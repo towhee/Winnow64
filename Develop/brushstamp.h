@@ -28,6 +28,11 @@
 #include <QHash>
 #include <QString>
 #include <QMutex>
+#include <QVector>
+#include <QFuture>
+#include <QThreadPool>
+#include <QtConcurrent>
+#include <atomic>
 
 namespace BrushStamp {
 
@@ -131,6 +136,15 @@ inline float edgeFactor(const AutoMaskCtx &a, int x, int y, int w, int h)
     return float(1.0 - s);
 }
 
+/* ---- Dab cost counters (diagnostic) ----
+   Two relaxed atomic adds per DAB (not per pixel), so the cost is nothing next to the dab
+   itself. MW's [DevTime] line reports and resets them around a mask build, which is the
+   only way to tell "too many dabs" from "each dab is the whole image" -- the two have very
+   different fixes and static reading cannot distinguish them. Renders on the GUI thread and
+   the settle worker share the counters, so a settle landing mid-drag can inflate one line. */
+struct DabStats { std::atomic<quint64> dabs{0}; std::atomic<quint64> pixels{0}; };
+inline DabStats &dabStats() { static DabStats s; return s; }
+
 /* Coverage 0..1 of a dab at distance `dist` (px) from centre -- LIGHTROOM model: `radius` is the
    OUTER extent (the brush SIZE; coverage reaches 0 there and does NOT grow with feather). Feather
    f=feather/100 softens INWARD: the full-coverage core boundary is radius*(1-f), so f=0 is a hard
@@ -148,7 +162,20 @@ inline float coverage(double dist, double radius, double f)
 }
 
 /* Accumulate a single dab into a per-stroke coverage buffer by MAX. With an active AutoMaskCtx the
-   coverage is attenuated by the edge factor (paints only near-luminance pixels). */
+   coverage is attenuated by the edge factor (paints only near-luminance pixels).
+
+   THIS IS THE BRUSH HOT LOOP. A dab's box is (2*radius)^2 pixels clamped to the buffer,
+   so a large brush touches most of the image PER DAB, and the develop render replays
+   every dab of the stroke on every interactive tick. Two things keep it honest:
+
+     - SQUARED-DISTANCE GATES. The outside and full-core tests use d^2, so the sqrt is
+       paid only by pixels actually in the feather band. At feather 0 (the default)
+       inner == radius and NO pixel pays it. Numerically identical to coverage(), which
+       is kept for the callers that need a distance-based value.
+     - ROW-PARALLEL. Bands own disjoint rows, so the MAX accumulation cannot race.
+       Serial below a threshold, where a big brush is not the case and dispatch would
+       dominate -- ImageView stamps one dab per mouse-move on a small buffer and must
+       not pay for a thread hop. */
 inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius, double f,
                    const AutoMaskCtx *am = nullptr)
 {
@@ -157,31 +184,95 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
     const int x1 = std::min(w - 1, int(std::ceil (cx + radius)));
     const int y0 = std::max(0,     int(std::floor(cy - radius)));
     const int y1 = std::min(h - 1, int(std::ceil (cy + radius)));
+    if (x1 < x0 || y1 < y0) return;
+    dabStats().dabs.fetch_add(1, std::memory_order_relaxed);
+    dabStats().pixels.fetch_add(quint64(x1 - x0 + 1) * quint64(y1 - y0 + 1),
+                                std::memory_order_relaxed);
     const bool auto_ = am && am->on && am->guide;
-    for (int y = y0; y <= y1; ++y) {
-        float *row = cov + size_t(y) * w;
-        const double dy = y + 0.5 - cy;
-        for (int x = x0; x <= x1; ++x) {
-            const double dx = x + 0.5 - cx;
-            float c = coverage(std::sqrt(dx*dx + dy*dy), radius, f);
-            if (c <= 0.0f) continue;
-            if (auto_) c *= edgeFactor(*am, x, y, w, h);
-            if (c > row[x]) row[x] = c;
+    const double r2    = radius * radius;
+    const double inner = radius * (1.0 - f);          // full-coverage core boundary
+    const double in2   = inner * inner;
+    const double band  = radius - inner;              // feather width; 0 when f == 0
+
+    auto rows = [=](int ya, int yb) {
+        for (int y = ya; y <= yb; ++y) {
+            float *row = cov + size_t(y) * w;
+            const double dy = y + 0.5 - cy;
+            const double dy2 = dy * dy;
+            for (int x = x0; x <= x1; ++x) {
+                const double dx = x + 0.5 - cx;
+                const double d2 = dx * dx + dy2;
+                if (d2 >= r2) continue;               // outside the dab
+                float c;
+                if (d2 <= in2) c = 1.0f;              // full-coverage core: no sqrt
+                else {
+                    double s = (std::sqrt(d2) - inner) / band;
+                    s = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);   // smootherstep
+                    c = float(1.0 - s);
+                    if (c <= 0.0f) continue;
+                }
+                if (auto_) { c *= edgeFactor(*am, x, y, w, h); if (c <= 0.0f) continue; }
+                if (c > row[x]) row[x] = c;
+            }
         }
+    };
+
+    const int nRows = y1 - y0 + 1;
+    const size_t area = size_t(x1 - x0 + 1) * size_t(nRows);
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    if (maxThreads == 1 || area < (size_t(1) << 16) || nRows < 2) {
+        rows(y0, y1);
+        return;
     }
+    const int chunks = qMin(maxThreads, nRows);
+    const int per = (nRows + chunks - 1) / chunks;
+    QVector<QFuture<void>> futs;
+    futs.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const int ya = y0 + k * per, yb = qMin(y1, ya + per - 1);
+        if (ya > yb) break;
+        futs.append(QtConcurrent::run(QThreadPool::globalInstance(),
+                                      [=]{ rows(ya, yb); }));
+    }
+    for (QFuture<void> &fu : futs) fu.waitForFinished();
 }
 
-/* Accumulate a stroke segment p0->p1 (px) into the coverage buffer, dabs spaced ~radius/4. */
-inline void segmentMax(float *cov, int w, int h, QPointF p0, QPointF p1, double radius, double f,
-                       const AutoMaskCtx *am = nullptr)
+/* Dab spacing along a stroke, as a fraction of the brush RADIUS. Dabs composite by MAX
+   and overlap heavily, so this is a cost/quality knob rather than a correctness one: at a
+   quarter of the radius the union's edge scallops by well under 1% of the radius. It is
+   also the single biggest cost lever in the brush path -- a stroke costs
+   (arc length / (radius*this)) full dab boxes, each (2*radius)^2 pixel evaluations. */
+inline constexpr double kDabSpacing = 0.25;
+
+/* Accumulate a stroke segment p0->p1 (px), placing dabs every radius*kDabSpacing of ARC
+   LENGTH. `carry` is how far the stroke has travelled since the last dab was stamped
+   (from the previous segment); the return value carries forward into the next one.
+
+   Spacing is tracked ACROSS segments deliberately. A mouse delivers moves a few pixels
+   apart, and this used to compute `n = max(1, len/step)` PER SEGMENT -- so a 3px move
+   still stamped two full-radius dabs, and a stroke cost two dab boxes per mouse-move
+   instead of one per quarter-radius travelled. On a 2 MP mask with a 20% brush that
+   measured ~900 ms per render tick, since the render replays every dab of the whole
+   stroke. Carrying the residual makes cost proportional to the LENGTH of the stroke, not
+   to how many events the mouse happened to deliver. See notes/Documentation.txt
+   "MASK-DRAG LATENCY". */
+inline double segmentMax(float *cov, int w, int h, QPointF p0, QPointF p1, double radius,
+                         double f, const AutoMaskCtx *am = nullptr, double carry = 0.0)
 {
     const double len = std::hypot(p1.x() - p0.x(), p1.y() - p0.y());
-    const double step = std::max(1.0, radius * 0.25);
-    const int n = std::max(1, int(len / step));
-    for (int i = 0; i <= n; ++i) {
-        const double t = double(i) / n;
-        dabMax(cov, w, h, p0.x() + (p1.x()-p0.x())*t, p0.y() + (p1.y()-p0.y())*t, radius, f, am);
+    if (len <= 0.0 || radius <= 0.0) return carry;
+    const double step = std::max(1.0, radius * kDabSpacing);
+    double u = step - carry;                 // distance into this segment to the next dab
+    if (u > len) return carry + len;         // segment too short to earn a dab
+    double last = u;
+    while (u <= len) {
+        const double t = u / len;
+        dabMax(cov, w, h, p0.x() + (p1.x()-p0.x())*t, p0.y() + (p1.y()-p0.y())*t,
+               radius, f, am);
+        last = u;
+        u += step;
     }
+    return len - last;
 }
 
 /* Composite a per-stroke coverage buffer into the running mask with flow (0..1). */
@@ -255,11 +346,17 @@ inline void rasterize(const QJsonArray &strokes, float *mask, std::vector<float>
         std::fill(scratch.begin(), scratch.end(), 0.0f);
         QPointF prev = point(pts, 0, degrees, w, h);
         dabMax(scratch.data(), w, h, prev.x(), prev.y(), radius, f, amp);
+        double carry = 0.0;
         for (int i = 1; i*2 + 1 < pts.size(); ++i) {
             const QPointF cur = point(pts, i, degrees, w, h);
-            segmentMax(scratch.data(), w, h, prev, cur, radius, f, amp);
+            carry = segmentMax(scratch.data(), w, h, prev, cur, radius, f, amp, carry);
             prev = cur;
         }
+        /* Always stamp the LAST point. Spaced dabs can stop up to one step short of it,
+           and mid-stroke that point is where the CURSOR is -- the painted area would
+           visibly trail the brush. ImageView's live preview stamps its tip the same way
+           (ImageView::brushStampTo), so the two stay in step. */
+        if (carry > 0.0) dabMax(scratch.data(), w, h, prev.x(), prev.y(), radius, f, amp);
         composite(mask, scratch.data(), size_t(w) * h, flow, erase);
     }
 }

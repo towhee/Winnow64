@@ -226,7 +226,7 @@ ImageView::ImageView(QWidget *parent,
     scene = new QGraphicsScene();
     scene->setObjectName("Scene");
 
-    pmItem = new QGraphicsPixmapItem;
+    pmItem = new ScaledPixmapItem;
     pmItem->setBoundingRegionGranularity(1);
     pmItem->setOpacity(1.0);
     scene->addItem(pmItem);
@@ -628,24 +628,37 @@ void ImageView::refreshDevelopCapture()
     developCaptureScrollPct = isScrollable ? getScrollPct() : scrollPct;
 }
 
-void ImageView::setDevelopPreview(const QImage &image)
+void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
 {
 /*
-    Replace the displayed pixmap with an already-rendered Develop preview. The image has the
-    same dimensions as the current one (only the pixels differ), so we swap the pixmap and
-    leave zoom / fit / scene rect untouched -- no refit, no scale reset. Called on the GUI
-    thread from MW::renderDevelopPreview while the user drags a Develop slider; the interactive
-    proxy render is upscaled to these full dimensions by the caller so this contract holds.
+    Replace the displayed pixmap with an already-rendered Develop preview. The DISPLAYED
+    dimensions match the current image's (only the pixels differ), so we swap the pixmap
+    and leave zoom / fit / scene rect untouched -- no refit, no scale reset. Called on the
+    GUI thread from MW::renderDevelopPreview while the user drags a Develop slider.
+
+    The interactive tick renders a screen-resolution PROXY. It used to be upscaled to the
+    full dimensions by the caller so this "same dimensions" contract held -- a ~200 MB
+    QImage::scaled plus QPixmap::fromImage per tick on a 50 MP file. Now the caller passes
+    the full size as displaySize and ScaledPixmapItem presents THAT to the scene while
+    holding the small pixmap, stretching it once at paint time. Everything downstream
+    still sees full image coordinates, so no overlay, hit test or zoom maths changes.
 */
     if (G::isLogger) G::log("ImageView::setDevelopPreview");
     if (image.isNull()) return;
-    /* Same dimensions (usual slider-drag case): swap pixels, leave zoom/fit alone. */
-    const QSize oldSize = pmItem->pixmap().size();
-    const bool sizeChanged = (image.size() != oldSize);
-    pmItem->setPixmap(QPixmap::fromImage(image));
+    const QSize shown = (displaySize.isValid() && !displaySize.isEmpty()) ? displaySize
+                                                                          : image.size();
+    /* Compare what the scene SEES, not what the pixmap holds -- a proxy tick changes the
+       pixmap size constantly while the displayed size stays put. */
+    const QSize oldSize = pmItem->displaySize();
+    const bool sizeChanged = (shown != oldSize);
+    /* Mid-drag the proxy is stretched fast (matching the old FastTransformation upscale);
+       a full-res render needs no stretch at all. */
+    pmItem->setTransformationMode(shown == image.size() ? Qt::SmoothTransformation
+                                                        : Qt::FastTransformation);
+    pmItem->setPixmapScaled(QPixmap::fromImage(image), shown);
     pmItem->setVisible(true);
     if (sizeChanged) {
-        imAspect = image.height() ? double(image.width()) / image.height() : 1.0;
+        imAspect = shown.height() ? double(shown.width()) / shown.height() : 1.0;
         const double oldAspect =
             oldSize.height() ? double(oldSize.width()) / oldSize.height() : 0.0;
         const bool aspectSame = oldAspect > 0.0 && qAbs(imAspect - oldAspect) < 0.01;
@@ -658,6 +671,24 @@ void ImageView::setDevelopPreview(const QImage &image)
             resetFitZoom();
         }
     }
+}
+
+QPointF ImageView::imageToPixmap(const QPointF &imagePt) const
+{
+/*
+    Image (== pmItem item) coordinates -> coordinates in the pixmap actually held.
+
+    They are the same everywhere except during a Develop drag, where the item holds a
+    screen-resolution PROXY while still presenting the full image size to the scene (see
+    Views/scaledpixmapitem.h). Overlay geometry, hit tests and zoom all work in image
+    coordinates and need no mapping; only code that READS PIXELS out of the pixmap does.
+*/
+    if (!pmItem) return imagePt;
+    const QSize disp = pmItem->displaySize();
+    const QSize pm   = pmItem->pixmap().size();
+    if (disp.isEmpty() || pm.isEmpty() || disp == pm) return imagePt;
+    return QPointF(imagePt.x() * pm.width()  / disp.width(),
+                   imagePt.y() * pm.height() / disp.height());
 }
 
 bool ImageView::applyDevelopCapturedView()
@@ -694,8 +725,10 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
     maskOp = op;
     maskInverted = inverted;
     maskFeather = feather;
-    maskTintHidden = false;         // new mask edit -> tint shown ("O" toggles)
-    emit maskTintVisibilityChanged(true);
+    /* Visibility is deliberately NOT reset here. It is the dock's call, made where the
+       submask is added: the scope's FIRST submask shows the veil (nothing else on screen
+       tells the user the mask exists), a later one starts hidden. See
+       DevelopProperties::addMaskTool -> maskTintShowRequested / maskTintHideRequested. */
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
         if (maskTool == 1) { maskC = QPointF(0.5, 0.5); maskRx = 0.25; maskRy = 0.30; maskAngle = 0; }
         else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
@@ -824,7 +857,10 @@ void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
 
     const int cells = kWbLoupeCells;
     const int half = cells / 2;
-    const QPointF ip = maskViewportToImage(vp);
+    /* Item coordinates are IMAGE coordinates, which mid-drag are NOT the held pixmap's:
+       an interactive tick leaves a screen-resolution proxy in the item (see
+       ScaledPixmapItem). Code that reads real pixels must map through imageToPixmap. */
+    const QPointF ip = imageToPixmap(maskViewportToImage(vp));
     const int cx = int(std::floor(ip.x()));
     const int cy = int(std::floor(ip.y()));
 
@@ -998,6 +1034,61 @@ void ImageView::paintEvent(QPaintEvent *event)
         QPainter p(viewport());
         drawSampleLoupe(p, rangeLoupeVp, "Sample a colour:", "Shift-click: add a colour", false);
     }
+    /* Last, so it survives drawForeground's early returns (crop and spot modes each own
+       the overlay and return before the mask chips are drawn). */
+    if (!renderingHint.isEmpty()) {
+        QPainter p(viewport());
+        drawRenderingHint(p);
+    }
+}
+
+void ImageView::setRenderingHint(const QString &msg)
+{
+/*
+    Show a small "working on it" chip on the loupe. MW raises it while the SLOW parts of a
+    Develop render are in flight -- the scene-linear RAW decode on an image switch, and
+    the full-resolution settle render -- so the frame on screen is visibly labelled as
+    not the final one rather than silently standing in for it. NOT used for the
+    sub-second proxy tick, the normal interactive state, which needs no announcement.
+*/
+    if (renderingHint == msg) return;
+    renderingHint = msg;
+    viewport()->update();
+}
+
+void ImageView::clearRenderingHint()
+{
+    setRenderingHint(QString());
+}
+
+void ImageView::drawRenderingHint(QPainter &p)
+{
+    /* TOP-RIGHT: the mask legend chip (drawMaskLegend) owns the top-left, and the two are
+       shown together whenever a settle render lands during mask editing. */
+    p.setRenderHint(QPainter::Antialiasing, true);
+    QFont f = p.font();
+    f.setPointSizeF(f.pointSizeF() > 0 ? f.pointSizeF() : 10.0);
+    p.setFont(f);
+    const QFontMetrics fm(f);
+    const int pad = 8, dot = 7;
+    const int textW = fm.horizontalAdvance(renderingHint);
+    const QRect panel(viewport()->width() - (textW + dot + pad * 3) - 12, 12,
+                      textW + dot + pad * 3, fm.height() + pad * 2 - 2);
+
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(0, 0, 0, 150));
+    p.drawRoundedRect(panel, 5, 5);
+
+    /* A filled dot reads as "in progress" without animating -- an animated spinner would
+       need a timer repainting the whole loupe while the render is already loading it. */
+    p.setBrush(QColor(235, 190, 90));
+    p.drawEllipse(QPoint(panel.left() + pad + dot / 2, panel.center().y()),
+                  dot / 2, dot / 2);
+
+    p.setPen(QColor(235, 235, 235));
+    p.drawText(QRect(panel.left() + pad * 2 + dot, panel.top() + pad - 1,
+                     textW, fm.height()),
+               Qt::AlignVCenter | Qt::AlignLeft, renderingHint);
 }
 
 void ImageView::setSpotReplaceMode(int mode)
@@ -1221,33 +1312,34 @@ void ImageView::clearScopeMaskTint()
     viewport()->update();
 }
 
-void ImageView::setMaskLegend(bool breakdown, const QString &selName, int selOp)
+void ImageView::setMaskLegend(const QString &submaskName, int op, bool showHint)
 {
-    maskLegendBreakdown = breakdown;
-    maskLegendSelName   = selName;
-    maskLegendSelOp     = selOp;
+    maskLegendSubmask = submaskName;
+    maskLegendOp      = op;
+    maskLegendHint    = showHint;
     if (maskEditMode) viewport()->update();
 }
 
 void ImageView::drawMaskLegend(QPainter *painter)
 {
 /*
-    A compact chip, top-left of the view, that names the overlay's colours so the tints
-    are self-explanatory: the RED swatch is "Result" (what the mask affects); in
-    Breakdown view a GREEN "+ Add" and BLUE "- Subtract" swatch name the constituent
-    outlines. The selected tool + role is appended so the user knows which piece they are
-    editing. Drawn in viewport coords, over the overlay, only while editing a mask.
+    A compact chip, top-left of the view, naming the operation the overlay is CURRENTLY
+    previewing -- "Update: Brush Mask" with no modifier held, "Subtract: ..." while Opt is
+    held, "Intersect: ..." while Shift+Opt is. The veil itself shows the outcome (one
+    colour, G::maskOverlayColor), so there is no colour key to give; this chip only names
+    what pressing Return/Update will do. A dim second line reminds the user of the two
+    modifiers, suppressed on the first submask (nothing to combine with). Drawn in
+    viewport coords, over the overlay, only while a submask is being defined.
 */
-    struct Chip { QColor c; QString label; };
-    QVector<Chip> chips;
-    chips.append({QColor(220, 40, 40), "Result"});
-    if (maskLegendBreakdown) {
-        chips.append({QColor(70, 220, 110), "+ Add"});
-        chips.append({QColor(60, 150, 255), "- Subtract"});
-    }
-    QString sel;
-    if (maskLegendSelOp >= 0 && !maskLegendSelName.isEmpty())
-        sel = (maskLegendSelOp == 1 ? "Subtract: " : "Add: ") + maskLegendSelName;
+    if (maskLegendOp < 0 || maskLegendSubmask.isEmpty()) return;
+
+    const QString opName = maskLegendOp == 1 ? "Subtract"
+                         : maskLegendOp == 2 ? "Intersect"
+                                             : "Update";
+    const QString line = opName + ": " + maskLegendSubmask;
+    const QString hint = maskLegendHint
+                       ? "Opt subtract " + QString(QChar(0x00B7)) + " Shift+Opt intersect"
+                       : QString();
 
     painter->save();
     painter->resetTransform();
@@ -1256,36 +1348,29 @@ void ImageView::drawMaskLegend(QPainter *painter)
     f.setPointSizeF(f.pointSizeF() > 0 ? f.pointSizeF() : 10.0);
     painter->setFont(f);
     const QFontMetrics fm(f);
-    const int pad = 8, gap = 6, sw = 11, rowH = qMax(fm.height(), sw) + 2;
+    QFont hf = f;
+    hf.setPointSizeF(f.pointSizeF() * 0.88);
+    const QFontMetrics hfm(hf);
+    const int pad = 8, rowH = fm.height() + 2;
+    const int hintH = hint.isEmpty() ? 0 : hfm.height() + 2;
 
-    /* Measure the widest row so the panel wraps the swatches + text + selected line. */
-    int wMax = 0;
-    for (const Chip &ch : chips)
-        wMax = qMax(wMax, sw + 5 + fm.horizontalAdvance(ch.label));
-    if (!sel.isEmpty()) wMax = qMax(wMax, fm.horizontalAdvance(sel));
-    const int rows = chips.size() + (sel.isEmpty() ? 0 : 1);
-    const QRect panel(12, 12, wMax + 2 * pad, rows * rowH + 2 * pad - 2);
+    int wMax = fm.horizontalAdvance(line);
+    if (!hint.isEmpty()) wMax = qMax(wMax, hfm.horizontalAdvance(hint));
+    const QRect panel(12, 12, wMax + 2 * pad, rowH + hintH + 2 * pad - 2);
 
-    QColor bg(0, 0, 0, 150);
     painter->setPen(Qt::NoPen);
-    painter->setBrush(bg);
+    painter->setBrush(QColor(0, 0, 0, 150));
     painter->drawRoundedRect(panel, 5, 5);
 
-    int y = panel.top() + pad;
-    for (const Chip &ch : chips) {
-        const QRect sr(panel.left() + pad, y + (rowH - sw) / 2, sw, sw);
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(ch.c);
-        painter->drawRoundedRect(sr, 2, 2);
-        painter->setPen(QColor(235, 235, 235));
-        painter->drawText(QRect(sr.right() + 5, y, wMax, rowH),
-                          Qt::AlignVCenter | Qt::AlignLeft, ch.label);
-        y += rowH;
-    }
-    if (!sel.isEmpty()) {
-        painter->setPen(QColor(200, 200, 200));
-        painter->drawText(QRect(panel.left() + pad, y, wMax, rowH),
-                          Qt::AlignVCenter | Qt::AlignLeft, sel);
+    painter->setPen(QColor(235, 235, 235));
+    painter->drawText(QRect(panel.left() + pad, panel.top() + pad, wMax, rowH),
+                      Qt::AlignVCenter | Qt::AlignLeft, line);
+    if (!hint.isEmpty()) {
+        painter->setFont(hf);
+        painter->setPen(QColor(150, 150, 150));
+        painter->drawText(QRect(panel.left() + pad, panel.top() + pad + rowH,
+                                wMax, hintH),
+                          Qt::AlignVCenter | Qt::AlignLeft, hint);
     }
     painter->restore();
 }
@@ -1350,13 +1435,11 @@ void ImageView::setMaskRangeParams(const QString &paramsJson)
 
 QColor ImageView::maskTintColor() const
 {
-    /* The SELECTED tool's own live preview (mid-drag / mid-stroke, before the composite
-       rebuilds). RED is reserved for the RESULT veil (MW::updateMaskOverlayTint), so a
-       constituent is shown by its ROLE colour -- GREEN for Add, BLUE for Subtract -- the
-       same colours as its Breakdown outline. Keep the two in sync so the colour does not
-       flicker on release. */
-    return (maskOp == 1) ? QColor(60, 150, 255)     // Subtract blue
-                         : QColor(70, 220, 110);    // Add green
+    /* The submask's own live preview (mid-drag / mid-stroke, before the composite
+       rebuilds). The overlay speaks ONE colour: the op is read off the veil, which
+       previews the OUTCOME (MW::updateMaskOverlayTint), and off the op-indicator chip --
+       never off the colour. Same colour as the veil so nothing flickers on release. */
+    return G::maskOverlayColor;
 }
 
 void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
@@ -2010,12 +2093,17 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's
        handles. When it is present the per-tool draw skips its own tint (it would double up) and draws
        only its handles/guides/cursor/swatches. */
-    /* While a brush stroke is being swiped, the whole-mask composite (scopeMaskTint) is STALE -- it
-       only rebuilds on stroke release (paramsChanged). Suppress it during the stroke so the per-brush
-       live preview (maskBrushPreview, updated on every move) shows the stroke building up in real time
-       instead of the tint only appearing after release. */
-    const bool brushStroking = (maskTool == 2 && maskPainting) ||
-                               (maskIsObject() && maskObjDrawing);
+    /* While an ADD stroke is swiped, the whole-mask composite (scopeMaskTint) lags it (it
+       rebuilds on the throttled live emit). Suppress it there so the per-brush live
+       preview (maskBrushPreview, updated on every move) shows the stroke building up in
+       real time. NOT for a SUBTRACT/INTERSECT stroke (maskLegendOp > 0): that preview
+       paints the overlay colour where the mask is being REMOVED, which reads as adding,
+       so the real veil -- rebuilt live by MW for exactly this case -- stays on and shows
+       the outcome instead. maskLegendOp is -1 when nothing is pending: suppress, as for
+       Add. */
+    const bool brushStroking = ((maskTool == 2 && maskPainting) ||
+                                (maskIsObject() && maskObjDrawing))
+                               && maskLegendOp <= 0;
     const bool showTint = !maskTintHidden;                  // "M"/"O" toggles the tint
     /* The tint is drawn whenever MW has pushed one (its presence == "overlay wanted"), so
        it survives past maskEditMode -- e.g. the combined result stays visible after a
@@ -2031,8 +2119,8 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
             painter->restore();
         }
     }
-    /* Legend chip: explains the overlay colours + names the selected tool. Shown while a
-       mask tool is being edited and the overlay is not toggled off ("O"). */
+    /* Op-indicator chip: names the submask + the op the veil is previewing. Shown while a
+       submask is being defined and the overlay is not toggled off ("O"). */
     if (maskEditMode && showTint) drawMaskLegend(painter);
 
     const bool content = maskIsContent();
@@ -2101,8 +2189,7 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
         const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double lo = qBound(0.0, 0.5 - 0.5*f, 1.0);
         const double hi = qBound(0.0, 0.5 + 0.5*f, 1.0);
-        /* Tint colour conveys the op: Add green, Subtract blue (red = result veil). */
-        const QColor base = (maskOp == 1) ? QColor(60, 150, 255) : QColor(70, 220, 110);
+        const QColor base = maskTintColor();        // the one overlay colour
         QColor clear = base; clear.setAlpha(0);     // mask 0% -> no tint
         QColor full  = base; full.setAlpha(150);    // mask 100% -> tinted
         /* Invert swaps which end of the ramp is covered. */
@@ -2176,7 +2263,7 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
     if (drawTint) {
         const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
         const double inner = qBound(0.0, 1.0 - f, 1.0);
-        const QColor base = (maskOp == 1) ? QColor(60, 150, 255) : QColor(70, 220, 110);
+        const QColor base = maskTintColor();        // the one overlay colour
         QColor clear = base; clear.setAlpha(0);
         QColor full  = base; full.setAlpha(150);
         const QColor cIn   = maskInverted ? clear : full;       // colour at the centre
@@ -2294,7 +2381,7 @@ void ImageView::brushRebuildPreview(QRect region)
     if (region.isNull()) region = QRect(0, 0, maskBrushW, maskBrushH);
     region &= QRect(0, 0, maskBrushW, maskBrushH);
     if (region.isEmpty()) return;
-    const QColor base = (maskOp == 1) ? QColor(40, 110, 230) : QColor(220, 40, 40);
+    const QColor base = maskTintColor();            // the one overlay colour
     const int R = base.red(), Gc = base.green(), B = base.blue();
     const double tint = 150.0 / 255.0;
     const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;
@@ -2329,10 +2416,25 @@ QRect ImageView::brushSegRect(QPointF a, QPointF b) const
 
 void ImageView::brushStampTo(QPointF bufPt)
 {
-    BrushStamp::segmentMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
-                           maskBrushLast, bufPt, brushRadiusBufPx(),
-                           qBound(0.0, maskFeather, 100.0) / 100.0,
-                           maskStrokeAM.on ? &maskStrokeAM : nullptr);
+/*
+    Extend the in-progress stroke to bufPt. Dabs are placed at a fixed ARC-LENGTH spacing
+    and maskBrushDabCarry threads the residual across mouse-moves, so a slow drag
+    delivering a move every few pixels costs the same as a fast one over that distance;
+    see BrushStamp::kDabSpacing for why that matters (the develop render replays the
+    same rule, so preview and render stay in step).
+
+    The cursor point is then stamped unconditionally: the spaced walk can stop up to one
+    step short, and the painted area must never trail the brush.
+*/
+    const double radius = brushRadiusBufPx();
+    const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
+    const BrushStamp::AutoMaskCtx *am = maskStrokeAM.on ? &maskStrokeAM : nullptr;
+    maskBrushDabCarry = BrushStamp::segmentMax(maskBrushStroke.data(),
+                                               maskBrushW, maskBrushH,
+                                               maskBrushLast, bufPt, radius, f, am,
+                                               maskBrushDabCarry);
+    BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                       bufPt.x(), bufPt.y(), radius, f, am);
     maskBrushLast = bufPt;
 }
 
@@ -2398,11 +2500,86 @@ void ImageView::brushUndoStroke()
     brushEnsureBuffers();
     viewport()->update();
     /* Persist the shortened stroke list and re-render. */
+    emit maskGeometryChanged(brushParamsJson(false));
+}
+
+QJsonObject ImageView::brushStrokeJson() const
+{
+    /* The stroke currently under the cursor. Every per-stroke setting is captured here
+       because the render rasterizes each stroke with the settings it was painted with
+       (changing Size/Feather/Flow later must not reshape strokes already laid down). */
+    QJsonArray pts;
+    for (double v : maskStrokePts) pts.append(v);
+    QJsonObject stroke;
+    stroke["pts"]          = pts;
+    stroke["size"]         = maskBrushSize;
+    stroke["feather"]      = maskFeather;
+    stroke["flow"]         = maskBrushFlow;
+    stroke["erase"]        = maskBrushErase;
+    stroke["autoMask"]     = maskBrushAutoMask;
+    stroke["autoMaskMode"] = maskBrushAutoMaskMode;
+    return stroke;
+}
+
+QString ImageView::brushParamsJson(bool withLiveStroke) const
+{
+    QJsonArray strokes = maskBrushStrokesJson;
+    if (withLiveStroke && maskStrokePts.size() >= 2) strokes.append(brushStrokeJson());
     QJsonObject o;
-    o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
+    o["size"]         = maskBrushSize;
+    o["flow"]         = maskBrushFlow;
+    o["autoMask"]     = maskBrushAutoMask;
     o["autoMaskMode"] = maskBrushAutoMaskMode;
-    o["strokes"] = maskBrushStrokesJson;
-    emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+    o["strokes"]      = strokes;
+    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+void ImageView::maskEmitLiveGeometry(LiveEmit kind)
+{
+/*
+    Hand the IN-PROGRESS geometry to the dock mid-gesture so the scope's adjustments
+    re-render through it -- the point of a mask is its effect, and waiting for the
+    mouse-up to see it made masking a guess. The dock stores the geometry without
+    rebuilding the tree (setActiveMaskParams), so the live edit state here is untouched.
+
+    THROTTLED: each emit costs a proxy develop render of the whole scope stack, while the
+    on-canvas feedback (maskBrushPreview for a stroke, the handles/gradient for a drag) is
+    already redrawn on every move. ~10 Hz keeps the effect honest without turning a fast
+    gesture into a render queue. Both release emits are unconditional, so the settled
+    result is never a throttled approximation.
+
+    ONE throttle serves both gestures: a brush stroke and a handle drag are mutually
+    exclusive (mousePressEvent takes one branch or the other), so they cannot interleave.
+*/
+    const bool live = (kind == LiveEmit::Brush) ? maskPainting : (maskDrag >= 0);
+    if (!live) return;
+    if (kind == LiveEmit::Brush && maskStrokePts.size() < 2)
+        return;                                   // a single dab: nothing to render yet
+    const qint64 due = maskStrokeLiveClock.isValid()
+                       ? kMaskStrokeLiveMs - maskStrokeLiveClock.elapsed() : 0;
+    if (due > 0) {
+        /* Too soon. Schedule ONE trailing emit rather than dropping the tick: a gesture
+           that PAUSES mid-swipe (paint a bit, stop, look) must not leave the effect
+           showing the mask as it was up to 100ms ago. The re-entry re-checks `live`, so a
+           gesture that ended while the timer was pending simply drops it -- its own
+           unconditional release emit has already carried the final geometry. */
+        if (!maskStrokeLivePending) {
+            maskStrokeLivePending = true;
+            QTimer::singleShot(int(due), this, [this, kind]{
+                maskStrokeLivePending = false;
+                maskEmitLiveGeometry(kind);
+            });
+        }
+        return;
+    }
+    maskStrokeLiveClock.restart();
+    emit maskGeometryChanged(kind == LiveEmit::Brush ? brushParamsJson(true)
+                                                     : maskParamsJson());
+}
+
+void ImageView::brushEmitLiveGeometry()
+{
+    maskEmitLiveGeometry(LiveEmit::Brush);
 }
 
 /* ---- Object Mask perimeter-paint helpers (reuse the brush buffers) ---- */
@@ -4195,12 +4372,24 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         if (maskBrushW > 0) {
             maskObjDrawing = true;
             maskHover = true;
-            maskBrushErase = (event->modifiers() & Qt::AltModifier);
+            /* Opt erases from the perimeter -- but only once there IS a perimeter. On an
+               empty submask there is nothing to erase, so Opt keeps its other meaning
+               (this submask SUBTRACTS from the mask) and the stroke paints normally.
+               Without this the natural "hold Opt and trace what to remove" gesture would
+               paint nothing at all and commit an empty submask.
+               G::useBrushEraseStroke false retires the erase stroke entirely: Opt then
+               means Subtract whatever is under way (see global.cpp). */
+            maskBrushErase = G::useBrushEraseStroke
+                             && (event->modifiers() & Qt::AltModifier)
+                             && !maskBrushStrokesJson.isEmpty();
+            emit maskStrokeStateChanged(true);   // after maskBrushErase: MW reads it
+            emit maskOpActionStarted();          // latch the combine op held right now
             maskStrokePts.clear();
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
             std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
             maskBrushLast = brushNormToBuf(n);
+            maskBrushDabCarry = 0.0;         // new stroke: dab spacing starts here
             BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
                                maskBrushLast.x(), maskBrushLast.y(), brushRadiusBufPx(), 0.0);
             maskBrushCursorVp = event->pos();
@@ -4219,8 +4408,20 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         if (maskBrushW > 0) {
             maskPainting = true;
             maskHover = true;          // painting implies hovering (gates the overlay draw)
-            maskBrushErase = (event->modifiers() & Qt::AltModifier);
+            /* Opt erases from the stroke -- but only once the submask HAS coverage. On a
+               fresh brush there is nothing to erase, so Opt keeps its other meaning (this
+               submask SUBTRACTS from the mask) and the stroke paints normally. Without
+               this the natural "hold Opt and paint what to remove" gesture paints nothing
+               and commits an empty submask.
+               G::useBrushEraseStroke false retires the erase stroke entirely: Opt then
+               means Subtract whatever is under way (see global.cpp). */
+            maskBrushErase = G::useBrushEraseStroke
+                             && (event->modifiers() & Qt::AltModifier)
+                             && !maskBrushStrokesJson.isEmpty();
+            emit maskStrokeStateChanged(true);   // after maskBrushErase: MW reads it
+            emit maskOpActionStarted();          // latch the combine op held right now
             maskStrokePts.clear();
+            maskStrokeLiveClock.start();         // throttle the live re-render from here
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
             std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
@@ -4251,6 +4452,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
                 }
             }
             maskBrushLast = brushNormToBuf(n);
+            maskBrushDabCarry = 0.0;         // new stroke: dab spacing starts here
             BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
                                maskBrushLast.x(), maskBrushLast.y(),
                                brushRadiusBufPx(), qBound(0.0, maskFeather, 100.0) / 100.0,
@@ -4269,6 +4471,11 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         const int h = maskHitTest(event->pos());
         if (h >= 0) {
             maskDrag = h;
+            /* Invalidate (not start) the throttle window: the drag's FIRST move then
+               emits immediately, so the effect responds to the grab at once instead of
+               inheriting the tail of a previous gesture's window. */
+            maskStrokeLiveClock.invalidate();
+            emit maskOpActionStarted();         // latch the combine op held right now
             if (maskTool == 1) {                // radial: anchor move / rotate
                 const QRectF br = pmItem->boundingRect();
                 const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());
@@ -4422,8 +4629,12 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
             const QPointF bp = brushNormToBuf(n);
-            BrushStamp::segmentMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
-                                   maskBrushLast, bp, brushRadiusBufPx(), 0.0);
+            maskBrushDabCarry =
+                BrushStamp::segmentMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                                       maskBrushLast, bp, brushRadiusBufPx(), 0.0,
+                                       nullptr, maskBrushDabCarry);
+            BrushStamp::dabMax(maskBrushStroke.data(), maskBrushW, maskBrushH,
+                               bp.x(), bp.y(), brushRadiusBufPx(), 0.0);
             maskBrushLast = bp;
             objRecomputeFill();
             objRebuildPreview();
@@ -4443,6 +4654,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             const QRect dirty = brushSegRect(maskBrushLast, bp);
             brushStampTo(bp);
             brushRebuildPreview(dirty);     // only the new segment's bbox
+            brushEmitLiveGeometry();        // re-render the effect as the mask grows
         }
         viewport()->update();
         if (maskPainting) return;          // consume while painting; hover falls through to scopes
@@ -4520,10 +4732,14 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             }
         }
         viewport()->update();
-        /* Live re-composite as the handle moves. setActiveMaskParams -> paramsChanged ->
-           developParamsChange coalesces the proxy render to one per event-loop turn and debounces
-           the full-res settle, so emitting every move is safe (same as a slider drag). */
-        emit maskGeometryChanged(maskParamsJson());
+        /* Live re-composite as the handle moves, THROTTLED like a brush stroke. The
+           handles themselves are already redrawn on every move by the update() above;
+           the emit is the expensive half (a proxy develop render of the whole scope
+           stack), and developParamsChange's 0ms coalescer only collapses emits that
+           land in the SAME event-loop turn -- a steady drag delivers one move per turn,
+           so it rendered on every one. The release emit (mouseReleaseEvent) is
+           unconditional, so the settled geometry is never a throttled approximation. */
+        maskEmitLiveGeometry(LiveEmit::Handle);
         return;
     }
     /* Hover feedback while a mask tool is active (not dragging): a move cursor over a
@@ -4712,6 +4928,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        fill to the object edge; an open perimeter yields no coverage yet. */
     if (!spacePanOverride && maskEditMode && maskIsObject() && maskObjDrawing) {
         maskObjDrawing = false;
+        emit maskStrokeStateChanged(false);      // Opt goes back to meaning subtract
         isLeftMouseBtnPressed = false;
         BrushStamp::composite(maskBrushMain.data(), maskBrushStroke.data(),
                               size_t(maskBrushW) * maskBrushH, 1.0, maskBrushErase);
@@ -4740,38 +4957,32 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        and persist the updated paramsJson (which triggers the masked re-render in stage 3). */
     if (!spacePanOverride && maskEditMode && maskTool == 2 && maskPainting) {
         maskPainting = false;
+        emit maskStrokeStateChanged(false);      // Opt goes back to meaning subtract
         isLeftMouseBtnPressed = false;
         const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;
         BrushStamp::composite(maskBrushMain.data(), maskBrushStroke.data(),
                               size_t(maskBrushW) * maskBrushH, flow, maskBrushErase);
         std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
         if (maskStrokePts.size() >= 2) {
-            QJsonArray pts;
-            for (double v : maskStrokePts) pts.append(v);
-            QJsonObject stroke;
-            stroke["pts"]      = pts;
-            stroke["size"]     = maskBrushSize;
-            stroke["feather"]  = maskFeather;
-            stroke["flow"]     = maskBrushFlow;
-            stroke["erase"]    = maskBrushErase;
-            stroke["autoMask"] = maskBrushAutoMask;
-            stroke["autoMaskMode"] = maskBrushAutoMaskMode;
-            maskBrushStrokesJson.append(stroke);
-            QJsonObject o;
-            o["size"] = maskBrushSize; o["flow"] = maskBrushFlow; o["autoMask"] = maskBrushAutoMask;
-            o["autoMaskMode"] = maskBrushAutoMaskMode;
-            o["strokes"] = maskBrushStrokesJson;
-            emit maskGeometryChanged(QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
+            maskBrushStrokesJson.append(brushStrokeJson());
+            /* Unconditional (the mid-stroke emit is throttled), so the settled render is
+               built from the whole stroke, not from the last live tick. */
+            emit maskGeometryChanged(brushParamsJson(false));
         }
+        maskStrokeLiveClock.invalidate();
         brushRebuildPreview();
         viewport()->update();
         return;
     }
 
-    /* Finish a mask-handle drag: persist the new geometry (dock writes it into the component). */
+    /* Finish a mask-handle drag: persist the new geometry (the dock writes it into the
+       component). */
     if (!spacePanOverride && maskEditMode && maskDrag >= 0) {
-        maskDrag = -1;
+        maskDrag = -1;                    // clears `live` for a pending trailing emit
         isLeftMouseBtnPressed = false;
+        maskStrokeLiveClock.invalidate();
+        /* Unconditional (the mid-drag emits are throttled), so the settled render is
+           built from where the handle actually landed, not the last live tick. */
         emit maskGeometryChanged(maskParamsJson());
         return;
     }
@@ -4926,6 +5137,12 @@ void ImageView::copyImage()
     if (G::isLogger) G::log("ImageView::copyImage");
     qDebug() << "ImageView::copyImage";
     QPixmap pm = pmItem->pixmap();
+    /* Mid-develop-drag the item holds a screen-resolution proxy. The clipboard must get
+       the image at its real size, so stretch it back -- the same thing the render path
+       did inline before ScaledPixmapItem made the upscale unnecessary on screen. */
+    if (!pm.isNull() && pmItem->isScaled())
+        pm = pm.scaled(pmItem->displaySize(), Qt::IgnoreAspectRatio,
+                       Qt::SmoothTransformation);
     if (pm.isNull()) {
        if (icd->contains(dm->currentFilePath)) {
             pm = QPixmap::fromImage(icd->imCache.value(dm->currentFilePath));

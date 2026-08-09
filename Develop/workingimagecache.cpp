@@ -229,7 +229,7 @@ inline float maskDec(float y) { return y <= 0.0f ? 0.0f : std::pow(y, 2.2f); }  
 bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &base,
                                     const std::vector<StackScope> &scopes,
                                     QImage &out, RenderTimings *timings, OutDepth depth,
-                                    Space space)
+                                    Space space, StackResume *resume)
 {
     if (!work.isValid()) return false;
     const size_t n = size_t(work.width) * size_t(work.height);
@@ -238,32 +238,82 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     if (timings) t.start();
     Develop develop;
 
-    /* Accumulator = Global applied globally. Owned (mutable) so scopes can blend into it. */
-    WorkingImage acc = work;
-    if (!base.isIdentity()) develop.Apply(acc, base, nullptr);
+    /* Accumulator = Global applied globally. Owned (mutable) so scopes can blend into it.
+       RESUMED: the caller already holds the accumulator as it stood before scope `start`
+       -- everything below it is unchanged -- so start there and skip the base develop and
+       every scope beneath. Copied, not aliased: the blends below mutate it. */
+    WorkingImage acc;
+    size_t first = 0;
+    const bool resumed = resume && resume->prefix && resume->prefix->isValid()
+                         && resume->start <= scopes.size()
+                         && size_t(resume->prefix->width) * size_t(resume->prefix->height) == n;
+    if (resumed) {
+        acc = *resume->prefix;
+        first = resume->start;
+    }
+    else {
+        acc = work;
+        if (!base.isIdentity()) develop.Apply(acc, base, nullptr);
+    }
 
-    for (const StackScope &L : scopes) {
-        if (!L.mask.empty() && L.mask.size() != n) continue;   // malformed mask: skip the scope
+    for (size_t i = first; i < scopes.size(); ++i) {
+        const StackScope &L = scopes[i];
+        const bool masked = L.mask && !L.mask->empty();
+        if (masked && L.mask->size() != n) continue;   // malformed mask: skip the scope
 
-        /* Develop this scope from the running ACCUMULATOR (the result of the scopes below), so where
-           masks overlap the adjustments COMPOUND rather than the top scope replacing the one
-           below -- e.g. two overlapping +1-stop scopes give ~+2 stops in the overlap. In scene-linear
-           this stacking is the natural per-op composition (exposure multiplies, etc.). An identity
-           scope aliases acc (no copy/Apply) and blends to a no-op. */
+        /* Hand back the accumulator as it stands BEFORE this scope blends into it -- that
+           is precisely what a later re-render of this scope alone needs to resume from.
+           Taken here, before any mutation. When we resumed AT this scope the caller's own
+           prefix is still untouched, so re-share it instead of copying it. */
+        const bool capture = resume && i == resume->capture;
+        if (capture)
+            resume->outPrefix = (resumed && i == resume->start)
+                                    ? resume->prefix
+                                    : std::make_shared<const WorkingImage>(acc);
+
+        /* Develop this scope from the running ACCUMULATOR (the result of the scopes
+           below), so where masks overlap the adjustments COMPOUND rather than the top
+           scope replacing the one below -- e.g. two overlapping +1-stop scopes give ~+2
+           stops in the overlap. In scene-linear this stacking is the natural per-op
+           composition (exposure multiplies, etc.). An identity scope aliases acc (no
+           copy/Apply) and blends to a no-op. */
         WorkingImage layBuf;
         const WorkingImage *layP = &acc;
-        if (!L.params.isIdentity()) { layBuf = acc; develop.Apply(layBuf, L.params, nullptr); layP = &layBuf; }
+        std::shared_ptr<const WorkingImage> layShared;   // set only on a resumed layer
+        if (!L.params.isIdentity()) {
+            /* A mask-only edit leaves this scope's developed pixels untouched, so the
+               caller can hand them straight back and the develop pass is skipped -- the
+               point of the whole mechanism. */
+            if (resumed && i == resume->start && resume->layer && resume->layer->isValid()
+                && size_t(resume->layer->width) * size_t(resume->layer->height) == n) {
+                layShared = resume->layer;
+                layP = layShared.get();
+            }
+            else {
+                layBuf = acc;
+                develop.Apply(layBuf, L.params, nullptr);
+                layP = &layBuf;
+            }
+        }
+        if (capture) {
+            /* An identity scope has no layer of its own -- it aliases the accumulator --
+               so hand back nothing and let the next call re-alias. */
+            if (layP == &acc)   resume->outLayer.reset();
+            else if (layShared) resume->outLayer = layShared;   // resumed: re-share it
+            else                resume->outLayer =
+                                    std::make_shared<const WorkingImage>(layBuf);
+        }
 
         const float *hi = layP->rgb.data();
         float *dst = acc.rgb.data();
-        if (L.mask.empty()) {                                  // global scope: its params on top of acc
+        if (!masked) {                         // global scope: its params on top of acc
             const float *src = hi;
             maskParallelFor(n, [=](size_t i0, size_t i1) {
                 std::copy(src + i0*3, src + i1*3, dst + i0*3);
             });
         }
         else {
-            const float *mk = L.mask.data();
+            const float *mk = L.mask->data();
             maskParallelFor(n, [=](size_t i0, size_t i1) {
                 for (size_t i = i0; i < i1; ++i) {
                     const float m = mk[i];

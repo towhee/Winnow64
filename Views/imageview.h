@@ -4,12 +4,14 @@
 #include <QtWidgets>
 #include <QHash>
 #include <QJsonArray>
+#include <QJsonObject>
 #include "Develop/brushstamp.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
 #include "Views/iconview.h"
 #include "Views/infostring.h"
+#include "Views/scaledpixmapitem.h"
 #include "Utilities/dropshadowlabel.h"
 #include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
@@ -36,7 +38,11 @@ public:
 
     QGraphicsScene *scene;
 
-    QGraphicsPixmapItem *pmItem;
+    /* ScaledPixmapItem, not QGraphicsPixmapItem: the develop preview may hand it a
+       proxy-resolution pixmap while it keeps presenting the FULL image size to the scene,
+       so every overlay/hit-test/zoom calculation below still reads image geometry off
+       pmItem->boundingRect(). See Views/scaledpixmapitem.h. */
+    ScaledPixmapItem *pmItem;
     QTransform transform;
     Pixmap *pixmap;
     QString currentImagePath;
@@ -81,6 +87,10 @@ public:
        (captureDevelopView), so a later same-image display (clean loadImage, developed
        setDevelopPreview) keeps the view instead of re-fitting. False if no match. */
     bool applyDevelopCapturedView();
+    /* Image (== pmItem) coordinates -> coordinates in the pixmap actually held. Identity
+       except during a Develop drag, where the item holds a screen-resolution proxy while
+       presenting the full image size. Only pixel READS need this. */
+    QPointF imageToPixmap(const QPointF &imagePt) const;
     /* While a Develop decode is in flight for the captured image, keep the capture in
        step with the live view (thumbnail click pan, zoom, scroll). */
     void refreshDevelopCapture();
@@ -126,9 +136,15 @@ public slots:
        Must be called before the displayed pixmap is replaced, while the live scroll
        state is still that of the image being left. */
     void captureDevelopView(const QString &fPath);
-    /* Swap the displayed pixmap to an already-rendered QImage (a Develop preview) without
-       re-decoding or refitting -- dimensions are unchanged, only the pixels differ. */
-    void setDevelopPreview(const QImage &image);
+    /* Swap the displayed pixmap to an already-rendered QImage (a Develop preview)
+       without re-decoding or refitting -- the DISPLAYED dimensions are unchanged, only
+       the pixels differ.
+
+       displaySize (optional) is the size `image` stands in for: the interactive proxy
+       renders at screen resolution, and passing the full size here lets the item present
+       that size to the scene while holding the small pixmap, instead of the caller
+       upscaling a 50MP QImage per drag tick. Omit it when `image` IS the full render. */
+    void setDevelopPreview(const QImage &image, QSize displaySize = QSize());
     void monitorCursorState();
     void copyImage();
     void panTo(float xPct, float yPct);
@@ -181,10 +197,29 @@ public slots:
        clear when no tool is expanded. */
     void setScopeMaskTint(const QImage &tint);
     void clearScopeMaskTint();
-    /* Legend content for the on-canvas overlay chip, pushed by MW when it rebuilds the
-       tint: whether Breakdown outlines show, and the selected tool name + op (-1 none,
-       0 Add, 1 Subtract). Drawn in drawForeground while the overlay is visible. */
-    void setMaskLegend(bool breakdown, const QString &selName, int selOp);
+
+    /* "Still rendering" chip, top-right of the loupe. MW raises it while a SLOW develop
+       stage is in flight -- the scene-linear RAW decode on an image switch, and the
+       full-resolution settle render -- so the interim frame on screen is labelled as
+       such. Not used for the sub-second interactive proxy tick. */
+    void setRenderingHint(const QString &msg);
+    void clearRenderingHint();
+    /* Op-indicator content for the on-canvas chip, pushed by MW when it rebuilds the
+       tint: the submask being defined and the op the veil is previewing (-1 = none, so
+       the chip is skipped). showHint adds the modifier reminder (2nd+ submask only).
+       Drawn in drawForeground while the overlay is visible. */
+    void setMaskLegend(const QString &submaskName, int op, bool showHint);
+    /* True while a brush/object stroke is being painted. */
+    bool maskStrokeInFlight() const { return maskPainting || maskObjDrawing; }
+    /* Whether the whole-mask veil would actually be PAINTED. MW asks before building
+       it: the veil is a full-resolution overlay rebuilt on every drag tick, and while
+       it is hidden drawForeground ignores it, so building it is pure cost. */
+    bool maskTintVisible() const { return !maskTintHidden; }
+    /* True while the in-flight stroke is an ERASE (Opt held AND the submask already had
+       coverage to erase). Only then does Opt belong to the stroke, so only then must MW
+       stop reading it as the Subtract op modifier -- an Opt stroke on an empty submask
+       is a normal paint that still means "this submask subtracts". */
+    bool maskStrokeIsErase() const { return maskStrokeInFlight() && maskBrushErase; }
     /* "M": hide/show the mask overlay tint (both the whole-mask composite and the per-tool preview)
        while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
     void toggleMaskTint();
@@ -260,6 +295,14 @@ signals:
        the start of a new mask edit) so the dock's scope menu shows the matching check
        state. */
     void maskTintVisibilityChanged(bool shown);
+    /* The user began SHAPING the pending submask -- a brush/object stroke, or a mask
+       handle drag. The dock latches the combine op held at this instant
+       (DevelopProperties::latchMaskOp) so it survives the modifier being released. */
+    void maskOpActionStarted();
+    /* A brush/object stroke started (true) or finished (false). While it runs Opt means
+       "erase from this stroke", so MW re-reads the combine modifiers on each edge: the
+       previewed op drops to Add for the stroke and returns to what is held afterwards. */
+    void maskStrokeStateChanged(bool painting);
     /* Brush size changed on the canvas ([ ] keys or two-finger drag); sync the dock. */
     void maskBrushSizeRequested(double size);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
@@ -491,12 +534,24 @@ private:
     QImage             maskBrushPreview;
     bool               maskPainting = false, maskBrushErase = false;
     QVector<double>    maskStrokePts;
-    QJsonArray         maskBrushStrokesJson;   // committed strokes (to rebuild paramsJson on commit)
+    QJsonArray         maskBrushStrokesJson;   // committed strokes (paramsJson on commit)
+    /* Throttle shared by every LIVE (mid-gesture) mask-geometry emit -- brush strokes and
+       Linear/Radial handle drags both drive a proxy develop render per emit, so both go
+       through maskEmitLiveGeometry. Only one such gesture can be in flight at a time, so
+       one clock + one pending flag covers both. */
+    QElapsedTimer      maskStrokeLiveClock;
+    bool               maskStrokeLivePending = false;   // a trailing emit is scheduled
+    static constexpr int kMaskStrokeLiveMs = 100;
+    enum class LiveEmit { Brush, Handle };              // which gesture is emitting
     std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask luminance guide (this image)
     std::shared_ptr<const BrushStamp::Guide> maskBrushSamField;  // AI stroke's SAM field (kept alive
                                                           // while maskStrokeAM.guide points into it)
     BrushStamp::AutoMaskCtx maskStrokeAM;      // current stroke's auto-mask context
     QPointF            maskBrushLast;          // last stamped point, buffer-pixel coords
+    /* Distance travelled since the last SPACED dab, carried across mouse-moves so a
+       slow drag costs the same as a fast one over the same path -- see
+       BrushStamp::kDabSpacing. */
+    double             maskBrushDabCarry = 0.0;
     QPoint             maskBrushCursorVp;      // cursor pos for the brush-size circle
     bool               maskBrushCursorOn = false;
     /* Object Mask (SAM 2), perimeter-paint: the user traces the object BOUNDARY with a
@@ -541,6 +596,12 @@ private:
     QRect   brushSegRect(QPointF a, QPointF b) const;       // buffer-px bbox of a dab/segment
     void    adjustBrushSize(double delta);                  // [ ] / two-finger; clamps + syncs dock
     void    brushUndoStroke();                              // remove + re-raster stroke
+    QJsonObject brushStrokeJson() const;                    // the stroke under the cursor
+    /* The Brush submask's paramsJson: committed strokes, plus the in-progress one when
+       withLiveStroke (used mid-swipe so the masked adjustment re-renders live). */
+    QString brushParamsJson(bool withLiveStroke) const;
+    void    maskEmitLiveGeometry(LiveEmit kind);            // throttled mid-gesture emit
+    void    brushEmitLiveGeometry();               // == maskEmitLiveGeometry(Brush)
     void    toggleAutoMask();                               // "A": toggle auto-mask
     void    brushStampTo(QPointF bufPt);                    // stamp segment last..bufPt into stroke
     double  brushRadiusBufPx() const;                       // current brush radius in buffer px
@@ -579,13 +640,15 @@ private:
     void    rebuildContentPreview();                // dispatch to the subject / sky / depth / range builder
     QString maskRangeParams;                       // lo/hi/hue/samples JSON, active tool
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
+    QString renderingHint;                          // non-empty => chip shown
     QImage  scopeMaskTint;                          // whole-mask composite coverage tint (output-oriented), all tools
     bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint
-    /* On-canvas legend state (set by setMaskLegend, drawn in drawMaskLegend). */
-    bool    maskLegendBreakdown = true;             // Breakdown outlines vs Result view
-    QString maskLegendSelName;                      // selected tool name ("" = none)
-    int     maskLegendSelOp = -1;                   // selected op: -1 none, 0 Add, 1 Sub
-    void    drawMaskLegend(QPainter *painter);      // overlay legend chip (viewport)
+    /* On-canvas op indicator (set by setMaskLegend, drawn in drawMaskLegend). */
+    QString maskLegendSubmask;                      // submask being defined ("" = none)
+    int     maskLegendOp = -1;                      // -1 none, 0 Add, 1 Sub, 2 Intersect
+    bool    maskLegendHint = false;                 // show the Opt/Shift+Opt reminder
+    void    drawMaskLegend(QPainter *painter);
+    void    drawRenderingHint(QPainter &painter);      // op-indicator chip (viewport)
     void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + colour swatches
     void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef

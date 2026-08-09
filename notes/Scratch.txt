@@ -819,3 +819,587 @@ preset item selection is changing. If I move the mouse from the last preset item
 outside the develop presets panel then the imageView updates.
 
 
+Delete drawMaskLegend/setMaskLegend, the three ImageView members, the MW push at
+mainwindow.cpp:6523, and the Documentation.txt "OVERLAY LEGEND" section.
+
+Mask behavior.
+I want to move away from having different mask overlay colors.
+Terms:
+    Mask - the entire mask to be applied
+    Submask - each "building block" for the mask.
+Flow:
+- the user creates a new mask and selects the mask type
+- the mask panel is shown and the initial mask tool is shown
+- after the initial submask is added, additional submask behavior:
+    - if Opt/alt modifier is pressed then the mask overlay is preview shows a subtract operation
+    - if Cmd/Ctl modifier is pressed then the mask overlay is preview shows a intersect
+- replace the Add, Subtract, Intersect buttons with a single Update button (also return key)
+
+Update the mask legend to reflect this.
+
+Please analyse and critique this change in behavior.
+
+Dropping the colour language is the strongest part. Today three registers encode how the mask is built (red result, green Add, blue Subtract
+outlines) — plus a breakdown toggle, a legend, and tinted dock captions to explain them. But if holding Opt makes the veil become the result of
+subtracting, the user reads the answer directly instead of decoding a colour key. That's strictly more informative: today a Subtract preview
+paints a blue blob where coverage will be removed; under your model the red veil visibly retreats. It also deletes real work — each non-selected
+submask currently costs an extra full buildMaskBuffer pass for its outline (mainwindow.cpp:6483-6495).
+
+Return-to-commit has precedent — Transform already commits on Enter through the same arbiter (mainwindow.cpp:1195-1199, G::isEnterKey), so this
+is consistent, not new machinery.
+
+Mask/Submask fits what's already there. A non-Global scope is already named "Mask 2" in the UI (developproperties.cpp:1146), so Mask = scope,
+Submask = component is the vocabulary the code half-speaks already. One wrinkle: a scope also carries the adjustments, so "Mask" would name both
+the selection and the thing being adjusted.
+
+Problems, in priority order
+
+1. Opt/Alt is already taken, in exactly the wrong place. imageview.cpp:4198 and :4222: Alt during a Brush or Object stroke means erase from this
+stroke. The Brush is the submask you're most likely to want as a subtract, so Alt+drag becomes genuinely ambiguous — erase (shapes the operand)
+vs subtract (sets the op) are different operations, not two names for one. Alt is also spot-erase (:4122), skin-tone WB (:4109), and crop-warp
+(:4144). This needs an explicit rule, not a "last writer wins".
+
+2. Ctrl on macOS is a landmine, Cmd is fine. Qt maps Cmd→Qt::ControlModifier on macOS, so one code path covers "Cmd/Ctrl" — good. But Ctrl+click
+on macOS is a right-click, so anyone using Ctrl literally gets a context menu instead of an intersect. And on Windows, a bare Alt press
+activates the menu bar unless the key is eaten. Both are handleable; both must be handled deliberately.
+
+3. The overlay must respond to a modifier with the mouse stationary. During mask editing focus usually sits in the dock, not the canvas — that's
+precisely why Esc had to be hoisted into developShortcutIntercept (mainwindow.cpp:1140-1151). So this needs modifier press/release tracking at
+the qApp filter level, plus a re-sync from queryKeyboardModifiers() on window activation or the op sticks after a Cmd+Tab with the key down.
+
+4. Discoverability goes backwards. Those three buttons are the only place the app says Subtract and Intersect exist. One unlabelled "Update"
+hides two of three operations behind undocumented keys. The fix that keeps your single button: make its label track the held modifier (Update →
+Subtract → Intersect) and put the hint on canvas — ImageView already has that hint mechanism, used by the WB dropper's "Opt/Alt-click: skin
+tone" (imageview.cpp:993-995). That also answers "update the legend": it collapses to one line naming the pending op.
+
+5. "Update" is a vague verb — it doesn't say what gets updated. The dynamic label above solves this for free by reusing the existing words.
+
+6. First submask has no valid modifiers. Nothing to subtract from an empty mask, so Opt/Cmd must be inert there and the hint suppressed.
+Related: today the first submask commits immediately (red) while later ones stay pending (blue) — two flows with two buttons. Since you're
+unifying the button, unify the flow too: every submask is pending until Update. That kills the finishFirstMask/commitPendingMask split and makes
+Esc uniform.
+
+7. Collateral to remove, deliberately. maskShowBreakdown + toggleMaskBreakdown + the scope-menu row + ImageView::maskTintColor role colours +
+the green/blue dock caption tint (developproperties.cpp:1626) all become dead language. Removing breakdown does cost the one diagnostic for
+"which submask contributed this?" after commit — and since committed submasks can't be reopened (flatten, developproperties.cpp:796), there'd be
+no way left to inspect a finished mask.
+
+8. No data migration — MaskComponent.op still stores 0/1/2 and the sidecar keys are untouched. Keep the rename UI/comment-level; JSON keys are a
+published format.
+
+Net effect is a code reduction. Four decisions change what I'd write:
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Planning: /Users/roryhill/.claude/plans/in-develop-masks-i-cheeky-dove.md
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+←  ☐ Alt conflict  ☐ Swatches  ☐ Button  ☐ Rename  ✔ Submit  →
+
+Alt/Opt currently means "erase" during a Brush or Object stroke (imageview.cpp:4198, 4222). How should that conflict resolve?
+
+❯ 1. Drawing wins; op latches otherwise (Recommended)
+   While a stroke is in flight, Alt = erase and the op is untouched. Any other time (hovering, adjusting sliders, before pressing Update)
+   Alt/Cmd sets the pending op, which latches and is shown on the button + canvas hint. Modifier state at Update/Return also counts, so
+   Opt+Return always means subtract.
+2. Modifier only at commit time
+   Ignore modifiers while defining the submask; only Opt+Return / Cmd+Return (or Opt/Cmd-click on Update) choose the op. Zero conflict with
+   brush erase, but you cannot preview the outcome before committing — which loses the main benefit of the change.
+3. Rebind brush erase to another key
+   Alt becomes subtract everywhere; brush/object erase moves to a different modifier or a toggle. Cleanest rule, but breaks existing muscle
+   memory and Shift is already used for range sampling.
+4. Type something.
+
+
+
+
+
+
+
+
+Develop masks: one overlay colour, modifier ops, single Update button
+
+ Context
+
+ The mask overlay currently speaks three colours at once — RED for the composited
+ result, GREEN for Add constituents, BLUE for Subtract constituents — plus a
+ "Show mask breakdown" toggle, an on-canvas colour-key legend, and green/blue
+ tinted captions in the dock to explain them. That is a lot of visual vocabulary
+ to answer one question, and the legend chip obscures the image.
+
+ The replacement is simpler and more direct: one overlay colour, and the veil
+ shows the OUTCOME. Holding Opt makes the veil retreat where the new submask
+ would subtract; Shift+Opt collapses it to the intersection. The user reads the
+ answer off the image instead of decoding a colour key. The three commit buttons
+ collapse to one whose label follows the held modifier, so the words "Subtract"
+ and "Intersect" stay visible.
+
+ Terminology (UI + docs only, no code or sidecar renames):
+ - Mask — the whole mask applied by a scope.
+ - Submask — each building block (was "mask tool" / MaskComponent).
+
+ Decided with the user:
+ - Op modifiers are momentary, never latched: read at commit, previewed while
+ held. A latched op would make a later Opt+drag erase unexpectedly.
+ - Opt = subtract, Shift+Opt = intersect (Photoshop's convention). Cmd/Ctrl is
+ NOT used.
+ - Opt while the mouse is down keeps meaning erase from the stroke for Brush
+ and Object submasks — unchanged. One rule: Opt takes away — from the stroke
+ while painting, from the mask otherwise.
+ - Overlay colour is user-pickable from a swatch row in the Mask panel.
+
+ Behaviour spec
+
+ ┌────────────────────────────────────────┬──────────────────────────────────────────────────┐
+ │                 Input                  │                      Result                      │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ (no modifier)                          │ Add                                              │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ Opt                                    │ Subtract                                         │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ Shift+Opt                              │ Intersect                                        │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ Opt, mouse down                        │ Erase from stroke (Brush/Object only, unchanged) │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ Return / Opt+Return / Shift+Opt+Return │ Commit with that op                              │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ Esc                                    │ Cancel the submask (unchanged)                   │
+ ├────────────────────────────────────────┼──────────────────────────────────────────────────┤
+ │ O                                      │ Show/hide the overlay (unchanged)                │
+ └────────────────────────────────────────┴──────────────────────────────────────────────────┘
+
+ - Op modifiers are ignored while a stroke is in flight (maskPainting /
+ maskObjDrawing); the button reverts to "Update" for the duration.
+ - The first submask has nothing to combine with: modifiers inert, hint hidden.
+ - On commit the op is re-read from QGuiApplication::queryKeyboardModifiers(),
+ so a modifier that changed while the app was inactive cannot commit stale.
+
+ Changes
+
+ 1. Single overlay colour — Main/global.h / global.cpp
+
+ Add extern QColor maskOverlayColor; defaulting to QColor(220, 40, 40).
+ Seeded in the DevelopProperties ctor (developproperties.cpp:27-31, which
+ already owns a QSettings *setting) from Develop/maskOverlayColor, following
+ the existing Develop/isSolo / Develop/autoRunDenoise pattern. A G:: global
+ is required because ImageView consumes it too and has no settings handle.
+
+ 2. Outcome preview — MW::updateMaskOverlayTint (Main/mainwindow.cpp:6365)
+
+ The core simplification. Today the pending submask is excluded from the red
+ composite and painted blue (:6387-6391, :6497-6511), and every constituent
+ gets a second buildMaskBuffer pass for its green/blue outline (:6455-6496).
+
+ Replace with:
+ - Set pendingM.op to the previewed op and composite ALL components in one
+ buildMaskBuffer call → a single-colour veil in G::maskOverlayColor
+ (maxA = 150 unchanged).
+ - Keep ONE use of the existing outline lambda: a thin ring around the pending
+ submask's own footprint, in the overlay colour. Needed because a Subtract whose
+ footprint misses the mask would otherwise produce no visible change at all.
+ - Delete the breakdown block, addCol/subCol, the per-constituent second
+ buffer pass, and the separate blue pending pass. Net: fewer full-resolution
+ mask builds per repaint, so live drags get cheaper.
+
+ Also delete MW::maskShowBreakdown (mainwindow.h:1553) and
+ MW::toggleMaskBreakdown (:6526-6537).
+
+ 3. Modifier tracking — MW::developShortcutIntercept (Main/mainwindow.cpp:1102)
+
+ While a mask panel is open, focus normally sits in the dock, not the canvas —
+ the documented reason Esc had to be hoisted here (:1140-1151). Add a branch in
+ the same arbiter, gated on developProperties->isMaskPanelOpen():
+
+ - On Key_Alt / Key_Shift press and release (ignore auto-repeat), recompute
+ op = (Shift && Alt) ? Intersect : Alt ? Subtract : Add and call
+ developProperties->setPendingMaskOp(op). Skip entirely while
+ imageView->maskStrokeInFlight().
+ - On G::isEnterKey(k) commit the pending submask with the op derived from
+ queryKeyboardModifiers(). Mirrors the Transform panel's Enter-commit at
+ :1195-1199.
+ - Re-sync the op on QEvent::WindowActivate so a modifier released while the app
+ was in the background cannot stick.
+
+ Windows note: a bare Alt press activates the menu bar unless the event is
+ accepted — accept it in this branch while the panel is open.
+
+ 4. One commit button — Develop/Properties/maskpanel.{h,cpp}
+
+ Replace addBtn/subBtn/intBtn (maskpanel.cpp:73-96) and doneBtn
+ (:99-102) with a single commitBtn. Add setPendingOp(int op) to relabel it:
+ Update / Subtract / Intersect. showForTool no longer switches between a
+ combine row and Done — one button always; keep only the first flag to suppress
+ the modifier hint.
+
+ Keep the min-width: 0 override (:83-92) — see the global QPushButton
+ min-width trap; one button still needs it to avoid widening the dock.
+
+ Add the swatch row above the button: 5-6 flat ~16px swatches (red, green,
+ blue, yellow, magenta, white) drawn as QPushButtons with a stylesheet fill and
+ a border on the active one. Clicking writes Develop/maskOverlayColor, updates
+ G::maskOverlayColor, and emits overlayColourChanged → DevelopProperties
+ re-emits paramsChanged() so the veil repaints. This is the "section in the Mask
+ subpanel" the user asked for; putting it in the panel rather than a property-tree
+ row avoids the DT_*/delegate registration entirely.
+
+ 5. Unify the commit path — Develop/Properties/developproperties.cpp
+
+ - beginMaskTool (:753): make the first submask pending too
+ (pendingIdx = selectedMaskIndex always, drop the first ? -1 : branch). With
+ outcome preview and a single colour, pending vs committed is visually identical
+ for the first submask, so this removes a whole parallel path.
+ - Fold finishFirstMask (:812-824) into commitPendingMask(int op)
+ (:789-810); keep the MaskPanel::finished signal only if the header's cancel
+ still needs it, otherwise delete both.
+ - Add setPendingMaskOp(int): stores the previewed op, calls
+ maskPanel->setPendingOp(op), emits paramsChanged() for the veil.
+ - Add isMaskPanelOpen() accessor for maskPanelOpen (:677).
+ - Remove maskBreakdownToggleRequested (:564-565) and setMaskBreakdownShown
+ (:1939-1943).
+ - Neutralise the green/blue caption tint at :1626 — the caption already reads
+ "Subtract Brush Mask"; the colour was the dock's echo of the canvas language.
+ - UI strings → Mask/Submask (showMaskMenu tooltips, addAddMaskRow caption
+ :535-536, MaskPanel title, noteEdit history verbs). Do not rename
+ MaskComponent, maskTool*, or any sidecar JSON key — published format.
+
+ 6. Overlay colour + legend — Views/imageview.{h,cpp}
+
+ - maskTintColor() (:1351-1360) returns G::maskOverlayColor — no op branch.
+ - Replace the three hardcoded role-colour sites with maskTintColor():
+ :2105 (linear gradient tint), :2179 (radial tint), :2297 (brush preview
+ buffer — note this one currently uses red/blue, not green/blue).
+ - Rewrite drawMaskLegend (:1232-1291) as a compact op indicator, keeping
+ the panel geometry and the maskEditMode && showTint gate at :2034:
+   - line 1: Update: Brush → Subtract: Brush → Intersect: Brush
+   - line 2 (dim, suppressed on the first submask and mid-stroke):
+ Opt subtract · Shift+Opt intersect
+   - No colour swatches — with one colour there is no key to give.
+ - setMaskLegend(bool breakdown, ...) → setMaskLegend(const QString &opName, const QString &submaskName, bool showHint); drop
+ maskLegendBreakdown.
+ - Add bool maskStrokeInFlight() const { return maskPainting || maskObjDrawing; }
+ (imageview.h:492, :511).
+
+ 7. Remove the breakdown menu row
+
+ Develop/Properties/scopeheader.cpp:157-160 (the "Show mask breakdown" action),
+ scopeheaderbase.h:68 (maskBreakdownToggled), scopeheader.cpp:200-203 and
+ scopeheaderlab.h (setMaskBreakdownShown), and the connect at
+ Main/initialize.cpp:1915-1916. "Show mask overlay" / O stays.
+
+ 8. Docs
+
+ - Help/shortcutsform.ui — add Opt / Shift+Opt / Return under Develop masks.
+ - notes/Documentation.txt — rewrite RESULT VEIL (:3578), delete
+ BREAKDOWN OUTLINES (:3609-3629), rewrite OVERLAY LEGEND (:3630-3638) as
+ the op indicator, add the modifier map and the Mask/Submask terms, and sync
+ the Table of Contents (section removed + renamed).
+
+ Verification
+
+ Build in Qt Creator, then in Develop mode on a raw file:
+
+ 1. New scope → add a Radial Gradient submask. Veil is one colour; the panel shows
+ one Update button and a swatch row; no modifier hint (first submask).
+ Return commits.
+ 2. Add a Brush submask over it. Hold Opt → veil visibly retreats where the brush
+ overlaps, button reads Subtract, hint line shows both modifiers. Release →
+ veil returns, button reads Update. Shift+Opt → Intersect, veil
+ collapses to the overlap.
+ 3. With the Brush submask, press and drag with Opt held → the stroke erases
+ and the button stays "Update" for the duration. Release, hold Opt, press
+ Return → commits as Subtract. This is the case the whole modifier rule
+ exists for.
+ 4. Hold Opt, Cmd+Tab away and back, release outside the app → the button and
+ veil must return to Add, not stick on Subtract.
+ 5. Click each swatch → veil recolours immediately; quit and relaunch → the choice
+ persists (Develop/maskOverlayColor).
+ 6. O still hides/shows the overlay; Esc still cancels the submask; the scope
+ header menu no longer offers "Show mask breakdown".
+ 7. Confirm a saved sidecar from before this change still loads with its submask
+ ops intact (op values 0/1/2 and all JSON keys are untouched).
+ 8. ctest --test-dir build/<preset> --output-on-failure for regressions.
+
+
+
+
+
+
+
+
+Develop: remove ImageView update latency
+
+The rasterized-overlay approach is already there — ImageView::drawForeground paints the whole mask veil and the brush/object previews without
+touching the pipeline, and an Add brush stroke already suppresses the veil in favour of a purely local dirty-rect preview. So the "show it
+rasterized, render on completion" idea is spent. What's left is that the develop render itself is doing far more work per tick than it needs to,
+and you said you want the effect to stay live — so the fix is to make the tick cheap.
+
+Four real sources of latency, in value order:
+
+1. Nothing is cached between ticks. renderStack starts every tick with a full float copy of the proxy + a Global Develop::Apply, then per masked
+scope another full copy + Apply — even when only a mask moved and no develop math changed. Caching per-scope prefix/layer images collapses a
+mask drag to one blend + ToImage.
+2. The proxy gets upscaled to full display dimensions every tick — a ~200 MB QImage::scaled + QPixmap::fromImage on a 50 MP file, just to
+satisfy setDevelopPreview's same-dimensions contract. That's the big one for plain slider drags.
+3. updateMaskOverlayTint is wired direct and uncoalesced — 1–2 more full mask evaluations at 1600 px plus a serial 3×3 edge scan on every emit,
+on top of the render.
+4. Linear/Radial handle drags emit unthrottled, while brush strokes are throttled to 10 Hz. Looks like an oversight; the throttle helper just
+needs generalising.
+
+Also folded in: per-scope mask-buffer caching, skipping the per-tick EditStack history snapshot, and the image-switch indicator you asked for.
+
+One thing worth flagging: Step 4 Stage A is the riskiest change in the plan — 37 pmItem->boundingRect() sites feed zoom, fit, hit-testing and
+every overlay. It's staged specifically so Stage A is provably a no-op before Stage B changes behaviour, but it deserves the full geometry sweep
+in the verification list rather than a spot check.
+
+
+Context
+
+Every Develop edit repaints the loupe by re-running the whole render pipeline
+synchronously on the GUI thread. DevelopProperties::paramsChanged fans out to two
+consumers (Main/initialize.cpp:1816 and :1895):
+
+- MW::developParamsChange (Main/mainwindow.cpp:6020) — coalesced to one proxy
+render per event-loop turn, plus a 160 ms settle that runs full-res off-thread.
+- MW::updateMaskOverlayTint (Main/mainwindow.cpp:6407) — not coalesced at all.
+It runs inline on every emit, doing one or two full buildMaskBuffer passes at a
+1600 px cap plus a single-threaded 3x3 edge scan.
+
+Inside the proxy render, WorkingImageCache::renderStack
+(Develop/workingimagecache.cpp:228) recomputes everything each tick: acc = work
+(full float copy), Develop::Apply for Global, then per masked scope another full copy
+plus another Apply, then the blend — even when only a mask's geometry moved and none
+of the develop math changed. buildMaskBuffer (Main/mainwindow.cpp:5649) likewise
+re-rasterises every scope, not just the edited one; only brush coverage is cached
+(brushRasterCached, :5563).
+
+The proxy result is then scaled() up to the full display dimensions
+(Main/mainwindow.cpp:5929) and converted with QPixmap::fromImage at full dimensions
+(Views/imageview.cpp:645) — on a 50 MP file a ~200 MB allocation, fill and upload
+per tick, purely to satisfy setDevelopPreview's "same dimensions" contract.
+
+Finally, Linear/Radial handle drags emit maskGeometryChanged on every mouse-move
+(Views/imageview.cpp:4606), unthrottled — while brush strokes go through a 10 Hz
+throttle (brushEmitLiveGeometry, Views/imageview.cpp:2429). The asymmetry looks
+unintentional.
+
+Decisions taken with the user:
+
+- The develop effect must stay live during a mask drag — no "freeze the effect,
+show only the veil" fallback. Make the tick cheap, don't skip it.
+- Image-switch latency is fixed the zero-memory progressive way: keep showing the
+already decoded 8-bit image and add an on-canvas "still rendering" indicator until
+the scene-linear render lands. No neighbour read-ahead, no disk cache. (A proxy
+cache is noted as possible future work; not in scope here.)
+- The proxy-sized-pixmap change is worth the pmItem->boundingRect() refactor, landed
+in two verifiable stages.
+
+---
+Step 0 — Measure before changing anything
+
+Per the "instrument, don't guess" rule, static analysis has picked the wrong culprit
+twice in this codebase. Turn on G::isReportDevelopTime (Main/global.cpp:232) and
+capture [DevTime] baselines on a 50 MP RAW for three gestures: a Basic slider drag,
+a Linear-gradient handle drag, and a brush stroke — each with 0, 1 and 3 masked scopes.
+
+Extend the existing probe (don't add a new mechanism) so a tick also reports:
+
+- buildMaskBuffer ms, split per scope
+- updateMaskOverlayTint ms, and how many times it ran per proxy render
+- the scaled() upscale and QPixmap::fromImage ms inside setDevelopPreview
+
+Every step below is gated on its own line moving in these numbers.
+
+---
+Step 1 — Stop doing redundant work per tick
+
+Cheap, no architecture change.
+
+1. Coalesce the overlay tint. Disconnect paramsChanged -> updateMaskOverlayTint
+(Main/initialize.cpp:1895) and call it from the same slot the proxy render runs
+in, so developProxyRenderTimer's 0 ms single-shot collapses both. Keep the direct
+maskEditBegin / maskEditEnd connections (:1893, :1894) — those are one-shot.
+2. Throttle Linear/Radial handle drags. Generalise the brush throttle
+(maskStrokeLiveClock + kMaskStrokeLiveMs, Views/imageview.h:513) into a
+private ImageView::emitMaskGeometryThrottled(const QString &json) that keeps the
+trailing-edge singleShot catch-up, and route Views/imageview.cpp:4606 through
+it. brushEmitLiveGeometry (:2429) becomes a thin caller so the two cannot
+drift. The release emit at :4845 stays unconditional.
+3. Skip the history snapshot on live ticks.
+DevelopProperties::setActiveMaskParams
+(Develop/Properties/developproperties.cpp:2023) calls noteEdit, which copies
+the whole EditStack, on every drag tick. Add a bool live = false parameter;
+live emits skip noteEdit, the release/commit emit records it. The merge key
+mask/geom/N already makes the single recorded entry correct.
+4. Cheapen the pending-footprint ring. Main/mainwindow.cpp:6508-6531 scans the
+whole buffer with a serial 3x3 neighbourhood test. Bound the scan to the pending
+component's bbox and parallelise it with the same idiom as buildMaskBuffer's
+rows() lambda (:5784).
+5. Gate the verification diff. imageGridDiff in updateDevelopScopes
+(Main/mainwindow.cpp:7287) runs 4096 QImage::pixel() calls per tick to prove
+Develop differs from Preview. That is a diagnostic — run it on settle only, or
+behind G::isReportDevelopTime.
+
+---
+Step 2 — Cache the per-scope mask buffer
+
+Generalise the existing brush-only cache (g_brushCache / brushRasterCached,
+Main/mainwindow.cpp:5563-5610) to a whole-scope coverage cache.
+
+- Key: hash of the scope's QVector<MaskComponent> (each component's tool, op,
+enabled, inverted, feather, paramsJson) + w + h + degrees + fPath.
+- Cache proxy-sized buffers only — the same <=4 MP rule the brush cache already uses
+(full-res is w*h*4 bytes and is built once per settle).
+- Mutex-guarded: the GUI proxy render and the developRenderPool worker both hit it.
+- Invalidate on image change and on the base-params changes that already invalidate
+RangeRef (MW::ensureRangeRef, :6038) — content-range coverage depends on the
+base render.
+
+Wire it in developCompositeStack at Main/mainwindow.cpp:5919, so during a drag only
+the scope being edited rebuilds its buffer.
+
+Also reuse it for the veil. updateMaskOverlayTint evaluates the same coverage a
+second and third time at a different resolution. Once the render-path buffer is cached,
+build the veil by downscaling that buffer instead of re-evaluating — which keeps the
+"veil is pixel-consistent with the developed result" property documented at :6418.
+
+---
+Step 3 — Cache developed scope layers so a mask drag re-blends only
+
+This is what keeps the effect live while making a mask tick nearly free.
+
+WorkingImageCache::renderStack (Develop/workingimagecache.cpp:245-289) walks scopes
+in order, developing each from the running accumulator. Split it so callers can enter
+partway:
+
+- Add a StackCache (owned by MW alongside developProxy, Main/mainwindow.h:1447)
+holding, for the proxy resolution only:
+  - prefix[k] — the accumulator before scope k
+  - layer[k] — scope k developed from prefix[k] (the layBuf at
+workingimagecache.cpp:255)
+  - the params signature each was built from
+- Give renderStack an optional cache pointer and a firstDirtyScope index. Scopes
+below firstDirtyScope are skipped entirely; the walk resumes from
+prefix[firstDirtyScope].
+- MW::renderDevelopPreview computes firstDirtyScope by diffing this tick's
+StackRenderJob against the one the cache was built from. A mask-only change to
+scope k leaves prefix[k] and layer[k] valid, so the tick costs one blend plus
+OutputTransform::ToImage. A params change to scope k invalidates layer[k]
+but keeps prefix[k].
+
+Scopes above k still re-develop (they read the accumulator, which changed), so
+correctness is preserved and no math changes. In practice the edited scope is the
+active one, usually the top, so the common case collapses to blend + ToImage.
+
+Memory: two proxy-res WorkingImages per cached scope (~46 MB each at 2400x1600). Cap
+by byte budget like WorkingImageCache already does (workingimagecache.cpp:133), and
+drop the whole cache on image change, mode exit, and proxy rebuild
+(Main/mainwindow.cpp:2691).
+
+Full-res settle renders (renderDevelopFullResAsync, :6769) keep using the uncached
+path — they run once, off-thread, and caching full-res layers would blow the budget.
+
+---
+Step 4 — Stop upscaling the proxy to full display dimensions (staged)
+
+Stage A — mechanical, verified no-op. Add an ImageView::imageRect() helper
+returning pmItem->mapToScene(pmItem->boundingRect()).boundingRect() (null rect when
+pmItem is absent), and replace all 37 pmItem->boundingRect() uses in
+Views/imageview.cpp with it. While the item scale is 1 these are identical, so this
+stage must produce zero visible change — verify zoom, fit, pan, crop overlay, mask
+handles, brush cursor, spot pins and the WB loupe all behave exactly as before.
+(Views/imageviewX.cpp, Views/compareview.cpp and Embellish/embelview.cpp have
+their own pmItem and are out of scope.)
+
+Stage B — flip it on. Change ImageView::setDevelopPreview
+(Views/imageview.cpp:631) to take the rendered image plus the full image size it
+represents; set the pixmap at the rendered (proxy) size and
+pmItem->setScale(fullW / renderedW). Scene coordinates, sceneRect, zoom,
+zoomFit and scroll all stay in full-image units, so nothing downstream of
+imageRect() moves. Use Qt::FastTransformation on the item during a drag and
+Qt::SmoothTransformation on the settle, matching today's proxy/full behaviour.
+
+Then delete the upscale at Main/mainwindow.cpp:5929-5930 for the interactive path and
+pass the proxy dimensions through instead. The [DevTime] "rotate+scale" and "preview"
+lines should collapse, and per-tick allocation drops from ~200 MB to ~15 MB on a 50 MP
+file.
+
+The sizeChanged branch in setDevelopPreview (:647-660), which restores the
+captured view when the demosaic replaces an interim preview, needs re-expressing in
+terms of the full size rather than the pixmap size — that is the one behavioural trap
+in this step.
+
+---
+Step 5 — Image switch: progressive display + "still rendering" indicator
+
+No caching, no read-ahead — zero additional memory, per the decision.
+
+- Keep the existing behaviour where the loupe shows the decoded 8-bit image while
+MW::ensureDevelopWork (Main/mainwindow.cpp:7179) decodes the scene-linear
+WorkingImage off-thread. Verify it actually appears promptly on switch:
+Develop mode suspends read-ahead, so confirm icd->imCache has an entry for the new
+path and, if not, that the loupe is not simply holding the previous image.
+- Add an on-canvas "rendering" chip to ImageView, modelled directly on
+drawMaskLegend (Views/imageview.cpp:1232) — same rounded panel, same
+viewport-coordinate placement, drawn from drawForeground (:1972). New API
+ImageView::setRenderingHint(const QString &msg) / clearRenderingHint().
+- MW sets it when developWorkInFlight or developFullResInFlight is set for the
+current path, and clears it in ensureDevelopWork's completion lambda (:7223) and
+in MW::onDevelopFullResReady (:6914). Word it as progress, not error, and do not
+show it for the sub-second proxy tick — only for the decode and the full-res settle.
+- Place the chip so it cannot collide with the mask legend chip, which is also
+top-left.
+
+Note in the code comment (and Documentation.txt) that a proxy cache / neighbour
+read-ahead is the deliberate future option here, so the next reader does not
+re-derive the trade-off.
+
+---
+Files touched
+
+- Main/mainwindow.cpp — renderDevelopPreview (:6569), developParamsChange
+(:6020), updateMaskOverlayTint (:6407), buildMaskBuffer (:5649),
+developCompositeStack (:5899), scope mask cache (:5563), updateDevelopScopes
+(:7270), ensureDevelopWork (:7179)
+- Main/mainwindow.h — StackCache + mask-cache members near developProxy (:1447)
+- Main/initialize.cpp — overlay-tint connection (:1895) folded into the render slot
+- Develop/workingimagecache.{h,cpp} — renderStack gains the cache and a
+firstDirtyScope entry point (:228)
+- Views/imageview.{h,cpp} — imageRect() helper + 37 call sites,
+setDevelopPreview (:631), throttle helper (:2429, :4606), rendering chip (near
+drawMaskLegend :1232)
+- Develop/Properties/developproperties.{h,cpp} —
+setActiveMaskParams(..., bool live) (:2023)
+- notes/Documentation.txt — update "SLIDER-DRAG LATENCY" (:3259) and the mask
+sections (:3748, :3782); sync the Table of Contents
+
+---
+Verification
+
+1. Probe deltas. Re-run the Step 0 [DevTime] captures after each step on the
+same 50 MP RAW. Targets: a 3-scope mask-drag tick down to roughly blend + ToImage;
+a slider-drag tick free of the full-size scale / pixmap lines.
+2. Pixel identity. For a fixed EditStack the cached-path proxy render must match
+the uncached path. Add a tests/ case that renders a 3-scope stack twice — once
+cold, once after a mask-only change and back — and asserts the images are
+identical. imageGridDiff (Main/mainwindow.cpp:7244) is the existing comparison
+idiom; the settle render is the oracle.
+3. Veil consistency. With Steps 2-3 in, confirm the overlay veil still matches the
+developed result for Add / Subtract / Intersect, with Opt and Shift+Opt held — the
+property Main/mainwindow.cpp:6418 guarantees today.
+4. Geometry regression sweep (Step 4 is the risky one). Rotated images
+(90/180/270), a cropped image, a warped image; zoom to 100% and pan; Linear,
+Radial, Brush, Object, Range and AI mask handles; crop and Level tools; spot pins;
+WB picker. All must land on the same pixels as before — Stage A on its own must be
+provably invisible.
+5. Run the suite. ctest --test-dir build/<preset> --output-on-failure.
+6. In-app (you run it in Qt Creator, as usual): drag a Linear gradient handle
+across a 50 MP RAW with three masked scopes and confirm the adjustment tracks the
+cursor without stutter; switch images and confirm the 8-bit frame appears
+immediately with the rendering chip, replaced by the developed render with no jump
+in zoom or pan.
+
+
+I want to move the proxy render to a worker as well.  I'd also like to only show the veil for the initial submask when a new scope mask is
+  created, or when the user presses O to visualize the overlay.
+
+I'd suggest exercising the geometry sweep from the original plan first — rotated images,
+zoom to 100 %, crop/Level, spot pins, WB picker
+
+move the proxy render to a worker

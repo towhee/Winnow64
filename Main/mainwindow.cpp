@@ -20,6 +20,7 @@
 #include "Utilities/objectmaskpredictor.h"
 #include "Develop/Transform/croptransform.h"
 #include <QMutex>
+#include <QScopeGuard>      // updateMaskOverlayTint probe (it has many early returns)
 #include <memory>
 #include <QMetaEnum>
 #include <cmath>            // std::sqrt (updateDevelopScopes sampling stride)
@@ -38,6 +39,11 @@
 /*
    Program notes / documentation: see notes/Documentation.txt
 */
+
+/* Defined below with the mask compositor, inside this file's anonymous namespace;
+   declared here because the folder-change reset runs earlier in the file. The namespace
+   matters: declaring it at global scope instead makes the later call ambiguous. */
+namespace { void maskFoldCacheClear(); }
 
 void MW::updateDockTabGraphics(QTabBar *tabBar)
 {
@@ -1439,10 +1445,52 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DEVELOP MODE: mask combine modifiers + commit, while a submask is being defined.
+       Opt previews Subtract and Shift+Opt previews Intersect -- momentary, so the veil
+       must follow the key with the mouse stationary, and the panel usually holds focus (the
+       same reason Space and Esc are driven from this global filter). Return commits with
+       whatever is held, like the Transform panel's Enter-commit. Auto-repeat is ignored.
+       The Alt KeyPress is accepted so Windows does not open the menu bar under us. */
+    {
+        if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
+            && developProperties && developProperties->isMaskPanelOpen()
+            && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease
+                || event->type() == QEvent::ShortcutOverride)) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            const int k = e->key();
+            if ((k == Qt::Key_Alt || k == Qt::Key_Shift) && !e->isAutoRepeat()) {
+                /* The event's own modifiers do not yet include the key being pressed (nor
+                   exclude the one being released), so read the live state instead. */
+                syncPendingMaskOp();
+                if (k == Qt::Key_Alt && event->type() != QEvent::ShortcutOverride) {
+                    event->accept();
+                    return true;
+                }
+            }
+            /* No value-editor bail here, unlike the rest of this filter: while a
+               submask is being defined the focus is almost always on one of the
+               panel's own sliders (Size/Feather/Flow), which is exactly when Return
+               must still commit. Same reasoning as the Esc-collapses-a-mask rule in
+               developShortcutIntercept, likewise checked BEFORE the editor bail.
+               Only a text field keeps Return. */
+            else if (G::isEnterKey(k) && !e->isAutoRepeat()
+                     && !qobject_cast<QLineEdit *>(QApplication::focusWidget())) {
+                event->accept();       // frees the key on the override pass
+                if (event->type() == QEvent::KeyPress)
+                    developProperties->commitPendingMask();   // resolves the op itself
+                return true;
+            }
+        }
+    }
+
     /* Clear the Space zoom/pan override if the app deactivates while Space is held -- a
        release delivered to another app would otherwise leave the override stuck on. */
     if (event->type() == QEvent::ApplicationDeactivate && imageView)
         imageView->setSpacePanOverride(false);
+
+    /* A modifier released while another app had the focus never reaches us, which would
+       leave the overlay previewing Subtract for ever; re-read it on the way back in. */
+    if (event->type() == QEvent::ApplicationActivate) syncPendingMaskOp();
 
     /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
@@ -2648,6 +2696,8 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     developPmridResHadNP = false;
     developProxy.reset();
     developProxyPath.clear();
+    developStackCache.clear();         // its entries are sized to the old proxy
+    maskFoldCacheClear();              // ditto, and its refs belong to the old folder
     developWorkTriedPath.clear();
 
     // block repeated clicks to folders or bookmarks while processing this one.
@@ -5407,24 +5457,31 @@ namespace {
    reads only its arguments (the source WorkingImage is const), so it is safe to call on a
    background thread for the full-res settle render. degrees/fullW/fullH are computed by the
    caller on the GUI thread (orientation needs the sort/filter model). */
+/* upscaleToFull=false leaves a proxy render at PROXY resolution: the loupe presents it
+   at the full size itself (ScaledPixmapItem), so the ~w*h*4 byte upscale a drag tick used
+   to pay is skipped. The caller then tells ImageView what size the result stands for. */
 QImage developComposite(const WorkingImage &src, const EditParams &edit, int degrees,
                         bool fullRes, int fullW, int fullH,
                         WorkingImageCache::RenderTimings *timings = nullptr,
                         WorkingImageCache::OutDepth depth =
                             WorkingImageCache::OutDepth::Eight,
                         WorkingImageCache::Space space =
-                            WorkingImageCache::Space::sRGB)
+                            WorkingImageCache::Space::sRGB,
+                        bool upscaleToFull = true)
 {
     QImage out;
     if (!WorkingImageCache::render(src, edit, out, timings, depth, space)) return QImage();
+    QElapsedTimer probe;
+    if (timings) probe.start();
     if (degrees != 0) {
         QTransform trans;
         trans.rotate(degrees);
         /* Proxy: fast (still small); full-res: smooth for the final image. */
         out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
     }
-    if (!fullRes && (out.width() != fullW || out.height() != fullH))
+    if (upscaleToFull && !fullRes && (out.width() != fullW || out.height() != fullH))
         out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    if (timings) timings->orientScaleMs = probe.elapsed();
     return out;
 }
 
@@ -5511,15 +5568,77 @@ inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, 
     return g.inverted ? 1.0f - r : r;
 }
 
+/* Where a mask build's time actually goes. Split out because the top-level `mask` number
+   could not distinguish brush rasterisation from the per-pixel component fold, and
+   reading the code guessed wrong twice: the dab counters exonerated the dabs (4 Mpx of
+   dab work against a 680 ms build), so the remaining candidates had to be measured,
+   not reasoned about. Diagnostic only -- passed nullptr unless G::isReportDevelopTime. */
+struct MaskBuildStats {
+    qint64 rasterMs = 0;    // BrushStamp::rasterize (replays every stroke's dabs)
+    qint64 setupMs  = 0;    // component parse + reference lookups, minus rasterMs
+    qint64 foldMs   = 0;    // the per-pixel fold over the scope's components
+    int    strokes  = 0;    // brush strokes replayed
+    int    comps    = 0;    // components folded
+};
+
 /* Cache of rasterized brush masks (work-space coverage, before component invert). A render replays
    every dab, so caching avoids re-rasterizing on each non-brush slider tick. Keyed by the brush
    paramsJson + target dims + degrees. Accessed from the GUI thread (proxy) AND the full-res worker
-   thread, so it is mutex-guarded. */
+   thread, so it is mutex-guarded.
+
+   LRU WITH A BYTE BUDGET, not a count cap. This was `if (size() > 8) clear()`, fine for
+   a scope with a couple of submasks and USELESS past eight: a mask with ~19 brush
+   submasks overflowed and wiped the whole cache on every build, so nothing was ever
+   reused and every component was re-rasterized (and re-allocated, and re-JSON-parsed)
+   on every drag tick. Measured at raster 275 ms + setup 308 ms per tick on a 2 MP proxy
+   with 21 components -- the dominant cost of a brush drag, and invisible until the
+   [DevTime] mask field was split (see notes/Documentation.txt "MASK-DRAG LATENCY").
+
+   The budget is what makes evicting safe: entries are w*h*4 bytes (~8 MB at a 2 MP
+   proxy), so a count cap either thrashes on a busy mask or hoards on a big one. Evict
+   least-recently-USED, so the components the user is not touching -- most of them --
+   survive while the one being edited churns through a new key every tick. */
 QMutex g_brushCacheMutex;
 QHash<QString, std::shared_ptr<const std::vector<float>>> g_brushCache;
+QList<QString> g_brushCacheLru;          // least-recently-used at the front
+qint64 g_brushCacheBytes = 0;
+constexpr qint64 kBrushCacheBudget = 256LL * 1024 * 1024;
 
+/* Both helpers assume g_brushCacheMutex is held. */
+void brushCacheTouch(const QString &key)
+{
+    g_brushCacheLru.removeOne(key);
+    g_brushCacheLru.append(key);
+}
+
+void brushCacheInsert(const QString &key,
+                      const std::shared_ptr<const std::vector<float>> &buf)
+{
+    auto it = g_brushCache.find(key);
+    if (it != g_brushCache.end()) {
+        g_brushCacheBytes -= qint64(it.value()->size()) * qint64(sizeof(float));
+        g_brushCacheLru.removeOne(key);
+    }
+    g_brushCache.insert(key, buf);
+    g_brushCacheLru.append(key);
+    g_brushCacheBytes += qint64(buf->size()) * qint64(sizeof(float));
+    while (g_brushCacheBytes > kBrushCacheBudget && g_brushCacheLru.size() > 1) {
+        const QString victim = g_brushCacheLru.takeFirst();
+        auto v = g_brushCache.find(victim);
+        if (v == g_brushCache.end()) continue;
+        g_brushCacheBytes -= qint64(v.value()->size()) * qint64(sizeof(float));
+        g_brushCache.erase(v);
+    }
+}
+
+/* inputsReady (when given) is cleared -- never set -- if an auto-mask stroke's
+   confinement input was missing, so a CALLER caching a composite built from this buffer
+   knows not to. Same condition the local autoInputsReady guard uses to skip its own
+   caching. */
 std::shared_ptr<const std::vector<float>>
-brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QString &fPath)
+brushRasterCached(const QString &paramsJson, int w, int h, int degrees,
+                  const QString &fPath, bool *inputsReady = nullptr,
+                  MaskBuildStats *stats = nullptr)
 {
     /* Only the (small) proxy buffer is worth caching: it is re-rasterized on every slider tick of a
        drag. The full-res buffer is huge (~w*h*4 bytes) and built once per settle, so we skip caching
@@ -5530,7 +5649,7 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QS
     if (cacheable) {
         QMutexLocker lk(&g_brushCacheMutex);
         auto it = g_brushCache.find(key);
-        if (it != g_brushCache.end()) return it.value();
+        if (it != g_brushCache.end()) { brushCacheTouch(key); return it.value(); }
     }
     auto buf = std::make_shared<std::vector<float>>(size_t(w) * h, 0.0f);
     std::vector<float> scratch;
@@ -5558,11 +5677,15 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees, const QS
         else if (!guide || !guide->valid()) autoInputsReady = false;
     }
 
+    if (inputsReady && !autoInputsReady) *inputsReady = false;
+
+    QElapsedTimer rasterProbe;
+    if (stats) { rasterProbe.start(); stats->strokes += strokes.size(); }
     BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get(), fPath);
+    if (stats) stats->rasterMs += rasterProbe.elapsed();
     if (cacheable && autoInputsReady) {
         QMutexLocker lk(&g_brushCacheMutex);
-        if (g_brushCache.size() > 8) g_brushCache.clear();      // crude cap (proxy-size entries)
-        g_brushCache.insert(key, buf);
+        brushCacheInsert(key, buf);
     }
     return buf;
 }
@@ -5600,15 +5723,142 @@ QString objectRefKey(const QString &fPath, const QString &paramsJson)
     return fPath + "|obj|" + QString::number(qHash(paramsJson));
 }
 
+/* ---- Mask FOLD-PREFIX cache ----
+
+   The component fold is SEQUENTIAL per pixel (m = max(m,c) / m *= 1-c / m *= c), so the
+   running value after components [0..k) is a well-defined image: a prefix. Editing one
+   submask leaves every earlier one untouched, so that prefix is still exactly right and
+   the components inside it never have to be looked at again -- not folded, not
+   rasterized, not even JSON-parsed. On a 22-submask scope that is the difference between
+   touching 22 components per tick and touching one.
+
+   Same shape as DevelopStackCache::hot one level down, but GLOBAL and mutex-guarded
+   rather than owned by MW: buildMaskBuffer is called by the GUI proxy render, the veil,
+   AND the off-thread settle render, and all three benefit. One entry per
+   (path, dims, orientation) -- the veil now builds at the proxy's dimensions, so it
+   shares the entry rather than keying its own.
+
+   INVALIDATION. The per-component signature covers everything buildMaskBuffer reads out
+   of a MaskComponent. What it does NOT cover is the path-registered references a
+   component SAMPLES: MW::ensureRangeRef rebuilds when the base params change, which moves
+   a content-range component's coverage without moving its signature. That one calls
+   maskFoldCacheClear(). The AI/object/guide references are per-image and built once, and
+   a component whose reference is not registered yet is refused entry to the prefix (see
+   prefixRefsReady), so nothing else can go stale behind it. */
+struct MaskFoldEntry {
+    QVector<QByteArray> sigs;      // per-component sigs this prefix was built against
+    int prefixCount = 0;           // how many leading components are folded into `prefix`
+    std::shared_ptr<const std::vector<float>> prefix;
+};
+
+/* SEVERAL ENTRIES PER KEY, not one. The render and the veil build at the same path, dims
+   and orientation -- deliberately, so they share brush rasters -- but they do NOT pass
+   the same component list: the veil substitutes the pending submask's op and can carry
+   one more component than the stack does. With one entry per key the two overwrote each
+   other every tick and NEITHER ever resumed (measured: `fold 49 ms, 23 comps` on the
+   render and `fold 57 ms, 24 comps` on the veil, i.e. the cache doing nothing at all).
+   Keeping a few entries lets both callers hold their own prefix; the lookup simply takes
+   whichever entry resumes deepest. */
+constexpr int kMaskFoldEntriesPerKey = 3;
+constexpr int kMaskFoldKeys = 4;
+QMutex g_maskFoldMutex;
+QHash<QString, QVector<MaskFoldEntry>> g_maskFoldCache;
+
+void maskFoldCacheClear()
+{
+    QMutexLocker lk(&g_maskFoldMutex);
+    g_maskFoldCache.clear();
+}
+
+/* Split h rows across the global pool; fn(y0, y1) processes a disjoint half-open row
+   band. Serial below a threshold, where the dispatch would cost more than the pass
+   itself. Same idiom as Develop::parallelFor and WorkingImageCache's maskParallelFor,
+   which are file-local there; this is the row-oriented mask/overlay version. */
+template <class F>
+inline void developParallelRows(int w, int h, F fn)
+{
+    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
+    if (maxThreads == 1 || size_t(w) * size_t(h) < (size_t(1) << 16)) {
+        fn(0, h);
+        return;
+    }
+    const int chunks = qMin(maxThreads, h);
+    const int per = (h + chunks - 1) / chunks;
+    QVector<QFuture<void>> futs;
+    futs.reserve(chunks);
+    for (int k = 0; k < chunks; ++k) {
+        const int y0 = k * per, y1 = qMin(h, y0 + per);
+        if (y0 >= y1) break;
+        futs.append(QtConcurrent::run(QThreadPool::globalInstance(), [=]{ fn(y0, y1); }));
+    }
+    for (QFuture<void> &f : futs) f.waitForFinished();
+}
+
 /* Rasterize the scope's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
    mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
-   component is evaluated, so the geometry edited on the oriented loupe lines up. */
+   component is evaluated, so the geometry edited on the oriented loupe lines up.
+
+   refsReady (when given) is CLEARED if any component's path-registered reference -- a
+   range reference, an AI field, an object coverage, a brush auto-mask guide -- was not
+   registered yet, in which case that component contributes nothing and the buffer is a
+   placeholder. A caller must not cache such a buffer: the real one lands once the
+   reference does, and nothing about the components changes to retire it. */
 std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int w, int h, int degrees,
-                                   const QString &fPath)
+                                   const QString &fPath, bool *refsReady = nullptr,
+                                   MaskBuildStats *stats = nullptr)
 {
+    QElapsedTimer buildProbe;
+    if (stats) buildProbe.start();
     std::vector<float> out(size_t(w) * size_t(h), 0.0f);
     if (w <= 0 || h <= 0) return out;
+
+    /* Resume the fold from the deepest still-valid prefix (see the fold-prefix cache
+       above), so only the submask the user is actually editing -- and anything after
+       it -- is looked at at all. */
+    QVector<QByteArray> sigs;
+    sigs.reserve(components.size());
+    for (const MaskComponent &mc : components) sigs.append(maskComponentSignature(mc));
+    const QString foldKey = fPath + "|" + QString::number(w) + "x" + QString::number(h)
+                          + "@" + QString::number(degrees);
+    int firstDirty = 0;
+    int start = 0;
+    int foldSlot = -1;              // entry we resumed from; preferred for the re-store
+    std::shared_ptr<const std::vector<float>> startPrefix;   // what `out` was seeded from
+    {
+        QMutexLocker lk(&g_maskFoldMutex);
+        auto it = g_maskFoldCache.constFind(foldKey);
+        if (it != g_maskFoldCache.constEnd()) {
+            const QVector<MaskFoldEntry> &entries = it.value();
+            for (int ei = 0; ei < entries.size(); ++ei) {
+                const MaskFoldEntry &e = entries.at(ei);
+                int fd = 0;
+                while (fd < sigs.size() && fd < e.sigs.size()
+                       && e.sigs[fd] == sigs[fd]) ++fd;
+                const bool usable = e.prefix && e.prefixCount <= fd
+                                    && e.prefixCount <= sigs.size()
+                                    && e.prefix->size() == out.size();
+                /* Take whichever entry resumes DEEPEST; firstDirty must come from that
+                   same entry, since it is what bounds the next cut point. */
+                if (usable && (foldSlot < 0 || e.prefixCount > start)) {
+                    foldSlot = ei;
+                    start = e.prefixCount;
+                    startPrefix = e.prefix;
+                    firstDirty = fd;
+                }
+                else if (foldSlot < 0 && fd > firstDirty) firstDirty = fd;
+            }
+            if (startPrefix) out = *startPrefix;   // copy: the fold below mutates it
+        }
+    }
+    /* Where to cut the NEXT prefix: at the first component that changed, so a drag on the
+       same submask resumes here every tick. Always leave at least one out, or a tick
+       where nothing changed would cache everything and the next edit could not
+       resume. */
+    int newK = firstDirty;
+    if (newK >= components.size()) newK = qMax(start, components.size() - 1);
+    newK = qBound(start, newK, components.size());
+
     const bool swap = (degrees == 90 || degrees == 270);
     const double Wo = swap ? h : w, Ho = swap ? w : h;   // output (oriented) pixel dimensions
 
@@ -5639,19 +5889,34 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
     for (const MaskComponent &m : components)
         if (m.tool == int(MaskTool::Depth)) { depthRef = DepthMask::getRef(fPath); break; }
 
+    /* Reference readiness for the components THIS call looks at ([start..n)). Those below
+       `start` came out of a prefix that was only cached when its own were ready, so the
+       property is inductive. */
+    bool refsHereReady = true;
     QVector<CompDesc> comps;
-    comps.reserve(components.size());
-    for (const MaskComponent &m : components) {
+    comps.reserve(components.size() - start);
+    /* comps index at which the components stop belonging to the next cached prefix.
+       Components are SKIPPED when their reference is missing, so this cannot be derived
+       from the component index -- it has to be recorded as the loop passes newK. */
+    int splitIdx = -1;
+    bool prefixRefsReady = true;
+    for (int ci = start; ci < components.size(); ++ci) {
+        if (ci == newK) { splitIdx = comps.size(); prefixRefsReady = refsHereReady; }
+        const MaskComponent &m = components.at(ci);
         if (m.tool == 2) {                                // Brush: rasterize (cached) strokes
             CompDesc d;
             d.isBrush = true;
-            d.brush = brushRasterCached(m.paramsJson, w, h, degrees, fPath);
+            d.brush = brushRasterCached(m.paramsJson, w, h, degrees, fPath,
+                                        &refsHereReady, stats);
             d.op = m.op;
             d.inverted = m.inverted;
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
-            if (!ref || !ref->valid()) continue;          // reference not ready -> no effect
+            if (!ref || !ref->valid()) {              // reference not ready -> no effect
+                refsHereReady = false;
+                continue;
+            }
             const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
             CompDesc d;
             d.isRange   = true;
@@ -5680,7 +5945,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
-            if (!subjRef || !subjRef->valid()) continue;  // saliency not ready -> no effect
+            if (!subjRef || !subjRef->valid()) {      // saliency not ready -> no effect
+                refsHereReady = false;
+                continue;
+            }
             CompDesc d;
             d.isSubject = true;
             d.subjectBaseInvert = (m.tool == int(MaskTool::Background));   // background = 1 - subject
@@ -5690,7 +5958,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Sky)) {
-            if (!skyRef || !skyRef->valid()) continue;    // sky coverage not ready -> no effect
+            if (!skyRef || !skyRef->valid()) {            // sky not ready -> no effect
+                refsHereReady = false;
+                continue;
+            }
             CompDesc d;
             d.isSky     = true;
             d.op        = m.op;
@@ -5699,7 +5970,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Depth)) {
-            if (!depthRef || !depthRef->valid()) continue;  // depth field not ready -> no effect
+            if (!depthRef || !depthRef->valid()) {      // depth not ready -> no effect
+                refsHereReady = false;
+                continue;
+            }
             const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
             CompDesc d;
             d.isDepth   = true;
@@ -5714,7 +5988,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             /* Per-brush ref (keyed path+brush), built by MW::ensureObjectMask. Absent (not yet
                decoded, or this brush empty) => no effect, like an unbuilt SubjectRef. */
             auto objRef = ObjectMask::getRef(objectRefKey(fPath, m.paramsJson));
-            if (!objRef || !objRef->valid()) continue;
+            if (!objRef || !objRef->valid()) {            // object not ready -> no effect
+                refsHereReady = false;
+                continue;
+            }
             CompDesc d;
             d.isObject  = true;
             d.objRef    = objRef;
@@ -5732,14 +6009,20 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             comps.append(d);
         }
     }
-    if (comps.isEmpty()) return out;     // no usable geometry -> all-zero (no effect)
+    if (splitIdx < 0) { splitIdx = comps.size(); prefixRefsReady = refsHereReady; }
+    if (refsReady && !refsHereReady) *refsReady = false;
+    if (comps.isEmpty()) return out;     // nothing new to fold -> the prefix (or zeros)
     const RangeMask::RangeRef *refp = ref ? ref.get() : nullptr;
     const SubjectMask::SubjectRef *subjp = subjRef ? subjRef.get() : nullptr;
     const SkyMask::SkyRef *skyp = skyRef ? skyRef.get() : nullptr;
     const DepthMask::DepthRef *depthp = depthRef ? depthRef.get() : nullptr;
 
     const double invW = 1.0/w, invH = 1.0/h;
-    auto rows = [&](int y0, int y1) {
+    /* c0..c1 is a half-open range into comps, so the fold can run in two passes with
+       the prefix captured between them. m is seeded from the buffer, NOT from 0: on a
+       resumed call that is the cached prefix, and on a cold one the buffer is zeros --
+       exactly what the fold used to start from, so the maths is unchanged either way. */
+    auto rows = [&](int c0, int c1, int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             const double wny = (y + 0.5) * invH;
             float *row = out.data() + size_t(y) * w;
@@ -5753,8 +6036,9 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
                     case 270: onx = wny;       ony = 1.0 - wnx; break;
                     default:  onx = wnx;       ony = wny;       break;
                 }
-                float m = 0.0f;
-                for (const CompDesc &d : comps) {
+                float m = row[x];
+                for (int di = c0; di < c1; ++di) {
+                    const CompDesc &d = comps.at(di);
                     float c;
                     if (d.isBrush) { c = (*d.brush)[k]; if (d.inverted) c = 1.0f - c; }
                     else if (d.isRange) {
@@ -5785,18 +6069,47 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         }
     };
 
-    const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
-    if (maxThreads == 1 || size_t(w)*size_t(h) < (size_t(1) << 16)) { rows(0, h); return out; }
-    const int chunks = qMin(maxThreads, h);
-    const int per = (h + chunks - 1) / chunks;
-    QVector<QFuture<void>> futs;
-    futs.reserve(chunks);
-    for (int k = 0; k < chunks; ++k) {
-        const int y0 = k * per, y1 = qMin(h, y0 + per);
-        if (y0 >= y1) break;
-        futs.append(QtConcurrent::run(QThreadPool::globalInstance(), [=]{ rows(y0, y1); }));
+    if (stats) { stats->setupMs += buildProbe.restart() - stats->rasterMs;
+                 stats->comps += comps.size(); }
+
+    /* Fold the part that belongs to the next prefix, snapshot it, then fold the rest. */
+    if (splitIdx > 0)
+        developParallelRows(w, h, [&](int y0, int y1){ rows(0, splitIdx, y0, y1); });
+
+    if (prefixRefsReady) {
+        /* When nothing new was folded, `out` is still exactly the buffer we were seeded
+           with -- re-share it instead of copying w*h*4 bytes. */
+        auto snapshot = (splitIdx == 0 && startPrefix)
+                            ? startPrefix
+                            : std::make_shared<const std::vector<float>>(out);
+        QMutexLocker lk(&g_maskFoldMutex);
+        if (g_maskFoldCache.size() > kMaskFoldKeys) g_maskFoldCache.clear();
+        QVector<MaskFoldEntry> &entries = g_maskFoldCache[foldKey];
+        /* Write back over the entry we resumed from -- this caller's own slot.
+           Overwriting a different caller's is exactly the thrash the vector prevents. */
+        int slot = foldSlot;
+        if (slot < 0) {
+            if (entries.size() < kMaskFoldEntriesPerKey) {
+                entries.append(MaskFoldEntry());
+                slot = entries.size() - 1;
+            }
+            else {   // evict the shallowest: it is saving the least work
+                slot = 0;
+                for (int ei = 1; ei < entries.size(); ++ei)
+                    if (entries.at(ei).prefixCount < entries.at(slot).prefixCount)
+                        slot = ei;
+            }
+        }
+        MaskFoldEntry &e = entries[slot];
+        e.sigs = sigs;
+        e.prefixCount = newK;
+        e.prefix = std::move(snapshot);
     }
-    for (QFuture<void> &f : futs) f.waitForFinished();
+
+    if (splitIdx < comps.size())
+        developParallelRows(w, h,
+                            [&](int y0, int y1){ rows(splitIdx, comps.size(), y0, y1); });
+    if (stats) stats->foldMs += buildProbe.elapsed();
     return out;
 }
 
@@ -5814,8 +6127,16 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
     pixels are synthesized, so 8-bit precision there costs nothing; every untouched pixel
     keeps its full 16-bit value.
 */
+/* The heal engines hold per-process model/session state and were only ever driven by ONE
+   background render at a time. Now the interactive proxy render has its own pool
+   alongside the settle render's, so two can overlap; serialise the heal rather than
+   audit LaMa and MI-GAN for reentrancy. Spots are rare, so without them the lock is
+   uncontended. */
+QMutex g_spotHealMutex;
+
 void applySpots(QImage &img, const QVector<FillSpot> &spots, const QString &fPath)
 {
+    QMutexLocker healLock(&g_spotHealMutex);
     auto heal = [&spots, &fPath](QImage &target) {
         if (G::useLamaSpotFill)
             LamaFill::apply(target, spots, fPath);   // fPath keys the pinned sources
@@ -5854,38 +6175,123 @@ void applySpots(QImage &img, const QVector<FillSpot> &spots, const QString &fPat
     }
 }
 
+/* cache (optional) is the interactive proxy's per-scope intermediate store -- see
+   Develop/developstackcache.h. Only the GUI-thread proxy path passes one; the off-thread
+   settle render and the small verification renders pass nullptr and recompute everything,
+   which is also what keeps the cache lock-free. */
 QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
                              int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
                              WorkingImageCache::RenderTimings *timings = nullptr,
                              WorkingImageCache::OutDepth depth =
                                  WorkingImageCache::OutDepth::Eight,
                              WorkingImageCache::Space space =
-                                 WorkingImageCache::Space::sRGB)
+                                 WorkingImageCache::Space::sRGB,
+                             DevelopStackCache *cache = nullptr,
+                             QSize *displaySize = nullptr,
+                             MaskBuildStats *maskStats = nullptr)
 {
+    /* An interactive (proxy) render is normally left at PROXY resolution -- the loupe
+       stretches it (ScaledPixmapItem) instead of this function allocating and filling a
+       full-dimension QImage on every drag tick. *displaySize reports the size it stands
+       in for.
+
+       EXCEPTION: a non-identity geometry. Crop/straighten/warp is applied at the bottom
+       of this function on the FULL-output-dimension image precisely so the cropped
+       result has the SAME dimensions as the settle render's; cropping the proxy instead
+       would round to a slightly different size and make the arriving settle re-fit the
+       view. So the upscale stays there. */
+    const bool upscale = fullRes || !job.geometry.isIdentity();
+    if (displaySize && !upscale) *displaySize = QSize(fullW, fullH);
+
     QImage out;
     if (job.scopes.isEmpty()) {             // just Global -> the fast single-pass path
         out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings,
-                               depth, space);
+                               depth, space, upscale);
     }
     else {
+        QElapsedTimer probe;
+        if (timings) probe.start();
+        const size_t nScopes = size_t(job.scopes.size());
+        if (cache) cache->matchScopeCount(nScopes);
+
+        /* Signature every scope FIRST, while the cache still describes the previous tick,
+           so firstDirty compares like with like -- putMask below overwrites the keys. */
+        std::vector<QByteArray> maskKeys(nScopes), paramsKeys(nScopes);
+        size_t first = 0;
+        if (cache) {
+            for (size_t i = 0; i < nScopes; ++i) {
+                const DevelopProperties::StackRenderJob::Scope &L = job.scopes.at(int(i));
+                maskKeys[i] = maskComponentsSignature(L.components);
+                paramsKeys[i] = QJsonDocument(EditStack::paramsToJson(L.params))
+                                    .toJson(QJsonDocument::Compact);
+            }
+            first = cache->firstDirty(maskKeys, paramsKeys);
+        }
+        /* Read BEFORE the loop below overwrites the stored keys: a cached layer survives
+           a mask-only edit, but not a params edit, of the scope we resume at. */
+        const size_t hotAt = nScopes ? qMin(first, nScopes - 1) : 0;
+        const bool hotParamsSame =
+            cache && nScopes && cache->paramsKeyAt(hotAt) == paramsKeys[hotAt];
+
         std::vector<WorkingImageCache::StackScope> sl;
-        sl.reserve(job.scopes.size());
-        for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes) {
+        sl.reserve(nScopes);
+        for (size_t i = 0; i < nScopes; ++i) {
+            const DevelopProperties::StackRenderJob::Scope &L = job.scopes.at(int(i));
             WorkingImageCache::StackScope s;
             s.params = L.params;
-            if (!L.components.isEmpty())         // empty masks => global scope (no buffer needed)
-                s.mask = buildMaskBuffer(L.components, src.width, src.height, degrees, fPath);
+            if (!L.components.isEmpty()) {       // empty masks => global scope, no buffer
+                /* A mask drag changes ONE scope's components; every other scope's buffer
+                   is identical to last tick's, so only the changed one is rasterized. */
+                s.mask = cache ? cache->mask(i, maskKeys[i]) : nullptr;
+                if (!s.mask) {
+                    bool refsReady = true;
+                    s.mask = std::make_shared<const std::vector<float>>(
+                        buildMaskBuffer(L.components, src.width, src.height, degrees,
+                                        fPath, &refsReady, maskStats));
+                    if (timings) ++timings->maskScopes;
+                    /* A buffer built without one of its references is a placeholder --
+                       cache it and nothing would ever retire it (the components do not
+                       change when the reference lands). */
+                    if (cache) {
+                        if (refsReady) cache->putMask(i, maskKeys[i], s.mask);
+                        else           cache->dropMask(i);
+                    }
+                }
+            }
+            if (cache) cache->setParamsKey(i, paramsKeys[i]);
             sl.push_back(std::move(s));
         }
-        if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings, depth, space))
+        if (timings) timings->maskBuildMs = probe.restart();
+
+        /* Resume from the developed intermediates of the scope being edited, so a
+           mask-only drag costs one blend instead of re-developing the whole stack. The
+           layer is reusable only when this scope's PARAMS are also unchanged. */
+        WorkingImageCache::StackResume resume;
+        WorkingImageCache::StackResume *resumeP = nullptr;
+        if (cache && nScopes) {
+            const DevelopStackCache::Hot hot = cache->hotAt(hotAt);   // copied under lock
+            if (hot.prefix) {
+                resume.start  = hotAt;
+                resume.prefix = hot.prefix;
+                if (hotParamsSame) resume.layer = hot.layer;
+            }
+            resume.capture = hotAt;      // re-arm for the next tick of this same drag
+            resumeP = &resume;
+        }
+        if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings, depth,
+                                           space, resumeP))
             return QImage();
+        if (cache && resumeP)
+            cache->setHot(resume.capture, resume.outPrefix, resume.outLayer);
+        if (timings) probe.restart();           // renderStack timed its own stages
         if (degrees != 0) {
             QTransform trans;
             trans.rotate(degrees);
             out = out.transformed(trans, fullRes ? Qt::SmoothTransformation : Qt::FastTransformation);
         }
-        if (!fullRes && (out.width() != fullW || out.height() != fullH))
+        if (upscale && !fullRes && (out.width() != fullW || out.height() != fullH))
             out = out.scaled(fullW, fullH, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        if (timings) timings->orientScaleMs = probe.elapsed();
     }
 
     /* Fill Replace heals BEFORE geometry, on the developed oriented full frame, so heals
@@ -6010,6 +6416,10 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
         QJsonDocument(EditStack::paramsToJson(base)).toJson(QJsonDocument::Compact);
     if (fPath == developRangeRefPath && key == developRangeRefBaseKey && RangeMask::getRef(fPath))
         return;                                       // already current
+
+    /* A rebuild MOVES what every content-range component resolves to, without changing
+       any component's signature -- the one thing the fold-prefix cache cannot see. */
+    maskFoldCacheClear();
 
     const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
     int fw = small.width, fh = small.height;
@@ -6365,14 +6775,47 @@ void MW::warmBrushSamEncoder()
 void MW::updateMaskOverlayTint()
 {
 /*
-    While any mask tool is expanded, the loupe shows the WHOLE mask (all the scope's Add/
-    Subtract tools composited) as a red coverage tint, under the active tool's handles. Rebuild it
-    whenever the mask selection or geometry changes (wired to maskEditBegin/End + paramsChanged), or
-    clear it when no tool is expanded. The composite reuses the render-path buildMaskBuffer, so the
-    tint is pixel-consistent with the developed result.
+    While a submask is being defined, the loupe shows the WHOLE mask (all the scope's
+    submasks composited) as a single-colour coverage veil, under the active submask's
+    handles. The veil shows the OUTCOME: the pending submask is composited with the op the
+    held modifier is previewing (Opt = Subtract, Shift+Opt = Intersect), so holding Opt
+    makes the veil retreat where that submask would be removed. That is why the overlay
+    needs only ONE colour (G::maskOverlayColor) -- the op is read off the result, not
+    off a colour key. Rebuild when the selection, geometry or previewed op changes (wired to
+    maskEditBegin/End + paramsChanged), or clear it when nothing is being edited. The
+    composite reuses the render-path buildMaskBuffer, so the veil is pixel-consistent with
+    the developed result.
 */
     if (G::isLogger) G::log("MW::updateMaskOverlayTint");
+    /* Probe: accumulate into the members the next [DevTime] render line reports and
+       resets, so one tick's veil cost -- and how often it ran -- is visible. Started
+       after the early-outs below would be wrong: an early-out IS the cheap case, and
+       the count is what shows the veil running more than once per render. */
+    QElapsedTimer tintProbe;
+    if (G::isReportDevelopTime) { tintProbe.start(); ++developTintCount; }
+    const auto tintProbeStop = qScopeGuard([this, &tintProbe] {
+        if (G::isReportDevelopTime) developTintMs += tintProbe.elapsed();
+    });
+
+    /* Mid-stroke on an ADD submask the veil is not drawn at all -- ImageView stands the
+       live brush preview in for it (drawMaskOverlay's brushStroking gate) -- so a rebuild
+       on every live tick is invisible work on top of that tick's develop render. The
+       release re-emits paramsChanged, which rebuilds it from the finished stroke.
+       A SUBTRACT/INTERSECT stroke is the opposite case and must pay for the rebuild: its
+       local preview paints coverage in the overlay colour exactly where the mask is being
+       REMOVED, which reads as adding. Keeping the real veil live there shows the outcome
+       -- the veil retreating under the brush -- matching the develop render. */
+    if (imageView->maskStrokeInFlight()
+        && developProperties->pendingMaskOp() == int(MaskOp::Add)) return;
     if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
+    /* HIDDEN -> do not build it. drawForeground will not paint the veil while it is
+       hidden ("O" off, or an adjustment slider pushed it out of the way), so every
+       millisecond spent compositing one is wasted -- and at the proxy resolution this
+       builds at, that was the largest single item on the GUI thread during a brush drag.
+       The stored QImage is deliberately left alone rather than cleared: it is not drawn,
+       and re-showing rebuilds it (MW listens to maskTintVisibilityChanged), so there is
+       no flash of an empty overlay in between. */
+    if (!imageView->maskTintVisible()) return;
 
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
@@ -6381,14 +6824,14 @@ void MW::updateMaskOverlayTint()
     const QVector<MaskComponent> components = developProperties->activeScopeComponents();
     if (components.isEmpty()) { imageView->clearScopeMaskTint(); return; }
 
-    /* The in-progress (uncommitted) tool is a real component in `components`; draw it BLUE and
-       exclude it from the RED committed veil. `components` (all) still drives the ref-building
-       below so the blue preview composites too. */
+    /* The in-progress (uncommitted) submask is a real component in `components`, but its
+       op is still momentary -- it lives in DevelopProperties::pendingMaskOp() (driven by
+       the held modifier) and is only written into the component on commit. Substitute it
+       here so the veil composites the OUTCOME of what Return/[Update] would do. */
     const int pendIdx = developProperties->pendingMaskIndex();
-    QVector<MaskComponent> redMasks = components;
-    MaskComponent pendingM;
-    const bool hasBlue = (pendIdx >= 0 && pendIdx < components.size());
-    if (hasBlue) { pendingM = components.at(pendIdx); redMasks.removeAt(pendIdx); }
+    QVector<MaskComponent> masks = components;
+    const bool hasPending = (pendIdx >= 0 && pendIdx < masks.size());
+    if (hasPending) masks[pendIdx].op = developProperties->pendingMaskOp();
 
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const EditParams base = developProperties->stackJob().global;
@@ -6419,49 +6862,78 @@ void MW::updateMaskOverlayTint()
        is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
     int mw = work->width, mh = work->height;
     if (mw <= 0 || mh <= 0) { imageView->clearScopeMaskTint(); return; }
-    const int cap = 1600;
-    const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
-    const int bw = qMax(1, int(mw * sc)), bh = qMax(1, int(mh * sc));
-    const std::vector<float> buf = buildMaskBuffer(redMasks, bw, bh, degrees, fPath);
+    int bw, bh;
+    if (developProxy && developProxyPath == fPath && developProxy->isValid()) {
+        /* Build at the PROXY's exact dimensions, not an independent cap. The
+           per-component brush rasters are cached by (paramsJson, dims, degrees), so
+           matching the render's dimensions means the veil reuses the buffers the render
+           just built, instead of rasterizing a near-identical second set at 1600px --
+           which was why `tint` cost about as much as `mask` again on every tick. */
+        bw = developProxy->width;
+        bh = developProxy->height;
+    }
+    else {
+        const int cap = 1600;
+        const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
+        bw = qMax(1, int(mw * sc));
+        bh = qMax(1, int(mh * sc));
+    }
+    MaskBuildStats tintStats;
+    const std::vector<float> buf =
+        buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
+                        G::isReportDevelopTime ? &tintStats : nullptr);
 
-    /* RESULT VEIL: the whole-mask composite as a flat RED coverage tint, alpha by
-       coverage. This is the TRUE resulting mask -- Subtract holes stay holes, and
-       nothing is painted back over a hole (the constituent marks below are EDGES only),
-       so the veil alone answers "what does this scope affect?". */
+    /* RESULT VEIL: the whole-mask composite as a flat coverage tint in the one overlay
+       colour, alpha by coverage. This is the TRUE resulting mask -- Subtract holes stay
+       holes -- so the veil alone answers both "what does this scope affect?" and (with a
+       modifier held) "what would this op do?". */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
     const int maxA = 150;             // full-coverage alpha
-    for (int y = 0; y < bh; ++y) {
-        QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
-        const float *mrow = buf.data() + size_t(y) * bw;
-        for (int x = 0; x < bw; ++x) {
-            const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
-            row[x] = a ? qRgba(220 * a / 255, 40 * a / 255, 40 * a / 255, a) : 0;
+    const QColor ovc = G::maskOverlayColor;
+    const int ovR = ovc.red(), ovG = ovc.green(), ovB = ovc.blue();
+    /* Row-parallel, and the scanline base is taken ONCE: this runs at the proxy's full
+       resolution (that is what lets it share the render's brush rasters), so it is a
+       2 MP per-pixel loop on the GUI thread during a drag -- it was measured at ~46 ms
+       of the veil's 87. QImage::scanLine() is the detaching accessor and races if called
+       from several threads, hence bits()/bytesPerLine() hoisted out. */
+    uchar *const tintBits0 = tint.bits();
+    const qsizetype tintBpl0 = tint.bytesPerLine();
+    developParallelRows(bw, bh, [&](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            QRgb *row = reinterpret_cast<QRgb*>(tintBits0 + qsizetype(y) * tintBpl0);
+            const float *mrow = buf.data() + size_t(y) * bw;
+            for (int x = 0; x < bw; ++x) {
+                const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
+                row[x] = a ? qRgba(ovR * a / 255, ovG * a / 255, ovB * a / 255, a) : 0;
+            }
         }
-    }
+    });
 
-    /* BREAKDOWN: outline each constituent over the veil so the user can read HOW the
-       result is built, in a register that can never be mistaken for the result FILL --
-       Add tools GREEN, Subtract tools BLUE. The RESULT VEIL WINS: a mark is painted only
-       where the result is absent (buf < gateT), so a tool's coverage that survives into
-       the result reads RED, and its green/blue only shows where it was EXCLUDED (an Add
-       cut away by a Subtract, or a Subtract's footprint). This also stops a noisy
-       content mask (Color/Luminance Range) whose per-pixel "edges" are everywhere from
-       fogging the subject green -- there the coverage IS the result, so it stays red.
-       The SELECTED tool is drawn thicker and LAST. Result view (false) = veil alone. */
-    /* Breakdown/legend describe the RED committed tools (redMasks). While a BLUE tool is
-       previewed it is the selected one, so no committed tool is highlighted. */
-    int selIdx = hasBlue ? -1 : developProperties->activeMaskIndex();
-    if (selIdx >= redMasks.size()) selIdx = -1;
-    if (maskShowBreakdown) {
-        const QColor addCol(70, 220, 110), subCol(60, 150, 255);
-        const float gateT = 0.12f;   // result present here -> red wins, skip the mark
-        /* Paint the inner-boundary pixels of a coverage buffer into the tint, but only
-           where the result is absent. `thick` is the neighbourhood radius: 1 = a 1px
-           ring, 2 = a thicker selected-tool ring. */
-        auto outline = [&](const std::vector<float> &cov, const QColor &col, int thick) {
-            const float T = 0.5f;
-            for (int y = 0; y < bh; ++y) {
-                QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
+    /* PENDING FOOTPRINT: a thin ring around the submask being defined, painted only where
+       the result is ABSENT. Without it a Subtract (or an Intersect) whose footprint lies
+       outside the mask would change nothing on screen, leaving the user unable to see
+       where the submask actually is. The veil WINS everywhere it covers, so coverage that
+       survives into the result reads as veil, not as an edge -- which also keeps a noisy
+       content submask (Color/Luminance Range), whose per-pixel "edges" are everywhere,
+       from fogging the subject. */
+    if (hasPending) {
+        const float gateT = 0.12f;   // result present -> the veil wins, skip the ring
+        const float T = 0.5f;
+        MaskComponent c = masks[pendIdx];
+        c.op = int(MaskOp::Add);                 // ring the footprint, not the sign
+        const std::vector<float> cov =
+            buildMaskBuffer({c}, bw, bh, degrees, fPath, nullptr,
+                            G::isReportDevelopTime ? &tintStats : nullptr);
+        const int a = 235, thick = 1;
+        /* Row-parallel: each band writes only its own scanlines and reads cov (const),
+           so the y+-thick neighbour lookups cross band boundaries safely. The scanline
+           base is taken ONCE here: QImage::scanLine() is the detaching (non-const)
+           accessor, and calling it from several threads races on detach_no. */
+        uchar *const tintBits = tint.bits();
+        const qsizetype tintBpl = tint.bytesPerLine();
+        developParallelRows(bw, bh, [&](int y0, int y1) {
+            for (int y = y0; y < y1; ++y) {
+                QRgb *row = reinterpret_cast<QRgb*>(tintBits + qsizetype(y) * tintBpl);
                 for (int x = 0; x < bw; ++x) {
                     const size_t idx = size_t(y) * bw + x;
                     if (cov[idx] < T || buf[idx] > gateT) continue;   // absent/in result
@@ -6473,67 +6945,53 @@ void MW::updateMaskOverlayTint()
                                 cov[size_t(ny) * bw + nx] < T) { edge = true; break; }
                         }
                     if (!edge) continue;
-                    const int a = 235;
-                    row[x] = qRgba(col.red() * a / 255, col.green() * a / 255,
-                                   col.blue() * a / 255, a);
+                    row[x] = qRgba(ovR * a / 255, ovG * a / 255, ovB * a / 255, a);
                 }
             }
-        };
-        /* Non-selected constituents first (thin), selected last (thick) so it wins. */
-        for (int i = 0; i < redMasks.size(); ++i) {
-            if (i == selIdx || !redMasks[i].enabled) continue;
-            MaskComponent c = redMasks[i];
-            const bool sub = (c.op == int(MaskOp::Subtract));
-            c.op = int(MaskOp::Add);         // outline the footprint, not the sign
-            outline(buildMaskBuffer({c}, bw, bh, degrees, fPath), sub ? subCol : addCol, 1);
-        }
-        if (selIdx >= 0 && selIdx < redMasks.size()) {
-            MaskComponent c = redMasks[selIdx];
-            const bool sub = (c.op == int(MaskOp::Subtract));
-            c.op = int(MaskOp::Add);
-            outline(buildMaskBuffer({c}, bw, bh, degrees, fPath), sub ? subCol : addCol, 2);
-        }
-    }
-    /* PENDING (blue) preview: the in-progress tool being defined in the MaskPanel, drawn
-       over the red committed veil so the user sees exactly what a combine would fold in.
-       Uncommitted -- discarded on Cancel/Esc. */
-    if (hasBlue) {
-        const std::vector<float> pbuf = buildMaskBuffer({pendingM}, bw, bh, degrees, fPath);
-        const int pA = 150;
-        for (int y = 0; y < bh; ++y) {
-            QRgb *row = reinterpret_cast<QRgb*>(tint.scanLine(y));
-            const float *prow = pbuf.data() + size_t(y) * bw;
-            for (int x = 0; x < bw; ++x) {
-                const int a = int(qBound(0.0f, prow[x], 1.0f) * pA + 0.5f);
-                if (a) row[x] = qRgba(40 * a / 255, 120 * a / 255, 255 * a / 255, a);
-            }
-        }
+        });
     }
     if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
     imageView->setScopeMaskTint(tint);
 
-    /* Legend: tell ImageView which tool/role is being edited (and the mode), so the
-       on-canvas chip can label the overlay (see ImageView::setMaskLegend). */
-    QString selName;
-    int selOp = -1;
-    if (selIdx >= 0 && selIdx < redMasks.size()) {
-        selName = DevelopProperties::maskToolName(redMasks[selIdx].tool);
-        selOp   = redMasks[selIdx].op;
-    }
-    imageView->setMaskLegend(maskShowBreakdown, selName, selOp);
+    /* Op indicator: tell ImageView which submask is being defined and which op the
+       veil previews, so the on-canvas chip can name it (see ImageView::setMaskLegend). The
+       modifier hint is suppressed on the first submask -- nothing to combine with. */
+    if (G::isReportDevelopTime)
+        qDebug().noquote() << "[DevTime] tint " << bw << "x" << bh
+                           << " raster" << tintStats.rasterMs
+                           << tintStats.strokes << "strokes"
+                           << " setup" << tintStats.setupMs
+                           << " fold" << tintStats.foldMs << tintStats.comps << "comps";
+
+    if (hasPending)
+        imageView->setMaskLegend(DevelopProperties::maskToolName(masks[pendIdx].tool),
+                                 developProperties->pendingMaskOp(), pendIdx > 0);
+    else
+        imageView->setMaskLegend(QString(), -1, false);
 }
 
-void MW::toggleMaskBreakdown()
+void MW::syncPendingMaskOp()
 {
 /*
-    Scope menu "Show mask breakdown": flip the mask overlay between Result view (the veil
-    alone -- "what does this scope affect?") and Breakdown view (the veil plus a green/blue
-    outline of every constituent -- "how is the mask built?"). Session-wide; rebuilds tint.
+    The op modifiers are MOMENTARY: Opt previews Subtract, Shift+Opt previews Intersect,
+    neither is Add, and nothing is written into the submask until it is committed. Read
+    the live modifier state and push it to DevelopProperties, which relabels the button
+    and re-composites the veil.
+
+    Opt is skipped while a brush/object stroke is in flight, where it already means "erase
+    from this stroke" -- the one rule that keeps the two meanings apart: Opt takes away
+    from the STROKE while painting, from the MASK otherwise.
 */
-    if (G::isLogger) G::log("MW::toggleMaskBreakdown");
-    maskShowBreakdown = !maskShowBreakdown;
-    if (developProperties) developProperties->setMaskBreakdownShown(maskShowBreakdown);
-    updateMaskOverlayTint();
+    if (!developProperties || !developProperties->isMaskPanelOpen()) return;
+    /* An ERASE stroke owns Opt, so the previewed op drops back to Add for its duration
+       (the button and chip say "Update", not "Subtract", while erasing). A plain paint
+       stroke does not -- including an Opt stroke on an empty submask, which paints the
+       area the user wants SUBTRACTED and must keep previewing that. */
+    if (imageView && imageView->maskStrokeIsErase()) {
+        developProperties->setPendingMaskOp(int(MaskOp::Add));
+        return;
+    }
+    developProperties->setPendingMaskOp(DevelopProperties::maskOpFromModifiers());
 }
 
 void MW::renderDevelopPreview(bool fullRes)
@@ -6615,6 +7073,7 @@ void MW::renderDevelopPreview(bool fullRes)
             developProxy = std::make_shared<WorkingImage>(
                 WorkingImageCache::downscaled(*base, target));
             developProxyPath = fPath;
+            developStackCache.clear();     // new pixels: cached masks are the wrong size
             if (G::isReportDevelopTime) tProxy = probe.restart();
         }
         srcImg = developProxy.get();
@@ -6647,19 +7106,109 @@ void MW::renderDevelopPreview(bool fullRes)
        guideless proxy paints the full brush and the settle snaps it to the band. */
     if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
-    const QImage out = developCompositeStack(*srcImg, mj, degrees, fullRes, fw, fh, fPath);
-    if (out.isNull()) return;
-    const qint64 tRender = G::isReportDevelopTime ? probe.restart() : 0;
-
-    imageView->setDevelopPreview(out);
-    updateDevelopScopes(out);   // scopes reflect exactly what is shown
-
-    if (G::isReportDevelopTime) {
-        qDebug().noquote() << "[DevTime]" << (fullRes ? "full " : "proxy")
-                           << srcImg->width << "x" << srcImg->height
-                           << " proxyBuild" << tProxy << " render+compose" << tRender
-                           << " preview" << probe.restart() << "ms";
+    /* Per-scope mask cache, PROXY ONLY: the full-res path renders once on settle, and
+       its buffers are ~w*h*4 bytes, so it recomputes rather than caching. reset() drops
+       every slot when the image, the proxy size, the orientation or the GLOBAL params
+       change -- the last because a content-range mask samples a reference built from the
+       developed base (ensureRangeRef), so it can move without its components moving. */
+    DevelopStackCache *cache = nullptr;
+    if (!fullRes) {
+        const QByteArray baseKey =
+            QJsonDocument(EditStack::paramsToJson(mj.global))
+                .toJson(QJsonDocument::Compact);
+        developStackCache.reset(fPath, srcImg->width, srcImg->height, degrees, baseKey);
+        cache = &developStackCache;
     }
+
+    if (G::isReportDevelopTime) {         // reset the dab counters for this tick
+        BrushStamp::dabStats().dabs.store(0, std::memory_order_relaxed);
+        BrushStamp::dabStats().pixels.store(0, std::memory_order_relaxed);
+    }
+
+    /* ---- Hand the composite to the worker ----
+       Everything above had to happen here: the orientation reads the sort/filter model,
+       ensureAutoGuide reads the loupe pixmap, and the ensure*Mask builders run inference
+       and touch MW state. Everything below is pure pixel work over a const WorkingImage
+       and value-copied params, so it runs off the GUI thread -- which is the whole point:
+       the brush CURSOR is painted by ImageView on this thread, so any millisecond spent
+       compositing here is a millisecond the cursor cannot move. */
+    if (developProxyInFlight) {
+        /* One render at a time. Note the request rather than dropping it: the completion
+           re-arms, so the newest state always gets rendered. Relying on developParamsGen
+           instead would silently lose the crop/warp callers, which re-render without
+           bumping it. */
+        developProxyPending = true;
+        return;
+    }
+    developProxyInFlight = true;
+
+    /* Captured by value / shared_ptr so the worker cannot be left holding a dangling
+       reference if the GUI thread moves on: `proxySrc` keeps the pixels alive even if
+       developProxy is reset, and mj/fPath are copies. */
+    const std::shared_ptr<const WorkingImage> proxySrc =
+        fullRes ? base : std::static_pointer_cast<const WorkingImage>(developProxy);
+    const quint64 reqGen = ++developProxyReqGen;
+    const bool wantTime = G::isReportDevelopTime;
+    const qint64 tProxyCap = tProxy;
+
+    developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
+                            reqGen, wantTime, tProxyCap]() {
+        QElapsedTimer wt;
+        wt.start();
+        WorkingImageCache::RenderTimings rt;
+        MaskBuildStats ms;
+        QSize displaySize;
+        QImage out = developCompositeStack(*proxySrc, mj, degrees, fullRes, fw, fh, fPath,
+                                           wantTime ? &rt : nullptr,
+                                           WorkingImageCache::OutDepth::Eight,
+                                           WorkingImageCache::Space::sRGB, cache,
+                                           &displaySize,
+                                           wantTime ? &ms : nullptr);
+        const qint64 tRender = wt.restart();
+        QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
+                                         rt, ms, tProxyCap, tRender, wantTime, proxySrc] {
+            developProxyInFlight = false;
+            /* Apply only if nothing newer was asked for and we are still on this image.
+               A superseded frame is DISCARDED rather than shown: the crop tool toggles
+               between geometry-applied and geometry-suppressed renders, and flashing the
+               wrong one reads as a glitch. The re-arm below renders the current state. */
+            const bool current = (dm && fPath == dm->currentFilePath)
+                                 && !developProxyPending && reqGen == developProxyReqGen;
+            if (current && !out.isNull()) {
+                imageView->setDevelopPreview(out, displaySize);
+                updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
+            }
+            if (developProxyPending) {
+                developProxyPending = false;
+                developProxyRenderTimer->start(0);
+            }
+            if (wantTime) {
+                qDebug().noquote() << "[DevTime]" << (fullRes ? "full " : "proxy")
+                                   << proxySrc->width << "x" << proxySrc->height
+                                   << " proxyBuild" << tProxyCap
+                                   << " mask" << rt.maskBuildMs
+                                   << "(" << rt.maskScopes << "scopes,"
+                                   << BrushStamp::dabStats().dabs
+                                          .load(std::memory_order_relaxed)
+                                   << "dabs,"
+                                   << BrushStamp::dabStats().pixels
+                                          .load(std::memory_order_relaxed) / 1000000
+                                   << "Mpx) [raster" << ms.rasterMs
+                                   << ms.strokes << "strokes"
+                                   << " setup" << ms.setupMs
+                                   << " fold" << ms.foldMs << ms.comps << "comps]"
+                                   << " develop" << rt.developMs
+                                   << " toImage" << rt.toImageMs
+                                   << " orient+scale" << rt.orientScaleMs
+                                   << " worker" << tRender
+                                   << " applied" << (current ? 1 : 0)
+                                   << " tint" << developTintMs << "x" << developTintCount
+                                   << "ms";
+                developTintMs = 0;
+                developTintCount = 0;
+            }
+        });
+    });
 }
 
 int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath) const
@@ -6725,6 +7274,9 @@ void MW::applyDevelopPreviewIfEdited()
     coalesced).
 */
     if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
+    /* A new image is on the loupe: re-evaluate the chip (the previous image's decode or
+       settle may still be flagged, and this image's may not have started yet). */
+    updateDevelopRenderingHint();
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
     /* An edited image (raw on) renders its saved params, and that render refreshes the scopes via
        setDevelopPreview. Otherwise nothing overlays the loupe, so refresh the scopes here from the
@@ -6803,6 +7355,7 @@ void MW::renderDevelopFullResAsync()
     if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
     developFullResInFlight = true;
+    updateDevelopRenderingHint();
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
     std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
     developRenderPool->start([this, src, clean, mj, degrees, fPath, gen]() {
@@ -6864,8 +7417,11 @@ void MW::renderDevelopFullResAsync()
             if (G::isReportDevelopTime)
                 qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
                                    << " total" << ms
-                                   << " (copy" << rt.copyMs << " develop" << rt.developMs
-                                   << " toImage" << rt.toImageMs << ")ms"
+                                   << " (mask" << rt.maskBuildMs << "(" << rt.maskScopes
+                                   << "scopes) copy" << rt.copyMs
+                                   << " develop" << rt.developMs
+                                   << " toImage" << rt.toImageMs
+                                   << " orient+scale" << rt.orientScaleMs << ")ms"
                                    << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
                                    << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs
                                    << " vignette" << rt.vignetteMs << " grain" << rt.grainMs << "]";
@@ -6881,6 +7437,34 @@ void MW::renderDevelopFullResAsync()
     });
 }
 
+void MW::updateDevelopRenderingHint()
+{
+/*
+    Raise or clear the loupe's "still rendering" chip. It tracks only the SLOW stages --
+    the off-thread scene-linear RAW decode an image switch needs (ensureDevelopWork) and
+    the full-resolution settle render -- because those are the ones that leave an interim
+    frame on screen for long enough to be mistaken for the final one. The interactive
+    proxy tick is sub-second and is the normal editing state, so it says nothing.
+
+    NOTE this is the deliberate ZERO-MEMORY answer to image-switch latency: show what is
+    already decoded, and label it, rather than pre-decoding neighbours. A proxy cache or
+    neighbour read-ahead would make the switch instant but costs 46 MB per cached proxy
+    (and a full scene-linear WorkingImage is 12 bytes/pixel -- ~600 MB on a 50 MP file).
+    That trade was weighed and deferred; see notes/Documentation.txt.
+*/
+    if (!imageView) return;
+    if (G::operationMode != G::OperationMode::Develop) {
+        imageView->clearRenderingHint();
+        return;
+    }
+    const QString fPath = dm ? dm->currentFilePath : QString();
+    if (fPath.isEmpty()) { imageView->clearRenderingHint(); return; }
+
+    if (developWorkInFlight == fPath) imageView->setRenderingHint(tr("Decoding raw"));
+    else if (developFullResInFlight)  imageView->setRenderingHint(tr("Rendering full"));
+    else                              imageView->clearRenderingHint();
+}
+
 void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen)
 {
 /*
@@ -6892,6 +7476,7 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
 */
     if (G::isLogger) G::log("MW::onDevelopFullResReady");
     developFullResInFlight = false;
+    updateDevelopRenderingHint();
 
     const bool currentImage = (fPath == dm->currentFilePath);
     if (!out.isNull() && currentImage && gen == developParamsGen) {
@@ -7075,6 +7660,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                 developProperties->updateDenoiseRunState(true);   // -> "Denoised"
             developProxy.reset();          // rebuild proxy from the denoised base
             developProxyPath.clear();
+            developStackCache.clear();     // new base pixels: every intermediate is stale
             ++developParamsGen;            // discard any stale in-flight full-res
             renderDevelopPreview(false);   // repaint the proxy now
             developFullResTimer->start(kDevelopSettleMs);   // and a crisp full-res
@@ -7159,6 +7745,7 @@ void MW::ensureDevelopWork(const QString &fPath)
     if (fPath.isEmpty()) return;
     if (developWorkInFlight == fPath) return;               // already decoding this image
     developWorkInFlight = fPath;
+    updateDevelopRenderingHint();        // label the interim frame while decoding
 
     ImageMetadata m = dm->imMetadata(fPath);                // GUI thread: read the datamodel
     if (m.fPath.isEmpty()) m.fPath = fPath;
@@ -7193,6 +7780,7 @@ void MW::ensureDevelopWork(const QString &fPath)
         QMetaObject::invokeMethod(this, [this, fPath, gen, showDemosaic]() {
             if (showDemosaic) progress->clearProgress(progressDemosaicRow);
             developWorkInFlight.clear();
+            updateDevelopRenderingHint();
             if (!dm || fPath != dm->currentFilePath) return;   // navigated away; drop it
             /* Success (scene-linear work now cached) -> clear the marker so a future eviction can
                re-decode. Otherwise (display-referred format, e.g. lossless ARW) -> mark it so the
@@ -7237,7 +7825,7 @@ static void imageGridDiff(const QImage &a, const QImage &b, int grid, int &maxAb
     meanAbs = cnt ? double(acc) / cnt : -1.0;
 }
 
-void MW::updateDevelopScopes(const QImage &shown)
+void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
 {
 /*
     Rebuild the Develop scopes (histogram + vectorscope) from the image currently shown. Called
@@ -7253,8 +7841,12 @@ void MW::updateDevelopScopes(const QImage &shown)
     /* Verify the Develop display differs from the Preview (embedded) image captured on
        mode entry -- confirms the decode change (demosaic) and/or edits actually altered
        pixels. Grid-sampled, so it is cheap even on a 50MP `shown` (no scaling). Runs for
-       edited AND unedited displays. */
-    if (dm && !shown.isNull() && !developVerifyPreviewBaseline.isNull()
+       edited AND unedited displays.
+
+       SKIPPED on an interactive proxy tick (verifyVsPreview=false): it is a diagnostic
+       about the IMAGE, not about the drag, and 4096 QImage::pixel() calls per tick is
+       pure overhead on the hot path. The settle render re-measures it. */
+    if (verifyVsPreview && dm && !shown.isNull() && !developVerifyPreviewBaseline.isNull()
         && developVerifyPreviewBaselinePath == dm->currentFilePath) {
         // 64x64 grid: negligible per drag tick
         imageGridDiff(developVerifyPreviewBaseline, shown, 64,

@@ -1888,11 +1888,17 @@ void MW::createDevelopDock()
             developProperties, &DevelopProperties::cancelWbDropper);
     connect(imageView, &ImageView::spotToolExited, developProperties,
             [this]{ developProperties->onSpotToolToggled(false); });
-    /* Whole-mask coverage tint: rebuild/clear when the mask selection changes (begin/end) or
-       any mask geometry/param changes (paramsChanged). MW composites the active scope's tools. */
+    /* Whole-mask coverage tint: rebuild/clear when the mask selection changes
+       (begin/end). MW composites the active scope's tools. These two are one-shot,
+       so they stay direct. paramsChanged does NOT connect here -- it fires on every
+       drag tick and the rebuild is two full mask composites, so it rides the
+       coalescing proxy render timer below instead. */
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::updateMaskOverlayTint);
     connect(developProperties, &DevelopProperties::maskEditEnd,   this, &MW::updateMaskOverlayTint);
-    connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::updateMaskOverlayTint);
+    /* Veil-only rebuild: the previewed combine op or the overlay colour changed, so the
+       image itself is untouched (no re-render). */
+    connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested,
+            this, &MW::updateMaskOverlayTint);
     connect(imageView, &ImageView::maskGeometryChanged, developProperties, &DevelopProperties::setActiveMaskParams);
     connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
     connect(developProperties, &DevelopProperties::maskInvertChanged, imageView, &ImageView::setMaskInverted);
@@ -1911,18 +1917,34 @@ void MW::createDevelopDock()
     /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);
-    /* Scope menu "Show mask breakdown" <-> MW's Result/Breakdown session flag. */
-    connect(developProperties, &DevelopProperties::maskBreakdownToggleRequested,
-            this, &MW::toggleMaskBreakdown);
     connect(imageView, &ImageView::maskTintVisibilityChanged,
             developProperties, &DevelopProperties::setMaskOverlayShown);
+    /* Becoming visible must REBUILD. While the veil is hidden MW skips building it
+       entirely, so whatever is stored is stale (or was never built for this mask) by the
+       time "O" turns it back on. */
+    connect(imageView, &ImageView::maskTintVisibilityChanged, this,
+            [this](bool visible){ if (visible) updateMaskOverlayTint(); });
+    /* A stroke starting/finishing flips what Opt means (erase vs subtract), so
+       re-read the combine modifiers on each edge. */
+    connect(imageView, &ImageView::maskStrokeStateChanged, this,
+            [this](bool){ syncPendingMaskOp(); });
+    /* A shaping action (stroke / handle drag) began: the modifier held at that instant
+       becomes what the submask DOES, and stays put when the key is released. */
+    connect(imageView, &ImageView::maskOpActionStarted,
+            developProperties, &DevelopProperties::latchMaskOp);
 
-    /* Develop preview render timers (see MW::developParamsChange). The proxy timer coalesces a
-       burst of slider ticks into one screen-resolution render; the full-res timer fires once the
-       drag settles for the crisp final image. */
+    /* Develop preview render timers (see MW::developParamsChange). The proxy timer
+       coalesces a burst of slider ticks into one screen-resolution render; the full-res
+       timer fires once the drag settles for the crisp final image. */
     developProxyRenderTimer = new QTimer(this);
     developProxyRenderTimer->setSingleShot(true);
-    connect(developProxyRenderTimer, &QTimer::timeout, this, [this]{ renderDevelopPreview(false); });
+    /* One tick = one veil rebuild + one proxy render, in that order (the order the two
+       direct connections used to run in), so a drag repaints the loupe ONCE per turn
+       instead of twice and the veil composite is not re-run per mouse-move event. */
+    connect(developProxyRenderTimer, &QTimer::timeout, this, [this]{
+        updateMaskOverlayTint();
+        renderDevelopPreview(false);
+    });
     developFullResTimer = new QTimer(this);
     developFullResTimer->setSingleShot(true);
     connect(developFullResTimer, &QTimer::timeout, this, [this]{ renderDevelopFullResAsync(); });
@@ -1932,6 +1954,13 @@ void MW::createDevelopDock()
        pool slot itself). One driver thread is enough: only one full-res render runs at a time. */
     developRenderPool = new QThreadPool(this);
     developRenderPool->setMaxThreadCount(1);
+
+    /* The interactive proxy render gets its OWN single thread. Sharing developRenderPool
+       would let a settled full-res render (~0.4-1.3 s) block every interactive tick
+       behind it, which is the opposite of the point. Both only DRIVE the render -- the
+       per-row parallelism inside runs on the global pool. */
+    developProxyPool = new QThreadPool(this);
+    developProxyPool->setMaxThreadCount(1);
 
     developDockTabText = "Develop";
     dockTextNames << developDockTabText;
@@ -2514,6 +2543,7 @@ void MW::setOperationMode(G::OperationMode mode)
 
     if (G::operationMode == mode) return;               // no change
     G::operationMode = mode;
+    updateDevelopRenderingHint();     // Preview hides the chip; Develop re-evaluates
 
     /* Refresh the status bar for the new mode: it hides the metadata / image cache
        running lights in Develop and shows them in Preview. */

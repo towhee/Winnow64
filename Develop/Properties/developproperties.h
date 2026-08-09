@@ -91,10 +91,8 @@ public:
        the user clicked in the scope panel), or -1. MW tints this component in its own
        colour so the user can see the selected tool's share of the mask. */
     int  activeMaskIndex() const;
-    /* Display name of a MaskTool (public so MW can label the overlay legend). */
+    /* Display name of a MaskTool (public so MW can label the on-canvas op chip). */
     static QString maskToolName(int tool);
-    /* Scope menu's "Show mask breakdown" check state, mirrored from MW's session flag. */
-    void setMaskBreakdownShown(bool shown);
 
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
@@ -162,10 +160,31 @@ public:
        panel, mark the sidecar dirty and re-render. Steps after it are discarded by the
        NEXT edit (see DevelopHistory::record). */
     void applyHistoryEntry(int index);
-    /* Index (into the active scope's masks) of the in-progress, uncommitted tool -- MW
-       draws it BLUE over the red committed veil while a later mask tool is previewed. -1
-       when nothing is pending (the first tool is committed immediately, drawn red). */
+    /* Index (into the active scope's submasks) of the in-progress, uncommitted submask.
+       MW composites it into the veil with the PREVIEWED op (pendingMaskOp), so the
+       overlay shows the outcome. -1 when nothing is being defined. */
     int pendingMaskIndex() const { return pendingIdx; }
+    /* The op the overlay AND the render are currently previewing for the pending submask
+       (MaskOp: 0 Add, 1 Subtract, 2 Intersect). Not written into the component until
+       commit. */
+    int pendingMaskOp() const { return pendingOp; }
+    /* Set by MW's modifier arbiter (Opt = Subtract, Shift+Opt = Intersect) while a
+       submask is being defined: relabels the commit button and re-previews the veil.
+       Releasing it falls back to the LATCHED op, not to Add (see latchMaskOp). */
+    void setPendingMaskOp(int op);
+    /* The user began SHAPING the submask (brush/object stroke, handle drag): the modifier
+       held at that instant becomes what this submask DOES, and it survives the key
+       being released. Without this, letting go of Opt turned the subtract just painted
+       back into an add -- and [Update] committed the add, changing nothing on screen. */
+    void latchMaskOp();
+    /* The combine op the LIVE keyboard state means: Opt = Subtract, Shift+Opt =
+       Intersect, neither = Add. The ONE place that mapping exists -- the button label,
+       the veil preview and the commit all read it, so they cannot disagree. */
+    static int maskOpFromModifiers();
+    /* True while the mask panel is up (a submask is being defined). */
+    bool isMaskPanelOpen() const { return maskPanelOpen; }
+    /* [Update] / Return: fold the pending submask in with the op held right now. */
+    void commitPendingMask();
 
     /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
        frame. Greys the property tree (caption text, which the delegate paints from the
@@ -342,8 +361,10 @@ signals:
     void maskTintShowRequested();
     /* The scope menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
-    /* The scope menu's "Show mask breakdown" row -> MW flips Result/Breakdown view. */
-    void maskBreakdownToggleRequested();
+    /* Rebuild the overlay tint ALONE (previewed op changed, overlay colour changed).
+       Deliberately NOT paramsChanged: nothing about the developed image has changed, and
+       paramsChanged would pay a proxy + full-res re-render per modifier press. */
+    void maskOverlayRefreshRequested();
 
 private:
     void initialize();
@@ -665,25 +686,26 @@ private:
     bool isRebuildingMasks = false;
 
     /* ---- Mask build-up (lab UI): append-only "flatten" via the MaskPanel ----------
-       A picked tool is APPENDED to the scope's masks and edited via the property tree
-       (addToolRow -- so its settings look exactly like the tree). The FIRST tool on an
-       empty mask is committed immediately and drawn RED; a LATER tool is a preview drawn
-       BLUE (pendingIdx = its index) until [Add]/[Subtract]/[Intersect] sets its op (fold)
-       or Cancel/Esc removes it. maskPanelOpen tracks whether the strip is up, so Esc
-       cancels the panel edit rather than collapsing a legacy tree tool. Gradient + brush
-       use this flow; range/AI still edit in the tree. */
+       A picked submask is APPENDED to the scope's mask and edited in the panel's embedded
+       MaskEditor. EVERY submask (including the first) is PENDING -- pendingIdx = its
+       index -- until the single [Update] button (or Return) folds it in with the op held
+       at that moment, or Cancel/Esc removes it. The overlay composites the pending
+       submask with pendingOp, so the veil shows the OUTCOME rather than colouring the
+       operand. maskPanelOpen tracks whether the strip is up, so Esc cancels the panel
+       edit rather than collapsing a legacy tree tool. */
     MaskPanel *maskPanel = nullptr;
-    int  pendingIdx = -1;                     // uncommitted (blue) tool's index, else -1
+    int  pendingIdx = -1;                     // uncommitted submask's index, else -1
+    int  pendingOp = 0;                       // op the overlay + render preview
+    int  latchedMaskOp = 0;                   // op the last shaping action set (survives
+                                              // the key release; see latchMaskOp)
     bool maskPanelOpen = false;
     /* Keep the combined-mask (red) overlay showing after a tool is committed/finished
        (the panel closes but the result stays visible + 'O'-toggleable). Cleared on scope/
        image switch or cancel. */
     bool maskLatched = false;
-    void beginMaskTool(int tool);            // pick -> append; commit first, else pending
-    void onMaskToolChosen(int tool);         // a tool was chosen -> beginMaskTool
-    void commitPendingMask(int op);          // [Add]/[Subtract]/[Intersect]
-    void finishFirstMask();                  // [Done] on the first tool (keep it)
-    void cancelMaskTool();                   // [x]/Esc: discard the preview / first tool
+    void beginMaskTool(int tool);            // pick -> append as the pending submask
+    void onMaskToolChosen(int tool);         // a submask type was chosen -> beginMaskTool
+    void cancelMaskTool();                   // [x]/Esc: discard the pending submask
     MaskComponent *editingMaskComp();        // the tool being built, or null
     /* MaskEditor (panel) change routing -- mirrors the tree's itemChange mask blocks. */
     void onMaskEditorSetting(const QString &key, const QVariant &value);

@@ -304,6 +304,7 @@ Q_NAMESPACE
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
     extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
     extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
+    extern bool useBrushEraseStroke;   // false = Opt always means Subtract, never erase
     extern int  spotFillCorrectMode;   // model-path heal correction 0-3, see global.cpp
     extern bool spotFillGrain;         // match surround grain into the heal (N toggles)
     extern bool useUpdateStatus ;
@@ -495,6 +496,11 @@ Q_NAMESPACE
     extern QString darkpink;
     extern QString lightmagenta;
     extern QString darkmagenta;
+
+    /* The ONE colour the Develop mask overlay is painted in (veil + per-submask
+       preview). User-pickable from the Mask panel's swatch row; persisted as
+       "Develop/maskOverlayColor" and seeded by the DevelopProperties ctor. */
+    extern QColor maskOverlayColor;
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;

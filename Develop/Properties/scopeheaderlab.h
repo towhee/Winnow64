@@ -53,7 +53,6 @@ public:
     void setGlobalActive(bool isGlobal) override { globalActive = isGlobal; }
     void setMaskOverlayAvailable(bool available) override { maskOverlayAvailable = available; }
     void setMaskOverlayShown(bool shown) override { maskOverlayShown = shown; }
-    void setMaskBreakdownShown(bool shown) override { maskBreakdownShown = shown; }
     void setCollapsed(bool collapsed) override;      // hide/show the rows container
     bool isCollapsed() const override { return collapsed; }
     QString currentScopeName() const override;
@@ -91,7 +90,6 @@ private:
     bool globalActive   = true;
     bool maskOverlayAvailable = false;
     bool maskOverlayShown     = true;
-    bool maskBreakdownShown   = true;
 };
 
 #endif // SCOPEHEADERLAB_H

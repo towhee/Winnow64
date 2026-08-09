@@ -1842,6 +1842,20 @@ Develop Mode Local Shortcuts
         H   Develop History panel       historyDockVisibleAction (Preview: unbound)
         P   Develop Presets panel       presetsDockVisibleAction (Preview: Pick)
 
+    Plus three keys that apply only while a SUBMASK is being defined (the MaskPanel is
+    up), handled in MW::eventFilter rather than by an action:
+
+        Return      Update the mask with the submask (same as the panel's button)
+        Opt/Alt     (held) preview + commit that submask as a SUBTRACT
+        Shift+Opt   (held) preview + commit that submask as an INTERSECT
+
+    The modifiers are MOMENTARY: they are read live (press AND release are tracked, so
+    the veil follows the key with the mouse stationary) and are never latched into the
+    submask until it is committed.  Opt is skipped while a Brush/Object stroke is in
+    flight, where it keeps its existing meaning of "erase from this stroke" -- the one
+    rule is that Opt takes away from the STROKE while painting and from the MASK
+    otherwise.  See "Scope & mask model (Global + masks)" in the Develop section.
+
     H and P are the odd ones out in that their actions are NOT Develop-menu local: they
     are the View menu's "Develop History Panel" / "Develop Presets Panel" dock toggles,
     which stay enabled in both modes (the menu items work in Preview) while the KEYS are
@@ -1888,20 +1902,19 @@ Develop Mode Local Shortcuts
     Contextual mode-local keys (active only while a panel/tool is up)
     ......................................................................................
     Some Develop keys are only valid while a specific tool is active, so they cannot live
-    in the static developShortcuts table (that would steal them mode-wide).  They are
+    in the static developShortcuts table (that would steal them mode-wide). They are
     instead a guarded branch INSIDE developShortcutIntercept, ahead of rule 1, keyed off
-    the tool's "active" flag.  Today the only case is the Transform panel: while
+    the tool's "active" flag. Today the only case is the Transform panel: while
     developCropEditing is true, C/L/W/A beat their window-level shortcuts (A Run Droplet,
     C Compare) and call TransformPanel::handleTransformShortcut(key); Esc calls
     MW::cancelDevelopTransform (discard the session + hide the panel); Enter/Return calls
     toggleDevelopTransform (commit + hide, i.e. R again), EXCEPT while a warp quad is
     traced (imageView->cropIsWarp()) where the branch falls through so ImageView commits
-    the quad (rectify) via its own Enter path.  See the Transform section.  Doing it in
-    the
+    the quad (rectify) via its own Enter path. See the Transform section. Doing it in the
     arbiter -- not in ImageView::event as tool-local keys are -- is deliberate: the crop
     overlay usually does NOT hold keyboard focus, so an ImageView ShortcutOverride claim
-    never fires (this was the first, wrong, fix).  The arbiter is a qApp filter, so it
-    works regardless of focus.  ADD FUTURE panel/tool-scoped letter keys here the same way
+    never fires (this was the first, wrong, fix). The arbiter is a qApp filter, so it
+    works regardless of focus. ADD FUTURE panel/tool-scoped letter keys here the same way
     (guard on the tool's active flag), NOT to developShortcuts and NOT to
     ImageView::event.
 
@@ -3250,10 +3263,12 @@ Scope & mask model (Global + masks)
            paramsChanged -> MW::developParamsChange -> MW::renderDevelopPreview):
              - PROXY: a drag renders a screen-resolution proxy WorkingImage
                (WorkingImageCache::downscaled, INTER_AREA in scene-linear, sized ~1.5x the loupe
-               viewport, cached per path in MW::developProxy) and FAST-upscales the result to the
-               displayed dimensions so ImageView::setDevelopPreview's "same dimensions" contract
-               holds (zoom/fit/scene untouched). Raw orientation is applied while the proxy is
-               still small (cheap). ~6-20x less pixel work per tick.
+               viewport, cached per path in MW::developProxy). Raw orientation is applied
+               while the proxy is still small (cheap). ~6-20x less pixel work per tick.
+               The proxy USED to be FAST-upscaled to the full displayed dimensions so
+               ImageView::setDevelopPreview's "same dimensions" contract held -- a ~200 MB
+               QImage::scaled plus an equally large QPixmap::fromImage per tick on a 50MP
+               file. It no longer is: see PROXY-SIZED PIXMAP below.
              - PARALLEL ToImage: OutputTransform::ToImage now splits rows across the global pool
                (same idiom as applyPointOps), cutting the per-pixel pow cost ~Ncore.
              - COALESCE + SETTLE: developParamsChange does no rendering itself -- it arms a 0ms
@@ -3295,9 +3310,241 @@ Scope & mask model (Global + masks)
                so a 0 slider early-returns -- see item 4 (XMP sidecar). GENERAL RULE: any new
                per-pixel Develop loop must use parallelFor; any new large-kernel blur should use a
                downscaled base (or an O(1) box/integral approach) -- files keep growing.
+             - MASK-DRAG LATENCY (2026-08): with masked scopes the proxy tick was still
+               doing all of the work every time. DevelopProperties::paramsChanged fanned
+               out to TWO direct consumers -- developParamsChange (coalesced) AND
+               updateMaskOverlayTint (NOT coalesced), so the veil's one-or-two full
+               buildMaskBuffer passes at a 1600px cap ran on every mouse-move on top of
+               the render. Inside the render, developCompositeStack re-rasterized EVERY
+               scope's mask and renderStack redid `acc = work` + a Develop::Apply for the
+               base and then a full copy + Apply per scope -- even when only one mask's
+               geometry had moved. And Linear/Radial handle drags emitted
+               maskGeometryChanged on every mouse-move while brush strokes went through a
+               10 Hz throttle. Five fixes:
+                 . COALESCED VEIL: paramsChanged no longer connects to
+                   updateMaskOverlayTint. The proxy timer's slot calls it, then
+                   renderDevelopPreview -- one veil rebuild and one render per event-loop
+                   turn, and ONE loupe repaint instead of two. maskEditBegin/End stay
+                   direct (they are one-shot).
+                 . THROTTLED HANDLE DRAGS: ImageView::maskEmitLiveGeometry(LiveEmit) is
+                   the one throttle for every live mask emit (kMaskStrokeLiveMs, trailing
+                   edge); brushEmitLiveGeometry is now a thin caller. A brush stroke and a
+                   handle drag are mutually exclusive, so one clock covers both. The grab
+                   invalidates the clock so the first move emits at once; both releases
+                   emit unconditionally, so the settled geometry is never a throttled
+                   sample.
+                 . PER-SCOPE MASK CACHE + LAYER CACHE: Develop/developstackcache.h. One
+                   entry per scope POSITION (so the dragged scope replaces its own entry
+                   instead of thrashing a shared store), keyed on the components'
+                   signature; plus the developed intermediates (prefix/layer) for the ONE
+                   scope being edited. renderStack takes a StackResume and skips every
+                   scope below the edited one, and skips the develop pass for the edited
+                   scope itself when only its MASK moved -- so a mask drag collapses to
+                   one blend + one OutputTransform. PROXY-ONLY and GUI-THREAD-ONLY (the
+                   settle render passes nullptr), which is what keeps it lock-free.
+                   Invalidated on image / proxy-size / orientation / GLOBAL-params change;
+                   a scope whose reference (AI field, range reference, auto-mask guide)
+                   was not registered yet is NOT cached, or the un-confined placeholder
+                   would never be retired. Covered by tests/unit/tst_renderstack.
+                 . PROXY-SIZED PIXMAP: Views/scaledpixmapitem.h. ScaledPixmapItem keeps
+                   presenting the FULL image size to the scene while holding the proxy
+                   pixmap and stretching it at paint time, so the per-tick upscale +
+                   QPixmap::fromImage at full dimensions is gone. This was chosen over
+                   making the ~37 pmItem->boundingRect() sites scene-relative: item
+                   coordinates ARE image coordinates as before, so no overlay, hit test or
+                   zoom calculation moved. Only code that READS PIXELS out of the pixmap
+                   needs ImageView::imageToPixmap (the sample loupe; copyImage stretches
+                   back for the clipboard). EXCEPTION: a non-identity geometry still
+                   upscales first, because crop is applied on the full-output-dimension
+                   image so its dims match the settle render's exactly -- cropping the
+                   proxy would round differently and make the arriving settle re-fit the
+                   view.
+                 . SETTLE-ONLY DIAGNOSTICS: updateDevelopScopes(shown, verifyVsPreview)
+                   skips the 4096-sample imageGridDiff on an interactive tick.
+                 . BRUSH DAB SPACING (the actual dominant cost, found by the probe above).
+                   With the develop stages down to ~3 ms, a brush drag on a 2 MP mask
+                   still measured `mask 900 ms` per tick and `tint` the same again. It was
+                   not the pipeline at all: BrushStamp::segmentMax computed its dab
+                   spacing PER SEGMENT (n = max(1, len/step)), so ANY mouse-move -- even a
+                   3 px one -- stamped two full-radius dab boxes, and each box is
+                   (2*radius)^2 pixel evaluations (~105k at a 20% brush on this image).
+                   The develop render replays every dab of the whole stroke on every tick,
+                   so cost grew with the number of mouse EVENTS rather than with the
+                   length of the stroke. Fixed by tracking the residual distance across
+                   segments (BrushStamp::kDabSpacing + segmentMax's `carry`), so dabs land
+                   at a fixed arc-length spacing however the events arrive; ImageView
+                   threads the same carry through maskBrushDabCarry so the live preview
+                   and the render still place dabs identically. Both stamp the
+                   final/cursor point unconditionally -- a spaced walk can stop up to one
+                   step short, and the paint must not trail the brush. GENERAL RULE: brush
+                   cost is (arc length / (radius * kDabSpacing)) dab boxes; anything that
+                   stamps per EVENT instead of per DISTANCE will scale with mouse polling
+                   rate.
+                 . DAB AREA (the rest of it). Spacing alone only bought ~1.4x, because a
+                   fast drag already delivers events roughly a step apart -- the cost was
+                   the SIZE of each dab, not the number. A dab box is (2*radius)^2 clamped
+                   to the buffer, so a large brush touches most of the image per dab, and
+                   BrushStamp::dabMax was the one per-pixel loop in Develop still running
+                   single-threaded. It is now row-parallel (bands own disjoint rows, so
+                   the MAX accumulation cannot race; serial below 64k px so ImageView's
+                   per-mouse-move dab does not pay a thread hop), and its
+                   outside/full-core tests use SQUARED distance so the sqrt is paid only
+                   in the feather band -- at feather 0, never. coverage() is unchanged for
+                   its other callers.
+                 . DAB COUNTERS. BrushStamp::dabStats() adds two relaxed atomics per dab
+                   and the [DevTime] mask field reports "(N scopes, D dabs, P Mpx)". This
+                   is the only way to tell "too many dabs" from "each dab is the whole
+                   image" -- they have different fixes, and reading the code cannot
+                   distinguish them (it took two wrong guesses to learn that). Shared by
+                   the GUI and settle renders, so a settle landing mid-drag inflates one
+                   line.
+                 . PER-COMPONENT BRUSH CACHE (what it actually was). Splitting the mask
+                   number into raster / setup / fold settled it: on a scope with 21
+                   submasks a tick read `raster 275 / setup 308 / fold 51`. The fold was
+                   never the problem and neither were the dabs (185 dabs = 4 Mpx against a
+                   700 ms build). The cost was PER COMPONENT: all ~19 brush submasks were
+                   re-rasterized every tick, each re-parsing its JSON and allocating +
+                   zeroing its own w*h*4 buffer. g_brushCache exists to prevent exactly
+                   that, but its policy was `if (size() > 8) clear()` -- past eight
+                   entries it wiped itself on every build, so it could never hit on a busy
+                   mask. Now a byte-budgeted LRU (kBrushCacheBudget): entries are ~8 MB at
+                   a 2 MP proxy, so a COUNT cap either thrashes on a busy mask or hoards
+                   on a big one, while least-recently-USED eviction keeps the components
+                   the user is not touching and lets the one being edited churn a new key
+                   per tick.
+                 . VEIL SHARES THE RASTERS. updateMaskOverlayTint built at its own
+                   1600px cap, so its brush components missed every cache entry the render
+                   had just filled and it cost about as much as the render again. It now
+                   builds at the PROXY's exact dimensions when one exists, so the two
+                   share keys.
+                 . LESSON. Three fixes were aimed at this before the split existed --
+                   dab spacing, dab parallelism, the scope layer cache -- and all three
+                   were reasoned from the code. Only the first was even a real bug.
+                   Sub-timings and COUNTS (dabs, components, strokes) are what found it.
+                   Split a number before optimising anything behind it.
+                 . RESULT (final). On a 1618x1214 proxy with a ~24-submask scope, a brush
+                   drag went from ~1450 ms per tick (mask 709 + tint 750) to 77 ms: mask
+                   46 [raster 15 one live stroke / setup 22 / fold 2, ONE component] +
+                   develop 3 + toImage 8, with the veil gated off (tint 0). That is ~19x,
+                   and it clears the 100 ms live-emit throttle with headroom, which is
+                   what stops the brush cursor lagging. WHAT IS LEFT: setup (22 ms) is now
+                   the largest item and is mostly signature work -- every component's
+                   paramsJson is hashed twice per tick (once for the scope signature in
+                   developCompositeStack, once per component in buildMaskBuffer) plus the
+                   8 MB prefix copy; and the proxy render is still SYNCHRONOUS on the GUI
+                   thread, so that headroom is a property of THIS image size and component
+                   count, not a guarantee.
+                 . PREFIX-FOLD CACHE. The component fold is SEQUENTIAL per pixel, so the
+                   running value after components [0..k) is a well-defined image -- a
+                   prefix -- and editing one submask leaves it exactly right.
+                   buildMaskBuffer now resumes from the deepest still-valid prefix
+                   (g_maskFoldCache, keyed on path+dims+orientation, mutex-guarded because
+                   the GUI render, the veil and the settle worker all call it). Components
+                   inside the prefix are not folded, not rasterized and not even
+                   JSON-parsed, so this removes the setup and raster cost too, not just
+                   the fold. The cut point is the first component whose signature changed,
+                   so a drag on one submask resumes at the same place every tick; at least
+                   one component is always left out or a no-change tick would cache
+                   everything. INVALIDATION: per-component signatures cover everything
+                   read out of a MaskComponent but NOT the references a component SAMPLES,
+                   so ensureRangeRef (base-params dependent) calls maskFoldCacheClear();
+                   the AI/object/guide refs are per-image and built once, and a component
+                   whose ref is not registered yet is refused entry to the prefix
+                   (prefixRefsReady), so nothing else can go stale behind it.
+                 . VEIL GATING (2026-08). Two changes, one a bug. (a)
+                   MW::updateMaskOverlayTint now asks ImageView::maskTintVisible() and
+                   returns before building. maskTintHidden lived entirely in ImageView and
+                   was only read by drawForeground, so pressing "O" hid the veil but MW
+                   kept compositing it at full proxy resolution every tick -- ~87 ms per
+                   tick for something nothing drew. The stored QImage is left in place
+                   rather than cleared (it is not drawn) and maskTintVisibilityChanged is
+                   wired to rebuild on the way back up, so re-showing cannot flash a stale
+                   or empty overlay. (b) The veil is now shown only for the scope's FIRST
+                   submask -- where nothing else on screen says the mask exists -- and
+                   starts hidden for a second or later one, since the tool's own live
+                   preview (brush coverage, gradient handles, range swatches) already
+                   shows what is being added. "O" brings it back. ImageView::beginMaskEdit
+                   no longer force-shows it; the decision belongs to DevelopProperties, at
+                   the two places a submask is added, emitted between buildTree() (whose
+                   maskEditBegin drives the overlay) and paramsChanged() (whose tick reads
+                   the visibility to decide whether to build at all).
+                 . WHY IT MATTERS BEYOND THE VEIL: the proxy render is SYNCHRONOUS on the
+                   GUI thread. With veil ~87 ms + render ~47 ms against a 100 ms live-emit
+                   throttle the GUI thread was over 100% occupied during a brush drag, so
+                   mouse-move events queued and the brush CURSOR RING -- which ImageView
+                   paints itself -- visibly lagged. That is a saturation problem, not a
+                   hot loop: no per-stage win fixes it once the total exceeds the
+                   throttle. Gating the veil takes the common drag to ~47 ms. The
+                   structural fix, still TO DO, is to run the proxy render off the GUI
+                   thread the way renderDevelopFullResAsync already runs the settle render
+                   (staleness gen, in-flight guard, invokeMethod back). Note before
+                   attempting it: DevelopStackCache is lock-free BECAUSE it is
+                   GUI-thread-only, orientation must be read on the GUI thread
+                   (developOrientationDegrees reads dm->sf), and
+                   ImageView::ensureAutoGuide reads pmItem->pixmap() so it has to run
+                   before launch.
+                 . PROXY RENDER OFF THE GUI THREAD (2026-08). renderDevelopPreview now
+                   does only the work that MUST happen on the GUI thread -- orientation
+                   (developOrientationDegrees reads dm->sf), ImageView::ensureAutoGuide
+                   (reads the loupe pixmap), the ensure*Mask builders (inference + MW
+                   state) and the proxy build -- then hands the composite to
+                   developProxyPool, a DEDICATED 1-thread pool. Not developRenderPool:
+                   sharing it would let a settled full-res render (0.4-1.3 s) block every
+                   interactive tick behind it. The worker captures the source as a
+                   shared_ptr and the job/path by value, so a GUI-side reset of
+                   developProxy cannot dangle it. WHY: the brush cursor and every mask
+                   overlay are painted by ImageView on the GUI thread, so compositing
+                   there capped cursor smoothness no matter how cheap the render became --
+                   at veil 87 + render 47 against a 100 ms throttle the thread was over
+                   100% occupied and mouse-moves queued.
+                 . PROXY WORKER GUARDS. developProxyInFlight allows one at a time.
+                   developProxyPending is what makes it CORRECT rather than merely
+                   serialised: a request arriving mid-flight is remembered and re-armed on
+                   completion. Relying on developParamsGen instead would silently lose the
+                   crop / warp / level callers, which call renderDevelopPreview directly
+                   without bumping it. developProxyReqGen discards a superseded frame --
+                   discarded, not shown, because the crop tool alternates geometry-applied
+                   and geometry-suppressed renders and flashing the wrong one reads as a
+                   glitch. [DevTime] gained `worker` (off-thread ms) and `applied` (0 when
+                   the frame was dropped as stale).
+                 . PROXY WORKER THREAD SAFETY. DevelopStackCache is now MUTEX-GUARDED with
+                   private members -- it was lock-free only because it had been
+                   GUI-thread-only, and the worker now reads and writes it while the GUI
+                   still calls reset()/clear() on image, folder, proxy and denoise-base
+                   changes. Never hand out a reference into `entries` or `hot`: copy the
+                   shared_ptr out under the lock (hotAt() does) and work from that, which
+                   is safe because everything they reach is const. g_brushCache and
+                   g_maskFoldCache were already mutex-guarded. applySpots is now
+                   serialised behind g_spotHealMutex: the LaMa/MI-GAN heal engines hold
+                   per-process state and were only ever driven by one background render at
+                   a time; two pools can now overlap. STILL ON THE GUI THREAD,
+                   deliberately: the one-off proxy build (~34 ms per image), the
+                   ensure*Mask inference (200-400 ms, once per image), and
+                   updateMaskOverlayTint -- the veil is gated off for most drags, and
+                   moving it would need the same treatment again.
+             - IMAGE-SWITCH LATENCY (2026-08): switching image in Develop blocks on a full
+               unpack + demosaic + RawColor before anything can be developed (Develop
+               trims read-ahead to the current image). The DELIBERATE answer is
+               progressive display at ZERO memory cost: keep showing the already-decoded
+               8-bit image while MW::ensureDevelopWork decodes the scene-linear
+               WorkingImage off-thread, and LABEL it -- MW::updateDevelopRenderingHint
+               raises ImageView's top-right chip ("Decoding raw", "Rendering full size")
+               for the two slow stages only, never for the sub-second proxy tick. It is
+               drawn from paintEvent, not drawForeground, so it survives the crop/spot
+               early returns, and sits top-right because drawMaskLegend owns top-left. NOT
+               DONE, on purpose: caching proxies or reading neighbours ahead. A
+               scene-linear WorkingImage is 12 bytes/pixel (~600 MB for 50 MP, against a
+               768 MB WorkingImageCache budget) and even a screen-resolution proxy is ~46
+               MB each. A half-size demosaic (2x2 CFA quad -> 1 px, no interpolation)
+               feeding a proxy read-ahead of +/-2 neighbours is the obvious next step if
+               this is revisited; a disk cache was considered and rejected (only helps
+               revisits, large files, mtime invalidation surface).
            PROBE: set G::isReportDevelopTime to log [DevTime] lines (proxy/full/full(async), dims,
-           proxyBuild / render+compose / preview ms; the async line adds the develop sub-stage
-           breakdown denoise/point/texture/dehaze). Off in production.
+           proxyBuild / mask (+scope count) / develop / toImage / orient+scale /
+           render+compose / preview / scopes / tint ms. The TINT COUNT is the diagnostic
+           that matters for coalescing: more than one veil rebuild per render means it has
+           come uncoupled again. The async line adds the develop sub-stage breakdown
+           denoise/point/texture/dehaze. Off in production.
         2. Scope object + compositor: add EditStack, run the fused loop over scopes with opacity;
            convert the dock's "scopes-as-alternatives" into a real stack (no masks yet).
         3. Parametric masks (linear/radial): analytic inline + per-scope alpha cache.
@@ -3348,10 +3595,8 @@ Scope & mask model (Global + masks)
                while a mask tool is expanded; toggles the red coverage tint, the same
                action as the "O" shortcut -- maskOverlayToggleRequested ->
                MW::toggleMaskOverlay, and its check state is pushed back from
-               ImageView::maskTintVisibilityChanged -> setMaskOverlayShown), a checkable
-               "Show mask breakdown" (Result view vs Breakdown view -- see RESULT VEIL /
-               BREAKDOWN OUTLINES below; maskBreakdownToggleRequested ->
-               MW::toggleMaskBreakdown), and Reset/Remove/Rename <scope> ->
+               ImageView::maskTintVisibilityChanged -> setMaskOverlayShown), and
+               Reset/Remove/Rename <scope> ->
                resetActiveScope / deleteScope / renameActiveScope. The per-scope group
                is OMITTED for Global (index 0) -- ScopeHeader::setGlobalActive, driven by
                updateMaskMenuBtn. MASK ENTRY POINTS: a scope's first mask tool is
@@ -3570,72 +3815,151 @@ Scope & mask model (Global + masks)
                through to pan/zoom. Drag emits maskGeometryChanged LIVE (and on release) ->
                DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
                tree rebuild). Feather/Invert live-update via maskFeatherChanged/
-               maskInvertChanged; tint colour conveys op (ImageView::maskTintColor --
-               Add=green 70,220,110, Subtract=blue 60,150,255). RED is reserved for the
-               RESULT veil (below), so a constituent is shown by its ROLE colour, the same
-               green/blue as its Breakdown outline. That preview is ALWAYS the SELECTED
-               tool. Invert flips (Radial: effect outside).
-             - RESULT VEIL (composite overlay): while ANY mask tool is expanded
+               maskInvertChanged; the tint is drawn in the ONE overlay colour
+               (ImageView::maskTintColor -> G::maskOverlayColor), the same colour as the
+               result veil -- the op is read off the veil's OUTCOME and the op chip, never
+               off the colour. That preview is ALWAYS the SELECTED tool. Invert flips
+               (Radial: effect outside).
+             - TERMS: the MASK is what a (non-Global) scope applies; each SUBMASK is a
+               building block folded into it. In code a submask is still a MaskComponent
+               and the sidecar keys are unchanged -- Mask/Submask is UI + docs vocabulary
+               only.
+             - RESULT VEIL (composite overlay): while a submask is being defined
                (selectedMaskIndex >= 0 on a non-Global scope), the loupe shows the ENTIRE
-               mask -- all the scope's Add/Subtract tools composited -- as a single
-               flat RED coverage tint, and hides it when all tools collapse. This is the
-               TRUE resulting mask: alpha is the composite coverage ALONE (up to 150), so
-               Subtract holes stay holes and the veil by itself answers "what does this
-               scope affect?". MW::updateMaskOverlayTint (wired to maskEditBegin/End +
-               paramsChanged) reuses the render-path buildMaskBuffer (so the tint is
-               pixel-consistent with the render) at a capped resolution (~1600 px long
-               edge), builds the AI/range refs it needs (cached), converts coverage ->
-               premultiplied red, adds the Breakdown outlines (below), orients it to the
-               displayed pixmap, and hands it to ImageView::setScopeMaskTint
-               (clearScopeMaskTint when no tool is expanded). drawForeground paints the
-               veil UNDER the active tool's handles, NOT hover-gated; when present the
-               per-tool draw takes drawTint=false (its own tint would double up). The veil
-               reflows live during a geometric drag. "O" (toggleMaskOverlayAction ->
-               MW::toggleMaskOverlay -> ImageView::toggleMaskTint) HIDES/SHOWS the whole
-               overlay -- flips maskTintHidden, gating BOTH veil and per-tool preview
-               (handles/cursor keep drawing); reset to shown on each beginMaskEdit.
-               Changing any adjustment slider while shown also hides it
-               (maskTintHideRequested -> hideMaskTint) so the effect is visible; re-shown
-               by "O", the scope menu's "Show mask overlay" row, or re-selecting a tool.
-               Mask-only edits (Feather/Invert/Range/Brush) keep the overlay shown.
-               COMPLETING A TOOL HIDES THE TINT: [Done] (finishFirstMask) and [Add]/
-               [Subtract]/[Intersect] (commitPendingMask) both emit maskTintHideRequested
-               after paramsChanged, so the red coverage clears the moment the tool is
-               folded in and the user sees the developed result. The overlay stays LATCHED
+               mask -- all the scope's submasks composited -- as a single flat coverage
+               tint in the ONE overlay colour (G::maskOverlayColor), and hides it when the
+               panel closes. This is the TRUE resulting mask: alpha is the composite
+               coverage ALONE (up to 150), so Subtract holes stay holes and the veil by
+               itself answers "what does this scope affect?". MW::updateMaskOverlayTint
+               (wired to maskEditBegin/End + paramsChanged) reuses the render-path
+               buildMaskBuffer (so the tint is pixel-consistent with the render) at a
+               capped resolution (~1600 px long edge), builds the AI/range refs it needs
+               (cached), converts coverage -> premultiplied overlay colour, rings the
+               pending submask's footprint (below), orients it to the displayed pixmap,
+               and hands it to ImageView::setScopeMaskTint (clearScopeMaskTint when
+               nothing is being edited). drawForeground paints the veil UNDER the active
+               submask's handles, NOT hover-gated; when present the per-submask draw takes
+               drawTint=false (its own tint would double up). The veil reflows live during
+               a geometric drag. "O" (toggleMaskOverlayAction -> MW::toggleMaskOverlay ->
+               ImageView::toggleMaskTint) HIDES/SHOWS the whole overlay -- flips
+               maskTintHidden, gating BOTH veil and per-submask preview (handles/cursor
+               keep drawing); reset to shown on each beginMaskEdit. Changing any
+               adjustment slider while shown also hides it (maskTintHideRequested ->
+               hideMaskTint) so the effect is visible; re-shown by "O", the scope menu's
+               "Show mask overlay" row, or re-selecting a submask. Mask-only edits
+               (Feather/Invert/Range/Brush) keep the overlay shown. COMMITTING A SUBMASK
+               HIDES THE TINT: commitPendingMask emits maskTintHideRequested after
+               paramsChanged, so the coverage clears the moment the submask is folded in
+               and the user sees the developed result. The overlay stays LATCHED
                (maskLatched -> maskOverlayActive), so it is only hidden, not gone: "O" or
                the scope menu row brings the combined mask back. maskTintHidden is sticky,
                so selecting another scope with a mask re-shows it explicitly
                (onScopeSelected -> maskTintShowRequested -> ImageView::showMaskTint).
-             - BREAKDOWN OUTLINES (which constituents build this mask?): the veil is a
-               FILL, so to show HOW it is built without repainting over it, each
-               constituent is drawn as an EDGE on top of the veil -- Add tools GREEN
-               (70,220,110), Subtract tools BLUE (60,150,255). The RESULT VEIL WINS: a
-               mark is painted only where the result is ABSENT (buf <= ~0.12), so coverage
-               that survives into the result reads RED and green/blue show only where a
-               tool's coverage is EXCLUDED (an Add cut by a Subtract, or a Subtract
-               footprint). This also stops a noisy content mask (Color/Luminance Range),
-               whose per-pixel "edges" are everywhere, from fogging the subject green --
-               there the coverage IS the result, so it stays red. updateMaskOverlayTint
-               finds the inner-boundary pixels of each constituent's coverage (op forced
-               to Add; a threshold-crossing neighbourhood test) and paints the
-               result-absent ones; the SELECTED tool
-               (DevelopProperties::activeMaskIndex()) is drawn LAST with a thicker ring so
-               it reads on top, and clicking another row re-emits maskEditBegin so the
-               emphasis follows the selection. RESULT vs BREAKDOWN is a session toggle
-               (MW::maskShowBreakdown, default Breakdown), flipped by the scope menu's
-               "Show mask breakdown" row (ScopeHeader::maskBreakdownToggled ->
-               DevelopProperties::maskBreakdownToggleRequested -> toggleMaskBreakdown):
-               Breakdown = veil + outlines; Result = veil alone. RED thus always means
-               "the result", green/blue always mean "an Add/Subtract constituent".
-             - OVERLAY LEGEND (what do the colours mean?): while the overlay is shown
-               ImageView::drawMaskLegend paints a compact chip top-left naming the colours
-               -- a RED "Result" swatch always, plus GREEN "+ Add" and BLUE "- Subtract"
-               swatches in Breakdown view -- and appends the selected tool's name + role
-               ("Add: Brush Mask"). MW pushes this via ImageView::setMaskLegend (name from
-               DevelopProperties::maskToolName, now public). The dock echoes the same
-               language: each mask tool ROW's caption is tinted by its role (green Add /
-               blue Subtract) via the UR_CaptionColor delegate role (set in addToolRow,
-               honoured in PropertyDelegate).
+             - ONE COLOUR, OUTCOME PREVIEW (how the op is shown): the overlay does NOT
+               colour-code Add/Subtract/Intersect. Instead the PENDING submask (the one
+               being defined, DevelopProperties::pendingMaskIndex) is composited into the
+               veil with the op the held modifier is previewing (pendingMaskOp), so the
+               veil shows the RESULT of what [Update]/Return would do: hold Opt and the
+               veil retreats where that submask would be removed; hold Shift+Opt and it
+               collapses to the overlap. That is strictly more informative than tinting
+               the operand, and it is why one colour suffices. The op is MOMENTARY -- it
+               is never written into the MaskComponent until commit. One ring is still
+               drawn: a thin outline of the pending submask's footprint, in the overlay
+               colour, painted ONLY where the result is absent (buf <= ~0.12), because a
+               Subtract whose footprint misses the mask would otherwise change nothing on
+               screen. The veil winning everywhere it covers also keeps a noisy content
+               submask (Color/Luminance Range), whose per-pixel "edges" are everywhere,
+               from fogging the subject.
+             - OVERLAY COLOUR: G::maskOverlayColor (default 220,40,40) is the single
+               colour of the veil, the per-submask live preview (ImageView::maskTintColor)
+               and the pending footprint ring. The MaskPanel's swatch row picks it (red /
+               green / blue / yellow / magenta / white) -- red reads badly over a red
+               subject -- writing "Develop/maskOverlayColor" and re-emitting paramsChanged
+               so the veil repaints. The DevelopProperties ctor seeds G:: from that key.
+               Mask tool ROW captions are NOT role-tinted: the caption already reads
+               "Subtract Brush Mask", and a green/blue caption would re-introduce the
+               colour key this design removed.
+             - COMBINE MODIFIERS (Opt = subtract, Shift+Opt = intersect): the three
+               [Add]/[Subtract]/[Intersect] buttons are gone -- the MaskPanel has ONE
+               commit button whose LABEL follows the held modifier (Update / Subtract /
+               Intersect), so the words stay visible instead of hiding behind undocumented
+               keys. Return commits too (MW::eventFilter, mirroring the Transform panel's
+               Enter-commit); Esc still discards. ONE MAPPING, ONE PLACE:
+               DevelopProperties::maskOpFromModifiers() reads the LIVE keyboard state, and
+               everything goes through it -- the button label, the veil preview and the
+               commit itself -- so they cannot disagree. MaskPanel::committed() carries no
+               op; commitPendingMask() uses pendingOp -- WHAT THE BUTTON SAYS. It used to
+               re-read the live modifiers at the instant of the commit, which meant
+               releasing Opt to reach for [Update] committed an Add: the user painted a
+               subtract, let go of the key, clicked the button and nothing changed.
+               THE OP LATCHES ON ACTION (latchMaskOp, 2026-08-08): a modifier PRESS still
+               previews momentarily, but starting to SHAPE the submask -- a brush/object
+               stroke or a handle drag (ImageView::maskOpActionStarted) -- freezes the op
+               held at that instant into latchedMaskOp, and a later key release falls back
+               to THAT, not to Add. So the subtract you painted stays a subtract with your
+               hands off the keyboard. Reversible by the same gesture: paint or drag again
+               with nothing held and the latch re-reads as Add. Reset per submask.
+               MW's filter tracks Key_Alt/Key_Shift press AND release (the veil
+               must follow the key with the mouse stationary and the dock usually holds
+               focus, the same reason Space and Esc are driven from there) and calls
+               MW::syncPendingMaskOp -> setPendingMaskOp, which relabels the button and
+               re-composites. THE OP DRIVES THE RENDER, NOT JUST THE VEIL: the pending
+               submask is stored with op = Add until commit, so stackJob() substitutes
+               pendingOp into its component (local copy -- nothing is written into the
+               stored stack before the commit), exactly as updateMaskOverlayTint does for
+               the veil, and setPendingMaskOp emits paramsChanged rather than a veil-only
+               refresh. Without that the image kept showing an Opt submask being ADDED
+               while the veil showed it being subtracted -- and over an already-masked
+               area that is NO VISIBLE CHANGE, which reads as "subtract brush is broken".
+               The Alt KeyPress is accepted so Windows cannot open the menu
+               bar under us; ApplicationActivate re-syncs so a modifier released while the
+               app was inactive cannot stick. The Return branch deliberately has NO
+               value-editor bail (only a QLineEdit keeps the key): while a submask is
+               being defined the focus is almost always on one of the panel's own
+               sliders, which is exactly when Return must commit -- the same reasoning
+               that puts Esc ahead of the editor bail in developShortcutIntercept.
+               ERASE STROKE CANCELLED (G::useBrushEraseStroke, false, 2026-08-08): Opt now
+               means Subtract EVERYWHERE, painting included -- one key, one meaning. The
+               erase stroke was there because the effect only appeared on stroke release,
+               so erasing inside the submask was the only way to fix a stroke you could
+               not yet judge; the effect now re-renders DURING the swipe, so a mis-paint
+               is visible as it happens (correct it with Cmd+Z, or commit and subtract).
+               The whole erase path is intact behind the flag -- maskBrushErase, the
+               per-stroke "erase" JSON flag, BrushStamp's erase composite, the pink cursor
+               -- so set it true to restore; delete both once this proves out. THE RULE IT
+               REPLACES, still accurate with the flag TRUE:
+               Opt takes away -- from the STROKE while painting a Brush or
+               Object submask (maskBrushErase), from the MASK otherwise. WITH ONE CLAUSE:
+               a stroke with nothing to erase is not an erase. While the submask has NO
+               coverage yet (maskBrushStrokesJson empty) Opt keeps meaning subtract and
+               the stroke paints normally -- otherwise the natural gesture for a subtract
+               brush ("hold Opt, paint what to remove") would paint nothing, leaving an
+               empty submask whose Subtract is arithmetically a no-op (m *= 1 - 0) and a
+               commit that silently changes nothing. That was a real bug, found by probe:
+               the whole op/preview chain was correct and the veil simply could not
+               change. From the second stroke on, Opt erases as it always has.
+               Consequently only an ERASE stroke owns Opt: ImageView::maskStrokeIsErase()
+               (not merely maskStrokeInFlight) is what drops the previewed op back to Add
+               for the stroke's duration, so an Opt paint on an empty submask keeps
+               previewing the subtraction while it is drawn. ImageView emits
+               maskStrokeStateChanged on both edges of a stroke (AFTER maskBrushErase is
+               decided) and MW re-reads the modifiers there. The FIRST submask has nothing
+               to combine with, so it is pinned to Add and the hint is hidden.
+             - OP INDICATOR (on-canvas chip): while the overlay is shown
+               ImageView::drawMaskLegend paints a compact chip top-left naming what
+               [Update]/Return will do -- "Update: Brush Mask", "Subtract: Brush Mask",
+               "Intersect: Brush Mask" -- over a dim reminder line "Opt subtract .
+               Shift+Opt intersect" (suppressed on the first submask). It replaces the old
+               colour-key legend, which named a RED/GREEN/BLUE scheme that no longer
+               exists. MW pushes it via ImageView::setMaskLegend(submaskName, op,
+               showHint) (name from DevelopProperties::maskToolName, public for this).
+             - SUBMASK BUILD-UP (MaskPanel): every submask -- including the first -- is
+               PENDING from the moment its type is picked (beginMaskTool appends it and
+               sets pendingIdx) until [Update]/Return folds it in with the op the BUTTON
+               shows (commitPendingMask) or Esc/[x] removes it (cancelMaskTool). There is
+               ONE commit path: the old "first submask commits immediately / later ones
+               preview" split, and finishFirstMask with it, are gone -- with outcome
+               preview in one colour the first submask looks identical either way.
              - RENDER COMPOSITING (Stage 4b + N-scope stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which scope is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
@@ -3670,7 +3994,8 @@ Scope & mask model (Global + masks)
                (then component Invert), parametric uses evalMaskComp. Falloff smootherstep,
                Add=union(max), Subtract=*(1-c), Invert flips. developComposite remains the fast
                single-pass path when there are no masks. Mask add/delete/geometry/feather/
-               invert and a committed brush stroke emit paramsChanged() to re-render. Deferred: true
+               invert and a brush stroke (live DURING the swipe, throttled, and again on
+               release) emit paramsChanged() to re-render. Deferred: true
                STACKED adjustments (each scope builds on the result below, not the original), the
                combine field (Union only today), and AI tools.
              - BRUSH (freehand mask): vector strokes in paramsJson {size,flow,autoMask,autoMaskMode,
@@ -3688,11 +4013,26 @@ Scope & mask model (Global + masks)
                (feather 0 = hard edge at the size ring, feather 100 = fully soft, core -> centre).
                Pairs with the perceptual mask blend (kPerceptualMaskBlend) so the displayed effect
                tracks the coverage the way Lightroom's does. Live red/blue tint
-               preview rebuilt only on the dirty segment bbox; the develop re-composites on stroke
-               release (maskGeometryChanged -> setActiveMaskParams). WHILE a stroke is being swiped the
-               whole-mask composite tint (scopeMaskTint, rebuilt only on release) is SUPPRESSED
-               (drawForeground brushStroking guard) so the per-brush live preview shows the stroke
-               building up in real time instead of the tint only appearing after release. Dock rows: Size/Feather/Flow/Auto
+               preview rebuilt only on the dirty segment bbox. The DEVELOP EFFECT follows
+               the swipe: the in-progress stroke is handed to the dock mid-stroke
+               (brushEmitLiveGeometry -> maskGeometryChanged -> setActiveMaskParams ->
+               paramsChanged), THROTTLED to kMaskStrokeLiveMs (100ms, ~10Hz) because each
+               tick costs a proxy develop render of the whole stroke set. The throttle has
+               a TRAILING edge (one scheduled catch-up emit), so a stroke that pauses
+               mid-swipe still settles on the mask as painted, not as of 100ms ago; the
+               release emit
+               is unconditional, so the settled render comes from the finished stroke, not
+               the last live tick. brushParamsJson(withLiveStroke) is the single builder
+               for the live, release and undo emits. WHILE AN ADD STROKE is swiped the
+               whole-mask composite tint (scopeMaskTint) is SUPPRESSED (drawForeground
+               brushStroking guard) so the per-brush live preview shows the stroke
+               building up in real time, and MW::updateMaskOverlayTint returns early while
+               that stroke is in flight (maskStrokeInFlight), so live ticks never rebuild
+               a veil nothing draws. A SUBTRACT/INTERSECT stroke inverts both gates
+               (maskLegendOp > 0): the local preview paints the overlay colour exactly
+               where the mask is being REMOVED -- it reads as adding -- so the real veil
+               stays drawn and IS rebuilt on the live ticks, retreating under the brush in
+               step with the develop render. Dock rows: Size/Feather/Flow/Auto
                mask/Invert. Size also via [ / ] keys or a two-finger drag (ImageView wheelEvent, gated
                to brush+hover) -> maskBrushSizeRequested -> setActiveBrushSize syncs the dock; "A"
                toggles auto-mask (-> maskBrushAutoMaskRequested -> setActiveBrushAutoMask); Cmd/Ctrl+Z

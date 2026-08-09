@@ -30,6 +30,15 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     mw = qobject_cast<MW*>(parent);
     this->setting = setting;
 
+    /* The mask overlay's single colour is a view preference owned by Develop, but read
+       by ImageView (which has no settings handle), so it lives in G::. Seed it here,
+       before any overlay can paint. */
+    {
+        const QColor c(setting->value("Develop/maskOverlayColor",
+                                      G::maskOverlayColor.name()).toString());
+        if (c.isValid()) G::maskOverlayColor = c;
+    }
+
     initialize();
     /* Per-image edit history (the History dock's model). Session scoped: it records a
        labelled EditStack snapshot per action via noteEdit and is never written to the
@@ -533,7 +542,7 @@ void DevelopProperties::addAddMaskRow()
     i.name = "addMask";
     i.parIdx = QModelIndex();
     i.captionText = "Add mask";
-    i.tooltip = "This mask is empty. Click [+] to add a mask tool.";
+    i.tooltip = "This mask is empty. Click [+] to add a submask.";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = false;
@@ -561,8 +570,6 @@ void DevelopProperties::bindScopeHeader(ScopeHeaderBase *header)
     connect(scopeHeader, &ScopeHeaderBase::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
     connect(scopeHeader, &ScopeHeaderBase::maskOverlayToggled,  this,
             &DevelopProperties::maskOverlayToggleRequested);
-    connect(scopeHeader, &ScopeHeaderBase::maskBreakdownToggled, this,
-            &DevelopProperties::maskBreakdownToggleRequested);
     connect(scopeHeader, &ScopeHeaderBase::previewToggled,      this, &DevelopProperties::onScopePreviewToggled);
     connect(scopeHeader, &ScopeHeaderBase::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
     connect(scopeHeader, &ScopeHeaderBase::scopeEnabledToggled, this, &DevelopProperties::onScopeEnabledToggled);
@@ -653,8 +660,13 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
     maskPanel = panel;
     if (!maskPanel) return;
     connect(maskPanel, &MaskPanel::committed, this, &DevelopProperties::commitPendingMask);
-    connect(maskPanel, &MaskPanel::finished,  this, &DevelopProperties::finishFirstMask);
     connect(maskPanel, &MaskPanel::cancelled, this, &DevelopProperties::cancelMaskTool);
+    /* A swatch recoloured the overlay (G::maskOverlayColor is already set): persist
+       it and re-composite so the veil repaints in the new colour. */
+    connect(maskPanel, &MaskPanel::overlayColourChanged, this, [this]{
+        setting->setValue("Develop/maskOverlayColor", G::maskOverlayColor.name());
+        emit maskOverlayRefreshRequested();
+    });
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
        active mask component (onMaskEditorSetting mirrors the main tree's itemChange). */
@@ -763,12 +775,14 @@ void DevelopProperties::beginMaskTool(int tool)
     m.paramsJson = defaultMaskParams(tool);
     if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
 
-    /* Append the tool; its settings render in the panel's embedded MaskEditor. The first
-       tool is committed immediately (drawn RED); a later tool is a BLUE preview
-       (pendingIdx) until Add/Subtract/Intersect folds it in. */
+    /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
+       submask is pending until [Update]/Return folds it in -- the first one too, which
+       costs nothing visually (the mask IS that submask) and keeps one commit path. */
     scope->components.append(m);
     selectedMaskIndex = scope->components.size() - 1;
-    pendingIdx = first ? -1 : selectedMaskIndex;
+    pendingIdx = selectedMaskIndex;
+    pendingOp = int(MaskOp::Add);        // every submask opens Add ...
+    latchedMaskOp = int(MaskOp::Add);    // ... with nothing latched from the last one
     maskPanelOpen = true;
     if (maskPanel) {
         maskPanel->showForTool(maskToolName(tool), first);
@@ -783,17 +797,88 @@ void DevelopProperties::beginMaskTool(int tool)
 
     noteEdit("Add " + maskToolName(tool));
     buildTree();                 // emits maskEditBegin for the on-canvas overlay
+    /* The whole-mask veil is a full-resolution overlay rebuilt on every drag tick, so it
+       is shown only where it is the ONLY feedback there is: the scope's FIRST submask,
+       when nothing on screen yet says the mask exists. A second or later submask starts
+       hidden -- the tool's own live preview (brush coverage, gradient handles, range
+       swatches) already shows what is being added -- and "O" brings the veil back on
+       demand. Must follow buildTree(), whose maskEditBegin drives the overlay, and
+       precede paramsChanged(), whose tick reads the visibility to decide whether to
+       build at all. */
+    if (first) emit maskTintShowRequested();
+    else       emit maskTintHideRequested();
     emit paramsChanged();        // overlay/tint (red committed, blue pending)
 }
 
-void DevelopProperties::commitPendingMask(int op)
+int DevelopProperties::maskOpFromModifiers()
 {
+    const Qt::KeyboardModifiers m = QGuiApplication::queryKeyboardModifiers();
+    const bool alt = m & Qt::AltModifier, shift = m & Qt::ShiftModifier;
+    return alt ? (shift ? int(MaskOp::Intersect) : int(MaskOp::Subtract))
+               : int(MaskOp::Add);
+}
+
+void DevelopProperties::setPendingMaskOp(int op)
+{
+    /* The held modifier changed (MW arbitrates: Opt = Subtract, Shift+Opt = Intersect).
+       The op is NOT written into the component -- it stays pending until commit -- but
+       the overlay AND the render composite the pending submask with it, so both preview
+       the outcome, and the panel button renames itself to match. The FIRST submask has
+       nothing to combine with, so it is pinned to Add. */
+    if (pendingIdx <= 0) op = int(MaskOp::Add);
+    /* Nothing held now: fall back to the LATCHED op rather than to Add. Releasing Opt
+       must not undo the subtract the user just painted (see latchMaskOp) -- the whole
+       point of the modifier is to say what the submask does, not to hold a preview open
+       with a spare finger while reaching for [Update]. */
+    if (op == int(MaskOp::Add)) op = latchedMaskOp;
+    if (op == pendingOp) return;
+    pendingOp = op;
+    if (maskPanel) maskPanel->setPendingOp(op);
+    /* The render composites the pending submask with this op too (see stackJob), so the
+       modifier changes the IMAGE, not just the veil: re-render as well as re-composite
+       (paramsChanged is wired to updateMaskOverlayTint, so the veil comes along). */
+    emit paramsChanged();
+}
+
+void DevelopProperties::latchMaskOp()
+{
+/*
+    A shaping action started on the pending submask -- a brush/object stroke, or a mask
+    handle drag (ImageView::maskOpActionStarted). Whatever modifier is held AT THAT
+    INSTANT is what this submask does, and it now STICKS: the veil, the render and [Update]
+    button all keep showing Subtract (or Intersect) after the key is released.
+
+    Before this the op was purely momentary. Painting a subtract stroke and letting go of
+    Opt silently turned it back into an add, the image stopped showing the subtraction,
+    and clicking [Update] committed the ADD -- "the subtract brush does nothing".
+
+    Reversible by the same gesture that set it: paint (or drag) again with nothing held
+    and the latch re-reads the modifiers as Add. A modifier PRESS alone still previews
+    momentarily, so peeking at the outcome without committing to it works as before.
+*/
+    if (!maskPanelOpen) return;
+    latchedMaskOp = (pendingIdx <= 0) ? int(MaskOp::Add)   // first submask: nothing to
+                                      : maskOpFromModifiers();   // combine with
+    setPendingMaskOp(latchedMaskOp);
+}
+
+void DevelopProperties::commitPendingMask()
+{
+    if (G::isLogger) G::log("DevelopProperties::commitPendingMask");
     EditScope *scope = activeScope();
     if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) return;
-    scope->components[pendingIdx].op = op;      // fold the preview in (sequential)
+    /* Commit what the user is LOOKING AT: pendingOp is what the veil, the render and the
+       button label have all been previewing (the held modifier, else the latched op).
+       Re-reading the live modifiers here instead -- as this used to -- meant releasing
+       Opt to reach for the [Update] button committed an Add. */
+    int op = (pendingIdx == 0) ? int(MaskOp::Add)   // nothing to combine the first with
+                               : pendingOp;
+    scope->components[pendingIdx].op = op;        // fold the submask in (sequential)
     const QString toolName = maskToolName(scope->components[pendingIdx].tool);
     pendingIdx = -1;
-    selectedMaskIndex = -1;                // flatten: committed tools are not re-opened
+    pendingOp = int(MaskOp::Add);
+    latchedMaskOp = int(MaskOp::Add);
+    selectedMaskIndex = -1;                // flatten: committed submasks don't re-open
     maskLatched = true;                    // overlay stays AVAILABLE ("O" re-shows it)
     maskPanelOpen = false;
     if (maskPanel) maskPanel->hide();
@@ -803,41 +888,29 @@ void DevelopProperties::commitPendingMask(int op)
     noteEdit(verb + toolName);
     buildTree();
     emit paramsChanged();
-    /* The tool is done: get the red coverage tint off the image so the user sees the
+    /* The submask is folded in: get the coverage tint off the image so the user sees the
        developed result. The overlay is still latched, so "O" (or the header menu row)
        brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint. */
-    emit maskTintHideRequested();
-}
-
-void DevelopProperties::finishFirstMask()
-{
-    /* [Done] on the first tool: already committed (red); close the panel and hide the
-       overlay tint (still latched, so "O" re-shows it). */
-    pendingIdx = -1;
-    selectedMaskIndex = -1;
-    maskLatched = true;
-    maskPanelOpen = false;
-    if (maskPanel) maskPanel->hide();
-    buildTree();
-    emit paramsChanged();
     emit maskTintHideRequested();
 }
 
 void DevelopProperties::cancelMaskTool()
 {
     EditScope *scope = activeScope();
-    /* Remove the just-added tool being edited (the blue preview, or an empty scope's
-       first tool -> the scope goes back to global). */
+    /* Remove the pending submask being defined (on an empty scope that is its only
+       submask -> the scope goes back to global). */
     if (scope && selectedMaskIndex >= 0 && selectedMaskIndex < scope->components.size())
         scope->components.removeAt(selectedMaskIndex);
     pendingIdx = -1;
+    pendingOp = int(MaskOp::Add);
+    latchedMaskOp = int(MaskOp::Add);
     selectedMaskIndex = -1;
     /* Cancel discards the in-progress tool. Keep the overlay only if committed masks
        remain on the scope. */
     maskLatched = (scope && !scope->components.isEmpty());
     maskPanelOpen = false;
     if (maskPanel) maskPanel->hide();
-    noteEdit("Cancel mask tool");
+    noteEdit("Cancel submask");
     buildTree();
     emit paramsChanged();
 }
@@ -1577,11 +1650,15 @@ void DevelopProperties::newMask()
     m.tool = maskToolFromName(txt.section(' ', 1));
     m.paramsJson = defaultMaskParams(m.tool);
     if (m.tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush defaults to a crisp edge
+    const bool first = scope->components.isEmpty();
     scope->components.append(m);
     selectedMaskIndex = scope->components.size() - 1;      // start editing the new tool
     noteEdit(txt);              // "Add Subject Mask" / "Subtract Brush Mask" / ...
 
     buildTree();
+    /* Veil on the scope's first submask only -- see addMaskTool for why. */
+    if (first) emit maskTintShowRequested();
+    else       emit maskTintHideRequested();
     emit paramsChanged();       // a mask confines the scope's adjustment -> re-composite
 }
 
@@ -1611,7 +1688,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     i.name = QString("maskTool%1").arg(index);
     i.parIdx = parIdx;
     i.captionText = opName(m.op) + " " + maskToolName(m.tool);
-    i.tooltip = "Mask tool. Click to show/hide its settings; [+] to add another tool, [-] to remove.";
+    i.tooltip = "Submask. Click to show/hide its settings; [+] adds another, [-] removes it.";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = false;
@@ -1621,11 +1698,9 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     addItem(i);
     const QModelIndex toolIdx = capIdx;
     model->setData(toolIdx, index, UR_MaskIndex);
-    /* Tint the caption by the tool's role so the dock matches the canvas overlay:
-       Add = green, Subtract = blue (see MW::updateMaskOverlayTint). */
-    model->setData(toolIdx, QColor(m.op == int(MaskOp::Subtract) ? QColor(90, 165, 255)
-                                                                 : QColor(90, 220, 125)),
-                   UR_CaptionColor);
+    /* No role tint: the caption already reads "Subtract Brush Mask", and the overlay
+       speaks one colour (see MW::updateMaskOverlayTint), so a green/blue caption would
+       be re-introducing the colour key this design removed. */
     model->setData(toolIdx, true, UR_LeafSingleLine);
     model->setData(toolIdx, true, UR_DeleteBtn);
     model->setData(toolIdx, true, UR_AddBtn);           // [+] left of [-]: add another mask tool
@@ -1934,12 +2009,6 @@ void DevelopProperties::setMaskOverlayShown(bool shown)
     /* ImageView flipped the red coverage tint ("O", an adjustment slider, or a new mask
        edit); mirror it so the scope menu's "Show mask overlay" row checks correctly. */
     if (scopeHeader) scopeHeader->setMaskOverlayShown(shown);
-}
-
-void DevelopProperties::setMaskBreakdownShown(bool shown)
-{
-    /* MW flipped Result/Breakdown; mirror the scope menu's "breakdown" check. */
-    if (scopeHeader) scopeHeader->setMaskBreakdownShown(shown);
 }
 
 void DevelopProperties::updateMaskEdit()
@@ -3160,7 +3229,19 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
     if (currentImagePath.isEmpty()) return job;
     /* A hovered History row overrides what renders, without disturbing the stored stack
        or the sliders (see previewHistoryEntry). */
-    const EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
+    EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
+    /* PREVIEW THE PENDING OP. The submask being defined carries op = Add in the stack
+       until [Update]/Return commits it -- the real op is MOMENTARY, held in pendingOp by
+       the modifier the user is pressing. The veil already composites with it
+       (MW::updateMaskOverlayTint); the RENDER has to as well, or an Opt (Subtract) or
+       Shift+Opt (Intersect) submask leaves the image showing that submask being ADDED --
+       which over an already-masked area is no visible change at all. Substituted into a
+       local copy, so nothing is written into the stored stack before the commit. */
+    if (!previewActive && pendingIdx >= 0 && activeScopeIndex > 0 &&
+        activeScopeIndex < s.scopes.size()) {
+        EditScope &sc = s.scopes[activeScopeIndex];
+        if (pendingIdx < sc.components.size()) sc.components[pendingIdx].op = pendingOp;
+    }
     /* Transform Preview: previewed off -> bypass geometry at render (identity), while
        the stored crop/warp stays in the cache so the overlay still draws (see
        currentGeometry). */
