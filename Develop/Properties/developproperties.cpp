@@ -2022,8 +2022,38 @@ void DevelopProperties::setActiveBrushSize(double size)
     const int s = qBound(1, int(size + 0.5), 100);
     m.paramsJson = brushWith(m.paramsJson, "size", s);
     noteEdit("Brush size", QString::number(s), "mask/brushSize");
-    isPopulating = true;            // sync the Size slider without re-entering itemChange
-    setSliderReal("maskSize", s);
+    syncMaskSlider("maskSize", s);
+}
+
+void DevelopProperties::setActiveMaskFeather(double feather)
+{
+    /* Shift + wheel on the canvas. Only the tools whose feather ImageView itself owns
+       (the two gradients + the brush) -- the content/AI masks feather at composite time
+       and are driven from their panel slider. */
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    MaskComponent &m = l->components[selectedMaskIndex];
+    if (m.tool != int(MaskTool::LinearGradient) &&
+        m.tool != int(MaskTool::RadialGradient) &&
+        m.tool != int(MaskTool::Brush)) return;
+    const int f = qBound(0, int(feather + 0.5), 100);
+    if (int(m.feather + 0.5f) == f) return;
+    m.feather = f;
+    noteEdit("Feather", QString::number(f), "mask/maskFeather");
+    syncMaskSlider("maskFeather", f);
+    /* Brush feather belongs to the NEXT stroke (committed strokes keep their snapshot),
+       so it only refreshes the cursor; a gradient's coverage changed -> re-composite.
+       Either way ImageView already holds the new value, so no maskFeatherChanged echo. */
+    if (m.tool == int(MaskTool::Brush)) emitBrushSettings(m);
+    else                                emit paramsChanged();
+}
+
+void DevelopProperties::syncMaskSlider(const QString &key, double value)
+{
+    if (maskPanel && maskPanel->editor())
+        maskPanel->editor()->setSliderReal(key, value);   // guards itself
+    isPopulating = true;            // sync the tree row without re-entering itemChange
+    setSliderReal(key, value);
     isPopulating = false;
 }
 

@@ -1930,9 +1930,11 @@ Develop Mode Local Shortcuts
     The wheel / two-finger scroll zooms too: in Develop mode ImageView::wheelEvent zooms
     the image under the cursor (ImageView::wheelZoom, cursor-anchored) instead of the
     Preview-mode prev/next navigation.  While a Spot or Brush/Object tool is armed the
-    wheel still resizes that tool, so hold Space (spacePanOverride) to zoom with the wheel
-    there -- the same flag that gates the mouse branches also bypasses the tool's
-    wheel-resize.
+    wheel still resizes that tool, and SHIFT + wheel over a Linear Gradient, Radial
+    Gradient or Brush submask changes its FEATHER, so hold Space (spacePanOverride) to
+    zoom with the wheel there -- the same flag that gates the mouse branches also bypasses
+    both tool gestures.  macOS swaps the scroll axes while Shift is held, so the shared
+    helper (wheelDelta) takes whichever axis reported rather than assuming y.
 
     Space is bound to zoomToggleAction globally, and ImageView usually lacks keyboard
     focus in Develop, so this is driven from MW::eventFilter (a qApp filter that sees
@@ -3846,9 +3848,14 @@ Scope & mask model (Global + masks)
                handle moves, axis handles resize each semi-axis (centre fixed), dragging the outline
                rotates. Tints/handles draw in viewport coords for constant on-screen size; a miss falls
                through to pan/zoom. Drag emits maskGeometryChanged LIVE (and on release) ->
-               DevelopProperties::setActiveMaskParams (stores into the component, debounce-persists, no
-               tree rebuild). Feather/Invert live-update via maskFeatherChanged/
-               maskInvertChanged; the tint is drawn in the ONE overlay colour
+               DevelopProperties::setActiveMaskParams (stores into the component,
+               debounce-persists, no tree rebuild). Feather/Invert live-update via
+               maskFeatherChanged / maskInvertChanged; feather is ALSO Shift + wheel /
+               two-finger scroll on the canvas (ImageView::adjustMaskFeather ->
+               maskFeatherRequested -> setActiveMaskFeather, which syncs the panel slider,
+               notes the edit and re-composites -- the reverse of the slider path, so it
+               sends no echo back to ImageView); the tint is drawn in the ONE overlay
+               colour
                (ImageView::maskTintColor -> G::maskOverlayColor), the same colour as the
                result veil -- the op is read off the veil's OUTCOME and the op chip, never
                off the colour. That preview is ALWAYS the SELECTED tool. Invert flips
@@ -4066,8 +4073,12 @@ Scope & mask model (Global + masks)
                where the mask is being REMOVED -- it reads as adding -- so the real veil
                stays drawn and IS rebuilt on the live ticks, retreating under the brush in
                step with the develop render. Dock rows: Size/Feather/Flow/Auto
-               mask/Invert. Size also via [ / ] keys or a two-finger drag (ImageView wheelEvent, gated
-               to brush+hover) -> maskBrushSizeRequested -> setActiveBrushSize syncs the dock; "A"
+               mask/Invert. Size also via [ / ] keys or a two-finger drag (ImageView
+               wheelEvent, gated to brush+hover) -> maskBrushSizeRequested ->
+               setActiveBrushSize syncs the dock; Feather also via Shift + wheel /
+               two-finger drag -> maskFeatherRequested -> setActiveMaskFeather, which is
+               the NEXT stroke's feather (committed strokes keep the feather they were
+               painted with, so this only refreshes the cursor rings); "A"
                toggles auto-mask (-> maskBrushAutoMaskRequested -> setActiveBrushAutoMask); Cmd/Ctrl+Z
                removes the last stroke. ImageView needs focus (set on brush enter) and claims [ ] A
                from their global action shortcuts via QEvent::ShortcutOverride. Each cursor ring is

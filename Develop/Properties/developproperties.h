@@ -231,8 +231,12 @@ public slots:
     void setActiveMaskParams(const QString &paramsJson);
     /* Re-assert the overlay for the active tool (e.g. when the Develop dock becomes visible). */
     void refreshMaskEdit() { updateMaskEdit(); }
-    /* ImageView changed the brush size via keyboard ([ ]) or a two-finger drag; sync the dock. */
+    /* ImageView changed the brush size via keyboard ([ ]) or a two-finger drag; sync the
+       dock. */
     void setActiveBrushSize(double size);
+    /* ImageView changed the feather of a gradient / brush mask (Shift + wheel); sync the
+       dock slider, persist and re-composite. */
+    void setActiveMaskFeather(double feather);
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
     /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
@@ -573,7 +577,12 @@ private:
     static bool    brushBool(const QString &paramsJson, const QString &key, bool def);
     static QString brushStr(const QString &paramsJson, const QString &key, const QString &def);
     static QString brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v);
-    void emitBrushSettings(const MaskComponent &m); // maskBrushSettingsChanged from current settings
+    /* maskBrushSettingsChanged from the current settings. */
+    void emitBrushSettings(const MaskComponent &m);
+    /* A canvas gesture changed a mask setting: seed the row wherever it is showing --
+       the MaskPanel's editor (Lab UI) and/or the main tree (legacy) -- without echoing
+       back. */
+    void syncMaskSlider(const QString &key, double value);
     EditParams &activeParams();                   // the active scope's params (creates a scope if none)
 
     /* The per-image edit state. stackCache holds loaded/edited stacks keyed by file path; dirty
