@@ -80,6 +80,16 @@ public:
        the edit state -- nothing here marks an image dirty or records history. */
     StackRenderJob stackJobFor(const QString &fPath);
 
+    /* ---- TEST HOOK, no production caller ----
+       Build a scope carrying `submasks` committed brush submasks plus one pending, on the
+       current image. The UI route to this is newScope() -> showMaskMenu() -> beginMaskTool,
+       and both of those are MODAL (a name dialog and a popup menu), so a headless driver
+       cannot use them. MW::runDevelopStressTest calls this to exercise the Develop render
+       path under ThreadSanitizer (tests/tsan/run_tsan_develop.sh) -- the proxy render runs
+       on a worker and nothing else in the suite goes near it. Returns false if there is no
+       current image. */
+    bool selfTestAddMaskScope(int submasks);
+
     /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
        show the composited mask), plus the active scope's ordered mask tools to composite. */
     bool maskOverlayActive() const;

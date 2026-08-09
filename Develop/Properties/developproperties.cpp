@@ -1334,6 +1334,51 @@ EditScope *DevelopProperties::activeScope()
     return &s.scopes[activeScopeIndex];
 }
 
+bool DevelopProperties::selfTestAddMaskScope(int submasks)
+{
+/*
+    TEST HOOK -- see the header. Mirrors newScope() without its modal name dialog, then
+    beginMaskTool() without showMaskMenu()'s popup, committing each submask so the scope
+    ends up with `submasks` COMMITTED brush submasks and one pending. That shape is the
+    point: the render cost this exercises is per-component, so a scope with one submask
+    proves nothing about the caches the drag path leans on.
+*/
+    if (currentImagePath.isEmpty()) return false;
+
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());   // index 0 is always Global
+    s.scopes[0].name = "Global";
+
+    EditScope l;
+    l.name = uniqueScopeName("Mask " + QString::number(s.scopes.size()));
+    /* A non-identity adjustment, so the scope actually develops pixels: an identity scope
+       aliases the accumulator and renderStack skips the develop pass, which would quietly
+       hide exactly the work under test. */
+    l.params.exposure = 0.35f;
+    l.params.contrast = 12.0f;
+    s.scopes.append(l);
+    activeScopeIndex = s.scopes.size() - 1;
+    selectedMaskIndex = -1;
+    refreshScopeList();
+    buildTree();
+
+    for (int i = 0; i < qMax(1, submasks); ++i) {
+        beginMaskTool(int(MaskTool::Brush));
+        /* Give each committed submask a stroke of its own, or it rasterizes to nothing and
+           the per-component caches have no work to cache. */
+        if (MaskComponent *c = editingMaskComp()) {
+            const double y = 0.15 + 0.7 * (double(i) / qMax(1, submasks));
+            c->paramsJson = QString(
+                "{\"size\":18,\"flow\":100,\"autoMask\":false,\"strokes\":"
+                "[{\"size\":18,\"feather\":0,\"flow\":100,\"erase\":false,"
+                "\"autoMask\":false,\"pts\":[0.15,%1,0.45,%2,0.80,%3]}]}")
+                .arg(y).arg(y + 0.03).arg(y);
+        }
+        if (i < submasks - 1) commitPendingMask();   // leave the LAST one pending
+    }
+    return true;
+}
+
 bool DevelopProperties::maskOverlayActive() const
 {
     /* Show the mask overlay on a mask while a tool is being edited

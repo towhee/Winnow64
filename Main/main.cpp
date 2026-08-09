@@ -101,21 +101,33 @@ int main(int argc, char *argv[])
     bool isSelfTest = false;
     bool isMetaTest = false;
     bool isSoakTest = false;
+    /* Headless DEVELOP stress mode (ThreadSanitizer layer):
+         Winnow --devtest <folder>
+       Duration via WINNOW_DEVTEST_MS. Unlike --selftest it enters Develop, builds a
+       multi-submask scope and drives a brush drag, which is the only way anything in the
+       suite reaches the worker-thread proxy render. See MW::runDevelopStressTest. */
+    bool isDevTest = false;
     QString selfTestFolder;
     QString metaTestFile;
+    QString devTestFolder;
     QStringList soakFolders;   // one or more folders to bounce between
     int selfTestMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_MS");
     if (selfTestMs <= 0) selfTestMs = 8000;
+    int devTestMs = qEnvironmentVariableIntValue("WINNOW_DEVTEST_MS");
+    if (devTestMs <= 0) devTestMs = 30000;
     for (int i = 1; i < argc; ++i) {
         const QString arg = QString::fromLocal8Bit(argv[i]);
         if (arg == "--selftest") isSelfTest = true;
         else if (arg == "--metatest") isMetaTest = true;
         else if (arg == "--soaktest") isSoakTest = true;
+        else if (arg == "--devtest") isDevTest = true;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
         else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
+        else if (isDevTest && devTestFolder.isEmpty()) devTestFolder = arg;
         else if (isSoakTest) soakFolders << arg;
     }
-    if (isSelfTest || isMetaTest || isSoakTest) QStandardPaths::setTestModeEnabled(true);
+    const bool isTestMode = isSelfTest || isMetaTest || isSoakTest || isDevTest;
+    if (isTestMode) QStandardPaths::setTestModeEnabled(true);
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
@@ -128,17 +140,17 @@ int main(int argc, char *argv[])
     }
     // The test modes open their target explicitly (runSelfTest / runMetaTest /
     // runSoakTest), not via args, and must always start a fresh instance.
-    if (isSelfTest || isMetaTest || isSoakTest) args.clear();
+    if (isTestMode) args.clear();
 
     // terminate if Winnow already open and no arguments to pass
-    if (!isSelfTest && !isMetaTest && !isSoakTest && args == "" && instance.isRunning()) {
+    if (!isTestMode && args == "" && instance.isRunning()) {
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
         return 0;
     }
 
     // instance already running
-    if (!isSelfTest && !isMetaTest && !isSoakTest && instance.sendMessage(args)) {
+    if (!isTestMode && instance.sendMessage(args)) {
         if (G::isRunByExtern) Utilities::log("WinnowMain", "Instance already running");
         QString msg = "Winnow or a Winnow report is open.";
         // G::popUp->showPopup(msg);
@@ -176,6 +188,9 @@ int main(int argc, char *argv[])
 
     if (isSelfTest) {
         mw.runSelfTest(selfTestFolder, selfTestMs);
+    }
+    else if (isDevTest) {
+        mw.runDevelopStressTest(devTestFolder, devTestMs);
     }
     else if (isMetaTest) {
         mw.runMetaTest(metaTestFile);

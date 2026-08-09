@@ -3522,6 +3522,39 @@ Scope & mask model (Global + masks)
                    ensure*Mask inference (200-400 ms, once per image), and
                    updateMaskOverlayTint -- the veil is gated off for most drags, and
                    moving it would need the same treatment again.
+                 . TSAN COVERAGE FOR THE WORKER (tests/tsan/run_tsan_develop.sh, --devtest
+                   -> MW::runDevelopStressTest). Nothing in the suite went near the
+                   Develop render before this: run_tsan.sh and run_soak.sh only exercise
+                   folder load. The driver simulates a brush drag on a multi-submask scope
+                   while switching images, toggling the veil, re-rendering through the
+                   crop-style caller and re-selecting the folder, so the worker collides
+                   with the GUI thread on DevelopStackCache, g_brushCache, g_maskFoldCache
+                   and the pending/gen guards. It found a REAL CRASH on its first run --
+                   see the stale-slot bug below -- which is the whole argument for it
+                   existing.
+                 . STALE FOLD-CACHE SLOT (crash, found by the TSan driver).
+                   buildMaskBuffer picks foldSlot while holding g_maskFoldMutex during the
+                   LOOKUP, then re-acquires the mutex to store. Between the two, the cache
+                   can be cleared -- maskFoldCacheClear() from the GUI thread's
+                   ensureRangeRef, the key cap, or another render -- leaving entries[]
+                   shorter than foldSlot, and QVector::operator[] out of range is a SEGV.
+                   foldSlot is now treated as a HINT and re-validated against the vector
+                   under the store lock. GENERAL RULE for these caches: an index chosen
+                   under one lock acquisition means nothing under the next; only the data
+                   copied out under the lock is safe to keep.
+                 . READING THAT TEST'S OUTPUT. WINNOW_DEVTEST_SERIAL=1 is the DEFAULT and
+                   is load-bearing: it caps the global pool at one thread so every
+                   parallelFor runs serially. Homebrew Qt is not TSan-instrumented, so
+                   QFuture::waitForFinished()'s happens-before edge is invisible to the
+                   tool -- a parallel-for's lambdas capture the caller's stack by
+                   reference, and once the caller returns and reuses that stack every one
+                   of those reads is reported as a race. Measured: 49 reports with the
+                   pool parallel, 5 with it serial, and the 44 that vanish are all that
+                   artifact (proved by A/B -- the same reports appear with the proxy
+                   render forced back onto the GUI thread, where that concurrency cannot
+                   exist). The run FAILS only on races naming the Develop render; the
+                   folder-load / metadata-reader family is warned about, not failed, and
+                   crashes always fail.
              - IMAGE-SWITCH LATENCY (2026-08): switching image in Develop blocks on a full
                unpack + demosaic + RawColor before anything can be developed (Develop
                trims read-ahead to the current image). The DELIBERATE answer is
