@@ -1905,6 +1905,7 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskRangeChanged, imageView, &ImageView::setMaskRangeParams);
     connect(developProperties, &DevelopProperties::maskBrushSettingsChanged, imageView, &ImageView::setMaskBrushSettings);
     connect(imageView, &ImageView::maskBrushSizeRequested, developProperties, &DevelopProperties::setActiveBrushSize);
+    connect(imageView, &ImageView::maskFeatherRequested, developProperties, &DevelopProperties::setActiveMaskFeather);
     connect(imageView, &ImageView::maskBrushAutoMaskRequested, developProperties, &DevelopProperties::setActiveBrushAutoMask);
     connect(imageView, &ImageView::maskBrushSamFieldRequested, this, &MW::onBrushSamFieldRequested);
     connect(developProperties, &DevelopProperties::maskBrushAiEnabled, this, &MW::warmBrushSamEncoder);

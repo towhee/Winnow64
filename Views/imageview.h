@@ -305,6 +305,9 @@ signals:
     void maskStrokeStateChanged(bool painting);
     /* Brush size changed on the canvas ([ ] keys or two-finger drag); sync the dock. */
     void maskBrushSizeRequested(double size);
+    /* Feather changed on the canvas (Shift + wheel / two-finger drag over a gradient or
+       brush mask); sync the dock slider + persist. */
+    void maskFeatherRequested(double feather);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
     void maskBrushAutoMaskRequested(bool on);
     /* Starting a Brush stroke in "AI" auto-mask mode: ask MW to decode the SAM object under the
@@ -572,6 +575,9 @@ private:
     double  maskGrabAngle   = 0;        // cursor angle (rad) at rotate start
 
     bool    maskHandlesEditable() const { return maskEditMode && maskHover && pmItem && pmItem->isVisible(); }
+    /* Shift + wheel / two-finger drag over a gradient or brush mask; clamps + syncs
+       the dock. */
+    void    adjustMaskFeather(double delta);
     QString maskParamsJson() const;                 // serialize the active tool's geometry
     bool    parseMaskParams(const QString &json);   // load geometry (false if invalid)
     QPointF maskNormToViewport(QPointF n) const;    // normalized image -> viewport px

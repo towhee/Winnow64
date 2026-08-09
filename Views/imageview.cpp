@@ -2447,6 +2447,18 @@ void ImageView::adjustBrushSize(double delta)
     if (maskEditMode && maskHover) viewport()->update();   // cursor circle
 }
 
+void ImageView::adjustMaskFeather(double delta)
+{
+    /* Shift + wheel over a Linear/Radial gradient or the Brush. The gradient overlay ramp
+       redraws from maskFeather at once; the brush uses it for the NEXT stroke (and its
+       cursor's inner half-coverage ring). The dock persists it and re-composites. */
+    const double f = qBound(0.0, maskFeather + delta, 100.0);
+    if (f == maskFeather) return;
+    maskFeather = f;
+    emit maskFeatherRequested(maskFeather);     // sync the dock + persist
+    if (maskEditMode) viewport()->update();     // ramp / cursor ring
+}
+
 void ImageView::ensureAutoGuide()
 {
     /* Build a small luminance guide from the displayed image (output-oriented), once per
@@ -3944,13 +3956,24 @@ void ImageView::leaveEvent(QEvent *event)
     // emit showLoupeRect(false);
 }
 
+/* Scroll amount for a tool gesture, in "wheel pixels": pixelDelta on a trackpad,
+   angleDelta/8 on a mouse wheel. macOS swaps the scroll axes while Shift is held, so take
+   whichever axis actually reported rather than assuming y. */
+static double wheelDelta(const QWheelEvent *event)
+{
+    const QPoint pd = event->pixelDelta();
+    const QPointF d = !pd.isNull() ? QPointF(pd) : QPointF(event->angleDelta()) / 8.0;
+    return (qAbs(d.y()) >= qAbs(d.x())) ? d.y() : d.x();
+}
+
 void ImageView::wheelEvent(QWheelEvent *event)
 {
 /*
     Preview: mouse wheel / trackpad scroll = next/previous image.
     Develop: wheel / two-finger scroll = zoom the image under the cursor. While a Spot or
-    Brush/Object tool is armed the wheel resizes that tool instead; hold Space to zoom
-    (spacePanOverride bypasses the resize).
+    Brush/Object tool is armed the wheel resizes that tool instead, and Shift + wheel over
+    a Linear/Radial gradient or Brush mask changes its feather; hold Space to zoom
+    (spacePanOverride bypasses both).
 */
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
@@ -3958,12 +3981,20 @@ void ImageView::wheelEvent(QWheelEvent *event)
     /* Spot removal armed: a two-finger drag (or wheel) resizes the spot brush, not the
        image. Space held (spacePanOverride) bypasses this so the wheel zooms instead. */
     if (!spacePanOverride && spotEditMode) {
-        const QPoint pd = event->pixelDelta();
-        const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
-        spotBrushSize = qBound(spotSizeMin(), spotBrushSize + dy * 0.04, 100.0);
+        spotBrushSize = qBound(spotSizeMin(), spotBrushSize + wheelDelta(event) * 0.04, 100.0);
         spotCursorVp = event->position().toPoint();
         spotCursorOn = true;
         viewport()->update();
+        event->accept();
+        return;
+    }
+
+    /* Shift + two-finger drag (or wheel) over a Linear/Radial gradient or the Brush:
+       change the FEATHER instead of zooming / resizing. Space held bypasses it. */
+    if (!spacePanOverride && maskEditMode &&
+        (event->modifiers() & Qt::ShiftModifier) &&
+        (maskTool == 0 || maskTool == 1 || maskIsBrush())) {   // 0 Linear, 1 Radial
+        adjustMaskFeather(wheelDelta(event) * 0.15);     // up = softer
         event->accept();
         return;
     }
@@ -3972,9 +4003,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
        not the image. Vertical delta; pixelDelta on a trackpad, angleDelta on a wheel.
        Space held bypasses this so the wheel zooms instead. */
     if (!spacePanOverride && maskEditMode && (maskTool == 2 || maskIsObject()) && maskHover) {
-        const QPoint pd = event->pixelDelta();
-        const double dy = !pd.isNull() ? pd.y() : event->angleDelta().y() / 8.0;
-        adjustBrushSize(dy * 0.15);     // up = larger
+        adjustBrushSize(wheelDelta(event) * 0.15);     // up = larger
         event->accept();
         return;
     }

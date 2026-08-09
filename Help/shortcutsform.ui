@@ -1205,6 +1205,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Feather (Gradient / Brush mask)</string>
+        </property>
+        <property name="text">
+         <string>Shift + scroll (wheel or two-finger drag)</string>
+        </property>
+        <property name="text">
+         <string>Softens / hardens the mask edge; while a Linear Gradient, Radial Gradient or Brush mask tool is active. Brush feather applies to the NEXT stroke</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Undo Stroke (Brush / Object mask)</string>
         </property>
         <property name="text">
