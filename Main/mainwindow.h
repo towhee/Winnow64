@@ -43,6 +43,7 @@
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
 #include "Develop/workingimage.h"
+#include "Develop/developstackcache.h"   // MW::developStackCache (interactive proxy)
 #include "Develop/Scopes/scopesview.h"
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
@@ -629,7 +630,13 @@ private slots:
     /* Refresh the Develop scopes (histogram + vectorscope) from the image currently shown: the
        develop preview after a render, else the decoded image. One strided sample pass feeds both
        scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */
-    void updateDevelopScopes(const QImage &shown);
+    /* verifyVsPreview=false on an interactive proxy tick: skip the grid-sampled
+       "Develop differs from Preview" diagnostic, which the settle render re-measures. */
+    void updateDevelopScopes(const QImage &shown, bool verifyVsPreview = true);
+    /* Raise/clear the loupe's "still rendering" chip from the two SLOW develop stages
+       (the off-thread raw decode and the full-res settle). See the impl for why image
+       switch is answered this way rather than with a proxy cache. */
+    void updateDevelopRenderingHint();
     /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the
        choice. */
     void toggleDevelopScopes();
@@ -651,9 +658,8 @@ private slots:
        Transform session is up. */
     void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
-    void toggleMaskBreakdown();   // scope menu: Result view <-> Breakdown (outlines)
     void developNewScope();       // "N": add a scope to the current image's stack
-    void developAddToMask();        // "M": pop the Add/Subtract mask tool menu
+    void developAddToMask();        // "M": pop the submask type menu
     void developExport();         // "X": export the developed selection (opens ExportDlg)
     /* Develop > Export with preset > <name>: run the named export preset over the
        selection with no dialog, reporting through G::popup. */
@@ -1447,6 +1453,11 @@ private:
        renderDevelopPreview and notes/Documentation.txt "DEVELOP / IMAGE EDIT". */
     std::shared_ptr<WorkingImage> developProxy;
     QString developProxyPath;
+    /* Per-scope intermediates for the PROXY tick, so a mask drag re-rasterizes only the
+       scope it is dragging (see Develop/developstackcache.h). GUI thread only -- the
+       off-thread settle render passes nullptr and recomputes, which is what keeps this
+       lock-free. Dropped with the proxy. */
+    DevelopStackCache developStackCache;
     QTimer *developProxyRenderTimer = nullptr;   // coalesces rapid ticks into one proxy render
     QTimer *developFullResTimer = nullptr;       // fires once the drag settles (full-res render)
     /* Full-res settle render runs OFF the GUI thread (it is ~1.3s on a 50MP RAW and would
@@ -1457,7 +1468,25 @@ private:
     static constexpr int kDevelopSettleMs = 160;  // full-res render fires this long after the drag pauses
     QThreadPool *developRenderPool = nullptr;
     quint64 developParamsGen = 0;                 // ++ on every Develop param change (staleness guard)
-    bool developFullResInFlight = false;          // a background full-res render is running
+    bool developFullResInFlight = false;      // a background full-res render is running
+    /* Interactive PROXY render, off the GUI thread. The brush cursor and every mask
+       overlay are painted by ImageView on the GUI thread, so compositing there capped how
+       smoothly the cursor could move no matter how cheap the render got. Its own 1-thread
+       pool, separate from developRenderPool so a settled full-res render cannot block an
+       interactive tick. developProxyPending is what makes it correct for the callers that
+       re-render WITHOUT bumping developParamsGen (crop, warp, level): a request arriving
+       mid-flight is remembered and re-armed on completion rather than dropped.
+       developProxyReqGen discards a frame that a newer request has superseded. */
+    QThreadPool *developProxyPool = nullptr;
+    bool developProxyInFlight = false;
+    bool developProxyPending = false;
+    quint64 developProxyReqGen = 0;
+
+    /* [DevTime] probe only (G::isReportDevelopTime): updateMaskOverlayTint accumulates
+       here and renderDevelopPreview reports + resets. The COUNT matters as much as the
+       ms -- more than one veil rebuild per render means the tint is not coalesced. */
+    qint64 developTintMs = 0;
+    int developTintCount = 0;
 
     /* Develop render verification (cheap, updated on each full-res settle; reported by
        the Develop diagnostics). Renders the base at a small fixed size TWICE -- the clean
@@ -1543,14 +1572,16 @@ private:
     /* Pre-warm the SAM 2 encoder for the current image when Brush "AI" auto-mask is enabled via the
        dock checkbox (the tool is already active, so maskEditBegin does not re-fire). */
     void warmBrushSamEncoder();
-    /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a mask tool is
-       expanded: composite the active scope's Add/Subtract tools (buildMaskBuffer) into a red tint
-       and hand it to ImageView. Cheap (capped resolution); a no-op when no tool is expanded. */
+    /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a
+       submask is being defined: composite the active scope's submasks -- INCLUDING
+       the pending one, with the op the modifiers are previewing -- into a
+       single-colour veil and hand it to ImageView. Cheap (capped resolution); a
+       no-op when nothing is being edited. */
     void updateMaskOverlayTint();
-    /* Mask overlay display mode (scope menu toggle). true = Breakdown: the result veil
-       PLUS a green(Add)/blue(Subtract) outline of each constituent;
-       false = Result: the composite veil alone. Session-wide, default true. */
-    bool maskShowBreakdown = true;
+    /* Read Opt/Shift+Opt while a submask is being defined and push the previewed op into
+       DevelopProperties (Opt = Subtract, Shift+Opt = Intersect, neither = Add). Ignored
+       mid-stroke, where Opt means "erase from this stroke". */
+    void syncPendingMaskOp();
     QString developSubjectRefPath;
     class SubjectPredictor *subjectPredictor = nullptr;
     /* AI "Select Sky" mask: single-channel sky coverage (SkyMask store) built once per image by

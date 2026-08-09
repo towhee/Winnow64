@@ -11,8 +11,8 @@
 #include <QLinearGradient>
 
 /*
-    MaskPanel (see maskpanel.h): the thin mask build-up strip -- title + commit buttons.
-    The tool's settings render in the property tree (addToolRow), so they match the tree.
+    MaskPanel (see maskpanel.h): the thin submask build-up strip -- title, settings,
+    overlay-colour swatches and ONE commit button whose label follows the held modifier.
 */
 
 MaskPanel::MaskPanel(QWidget *parent) : QWidget(parent)
@@ -65,43 +65,74 @@ void MaskPanel::buildUi()
     bw->setSpacing(4);
     bl->addWidget(btnWrap);
 
-    /* Three combine ops (2nd+ tool). */
-    combineRow = new QWidget(body);
-    QHBoxLayout *cl = new QHBoxLayout(combineRow);
-    cl->setContentsMargins(0, 0, 0, 0);
-    cl->setSpacing(6);
-    QPushButton *addBtn = new QPushButton(tr("Add"), combineRow);
-    QPushButton *subBtn = new QPushButton(tr("Subtract"), combineRow);
-    QPushButton *intBtn = new QPushButton(tr("Intersect"), combineRow);
-    addBtn->setToolTip("Add this tool's area to the mask");
-    subBtn->setToolTip("Remove this tool's area from the mask");
-    intBtn->setToolTip("Keep only where this tool overlaps the mask");
-    /* MaskOp: Add=0, Subtract=1, Intersect=2 (see editstack.h). */
-    connect(addBtn, &QPushButton::clicked, this, [this]{ emit committed(0); });
-    connect(subBtn, &QPushButton::clicked, this, [this]{ emit committed(1); });
-    connect(intBtn, &QPushButton::clicked, this, [this]{ emit committed(2); });
-    /* The global stylesheet (widgetcss.cpp) sets "QPushButton { min-width: 100px }",
-       which Qt applies as an EXPLICIT minimum width (~112px at this DPI). Three side by
-       side then floor the row -- and thus the whole develop dock -- at ~348px, widening
-       the dock permanently (a size policy alone can't undo an explicit minimum). Override
-       min-width on just these buttons so the row fits inside the dock; Ignored lets them
-       share whatever width the row gets equally. */
-    for (QPushButton *b : {addBtn, subBtn, intBtn}) {
-        b->setStyleSheet("QPushButton { min-width: 0; }");
-        b->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+    /* Overlay colour: the mask overlay speaks ONE colour (the veil previews the OUTCOME
+       of the op, so no colour key is needed), and this row picks it -- red reads badly
+       over a red subject. Persisted by DevelopProperties under Develop/maskOverlayColor;
+       G::maskOverlayColor is updated here so the repaint is immediate. */
+    swatchRow = new QWidget(body);
+    QHBoxLayout *sl = new QHBoxLayout(swatchRow);
+    sl->setContentsMargins(0, 0, 0, 2);
+    sl->setSpacing(6);
+    swatchColors = {QColor(220, 40, 40),   QColor(70, 200, 90),  QColor(60, 150, 255),
+                    QColor(240, 200, 40),  QColor(225, 70, 210), QColor(240, 240, 240)};
+    for (const QColor &c : swatchColors) {
+        QPushButton *sw = new QPushButton(swatchRow);
+        sw->setFixedSize(18, 18);
+        sw->setToolTip("Mask overlay colour");
+        sw->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        connect(sw, &QPushButton::clicked, this, [this, c]{
+            G::maskOverlayColor = c;
+            refreshSwatches();
+            emit overlayColourChanged();
+        });
+        swatches.append(sw);
+        sl->addWidget(sw);
     }
-    cl->addWidget(addBtn);
-    cl->addWidget(subBtn);
-    cl->addWidget(intBtn);
-    bw->addWidget(combineRow);
+    sl->addStretch(1);
+    bw->addWidget(swatchRow);
+    refreshSwatches();
 
-    /* Done (first tool -- already the mask). */
-    doneBtn = new QPushButton(tr("Done"), btnWrap);
-    doneBtn->setToolTip("Finish editing this mask");
-    connect(doneBtn, &QPushButton::clicked, this, [this]{ emit finished(); });
-    bw->addWidget(doneBtn);
+    /* ONE commit button. Its label follows the op the overlay is previewing, so the words
+       Subtract/Intersect stay visible instead of hiding behind undocumented keys. */
+    commitBtn = new QPushButton(tr("Update"), btnWrap);
+    commitBtn->setToolTip("Update the mask with this submask (Return)\n"
+                          "Opt: subtract    Shift+Opt: intersect");
+    connect(commitBtn, &QPushButton::clicked, this, [this]{ emit committed(); });
+    /* The global stylesheet (widgetcss.cpp) sets "QPushButton { min-width: 100px }",
+       which Qt applies as an EXPLICIT minimum width (~112px at this DPI) and which floors
+       the whole develop dock's width (a size policy alone can't undo an explicit
+       minimum). Override it here so the panel never widens the dock. */
+    commitBtn->setStyleSheet("QPushButton { min-width: 0; }");
+    commitBtn->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+    bw->addWidget(commitBtn);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+}
+
+void MaskPanel::refreshSwatches()
+{
+    /* Flat colour chips; the active one gets a light border. Styled rather than painted
+       so they inherit the dock's button metrics. */
+    for (int k = 0; k < swatches.size(); ++k) {
+        const bool on = (swatchColors.at(k).rgb() == G::maskOverlayColor.rgb());
+        swatches[k]->setStyleSheet(
+            QString("QPushButton { min-width: 0; border-radius: 3px; background: %1;"
+                    " border: %2; }")
+                .arg(swatchColors.at(k).name(),
+                     on ? "2px solid #f0f0f0" : "1px solid #303030"));
+    }
+}
+
+void MaskPanel::setPendingOp(int op)
+{
+    /* Modifiers are inert on the first submask -- there is nothing to subtract from or
+       intersect with an empty mask. */
+    if (firstMask) op = 0;
+    if (op == pendingOp) return;
+    pendingOp = op;
+    if (commitBtn)
+        commitBtn->setText(op == 1 ? tr("Subtract") : op == 2 ? tr("Intersect")
+                                                              : tr("Update"));
 }
 
 void MaskPanel::paintEvent(QPaintEvent *)
@@ -120,9 +151,9 @@ void MaskPanel::paintEvent(QPaintEvent *)
 void MaskPanel::showForTool(const QString &toolName, bool first)
 {
     if (titleLabel) titleLabel->setText(tr("Mask: %1").arg(toolName));
-    /* First tool is already the (red) mask -> [Done]; a later tool is a (blue) preview to
-       fold in -> the three combine buttons. */
-    if (combineRow) combineRow->setVisible(!first);
-    if (doneBtn)    doneBtn->setVisible(first);
+    firstMask = first;
+    pendingOp = -1;                 // force the relabel below
+    setPendingOp(0);                // every submask opens as Add ("Update")
+    refreshSwatches();
     setVisible(true);
 }

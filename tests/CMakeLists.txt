@@ -71,6 +71,27 @@ winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
 # tst_whitebalance compiles Develop/whitebalance.cpp (depends only on workingimage.h).
 winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
+# tst_renderstack exercises the Develop scope compositor's interactive RESUME path, so it
+# compiles the real render closure (workingimagecache + develop + whitebalance +
+# outputtransform). That closure needs OpenCV (develop.cpp's blurs) -- the only unit test
+# that does, hence the extra link/include below rather than widening the shared closure.
+winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+if(APPLE)
+    target_include_directories(tst_renderstack PRIVATE
+        ${HOMEBREW_PREFIX}/opt/opencv/include/opencv4)
+    target_link_directories(tst_renderstack PRIVATE ${HOMEBREW_PREFIX}/opt/opencv/lib)
+    target_link_libraries(tst_renderstack PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_renderstack PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_renderstack PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
+
 # tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
 winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)
 # tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).

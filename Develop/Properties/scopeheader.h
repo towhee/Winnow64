@@ -58,7 +58,6 @@ public:
        right check state and only appears while a mask tool is being edited. */
     void setMaskOverlayAvailable(bool available) override;
     void setMaskOverlayShown(bool shown) override;
-    void setMaskBreakdownShown(bool shown) override;     // Result <-> Breakdown state
     bool isCollapsed() const override { return collapsed; }
     /* Programmatic collapse (Expand all / Collapse all / Solo) -- updates the arrow
        WITHOUT emitting collapseToggled; the caller drives the tree itself. */
@@ -93,7 +92,6 @@ private:
     bool globalActive   = true;           // the selected scope is Global (index 0)
     bool maskOverlayAvailable = false;  // a mask tool is being edited -> menu row applies
     bool maskOverlayShown     = true;   // the red coverage tint is currently visible
-    bool maskBreakdownShown   = true;   // Breakdown view (veil + outlines) vs Result view
 };
 
 #endif // SCOPEHEADER_H

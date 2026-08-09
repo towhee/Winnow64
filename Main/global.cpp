@@ -88,6 +88,16 @@ bool useReplaceFillModes = false;
    shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
    Scope section; retire it once the lab design is copied back over scopeheader.*. */
 bool useScopeHeaderLab = true;
+/* Brush/Object "erase from this stroke" (Opt while painting removes from the stroke)
+   CANCELLED 2026-08-08. It existed because the developed effect only appeared on stroke
+   release, so erasing inside the submask was the only way to correct a stroke you could
+   not yet judge. The effect now re-renders DURING the swipe (brushEmitLiveGeometry), so
+   a mis-paint is visible as it happens and Opt is better spent on its other, less
+   discoverable meaning: this submask SUBTRACTS from the mask. With this false Opt means
+   Subtract everywhere -- one key, one meaning. Set true to restore the erase stroke
+   (the whole path is intact: maskBrushErase, the "erase" stroke flag, BrushStamp's erase
+   composite, the pink cursor); delete it and the erase path once this proves out. */
+bool useBrushEraseStroke = false;
 /* Model-path heal correction (Object fills + clone fallbacks; clone heals need none).
    Poisson default: keeps the model's content with the level solved from the boundary. */
 int  spotFillCorrectMode = 1;       // A/B: 0 none 1 Poisson 2 low-freq 3 harmonic
@@ -175,6 +185,8 @@ QColor labelGreenColor(QColor(20,40,20));        // Dark green
 QColor labelBlueColor(QColor(20,20,60));         // Dark blue
 //    QColor labelBlueColor(QColor(20,45,100));         // Dark blue
 //    QColor labelBlueColor(QColor(32,58,124));         // Dark blue
+QColor maskOverlayColor(QColor(220,40,40));    // Develop mask overlay (see global.h)
+
 QColor labelPurpleColor(QColor(50,30,70));     // Dark purple
 //    QColor labelPurpleColor(QColor(60,30,90));     // Dark purple
 //    QColor labelPurpleColor(QColor(54,37,95));     // Dark purple
@@ -217,7 +229,7 @@ bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lin
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)
 // DecodeRawEngine decodeRawEngine = DecodeRawEngine::winnowDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
 DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
-bool isReportDevelopTime = false;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
+bool isReportDevelopTime = true;       // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
 bool isDevelopDebounceWrite = true;     // also flush per-image develop settings to sidecar a short time after edits settle
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 

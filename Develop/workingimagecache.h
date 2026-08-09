@@ -79,6 +79,11 @@ public:
         /* Develop sub-stages (subset of developMs). */
         qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0; qint64 dehazeMs = 0;
         qint64 vignetteMs = 0; qint64 grainMs = 0;
+        /* Filled by the caller's compositor (MW::developCompositeStack), not by
+           render*(): the per-scope mask rasterisation and the EXIF-rotate +
+           proxy-upscale that follow the stack render. maskScopes is how many
+           scopes actually built a buffer. */
+        qint64 maskBuildMs = 0; int maskScopes = 0; qint64 orientScaleMs = 0;
     };
 
     /* Output bit depth of the final OutputTransform. Eight (Format_RGB888) is the
@@ -102,22 +107,53 @@ public:
                        OutDepth depth = OutDepth::Eight,
                        Space space = Space::sRGB);
 
-    /* One scope of a stack composite: its develop params and a 0..1 mask (row-major width*height,
-       matching work; empty => the scope applies globally). */
+    /* One scope of a stack composite: its develop params and a 0..1 mask (row-major
+       width*height, matching work; null or empty => the scope applies globally).
+
+       The mask is SHARED, not owned: the interactive proxy re-renders with the same mask
+       for every scope the user is not currently dragging, and those buffers are megabytes
+       each (see MW's DevelopStackCache), so handing one over must not copy it. */
     struct StackScope {
-        EditParams         params;
-        std::vector<float> mask;
+        EditParams params;
+        std::shared_ptr<const std::vector<float>> mask;
     };
 
-    /* Stack composite, blended in scene-linear before the output transform: start from base
-       (applied globally), then for each scope develop `work` with its params and blend over the
-       accumulator by its mask (acc = acc*(1-m) + scope*m; global scope replaces). One final
-       OutputTransform. An identity params side skips its develop (aliases work). */
+    /* Interactive resume point: lets a repeated render skip the scopes it already knows
+       the answer for. Optional -- pass nullptr and renderStack computes everything from
+       `work`, exactly as before. Owned and populated by MW's DevelopStackCache (see
+       Develop/developstackcache.h), which is proxy-only and GUI-thread-only.
+
+       IN   start   first scope to compute; scopes below it are skipped entirely.
+            prefix  the accumulator as it stands BEFORE `start` (base applied globally +
+                    every scope below `start` blended in). Null => ignore `start` and
+                    render the whole stack.
+            layer   scope `start` ALREADY developed from prefix; null => develop it here.
+                    Valid only when scope `start`'s params are unchanged -- a mask-only
+                    edit, which is the case this whole mechanism exists for.
+       OUT  capture which scope's intermediates to hand back for the next call
+                    (size_t(-1) = none). outPrefix/outLayer are filled with the
+                    accumulator before, and the developed image of, that scope. outLayer
+                    stays null when the scope's params are identity (its "layer" is just
+                    the prefix). */
+    struct StackResume {
+        size_t start = 0;
+        std::shared_ptr<const WorkingImage> prefix;
+        std::shared_ptr<const WorkingImage> layer;
+        size_t capture = size_t(-1);
+        std::shared_ptr<const WorkingImage> outPrefix, outLayer;
+    };
+
+    /* Stack composite, blended in scene-linear before the output transform: start from
+       base (applied globally), then for each scope develop `work` with its params and
+       blend over the accumulator by its mask (acc = acc*(1-m) + scope*m; a global scope
+       replaces). One final OutputTransform. An identity params side skips its develop
+       (aliases work). */
     static bool renderStack(const WorkingImage &work, const EditParams &base,
                             const std::vector<StackScope> &scopes,
                             QImage &out, RenderTimings *timings = nullptr,
                             OutDepth depth = OutDepth::Eight,
-                            Space space = Space::sRGB);
+                            Space space = Space::sRGB,
+                            StackResume *resume = nullptr);
 
     /* Area-downsampled copy of src whose longest edge is <= targetLongEdge (white /
        sceneReferred carried through). Used to build the interactive develop PROXY so a slider

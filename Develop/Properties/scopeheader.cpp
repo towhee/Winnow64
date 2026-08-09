@@ -144,20 +144,14 @@ void ScopeHeader::showScopeMenu()
         menu.addSeparator();
         connect(menu.addAction(tr("Tweak %1 mask\tM").arg(nm)), &QAction::triggered,
                 this, [this]{ emit addMaskRequested(); });
-        /* Show/hide the red mask coverage tint on the loupe. Only meaningful while a mask
-           tool is expanded (its overlay is being edited), so the row is omitted if not.
+        /* Show/hide the mask coverage tint on the loupe. Only meaningful while a submask
+           is being defined (its overlay is being edited), so the row is omitted if not.
            Same action as the "O" Develop shortcut (MW::toggleMaskOverlay). */
         if (maskOverlayAvailable) {
             QAction *ov = menu.addAction(tr("Show mask overlay\tO"));
             ov->setCheckable(true);
             ov->setChecked(maskOverlayShown);
             connect(ov, &QAction::triggered, this, [this]{ emit maskOverlayToggled(); });
-            /* Result view (veil only) vs Breakdown view (veil + a green/blue outline
-               of each Add/Subtract tool, so the mask's constituents are legible). */
-            QAction *bd = menu.addAction(tr("Show mask breakdown"));
-            bd->setCheckable(true);
-            bd->setChecked(maskBreakdownShown);
-            connect(bd, &QAction::triggered, this, [this]{ emit maskBreakdownToggled(); });
         }
         connect(menu.addAction(tr("Reset %1").arg(nm)), &QAction::triggered,
                 this, [this]{ emit resetScopeRequested(); });
@@ -195,11 +189,6 @@ void ScopeHeader::setMaskOverlayAvailable(bool available)
 void ScopeHeader::setMaskOverlayShown(bool shown)
 {
     maskOverlayShown = shown;
-}
-
-void ScopeHeader::setMaskBreakdownShown(bool shown)
-{
-    maskBreakdownShown = shown;
 }
 
 void ScopeHeader::setGlobalActive(bool isGlobal)

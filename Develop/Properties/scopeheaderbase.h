@@ -52,7 +52,6 @@ public:
     virtual void setGlobalActive(bool isGlobal) = 0;            // Global: omit per-scope group
     virtual void setMaskOverlayAvailable(bool available) = 0;
     virtual void setMaskOverlayShown(bool shown) = 0;
-    virtual void setMaskBreakdownShown(bool shown) = 0;     // Result <-> Breakdown state
     virtual void setCollapsed(bool collapsed) = 0;          // programmatic, no signal
     virtual bool isCollapsed() const = 0;
     virtual QString currentScopeName() const = 0;
@@ -65,7 +64,6 @@ signals:
     void addScopeRequested();                    // menu: add a new scope
     void addMaskRequested();                     // menu: add a mask tool to this scope
     void maskOverlayToggled();                   // menu: show/hide the mask overlay
-    void maskBreakdownToggled();                 // menu: Result view <-> Breakdown view
     void previewToggled(bool shown);             // [E] show/ignore the whole scope
     void collapseToggled(bool collapsed);        // > hide/show the scope's tree items
     /* List panel only: a scope row's show/hide checkbox was toggled (index into the
