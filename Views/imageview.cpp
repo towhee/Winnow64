@@ -169,6 +169,7 @@ QCursor buildDropperCursor()
 #include "Develop/brushstamp.h"
 #include "Develop/objectmask.h"
 #include "Develop/fillspot.h"
+#include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
@@ -2186,34 +2187,34 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
        p1->p2. Skipped when the whole-mask composite tint is already shown
        (drawTint=false): only the handles are drawn. */
     if (drawTint) {
-        const double f  = qBound(0.0, maskFeather, 100.0) / 100.0;
-        const double lo = qBound(0.0, 0.5 - 0.5*f, 1.0);
-        const double hi = qBound(0.0, 0.5 + 0.5*f, 1.0);
+        const double sigma = MaskFalloff::gradientSigma(maskFeather);
         const QColor base = maskTintColor();        // the one overlay colour
         QColor clear = base; clear.setAlpha(0);     // mask 0% -> no tint
         QColor full  = base; full.setAlpha(150);    // mask 100% -> tinted
         /* Invert swaps which end of the ramp is covered. */
         const QColor &cLo = maskInverted ? full  : clear;
         const QColor &cHi = maskInverted ? clear : full;
+        const int aLo = cLo.alpha(), aHi = cHi.alpha();
         QLinearGradient grad(s1, s2);
-        grad.setColorAt(0.0, cLo);
-        grad.setColorAt(lo,  cLo);
-        /* Sample a smoothstep falloff (matches evalGrad in the render) so the tinted edge eases in
-           and out instead of kinking at lo/hi -- QLinearGradient only interpolates linearly between
-           stops, so we add intermediate ones. */
-        if (hi > lo) {
-            const int N = 6;
-            const int aLo = cLo.alpha(), aHi = cHi.alpha();
-            for (int k = 1; k < N; ++k) {
+        /* Sample the SAME profile the render uses (MaskFalloff::cdf, see evalMaskComp).
+           QLinearGradient interpolates linearly between stops, so the curve has to be
+           laid down AS stops. At feather 0 that collapses to a step at the midpoint. */
+        if (sigma <= 0.0) {
+            grad.setColorAt(0.0, cLo);
+            grad.setColorAt(0.4999, cLo);
+            grad.setColorAt(0.5, cHi);
+            grad.setColorAt(1.0, cHi);
+        }
+        else {
+            const int N = 24;
+            for (int k = 0; k <= N; ++k) {
                 const double s = double(k) / N;
-                const double ss = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);   // smootherstep
+                const double m = MaskFalloff::cdf((s - 0.5) / sigma);
                 QColor c = base;
-                c.setAlpha(int(aLo + (aHi - aLo) * ss + 0.5));
-                grad.setColorAt(lo + (hi - lo) * s, c);
+                c.setAlpha(int(aLo + (aHi - aLo) * m + 0.5));
+                grad.setColorAt(s, c);
             }
         }
-        grad.setColorAt(hi, cHi);
-        grad.setColorAt(1.0, cHi);
         painter->save();
         painter->setPen(Qt::NoPen);
         painter->setBrush(grad);
@@ -2221,8 +2222,11 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
         painter->restore();
     }
 
-    /* 2) Centre line, perpendicular 0%/100% guide ticks, and handles -- drawn in viewport coords
-       (identity transform) so they stay a constant on-screen size at any zoom. */
+    /* 2) Centre line, perpendicular end guide ticks, and handles -- drawn in viewport
+       coords (identity transform) so they stay a constant on-screen size at any zoom.
+       The ticks mark p1 and p2; with the Gaussian ramp those are the ~2% and ~98%
+       coverage lines at feather 100 (the tails run a little past them), not hard
+       0%/100% boundaries. */
     painter->save();
     painter->resetTransform();
     const QPointF v1 = mapFromScene(s1);
@@ -2256,34 +2260,46 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
     const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());      // centre, image px
     const double ax = qMax(1.0, maskRx*br.width()), ay = qMax(1.0, maskRy*br.height());
 
-    /* 1) Elliptical tint ramp (scene coords) via a transformed radial gradient: a unit circle
-       mapped to the rotated image ellipse, then to scene. mask 100% inside -> 0% at the boundary
-       (Invert swaps); feather widens the transition inward. Skipped when the whole-mask composite
-       tint is already shown (drawTint=false): only the handles are drawn. */
+    /* 1) Elliptical tint ramp (scene coords) via a transformed radial gradient: a unit
+       circle mapped to the rotated image ellipse, then to scene. Coverage is 100% at the
+       centre and falls outward on the shared MaskFalloff profile, ~8% at the boundary at
+       feather 82 (Invert swaps); feather pulls the half-coverage radius inward. Skipped
+       when the whole-mask composite tint is already shown (drawTint=false): only the
+       handles are drawn. */
     if (drawTint) {
-        const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
-        const double inner = qBound(0.0, 1.0 - f, 1.0);
         const QColor base = maskTintColor();        // the one overlay colour
         QColor clear = base; clear.setAlpha(0);
         QColor full  = base; full.setAlpha(150);
-        const QColor cIn   = maskInverted ? clear : full;       // colour at the centre
-        const QColor cEdge = maskInverted ? full  : clear;      // colour at/after the boundary
+        const QColor cIn   = maskInverted ? clear : full;   // at the centre
+        const QColor cEdge = maskInverted ? full  : clear;  // out past the boundary
+        const int aIn = cIn.alpha(), aEd = cEdge.alpha();
+        /* The gradient is defined on the unit circle but the profile has a TAIL past it
+           (MaskFalloff), so the brush circle is stretched to tMax and the stops laid out
+           in those units -- otherwise the tail would be clipped to a hard ring at the
+           ellipse. Stops sample the same table the render reads. */
+        MaskFalloff::Lut lut;
+        const bool hard = maskFeather <= 0.0;
+        if (!hard) lut.build(maskFeather);
+        const double tMax = hard ? 1.0 : qMax(1e-6, lut.tMax());
         QRadialGradient rg(QPointF(0, 0), 1.0);
-        rg.setColorAt(0.0, cIn);
-        rg.setColorAt(inner, cIn);
-        if (1.0 > inner) {                                      // smootherstep-sampled ramp stops
-            const int N = 6, aIn = cIn.alpha(), aEd = cEdge.alpha();
-            for (int k = 1; k < N; ++k) {
-                const double s = double(k) / N;
-                const double ss = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);
-                QColor c = base; c.setAlpha(int(aIn + (aEd - aIn) * ss + 0.5));
-                rg.setColorAt(inner + (1.0 - inner) * s, c);
+        if (hard) {
+            rg.setColorAt(0.0, cIn);
+            rg.setColorAt(0.9999, cIn);
+            rg.setColorAt(1.0, cEdge);
+        }
+        else {
+            const int N = 24;
+            for (int k = 0; k <= N; ++k) {
+                const double s = double(k) / N;                 // 0..1 of tMax
+                QColor c = base;
+                c.setAlpha(int(aIn + (aEd - aIn) * (1.0 - lut.at(s * tMax)) + 0.5));
+                rg.setColorAt(s, c);
             }
         }
-        rg.setColorAt(1.0, cEdge);
         QBrush brush(rg);
         QTransform E;
-        E.translate(ci.x(), ci.y()); E.rotate(maskAngle); E.scale(ax, ay);
+        E.translate(ci.x(), ci.y()); E.rotate(maskAngle);
+        E.scale(ax * tMax, ay * tMax);
         brush.setTransform(E * pmItem->sceneTransform());      // unit circle -> image ellipse -> scene
         painter->save();
         painter->setPen(Qt::NoPen);
@@ -2292,22 +2308,43 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
         painter->restore();
     }
 
-    /* 2) Ellipse outline + centre/axis handles, viewport coords (constant on-screen size). */
+    /* 2) Ellipse outlines + centre/axis handles, viewport coords (constant on-screen
+       size). Two outlines are shown: the solid outline through the axis handles (the
+       mask's nominal boundary, t = 1) and a dashed ellipse at the HALF-COVERAGE radius
+       (MaskFalloff::Shape::h). Half coverage is the only radius the Gaussian profile
+       makes a promise about -- there is no "ramp starts here" circle any more, since
+       coverage falls from the centre outward -- and it is the same convention the brush
+       cursor's inner ring uses. With feather 0 the two coincide, so only the solid one
+       is drawn. */
     painter->save();
     painter->resetTransform();
     const double a = maskAngle * 0.017453292519943295;
     const double ca = std::cos(a), sa = std::sin(a);
-    QPolygonF poly;
-    const int N = 48;
-    for (int i = 0; i <= N; ++i) {
-        const double t = (6.283185307179586 * i) / N;
-        const double lx = ax * std::cos(t), ly = ay * std::sin(t);
-        const QPointF pImg = ci + QPointF(ca*lx - sa*ly, sa*lx + ca*ly);
-        poly << mapFromScene(pmItem->mapToScene(pImg));
-    }
+    auto ellipseVp = [&](double k) {
+        QPolygonF poly;
+        const int N = 48;
+        for (int i = 0; i <= N; ++i) {
+            const double t = (6.283185307179586 * i) / N;
+            const double lx = k * ax * std::cos(t), ly = k * ay * std::sin(t);
+            const QPointF pImg = ci + QPointF(ca*lx - sa*ly, sa*lx + ca*ly);
+            poly << mapFromScene(pmItem->mapToScene(pImg));
+        }
+        return poly;
+    };
     QPen outline(QColor(255, 255, 255, 210)); outline.setWidthF(1.4);
     painter->setPen(outline); painter->setBrush(Qt::NoBrush);
-    painter->drawPolyline(poly);
+    painter->drawPolyline(ellipseVp(1.0));                      // outer boundary (0%)
+
+    const double featherK = MaskFalloff::shapeFor(maskFeather).h;
+    if (maskFeather > 0.0 && featherK < 0.999) {
+        QPen featherPen(QColor(255, 255, 255, 150));
+        featherPen.setWidthF(1.1);
+        featherPen.setStyle(Qt::DashLine);
+        featherPen.setDashPattern({5.0, 4.0});
+        painter->setPen(featherPen);
+        painter->drawPolyline(ellipseVp(featherK));             // half coverage
+        painter->setPen(outline);
+    }
 
     auto handle = [&](const QPointF &c, double r, const QColor &fill) {
         painter->setPen(QPen(QColor(0, 0, 0, 180), 1.2));
@@ -2694,7 +2731,30 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
         painter->setRenderHint(QPainter::Antialiasing, true);
         painter->setBrush(Qt::NoBrush);
         const bool aiAuto = maskBrushAutoMask && maskBrushAutoMaskMode == "ai";
-        const QColor cur = maskBrushErase ? QColor(255, 170, 170, 235)   // erase
+        /* Is the pending work REMOVING coverage? Two independent paths:
+           - the erase stroke (Opt while painting), only when G::useBrushEraseStroke is
+             on. maskBrushErase is latched at mouse-press, so on hover it still describes
+             the PREVIOUS stroke -- predict it from the Opt key held right now (the same
+             test the press uses).
+           - the combine op: with the erase stroke retired (the shipping default), Opt
+             means this submask SUBTRACTS from the mask (maskLegendOp 1, kept live by
+             MW::syncPendingMaskOp), Shift+Opt INTERSECTS. Both take area away. */
+        const bool eraseNow = maskStrokeInFlight()
+                ? maskBrushErase
+                : (G::useBrushEraseStroke
+                   && (QGuiApplication::keyboardModifiers() & Qt::AltModifier)
+                   && !maskBrushStrokesJson.isEmpty());
+        /* Read the KEYS, not just maskLegendOp. The legend op is pinned to Add on the
+           first submask (nothing to combine with) and only lands here when the veil
+           rebuilds, so it cannot answer "is Opt down right now?" -- which is exactly what
+           the cursor has to say. queryKeyboardModifiers() polls the real key state (the
+           same call DevelopProperties::maskOpFromModifiers uses); maskLegendOp is still
+           ORed in so a LATCHED subtract keeps the minus after the key is released. */
+        const Qt::KeyboardModifiers mods = QGuiApplication::queryKeyboardModifiers();
+        const bool altNow = (mods & Qt::AltModifier) && !eraseNow;
+        const bool intersectNow = (altNow && (mods & Qt::ShiftModifier)) || maskLegendOp == 2;
+        const bool subtractNow = !intersectNow && (eraseNow || altNow || maskLegendOp == 1);
+        const QColor cur = eraseNow ? QColor(255, 170, 170, 235)         // erase
                          : aiAuto          ? QColor(150, 200, 255, 235)   // AI (SAM) auto-mask
                          : maskBrushAutoMask ? QColor(150, 255, 150, 235) // luminance auto-mask
                                              : QColor(255, 255, 255, 235);
@@ -2714,12 +2774,36 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
             painter->setPen(pen);
             painter->drawEllipse(cVp, r, r);
         };
-        ring(rVp, cur, 1.4, dash);                             // outer = brush SIZE (coverage 0 here)
-        /* Lightroom-style: feather softens INWARD. The inner ring marks the half-coverage radius
-           radius*(1-f/2) (== LR's inner circle). Only drawn when feather > 0 (else it coincides). */
-        const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
-        if (f > 0.001)
-            ring(rVp * (1.0 - f * 0.5), cur, 1.4, dash);       // inner = half-coverage (feather guide)
+        ring(rVp, cur, 1.4, dash);              // outer = brush SIZE (coverage 0 here)
+        /* Lightroom-style: feather softens INWARD. The inner ring marks the half-coverage
+           radius (MaskFalloff::Shape::h -- the same guide the Radial mask's dashed
+           ellipse uses). Drawn only when feather > 0, else it coincides with the size. */
+        if (maskFeather > 0.0)
+            ring(rVp * MaskFalloff::shapeFor(maskFeather).h, cur, 1.4, dash);
+        /* Centre glyph naming what the pending work will do: a plus (in the ring's
+           colour) when adding, a red minus when subtracting/erasing, a red cross when
+           intersecting. Same dark-halo idiom as the rings. Skipped for a tiny brush,
+           where the glyph would swamp the circle. */
+        if (rVp >= 7.0) {
+            const double arm = qBound(3.0, rVp * 0.25, 7.0);
+            const QColor gc = (subtractNow || intersectNow) ? QColor(255, 80, 80, 245) : cur;
+            const double d = arm * 0.72;        // cross arm (same visual size)
+            const QLineF hLine(cVp - QPointF(arm, 0), cVp + QPointF(arm, 0));
+            const QLineF vLine(cVp - QPointF(0, arm), cVp + QPointF(0, arm));
+            const QLineF d1(cVp - QPointF(d, d), cVp + QPointF(d, d));
+            const QLineF d2(cVp - QPointF(d, -d), cVp + QPointF(d, -d));
+            auto glyph = [&](const QColor &c, double w) {
+                QPen pen(c);
+                pen.setWidthF(w);
+                pen.setCapStyle(Qt::RoundCap);
+                painter->setPen(pen);
+                if (intersectNow)     { painter->drawLine(d1); painter->drawLine(d2); }
+                else if (subtractNow) { painter->drawLine(hLine); }
+                else                  { painter->drawLine(hLine); painter->drawLine(vLine); }
+            };
+            glyph(QColor(0, 0, 0, 150), 3.6);   // halo
+            glyph(gc, 2.0);
+        }
         painter->restore();
     }
 }
@@ -4189,6 +4273,9 @@ bool ImageView::event(QEvent *event) {
 }
 
 void ImageView::keyPressEvent(QKeyEvent *event){
+    /* Opt toggles the brush cursor between the add (+) and erase (red -) glyph, so a
+       bare modifier press has to repaint the overlay. Never consumed. */
+    if (maskBrushCursorOn && event->key() == Qt::Key_Alt) viewport()->update();
     /* Commit a perspective warp with Enter/Return (the ShortcutOverride above frees the key from its
        global binding while the quad is being traced). */
     if (cropActive() && cropWarp && G::isEnterKey(event)) {
@@ -4254,6 +4341,13 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         }
     }
     emit keyPress(event);
+}
+
+void ImageView::keyReleaseEvent(QKeyEvent *event)
+{
+    /* See keyPressEvent: releasing Opt flips the brush cursor glyph back to add. */
+    if (maskBrushCursorOn && event->key() == Qt::Key_Alt) viewport()->update();
+    QGraphicsView::keyReleaseEvent(event);
 }
 
 // not used

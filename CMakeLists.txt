@@ -391,6 +391,7 @@ set(WINNOW_HEADERS
     Develop/colorgrade.h
     Develop/editparams.h
     Develop/inputtransform.h
+    Develop/maskfalloff.h
     Develop/outputtransform.h
     Develop/rangemask.h
     Develop/whitebalance.h

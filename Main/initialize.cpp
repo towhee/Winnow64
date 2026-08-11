@@ -2203,7 +2203,7 @@ void MW::createDevelopDock()
     developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
     developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.  "
-                                 "G cycles both / histogram / vectorscope / hidden");
+                                 "(G) cycles: both > histogram > vectorscope > hidden");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developTitleLayout->addWidget(developScopesBtn);

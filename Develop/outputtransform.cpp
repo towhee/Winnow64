@@ -90,6 +90,39 @@ inline float BaselineTone(float v)
 }
 
 /*
+    Highlight rolloff: applied to every render in LINEAR, in the OUTPUT primaries (after
+    the matrix, before the transfer) -- that is the space the clip actually happens in.
+
+    Without it the only thing standing between an over-range value and the file is the
+    transfer function's Clamp01 -- a hard per-channel clip. That is what makes a
+    brightened radial mask look wrong: the core of the mask clips flat, so the smooth
+    smootherstep falloff is invisible there and re-appears with a derivative kink at the
+    radius where the channel drops back under 1.0 (a Mach-band ring), and because the
+    channels clip one at a time the hue swings on the way out.
+
+    Instead the energy the peak channel loses to the clip is bled into the other two, so
+    an over-range colour desaturates toward white the way Lightroom's does: pushing a
+    saturated green past white lifts red and blue instead of pinning green at 255 and
+    freezing the pixel. Measured on the green test frame that puts the mask core at
+    ~(154,255,151) against Lightroom's ~(172,255,164), and it removes the flat plateau --
+    brightness keeps rising smoothly through the region where green alone is clipped.
+
+    Everything at or below white is left BIT-EXACT: nothing but the over-range part of a
+    render can change, so an unedited image (and every export of one) is untouched. That
+    rules out a compressive shoulder here -- any curve with a soft knee below 1.0 would
+    have to darken existing whites to make room.
+*/
+inline void HighlightRolloff(float &r, float &g, float &b)
+{
+    const float mx = qMax(r, qMax(g, b));
+    if (mx <= 1.0f) return;                     // in range: the common case, untouched
+    const float bleed = mx - 1.0f;              // the part that would have been clipped
+    r = qMin(1.0f, r + bleed);
+    g = qMin(1.0f, g + bleed);
+    b = qMin(1.0f, b + bleed);
+}
+
+/*
     Run processRows(y0, y1) over the image's rows, parallelised over disjoint row chunks
     (QtConcurrent + the global pool) exactly as Develop::applyPointOps is. Rows are
     disjoint, so the threads write into the output buffer without contention. Shared by
@@ -164,6 +197,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space)
                     if (tone) v[c] = BaselineTone(v[c]);
                 }
                 if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
+                HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)
                     line[x * 3 + c] = static_cast<uchar>(
                         std::lround(Transfer(v[c], enc.gammaInv) * 255.0f));
@@ -212,6 +246,7 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
                     if (tone) v[c] = BaselineTone(v[c]);
                 }
                 if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
+                HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)
                     line[x * 4 + c] = static_cast<quint16>(
                         std::lround(Transfer(v[c], enc.gammaInv) * 65535.0f));

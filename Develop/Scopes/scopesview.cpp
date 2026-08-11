@@ -39,7 +39,7 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     closeBtn = new BarBtn();
     closeBtn->setParent(this);
     closeBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    closeBtn->setToolTip(tr("Close the histogram and vectorscope (G cycles them)"));
+    closeBtn->setToolTip(tr("Close the histogram and vectorscope. Press (G) to cycle scopes."));
     connect(closeBtn, &BarBtn::clicked, this, &ScopesView::closeRequested);
 
     /* Fixed strip at the top of the dock; the property tree below takes the stretch. */

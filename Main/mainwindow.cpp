@@ -4,6 +4,7 @@
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
 #include "Develop/brushstamp.h"
+#include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
@@ -1596,6 +1597,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 /* The event's own modifiers do not yet include the key being pressed (nor
                    exclude the one being released), so read the live state instead. */
                 syncPendingMaskOp();
+                /* The brush cursor's centre glyph (+ / - / x) reads the held modifier
+                   directly, so it has to repaint even when syncPendingMaskOp changes
+                   nothing -- the op is pinned to Add on the first submask, and unchanged
+                   ops return early without touching the veil. */
+                if (imageView) imageView->viewport()->update();
                 if (k == Qt::Key_Alt && event->type() != QEvent::ShortcutOverride) {
                     event->accept();
                     return true;
@@ -5631,9 +5637,12 @@ struct MaskComp {
     bool   valid = false;
     double feat = 0.0;              // feather fraction 0..1
     /* Linear */
-    double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0, lo = 0.5, hi = 0.5;
+    double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0, invSigma = 0;
     /* Radial (output-pixel space) */
     double cpx = 0, cpy = 0, iax = 0, iay = 0, cosA = 1, sinA = 0;
+    /* Feather profile (MaskFalloff). Radial reads the table; Linear uses the CDF and
+       only needs invSigma. Built once per component, never in the per-pixel loop. */
+    MaskFalloff::Lut falloff;
 };
 
 MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
@@ -5657,8 +5666,9 @@ MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
         const double len2 = g.dx*g.dx + g.dy*g.dy;
         if (len2 <= 1e-12) return g;
         g.invLen2 = 1.0 / len2;
-        g.lo = 0.5 - 0.5*g.feat; g.hi = 0.5 + 0.5*g.feat;
-        g.hardStep = (g.hi <= g.lo);
+        const double sigma = MaskFalloff::gradientSigma(m.feather);
+        g.hardStep = (sigma <= 0.0);
+        g.invSigma = g.hardStep ? 0.0 : 1.0 / sigma;
         g.valid = true;
     }
     else if (m.tool == 1) {         // Radial
@@ -5671,15 +5681,10 @@ MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
         g.cpx = cx * Wo; g.cpy = cy * Ho;
         g.iax = 1.0 / ax; g.iay = 1.0 / ay;
         g.cosA = std::cos(ang); g.sinA = std::sin(ang);
+        if (!g.hardStep) g.falloff.build(m.feather);
         g.valid = true;
     }
     return g;
-}
-
-inline float smoother(double v)
-{
-    v = v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
-    return float(v * v * v * (v * (v * 6.0 - 15.0) + 10.0));   // smootherstep (quintic)
 }
 
 inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, double Ho)
@@ -5691,12 +5696,16 @@ inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, 
         const double rdy = -ddx*g.sinA + ddy*g.cosA;
         const double ex = rdx*g.iax, ey = rdy*g.iay;
         const double d = std::sqrt(ex*ex + ey*ey);
+        /* d is already the MaskFalloff t: 0 at the centre, 1 at the ellipse. The profile
+           runs past 1 (a Gaussian tail, as Lightroom's does), so a mask reaches slightly
+           beyond its drawn outline -- see MaskFalloff. */
         if (g.hardStep) v = (d <= 1.0) ? 1.0 : 0.0;     // hard edge at the boundary
-        else            v = 1.0 - smoother((d - (1.0 - g.feat)) / g.feat);   // 1 inside -> 0 at edge
+        else            v = g.falloff.at(d);
     }
     else {                          // Linear: projection along p1->p2
         const double t = ((onx - g.p1x)*g.dx + (ony - g.p1y)*g.dy) * g.invLen2;
-        v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0) : smoother((t - g.lo) / (g.hi - g.lo));
+        v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0)
+                       : MaskFalloff::cdf((t - 0.5) * g.invSigma);
     }
     const float r = float(v);       // both paths already produced the final 0..1 mask value
     return g.inverted ? 1.0f - r : r;

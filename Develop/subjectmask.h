@@ -25,6 +25,7 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
+#include "Develop/maskfalloff.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
@@ -57,11 +58,6 @@ inline std::shared_ptr<const SubjectRef> getRef(const QString &path)
     return it != refStore().end() ? it.value() : nullptr;
 }
 
-inline float smoother(double v)
-{
-    v = v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
-    return float(v * v * v * (v * (v * 6.0 - 15.0) + 10.0));   // smootherstep (quintic)
-}
 
 /* Bilinear sample of the coverage at output-normalized (onx,ony). */
 inline float sampleCov(const SubjectRef &ref, double onx, double ony)
@@ -91,7 +87,9 @@ inline float coverage(const SubjectRef &ref, double onx, double ony,
     const double band = std::clamp(double(featherPct) / 100.0, 0.0, 1.0) * 0.5;
     double v;
     if (band <= 1e-6)  v = (s >= 0.5f) ? 1.0 : 0.0;      // hard threshold
-    else               v = smoother((s - (0.5 - band)) / (2.0 * band));
+    /* Gaussian edge (MaskFalloff::cdf), sigma matched to the 10-90 width of the
+       smootherstep it replaces, so the band reads the same but has no hard ends. */
+    else               v = MaskFalloff::cdf((s - 0.5) / (0.48 * band));
     const float c = float(v);
     return inverted ? 1.0f - c : c;
 }

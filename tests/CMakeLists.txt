@@ -68,6 +68,9 @@ winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
 # tst_colorgrade tests Develop/colorgrade.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
+# tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
+# header-only: no OpenCV / develop.cpp needed).
+winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)
 # tst_whitebalance compiles Develop/whitebalance.cpp (depends only on workingimage.h).
 winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
