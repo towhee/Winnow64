@@ -2731,6 +2731,22 @@ Architecture
     look, not per-image auto-exposure; a future Develop "exposure" can override it. Non-raw
     output is unchanged (tone curve skipped), so the unedited-JPEG round trip stays identity.
 
+    HIGHLIGHT ROLLOFF (OutputTransform::HighlightRolloff): the last thing before the
+    transfer curve, in linear and in the OUTPUT primaries -- the space the clip happens
+    in. Any channel over 1.0 would otherwise be hard-clipped by Transfer's Clamp01, which
+    is what made a brightened radial mask look banded: the mask core clipped flat, hiding
+    the smootherstep falloff, which then re-appeared with a derivative kink (a Mach-band
+    ring) where the channel dropped back under 1.0, with a hue swing as the channels
+    clipped one at a time. Instead the energy the peak channel loses to the clip is BLED
+    into the other two, so an over-range colour desaturates smoothly toward white -- the
+    Lightroom behaviour (a green frame pushed past white gives ~(154,255,151) here vs
+    LR's ~(172,255,164), measured).
+    Pixels at or below white are bit-exact, so unedited images and their exports are
+    untouched; that is why this is a bleed and not a compressive shoulder, since any soft
+    knee below 1.0 would have to darken existing whites. The RAW baseline tone curve above
+    still runs first (it rarely leaves anything over-range); the rolloff is applied to raw
+    and non-raw alike, in both ToImage and ToImage16.
+
     OUTPUT COLOUR SPACES: OutputTransform::ToImage / ToImage16 take an
     OutputTransform::Space -- sRGB (default), DisplayP3 or AdobeRGB. The pipeline works in
     scene-linear with sRGB (Rec.709) primaries at D65, so the conversion is a 3x3 to the
@@ -3844,9 +3860,15 @@ Scope & mask model (Global + masks)
                via enter/leaveEvent). Linear: tint ramp + centre line + 0%/100% perpendicular guides +
                endpoint/centre handles; endpoint drag rotates+scales about the fixed centre, centre/line
                drag translates. Radial: elliptical tint (a unit-circle QRadialGradient mapped through a
-               brush transform to the rotated image ellipse) + outline + centre + 4 axis handles; centre
-               handle moves, axis handles resize each semi-axis (centre fixed), dragging the outline
-               rotates. Tints/handles draw in viewport coords for constant on-screen size; a miss falls
+               brush transform to the rotated image ellipse) + TWO outlines + centre + 4
+               axis handles; the solid outline is the nominal boundary (through the axis
+               handles) and a dashed ellipse marks the HALF-COVERAGE radius (hidden when
+               feather is 0). There is no "ramp starts here" circle: coverage falls from
+               the centre outward (see MASK FEATHER PROFILE) and runs a little PAST the
+               solid outline, so the tint's gradient brush is stretched to the profile's
+               tMax rather than to the ellipse. Centre handle moves, axis handles resize
+               each semi-axis (centre fixed), dragging the outline rotates.
+               Tints/handles draw in viewport coords for constant on-screen size; a miss falls
                through to pan/zoom. Drag emits maskGeometryChanged LIVE (and on release) ->
                DevelopProperties::setActiveMaskParams (stores into the component,
                debounce-persists, no tree rebuild). Feather/Invert live-update via
@@ -3860,6 +3882,51 @@ Scope & mask model (Global + masks)
                result veil -- the op is read off the veil's OUTCOME and the op chip, never
                off the colour. That preview is ALWAYS the SELECTED tool. Invert flips
                (Radial: effect outside).
+             - MASK FEATHER PROFILE (Develop/maskfalloff.h): ONE feather curve for every
+               mask tool. Every tool used to taper with a smootherstep, which is
+               flat-ended by construction -- coverage sits at exactly 1 across a core,
+               ramps, then sits at exactly 0. Measured against Lightroom on the same frame
+               (white image, radial mask, feather 82, exposure -3.0), recovering coverage
+               from both screenshots through Winnow's own perceptual blend:
+
+                   Winnow  smootherstep from 0.180R (== feather 82)  fit rms 0.002
+                   LR      GAUSSIAN, sigma 0.450R                    fit rms 0.024
+                           (best smootherstep fit to LR: k~0.02, still rms 0.086)
+
+               So Winnow's render was exactly per spec and the SHAPE was what differed:
+               LR's coverage starts falling at the very centre (no flat core) and still
+               carries ~4% at the boundary, dying by ~1.3R. Feeding a Gaussian through
+               Winnow's blend reproduced LR's whole profile to ~3/255 levels, which also
+               confirmed the blend space (kPerceptualMaskBlend) was already right.
+               The family is a super-Gaussian in t, the normalised distance from full
+               coverage (t=0) to the boundary (t=1):
+
+                   m(t) = 2^-((t/h)^p)     h = half-coverage radius, p = roundness
+                   h = 1 - 0.579f          p = (3.3 - 2.024f)/f       f = feather/100
+
+               p=2 is a true Gaussian, large p a near-hard edge, p<2 peaks harder with a
+               longer tail. feather 82 gives (0.525, 2.0) -- the LR measurement -- and the
+               rest of the map is the curve that makes the 10-90% transition width come
+               out PROPORTIONAL to the feather (~0.92f) through that anchor, so the slider
+               still behaves the way it reads and softness rises monotonically to 100.
+               Feather 0 short-circuits to a hard step. THREE entry points, because the
+               tools are not all the same shape: Lut (distance-to-boundary: Radial, Brush
+               -- table-built once per component/dab, so the pow never enters a per-pixel
+               loop), cdf (the Linear Gradient's two-sided S -- a Gaussian CDF, sigma =
+               0.25f, matched to the old smootherstep's 10-90 width so the ramp keeps its
+               apparent width but gains tails past p1/p2), and taper (the fixed-band tools
+               -- Luminance/Colour Range, Depth, Subject, Sky, Object -- where feather is
+               a TOLERANCE band the caller has already scaled, so only the curve's
+               character is shared: same half-coverage at mid-band, no flat start; NOT
+               calibrated against LR, there is no reference capture for those).
+               CONSEQUENCE: a mask now reaches slightly past its drawn outline, exactly as
+               Lightroom's does, and overlay guides mark the HALF-COVERAGE radius -- the
+               only radius the profile makes a promise about. Changed in place, so
+               existing sidecars re-render with the new curve (the
+               feather key itself is unchanged, 0-100). Still OPEN, tracked separately: LR
+               reads exposure -3.0 on white as only -1.95 EV (its scene-referred tone
+               curve), where Winnow applies a literal linear gain -- that gap is why the
+               two frames still differ in DEPTH once the shape matches.
              - TERMS: the MASK is what a (non-Global) scope applies; each SUBMASK is a
                building block folded into it. In code a submask is still a MaskComponent
                and the sidecar keys are unchanged -- Mask/Submask is UI + docs vocabulary
@@ -4025,14 +4092,15 @@ Scope & mask model (Global + masks)
                rotated CW by degrees) so geometry edited on the oriented loupe lines up after the
                EXIF rotation. parseMaskComp/evalMaskComp branch by tool: Linear = projection ramp;
                Radial = distance in the ellipse's local frame (computed in OUTPUT-PIXEL space so the
-               ellipse keeps aspect + rotation), 1 inside -> 0 at the boundary. The BRUSH component is
+               ellipse keeps aspect + rotation), which IS the MaskFalloff t: 1 at the centre, falling
+               to ~8% at the boundary and dying out past it (see MASK FEATHER PROFILE below). The BRUSH component is
                not analytic: its strokes are RASTERIZED (Develop/brushstamp.h, shared with the
                ImageView preview so they match) into a work-space coverage buffer, cached
                (brushRasterCached, paramsJson+dims+degrees key, mutex-guarded since the GUI proxy and
                full-res worker both build it; only proxy-size buffers are cached -- full-res is ~w*h*4
                bytes and built once per settle). Components combine in order: brush samples its buffer
-               (then component Invert), parametric uses evalMaskComp. Falloff smootherstep,
-               Add=union(max), Subtract=*(1-c), Invert flips. developComposite remains the fast
+               (then component Invert), parametric uses evalMaskComp. Falloff = the shared
+               MaskFalloff profile, Add=union(max), Subtract=*(1-c), Invert flips. developComposite remains the fast
                single-pass path when there are no masks. Mask add/delete/geometry/feather/
                invert and a brush stroke (live DURING the swipe, throttled, and again on
                release) emit paramsChanged() to re-render. Deferred: true
@@ -4043,14 +4111,15 @@ Scope & mask model (Global + masks)
                its settings, incl. the auto-mask mode; current
                settings drive the next stroke). DEFAULTS: feather 0 (crisp), flow 100. Painted on the
                loupe (ImageView): a two-ring cursor -- the OUTER ring is the brush SIZE (the total
-               extent; coverage reaches 0 there), and when feather>0 an INNER ring at radius*(1-f/2)
-               (the half-coverage radius) marks the feather, matching Lightroom's cursor. left-drag
-               paints, Alt-drag erases; dabs = smootherstep dabs accumulated per stroke by MAX then
+               extent; the dab is clipped there), and when feather>0 an INNER ring at the
+               HALF-COVERAGE radius (MaskFalloff::Shape::h) marks the feather, matching Lightroom's
+               cursor and the Radial mask's dashed ellipse. left-drag
+               paints, Alt-drag erases; dabs accumulate per stroke by MAX then are
                composited with flow (build-up across strokes). FEATHER = LIGHTROOM MODEL (softens
-               INWARD): coverage is a full-strength core out to radius*(1-feather/100), then
-               smootherstep to 0 at radius (BrushStamp::coverage) -- so feather does NOT change the
-               brush footprint (size = outer extent, fixed); it shrinks the solid core inward
-               (feather 0 = hard edge at the size ring, feather 100 = fully soft, core -> centre).
+               INWARD) through the shared MaskFalloff profile -- feather does NOT change the
+               brush footprint (size = outer extent, fixed); it pulls the half-coverage radius
+               inward with a rounder falloff and no flat core (feather 0 = hard edge at the size
+               ring, feather 100 = fully soft).
                Pairs with the perceptual mask blend (kPerceptualMaskBlend) so the displayed effect
                tracks the coverage the way Lightroom's does. Live red/blue tint
                preview rebuilt only on the dirty segment bbox. The DEVELOP EFFECT follows
@@ -4084,7 +4153,20 @@ Scope & mask model (Global + masks)
                from their global action shortcuts via QEvent::ShortcutOverride. Each cursor ring is
                drawn twice -- a dark halo under the coloured line -- so it stays visible on light AND
                dark images (Level-tool halo idiom). Cursor hint: dashed
-               blue = AI auto-mask, green = luminance auto-mask, pink = erase, white = plain. AUTO-MASK has TWO MODES
+               blue = AI auto-mask, green = luminance auto-mask, pink = erase, white =
+               plain. A CENTRE GLYPH says what the pending work will do: a plus in the
+               ring colour when adding, a RED MINUS when subtracting, a RED CROSS when
+               intersecting (skipped when the brush is smaller than the glyph). It polls
+               the HELD MODIFIER (QGuiApplication::queryKeyboardModifiers, the same read
+               DevelopProperties::maskOpFromModifiers uses) ORed with maskLegendOp, so it
+               answers "what does Opt do right now?" even on the FIRST submask -- where
+               the pending op is pinned to Add and the legend chip stays "Update" -- while
+               a LATCHED subtract keeps the minus after the key is released. The Alt/Shift
+               branch of MW::eventFilter repaints the loupe, because it eats the Alt
+               KeyPress and an unchanged op returns early without rebuilding the veil.
+               If the erase stroke is ever restored (G::useBrushEraseStroke) the glyph
+               covers it too: maskBrushErase is latched at mouse-press, so on hover the
+               cursor PREDICTS it from the Opt key held right now. AUTO-MASK has TWO MODES
                (per-stroke, chosen by the "AI edge (SAM)" dock checkbox; stored as autoMaskMode
                "lum"|"ai" in the stroke + brush paramsJson; the "A" key just toggles auto-mask on/off,
                keeping the current mode). Both attenuate each dab by an edge factor

@@ -13,15 +13,17 @@
 
     Stroke JSON: { pts:[x0,y0,x1,y1,...] normalized output coords, size, feather, flow (0..100),
                    erase, autoMask }. size = diameter as % of the image long edge (radius =
-    size/200 * longEdge = the OUTER extent). feather (feather/100) softens INWARD Lightroom-style:
-    full-coverage core out to radius*(1-feather/100), smootherstep falloff to 0 at radius -- so
-    feather=0 is a crisp edge at the size circle and feather=100 is fully soft (see coverage()).
+    size/200 * longEdge = the OUTER extent). feather (feather/100) softens INWARD
+    Lightroom-style, through the shared MaskFalloff profile: feather=0 is a crisp edge at the
+    size circle and feather=100 is fully soft, with the half-coverage radius pulling in as the
+    feather rises and NO flat core in between (see coverage() and MaskFalloff).
 */
 
 #include <vector>
 #include <cmath>
 #include <algorithm>
 #include <memory>
+#include "Develop/maskfalloff.h"
 #include <QPointF>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -145,20 +147,19 @@ inline float edgeFactor(const AutoMaskCtx &a, int x, int y, int w, int h)
 struct DabStats { std::atomic<quint64> dabs{0}; std::atomic<quint64> pixels{0}; };
 inline DabStats &dabStats() { static DabStats s; return s; }
 
-/* Coverage 0..1 of a dab at distance `dist` (px) from centre -- LIGHTROOM model: `radius` is the
-   OUTER extent (the brush SIZE; coverage reaches 0 there and does NOT grow with feather). Feather
-   f=feather/100 softens INWARD: the full-coverage core boundary is radius*(1-f), so f=0 is a hard
-   edge at radius and f=1 is fully soft (core collapses to the centre). Smootherstep falloff from the
-   core to the outer edge. (Cursor's inner ring = the half-coverage radius radius*(1-f/2).) */
+/* Coverage 0..1 of a dab at distance `dist` (px) from centre -- LIGHTROOM model:
+   `radius` is the OUTER extent (the brush SIZE) and the dab is clipped there, so a dab
+   never grows with feather. Feather f=feather/100 softens INWARD through the shared
+   MaskFalloff profile: f=0 is a hard edge at radius, and as f rises the half-coverage
+   radius pulls in to radius*Shape::h with a rounder, Gaussian falloff -- no flat core
+   (see MaskFalloff for why). The cursor's inner ring is that same half-coverage
+   radius. */
 inline float coverage(double dist, double radius, double f)
 {
     if (radius <= 0.0)   return 0.0f;
     if (dist >= radius)  return 0.0f;
-    const double inner = radius * (1.0 - f);               // full-coverage core boundary
-    if (dist <= inner)   return 1.0f;
-    double s = (dist - inner) / (radius - inner);          // 0..1 across the feather band
-    s = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);         // smootherstep
-    return float(1.0 - s);
+    if (f <= 0.0)        return 1.0f;                      // hard edge at radius
+    return MaskFalloff::coverage(dist / radius, MaskFalloff::shapeFor(f * 100.0));
 }
 
 /* Accumulate a single dab into a per-stroke coverage buffer by MAX. With an active AutoMaskCtx the
@@ -168,10 +169,11 @@ inline float coverage(double dist, double radius, double f)
    so a large brush touches most of the image PER DAB, and the develop render replays
    every dab of the stroke on every interactive tick. Two things keep it honest:
 
-     - SQUARED-DISTANCE GATES. The outside and full-core tests use d^2, so the sqrt is
-       paid only by pixels actually in the feather band. At feather 0 (the default)
-       inner == radius and NO pixel pays it. Numerically identical to coverage(), which
-       is kept for the callers that need a distance-based value.
+     - SQUARED-DISTANCE GATES. The outside test uses d^2, so a pixel beyond the dab pays
+       no sqrt at all, and at feather 0 (the default) NO pixel does -- the whole dab is a
+       flat disc. Inside, the profile is read from a table built ONCE per dab
+       (MaskFalloff::Lut), never a pow per pixel -- which tracks coverage() (kept for the
+       callers that need a distance-based value) to ~1e-5, the table's interpolation error.
      - ROW-PARALLEL. Bands own disjoint rows, so the MAX accumulation cannot race.
        Serial below a threshold, where a big brush is not the case and dispatch would
        dominate -- ImageView stamps one dab per mouse-move on a small buffer and must
@@ -190,11 +192,12 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
                                 std::memory_order_relaxed);
     const bool auto_ = am && am->on && am->guide;
     const double r2    = radius * radius;
-    const double inner = radius * (1.0 - f);          // full-coverage core boundary
-    const double in2   = inner * inner;
-    const double band  = radius - inner;              // feather width; 0 when f == 0
+    const bool   hard  = (f <= 0.0);                  // flat disc, no profile to sample
+    const double invR  = 1.0 / radius;
+    MaskFalloff::Lut lut;
+    if (!hard) lut.build(f * 100.0);
 
-    auto rows = [=](int ya, int yb) {
+    auto rows = [=, &lut](int ya, int yb) {
         for (int y = ya; y <= yb; ++y) {
             float *row = cov + size_t(y) * w;
             const double dy = y + 0.5 - cy;
@@ -204,11 +207,9 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
                 const double d2 = dx * dx + dy2;
                 if (d2 >= r2) continue;               // outside the dab
                 float c;
-                if (d2 <= in2) c = 1.0f;              // full-coverage core: no sqrt
+                if (hard) c = 1.0f;                   // feather 0: no sqrt, no table
                 else {
-                    double s = (std::sqrt(d2) - inner) / band;
-                    s = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);   // smootherstep
-                    c = float(1.0 - s);
+                    c = lut.at(std::sqrt(d2) * invR);
                     if (c <= 0.0f) continue;
                 }
                 if (auto_) { c *= edgeFactor(*am, x, y, w, h); if (c <= 0.0f) continue; }

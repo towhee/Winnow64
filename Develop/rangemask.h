@@ -29,6 +29,7 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
+#include "Develop/maskfalloff.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
@@ -79,8 +80,9 @@ inline void sampleRGB(const RangeRef &ref, double onx, double ony, float &r, flo
 }
 
 /* ---- Luminance Range ----
-   1 where the pixel's luminance lies in [lo,hi], easing to 0 over a smootherstep band whose
-   half-width is set by featherPct (0..100 -> up to 0.5 of the 0..1 luma range). inverted flips. */
+   1 where the pixel's luminance lies in [lo,hi], easing to 0 over a MaskFalloff::taper band
+   whose half-width is set by featherPct (0..100 -> up to 0.5 of the 0..1 luma range).
+   inverted flips. */
 inline float lumCoverage(const RangeRef &ref, double onx, double ony,
                          double lo, double hi, double featherPct, bool inverted)
 {
@@ -90,8 +92,8 @@ inline float lumCoverage(const RangeRef &ref, double onx, double ony,
     double v;
     if (L >= lo && L <= hi)      v = 1.0;
     else if (band <= 1e-6)       v = 0.0;
-    else if (L < lo)             v = 1.0 - smoother((lo - L) / band);
-    else                         v = 1.0 - smoother((L - hi) / band);
+    else if (L < lo)             v = MaskFalloff::taper((lo - L) / band);
+    else                         v = MaskFalloff::taper((L - hi) / band);
     const float c = float(v);
     return inverted ? 1.0f - c : c;
 }
@@ -101,7 +103,7 @@ inline float lumCoverage(const RangeRef &ref, double onx, double ony,
    Luminance Range mask). Each sampled colour fixes a centre (hue angle, sat radius); the
    mask selects pixels whose HUE lies in [centre - hueLo, centre + hueHi] AND whose SAT
    lies in [centre - satLo, centre + satHi] of ANY sample (union), each edge eased by a
-   smootherstep feather band. hueLo/hueHi are degrees; satLo/satHi are sat fractions
+   tapered feather band. hueLo/hueHi are degrees; satLo/satHi are sat fractions
    (0..1) measured from the sample's own saturation, so the band tracks the sample.
    A tiny absolute saturation floor drops near-neutral pixels, whose hue is noise.
 
@@ -139,16 +141,16 @@ inline double angDiffDeg(double a, double b)
     return d;
 }
 
-/* One-sided smootherstep gate: 1 while |x| <= edge, easing to 0 across band beyond. */
+/* One-sided gate: 1 while |x| <= edge, easing to 0 across band beyond (MaskFalloff::taper). */
 inline double bandGate(double x, double edge, double band)
 {
     const double over = std::fabs(x) - std::max(0.0, edge);
     if (over <= 0.0) return 1.0;
-    return 1.0 - smoother(over / std::max(1e-6, band));
+    return MaskFalloff::taper(over / std::max(1e-6, band));
 }
 
 /* Coverage 1 where the pixel's hue AND saturation fall inside the BEST-matching sample's
-   window, easing to 0 over smootherstep feather bands beyond each edge. hueLo/hueHi are
+   window, easing to 0 over tapered feather bands beyond each edge. hueLo/hueHi are
    degrees; satLo/satHi are saturation fractions (0..1). No sample -> nothing selected. */
 inline float colorCoverage(const RangeRef &ref, double onx, double ony,
                            const std::vector<ColorSample> &samples,

@@ -10,7 +10,7 @@
 
     Unlike Subject/Sky (binary saliency thresholded at 0.5), Depth Range is a BAND selection over a
     continuous field -- the exact analogue of RangeMask::lumCoverage over luminance, but the value is
-    per-pixel DEPTH instead of luminance. coverage() selects [lo,hi] with a smootherstep feather band.
+    per-pixel DEPTH instead of luminance. coverage() selects [lo,hi] with a tapered feather band.
 
     onx/ony are OUTPUT-normalized (0..1 of the oriented image), the same space the other tools use.
 */
@@ -19,6 +19,7 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
+#include "Develop/maskfalloff.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
@@ -49,11 +50,6 @@ inline std::shared_ptr<const DepthRef> getRef(const QString &path)
     return it != refStore().end() ? it.value() : nullptr;
 }
 
-inline float smoother(double v)
-{
-    v = v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
-    return float(v * v * v * (v * (v * 6.0 - 15.0) + 10.0));   // smootherstep (quintic)
-}
 
 /* Bilinear sample of the depth at output-normalized (onx,ony). */
 inline float sampleDepth(const DepthRef &ref, double onx, double ony)
@@ -71,7 +67,7 @@ inline float sampleDepth(const DepthRef &ref, double onx, double ony)
     return float(top + (bot - top) * ty);
 }
 
-/* 1 where depth is in [lo,hi], easing to 0 over a smootherstep band whose half-width is featherPct
+/* 1 where depth is in [lo,hi], easing to 0 over a MaskFalloff::taper band whose half-width is featherPct
    (0..100 -> up to 0.5 of the 0..1 depth range). inverted flips. Mirrors RangeMask::lumCoverage. */
 inline float coverage(const DepthRef &ref, double onx, double ony,
                       double lo, double hi, double featherPct, bool inverted)
@@ -81,8 +77,8 @@ inline float coverage(const DepthRef &ref, double onx, double ony,
     double v;
     if (D >= lo && D <= hi)      v = 1.0;
     else if (band <= 1e-6)       v = 0.0;
-    else if (D < lo)             v = 1.0 - smoother((lo - D) / band);
-    else                         v = 1.0 - smoother((D - hi) / band);
+    else if (D < lo)             v = MaskFalloff::taper((lo - D) / band);
+    else                         v = MaskFalloff::taper((D - hi) / band);
     const float c = float(v);
     return inverted ? 1.0f - c : c;
 }
