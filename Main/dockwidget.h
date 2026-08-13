@@ -66,6 +66,10 @@ class DockTitleBar : public QWidget
 public:
     DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent = nullptr*/);
     void setStyle();
+    /* Drop the 1px rule under the title. The Develop dock does this: its action row
+       carries the panel separator (G::panelBorderHeight) a few pixels lower, and two
+       rules that close to each other read as a mistake. */
+    void setBottomBorderVisible(bool visible);
     void setTitle(QString title);
     QSize sizeHint() const override;
 protected:
@@ -75,6 +79,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 private:
     QLabel *titleLabel;
+    bool bottomBorder = true;           // see setBottomBorderVisible
 
 };
 

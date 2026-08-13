@@ -1150,7 +1150,7 @@ void MW::createUtilActions()
     connect(developPasteSettingsAction, &QAction::triggered, this, &MW::developPasteSettings);
 
     /* Not checkable: each trigger steps the scopes strip on through both scopes ->
-       histogram only -> vectorscope only -> hidden -> both ... The editor-bar button
+       histogram only -> vectorscope only -> hidden -> both ... The action-row button
        beside the Develop dock title is the plain show/hide (and carries the state). */
     developScopesAction = new QAction(tr("Histogram / Vectorscope\tG"), this);
     developScopesAction->setObjectName("developScopes");

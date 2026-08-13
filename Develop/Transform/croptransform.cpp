@@ -3,6 +3,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <QTransform>
+#include <QPolygonF>
 #include <vector>
 #include <cmath>
 #include <cstring>
@@ -212,6 +213,66 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
         if (cri.isValid() && cri != img.rect()) img = img.copy(cri);
     }
     return img;
+}
+
+QTransform CropTransform::geometryTransform(double srcW, double srcH, const Geometry &g,
+                                            QSizeF *outSize)
+{
+    /* Mirrors applyGeometry step for step, in points instead of pixels. QTransform
+       composes in APPLICATION order (p * A * B), so each stage appends on the right. */
+    QTransform t;
+    double W = srcW, H = srcH;
+    if (W <= 0.0 || H <= 0.0) { if (outSize) *outSize = QSizeF(); return t; }
+
+    /* 1) Straighten. QImage::transformed() rotates and then shifts the result into a
+       positive-origin canvas -- the rotation centre drops out of that pair, so rotating
+       about the origin and translating by -boundingRect.topLeft() gives the same map. */
+    if (g.straighten != 0.0) {
+        QTransform r;
+        r.rotate(g.straighten);
+        const QRectF bb = r.mapRect(QRectF(0.0, 0.0, W, H));
+        QTransform shift;
+        shift.translate(-bb.left(), -bb.top());
+        t = t * r * shift;
+        W = bb.width(); H = bb.height();
+    }
+
+    /* 2) Warp: the same quad -> upright-rectangle homography rectifyPerspective builds,
+       plus its translation into the positive-origin output canvas. */
+    if (g.hasWarp) {
+        QPolygonF srcQuad;
+        for (int i = 0; i < 4; ++i)
+            srcQuad << QPointF(g.quad[i * 2] * W, g.quad[i * 2 + 1] * H);
+        auto len = [](const QPointF &a, const QPointF &b) {
+            return std::hypot(a.x() - b.x(), a.y() - b.y());
+        };
+        const double dW = (len(srcQuad[0], srcQuad[1]) + len(srcQuad[3], srcQuad[2])) / 2.0;
+        const double dH = (len(srcQuad[0], srcQuad[3]) + len(srcQuad[1], srcQuad[2])) / 2.0;
+        QTransform h;
+        if (dW >= 2.0 && dH >= 2.0) {
+            QPolygonF dstQuad;
+            dstQuad << QPointF(0, 0) << QPointF(dW, 0) << QPointF(dW, dH) << QPointF(0, dH);
+            if (QTransform::quadToQuad(srcQuad, dstQuad, h)) {
+                const QRectF bb = h.mapRect(QRectF(0.0, 0.0, W, H));
+                QTransform shift;
+                shift.translate(-bb.left(), -bb.top());
+                t = t * h * shift;
+                W = std::min(20000.0, std::max(2.0, std::ceil(bb.width())));
+                H = std::min(20000.0, std::max(2.0, std::ceil(bb.height())));
+            }
+        }
+    }
+
+    /* 3) Crop: g.crop is normalized in the post-warp output space. */
+    if (!g.cropIsIdentity()) {
+        QTransform c;
+        c.translate(-g.cropX * W, -g.cropY * H);
+        t = t * c;
+        W *= g.cropW; H *= g.cropH;
+    }
+
+    if (outSize) *outSize = QSizeF(W, H);
+    return t;
 }
 
 QRectF CropTransform::straightenCropNorm(double W, double H, double deg)

@@ -502,6 +502,14 @@ Q_NAMESPACE
        "Develop/maskOverlayColor" and seeded by the DevelopProperties ctor. */
     extern QColor maskOverlayColor;
 
+    /* Show the image desaturated while the mask overlay is painted, so the coloured
+       veil separates from the picture (a red veil over a red subject reads as noise).
+       Toggled from the Mask panel's swatch row, persisted as
+       "Develop/maskOverlayGrayscale" and seeded by the DevelopProperties ctor. It is a
+       VIEW effect only (ImageView::drawForeground) -- the render and the export are
+       untouched. */
+    extern bool maskOverlayGrayscale;
+
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
     extern QColor labelYellowColor;
@@ -578,6 +586,7 @@ Q_NAMESPACE
     extern int decorationTitleGap;
     extern int scopeRailX;              // Develop scope containment rail: left edge
     extern int scopeRailW;              // ditto: width (0 = no rail)
+    extern int panelBorderHeight;       // Develop panel bottom separator rule height
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
 

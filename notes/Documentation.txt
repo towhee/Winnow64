@@ -114,6 +114,7 @@ Table of Contents
          - Develop dock (UI)
          - Develop scopes (histogram + vectorscope)
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
+         - Overlays over a transformed image (mask space vs displayed space)
          - White balance (absolute, Kelvin)
          - Color Mix panel (colour grading)
          - Develop presets (the Presets dock)
@@ -1845,7 +1846,7 @@ Develop Mode Local Shortcuts
     Plus three keys that apply only while a SUBMASK is being defined (the MaskPanel is
     up), handled in MW::eventFilter rather than by an action:
 
-        Return      Update the mask with the submask (same as the panel's button)
+        Return      Commit the submask into the mask (same as the panel's button)
         Opt/Alt     (held) preview + commit that submask as a SUBTRACT
         Shift+Opt   (held) preview + commit that submask as an INTERSECT
 
@@ -1998,7 +1999,7 @@ Develop Mode Local Shortcuts
     already use for their multi-key hints.  The keys are surfaced in three places: the
     Utilities > Develop submenu (built in MW::createUtilMenu; MW::syncDevelopMenuEnabled
     greys the mode-local items outside Develop mode so they never advertise a key that
-    does something else), the Develop editor-bar button tooltips, and Help > Shortcuts.
+    does something else), the Develop action-row button tooltips, and Help > Shortcuts.
 
     The one exception is Save Develop Preset (Cmd+Shift+N): a MODIFIED combo owned by no
     other action, so it is a normal QAction with a real QKeySequence (not in the arbiter's
@@ -3713,10 +3714,31 @@ Scope & mask model (Global + masks)
                app QSS gives every QTreeView a 1px border). That border was both a seam
                and a 1px break in the rail; with it gone the viewport shares the widget
                origin, so both rail halves use the same x. The block's bottom is closed
-               by a full-width rule 3px under the LAST ROW in the old border's shade
-               (backgroundShade + 15), drawn only when empty dock remains below it -- if
-               the rows fill or overflow the viewport, the panel edge already ends the
-               block and a rule at the last visible row would be a false bottom.
+               by a full-width rule 3px under the LAST ROW -- the PANEL SEPARATOR below,
+               so the last section (Effects) is closed like every other panel -- drawn
+               only when empty dock remains below it: if the rows fill or overflow the
+               viewport, the panel edge already ends the block and a rule at the last
+               visible row would be a false bottom.
+               PANEL SEPARATOR: every Develop dock PANEL draws a G::panelBorderHeight
+               (2px) rule in G::tabWidgetBorderColor across its bottom edge, so stacked
+               panels read as distinct blocks. G::panelBorderHeight = 0 removes it
+               everywhere. Carried by: the action row under the dock title (a QSS
+               border-bottom on QWidget#developActionRow, ID-scoped so it misses the
+               child buttons, 8px clear of them -- MW::createDevelopDock; the dock
+               TITLE BAR's own 1px rule is switched off there via
+               DockTitleBar::setBottomBorderVisible(false), since two rules that close
+               together read as a mistake -- other docks keep theirs), the Scopes strip
+               (histogram /
+               vectorscope -- its fixed height is 160 + the rule, so the scopes keep
+               their 160px), Raw, Mask, Transform and Fill Replace (each in its own
+               paintEvent), and the tree's closing rule under
+               the last row, which is the Effects section's bottom
+               (DevelopProperties::paintEvent, see ONE BLOCK above). Each panel reserves
+               the space as its outer layout's bottom margin, so the rule never overlaps
+               content. TWO WIDGETS DELIBERATELY HAVE NONE: the legacy ScopeHeader (a
+               band, not a panel), and the scope list (ScopeHeaderLab) -- it and the tree
+               below it are ONE BLOCK joined by the containment rail, so a rule there
+               would cut the rail and re-open the seam that block closes.
                PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
                the active scope; the whole-mask eye + reset live in the ScopeHeader widget
@@ -3867,7 +3889,12 @@ Scope & mask model (Global + masks)
                the centre outward (see MASK FEATHER PROFILE) and runs a little PAST the
                solid outline, so the tint's gradient brush is stretched to the profile's
                tMax rather than to the ellipse. Centre handle moves, axis handles resize
-               each semi-axis (centre fixed), dragging the outline rotates.
+               each semi-axis (centre fixed), dragging the outline rotates. SHIFT + an
+               axis-handle drag resizes PROPORTIONALLY: both semi-axes scale by the one
+               factor the grabbed handle moved through, measured in frame pixels against
+               the shape at grab time, so the ellipse keeps its aspect (and a circle stays
+               a circle). Shift may be pressed or released mid-drag -- the anchor is the
+               shape at mouse-down either way.
                Tints/handles draw in viewport coords for constant on-screen size; a miss falls
                through to pan/zoom. Drag emits maskGeometryChanged LIVE (and on release) ->
                DevelopProperties::setActiveMaskParams (stores into the component,
@@ -3983,6 +4010,21 @@ Scope & mask model (Global + masks)
                green / blue / yellow / magenta / white) -- red reads badly over a red
                subject -- writing "Develop/maskOverlayColor" and re-emitting paramsChanged
                so the veil repaints. The DevelopProperties ctor seeds G:: from that key.
+             - OVERLAY GRAYSCALE ("Gray" chip, right of the swatches): no overlay colour
+               reads well over every subject, so the other half of the answer is to take
+               the colour out of the PICTURE. G::maskOverlayGrayscale (persisted as
+               "Develop/maskOverlayGrayscale", seeded by the DevelopProperties ctor) makes
+               the IMAGE ITEM paint itself grey: Qt has no saturation blend mode, so it
+               cannot be laid over the top in drawForeground. ImageView::paintEvent
+               evaluates maskGrayscaleActive() and pushes it to ScaledPixmapItem::
+               setGrayscale (no update() from inside a paint pass -- the view has already
+               scheduled the repaint); the item blits a grey copy cached by
+               pixmap().cacheKey(), so a Develop tick pays one Grayscale8 conversion at
+               PROXY resolution and pans/zooms pay none. The veil, handles and legend are
+               drawn after and keep their colour. VIEW effect only -- the render, the
+               sidecar and the export are untouched. It follows the veil (hidden by
+               "M"/"O" -> colour returns) and emits maskOverlayRepaintRequested, a repaint
+               with NO veil rebuild (cheaper again than maskOverlayRefreshRequested).
                Mask tool ROW captions are NOT role-tinted: the caption already reads
                "Subtract Brush Mask", and a green/blue caption would re-introduce the
                colour key this design removed.
@@ -4054,19 +4096,60 @@ Scope & mask model (Global + masks)
                to combine with, so it is pinned to Add and the hint is hidden.
              - OP INDICATOR (on-canvas chip): while the overlay is shown
                ImageView::drawMaskLegend paints a compact chip top-left naming what
-               [Update]/Return will do -- "Update: Brush Mask", "Subtract: Brush Mask",
-               "Intersect: Brush Mask" -- over a dim reminder line "Opt subtract .
+               the commit button/Return will do -- "Add: Brush Mask", "Subtract: Brush
+               Mask", "Intersect: Brush Mask" -- over a dim reminder line "Opt subtract .
                Shift+Opt intersect" (suppressed on the first submask). It replaces the old
                colour-key legend, which named a RED/GREEN/BLUE scheme that no longer
                exists. MW pushes it via ImageView::setMaskLegend(submaskName, op,
                showHint) (name from DevelopProperties::maskToolName, public for this).
              - SUBMASK BUILD-UP (MaskPanel): every submask -- including the first -- is
                PENDING from the moment its type is picked (beginMaskTool appends it and
-               sets pendingIdx) until [Update]/Return folds it in with the op the BUTTON
-               shows (commitPendingMask) or Esc/[x] removes it (cancelMaskTool). There is
-               ONE commit path: the old "first submask commits immediately / later ones
-               preview" split, and finishFirstMask with it, are gone -- with outcome
-               preview in one colour the first submask looks identical either way.
+               sets pendingIdx) until the commit button/Return folds it in with the op the
+               BUTTON shows (commitPendingMask) or Esc/[x] removes it (cancelMaskTool).
+               The button is labelled by that op plus the act -- "Add and Commit",
+               "Subtract and Commit", "Intersect and Commit". It was once just "Update",
+               which stopped making sense when the render went live: with the outcome
+               already on screen the word read as "refresh the view" rather than "fold
+               this submask in". The button is NOT a render trigger; it is the commit
+               boundary -- it writes the op into the component, ends the pending session,
+               names the history entry and makes the submask persistent (a pending submask
+               is discarded when the image is left, so it never reaches the sidecar).
+               There is ONE commit path: the old "first submask commits immediately /
+               later ones preview" split, and finishFirstMask with it, are gone -- with
+               outcome preview in one colour the first submask looks identical either way.
+             - LEAVING A PENDING SUBMASK (confirmPendingMask): picking another scope, or
+               adding one, used to discard the pending submask SILENTLY -- minutes of
+               brushwork gone with no warning, the MaskPanel being the only cue that
+               anything was outstanding. Both paths now route through
+               DevelopProperties::confirmPendingMask(). It names the tool and the scope
+               ("The Brush submask on "Mask 2" has not been committed.") and offers
+               Cancel / Commit / Discard -- one word each, so the body text spells out
+               what all three DO, the Commit line carrying the previewed op ("Commit --
+               subtract it from the mask, then continue. / Discard -- throw the submask
+               away and continue. / Cancel -- stay on "Mask 2" and keep building it.").
+               Discard and Cancel are the pair a user can read backwards and lose the
+               work, which is why neither stands on its label alone. It is a hand-built
+               QDialog, NOT a QMessageBox: a message box orders its buttons by ROLE, per
+               platform, and pads them unevenly (mac banishes the destructive one to the
+               far left). Here the order is fixed left-to-right, the three buttons are
+               equal width (Expanding) with one 12px spacing between them, Discard is the
+               default (Return) and Esc leaves the choice at Cancel. Cancel abandons the
+               transition and the caller re-asserts the header selection
+               (refreshScopeList), since the clicked row has already moved.
+               It asks only when there is WORK TO LOSE:
+               pendingMaskIsUntouched() drops the submask silently (as leaving always did)
+               when committing it would achieve nothing -- it covers no pixels (Brush or
+               Object with an empty stroke list, Color Range with no samples, so picking
+               the tool or dragging its size slider does not count) or it is still
+               byte-identical to what beginMaskTool built (pendingPristine), which is the
+               centred-gradient case: a real mask, but not one the user made. Anything
+               that misses both tests prompts -- the safe direction. Two paths
+               deliberately do NOT prompt either: deleting the scope
+               (there is nothing left to commit into -- it just closes the panel) and
+               leaving the IMAGE (setCurrentImage still drops it, so a half-built submask
+               can never reach the sidecar). ScopeHeaderLab's row menu emits scopeSelected
+               then acts on the active scope, so it re-checks currentScopeName() after the
+               emit -- a refused switch must not let "Remove Mask 2" remove Mask 1.
              - RENDER COMPOSITING (Stage 4b + N-scope stack): the render composites the WHOLE stack
                in SCENE-LINEAR before the output transform, INDEPENDENT of which scope is active for
                editing -- so a saved mask is visible the moment the image loads (no need to select
@@ -4581,7 +4664,7 @@ Fill Replace (spot / fill / object heal)
     heals over prior ones). Shared FillSpotGeom rasteriser (Develop/fillspot.h) is used
     by BOTH the ImageView preview and the render, so preview == render (cf. objectmask.h).
 
-    UI (discoverability): a spot tool BarBtn in the Develop dock title bar
+    UI (discoverability): a spot tool BarBtn in the Develop dock action row
     (initialize.cpp, images/icon16/spot.png; dims off, brightens armed) arms the mode.
     It calls DevelopProperties::onSpotToolToggled; DevelopProperties owns the armed
     state (spotMode) and drives the button icon back via the spotActiveChanged signal.
@@ -4618,7 +4701,7 @@ Fill Replace (spot / fill / object heal)
     area; the clone extent is dilated by the same band so the ramp blends cloned content
     over its whole width). The stored per-spot "feather" JSON field is legacy metadata,
     no longer rasterized.
-    The title-bar spot button or "S" toggles the panel; visible == armed
+    The action-row spot button or "S" toggles the panel; visible == armed
     (DevelopProperties::spotMode, panel visibility tracks spotActiveChanged so Escape
     closes it too). S is a Develop mode local shortcut (Slideshow in Preview mode) -- see
     DEVELOP MODE LOCAL SHORTCUTS. The tool must NOT claim S back from that table while
@@ -4762,9 +4845,28 @@ Develop dock (UI)
     persists exactly as the other docks (settings isDevelopDockVisible + DevelopDock, plus the
     workspace struct field isDevelopDockVisible).
 
-    The dock's widget is a container, top to bottom: a fixed-height SCOPES strip, the TRANSFORM
-    (crop + perspective) panel, then the DevelopProperties tree taking the remaining (stretch)
-    space. The scopes and transform strips are each independently toggled from the editor bar.
+    The dock's widget is a container, top to bottom: the ACTION ROW, a fixed-height SCOPES
+    strip, the TRANSFORM (crop + perspective) panel, then the DevelopProperties tree
+    taking the remaining (stretch) space. The scopes and transform strips are each
+    independently toggled from the action row.
+
+    The ACTION ROW is the dock's tool bar: the Scopes, Transform (crop), Spot, Preset and
+    Export BarBtns, in a centered QHBoxLayout (a stretch at each end) directly below the
+    dock title bar. It sits INSIDE the dock body, not in the title bar -- the title bar
+    keeps only the ? (how this works), collapse and X (close) buttons, so the title text
+    is not squeezed by the tools. Collapsing the dock hides the row with the rest of the
+    body (DockWidget::setCollapsed clamps the dock to the title bar height).
+
+    TRANSFORM AND SPOT ARE MUTUALLY EXCLUSIVE. Both tools drive the loupe (the crop /
+    warp overlay vs the spot brush + pins), so arming either one closes the other --
+    whether it is armed from the action row, the Develop menu or the R / S keys:
+      - toggleDevelopTransform disarms Spot (onSpotToolToggled(false)) BEFORE showing
+        the panel, so the spot tool has released the canvas before enterDevelopCrop
+        starts the overlay.
+      - toggleDevelopReplace calls toggleDevelopTransform when a Transform session is
+        open, re-using its hide path rather than duplicating it -- which means the crop
+        COMMITS, exactly as it does when the user closes the panel with R / the button.
+        Esc (cancelDevelopTransform) remains the only way to discard a crop session.
 
 Develop scopes (histogram + vectorscope)
 ------------------------------------------------------------------------------------------
@@ -4782,7 +4884,7 @@ Develop scopes (histogram + vectorscope)
     cleared at the imageView->clear() sites. No new timers -- it piggybacks the existing coalesced
     render path. The pass is a cheap no-op while the scopes are hidden.
 
-    A button on the Develop editor bar (graphic.png) shows/hides the strip
+    A button on the Develop action row (graphic.png) shows/hides the strip
     (MW::toggleDevelopScopes -> setDevelopScopesVisible); the choice persists as Settings
     "Develop/scopesVisible". (A standalone widget above the tree was chosen over an
     in-tree spanned row so the scope stays pinned rather than scrolling away; see
@@ -4841,7 +4943,7 @@ Develop scopes (histogram + vectorscope)
     layout), so it sits over the histogram or the vectorscope, whichever is there. Its
     click emits ScopesView::closeRequested -> MW::closeDevelopScopes ->
     setDevelopScopesVisible(false): the strip hides and the LAYOUT IS LEFT ALONE, so "G"
-    or the editor-bar button brings it back showing the same scope(s) as before.
+    or the action-row button brings it back showing the same scope(s) as before.
 
     Skin-tone line: the same right-click menu toggles a flesh-tone reference line -- the YIQ
     I-axis, which from our BT.601 Cb/Cr coefficients is (Cr-128) = -1.946*(Cb-128); skin of every
@@ -4868,7 +4970,7 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     straighten and warp to identity, resetRequested; icon reset.png -- "chasing arrows",
     replacing the old refresh.png) and, at the extreme right, [X] close (close.png,
     closeRequested). The [X] runs MW::toggleDevelopTransform's hide path, so closing from
-    the header commits the crop session and clears the tool exactly like the editor-bar
+    the header commits the crop session and clears the tool exactly like the action-row
     Transform button or "R" (Esc still CANCELS via MW::cancelDevelopTransform).
 
     Below it a three-way MODE toggle down the left (Crop / Level / Warp -- a mutually exclusive
@@ -4917,7 +5019,7 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     Shortcuts: "R" toggles the panel (MW::toggleDevelopTransform, developTransformAction, editor-
     bar button rectangle.png; persists Settings "Develop/transformVisible"). R is a Develop mode
     local shortcut and does nothing in Preview mode -- see DEVELOP MODE LOCAL
-    SHORTCUTS. Closing the panel has two OPPOSITE outcomes: R / Enter / the editor-bar
+    SHORTCUTS. Closing the panel has two OPPOSITE outcomes: R / Enter / the action-row
     button all COMMIT (via toggleDevelopTransform -> exitDevelopCrop: write the overlay
     crop into the edit stack, show the cropped result); Esc CANCELS via
     MW::cancelDevelopTransform -- restores the Geometry snapshot taken at enterDevelopCrop
@@ -5043,6 +5145,49 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     NOT yet done (next increments): a warp-reset (to re-warp); confirm export applies the geometry;
     content-aware fill. The panel's Crop button is unwired.
 
+    Overlays over a transformed image (mask space vs displayed space) -- IMPLEMENTED
+    -------------------------------------------------------------------------------
+    Geometry is the LAST render stage, but every mask and spot coordinate is normalized
+    in its INPUT -- the developed, EXIF-oriented, UNCROPPED frame ("mask space") -- so an
+    edit stays glued to the photo content when the crop later changes. The loupe shows
+    the OUTPUT. Everything the overlays do has to cross that gap, and before this was in
+    place a cropped image painted its submasks (and drew its veils, gradients, ellipses,
+    brush cursor and auto-mask guide) in the wrong place -- normalized against the
+    visible edges instead of the full frame.
+
+    ONE map resolves it. CropTransform::geometryTransform(srcW, srcH, g) is the POINT
+    twin of applyGeometry: same straighten -> warp -> crop order, in QTransforms instead
+    of pixels (the warp reuses QTransform::quadToQuad for the homography applyGeometry
+    gets from cv). Only the input frame's ASPECT matters, so a proxy-sized frame maps
+    identically. MW pairs each render with the geometry that produced it --
+    imageView->setDevelopGeometry(mj.geometry, orientedSize) right before
+    setDevelopPreview, in the async completion so the pairing is never a tick stale; a
+    plain ImageView::loadImage resets it to identity. Cheap on repeat: an unchanged
+    geometry early-returns, because the setter invalidates the overlay buffers and it is
+    called on every drag tick.
+
+    ImageView::maskNormToItem() (+ maskItemToNorm) is then the ONLY place the two spaces
+    meet: mask-normalized -> geometry-input px -> geometry-output px -> displayed px.
+    With an identity geometry it collapses to a scale by the pixmap size, which is what
+    each overlay used to do inline. Consequences worth knowing:
+      o maskViewportToNorm / maskNormToViewport go through it, so hit-testing, dragging,
+        brush stamping, the range eyedropper and the WB dropper land in mask space.
+      o The overlay RASTERS (brush + object tint, content/AI coverage tint, MW's
+        whole-mask veil) are built in mask space, sized from maskNormFrameSize(), and
+        painted by maskDrawSpaceImage() -- through the map and CLIPPED to the photo,
+        since the buffer spans the uncropped frame.
+      o The radial ellipse and its handles are computed in mask-frame px (where the
+        render defines them, and where the rotation angle is meaningful), then mapped.
+      o Brush / spot radii are fractions of the mask frame's long edge, measured on
+        screen via maskNormLongEdgeItemPx(), so a crop magnifies the cursor exactly as
+        it magnifies the render.
+      o The luminance auto-mask guide is sampled in mask space, so ensureAutoGuide draws
+        the displayed image back into that frame through the inverse map (what the crop
+        threw away is left mid-grey).
+    Under a perspective warp the gradient RAMPS (linear/radial) are positioned correctly
+    but their spacing stays linear on screen; the tint rasters, which go through the full
+    projective map, are exact.
+
     White balance (absolute, Kelvin) -- IMPLEMENTED
     -----------------------------------------------
     The Basic panel's white balance is ABSOLUTE, like Lightroom's: Temp is a colour
@@ -5110,10 +5255,10 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     THE WB ROW (DevelopProperties::addWhiteBalanceRow, above Temp) -- a DT_None row
     owning both cells, the same idiom as the Core rows: a dropper button in the caption
     cell, the preset dropdown in the value cell. The button is a BarBtn -- the SAME
-    class as the Develop title-bar tools (Scopes / Transform / Spot), so it inherits
+    class as the Develop action-row tools (Scopes / Transform / Spot), so it inherits
     their chrome for free: G::css draws it transparent with no border, and
     BarBtn::setActive() adds the blue accent when armed. Do not hand-roll a stylesheet
-    here; it drifts from the title bar the moment that chrome changes. The glyph is
+    here; it drifts from the action row the moment that chrome changes. The glyph is
     DRAWN (dropperIcon) rather than shipped as a png + qrc entry, at G::iconOpacity
     when idle so the row has no conspicuously brighter icon in it. The ARMED ghost is
     drawn at FULL opacity in the accent colour: dimming it too would leave the empty
@@ -5339,7 +5484,7 @@ Develop presets (the Presets dock)
     setDevelopDockVisibility / setDevelopPanelEnabled / setOperationMode / showDevelopDock
     site mirrors History's handling). Develop is always raised as the front tab, so
     Presets is reached by clicking its tab, by "P" (menu View > Develop Presets Panel),
-    or by the colour-wheel Preset button in the Develop title bar. P is a Develop MODE
+    or by the colour-wheel Preset button in the Develop action row. P is a Develop MODE
     LOCAL key (developShortcuts / developShortcutIntercept), NOT a QKeySequence --
     QKeySequence("P") would clash with the global Pick. Like F3-F9 and H it shows /
     raises rather than toggles. Adding the dock bumped winnowStateVersion to 3 and
@@ -5436,12 +5581,12 @@ Develop presets (the Presets dock)
         QKeySequence ("Ctrl+Shift+N"). It is enabled only in Develop mode --
         setOperationMode tracks the mode (a disabled QAction's shortcut does not fire) and
         syncDevelopMenuEnabled greys the menu item in Preview.
-      - presetsDockVisibleAction (SHOW the dock, "P" + the title-bar Preset button + View
+      - presetsDockVisibleAction (SHOW the dock, "P" + the action-row Preset button + View
         menu). P is globally Pick, so like the other bare Develop keys it is dispatched by
         developShortcutIntercept via the developShortcuts table (loadDevelopShortcuts),
         NOT a real QKeySequence.
 
-    Active border. The Develop title-bar buttons that toggle a panel/tool -- Scopes,
+    Active border. The Develop action-row buttons that toggle a panel/tool -- Scopes,
     Transform, Spot and now Preset -- carry a blue (G::appleBlue) border while their
     panel is shown / the tool is armed, like a conventional checked toolbutton
     (BarBtn::setActive). MW keeps them as members and calls setActive from the toggle

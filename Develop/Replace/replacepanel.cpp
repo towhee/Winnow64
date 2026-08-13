@@ -122,8 +122,9 @@ void ReplacePanel::buildUi()
     connect(modeGroup, &QButtonGroup::idClicked, this, &ReplacePanel::selectMode);
 
     /* -------- Assemble -------- */
+    /* The bottom margin reserves the panel separator rule drawn in paintEvent. */
     QVBoxLayout *lay = new QVBoxLayout(this);
-    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setContentsMargins(0, 0, 0, G::panelBorderHeight);
     lay->setSpacing(6);
     lay->addWidget(header);
     QVBoxLayout *bodyWrap = new QVBoxLayout;
@@ -179,6 +180,15 @@ void ReplacePanel::updatePreviewButton()
     previewBtn->setToolTip(previewShown
         ? tr("Showing the replaces (click to view the original)")
         : tr("Replaces hidden (click to show them)"));
+}
+
+void ReplacePanel::paintEvent(QPaintEvent *event)
+{
+    QWidget::paintEvent(event);
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
+    QPainter p(this);
+    p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
+               G::tabWidgetBorderColor);
 }
 
 bool ReplacePanel::eventFilter(QObject *watched, QEvent *event)

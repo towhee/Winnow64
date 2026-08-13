@@ -19,14 +19,16 @@ class MaskEditor;
         | Mask: Linear Gradient             [x] |   <- header + cancel
         | <submask settings>                    |   (embedded MaskEditor)
         | [][][][][][]                          |   <- overlay colour swatches
-        | [        Update        ]              |   <- label follows the held modifier
+        | [    Add and Commit    ]              |   <- label follows the held modifier
 
     Terms: the MASK is what the scope applies; each SUBMASK is a building block folded
     into it. The submask's SETTINGS (feather, brush size/flow, etc.) render in the
     embedded MaskEditor so they look identical to the property tree's other rows.
 
-    ONE commit button, whose label tracks the op the overlay is previewing: no modifier
-    "Update" (Add), Opt "Subtract", Shift+Opt "Intersect". MW arbitrates the modifiers
+    ONE commit button, whose label names the op the overlay is previewing AND the act:
+    no modifier "Add and Commit", Opt "Subtract and Commit", Shift+Opt "Intersect and
+    Commit" (a bare "Update" read as "refresh" once the render went live). MW arbitrates
+    the modifiers
     (developShortcutIntercept) and calls DevelopProperties::setPendingMaskOp, which
     relabels the button. Return commits too. DevelopProperties owns the mask model and
     drives the panel.
@@ -48,12 +50,16 @@ public:
     MaskEditor *editor() const { return maskEditor; }
 
 signals:
-    /* [Update] was clicked. No op is carried: the op is resolved from the LIVE modifier
-       state at the instant of the commit (DevelopProperties::maskOpFromModifiers), the
-       same source that drives this button's label, so the two can never disagree. */
+    /* The commit button was clicked. No op is carried: the op is resolved from the LIVE
+       modifier state at the instant of the commit (DevelopProperties::
+       maskOpFromModifiers), the same source that drives this button's label, so the two
+       can never disagree. */
     void committed();
     void cancelled();                      // [x] / Cancel (discard the submask)
     void overlayColourChanged();           // a swatch was clicked (G:: already updated)
+    /* The grayscale toggle was flipped (G::maskOverlayGrayscale already updated): the
+       image under the overlay is shown desaturated so the veil's colour stands out. */
+    void overlayGrayscaleChanged();
 
 protected:
     void paintEvent(QPaintEvent *) override;   // gradient behind the header band
@@ -61,13 +67,15 @@ protected:
 private:
     void buildUi();
     void refreshSwatches();                // re-draw the selected border after a pick
+    void refreshGrayBtn();                 // reflect G::maskOverlayGrayscale on the chip
 
     QLabel      *titleLabel = nullptr;
     QWidget     *headerBand = nullptr;
     BarBtn      *cancelBtn  = nullptr;
     MaskEditor  *maskEditor = nullptr;     // tree-rendered settings, above the buttons
-    QPushButton *commitBtn  = nullptr;     // Update / Subtract / Intersect
+    QPushButton *commitBtn  = nullptr;     // Add / Subtract / Intersect "and Commit"
     QWidget     *swatchRow  = nullptr;     // overlay-colour picker
+    QPushButton *grayBtn    = nullptr;     // desaturate the image under the overlay
     QVector<QPushButton*> swatches;
     QVector<QColor>       swatchColors;
     int          pendingOp  = 0;           // MaskOp the button/label currently shows

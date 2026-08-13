@@ -380,6 +380,11 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     isBusy = true;
     bool isLoaded = false;
 
+    /* A plain (non-develop) load shows the image as it is, with no geometry stage: drop
+       the previous image's crop/straighten/warp so the mask overlays do not keep mapping
+       through it. A develop render pushes the real one back (MW::setDevelopGeometry). */
+    setDevelopGeometry(Geometry(), QSize());     // no-op when already identity
+
     // SLIDESHOW
     if (G::isSlideShow) {
         // load image without waiting for cache
@@ -1021,6 +1026,15 @@ void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
 
 void ImageView::paintEvent(QPaintEvent *event)
 {
+    /* Grayscale backdrop for the mask overlay ("Gray" chip on the Mask panel's swatch
+       row): no overlay colour reads well over every subject, so the other half of the
+       answer is to take the colour out of the PICTURE. Decided here, immediately before
+       the scene renders, because the item paints itself grey (Qt has no saturation blend
+       mode, so it cannot be done over the top in drawForeground) -- and this is the one
+       place every state it depends on is settled. The veil, handles and legend are drawn
+       afterwards and keep their colour. VIEW ONLY: the render, the sidecar and the
+       export are untouched. */
+    if (pmItem) pmItem->setGrayscale(maskGrayscaleActive());
     QGraphicsView::paintEvent(event);
     /* Painted here, after the scene and every drawForeground overlay, so the loupe is
        always on top. Shared by the WB dropper and the Color Range mask sampler. */
@@ -1217,7 +1231,9 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
        double the opacity. */
     const bool livePaint = spotPainting && spotStrokePts.size() >= 2;
     if (spotReplaceMode == 1 && (!spotPending.isEmpty() || livePaint) && br.width() > 0) {
-        const double imgLong = std::max(br.width(), br.height());
+        /* Stroke widths are a fraction of the MASK frame's long edge (spots, like masks,
+           are stored pre-geometry), measured here in displayed px. */
+        const double imgLong = maskNormLongEdgeItemPx();
         /* Viewport px per image px, measured over a long baseline: mapFromScene returns
            integer QPoints, so a 1px baseline rounds to ~0 at fit zoom and collapsed the
            painted width to a hairline. */
@@ -1267,7 +1283,7 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
     }
 
     if (spotCursorOn && br.width() > 0) {               // brush-size circle
-        const double imgLong = std::max(br.width(), br.height());
+        const double imgLong = maskNormLongEdgeItemPx();
         const double rImg = (qBound(0.0, spotBrushSize, 100.0) / 200.0) * imgLong;
         const QPointF cImg = pmItem->mapFromScene(mapToScene(spotCursorVp));
         const QPointF cVp(spotCursorVp);
@@ -1325,18 +1341,19 @@ void ImageView::drawMaskLegend(QPainter *painter)
 {
 /*
     A compact chip, top-left of the view, naming the operation the overlay is CURRENTLY
-    previewing -- "Update: Brush Mask" with no modifier held, "Subtract: ..." while Opt is
-    held, "Intersect: ..." while Shift+Opt is. The veil itself shows the outcome (one
-    colour, G::maskOverlayColor), so there is no colour key to give; this chip only names
-    what pressing Return/Update will do. A dim second line reminds the user of the two
-    modifiers, suppressed on the first submask (nothing to combine with). Drawn in
+    previewing -- "Add: Brush Mask" with no modifier held, "Subtract: ..." while Opt is
+    held, "Intersect: ..." while Shift+Opt is. The op names match the panel's commit
+    button ("Add and Commit" etc). The veil itself shows the outcome (one colour,
+    G::maskOverlayColor), so there is no colour key to give; this chip only names what
+    pressing Return / the commit button will do. A dim second line reminds the user of
+    the two modifiers, suppressed on the first submask (nothing to combine with). Drawn in
     viewport coords, over the overlay, only while a submask is being defined.
 */
     if (maskLegendOp < 0 || maskLegendSubmask.isEmpty()) return;
 
     const QString opName = maskLegendOp == 1 ? "Subtract"
                          : maskLegendOp == 2 ? "Intersect"
-                                             : "Update";
+                                             : "Add";
     const QString line = opName + ": " + maskLegendSubmask;
     const QString hint = maskLegendHint
                        ? "Opt subtract " + QString(QChar(0x00B7)) + " Shift+Opt intersect"
@@ -1980,19 +1997,112 @@ QString ImageView::maskParamsJson() const
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
 
+void ImageView::setDevelopGeometry(const Geometry &g, QSize orientedSrcSize)
+{
+    /* Called on EVERY develop render tick, including each tick of a brush or slider drag,
+       so an unchanged geometry must cost nothing: the invalidation below re-rasters the
+       overlay buffers and the auto-mask guide. */
+    auto same = [](const Geometry &a, const Geometry &b) {
+        if (a.cropX != b.cropX || a.cropY != b.cropY ||
+            a.cropW != b.cropW || a.cropH != b.cropH ||
+            a.straighten != b.straighten || a.hasWarp != b.hasWarp) return false;
+        if (a.hasWarp)
+            for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
+        return true;
+    };
+    if (orientedSrcSize == developGeomSrc && same(g, developGeom)) return;
+
+    developGeom = g;
+    developGeomSrc = orientedSrcSize;
+    developGeomFwd = QTransform();
+    developGeomOut = QSizeF();
+    if (!g.isIdentity() && !orientedSrcSize.isEmpty())
+        developGeomFwd = CropTransform::geometryTransform(orientedSrcSize.width(),
+                                                          orientedSrcSize.height(),
+                                                          g, &developGeomOut);
+    /* The overlays' buffers are rasterized in mask space and sized from its aspect, so a
+       geometry change invalidates them. */
+    maskBrushW = maskBrushH = 0;
+    maskRangePreview = QImage();
+    maskGuide.reset();
+    if (maskEditMode) viewport()->update();
+}
+
+QSizeF ImageView::maskNormFrameSize() const
+{
+    if (!developGeomSrc.isEmpty()) return QSizeF(developGeomSrc);
+    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
+    return br.size();
+}
+
+QTransform ImageView::maskNormToItem() const
+{
+    /* mask-normalized -> geometry-input px -> geometry-output px -> displayed px.
+       pmItem's boundingRect IS the geometry output (at whatever resolution is
+       displayed), so the last step is the ratio between the two. */
+    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
+    QTransform t;
+    if (br.width() <= 0 || br.height() <= 0) return t;
+    if (developGeom.isIdentity() || developGeomSrc.isEmpty() || developGeomOut.isEmpty()) {
+        t.scale(br.width(), br.height());
+        return t;
+    }
+    QTransform pre;
+    pre.scale(developGeomSrc.width(), developGeomSrc.height());
+    QTransform post;
+    post.scale(br.width() / developGeomOut.width(), br.height() / developGeomOut.height());
+    return pre * developGeomFwd * post;
+}
+
+QTransform ImageView::maskItemToNorm() const
+{
+    bool ok = false;
+    const QTransform inv = maskNormToItem().inverted(&ok);
+    return ok ? inv : QTransform();
+}
+
+double ImageView::maskNormLongEdgeItemPx() const
+{
+    /* A radius stored as a fraction of the mask frame's long edge, measured on screen.
+       Taken from the transform's own scale so a crop (which magnifies the displayed
+       image relative to the mask frame) enlarges the cursor to match the render. */
+    const QSizeF f = maskNormFrameSize();
+    if (f.isEmpty()) return 0.0;
+    const QTransform t = maskNormToItem();
+    const QPointF o = t.map(QPointF(0.0, 0.0));
+    const double sx = QLineF(o, t.map(QPointF(1.0, 0.0))).length();   // frame w, item px
+    const double sy = QLineF(o, t.map(QPointF(0.0, 1.0))).length();   // frame h, item px
+    /* The brush is a circle in mask-frame pixels, so magnify the frame's long edge by the
+       average of the two axes' displayed-px-per-frame-px. */
+    const double mag = (sx / f.width() + sy / f.height()) / 2.0;
+    return std::max(f.width(), f.height()) * mag;
+}
+
+void ImageView::maskDrawSpaceImage(QPainter *painter, const QImage &img) const
+{
+    if (img.isNull() || img.width() <= 0 || img.height() <= 0 || !pmItem) return;
+    QTransform toNorm;                                  // buffer px -> mask normalized
+    toNorm.scale(1.0 / img.width(), 1.0 / img.height());
+    painter->save();
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+    QPainterPath clip;
+    clip.addPolygon(pmItem->mapToScene(pmItem->boundingRect()));
+    painter->setClipPath(clip);
+    painter->setWorldTransform(toNorm * maskNormToItem() * pmItem->sceneTransform(), true);
+    painter->drawImage(0, 0, img);
+    painter->restore();
+}
+
 QPointF ImageView::maskNormToViewport(QPointF n) const
 {
-    const QRectF br = pmItem->boundingRect();
-    const QPointF itemPt(n.x() * br.width(), n.y() * br.height());
-    return mapFromScene(pmItem->mapToScene(itemPt));
+    return mapFromScene(pmItem->mapToScene(maskNormToItem().map(n)));
 }
 
 QPointF ImageView::maskViewportToNorm(QPoint vp) const
 {
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return QPointF();
-    const QPointF itemPt = pmItem->mapFromScene(mapToScene(vp));
-    return QPointF(itemPt.x() / br.width(), itemPt.y() / br.height());
+    return maskItemToNorm().map(pmItem->mapFromScene(mapToScene(vp)));
 }
 
 QPointF ImageView::maskViewportToImage(QPoint vp) const
@@ -2002,16 +2112,26 @@ QPointF ImageView::maskViewportToImage(QPoint vp) const
 
 void ImageView::maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const
 {
-    /* Axis-end handles in image-pixel coords: centre +/- semi-axis along the rotated x and y axes
-       (rx is a fraction of width, ry of height). */
+    /* Axis-end handles in displayed (pmItem) coords: centre +/- semi-axis along the
+       rotated x and y axes (rx is a fraction of the mask frame's width, ry of its
+       height). The ellipse is built in MASK-frame pixels -- where the render defines it,
+       and where the rotation is meaningful -- then mapped onto the photo. */
+    Q_UNUSED(br)
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) { for (int i = 0; i < 4; ++i) h[i] = QPointF(); return; }
+    const double fw = fr.width(), fh = fr.height();
     const double a = maskAngle * 0.017453292519943295;
     const double ca = std::cos(a), sa = std::sin(a);
-    const QPointF c(maskC.x()*br.width(), maskC.y()*br.height());
-    const double ax = maskRx * br.width(), ay = maskRy * br.height();
+    const QPointF c(maskC.x()*fw, maskC.y()*fh);
+    const double ax = maskRx * fw, ay = maskRy * fh;
     const QPointF ux(ca*ax,  sa*ax);     // rotated +x axis * rx
     const QPointF uy(-sa*ay, ca*ay);     // rotated +y axis * ry
-    h[0] = c + ux; h[1] = c - ux;        // +x, -x  (resize rx)
-    h[2] = c + uy; h[3] = c - uy;        // +y, -y  (resize ry)
+    const QTransform toItem = maskNormToItem();
+    auto place = [&](QPointF pFrame) {
+        return toItem.map(QPointF(pFrame.x() / fw, pFrame.y() / fh));
+    };
+    h[0] = place(c + ux); h[1] = place(c - ux);      // +x, -x  (resize rx)
+    h[2] = place(c + uy); h[3] = place(c - uy);      // +y, -y  (resize ry)
 }
 
 QPointF ImageView::maskRadialRotateHandleVp(const QRectF &br) const
@@ -2113,12 +2233,9 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
                                && !brushStroking && showTint;
     if (haveComposite) {
         const QRectF cbr = pmItem->boundingRect();
-        if (cbr.width() > 0 && cbr.height() > 0) {
-            painter->save();
-            painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-            painter->drawImage(pmItem->mapToScene(cbr).boundingRect(), scopeMaskTint);
-            painter->restore();
-        }
+        /* MW builds the veil in MASK space (the uncropped oriented frame), so it goes
+           through the geometry map like every other mask raster. */
+        if (cbr.width() > 0 && cbr.height() > 0) maskDrawSpaceImage(painter, scopeMaskTint);
     }
     /* Op-indicator chip: names the submask + the op the veil is previewing. Shown while a
        submask is being defined and the overlay is not toggled off ("O"). */
@@ -2148,16 +2265,11 @@ void ImageView::drawObjectMask(QPainter *painter, const QRectF &br, bool drawTin
     (drawTint=false, the SAM cutout has landed): only the size cursor remains. Like the brush.
 */
     objEnsureBuffers();             // heal if the pixmap size changed since beginMaskEdit
-    if (drawTint && !maskBrushPreview.isNull()) {
-        painter->save();
-        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-        painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskBrushPreview);
-        painter->restore();
-    }
+    if (drawTint && !maskBrushPreview.isNull()) maskDrawSpaceImage(painter, maskBrushPreview);
     /* Brush-size cursor circle (viewport coords, scales with zoom, constant pen width).
        Red while erasing (Alt held during a stroke); white otherwise. */
     if (maskBrushCursorOn) {
-        const double imgLong = std::max(br.width(), br.height());
+        const double imgLong = maskNormLongEdgeItemPx();
         const double rImg = (qBound(0.0, maskBrushSize, 100.0) / 200.0) * imgLong;
         const QPointF cImg = pmItem->mapFromScene(mapToScene(maskBrushCursorVp));
         const QPointF cVp(maskBrushCursorVp);
@@ -2179,8 +2291,13 @@ void ImageView::drawObjectMask(QPainter *painter, const QRectF &br, bool drawTin
 
 void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
-    const QPointF s1 = pmItem->mapToScene(QPointF(maskP1.x()*br.width(), maskP1.y()*br.height()));
-    const QPointF s2 = pmItem->mapToScene(QPointF(maskP2.x()*br.width(), maskP2.y()*br.height()));
+    /* The endpoints are mask-normalized (the geometry stage's input), so they go through
+       the geometry map to reach the displayed photo. A perspective warp bends the ramp's
+       spacing, not the line: the endpoints land right, the gradient between them stays
+       linear on screen. */
+    const QTransform toItem = maskNormToItem();
+    const QPointF s1 = pmItem->mapToScene(toItem.map(maskP1));
+    const QPointF s2 = pmItem->mapToScene(toItem.map(maskP2));
 
     /* 1) Role tint ramp, in scene coords so it tracks the image. feather widens the
        transition around the centre: 0 = hard step at the midpoint, 100 = full linear ramp
@@ -2257,11 +2374,21 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
 
 void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTint)
 {
-    const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());      // centre, image px
-    const double ax = qMax(1.0, maskRx*br.width()), ay = qMax(1.0, maskRy*br.height());
+    /* The ellipse lives in MASK-frame pixels (the geometry stage's input, where the
+       render defines it); frameToItem carries that frame onto the displayed photo, so a
+       crop or straighten moves the overlay with the content, not the visible edges. */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) return;
+    const double fw = fr.width(), fh = fr.height();
+    QTransform frameToItem;
+    frameToItem.scale(1.0 / fw, 1.0 / fh);
+    frameToItem = frameToItem * maskNormToItem();
+
+    const QPointF ci(maskC.x()*fw, maskC.y()*fh);       // centre, mask-frame px
+    const double ax = qMax(1.0, maskRx*fw), ay = qMax(1.0, maskRy*fh);
 
     /* 1) Elliptical tint ramp (scene coords) via a transformed radial gradient: a unit
-       circle mapped to the rotated image ellipse, then to scene. Coverage is 100% at the
+       circle mapped to the rotated frame ellipse, then to scene. Coverage is 100% at the
        centre and falls outward on the shared MaskFalloff profile, ~8% at the boundary at
        feather 82 (Invert swaps); feather pulls the half-coverage radius inward. Skipped
        when the whole-mask composite tint is already shown (drawTint=false): only the
@@ -2300,7 +2427,8 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
         QTransform E;
         E.translate(ci.x(), ci.y()); E.rotate(maskAngle);
         E.scale(ax * tMax, ay * tMax);
-        brush.setTransform(E * pmItem->sceneTransform());      // unit circle -> image ellipse -> scene
+        // unit circle -> mask-frame ellipse -> displayed photo -> scene
+        brush.setTransform(E * frameToItem * pmItem->sceneTransform());
         painter->save();
         painter->setPen(Qt::NoPen);
         painter->setBrush(brush);
@@ -2326,8 +2454,8 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
         for (int i = 0; i <= N; ++i) {
             const double t = (6.283185307179586 * i) / N;
             const double lx = k * ax * std::cos(t), ly = k * ay * std::sin(t);
-            const QPointF pImg = ci + QPointF(ca*lx - sa*ly, sa*lx + ca*ly);
-            poly << mapFromScene(pmItem->mapToScene(pImg));
+            const QPointF pFrame = ci + QPointF(ca*lx - sa*ly, sa*lx + ca*ly);
+            poly << mapFromScene(pmItem->mapToScene(frameToItem.map(pFrame)));
         }
         return poly;
     };
@@ -2360,8 +2488,8 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
     painter->drawLine(hx, rotV);
     for (int i = 0; i < 4; ++i)
         handle(mapFromScene(pmItem->mapToScene(h[i])), 5.0, QColor(120, 200, 255, 235));
-    handle(rotV, 5.0, QColor(120, 255, 160, 235));                                    // rotate
-    handle(mapFromScene(pmItem->mapToScene(ci)), 4.5, QColor(255, 255, 255, 235));    // centre (move)
+    handle(rotV, 5.0, QColor(120, 255, 160, 235));                      // rotate
+    handle(maskNormToViewport(maskC), 4.5, QColor(255, 255, 255, 235)); // centre (move)
     painter->restore();
 }
 
@@ -2388,16 +2516,20 @@ void ImageView::brushBuildBuffers(const QString &paramsJson)
 
 void ImageView::brushEnsureBuffers()
 {
-    /* (Re)build the output-oriented preview buffers from the committed strokes whenever the
-       displayed pixmap's size changes (e.g. the overlay began before the new image was shown).
-       Capped resolution so a live rebuild stays cheap; strokes are normalized so any size is valid. */
-    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
-    if (br.width() <= 0 || br.height() <= 0) return;
+    /* (Re)build the preview buffers from the committed strokes whenever the frame they
+       cover changes size (e.g. the overlay began before the new image was shown). They
+       are in MASK space -- the geometry stage's uncropped input, which is where the
+       strokes are normalized and where the render rasterizes them -- so a crop does not
+       change what a stroke covers, and drawMaskSpaceImage maps them onto the photo.
+       Capped resolution so a live rebuild stays cheap; strokes are normalized so any
+       size is valid. */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
     const int cap = 1280;
-    const double longE = std::max(br.width(), br.height());
+    const double longE = std::max(fr.width(), fr.height());
     const double s = (longE > cap) ? cap / longE : 1.0;
-    const int w = std::max(1, int(br.width()  * s));
-    const int h = std::max(1, int(br.height() * s));
+    const int w = std::max(1, int(fr.width()  * s));
+    const int h = std::max(1, int(fr.height() * s));
     if (w == maskBrushW && h == maskBrushH && !maskBrushMain.empty()) return;   // already current
     maskBrushW = w; maskBrushH = h;
     maskBrushMain.assign(size_t(w) * h, 0.0f);
@@ -2498,9 +2630,13 @@ void ImageView::adjustMaskFeather(double delta)
 
 void ImageView::ensureAutoGuide()
 {
-    /* Build a small luminance guide from the displayed image (output-oriented), once per
-       image, and register it by path so the develop render samples the SAME guide as this
-       preview. */
+    /* Build a small luminance guide from the displayed image, once per image, and
+       register it by path so the develop render samples the SAME guide as this preview.
+       The guide is sampled in MASK space (BrushStamp works in the geometry stage's input
+       coords), so a cropped/straightened/warped display is placed back into that frame
+       first -- else the auto-mask would confine strokes to the wrong content. What the
+       geometry threw away has no pixels to offer and is left mid-grey; strokes there are
+       outside the photo anyway. */
     if (maskGuide && maskGuide->valid()) {
         /* Already built for this image, but the shared store may have evicted it (crude
            size cap) -- re-register so the render's getGuide() never comes up empty and
@@ -2512,13 +2648,33 @@ void ImageView::ensureAutoGuide()
     if (!pmItem || pmItem->pixmap().isNull() || currentImagePath.isEmpty()) return;
     const QImage img = pmItem->pixmap().toImage();
     if (img.isNull()) return;
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
     const int cap = 1024;
-    const int longE = std::max(img.width(), img.height());
-    const double s = (longE > cap) ? double(cap) / longE : 1.0;
-    const int gw = std::max(1, int(img.width()  * s));
-    const int gh = std::max(1, int(img.height() * s));
-    const QImage small = img.scaled(gw, gh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                            .convertToFormat(QImage::Format_ARGB32);
+    const double longE = std::max(fr.width(), fr.height());
+    const double s = (longE > cap) ? cap / longE : 1.0;
+    const int gw = std::max(1, int(fr.width()  * s));
+    const int gh = std::max(1, int(fr.height() * s));
+    QImage small(gw, gh, QImage::Format_ARGB32);
+    if (developGeom.isIdentity()) {
+        small = img.scaled(gw, gh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+                   .convertToFormat(QImage::Format_ARGB32);
+    }
+    else {
+        /* Displayed px -> mask norm -> guide px: the inverse of what the render's
+           geometry stage did, so the guide lines up with the strokes' coords. */
+        small.fill(qRgb(128, 128, 128));
+        QTransform toGuide;
+        toGuide.scale(gw, gh);
+        QTransform disp;                                    // pmItem px -> displayed px
+        const QRectF br = pmItem->boundingRect();
+        if (br.width() > 0 && img.width() > 0)
+            disp.scale(br.width() / img.width(), br.height() / img.height());
+        QPainter p(&small);
+        p.setRenderHint(QPainter::SmoothPixmapTransform, true);
+        p.setTransform(disp * maskItemToNorm() * toGuide);
+        p.drawImage(0, 0, img);
+    }
     auto g = std::make_shared<BrushStamp::Guide>();
     g->w = gw; g->h = gh; g->lum.resize(size_t(gw) * gh);
     for (int y = 0; y < gh; ++y) {
@@ -2635,16 +2791,16 @@ void ImageView::brushEmitLiveGeometry()
 
 void ImageView::objEnsureBuffers()
 {
-    /* Size the output-oriented buffers to the displayed pixmap (capped) and re-raster the
-       committed perimeter strokes into maskBrushMain (the wall). Rebuilds only when the
-       pixmap size changed, so a live paint stays cheap. Strokes normalized. */
-    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
-    if (br.width() <= 0 || br.height() <= 0) return;
+    /* Size the buffers to the MASK frame (capped -- see brushEnsureBuffers) and re-raster
+       the committed perimeter strokes into maskBrushMain (the wall). Rebuilds only when
+       that frame changed size, so a live paint stays cheap. Strokes normalized. */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
     const int cap = 1280;
-    const double longE = std::max(br.width(), br.height());
+    const double longE = std::max(fr.width(), fr.height());
     const double s = (longE > cap) ? cap / longE : 1.0;
-    const int w = std::max(1, int(br.width()  * s));
-    const int h = std::max(1, int(br.height() * s));
+    const int w = std::max(1, int(fr.width()  * s));
+    const int h = std::max(1, int(fr.height() * s));
     if (w == maskBrushW && h == maskBrushH && !maskBrushMain.empty()) return;   // current
     maskBrushW = w; maskBrushH = h;
     maskBrushMain.assign(size_t(w) * h, 0.0f);
@@ -2713,15 +2869,10 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
     brushEnsureBuffers();           // heal if the pixmap size changed since beginMaskEdit
     /* 1) Tint preview image over the photo (scene coords, scales with the image). Skipped when the
        whole-mask composite tint is already shown (drawTint=false): only the brush cursor is drawn. */
-    if (drawTint && !maskBrushPreview.isNull()) {
-        painter->save();
-        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-        painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskBrushPreview);
-        painter->restore();
-    }
-    /* 2) Brush-size cursor circle (viewport coords, scales with zoom but constant pen width). */
+    if (drawTint && !maskBrushPreview.isNull()) maskDrawSpaceImage(painter, maskBrushPreview);
+    /* 2) Brush-size cursor circle (viewport coords, scales with zoom, constant pen). */
     if (maskBrushCursorOn) {
-        const double imgLong = std::max(br.width(), br.height());
+        const double imgLong = maskNormLongEdgeItemPx();
         const double rImg = (qBound(0.0, maskBrushSize, 100.0) / 200.0) * imgLong;
         const QPointF cImg = pmItem->mapFromScene(mapToScene(maskBrushCursorVp));
         const QPointF cVp(maskBrushCursorVp);
@@ -2814,20 +2965,20 @@ void ImageView::buildRangePreview()
 {
     /* Rebuild the coverage tint from the shared display-referred RangeRef (built by MW from the
        developed base and registered by path -- the SAME map the render samples, so preview ==
-       render). The RangeRef and the displayed pixmap are both output-oriented, so coverage samples
-       directly at each tint pixel's normalized position (no rotation). */
+       render). The RangeRef is in MASK space (the oriented frame the render samples), so the
+       tint is built there too and mapped onto the photo by maskDrawSpaceImage. */
     maskRangePreview = QImage();
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = RangeMask::getRef(currentImagePath);
     if (!ref || !ref->valid()) return;
-    const QRectF br = pmItem->boundingRect();
-    if (br.width() <= 0 || br.height() <= 0) return;
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
 
     const int cap = 1280;
-    const double longE = std::max(br.width(), br.height());
+    const double longE = std::max(fr.width(), fr.height());
     const double s = (longE > cap) ? cap / longE : 1.0;
-    const int tw = std::max(1, int(br.width()  * s));
-    const int th = std::max(1, int(br.height() * s));
+    const int tw = std::max(1, int(fr.width()  * s));
+    const int th = std::max(1, int(fr.height() * s));
 
     const QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
     const double lo = o.value("lo").toDouble(0.0), hi = o.value("hi").toDouble(1.0);
@@ -2877,22 +3028,22 @@ void ImageView::buildSubjectPreview()
 {
     /* Rebuild the coverage tint from the shared SubjectMask saliency map (built + registered by MW
        from the U^2-Net model -- the SAME map the render samples, so preview == render). Mirrors
-       buildRangePreview: the ref and the displayed pixmap are both output-oriented, so coverage
-       samples directly at each tint pixel's normalized position. Background selects the INVERSE of
+       buildRangePreview: the ref is in mask space, so the tint is built there and mapped onto the
+       photo by maskDrawSpaceImage. Background selects the INVERSE of
        the subject, so it XORs the user's invert flag (matches buildMaskBuffer's subjectBaseInvert). */
     maskRangePreview = QImage();
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = SubjectMask::getRef(currentImagePath);
     if (!ref || !ref->valid()) return;
     const bool invert = maskInverted ^ maskIsBackground();
-    const QRectF br = pmItem->boundingRect();
-    if (br.width() <= 0 || br.height() <= 0) return;
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
 
     const int cap = 1280;
-    const double longE = std::max(br.width(), br.height());
+    const double longE = std::max(fr.width(), fr.height());
     const double s = (longE > cap) ? cap / longE : 1.0;
-    const int tw = std::max(1, int(br.width()  * s));
-    const int th = std::max(1, int(br.height() * s));
+    const int tw = std::max(1, int(fr.width()  * s));
+    const int th = std::max(1, int(fr.height() * s));
 
     const QColor base = maskTintColor();
     const int R = base.red(), Gc = base.green(), B = base.blue();
@@ -2919,14 +3070,14 @@ void ImageView::buildSkyPreview()
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = SkyMask::getRef(currentImagePath);
     if (!ref || !ref->valid()) return;
-    const QRectF br = pmItem->boundingRect();
-    if (br.width() <= 0 || br.height() <= 0) return;
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
 
     const int cap = 1280;
-    const double longE = std::max(br.width(), br.height());
+    const double longE = std::max(fr.width(), fr.height());
     const double s = (longE > cap) ? cap / longE : 1.0;
-    const int tw = std::max(1, int(br.width()  * s));
-    const int th = std::max(1, int(br.height() * s));
+    const int tw = std::max(1, int(fr.width()  * s));
+    const int th = std::max(1, int(fr.height() * s));
 
     const QColor base = maskTintColor();
     const int R = base.red(), Gc = base.green(), B = base.blue();
@@ -2954,14 +3105,14 @@ void ImageView::buildDepthPreview()
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = DepthMask::getRef(currentImagePath);
     if (!ref || !ref->valid()) return;
-    const QRectF br = pmItem->boundingRect();
-    if (br.width() <= 0 || br.height() <= 0) return;
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.width() <= 0 || fr.height() <= 0) return;
 
     const int cap = 1280;
-    const double longE = std::max(br.width(), br.height());
+    const double longE = std::max(fr.width(), fr.height());
     const double s = (longE > cap) ? cap / longE : 1.0;
-    const int tw = std::max(1, int(br.width()  * s));
-    const int th = std::max(1, int(br.height() * s));
+    const int tw = std::max(1, int(fr.width()  * s));
+    const int th = std::max(1, int(fr.height() * s));
 
     const QJsonObject o = QJsonDocument::fromJson(maskRangeParams.toUtf8()).object();
     const double lo = o.value("lo").toDouble(0.0), hi = o.value("hi").toDouble(0.5);
@@ -3021,13 +3172,9 @@ void ImageView::drawRangeMask(QPainter *painter, const QRectF &br, bool drawTint
 {
     /* 1) Coverage tint over the photo (scene coords, scales with the image). Skipped when the
        whole-mask composite tint is already shown (drawTint=false): only the swatches are drawn. */
-    if (drawTint && maskRangePreview.isNull()) rebuildContentPreview();  // heal if the ref arrived after beginMaskEdit
-    if (drawTint && !maskRangePreview.isNull()) {
-        painter->save();
-        painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
-        painter->drawImage(pmItem->mapToScene(br).boundingRect(), maskRangePreview);
-        painter->restore();
-    }
+    /* heal if the ref arrived after beginMaskEdit */
+    if (drawTint && maskRangePreview.isNull()) rebuildContentPreview();
+    if (drawTint && !maskRangePreview.isNull()) maskDrawSpaceImage(painter, maskRangePreview);
     /* 2) Color Range: the sampled-colour swatches (viewport coords). Click a swatch to remove it. */
     if (maskTool == 3) {
         QVector<QRectF> rects;
@@ -4600,16 +4747,22 @@ void ImageView::mousePressEvent(QMouseEvent *event)
             maskStrokeLiveClock.invalidate();
             emit maskOpActionStarted();         // latch the combine op held right now
             if (maskTool == 1) {                // radial: anchor move / rotate
-                const QRectF br = pmItem->boundingRect();
-                const QPointF ci(maskC.x()*br.width(), maskC.y()*br.height());
+                /* Mask-frame px, the space the ellipse (and its angle) is defined in. */
+                const QSizeF fr = maskNormFrameSize();
+                const QPointF ci(maskC.x()*fr.width(), maskC.y()*fr.height());
                 if (h == 0) {                   // centre move
                     maskMoveAnchorN = maskViewportToNorm(event->pos());
                     maskCAnchor = maskC;
                 }
                 else if (h == 5) {              // rotate
-                    const QPointF ip = maskViewportToImage(event->pos());
+                    const QPointF n = maskViewportToNorm(event->pos());
+                    const QPointF ip(n.x()*fr.width(), n.y()*fr.height());
                     maskGrabAngle = std::atan2(ip.y() - ci.y(), ip.x() - ci.x());
                     maskAngleAnchor = maskAngle;
+                }
+                else {                          // resize: remember the shape for Shift
+                    maskAxPxAnchor = maskRx * fr.width();
+                    maskAyPxAnchor = maskRy * fr.height();
                 }
             }
             else if (h == 2) {                  // linear move: anchor the whole line
@@ -4820,10 +4973,13 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
        move, axis-handle resize, or outline rotate. */
     if (maskEditMode && maskDrag >= 0) {
         if (maskTool == 1) {                                // ---- Radial ----
-            const QRectF br = pmItem->boundingRect();
-            const double bw = br.width(), bh = br.height();
-            const QPointF ci(maskC.x()*bw, maskC.y()*bh);   // current centre, image px
-            const QPointF ip = maskViewportToImage(event->pos());
+            /* Mask-frame px throughout: the ellipse, its angle and rx/ry are defined in
+               the geometry stage's input frame, not in what a crop leaves visible. */
+            const QSizeF fr = maskNormFrameSize();
+            const double bw = fr.width(), bh = fr.height();
+            const QPointF ci(maskC.x()*bw, maskC.y()*bh);   // current centre, frame px
+            const QPointF nCur = maskViewportToNorm(event->pos());
+            const QPointF ip(nCur.x()*bw, nCur.y()*bh);
             if (maskDrag == 0) {                            // move
                 const QPointF d = maskViewportToNorm(event->pos()) - maskMoveAnchorN;
                 maskC = maskCAnchor + d;
@@ -4837,8 +4993,20 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                 const double ca = std::cos(a), sa = std::sin(a);
                 const double ddx = ip.x() - ci.x(), ddy = ip.y() - ci.y();
                 const double lx =  ddx*ca + ddy*sa, ly = -ddx*sa + ddy*ca;   // un-rotated local px
-                if (maskDrag == 1 || maskDrag == 2) maskRx = qMax(2.0, std::abs(lx)) / bw;
-                else                                maskRy = qMax(2.0, std::abs(ly)) / bh;
+                const bool xAxis = (maskDrag == 1 || maskDrag == 2);
+                if (event->modifiers() & Qt::ShiftModifier) {
+                    /* Proportional: scale BOTH semi-axes by the factor the grabbed one
+                       moved through, measured against the shape at grab time. Frame px,
+                       so an on-screen circle stays a circle even when W != H. */
+                    const double ax0 = qMax(1.0, maskAxPxAnchor);
+                    const double ay0 = qMax(1.0, maskAyPxAnchor);
+                    const double s = xAxis ? qMax(2.0, std::abs(lx)) / ax0
+                                           : qMax(2.0, std::abs(ly)) / ay0;
+                    maskRx = qMax(2.0, ax0 * s) / bw;
+                    maskRy = qMax(2.0, ay0 * s) / bh;
+                }
+                else if (xAxis) maskRx = qMax(2.0, std::abs(lx)) / bw;
+                else            maskRy = qMax(2.0, std::abs(ly)) / bh;
             }
         }
         else {                                              // ---- Linear ----

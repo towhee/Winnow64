@@ -141,7 +141,7 @@ void TransformPanel::buildUi()
     headerResetBtn->setToolTip(tr("Reset crop, straighten and perspective to the full frame"));
     connect(headerResetBtn, &BarBtn::clicked, this, &TransformPanel::resetRequested);
 
-    /* Close the panel (same as the editor-bar Transform button / "R"): commits the crop
+    /* Close the panel (same as the action-row Transform button / "R"): commits the crop
        session and hides the panel. Kept last so it sits at the extreme right. */
     closeBtn = new BarBtn();
     closeBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
@@ -296,8 +296,9 @@ void TransformPanel::buildUi()
     /* Lock + flip share the padlock column so the reset buttons stay aligned in col4. */
     QHBoxLayout *lockFlipRow = new QHBoxLayout;
     lockFlipRow->setContentsMargins(0, 0, 0, 0);
-    lockFlipRow->setSpacing(2);
+    lockFlipRow->setSpacing(0);
     lockFlipRow->addWidget(lockBtn);
+    lockFlipRow->addSpacing(10);
     lockFlipRow->addWidget(flipBtn);
 
     grid->addWidget(cropModeBtn,  0, 0);
@@ -316,8 +317,9 @@ void TransformPanel::buildUi()
     grid->addWidget(warpResetBtn, 2, 4);
 
     /* -------- Assemble -------- */
+    /* The bottom margin reserves the panel separator rule drawn in paintEvent. */
     QVBoxLayout *lay = new QVBoxLayout(this);
-    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setContentsMargins(0, 0, 0, G::panelBorderHeight);
     lay->setSpacing(6);
     lay->addWidget(header);
     QVBoxLayout *bodyWrap = new QVBoxLayout;
@@ -536,6 +538,15 @@ void TransformPanel::updateLockButton()
     lockBtn->setToolTip(aspectLocked
         ? tr("Aspect ratio LOCKED: dragging the crop keeps the ratio (A)")
         : tr("Aspect ratio unlocked: dragging the crop is free (A)"));
+}
+
+void TransformPanel::paintEvent(QPaintEvent *event)
+{
+    QWidget::paintEvent(event);
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
+    QPainter p(this);
+    p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
+               G::tabWidgetBorderColor);
 }
 
 bool TransformPanel::eventFilter(QObject *watched, QEvent *event)

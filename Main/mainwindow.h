@@ -642,7 +642,12 @@ private slots:
        (the off-thread raw decode and the full-res settle). See the impl for why image
        switch is answered this way rather than with a proxy cache. */
     void updateDevelopRenderingHint();
-    /* Show/hide the Develop scopes strip (Develop editor-bar toggle); persists the
+    /* Tell the loupe which geometry (crop/straighten/warp) the frame it is showing was
+       rendered with, so the mask / spot overlays -- whose coordinates are all in the
+       geometry stage's INPUT space -- can map onto it. Called with each applied render;
+       cheap when nothing changed. */
+    void pushDevelopGeometryToView();
+    /* Show/hide the Develop scopes strip (Develop action-row toggle); persists the
        choice. */
     void toggleDevelopScopes();
     /* Apply a scopes-strip visibility, repopulating the scopes when it is shown;
@@ -653,9 +658,9 @@ private slots:
     void cycleDevelopScopes();
     /* The scopes strip's own [X]: hide the strip, keeping its layout; persists. */
     void closeDevelopScopes();
-    /* Show/hide the Develop Transform panel (editor-bar toggle / "R"); persists. */
+    /* Show/hide the Develop Transform panel (action-row toggle / "R"); persists. */
     void toggleDevelopTransform();
-    /* Show/hide the Fill Replace panel (title-bar spot button / "S" in Develop mode):
+    /* Show/hide the Fill Replace panel (action-row spot button / "S" in Develop mode):
        visible == the replace (spot/fill/object) tool is armed on the loupe. */
     void toggleDevelopReplace();
     /* "W" in Develop mode: arm/disarm the Basic panel's white-balance dropper. Transform
@@ -1407,7 +1412,8 @@ private:
     DevelopProperties *developProperties = nullptr;
     /* Live Develop scopes (histogram + vectorscope) shown above the property tree in the
        Develop dock. Fed by updateDevelopScopes() from the displayed image / preview render;
-       toggled by a button on the Develop editor bar and persisted (Develop/scopesVisible). */
+       toggled by a button on the Develop action row and persisted
+       (Develop/scopesVisible). */
     ScopesView *scopesView = nullptr;
     bool developScopesVisible = true;
     /* Which scopes the strip shows (ScopesView::ScopeLayout, cycled by "G" and persisted
@@ -1428,7 +1434,7 @@ private:
     QLabel *developSelectionWarning = nullptr;
     void updateDevelopSelectionWarning();
     /* Develop Transform (crop + perspective) panel: a control strip below the scopes
-       and above the property tree. Toggled by a button on the Develop editor bar and
+       and above the property tree. Toggled by a button on the Develop action row and
        the "R" shortcut; visibility persists (Develop/transformVisible). */
     TransformPanel *transformPanel = nullptr;
     /* Fill Replace (spot/fill/object heal) strip below the Transform panel. Visible only
@@ -1785,10 +1791,11 @@ private:
     void developDockVisibilityChange();
     void historyDockVisibilityChange();
     void presetsDockVisibilityChange();
-    /* The Develop title-bar Preset button reads as a checked toolbutton while the Presets
-       dock is the front tab. A TABIFIED dock keeps isVisible() == true when a sibling tab
-       is selected, so visibilityChanged alone cannot see a tab switch -- this is called
-       from there AND from tabifiedDockWidgetActivated / showPresetsDock. */
+    /* The Develop action-row Preset button reads as a checked toolbutton while the
+       Presets dock is the front tab. A TABIFIED dock keeps isVisible() == true when a
+       sibling tab is selected, so visibilityChanged alone cannot see a tab switch --
+       this is called from there AND from tabifiedDockWidgetActivated /
+       showPresetsDock. */
     void updateDevelopPresetBtn();
 
 public:

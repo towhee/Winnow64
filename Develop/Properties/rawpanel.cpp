@@ -36,8 +36,10 @@ void RawPanel::buildUi()
     const QString capCss = QString("color: %1; font-size: %2pt; background: transparent;")
                                .arg(G::textColor.name()).arg(G::strFontSize.toInt());
 
+    /* The bottom margin reserves the 2px separator rule paintEvent draws under every
+       Develop panel (G::panelBorderHeight). */
     QVBoxLayout *outer = new QVBoxLayout(this);
-    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setContentsMargins(0, 0, 0, G::panelBorderHeight);
     outer->setSpacing(0);
 
     /* Header band (collapse arrow + "Raw" + [?]); transparent so paintEvent draws the
@@ -256,6 +258,9 @@ void RawPanel::paintEvent(QPaintEvent *)
     g.setColorAt(0, QColor(a, a, a));
     g.setColorAt(1, QColor(b, b, b));
     p.fillRect(r, g);
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
+    p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
+               G::tabWidgetBorderColor);
 }
 
 void RawPanel::setEditSource(bool raw)
