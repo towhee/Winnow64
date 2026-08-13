@@ -2,6 +2,7 @@
 #define SCALEDPIXMAPITEM_H
 
 #include <QGraphicsPixmapItem>
+#include <QImage>
 #include <QPainter>
 #include <QPixmap>
 #include <QSize>
@@ -74,9 +75,33 @@ public:
         return boundingRect().contains(point);
     }
 
+    /* Draw the image desaturated (Develop's mask-overlay "Gray" chip: the coloured veil
+       reads better over a grey picture). Set by ImageView::paintEvent just before the
+       scene is rendered -- deliberately NO update() call, since the view has already
+       scheduled the repaint and an update() from inside a paint pass would spin. */
+    void setGrayscale(bool on)
+    {
+        grayOn = on;
+        if (!on && !grayPm.isNull()) { grayPm = QPixmap(); grayKey = 0; }
+    }
+
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                QWidget *widget) override
     {
+        if (grayOn && !pixmap().isNull()) {
+            /* Qt has no saturation blend mode, so the grey copy is made once per pixmap
+               and cached by cacheKey -- pans, zooms and overlay repaints reuse it, and a
+               Develop tick pays one Grayscale8 conversion at PROXY resolution. */
+            if (grayPm.isNull() || grayKey != pixmap().cacheKey()) {
+                grayPm = QPixmap::fromImage(
+                    pixmap().toImage().convertToFormat(QImage::Format_Grayscale8));
+                grayKey = pixmap().cacheKey();
+            }
+            painter->setRenderHint(QPainter::SmoothPixmapTransform,
+                                   transformationMode() == Qt::SmoothTransformation);
+            painter->drawPixmap(boundingRect(), grayPm, QRectF(grayPm.rect()));
+            return;
+        }
         if (!isScaled()) { QGraphicsPixmapItem::paint(painter, option, widget); return; }
         /* One stretched blit. The view transform is already on the painter, so QPainter
            resolves proxy -> screen in a single step -- there is no full-resolution
@@ -89,6 +114,9 @@ public:
 
 private:
     QSize logicalSize;      // invalid => the pixmap's own size
+    bool  grayOn = false;   // paint desaturated (mask overlay backdrop)
+    QPixmap grayPm;         // cached grey copy of pixmap()
+    qint64  grayKey = 0;    // pixmap().cacheKey() grayPm was built from
 };
 
 #endif // SCALEDPIXMAPITEM_H

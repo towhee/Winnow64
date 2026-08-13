@@ -1150,13 +1150,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Update Mask (add submask)</string>
+         <string>Commit Mask (add submask)</string>
         </property>
         <property name="text">
          <string>Return</string>
         </property>
         <property name="text">
-         <string>Folds the submask being defined into the mask; same as the panel's Update button. Esc discards it instead</string>
+         <string>Folds the submask being defined into the mask; same as the panel's &quot;Add and Commit&quot; button. Esc discards it instead</string>
         </property>
        </item>
        <item>
@@ -1212,6 +1212,17 @@
         </property>
         <property name="text">
          <string>Softens / hardens the mask edge; while a Linear Gradient, Radial Gradient or Brush mask tool is active. Brush feather applies to the NEXT stroke</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Proportional Resize (Radial Gradient mask)</string>
+        </property>
+        <property name="text">
+         <string>Shift + drag an axis handle</string>
+        </property>
+        <property name="text">
+         <string>Scales both axes together so the ellipse keeps its proportions (a circle stays a circle); while a Radial Gradient mask tool is active</string>
         </property>
        </item>
        <item>

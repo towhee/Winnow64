@@ -185,7 +185,8 @@ public:
     /* The user began SHAPING the submask (brush/object stroke, handle drag): the modifier
        held at that instant becomes what this submask DOES, and it survives the key
        being released. Without this, letting go of Opt turned the subtract just painted
-       back into an add -- and [Update] committed the add, changing nothing on screen. */
+       back into an add -- and the commit button committed the add, changing nothing
+       on screen. */
     void latchMaskOp();
     /* The combine op the LIVE keyboard state means: Opt = Subtract, Shift+Opt =
        Intersect, neither = Add. The ONE place that mapping exists -- the button label,
@@ -193,8 +194,18 @@ public:
     static int maskOpFromModifiers();
     /* True while the mask panel is up (a submask is being defined). */
     bool isMaskPanelOpen() const { return maskPanelOpen; }
-    /* [Update] / Return: fold the pending submask in with the op held right now. */
+    /* Commit button / Return: fold the pending submask in with the op held now. */
     void commitPendingMask();
+    /* Guard for anything that LEAVES the scope a submask is still pending on (picking
+       another scope, adding one). A pending submask is invisible state -- it would be
+       silently discarded -- so ask: commit it, discard it, or stay put. Returns false
+       only for "stay put", in which case the caller must abandon the transition (and
+       re-assert the header selection with refreshScopeList). No panel open -> true. */
+    bool confirmPendingMask();
+    /* True when committing the pending submask would achieve nothing -- it covers no
+       pixels (an unpainted Brush/Object, an unsampled Color Range) or is still exactly
+       what beginMaskTool built. confirmPendingMask drops those without asking. */
+    bool pendingMaskIsUntouched(const MaskComponent &m) const;
 
     /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
        frame. Greys the property tree (caption text, which the delegate paints from the
@@ -243,12 +254,12 @@ public slots:
     void setMaskOverlayShown(bool shown);
 
     /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
-       Develop title-bar button); onSpotStrokeCommitted takes one finished stroke and
+       Develop action-row button); onSpotStrokeCommitted takes one finished stroke and
        appends it as a FillSpot to the current stack. */
     void onSpotToolToggled(bool active);
     void onSpotStrokeCommitted(const QString &paramsJson);
     void onSpotRemoveRequested(int index);      // a pin was clicked -> drop that spot
-    bool isSpotActive() const { return spotMode; }   // for the title-bar spot button
+    bool isSpotActive() const { return spotMode; }   // for the action-row spot button
     /* Replace panel preview eye: false renders WITHOUT the spot heals (non-destructive
        bypass, like the Transform eye); the spots stay in the stack. Session-wide. */
     void setSpotsShown(bool shown) { spotsShown = shown; }
@@ -345,13 +356,13 @@ signals:
     void maskEditBegin(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void maskEditEnd();
     /* Regenerative spot fill: arm/disarm ImageView spot-brush capture. Emitted when the
-       Develop title-bar spot tool is toggled. */
+       Develop action-row spot tool is toggled. */
     void spotEditBegin();
     void spotEditEnd();
     /* White-balance dropper: arm/disarm ImageView's sample-a-neutral mode. */
     void wbDropperBegin();
     void wbDropperEnd();
-    /* Spot tool armed/disarmed: drives the title-bar spot button's on/off icon. */
+    /* Spot tool armed/disarmed: drives the action-row spot button's on/off icon. */
     void spotActiveChanged(bool active);
     /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
     void spotPinsChanged(const QVector<QPointF> &pins);
@@ -379,6 +390,9 @@ signals:
        Deliberately NOT paramsChanged: nothing about the developed image has changed, and
        paramsChanged would pay a proxy + full-res re-render per modifier press. */
     void maskOverlayRefreshRequested();
+    /* Repaint the view alone: neither the image nor the veil changed, only how the view
+       draws them (the overlay grayscale toggle). Cheaper again than a veil rebuild. */
+    void maskOverlayRepaintRequested();
 
 private:
     void initialize();
@@ -707,7 +721,7 @@ private:
     /* ---- Mask build-up (lab UI): append-only "flatten" via the MaskPanel ----------
        A picked submask is APPENDED to the scope's mask and edited in the panel's embedded
        MaskEditor. EVERY submask (including the first) is PENDING -- pendingIdx = its
-       index -- until the single [Update] button (or Return) folds it in with the op held
+       index -- until the single commit button (or Return) folds it in with the op held
        at that moment, or Cancel/Esc removes it. The overlay composites the pending
        submask with pendingOp, so the veil shows the OUTCOME rather than colouring the
        operand. maskPanelOpen tracks whether the strip is up, so Esc cancels the panel
@@ -717,6 +731,10 @@ private:
     int  pendingOp = 0;                       // op the overlay + render preview
     int  latchedMaskOp = 0;                   // op the last shaping action set (survives
                                               // the key release; see latchMaskOp)
+    /* The pending submask AS BUILT by beginMaskTool, before the user touched it. The
+       baseline pendingMaskIsUntouched compares against, so leaving a scope with a tool
+       that was picked and then ignored asks nothing. */
+    MaskComponent pendingPristine;
     bool maskPanelOpen = false;
     /* Keep the combined-mask (red) overlay showing after a tool is committed/finished
        (the panel closes but the result stays visible + 'O'-toggleable). Cleared on scope/

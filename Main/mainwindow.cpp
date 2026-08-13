@@ -6981,7 +6981,8 @@ void MW::updateMaskOverlayTint()
     /* The in-progress (uncommitted) submask is a real component in `components`, but its
        op is still momentary -- it lives in DevelopProperties::pendingMaskOp() (driven by
        the held modifier) and is only written into the component on commit. Substitute it
-       here so the veil composites the OUTCOME of what Return/[Update] would do. */
+       here so the veil composites the OUTCOME of what Return / the commit button would
+       do. */
     const int pendIdx = developProperties->pendingMaskIndex();
     QVector<MaskComponent> masks = components;
     const bool hasPending = (pendIdx >= 0 && pendIdx < masks.size());
@@ -7319,8 +7320,11 @@ void MW::renderDevelopPreview(bool fullRes)
                                            &displaySize,
                                            wantTime ? &ms : nullptr);
         const qint64 tRender = wt.restart();
+        const Geometry appliedGeom = mj.geometry;
+        const QSize orientedSize(fw, fh);
         QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
-                                         rt, ms, tProxyCap, tRender, wantTime, proxySrc] {
+                                         rt, ms, tProxyCap, tRender, wantTime, proxySrc,
+                                         appliedGeom, orientedSize] {
             developProxyInFlight = false;
             /* Apply only if nothing newer was asked for and we are still on this image.
                A superseded frame is DISCARDED rather than shown: the crop tool toggles
@@ -7329,6 +7333,10 @@ void MW::renderDevelopPreview(bool fullRes)
             const bool current = (dm && fPath == dm->currentFilePath)
                                  && !developProxyPending && reqGen == developProxyReqGen;
             if (current && !out.isNull()) {
+                /* Pair the geometry with the pixels it produced, BEFORE they are shown:
+                   the overlays map mask coordinates (pre-geometry) onto this frame, so a
+                   stale pairing would draw them in the wrong place for one tick. */
+                imageView->setDevelopGeometry(appliedGeom, orientedSize);
                 imageView->setDevelopPreview(out, displaySize);
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
             }
@@ -7591,6 +7599,31 @@ void MW::renderDevelopFullResAsync()
     });
 }
 
+void MW::pushDevelopGeometryToView()
+{
+/*
+    Pair the loupe's overlays with the geometry the frame on screen carries. Reads the
+    CURRENT stack job, so callers must only use it where the shown frame is known to be
+    up to date with it (the render completions, which already gate on that). Mirrors
+    renderDevelopPreview's crop suppression: while the crop tool is open the render shows
+    the full frame, so the overlays must map through the same suppressed geometry.
+*/
+    if (!imageView || !developProperties || !dm) return;
+    const QString fPath = dm->currentFilePath;
+    if (fPath.isEmpty()) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
+
+    Geometry g = developProperties->stackJob().geometry;
+    if (developCropEditing && !developCropShowResult) {
+        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
+    }
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    int fw = work->width, fh = work->height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    imageView->setDevelopGeometry(g, QSize(fw, fh));
+}
+
 void MW::updateDevelopRenderingHint()
 {
 /*
@@ -7634,6 +7667,9 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
 
     const bool currentImage = (fPath == dm->currentFilePath);
     if (!out.isNull() && currentImage && gen == developParamsGen) {
+        /* gen unchanged => the recipe (and its geometry) is still the one this render
+           used, so the current state is the right pairing for the overlays. */
+        pushDevelopGeometryToView();
         imageView->setDevelopPreview(out);
         updateDevelopScopes(out);
     }
@@ -8052,7 +8088,7 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
 void MW::toggleDevelopScopes()
 {
 /*
-    Develop editor-bar toggle: show/hide the scopes strip and persist the choice.
+    Develop action-row toggle: show/hide the scopes strip and persist the choice.
 */
     if (G::isLogger) G::log("MW::toggleDevelopScopes");
     setDevelopScopesVisible(!developScopesVisible);
@@ -8121,7 +8157,7 @@ void MW::closeDevelopScopes()
 {
 /*
     The scopes strip's own [X] (top right corner): hide the strip, exactly as the Develop
-    editor-bar button does. The layout is left alone, so "G" or the button brings the
+    action-row button does. The layout is left alone, so "G" or the button brings the
     strip back showing the same scope(s) it had.
 */
     if (G::isLogger) G::log("MW::closeDevelopScopes");
@@ -8131,8 +8167,9 @@ void MW::closeDevelopScopes()
 void MW::toggleDevelopTransform()
 {
 /*
-    Develop editor-bar toggle (also bound to "R"): show/hide the Transform crop/perspective panel
-    and persist the choice. When shown it brings the Develop dock forward so the panel is visible.
+    Develop action-row toggle (also bound to "R"): show/hide the Transform
+    crop/perspective panel and persist the choice. When shown it brings the Develop
+    dock forward so the panel is visible.
 */
     if (G::isLogger) G::log("MW::toggleDevelopTransform");
     /* Transform/Crop only exists in Develop mode. In Preview mode tell the user how to switch and
@@ -8143,6 +8180,13 @@ void MW::toggleDevelopTransform()
                                           3000);
         return;
     }
+    /* Transform and Spot are MUTUALLY EXCLUSIVE: both own the loupe (crop overlay vs
+       spot brush), so opening Transform disarms Spot. Done before the panel is shown so
+       the spot tool has released the canvas by the time the crop overlay starts. */
+    if (!developTransformVisible && developProperties &&
+        developProperties->isSpotActive())
+        developProperties->onSpotToolToggled(false);
+
     developTransformVisible = !developTransformVisible;
     if (transformPanel) transformPanel->setVisible(developTransformVisible);
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
@@ -8152,8 +8196,8 @@ void MW::toggleDevelopTransform()
         developDock->setVisible(true);
         developDock->raise();
     }
-    /* The crop tool appears whenever the Transform panel is shown (R / editor-bar button), and
-       commits + clears when it is hidden. */
+    /* The crop tool appears whenever the Transform panel is shown (R / action-row
+       button), and commits + clears when it is hidden. */
     if (imageView && transformPanel) {
         if (developTransformVisible) enterDevelopCrop();
         else                         exitDevelopCrop();
@@ -8163,10 +8207,15 @@ void MW::toggleDevelopTransform()
 void MW::toggleDevelopReplace()
 {
 /*
-    Title-bar spot button (also "S" in Develop mode): arm/disarm the Fill
+    Action-row spot button (also "S" in Develop mode): arm/disarm the Fill
     Replace (spot/fill/object heal) tool. DevelopProperties owns the armed state; the
     ReplacePanel's visibility tracks it via spotActiveChanged (see createDevelopDock), so
     Escape on the loupe closes the panel through the same path.
+
+    Transform and Spot are MUTUALLY EXCLUSIVE (both drive the loupe), so arming Spot
+    closes an open Transform session. toggleDevelopTransform is re-used rather than
+    duplicating its hide path, so the crop COMMITS exactly as it does when the user
+    closes the panel with R / the action-row button (Esc is the only cancel).
 */
     if (G::isLogger) G::log("MW::toggleDevelopReplace");
     if (G::operationMode != G::OperationMode::Develop) {
@@ -8175,8 +8224,10 @@ void MW::toggleDevelopReplace()
                                           3000);
         return;
     }
-    if (developProperties)
-        developProperties->onSpotToolToggled(!developProperties->isSpotActive());
+    if (!developProperties) return;
+    const bool arming = !developProperties->isSpotActive();
+    if (arming && developTransformVisible) toggleDevelopTransform();
+    developProperties->onSpotToolToggled(arming);
 }
 
 void MW::toggleDevelopWbSampler()

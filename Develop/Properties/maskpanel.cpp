@@ -23,8 +23,9 @@ MaskPanel::MaskPanel(QWidget *parent) : QWidget(parent)
 
 void MaskPanel::buildUi()
 {
+    /* Bottom margin reserves the 2px panel separator drawn in paintEvent. */
     QVBoxLayout *outer = new QVBoxLayout(this);
-    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setContentsMargins(0, 0, 0, G::panelBorderHeight);
     outer->setSpacing(0);
 
     /* Header band ("Mask: <tool>" + cancel); transparent so paintEvent draws gradient. */
@@ -88,14 +89,34 @@ void MaskPanel::buildUi()
         swatches.append(sw);
         sl->addWidget(sw);
     }
+    /* Grayscale toggle, on the same row as the swatches: no overlay colour reads well
+       over every subject, so the alternative to hunting for a colour is to take the
+       colour out of the picture. Purely a view effect (ImageView desaturates what it
+       draws under the veil) -- the render and the export are untouched. */
+    sl->addSpacing(8);
+    grayBtn = new QPushButton(tr("Gray"), swatchRow);
+    grayBtn->setCheckable(true);
+    grayBtn->setChecked(G::maskOverlayGrayscale);
+    grayBtn->setFixedHeight(18);
+    grayBtn->setToolTip("Show the image in grayscale while the mask overlay is on,\n"
+                        "so the overlay colour is easier to see (view only)");
+    grayBtn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    connect(grayBtn, &QPushButton::clicked, this, [this]{
+        G::maskOverlayGrayscale = grayBtn->isChecked();
+        refreshGrayBtn();
+        emit overlayGrayscaleChanged();
+    });
+    sl->addWidget(grayBtn);
+
     sl->addStretch(1);
     bw->addWidget(swatchRow);
     refreshSwatches();
+    refreshGrayBtn();
 
     /* ONE commit button. Its label follows the op the overlay is previewing, so the words
        Subtract/Intersect stay visible instead of hiding behind undocumented keys. */
-    commitBtn = new QPushButton(tr("Update"), btnWrap);
-    commitBtn->setToolTip("Update the mask with this submask (Return)\n"
+    commitBtn = new QPushButton(tr("Add and Commit"), btnWrap);
+    commitBtn->setToolTip("Commit this submask into the mask (Return)\n"
                           "Opt: subtract    Shift+Opt: intersect");
     connect(commitBtn, &QPushButton::clicked, this, [this]{ emit committed(); });
     /* The global stylesheet (widgetcss.cpp) sets "QPushButton { min-width: 100px }",
@@ -123,6 +144,20 @@ void MaskPanel::refreshSwatches()
     }
 }
 
+void MaskPanel::refreshGrayBtn()
+{
+    /* Chip-sized like the swatches beside it (the global stylesheet's 100px minimum
+       would otherwise widen the whole dock -- see the commit button), with the checked
+       state drawn as a light border so it matches the selected swatch. */
+    if (!grayBtn) return;
+    grayBtn->setChecked(G::maskOverlayGrayscale);
+    grayBtn->setStyleSheet(
+        QString("QPushButton { min-width: 0; padding: 0 6px; border-radius: 3px;"
+                " background: %1; border: %2; }")
+            .arg(G::maskOverlayGrayscale ? "#585858" : "#3a3a3a",
+                 G::maskOverlayGrayscale ? "2px solid #f0f0f0" : "1px solid #303030"));
+}
+
 void MaskPanel::setPendingOp(int op)
 {
     /* Modifiers are inert on the first submask -- there is nothing to subtract from or
@@ -130,9 +165,12 @@ void MaskPanel::setPendingOp(int op)
     if (firstMask) op = 0;
     if (op == pendingOp) return;
     pendingOp = op;
+    /* The label names the OPERATION and the ACT: with the render already live, a bare
+       "Update" read as "refresh the view" rather than "fold this submask in". */
     if (commitBtn)
-        commitBtn->setText(op == 1 ? tr("Subtract") : op == 2 ? tr("Intersect")
-                                                              : tr("Update"));
+        commitBtn->setText(op == 1 ? tr("Subtract and Commit")
+                         : op == 2 ? tr("Intersect and Commit")
+                                   : tr("Add and Commit"));
 }
 
 void MaskPanel::paintEvent(QPaintEvent *)
@@ -146,6 +184,9 @@ void MaskPanel::paintEvent(QPaintEvent *)
     g.setColorAt(0, QColor(a, a, a));
     g.setColorAt(1, QColor(b, b, b));
     p.fillRect(r, g);
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
+    p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
+               G::tabWidgetBorderColor);
 }
 
 void MaskPanel::showForTool(const QString &toolName, bool first)
@@ -153,7 +194,8 @@ void MaskPanel::showForTool(const QString &toolName, bool first)
     if (titleLabel) titleLabel->setText(tr("Mask: %1").arg(toolName));
     firstMask = first;
     pendingOp = -1;                 // force the relabel below
-    setPendingOp(0);                // every submask opens as Add ("Update")
+    setPendingOp(0);                // every submask opens as Add ("Add and Commit")
     refreshSwatches();
+    refreshGrayBtn();               // the flag is persistent, so re-sync on every show
     setVisible(true);
 }

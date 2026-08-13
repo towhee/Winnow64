@@ -37,6 +37,8 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
         const QColor c(setting->value("Develop/maskOverlayColor",
                                       G::maskOverlayColor.name()).toString());
         if (c.isValid()) G::maskOverlayColor = c;
+        G::maskOverlayGrayscale =
+            setting->value("Develop/maskOverlayGrayscale", false).toBool();
     }
 
     initialize();
@@ -667,6 +669,13 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         setting->setValue("Develop/maskOverlayColor", G::maskOverlayColor.name());
         emit maskOverlayRefreshRequested();
     });
+    /* The grayscale chip was flipped (G::maskOverlayGrayscale is already set): the veil
+       itself is unchanged, so only the view has to repaint -- ImageView desaturates the
+       image it draws under the overlay. */
+    connect(maskPanel, &MaskPanel::overlayGrayscaleChanged, this, [this]{
+        setting->setValue("Develop/maskOverlayGrayscale", G::maskOverlayGrayscale);
+        emit maskOverlayRepaintRequested();
+    });
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
        active mask component (onMaskEditorSetting mirrors the main tree's itemChange). */
@@ -776,11 +785,13 @@ void DevelopProperties::beginMaskTool(int tool)
     if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
 
     /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
-       submask is pending until [Update]/Return folds it in -- the first one too, which
+       submask is pending until the commit button / Return folds it in -- the first one
+       too, which
        costs nothing visually (the mask IS that submask) and keeps one commit path. */
     scope->components.append(m);
     selectedMaskIndex = scope->components.size() - 1;
     pendingIdx = selectedMaskIndex;
+    pendingPristine = m;                 // baseline for pendingMaskIsUntouched
     pendingOp = int(MaskOp::Add);        // every submask opens Add ...
     latchedMaskOp = int(MaskOp::Add);    // ... with nothing latched from the last one
     maskPanelOpen = true;
@@ -829,7 +840,7 @@ void DevelopProperties::setPendingMaskOp(int op)
     /* Nothing held now: fall back to the LATCHED op rather than to Add. Releasing Opt
        must not undo the subtract the user just painted (see latchMaskOp) -- the whole
        point of the modifier is to say what the submask does, not to hold a preview open
-       with a spare finger while reaching for [Update]. */
+       with a spare finger while reaching for the commit button. */
     if (op == int(MaskOp::Add)) op = latchedMaskOp;
     if (op == pendingOp) return;
     pendingOp = op;
@@ -845,12 +856,12 @@ void DevelopProperties::latchMaskOp()
 /*
     A shaping action started on the pending submask -- a brush/object stroke, or a mask
     handle drag (ImageView::maskOpActionStarted). Whatever modifier is held AT THAT
-    INSTANT is what this submask does, and it now STICKS: the veil, the render and [Update]
-    button all keep showing Subtract (or Intersect) after the key is released.
+    INSTANT is what this submask does, and it now STICKS: the veil, the render and the
+    commit button all keep showing Subtract (or Intersect) after the key is released.
 
     Before this the op was purely momentary. Painting a subtract stroke and letting go of
     Opt silently turned it back into an add, the image stopped showing the subtraction,
-    and clicking [Update] committed the ADD -- "the subtract brush does nothing".
+    and clicking the commit button committed the ADD -- "the subtract brush does nothing".
 
     Reversible by the same gesture that set it: paint (or drag) again with nothing held
     and the latch re-reads the modifiers as Add. A modifier PRESS alone still previews
@@ -870,7 +881,7 @@ void DevelopProperties::commitPendingMask()
     /* Commit what the user is LOOKING AT: pendingOp is what the veil, the render and the
        button label have all been previewing (the held modifier, else the latched op).
        Re-reading the live modifiers here instead -- as this used to -- meant releasing
-       Opt to reach for the [Update] button committed an Add. */
+       Opt to reach for the commit button committed an Add. */
     int op = (pendingIdx == 0) ? int(MaskOp::Add)   // nothing to combine the first with
                                : pendingOp;
     scope->components[pendingIdx].op = op;        // fold the submask in (sequential)
@@ -892,6 +903,125 @@ void DevelopProperties::commitPendingMask()
        developed result. The overlay is still latched, so "O" (or the header menu row)
        brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint. */
     emit maskTintHideRequested();
+}
+
+bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
+{
+/*
+    "Nothing to lose": true when committing this pending submask would achieve nothing,
+    so the leave-the-scope prompt is pure noise. Two ways that happens:
+
+      1. It COVERS NOTHING. Brush and Object start with an empty stroke list and Color
+         Range with no samples -- picking the tool alone paints no pixels, and neither
+         does dragging the brush-size slider around. (The other tools' defaults ARE a
+         mask: a gradient lands centred, the range tools open on a band.)
+      2. It was NEVER TOUCHED -- still byte-identical to what beginMaskTool built. That
+         is what catches the centred-gradient case: a real mask, but not one the user
+         made, so there is no work to protect.
+
+    Anything that misses both tests just means the prompt appears -- the safe direction.
+*/
+    const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
+    if (m.tool == int(MaskTool::Brush) || m.tool == int(MaskTool::Object))
+        return o.value("strokes").toArray().isEmpty();
+    if (m.tool == int(MaskTool::ColorRange))
+        return o.value("samples").toArray().isEmpty();
+
+    return m.tool     == pendingPristine.tool
+        && m.inverted == pendingPristine.inverted
+        && m.feather  == pendingPristine.feather
+        && m.paramsJson == pendingPristine.paramsJson;
+}
+
+bool DevelopProperties::confirmPendingMask()
+{
+/*
+    A submask is PENDING from the moment its tool is picked until the commit button /
+    Return folds it in -- it exists in scope->components but is discarded on cancel or on
+    leaving the image. Anything that leaves the scope it belongs to therefore throws work
+    away, and the only cue that work is outstanding is the MaskPanel being up. Ask
+    instead, naming the tool and the op the user has been previewing so the dialog reads
+    like the button they didn't press.
+
+    Returns true if the caller may proceed (the submask was committed or discarded),
+    false for "stay on this scope".
+*/
+    if (G::isLogger) G::log("DevelopProperties::confirmPendingMask");
+    if (!maskPanelOpen) return true;
+
+    EditScope *scope = activeScope();
+    if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) {
+        cancelMaskTool();          // nothing coherent to commit: just close the panel
+        return true;
+    }
+
+    /* Picked a tool but never made a mask with it: nothing to commit, so don't ask --
+       drop it exactly as leaving used to, silently. */
+    const MaskComponent &pending = scope->components.at(pendingIdx);
+    if (pendingMaskIsUntouched(pending)) { cancelMaskTool(); return true; }
+
+    const QString tool = maskToolName(pending.tool);
+    /* Same resolution as commitPendingMask: the first submask has nothing to combine
+       with, otherwise it is the op the veil and the button have been previewing. */
+    const int op = (pendingIdx == 0) ? int(MaskOp::Add) : pendingOp;
+    /* The op reads as what it DOES to the mask, so the Commit line is a sentence. */
+    const QString what = op == int(MaskOp::Subtract)  ? tr("subtract it from the mask")
+                       : op == int(MaskOp::Intersect) ? tr("intersect it with the mask")
+                                                      : tr("add it to the mask");
+
+    /* Built by hand rather than as a QMessageBox: that lays its buttons out by ROLE, in
+       a platform-specific order, and pads them unevenly (mac pushes the destructive one
+       to the far left). The order here is fixed -- Cancel, Commit, Discard -- with equal
+       widths and one spacing between them on both platforms. */
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Commit submask?"));
+    QVBoxLayout *v = new QVBoxLayout(&dlg);
+    v->setContentsMargins(20, 18, 20, 16);
+    v->setSpacing(10);
+
+    QLabel *heading = new QLabel(tr("The %1 submask on \"%2\" has not been committed.")
+                                     .arg(tool, scope->name), &dlg);
+    QFont hf = heading->font();
+    hf.setBold(true);
+    heading->setFont(hf);
+    heading->setWordWrap(true);
+    v->addWidget(heading);
+
+    /* Spell out all three outcomes: the buttons are one word each, and "Discard" vs
+       "Cancel" is exactly the pair a user can read backwards and lose the work. */
+    QLabel *detail = new QLabel(tr("Commit — %1, then continue.\n"
+                                   "Discard — throw the submask away and continue.\n"
+                                   "Cancel — stay on \"%2\" and keep building it.")
+                                    .arg(what, scope->name), &dlg);
+    detail->setWordWrap(true);
+    v->addWidget(detail);
+    v->addSpacing(6);
+
+    QHBoxLayout *h = new QHBoxLayout;
+    h->setSpacing(12);
+    QPushButton *cancelBtn  = new QPushButton(tr("Cancel"),  &dlg);
+    QPushButton *commitBtn  = new QPushButton(tr("Commit"),  &dlg);
+    QPushButton *discardBtn = new QPushButton(tr("Discard"), &dlg);
+    int choice = 0;                                  // 0 = Cancel (also Esc / close box)
+    for (QPushButton *b : {cancelBtn, commitBtn, discardBtn}) {
+        b->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);  // equal widths
+        b->setAutoDefault(false);
+        h->addWidget(b);
+    }
+    v->addLayout(h);
+    connect(cancelBtn,  &QPushButton::clicked, &dlg, [&]{ choice = 0; dlg.accept(); });
+    connect(commitBtn,  &QPushButton::clicked, &dlg, [&]{ choice = 1; dlg.accept(); });
+    connect(discardBtn, &QPushButton::clicked, &dlg, [&]{ choice = 2; dlg.accept(); });
+    /* Discard is the default (Return); Esc rejects the dialog, which leaves choice at
+       Cancel. autoDefault is off on the other two so neither steals Return. */
+    discardBtn->setAutoDefault(true);
+    discardBtn->setDefault(true);
+    discardBtn->setFocus();
+    dlg.exec();
+
+    if (choice == 1) { commitPendingMask(); return true; }
+    if (choice == 2) { cancelMaskTool();    return true; }
+    return false;
 }
 
 void DevelopProperties::cancelMaskTool()
@@ -967,8 +1097,10 @@ void DevelopProperties::onScopeSelected(const QString &name)
     if (currentImagePath.isEmpty()) return;
     const int idx = currentScopeNames().indexOf(name);
     if (idx < 0 || idx == activeScopeIndex) return;
-    /* Discard an in-progress mask preview on the scope being left. */
-    if (maskPanelOpen) cancelMaskTool();
+    /* A submask still being built on the scope being LEFT used to be discarded silently.
+       Ask instead; "Cancel" abandons the switch, so put the header selection back (the
+       row/dropdown has already moved to the clicked scope). */
+    if (!confirmPendingMask()) { refreshScopeList(); return; }
     activeScopeIndex = idx;
 
     EditScope *l = activeScope();
@@ -1007,7 +1139,7 @@ void DevelopProperties::onSpotToolToggled(bool active)
     if (G::isLogger) G::log("DevelopProperties::onSpotToolToggled");
     if (spotMode == active) return;
     spotMode = active;
-    emit spotActiveChanged(active);            // update the title-bar spot button icon
+    emit spotActiveChanged(active);            // update the action-row spot button icon
     if (active) { emit spotEditBegin(); emitSpotPins(); }   // arm + seed the pins
     else        emit spotEditEnd();
 }
@@ -1207,6 +1339,9 @@ void DevelopProperties::newScope()
 {
     if (G::isLogger) G::log("DevelopProperties::newScope");
     if (currentImagePath.isEmpty()) return;
+    /* Adding a scope switches to it, so it leaves any pending submask behind on the
+       current scope just as picking one does -- same prompt. */
+    if (!confirmPendingMask()) return;
 
     EditStack &s = stackCache[currentImagePath];
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());     // ensure a base scope exists
@@ -1263,6 +1398,10 @@ void DevelopProperties::deleteScope()
         return;
     }
     if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = s.scopes.size() - 1;
+    /* No prompt here: the scope holding the pending submask is being removed, so there is
+       nothing to commit it INTO. Just close the panel, or it keeps editing indices into a
+       scope that no longer exists. */
+    if (maskPanelOpen) cancelMaskTool();
     const QString goneName = s.scopes.at(activeScopeIndex).name;
     s.scopes.removeAt(activeScopeIndex);
     if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = s.scopes.size() - 1;
@@ -2262,8 +2401,6 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        viewport: the empty space under a short tree is not part of the scope's block.
        The frame is off (initialize), so the viewport shares this widget's origin and the
        two halves line up at the same x with no correction. */
-    if (G::scopeRailW <= 0) return;
-
     /* Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
        hides rows (Core / mask / raw-only rows), and indexBelow on a hidden index returns
        an invalid index, which would end the walk immediately. */
@@ -2275,17 +2412,19 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
     if (bottom <= 0) return;
 
     QPainter p(viewport());
-    p.fillRect(G::scopeRailX, 0, G::scopeRailW, bottom, G::selectionColor);
+    if (G::scopeRailW > 0)
+        p.fillRect(G::scopeRailX, 0, G::scopeRailW, bottom, G::selectionColor);
 
-    /* Close the block: a full-width rule just under the last row, in the shade the tree's
-       old QSS border used (backgroundShade + 15), so the bottom edge is as legible as the
-       Scope band at the top. Only when there is empty dock below it -- if the rows fill
-       or overflow the viewport, the panel edge already ends the block and a rule pinned
-       to the last visible row would be a false bottom. */
+    /* Close the block: the same separator every Develop panel carries along its bottom
+       edge (G::panelBorderHeight in G::tabWidgetBorderColor), just under the last row --
+       Effects is the last section, so this is the Effects panel's bottom border. Only
+       when there is empty dock below it -- if the rows fill or overflow the viewport,
+       the panel edge already ends the block and a rule pinned to the last visible row
+       would be a false bottom. */
     const int ruleY = bottom + 3;
-    if (ruleY < viewport()->height() - 1) {
-        const int m = G::backgroundShade + 15;
-        p.fillRect(0, ruleY, viewport()->width(), 1, QColor(m, m, m));
+    if (ruleY < viewport()->height() - G::panelBorderHeight) {
+        p.fillRect(0, ruleY, viewport()->width(), G::panelBorderHeight,
+                   G::tabWidgetBorderColor);
     }
 }
 
@@ -2490,7 +2629,7 @@ void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
         chb->setContentsMargins(0, 0, 0, 0);
         chb->setSpacing(6);
         QLabel *lbl = new QLabel("WB");
-        /* A BarBtn, like the Develop title-bar tools (Scopes / Transform / Spot): its
+        /* A BarBtn, like the Develop action-row tools (Scopes / Transform / Spot): its
            G::css base is transparent with no border, and setActive() adds the blue
            accent when armed. Using the shared class rather than a hand-rolled
            stylesheet keeps it in step if that chrome ever changes. */
@@ -2551,7 +2690,7 @@ void DevelopProperties::setWbDropperActive(bool on)
     if (wbDropperActive == on) return;
     wbDropperActive = on;
     if (wbDropperBtn) {
-        /* Blue accent border while armed (BarBtn::setActive, the same cue the title-bar
+        /* Blue accent border while armed (BarBtn::setActive, the same cue the action-row
            tools use), and the icon goes to its ghost outline -- the dropper has been
            lifted out of the button and is now the cursor. */
         wbDropperBtn->setActive(on);
@@ -3306,7 +3445,8 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
        or the sliders (see previewHistoryEntry). */
     EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
     /* PREVIEW THE PENDING OP. The submask being defined carries op = Add in the stack
-       until [Update]/Return commits it -- the real op is MOMENTARY, held in pendingOp by
+       until the commit button / Return commits it -- the real op is MOMENTARY, held in
+       pendingOp by
        the modifier the user is pressing. The veil already composites with it
        (MW::updateMaskOverlayTint); the RENDER has to as well, or an Opt (Subtract) or
        Shift+Opt (Intersect) submask leaves the image showing that submask being ADDED --

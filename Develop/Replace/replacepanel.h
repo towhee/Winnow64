@@ -13,7 +13,7 @@ class BarBtn;
     The Develop dock's "Fill Replace" panel: the UI surface for the regenerative
     spot/fill/object replace tool. Sibling of TransformPanel -- a compact strip below the
     scopes and above the property tree (see MW::createDevelopDock), visible only while
-    the replace tool is armed (the title-bar spot button or "F" toggles it). It carries
+    the replace tool is armed (the action-row spot button or "F" toggles it). It carries
     no pixel state: committed replaces live in EditStack::spots (paramsJson carries the
     mode as "kind", see Develop/fillspot.h) and heal at render in lamafill.cpp.
 
@@ -55,6 +55,9 @@ signals:
     void previewToggled(bool shown);       // eye: show (true) or ignore (false) replaces
 
 protected:
+    /* Separator rule (G::panelBorderHeight in G::tabWidgetBorderColor) across the bottom
+       edge, so stacked Develop panels read as distinct blocks. */
+    void paintEvent(QPaintEvent *event) override;
     /* Claim bare S/F/O for the focused panel (same idiom as TransformPanel's C/L/W). */
     bool eventFilter(QObject *watched, QEvent *event) override;
 

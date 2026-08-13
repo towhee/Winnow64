@@ -4,6 +4,8 @@
 #include <QImage>
 #include <QPointF>
 #include <QRectF>
+#include <QSizeF>
+#include <QTransform>
 #include "Develop/editstack.h"   // Geometry
 
 /*
@@ -30,6 +32,22 @@ QImage rectifyPerspective(const QImage &src, const QPointF quad[4], QRectF &outC
     geometry is identity; the crop-only case is a fast QImage::copy of the sub-rectangle.
 */
 QImage applyGeometry(const QImage &src, const Geometry &g);
+
+/*
+    The POINT twin of applyGeometry: the transform a pixel undergoes in the geometry
+    stage, without touching any pixels. Maps a point in the stage's INPUT space (the
+    developed/oriented full frame, srcW x srcH pixels) to the OUTPUT space (the
+    cropped/straightened/warped result), in the same straighten -> warp -> crop order
+    applyGeometry uses. outSize, when given, receives the output's pixel dimensions.
+
+    This is what lets the mask / spot overlays -- whose coordinates are all normalized in
+    the stage's INPUT space, because masks are rasterized before geometry -- be drawn on,
+    and edited over, the geometry-applied image the loupe shows. Only the input frame's
+    ASPECT matters: scaling srcW and srcH together scales the output the same way, so a
+    proxy-sized frame maps identically.
+*/
+QTransform geometryTransform(double srcW, double srcH, const Geometry &g,
+                             QSizeF *outSize = nullptr);
 
 /*
     The largest axis-aligned rectangle (normalized in the straightened output canvas) that contains

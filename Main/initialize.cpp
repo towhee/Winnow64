@@ -1899,6 +1899,9 @@ void MW::createDevelopDock()
        image itself is untouched (no re-render). */
     connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested,
             this, &MW::updateMaskOverlayTint);
+    /* View-only change (overlay grayscale): no veil rebuild, just a repaint. */
+    connect(developProperties, &DevelopProperties::maskOverlayRepaintRequested,
+            this, [this]{ imageView->viewport()->update(); });
     connect(imageView, &ImageView::maskGeometryChanged, developProperties, &DevelopProperties::setActiveMaskParams);
     connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
     connect(developProperties, &DevelopProperties::maskInvertChanged, imageView, &ImageView::setMaskInverted);
@@ -1971,7 +1974,7 @@ void MW::createDevelopDock()
 
     /* Dock content = live scopes strip (histogram + vectorscope) pinned above the property tree.
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
-       Visibility is user-toggled from the editor bar below and persisted. */
+       Visibility is user-toggled from the action row above and persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
     /* Which scopes the strip shows ("G" cycles both / histogram / vectorscope). */
     developScopesLayout = settings->value("Develop/scopesLayout", ScopesView::Both).toInt();
@@ -1997,6 +2000,27 @@ void MW::createDevelopDock()
         " padding: 4px 6px; }");
     developSelectionWarning->setVisible(false);
     developContainerLayout->addWidget(developSelectionWarning);
+
+    /* Action row: the tool buttons (Scopes, Crop, Spot, Preset, Export) live here, in
+       their own centered row directly below the dock title bar, instead of competing
+       with the title text for space in the title bar itself. Only the ? and X buttons
+       remain in the title bar. The buttons are created further down (with the rest of
+       the title bar) and added to developActionLayout, which is flanked by stretches so
+       the group stays centered as the dock is resized. */
+    QWidget *developActionRow = new QWidget(developContainer);
+    developActionRow->setObjectName("developActionRow");
+    /* The same bottom separator every Develop panel carries (G::panelBorderHeight in
+       G::tabWidgetBorderColor); the ID selector keeps it off the child buttons and the
+       extra bottom margin reserves the rule's space. */
+    developActionRow->setStyleSheet(
+        QString("QWidget#developActionRow { border-bottom: %1px solid %2; }")
+            .arg(G::panelBorderHeight).arg(G::tabWidgetBorderColor.name()));
+    QHBoxLayout *developActionLayout = new QHBoxLayout(developActionRow);
+    developActionLayout->setContentsMargins(0, 0, 0, 8 + G::panelBorderHeight);
+    developActionLayout->setSpacing(0);
+    developActionLayout->addStretch(1);
+    developContainerLayout->addWidget(developActionRow);
+
     scopesView = new ScopesView(developContainer);
     scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
     scopesView->setVisible(developScopesVisible);
@@ -2062,7 +2086,7 @@ void MW::createDevelopDock()
                                      QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
         }
     });
-    /* Transform [X]: close the panel exactly as the editor-bar button / "R" does --
+    /* Transform [X]: close the panel exactly as the action-row button / "R" does --
        commit the crop session, hide the panel and update the action/button state. */
     connect(transformPanel, &TransformPanel::closeRequested, this, [this]{
         if (developTransformVisible) toggleDevelopTransform();
@@ -2180,7 +2204,7 @@ void MW::createDevelopDock()
     scopesView->setVectorscopeSkinLine(settings->value("Develop/vectorscopeSkinLine", false).toBool());
     connect(scopesView, &ScopesView::vectorscopeSkinLineChanged, this,
             [this](bool on){ settings->setValue("Develop/vectorscopeSkinLine", on); });
-    /* The strip's [X] (top right corner): hide the scopes ("G" or the editor-bar
+    /* The strip's [X] (top right corner): hide the scopes ("G" or the action-row
        button brings them back with the same layout). */
     connect(scopesView, &ScopesView::closeRequested, this, &MW::closeDevelopScopes);
     developDock->setFloating(false);
@@ -2196,6 +2220,9 @@ void MW::createDevelopDock()
     developTitleLayout->setSpacing(0);
 
     developTitleBar = new DockTitleBar("Develop Editor", developTitleLayout);
+    /* No rule under the title: the action row just below it carries the panel separator,
+       and two rules that close together read as a mistake. */
+    developTitleBar->setBottomBorderVisible(false);
     developDock->setTitleBarWidget(developTitleBar);
     developTitleBar->setToolTip(dockTabToolTip(developDockTabText));
 
@@ -2206,8 +2233,8 @@ void MW::createDevelopDock()
                                  "(G) cycles: both > histogram > vectorscope > hidden");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
-    developTitleLayout->addWidget(developScopesBtn);
-    developTitleLayout->addSpacing(10);
+    developActionLayout->addWidget(developScopesBtn);
+    developActionLayout->addSpacing(10);
 
     // show/hide the Transform (crop + perspective) panel
     developTransformBtn = new BarBtn();
@@ -2215,8 +2242,8 @@ void MW::createDevelopDock()
     developTransformBtn->setToolTip("Show or hide the Transform (crop) panel  (R)");
     developTransformBtn->setActive(developTransformVisible);
     connect(developTransformBtn, &BarBtn::clicked, this, &MW::toggleDevelopTransform);
-    developTitleLayout->addWidget(developTransformBtn);
-    developTitleLayout->addSpacing(10);
+    developActionLayout->addWidget(developTransformBtn);
+    developActionLayout->addSpacing(10);
 
     /* Spot-removal tool (regenerative fill): brush over a blemish to heal it; heals are
        recorded in the pinned "Fill" scope. DevelopProperties owns the armed state and
@@ -2230,28 +2257,30 @@ void MW::createDevelopDock()
         developSpotBtn->setIcon(":/images/icon16/spot.png", active ? 1.0 : G::iconOpacity);
         developSpotBtn->setActive(active);
     });
-    developTitleLayout->addWidget(developSpotBtn);
-    developTitleLayout->addSpacing(10);
+    developActionLayout->addWidget(developSpotBtn);
+    developActionLayout->addSpacing(10);
 
     /* Preset: show / raise the Presets dock, where a click applies a saved preset (P).
        Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title
-       bar. The colour-wheel glyph matches the Scope / Transform title-bar button style,
+       bar. The colour-wheel glyph matches the Scope / Transform action-row button style,
        and like them it carries the blue active border while its panel is the front tab
        (driven from presetsDockVisibilityChange). */
     developPresetBtn = new BarBtn();
     developPresetBtn->setIcon(":/images/icon16/colorwheel.png", G::iconOpacity);
     developPresetBtn->setToolTip("Develop presets: apply a saved preset  (P)");
     connect(developPresetBtn, &BarBtn::clicked, this, &MW::showPresetsDock);
-    developTitleLayout->addWidget(developPresetBtn);
-    developTitleLayout->addSpacing(10);
+    developActionLayout->addWidget(developPresetBtn);
+    developActionLayout->addSpacing(10);
 
     /* Export the developed image. STUB for now (MW::developExport is not built yet). */
     BarBtn *developExportBtn = new BarBtn();
     developExportBtn->setIcon(":/images/icon16/lightning.png", G::iconOpacity);
     developExportBtn->setToolTip("Export the developed image  (X)");
     connect(developExportBtn, &BarBtn::clicked, this, &MW::developExport);
-    developTitleLayout->addWidget(developExportBtn);
-    developTitleLayout->addSpacing(10);
+    developActionLayout->addWidget(developExportBtn);
+
+    // close the centered group of action buttons
+    developActionLayout->addStretch(1);
 
     // question mark button
     BarBtn *devQuestionBtn = new BarBtn();

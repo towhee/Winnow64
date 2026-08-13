@@ -195,11 +195,18 @@ void DockTitleBar::setStyle()
     int fm = G::backgroundShade + 35;
     QString borderColor = QColor(fm, fm, fm).name();
     QString s = "DockTitleBar {"
-                "  border: none;"
-                "  border-bottom: 1px solid " + borderColor + ";"
-                "  font-size:" + G::strFontSize + "pt;"
+                "  border: none;";
+    if (bottomBorder)
+        s += "  border-bottom: 1px solid " + borderColor + ";";
+    s +=        "  font-size:" + G::strFontSize + "pt;"
                 "}";
     setStyleSheet(s);
+}
+
+void DockTitleBar::setBottomBorderVisible(bool visible)
+{
+    bottomBorder = visible;
+    setStyle();
 }
 
 void DockTitleBar::paintEvent(QPaintEvent *)

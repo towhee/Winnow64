@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QMouseEvent>
 #include <QResizeEvent>
+#include <QPainter>
 
 ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
 {
@@ -23,7 +24,8 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     leftCol->addWidget(tone);           // fixed height (sizeHint)
 
     rowLay = new QHBoxLayout(this);
-    rowLay->setContentsMargins(2, 2, 2, 2);
+    /* The extra bottom margin reserves the panel separator drawn in paintEvent. */
+    rowLay->setContentsMargins(2, 2, 2, 2 + G::panelBorderHeight);
     rowLay->setSpacing(2);
     rowLay->addLayout(leftCol, 3);      // histogram column left, wider
     rowLay->addWidget(vectorscope, 2);  // vectorscope right
@@ -42,8 +44,9 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     closeBtn->setToolTip(tr("Close the histogram and vectorscope. Press (G) to cycle scopes."));
     connect(closeBtn, &BarBtn::clicked, this, &ScopesView::closeRequested);
 
-    /* Fixed strip at the top of the dock; the property tree below takes the stretch. */
-    setFixedHeight(160);
+    /* Fixed strip at the top of the dock; the property tree below takes the stretch. The
+       separator rule is added on top of the 160px of scopes, not taken out of them. */
+    setFixedHeight(160 + G::panelBorderHeight);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 }
 
@@ -76,6 +79,15 @@ void ScopesView::resizeEvent(QResizeEvent *event)
     const QSize s = closeBtn->sizeHint();
     closeBtn->setGeometry(width() - s.width() - 2, 2, s.width(), s.height());
     closeBtn->raise();
+}
+
+void ScopesView::paintEvent(QPaintEvent *event)
+{
+    QWidget::paintEvent(event);
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
+    QPainter p(this);
+    p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
+               G::tabWidgetBorderColor);
 }
 
 void ScopesView::setData(const ScopeData &d)

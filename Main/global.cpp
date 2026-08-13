@@ -186,6 +186,7 @@ QColor labelBlueColor(QColor(20,20,60));         // Dark blue
 //    QColor labelBlueColor(QColor(20,45,100));         // Dark blue
 //    QColor labelBlueColor(QColor(32,58,124));         // Dark blue
 QColor maskOverlayColor(QColor(220,40,40));    // Develop mask overlay (see global.h)
+bool maskOverlayGrayscale = false;             // desaturate under the overlay (global.h)
 
 QColor labelPurpleColor(QColor(50,30,70));     // Dark purple
 //    QColor labelPurpleColor(QColor(60,30,90));     // Dark purple
@@ -289,6 +290,11 @@ int decorationTitleGap = 3;
    scopeRailW = 0 removes the rail everywhere. */
 int scopeRailX = 3;
 int scopeRailW = 3;
+/* Develop PANEL SEPARATOR: every Develop dock panel (Raw, Edits, Mask,
+   Transform, Fill Replace) draws a rule this high across its bottom edge in
+   G::tabWidgetBorderColor, so stacked panels read as distinct blocks. Each panel
+   reserves the space as its layout's bottom margin. 0 removes the rule everywhere. */
+int panelBorderHeight = 2;
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 

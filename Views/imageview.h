@@ -3,9 +3,11 @@
 
 #include <QtWidgets>
 #include <QHash>
+#include "Main/global.h"                // G::maskOverlayGrayscale (mask overlay backdrop)
 #include <QJsonArray>
 #include <QJsonObject>
 #include "Develop/brushstamp.h"
+#include "Develop/editstack.h"          // Geometry (crop/straighten/warp)
 #include "Datamodel/datamodel.h"
 #include "Datamodel/selection.h"
 #include "Cache/imagecache.h"
@@ -197,6 +199,15 @@ public slots:
        clear when no tool is expanded. */
     void setScopeMaskTint(const QImage &tint);
     void clearScopeMaskTint();
+
+    /* The develop GEOMETRY (crop / straighten / warp) the displayed image was rendered
+       WITH, plus the oriented full-frame size it was applied to. Geometry is the LAST
+       render stage, while every mask / spot coordinate is normalized in its INPUT space
+       (the uncropped oriented frame) so edits stay glued to the photo when the crop
+       changes. Pushing it here lets the overlays map between the two: without it a
+       cropped image paints its masks in the wrong place. Push identity (default) whenever
+       the render suppresses the geometry, e.g. while the crop tool is open. */
+    void setDevelopGeometry(const Geometry &g, QSize orientedSrcSize);
 
     /* "Still rendering" chip, top-right of the loupe. MW raises it while a SLOW develop
        stage is in flight -- the scene-linear RAW decode on an image switch, and the
@@ -573,9 +584,21 @@ private:
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
     QPointF maskCAnchor;                // radial centre at move start
     double  maskAngleAnchor = 0;        // radial angle at rotate start
+    /* Radial semi-axes at resize start, in FRAME PIXELS (not normalized): a Shift-drag
+       scales both by one factor about the grabbed axis, so the on-screen proportions
+       (and a circle's circularity) are preserved. */
+    double  maskAxPxAnchor = 0, maskAyPxAnchor = 0;
     double  maskGrabAngle   = 0;        // cursor angle (rad) at rotate start
 
     bool    maskHandlesEditable() const { return maskEditMode && maskHover && pmItem && pmItem->isVisible(); }
+    /* Show the image desaturated? Only while an overlay is actually being shown (a tool
+       is expanded or a committed mask's veil is up, and "M"/"O" has not hidden it), so
+       hiding the overlay brings the colour back and nothing outside Develop is affected.
+       Read by paintEvent, which pushes it to pmItem. */
+    bool    maskGrayscaleActive() const
+            { return G::maskOverlayGrayscale && !maskTintHidden && pmItem
+                     && pmItem->isVisible()
+                     && (maskEditMode || !scopeMaskTint.isNull()); }
     /* Shift + wheel / two-finger drag over a gradient or brush mask; clamps + syncs
        the dock. */
     void    adjustMaskFeather(double delta);
@@ -583,7 +606,26 @@ private:
     bool    parseMaskParams(const QString &json);   // load geometry (false if invalid)
     QPointF maskNormToViewport(QPointF n) const;    // normalized image -> viewport px
     QPointF maskViewportToNorm(QPoint vp) const;    // viewport px -> normalized image
-    QPointF maskViewportToImage(QPoint vp) const;   // viewport px -> image-pixel (pmItem) coords
+    QPointF maskViewportToImage(QPoint vp) const;   // viewport px -> image px (pmItem)
+    /* ------- Mask space vs displayed space -------
+       Mask / spot coordinates are normalized in the develop geometry stage's INPUT (the
+       uncropped oriented frame); the loupe shows its OUTPUT. maskNormToItem maps the
+       first to pmItem (displayed pixel) coords and is the ONLY place that difference is
+       resolved -- with an identity geometry it is just a scale by the pixmap size, which
+       is what every overlay used to do inline. maskItemToNorm is its inverse.
+       maskNormFrameSize is the mask space's own pixel size (aspect), for sizing the
+       overlay buffers that are rasterized in it. */
+    QTransform maskNormToItem() const;
+    QTransform maskItemToNorm() const;
+    QSizeF     maskNormFrameSize() const;
+    /* Paint a raster built in mask space (the brush / object / content tints, and MW's
+       whole-mask veil) onto the photo, through that map and clipped to it: the buffer
+       spans the UNCROPPED frame, so a crop would otherwise spill it over the canvas.
+       Called with the painter in scene coords (drawForeground). */
+    void       maskDrawSpaceImage(QPainter *painter, const QImage &img) const;
+    /* Length in mask-normalized units of a fraction of the mask frame's long edge (brush
+       radii and the like are stored that way), and the same length in displayed px. */
+    double     maskNormLongEdgeItemPx() const;
     int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
     /* drawTint=false draws only the tool's handles/guides/cursor/swatches (the whole-mask composite
        tint has already been painted underneath by the mask overlay). */
@@ -650,6 +692,13 @@ private:
     QString renderingHint;                          // non-empty => chip shown
     QImage  scopeMaskTint;                          // whole-mask composite coverage tint (output-oriented), all tools
     bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint
+    /* The geometry the displayed render carries (see setDevelopGeometry), with the
+       input->output pixel transform and output size cached: the warp case builds a
+       homography, and the overlays ask for it on every paint. */
+    Geometry   developGeom;
+    QSize      developGeomSrc;              // oriented full frame (geometry stage input)
+    QTransform developGeomFwd;              // input px -> output px
+    QSizeF     developGeomOut;              // output px size
     /* On-canvas op indicator (set by setMaskLegend, drawn in drawMaskLegend). */
     QString maskLegendSubmask;                      // submask being defined ("" = none)
     int     maskLegendOp = -1;                      // -1 none, 0 Add, 1 Sub, 2 Intersect

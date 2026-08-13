@@ -51,7 +51,7 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     collapseBtn->setFixedSize(9, 16);
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleListCollapsed(); });
-    titleLabel = new QLabel(tr("Global and Masks"), headerBand);
+    titleLabel = new QLabel(tr("Edits"), headerBand);
     titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
                                   .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
@@ -104,6 +104,8 @@ void ScopeHeaderLab::paintEvent(QPaintEvent *)
        block. The rail is G::selectionColor, the same fill as the selected row's band, so
        the stretch crossing that row is invisible: the selection reads as a gap in the
        rail rather than as its origin. */
+    /* NO panel separator along the bottom edge (unlike the other Develop panels): the
+       scope list and the tree below it are ONE BLOCK, joined by the rail. */
     if (G::scopeRailW > 0) {
         const int top = r.bottom() + 1;
         p.fillRect(G::scopeRailX, top, G::scopeRailW, height() - top, G::selectionColor);
@@ -278,6 +280,11 @@ void ScopeHeaderLab::showRowMenu(int index, const QString &name)
 
     QTimer::singleShot(0, this, [this, name, code]{
         emit scopeSelected(name);            // make this the active scope first
+        /* The select can be REFUSED -- a submask still pending on the scope being left
+           prompts, and "Cancel" keeps the old scope active (DevelopProperties re-asserts
+           the rows, so currentScopeName reports the truth). Running the action anyway
+           would apply it to the wrong scope: "Remove Mask 2" would remove Mask 1. */
+        if (currentScopeName() != name) return;
         switch (code) {
             case AddMask: emit addMaskRequested();     break;
             case Reset:   emit resetScopeRequested();  break;
