@@ -4,7 +4,6 @@ WHAT'S NEW
 - Develop Presets panel
 
 BUGS / TO DO
-- Submask tools paint in wrong coordinates when the image has been transformed (ie cropped).
 - Radial gradient mask: Shift drag grab pt maintain radial shape while resize.
 Mouse wheel/touchscroll while cursor in radial shape should do the same thing.
 - Check if libheif library is in Winnow (use for windows platform)

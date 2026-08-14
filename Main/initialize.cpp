@@ -2174,19 +2174,22 @@ void MW::createDevelopDock()
         rawPanel->setVisible(false);                 // syncRawPanel reveals it for raw
         developContainerLayout->addWidget(rawPanel);
         developProperties->bindRawPanel(rawPanel);
-
-        /* The transient mask-editing strip: between Raw and the Scopes list, hidden until
-           a mask tool is being defined (DevelopProperties shows/hides it). */
-        MaskPanel *maskPanel = new MaskPanel(developContainer);
-        maskPanel->setVisible(false);
-        developContainerLayout->addWidget(maskPanel);
-        developProperties->bindMaskPanel(maskPanel);
     }
     ScopeHeaderBase *developScopeHeader = G::useScopeHeaderLab
             ? static_cast<ScopeHeaderBase *>(new ScopeHeaderLab(developContainer))
             : static_cast<ScopeHeaderBase *>(new ScopeHeader(developContainer));
     developContainerLayout->addWidget(developScopeHeader);
     developProperties->bindScopeHeader(developScopeHeader);
+    /* The mask editor is NESTED under its own scope row in the list (setRowDetail), not a
+       separate strip above it: a mask's submasks and settings belong to that mask. It is
+       created here and owned by the panel hierarchy; DevelopProperties shows it for mask
+       scopes and hides it on Global (syncMaskPanel). */
+    if (G::useScopeHeaderLab) {
+        MaskPanel *maskPanel = new MaskPanel(developContainer);
+        maskPanel->setVisible(false);
+        static_cast<ScopeHeaderLab *>(developScopeHeader)->setRowDetail(maskPanel);
+        developProperties->bindMaskPanel(maskPanel);
+    }
     developContainerLayout->addWidget(developProperties, 1);
     developDock->setWidget(developContainer);
     /* The tone-region slider under the histogram drives the active scope's tone-split params. */

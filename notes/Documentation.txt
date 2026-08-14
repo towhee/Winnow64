@@ -1843,12 +1843,16 @@ Develop Mode Local Shortcuts
         H   Develop History panel       historyDockVisibleAction (Preview: unbound)
         P   Develop Presets panel       presetsDockVisibleAction (Preview: Pick)
 
-    Plus three keys that apply only while a SUBMASK is being defined (the MaskPanel is
-    up), handled in MW::eventFilter rather than by an action:
+    Plus three keys that apply only while a SUBMASK is being defined (it is still
+    PENDING), handled in MW::eventFilter rather than by an action:
 
         Return      Commit the submask into the mask (same as the panel's button)
         Opt/Alt     (held) preview + commit that submask as a SUBTRACT
         Shift+Opt   (held) preview + commit that submask as an INTERSECT
+
+    Return also closes a submask RE-OPENED from the Submasks list ("Done") -- its edits
+    are already part of the mask, so there is nothing to commit and the modifiers are
+    inert there (its op is changed on its own row).
 
     The modifiers are MOMENTARY: they are read live (press AND release are tracked, so
     the veil follows the key with the mouse stationary) and are never latched into the
@@ -1957,8 +1961,8 @@ Develop Mode Local Shortcuts
         action has no sequence to match.  Without it a bare S typed into a Preferences
         field would arm the spot tool.  Floating QDockWidgets are separate top-level
         windows too but belong to the MW workspace, hence the QDialog test.
-      • Esc while a MASK tool is expanded -> collapse it (escapeMaskTool, like clicking
-        its caption) and consume. Placed BEFORE the value-editor bail so it fires even
+      • Esc while a submask is open -> discard it if still PENDING, else just close it
+        (escapeMaskTool) and consume. Placed BEFORE the value-editor bail so it fires even
         when focus is on a mask slider (Hue/Sat) or the Color Range wheel; skipped (falls
         through) while the WB dropper or Transform is up, whose Esc handlers run later.
       • Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit /
@@ -4117,6 +4121,122 @@ Scope & mask model (Global + masks)
                There is ONE commit path: the old "first submask commits immediately /
                later ones preview" split, and finishFirstMask with it, are gone -- with
                outcome preview in one colour the first submask looks identical either way.
+             - THE MASK PANEL IS NESTED UNDER ITS MASK (2026-08-13): the MaskPanel is no
+               longer a transient strip above the Scopes list. It is a CHILD of the active
+               mask's row in the Edits list (ScopeHeaderLab::setRowDetail, indented by
+               kDetailIndent = 22) and is up whenever a MASK scope is active, not only
+               while a submask is being built:
+
+                   [x] Mask 2                          [:]     <- the scope row
+                   |  v Submasks                       [+]     <- SubmaskList (collapses)
+                   |    [x] (+) Linear Gradient        [:]
+                   |    [x] (-) Brush              *   [:]     <- open for editing
+                   |    Feather   -----o-----                  <- embedded MaskEditor
+                   |    Invert    [ ]
+                   |    [][][][][][]  [Gray]                   <- overlay colour row
+                   |    [    Add and Commit    ]               <- "Done" when re-editing
+
+               ScopeHeaderLab::rebuild() destroys and re-makes every row on each
+               setScopeRows, so it REPARENTS the detail out first (setParent(this) + hide)
+               and re-inserts it after the active row -- the panel is owned by the caller
+               and must never be taken down with the rows. The panel's own "Mask: <tool>"
+               header band is gone: the scope row above it and the selected submask row
+               already say it. The tree carries NO mask rows in the lab UI at all
+               (addMaskItems returns immediately) -- the old "Add mask" placeholder row is
+               replaced by the Submasks section's own [+].
+             - SUBMASK LIST (Develop/Properties/submasklist.h, SubmaskList): the mask's
+               components IN FOLD ORDER, and the only way back into one. Built on the
+               ScopeHeaderLab pattern -- a gradient header band, a rows container rebuilt
+               wholesale by setSubmasks(rows, selected), and EVERY emission DEFERRED a
+               tick (QTimer::singleShot(0)) because the handler loops back through
+               setSubmasks and deletes the very row widget the click is inside. Per row: a
+               show/hide checkbox (MaskComponent::enabled -- the fold skips a disabled
+               component, so it is a one-click A/B), an OP CHIP that cycles
+               Add/Subtract/Intersect, the tool name, and a [:] menu (Edit / op / Invert /
+               Move up / Move down / Duplicate / Delete). DevelopProperties owns the model
+               side: reopenSubmask, setSubmaskEnabled, setSubmaskOp,
+               toggleSubmaskInverted, moveSubmask, duplicateSubmask and deleteMask -- each
+               mutates, fixes up selectedMaskIndex/pendingIdx, noteEdit()s, buildTree()s
+               and emits paramsChanged(). syncMaskPanel() at the end of buildTree() is the
+               single refresh point, so the list tracks image, scope and mask changes
+               without any caller remembering to update it.
+             - COMMITTED SUBMASKS RE-OPEN (2026-08-13): commitPendingMask() used to set
+               selectedMaskIndex = -1 ("flatten: committed submasks don't re-open"), which
+               made the mask a WRITE-ONLY PILE: a committed submask could not be
+               re-shaped, re-tuned, disabled, reordered, re-op'd or even deleted --
+               deleteMask(int) existed and was correct but had no reachable caller. The
+               data model always supported all of it (enabled/op/inverted/feather/
+               paramsJson per component, order = array order, all already in the sidecar);
+               only the UI threw it away. Now commit ends the PENDING session and nothing
+               else, and clicking a row calls reopenSubmask(): selectedMaskIndex moves,
+               pendingIdx goes to -1, the settings load into the panel's MaskEditor and
+               buildTree()'s updateMaskEdit() re-arms the ON-CANVAS overlay (gradient
+               handles, brush buffers, range swatches) -- that last part needed no new
+               ImageView work, because maskEditBegin already fires for any
+               selectedMaskIndex across all ten tools. Every mask mutator
+               (setActiveMaskParams, setActiveMaskFeather, setActiveBrushSize,
+               onMaskEditorSetting) already writes through selectedMaskIndex, so they work
+               on a re-opened submask unchanged.
+               TWO STATES, because a submask is only fragile while it is NEW:
+                 . PENDING (pendingIdx >= 0): discarded by Esc/[x] or by leaving the
+                   image; op comes from the held modifier (latched); the button reads
+                   "<Op> and Commit"; leaving the scope prompts (confirmPendingMask).
+                 . EXISTING (pendingIdx < 0, selectedMaskIndex >= 0): its edits are
+                   already real, so the button reads "Done" (deselect), the [x] is hidden,
+                   Esc just closes it, and MODIFIERS ARE INERT -- setPendingMaskOp returns
+                   early, since a stray Opt press rewriting a committed submask's op would
+                   be an invisible edit. Its op is changed on its own row instead.
+             - BRUSH ATTRIBUTES HAVE THREE SCOPES, AND THE PANEL SAYS WHICH: size,
+               feather, flow and auto-mask are BAKED INTO EACH STROKE as it is drawn
+               (ImageView writes them into the stroke object, BrushStamp reads them back
+               per stroke), which is what lets one submask hold strokes of different
+               sizes. The cost is that the same slider can mean three different things,
+               and a slider whose effect you cannot predict reads as broken:
+
+                 . ADDING (pendingIdx >= 0, the submask is still being built) -> the NEXT
+                   stroke (brushWith), the original behaviour; it is how a submask gets
+                   strokes of different sizes.
+                 . ADDING + SHIFT, with a stroke already painted -> the LAST STROKE only
+                   (brushLastStrokeWith). "I just painted that, make it softer" -- the
+                   common correction. The component's next-stroke default is deliberately
+                   NOT touched, so the next stroke still comes out as armed.
+                 . SELECTED (pendingIdx < 0, re-opened from the submask list) -> EVERY
+                   stroke (brushStrokesWith). Nothing is being painted, so there is no
+                   next stroke to arm and no "last" one to single out; a slider that only
+                   armed would move and change nothing at all. Invisible while a committed
+                   submask could not be re-opened; a dead end now that it can.
+                   SHIFT IS DELIBERATELY INERT HERE -- it belongs to the act of painting.
+
+               ATTRIBUTE SCOPE HEADER (MaskPanel::setAttributeScope, text from
+               DevelopProperties::maskAttributeScopeText): a dim caption row just above
+               the settings naming the state in force, in exactly those words --
+               "Attribute adjustment applies to 7 strokes" (SELECTED, singular at 1),
+               "... to next stroke" (ADDING), "... to last stroke" (ADDING + Shift), or
+               for a non-stroke tool "Attribute adjustment applies to this Linear Gradient
+               submask". It is LIVE: MW's modifier filter calls syncAttributeScopeLabel()
+               on every Shift press and release, so the header names the scope the next
+               drag will use BEFORE the drag happens. A stroke tool with nothing painted
+               yet always reads "next stroke" -- naming a last stroke that does not exist
+               would be a lie.
+               The three-way split is applied in onMaskEditorSetting (the panel rows).
+               The CANVAS gestures -- setActiveBrushSize ([ ]), setActiveMaskFeather
+               (Shift+wheel) and setActiveBrushAutoMask -- take the pending/existing split
+               but NOT the Shift branch: Shift+wheel already means feather there, so a
+               second meaning for the same key could not be resolved. Per-stroke VARIATION
+               is lost the moment a SELECTED brush's slider is touched -- every stroke
+               takes the new value. That is the trade accepted for a committed brush being
+               tunable at all; Cmd+Z restores it, and Shift while still painting is the
+               way to fix one stroke without flattening the rest.
+               MW's modifier/commit block is gated on isSubmaskOpen() (any open submask),
+               not isMaskPanelOpen() (a PENDING one), so Return/Esc and this header follow
+               a re-opened submask too; syncPendingMaskOp keeps the op preview itself
+               pending-only.
+               ORDER IS THE RESULT (moveSubmask): components fold sequentially, so a
+               Subtract placed before the Add it was meant to cut into does nothing. The
+               fold-prefix cache resumes at the longest matching prefix of per-component
+               signatures, so a move/delete/toggle at index k invalidates [k..n) and keeps
+               [0..k) with no cache work at all. No sidecar change either: enabled, op,
+               inverted, feather, params and the array order were always written.
              - LEAVING A PENDING SUBMASK (confirmPendingMask): picking another scope, or
                adding one, used to discard the pending submask SILENTLY -- minutes of
                brushwork gone with no warning, the MaskPanel being the only cue that

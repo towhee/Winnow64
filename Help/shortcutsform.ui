@@ -1134,7 +1134,7 @@
          <string>M</string>
         </property>
         <property name="text">
-         <string>Pops the submask type menu for the active mask; in Develop mode. Global applies to the whole image and cannot be masked</string>
+         <string>Pops the submask type menu for the active mask, appending a submask; same as the [+] on the mask panel's Submasks list. In Develop mode. Global applies to the whole image and cannot be masked</string>
         </property>
        </item>
        <item>
@@ -1156,7 +1156,7 @@
          <string>Return</string>
         </property>
         <property name="text">
-         <string>Folds the submask being defined into the mask; same as the panel's &quot;Add and Commit&quot; button. Esc discards it instead</string>
+         <string>Folds the submask being defined into the mask; same as the panel's &quot;Add and Commit&quot; button. Esc discards it instead. On a submask re-opened from the Submasks list, Return / Esc simply close it (&quot;Done&quot;) - its edits are already part of the mask</string>
         </property>
        </item>
        <item>
@@ -1200,7 +1200,7 @@
          <string>[ / ]  (or two-finger drag)</string>
         </property>
         <property name="text">
-         <string>Shrinks / grows the brush; while a Brush, Object mask or Spot tool is active</string>
+         <string>Shrinks / grows the brush; while a Brush, Object mask or Spot tool is active. In the mask panel, while you are adding a stroke, hold Shift when changing an attribute to change only the LAST stroke painted - the panel header always states what the adjustment will apply to</string>
         </property>
        </item>
        <item>
@@ -1211,7 +1211,7 @@
          <string>Shift + scroll (wheel or two-finger drag)</string>
         </property>
         <property name="text">
-         <string>Softens / hardens the mask edge; while a Linear Gradient, Radial Gradient or Brush mask tool is active. Brush feather applies to the NEXT stroke</string>
+         <string>Softens / hardens the mask edge; while a Linear Gradient, Radial Gradient or Brush mask tool is active. Brush feather applies to the NEXT stroke while the submask is being built; on a submask re-opened from the Submasks list it re-feathers every stroke already painted</string>
         </property>
        </item>
        <item>

@@ -133,6 +133,7 @@ set(WINNOW_SOURCES
     Develop/Properties/scopeheaderlab.cpp
     Develop/Properties/rawpanel.cpp
     Develop/Properties/maskpanel.cpp
+    Develop/Properties/submasklist.cpp
     Develop/Properties/maskeditor.cpp
     Develop/Properties/paneleditor.cpp
     Develop/Scopes/histogramview.cpp
@@ -404,6 +405,7 @@ set(WINNOW_HEADERS
     Develop/Properties/scopeheaderlab.h
     Develop/Properties/rawpanel.h
     Develop/Properties/maskpanel.h
+    Develop/Properties/submasklist.h
     Develop/Properties/maskeditor.h
     Develop/Properties/paneleditor.h
     Develop/Scopes/scopedata.h

@@ -7,12 +7,12 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QPainter>
-#include <QLinearGradient>
 
 /*
-    MaskPanel (see maskpanel.h): the thin submask build-up strip -- title, settings,
-    overlay-colour swatches and ONE commit button whose label follows the held modifier.
+    MaskPanel (see maskpanel.h): the active mask's editor, nested under its scope row --
+    the submask list, the selected submask's settings, the overlay-colour row and ONE
+    commit button whose label follows the held modifier (or reads "Done" when the submask
+    being edited is already committed).
 */
 
 MaskPanel::MaskPanel(QWidget *parent) : QWidget(parent)
@@ -23,44 +23,45 @@ MaskPanel::MaskPanel(QWidget *parent) : QWidget(parent)
 
 void MaskPanel::buildUi()
 {
-    /* Bottom margin reserves the 2px panel separator drawn in paintEvent. */
     QVBoxLayout *outer = new QVBoxLayout(this);
-    outer->setContentsMargins(0, 0, 0, G::panelBorderHeight);
+    outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
-    /* Header band ("Mask: <tool>" + cancel); transparent so paintEvent draws gradient. */
-    headerBand = new QWidget(this);
-    headerBand->setAttribute(Qt::WA_TranslucentBackground);
-    QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(10, 3, 6, 3);
-    hb->setSpacing(6);
-    titleLabel = new QLabel(tr("Mask"), headerBand);
-    titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
-    cancelBtn = new BarBtn();
-    cancelBtn->setToolTip("Cancel (Esc): discard this tool");
-    cancelBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    connect(cancelBtn, &BarBtn::clicked, this, [this]{ emit cancelled(); });
-    hb->addWidget(titleLabel);
-    hb->addStretch(1);
-    hb->addWidget(cancelBtn);
-    outer->addWidget(headerBand);
+    /* The mask's contents, first: what the mask is made of is the thing the user needs to
+       see, and every submask in it re-opens from here. */
+    submaskList = new SubmaskList(this);
+    outer->addWidget(submaskList);
 
-    /* Settings tree (tree-rendered rows), then the commit buttons. */
-    QWidget *body = new QWidget(this);
-    QVBoxLayout *bl = new QVBoxLayout(body);
+    /* Settings + commit for the SELECTED submask. Wrapped so the whole block hides when
+       nothing is selected (the list alone is then the panel). */
+    attrWrap = new QWidget(this);
+    QVBoxLayout *bl = new QVBoxLayout(attrWrap);
     bl->setContentsMargins(0, 2, 10, 6);
     bl->setSpacing(4);
-    outer->addWidget(body);
+    outer->addWidget(attrWrap);
+
+    /* Header row: what a change to the settings below will AFFECT. A brush's attributes
+       are baked per stroke, so the same slider reaches the submask's strokes when it is
+       SELECTED, the next stroke while one is being ADDED, and the last stroke when Shift
+       is held there -- with no way to tell which, and a slider that silently does nothing
+       reads as broken. DevelopProperties keeps the text current, Shift included. */
+    scopeLabel = new QLabel(attrWrap);
+    scopeLabel->setWordWrap(true);
+    scopeLabel->setContentsMargins(10, 2, 0, 2);
+    scopeLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
+                                  .arg(G::disabledColor.name())
+                                  .arg(qMax(7, G::strFontSize.toInt() - 1)));
+    scopeLabel->setVisible(false);
+    bl->addWidget(scopeLabel);
 
     /* The tool's settings render here (Size/Feather/etc.), identical to the main tree.
        DevelopProperties populates + wires it. Full left margin (0) so its own caption
        column lines up with the tree below. */
-    maskEditor = new MaskEditor(body);
+    maskEditor = new MaskEditor(attrWrap);
     bl->addWidget(maskEditor);
 
     /* Commit buttons live under the settings, inset like a normal control row. */
-    QWidget *btnWrap = new QWidget(body);
+    QWidget *btnWrap = new QWidget(attrWrap);
     QVBoxLayout *bw = new QVBoxLayout(btnWrap);
     bw->setContentsMargins(10, 4, 0, 0);
     bw->setSpacing(4);
@@ -70,7 +71,7 @@ void MaskPanel::buildUi()
        of the op, so no colour key is needed), and this row picks it -- red reads badly
        over a red subject. Persisted by DevelopProperties under Develop/maskOverlayColor;
        G::maskOverlayColor is updated here so the repaint is immediate. */
-    swatchRow = new QWidget(body);
+    swatchRow = new QWidget(btnWrap);
     QHBoxLayout *sl = new QHBoxLayout(swatchRow);
     sl->setContentsMargins(0, 0, 0, 2);
     sl->setSpacing(6);
@@ -114,8 +115,14 @@ void MaskPanel::buildUi()
     refreshGrayBtn();
 
     /* ONE commit button. Its label follows the op the overlay is previewing, so the words
-       Subtract/Intersect stay visible instead of hiding behind undocumented keys. */
-    commitBtn = new QPushButton(tr("Add and Commit"), btnWrap);
+       Subtract/Intersect stay visible instead of hiding behind undocumented keys. The
+       [x] beside it discards a submask that is still being built; a re-opened submask has
+       nothing to discard, so it is hidden there (see refreshCommitBtn). */
+    QWidget *commitRow = new QWidget(btnWrap);
+    QHBoxLayout *cl = new QHBoxLayout(commitRow);
+    cl->setContentsMargins(0, 0, 0, 0);
+    cl->setSpacing(6);
+    commitBtn = new QPushButton(tr("Add and Commit"), commitRow);
     commitBtn->setToolTip("Commit this submask into the mask (Return)\n"
                           "Opt: subtract    Shift+Opt: intersect");
     connect(commitBtn, &QPushButton::clicked, this, [this]{ emit committed(); });
@@ -125,7 +132,13 @@ void MaskPanel::buildUi()
        minimum). Override it here so the panel never widens the dock. */
     commitBtn->setStyleSheet("QPushButton { min-width: 0; }");
     commitBtn->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
-    bw->addWidget(commitBtn);
+    cancelBtn = new BarBtn();
+    cancelBtn->setToolTip("Cancel (Esc): discard this submask");
+    cancelBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    connect(cancelBtn, &BarBtn::clicked, this, [this]{ emit cancelled(); });
+    cl->addWidget(commitBtn);
+    cl->addWidget(cancelBtn);
+    bw->addWidget(commitRow);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 }
@@ -158,44 +171,68 @@ void MaskPanel::refreshGrayBtn()
                  G::maskOverlayGrayscale ? "2px solid #f0f0f0" : "1px solid #303030"));
 }
 
+void MaskPanel::refreshCommitBtn()
+{
+    if (!commitBtn) return;
+    if (editingExisting) {
+        /* Already folded into the mask: there is nothing to commit and nothing to throw
+           away -- the button just closes the editing session. */
+        commitBtn->setText(tr("Done"));
+        commitBtn->setToolTip("Finish editing this submask (Return).\n"
+                              "Its edits are already part of the mask.");
+    }
+    else {
+        /* The label names the OPERATION and the ACT: with the render already live, a bare
+           "Update" read as "refresh the view" rather than "fold this submask in". */
+        commitBtn->setText(pendingOp == 1 ? tr("Subtract and Commit")
+                         : pendingOp == 2 ? tr("Intersect and Commit")
+                                          : tr("Add and Commit"));
+        commitBtn->setToolTip("Commit this submask into the mask (Return)\n"
+                              "Opt: subtract    Shift+Opt: intersect");
+    }
+    if (cancelBtn) cancelBtn->setVisible(!editingExisting);
+}
+
 void MaskPanel::setPendingOp(int op)
 {
     /* Modifiers are inert on the first submask -- there is nothing to subtract from or
-       intersect with an empty mask. */
+       intersect with an empty mask -- and on a submask that is already committed, whose
+       op is changed on its own row in the list. */
+    if (editingExisting) return;
     if (firstMask) op = 0;
     if (op == pendingOp) return;
     pendingOp = op;
-    /* The label names the OPERATION and the ACT: with the render already live, a bare
-       "Update" read as "refresh the view" rather than "fold this submask in". */
-    if (commitBtn)
-        commitBtn->setText(op == 1 ? tr("Subtract and Commit")
-                         : op == 2 ? tr("Intersect and Commit")
-                                   : tr("Add and Commit"));
+    refreshCommitBtn();
 }
 
-void MaskPanel::paintEvent(QPaintEvent *)
+void MaskPanel::setEditingExisting(bool existing)
 {
-    if (!headerBand) return;
-    QPainter p(this);
-    const int a = G::backgroundShade + 5;
-    const int b = G::backgroundShade - 15;
-    const QRect r = headerBand->geometry();
-    QLinearGradient g(0, r.top(), 0, r.bottom());
-    g.setColorAt(0, QColor(a, a, a));
-    g.setColorAt(1, QColor(b, b, b));
-    p.fillRect(r, g);
-    /* Separator rule across the bottom edge (space reserved by the layout margin). */
-    p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::tabWidgetBorderColor);
+    editingExisting = existing;
+    if (existing) pendingOp = 0;
+    refreshCommitBtn();
 }
 
-void MaskPanel::showForTool(const QString &toolName, bool first)
+void MaskPanel::showAttributes(bool show)
 {
-    if (titleLabel) titleLabel->setText(tr("Mask: %1").arg(toolName));
+    if (attrWrap) attrWrap->setVisible(show);
+}
+
+void MaskPanel::setAttributeScope(const QString &text)
+{
+    if (!scopeLabel) return;
+    if (scopeLabel->text() == text) return;      // called on every Shift press/release
+    scopeLabel->setText(text);
+    scopeLabel->setVisible(!text.isEmpty());
+}
+
+void MaskPanel::beginPending(bool first)
+{
     firstMask = first;
-    pendingOp = -1;                 // force the relabel below
-    setPendingOp(0);                // every submask opens as Add ("Add and Commit")
+    editingExisting = false;
+    pendingOp = 0;                  // every submask opens as Add ("Add and Commit")
+    refreshCommitBtn();
     refreshSwatches();
     refreshGrayBtn();               // the flag is persistent, so re-sync on every show
+    showAttributes(true);
     setVisible(true);
 }

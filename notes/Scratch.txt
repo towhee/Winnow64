@@ -1403,3 +1403,284 @@ I'd suggest exercising the geometry sweep from the original plan first — rotat
 zoom to 100 %, crop/Level, spot pins, WB picker
 
 move the proxy render to a worker
+
+Changes to the mask panel:
+- make the mask panel a child of the scope mask row
+- [+] button at top to append a submask (also existing shortcut M).
+- have a collapsible history section showing all the submask tools used in the mask with the
+capability to delete any submask in the mask.
+- show the attributes of the active submask tool (existing format)
+- show the existing overlay tint row
+- show the existing commit button
+I have committed the current program state to git, as I may want to revert.  If I revert
+make sure you have saved this plan in case we need to reuse some or all of it in the future.
+Please make any suggestions to improve on my suggested changes.  The objective is to make
+masks intuitive and give the user maximum edit control over the submasks.
+Pleasse make a mockup of how the new layout looks.
+
+--------------------------------------------------------------------------
+Mask panel restructure: submask list, re-edit, nesting under the scope row
+
+ Context
+
+ In the Develop dock, a mask is an EditScope (UI: "Mask 1", "Mask 2"; code:
+ EditScope in Develop/editstack.h:59) and a submask is a MaskComponent
+ (editstack.h:50) in that scope's ordered components vector. The renderer folds the
+ components sequentially - m = max(m,c) (Add), m *= 1-c (Subtract), m *= c
+ (Intersect) - at Main/mainwindow.cpp:5871.
+
+ The data model already supports everything a user would want: per-submask enabled,
+ op, inverted, feather, paramsJson, and order. The UI throws almost all of it
+ away. commitPendingMask() sets selectedMaskIndex = -1 with the comment "flatten:
+ committed submasks don't re-open" (developproperties.cpp:892), and addMaskItems()
+ early-returns in lab mode (developproperties.cpp:520), so once a submask is committed:
+
+ - it cannot be re-selected, re-shaped or re-tuned;
+ - it cannot be deleted (deleteMask(int) at developproperties.cpp:1849 is complete
+ and correct but has no reachable caller - dead code today);
+ - it cannot be disabled, reordered, or have its op changed;
+ - there is no list of what the mask is even made of. MaskPanel shows only the one
+ submask currently being built, then vanishes.
+
+ The mask is therefore a write-only pile. The goal of this change is the opposite: the
+ mask's contents are always visible, nested under their own scope row, and every submask
+ stays fully editable for the life of the image.
+
+ Decisions taken with the user: full re-edit (attributes and on-canvas geometry),
+ editable op per row, reorder via the row menu (not drag), section named
+ "Submasks" (not "history" - that word already means the History dock's undo
+ snapshots).
+
+ ---
+ Target layout (mockup)
+
+ The panel becomes a child of the active mask's row in the Edits list. It is visible
+ whenever the active scope is a mask (index > 0), not only while a tool is open.
+
+ +---------------------------------------------+
+ | v Edits                                 [:] |   ScopeHeaderLab header band
+ +---------------------------------------------+
+ | [x] Global                                  |
+ | [x] Mask 1                              [:] |
+ | [x] Mask 2                              [:] |  <- ACTIVE (selectionColor band)
+ | |   v Submasks                        [+]   |  <- collapsible; [+] appends (= M)
+ | |     [x] (+) Linear Gradient         [:]   |
+ | |     [x] (-) Brush                   [:]   |
+ | |     [x] (x) Luminance Range     *   [:]   |  <- SELECTED: attributes below,
+ | |     [ ] (+) Sky           (off)     [:]   |     handles live on canvas
+ | |                                           |
+ | |     Range Low   --*--------    20         |  <- MaskEditor: attributes of the
+ | |     Range High  --------*--    80         |     SELECTED submask (rows and
+ | |     Feather     -----*-----    50         |     keys unchanged)
+ | |     Invert      [ ]                       |
+ | |                                           |
+ | |     Overlay  # # # # # #   [Gray]         |  <- existing tint row
+ | |     [       Add and Commit       ]        |  <- new submask: commit/cancel
+ | |                                           |     existing submask: [ Done ]
+ | [x] Mask 3                              [:] |
+ +---------------------------------------------+
+ | > Basic                                     |   the rest of the property tree
+ | > Color                                     |
+ +---------------------------------------------+
+
+ Op glyphs: (+) Add, (-) Subtract, (x) Intersect - clicking one cycles the op and
+ re-renders. * marks the submask currently open for editing. [:] is the existing
+ vertical-ellipsis BarBtn.
+
+ Submask row [:] menu:
+
+    Edit                          (select + re-arm canvas)
+    Add / Subtract / Intersect    (radio, current one checked)
+    Invert
+    ---------------
+    Move up                       Opt+Up
+    Move down                     Opt+Down
+    Duplicate
+    Delete
+
+ Nothing is lost from the current panel: the attribute rows, the overlay tint swatches +
+ Gray toggle, and the commit button all survive verbatim. What is removed is the panel's
+ own "Mask: <tool>" header band - the scope row above it and the selected submask row
+ now say the same thing twice.
+
+ ---
+ Design
+
+ 1. Two kinds of open submask
+
+ ┌───────────────┬─────────────────────────────┬───────────────────────────┐
+ │               │        Pending (new)        │    Existing (re-edit)     │
+ ├───────────────┼─────────────────────────────┼───────────────────────────┤
+ │ State         │ pendingIdx >= 0             │ pendingIdx == -1          │
+ ├───────────────┼─────────────────────────────┼───────────────────────────┤
+ │ Created by    │ [+] / M / tool menu         │ clicking a committed row  │
+ ├───────────────┼─────────────────────────────┼───────────────────────────┤
+ │ Op source     │ held modifier, latched      │ the row's op control only │
+ ├───────────────┼─────────────────────────────┼───────────────────────────┤
+ │ Button        │ <Op> and Commit             │ Done (just deselects)     │
+ ├───────────────┼─────────────────────────────┼───────────────────────────┤
+ │ [x] / Esc     │ discards the submask        │ deselects; nothing lost   │
+ ├───────────────┼─────────────────────────────┼───────────────────────────┤
+ │ Leaving scope │ confirmPendingMask() prompt │ no prompt; edits are real │
+ └───────────────┴─────────────────────────────┴───────────────────────────┘
+
+ This keeps the existing pending machinery (pendingIdx, pendingPristine, pendingOp,
+ latchedMaskOp, stackJob()'s op substitution at developproperties.cpp:3455)
+ completely untouched for new submasks, and simply does not engage it for re-edits. Every
+ existing mutator - setActiveMaskParams, setActiveMaskFeather, setActiveBrushSize,
+ onMaskEditorSetting - already writes through selectedMaskIndex, so they work on a
+ re-opened submask with no change at all.
+
+ 2. Re-arming the canvas
+
+ updateMaskEdit() (developproperties.cpp:2228) already emits
+ maskEditBegin(tool, op, inverted, paramsJson, feather) for any selectedMaskIndex,
+ for all ten tools. Re-edit therefore needs no new ImageView work: set
+ selectedMaskIndex = k, call buildTree() (which ends in updateMaskEdit()), and the
+ gradient handles / brush buffers / range swatches come back.
+
+ 3. Panel lifetime
+
+ maskPanelOpen currently means both "a tool is being built" and "the panel is visible".
+ Split it: maskPanelOpen keeps its current meaning (pending submask outstanding, so
+ confirmPendingMask() and latchMaskOp() do not change behaviour), and panel visibility
+ becomes a separate function of activeScopeIndex > 0.
+
+ ---
+ Files to change
+
+ New: Develop/Properties/submasklist.h/.cpp (class SubmaskList : public QWidget)
+
+ The collapsible "Submasks" section. Deliberately modelled on ScopeHeaderLab
+ (Develop/Properties/scopeheaderlab.cpp), the closest existing widget:
+
+ - struct SubmaskRowInfo { QString toolName; int op; bool enabled; bool pending; };
+ - void setSubmasks(const QVector<SubmaskRowInfo> &rows, int selected); - full rebuild,
+ same takeAt / deleteLater idiom as ScopeHeaderLab::rebuild
+ (scopeheaderlab.cpp:139).
+ - Collapse: copy the collapseBtn / toggleCollapsed / updateCollapseIcon trio from
+ RawPanel (rawpanel.h:51-72) - branch-open/closed pixmaps, header click toggles.
+ There is no shared collapsible-section widget in the codebase; this is the third copy
+ of the idiom, and factoring one out is not in scope here.
+ - [+] BarBtn in the header, emitting addRequested().
+ - Signals: addRequested(), selected(int), enabledToggled(int,bool),
+ opChanged(int,int), invertToggled(int), deleteRequested(int),
+ moveRequested(int,int), duplicateRequested(int).
+ - All row signals must be emitted deferred (QTimer::singleShot(0, ...)), exactly as
+ ScopeHeaderLab::selectRowDeferred (scopeheaderlab.cpp:225) and showRowMenu
+ (:281) do, and for the identical reason: the handler loops back through
+ setSubmasks() and deletes the row widget that is mid-handler.
+ - Every QPushButton needs the min-width: 0 stylesheet override (see
+ maskpanel.cpp:126) or the dock widens.
+
+ Develop/Properties/maskpanel.h/.cpp
+
+ - Drop headerBand / titleLabel / the paintEvent gradient (the panel is now nested
+ inside a scope row, not a top-level panel band); likely drop the bottom separator too.
+ - Add SubmaskList *submasks at the top of the layout, above maskEditor.
+ - Replace showForTool(toolName, first) with:
+   - void setSubmasks(const QVector<SubmaskRowInfo>&, int selected) (forwards),
+   - void showAttributes(bool) - hides maskEditor + commit button when nothing is
+ selected,
+   - void setEditingExisting(bool) - makes the button read Done and makes
+ setPendingOp() a no-op.
+ - Forward the new SubmaskList signals out of MaskPanel.
+
+ Develop/Properties/scopeheaderlab.h/.cpp
+
+ - void setRowDetail(QWidget *w) - the widget to nest under the active scope row.
+ - rebuild() must reparent the detail widget out (w->setParent(nullptr)) before
+ tearing the rows down, then re-insert it into rowsLayout immediately after the active
+ row. It is owned by DevelopProperties, not by the row, and must survive every
+ rebuild. This is the single most likely place to introduce a crash.
+ - Indent the detail: wrap it in a container with a left content margin (~22px) so it
+ aligns under the scope name.
+ - paintEvent's containment rail (:109) runs to height(), so it spans the nested
+ panel unchanged - verify visually.
+
+ Develop/Properties/developproperties.h/.cpp (the controller)
+
+ New slots, all following the existing deleteMask() shape (mutate, fix up
+ selectedMaskIndex, noteEdit(...), buildTree(), emit paramsChanged()):
+
+ - reopenSubmask(int k) - confirmPendingMask() first; then selectedMaskIndex = k,
+ pendingIdx = -1, populate maskPanel->editor()->showTool(m) (plus setWheelSamples
+ for ColorRange, mirroring beginMaskTool at :801-806), buildTree(),
+ paramsChanged().
+ - setSubmaskEnabled(int k, bool), setSubmaskOp(int k, int op),
+ setSubmaskInverted(int k, bool).
+ - moveSubmask(int from, int to) - components.move(); fix selectedMaskIndex.
+ - duplicateSubmask(int k) - components.insert(k+1, components[k]).
+ - Reuse deleteMask(int) (developproperties.cpp:1849) as-is - it already does the
+ index fix-up and noteEdit; it just needs a caller.
+ - refreshSubmaskList() - builds QVector<SubmaskRowInfo> from
+ activeScopeComponents(); called from buildTree() and refreshScopeList() (:3583).
+ - commitPendingMask() (:876): stop clearing selectedMaskIndex at :892 - the
+ committed submask stays selected and editable; only pendingIdx clears. Keep
+ maskTintHideRequested(). Do not hide the panel.
+ - cancelMaskTool() (:1027): only remove the component when pendingIdx >= 0;
+ otherwise it is a plain deselect.
+ - setPendingMaskOp() / latchMaskOp(): early-return when pendingIdx < 0 so modifiers
+ cannot silently rewrite an existing submask's op.
+ - escapeMaskTool() (:2036): deselect when re-editing, discard when pending.
+ - Panel visibility: show whenever activeScopeIndex > 0; hide on Global and on image
+ change with no mask. onScopeSelected (:1103) already sets selectedMaskIndex = -1;
+ keep that, so a scope switch closes the open submask.
+ - bindMaskPanel() (:659) wires the new signals.
+
+ Main/initialize.cpp
+
+ Move the MaskPanel construction (:2180-2183) out of developContainerLayout and hand
+ it to scopeHeaderLab->setRowDetail(maskPanel) after ScopeHeaderLab is built
+ (:2185-2189).
+
+ Main/menusandactions.cpp + Help/shortcutsform.ui
+
+ Optional but recommended: Opt+Up / Opt+Down to move the selected submask. If added they
+ go in the developShortcuts table (menusandactions.cpp:3210 pattern), not as
+ QActions on a view, per the Develop shortcut arbiter rule - and Help/shortcutsform.ui
+ must be updated in the same pass.
+
+ notes/Documentation.txt
+
+ Update the mask/submask section for: the nested panel, the Submasks list, re-editable
+ committed submasks, per-row op/enable/invert/reorder/delete, and the changed meaning of
+ Commit vs Done. Sync the Table of Contents at the end of the edit.
+
+ ---
+ What does NOT change
+
+ - Sidecar format. enabled, op, inverted, feather, params are already
+ written per submask (editstack.h:296-307); order is already the array order. No new
+ keys, no migration. Old sidecars open with everything enabled and in order, as now.
+ - Render caches. maskComponentSignature() (developstackcache.h:55) hashes
+ tool/op/enabled/inverted/feather/paramsJson, and the fold-prefix cache
+ (mainwindow.cpp:5891-5950) resumes at the longest matching prefix of those
+ signatures. Delete / reorder / toggle / op-change at index k therefore invalidate
+ [k..n) and keep [0..k) automatically. No cache work is needed.
+ - MaskEditor and its row keys. showTool() (maskeditor.cpp:19) and the
+ settingChanged key contract are reused untouched.
+ - The legacy ScopeHeader dropdown path and the legacy tree mask rows (addToolRow,
+ addMaskItems), left as they are behind G::useScopeHeaderLab.
+
+ ---
+ Risks
+
+ 1. Detail-widget lifetime in ScopeHeaderLab::rebuild(). Rows are destroyed on every
+ setScopeRows; the nested MaskPanel must be reparented out first or it dies with
+ them. Guard with an explicit reparent + re-insert, never deleteLater on the detail.
+ 2. Re-entrancy. Row clicks trigger rebuilds that delete the clicked widget. Every
+ SubmaskList emission must be deferred a tick, as ScopeHeaderLab already does.
+ 3. Caption-column alignment. MaskEditor::setCaptionWidth(captionColumnWidth)
+ (developproperties.cpp:802) currently aligns the panel with the tree below. Nesting
+ adds a left indent, so pass captionColumnWidth - indent to keep the value column
+ lined up.
+ 4. Dock width. Any new QPushButton inherits min-width: 100px from
+ widgetcss.cpp as an explicit minimum and will widen the whole dock. Override to
+ min-width: 0 on every one (the existing panel already does this three times).
+ 5. Deleting the last submask leaves components empty, which makes the scope act
+ globally. Verify that path; it is the same state cancelMaskTool produces today.
+
+
+Allow edits to project_mask_submask_list.md
+Yes, and allow Claude to edit its own settings for this session
