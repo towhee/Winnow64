@@ -1,0 +1,98 @@
+#ifndef SUBMASKLIST_H
+#define SUBMASKLIST_H
+
+#include <QString>
+#include <QVector>
+#include <QWidget>
+
+#include <functional>
+
+class QLabel;
+class QVBoxLayout;
+class BarBtn;
+
+/*
+    One row of the SubmaskList: everything the list needs to draw a submask without
+    reaching into the edit stack. Mirrors ScopeHeaderBase::ScopeRowInfo.
+*/
+struct SubmaskRowInfo
+{
+    QString toolName;                 // "Linear Gradient", "Brush", ...
+    int     op       = 0;             // MaskOp: 0 Add, 1 Subtract, 2 Intersect
+    bool    enabled  = true;          // MaskComponent::enabled (show/hide)
+    bool    inverted = false;         // MaskComponent::inverted (row tooltip only)
+    bool    pending  = false;         // still being built (not yet committed)
+};
+
+/*
+    SubmaskList -- the collapsible "Submasks" section inside the MaskPanel. It lists the
+    active mask's submasks IN FOLD ORDER and is the one place a committed submask can be
+    reached again:
+
+        | v Submasks                          [+] |   <- [+] appends (same as M)
+        |   [x] (+) Linear Gradient           [:] |
+        |   [x] (-) Brush                     [:] |
+        |   [x] (n) Luminance Range      *    [:] |   <- selected: editing it
+        |   [ ] (+) Sky            (off)      [:] |
+
+    The op glyph is a BUTTON: clicking it cycles Add -> Subtract -> Intersect, because
+    the op used to be settable only by holding a modifier at commit time and was then
+    frozen forever. The [:] menu carries the rest (edit, op, invert, move, duplicate,
+    delete).
+
+    Carries NO model state beyond what setSubmasks() was handed: every control emits an
+    index-based signal and DevelopProperties pushes the new list straight back. Like
+    ScopeHeaderLab, every emission is DEFERRED a tick -- the handler loops back through
+    setSubmasks(), which deletes the very row widget the click is being handled in.
+*/
+class SubmaskList : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit SubmaskList(QWidget *parent = nullptr);
+
+    /* Rebuild the rows. selected == -1 means no submask is open for editing. */
+    void setSubmasks(const QVector<SubmaskRowInfo> &rows, int selected);
+    int  count() const { return infos.size(); }
+
+    /* Display name of a MaskOp, shared with the panel's commit button wording. */
+    static QString opName(int op);
+
+signals:
+    void addRequested();                          // [+] / "Add submask"
+    void submaskSelected(int index);              // row click: re-open it for editing
+    void enabledToggled(int index, bool on);      // row checkbox
+    void opChanged(int index, int op);            // op glyph / menu
+    void invertRequested(int index);
+    void deleteRequested(int index);
+    void moveRequested(int from, int to);
+    void duplicateRequested(int index);
+
+protected:
+    void paintEvent(QPaintEvent *) override;      // gradient behind the header band
+    bool eventFilter(QObject *watched, QEvent *event) override;   // header + row clicks
+
+private:
+    void buildUi();
+    void rebuild();
+    QWidget *makeRow(int index, const SubmaskRowInfo &r, bool selected);
+    void showRowMenu(int index);
+    void toggleCollapsed();
+    void updateCollapseIcon();
+    /* Fire on the next tick: the handler rebuilds these rows (see the class comment). */
+    void emitDeferred(std::function<void()> fn);
+    static QString opGlyph(int op);
+
+    QWidget     *headerBand    = nullptr;
+    BarBtn      *collapseBtn   = nullptr;
+    QLabel      *titleLabel    = nullptr;
+    BarBtn      *addBtn        = nullptr;
+    QWidget     *rowsContainer = nullptr;
+    QVBoxLayout *rowsLayout    = nullptr;
+
+    QVector<SubmaskRowInfo> infos;
+    int  selectedIndex = -1;
+    bool collapsed     = false;
+};
+
+#endif // SUBMASKLIST_H

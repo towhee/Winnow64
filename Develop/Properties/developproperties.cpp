@@ -203,6 +203,7 @@ void DevelopProperties::buildTree()
     applyCoreVisibility();           // hide Demosaic/Denoise raw on preview
     if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if disabled
     syncRawPanel();                  // lab UI: reflect raw state + visibility in RawPanel
+    syncMaskPanel();                 // lab UI: the active mask's submask list + settings
 }
 
 bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
@@ -513,12 +514,11 @@ void DevelopProperties::addMaskItems()
     if (!scope || activeScopeIndex == 0) { selectedMaskIndex = -1; return; }
     const int n = scope->components.size();
 
-    /* Lab UI (append-only "flatten"): the tool being built shows its settings in the
-       MaskPanel's own tree (above the Scopes list), NOT here. Committed tools are folded
-       into the mask and never re-opened, so the main tree shows no mask rows -- only the
-       "Add mask" placeholder when the scope has no mask and nothing is being edited. */
+    /* Lab UI: the whole mask lives in the MaskPanel nested under this scope's row -- its
+       SubmaskList lists the submasks (including its own [+] for an empty mask) and the
+       open one shows its settings there. The tree carries no mask rows at all. */
     if (G::useScopeHeaderLab) {
-        if (n == 0 && !maskPanelOpen) { selectedMaskIndex = -1; addAddMaskRow(); }
+        if (n == 0) selectedMaskIndex = -1;
         return;
     }
 
@@ -683,6 +683,176 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(ed, &MaskEditor::settingChanged, this, &DevelopProperties::onMaskEditorSetting);
         connect(ed, &MaskEditor::wheelChanged,   this, &DevelopProperties::onMaskEditorWheel);
     }
+
+    /* The submask list: the mask's contents, and the only way back into a submask that
+       has already been committed. Every emission arrives DEFERRED (SubmaskList rebuilds
+       its rows from inside these handlers), so they are safe to act on directly. */
+    if (SubmaskList *sl = maskPanel->list()) {
+        connect(sl, &SubmaskList::addRequested,      this, &DevelopProperties::showMaskMenu);
+        connect(sl, &SubmaskList::submaskSelected,   this, &DevelopProperties::reopenSubmask);
+        connect(sl, &SubmaskList::enabledToggled,    this, &DevelopProperties::setSubmaskEnabled);
+        connect(sl, &SubmaskList::opChanged,         this, &DevelopProperties::setSubmaskOp);
+        connect(sl, &SubmaskList::invertRequested,   this, &DevelopProperties::toggleSubmaskInverted);
+        connect(sl, &SubmaskList::moveRequested,     this, &DevelopProperties::moveSubmask);
+        connect(sl, &SubmaskList::duplicateRequested, this, &DevelopProperties::duplicateSubmask);
+        connect(sl, &SubmaskList::deleteRequested,   this, &DevelopProperties::deleteMask);
+    }
+}
+
+void DevelopProperties::syncMaskPanel()
+{
+    /* Reflect the active scope's mask in the panel: the ordered submasks, which one is
+       open, and whether the panel belongs on screen at all. Called at the end of every
+       buildTree, so nothing else has to remember to refresh it.
+
+       The panel is up for any MASK scope (index > 0), not just while a submask is being
+       built: the whole point of the list is that a mask's contents stay visible. */
+    if (!maskPanel) return;
+    EditScope *scope = activeScope();
+    const bool isMask = (activeScopeIndex > 0 && scope != nullptr);
+    if (!isMask) {
+        maskPanel->hide();
+        return;
+    }
+
+    QVector<SubmaskRowInfo> rows;
+    rows.reserve(scope->components.size());
+    for (int i = 0; i < scope->components.size(); ++i) {
+        const MaskComponent &m = scope->components.at(i);
+        SubmaskRowInfo r;
+        r.toolName = maskToolName(m.tool);
+        /* The PENDING submask shows the op the veil and the button are previewing, not
+           the (not yet written) one on the component -- the row and the button must not
+           disagree about what is about to happen. */
+        r.op       = (i == pendingIdx) ? pendingOp : m.op;
+        r.enabled  = m.enabled;
+        r.inverted = m.inverted;
+        r.pending  = (i == pendingIdx);
+        rows.append(r);
+    }
+    maskPanel->list()->setSubmasks(rows, selectedMaskIndex);
+    /* Settings + commit only make sense with a submask open; an empty mask shows nothing
+       but its [+]. */
+    const bool open = (selectedMaskIndex >= 0 &&
+                       selectedMaskIndex < scope->components.size());
+    maskPanel->setEditingExisting(open && pendingIdx < 0);
+    maskPanel->showAttributes(open);
+    syncAttributeScopeLabel();      // names what the settings below will affect
+    maskPanel->setVisible(true);
+}
+
+void DevelopProperties::reopenSubmask(int index)
+{
+    if (G::isLogger) G::log("DevelopProperties::reopenSubmask");
+    EditScope *scope = activeScope();
+    if (!scope || index < 0 || index >= scope->components.size()) return;
+    if (index == selectedMaskIndex) return;          // already the one being edited
+    /* Switching away from a submask that is still PENDING would discard it silently, the
+       same trap as leaving the scope -- ask with the same dialog. */
+    if (!confirmPendingMask()) { syncMaskPanel(); return; }
+
+    /* confirmPendingMask may have removed the pending submask (Discard), which shifts
+       everything after it down one. */
+    scope = activeScope();
+    if (!scope || index >= scope->components.size()) return;
+
+    selectedMaskIndex = index;
+    pendingIdx = -1;                 // a committed submask is not pending: no cancel
+    pendingOp = int(MaskOp::Add);
+    latchedMaskOp = int(MaskOp::Add);
+    maskPanelOpen = false;           // nothing outstanding, so nothing to confirm
+    const MaskComponent &m = scope->components.at(index);
+    if (MaskEditor *ed = maskPanel ? maskPanel->editor() : nullptr) {
+        ed->setCaptionWidth(captionColumnWidth - kMaskPanelIndent);
+        ed->showTool(m);
+        if (m.tool == int(MaskTool::ColorRange))
+            ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
+    }
+    if (m.tool == int(MaskTool::Brush)) emitBrushSettings(m);
+    /* buildTree ends in updateMaskEdit, which emits maskEditBegin for the selected
+       component -- that is what puts the tool's handles back on the canvas. */
+    buildTree();
+    emit paramsChanged();
+}
+
+void DevelopProperties::setSubmaskEnabled(int index, bool on)
+{
+    EditScope *scope = activeScope();
+    if (!scope || index < 0 || index >= scope->components.size()) return;
+    if (scope->components[index].enabled == on) return;
+    scope->components[index].enabled = on;
+    noteEdit((on ? "Show " : "Hide ") + maskToolName(scope->components.at(index).tool));
+    buildTree();
+    emit paramsChanged();       // the fold skips a disabled component -> re-composite
+}
+
+void DevelopProperties::setSubmaskOp(int index, int op)
+{
+    EditScope *scope = activeScope();
+    if (!scope || index < 0 || index >= scope->components.size()) return;
+    if (op < 0 || op > int(MaskOp::Intersect)) return;
+    /* The first submask starts the mask: there is nothing under it to combine with, so
+       it always adds. */
+    if (index == 0) return;
+    if (scope->components[index].op == op) return;
+    scope->components[index].op = op;
+    /* A pending submask's op is previewed from pendingOp, so move that too or the veil
+       and the render would keep showing the old op until commit. */
+    if (index == pendingIdx) { pendingOp = op; latchedMaskOp = op; }
+    noteEdit(SubmaskList::opName(op) + " "
+             + maskToolName(scope->components.at(index).tool));
+    buildTree();
+    emit paramsChanged();
+}
+
+void DevelopProperties::toggleSubmaskInverted(int index)
+{
+    EditScope *scope = activeScope();
+    if (!scope || index < 0 || index >= scope->components.size()) return;
+    MaskComponent &m = scope->components[index];
+    m.inverted = !m.inverted;
+    noteEdit("Invert " + maskToolName(m.tool), m.inverted ? "On" : "Off");
+    /* The panel's Invert checkbox shows the same flag when this submask is the open one;
+       buildTree -> syncMaskPanel repaints the row, so only the editor needs seeding. */
+    if (index == selectedMaskIndex && maskPanel && maskPanel->editor())
+        maskPanel->editor()->setCheckboxValue("maskInvert", m.inverted);
+    buildTree();
+    emit paramsChanged();
+}
+
+void DevelopProperties::moveSubmask(int from, int to)
+{
+    EditScope *scope = activeScope();
+    if (!scope) return;
+    const int n = scope->components.size();
+    if (from < 0 || from >= n || to < 0 || to >= n || from == to) return;
+    /* Order IS the result: the components are folded sequentially, so a Subtract before
+       the Add it was meant to cut into does nothing. */
+    scope->components.move(from, to);
+    if      (selectedMaskIndex == from) selectedMaskIndex = to;
+    else if (selectedMaskIndex > from && selectedMaskIndex <= to) selectedMaskIndex--;
+    else if (selectedMaskIndex < from && selectedMaskIndex >= to) selectedMaskIndex++;
+    if      (pendingIdx == from) pendingIdx = to;
+    else if (pendingIdx > from && pendingIdx <= to) pendingIdx--;
+    else if (pendingIdx < from && pendingIdx >= to) pendingIdx++;
+    noteEdit("Reorder " + maskToolName(scope->components.at(to).tool));
+    buildTree();
+    emit paramsChanged();
+}
+
+void DevelopProperties::duplicateSubmask(int index)
+{
+    EditScope *scope = activeScope();
+    if (!scope || index < 0 || index >= scope->components.size()) return;
+    /* A copy lands directly after the original, where it composites against everything
+       the original did -- the usual reason to duplicate is "same shape, other op". */
+    const MaskComponent copy = scope->components.at(index);
+    scope->components.insert(index + 1, copy);
+    if (selectedMaskIndex > index) selectedMaskIndex++;
+    if (pendingIdx > index) pendingIdx++;
+    noteEdit("Duplicate " + maskToolName(copy.tool));
+    buildTree();
+    emit paramsChanged();
 }
 
 /* History caption for a mask-tool setting key (the tree/panel row's own wording). */
@@ -699,6 +869,60 @@ static QString maskSettingLabel(const QString &key)
     return "Mask setting";
 }
 
+/* How many strokes a Brush/Object submask already carries. Everything that has to say
+   "next stroke" vs "all strokes" vs "the last stroke" turns on this. */
+static int brushStrokeCount(const QString &paramsJson)
+{
+    return QJsonDocument::fromJson(paramsJson.toUtf8())
+               .object().value("strokes").toArray().size();
+}
+
+/* Is this a stroke-based tool -- one whose attributes are baked per stroke rather than
+   evaluated for the submask as a whole? */
+static bool isStrokeTool(int tool)
+{
+    return tool == int(MaskTool::Brush) || tool == int(MaskTool::Object);
+}
+
+QString DevelopProperties::maskAttributeScopeText()
+{
+/*
+    What a change to the settings below the header will actually affect. Three states,
+    matching the three scopes onMaskEditorSetting applies (keep the two in step):
+
+      SELECTED   a committed submask re-opened from the list -> its strokes are all down,
+                 so an adjustment rewrites every one of them.
+      ADDING     the submask is still being built -> the adjustment arms the NEXT stroke,
+                 which is how one submask ends up holding strokes of different sizes.
+      ADDING     + Shift -> the LAST stroke just painted, the common correction.
+
+    A tool that is not stroke-based has no such split: its attributes describe the whole
+    submask, and the header says so rather than going silent.
+*/
+    MaskComponent *mm = editingMaskComp();
+    if (!mm) return QString();
+    if (!isStrokeTool(mm->tool))
+        return tr("Attribute adjustment applies to this %1 submask")
+                   .arg(maskToolName(mm->tool));
+
+    const int n = brushStrokeCount(mm->paramsJson);
+    /* ADDING. With nothing painted yet there is no last stroke to name, so Shift or not
+       the only thing an adjustment can reach is the next one. */
+    if (pendingIdx >= 0 || n == 0) {
+        const bool shift = QGuiApplication::queryKeyboardModifiers() & Qt::ShiftModifier;
+        if (shift && n > 0) return tr("Attribute adjustment applies to last stroke");
+        return tr("Attribute adjustment applies to next stroke");
+    }
+    /* SELECTED. */
+    return n == 1 ? tr("Attribute adjustment applies to 1 stroke")
+                  : tr("Attribute adjustment applies to %1 strokes").arg(n);
+}
+
+void DevelopProperties::syncAttributeScopeLabel()
+{
+    if (maskPanel) maskPanel->setAttributeScope(maskAttributeScopeText());
+}
+
 void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &v)
 {
     MaskComponent *mm = editingMaskComp();
@@ -709,15 +933,51 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
                            key == "maskAutoMask" || key == "maskAutoMaskAi" ||
                            (key == "maskFeather" && mm->tool == int(MaskTool::Brush));
     if (brushLike) {
-        if      (key == "maskFeather")  mm->feather = v.toFloat();
-        else if (key == "maskSize")     mm->paramsJson = brushWith(mm->paramsJson, "size", v.toInt());
-        else if (key == "maskFlow")     mm->paramsJson = brushWith(mm->paramsJson, "flow", v.toInt());
-        else if (key == "maskAutoMask") mm->paramsJson = brushWith(mm->paramsJson, "autoMask", v.toBool());
+        /* THREE SCOPES, one slider. Size/feather/flow/auto-mask are baked into each
+           stroke as it is drawn, which is what lets one submask hold strokes of different
+           sizes -- and what makes a bare slider ambiguous. The panel's header row
+           (maskAttributeScopeText) always names which of these is in force; keep the two
+           in step.
+
+             . ADDING (pendingIdx >= 0, the submask is still being built) -> the NEXT
+               stroke, unchanged behaviour: it is how a submask gets varied strokes.
+             . ADDING + SHIFT, with a stroke already painted -> the LAST stroke only.
+               "I just painted that, make it softer" -- the common correction, and the
+               reason Shift is here. The next-stroke default is left alone, so the next
+               stroke still comes out as armed.
+             . SELECTED (pendingIdx < 0, re-opened from the submask list) -> EVERY stroke.
+               Nothing is being painted, so there is no next stroke to arm and no "last"
+               one to single out; a slider that only armed would move and change nothing
+               at all. */
+        const bool adding = (pendingIdx >= 0);
+        const bool shift = QGuiApplication::queryKeyboardModifiers() & Qt::ShiftModifier;
+        const bool lastOnly = adding && shift && brushStrokeCount(mm->paramsJson) > 0;
+        const bool retro = !adding;
+        auto put = [&](const QString &k, const QJsonValue &val) {
+            mm->paramsJson = lastOnly ? brushLastStrokeWith(mm->paramsJson, k, val)
+                           : retro    ? brushStrokesWith(mm->paramsJson, k, val)
+                                      : brushWith(mm->paramsJson, k, val);
+        };
+        if (key == "maskFeather") {
+            /* Only the strokes carry a feather; the next-stroke path passes it to
+               ImageView through emitBrushSettings instead of storing it in paramsJson, so
+               the component's own feather moves in every case. */
+            mm->feather = v.toFloat();
+            if (lastOnly)   mm->paramsJson = brushLastStrokeWith(mm->paramsJson, "feather", v.toInt());
+            else if (retro) mm->paramsJson = brushStrokesWith(mm->paramsJson, "feather", v.toInt());
+        }
+        else if (key == "maskSize")     put("size", v.toInt());
+        else if (key == "maskFlow")     put("flow", v.toInt());
+        else if (key == "maskAutoMask") put("autoMask", v.toBool());
         else if (key == "maskAutoMaskAi") {
-            mm->paramsJson = brushWith(mm->paramsJson, "autoMaskMode", v.toBool() ? "ai" : "lum");
+            put("autoMaskMode", v.toBool() ? "ai" : "lum");
             if (v.toBool()) emit maskBrushAiEnabled();      // pre-warm the SAM encoder
         }
         emitBrushSettings(*mm);
+        /* A stroke that is already down changed -> re-composite. Arming the next stroke
+           changes nothing on screen but the cursor. */
+        if (lastOnly || retro) emit paramsChanged();
+        syncAttributeScopeLabel();   // the stroke count may have made "last stroke" real
     }
     /* Content-range settings (Luminance/Depth lo/hi, Color Range hue/sat): change
        coverage, so re-composite AND live-update the loupe tint. */
@@ -796,10 +1056,11 @@ void DevelopProperties::beginMaskTool(int tool)
     latchedMaskOp = int(MaskOp::Add);    // ... with nothing latched from the last one
     maskPanelOpen = true;
     if (maskPanel) {
-        maskPanel->showForTool(maskToolName(tool), first);
-        /* Populate the panel's embedded settings tree, aligned to the tree's split. */
+        maskPanel->beginPending(first);
+        /* Populate the panel's embedded settings tree, aligned to the tree's split (less
+           the indent the nested panel sits at -- see kMaskPanelIndent). */
         if (MaskEditor *ed = maskPanel->editor()) {
-            ed->setCaptionWidth(captionColumnWidth);
+            ed->setCaptionWidth(captionColumnWidth - kMaskPanelIndent);
             ed->showTool(m);
             if (tool == int(MaskTool::ColorRange))
                 ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
@@ -836,7 +1097,11 @@ void DevelopProperties::setPendingMaskOp(int op)
        the overlay AND the render composite the pending submask with it, so both preview
        the outcome, and the panel button renames itself to match. The FIRST submask has
        nothing to combine with, so it is pinned to Add. */
-    if (pendingIdx <= 0) op = int(MaskOp::Add);
+    /* Only a PENDING submask takes its op from the modifiers. A re-opened submask's op is
+       already real and is changed on its own row in the submask list -- letting a stray
+       Opt press rewrite it would be an invisible edit. */
+    if (pendingIdx < 0) return;
+    if (pendingIdx == 0) op = int(MaskOp::Add);
     /* Nothing held now: fall back to the LATCHED op rather than to Add. Releasing Opt
        must not undo the subtract the user just painted (see latchMaskOp) -- the whole
        point of the modifier is to say what the submask does, not to hold a preview open
@@ -845,6 +1110,7 @@ void DevelopProperties::setPendingMaskOp(int op)
     if (op == pendingOp) return;
     pendingOp = op;
     if (maskPanel) maskPanel->setPendingOp(op);
+    syncMaskPanel();            // the pending submask's row shows the previewed op too
     /* The render composites the pending submask with this op too (see stackJob), so the
        modifier changes the IMAGE, not just the veil: re-render as well as re-composite
        (paramsChanged is wired to updateMaskOverlayTint, so the veil comes along). */
@@ -877,7 +1143,19 @@ void DevelopProperties::commitPendingMask()
 {
     if (G::isLogger) G::log("DevelopProperties::commitPendingMask");
     EditScope *scope = activeScope();
-    if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) return;
+    /* Re-editing an already committed submask: the button reads "Done" and there is
+       nothing to fold in -- its edits went into the mask as they were made. Just close
+       the editing session, leaving the submask (and the mask) exactly as it is. */
+    if (pendingIdx < 0) {
+        if (selectedMaskIndex < 0) return;
+        selectedMaskIndex = -1;
+        maskLatched = true;              // the combined mask stays "O"-toggleable
+        buildTree();                     // updateMaskEdit -> take the handles off canvas
+        emit paramsChanged();
+        emit maskTintHideRequested();
+        return;
+    }
+    if (!scope || pendingIdx >= scope->components.size()) return;
     /* Commit what the user is LOOKING AT: pendingOp is what the veil, the render and the
        button label have all been previewing (the held modifier, else the latched op).
        Re-reading the live modifiers here instead -- as this used to -- meant releasing
@@ -889,10 +1167,12 @@ void DevelopProperties::commitPendingMask()
     pendingIdx = -1;
     pendingOp = int(MaskOp::Add);
     latchedMaskOp = int(MaskOp::Add);
-    selectedMaskIndex = -1;                // flatten: committed submasks don't re-open
+    /* selectedMaskIndex is deliberately LEFT ALONE. Committing folds the submask into the
+       mask but does not flatten it away: it stays listed and stays editable, so the user
+       can come straight back to it (or keep tuning it) instead of having to delete and
+       redraw. Only its PENDING status ends here. */
     maskLatched = true;                    // overlay stays AVAILABLE ("O" re-shows it)
-    maskPanelOpen = false;
-    if (maskPanel) maskPanel->hide();
+    maskPanelOpen = false;                 // nothing outstanding to confirm any more
     const QString verb = op == int(MaskOp::Subtract)  ? "Subtract "
                        : op == int(MaskOp::Intersect) ? "Intersect "
                                                       : "Add ";
@@ -1028,9 +1308,11 @@ void DevelopProperties::cancelMaskTool()
 {
     EditScope *scope = activeScope();
     /* Remove the pending submask being defined (on an empty scope that is its only
-       submask -> the scope goes back to global). */
-    if (scope && selectedMaskIndex >= 0 && selectedMaskIndex < scope->components.size())
-        scope->components.removeAt(selectedMaskIndex);
+       submask -> the scope goes back to global). ONLY a pending submask is discarded: a
+       re-opened committed one has nothing to cancel, so this is a plain deselect and its
+       edits stay in the mask. */
+    if (scope && pendingIdx >= 0 && pendingIdx < scope->components.size())
+        scope->components.removeAt(pendingIdx);
     pendingIdx = -1;
     pendingOp = int(MaskOp::Add);
     latchedMaskOp = int(MaskOp::Add);
@@ -1039,7 +1321,8 @@ void DevelopProperties::cancelMaskTool()
        remain on the scope. */
     maskLatched = (scope && !scope->components.isEmpty());
     maskPanelOpen = false;
-    if (maskPanel) maskPanel->hide();
+    /* The panel itself stays up (it belongs to the mask, not to the tool) -- buildTree ->
+       syncMaskPanel drops the settings block and leaves the submask list. */
     noteEdit("Cancel submask");
     buildTree();
     emit paramsChanged();
@@ -1106,8 +1389,9 @@ void DevelopProperties::onScopeSelected(const QString &name)
     EditScope *l = activeScope();
     const bool hasMask = (idx > 0 && l && !l->components.isEmpty());
     if (G::useScopeHeaderLab) {
-        /* Lab UI: committed tools are not re-edited (flatten). Show the scope's combined
-           mask (red, no handles) via the latch when it has one; no tool is "selected". */
+        /* Lab UI: arriving at a scope opens no submask -- show the scope's COMBINED mask
+           (red, no handles) via the latch when it has one. Its submasks are listed in the
+           panel below the row, and clicking one re-opens it. */
         selectedMaskIndex = -1;
         maskLatched = hasMask;
     }
@@ -2035,9 +2319,15 @@ void DevelopProperties::setSelectedMask(int index)
 
 bool DevelopProperties::escapeMaskTool()
 {
-    /* Lab UI: Esc while the MaskPanel is up cancels the panel edit (discard the blue
-       preview, or the just-created first tool) rather than collapsing a tree tool. */
+    /* Lab UI: Esc while a submask is still PENDING discards it (the blue preview, or the
+       just-created first tool) rather than collapsing a tree tool. */
     if (maskPanelOpen) { cancelMaskTool(); return true; }
+    /* A re-opened submask has nothing to discard: Esc just closes it, the same as the
+       panel's "Done" button. */
+    if (G::useScopeHeaderLab && selectedMaskIndex >= 0) {
+        commitPendingMask();                  // pendingIdx < 0 -> the "Done" path
+        return true;
+    }
     if (activeMaskTool() < 0) return false;   // no mask tool expanded
     setSelectedMask(-1);                      // collapse it (as clicking its caption)
     return true;
@@ -2152,6 +2442,49 @@ QString DevelopProperties::brushWith(const QString &paramsJson, const QString &k
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
 
+QString DevelopProperties::brushStrokesWith(const QString &paramsJson, const QString &key,
+                                            const QJsonValue &v)
+{
+    /* Write a brush setting onto EVERY stroke already painted, as well as onto the
+       component's own "next stroke" default.
+
+       Size, feather, flow and auto-mask are BAKED INTO EACH STROKE as it is drawn
+       (ImageView writes them into the stroke object; BrushStamp reads them back per
+       stroke), which is what lets one submask hold strokes of different sizes. The cost
+       is that on a submask whose strokes are all already down, the sliders arm a stroke
+       that will never come: they move and the image does not. That was invisible while a
+       committed submask could not be re-opened, and is a dead end now that it can. So on
+       an EXISTING submask the sliders act retroactively instead -- see
+       onMaskEditorSetting, which keeps the next-stroke meaning while the submask is still
+       being built. */
+    QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    o[key] = v;
+    QJsonArray strokes = o.value("strokes").toArray();
+    for (int i = 0; i < strokes.size(); ++i) {
+        QJsonObject s = strokes.at(i).toObject();
+        s[key] = v;
+        strokes[i] = s;
+    }
+    if (!strokes.isEmpty()) o["strokes"] = strokes;
+    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+QString DevelopProperties::brushLastStrokeWith(const QString &paramsJson,
+                                               const QString &key, const QJsonValue &v)
+{
+    /* Only the stroke most recently painted. The component's own next-stroke default is
+       NOT touched: this is a correction to what is already on the image ("that last dab
+       was too hard"), not a change to how the brush is loaded. */
+    QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    QJsonArray strokes = o.value("strokes").toArray();
+    if (strokes.isEmpty()) return paramsJson;
+    QJsonObject s = strokes.last().toObject();
+    s[key] = v;
+    strokes[strokes.size() - 1] = s;
+    o["strokes"] = strokes;
+    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
 void DevelopProperties::setActiveBrushSize(double size)
 {
     EditScope *l = activeScope();
@@ -2159,9 +2492,14 @@ void DevelopProperties::setActiveBrushSize(double size)
     MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::Brush) && m.tool != int(MaskTool::Object)) return;
     const int s = qBound(1, int(size + 0.5), 100);
-    m.paramsJson = brushWith(m.paramsJson, "size", s);
+    /* Same split as the panel slider (onMaskEditorSetting): while the submask is being
+       built this arms the next stroke, on a re-opened one it resizes what is there. */
+    const bool retro = (pendingIdx < 0);
+    m.paramsJson = retro ? brushStrokesWith(m.paramsJson, "size", s)
+                         : brushWith(m.paramsJson, "size", s);
     noteEdit("Brush size", QString::number(s), "mask/brushSize");
     syncMaskSlider("maskSize", s);
+    if (retro) emit paramsChanged();
 }
 
 void DevelopProperties::setActiveMaskFeather(double feather)
@@ -2180,11 +2518,19 @@ void DevelopProperties::setActiveMaskFeather(double feather)
     m.feather = f;
     noteEdit("Feather", QString::number(f), "mask/maskFeather");
     syncMaskSlider("maskFeather", f);
-    /* Brush feather belongs to the NEXT stroke (committed strokes keep their snapshot),
-       so it only refreshes the cursor; a gradient's coverage changed -> re-composite.
-       Either way ImageView already holds the new value, so no maskFeatherChanged echo. */
-    if (m.tool == int(MaskTool::Brush)) emitBrushSettings(m);
-    else                                emit paramsChanged();
+    /* Brush feather belongs to the NEXT stroke while the submask is being built (each
+       stroke keeps its own snapshot), so it only refreshes the cursor; on a RE-OPENED
+       submask there is no next stroke, so it re-feathers every stroke instead. A
+       gradient's coverage always changed -> re-composite. Either way ImageView already
+       holds the new value, so no maskFeatherChanged echo. */
+    if (m.tool == int(MaskTool::Brush)) {
+        emitBrushSettings(m);
+        if (pendingIdx < 0) {
+            m.paramsJson = brushStrokesWith(m.paramsJson, "feather", f);
+            emit paramsChanged();
+        }
+    }
+    else emit paramsChanged();
 }
 
 void DevelopProperties::syncMaskSlider(const QString &key, double value)
@@ -2202,11 +2548,16 @@ void DevelopProperties::setActiveBrushAutoMask(bool on)
     if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
     MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::Brush)) return;
-    m.paramsJson = brushWith(m.paramsJson, "autoMask", on);
+    /* Next stroke while the submask is being built; retroactive on a re-opened one (see
+       onMaskEditorSetting). */
+    const bool retro = (pendingIdx < 0);
+    m.paramsJson = retro ? brushStrokesWith(m.paramsJson, "autoMask", on)
+                         : brushWith(m.paramsJson, "autoMask", on);
     noteEdit("Auto mask", on ? "On" : "Off");
     isPopulating = true;            // sync the checkbox without re-entering itemChange
     setCheckboxValue("maskAutoMask", on);
     isPopulating = false;
+    if (retro) emit paramsChanged();
 }
 
 void DevelopProperties::emitBrushSettings(const MaskComponent &m)
@@ -2953,7 +3304,7 @@ void DevelopProperties::addColor()
 void DevelopProperties::addColorMix()
 {
     if (G::isLogger) G::log("DevelopProperties::addColorMix");
-    addHeader("ColorMixHeader", "???", "Color Mix",
+    addHeader("ColorMixHeader", "???", "Color Grade",
               "Tonal-range colour grading (shadows / midtones / highlights).", PV_ColorMix);
     QModelIndex parIdx = capIdx;
 
@@ -3222,7 +3573,7 @@ void DevelopProperties::updateSectionHeaderCaptions()
     const QPair<QString, QString> hdrs[] = {
         {"BasicHeader",    "Basic"},
         {"ColorHeader",    "Color"},
-        {"ColorMixHeader", "Color Mix"},
+        {"ColorMixHeader", "Color Grade"},
         {"EffectsHeader",  "Effects"},
     };
     for (const auto &h : hdrs) {
@@ -3627,10 +3978,12 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
         if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
             l->components.removeAt(pendingIdx);
         pendingIdx = -1;
-        selectedMaskIndex = -1;
         maskPanelOpen = false;
-        if (maskPanel) maskPanel->hide();
     }
+    /* Nothing is open on the new image, and the panel belongs to whatever scope turns out
+       to be active there (buildTree -> syncMaskPanel decides). */
+    selectedMaskIndex = -1;
+    if (maskPanel) maskPanel->hide();
     maskLatched = false;         // a fresh image starts with no latched mask overlay
     previewActive = false;       // a History hover does not follow the image
     previewStack = EditStack();
@@ -3791,10 +4144,12 @@ void DevelopProperties::applyHistoryEntry(int index)
         if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
             l->components.removeAt(pendingIdx);
         pendingIdx = -1;
-        selectedMaskIndex = -1;
         maskPanelOpen = false;
-        if (maskPanel) maskPanel->hide();
     }
+    /* Unconditional: a submask RE-OPENED for editing is not pending, so the guard above
+       misses it, but its index still points into the scope about to be replaced. */
+    selectedMaskIndex = -1;
+    if (maskPanel) maskPanel->hide();
     maskLatched = false;
     previewActive = false;              // the previewed state is about to become real
     previewStack = EditStack();
@@ -4273,10 +4628,12 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
         if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
             l->components.removeAt(pendingIdx);
         pendingIdx = -1;
-        selectedMaskIndex = -1;
         maskPanelOpen = false;
-        if (maskPanel) maskPanel->hide();
     }
+    /* Unconditional: a submask RE-OPENED for editing is not pending, so the guard above
+       misses it, but its index still points into the scope about to be replaced. */
+    selectedMaskIndex = -1;
+    if (maskPanel) maskPanel->hide();
     maskLatched = false;
     previewActive = false;              // the previewed state is about to become real
     previewStack = EditStack();

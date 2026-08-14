@@ -1580,15 +1580,21 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
-    /* DEVELOP MODE: mask combine modifiers + commit, while a submask is being defined.
+    /* DEVELOP MODE: mask combine modifiers + commit, while a submask is OPEN.
        Opt previews Subtract and Shift+Opt previews Intersect -- momentary, so the veil
-       must follow the key with the mouse stationary, and the panel usually holds focus (the
-       same reason Space and Esc are driven from this global filter). Return commits with
+       must follow the key with the mouse stationary, and the panel usually holds focus
+       (the same reason Space and Esc are driven from this filter). Return commits with
        whatever is held, like the Transform panel's Enter-commit. Auto-repeat is ignored.
-       The Alt KeyPress is accepted so Windows does not open the menu bar under us. */
+       The Alt KeyPress is accepted so Windows does not open the menu bar under us.
+
+       The gate is isSubmaskOpen(), not isMaskPanelOpen(): a submask RE-OPENED from the
+       submask list is not "pending", but Return still closes it ("Done") and Shift still
+       retargets its brush attributes at the last stroke, so the panel's scope header has
+       to follow the key there too. The op preview itself stays pending-only --
+       syncPendingMaskOp guards that for us. */
     {
         if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
-            && developProperties && developProperties->isMaskPanelOpen()
+            && developProperties && developProperties->isSubmaskOpen()
             && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease
                 || event->type() == QEvent::ShortcutOverride)) {
             QKeyEvent *e = static_cast<QKeyEvent *>(event);
@@ -1597,6 +1603,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 /* The event's own modifiers do not yet include the key being pressed (nor
                    exclude the one being released), so read the live state instead. */
                 syncPendingMaskOp();
+                /* Shift retargets the brush attributes at the last stroke: say so while
+                   it is held, so the header names the scope the NEXT drag will use. */
+                developProperties->syncAttributeScopeLabel();
                 /* The brush cursor's centre glyph (+ / - / x) reads the held modifier
                    directly, so it has to repaint even when syncPendingMaskOp changes
                    nothing -- the op is pinned to Add on the first submask, and unchanged

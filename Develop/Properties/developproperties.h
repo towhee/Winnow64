@@ -194,6 +194,14 @@ public:
     static int maskOpFromModifiers();
     /* True while the mask panel is up (a submask is being defined). */
     bool isMaskPanelOpen() const { return maskPanelOpen; }
+    /* True while ANY submask is open in the panel -- a pending one OR one re-opened from
+       the submask list. Wider than isMaskPanelOpen: Return/Esc and the Shift-scope
+       readout apply to both, only the discard/commit semantics differ. */
+    bool isSubmaskOpen() const { return selectedMaskIndex >= 0; }
+    /* Re-caption the panel's attribute header ("Size / Feather / Flow apply to ..."). MW
+       calls it on every Shift press/release, since Shift retargets those at the last
+       stroke and the header has to say so while it is held. */
+    void syncAttributeScopeLabel();
     /* Commit button / Return: fold the pending submask in with the op held now. */
     void commitPendingMask();
     /* Guard for anything that LEAVES the scope a submask is still pending on (picking
@@ -591,6 +599,20 @@ private:
     static bool    brushBool(const QString &paramsJson, const QString &key, bool def);
     static QString brushStr(const QString &paramsJson, const QString &key, const QString &def);
     static QString brushWith(const QString &paramsJson, const QString &key, const QJsonValue &v);
+    /* As brushWith, but ALSO writes the key onto every stroke already painted, so the
+       slider changes what is on screen instead of only arming the next stroke. Used when
+       a COMMITTED submask is re-opened (see onMaskEditorSetting). */
+    static QString brushStrokesWith(const QString &paramsJson, const QString &key,
+                                    const QJsonValue &v);
+    /* As brushStrokesWith, but only the LAST stroke -- "I just painted that, make it
+       softer". Shift + any brush attribute in the panel. The component's own next-stroke
+       default is deliberately left alone: this edits history, it does not re-arm. */
+    static QString brushLastStrokeWith(const QString &paramsJson, const QString &key,
+                                       const QJsonValue &v);
+    /* Caption for the MaskPanel's attribute header: what a change to the settings below
+       will actually affect, given the tool, whether the submask is still pending, and
+       whether Shift is held right now. */
+    QString maskAttributeScopeText();
     /* maskBrushSettingsChanged from the current settings. */
     void emitBrushSettings(const MaskComponent &m);
     /* A canvas gesture changed a mask setting: seed the row wherever it is showing --
@@ -744,6 +766,31 @@ private:
     void onMaskToolChosen(int tool);         // a submask type was chosen -> beginMaskTool
     void cancelMaskTool();                   // [x]/Esc: discard the pending submask
     MaskComponent *editingMaskComp();        // the tool being built, or null
+
+    /* ---- Submask list (lab UI) ------------------------------------------------------
+       A committed submask is NOT flattened away: it stays in the scope's ordered
+       components and stays editable. These are what the MaskPanel's SubmaskList drives.
+       Each follows the deleteMask shape: mutate, fix up selectedMaskIndex, noteEdit,
+       buildTree, paramsChanged.
+
+       reopenSubmask makes a committed submask the active one again -- its settings load
+       into the panel's editor and buildTree's updateMaskEdit re-arms the on-canvas
+       overlay (handles, brush buffers, range swatches). Nothing else is needed because
+       every mask mutator already writes through selectedMaskIndex. */
+    void reopenSubmask(int index);
+    void setSubmaskEnabled(int index, bool on);
+    void setSubmaskOp(int index, int op);
+    void toggleSubmaskInverted(int index);
+    void moveSubmask(int from, int to);
+    void duplicateSubmask(int index);
+    /* Push the active scope's components into the panel's list and set the panel's
+       visibility/state. Called at the end of every buildTree, so the list tracks image,
+       scope and mask changes without any caller having to remember. */
+    void syncMaskPanel();
+    /* The MaskPanel is nested inside the active scope's row and therefore indented by
+       ScopeHeaderLab::kDetailIndent. Its embedded editor's caption column is narrowed by
+       the same amount so its VALUE column still lines up with the tree below. */
+    static constexpr int kMaskPanelIndent = 22;
     /* MaskEditor (panel) change routing -- mirrors the tree's itemChange mask blocks. */
     void onMaskEditorSetting(const QString &key, const QVariant &value);
     void onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit);

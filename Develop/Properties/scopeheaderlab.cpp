@@ -136,8 +136,38 @@ void ScopeHeaderLab::setScopeRows(const QVector<ScopeRowInfo> &rows, int active)
     rebuild(rows, activeIndex);
 }
 
+void ScopeHeaderLab::setRowDetail(QWidget *detail)
+{
+    if (rowDetail == detail) return;
+    if (detailWrap) {
+        /* Hand any previous detail back to its owner before the wrapper is rebuilt. */
+        if (rowDetail) rowDetail->setParent(nullptr);
+        delete detailWrap;
+        detailWrap = nullptr;
+    }
+    rowDetail = detail;
+    if (!rowDetail) return;
+
+    /* Indent the detail under the scope name (the row's own left margin is 10, plus the
+       checkbox column) so it reads as belonging to that scope, not to the list. */
+    detailWrap = new QWidget(rowsContainer);
+    detailWrap->setAttribute(Qt::WA_TranslucentBackground);
+    QVBoxLayout *dl = new QVBoxLayout(detailWrap);
+    dl->setContentsMargins(kDetailIndent, 0, 0, 0);
+    dl->setSpacing(0);
+    dl->addWidget(rowDetail);
+    rowsLayout->addWidget(detailWrap);
+}
+
 void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
 {
+    /* The nested detail (the MaskPanel) is NOT ours to delete: pull it out of the layout
+       first, so the teardown below cannot take it with the rows. setParent re-homes it on
+       this widget, outside any layout, until it is re-inserted. */
+    if (detailWrap) {
+        detailWrap->setParent(this);
+        detailWrap->hide();
+    }
     /* Drop the old rows (widgets own their children; deleteLater is unnecessary here as
        nothing captures them beyond this rebuild). */
     while (QLayoutItem *it = rowsLayout->takeAt(0)) {
@@ -146,6 +176,15 @@ void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
     }
     for (int i = 0; i < rows.size(); ++i)
         rowsLayout->addWidget(makeRow(i, rows.at(i), i == active));
+
+    /* Re-insert the detail directly beneath the ACTIVE row, so it moves with the
+       selection. Its own visibility is the owner's business (DevelopProperties hides the
+       MaskPanel on Global), so the wrapper always shows: an empty wrapper is 0 high. */
+    if (detailWrap) {
+        const int pos = qBound(0, active + 1, rowsLayout->count());
+        rowsLayout->insertWidget(pos, detailWrap);
+        detailWrap->show();
+    }
 }
 
 QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
