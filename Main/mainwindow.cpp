@@ -7009,23 +7009,42 @@ void MW::updateMaskOverlayTint()
     const QVector<MaskComponent> components = developProperties->activeScopeComponents();
     if (components.isEmpty()) { imageView->clearScopeMaskTint(); return; }
 
-    /* The in-progress (uncommitted) submask is a real component in `components`, but its
+    /* DISABLED submasks (the submask list's row checkbox, MaskComponent::enabled) are
+       skipped by the render (DevelopProperties::stackJob drops them before the job is
+       built), so the veil has to skip them too -- it shows the OUTCOME, and coverage the
+       develop result does not have is a lie. buildMaskBuffer composites whatever vector
+       it is handed and never reads the flag, so the filtering happens here.
+
+       The in-progress (uncommitted) submask is a real component in `components`, but its
        op is still momentary -- it lives in DevelopProperties::pendingMaskOp() (driven by
        the held modifier) and is only written into the component on commit. Substitute it
        here so the veil composites the OUTCOME of what Return / the commit button would
-       do. */
-    const int pendIdx = developProperties->pendingMaskIndex();
-    QVector<MaskComponent> masks = components;
-    const bool hasPending = (pendIdx >= 0 && pendIdx < masks.size());
+       do. Its index is against `components`, so it is remapped onto the filtered vector
+       (and drops out entirely if the pending submask is itself unchecked -- it then
+       contributes nothing, so there is no footprint ring or op chip to show for it). */
+    const int pendSrcIdx = developProperties->pendingMaskIndex();
+    QVector<MaskComponent> masks;
+    masks.reserve(components.size());
+    int pendIdx = -1;
+    for (int i = 0; i < components.size(); ++i) {
+        if (!components.at(i).enabled) continue;
+        if (i == pendSrcIdx) pendIdx = masks.size();
+        masks.append(components.at(i));
+    }
+    if (masks.isEmpty()) { imageView->clearScopeMaskTint(); return; }
+    const bool hasPending = (pendIdx >= 0);
     if (hasPending) masks[pendIdx].op = developProperties->pendingMaskOp();
 
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const EditParams base = developProperties->stackJob().global;
 
-    /* Build any content/AI references the scope's tools sample (cached; no-op if already present),
-       so the composite is non-zero even for a just-added mask on an unadjusted scope. */
+    /* Build any content/AI references the scope's tools sample (cached; no-op if already
+       present), so the composite is non-zero even for a just-added mask on an unadjusted
+       scope. Driven off the FILTERED list: a disabled submask is not composited, so
+       building its (costly, AI) reference would be waste -- re-checking it rebuilds on
+       the next tick. */
     bool needRange = false, needSubject = false, needSky = false, needDepth = false;
-    for (const MaskComponent &m : components) {
+    for (const MaskComponent &m : masks) {
         if      (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) needRange = true;
         else if (m.tool == int(MaskTool::Subject)    || m.tool == int(MaskTool::Background))     needSubject = true;
         else if (m.tool == int(MaskTool::Sky))        needSky = true;
@@ -7036,11 +7055,12 @@ void MW::updateMaskOverlayTint()
     if (needSky)     ensureSkyMask(fPath, *work, base, degrees);
     if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
     /* Object components are per-brush, so build each one from its own component params. */
-    for (const MaskComponent &m : components)
+    for (const MaskComponent &m : masks)
         if (m.tool == int(MaskTool::Object))
             ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
-    /* Brush "AI" auto-mask strokes need their SAM object fields before the tint composites. */
-    for (const MaskComponent &m : components)
+    /* Brush "AI" auto-mask strokes need their SAM object fields before the tint
+       composites. */
+    for (const MaskComponent &m : masks)
         if (m.tool == int(MaskTool::Brush))
             ensureBrushSamFields(fPath, *work, base, degrees, m.paramsJson);
 
@@ -8291,10 +8311,20 @@ void MW::toggleMaskOverlay()
     "O" (Develop mode): hide/show the current scope's mask overlay tint (the red coverage
     visualisation) so the user can see the developed image without it while still editing.
     The visibility state lives in ImageView (per mask-edit session); this just flips it.
-    No-op when no mask tool is active.
+
+    There is nothing to hide or show when no mask is on display -- the Global scope has no
+    mask -- so say so rather than let the click (or "O") appear to do nothing.
 */
     if (G::isLogger) G::log("MW::toggleMaskOverlay");
-    if (imageView) imageView->toggleMaskTint();
+    if (!imageView) return;
+    if (!imageView->maskTintAvailable()) {
+        if (G::popup)
+            G::popup->showPopup("The overlay tint shows a mask's coverage. The Global "
+                                "scope has no mask, so there is nothing to tint. Select "
+                                "a mask scope (or add a mask) first.", 3000);
+        return;
+    }
+    imageView->toggleMaskTint();
 }
 
 void MW::refreshDevelopMaskTintBtn()
@@ -8308,10 +8338,16 @@ void MW::refreshDevelopMaskTintBtn()
     The swatch is painted 12x12 inside the 16x16 button so BarBtn::setActive's blue border
     has room to read; dimmed to G::iconOpacity when the tint is off, matching the other
     action-row buttons.
+
+    With no mask on display (the Global scope) there is nothing to toggle, so the swatch is
+    dimmed further and hollowed out. The button stays ENABLED: its right-click menu (overlay
+    colour, grayscale background) is meant to be reachable without a mask, and a disabled
+    QToolButton would swallow that too -- the left-click explains itself with a popup.
 */
     if (G::isLogger) G::log("MW::refreshDevelopMaskTintBtn");
     if (!developMaskTintBtn) return;
-    const bool shown = imageView ? imageView->maskTintVisible() : false;
+    const bool available = imageView ? imageView->maskTintAvailable() : false;
+    const bool shown = available && imageView->maskTintVisible();
 
     const int side = 12;
     const qreal dpr = developMaskTintBtn->devicePixelRatioF();
@@ -8320,9 +8356,9 @@ void MW::refreshDevelopMaskTintBtn()
     pm.fill(Qt::transparent);
     QPainter p(&pm);
     p.setRenderHint(QPainter::Antialiasing);
-    p.setOpacity(shown ? 1.0 : G::iconOpacity);
-    p.setBrush(G::maskOverlayColor);
-    p.setPen(QPen(QColor(48, 48, 48), 1));
+    p.setOpacity(available ? (shown ? 1.0 : G::iconOpacity) : G::iconOpacity * 0.5);
+    p.setBrush(available ? QBrush(G::maskOverlayColor) : QBrush(Qt::NoBrush));
+    p.setPen(QPen(available ? QColor(48, 48, 48) : G::maskOverlayColor, 1));
     p.drawRoundedRect(QRectF(0.5, 0.5, side - 1, side - 1), 2, 2);
     p.end();
 

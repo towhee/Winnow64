@@ -226,6 +226,11 @@ public slots:
        it: the veil is a full-resolution overlay rebuilt on every drag tick, and while
        it is hidden drawForeground ignores it, so building it is pure cost. */
     bool maskTintVisible() const { return !maskTintHidden; }
+    /* Whether there is anything to tint at all: a mask tool is expanded, or a committed
+       mask's composite is on display. False on the Global scope (no mask), where the
+       tint toggle has nothing to act on -- the action-row button reads this to show
+       itself as unavailable instead of silently doing nothing. */
+    bool maskTintAvailable() const { return maskEditMode || !scopeMaskTint.isNull(); }
     /* True while the in-flight stroke is an ERASE (Opt held AND the submask already had
        coverage to erase). Only then does Opt belong to the stroke, so only then must MW
        stop reading it as the Subtract op modifier -- an Opt stroke on an empty submask
@@ -306,6 +311,10 @@ signals:
        the start of a new mask edit) so the dock's scope menu shows the matching check
        state. */
     void maskTintVisibilityChanged(bool shown);
+    /* There is now (or is no longer) a mask overlay to show/hide -- a tool was expanded
+       or collapsed, or a committed-mask composite appeared/vanished. Drives the enabled
+       look of the action-row tint button. */
+    void maskTintAvailabilityChanged(bool available);
     /* The user began SHAPING the pending submask -- a brush/object stroke, or a mask
        handle drag. The dock latches the combine op held at this instant
        (DevelopProperties::latchMaskOp) so it survives the modifier being released. */

@@ -3701,9 +3701,11 @@ Scope & mask model (Global + masks)
                rows yet) seeds each header's default from sectionExpanded() (first-ever run => Basic
                open, Color/Effects closed), and QTreeView::expanded/collapsed -> persistSectionExpanded()
                writes the state whenever the user toggles one of the three headers (mask tool rows,
-               which also expand/collapse, are filtered out by name). SECTION HEADERS: the Basic, Color
-               and Effects headers append the active scope's name (e.g. "Global: Basic", "Sky:
-               Color") via updateSectionHeaderCaptions(). They carry NO band at all
+               which also expand/collapse, are filtered out by name). SECTION HEADERS: the Basic, Color,
+               Calibrate, Color Grade and Effects headers show their plain section name
+               only ("Basic", "Color") via updateSectionHeaderCaptions() -- the active
+               scope is already shown selected in the scope list above, so the old
+               "Global: Basic" prefix was redundant. They carry NO band at all
                (UR_HeaderFlat): they sit on the panel background, like the rows below
                them. The gradient marks a PANEL-level band (Raw, Scope, Transform), and
                a section belongs to the scope selected in the Scope band above it, so it
@@ -4007,6 +4009,18 @@ Scope & mask model (Global + masks)
                the scope menu row brings the combined mask back. maskTintHidden is sticky,
                so selecting another scope with a mask re-shows it explicitly
                (onScopeSelected -> maskTintShowRequested -> ImageView::showMaskTint).
+             - DISABLED SUBMASKS ARE NOT VEILED: a submask whose row checkbox is off
+               (MaskComponent::enabled == false) is dropped by the render (stackJob skips
+               it), so updateMaskOverlayTint filters it out of the vector it hands
+               buildMaskBuffer -- which composites what it is given and never reads the
+               flag. Before the fix the veil advertised coverage the developed image did
+               not have. The filter also drives the ensure*() reference builds, so an
+               unchecked AI/range submask costs nothing, and the pending index is REMAPPED
+               onto the filtered vector (it is an index into the unfiltered components).
+               Uncheck the pending submask itself and it leaves the veil too -- no
+               footprint ring, no op chip -- since it then contributes nothing; the tool's
+               own live preview still draws, so editing it is not blind. Toggling the
+               checkbox emits paramsChanged, which rebuilds both render and veil.
              - ONE COLOUR, OUTCOME PREVIEW (how the op is shown): the overlay does NOT
                colour-code Add/Subtract/Intersect. Instead the PENDING submask (the one
                being defined, DevelopProperties::pendingMaskIndex) is composited into the
@@ -5401,7 +5415,7 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     cell, the preset dropdown in the value cell. The button is a BarBtn -- the SAME
     class as the Develop action-row tools (Scopes / Transform / Spot), so it inherits
     their chrome for free: G::css draws it transparent with no border, and
-    BarBtn::setActive() adds the blue accent when armed. Do not hand-roll a stylesheet
+    BarBtn::setActive() adds the white accent border when armed. Do not hand-roll a stylesheet
     here; it drifts from the action row the moment that chrome changes. The glyph is
     DRAWN (dropperIcon) rather than shipped as a png + qrc entry, at G::iconOpacity
     when idle so the row has no conspicuously brighter icon in it. The ARMED ghost is
@@ -5846,6 +5860,19 @@ Develop presets (the Presets dock)
     maskTintVisibilityChanged (the key, the scope menu, the slider auto-hide) and
     DevelopProperties::maskOverlayRefreshRequested (the colour changed).
 
+    NOTHING TO TINT (Global scope). The tint only exists while a mask tool is expanded or
+    a committed mask's composite is on display (ImageView::maskTintAvailable() ==
+    maskEditMode || !scopeMaskTint.isNull()). On the Global scope neither holds, and the
+    old button just did nothing when clicked. Now the swatch paints HOLLOW (outline in the
+    overlay colour) at half G::iconOpacity, and a left-click (or "O") says why in a popup
+    instead of no-op'ing. The button stays ENABLED on purpose: its right-click menu is
+    meant to be reachable without a mask, and a disabled QToolButton would swallow that
+    too. A third signal, ImageView::maskTintAvailabilityChanged, repaints it -- emitted
+    from beginMaskEdit / endMaskEdit / setScopeMaskTint / clearScopeMaskTint, each guarded
+    so only a real null <-> non-null transition fires (setScopeMaskTint runs every drag
+    tick). The scope menu already omits its "Show mask overlay" row when unavailable
+    (ScopeHeader::maskOverlayAvailable), so the two agree.
+
     RIGHT-CLICK on it (MW::showDevelopMaskTintMenu) is where the overlay's two APPEARANCE
     settings now live -- the colour, and the grayscale background. THE ONLY PLACE: the
     Mask panel's swatch + "Gray" row was removed on 2026-08-15, because those settings
@@ -5859,9 +5886,10 @@ Develop presets (the Presets dock)
     grayscale is view-only so it just repaints (maskOverlayRepaintRequested).
 
     Active border. The Develop action-row buttons that toggle a panel/tool -- Scopes,
-    Transform, Spot, Mask tint, Preset -- carry a blue (G::appleBlue) border while their
-    panel is shown / the tool is armed, like a conventional checked toolbutton
-    (BarBtn::setActive). MW keeps them as members and calls setActive from the toggle
+    Transform, Spot, Mask tint, Preset -- carry a WHITE border while their panel is
+    shown / the tool is armed, like a conventional checked toolbutton
+    (BarBtn::setActive). It was G::appleBlue; white was chosen because the blue was too
+    quiet against the dark panel to read as "this tool is on" at a glance. MW keeps them as members and calls setActive from the toggle
     handlers (toggleDevelopScopes, toggleDevelopTransform + cancelDevelopTransform,
     spotActiveChanged) so the border tracks the real state even when toggled by the
     keyboard (H / R / Esc / S). The Preset button is the awkward one, because "its panel
