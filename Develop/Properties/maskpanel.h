@@ -25,8 +25,11 @@ class MaskEditor;
         | |    [x] (-) Brush            *    [:]  |   <- selected -> settings below
         | |    Feather   -----o-----              |   <- embedded MaskEditor
         | |    Invert    [ ]                      |
-        | |    [][][][][][]   [Gray]              |   <- overlay colour swatches
         | |    [    Add and Commit    ]           |   <- pending; existing reads "Done"
+
+    The overlay's APPEARANCE (colour, grayscale background) is NOT here: it describes the
+    veil rather than any submask, and is edited from the Develop action row's tint button
+    (right-click). Only the palette still lives with this class -- overlayColours().
 
     Terms: the MASK is what the scope applies; each SUBMASK is a building block folded
     into it, in list order. The submask's SETTINGS render in the embedded MaskEditor so
@@ -84,9 +87,6 @@ public:
     /* Display names for overlayColours(), same order (a menu needs words, chips do
        not). Kept beside the palette so adding a colour cannot leave a menu unlabelled. */
     static const QStringList &overlayColourNames();
-    /* The overlay colour / grayscale flag was changed somewhere ELSE (the action-row
-       tint button's context menu); repaint the chips so this panel agrees. */
-    void syncOverlayControls();
 
 signals:
     /* The commit button was clicked. No op is carried: the op is resolved from the LIVE
@@ -95,15 +95,9 @@ signals:
        can never disagree. On an existing submask this means "Done" -- deselect. */
     void committed();
     void cancelled();                      // [x] / Cancel (discard the pending submask)
-    void overlayColourChanged();           // a swatch was clicked (G:: already updated)
-    /* The grayscale toggle was flipped (G::maskOverlayGrayscale already updated): the
-       image under the overlay is shown desaturated so the veil's colour stands out. */
-    void overlayGrayscaleChanged();
 
 private:
     void buildUi();
-    void refreshSwatches();                // re-draw the selected border after a pick
-    void refreshGrayBtn();                 // reflect G::maskOverlayGrayscale on the chip
     void refreshCommitBtn();               // label + cancel visibility for the state
     void syncAttrVisible();                // attrShown AND the list is not collapsed
 
@@ -113,10 +107,6 @@ private:
     QWidget     *attrWrap    = nullptr;    // maskEditor + commit row (hidden when none)
     QPushButton *commitBtn   = nullptr;    // Add / Subtract / Intersect "and Commit"
     BarBtn      *cancelBtn   = nullptr;    // discard a pending submask (hidden if not)
-    QWidget     *swatchRow   = nullptr;    // overlay-colour picker
-    QPushButton *grayBtn     = nullptr;    // desaturate the image under the overlay
-    QVector<QPushButton*> swatches;
-    QVector<QColor>       swatchColors;
     int          pendingOp  = 0;           // MaskOp the button/label currently shows
     bool         firstMask  = true;        // only Add is possible on an empty mask
     bool         editingExisting = false;  // re-opened submask: "Done", no cancel

@@ -4024,11 +4024,15 @@ Scope & mask model (Global + masks)
                from fogging the subject.
              - OVERLAY COLOUR: G::maskOverlayColor (default 220,40,40) is the single
                colour of the veil, the per-submask live preview (ImageView::maskTintColor)
-               and the pending footprint ring. The MaskPanel's swatch row picks it (red /
-               green / blue / yellow / magenta / white) -- red reads badly over a red
-               subject -- writing "Develop/maskOverlayColor" and re-emitting paramsChanged
-               so the veil repaints. The DevelopProperties ctor seeds G:: from that key.
-             - OVERLAY GRAYSCALE ("Gray" chip, right of the swatches): no overlay colour
+               and the pending footprint ring. The action-row tint button's CONTEXT MENU
+               picks it (red / green / blue / yellow / magenta / white -- red reads badly
+               over a red subject) via DevelopProperties::setMaskOverlayColour, which
+               writes "Develop/maskOverlayColor" and asks for the veil rebuild. The
+               DevelopProperties ctor seeds G:: from that key. The palette itself is
+               MaskPanel::overlayColours() (2026-08-15: the Mask panel's own swatch row
+               was removed -- the overlay's appearance describes the veil, not a submask,
+               so it belongs with the tint button, not inside the submask editor).
+             - OVERLAY GRAYSCALE (same context menu): no overlay colour
                reads well over every subject, so the other half of the answer is to take
                the colour out of the PICTURE. G::maskOverlayGrayscale (persisted as
                "Develop/maskOverlayGrayscale", seeded by the DevelopProperties ctor) makes
@@ -4147,7 +4151,6 @@ Scope & mask model (Global + masks)
                    |    [x] (-) Brush              *   [:]     <- open for editing
                    |    Feather   -----o-----                  <- embedded MaskEditor
                    |    Invert    [ ]
-                   |    [][][][][][]  [Gray]                   <- overlay colour row
                    |    [    Add and Commit    ]               <- "Done" when re-editing
 
                ScopeHeaderLab::rebuild() destroys and re-makes every row on each
@@ -4177,7 +4180,7 @@ Scope & mask model (Global + masks)
                (header arrow or a click on the band) hides the selected submask's
                SETTINGS as well as the rows: SubmaskList emits collapsedChanged and
                MaskPanel::syncAttrVisible() takes the whole attribute block (scope
-               label, MaskEditor, overlay swatches, commit row) down with them, since
+               label, MaskEditor, commit row) down with them, since
                those settings belong to a submask inside the collapsed list. Starting a
                new submask (beginPending) re-expands the section, so a pending edit can
                never be stranded behind a closed header.
@@ -5647,8 +5650,9 @@ Color Grade panel (colour grading)
     hue/sat windows. Replace, not append, because a chip means "select this colour".
     Shift-clicking the image still adds further samples on top.
 
-    ISOLATING THE SELECTION is the pre-existing "Gray" chip on the Mask panel's swatch
-    row (G::maskOverlayGrayscale): it desaturates the image while any overlay is shown, so
+    ISOLATING THE SELECTION is the pre-existing "Grayscale background" item on the action-
+    row tint button's context menu (G::maskOverlayGrayscale, formerly the Mask panel's
+    "Gray" chip): it desaturates the image while any overlay is shown, so
     the veil separates from the picture. It is a VIEW effect in ImageView/ScaledPixmapItem
     only. Do not add a second, competing isolation overlay -- the combine-modifier work
     settled on ONE overlay colour and one outcome preview, and a rival path would undo
@@ -5840,20 +5844,19 @@ Develop presets (the Presets dock)
     to G::iconOpacity while the tint is off. It is repainted from two signals, so the
     swatch and the border stay true no matter what changed the state: ImageView's
     maskTintVisibilityChanged (the key, the scope menu, the slider auto-hide) and
-    DevelopProperties::maskOverlayRefreshRequested (a Mask-panel colour swatch).
+    DevelopProperties::maskOverlayRefreshRequested (the colour changed).
 
-    RIGHT-CLICK on it (MW::showDevelopMaskTintMenu) offers the overlay's two APPEARANCE
-    settings -- the colour, and the grayscale background -- so they are reachable without
-    opening the Mask panel, or even having a mask. The menu is not a second copy of that
-    panel's chips: the colours and their names come from MaskPanel::overlayColours() /
-    overlayColourNames(), and both settings are applied through
-    DevelopProperties::setMaskOverlayColour / setMaskOverlayGrayscale, the ONE entry point
-    that updates the G:: flag, persists it (Develop/maskOverlayColor,
-    Develop/maskOverlayGrayscale), re-syncs the panel chips
-    (MaskPanel::syncOverlayControls) and asks for the right redraw -- a colour rebuilds
-    the veil (maskOverlayRefreshRequested), grayscale is view-only so it just repaints
-    (maskOverlayRepaintRequested). The panel's own chips were rewired to call the same
-    setters, so the two pickers cannot disagree or drift.
+    RIGHT-CLICK on it (MW::showDevelopMaskTintMenu) is where the overlay's two APPEARANCE
+    settings now live -- the colour, and the grayscale background. THE ONLY PLACE: the
+    Mask panel's swatch + "Gray" row was removed on 2026-08-15, because those settings
+    describe the veil rather than any submask, and putting them in the submask editor
+    made them unreachable without a mask open (and duplicated once the button existed).
+    Colours and names come from MaskPanel::overlayColours() / overlayColourNames() (the
+    palette stayed with that class); both settings are applied through
+    DevelopProperties::setMaskOverlayColour / setMaskOverlayGrayscale, which update the
+    G:: flag, persist it (Develop/maskOverlayColor, Develop/maskOverlayGrayscale) and ask
+    for the right redraw -- a colour rebuilds the veil (maskOverlayRefreshRequested),
+    grayscale is view-only so it just repaints (maskOverlayRepaintRequested).
 
     Active border. The Develop action-row buttons that toggle a panel/tool -- Scopes,
     Transform, Spot, Mask tint, Preset -- carry a blue (G::appleBlue) border while their
