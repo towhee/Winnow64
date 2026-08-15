@@ -664,15 +664,9 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
     if (!maskPanel) return;
     connect(maskPanel, &MaskPanel::committed, this, &DevelopProperties::commitPendingMask);
     connect(maskPanel, &MaskPanel::cancelled, this, &DevelopProperties::cancelMaskTool);
-    /* A chip recoloured the overlay / flipped grayscale (the G:: flag is already set):
-       hand it to the shared setter, which persists and asks for the redraw -- the same
-       path the action-row tint button's context menu takes. */
-    connect(maskPanel, &MaskPanel::overlayColourChanged, this, [this]{
-        setMaskOverlayColour(G::maskOverlayColor);
-    });
-    connect(maskPanel, &MaskPanel::overlayGrayscaleChanged, this, [this]{
-        setMaskOverlayGrayscale(G::maskOverlayGrayscale);
-    });
+    /* The overlay's colour / grayscale controls are NOT in this panel (they are on the
+       action-row tint button's context menu, which calls setMaskOverlayColour /
+       setMaskOverlayGrayscale directly), so there is nothing to connect for them. */
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
        active mask component (onMaskEditorSetting mirrors the main tree's itemChange). */
@@ -2621,13 +2615,11 @@ void DevelopProperties::setMaskOverlayShown(bool shown)
 
 void DevelopProperties::setMaskOverlayColour(const QColor &c)
 {
-    /* One entry point for every overlay-colour picker (the Mask panel chips and the
-       action-row tint button's context menu): persist, re-sync the chips and rebuild the
-       veil so it repaints in the new colour. The image itself is untouched. */
+    /* The overlay colour, set from the action-row tint button's context menu: persist it
+       and rebuild the veil so it repaints in the new colour. The image is untouched. */
     if (G::isLogger) G::log("DevelopProperties::setMaskOverlayColour");
     if (!c.isValid()) return;
     G::maskOverlayColor = c;
-    if (maskPanel) maskPanel->syncOverlayControls();
     setting->setValue("Develop/maskOverlayColor", G::maskOverlayColor.name());
     emit maskOverlayRefreshRequested();
 }
@@ -2638,7 +2630,6 @@ void DevelopProperties::setMaskOverlayGrayscale(bool on)
        the image it draws UNDER the overlay), so a repaint is all it costs. */
     if (G::isLogger) G::log("DevelopProperties::setMaskOverlayGrayscale");
     G::maskOverlayGrayscale = on;
-    if (maskPanel) maskPanel->syncOverlayControls();
     setting->setValue("Develop/maskOverlayGrayscale", G::maskOverlayGrayscale);
     emit maskOverlayRepaintRequested();
 }

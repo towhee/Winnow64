@@ -261,10 +261,9 @@ public slots:
     void setActiveBrushAutoMask(bool on);
     /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
     void setMaskOverlayShown(bool shown);
-    /* Set the overlay colour / grayscale-under-the-veil flag from ANY picker (the Mask
-       panel's chips, the action-row tint button's context menu): updates G::, persists,
-       re-syncs the panel chips and asks for the matching redraw (a colour needs the veil
-       rebuilt, grayscale is view-only). */
+    /* Set the overlay colour / grayscale-under-the-veil flag (the action-row tint
+       button's context menu): updates G::, persists and asks for the matching redraw --
+       a colour needs the veil rebuilt, grayscale is view-only. */
     void setMaskOverlayColour(const QColor &c);
     void setMaskOverlayGrayscale(bool on);
 

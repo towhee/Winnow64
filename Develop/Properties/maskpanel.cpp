@@ -68,51 +68,10 @@ void MaskPanel::buildUi()
     bw->setSpacing(4);
     bl->addWidget(btnWrap);
 
-    /* Overlay colour: the mask overlay speaks ONE colour (the veil previews the OUTCOME
-       of the op, so no colour key is needed), and this row picks it -- red reads badly
-       over a red subject. Persisted by DevelopProperties under Develop/maskOverlayColor;
-       G::maskOverlayColor is updated here so the repaint is immediate. */
-    swatchRow = new QWidget(btnWrap);
-    QHBoxLayout *sl = new QHBoxLayout(swatchRow);
-    sl->setContentsMargins(0, 0, 0, 2);
-    sl->setSpacing(6);
-    swatchColors = overlayColours();
-    for (const QColor &c : swatchColors) {
-        QPushButton *sw = new QPushButton(swatchRow);
-        sw->setFixedSize(18, 18);
-        sw->setToolTip("Mask overlay colour");
-        sw->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        connect(sw, &QPushButton::clicked, this, [this, c]{
-            G::maskOverlayColor = c;
-            refreshSwatches();
-            emit overlayColourChanged();
-        });
-        swatches.append(sw);
-        sl->addWidget(sw);
-    }
-    /* Grayscale toggle, on the same row as the swatches: no overlay colour reads well
-       over every subject, so the alternative to hunting for a colour is to take the
-       colour out of the picture. Purely a view effect (ImageView desaturates what it
-       draws under the veil) -- the render and the export are untouched. */
-    sl->addSpacing(8);
-    grayBtn = new QPushButton(tr("Gray"), swatchRow);
-    grayBtn->setCheckable(true);
-    grayBtn->setChecked(G::maskOverlayGrayscale);
-    grayBtn->setFixedHeight(18);
-    grayBtn->setToolTip("Show the image in grayscale while the mask overlay is on,\n"
-                        "so the overlay colour is easier to see (view only)");
-    grayBtn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    connect(grayBtn, &QPushButton::clicked, this, [this]{
-        G::maskOverlayGrayscale = grayBtn->isChecked();
-        refreshGrayBtn();
-        emit overlayGrayscaleChanged();
-    });
-    sl->addWidget(grayBtn);
-
-    sl->addStretch(1);
-    bw->addWidget(swatchRow);
-    refreshSwatches();
-    refreshGrayBtn();
+    /* The overlay's APPEARANCE (colour + grayscale background) is not edited here: it
+       belongs to the veil, not to a submask, and it now lives on the Develop action row's
+       tint button (left-click toggles the veil, right-click picks the colour / flips
+       grayscale). The palette itself still lives with this class -- overlayColours(). */
 
     /* ONE commit button. Its label follows the op the overlay is previewing, so the words
        Subtract/Intersect stay visible instead of hiding behind undocumented keys. The
@@ -159,40 +118,6 @@ const QStringList &MaskPanel::overlayColourNames()
     static const QStringList names = {
         tr("Red"), tr("Green"), tr("Blue"), tr("Yellow"), tr("Magenta"), tr("White")};
     return names;
-}
-
-void MaskPanel::syncOverlayControls()
-{
-    refreshSwatches();
-    refreshGrayBtn();
-}
-
-void MaskPanel::refreshSwatches()
-{
-    /* Flat colour chips; the active one gets a light border. Styled rather than painted
-       so they inherit the dock's button metrics. */
-    for (int k = 0; k < swatches.size(); ++k) {
-        const bool on = (swatchColors.at(k).rgb() == G::maskOverlayColor.rgb());
-        swatches[k]->setStyleSheet(
-            QString("QPushButton { min-width: 0; border-radius: 3px; background: %1;"
-                    " border: %2; }")
-                .arg(swatchColors.at(k).name(),
-                     on ? "2px solid #f0f0f0" : "1px solid #303030"));
-    }
-}
-
-void MaskPanel::refreshGrayBtn()
-{
-    /* Chip-sized like the swatches beside it (the global stylesheet's 100px minimum
-       would otherwise widen the whole dock -- see the commit button), with the checked
-       state drawn as a light border so it matches the selected swatch. */
-    if (!grayBtn) return;
-    grayBtn->setChecked(G::maskOverlayGrayscale);
-    grayBtn->setStyleSheet(
-        QString("QPushButton { min-width: 0; padding: 0 6px; border-radius: 3px;"
-                " background: %1; border: %2; }")
-            .arg(G::maskOverlayGrayscale ? "#585858" : "#3a3a3a",
-                 G::maskOverlayGrayscale ? "2px solid #f0f0f0" : "1px solid #303030"));
 }
 
 void MaskPanel::refreshCommitBtn()
@@ -266,8 +191,6 @@ void MaskPanel::beginPending(bool first)
     editingExisting = false;
     pendingOp = 0;                  // every submask opens as Add ("Add and Commit")
     refreshCommitBtn();
-    refreshSwatches();
-    refreshGrayBtn();               // the flag is persistent, so re-sync on every show
     /* A new submask is being built: re-open the section, or its settings and the
        commit button would be invisible (the [+] that starts one is on the header). */
     if (submaskList) submaskList->setCollapsed(false);
