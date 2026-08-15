@@ -112,12 +112,14 @@ void BarBtn::setIcon(const QIcon &icon)
 
 void BarBtn::setActive(bool on)
 {
-    /* Override the inherited (border:none) style with a blue accent border when active,
-       matching a conventional checked button. Appended after G::css so it wins; cleared
-       back to G::css when inactive. */
+    /* Override the inherited (border:none) style with a white accent border when active,
+       matching a conventional checked button. White reads louder than the blue accent
+       against the dark panel background, which is the point: the active tool must be
+       obvious at a glance. Appended after G::css so it wins; cleared back to G::css
+       when inactive. */
     if (on)
-        setStyleSheet(G::css + "QToolButton { border: 1px solid " + G::appleBlue.name() +
-                      "; border-radius: 2px; }");
+        setStyleSheet(G::css + "QToolButton { border: 1px solid white;"
+                               " border-radius: 2px; }");
     else
         setStyleSheet(G::css);
 }

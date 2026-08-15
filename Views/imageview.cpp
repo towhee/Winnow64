@@ -756,6 +756,7 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
         rebuildContentPreview();
     }
     maskEditMode = true;
+    emit maskTintAvailabilityChanged(true);
     maskHover = underMouse();        // show at once if the cursor is already over view
     maskBrushCursorOn = maskHover && (maskTool == 2 || maskIsObject());
     rangeLoupeOn = false;            // no sampling loupe until the pointer is over image
@@ -769,8 +770,12 @@ void ImageView::endMaskEdit()
     /* The composite tint can be shown with maskEditMode OFF (a committed-mask display, so
        it survives past editing), so ALWAYS drop it here -- else leaving Develop (dock
        hidden) would leave the red tint painted over the image. */
+    const bool wasAvailable = maskTintAvailable();
     if (!scopeMaskTint.isNull()) { scopeMaskTint = QImage(); viewport()->update(); }
-    if (!maskEditMode) return;
+    if (!maskEditMode) {
+        if (wasAvailable) emit maskTintAvailabilityChanged(false);
+        return;
+    }
     if (G::isLogger) G::log("ImageView::endMaskEdit");
     maskEditMode = false;
     maskDrag = -1;
@@ -789,6 +794,7 @@ void ImageView::endMaskEdit()
        blank cursor for Brush/Object) that mouseMoveEvent only refreshes on the next move,
        so an Esc collapse while hovering the image would otherwise leave it showing. */
     setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    emit maskTintAvailabilityChanged(false);
     viewport()->update();
 }
 
@@ -1318,7 +1324,9 @@ void ImageView::setScopeMaskTint(const QImage &tint)
 {
     /* The whole-mask composite coverage tint (all Add/Subtract tools), built by MW and shown under
        the active tool's handles while any tool is expanded. */
+    const bool wasAvailable = maskTintAvailable();
     scopeMaskTint = tint;
+    if (maskTintAvailable() != wasAvailable) emit maskTintAvailabilityChanged(!wasAvailable);
     viewport()->update();       // may be a committed-mask display (not in maskEditMode)
 }
 
@@ -1326,6 +1334,7 @@ void ImageView::clearScopeMaskTint()
 {
     if (scopeMaskTint.isNull()) return;
     scopeMaskTint = QImage();
+    if (!maskTintAvailable()) emit maskTintAvailabilityChanged(false);
     viewport()->update();
 }
 

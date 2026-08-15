@@ -2270,7 +2270,8 @@ void MW::createDevelopDock()
        refreshDevelopMaskTintBtn on both the visibility and the colour signals. */
     developMaskTintBtn = new BarBtn();
     developMaskTintBtn->setToolTip("Show or hide the mask overlay tint  (O)\n"
-                                   "Right-click: overlay colour / grayscale background");
+                                   "Right-click: overlay colour / grayscale background\n"
+                                   "Note: the Global scope has no mask, so no overlay.");
     connect(developMaskTintBtn, &BarBtn::clicked, this, &MW::toggleMaskOverlay);
     /* Right-click picks the colour and flips the grayscale background -- the Mask panel's
        chips, reachable without opening (or even having) a mask. */
@@ -2278,6 +2279,10 @@ void MW::createDevelopDock()
     connect(developMaskTintBtn, &BarBtn::customContextMenuRequested,
             this, &MW::showDevelopMaskTintMenu);
     connect(imageView, &ImageView::maskTintVisibilityChanged, this,
+            [this](bool){ refreshDevelopMaskTintBtn(); });
+    /* A mask tool was expanded/collapsed or a committed-mask tint appeared/vanished: the
+       swatch shows hollow + extra-dim while there is no mask to tint (Global scope). */
+    connect(imageView, &ImageView::maskTintAvailabilityChanged, this,
             [this](bool){ refreshDevelopMaskTintBtn(); });
     /* A swatch in the Mask panel recoloured the overlay. */
     connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested, this,

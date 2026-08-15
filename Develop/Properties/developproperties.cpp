@@ -3041,8 +3041,8 @@ void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
         chb->setSpacing(6);
         QLabel *lbl = new QLabel("WB");
         /* A BarBtn, like the Develop action-row tools (Scopes / Transform / Spot): its
-           G::css base is transparent with no border, and setActive() adds the blue
-           accent when armed. Using the shared class rather than a hand-rolled
+           G::css base is transparent with no border, and setActive() adds the white
+           accent border when armed. Using the shared class rather than a hand-rolled
            stylesheet keeps it in step if that chrome ever changes. */
         BarBtn *drop = new BarBtn();
         drop->setIcon(dropperIcon(false));
@@ -3884,9 +3884,9 @@ void DevelopProperties::addEffects()
 void DevelopProperties::updateSectionHeaderCaptions()
 {
     if (G::isLogger) G::log("DevelopProperties::updateSectionHeaderCaptions");
-    /* The Basic/Color/Effects section headers carry the active scope's name so it is
-       always clear what the sliders below edit, e.g. "Global: Basic", "Sky: Color". */
-    const QString scopeName = currentScopeNames().value(activeScopeIndex);
+    /* The Basic/Color/Effects section headers carry their plain section name only: the
+       active scope is already shown (selected) in the scope list above them, so prefixing
+       every header with it ("Global: Basic") was redundant noise. */
     const QPair<QString, QString> hdrs[] = {
         {"BasicHeader",    "Basic"},
         {"ColorHeader",    "Color"},
@@ -3897,8 +3897,7 @@ void DevelopProperties::updateSectionHeaderCaptions()
     for (const auto &h : hdrs) {
         const QModelIndex idx = findCaptionIndex(h.first);
         if (idx.isValid())
-            model->setData(idx, scopeName + ": " + h.second);
-            // model->setData(idx, h.second + " " + scopeName);
+            model->setData(idx, h.second);
     }
 }
 

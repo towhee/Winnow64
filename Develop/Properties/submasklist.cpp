@@ -52,7 +52,7 @@ void SubmaskList::buildUi()
 
     titleLabel = new QLabel(tr("Submasks"), headerBand);
     titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
+                                  .arg(G::textColor.name()).arg(G::strFontSize.toInt()));
 
     addBtn = new BarBtn();
     addBtn->setToolTip("Add a submask to this mask (M)");
