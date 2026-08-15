@@ -522,7 +522,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
         /* Header band fill. The gradient (a -> b) marks a PANEL-level header; a
            UR_HeaderFlat header is a subordinate section INSIDE a panel (Develop's
-           Basic / Color / Color Mix / Effects under the Scope band) and gets NO band at
+           Basic / Color / Color Grade / Effects under the Scope band) and gets NO band at
            all -- it sits on the panel background, like the rows below it, so the tier
            reads from the caption and the containment rail rather than from banding.
            Skipping the fill (rather than filling with a matching colour) keeps it exact
@@ -557,7 +557,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            gutter), so captions stay aligned down the panel and the caption-column and
            value-column passes compute the same capLeft. */
         if (deco) capLeft += decoCapShift();
-        /* Nest a header one indent level right (Develop's Basic/Color/Color Mix/Effects
+        /* Nest a header one indent level right (Develop's Basic/Color/Color Grade/Effects
            sections sit under the Layer band above the tree). Only the header's own
            content (arrow + caption) shifts; child rows keep their own indentation. */
         const int hdrExtraIndent = capIndex.data(UR_ExtraIndent).toBool()

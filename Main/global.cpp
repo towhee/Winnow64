@@ -284,7 +284,7 @@ int propertyWidgetMarginRight = 2;
 int decorationTitleGap = 3;
 /* Develop dock CONTAINMENT RAIL: a vertical accent line down the left edge, running from
    the top of the selected scope row (ScopeHeaderLab) through the whole property tree
-   (DevelopProperties), so the Basic/Color/Color Mix/Effects sections read as the contents
+   (DevelopProperties), so the Basic/Color/Color Grade/Effects sections read as contents
    of that scope rather than as siblings of the Scope band. Drawn in G::selectionColor, so
    over the selected row itself it is invisible and the rail appears to grow out of it.
    scopeRailW = 0 removes the rail everywhere. */

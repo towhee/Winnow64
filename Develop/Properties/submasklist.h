@@ -55,6 +55,11 @@ public:
     void setSubmasks(const QVector<SubmaskRowInfo> &rows, int selected);
     int  count() const { return infos.size(); }
 
+    /* Collapsed hides the rows AND (via collapsedChanged, in MaskPanel) the selected
+       submask's settings below them: the section is one thing to the user. */
+    bool isCollapsed() const { return collapsed; }
+    void setCollapsed(bool collapse);
+
     /* Display name of a MaskOp, shared with the panel's commit button wording. */
     static QString opName(int op);
 
@@ -67,6 +72,7 @@ signals:
     void deleteRequested(int index);
     void moveRequested(int from, int to);
     void duplicateRequested(int index);
+    void collapsedChanged(bool collapsed);        // hide/show the settings below too
 
 protected:
     void paintEvent(QPaintEvent *) override;      // gradient behind the header band

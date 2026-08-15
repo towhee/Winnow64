@@ -3,7 +3,7 @@
 #include "Develop/colorgrade.h"
 
 /*
-    Colour-grading math (Develop/colorgrade.h) -- the shared kernel behind the Color Mix
+    Colour-grading math (Develop/colorgrade.h) -- the shared kernel behind the Color Grade
     panel's tonal-range tinting. These guard the two things easy to get subtly wrong and
     invisible in review: that a tint pushes CHROMA without shifting luma (so grading does
     not double as an exposure control), and that the tonal windows form a clean partition
@@ -19,7 +19,85 @@ class tst_colorgrade : public QObject
         return 0.2126f * v[0] + 0.7152f * v[1] + 0.0722f * v[2];
     }
 
+    /* The pipeline's tuning constants, mirrored so the split-point tests can assert the
+       exact values develop.cpp will feed in. Kept in sync by hand -- if they drift, the
+       defaultBlendingMatchesLegacySplit test below is what catches it. */
+    static constexpr float kBaseShadowEnd = 0.5f;
+    static constexpr float kBaseHighStart = 0.5f;
+    static constexpr float kBlendRange    = 0.30f;
+    static constexpr float kBalanceRange  = 0.20f;
+    static constexpr float kSplitLo       = 0.05f;
+    static constexpr float kSplitHi       = 0.95f;
+
+    static void splits(float blending, float balance, float &se, float &hs)
+    {
+        ColorGrade::gradeSplitPoints(blending, balance, kBaseShadowEnd, kBaseHighStart,
+                                     kBlendRange, kBalanceRange, kSplitLo, kSplitHi,
+                                     se, hs);
+    }
+
 private slots:
+
+    /* THE compatibility guard. Blending 50 / Balance 0 are the defaults every image
+       carries, including ones graded before these sliders existed. They must reproduce
+       the fixed split the panel used then, EXACTLY -- anything else silently re-renders
+       every previously graded photo the first time it is reopened. */
+    void defaultBlendingMatchesLegacySplit()
+    {
+        float se, hs;
+        splits(50.0f, 0.0f, se, hs);
+        QCOMPARE(se, kBaseShadowEnd);
+        QCOMPARE(hs, kBaseHighStart);
+    }
+
+    /* Blending below 50 pulls the edges APART (a wider pure-midtone band); above 50
+       pushes them together into more overlap. */
+    void blendingWidensAndNarrowsTheWindows()
+    {
+        float seLow, hsLow, seHigh, hsHigh;
+        splits(0.0f,   0.0f, seLow,  hsLow);
+        splits(100.0f, 0.0f, seHigh, hsHigh);
+        QVERIFY(seLow  < kBaseShadowEnd);      // shadow window closes earlier
+        QVERIFY(hsLow  > kBaseHighStart);      // highlight window opens later
+        QVERIFY(seHigh > kBaseShadowEnd);      // and the reverse above 50
+        QVERIFY(hsHigh < kBaseHighStart);
+        QVERIFY(hsLow - seLow > hsHigh - seHigh);   // the gap really did shrink
+    }
+
+    /* Balance slides BOTH edges the same way. Lightroom's sense: positive favours the
+       highlight range, so both splits move DOWN and more of the image reads as highlight.
+       A sign flip here would invert the control, which is invisible in review. */
+    void balanceSlidesTheSplitTowardHighlights()
+    {
+        float sePos, hsPos, seNeg, hsNeg;
+        splits(50.0f,  100.0f, sePos, hsPos);
+        splits(50.0f, -100.0f, seNeg, hsNeg);
+        QVERIFY(sePos < kBaseShadowEnd);
+        QVERIFY(hsPos < kBaseHighStart);
+        QVERIFY(seNeg > kBaseShadowEnd);
+        QVERIFY(hsNeg > kBaseHighStart);
+
+        /* Confirm the CONSEQUENCE, not just the numbers: at positive balance a mid-grey
+           pixel must carry more highlight weight than at negative. */
+        float wS, wM, wH, wS2, wM2, wH2;
+        ColorGrade::gradeTonalWeights(0.5f, sePos, hsPos, wS, wM, wH);
+        ColorGrade::gradeTonalWeights(0.5f, seNeg, hsNeg, wS2, wM2, wH2);
+        QVERIFY(wH > wH2);
+    }
+
+    /* The splits feed divisions inside gradeTonalWeights, so they must never reach 0 or
+       1 however hard the two sliders are pushed. */
+    void splitsStayInsideTheOpenInterval()
+    {
+        for (float b : {0.f, 25.f, 50.f, 75.f, 100.f}) {
+            for (float bal : {-100.f, -50.f, 0.f, 50.f, 100.f}) {
+                float se, hs;
+                splits(b, bal, se, hs);
+                QVERIFY(se >= kSplitLo && se <= kSplitHi);
+                QVERIFY(hs >= kSplitLo && hs <= kSplitHi);
+            }
+        }
+    }
 
     /* sat 0 is a no-op regardless of hue: an unset range must never tint. */
     void zeroSatIsNoTint()

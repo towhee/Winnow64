@@ -71,11 +71,12 @@ struct EditScope {
        scope's params (Basic+Color+Effects together) and is distinct from `enabled` -- `enabled`
        drives the compositor's scope on/off, showScope is the editing-side preview and leaves the
        compositor semantics untouched. All default true so older sidecars are unaffected. */
-    bool showScope    = true;
-    bool showBasic    = true;
-    bool showColor    = true;
-    bool showColorMix = true;
-    bool showEffects  = true;
+    bool showScope      = true;
+    bool showBasic      = true;
+    bool showColor      = true;
+    bool showCalibrate  = true;
+    bool showColorGrade = true;
+    bool showEffects    = true;
 };
 
 /* The params the renderer should apply for one scope: a COPY of the stored params with any
@@ -85,14 +86,16 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     if (!l.showScope) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
         EditParams::resetGroup(p, EditParams::Group::Color);
-        EditParams::resetGroup(p, EditParams::Group::ColorMix);
+        EditParams::resetGroup(p, EditParams::Group::Calibrate);
+        EditParams::resetGroup(p, EditParams::Group::ColorGrade);
         EditParams::resetGroup(p, EditParams::Group::Effects);
         return p;
     }
-    if (!l.showBasic)    EditParams::resetGroup(p, EditParams::Group::Basic);
-    if (!l.showColor)    EditParams::resetGroup(p, EditParams::Group::Color);
-    if (!l.showColorMix) EditParams::resetGroup(p, EditParams::Group::ColorMix);
-    if (!l.showEffects)  EditParams::resetGroup(p, EditParams::Group::Effects);
+    if (!l.showBasic)      EditParams::resetGroup(p, EditParams::Group::Basic);
+    if (!l.showColor)      EditParams::resetGroup(p, EditParams::Group::Color);
+    if (!l.showCalibrate)  EditParams::resetGroup(p, EditParams::Group::Calibrate);
+    if (!l.showColorGrade) EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+    if (!l.showEffects)    EditParams::resetGroup(p, EditParams::Group::Effects);
     return p;
 }
 
@@ -172,7 +175,8 @@ struct EditStack {
         for (const EditScope &l : scopes)
             if (l.enabled && (!l.params.isIdentity() || !l.components.isEmpty() ||
                               !l.showScope || !l.showBasic || !l.showColor ||
-                              !l.showColorMix || !l.showEffects))
+                              !l.showCalibrate || !l.showColorGrade ||
+                              !l.showEffects))
                 return false;
         return true;
     }
@@ -209,6 +213,12 @@ struct EditStack {
         o["saturation"]      = p.saturation;
         o["vibrance"]        = p.vibrance;
         o["luminance"]       = p.luminance;
+        o["calRedHue"]       = p.calRedHue;
+        o["calRedSat"]       = p.calRedSat;
+        o["calGreenHue"]     = p.calGreenHue;
+        o["calGreenSat"]     = p.calGreenSat;
+        o["calBlueHue"]      = p.calBlueHue;
+        o["calBlueSat"]      = p.calBlueSat;
         o["gradeShadowHue"]  = p.gradeShadowHue;
         o["gradeShadowSat"]  = p.gradeShadowSat;
         o["gradeShadowLum"]  = p.gradeShadowLum;
@@ -218,6 +228,11 @@ struct EditStack {
         o["gradeHighHue"]    = p.gradeHighHue;
         o["gradeHighSat"]    = p.gradeHighSat;
         o["gradeHighLum"]    = p.gradeHighLum;
+        o["gradeGlobalHue"]  = p.gradeGlobalHue;
+        o["gradeGlobalSat"]  = p.gradeGlobalSat;
+        o["gradeGlobalLum"]  = p.gradeGlobalLum;
+        o["gradeBlending"]   = p.gradeBlending;
+        o["gradeBalance"]    = p.gradeBalance;
         o["denoiseLuma"]     = p.denoiseLuma;
         o["denoiseChroma"]   = p.denoiseChroma;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
@@ -255,6 +270,12 @@ struct EditStack {
         p.saturation      = static_cast<float>(o.value("saturation").toDouble(p.saturation));
         p.vibrance        = static_cast<float>(o.value("vibrance").toDouble(p.vibrance));
         p.luminance       = static_cast<float>(o.value("luminance").toDouble(p.luminance));
+        p.calRedHue       = static_cast<float>(o.value("calRedHue").toDouble(p.calRedHue));
+        p.calRedSat       = static_cast<float>(o.value("calRedSat").toDouble(p.calRedSat));
+        p.calGreenHue     = static_cast<float>(o.value("calGreenHue").toDouble(p.calGreenHue));
+        p.calGreenSat     = static_cast<float>(o.value("calGreenSat").toDouble(p.calGreenSat));
+        p.calBlueHue      = static_cast<float>(o.value("calBlueHue").toDouble(p.calBlueHue));
+        p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
         p.gradeShadowSat  = static_cast<float>(o.value("gradeShadowSat").toDouble(p.gradeShadowSat));
         p.gradeShadowLum  = static_cast<float>(o.value("gradeShadowLum").toDouble(p.gradeShadowLum));
@@ -264,6 +285,11 @@ struct EditStack {
         p.gradeHighHue    = static_cast<float>(o.value("gradeHighHue").toDouble(p.gradeHighHue));
         p.gradeHighSat    = static_cast<float>(o.value("gradeHighSat").toDouble(p.gradeHighSat));
         p.gradeHighLum    = static_cast<float>(o.value("gradeHighLum").toDouble(p.gradeHighLum));
+        p.gradeGlobalHue  = static_cast<float>(o.value("gradeGlobalHue").toDouble(p.gradeGlobalHue));
+        p.gradeGlobalSat  = static_cast<float>(o.value("gradeGlobalSat").toDouble(p.gradeGlobalSat));
+        p.gradeGlobalLum  = static_cast<float>(o.value("gradeGlobalLum").toDouble(p.gradeGlobalLum));
+        p.gradeBlending   = static_cast<float>(o.value("gradeBlending").toDouble(p.gradeBlending));
+        p.gradeBalance    = static_cast<float>(o.value("gradeBalance").toDouble(p.gradeBalance));
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
@@ -288,11 +314,12 @@ struct EditStack {
             lo["combine"] = l.combine;
             /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
                untouched scope serializes exactly as before (forward/backward tolerant). */
-            if (!l.showScope)    lo["showLayer"]    = false;
-            if (!l.showBasic)    lo["showBasic"]    = false;
-            if (!l.showColor)    lo["showColor"]    = false;
-            if (!l.showColorMix) lo["showColorMix"] = false;
-            if (!l.showEffects)  lo["showEffects"]  = false;
+            if (!l.showScope)      lo["showLayer"]      = false;
+            if (!l.showBasic)      lo["showBasic"]      = false;
+            if (!l.showColor)      lo["showColor"]      = false;
+            if (!l.showCalibrate)  lo["showCalibrate"]  = false;
+            if (!l.showColorGrade) lo["showColorGrade"] = false;
+            if (!l.showEffects)    lo["showEffects"]    = false;
             QJsonArray marr;
             for (const MaskComponent &m : l.components) {
                 QJsonObject mo;
@@ -377,11 +404,16 @@ struct EditStack {
             l.opacity = static_cast<float>(lo.value("opacity").toDouble(l.opacity));
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
-            l.showScope    = lo.value("showLayer").toBool(l.showScope);
-            l.showBasic    = lo.value("showBasic").toBool(l.showBasic);
-            l.showColor    = lo.value("showColor").toBool(l.showColor);
-            l.showColorMix = lo.value("showColorMix").toBool(l.showColorMix);
-            l.showEffects  = lo.value("showEffects").toBool(l.showEffects);
+            l.showScope = lo.value("showLayer").toBool(l.showScope);
+            l.showBasic = lo.value("showBasic").toBool(l.showBasic);
+            l.showColor = lo.value("showColor").toBool(l.showColor);
+            l.showCalibrate = lo.value("showCalibrate").toBool(l.showCalibrate);
+            /* The colour-grading section was called "Color Mix" until its rename, so
+               sidecars written before that carry the old key. Read the legacy spelling
+               first, then let the current one win if both are present. */
+            l.showColorGrade = lo.value("showColorMix").toBool(l.showColorGrade);
+            l.showColorGrade = lo.value("showColorGrade").toBool(l.showColorGrade);
+            l.showEffects = lo.value("showEffects").toBool(l.showEffects);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
                 const QJsonObject mo = mv.toObject();
@@ -489,15 +521,30 @@ struct EditStack {
         if (clampF(p.vibrance,   -100.0f, 100.0f, def.vibrance))   ++fixed;
         if (clampF(p.luminance,  -100.0f, 100.0f, def.luminance))  ++fixed;
 
+        /* Calibration: all six are plain -100..100 slider values. */
+        if (clampF(p.calRedHue,   -100.0f, 100.0f, def.calRedHue))   ++fixed;
+        if (clampF(p.calRedSat,   -100.0f, 100.0f, def.calRedSat))   ++fixed;
+        if (clampF(p.calGreenHue, -100.0f, 100.0f, def.calGreenHue)) ++fixed;
+        if (clampF(p.calGreenSat, -100.0f, 100.0f, def.calGreenSat)) ++fixed;
+        if (clampF(p.calBlueHue,  -100.0f, 100.0f, def.calBlueHue))  ++fixed;
+        if (clampF(p.calBlueSat,  -100.0f, 100.0f, def.calBlueSat))  ++fixed;
+
         /* Colour grading: hue degrees wrap, sat 0..1, lum -100..100. */
-        float *hues[] = {&p.gradeShadowHue, &p.gradeMidHue, &p.gradeHighHue};
-        float *sats[] = {&p.gradeShadowSat, &p.gradeMidSat, &p.gradeHighSat};
-        float *lums[] = {&p.gradeShadowLum, &p.gradeMidLum, &p.gradeHighLum};
-        for (int i = 0; i < 3; ++i) {
+        float *hues[] = {&p.gradeShadowHue, &p.gradeMidHue, &p.gradeHighHue,
+                         &p.gradeGlobalHue};
+        float *sats[] = {&p.gradeShadowSat, &p.gradeMidSat, &p.gradeHighSat,
+                         &p.gradeGlobalSat};
+        float *lums[] = {&p.gradeShadowLum, &p.gradeMidLum, &p.gradeHighLum,
+                         &p.gradeGlobalLum};
+        for (int i = 0; i < 4; ++i) {
             if (clampF(*hues[i], 0.0f, 360.0f, 0.0f)) ++fixed;
             if (clampF(*sats[i], 0.0f, 1.0f,   0.0f)) ++fixed;
             if (clampF(*lums[i], -100.0f, 100.0f, 0.0f)) ++fixed;
         }
+        /* Window shape: defaults are 50 / 0, NOT 0 / 0 -- restoring a bad blending to 0
+           would silently re-shape every range. */
+        if (clampF(p.gradeBlending, 0.0f, 100.0f, def.gradeBlending)) ++fixed;
+        if (clampF(p.gradeBalance, -100.0f, 100.0f, def.gradeBalance)) ++fixed;
 
         if (clampF(p.denoiseLuma,   0.0f, 1.0f, def.denoiseLuma))   ++fixed;
         if (clampF(p.denoiseChroma, 0.0f, 1.0f, def.denoiseChroma)) ++fixed;

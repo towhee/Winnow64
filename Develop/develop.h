@@ -109,27 +109,40 @@ private:
         float toneLutSMax = 1.0f;          // perceptual s domain the table spans is [0, this]
         float toneLut[kLutSize] = {};      // s -> white-normalised linear output
 
-        /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the tone curve
-           in the same fused pass (it mixes the three channels, so unlike the tone curve it cannot
-           be a per-channel LUT). hueMat is a 3x3 rotation about the neutral axis (row-major, used
-           only when hue != 0); satFactor scales chroma about luma; vibAmount is a per-pixel
-           saturation boost weighted by how muted the pixel already is (0 = off); lumGain is a
-           uniform gain. hslActive == false => identity (skip the block). */
+        /* Calibration (Calibrate panel) -- a 3x3 matrix (row-major) re-pointing the R/G/B
+           primaries, applied in LINEAR light right after channelGain and BEFORE the tone
+           curve. Its columns are the rotated/chroma-scaled primaries, built so neutrals
+           are fixed. calActive == false => identity (skip the block). */
+        bool  calActive = false;
+        float calMat[9] = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+        /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the
+           tone curve in the same fused pass (it mixes the three channels, so unlike the
+           tone curve it cannot be a per-channel LUT). hueMat is a 3x3 rotation about the
+           neutral axis (row-major, used only when hue != 0); satFactor scales chroma
+           about luma; vibAmount is a per-pixel saturation boost weighted by how muted the
+           pixel already is (0 = off); lumGain is a uniform gain. hslActive == false =>
+           identity (skip the block). */
         bool  hslActive  = false;
         float hueMat[9]  = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
         float satFactor  = 1.0f;
         float vibAmount  = 0.0f;
         float lumGain    = 1.0f;
 
-        /* Colour grading (Color Mix panel) -- tonal-range tinting applied after HSL in
-           the same fused pass. For each of the three ranges [0]=shadows, [1]=midtones,
-           [2]=highlights: gradeTint is a zero-luma RGB chroma push (hue+sat pre-scaled)
-           ADDED to the pixel, gradeLum a per-range luminance gain delta. Both weighted
-           per pixel by smooth tonal windows of the pixel's luma (see applyPointOps).
-           gradeActive == false => identity (skip the block). */
+        /* Colour grading (Color Grade panel) -- tonal-range tinting applied after HSL in
+           the same fused pass. For each of the four ranges [0]=shadows, [1]=midtones,
+           [2]=highlights, [3]=GLOBAL: gradeTint is a zero-luma RGB chroma push (hue+sat
+           pre-scaled) ADDED to the pixel, gradeLum a per-range luminance gain delta.
+           Ranges 0-2 are weighted per pixel by smooth tonal windows of the pixel's luma;
+           range 3 is NOT tone-selective and applies at weight 1 everywhere, so it needs
+           no window (see applyPointOps). gradeShadowEnd / gradeHighStart are those
+           windows' split points, derived once from the panel's Blending + Balance
+           sliders. gradeActive == false => identity (skip the block). */
         bool  gradeActive = false;
-        float gradeTint[3][3] = {};   // [range][rgb], zero-luma chroma offset
-        float gradeLum[3]     = {};   // [range] luminance gain delta (0 = none)
+        float gradeTint[4][3] = {};   // [range][rgb], zero-luma chroma offset
+        float gradeLum[4]     = {};   // [range] luminance gain delta (0 = none)
+        float gradeShadowEnd  = 0.5f; // perceptual L where the shadow window closes
+        float gradeHighStart  = 0.5f; // perceptual L where the highlight window opens
     };
     static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);
 

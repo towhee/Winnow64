@@ -4,21 +4,20 @@
 #include <QPainterPath>
 #include <QFontMetrics>
 #include <QMouseEvent>
-#include <QResizeEvent>
 #include <cmath>
 
 namespace {
-constexpr float kPi     = 3.14159265358979323846f;
-constexpr float kMargin = 26.0f;    // rim-to-edge gap; leaves room for hue labels OUTSIDE
 constexpr float kHueMax = 90.0f;    // matches the dock Hue Lo/Hi slider range
 constexpr float kHitPx  = 10.0f;    // grab-handle hit radius
 }
 
-ColorRangeWheel::ColorRangeWheel(QWidget *parent) : QWidget(parent)
+ColorRangeWheel::ColorRangeWheel(QWidget *parent) : HueSatWheel(parent)
 {
+    /* Wider rim gap than the grade wheel: the hue-edge handles are labelled OUTSIDE the
+       rim, and the labels need somewhere to go. */
+    discMargin = 26.0f;
     setMinimumHeight(180);   // taller so the disc stays large with the outside labels
     setMouseTracking(true);
-    setAttribute(Qt::WA_TranslucentBackground);
 }
 
 void ColorRangeWheel::setSamples(const QVector<QPointF> &s)
@@ -34,52 +33,6 @@ void ColorRangeWheel::setBounds(float hueLoDeg, float hueHiDeg, float satLo, flo
     m_satLo = qBound(0.0f, satLo, 1.0f);
     m_satHi = qBound(0.0f, satHi, 1.0f);
     update();
-}
-
-void ColorRangeWheel::resizeEvent(QResizeEvent *)
-{
-    rebuildWheel();
-}
-
-/* Render the HSV disc once per size (hue = angle at +x growing anticlockwise, sat =
-   radius / disc radius, value 1), with a one-pixel rim alpha ramp. */
-void ColorRangeWheel::rebuildWheel()
-{
-    if (width() <= 0 || height() <= 0) return;
-    centre = QPointF(width() / 2.0, height() / 2.0);
-    radius = static_cast<float>(qMax(4.0, qMin(width(), height()) / 2.0 - kMargin));
-
-    wheelCache = QImage(size(), QImage::Format_ARGB32);
-    wheelCache.fill(Qt::transparent);
-    const float cx = static_cast<float>(centre.x());
-    const float cy = static_cast<float>(centre.y());
-    for (int y = 0; y < height(); ++y) {
-        QRgb *row = reinterpret_cast<QRgb *>(wheelCache.scanLine(y));
-        for (int x = 0; x < width(); ++x) {
-            const float dx = x + 0.5f - cx;
-            const float dy = cy - (y + 0.5f);          // screen y grows downward
-            const float dist = std::sqrt(dx * dx + dy * dy);
-            if (dist > radius + 1.0f) continue;
-            float ang = std::atan2(dy, dx) * 180.0f / kPi;
-            if (ang < 0.0f) ang += 360.0f;
-            const float ssat = qMin(1.0f, dist / radius);
-            QColor c = QColor::fromHsvF(qMin(0.9999f, ang / 360.0f), ssat, 1.0);
-            float a = 1.0f;
-            if (dist > radius) a = radius + 1.0f - dist;
-            const int ai = static_cast<int>(a * 255.0f + 0.5f);
-            c.setAlpha(ai < 0 ? 0 : (ai > 255 ? 255 : ai));
-            row[x] = c.rgba();
-        }
-    }
-    wheelCache = wheelCache.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-}
-
-QPointF ColorRangeWheel::posFor(float hueDeg, float satUnit) const
-{
-    const float rad = hueDeg * kPi / 180.0f;
-    const float rr  = qBound(0.0f, satUnit, 1.0f) * radius;
-    return QPointF(centre.x() + std::cos(rad) * rr,
-                   centre.y() - std::sin(rad) * rr);
 }
 
 bool ColorRangeWheel::anchor(float &hueDeg, float &sat) const
@@ -145,16 +98,9 @@ void ColorRangeWheel::applyDrag(const QPointF &pos)
 
 void ColorRangeWheel::paintEvent(QPaintEvent *)
 {
-    if (wheelCache.size() != size()) rebuildWheel();
-
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, true);
-    p.drawImage(0, 0, wheelCache);
-
-    /* Rim ring + neutral centre. */
-    p.setPen(QPen(QColor(0, 0, 0, 110), 1.0));
-    p.setBrush(Qt::NoBrush);
-    p.drawEllipse(centre, radius, radius);
+    paintDisc(p);
 
     if (m_samples.isEmpty()) {
         p.setPen(QColor(210, 210, 210, 200));
@@ -210,8 +156,8 @@ void ColorRangeWheel::paintEvent(QPaintEvent *)
     }
 
     /* Absolute hue (degrees) at each rim hue handle -- the low/high edges of the selected
-       hue range. Drawn in a small dark pill just OUTSIDE the rim (kMargin reserves the
-       space) so it never sits over the disc colours. */
+       hue range. Drawn in a small dark pill just OUTSIDE the rim (discMargin reserves
+       the space) so it never sits over the disc colours. */
     float ah, as;
     if (anchor(ah, as)) {
         auto wrap360 = [](float d){ while (d < 0.0f) d += 360.0f;

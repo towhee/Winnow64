@@ -219,6 +219,12 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "saturation")          p.saturation          = f;
     else if (key == "vibrance")            p.vibrance            = f;
     else if (key == "luminance")           p.luminance           = f;
+    else if (key == "calRedHue")           p.calRedHue           = f;
+    else if (key == "calRedSat")           p.calRedSat           = f;
+    else if (key == "calGreenHue")         p.calGreenHue         = f;
+    else if (key == "calGreenSat")         p.calGreenSat         = f;
+    else if (key == "calBlueHue")          p.calBlueHue          = f;
+    else if (key == "calBlueSat")          p.calBlueSat          = f;
     else if (key == "gradeShadowHue")      p.gradeShadowHue      = f;
     else if (key == "gradeShadowSat")      p.gradeShadowSat      = f;
     else if (key == "gradeShadowLum")      p.gradeShadowLum      = f;
@@ -228,6 +234,11 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "gradeHighHue")        p.gradeHighHue        = f;
     else if (key == "gradeHighSat")        p.gradeHighSat        = f;
     else if (key == "gradeHighLum")        p.gradeHighLum        = f;
+    else if (key == "gradeGlobalHue")      p.gradeGlobalHue      = f;
+    else if (key == "gradeGlobalSat")      p.gradeGlobalSat      = f;
+    else if (key == "gradeGlobalLum")      p.gradeGlobalLum      = f;
+    else if (key == "gradeBlending")       p.gradeBlending       = f;
+    else if (key == "gradeBalance")        p.gradeBalance        = f;
     else if (key == "localDenoiseLuma")    p.localDenoiseLuma    = f;
     else if (key == "localDenoiseChroma")  p.localDenoiseChroma  = f;
     else if (key == "vignetteExposure")    p.vignetteExposure    = f;

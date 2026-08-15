@@ -1240,6 +1240,17 @@ static bool isSelectionKey(const QKeyEvent *e)
     return true;
 }
 
+/* Is the focus widget a place where a typed LETTER is text rather than a shortcut? Only
+   the search field and an editable combo qualify. A spin box's internal QLineEdit does
+   NOT: it takes numbers, so a letter typed there is a Develop shortcut. */
+static bool isTextEntryWidget(const QWidget *fw)
+{
+    if (!fw) return false;
+    if (const QLineEdit *le = qobject_cast<const QLineEdit *>(fw))
+        return !qobject_cast<QAbstractSpinBox *>(le->parentWidget());
+    return qobject_cast<const QComboBox *>(fw) != nullptr;
+}
+
 bool MW::developShortcutIntercept(QEvent *event)
 {
 /*
@@ -1291,10 +1302,21 @@ bool MW::developShortcutIntercept(QEvent *event)
         return true;
     }
 
-    /* A value editor owns its keys unconditionally: arrows nudge a Develop slider,
-       letters type into the search field. Arbitrating those away would break both. */
-    if (qobject_cast<QAbstractSlider *>(fw)  || qobject_cast<QAbstractSpinBox *>(fw) ||
-        qobject_cast<QLineEdit *>(fw)        || qobject_cast<QComboBox *>(fw))
+    /* A value editor owns its keys: arrows nudge a Develop slider, letters type into the
+       search field. But a slider or spin box has no use for a LETTER, and focus sits on a
+       Develop dock slider for most of a session -- bailing there sent the letter on to
+       the GLOBAL action bound to it (O opened the folder dialog instead of toggling the
+       overlay, S started a slideshow, X rejected the image), which is exactly what this
+       arbiter exists to prevent. So a letter in developShortcuts is still arbitrated over
+       a slider/spin box; only real text entry keeps its letters unconditionally. */
+    const int key = e->key();
+    const bool developLetter = key >= Qt::Key_A && key <= Qt::Key_Z
+                               && G::bareModifiers(e) == Qt::NoModifier
+                               && !e->isAutoRepeat() && developShortcuts.contains(key);
+    if (isTextEntryWidget(fw)) return false;
+    if (!developLetter &&
+        (qobject_cast<QAbstractSlider *>(fw) || qobject_cast<QAbstractSpinBox *>(fw) ||
+         qobject_cast<QLineEdit *>(fw)))
         return false;
 
     /* 1b. Esc disarms the white-balance dropper. It is armed from the Develop dock, so
@@ -8273,6 +8295,84 @@ void MW::toggleMaskOverlay()
 */
     if (G::isLogger) G::log("MW::toggleMaskOverlay");
     if (imageView) imageView->toggleMaskTint();
+}
+
+void MW::refreshDevelopMaskTintBtn()
+{
+/*
+    The action-row tint button is a colour swatch rather than a glyph: it is filled with
+    the overlay colour in force (G::maskOverlayColor, picked from the Mask panel swatches)
+    so the row always shows which colour the veil speaks. Called on launch and whenever
+    the tint is toggled ("O", the scope menu, a slider auto-hide) or recoloured.
+
+    The swatch is painted 12x12 inside the 16x16 button so BarBtn::setActive's blue border
+    has room to read; dimmed to G::iconOpacity when the tint is off, matching the other
+    action-row buttons.
+*/
+    if (G::isLogger) G::log("MW::refreshDevelopMaskTintBtn");
+    if (!developMaskTintBtn) return;
+    const bool shown = imageView ? imageView->maskTintVisible() : false;
+
+    const int side = 12;
+    const qreal dpr = developMaskTintBtn->devicePixelRatioF();
+    QPixmap pm(QSize(side, side) * dpr);
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setOpacity(shown ? 1.0 : G::iconOpacity);
+    p.setBrush(G::maskOverlayColor);
+    p.setPen(QPen(QColor(48, 48, 48), 1));
+    p.drawRoundedRect(QRectF(0.5, 0.5, side - 1, side - 1), 2, 2);
+    p.end();
+
+    developMaskTintBtn->setIcon(QIcon(pm));
+    developMaskTintBtn->setActive(shown);
+}
+
+void MW::showDevelopMaskTintMenu(const QPoint &pos)
+{
+/*
+    Right-click on the action-row tint button: the overlay's two APPEARANCE settings --
+    which colour the veil speaks and whether the image under it is desaturated -- without
+    having to open the Mask panel to reach the same chips. Left-click stays the toggle.
+
+    Both settings are pushed through DevelopProperties (setMaskOverlayColour /
+    setMaskOverlayGrayscale), which persists them, repaints the Mask panel chips and asks
+    for the right redraw, so this menu and the panel can never disagree. The colours come
+    from MaskPanel::overlayColours() for the same reason.
+*/
+    if (G::isLogger) G::log("MW::showDevelopMaskTintMenu");
+    if (!developMaskTintBtn || !developProperties) return;
+
+    QMenu menu(developMaskTintBtn);
+    const QVector<QColor> &colours = MaskPanel::overlayColours();
+    const QStringList &names = MaskPanel::overlayColourNames();
+    for (int i = 0; i < colours.size(); ++i) {
+        const QColor c = colours.at(i);
+        QPixmap chip(16, 16);
+        chip.fill(c);
+        QAction *a = menu.addAction(QIcon(chip),
+                                    i < names.size() ? names.at(i) : c.name());
+        a->setCheckable(true);
+        a->setChecked(c.rgb() == G::maskOverlayColor.rgb());
+        /* No repaint of the button here: setMaskOverlayColour emits
+           maskOverlayRefreshRequested, which refreshDevelopMaskTintBtn is wired to. */
+        connect(a, &QAction::triggered, this, [this, c]{
+            developProperties->setMaskOverlayColour(c);
+        });
+    }
+    menu.addSeparator();
+    QAction *gray = menu.addAction(tr("Grayscale background"));
+    gray->setCheckable(true);
+    gray->setChecked(G::maskOverlayGrayscale);
+    gray->setToolTip(tr("Show the image in grayscale while the overlay is on,\n"
+                        "so the overlay colour is easier to see (view only)"));
+    connect(gray, &QAction::triggered, this, [this](bool on){
+        developProperties->setMaskOverlayGrayscale(on);
+    });
+
+    menu.exec(developMaskTintBtn->mapToGlobal(pos));
 }
 
 void MW::developNewScope()

@@ -68,6 +68,8 @@ winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
 # tst_colorgrade tests Develop/colorgrade.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
+# tst_calibrate tests Develop/calibrate.h (header-only, same as colorgrade).
+winnow_add_unit_test(tst_calibrate unit/tst_calibrate.cpp)
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)

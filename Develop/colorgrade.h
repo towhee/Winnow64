@@ -40,6 +40,30 @@ inline void gradeTintVector(float hueDeg, float sat, float strength, float out[3
     out[2] = (b - y) * k;
 }
 
+/* Turn the panel-wide Blending (0..100) and Balance (-100..100) sliders into the two
+   split points gradeTonalWeights takes. Blending pushes the shadow and highlight edges
+   APART (< 50, a broader pure-midtone band) or TOGETHER (> 50, more overlap) about the
+   base; Balance slides both the same way, negative favouring shadows and positive
+   highlights, matching Lightroom's sense.
+
+   blending == 50 and balance == 0 return baseShadowEnd / baseHighStart UNCHANGED. That
+   is load-bearing: those are the fixed splits the panel used before these sliders
+   existed, so every image graded before them must render identically. Both outputs are
+   clamped strictly inside (0,1) because gradeTonalWeights divides by them. */
+inline void gradeSplitPoints(float blending, float balance,
+                             float baseShadowEnd, float baseHighStart,
+                             float blendRange, float balanceRange,
+                             float lo, float hi,
+                             float &shadowEnd, float &highStart)
+{
+    const float spread = (blending - 50.0f) / 50.0f;    // -1 .. 1, 0 at the default
+    const float bal    = balance / 100.0f;              // -1 .. 1
+    shadowEnd = baseShadowEnd + spread * blendRange - bal * balanceRange;
+    highStart = baseHighStart - spread * blendRange - bal * balanceRange;
+    if (shadowEnd < lo) shadowEnd = lo; else if (shadowEnd > hi) shadowEnd = hi;
+    if (highStart < lo) highStart = lo; else if (highStart > hi) highStart = hi;
+}
+
 /* Smoothstep partition of perceptual lightness L (0..1) into shadow / mid / highlight
    weights. shadowEnd = L where the shadow weight reaches 0; highStart = L where the
    highlight weight begins. Weights are non-negative and sum to 1. */

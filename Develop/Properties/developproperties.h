@@ -10,6 +10,7 @@
 #include "Dialogs/savedeveloppresetdlg.h"    // PresetGroup: the checklist model
 #include "Develop/workingimage.h"
 #include "Develop/Properties/colorgradewheel.h"
+#include "Develop/Properties/primarywheel.h"
 #include "Develop/Properties/colorrangewheel.h"
 
 class MW;
@@ -260,6 +261,12 @@ public slots:
     void setActiveBrushAutoMask(bool on);
     /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
     void setMaskOverlayShown(bool shown);
+    /* Set the overlay colour / grayscale-under-the-veil flag from ANY picker (the Mask
+       panel's chips, the action-row tint button's context menu): updates G::, persists,
+       re-syncs the panel chips and asks for the matching redraw (a colour needs the veil
+       rebuilt, grayscale is view-only). */
+    void setMaskOverlayColour(const QColor &c);
+    void setMaskOverlayGrayscale(bool on);
 
     /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
        Develop action-row button); onSpotStrokeCommitted takes one finished stroke and
@@ -415,7 +422,8 @@ private:
     void applyScopeItemsCollapsed();// hide/show just the scope's top items (not the sections)
     void addBasic();
     void addColor();
-    void addColorMix();
+    void addCalibrate();
+    void addColorGrade();
     void addEffects();
 
     /* ---- White balance row (Basic, above Temp) -----------------------------------
@@ -438,7 +446,17 @@ private:
     bool wbDropperActive = false;
     void updateSectionHeaderCaptions();   // append active scope name to section headers
 
-    /* ---- Color Mix (colour grading) --------------------------------------------------
+    /* ---- Calibrate (RGB primaries) ---------------------------------------------------
+       Same select-then-adjust grammar as Color Grade: R/G/B checkboxes pick which
+       primaries the wheel writes (calActiveMask bits 0x1/0x2/0x4). The wheel is an
+       embedded index widget, and each dot is a DELTA from its primary's home angle --
+       see primarywheel.h. Recreated on every tree rebuild. */
+    QPointer<PrimaryWheel> primaryWheel;
+    int  calActiveMask = 0x1;                 // red checked by default
+    void onPrimaryWheelChanged(bool commit);  // wheel drag -> active-scope cal params
+    void refreshCalibrateRow();               // push stored primaries to the wheel
+
+    /* ---- Color Grade (colour grading) ------------------------------------------------
        The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
        editor; it edits whichever range(s) the Dark/Mid/Light checkboxes select
        (gradeActiveMask bits: 0x1 shadow, 0x2 mid, 0x4 high). The Luminance slider writes
@@ -446,7 +464,7 @@ private:
     QPointer<ColorGradeWheel> colorGradeWheel;
     int  gradeActiveMask = 0x2;             // midtones checked by default
     void onGradeWheelChanged(bool commit);  // wheel drag -> active-scope grade params
-    void refreshColorMixRow();              // push stored grade to the wheel + Lum slider
+    void refreshColorGradeRow();            // push stored grade to the wheel + Lum slider
     void setGradeLum(float lum);            // write Lum to every active range
     int  firstActiveGradeRange() const;     // lowest checked range (drives Lum slider)
 
@@ -458,6 +476,16 @@ private:
     QPointer<ColorRangeWheel> colorRangeWheel;
     void onColorRangeWheelChanged(bool commit);   // wheel drag -> mask hue/sat bounds
     void refreshColorRangeWheel();                // push samples + bounds into the wheel
+    /* HUE PRESET CHIPS. One click seeds the active Color Range mask with a synthetic
+       sample at a named band's centre hue plus a matching hue window -- the fast route
+       to "the greens" without hunting for a pixel to pipette. This is what Winnow has
+       INSTEAD of a Lightroom-style 8-band HSL mixer: the mask already selects by hue
+       with more freedom, it only lacked a one-click start. See the Color Grade panel
+       notes in Documentation.txt for why the mixer was dropped. */
+    void applyColorRangeHuePreset(int band);      // 0..7, see kHueBands
+    static int  hueBandCount();
+    static QString hueBandName(int band);
+    static float   hueBandCentre(int band);       // degrees
     static QVector<QPointF> colorRangeSamplesHS(const QString &paramsJson);
 
     /* Clicking a slider row's caption flashes that caption white (fading to 0 via
@@ -497,9 +525,9 @@ private:
        group is folded to identity at render by effectiveScopeParams). Right-clicking a header pops
        a menu to toggle Preview or Reset (restore defaults, destructive) for that group. Transform's
        preview/reset live in TransformPanel (separate widget), wired via MW. Group codes: PV_Scope =
-       whole active scope, PV_Basic/PV_Color/PV_ColorMix/PV_Effects = a section. */
+       whole active scope, PV_Basic/PV_Color/PV_ColorGrade/PV_Effects = a section. */
     enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
-                        PV_ColorMix = 2, PV_Effects = 3 };
+                        PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     void togglePreviewSection(int group);   // flip the flag, refresh icon, re-render (no value change)
     void resetSection(int group);           // restore the group's defaults, repopulate, re-render
@@ -511,7 +539,8 @@ private:
     static QString groupLabel(int group);
     bool *previewFlag(EditScope *l, int group);        // the bool a PV_* code maps to on a scope
     BarBtn *basicEyeBtn = nullptr,
-           *colorEyeBtn = nullptr, *colorMixEyeBtn = nullptr, *effectsEyeBtn = nullptr;
+           *colorEyeBtn = nullptr, *colorGradeEyeBtn = nullptr,
+           *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 
