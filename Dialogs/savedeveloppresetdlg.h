@@ -7,7 +7,7 @@
     Save Develop Preset dialog (Lightroom-style "New Develop Preset"). Presents a
     collapsible, scrollable checklist of every settable Develop item, grouped exactly
     like the Develop panel's Scope tree -- Global settings, then Basic / Color /
-    Color Mix / Effects -- plus a Scope combo choosing WHICH scope's values are
+    Color Grade / Effects -- plus a Scope combo choosing WHICH scope's values are
     captured. Items that differ from their default in the selected scope are pre-checked
     (and their group pre-expanded), so the user can Save immediately or fine-tune.
 

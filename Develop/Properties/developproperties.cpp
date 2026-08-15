@@ -178,7 +178,8 @@ void DevelopProperties::buildTree()
     else                       addMaskItems();      // this scope's mask tool rows
     addBasic();
     addColor();
-    addColorMix();
+    addCalibrate();
+    addColorGrade();
     addEffects();
     updateSectionHeaderCaptions();
 
@@ -663,18 +664,14 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
     if (!maskPanel) return;
     connect(maskPanel, &MaskPanel::committed, this, &DevelopProperties::commitPendingMask);
     connect(maskPanel, &MaskPanel::cancelled, this, &DevelopProperties::cancelMaskTool);
-    /* A swatch recoloured the overlay (G::maskOverlayColor is already set): persist
-       it and re-composite so the veil repaints in the new colour. */
+    /* A chip recoloured the overlay / flipped grayscale (the G:: flag is already set):
+       hand it to the shared setter, which persists and asks for the redraw -- the same
+       path the action-row tint button's context menu takes. */
     connect(maskPanel, &MaskPanel::overlayColourChanged, this, [this]{
-        setting->setValue("Develop/maskOverlayColor", G::maskOverlayColor.name());
-        emit maskOverlayRefreshRequested();
+        setMaskOverlayColour(G::maskOverlayColor);
     });
-    /* The grayscale chip was flipped (G::maskOverlayGrayscale is already set): the veil
-       itself is unchanged, so only the view has to repaint -- ImageView desaturates the
-       image it draws under the overlay. */
     connect(maskPanel, &MaskPanel::overlayGrayscaleChanged, this, [this]{
-        setting->setValue("Develop/maskOverlayGrayscale", G::maskOverlayGrayscale);
-        emit maskOverlayRepaintRequested();
+        setMaskOverlayGrayscale(G::maskOverlayGrayscale);
     });
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
@@ -1507,7 +1504,8 @@ void DevelopProperties::resetActiveScope()
     /* Restore this scope's adjustments to their defaults and un-hide every group (non-destructive to
        the mask geometry, which defines WHERE the scope applies). */
     l->params = EditParams();
-    l->showScope = l->showBasic = l->showColor = l->showEffects = true;
+    l->showScope = l->showBasic = l->showColor = l->showCalibrate =
+        l->showColorGrade = l->showEffects = true;
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
     emit paramsChanged();
@@ -1840,9 +1838,10 @@ int DevelopProperties::activeMaskIndex() const
 EditParams::Group DevelopProperties::paramsGroup(int group)
 {
     switch (group) {
-    case PV_Color:    return EditParams::Group::Color;
-    case PV_ColorMix: return EditParams::Group::ColorMix;
-    case PV_Effects:  return EditParams::Group::Effects;
+    case PV_Color:      return EditParams::Group::Color;
+    case PV_Calibrate:  return EditParams::Group::Calibrate;
+    case PV_ColorGrade: return EditParams::Group::ColorGrade;
+    case PV_Effects:    return EditParams::Group::Effects;
     default:          return EditParams::Group::Basic;   // PV_Basic (+ PV_Scope, unused)
     }
 }
@@ -1851,11 +1850,12 @@ EditParams::Group DevelopProperties::paramsGroup(int group)
 QString DevelopProperties::groupLabel(int group)
 {
     switch (group) {
-    case PV_Color:    return "Color";
-    case PV_ColorMix: return "Color Mix";
-    case PV_Effects:  return "Effects";
-    case PV_Scope:    return "all";
-    default:          return "Basic";
+    case PV_Color:      return "Color";
+    case PV_Calibrate:  return "Calibrate";
+    case PV_ColorGrade: return "Color Grade";
+    case PV_Effects:    return "Effects";
+    case PV_Scope:      return "all";
+    default:            return "Basic";
     }
 }
 
@@ -1863,10 +1863,11 @@ bool *DevelopProperties::previewFlag(EditScope *l, int group)
 {
     if (!l) return nullptr;
     switch (group) {
-    case PV_Scope:    return &l->showScope;
-    case PV_Color:    return &l->showColor;
-    case PV_ColorMix: return &l->showColorMix;
-    case PV_Effects:  return &l->showEffects;
+    case PV_Scope:      return &l->showScope;
+    case PV_Color:      return &l->showColor;
+    case PV_Calibrate:  return &l->showCalibrate;
+    case PV_ColorGrade: return &l->showColorGrade;
+    case PV_Effects:    return &l->showEffects;
     default:          return &l->showBasic;             // PV_Basic
     }
 }
@@ -1889,7 +1890,7 @@ void DevelopProperties::refreshPreviewButtons()
     };
     set(basicEyeBtn,    l ? l->showBasic    : true);
     set(colorEyeBtn,    l ? l->showColor    : true);
-    set(colorMixEyeBtn, l ? l->showColorMix : true);
+    set(colorGradeEyeBtn, l ? l->showColorGrade : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
     /* The whole-mask eye lives in the ScopeHeader widget, not the tree. */
     if (scopeHeader) scopeHeader->setPreviewShown(l ? l->showScope : true);
@@ -1915,7 +1916,7 @@ void DevelopProperties::resetSection(int group)
     if (group == PV_Scope) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
         EditParams::resetGroup(p, EditParams::Group::Color);
-        EditParams::resetGroup(p, EditParams::Group::ColorMix);
+        EditParams::resetGroup(p, EditParams::Group::ColorGrade);
         EditParams::resetGroup(p, EditParams::Group::Effects);
     }
     else {
@@ -1938,7 +1939,8 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
     QString label;
     if      (name == "BasicHeader")    { group = PV_Basic;    label = "Basic"; }
     else if (name == "ColorHeader")    { group = PV_Color;    label = "Color"; }
-    else if (name == "ColorMixHeader") { group = PV_ColorMix; label = "Color Mix"; }
+    else if (name == "CalibrateHeader") { group = PV_Calibrate; label = "Calibrate"; }
+    else if (name == "ColorGradeHeader") { group = PV_ColorGrade; label = "Color Grade"; }
     else if (name == "EffectsHeader")  { group = PV_Effects;  label = "Effects"; }
 
     QMenu menu(this);
@@ -2237,8 +2239,49 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                swatches remove). A hue/sat WHEEL above the sliders shows each sample + its
                selection band; drag its handles or the Hue/Sat Lo/Hi sliders to widen the
                band toward lower/higher hue and lower/higher saturation. Feather softens
-               all edges. The wheel is a spanned index widget, mirroring the Color Mix
-               wheel (addColorMix). */
+               all edges. The wheel is a spanned index widget, mirroring the Color Grade
+               wheel (addColorGrade). */
+            /* Hue preset chips: one click seeds the mask with a named band instead of
+               hunting for a pixel to pipette. Visible on the row itself, not behind a
+               menu -- this is the fast path and it has to be findable. */
+            clearItemInfo(i);
+            i.name = QString("maskHueChips%1").arg(index);
+            i.parIdx = toolIdx;
+            i.parentName = "";
+            i.captionText = "";
+            i.isIndent = true;
+            i.hasValue = false;
+            i.captionIsEditable = false;
+            addItem(i);
+            const QModelIndex chipsIdx = capIdx;
+            model->setData(chipsIdx, 8, UR_ExtraRowHeight);
+            setFirstColumnSpanned(chipsIdx.row(), toolIdx, true);
+            {
+                QWidget *cw = new QWidget;
+                cw->setAttribute(Qt::WA_TranslucentBackground);
+                QHBoxLayout *hb = new QHBoxLayout(cw);
+                hb->setContentsMargins(QTreeView::indentation() + 4, 2, 4, 2);
+                hb->setSpacing(3);
+                for (int b = 0; b < hueBandCount(); ++b) {
+                    const QColor swatch =
+                        QColor::fromHsvF(qMin(0.9999f, hueBandCentre(b) / 360.0f), 0.6, 1.0);
+                    QToolButton *chip = new QToolButton(cw);
+                    chip->setAutoRaise(true);
+                    chip->setFixedSize(18, 18);
+                    chip->setToolTip(QString("Select the %1 range").arg(hueBandName(b)));
+                    chip->setStyleSheet(
+                        QString("QToolButton{background:%1;border:1px solid #00000060;"
+                                "border-radius:3px;}"
+                                "QToolButton:hover{border:1px solid #ffffffc0;}")
+                            .arg(swatch.name()));
+                    connect(chip, &QToolButton::clicked, this,
+                            [this, b]{ applyColorRangeHuePreset(b); });
+                    hb->addWidget(chip);
+                }
+                hb->addStretch(1);
+                setIndexWidget(chipsIdx, cw);
+            }
+
             clearItemInfo(i);
             i.name = QString("maskColorWheel%1").arg(index);
             i.parIdx = toolIdx;
@@ -2576,6 +2619,30 @@ void DevelopProperties::setMaskOverlayShown(bool shown)
     if (scopeHeader) scopeHeader->setMaskOverlayShown(shown);
 }
 
+void DevelopProperties::setMaskOverlayColour(const QColor &c)
+{
+    /* One entry point for every overlay-colour picker (the Mask panel chips and the
+       action-row tint button's context menu): persist, re-sync the chips and rebuild the
+       veil so it repaints in the new colour. The image itself is untouched. */
+    if (G::isLogger) G::log("DevelopProperties::setMaskOverlayColour");
+    if (!c.isValid()) return;
+    G::maskOverlayColor = c;
+    if (maskPanel) maskPanel->syncOverlayControls();
+    setting->setValue("Develop/maskOverlayColor", G::maskOverlayColor.name());
+    emit maskOverlayRefreshRequested();
+}
+
+void DevelopProperties::setMaskOverlayGrayscale(bool on)
+{
+    /* As above, but the veil is unchanged: grayscale is view-only (ImageView desaturates
+       the image it draws UNDER the overlay), so a repaint is all it costs. */
+    if (G::isLogger) G::log("DevelopProperties::setMaskOverlayGrayscale");
+    G::maskOverlayGrayscale = on;
+    if (maskPanel) maskPanel->syncOverlayControls();
+    setting->setValue("Develop/maskOverlayGrayscale", G::maskOverlayGrayscale);
+    emit maskOverlayRepaintRequested();
+}
+
 void DevelopProperties::updateMaskEdit()
 {
     /* Drive the ImageView mask overlay from the active (selected) mask tool. Begin when a spatial
@@ -2812,7 +2879,8 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         BarBtn *eye = makeEyeBtn("Preview: show or ignore these settings", previewGroup);
         if      (previewGroup == PV_Basic)    basicEyeBtn    = eye;
         else if (previewGroup == PV_Color)    colorEyeBtn    = eye;
-        else if (previewGroup == PV_ColorMix) colorMixEyeBtn = eye;
+        else if (previewGroup == PV_Calibrate)  calibrateEyeBtn  = eye;
+        else if (previewGroup == PV_ColorGrade) colorGradeEyeBtn = eye;
         else if (previewGroup == PV_Effects)  effectsEyeBtn  = eye;
         btns.append(eye);
         i.hasValue = true;
@@ -2823,9 +2891,10 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         i.delegateType = DT_None;
     }
     addItem(i);
-    /* Nest the section header (Basic/Color/Color Mix/Effects) one indent level under the
-       Scope band above the tree. Only the header content shifts -- its child rows keep
-       their own indentation (the delegate reads UR_ExtraIndent on the header caption). */
+    /* Nest the section header (Basic/Color/Color Grade/Effects) one indent level under
+       the Scope band above the tree. Only the header content shifts -- its child rows
+       keep their own indentation (the delegate reads UR_ExtraIndent on the header
+       caption). */
     model->setData(capIdx, true, UR_ExtraIndent);
     /* A section header belongs to the scope selected in the Scope band above, so it is a
        tier BELOW that band: a flat band, not the panel-header gradient the Scope and Raw
@@ -3290,7 +3359,141 @@ void DevelopProperties::addColor()
 }
 
 /* --------------------------------------------------------------------------------------
-   Color Mix (colour grading)
+   Calibrate (RGB primaries)
+
+   Lightroom's Calibration panel: a hue shift + saturation scale for each of the three
+   PRIMARIES of the working space, built into one 3x3 matrix and applied in linear light
+   before the tone curve. Same select-then-adjust grammar as Color Grade -- R / G / B
+   checkboxes pick which primaries the wheel writes (calActiveMask), then one shared wheel
+   whose dots are DELTAS from each primary's home angle (see primarywheel.h).
+
+   Distinct from the Color panel's Red/Green/Blue, which are per-channel linear GAINS
+   folded into the white-balance vector -- a cruder second white balance. Both exist; the
+   gains are kept until Calibrate proves out. The maths (Develop/calibrate.h) normalises
+   the matrix rows so NEUTRALS STAY NEUTRAL, which is the whole point of the panel.
+   ------------------------------------------------------------------------------------ */
+
+void DevelopProperties::addCalibrate()
+{
+    if (G::isLogger) G::log("DevelopProperties::addCalibrate");
+    addHeader("CalibrateHeader", "???", "Calibrate",
+              "Camera calibration: hue + saturation of the R/G/B primaries.",
+              PV_Calibrate);
+    QModelIndex parIdx = capIdx;
+
+    /* Primary selector: three checkboxes on one spanned row, mirroring the Color Grade
+       range row. UI state (calActiveMask), not EditParams. */
+    clearItemInfo(i);
+    i.name = "calPrimaries";
+    i.parIdx = parIdx;
+    i.parentName = "CalibrateHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex primIdx = capIdx;
+    model->setData(primIdx, 6, UR_ExtraRowHeight);
+    setFirstColumnSpanned(primIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
+        hb->setSpacing(10);
+        QCheckBox *red   = new QCheckBox("Red",   rw);
+        QCheckBox *green = new QCheckBox("Green", rw);
+        QCheckBox *blue  = new QCheckBox("Blue",  rw);
+        red->setChecked(calActiveMask   & 0x1);
+        green->setChecked(calActiveMask & 0x2);
+        blue->setChecked(calActiveMask  & 0x4);
+        auto upd = [this, red, green, blue]{
+            calActiveMask = (red->isChecked()   ? 0x1 : 0) |
+                            (green->isChecked() ? 0x2 : 0) |
+                            (blue->isChecked()  ? 0x4 : 0);
+            if (primaryWheel) primaryWheel->setActiveMask(calActiveMask);
+        };
+        connect(red,   &QCheckBox::toggled, this, [upd](bool){ upd(); });
+        connect(green, &QCheckBox::toggled, this, [upd](bool){ upd(); });
+        connect(blue,  &QCheckBox::toggled, this, [upd](bool){ upd(); });
+        hb->addWidget(red);
+        hb->addWidget(green);
+        hb->addWidget(blue);
+        hb->addStretch(1);
+        setIndexWidget(primIdx, rw);
+    }
+
+    /* The shared wheel: a tall, full-width spanned row hosting the PrimaryWheel. */
+    clearItemInfo(i);
+    i.name = "calWheel";
+    i.parIdx = parIdx;
+    i.parentName = "CalibrateHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex wheelIdx = capIdx;
+    model->setData(wheelIdx, 150, UR_ExtraRowHeight);
+    setFirstColumnSpanned(wheelIdx.row(), parIdx, true);
+    {
+        PrimaryWheel *wheel = new PrimaryWheel;
+        primaryWheel = wheel;
+        wheel->setActiveMask(calActiveMask);
+        connect(wheel, &PrimaryWheel::primaryChanged,   this,
+                [this]{ onPrimaryWheelChanged(false); });
+        connect(wheel, &PrimaryWheel::primaryCommitted, this,
+                [this]{ onPrimaryWheelChanged(true); });
+        setIndexWidget(wheelIdx, wheel);
+    }
+}
+
+/* Wheel drag -> the active scope's cal params for every checked primary, then preview.
+   commit marks the drag-release. One history entry per drag, keyed by which primaries it
+   is moving (a custom editor gets no history for free -- see the checklist). */
+void DevelopProperties::onPrimaryWheelChanged(bool commit)
+{
+    if (currentImagePath.isEmpty() || !primaryWheel) return;
+    if (maskOverlayActive()) emit maskTintHideRequested();
+    EditParams &p = activeParams();
+    if (calActiveMask & 0x1) {
+        p.calRedHue = primaryWheel->hue(0);
+        p.calRedSat = primaryWheel->sat(0);
+    }
+    if (calActiveMask & 0x2) {
+        p.calGreenHue = primaryWheel->hue(1);
+        p.calGreenSat = primaryWheel->sat(1);
+    }
+    if (calActiveMask & 0x4) {
+        p.calBlueHue = primaryWheel->hue(2);
+        p.calBlueSat = primaryWheel->sat(2);
+    }
+    noteEdit("Calibrate", QString(),
+             QString("cal/wheel/%1").arg(calActiveMask));
+    emit paramsChanged();
+}
+
+/* Push the active scope's stored primaries into the wheel dots. Called on image/scope
+   load, from populateSlidersFromStack. */
+void DevelopProperties::refreshCalibrateRow()
+{
+    EditParams p;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (!s.scopes.isEmpty()) {
+        const int idx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
+                            ? activeScopeIndex : 0;
+        p = s.scopes[idx].params;
+    }
+    if (primaryWheel) {
+        primaryWheel->setPrimary(0, p.calRedHue,   p.calRedSat);
+        primaryWheel->setPrimary(1, p.calGreenHue, p.calGreenSat);
+        primaryWheel->setPrimary(2, p.calBlueHue,  p.calBlueSat);
+        primaryWheel->setActiveMask(calActiveMask);
+    }
+}
+
+/* --------------------------------------------------------------------------------------
+   Color Grade (colour grading)
 
    A minimalist take on Lightroom's Color Grading: ONE shared hue/saturation wheel driven
    by Dark / Mid / Light checkboxes (which tonal range the wheel edits -- check all three
@@ -3298,14 +3501,15 @@ void DevelopProperties::addColor()
    range(s). The wheel and range checkboxes are custom widgets hosted via setIndexWidget
    (not delegate editors); the wheel writes hue/sat and the slider luminance into the
    active scope's nine grade params (see onGradeWheelChanged / setGradeLum). Distinct from
-   the legacy Color panel (RGB + global HSL), which stays for now.
+   the Color panel (RGB + global HSL): grading selects pixels by TONE and adds a tint,
+   while the HSL sliders remap existing hues globally.
    ------------------------------------------------------------------------------------ */
 
-void DevelopProperties::addColorMix()
+void DevelopProperties::addColorGrade()
 {
-    if (G::isLogger) G::log("DevelopProperties::addColorMix");
-    addHeader("ColorMixHeader", "???", "Color Grade",
-              "Tonal-range colour grading (shadows / midtones / highlights).", PV_ColorMix);
+    if (G::isLogger) G::log("DevelopProperties::addColorGrade");
+    addHeader("ColorGradeHeader", "???", "Color Grade",
+              "Tonal-range colour grading (shadows / midtones / highlights).", PV_ColorGrade);
     QModelIndex parIdx = capIdx;
 
     /* Range selector: three checkboxes on one spanned row (Dark/Mid/Light), matching the
@@ -3314,7 +3518,7 @@ void DevelopProperties::addColorMix()
     clearItemInfo(i);
     i.name = "gradeRanges";
     i.parIdx = parIdx;
-    i.parentName = "ColorMixHeader";
+    i.parentName = "ColorGradeHeader";
     i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
@@ -3332,22 +3536,28 @@ void DevelopProperties::addColorMix()
         QCheckBox *dark  = new QCheckBox("Shadows",    rw);
         QCheckBox *mid   = new QCheckBox("Midtones",   rw);
         QCheckBox *light = new QCheckBox("Highlights", rw);
+        QCheckBox *glob  = new QCheckBox("Global",     rw);
+        glob->setToolTip("Tint every pixel, whatever its tone.");
         dark->setChecked(gradeActiveMask  & 0x1);
         mid->setChecked(gradeActiveMask   & 0x2);
         light->setChecked(gradeActiveMask & 0x4);
-        auto upd = [this, dark, mid, light]{
+        glob->setChecked(gradeActiveMask  & 0x8);
+        auto upd = [this, dark, mid, light, glob]{
             gradeActiveMask = (dark->isChecked()  ? 0x1 : 0) |
                               (mid->isChecked()   ? 0x2 : 0) |
-                              (light->isChecked() ? 0x4 : 0);
+                              (light->isChecked() ? 0x4 : 0) |
+                              (glob->isChecked()  ? 0x8 : 0);
             if (colorGradeWheel) colorGradeWheel->setActiveMask(gradeActiveMask);
-            refreshColorMixRow();      // point the Lum slider at the new active range
+            refreshColorGradeRow();      // point the Lum slider at the new active range
         };
         connect(dark,  &QCheckBox::toggled, this, [upd](bool){ upd(); });
         connect(mid,   &QCheckBox::toggled, this, [upd](bool){ upd(); });
         connect(light, &QCheckBox::toggled, this, [upd](bool){ upd(); });
+        connect(glob,  &QCheckBox::toggled, this, [upd](bool){ upd(); });
         hb->addWidget(dark);
         hb->addWidget(mid);
         hb->addWidget(light);
+        hb->addWidget(glob);
         hb->addStretch(1);
         setIndexWidget(rangesIdx, rw);
     }
@@ -3356,7 +3566,7 @@ void DevelopProperties::addColorMix()
     clearItemInfo(i);
     i.name = "gradeWheel";
     i.parIdx = parIdx;
-    i.parentName = "ColorMixHeader";
+    i.parentName = "ColorGradeHeader";
     i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
@@ -3377,7 +3587,20 @@ void DevelopProperties::addColorMix()
     /* Luminance for the checked range(s). Integer -100..100 like the colour sliders. */
     addSlider("gradeLum", "Luminance",
               "Brighten / darken the checked tonal range(s).",
-              parIdx, "ColorMixHeader", -100, 100, 0, G::darkgray, G::lightgray);
+              parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
+
+    /* Window SHAPE: panel-wide, not per-range, so they sit below the divider. Blending
+       defaults to 50 and Balance to 0, which reproduce the fixed split the panel used
+       before they existed. */
+    addDivider(dividerHeight, 1, divColor, parIdx, "ColorGradeHeader", "GradeDivider");
+    addSlider("gradeBlending", "Blending",
+              "How much the shadow / midtone / highlight ranges overlap "
+              "(50 = the default split).",
+              parIdx, "ColorGradeHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addSlider("gradeBalance", "Balance",
+              "Slide the split between the ranges: right favours highlights, "
+              "left favours shadows.",
+              parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
 }
 
 int DevelopProperties::firstActiveGradeRange() const
@@ -3385,6 +3608,7 @@ int DevelopProperties::firstActiveGradeRange() const
     if (gradeActiveMask & 0x1) return 0;   // shadows
     if (gradeActiveMask & 0x2) return 1;   // midtones
     if (gradeActiveMask & 0x4) return 2;   // highlights
+    if (gradeActiveMask & 0x8) return 3;   // global
     return 1;                              // nothing checked: default to midtones
 }
 
@@ -3395,6 +3619,7 @@ void DevelopProperties::setGradeLum(float lum)
     if (gradeActiveMask & 0x1) p.gradeShadowLum = lum;
     if (gradeActiveMask & 0x2) p.gradeMidLum    = lum;
     if (gradeActiveMask & 0x4) p.gradeHighLum   = lum;
+    if (gradeActiveMask & 0x8) p.gradeGlobalLum = lum;
 }
 
 /* Wheel drag -> the active scope's grade hue/sat for every checked range, then preview.
@@ -3417,6 +3642,10 @@ void DevelopProperties::onGradeWheelChanged(bool commit)
         p.gradeHighHue = colorGradeWheel->hue(2);
         p.gradeHighSat = colorGradeWheel->sat(2);
     }
+    if (gradeActiveMask & 0x8) {
+        p.gradeGlobalHue = colorGradeWheel->hue(3);
+        p.gradeGlobalSat = colorGradeWheel->sat(3);
+    }
     /* One entry for the whole wheel drag, keyed by which ranges it is moving. */
     noteEdit("Color grade", QString(),
              QString("grade/wheel/%1").arg(gradeActiveMask));
@@ -3426,7 +3655,7 @@ void DevelopProperties::onGradeWheelChanged(bool commit)
 /* Push the active scope's stored grade into the wheel dots + the Luminance slider (which
    shows the lowest checked range's value). Guards the slider set so it does not feed back
    as an edit. Called on image/scope load and whenever the range checkboxes change. */
-void DevelopProperties::refreshColorMixRow()
+void DevelopProperties::refreshColorGradeRow()
 {
     EditParams p;
     const EditStack s = stackCache.value(currentImagePath);
@@ -3439,10 +3668,13 @@ void DevelopProperties::refreshColorMixRow()
         colorGradeWheel->setRange(0, p.gradeShadowHue, p.gradeShadowSat);
         colorGradeWheel->setRange(1, p.gradeMidHue,    p.gradeMidSat);
         colorGradeWheel->setRange(2, p.gradeHighHue,   p.gradeHighSat);
+        colorGradeWheel->setRange(3, p.gradeGlobalHue, p.gradeGlobalSat);
         colorGradeWheel->setActiveMask(gradeActiveMask);
     }
     const int r = firstActiveGradeRange();
-    const float lum = (r == 0) ? p.gradeShadowLum : (r == 1) ? p.gradeMidLum : p.gradeHighLum;
+    const float lum = (r == 0) ? p.gradeShadowLum : (r == 1) ? p.gradeMidLum
+                                                  : (r == 2) ? p.gradeHighLum
+                                                             : p.gradeGlobalLum;
     const bool wasPop = isPopulating;
     isPopulating = true;                 // don't let setValue echo back as an edit
     setSliderReal("gradeLum", lum);
@@ -3452,6 +3684,100 @@ void DevelopProperties::refreshColorMixRow()
 /* Convert the Color Range mask's [r,g,b] samples to (hueDeg, sat) points for the wheel,
    using the SAME HSV conversion the coverage maths use (RangeMask::rgb2hs), so the dots
    and band the user sees match the selection exactly. */
+/* --------------------------------------------------------------------------------------
+   Color Range hue presets
+
+   The eight named hue bands Lightroom's Color Mixer uses, offered here as one-click chips
+   on the Color Range MASK instead. Clicking one writes a synthetic sample at the band's
+   centre hue (at a mid saturation, so the sample sits mid-radius on the wheel where its
+   sat window has room both ways) plus a +/- half-band hue window, which is exactly what
+   the pipette would have written had the user found a perfectly representative pixel.
+
+   Everything downstream is untouched: RangeMask::colorCoverage already takes a sample
+   list and hue/sat windows, so this adds NO new selection maths. The chips are a
+   shortcut into the existing mask, not a second mechanism.
+   ------------------------------------------------------------------------------------ */
+
+namespace {
+struct HueBand { const char *name; float centre; };
+/* Centres 45 deg apart, starting at red. Half-band = 22.5 deg, so the eight windows tile
+   the circle without gaps when used one at a time. */
+const HueBand kHueBands[] = {
+    {"Red",     0.0f},   {"Orange", 45.0f},  {"Yellow",  90.0f}, {"Green",  135.0f},
+    {"Aqua",  180.0f},   {"Blue",  225.0f},  {"Purple", 270.0f}, {"Magenta", 315.0f},
+};
+constexpr float kHueBandHalf = 22.5f;      // degrees either side of the centre
+constexpr float kHueBandSat  = 0.6f;       // the synthetic sample's saturation
+}
+
+int DevelopProperties::hueBandCount()
+{
+    return int(sizeof(kHueBands) / sizeof(HueBand));
+}
+
+QString DevelopProperties::hueBandName(int band)
+{
+    if (band < 0 || band >= hueBandCount()) return QString();
+    return QString::fromLatin1(kHueBands[band].name);
+}
+
+float DevelopProperties::hueBandCentre(int band)
+{
+    if (band < 0 || band >= hueBandCount()) return 0.0f;
+    return kHueBands[band].centre;
+}
+
+void DevelopProperties::applyColorRangeHuePreset(int band)
+{
+    if (G::isLogger) G::log("DevelopProperties::applyColorRangeHuePreset");
+    if (band < 0 || band >= hueBandCount()) return;
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    MaskComponent &mm = l->components[selectedMaskIndex];
+    if (mm.tool != int(MaskTool::ColorRange)) return;
+
+    /* The band centre as an RGB triple -- samples are stored as RGB (see
+       colorRangeSamplesHS), and full VALUE keeps the round-trip through rgb2hs exact. */
+    const QColor c = QColor::fromHsvF(qMin(0.9999f, kHueBands[band].centre / 360.0f),
+                                      kHueBandSat, 1.0);
+    QJsonArray sample;
+    sample.append(c.redF());
+    sample.append(c.greenF());
+    sample.append(c.blueF());
+
+    /* REPLACE rather than append: a chip means "select this colour", so clicking Green
+       after Red must not leave the reds selected too. Shift-clicking the image still
+       adds further samples on top, as before. */
+    QJsonObject o = QJsonDocument::fromJson(mm.paramsJson.toUtf8()).object();
+    QJsonArray samples;
+    samples.append(sample);
+    o["samples"] = samples;
+    o["hueLo"] = kHueBandHalf;
+    o["hueHi"] = kHueBandHalf;
+    if (!o.contains("satLo")) o["satLo"] = 25;
+    if (!o.contains("satHi")) o["satHi"] = 25;
+    mm.paramsJson = QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+
+    noteEdit("Color range preset", hueBandName(band), "mask/huePreset");
+
+    /* Push the new sample + window into the wheel and the four bound sliders, guarded so
+       the sets do not echo back as edits. */
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setSliderReal("maskHueLo", kHueBandHalf);
+    setSliderReal("maskHueHi", kHueBandHalf);
+    isPopulating = wasPop;
+    if (colorRangeWheel) {
+        colorRangeWheel->setSamples(colorRangeSamplesHS(mm.paramsJson));
+        colorRangeWheel->setBounds(kHueBandHalf, kHueBandHalf,
+                                   brushNum(mm.paramsJson, "satLo", 25) / 100.0,
+                                   brushNum(mm.paramsJson, "satHi", 25) / 100.0);
+    }
+    emit maskRangeChanged(mm.paramsJson);   // live-update the loupe tint
+    emit paramsChanged();                   // re-composite the masked scope
+    if (G::isDevelopDebounceWrite) debounceWriteTimer->start(kDebounceWriteMs);
+}
+
 QVector<QPointF> DevelopProperties::colorRangeSamplesHS(const QString &paramsJson)
 {
     QVector<QPointF> out;
@@ -3573,7 +3899,8 @@ void DevelopProperties::updateSectionHeaderCaptions()
     const QPair<QString, QString> hdrs[] = {
         {"BasicHeader",    "Basic"},
         {"ColorHeader",    "Color"},
-        {"ColorMixHeader", "Color Grade"},
+        {"CalibrateHeader",  "Calibrate"},
+        {"ColorGradeHeader", "Color Grade"},
         {"EffectsHeader",  "Effects"},
     };
     for (const auto &h : hdrs) {
@@ -3713,8 +4040,8 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
-    /* Color Mix Luminance slider: writes every range the Dark/Mid/Light checkboxes select
-       (not a plain applyKeyToParams key -- it needs the gradeActiveMask context). */
+    /* Color Grade Luminance slider: writes every range the Dark/Mid/Light checkboxes
+       select (not a plain applyKeyToParams key -- it needs gradeActiveMask context). */
     if (source == "gradeLum") {
         if (currentImagePath.isEmpty()) return;
         if (maskOverlayActive()) emit maskTintHideRequested();
@@ -3763,6 +4090,8 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "hue")        p.hue        = f;
     else if (key == "saturation") p.saturation = f;
     else if (key == "vibrance")   p.vibrance   = f;
+    else if (key == "gradeBlending") p.gradeBlending = f;
+    else if (key == "gradeBalance")  p.gradeBalance  = f;
     else if (key == "luminance")  p.luminance  = f;
     else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Global "Denoise raw" (0..100 -> 0..1)
     else if (key == "denoiseChroma") p.denoiseChroma = f / 100.0f;
@@ -4197,7 +4526,7 @@ namespace {
 struct PresetLeafDef { const char *key; const char *label; };
 
 /* The adjustment leaves, grouped and ordered exactly like the Develop panel's Scope
-   tree (addBasic / addColor / addColorMix / addEffects). One table drives the dialog's
+   tree (addBasic / addColor / addColorGrade / addEffects). One table drives the dialog's
    groups, the pre-checked test and the value write, so the three cannot drift apart.
    A leaf that folds several params in (white balance, a grade range, denoise, vignette,
    grain) is ONE tick -- the panel treats them as one control. */
@@ -4221,10 +4550,17 @@ const PresetLeafDef kColorLeaves[] = {
     {"luminance",  "Luminance"},
     {"vibrance",   "Vibrance"},
 };
-const PresetLeafDef kColorMixLeaves[] = {
+const PresetLeafDef kCalibrateLeaves[] = {
+    {"calRed",   "Red primary"},
+    {"calGreen", "Green primary"},
+    {"calBlue",  "Blue primary"},
+};
+const PresetLeafDef kColorGradeLeaves[] = {
     {"gradeShadow", "Shadows"},
     {"gradeMid",    "Midtones"},
     {"gradeHigh",   "Highlights"},
+    {"gradeGlobal", "Global"},
+    {"gradeShape",  "Blending + Balance"},
 };
 const PresetLeafDef kEffectsLeaves[] = {
     {"denoise",  "Denoise"},
@@ -4240,7 +4576,8 @@ struct PresetSectionDef {
 const PresetSectionDef kSections[] = {
     {"Basic",     kBasicLeaves,    int(sizeof(kBasicLeaves)    / sizeof(PresetLeafDef))},
     {"Color",     kColorLeaves,    int(sizeof(kColorLeaves)    / sizeof(PresetLeafDef))},
-    {"Color Mix", kColorMixLeaves, int(sizeof(kColorMixLeaves) / sizeof(PresetLeafDef))},
+    {"Calibrate", kCalibrateLeaves, int(sizeof(kCalibrateLeaves) / sizeof(PresetLeafDef))},
+    {"Color Grade", kColorGradeLeaves, int(sizeof(kColorGradeLeaves) / sizeof(PresetLeafDef))},
     {"Effects",   kEffectsLeaves,  int(sizeof(kEffectsLeaves)  / sizeof(PresetLeafDef))},
 };
 
@@ -4266,12 +4603,22 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "saturation")   return p.saturation != def.saturation;
     if (key == "luminance")    return p.luminance  != def.luminance;
     if (key == "vibrance")     return p.vibrance   != def.vibrance;
+    if (key == "calRed")       return p.calRedHue   != def.calRedHue ||
+                                      p.calRedSat   != def.calRedSat;
+    if (key == "calGreen")     return p.calGreenHue != def.calGreenHue ||
+                                      p.calGreenSat != def.calGreenSat;
+    if (key == "calBlue")      return p.calBlueHue  != def.calBlueHue ||
+                                      p.calBlueSat  != def.calBlueSat;
     if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
                                       p.gradeShadowLum != def.gradeShadowLum;
     if (key == "gradeMid")     return p.gradeMidSat != def.gradeMidSat ||
                                       p.gradeMidLum != def.gradeMidLum;
     if (key == "gradeHigh")    return p.gradeHighSat != def.gradeHighSat ||
                                       p.gradeHighLum != def.gradeHighLum;
+    if (key == "gradeGlobal")  return p.gradeGlobalSat != def.gradeGlobalSat ||
+                                      p.gradeGlobalLum != def.gradeGlobalLum;
+    if (key == "gradeShape")   return p.gradeBlending != def.gradeBlending ||
+                                      p.gradeBalance  != def.gradeBalance;
     if (key == "denoise")      return p.localDenoiseLuma   != def.localDenoiseLuma ||
                                       p.localDenoiseChroma != def.localDenoiseChroma;
     if (key == "vignette")     return p.vignetteExposure != def.vignetteExposure;
@@ -4321,6 +4668,18 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("tint", p.tint);
         out.insert("wbPreset", p.wbPreset);
     }
+    if (lk.contains("calRed")) {
+        out.insert("calRedHue", p.calRedHue);
+        out.insert("calRedSat", p.calRedSat);
+    }
+    if (lk.contains("calGreen")) {
+        out.insert("calGreenHue", p.calGreenHue);
+        out.insert("calGreenSat", p.calGreenSat);
+    }
+    if (lk.contains("calBlue")) {
+        out.insert("calBlueHue", p.calBlueHue);
+        out.insert("calBlueSat", p.calBlueSat);
+    }
     if (lk.contains("gradeShadow")) {
         out.insert("gradeShadowHue", p.gradeShadowHue);
         out.insert("gradeShadowSat", p.gradeShadowSat);
@@ -4335,6 +4694,15 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("gradeHighHue", p.gradeHighHue);
         out.insert("gradeHighSat", p.gradeHighSat);
         out.insert("gradeHighLum", p.gradeHighLum);
+    }
+    if (lk.contains("gradeGlobal")) {
+        out.insert("gradeGlobalHue", p.gradeGlobalHue);
+        out.insert("gradeGlobalSat", p.gradeGlobalSat);
+        out.insert("gradeGlobalLum", p.gradeGlobalLum);
+    }
+    if (lk.contains("gradeShape")) {
+        out.insert("gradeBlending", p.gradeBlending);
+        out.insert("gradeBalance", p.gradeBalance);
     }
     if (lk.contains("denoise")) {
         out.insert("localDenoiseLuma", p.localDenoiseLuma);
@@ -4950,6 +5318,12 @@ const FloatField kFloatFields[] = {
     {"saturation",          &EditParams::saturation},
     {"vibrance",            &EditParams::vibrance},
     {"luminance",           &EditParams::luminance},
+    {"calRedHue",           &EditParams::calRedHue},
+    {"calRedSat",           &EditParams::calRedSat},
+    {"calGreenHue",         &EditParams::calGreenHue},
+    {"calGreenSat",         &EditParams::calGreenSat},
+    {"calBlueHue",          &EditParams::calBlueHue},
+    {"calBlueSat",          &EditParams::calBlueSat},
     {"gradeShadowHue",      &EditParams::gradeShadowHue},
     {"gradeShadowSat",      &EditParams::gradeShadowSat},
     {"gradeShadowLum",      &EditParams::gradeShadowLum},
@@ -4959,6 +5333,11 @@ const FloatField kFloatFields[] = {
     {"gradeHighHue",        &EditParams::gradeHighHue},
     {"gradeHighSat",        &EditParams::gradeHighSat},
     {"gradeHighLum",        &EditParams::gradeHighLum},
+    {"gradeGlobalHue",      &EditParams::gradeGlobalHue},
+    {"gradeGlobalSat",      &EditParams::gradeGlobalSat},
+    {"gradeGlobalLum",      &EditParams::gradeGlobalLum},
+    {"gradeBlending",       &EditParams::gradeBlending},
+    {"gradeBalance",        &EditParams::gradeBalance},
     {"denoiseLuma",         &EditParams::denoiseLuma},
     {"denoiseChroma",       &EditParams::denoiseChroma},
     {"localDenoiseLuma",    &EditParams::localDenoiseLuma},
@@ -5166,6 +5545,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("hue",        p.hue);
     setSliderReal("saturation", p.saturation);
     setSliderReal("vibrance",   p.vibrance);
+    setSliderReal("gradeBlending", p.gradeBlending);
+    setSliderReal("gradeBalance",  p.gradeBalance);
     setSliderReal("luminance",  p.luminance);
     setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Global "Denoise raw" (0..1 -> 0..100)
     setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
@@ -5178,7 +5559,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("grainRoughness",     p.grainRoughness     * 100.0);
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
-    refreshColorMixRow();           // push grade values into the wheel + Lum slider
+    refreshCalibrateRow();            // push primaries into the Calibrate wheel
+    refreshColorGradeRow();           // push grade values into the wheel + Lum slider
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
     refreshPreviewButtons();        // sync the eye icons to this scope's Preview flags

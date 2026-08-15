@@ -5,6 +5,7 @@
 #include <QVector>
 #include <QWidget>
 #include <QString>
+#include <QStringList>
 
 #include "Develop/Properties/submasklist.h"
 
@@ -62,7 +63,9 @@ public:
        cancelled, and its button reads "Done". */
     void setEditingExisting(bool existing);
     /* Show or hide the settings + commit block. Hidden when no submask is selected, so
-       the panel shows just the list (and the mask's overlay controls). */
+       the panel shows just the list (and the mask's overlay controls). Also hidden while
+       the Submasks section is COLLAPSED: the settings belong to a submask in that list,
+       so leaving them on screen made a collapsed section look half-open. */
     void showAttributes(bool show);
     /* The header row above the settings, naming WHAT a change to them will affect --
        "Attribute adjustment applies to 7 strokes" / "to next stroke" / "to last stroke" /
@@ -75,6 +78,15 @@ public:
     MaskEditor *editor() const { return maskEditor; }
     /* The mask's submasks. DevelopProperties pushes rows in and binds its signals. */
     SubmaskList *list() const { return submaskList; }
+    /* THE overlay-colour palette. Static because the Develop action-row tint button's
+       context menu offers the same colours: one list, so the two pickers cannot drift. */
+    static const QVector<QColor> &overlayColours();
+    /* Display names for overlayColours(), same order (a menu needs words, chips do
+       not). Kept beside the palette so adding a colour cannot leave a menu unlabelled. */
+    static const QStringList &overlayColourNames();
+    /* The overlay colour / grayscale flag was changed somewhere ELSE (the action-row
+       tint button's context menu); repaint the chips so this panel agrees. */
+    void syncOverlayControls();
 
 signals:
     /* The commit button was clicked. No op is carried: the op is resolved from the LIVE
@@ -93,6 +105,7 @@ private:
     void refreshSwatches();                // re-draw the selected border after a pick
     void refreshGrayBtn();                 // reflect G::maskOverlayGrayscale on the chip
     void refreshCommitBtn();               // label + cancel visibility for the state
+    void syncAttrVisible();                // attrShown AND the list is not collapsed
 
     SubmaskList *submaskList = nullptr;    // the mask's contents, above the settings
     QLabel      *scopeLabel  = nullptr;    // "changes apply to ..." above the settings
@@ -107,6 +120,7 @@ private:
     int          pendingOp  = 0;           // MaskOp the button/label currently shows
     bool         firstMask  = true;        // only Add is possible on an empty mask
     bool         editingExisting = false;  // re-opened submask: "Done", no cancel
+    bool         attrShown  = false;       // a submask is selected (collapse aside)
 };
 
 #endif // MASKPANEL_H

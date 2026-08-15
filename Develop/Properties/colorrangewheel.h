@@ -1,15 +1,16 @@
 #ifndef COLORRANGEWHEEL_H
 #define COLORRANGEWHEEL_H
 
-#include <QWidget>
-#include <QImage>
+#include "Develop/Properties/huesatwheel.h"
+
 #include <QPointF>
 #include <QVector>
 
 /*
-    ColorRangeWheel -- the hue/saturation wheel for the Develop Color Range MASK. It
-    mirrors ColorGradeWheel's HSV disc (hue = angle, 0 deg = red at 3 o'clock growing
-    anticlockwise; saturation = radius) but visualises a SELECTION rather than a grade:
+    ColorRangeWheel -- the hue/saturation wheel for the Develop Color Range MASK. The HSV
+    disc, its geometry and the hue/sat <-> pixel mapping come from HueSatWheel (hue =
+    angle, 0 deg = red at 3 o'clock growing anticlockwise; saturation = radius); this
+    class visualises a SELECTION rather than a grade:
 
       * a small dot for every sampled colour (the pipette picks), at its hue/sat;
       * a band SECTOR around each sample -- hue [sample - hueLo, sample + hueHi], sat
@@ -22,7 +23,7 @@
     boundsChanged live during a drag (drive the preview) and boundsCommitted on release
     (commit / debounced persist), like a SliderEditor / ColorGradeWheel.
 */
-class ColorRangeWheel : public QWidget
+class ColorRangeWheel : public HueSatWheel
 {
     Q_OBJECT
 public:
@@ -43,7 +44,6 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent *) override;
-    void resizeEvent(QResizeEvent *) override;
     void mousePressEvent(QMouseEvent *) override;
     void mouseMoveEvent(QMouseEvent *) override;
     void mouseReleaseEvent(QMouseEvent *) override;
@@ -51,8 +51,6 @@ protected:
 private:
     enum Handle { None = -1, HueLoH = 0, HueHiH, SatInH, SatOutH };
 
-    void    rebuildWheel();                       // render the HSV disc into wheelCache
-    QPointF posFor(float hueDeg, float satUnit) const;   // hue/sat -> widget px
     bool    anchor(float &hueDeg, float &sat) const;     // first sample; false if none
     void    handlePositions(QPointF out[4]) const;       // 4 grab handles on the anchor
     int     hitHandle(const QPointF &pos) const;
@@ -62,10 +60,6 @@ private:
     float   m_hueLo = 20.0f, m_hueHi = 20.0f;      // degrees
     float   m_satLo = 0.25f, m_satHi = 0.25f;      // saturation fractions 0..1
     int     m_drag  = None;
-
-    QImage  wheelCache;
-    QPointF centre;
-    float   radius = 1.0f;
 };
 
 #endif // COLORRANGEWHEEL_H

@@ -116,7 +116,8 @@ Table of Contents
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
          - Overlays over a transformed image (mask space vs displayed space)
          - White balance (absolute, Kelvin)
-         - Color Mix panel (colour grading)
+         - Calibrate panel (RGB primaries)
+         - Color Grade panel (colour grading)
          - Develop presets (the Presets dock)
          - Copy / paste develop settings (the develop clipboard)
          - Multi-image editing (edits apply to the whole selection)
@@ -1967,6 +1968,14 @@ Develop Mode Local Shortcuts
         through) while the WB dropper or Transform is up, whose Esc handlers run later.
       • Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit /
         QComboBox) -> bail, so arrows still nudge a Develop slider and letters still type.
+        EXCEPTION (2026-08-15): a LETTER that is in developShortcuts is still arbitrated
+        over a slider or spin box (incl. a spin box's internal QLineEdit -- see
+        isTextEntryWidget()).  Focus sits on a dock slider for most of a Develop session,
+        and bailing there passed the letter to the GLOBAL action on that key: O opened the
+        folder dialog instead of toggling the mask overlay (likewise S = Slideshow, X =
+        Reject, G = Grid), the very collision the arbiter exists to stop.  A slider/spin
+        box has no use for a letter; only real text entry (the search field, an editable
+        QComboBox) keeps its letters unconditionally.
       • Auto-repeat -> bail; every Develop key is a toggle or pops a dialog.
 
     Selection keys are ignored in Develop mode
@@ -2669,13 +2678,18 @@ Architecture
         4. Contrast                     S-curve about mid-grey
         5. Highlights/Shadows/          luminance-masked parametric tone
            Whites/Blacks
-        5b. Colour RGB                  per-channel linear gain (red/green/blue), folded into #2
+        2b. Calibration                 3x3 primary re-point (R/G/B hue + sat), in LINEAR
+                                        light after #2 and BEFORE the tone curve; rows sum
+                                        to 1 so neutrals are fixed (Calibrate panel below)
+        5b. Colour RGB                  per-channel linear gain (red/green/blue), into #2
         5c. Colour HSL                  hue rotation + saturation + vibrance + luminance,
                                         after the tone curve
-        5d. Colour grading (Color Mix)  tonal-range tinting: per shadows/mid/highlights a
+        5d. Colour grading              tonal-range tinting: per shadows/mid/highlights a
                                         zero-luma hue+sat chroma push + a luminance nudge,
-                                        weighted by smooth tonal windows; after HSL in the
-                                        same fused point-op pass (Color Mix panel below)
+                                        weighted by smooth tonal windows (shaped by
+                                        Blending/Balance), plus an unweighted GLOBAL
+                                        range; after HSL in the same fused point-op pass
+                                        (Color Grade panel below)
         6. Texture                      mid-frequency local contrast
         7. Dehaze                       local contrast + black-point, haze estimate
         8. Vignette                     radial corner exposure falloff (exposure/feather)
@@ -4159,7 +4173,14 @@ Scope & mask model (Global + masks)
                mutates, fixes up selectedMaskIndex/pendingIdx, noteEdit()s, buildTree()s
                and emits paramsChanged(). syncMaskPanel() at the end of buildTree() is the
                single refresh point, so the list tracks image, scope and mask changes
-               without any caller remembering to update it.
+               without any caller remembering to update it. COLLAPSING the section
+               (header arrow or a click on the band) hides the selected submask's
+               SETTINGS as well as the rows: SubmaskList emits collapsedChanged and
+               MaskPanel::syncAttrVisible() takes the whole attribute block (scope
+               label, MaskEditor, overlay swatches, commit row) down with them, since
+               those settings belong to a submask inside the collapsed list. Starting a
+               new submask (beginPending) re-expands the section, so a pending edit can
+               never be stranded behind a closed header.
              - COMMITTED SUBMASKS RE-OPEN (2026-08-13): commitPendingMask() used to set
                selectedMaskIndex = -1 ("flatten: committed submasks don't re-open"), which
                made the mask a WRITE-ONLY PILE: a committed submask could not be
@@ -4429,7 +4450,7 @@ Scope & mask model (Global + masks)
                pixels. hueLo/hueHi/satLo/satHi widen the band INDEPENDENTLY in four
                directions -- this replaced the earlier symmetric "refine" luma/chroma
                distance tolerance. WHEEL: a spanned ColorRangeWheel index widget above the
-               sliders (mirrors the Color Mix colorGradeWheel embed) paints the HSV disc,
+               sliders (mirrors the Color Grade wheel embed) paints the HSV disc,
                a dot per sample, the band SECTOR per sample, and four GRAB HANDLES on the
                anchor (first) sample -- two hue edges (on the rim, each labelled with its
                ABSOLUTE hue in degrees) + inner/outer sat arcs. Dragging a
@@ -4970,8 +4991,8 @@ Develop dock (UI)
     taking the remaining (stretch) space. The scopes and transform strips are each
     independently toggled from the action row.
 
-    The ACTION ROW is the dock's tool bar: the Scopes, Transform (crop), Spot, Preset and
-    Export BarBtns, in a centered QHBoxLayout (a stretch at each end) directly below the
+    The ACTION ROW is the dock's tool bar: the Scopes, Transform (crop), Spot, Mask tint,
+    Preset and Export BarBtns, in a centered QHBoxLayout (a stretch at each end) below the
     dock title bar. It sits INSIDE the dock body, not in the title bar -- the title bar
     keeps only the ? (how this works), collapse and X (close) buttons, so the title text
     is not squeezed by the tools. Collapsing the dock hides the row with the rest of the
@@ -5537,18 +5558,105 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     and emits paramsChanged() so the hook is ready.
 
 
-Color Mix panel (colour grading)
---------------------------------
+Calibrate panel (RGB primaries)
+-------------------------------
+
+    Lightroom's Calibration panel: a hue shift + saturation scale for each of the three
+    PRIMARIES of the working space (DevelopProperties::addCalibrate, header
+    "CalibrateHeader", preview group PV_Calibrate), sitting between Color and Color Grade
+    so the sections read in pipeline order.
+
+    NOT the same thing as the Color panel's Red/Green/Blue. Those are per-channel linear
+    GAINS folded into the white-balance vector (develop.cpp buildPointCoeffs) -- a cruder
+    second white balance. Calibration re-points the primaries themselves. Both exist; the
+    gains stay until Calibrate has been used in anger, the same "keep the old control
+    until the new one proves out" approach Color Grade got. Lightroom's "Shadows Tint" is
+    deliberately NOT reproduced: the Color Grade shadows wheel already does that job with
+    more freedom.
+
+    UI. Three Red / Green / Blue checkboxes on one row (calActiveMask, UI state not
+    EditParams) then one shared wheel, mirroring Color Grade's grammar.
+      • The wheel (Develop/Properties/primarywheel.*) draws a dot per primary, but
+        unlike the grade wheel a dot is a DELTA from a home angle (red 0 deg, green 120,
+        blue 240), shown with a faint home spoke. Angle swept from home = hue (-100..100
+        -> +/-30 deg); radius about the mid point = sat (-100 = grey, +100 = 2x chroma).
+      • A drag moves every CHECKED primary by the same delta; double-click returns them
+        to 0/0.
+
+    ALL THREE hue/sat wheels share one base, HueSatWheel (Develop/Properties/
+    huesatwheel.*), extracted when this panel added the third: it owns the cached HSV
+    disc, centre/radius, paintDisc and the hue/sat <-> pixel mapping, leaving each
+    subclass only its dots, interaction and signals. discMargin is the one thing they
+    size differently -- a wheel that labels handles OUTSIDE the rim needs the room.
+    Subclasses: ColorGradeWheel, ColorRangeWheel, PrimaryWheel.
+
+    Data + pipeline. EditParams gains six fields (calRed/Green/Blue x Hue/Sat), its own
+    Group::Calibrate, and a per-scope showCalibrate preview flag. The math is header-only
+    in Develop/calibrate.h (unit-tested by tst_calibrate); buildPointCoeffs turns the six
+    into one 3x3 (c.calMat / c.calActive) and applyPointOps applies it in the fused pass
+    right after channelGain, BEFORE the tone curve -- calibration is a change of colour
+    space and belongs upstream of anything perceptual.
+
+    WHY THE ROWS ARE NORMALISED. Each primary's unit vector is rotated about the neutral
+    axis and chroma-scaled, and those become the matrix COLUMNS; then every ROW is scaled
+    to sum to 1. That row normalisation is what keeps grey grey, because (M*(1,1,1))_i is
+    the sum of row i. It is an easy slip to "fix" this by normalising the columns instead
+    (so each primary keeps its own neutral component) -- that sounds right, is tidier, and
+    does not preserve white at all. tst_calibrate::rowsSumToOne pins it.
+
+    THE SLIDERS INTERACT, BY DESIGN. Turning red toward green gives reds a green response,
+    and holding white fixed forces green's own response down to compensate. That is what a
+    real primary change does, and Lightroom's calibration sliders interact the same way.
+    What does survive is direction: an untouched primary's column stays parallel to its
+    own axis and is only rescaled.
+
+
+Color Grade panel (colour grading)
+----------------------------------
 
     A minimalist take on Lightroom's Color Grading, added as its own Develop section
-    (DevelopProperties::addColorMix, header "ColorMixHeader", preview group PV_ColorMix)
-    ALONGSIDE the legacy Color panel (RGB + global HSL), which stays for now. Distinct
+    (DevelopProperties::addColorGrade, header "ColorGradeHeader", preview group
+    PV_ColorGrade) ALONGSIDE the Color panel (RGB + global HSL), which stays. Distinct
     function from the Color panel: grading selects pixels by TONE and adds a tint; the HSL
-    sliders remap existing hues. (The Lightroom 8-band hue mixer -- hue-selective HSL --
-    is a separate, still-deferred op.)
+    sliders remap existing hues globally.
 
-    UI (compact, per the mockup): three Dark / Mid / Light checkboxes on one row, one
-    shared hue/saturation wheel, and a single Luminance slider.
+    NAMING (historical). This section was called "Color Mix" everywhere in code until it
+    was renamed -- the name had been claimed for a planned Lightroom-style 8-band HSL
+    mixer that was then cancelled, leaving the grading panel wearing it. The header read
+    "Color Grade" while groupLabel(), the section context menu and the Save Preset dialog
+    still said "Color Mix", so history rows named a panel that did not exist. Everything
+    is now ColorGrade. The per-scope preview flag's SIDECAR KEY moved from "showColorMix"
+    to "showColorGrade"; editstack.h reads the legacy spelling first and lets the current
+    one win, so pre-rename sidecars keep their preview state. The nine value keys were
+    always grade* and did not change.
+
+    THE 8-BAND MIXER IS CANCELLED, not deferred. The Color Range mask (rangemask.h,
+    colorCoverage) already selects by hue + saturation, with arbitrary windows, multiple
+    samples, combine modifiers, submasks and the full adjustment set -- strictly more than
+    a fixed 8-band H/S/L mixer. Building the mixer would mean maintaining a second, weaker
+    selection system. Its one advantage (speed) is instead given to the mask as one-click
+    hue presets. Do not resurrect it, and do not treat "Color Mix" as a free name.
+
+    THOSE HUE PRESETS: the Color Range mask's rows carry eight colour CHIPS (Red, Orange,
+    Yellow, Green, Aqua, Blue, Purple, Magenta -- Lightroom's band set). Clicking one
+    calls DevelopProperties::applyColorRangeHuePreset, which REPLACES the mask's samples
+    with a synthetic one at the band's centre hue (sat 0.6, so it sits mid-radius on the
+    wheel with room to widen either way) and sets hueLo/hueHi to the 22.5 deg half-band --
+    exactly what the pipette would have written given a perfectly representative pixel.
+    No new selection maths: RangeMask::colorCoverage already takes a sample list plus
+    hue/sat windows. Replace, not append, because a chip means "select this colour".
+    Shift-clicking the image still adds further samples on top.
+
+    ISOLATING THE SELECTION is the pre-existing "Gray" chip on the Mask panel's swatch
+    row (G::maskOverlayGrayscale): it desaturates the image while any overlay is shown, so
+    the veil separates from the picture. It is a VIEW effect in ImageView/ScaledPixmapItem
+    only. Do not add a second, competing isolation overlay -- the combine-modifier work
+    settled on ONE overlay colour and one outcome preview, and a rival path would undo
+    that.
+
+    UI (compact, per the mockup): four Shadows / Midtones / Highlights / GLOBAL
+    checkboxes on one row, one shared hue/saturation wheel, a Luminance slider, then
+    Blending + Balance below a divider.
       • The wheel (Develop/Properties/colorgradewheel.*) is a directly-embedded index
         widget (setIndexWidget on a full-width first-column-spanned row), NOT a delegate
         editor. Hue = angle, saturation = radius; it draws all three range dots (active
@@ -5558,10 +5666,25 @@ Color Mix panel (colour grading)
         pick which range(s) the wheel + Luminance slider write. Default: Mid checked.
       • Luminance (key "gradeLum") writes to every checked range; on load it shows the
         lowest checked range's value.
+      • GLOBAL is a fourth range that is NOT tone-selective: it applies its tint and
+        luminance to every pixel at weight 1, on top of the three windowed ranges. In the
+        pipeline it is simply range [3] with no tonal weight (see applyPointOps).
+      • Blending (0..100, default 50) and Balance (-100..100, default 0) shape the three
+        windows and are PANEL-WIDE, not per-range. Blending pushes the shadow and
+        highlight edges apart (< 50, a broader pure-midtone band) or together (> 50, more
+        overlap); Balance slides both, positive favouring highlights as in Lightroom.
+        ColorGrade::gradeSplitPoints derives the two split points from them.
+
+    THE DEFAULTS ARE A COMPATIBILITY CONTRACT. Blending 50 / Balance 0 must return
+    kGradeShadowEnd / kGradeHighStart unchanged -- those are the fixed splits the panel
+    used before the sliders existed, so anything else silently re-renders every image
+    graded before them the first time it is reopened. Pinned by
+    tst_colorgrade::defaultBlendingMatchesLegacySplit; do not "tidy" the arithmetic in
+    gradeSplitPoints without rerunning it.
 
     Data + pipeline. EditParams gains nine grade fields (gradeShadow/Mid/High x Hue/Sat/
-    Lum), its own Group::ColorMix (reset/preview independent of the Color group), and a
-    per-scope showColorMix preview flag; all persist through editstack.h (forward-
+    Lum), its own Group::ColorGrade (reset/preview independent of the Color group), and a
+    per-scope showColorGrade preview flag; all persist through editstack.h (forward-
     tolerant, so old sidecars load as identity). The math lives header-only in Develop/
     colorgrade.h (gradeTintVector + gradeTonalWeights -- no Qt/OpenCV, unit-tested by
     tst_colorgrade); Develop::buildPointCoeffs/applyPointOps consume it as stage 5d,
@@ -5652,11 +5775,14 @@ Develop presets (the Presets dock)
                           Winnow engine only; both stay listed but are pre-checked only
                           when relevant.
         Basic / Color /   one checkable tri-state group per Develop section, each with
-        Color Mix /       its own [All] / [None] buttons. Leaves follow the panel's own
+        Calibrate /       its own [All] / [None] buttons. Leaves follow the panel's own
+        Color Grade /
         Effects           controls, so a control that folds several params in is ONE
-                          tick: White balance = temp + tint, each Color Mix range =
-                          its hue + sat + lum, Denoise = luma + chroma, Vignette folds
-                          in its feather, Grain folds in size + roughness.
+                          tick: White balance = temp + tint, each Color Grade range =
+                          its hue + sat + lum (Global included), Blending + Balance share
+                          one tick, each Calibrate primary = its hue + sat,
+                          Denoise = luma + chroma, Vignette folds in its feather, Grain
+                          folds in size + roughness.
 
     Items that differ from their default IN THE SELECTED SCOPE are pre-checked and their
     group pre-expanded, so the user can Save immediately or fine-tune. Moving the Scope
@@ -5706,8 +5832,31 @@ Develop presets (the Presets dock)
         developShortcutIntercept via the developShortcuts table (loadDevelopShortcuts),
         NOT a real QKeySequence.
 
+    MASK TINT BUTTON. The action row's fourth button toggles the mask overlay tint, the
+    same thing "O" does (MW::toggleMaskOverlay -> ImageView::toggleMaskTint), and gives
+    that otherwise invisible key a home in the UI. It carries NO glyph: it IS the swatch
+    -- MW::refreshDevelopMaskTintBtn paints a 12x12 rounded chip filled with
+    G::maskOverlayColor into the 16x16 BarBtn (12 so the active border has room), dimmed
+    to G::iconOpacity while the tint is off. It is repainted from two signals, so the
+    swatch and the border stay true no matter what changed the state: ImageView's
+    maskTintVisibilityChanged (the key, the scope menu, the slider auto-hide) and
+    DevelopProperties::maskOverlayRefreshRequested (a Mask-panel colour swatch).
+
+    RIGHT-CLICK on it (MW::showDevelopMaskTintMenu) offers the overlay's two APPEARANCE
+    settings -- the colour, and the grayscale background -- so they are reachable without
+    opening the Mask panel, or even having a mask. The menu is not a second copy of that
+    panel's chips: the colours and their names come from MaskPanel::overlayColours() /
+    overlayColourNames(), and both settings are applied through
+    DevelopProperties::setMaskOverlayColour / setMaskOverlayGrayscale, the ONE entry point
+    that updates the G:: flag, persists it (Develop/maskOverlayColor,
+    Develop/maskOverlayGrayscale), re-syncs the panel chips
+    (MaskPanel::syncOverlayControls) and asks for the right redraw -- a colour rebuilds
+    the veil (maskOverlayRefreshRequested), grayscale is view-only so it just repaints
+    (maskOverlayRepaintRequested). The panel's own chips were rewired to call the same
+    setters, so the two pickers cannot disagree or drift.
+
     Active border. The Develop action-row buttons that toggle a panel/tool -- Scopes,
-    Transform, Spot and now Preset -- carry a blue (G::appleBlue) border while their
+    Transform, Spot, Mask tint, Preset -- carry a blue (G::appleBlue) border while their
     panel is shown / the tool is armed, like a conventional checked toolbutton
     (BarBtn::setActive). MW keeps them as members and calls setActive from the toggle
     handlers (toggleDevelopScopes, toggleDevelopTransform + cancelDevelopTransform,
@@ -5953,7 +6102,8 @@ Adding or changing a develop adjustment (checklist)
        forward tolerant (an absent key keeps its default), so ADDING a field needs no
        version bump and old sidecars stay valid.
 
-    4. developproperties.cpp, addBasic / addColor / addColorMix / addEffects -- the
+    4. developproperties.cpp, addBasic / addColor / addCalibrate / addColorGrade /
+       addEffects -- the
        addSlider call: dock key, caption, tooltip, section header, min, max, divisor,
        colours, default. A sub-control of the slider above it uses a "   "-indented
        caption ("   Feather", "   Size").
@@ -5966,7 +6116,8 @@ Adding or changing a develop adjustment (checklist)
        further every time the user navigates away and back.
 
     7-9. Presets -- four functions, and NOTE THE KEY NAMESPACE CHANGE:
-         • kBasicLeaves / kColorLeaves / kColorMixLeaves / kEffectsLeaves in
+         • kBasicLeaves / kColorLeaves / kCalibrateLeaves / kColorGradeLeaves /
+           kEffectsLeaves in
            developproperties.cpp -- the checklist row's key + label. Params the panel
            treats as one control fold into ONE leaf (Grain = amount + size + roughness).
          • leafChanged() -- is this leaf non-default? Tests the PRIMARY param(s) only,

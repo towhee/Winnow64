@@ -1,5 +1,6 @@
 #include "Develop/develop.h"
 #include "Develop/whitebalance.h"
+#include "Develop/calibrate.h"
 #include "Develop/colorgrade.h"
 #include <QtConcurrent>
 #include <QThreadPool>
@@ -43,8 +44,8 @@ constexpr float kRgbGain      = 0.5f;
 constexpr float kHslFullScale = 100.0f;
 constexpr float kHueMaxRad    = 1.04719755f;   // 60 degrees at full slider
 
-/* Colour grading (Color Mix panel) -- tonal-range tinting. Each range's hue+sat becomes a
-   zero-luma RGB chroma push scaled by kGradeTintStrength (amount added at full sat), and
+/* Colour grading (Color Grade panel) -- tonal-range tinting. Each range's hue+sat becomes
+   a zero-luma RGB chroma push scaled by kGradeTintStrength (added at full sat), and
    its -100..100 luminance a gain delta scaled by kGradeLumStrength (+/-100 -> +/-50% in
    that range). Weighted per pixel by smooth tonal windows split at kGradeShadowEnd /
    kGradeHighStart in the perceptual (gamma) domain. See buildPointCoeffs' grade block. */
@@ -53,6 +54,15 @@ constexpr float kGradeLumStrength  = 0.5f;
 constexpr float kGradeLumFullScale = 100.0f;
 constexpr float kGradeShadowEnd    = 0.5f;    // perceptual L: shadow weight reaches 0
 constexpr float kGradeHighStart    = 0.5f;    // perceptual L: highlight weight starts
+
+/* How far the Blending and Balance sliders may move those two split points. Blending
+   pushes them apart / together about the base; Balance slides both the same way. The
+   DEFAULTS (blending 50, balance 0) must land exactly on the two constants above, or
+   every already-graded image would shift the first time it is reopened. */
+constexpr float kGradeBlendRange   = 0.30f;
+constexpr float kGradeBalanceRange = 0.20f;
+constexpr float kGradeSplitMin     = 0.05f;   // keep both strictly inside (0,1): the
+constexpr float kGradeSplitMax     = 0.95f;   // weights divide by them
 
 /* Tone-region controls (highlights/shadows/whites/blacks). Each is a smooth, region-weighted
    shift of the PERCEPTUAL (gamma) value, applied after contrast (pipeline order #5). The
@@ -720,26 +730,45 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     c.hslActive = (c.satFactor != 1.0f) || (c.vibAmount != 0.0f) ||
                   (c.lumGain != 1.0f) || (hue != 0.0f);
 
+    /* Calibration: re-point the R/G/B primaries into one 3x3 matrix. Runs in linear light
+       before the tone curve, so it is built here but applied earlier in the fused loop
+       than HSL. All six sliders at 0 leaves the identity matrix, which we skip. */
+    c.calActive = !Calibrate::isIdentity(p.calRedHue, p.calRedSat, p.calGreenHue,
+                                         p.calGreenSat, p.calBlueHue, p.calBlueSat);
+    if (c.calActive)
+        Calibrate::buildMatrix(p.calRedHue, p.calRedSat, p.calGreenHue, p.calGreenSat,
+                               p.calBlueHue, p.calBlueSat, c.calMat);
+
     /* Colour grading: turn each range's (hue, sat, lum) into a pre-scaled zero-luma RGB
        tint vector + a luminance gain delta. HSV(hue, 1, 1) gives a fully-saturated hue
        colour; subtracting its Rec.709 luma leaves a chroma-only push that shifts colour
        without brightness. sat scales it, so a sat-0 range contributes nothing. */
-    const float gHue[3] = {p.gradeShadowHue, p.gradeMidHue, p.gradeHighHue};
-    const float gSat[3] = {p.gradeShadowSat, p.gradeMidSat, p.gradeHighSat};
-    const float gLum[3] = {p.gradeShadowLum, p.gradeMidLum, p.gradeHighLum};
-    for (int r = 0; r < 3; ++r) {
+    const float gHue[4] = {p.gradeShadowHue, p.gradeMidHue, p.gradeHighHue,
+                           p.gradeGlobalHue};
+    const float gSat[4] = {p.gradeShadowSat, p.gradeMidSat, p.gradeHighSat,
+                           p.gradeGlobalSat};
+    const float gLum[4] = {p.gradeShadowLum, p.gradeMidLum, p.gradeHighLum,
+                           p.gradeGlobalLum};
+    for (int r = 0; r < 4; ++r) {
         ColorGrade::gradeTintVector(gHue[r], gSat[r], kGradeTintStrength, c.gradeTint[r]);
         c.gradeLum[r] = (gLum[r] / kGradeLumFullScale) * kGradeLumStrength;
     }
-    c.gradeActive = (c.gradeTint[0][0] != 0.0f || c.gradeTint[0][1] != 0.0f ||
-                     c.gradeTint[0][2] != 0.0f || c.gradeTint[1][0] != 0.0f ||
-                     c.gradeTint[1][1] != 0.0f || c.gradeTint[1][2] != 0.0f ||
-                     c.gradeTint[2][0] != 0.0f || c.gradeTint[2][1] != 0.0f ||
-                     c.gradeTint[2][2] != 0.0f ||
-                     c.gradeLum[0] != 0.0f || c.gradeLum[1] != 0.0f || c.gradeLum[2] != 0.0f);
+    c.gradeActive = false;
+    for (int r = 0; r < 4 && !c.gradeActive; ++r)
+        c.gradeActive = (c.gradeTint[r][0] != 0.0f || c.gradeTint[r][1] != 0.0f ||
+                         c.gradeTint[r][2] != 0.0f || c.gradeLum[r] != 0.0f);
+
+    /* Window shape from the panel-wide Blending / Balance sliders. At their defaults this
+       returns the two base constants unchanged, so old grades render as before. */
+    ColorGrade::gradeSplitPoints(p.gradeBlending, p.gradeBalance,
+                                 kGradeShadowEnd, kGradeHighStart,
+                                 kGradeBlendRange, kGradeBalanceRange,
+                                 kGradeSplitMin, kGradeSplitMax,
+                                 c.gradeShadowEnd, c.gradeHighStart);
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
-               (c.channelGain[2] != 1.0f) || c.toneActive || c.hslActive || c.gradeActive;
+               (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
+               c.hslActive || c.gradeActive;
     return c;
 }
 
@@ -756,8 +785,14 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const float invWhite = 1.0f / white;
     const bool doGain = (g0 != 1.0f) || (g1 != 1.0f) || (g2 != 1.0f);
     const bool doTone = c.toneActive;
+    const bool doCal  = c.calActive;
     const bool doHsl  = c.hslActive;
     const bool doGrade = c.gradeActive;
+
+    /* Calibration matrix, local so the block folds into the inner loop like the rest. */
+    const float cm0 = c.calMat[0], cm1 = c.calMat[1], cm2 = c.calMat[2];
+    const float cm3 = c.calMat[3], cm4 = c.calMat[4], cm5 = c.calMat[5];
+    const float cm6 = c.calMat[6], cm7 = c.calMat[7], cm8 = c.calMat[8];
 
     /* HSL coeffs (cross-channel, applied after the tone curve). Locals so they fold into the
        inner loop the same way the gain/tone constants do. */
@@ -775,7 +810,11 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const float gt00 = c.gradeTint[0][0], gt01 = c.gradeTint[0][1], gt02 = c.gradeTint[0][2];
     const float gt10 = c.gradeTint[1][0], gt11 = c.gradeTint[1][1], gt12 = c.gradeTint[1][2];
     const float gt20 = c.gradeTint[2][0], gt21 = c.gradeTint[2][1], gt22 = c.gradeTint[2][2];
+    /* Range 3 is Global: no tonal window, so it is added at weight 1. */
+    const float gt30 = c.gradeTint[3][0], gt31 = c.gradeTint[3][1], gt32 = c.gradeTint[3][2];
     const float gl0 = c.gradeLum[0], gl1 = c.gradeLum[1], gl2 = c.gradeLum[2];
+    const float gl3 = c.gradeLum[3];
+    const float gShadowEnd = c.gradeShadowEnd, gHighStart = c.gradeHighStart;
 
     /* Perceptual tone curve via the precomputed LUT (contrast + tone regions, see
        buildPointCoeffs). The table is indexed by the perceptual value s = (v/white)^(1/gamma)
@@ -806,6 +845,17 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
             for (int x = 0; x < w; ++x) {
                 float *px = row + static_cast<size_t>(x) * 3;
                 if (doGain) { px[0] *= g0; px[1] *= g1; px[2] *= g2; }
+                if (doCal) {
+                    /* Re-point the primaries in LINEAR light, before any tone shaping.
+                       The matrix fixes the neutral axis, so greys pass through. */
+                    const float r = px[0], g = px[1], b = px[2];
+                    float cr = cm0 * r + cm1 * g + cm2 * b;
+                    float cg = cm3 * r + cm4 * g + cm5 * b;
+                    float cb = cm6 * r + cm7 * g + cm8 * b;
+                    px[0] = (cr < 0.0f) ? 0.0f : cr;
+                    px[1] = (cg < 0.0f) ? 0.0f : cg;
+                    px[2] = (cb < 0.0f) ? 0.0f : cb;
+                }
                 if (doTone) {
                     px[0] = toneCh(px[0]);
                     px[1] = toneCh(px[1]);
@@ -841,19 +891,20 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                     /* Split the pixel's perceptual lightness into three smooth tonal
                        windows (shadows/mid/highlights, weights sum to 1), then apply each
                        range's luminance gain + zero-luma chroma tint, weighted by its
-                       window. Tint is in 0..1 RGB units, scaled to the working range by
-                       white. The perceptual encode pow is the only transcendental. */
+                       window -- plus the Global range, which is not tone-selective and so
+                       rides in at weight 1. Tint is in 0..1 RGB units, scaled to the
+                       working range by white. The perceptual encode pow is the only
+                       transcendental. */
                     float Yg = 0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2];
                     float n = Yg * invWhite;
                     if (n < 0.0f) n = 0.0f; else if (n > 1.0f) n = 1.0f;
                     const float L = std::pow(n, kInvGamma);          // perceptual 0..1
                     float wS, wM, wH;
-                    ColorGrade::gradeTonalWeights(L, kGradeShadowEnd, kGradeHighStart,
-                                                  wS, wM, wH);
-                    const float lumMul = 1.0f + wS * gl0 + wM * gl1 + wH * gl2;
-                    const float tR = (wS * gt00 + wM * gt10 + wH * gt20) * white;
-                    const float tG = (wS * gt01 + wM * gt11 + wH * gt21) * white;
-                    const float tB = (wS * gt02 + wM * gt12 + wH * gt22) * white;
+                    ColorGrade::gradeTonalWeights(L, gShadowEnd, gHighStart, wS, wM, wH);
+                    const float lumMul = 1.0f + wS * gl0 + wM * gl1 + wH * gl2 + gl3;
+                    const float tR = (wS * gt00 + wM * gt10 + wH * gt20 + gt30) * white;
+                    const float tG = (wS * gt01 + wM * gt11 + wH * gt21 + gt31) * white;
+                    const float tB = (wS * gt02 + wM * gt12 + wH * gt22 + gt32) * white;
                     float r = px[0] * lumMul + tR;
                     float g = px[1] * lumMul + tG;
                     float b = px[2] * lumMul + tB;

@@ -2263,6 +2263,29 @@ void MW::createDevelopDock()
     developActionLayout->addWidget(developSpotBtn);
     developActionLayout->addSpacing(10);
 
+    /* Mask overlay tint on/off ("O"). The button has no glyph: it IS the swatch -- its
+       icon is filled with the current overlay colour (G::maskOverlayColor, picked in the
+       Mask panel), so the row shows at a glance which colour the veil speaks and whether
+       it is on (blue active border, same as the other action buttons). Repainted by
+       refreshDevelopMaskTintBtn on both the visibility and the colour signals. */
+    developMaskTintBtn = new BarBtn();
+    developMaskTintBtn->setToolTip("Show or hide the mask overlay tint  (O)\n"
+                                   "Right-click: overlay colour / grayscale background");
+    connect(developMaskTintBtn, &BarBtn::clicked, this, &MW::toggleMaskOverlay);
+    /* Right-click picks the colour and flips the grayscale background -- the Mask panel's
+       chips, reachable without opening (or even having) a mask. */
+    developMaskTintBtn->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(developMaskTintBtn, &BarBtn::customContextMenuRequested,
+            this, &MW::showDevelopMaskTintMenu);
+    connect(imageView, &ImageView::maskTintVisibilityChanged, this,
+            [this](bool){ refreshDevelopMaskTintBtn(); });
+    /* A swatch in the Mask panel recoloured the overlay. */
+    connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested, this,
+            &MW::refreshDevelopMaskTintBtn);
+    refreshDevelopMaskTintBtn();
+    developActionLayout->addWidget(developMaskTintBtn);
+    developActionLayout->addSpacing(10);
+
     /* Preset: show / raise the Presets dock, where a click applies a saved preset (P).
        Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title
        bar. The colour-wheel glyph matches the Scope / Transform action-row button style,

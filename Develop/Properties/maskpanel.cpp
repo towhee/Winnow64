@@ -30,6 +30,7 @@ void MaskPanel::buildUi()
     /* The mask's contents, first: what the mask is made of is the thing the user needs to
        see, and every submask in it re-opens from here. */
     submaskList = new SubmaskList(this);
+    connect(submaskList, &SubmaskList::collapsedChanged, this, [this]{ syncAttrVisible(); });
     outer->addWidget(submaskList);
 
     /* Settings + commit for the SELECTED submask. Wrapped so the whole block hides when
@@ -75,8 +76,7 @@ void MaskPanel::buildUi()
     QHBoxLayout *sl = new QHBoxLayout(swatchRow);
     sl->setContentsMargins(0, 0, 0, 2);
     sl->setSpacing(6);
-    swatchColors = {QColor(220, 40, 40),   QColor(70, 200, 90),  QColor(60, 150, 255),
-                    QColor(240, 200, 40),  QColor(225, 70, 210), QColor(240, 240, 240)};
+    swatchColors = overlayColours();
     for (const QColor &c : swatchColors) {
         QPushButton *sw = new QPushButton(swatchRow);
         sw->setFixedSize(18, 18);
@@ -141,6 +141,30 @@ void MaskPanel::buildUi()
     bw->addWidget(commitRow);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+}
+
+const QVector<QColor> &MaskPanel::overlayColours()
+{
+    /* The overlay speaks ONE colour and this is the choice: red first (the default),
+       then colours far enough apart in hue to survive most subjects, ending in white
+       for dark ones. Shared with the Develop action-row tint button's context menu. */
+    static const QVector<QColor> colours = {
+        QColor(220, 40, 40),   QColor(70, 200, 90),  QColor(60, 150, 255),
+        QColor(240, 200, 40),  QColor(225, 70, 210), QColor(240, 240, 240)};
+    return colours;
+}
+
+const QStringList &MaskPanel::overlayColourNames()
+{
+    static const QStringList names = {
+        tr("Red"), tr("Green"), tr("Blue"), tr("Yellow"), tr("Magenta"), tr("White")};
+    return names;
+}
+
+void MaskPanel::syncOverlayControls()
+{
+    refreshSwatches();
+    refreshGrayBtn();
 }
 
 void MaskPanel::refreshSwatches()
@@ -214,7 +238,18 @@ void MaskPanel::setEditingExisting(bool existing)
 
 void MaskPanel::showAttributes(bool show)
 {
-    if (attrWrap) attrWrap->setVisible(show);
+    attrShown = show;
+    syncAttrVisible();
+}
+
+void MaskPanel::syncAttrVisible()
+{
+    /* The settings block belongs to a submask in the list above it, so a collapsed
+       Submasks section takes it down too -- otherwise collapsing left the selected
+       submask's settings (and the commit row) floating under a closed header. */
+    if (!attrWrap) return;
+    const bool collapsed = submaskList && submaskList->isCollapsed();
+    attrWrap->setVisible(attrShown && !collapsed);
 }
 
 void MaskPanel::setAttributeScope(const QString &text)
@@ -233,6 +268,9 @@ void MaskPanel::beginPending(bool first)
     refreshCommitBtn();
     refreshSwatches();
     refreshGrayBtn();               // the flag is persistent, so re-sync on every show
+    /* A new submask is being built: re-open the section, or its settings and the
+       commit button would be invisible (the [+] that starts one is on the header). */
+    if (submaskList) submaskList->setCollapsed(false);
     showAttributes(true);
     setVisible(true);
 }

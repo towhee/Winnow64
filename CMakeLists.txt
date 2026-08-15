@@ -127,6 +127,8 @@ set(WINNOW_SOURCES
     Develop/whitebalance.cpp
     Develop/workingimagecache.cpp
     Develop/Properties/developproperties.cpp
+    Develop/Properties/huesatwheel.cpp
+    Develop/Properties/primarywheel.cpp
     Develop/Properties/colorgradewheel.cpp
     Develop/Properties/colorrangewheel.cpp
     Develop/Properties/scopeheader.cpp
@@ -389,6 +391,7 @@ set(WINNOW_HEADERS
     Datamodel/selection.h
 
     Develop/develop.h
+    Develop/calibrate.h
     Develop/colorgrade.h
     Develop/editparams.h
     Develop/inputtransform.h
@@ -398,6 +401,8 @@ set(WINNOW_HEADERS
     Develop/whitebalance.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
+    Develop/Properties/huesatwheel.h
+    Develop/Properties/primarywheel.h
     Develop/Properties/colorgradewheel.h
     Develop/Properties/colorrangewheel.h
     Develop/Properties/scopeheader.h

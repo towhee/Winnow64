@@ -1684,3 +1684,26 @@ Mask panel restructure: submask list, re-edit, nesting under the scope row
 
 Allow edits to project_mask_submask_list.md
 Yes, and allow Claude to edit its own settings for this session
+
+full Color Mix
+     Do the rename AND build the complete Lightroom 8-band HSL mixer: params, panel UI
+     (band selector + H/S/L sliders + targeted-adjust), pipeline math, sidecar, presets,
+     history, docs, tests. Large.
+
+❯ 1. Two sibling sections (Recommended)
+
+     Keep 'Color Grade' as its own section and add 'Color Mix' as a separate section
+     beside it — matches the existing addBasic/addColor/addEffects pattern, independent
+     Preview-eye and Reset per section, no new widget machinery.
+
+  2. One 'Color' section, two sub-groups
+
+     Fold grading and mixing under a single Color header with nested sub-headers. Fewer
+     top-level rows, but the per-section eye/reset model would need extending to nested
+     groups.
+
+  3. One section with a Grade/Mix toggle
+
+     A single Color section whose body switches between the wheel and the band mixer via
+     a segmented toggle (closest to Lightroom's Color Grading 4-way selector idea). Most
+     UI work; one eye/reset covers both.

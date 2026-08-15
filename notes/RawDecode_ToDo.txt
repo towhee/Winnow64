@@ -295,10 +295,15 @@ REMAINING DEVELOP-MODULE WORK (beyond raw decode; verified vs tree 2026-07-11)
                  Distinct from #27 colour management (working/output ICC); this is the
                  look/rendering profile. Persist the choice in the EditStack.
 
-39   [todo]      Color mixer. Per-hue HSL mixer (8 colour bands: red/orange/yellow/green/
+39   [dropped]   Color mixer. Per-hue HSL mixer (8 colour bands: red/orange/yellow/green/
                  aqua/blue/purple/magenta, each with hue/saturation/luminance) beyond
-                 the single global HSL of #23. Point op after the tone curve; EditParams
-                 fields + JSON persistence + UI rows under the Color header.
+                 the single global HSL of #23.
+                 CANCELLED: the Color Range mask (rangemask.h colorCoverage) already
+                 selects by hue + saturation with arbitrary windows, multiple samples,
+                 combine modifiers, submasks and the full adjustment set -- strictly
+                 more than a fixed 8-band mixer, so the mixer would be a second, weaker
+                 selection system. Its one advantage (speed) goes to the mask instead as
+                 one-click hue presets. See Documentation.txt "Color Grade panel".
 
 40   [idea]      Consolidate the AI-mask model stack (deployment size). The mask
                  models total ~570 MB: u2net.onnx (Subject + inverted Background,

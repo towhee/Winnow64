@@ -668,6 +668,12 @@ private slots:
        Transform session is up. */
     void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
+    /* Repaint the action-row tint button: its swatch is filled with the current overlay
+       colour and it carries the blue active border while the tint is shown. */
+    void refreshDevelopMaskTintBtn();
+    /* Right-click on that button: pick the overlay colour / toggle the grayscale
+       background without opening the Mask panel. pos is in button coordinates. */
+    void showDevelopMaskTintMenu(const QPoint &pos);
     void developNewScope();       // "N": add a scope to the current image's stack
     void developAddToMask();        // "M": pop the submask type menu
     void developExport();         // "X": export the developed selection (opens ExportDlg)
@@ -1155,6 +1161,7 @@ private:
     BarBtn *developScopesBtn = nullptr;
     BarBtn *developTransformBtn = nullptr;
     BarBtn *developSpotBtn = nullptr;
+    BarBtn *developMaskTintBtn = nullptr;  // mask overlay tint on/off (O)
     BarBtn *developPresetBtn = nullptr;    // shows/raises the Presets dock (P)
     QAction *developScopesAction;       // G
     // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks

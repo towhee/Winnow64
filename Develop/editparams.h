@@ -69,7 +69,19 @@ struct EditParams {
     float vibrance   = 0.0f;
     float luminance  = 0.0f;
 
-    /* Colour grading (Color Mix panel) -- tonal-range tinting, the Lightroom "teal
+    /* Camera calibration (Calibrate panel) -- rotates the three PRIMARIES of the working
+       space: each of R/G/B gets a hue shift (-100..100 -> +/-30 deg about the neutral
+       axis) and a saturation scale (-100..100 -> chroma x0..x2 about the primary's own
+       luma). Built into one 3x3 matrix whose columns are the re-pointed primaries, so
+       neutrals stay neutral. Applied in LINEAR light before the tone curve -- distinct
+       from the Color panel's red/green/blue, which are per-channel gains folded into
+       white balance, and from its HSL hue, which runs after the curve. Math is
+       header-only in Develop/calibrate.h. Identity = all six zero. */
+    float calRedHue   = 0.0f, calRedSat   = 0.0f;
+    float calGreenHue = 0.0f, calGreenSat = 0.0f;
+    float calBlueHue  = 0.0f, calBlueSat  = 0.0f;
+
+    /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
        each ADDS a chroma tint of the given hue at the given saturation and NUDGES that
        range's luminance. Applied as a point op after HSL in the fused pass, weighted by
@@ -78,6 +90,20 @@ struct EditParams {
     float gradeShadowHue = 0.0f, gradeShadowSat = 0.0f, gradeShadowLum = 0.0f;
     float gradeMidHue    = 0.0f, gradeMidSat    = 0.0f, gradeMidLum    = 0.0f;
     float gradeHighHue   = 0.0f, gradeHighSat   = 0.0f, gradeHighLum   = 0.0f;
+
+    /* A fourth grading range that is NOT tone-selective: Global applies its tint and
+       luminance to every pixel at full weight, on top of the three windowed ranges. */
+    float gradeGlobalHue = 0.0f, gradeGlobalSat = 0.0f, gradeGlobalLum = 0.0f;
+
+    /* Shape of the three tonal windows, panel-wide rather than per-range.
+       gradeBlending (0..100, default 50) widens or narrows the OVERLAP between shadows
+       and highlights: 50 reproduces the fixed split the panel had before these existed,
+       0 pulls them apart (a broader pure-midtone band), 100 pushes them together.
+       gradeBalance (-100..100, default 0) slides the whole split -- positive favours the
+       highlight range, negative the shadow range. Both are inert while every range is at
+       sat/lum 0, so neither is part of isIdentity. */
+    float gradeBlending = 50.0f;
+    float gradeBalance  = 0.0f;
 
     /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
        engine) during demosaic, alongside start WB / black / white. Not maskable: these are
@@ -131,9 +157,10 @@ struct EditParams {
        localDenoiseLuma ("Denoise", local post-demosaic NR) is under Effects. denoiseLuma/denoiseChroma
        are decode-time global NR (the Global scope's "Denoise raw", baked before Develop runs) so they
        are in NO group and cannot be previewed/reset via params. */
-    /* ColorMix = the nine colour-grading fields (its own group so the Color Mix panel's
-       Preview/Reset are independent of the legacy Color panel's RGB/HSL group). */
-    enum class Group { Basic, Color, ColorMix, Effects };
+    /* ColorGrade = the nine colour-grading fields, Calibrate = the six primary fields;
+       each is its own group so its panel's Preview/Reset are independent of the Color
+       panel's RGB/HSL group. */
+    enum class Group { Basic, Color, Calibrate, ColorGrade, Effects };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
        fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
@@ -156,13 +183,22 @@ struct EditParams {
             p.hue = def.hue; p.saturation = def.saturation;
             p.vibrance = def.vibrance; p.luminance = def.luminance;
             break;
-        case Group::ColorMix:
+        case Group::Calibrate:
+            p.calRedHue = def.calRedHue;     p.calRedSat = def.calRedSat;
+            p.calGreenHue = def.calGreenHue; p.calGreenSat = def.calGreenSat;
+            p.calBlueHue = def.calBlueHue;   p.calBlueSat = def.calBlueSat;
+            break;
+        case Group::ColorGrade:
             p.gradeShadowHue = def.gradeShadowHue; p.gradeShadowSat = def.gradeShadowSat;
             p.gradeShadowLum = def.gradeShadowLum;
             p.gradeMidHue = def.gradeMidHue; p.gradeMidSat = def.gradeMidSat;
             p.gradeMidLum = def.gradeMidLum;
             p.gradeHighHue = def.gradeHighHue; p.gradeHighSat = def.gradeHighSat;
             p.gradeHighLum = def.gradeHighLum;
+            p.gradeGlobalHue = def.gradeGlobalHue;
+            p.gradeGlobalSat = def.gradeGlobalSat;
+            p.gradeGlobalLum = def.gradeGlobalLum;
+            p.gradeBlending = def.gradeBlending; p.gradeBalance = def.gradeBalance;
             break;
         case Group::Effects:
             p.localDenoiseLuma = def.localDenoiseLuma;       // "Denoise" (local NR)
@@ -185,10 +221,14 @@ struct EditParams {
                whites == 0.0f && blacks == 0.0f &&
                texture == 0.0f && dehaze == 0.0f &&
                red == 0.0f && green == 0.0f && blue == 0.0f &&
+               calRedHue == 0.0f && calRedSat == 0.0f &&
+               calGreenHue == 0.0f && calGreenSat == 0.0f &&
+               calBlueHue == 0.0f && calBlueSat == 0.0f &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
                gradeShadowSat == 0.0f && gradeShadowLum == 0.0f &&
                gradeMidSat == 0.0f && gradeMidLum == 0.0f &&
                gradeHighSat == 0.0f && gradeHighLum == 0.0f &&
+               gradeGlobalSat == 0.0f && gradeGlobalLum == 0.0f &&
                denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f;

@@ -282,9 +282,18 @@ void SubmaskList::showRowMenu(int index)
 
 void SubmaskList::toggleCollapsed()
 {
-    collapsed = !collapsed;
+    setCollapsed(!collapsed);
+}
+
+void SubmaskList::setCollapsed(bool collapse)
+{
+    if (collapse == collapsed) return;
+    collapsed = collapse;
     if (rowsContainer) rowsContainer->setVisible(!collapsed);
     updateCollapseIcon();
+    /* The selected submask's settings live BELOW this widget (MaskPanel), so the section
+       only reads as collapsed if they go away with the rows. */
+    emit collapsedChanged(collapsed);
 }
 
 void SubmaskList::updateCollapseIcon()
