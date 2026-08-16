@@ -87,7 +87,7 @@ private:
        coordinates -- what the containment rail brackets. Empty if there is nothing to
        bracket (list collapsed). */
     QRect activeBlockRect() const;
-    void showPanelMenu();                 // panel [v]: Add new scope
+    void showPanelMenu();                 // panel [v]: New mask / Reset all edits
     void showRowMenu(int index, const QString &name);   // row [v]: per-scope actions
     void selectRowDeferred(const QString &name);        // emit scopeSelected next tick
     /* The header's collapse arrow: hide/show the scope LIST (not the tree). Collapsing

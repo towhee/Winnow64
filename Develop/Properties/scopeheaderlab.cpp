@@ -325,6 +325,10 @@ void ScopeHeaderLab::showPanelMenu()
     QMenu menu(this);
     connect(menu.addAction(tr("New mask\tN")), &QAction::triggered,
             this, [this]{ emit addScopeRequested(); });
+    /* Wipes the whole recipe (every scope, the geometry and the spots), the history and
+       the sidecar record, on every selected image. DevelopProperties confirms first. */
+    connect(menu.addAction(tr("Reset all edits")), &QAction::triggered,
+            this, [this]{ emit resetAllEditsRequested(); });
     menu.exec(QCursor::pos());
 }
 

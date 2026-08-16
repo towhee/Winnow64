@@ -137,6 +137,11 @@ void ScopeHeader::showScopeMenu()
     connect(menu.addAction(tr("New mask\tN")), &QAction::triggered,
             this, [this]{ emit addScopeRequested(); });
 
+    /* Wipes the whole recipe (every scope, the geometry and the spots), the history and
+       the sidecar record, on every selected image. DevelopProperties confirms first. */
+    connect(menu.addAction(tr("Reset all edits")), &QAction::triggered,
+            this, [this]{ emit resetAllEditsRequested(); });
+
     /* Per-scope actions, captioned with the active scope's name. Omitted for Global
        (index 0), which applies globally and cannot be reset/removed/renamed here. */
     if (!globalActive) {

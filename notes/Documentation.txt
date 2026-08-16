@@ -122,6 +122,7 @@ Table of Contents
          - Copy / paste develop settings (the develop clipboard)
          - Multi-image editing (edits apply to the whole selection)
          - Develop history (the History dock)
+         - Reset all edits (wipe one image's recipe)
          - Adding or changing a develop adjustment (checklist)
          - Export (getting developed images out)
          - Stale presets and history (schema drift)
@@ -3660,7 +3661,8 @@ Scope & mask model (Global + masks)
                between the dropdown and [E], patterned on EmbelProperties::effectNewBtn
                -> effectContextMenu: clicking it pops a QMenu (ScopeHeader::showScopeMenu,
                built on demand) with "New mask" -> newScope (name dialog, default
-               "Mask n"); then, below a separator, the per-scope actions "Add to
+               "Mask n") and "Reset all edits" -> resetAllEdits (see "Reset all edits"
+               below); then, below a separator, the per-scope actions "Add to
                <mask>" -> showMaskMenu, a checkable "Show mask overlay" (shown only
                while a mask tool is expanded; toggles the red coverage tint, the same
                action as the "O" shortcut -- maskOverlayToggleRequested ->
@@ -6208,6 +6210,51 @@ Develop history (the History dock)
     action left / value right). MW::createHistoryDock runs AFTER createDevelopDock (it
     binds to developProperties). Adding the dock required the full new-dock checklist
     above, including the history_white.png glyph and the winnowStateVersion bump to 2.
+
+
+Reset all edits (wipe one image's recipe)
+-----------------------------------------
+
+    The Edits (scope) header menu carries "Reset all edits" directly under "New mask",
+    in BOTH header implementations (ScopeHeader::showScopeMenu and
+    ScopeHeaderLab::showPanelMenu -> resetAllEditsRequested, declared on ScopeHeaderBase
+    so one connect in bindScopeHeader binds whichever was built). It runs
+    DevelopProperties::resetAllEdits.
+
+    WHAT IT DELETES. Everything the EditStack holds: every scope and its masks, the
+    crop / straighten / warp geometry, and the spot heals. The stack is replaced with a
+    fresh identity stack (one "Global" scope), not merely reset field by field -- that is
+    what makes the geometry and the spots go too.
+
+    WHOLE SELECTION. Like a preset apply or a settings paste (and unlike Reset / Remove
+    on a scope), it lands on every selected image: the current one, then each of
+    otherSelectedPaths() -- which skips videos, they have no develop recipe. Per image
+    the work is identical and lives in the helper resetImageEdits(fPath); resetAllEdits
+    itself adds only what the DOCK needs for the image on screen (mask-tool teardown,
+    refreshScopeList + buildTree, spot pins, propagate base, paramsChanged) and the
+    "Reset all edits on N images." popup. A multi-image batch already queued is flushed
+    first (flushPropagation): its targets were captured when the batch opened and need
+    not be the current selection, so it cannot just be dropped.
+
+    HISTORY AND SIDECAR (per image, resetImageEdits). The image's whole timeline goes:
+    history->forget(path) then seed(path, identity), so the dock shows one fresh
+    "Original" baseline -- but only for an image that HAS a timeline (count > 0, i.e.
+    visited this session); seeding an unvisited image would fill the LRU with images the
+    user never opened. The sidecar is written IMMEDIATELY (dirty.insert + flushImage)
+    rather than left to the debounce -- an identity stack makes flushImage write an empty
+    blob, which clears the winnow:Develop attribute (Metadata::writeDevelopSidecar; it
+    will not create a sidecar just to store nothing). The settings are then gone even if
+    the app never gets a clean shutdown.
+
+    CONFIRMED, NOT UNDOABLE. History is wiped along with the edits, so there is nothing
+    to revert to: a QMessageBox with a destructive "Reset" button (Cancel default) asks
+    first, naming the image or the number of selected images.
+
+    TEARDOWN. Same order as applyHistoryEntry: retire a half-built mask tool (no
+    commit prompt -- the scope it would land in is being deleted), clear
+    selectedMaskIndex, hide the mask panel, drop any hover preview, then rebuild under
+    isRestoringHistory (so the repopulation records nothing), re-seed the propagate base
+    and emit paramsChanged.
 
 
 Adding or changing a develop adjustment (checklist)

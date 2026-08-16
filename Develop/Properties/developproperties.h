@@ -295,7 +295,11 @@ public slots:
     /* ---- ScopeHeader widget handlers (the scope dropdown + buttons above the tree) ---- */
     void onScopeSelected(const QString &name);    // dropdown picked a different scope
     void renameActiveScope();                     // [R] rename (dialog); Global cannot be renamed
-    void resetActiveScope();                      // header reset: restore the whole scope's defaults
+    void resetActiveScope();                      // header reset: scope back to defaults
+    /* Menu "Reset all edits": wipe the WHOLE recipe -- every scope and mask, the
+       crop/warp geometry and the spot heals -- then clear the history and the sidecar
+       record, for EVERY selected image. Destructive and confirmed. */
+    void resetAllEdits();
     void newScope();                              // [+] add a scope (name dialog, default "Scope n")
     void deleteScope();                           // [-] remove the selected scope (not Global)
     void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new scope)
@@ -745,6 +749,9 @@ private:
     /* Whole-object merge into the other selected images; returns how many it wrote. */
     int  propagatePreset(const DevelopPreset &preset, const QString &label);
     QStringList otherSelectedPaths() const;    // selected images minus the current one
+    /* One image's share of resetAllEdits: identity stack + history dropped + sidecar
+       cleared. No dock work, so it serves the current image and the others alike. */
+    void resetImageEdits(const QString &fPath);
     /* The names of the EditParams fields that differ, and the copy of those fields --
        one field table drives both (see kFloatFields / kIntFields in the .cpp). */
     static QSet<QString> diffParamFields(const EditParams &a, const EditParams &b);

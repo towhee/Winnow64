@@ -695,6 +695,7 @@ void DevelopProperties::bindScopeHeader(ScopeHeaderBase *header)
     connect(scopeHeader, &ScopeHeaderBase::removeScopeRequested,this, &DevelopProperties::deleteScope);
     connect(scopeHeader, &ScopeHeaderBase::addScopeRequested,   this, &DevelopProperties::newScope);
     connect(scopeHeader, &ScopeHeaderBase::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
+    connect(scopeHeader, &ScopeHeaderBase::resetAllEditsRequested, this, &DevelopProperties::resetAllEdits);
     connect(scopeHeader, &ScopeHeaderBase::maskOverlayToggled,  this,
             &DevelopProperties::maskOverlayToggleRequested);
     connect(scopeHeader, &ScopeHeaderBase::previewToggled,      this, &DevelopProperties::onScopePreviewToggled);
@@ -1627,6 +1628,122 @@ void DevelopProperties::resetActiveScope()
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
     emit paramsChanged();
+}
+
+void DevelopProperties::resetAllEdits()
+{
+/*
+    Menu "Reset all edits": return the image to its undeveloped state. Everything the
+    EditStack holds goes -- every scope and its masks, the crop/straighten/warp geometry,
+    the spot heals -- along with the image's session history and the winnow:Develop
+    record in its sidecar.
+
+    Like a preset apply or a settings paste, it lands on the WHOLE selection: the current
+    image here, every other selected image in resetImageEdits (videos are skipped -- they
+    have no develop recipe).
+
+    Destructive and NOT undoable (the history it would be undone from is wiped too), so
+    it is confirmed first, with the image count spelled out.
+*/
+    if (G::isLogger) G::log("DevelopProperties::resetAllEdits");
+    if (currentImagePath.isEmpty()) return;
+
+    const QStringList others = otherSelectedPaths();
+    const int nImages = others.count() + 1;
+    const QString file = QFileInfo(currentImagePath).fileName();
+
+    QMessageBox box(this);
+    box.setWindowTitle(tr("Reset all edits"));
+    box.setIcon(QMessageBox::Warning);
+    box.setText(nImages > 1
+                ? tr("Delete every develop edit on the %1 selected images?").arg(nImages)
+                : tr("Delete every develop edit on \"%1\"?").arg(file));
+    box.setInformativeText(tr("All masks, adjustments, crop and spot repairs are removed, "
+                              "the edit history is cleared and the saved settings are "
+                              "deleted from the sidecar.\nThis cannot be undone."));
+    QPushButton *resetBtn = box.addButton(tr("Reset"), QMessageBox::DestructiveRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.exec();
+    if (box.clickedButton() != resetBtn) return;
+
+    /* Land any queued multi-image batch first. Its targets were captured when the batch
+       opened and need not be the current selection, so it cannot simply be dropped --
+       the images it is owed keep their edits, and those inside this selection have them
+       wiped again a moment later. */
+    flushPropagation();
+
+    /* A half-built mask tool indexes into the scopes about to be replaced, so retire it
+       first (the same teardown applyHistoryEntry does). No prompt to commit it: the
+       scope it would be committed into is being deleted anyway. */
+    if (maskPanelOpen) {
+        EditScope *l = activeScope();
+        if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
+            l->components.removeAt(pendingIdx);
+        pendingIdx = -1;
+        maskPanelOpen = false;
+    }
+    /* Unconditional: a submask RE-OPENED for editing is not pending, so the guard above
+       misses it, but its index still points into a scope about to go. */
+    selectedMaskIndex = -1;
+    if (maskPanel) maskPanel->hide();
+    maskLatched = false;
+    previewActive = false;
+    previewStack = EditStack();
+
+    isRestoringHistory = true;          // suppress recording while the panel repopulates
+    resetImageEdits(currentImagePath);
+    activeScopeIndex = 0;
+
+    refreshScopeList();
+    buildTree();                        // sliders back to their defaults
+    if (spotMode) emitSpotPins();       // the pins went with the spots
+    isRestoringHistory = false;
+    syncPropagateBase();                // identity is the new diff baseline
+    if (historyView) historyView->setImage(currentImagePath);
+
+    /* The rest of the selection. No panel work for these -- they are not on screen --
+       so the stack, history and sidecar are all resetImageEdits does. */
+    for (const QString &p : others) resetImageEdits(p);
+
+    emit paramsChanged();               // full render of the untouched image
+
+    if (nImages > 1 && G::popup)
+        G::popup->showPopup("Reset all edits on " + QString::number(nImages) + " images.");
+}
+
+void DevelopProperties::resetImageEdits(const QString &fPath)
+{
+/*
+    One image's share of "Reset all edits" (see resetAllEdits): replace its stack with a
+    fresh identity stack, drop its history and clear its sidecar. Nothing here touches
+    the dock, so it serves the current image and the rest of the selection alike.
+
+    The stack is REPLACED rather than reset field by field: that is what takes the
+    geometry and the spot heals with it, not just the scopes.
+*/
+    if (fPath.isEmpty()) return;
+
+    EditStack s;                        // identity: one Global scope, nothing else
+    s.scopes.append(EditScope());
+    s.scopes[0].name = "Global";
+    stackCache[fPath] = s;
+
+    /* History: drop the whole timeline, then lay a fresh "Original" baseline for the
+       state the image is now in -- but only for an image that HAS one (was visited this
+       session). Seeding an unvisited image would fill the LRU with images the user never
+       opened, evicting timelines they can still use. */
+    if (history && history->count(fPath) > 0) {
+        history->forget(fPath);
+        history->seed(fPath, s);
+    }
+
+    /* Sidecar: written NOW rather than left to the debounce. An identity stack makes
+       flushImage write an empty blob, which clears winnow:Develop (see
+       Metadata::writeDevelopSidecar); the user asked for the settings to be gone, so
+       they should be gone even if the app never gets a clean shutdown. */
+    dirty.insert(fPath);
+    flushImage(fPath);
 }
 
 void DevelopProperties::onScopePreviewToggled(bool shown)

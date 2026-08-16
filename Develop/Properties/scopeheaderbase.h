@@ -62,6 +62,7 @@ signals:
     void resetScopeRequested();                  // menu: reset the scope to identity
     void removeScopeRequested();                 // menu: remove the selected scope
     void addScopeRequested();                    // menu: add a new scope
+    void resetAllEditsRequested();               // menu: wipe every edit on this image
     void addMaskRequested();                     // menu: add a mask tool to this scope
     void maskOverlayToggled();                   // menu: show/hide the mask overlay
     void previewToggled(bool shown);             // [E] show/ignore the whole scope
