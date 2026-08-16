@@ -3140,6 +3140,31 @@ CameraColor DevelopProperties::currentCam() const
     return work ? work->cam : CameraColor();
 }
 
+std::shared_ptr<const WorkingImage> DevelopProperties::ensureWorkingImage()
+{
+/*
+    The pre-develop (scene-linear) WorkingImage for the current image, built ON DEMAND.
+
+    RAW caches it at decode, but a DISPLAY-REFERRED file (JPG/TIFF/HEIC) only gets one the
+    first time it is DEVELOPED: ImageDecoder::applyDevelop skips identity params and
+    MW::applyDevelopPreviewIfEdited skips an unedited image, so a freshly selected,
+    untouched JPEG has no entry. The WB dropper and Auto white balance need the pixels
+    AND the colour characterisation (cam) before any edit exists, so they ask MW to build
+    it rather than refusing the click.
+
+    MW builds a display-referred file synchronously (an InputTransform over the decoded
+    image) and returns with the cache populated. A missing raw scene-linear image needs a
+    decode, which is asynchronous -- this returns null and the caller reports "not ready",
+    as before.
+*/
+    if (currentImagePath.isEmpty()) return nullptr;
+    auto work = WorkingImageCache::instance().get(currentImagePath);
+    if (work && work->isValid()) return work;
+    emit workingImageNeeded(currentImagePath);      // same thread: direct call into MW
+    work = WorkingImageCache::instance().get(currentImagePath);
+    return (work && work->isValid()) ? work : nullptr;
+}
+
 QIcon DevelopProperties::dropperIcon(bool armed)
 {
 /*
@@ -3329,10 +3354,10 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
     setWbDropperActive(false);              // auto-dismiss, like Lightroom
     if (currentImagePath.isEmpty()) return;
 
-    auto work = WorkingImageCache::instance().get(currentImagePath);
-    if (!work || !work->isValid() || !work->cam.valid) {
-        /* No pre-develop buffer for this image yet (decode still in flight, or it was
-           evicted). Say so rather than swallowing the click. */
+    auto work = ensureWorkingImage();
+    if (!work || !work->cam.valid) {
+        /* Still no pre-develop buffer for this image (a raw decode is in flight, or the
+           image is not decoded yet). Say so rather than swallowing the click. */
         if (G::popup)
             G::popup->showPopup("The image is not ready to sample yet -- try again in "
                                 "a moment.", 2000);
@@ -3411,7 +3436,7 @@ void DevelopProperties::setWbPreset(int preset)
         p.tint = 0.0f;
     }
     else if (w == WB::Auto) {
-        auto work = WorkingImageCache::instance().get(currentImagePath);
+        auto work = ensureWorkingImage();
         if (!work || !WhiteBalance::autoWhiteBalance(*work, k, t)) {
             if (G::popup)
                 G::popup->showPopup("Auto white balance could not find a neutral "

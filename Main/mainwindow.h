@@ -627,6 +627,12 @@ private slots:
        Coalesced (one decode in flight). Replaces the old synchronous re-decode inside
        renderDevelopPreview that froze the first slider drag by ~1s on a 50MP RAW. */
     void ensureDevelopWork(const QString &fPath);
+    /* On-demand version, for a Develop action that needs the pre-develop
+       WorkingImage BEFORE any edit exists (WB dropper / Auto white balance). A
+       display-referred file is built here and now -- synchronously, so the caller
+       can use it on return; raw falls back to the async ensureDevelopWork. See
+       DevelopProperties::ensureWorkingImage. */
+    void ensureWorkingImageNow(const QString &fPath);
     /* ISO of the current image (sort/filter model, GUI thread) for the denoise model conditioning. */
     int currentImageIso() const;
     /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
