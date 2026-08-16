@@ -1707,3 +1707,7 @@ full Color Mix
      A single Color section whose body switches between the wheel and the band mixer via
      a segmented toggle (closest to Lightroom's Color Grading 4-way selector idea). Most
      UI work; one eye/reset covers both.
+
+
+
+Style guide says PascalCase, not camelCase.

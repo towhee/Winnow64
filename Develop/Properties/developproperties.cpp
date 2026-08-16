@@ -60,6 +60,18 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     updateHiddenRows(QModelIndex());
     setMouseTracking(true);
 
+    /* No row selection in this tree. The rows are ADJUSTMENTS, not a list to pick from:
+       nothing here reads the selection (the mask tools track selectedMaskIndex, the
+       focused slider is its own cue), and a selected row is purely an artifact -- the
+       G::css "QTreeView::item:selected" background paints the row's INDENTATION strip
+       (QTreeView fills it before the delegate runs, and drawBranches leaves it alone),
+       giving a solid blue tab to the left of a caption. Stripping State_Selected in
+       drawRow does NOT fix that: QTreeView::drawRow re-derives the flag PER CELL from
+       the selection model, so the only reliable cure is an empty selection model. The
+       CURRENT index is unaffected -- QAbstractItemView still sets it on click (with
+       NoUpdate), so currentChanged / onMaskSelectionChanged behave as before. */
+    setSelectionMode(QAbstractItemView::NoSelection);
+
     dividerHeight = 5;
     const int c = G::backgroundShade + 20;
     divColor = QColor(c,c,c);
@@ -85,13 +97,23 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     connect(this, &QTreeView::expanded,  this, [this](const QModelIndex &idx){
         persistSectionExpanded(idx, true);
         onSectionExpanded(idx);                 // Solo: fold the Scope row in
+        scheduleContentFit();                   // fit mode: more rows -> taller block
     });
-    connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){ persistSectionExpanded(idx, false); });
+    connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){
+        persistSectionExpanded(idx, false);
+        scheduleContentFit();
+    });
 
     /* Programmatic row selection reveals that mask tool's settings (clicks go via mousePressEvent,
        since the base PropertyEditor does not select on click). */
     connect(selectionModel(), &QItemSelectionModel::currentChanged,
             this, [this](const QModelIndex &, const QModelIndex &){ onMaskSelectionChanged(); });
+
+    /* Every adjustment (slider, wheel, dropdown, preset, reset, history) ends by
+       emitting paramsChanged, so that is the one place to refresh the " *" edited
+       markers on the section headers. */
+    connect(this, &DevelopProperties::paramsChanged,
+            this, &DevelopProperties::updateSectionHeaderCaptions);
 }
 
 void DevelopProperties::initialize()
@@ -121,6 +143,103 @@ void DevelopProperties::initialize()
     resizeColumns();
 
     root = model->invisibleRootItem()->index();
+}
+
+/* ---------------------------------------------------------------------------------
+   Content-height fitting (the tree nested under the active scope row)
+   --------------------------------------------------------------------------------- */
+
+void DevelopProperties::setFitToContentHeight(bool on)
+{
+    if (G::isLogger) G::log("DevelopProperties::setFitToContentHeight");
+    if (fitToContents == on) return;
+    fitToContents = on;
+    if (!on) return;
+
+    /* No scrollbars of our own: the tree is a fixed-height block inside the dock's
+       QScrollArea, which does all the scrolling. autoScroll off as well -- a transient
+       scroll offset would skew visualRect and the containment rail it drives. */
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setMinimumHeight(0);
+    setAutoScroll(false);
+
+    /* Any structural model change re-fits. Row HIDING (setRowHidden) emits nothing, so
+       those callers schedule the fit themselves (applyScopeItemsCollapsed etc.). */
+    connect(model, &QStandardItemModel::rowsInserted, this,
+            [this]{ scheduleContentFit(); });
+    connect(model, &QStandardItemModel::rowsRemoved, this,
+            [this]{ scheduleContentFit(); });
+    connect(model, &QStandardItemModel::modelReset, this,
+            [this]{ scheduleContentFit(); });
+    connect(model, &QStandardItemModel::layoutChanged, this,
+            [this]{ scheduleContentFit(); });
+    scheduleContentFit();
+}
+
+QSize DevelopProperties::sizeHint() const
+{
+    if (!fitToContents) return PropertyEditor::sizeHint();
+    /* viewportSizeHint() executes any posted layout and returns the bottom of the LAST
+       VISIBLE item -- hidden rows (Core / mask / raw-only) and collapsed sections are
+       already excluded, so it is exactly where the containment rail ends. Reserve the
+       closing rule's band below it, plus the clear gap under that (see paintEvent). */
+    const QSize vs = viewportSizeHint();
+    return QSize(vs.width(), vs.height() + kBlockCloseGap + G::panelBorderHeight
+                             + kBlockBottomGap);
+}
+
+QSize DevelopProperties::minimumSizeHint() const
+{
+    /* QAbstractScrollArea's minimum is derived from its scrollbars and would floor the
+       block above its content (visible when every section is collapsed). In fit mode the
+       content HEIGHT is the minimum.
+
+       WIDTH stays 0. sizeHint().width() is the width the tree currently occupies, and
+       returning it as a minimum floors the whole scope block (and so the dock's
+       QScrollArea body, which cannot scroll horizontally) at the width it had BEFORE the
+       vertical scrollbar appeared: expanding enough sections to need the scrollbar then
+       clipped the value column and the eye buttons by the scrollbar's width instead of
+       reflowing. The tree has no intrinsic minimum -- its caption column is fixed and the
+       value column stretches -- so it must be free to give the scrollbar its space. */
+    if (!fitToContents) return PropertyEditor::minimumSizeHint();
+    return QSize(0, sizeHint().height());
+}
+
+void DevelopProperties::scheduleContentFit()
+{
+    if (!fitToContents || fitPending) return;
+    fitPending = true;
+    /* Deferred and coalesced: this is called from model signals, expand/collapse and
+       paintEvent, so it must never resize the widget re-entrantly, and a scope switch
+       (a full teardown + rebuild) must cost one relayout, not dozens. */
+    QTimer::singleShot(0, this, [this]{
+        fitPending = false;
+        const int h = sizeHint().height();
+        if (h == fittedHeight && height() == h) return;     // no change, no oscillation
+        fittedHeight = h;
+        verticalScrollBar()->setValue(0);        // never leave the viewport offset
+        updateGeometry();
+    });
+}
+
+void DevelopProperties::wheelEvent(QWheelEvent *event)
+{
+    /* Fit mode: the tree has no scroll range of its own, so ignore the wheel and let it
+       reach the dock's QScrollArea. QAbstractScrollArea would otherwise accept and
+       swallow it, freezing the dock under the cursor. (Slider editors are separate child
+       widgets and still get their own wheel events.) */
+    if (fitToContents) { event->ignore(); return; }
+    PropertyEditor::wheelEvent(event);
+}
+
+void DevelopProperties::resizeEvent(QResizeEvent *event)
+{
+    PropertyEditor::resizeEvent(event);
+    /* A width change can re-measure delegate rows (elided captions, wrapped editors). */
+    if (fitToContents && event->oldSize().width() != event->size().width())
+        scheduleContentFit();
 }
 
 /* ---------------------------------------------------------------------------------
@@ -181,6 +300,9 @@ void DevelopProperties::buildTree()
     addCalibrate();
     addColorGrade();
     addEffects();
+    /* The headers were just re-added with their plain captions, so the cached " *"
+       state is stale -- force a full re-evaluation. */
+    for (int &st : hdrStar) st = -1;
     updateSectionHeaderCaptions();
 
     isPopulating = false;
@@ -205,6 +327,7 @@ void DevelopProperties::buildTree()
     if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if disabled
     syncRawPanel();                  // lab UI: reflect raw state + visibility in RawPanel
     syncMaskPanel();                 // lab UI: the active mask's submask list + settings
+    scheduleContentFit();            // nested under a scope row: re-fit the block height
 }
 
 bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
@@ -504,6 +627,7 @@ void DevelopProperties::applyCoreVisibility()
         model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()
         setRowHidden(r, QModelIndex(), hide);
     }
+    scheduleContentFit();       // setRowHidden emits nothing: re-fit the block ourselves
 }
 
 void DevelopProperties::addMaskItems()
@@ -1578,6 +1702,7 @@ void DevelopProperties::applyScopeItemsCollapsed()
     const int firstSection = basic.isValid() ? basic.row() : model->rowCount();
     for (int r = 0; r < firstSection; ++r)
         setRowHidden(r, QModelIndex(), scopeItemsCollapsed);
+    scheduleContentFit();       // setRowHidden emits nothing: re-fit the block ourselves
 }
 
 void DevelopProperties::bindToneSlider(ToneRegionSlider *slider)
@@ -2760,9 +2885,39 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
 
 void DevelopProperties::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    /* Global resets the row's slider to its default. On a CAPTION double-click Qt has moved
-       keyboard focus to the tree (the caption cell is delegate-painted, not a widget), so
-       re-focus the slider to keep the row lit blue -- matching the single-click cue. */
+    /* The WB row resets the white balance to "As shot" -- it is a DT_None row (it owns
+       both cells), so the base class has no default value to restore for it, and the
+       0 sentinel As Shot writes is the exact way back. Checked BEFORE the base call.
+       The dropper button and the preset combo handle their own clicks; this catches the
+       rest of the row, including the "WB" label. */
+    if (event->button() == Qt::LeftButton) {
+        const QModelIndex hit = indexAt(event->pos());
+        if (hit.isValid() &&
+            hit.siblingAtColumn(CapColumn).data(UR_Name).toString() == "whiteBalance") {
+            setWbPreset(int(WhiteBalance::Preset::AsShot));
+            return;
+        }
+        /* Temp / Tint are ABSOLUTE, so the base class reset (row default = 0) is wrong
+           for them: 0 is the EditParams "untouched" sentinel, not a temperature, and
+           pushing it through the slider would slam Temp to the 2000 K floor. Their
+           default IS the as-shot value, so reset to that. Checked BEFORE the base call
+           so it never sees these rows. */
+        const QString key = hit.siblingAtColumn(CapColumn).data(UR_Name).toString();
+        if (key == "temp" || key == "tint") {
+            resetWbAxisToAsShot(key == "temp");
+            /* Keep the row lit blue: a caption double-click moves focus to the tree
+               (the caption is delegate-painted), as in the base path below. */
+            const QModelIndex valIdx = hit.siblingAtColumn(ValColumn);
+            if (auto *se = static_cast<SliderEditor*>(valIdx.data(UR_Editor).value<void*>()))
+                se->focusSlider();
+            return;
+        }
+    }
+
+    /* Global resets the row's slider to its default. On a CAPTION double-click Qt has
+       moved keyboard focus to the tree (the caption cell is delegate-painted, not a
+       widget), so re-focus the slider to keep the row lit blue -- matching the
+       single-click cue. */
     PropertyEditor::mouseDoubleClickEvent(event);
     if (event->button() != Qt::LeftButton) return;
     const QModelIndex idx = indexAt(event->pos());
@@ -2804,10 +2959,20 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
 {
     PropertyEditor::paintEvent(event);
 
+    /* Fit-mode backstop: whatever changed the visible rows without scheduling a re-fit,
+       the block self-corrects on the next repaint. Compared against the height we last
+       ASKED for, not the height we were given -- a layout that cannot honour the request
+       would otherwise re-schedule on every paint forever. The schedule is deferred, so
+       this cannot recurse into the paint either way. */
+    if (fitToContents && sizeHint().height() != fittedHeight) scheduleContentFit();
+
     /* The scope containment rail, continued from ScopeHeaderLab (which draws the same
        2px G::selectionColor line from the selected scope row down to its bottom edge --
-       see G::scopeRailX/W). It runs to the BOTTOM OF THE LAST ROW, not the bottom of the
-       viewport: the empty space under a short tree is not part of the scope's block.
+       see G::scopeRailX/W). In FIT mode the tree is nested INSIDE the scope list, so the
+       rail runs the FULL viewport height: it must meet the list's rail again below this
+       widget (the scope rows after the selected one) with no visible gap. In the legacy
+       stacked dock it stops at the BOTTOM OF THE LAST ROW -- there the empty space under
+       a short tree is dock, not part of the scope's block.
        The frame is off (initialize), so the viewport shares this widget's origin and the
        two halves line up at the same x with no correction. */
     /* Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
@@ -2821,19 +2986,30 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
     if (bottom <= 0) return;
 
     QPainter p(viewport());
-    if (G::scopeRailW > 0)
-        p.fillRect(G::scopeRailX, 0, G::scopeRailW, bottom, G::selectionColor);
+    const int ruleY = bottom + kBlockCloseGap;
+    if (G::scopeRailW > 0) {
+        /* Fit mode: down to the FOOT of the bracket (the closing rule) and no further --
+           the clear gap under the rule separates this scope's block from the next scope
+           row. Legacy: to the last row, since the space below is plain dock. */
+        const int railBottom = fitToContents ? ruleY + G::panelBorderHeight : bottom;
+        p.fillRect(G::scopeRailX, 0, G::scopeRailW, railBottom, G::selectionColor);
+    }
 
     /* Close the block: the same separator every Develop panel carries along its bottom
        edge (G::panelBorderHeight in G::tabWidgetBorderColor), just under the last row --
        Effects is the last section, so this is the Effects panel's bottom border. Only
        when there is empty dock below it -- if the rows fill or overflow the viewport,
        the panel edge already ends the block and a rule pinned to the last visible row
-       would be a false bottom. */
-    const int ruleY = bottom + 3;
-    if (ruleY < viewport()->height() - G::panelBorderHeight) {
-        p.fillRect(0, ruleY, viewport()->width(), G::panelBorderHeight,
-                   G::tabWidgetBorderColor);
+       would be a false bottom. In FIT mode the viewport is exactly the rows plus the
+       band sizeHint reserves for this rule, so it always draws -- starting at the RIGHT
+       EDGE OF THE RAIL and painted in the RAIL'S OWN COLOUR: there it is the foot of the
+       bracket around the selected scope, so it reads as the rail turning the corner
+       rather than as a divider cutting across it. */
+    if (fitToContents || ruleY < viewport()->height() - G::panelBorderHeight) {
+        const int ruleX = fitToContents && G::scopeRailW > 0
+                              ? G::scopeRailX + G::scopeRailW : 0;
+        p.fillRect(ruleX, ruleY, viewport()->width() - ruleX, G::panelBorderHeight,
+                   fitToContents ? G::selectionColor : G::tabWidgetBorderColor);
     }
 }
 
@@ -2882,11 +3058,15 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         i.delegateType = DT_None;
     }
     addItem(i);
-    /* Nest the section header (Basic/Color/Color Grade/Effects) one indent level under
-       the Scope band above the tree. Only the header content shifts -- its child rows
-       keep their own indentation (the delegate reads UR_ExtraIndent on the header
-       caption). */
-    model->setData(capIdx, true, UR_ExtraIndent);
+    /* Nest the section header (Basic/Color/Color Grade/Effects) under the scope it
+       belongs to. Only the header content shifts -- its child rows keep their own
+       indentation (the delegate reads UR_ExtraIndent on the header caption), so the
+       sliders keep their full width. In the lab UI the tree sits INSIDE the scope row
+       list, so the headers indent by the same inset as the other nested details
+       (kMaskPanelIndent) and line up under the scope NAME; the legacy dock keeps the
+       original one-indent-level nudge. */
+    model->setData(capIdx, G::useScopeHeaderLab ? QVariant(kMaskPanelIndent)
+                                                : QVariant(true), UR_ExtraIndent);
     /* A section header belongs to the scope selected in the Scope band above, so it is a
        tier BELOW that band: a flat band, not the panel-header gradient the Scope and Raw
        bands use. Without this the sections read as siblings of Scope rather than as its
@@ -3019,7 +3199,8 @@ void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
     i.parIdx = parIdx;
     i.parentName = "BasicHeader";
     i.captionText = "WB";
-    i.tooltip = "White balance: pick a neutral with the dropper, or choose a preset.";
+    i.tooltip = "White balance: pick a neutral with the dropper, or choose a preset.\n"
+                "Double click to reset to \"As shot\".";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -3040,6 +3221,10 @@ void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
         chb->setContentsMargins(0, 0, 0, 0);
         chb->setSpacing(6);
         QLabel *lbl = new QLabel("WB");
+        /* Let clicks fall through to the tree so mouseDoubleClickEvent sees them (double
+           click on the row = back to As shot). Set on the LABEL only: the attribute also
+           covers a widget's children, so on the cell it would kill the dropper too. */
+        lbl->setAttribute(Qt::WA_TransparentForMouseEvents);
         /* A BarBtn, like the Develop action-row tools (Scopes / Transform / Spot): its
            G::css base is transparent with no border, and setActive() adds the white
            accent border when armed. Using the shared class rather than a hand-rolled
@@ -3253,6 +3438,47 @@ void DevelopProperties::setWbPreset(int preset)
     emit paramsChanged();
 }
 
+void DevelopProperties::resetWbAxisToAsShot(bool isTemp)
+{
+/*
+    Double-clicking Temp (or Tint) restores THAT axis to the as-shot value the camera
+    recorded -- the real default for an absolute Kelvin/tint pair. The other axis keeps
+    whatever the user set: the pair is always committed together, so the surviving axis
+    must be written as its resolved absolute value.
+
+    When both axes end up back at as shot the row goes all the way home: the 0 sentinel
+    (which reproduces the decoded balance exactly) and the As Shot preset, so the image
+    reads as unedited -- the same state the WB row's double-click gives.
+*/
+    if (currentImagePath.isEmpty()) return;
+    if (maskOverlayActive()) emit maskTintHideRequested();
+
+    const CameraColor cam = currentCam();
+    EditParams &p = activeParams();
+    float k, t, asK, asT;
+    WhiteBalance::resolve(cam, p.temp, p.tint, k, t);      // current, absolute
+    WhiteBalance::resolve(cam, 0.0f, 0.0f, asK, asT);      // as shot
+    if (isTemp) k = asK;
+    else        t = asT;
+
+    if (qFuzzyCompare(k, asK) && qFuzzyCompare(t, asT)) {
+        p.temp = 0.0f;
+        p.tint = 0.0f;
+        p.wbPreset = int(WhiteBalance::Preset::AsShot);
+    }
+    else {
+        p.temp = k;
+        p.tint = t;
+        p.wbPreset = int(WhiteBalance::Preset::Custom);
+    }
+
+    /* Same merge key as a Temp/Tint drag, so a drag followed by a reset reads as one
+       white balance step ending where the user left it. */
+    noteEdit("White balance", QString::number(qRound(k)) + "K", "wb/tempTint");
+    refreshWbRow();
+    emit paramsChanged();
+}
+
 void DevelopProperties::refreshWbRow()
 {
     /* Push the active scope's white balance back into the row: the resolved absolute
@@ -3317,6 +3543,7 @@ void DevelopProperties::addBasic()
     addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ToneDevider");
     addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
+    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "BasicEndDivider");
     // demo colors
     // addSlider("blue", "Blue", "Blue.", parIdx, "BasicHeader", -100, 100, 0, G::darkblue, G::lightblue);
     // addSlider("yellow", "Yellow", "Yellow.", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
@@ -3347,6 +3574,7 @@ void DevelopProperties::addColor()
     addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "HSLDevider");
     addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
+    addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "ColorEndDivider");
 }
 
 /* --------------------------------------------------------------------------------------
@@ -3437,6 +3665,7 @@ void DevelopProperties::addCalibrate()
                 [this]{ onPrimaryWheelChanged(true); });
         setIndexWidget(wheelIdx, wheel);
     }
+    addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateEndDivider");
 }
 
 /* Wheel drag -> the active scope's cal params for every checked primary, then preview.
@@ -3592,6 +3821,7 @@ void DevelopProperties::addColorGrade()
               "Slide the split between the ranges: right favours highlights, "
               "left favours shadows.",
               parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
+    addDivider(dividerHeight, 1, divColor, parIdx, "ColorGradeHeader", "ColorGradeEndDivider");
 }
 
 int DevelopProperties::firstActiveGradeRange() const
@@ -3886,18 +4116,35 @@ void DevelopProperties::updateSectionHeaderCaptions()
     if (G::isLogger) G::log("DevelopProperties::updateSectionHeaderCaptions");
     /* The Basic/Color/Effects section headers carry their plain section name only: the
        active scope is already shown (selected) in the scope list above them, so prefixing
-       every header with it ("Global: Basic") was redundant noise. */
-    const QPair<QString, QString> hdrs[] = {
-        {"BasicHeader",    "Basic"},
-        {"ColorHeader",    "Color"},
-        {"CalibrateHeader",  "Calibrate"},
-        {"ColorGradeHeader", "Color Grade"},
-        {"EffectsHeader",  "Effects"},
+       every header with it ("Global: Basic") was redundant noise.
+
+       A section whose params are no longer at their defaults gets a trailing " *"
+       ("Basic *"), so an edited panel is obvious while collapsed. The state is compared
+       against hdrStar[] and the model is only touched when a section actually flips --
+       this runs on every paramsChanged (i.e. every slider tick), and findCaptionIndex is
+       a recursive model search. */
+    struct HdrDef { const char *name; const char *label; int group; };
+    static const HdrDef hdrs[] = {
+        {"BasicHeader",      "Basic",       PV_Basic},
+        {"ColorHeader",      "Color",       PV_Color},
+        {"CalibrateHeader",  "Calibrate",   PV_Calibrate},
+        {"ColorGradeHeader", "Color Grade", PV_ColorGrade},
+        {"EffectsHeader",    "Effects",     PV_Effects},
     };
-    for (const auto &h : hdrs) {
-        const QModelIndex idx = findCaptionIndex(h.first);
-        if (idx.isValid())
-            model->setData(idx, h.second);
+    const EditStack s = stackCache.value(currentImagePath);
+    const bool haveParams = !currentImagePath.isEmpty() && !s.scopes.isEmpty();
+    const int scopeIdx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
+                             ? activeScopeIndex : 0;
+
+    for (int i = 0; i < int(sizeof(hdrs) / sizeof(HdrDef)); ++i) {
+        const HdrDef &h = hdrs[i];
+        const bool edited = haveParams &&
+            !EditParams::groupIsDefault(s.scopes.at(scopeIdx).params, paramsGroup(h.group));
+        if (hdrStar[i] == int(edited)) continue;     // caption already correct
+        const QModelIndex idx = findCaptionIndex(h.name);
+        if (!idx.isValid()) continue;
+        model->setData(idx, edited ? QString(QString(h.label) + " *") : QString(h.label));
+        hdrStar[i] = int(edited);
     }
 }
 
@@ -5554,6 +5801,7 @@ void DevelopProperties::populateSlidersFromStack()
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
     refreshPreviewButtons();        // sync the eye icons to this scope's Preview flags
+    updateSectionHeaderCaptions();  // " *" on sections holding non-default values
 }
 
 void DevelopProperties::setSliderReal(const QString &key, double real)

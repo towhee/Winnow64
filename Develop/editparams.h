@@ -212,6 +212,20 @@ struct EditParams {
         }
     }
 
+    /* Field-wise equality (all members are scalars), used by groupIsDefault below. */
+    bool operator==(const EditParams &) const = default;
+
+    /* True when every field in one group still holds its identity default, i.e. the
+       panel has no edits. Derived from resetGroup on a copy so it can never drift out
+       of step with the group membership above: resetGroup touches only that group's
+       fields, so an unchanged copy means the group is pristine. The Develop panel uses
+       this to flag edited sections in their header ("Basic *"). */
+    static bool groupIsDefault(const EditParams &p, Group g) {
+        EditParams q = p;
+        resetGroup(q, g);
+        return q == p;
+    }
+
     /* True when nothing would change, letting callers skip the Develop stage and
        serve the cached WorkingImage directly. */
     bool isIdentity() const {

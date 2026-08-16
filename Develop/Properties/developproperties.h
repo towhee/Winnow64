@@ -153,6 +153,14 @@ public:
        this class drives it and owns the mask model. */
     void bindMaskPanel(MaskPanel *panel);
 
+    /* Size the tree to its CONTENT instead of scrolling internally. Used when the tree is
+       nested under the active scope row (ScopeHeaderLab::EditsDetail) and the dock's own
+       QScrollArea does the scrolling; off (the default) keeps the legacy behaviour of a
+       stretch widget with its own scrollbars. */
+    void setFitToContentHeight(bool on);
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
     /* The History dock's list (owned by MW, lives in its own dock). Bind it once; this
        class owns the DevelopHistory model it views and answers its hover/click. */
     void bindHistoryView(HistoryView *view);
@@ -244,6 +252,11 @@ protected:
        edge, so the scope rows above and the sections below read as one block. Drawn
        over the rows, after the base paint. */
     void paintEvent(QPaintEvent *event) override;
+    /* Fit mode only: the tree never scrolls itself, so pass the wheel out to the dock's
+       scroll area instead of letting QAbstractScrollArea swallow it. */
+    void wheelEvent(QWheelEvent *event) override;
+    /* A width change can re-wrap delegate rows, changing the content height. */
+    void resizeEvent(QResizeEvent *event) override;
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -418,7 +431,25 @@ private:
     void addCoreItems();            // Global only: Demosaic + Denoise rows at the top of the tree
     void addMaskItems();            // non-Global: the scope's mask tool rows at the top of the tree
     void addAddMaskRow();           // non-Global with no mask: an "Add mask" [+] placeholder row
-    void applyScopeItemsCollapsed();// hide/show just the scope's top items (not the sections)
+    void applyScopeItemsCollapsed();// hide/show the scope's top items (not the sections)
+
+    /* ---- Content-height fitting (nested under a scope row) ------------------------
+       In fit mode the tree has no scrollbars of its own: its sizeHint is the bottom of
+       the last VISIBLE row, so the enclosing QScrollArea scrolls the whole scope block.
+       Anything that changes which rows are visible (rebuild, expand/collapse, row hide)
+       must schedule a re-fit; the call is deferred + coalesced so it is never made from
+       inside a paint, a sizeHint or a mid-rebuild signal. */
+    void scheduleContentFit();
+    bool fitToContents = false;
+    bool fitPending    = false;
+    int  fittedHeight  = -1;
+    /* Gap between the last row and the block's closing rule (paintEvent), reserved by
+       sizeHint in fit mode so the rule always has room. 0 = the rule sits directly on the
+       last row, closing the bracket tight against the section it ends. */
+    static constexpr int kBlockCloseGap = 0;
+    /* Clear space BELOW the closing rule, so the next scope row does not butt onto the
+       bracket's foot. Also reserved by sizeHint in fit mode. */
+    static constexpr int kBlockBottomGap = 2;
     void addBasic();
     void addColor();
     void addCalibrate();
@@ -435,6 +466,9 @@ private:
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
     void setWbDropperActive(bool on);
+    /* Double-click reset for the Temp / Tint rows: back to AS SHOT, not to the slider's
+       0 default (see mouseDoubleClickEvent). */
+    void resetWbAxisToAsShot(bool isTemp);
     /* The current image's colour characterisation, from the cached pre-develop
        WorkingImage. Invalid when the image is not (yet) in the cache, which resolves
        temperatures to a D65 fallback and disables the dropper. */
@@ -443,7 +477,12 @@ private:
     QPointer<QComboBox> wbCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
-    void updateSectionHeaderCaptions();   // append active scope name to section headers
+    void updateSectionHeaderCaptions();   // section names + the edited " *" marker
+    /* Current " *" state of each section header (Basic/Color/Calibrate/ColorGrade/
+       Effects, in that order): 1 = starred, 0 = plain, -1 = unknown (after a tree
+       rebuild). Lets updateSectionHeaderCaptions skip the model search when nothing
+       flipped -- it runs on every params change. */
+    int hdrStar[5] = {-1, -1, -1, -1, -1};
 
     /* ---- Calibrate (RGB primaries) ---------------------------------------------------
        Same select-then-adjust grammar as Color Grade: R/G/B checkboxes pick which

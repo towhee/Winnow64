@@ -38,6 +38,14 @@ Slider::Slider(Qt::Orientation orientation, int div, QWidget *parent) : QSlider(
 
 void Slider::mousePressEvent(QMouseEvent *event)
 {
+    /* Ignore right clicks (reserved for the context menu): do not jump the handle or take
+       focus. The event is not accepted, so the QContextMenuEvent still propagates up
+       to the host tree (DevelopProperties::contextMenuEvent) and the menu shows. */
+    if (event->button() == Qt::RightButton) {
+        event->ignore();
+        return;
+    }
+
     QSlider::mousePressEvent(event);
     /* Take keyboard focus on click so arrows immediately nudge this slider. */
     setFocus(Qt::MouseFocusReason);

@@ -3704,8 +3704,14 @@ Scope & mask model (Global + masks)
                which also expand/collapse, are filtered out by name). SECTION HEADERS: the Basic, Color,
                Calibrate, Color Grade and Effects headers show their plain section name
                only ("Basic", "Color") via updateSectionHeaderCaptions() -- the active
-               scope is already shown selected in the scope list above, so the old
-               "Global: Basic" prefix was redundant. They carry NO band at all
+               scope is already shown selected in the scope list, so the old
+               "Global: Basic" prefix was redundant. Each header is INDENTED to line up
+               under the scope name it belongs to, while its child rows are NOT -- the
+               sliders keep their full width. The indent is UR_ExtraIndent on the header
+               CAPTION index, read by PropertyDelegate::paint: a bool means one
+               indentation() level (the legacy dock), an int means that many pixels
+               (the nested dock uses kMaskPanelIndent = 22, the same inset as the Mask
+               panel). Only the header's arrow + caption shift. They carry NO band at all
                (UR_HeaderFlat): they sit on the panel background, like the rows below
                them. The gradient marks a PANEL-level band (Raw, Scope, Transform), and
                a section belongs to the scope selected in the Scope band above it, so it
@@ -3716,29 +3722,87 @@ Scope & mask model (Global + masks)
                previewGroup; PropertyDelegate::paint reads UR_HeaderFlat from the CAPTION
                index (both column passes read the same sibling, so a value-column-only
                repaint does not put the gradient back).
+               TREE NESTED UNDER THE SELECTED SCOPE: the adjustment tree is not a strip
+               below the scope list -- it is a ROW DETAIL of ScopeHeaderLab, inserted
+               directly under the SELECTED scope row (setRowDetail(widget, slot, indent);
+               slot EditsDetail follows slot MaskDetail, the Mask panel). Scope rows below
+               the selected one therefore sit BELOW the sections, and collapsing the
+               "Edits" header hides the sections with the list. The tree's detail indent
+               is 0, so its left edge -- and the rail it paints -- coincide with the
+               list's; the visible nesting comes from the section-header indent above.
+               Since it is nested the tree cannot scroll itself:
+               DevelopProperties::setFitToContentHeight(true) turns off both scrollbars
+               and makes sizeHint() = viewportSizeHint() (the bottom of the LAST VISIBLE
+               row, hidden rows and collapsed sections already excluded) plus the closing
+               rule's band. scheduleContentFit() re-fits, deferred + coalesced, from
+               buildTree, expand/collapse, the setRowHidden callers
+               (applyScopeItemsCollapsed / applyCoreVisibility, which emit no model
+               signal), resizeEvent and a paintEvent backstop. wheelEvent is IGNORED in
+               fit mode so the wheel reaches the dock's QScrollArea (the scope list + the
+               nested tree scroll as one block; the action row, scopes strip, Transform,
+               Replace and Raw panels stay pinned above it). MW::createDevelopDock builds
+               that QScrollArea only for the lab UI; the legacy ScopeHeader path keeps the
+               old stacked layout and fit mode stays off.
+               minimumSizeHint in fit mode is (0, sizeHint().height()): the HEIGHT floor
+               is the point (QAbstractScrollArea's own minimum would hold the block open
+               above its content when every section is collapsed), but the WIDTH must stay
+               free. Returning the content width there floors the scroll body -- which has
+               no horizontal scrollbar -- at its pre-scrollbar width, so expanding enough
+               sections to raise the vertical scrollbar clipped the value column and the
+               eye buttons instead of reflowing. The tree has no intrinsic minimum width:
+               the caption column is fixed and the value column stretches.
                CONTAINMENT RAIL: a 3px G::selectionColor line down the panel's left edge
                (G::scopeRailX / G::scopeRailW; scopeRailW = 0 removes it) ties the
-               sections to the scope they belong to. It is drawn in TWO halves that meet
-               at the widget boundary: ScopeHeaderLab::paintEvent runs it from under the
-               "Scope" band -- so it spans the WHOLE scope list, Global + every mask, not
-               just the selected row -- to its own bottom edge, and
-               DevelopProperties::paintEvent continues it from the viewport top to the
-               bottom of the LAST VISIBLE ROW (indexAt(0,0) then walk indexBelow -- NOT
-               model row 0, which may be a hidden row, and indexBelow of a hidden index
-               is invalid). Since the rail colour is
+               sections to the scope they belong to. It brackets the SELECTED SCOPE ONLY
+               -- its row plus everything nested under it -- so an unselected scope row
+               carries no rail: it is just a name until it is picked.
+               It is drawn in TWO halves that meet at the widget boundary:
+               ScopeHeaderLab::paintEvent runs it over activeBlockRect() (the active row's
+               geometry extended to the bottom of the last visible detail wrapper -- the
+               Mask panel and the tree -- offset by rowsContainer's position), and
+               DevelopProperties::paintEvent paints the tree's own stretch. In FIT mode
+               that stretch ends at the BOTTOM OF THE CLOSING RULE -- the foot of the
+               bracket -- and never runs past it, so the kBlockBottomGap clear space below
+               separates this scope's block from the next scope row; in the legacy stacked
+               dock it stops at the bottom of the LAST VISIBLE ROW (indexAt(0,0) then walk
+               indexBelow -- NOT model row 0, which may be a hidden row, and indexBelow of
+               a hidden index is invalid). Since the rail colour is
                the selected row's own band colour, the stretch crossing that row is
                invisible: the selection reads as a gap in the rail.
+               NO SELECTION: the tree runs in QAbstractItemView::NoSelection (set in the
+               DevelopProperties ctor, overriding PropertyEditor's SingleSelection). Its
+               rows are ADJUSTMENTS, not a list to pick from -- nothing reads the
+               selection (mask tools track selectedMaskIndex, a focused slider paints its
+               own blue cue) -- and a selected row shows up only as an ARTIFACT: the app
+               QSS "QTreeView::item:selected" background fills the row's INDENTATION
+               strip, which QTreeView paints before the delegate runs and the empty
+               drawBranches override deliberately leaves alone, so a solid blue tab
+               appears left of the caption (over and around the containment rail).
+               Stripping State_Selected in a drawRow override does NOT cure it --
+               QTreeView::drawRow re-derives the flag per cell from the selection model,
+               so the fix has to be an always-empty selection model. The CURRENT index is
+               unaffected: QAbstractItemView still sets it on click (with NoUpdate), so
+               currentChanged -> onMaskSelectionChanged and keyboard navigation are
+               unchanged.
                ONE BLOCK: the seam between the scope list and the tree is closed --
                rowsLayout has no bottom margin, and DevelopProperties turns OFF the frame
                (setFrameShape + a widget-level "QTreeView { border: none; }", since the
                app QSS gives every QTreeView a 1px border). That border was both a seam
                and a 1px break in the rail; with it gone the viewport shares the widget
                origin, so both rail halves use the same x. The block's bottom is closed
-               by a full-width rule 3px under the LAST ROW -- the PANEL SEPARATOR below,
-               so the last section (Effects) is closed like every other panel -- drawn
-               only when empty dock remains below it: if the rows fill or overflow the
-               viewport, the panel edge already ends the block and a rule at the last
-               visible row would be a false bottom.
+               by a full-width rule kBlockCloseGap (0px) under the LAST ROW -- see PANEL
+               SEPARATOR below, so the last section (Effects) is closed like every other
+               panel. In the
+               legacy (scrolling) tree it is drawn only when empty dock remains below it:
+               if the rows fill or overflow the viewport, the panel edge already ends the
+               block and a rule at the last visible row would be a false bottom. In FIT
+               mode the viewport is exactly the rows plus the band sizeHint reserves for
+               the rule AND for the kBlockBottomGap (2px) clear space under it, so it
+               always draws -- starting at the RIGHT EDGE OF THE RAIL
+               (G::scopeRailX + G::scopeRailW), not at x 0, and in G::selectionColor (the
+               RAIL's colour, not G::tabWidgetBorderColor). Nested, that rule is the FOOT
+               OF THE BRACKET around the selected scope, so it reads as the rail turning
+               the corner rather than as a divider cutting across it.
                PANEL SEPARATOR: every Develop dock PANEL draws a G::panelBorderHeight
                (2px) rule in G::tabWidgetBorderColor across its bottom edge, so stacked
                panels read as distinct blocks. G::panelBorderHeight = 0 removes it
@@ -3759,6 +3823,16 @@ Scope & mask model (Global + masks)
                band, not a panel), and the scope list (ScopeHeaderLab) -- it and the tree
                below it are ONE BLOCK joined by the containment rail, so a rule there
                would cut the rail and re-open the seam that block closes.
+               EDITED MARKER: a section header whose group holds any non-default value
+               reads "Basic *" (Basic / Color / Calibrate / Color Grade / Effects), so an
+               edited panel is obvious while collapsed. The test is
+               EditParams::groupIsDefault, which resetGroup's a COPY of the active scope's
+               params and compares -- it can never drift from the group membership.
+               DevelopProperties::updateSectionHeaderCaptions writes the captions; it is
+               driven by paramsChanged (every adjustment) plus populateSlidersFromStack /
+               refreshScopeList / buildTree, and caches each section's star state
+               (hdrStar[], -1 = unknown after a rebuild) so a slider drag does not run
+               five recursive findCaptionIndex searches per tick.
                PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
                the active scope; the whole-mask eye + reset live in the ScopeHeader widget
@@ -4168,9 +4242,14 @@ Scope & mask model (Global + masks)
                    |    [    Add and Commit    ]               <- "Done" when re-editing
 
                ScopeHeaderLab::rebuild() destroys and re-makes every row on each
-               setScopeRows, so it REPARENTS the detail out first (setParent(this) + hide)
-               and re-inserts it after the active row -- the panel is owned by the caller
-               and must never be taken down with the rows. The panel's own "Mask: <tool>"
+               setScopeRows, so it SKIPS the detail wrappers when it drains rowsLayout
+               (QLayout::takeAt removes a widget from the layout without re-parenting it,
+               so they stay children of rowsContainer) and re-inserts them, in slot order,
+               after the active row -- the details are owned by the caller and must never
+               be taken down with the rows. They are deliberately NOT re-parented on the
+               way through: the adjustment tree is a detail too (slot EditsDetail), and
+               re-parenting a QTreeView full of setIndexWidget editors on every scope
+               switch is the flicker-prone, expensive path. The panel's own "Mask: <tool>"
                header band is gone: the scope row above it and the selected submask row
                already say it. The tree carries NO mask rows in the lab UI at all
                (addMaskItems returns immediately) -- the old "Add mask" placeholder row is
@@ -5527,6 +5606,20 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                   large saturated subject cannot drag the balance) then solved. Custom is
                   a readout, not a command -- picking it changes nothing; any manual
                   slider move demotes the selection to it.
+        DBL CLICK a double click on the WB row is As Shot -- the row's equivalent of the
+                  double-click-resets-to-default every slider row has (the base class has
+                  no default to restore for a DT_None row, so DevelopProperties::
+                  mouseDoubleClickEvent handles it before falling through). The "WB"
+                  label carries WA_TransparentForMouseEvents so its clicks reach the
+                  tree; the attribute is set on the LABEL, never the cell widget, as it
+                  also covers a widget's children and would deafen the dropper.
+                  A double click on the Temp or Tint CAPTION resets THAT axis to its
+                  as-shot value (resetWbAxisToAsShot), not to the slider's 0 default: 0
+                  is the untouched sentinel, not a temperature, and the base reset would
+                  slam Temp to the 2000 K floor. The other axis keeps its value and is
+                  rewritten as resolved absolute Kelvin/tint, since the pair always
+                  commits together; when both land back on as shot the row restores the
+                  0 sentinel and the As Shot preset, so the image reads as unedited.
         NON-RAW   only As Shot / Auto / Custom are offered, matching Lightroom: a
                   rendered JPEG has no camera-neutral reference for the named
                   illuminants to mean anything against.

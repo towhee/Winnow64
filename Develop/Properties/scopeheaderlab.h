@@ -22,10 +22,12 @@ class BarBtn;
         | [x] Scope 1                       [v] |   <- checkbox = show/hide, [v] = actions
         | [ ] Scope 2                       [v] |
 
-    The ACTIVE row can carry a nested detail widget (setRowDetail) -- the MaskPanel, so a
-    mask's submasks and settings sit under the mask they belong to rather than in a
-    separate strip. It is the caller's widget: rebuild() lifts it out before it deletes
-    the rows and re-inserts it under the new active row.
+    The ACTIVE row carries nested detail widgets (setRowDetail), in slot order: the
+    MaskPanel, then the adjustment tree (DevelopProperties). A mask's submasks and the
+    Basic/Color/... sections therefore sit under the scope they belong to rather than in
+    separate strips below the whole list. They are the caller's widgets: rebuild() leaves
+    them parented to rowsContainer while it deletes the rows, then re-inserts them under
+    the new active row.
 
     Still a ScopeHeaderBase, so DevelopProperties binds it exactly like the dropdown
     (bindScopeHeader) and drives it via setScopeRows(); the class name stays
@@ -54,11 +56,17 @@ public:
     /* Primary refresh: rebuild the list from names + per-scope enabled + Global flag. */
     void setScopeRows(const QVector<ScopeRowInfo> &rows, int active) override;
 
-    /* Nest a widget UNDER the active scope's row -- the MaskPanel, so a mask's submasks
-       and settings read as belonging to that mask rather than as a separate panel. The
-       widget is owned by the CALLER and survives every rebuild (rebuild reparents it out
-       before it deletes the rows, then re-inserts it). Pass nullptr to detach. */
-    void setRowDetail(QWidget *detail);
+    /* Widgets nested UNDER the active scope's row, drawn top to bottom in slot order:
+       MaskDetail is the MaskPanel (indented under the scope name); EditsDetail is the
+       adjustment tree, which is NOT indented so its containment rail lines up with this
+       widget's. Each is owned by the CALLER and survives every rebuild. Pass nullptr to
+       detach a slot. */
+    enum RowDetailSlot { MaskDetail = 0, EditsDetail = 1, RowDetailSlotCount };
+    void setRowDetail(QWidget *detail, int slot, int indent);
+
+    /* Left inset of a nested detail: the row's own 10px margin plus roughly the show/hide
+       checkbox, so the detail starts under the scope NAME. */
+    static constexpr int kDetailIndent = 22;
 
     void setPreviewShown(bool shown) override { previewShown = shown; }
     void setGlobalActive(bool isGlobal) override { globalActive = isGlobal; }
@@ -75,6 +83,10 @@ protected:
 private:
     void rebuild(const QVector<ScopeRowInfo> &rows, int active);
     QWidget *makeRow(int index, const ScopeRowInfo &r, bool active);
+    /* The selected scope's block (its row + the details nested under it) in this widget's
+       coordinates -- what the containment rail brackets. Empty if there is nothing to
+       bracket (list collapsed). */
+    QRect activeBlockRect() const;
     void showPanelMenu();                 // panel [v]: Add new scope
     void showRowMenu(int index, const QString &name);   // row [v]: per-scope actions
     void selectRowDeferred(const QString &name);        // emit scopeSelected next tick
@@ -89,14 +101,14 @@ private:
     BarBtn      *panelMenuBtn  = nullptr;
     QWidget     *rowsContainer = nullptr;
     QVBoxLayout *rowsLayout    = nullptr;
-    /* The nested detail widget (setRowDetail) and the indenting wrapper it sits in. The
-       wrapper is ours; the detail inside it is not, so neither is ever deleted by the
-       row teardown. */
-    QWidget     *rowDetail     = nullptr;
-    QWidget     *detailWrap    = nullptr;
-    /* Left inset of the nested detail: the row's own 10px margin plus roughly the
-       show/hide checkbox, so the detail starts under the scope NAME. */
-    static constexpr int kDetailIndent = 22;
+    /* The SELECTED scope's row widget, re-captured on every rebuild: the rail brackets
+       it and the details below it, and nothing else. */
+    QWidget     *activeRow     = nullptr;
+    /* The nested detail widgets (setRowDetail) and the indenting wrappers they sit in.
+       The wrappers are ours; the details inside them are not, so neither is ever deleted
+       by the row teardown. */
+    QWidget     *rowDetail[RowDetailSlotCount]  = {};
+    QWidget     *detailWrap[RowDetailSlotCount] = {};
 
     /* menuIcon removed: the scope menu buttons now load ellipsis_vertical.png through
        BarBtn::setIcon(path, G::iconOpacity) at each call site. */

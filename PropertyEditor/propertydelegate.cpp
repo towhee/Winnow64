@@ -557,11 +557,17 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            gutter), so captions stay aligned down the panel and the caption-column and
            value-column passes compute the same capLeft. */
         if (deco) capLeft += decoCapShift();
-        /* Nest a header one indent level right (Develop's Basic/Color/Color Grade/Effects
-           sections sit under the Layer band above the tree). Only the header's own
-           content (arrow + caption) shifts; child rows keep their own indentation. */
-        const int hdrExtraIndent = capIndex.data(UR_ExtraIndent).toBool()
-                                       ? (tv ? tv->indentation() : 10) : 0;
+        /* Nest a header right of its own column (Develop's Basic/Color/Color Grade/
+           Effects sections sit under the scope row they belong to). Only the header's own
+           content (arrow + caption) shifts; child rows keep their own indentation.
+           UR_ExtraIndent is either a bool (one indent level, the original contract) or an
+           explicit pixel inset -- so a caller nesting the tree under another widget's
+           rows can line the headers up with those rows. */
+        const QVariant hdrIndentV = capIndex.data(UR_ExtraIndent);
+        const int hdrIndentPx = hdrIndentV.toInt();
+        const int hdrExtraIndent = !hdrIndentV.toBool() ? 0
+                                 : hdrIndentPx > 1      ? hdrIndentPx
+                                                        : (tv ? tv->indentation() : 10);
         capLeft += hdrExtraIndent;
         /* Reserve room at the right for the delegate-drawn glyphs: [-] alone, or [+][-] when both. */
         int glyphSlots = (capIndex.data(UR_DeleteBtn).toBool() ? 1 : 0)
