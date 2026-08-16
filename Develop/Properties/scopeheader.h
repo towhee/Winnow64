@@ -34,6 +34,7 @@ class BarBtn;
     (scopeMenuBtn, an ellipsis) that pops up a QMenu (like EmbelProperties::effectContextMenu):
 
         Add new scope
+        Reset all edits        (wipes the image's whole recipe, history and sidecar)
         ---                    (per-scope group, hidden when Global is active)
         Add mask to Scope 2
         Show mask overlay     (checkable; only while a mask tool is being edited)
