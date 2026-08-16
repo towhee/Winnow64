@@ -117,9 +117,14 @@ void BarBtn::setActive(bool on)
        against the dark panel background, which is the point: the active tool must be
        obvious at a glance. Appended after G::css so it wins; cleared back to G::css
        when inactive. */
+    /* The accent border dims with the panel: white on a greyed action row reads as the
+       one live control left. G::dimmed keeps it the same border, just deactivated, so
+       which tool is armed is still legible. */
     if (on)
         setStyleSheet(G::css + "QToolButton { border: 1px solid white;"
-                               " border-radius: 2px; }");
+                               " border-radius: 2px; }"
+                               "QToolButton:disabled { border: 1px solid " +
+                               G::dimmed(Qt::white).name() + "; border-radius: 2px; }");
     else
         setStyleSheet(G::css);
 }

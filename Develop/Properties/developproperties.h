@@ -132,10 +132,18 @@ public:
        the selection that was live when editing started, so it must land first) and
        before any operation that reads the sidecars.
 
-       selectedEditCount is what the Develop dock's red banner reports: how many images
-       the next edit will touch (1 = just the current image). */
+       selectedEditCount is what the Develop dock's red alert row reports: how many images
+       the next edit will touch (1 = just the current image). It is 0 when there is no
+       current image to edit from -- notably a VIDEO current item, where MW sets the
+       current path empty.
+
+       selectedStillCount ignores the current item entirely: how many developable stills
+       are in the selection, whatever the current item is. The alert rows need it for the
+       mixed case (video current + stills selected), where selectedEditCount is 0 and
+       would otherwise report nothing at all. */
     void flushPropagation();
     int  selectedEditCount() const;
+    int  selectedStillCount() const;
 
     /* The scope dropdown (scopes + scope actions) and the preview eye live in a gradient header
        widget ABOVE this tree (see ScopeHeaderBase). Bind it once; this class drives its

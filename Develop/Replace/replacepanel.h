@@ -58,6 +58,9 @@ protected:
     /* Separator rule (G::panelBorderHeight in G::tabWidgetBorderColor) across the bottom
        edge, so stacked Develop panels read as distinct blocks. */
     void paintEvent(QPaintEvent *event) override;
+    /* Re-render the inline-html mode captions when the panel is enabled/disabled: an
+       inline colour ignores the stylesheet ":disabled" rule (G::restyleAccentLabels). */
+    void changeEvent(QEvent *event) override;
     /* Claim bare S/F/O for the focused panel (same idiom as TransformPanel's C/L/W). */
     bool eventFilter(QObject *watched, QEvent *event) override;
 

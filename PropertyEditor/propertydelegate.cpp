@@ -519,6 +519,14 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            Add/Subtract role). Overrides the leaf/category pen when set. */
         const QVariant capColorV = capIndex.data(UR_CaptionColor);
         if (capColorV.isValid()) capPen = QPen(capColorV.value<QColor>());
+        /* A DISABLED header greys like the leaves below it (the leaf branch does the same
+           test further down). Section captions are painted from this pen, not from the
+           widget's enabled state, so without this a greyed Develop panel kept teal
+           "Basic / Color / Calibrate / ..." headers over dead rows. Tested only when the
+           role is actually set: trees that never set it (Preferences, Embellish) must
+           keep their normal colour, and an unset QVariant is false. */
+        const QVariant capEnabledV = capIndex.data(UR_isEnabled);
+        if (capEnabledV.isValid() && !capEnabledV.toBool()) capPen = disPen;
 
         /* Header band fill. The gradient (a -> b) marks a PANEL-level header; a
            UR_HeaderFlat header is a subordinate section INSIDE a panel (Develop's

@@ -683,6 +683,13 @@ QString WidgetCSS::radioButton()
     "}"
     "QRadioButton:unchecked {"
         "color:" + textColor.name() + ";"
+    "}"
+    /* LAST so it beats the two above (same specificity, later rule wins): neither of
+       them is qualified with :enabled, so without this a disabled radio kept its
+       cadetblue / silver text -- e.g. the Raw panel's "Raw / Embedded Preview" pair on a
+       greyed Develop panel. */
+    "QRadioButton:disabled {"
+        "color:" + disabledColor.name() + ";"
     "}";
 }
 

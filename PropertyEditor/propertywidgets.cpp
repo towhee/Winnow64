@@ -219,8 +219,11 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setMaximumWidth(lineEditWidth);
     lineEdit->setAlignment(Qt::AlignRight);
+    /* The disabled value must be the SAME grey as every other disabled caption
+       (G::disabledColor); the literal "gray" it used to carry is brighter, which left the
+       numbers looking live next to their greyed captions. */
     lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}"
-                            "QLineEdit:disabled {color:gray;}");   // grey value in Preview mode
+                            "QLineEdit:disabled {color:" + G::disabledColor.name() + ";}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 

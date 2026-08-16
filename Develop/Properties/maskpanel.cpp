@@ -49,9 +49,8 @@ void MaskPanel::buildUi()
     scopeLabel = new QLabel(attrWrap);
     scopeLabel->setWordWrap(true);
     scopeLabel->setContentsMargins(10, 2, 0, 2);
-    scopeLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::disabledColor.name())
-                                  .arg(qMax(7, G::strFontSize.toInt() - 1)));
+    scopeLabel->setStyleSheet(G::labelCss(G::disabledColor,
+                                          qMax(7, G::strFontSize.toInt() - 1)));
     scopeLabel->setVisible(false);
     bl->addWidget(scopeLabel);
 

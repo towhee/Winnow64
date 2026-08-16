@@ -89,6 +89,9 @@ protected:
     /* Separator rule (G::panelBorderHeight in G::tabWidgetBorderColor) across the bottom
        edge, so stacked Develop panels read as distinct blocks. */
     void paintEvent(QPaintEvent *event) override;
+    /* Re-render the inline-html mode captions when the panel is enabled/disabled: an
+       inline colour ignores the stylesheet ":disabled" rule (G::restyleAccentLabels). */
+    void changeEvent(QEvent *event) override;
     /* Single-letter shortcuts (A lock, C Crop, L Level, W Warp) are claimed via
        ShortcutOverride so a bare letter acts on the focused panel instead of a
        window-level shortcut. Text editors (the aspect combo, the angle field) are

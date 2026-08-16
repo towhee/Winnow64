@@ -117,7 +117,7 @@ void TransformPanel::buildUi()
     GradientHeader *header = new GradientHeader(this);
 
     QLabel *title = new QLabel(tr("Transform"), header);
-    title->setStyleSheet(QString("color: %1;").arg(G::header2Color.name()));
+    title->setStyleSheet(G::labelCss(G::header2Color));
     QFont hf = title->font();
     hf.setPointSize(G::strFontSize.toInt());
     title->setFont(hf);
@@ -164,11 +164,19 @@ void TransformPanel::buildUi()
     const QString border  = QColor(bs + 30, bs + 30, bs + 30).name();
     const QString normalBg = QColor(bs + 8,  bs + 8,  bs + 8).name();
     const QString hoverBg  = QColor(bs + 18, bs + 18, bs + 18).name();
+    /* The disabled state has to be spelled out here: a per-widget stylesheet overrides
+       the app one, and ":checked" with no ":enabled" qualifier keeps painting the armed
+       mode at full strength on a greyed panel. Disabled = dimmed text, and a checked
+       button keeps a MUTED teal so "which mode is armed" survives greying. */
+    const QString mutedSel = G::dimmed(G::selectionColor).name();
+    const QString dim = G::disabledColor.name();
     const QString modeQss = QString(
         "QToolButton{border:1px solid %1; border-radius:3px; padding:2px 6px; background:%2;}"
         "QToolButton:hover:!checked{background:%3;}"
-        "QToolButton:checked{background-color:%4; border:1px solid %3; color:white;}")
-        .arg(border, normalBg, hoverBg, select);
+        "QToolButton:checked{background-color:%4; border:1px solid %3; color:white;}"
+        "QToolButton:disabled{color:%5;}"
+        "QToolButton:checked:disabled{background-color:%6; border:1px solid %1; color:%5;}")
+        .arg(border, normalBg, hoverBg, select, dim, mutedSel);
 
     // auto makeModeBtn = [&](const QString &text, const QString &tip) {
     //     QToolButton *b = new QToolButton(this);
@@ -182,7 +190,7 @@ void TransformPanel::buildUi()
     //     return b;
     // };
 
-    auto makeModeBtn = [&](const QString &htmlText, const QString &tip) {
+    auto makeModeBtn = [&](const QString &letter, const QString &rest, const QString &tip) {
         QToolButton *b = new QToolButton(this);
         b->setToolTip(tip);
         b->setCheckable(true);
@@ -190,8 +198,11 @@ void TransformPanel::buildUi()
         b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         b->setFocusPolicy(Qt::StrongFocus);
 
-        // 1. Create a QLabel that accepts HTML rich text
-        QLabel *label = new QLabel(htmlText, b);
+        /* 1. A QLabel for the caption: the shortcut letter is accented (white, bold) and
+              QToolButton text cannot render rich text. setAccentCaption keeps the halves
+              on the label so changeEvent can re-render them dimmed when disabled. */
+        QLabel *label = new QLabel(b);
+        G::setAccentCaption(label, letter, rest, QColor(Qt::white));
         label->setAttribute(Qt::WA_TransparentForMouseEvents); // Clicks pass through to the button
         label->setAlignment(Qt::AlignCenter);
         label->setStyleSheet("background-color: transparent;");
@@ -207,13 +218,12 @@ void TransformPanel::buildUi()
         return b;
     };
 
-    // 3. Pass raw HTML straight to your factory function
-    // Use an inline style block to force the first letter to be bold and white
-    cropModeBtn = makeModeBtn(tr("<span style='color:white; font-weight:bold;'>C</span>rop"),
+    // 3. Shortcut letter + the rest of the caption; the factory accents the letter.
+    cropModeBtn = makeModeBtn(tr("C"), tr("rop"),
                               tr("Crop and set an aspect ratio (C)"));
-    levelModeBtn = makeModeBtn(tr("<span style='color:white; font-weight:bold;'>L</span>evel"),
+    levelModeBtn = makeModeBtn(tr("L"), tr("evel"),
                               tr("Straighten: draw a level line or type an angle (L)"));
-    warpModeBtn = makeModeBtn(tr("<span style='color:white; font-weight:bold;'>W</span>arp"),
+    warpModeBtn = makeModeBtn(tr("W"), tr("arp"),
                               tr("Perspective correction: drag the corners (W)"));
 
     // cropModeBtn  = makeModeBtn(tr("Crop"),  tr("Crop and set an aspect ratio (C)"));
@@ -547,6 +557,15 @@ void TransformPanel::paintEvent(QPaintEvent *event)
     QPainter p(this);
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
                G::tabWidgetBorderColor);
+}
+
+void TransformPanel::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    /* The mode captions accent their shortcut letter with INLINE html, which no
+       ":disabled" rule can reach, so re-render them whenever the panel is greyed or
+       re-enabled (Develop greys wholesale on a video selection). */
+    if (event->type() == QEvent::EnabledChange) G::restyleAccentLabels(this);
 }
 
 bool TransformPanel::eventFilter(QObject *watched, QEvent *event)

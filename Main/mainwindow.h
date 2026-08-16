@@ -1383,9 +1383,17 @@ private:
     /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
        strip them (lock float/move) while disabled and restore them when re-enabled. */
     QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
-    void setDevelopPanelEnabled(bool on);   // enable/disable the whole Develop dock + panel
-    /* The Develop panel is enabled only when the user's Develop toggle is on AND the operation
-       mode is Develop -- Preview mode always greys it out. Call after either input changes. */
+    /* The tool button row (Scopes, Crop, Spot, Preset, Export) is a sibling of the panel
+       inside the dock, so it must be greyed explicitly when the panel is unusable. */
+    QWidget *developActionRow = nullptr;
+    /* Two separate states: VISIBLE = the Develop tool is in play at all (the user's
+       Develop toggle + Develop operation mode); USABLE = the current selection can
+       actually be developed. A video cannot, so it stays visible but greyed -- the
+       alert row has to remain on screen to say why. */
+    void setDevelopPanelEnabled(bool visible, bool usable);
+    /* The Develop panel is enabled only when the user's Develop toggle is on AND the
+       operation mode is Develop -- Preview mode always greys it out. Call after either
+       input changes. */
     void syncDevelopPanelEnabled();
     /* Operation mode (G::operationMode): Preview (fast review) vs Develop (best-quality single
        image). setOperationMode applies a mode and syncs the status-bar dropdown; toggleOperationMode
@@ -1439,13 +1447,21 @@ private:
     /* The Presets dock's list of saved develop presets (hover previews it applied, a
        click applies it). DevelopProperties owns the store it views. */
     PresetsView *presetsView = nullptr;
-    /* Multi-image editing warning: a red banner at the top of the Develop dock, shown
-       only when more than one image is selected, because every develop edit and every
-       Paste Settings then lands on ALL of them (DevelopProperties::flushPropagation).
-       Editing images you cannot see is destructive and invisible, so the warning is
-       loud. updateDevelopSelectionWarning refreshes it from the selection. */
-    QLabel *developSelectionWarning = nullptr;
+    /* Alert rows, directly below the Develop action row: bright red text on the panel
+       background, one row per live condition, refreshed from the selection by
+       updateDevelopSelectionWarning. Shown when more than one image is selected, because
+       every develop edit and every Paste Settings then lands on ALL of them
+       (DevelopProperties::flushPropagation) -- editing images you cannot see is
+       destructive and invisible, so the warning is loud -- and when the selection is a
+       video, which Develop does not apply to at all (the panel is greyed alongside).
+       Conditions stack: each gets its own row. The container hides when there is
+       nothing to say. */
+    QWidget *developAlertRows = nullptr;
+    QVBoxLayout *developAlertRowsLayout = nullptr;
+    QList<QLabel *> developAlertLabels;      // pooled rows, surplus hidden not deleted
     void updateDevelopSelectionWarning();
+    /* Fill the alert rows, one message per row. An empty list hides the block. */
+    void setDevelopAlerts(const QStringList &messages);
     /* Develop Transform (crop + perspective) panel: a control strip below the scopes
        and above the property tree. Toggled by a button on the Develop action row and
        the "R" shortcut; visibility persists (Develop/transformVisible). */
