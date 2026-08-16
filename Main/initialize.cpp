@@ -2178,19 +2178,55 @@ void MW::createDevelopDock()
     ScopeHeaderBase *developScopeHeader = G::useScopeHeaderLab
             ? static_cast<ScopeHeaderBase *>(new ScopeHeaderLab(developContainer))
             : static_cast<ScopeHeaderBase *>(new ScopeHeader(developContainer));
-    developContainerLayout->addWidget(developScopeHeader);
     developProperties->bindScopeHeader(developScopeHeader);
-    /* The mask editor is NESTED under its own scope row in the list (setRowDetail), not a
-       separate strip above it: a mask's submasks and settings belong to that mask. It is
-       created here and owned by the panel hierarchy; DevelopProperties shows it for mask
-       scopes and hides it on Global (syncMaskPanel). */
+    /* The mask editor and the adjustment tree are NESTED under the SELECTED scope's row
+       in the list (setRowDetail), not stacked below the whole list: a mask's submasks and
+       the Basic/Color/... sections belong to the scope they edit. Both are created here
+       and owned by the panel hierarchy; DevelopProperties shows the mask editor for mask
+       scopes and hides it on Global (syncMaskPanel).
+
+       Because the tree is nested it can no longer scroll itself: it fits its content
+       height and the whole scope block scrolls inside a QScrollArea. Everything above
+       (action row, scopes strip, Transform, Replace, Raw) stays pinned. */
     if (G::useScopeHeaderLab) {
+        ScopeHeaderLab *lab = static_cast<ScopeHeaderLab *>(developScopeHeader);
+
         MaskPanel *maskPanel = new MaskPanel(developContainer);
         maskPanel->setVisible(false);
-        static_cast<ScopeHeaderLab *>(developScopeHeader)->setRowDetail(maskPanel);
+        lab->setRowDetail(maskPanel, ScopeHeaderLab::MaskDetail,
+                          ScopeHeaderLab::kDetailIndent);
         developProperties->bindMaskPanel(maskPanel);
+
+        /* Indent 0 for the tree: its left edge then coincides with the scope list's, so
+           the containment rail it paints continues the list's rail at the same x. The
+           section headers carry their own indent instead (addHeader/UR_ExtraIndent), so
+           the sliders keep their full width. */
+        developProperties->setFitToContentHeight(true);
+        lab->setRowDetail(developProperties, ScopeHeaderLab::EditsDetail, 0);
+
+        QScrollArea *developScroll = new QScrollArea(developContainer);
+        developScroll->setObjectName("developScroll");
+        developScroll->setFrameShape(QFrame::NoFrame);
+        developScroll->setWidgetResizable(true);
+        developScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        /* The app stylesheet fills a plain QWidget opaquely, which would paint over the
+           dock background (the same trap ScopeHeaderLab's rowsContainer hit). */
+        developScroll->viewport()->setAutoFillBackground(false);
+        QWidget *developScrollBody = new QWidget(developScroll);
+        developScrollBody->setAttribute(Qt::WA_TranslucentBackground);
+        QVBoxLayout *developScrollLayout = new QVBoxLayout(developScrollBody);
+        developScrollLayout->setContentsMargins(0, 0, 0, 0);
+        developScrollLayout->setSpacing(0);
+        developScopeHeader->setParent(developScrollBody);
+        developScrollLayout->addWidget(developScopeHeader);
+        developScrollLayout->addStretch(1);
+        developScroll->setWidget(developScrollBody);
+        developContainerLayout->addWidget(developScroll, 1);
     }
-    developContainerLayout->addWidget(developProperties, 1);
+    else {
+        developContainerLayout->addWidget(developScopeHeader);
+        developContainerLayout->addWidget(developProperties, 1);
+    }
     developDock->setWidget(developContainer);
     /* The tone-region slider under the histogram drives the active scope's tone-split params. */
     developProperties->bindToneSlider(scopesView->toneRegionSlider());

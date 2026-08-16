@@ -97,19 +97,39 @@ void ScopeHeaderLab::paintEvent(QPaintEvent *)
     g.setColorAt(1, QColor(b, b, b));
     p.fillRect(r, g);
 
-    /* Containment rail (G::scopeRailX/W): starts under the "Scope" band -- so it spans
-       the WHOLE scope list (Global + every mask), not just the selected row -- and runs
-       to this widget's bottom edge, where DevelopProperties picks it up and carries it
-       to the last tree row. The list and the sections below it are then bracketed as one
-       block. The rail is G::selectionColor, the same fill as the selected row's band, so
-       the stretch crossing that row is invisible: the selection reads as a gap in the
-       rail rather than as its origin. */
+    /* Containment rail (G::scopeRailX/W): brackets the SELECTED scope only -- from the
+       top of its row down past the details nested under it (the Mask panel and the
+       adjustment tree), so the rail says "everything in here belongs to this scope". The
+       unselected rows carry no rail: they are just names until they are picked.
+       The rail is G::selectionColor, the same fill as the selected row's band, so the
+       stretch crossing that row is invisible: the selection reads as a gap in the rail
+       rather than as its origin. The nested tree paints its own segment over its
+       viewport (DevelopProperties::paintEvent), at the same x and colour, so the two
+       read as one line. */
     /* NO panel separator along the bottom edge (unlike the other Develop panels): the
-       scope list and the tree below it are ONE BLOCK, joined by the rail. */
+       scope row and its nested details are ONE BLOCK, joined by the rail. */
     if (G::scopeRailW > 0) {
-        const int top = r.bottom() + 1;
-        p.fillRect(G::scopeRailX, top, G::scopeRailW, height() - top, G::selectionColor);
+        const QRect block = activeBlockRect();
+        if (!block.isEmpty())
+            p.fillRect(G::scopeRailX, block.top(), G::scopeRailW, block.height(),
+                       G::selectionColor);
     }
+}
+
+QRect ScopeHeaderLab::activeBlockRect() const
+{
+    /* The selected scope's block in THIS widget's coordinates: its row, plus every detail
+       nested under it. The rows live in rowsContainer, so their geometry is offset by the
+       container's own position. Empty while the list is collapsed (no row to bracket). */
+    if (!rowsContainer || !rowsContainer->isVisible() || !activeRow) return QRect();
+    const int dy = rowsContainer->y();
+    int top    = activeRow->y() + dy;
+    int bottom = top + activeRow->height();
+    for (QWidget *d : detailWrap) {
+        if (!d || !d->isVisible()) continue;
+        bottom = qMax(bottom, d->y() + dy + d->height());
+    }
+    return QRect(0, top, width(), bottom - top);
 }
 
 void ScopeHeaderLab::setScopes(const QStringList &n, int currentIndex)
@@ -136,54 +156,66 @@ void ScopeHeaderLab::setScopeRows(const QVector<ScopeRowInfo> &rows, int active)
     rebuild(rows, activeIndex);
 }
 
-void ScopeHeaderLab::setRowDetail(QWidget *detail)
+void ScopeHeaderLab::setRowDetail(QWidget *detail, int slot, int indent)
 {
-    if (rowDetail == detail) return;
-    if (detailWrap) {
-        /* Hand any previous detail back to its owner before the wrapper is rebuilt. */
-        if (rowDetail) rowDetail->setParent(nullptr);
-        delete detailWrap;
-        detailWrap = nullptr;
+    if (slot < 0 || slot >= RowDetailSlotCount) return;
+    if (rowDetail[slot] == detail) return;
+    if (detailWrap[slot]) {
+        /* Hand any previous detail back before the wrapper goes: re-parent it to
+           rowsContainer, NOT nullptr -- a parentless QTreeView would briefly become a
+           top-level window and flash on screen. */
+        if (rowDetail[slot]) rowDetail[slot]->setParent(rowsContainer);
+        delete detailWrap[slot];
+        detailWrap[slot] = nullptr;
     }
-    rowDetail = detail;
-    if (!rowDetail) return;
+    rowDetail[slot] = detail;
+    if (!detail) return;
 
-    /* Indent the detail under the scope name (the row's own left margin is 10, plus the
-       checkbox column) so it reads as belonging to that scope, not to the list. */
-    detailWrap = new QWidget(rowsContainer);
-    detailWrap->setAttribute(Qt::WA_TranslucentBackground);
-    QVBoxLayout *dl = new QVBoxLayout(detailWrap);
-    dl->setContentsMargins(kDetailIndent, 0, 0, 0);
+    /* Indent (slot's choice) so the detail reads as belonging to the scope above it: the
+       MaskPanel lines up under the scope NAME (kDetailIndent), while the adjustment tree
+       takes indent 0 so its containment rail continues this widget's at the same x. */
+    detailWrap[slot] = new QWidget(rowsContainer);
+    detailWrap[slot]->setAttribute(Qt::WA_TranslucentBackground);
+    QVBoxLayout *dl = new QVBoxLayout(detailWrap[slot]);
+    dl->setContentsMargins(indent, 0, 0, 0);
     dl->setSpacing(0);
-    dl->addWidget(rowDetail);
-    rowsLayout->addWidget(detailWrap);
+    dl->addWidget(detail);
+    rowsLayout->addWidget(detailWrap[slot]);      // rebuild() fixes the position
 }
 
 void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
 {
-    /* The nested detail (the MaskPanel) is NOT ours to delete: pull it out of the layout
-       first, so the teardown below cannot take it with the rows. setParent re-homes it on
-       this widget, outside any layout, until it is re-inserted. */
-    if (detailWrap) {
-        detailWrap->setParent(this);
-        detailWrap->hide();
-    }
     /* Drop the old rows (widgets own their children; deleteLater is unnecessary here as
-       nothing captures them beyond this rebuild). */
+       nothing captures them beyond this rebuild). The nested details are NOT ours to
+       delete: takeAt removes them from the layout WITHOUT re-parenting, so they stay
+       children of rowsContainer and are simply re-inserted below. Deliberately no
+       setParent/hide round trip -- re-parenting a QTreeView full of setIndexWidget
+       editors on every scope switch is the expensive, flicker-prone path. */
+    auto isDetail = [this](QWidget *w) {
+        for (QWidget *d : detailWrap) if (d && d == w) return true;
+        return false;
+    };
     while (QLayoutItem *it = rowsLayout->takeAt(0)) {
-        if (QWidget *w = it->widget()) w->deleteLater();
+        QWidget *w = it->widget();
+        if (w && !isDetail(w)) w->deleteLater();
         delete it;
     }
-    for (int i = 0; i < rows.size(); ++i)
-        rowsLayout->addWidget(makeRow(i, rows.at(i), i == active));
+    activeRow = nullptr;
+    for (int i = 0; i < rows.size(); ++i) {
+        QWidget *row = makeRow(i, rows.at(i), i == active);
+        if (i == active) activeRow = row;       // the rail brackets this row's block
+        rowsLayout->addWidget(row);
+    }
 
-    /* Re-insert the detail directly beneath the ACTIVE row, so it moves with the
-       selection. Its own visibility is the owner's business (DevelopProperties hides the
-       MaskPanel on Global), so the wrapper always shows: an empty wrapper is 0 high. */
-    if (detailWrap) {
-        const int pos = qBound(0, active + 1, rowsLayout->count());
-        rowsLayout->insertWidget(pos, detailWrap);
-        detailWrap->show();
+    /* Re-insert the details directly beneath the ACTIVE row, in slot order, so they move
+       with the selection. Their own visibility is the owner's business (DevelopProperties
+       hides the MaskPanel on Global), so the wrappers always show: an empty wrapper is 0
+       high. */
+    int pos = qBound(0, active + 1, rowsLayout->count());
+    for (QWidget *d : detailWrap) {
+        if (!d) continue;
+        rowsLayout->insertWidget(pos++, d);
+        d->show();
     }
 }
 
