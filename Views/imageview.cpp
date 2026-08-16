@@ -3549,6 +3549,12 @@ QSize ImageView::viewportInScene()
     int imW = pmItem->boundingRect().width();
     int imH = pmItem->boundingRect().height();
     QPolygonF p = mapToScene(viewport()->rect());
+    /* QGraphicsView::mapToScene returns an EMPTY polygon for an invalid rect, and a
+       hidden or not-yet-laid-out ImageView has a 0x0 viewport (QRect(0,0,0,0) is not
+       "valid"). p.at(0) then trips QList's index assert and aborts the app -- reached
+       from IconView::zoomCursor on a thumbnail hover. Report a null size instead and
+       let the caller skip the zoom cursor. */
+    if (p.size() < 4) return QSize();
     qreal x1 = p.at(0).x();
     qreal y1 = p.at(0).y();
     qreal x2 = p.at(2).x();

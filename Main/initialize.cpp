@@ -1886,6 +1886,11 @@ void MW::createDevelopDock()
             developProperties, &DevelopProperties::onWbSampled);
     connect(imageView, &ImageView::wbPickExited,
             developProperties, &DevelopProperties::cancelWbDropper);
+    /* The dropper / Auto WB need the pre-develop WorkingImage before the image has been
+       edited, which for a display-referred file nothing has built yet. DIRECT (same
+       thread), so the dock can use the result the moment emit returns. */
+    connect(developProperties, &DevelopProperties::workingImageNeeded,
+            this, &MW::ensureWorkingImageNow, Qt::DirectConnection);
     connect(imageView, &ImageView::spotToolExited, developProperties,
             [this]{ developProperties->onSpotToolToggled(false); });
     /* Whole-mask coverage tint: rebuild/clear when the mask selection changes

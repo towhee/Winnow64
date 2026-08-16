@@ -8036,6 +8036,45 @@ void MW::ensureDevelopWork(const QString &fPath)
     });
 }
 
+void MW::ensureWorkingImageNow(const QString &fPath)
+{
+/*
+    Build the pre-develop WorkingImage for fPath NOW, for a Develop action that needs the
+    pixels (and the colour characterisation) before the image has been edited: the WB
+    dropper and Auto white balance. Without this an untouched DISPLAY-REFERRED file has no
+    cache entry at all -- ImageDecoder::applyDevelop skips identity params and
+    applyDevelopPreviewIfEdited skips an unedited image -- so the dropper reported "not
+    ready to sample yet" on every freshly opened JPEG.
+
+    Display-referred (JPG/TIFF/HEIC, or raw in preview mode): built HERE, synchronously,
+    from the already-decoded image, so DevelopProperties::ensureWorkingImage can use it on
+    return. That is one InputTransform pass over the full image -- the same cost the first
+    slider move pays -- and it runs only on an explicit click.
+
+    Raw needing the SCENE-LINEAR image: that is a decode, so hand off to the async
+    ensureDevelopWork and let the caller report "not ready". In practice raw already has
+    it: the raw decode path caches it unconditionally.
+*/
+    if (G::isLogger) G::log("MW::ensureWorkingImageNow");
+    if (fPath.isEmpty() || !icd) return;
+
+    auto work = WorkingImageCache::instance().get(fPath);
+    const bool wantRaw = isFileRaw(fPath) && G::useRaw;
+    if (wantRaw && (!work || !work->sceneReferred) && developWorkTriedPath != fPath) {
+        ensureDevelopWork(fPath);
+        return;
+    }
+    if (work && work->isValid()) return;
+
+    if (!icd->contains(fPath)) return;      // not decoded yet; nothing to build from
+    const QImage src = icd->imCache.value(fPath);
+    if (src.isNull()) return;
+    auto built = std::make_shared<WorkingImage>();
+    InputTransform input;
+    if (!input.FromImage(src, *built)) return;
+    WorkingImageCache::instance().put(fPath, built);
+}
+
 /* Cheap, size-agnostic pixel-difference between two QImages: sample both on a normalised
    grid (no scaling of the large image) and return the max and mean per-pixel max-channel
    difference in 0..255. Used for the develop render verifications. maxAbs == 0 =>

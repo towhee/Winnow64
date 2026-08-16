@@ -1821,6 +1821,9 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
 
     // viewport
     QSize vpSize = m2->imageView->viewportInScene();
+    /* Null when the ImageView has no laid-out viewport to map (see viewportInScene):
+       there is no zoom rectangle to draw, and the divisions below would be by zero. */
+    if (vpSize.isEmpty()) return;
     int vpW = vpSize.width();
     int vpH = vpSize.height();
 

@@ -5562,6 +5562,21 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                   averages a 5x5 patch (one pixel is a poor estimate on a noisy raw), and
                   solves. It auto-dismisses on use, like Lightroom. A black or clipped
                   sample is refused with a popup rather than silently mis-balancing.
+                  ON-DEMAND BUFFER: the dropper and Auto WB are the only Develop
+                  actions that need the pre-develop WorkingImage BEFORE any edit
+                  exists, and for a DISPLAY-REFERRED file nothing has built one:
+                  ImageDecoder::applyDevelop skips identity params and
+                  MW::applyDevelopPreviewIfEdited skips an unedited image, so a
+                  freshly opened JPEG had no cache entry and the dropper answered
+                  "not ready to sample yet" until a slider was touched. Both now go
+                  through DevelopProperties::ensureWorkingImage, which on a miss
+                  emits workingImageNeeded -> MW::ensureWorkingImageNow: a
+                  display-referred file is built THERE AND THEN (one InputTransform
+                  pass, direct connection, so the value is ready when emit returns);
+                  a raw missing its scene-linear image hands off to the async
+                  ensureDevelopWork and the caller reports "not ready" as before.
+                  Deliberately not eager on selection -- that would pay a full-res
+                  float conversion per navigation.
                   ESC disarms it, and that MUST live in MW::developShortcutIntercept
                   (rule 1b), not ImageView: the dropper is armed from the Develop dock,
                   so focus is in the dock and ImageView's keyPressEvent never runs --

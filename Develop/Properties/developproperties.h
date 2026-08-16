@@ -389,6 +389,11 @@ signals:
     /* White-balance dropper: arm/disarm ImageView's sample-a-neutral mode. */
     void wbDropperBegin();
     void wbDropperEnd();
+    /* The pre-develop WorkingImage for fPath is needed NOW (a WB dropper sample / Auto
+       white balance) and is not in WorkingImageCache. MW builds it -- synchronously for
+       a display-referred file, or by starting the async scene-linear decode for raw --
+       see ensureWorkingImage(). */
+    void workingImageNeeded(const QString &fPath);
     /* Spot tool armed/disarmed: drives the action-row spot button's on/off icon. */
     void spotActiveChanged(bool active);
     /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
@@ -473,6 +478,10 @@ private:
        WorkingImage. Invalid when the image is not (yet) in the cache, which resolves
        temperatures to a D65 fallback and disables the dropper. */
     CameraColor currentCam() const;
+    /* The current image's pre-develop WorkingImage, BUILDING it on demand (via
+       workingImageNeeded) when the cache has no entry. Null if it could not be made
+       ready in this call -- a raw decode is asynchronous. */
+    std::shared_ptr<const WorkingImage> ensureWorkingImage();
     static QIcon dropperIcon(bool armed);   // drawn, not a resource
     QPointer<QComboBox> wbCombo;
     QPointer<BarBtn> wbDropperBtn;
