@@ -587,6 +587,65 @@ Q_NAMESPACE
     extern int scopeRailX;              // Develop scope containment rail: left edge
     extern int scopeRailW;              // ditto: width (0 = no rail)
     extern int panelBorderHeight;       // Develop panel bottom separator rule height
+
+    /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,
+       hints ...). Use this instead of a bare "color: x" string: a per-widget stylesheet
+       OVERRIDES the app stylesheet, including its "QLabel:disabled" rule, so a hand-
+       rolled "color: x" leaves the text at full strength when its panel is greyed -- the
+       "disabled panel with live-looking captions". This emits both states, so every
+       explicitly coloured label greys with its panel (Develop greys wholesale on a video
+       selection; see MW::setDevelopPanelEnabled).
+       ptSize 0 leaves the font size to the widget. The background is transparent so the
+       label sits on whatever its panel paints (gradient band, selection fill, rail). */
+    inline QString labelCss(const QColor &color, int ptSize = 0) {
+        QString css = "QLabel { color: " + color.name() + "; background: transparent;";
+        if (ptSize > 0) css += " font-size: " + QString::number(ptSize) + "pt;";
+        css += " } QLabel:disabled { color: " + disabledColor.name() + "; }";
+        return css;
+    }
+
+    /* A colour blended halfway into the panel background: the DISABLED form of anything
+       that carries meaning through colour rather than text (a selection band, a hue
+       chip, the scope rail). Still identifiable, visibly dead. Text does not use this --
+       it has disabledColor. */
+    inline QColor dimmed(const QColor &c) {
+        return QColor((c.red()   + backgroundShade) / 2,
+                      (c.green() + backgroundShade) / 2,
+                      (c.blue()  + backgroundShade) / 2);
+    }
+
+    /* Panel captions that ACCENT their shortcut letter ("Crop", "Spot") do it with inline
+       HTML, and an inline colour is not a stylesheet: ":disabled" cannot reach it, so the
+       letter stays bright on a greyed panel while the rest of the caption dims. The pair
+       below fixes that. setAccentCaption remembers the two halves on the label, and
+       restyleAccentLabels re-renders every such label in a panel for its CURRENT enabled
+       state -- call it from the panel's changeEvent on QEvent::EnabledChange. */
+    inline QString accentHtml(const QString &letter, const QString &rest,
+                              const QColor &accent) {
+        return "<span style=\"color:" + accent.name() + "; font-weight:bold;\">" +
+               letter.toHtmlEscaped() + "</span>" + rest.toHtmlEscaped();
+    }
+    inline void setAccentCaption(QLabel *label, const QString &letter, const QString &rest,
+                                 const QColor &accent) {
+        if (!label) return;
+        label->setProperty("accentLetter", letter);
+        label->setProperty("accentRest", rest);
+        label->setProperty("accentColor", accent);
+        label->setText(accentHtml(letter, rest,
+                                  label->isEnabled() ? accent : disabledColor));
+    }
+    inline void restyleAccentLabels(QWidget *panel) {
+        if (!panel) return;
+        const QList<QLabel *> labels = panel->findChildren<QLabel *>();
+        for (QLabel *l : labels) {
+            const QVariant letter = l->property("accentLetter");
+            if (!letter.isValid()) continue;
+            const QColor accent = l->property("accentColor").value<QColor>();
+            l->setText(accentHtml(letter.toString(), l->property("accentRest").toString(),
+                                  l->isEnabled() ? accent : disabledColor));
+        }
+    }
+
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
 

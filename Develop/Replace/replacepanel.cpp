@@ -34,14 +34,6 @@ protected:
     }
 };
 
-/* Row caption with the shortcut letter bold in G::header2Color, e.g. (S)pot -> "Spot"
-   with a bold blue S. QRadioButton text cannot render rich text, so the caption is a
-   separate QLabel; clicking it selects the row's radio (see labelClickFilter). */
-QString captionHtml(const QString &shortcutLetter, const QString &rest)
-{
-    return QString("<span style=\"color:%1; font-weight:bold;\">%2</span>%3")
-        .arg(G::header2Color.name(), shortcutLetter, rest);
-}
 }
 
 ReplacePanel::ReplacePanel(QWidget *parent, QSettings *settings)
@@ -57,7 +49,7 @@ void ReplacePanel::buildUi()
     GradientHeader *header = new GradientHeader(this);
 
     QLabel *title = new QLabel(tr("Fill Replace"), header);
-    title->setStyleSheet(QString("color: %1;").arg(G::header2Color.name()));
+    title->setStyleSheet(G::labelCss(G::header2Color));
     QFont hf = title->font();
     hf.setPointSize(G::strFontSize.toInt());
     title->setFont(hf);
@@ -100,14 +92,20 @@ void ReplacePanel::buildUi()
         radio->setToolTip(tip);
         radio->setFocusPolicy(Qt::StrongFocus);   // so S/F/O reach the eventFilter
         modeGroup->addButton(radio, row);
-        QLabel *caption = new QLabel(captionHtml(letter, rest), this);
+        /* Caption with the shortcut letter bold in G::header2Color, e.g. (S)pot -> "Spot"
+           with a bold blue S. QRadioButton text cannot render rich text, so the caption
+           is a separate QLabel; clicking it selects the row's radio (see the event
+           filter). setAccentCaption keeps the two halves on the label so changeEvent can
+           re-render them greyed when the panel is disabled. */
+        QLabel *caption = new QLabel(this);
+        G::setAccentCaption(caption, letter, rest, G::header2Color);
         caption->setToolTip(tip);
         /* Clicking the caption selects its radio (rich text keeps QLabel, not the
            radio's own text). The label is tagged with the mode for the event filter. */
         caption->setProperty("replaceMode", row);
         caption->installEventFilter(this);
         QLabel *hintLbl = new QLabel(hint, this);
-        hintLbl->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
+        hintLbl->setStyleSheet(G::labelCss(G::disabledColor));
         grid->addWidget(radio,   row, 0);
         grid->addWidget(caption, row, 1);
         grid->addWidget(hintLbl, row, 2);
@@ -189,6 +187,15 @@ void ReplacePanel::paintEvent(QPaintEvent *event)
     QPainter p(this);
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
                G::tabWidgetBorderColor);
+}
+
+void ReplacePanel::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    /* The mode captions accent their shortcut letter with INLINE html, which no
+       ":disabled" rule can reach, so re-render them whenever the panel is greyed or
+       re-enabled (Develop greys wholesale on a video selection). */
+    if (event->type() == QEvent::EnabledChange) G::restyleAccentLabels(this);
 }
 
 bool ReplacePanel::eventFilter(QObject *watched, QEvent *event)

@@ -51,8 +51,7 @@ void SubmaskList::buildUi()
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
 
     titleLabel = new QLabel(tr("Submasks"), headerBand);
-    titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::textColor.name()).arg(G::strFontSize.toInt()));
+    titleLabel->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
 
     addBtn = new BarBtn();
     addBtn->setToolTip("Add a submask to this mask (M)");
@@ -136,10 +135,18 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     QWidget *row = new QWidget(rowsContainer);
     row->setProperty("submaskIndex", index);     // read back by the row-body click filter
     row->installEventFilter(this);
-    if (selected)
-        row->setStyleSheet(QString("background: %1;").arg(G::selectionColor.name()));
-    else
+    if (selected) {
+        /* Same treatment as the scope rows: an object-name selector (so the rule cannot
+           leak onto the row's children) and a muted band while the panel is greyed. */
+        row->setObjectName("submaskRow");
+        row->setStyleSheet(QString("QWidget#submaskRow { background: %1; }"
+                                   "QWidget#submaskRow:disabled { background: %2; }")
+                               .arg(G::selectionColor.name(),
+                                    G::dimmed(G::selectionColor).name()));
+    }
+    else {
         row->setAttribute(Qt::WA_TranslucentBackground);
+    }
 
     QHBoxLayout *hb = new QHBoxLayout(row);
     hb->setContentsMargins(10, 1, 6, 1);
@@ -180,11 +187,10 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     QString caption = r.toolName;
     if (r.inverted) caption += tr(" (inverted)");
     QLabel *name = new QLabel(caption, row);
-    name->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                            .arg((selected ? QColor(Qt::white)
-                                 : r.enabled ? G::textColor
-                                             : G::disabledColor).name())
-                            .arg(G::strFontSize.toInt()));
+    name->setStyleSheet(G::labelCss(selected ? QColor(Qt::white)
+                                    : r.enabled ? G::textColor
+                                                : G::disabledColor,
+                                    G::strFontSize.toInt()));
     name->setToolTip(r.pending ? tr("Being built -- commit or cancel it")
                                : tr("Click to edit this submask again"));
     hb->addWidget(name);

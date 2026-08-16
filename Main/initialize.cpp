@@ -694,7 +694,7 @@ void MW::createSelection()
        index changes (fileSelectionChange). */
     connect(sel->sm, &QItemSelectionModel::selectionChanged,
             this, &MW::enableSelectionDependentMenus);
-    /* Develop edits apply to the whole selection, so the dock's red multi-image banner
+    /* Develop edits apply to the whole selection, so the dock's red multi-image alert
        tracks the selection set (and any queued propagation lands before it changes). */
     connect(sel->sm, &QItemSelectionModel::selectionChanged,
             this, &MW::updateDevelopSelectionWarning);
@@ -1991,28 +1991,13 @@ void MW::createDevelopDock()
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
     developContainerLayout->setSpacing(0);
-    /* Multi-image editing warning, pinned above everything else in the dock. Develop
-       edits and Paste Settings apply to the WHOLE selection, so when more than one
-       image is selected the user is editing images that are not on screen -- a red
-       banner is the only thing loud enough to make that obvious before the fact.
-       Hidden whenever the selection is a single image (updateDevelopSelectionWarning). */
-    developSelectionWarning = new QLabel(developContainer);
-    developSelectionWarning->setObjectName("developSelectionWarning");
-    developSelectionWarning->setAlignment(Qt::AlignCenter);
-    developSelectionWarning->setWordWrap(true);
-    developSelectionWarning->setStyleSheet(
-        "QLabel { background-color: #D01515; color: white; font-weight: bold;"
-        " padding: 4px 6px; }");
-    developSelectionWarning->setVisible(false);
-    developContainerLayout->addWidget(developSelectionWarning);
-
     /* Action row: the tool buttons (Scopes, Crop, Spot, Preset, Export) live here, in
        their own centered row directly below the dock title bar, instead of competing
        with the title text for space in the title bar itself. Only the ? and X buttons
        remain in the title bar. The buttons are created further down (with the rest of
        the title bar) and added to developActionLayout, which is flanked by stretches so
        the group stays centered as the dock is resized. */
-    QWidget *developActionRow = new QWidget(developContainer);
+    developActionRow = new QWidget(developContainer);
     developActionRow->setObjectName("developActionRow");
     /* The same bottom separator every Develop panel carries (G::panelBorderHeight in
        G::tabWidgetBorderColor); the ID selector keeps it off the child buttons and the
@@ -2025,6 +2010,26 @@ void MW::createDevelopDock()
     developActionLayout->setSpacing(0);
     developActionLayout->addStretch(1);
     developContainerLayout->addWidget(developActionRow);
+
+    /* Alert rows, directly BELOW the action row: one row per condition the user needs to
+       know about before editing (multiple images selected, a video that Develop cannot
+       touch, ...). Each is bright red text on the panel background rather than a filled
+       banner -- the panel reads as one surface and the colour alone carries the alarm.
+       setDevelopAlerts fills the rows; the container hides itself when there is nothing
+       to say. It is NOT greyed with the rest of the panel (setDevelopPanelEnabled greys
+       the panel and the action row individually) -- an alert must stay readable
+       precisely when the panel is disabled. */
+    developAlertRows = new QWidget(developContainer);
+    developAlertRows->setObjectName("developAlertRows");
+    /* The app stylesheet fills a plain QWidget opaquely, which would paint a slab behind
+       the alerts instead of letting the panel background show through (the same trap
+       developScroll's viewport hits below). */
+    developAlertRows->setStyleSheet("QWidget#developAlertRows { background: transparent; }");
+    developAlertRowsLayout = new QVBoxLayout(developAlertRows);
+    developAlertRowsLayout->setContentsMargins(6, 4, 6, 4);
+    developAlertRowsLayout->setSpacing(2);
+    developAlertRows->setVisible(false);
+    developContainerLayout->addWidget(developAlertRows);
 
     scopesView = new ScopesView(developContainer);
     scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
@@ -2578,41 +2583,73 @@ void MW::createPresetsDock()
     presetsTitleLayout->addSpacing(5);
 }
 
-void MW::setDevelopPanelEnabled(bool on)
+void MW::setDevelopPanelEnabled(bool visible, bool usable)
 {
     if (G::isLogger) G::log("MW::setDevelopPanelEnabled");
     if (!developDock) return;
-    developDock->setEnabled(on);
-    /* setEnabled() greys the frame but does NOT stop a title-bar double-click from floating
-       the dock (or a drag from moving it) -- that is governed by features(), not enabled
-       state. So strip the features while disabled and restore the captured set when on. */
-    developDock->setFeatures(on ? developDockFeatures : QDockWidget::NoDockWidgetFeatures);
-    if (developProperties) developProperties->setPanelEnabled(on);
+    /* VISIBLE governs whether the Develop tool is on screen at all; USABLE governs
+       whether its controls respond. They differ for a video selection, which cannot be
+       developed: the docks stay up (greyed) so the alert rows can explain why, instead of
+       the whole tool silently vanishing the moment a video is selected.
+       NOTE the dock itself is NOT disabled for the unusable case -- a disabled parent
+       greys every child, the alerts included, and setEnabled() on a child cannot override
+       a disabled ancestor. Each piece is greyed individually instead: the property panel
+       (which reaches its own ScopeHeader + RawPanel), the action row, and the Transform
+       and Fill Replace strips. */
+    developDock->setEnabled(visible);
+    /* setEnabled() greys the frame but does NOT stop a title-bar double-click from
+       floating the dock (or a drag from moving it) -- that is governed by features(),
+       not enabled state. So strip the features while disabled and restore the captured
+       set when on. */
+    developDock->setFeatures(visible ? developDockFeatures
+                                     : QDockWidget::NoDockWidgetFeatures);
+    const bool live = visible && usable;
+    if (developProperties) developProperties->setPanelEnabled(live);
+    if (developActionRow) developActionRow->setEnabled(live);
+    /* Transform and Fill Replace are SIBLINGS of the property panel inside the dock (they
+       are pinned strips, not part of the tree), so setPanelEnabled does not reach them --
+       they have to be greyed here or a video selection leaves a live crop/heal strip over
+       a dead panel. They are usually hidden anyway, but a panel left open from the
+       previous still stays on screen when the selection moves to a video.
+       Everything in the dock is greyed this way EXCEPT developAlertRows, which must stay
+       readable precisely when the rest is disabled -- it says why. */
+    if (transformPanel) transformPanel->setEnabled(live);
+    if (replacePanel) replacePanel->setEnabled(live);
     /* History and Presets are part of the Develop tool: they come and go with it. Show
        them FIRST -- showing a tabified dock makes it the front tab, so Develop must be
        shown last (and raised) or the group would open on one of their tabs. */
     if (presetsDock) {
-        presetsDock->setEnabled(on);
-        presetsDock->setVisible(on);
-        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(on);
+        presetsDock->setEnabled(live);
+        presetsDock->setVisible(visible);
+        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(visible);
     }
     if (historyDock) {
-        historyDock->setEnabled(on);
-        historyDock->setVisible(on);
-        if (historyDockVisibleAction) historyDockVisibleAction->setChecked(on);
+        historyDock->setEnabled(live);
+        historyDock->setVisible(visible);
+        if (historyDockVisibleAction) historyDockVisibleAction->setChecked(visible);
     }
-    developDock->setVisible(on);
-    if (on) developDock->raise();
+    /* raise() ONLY on an actual hidden -> visible transition. This runs on every file
+       selection change in Develop mode (the usable state follows the selection), and an
+       unconditional raise would yank Develop to the front tab every time the user
+       navigated with History or Presets selected. */
+    const bool wasVisible = developDock->isVisible();
+    developDock->setVisible(visible);
+    if (visible && !wasVisible) developDock->raise();
 }
 
 void MW::syncDevelopPanelEnabled()
 {
     if (G::isLogger) G::log("MW::syncDevelopPanelEnabled");
-    /* The Develop panel is usable only when the user's Develop toggle is on AND we are in Develop
-       operation mode. Preview mode is fast, as-shot review, so the panel is always greyed there. */
-    const bool on = developAction && developAction->isChecked()
-                    && G::operationMode == G::OperationMode::Develop;
-    setDevelopPanelEnabled(on);
+    /* The Develop panel is usable only when the user's Develop toggle is on AND we are
+       in Develop operation mode. Preview mode is fast, as-shot review, so the panel is
+       always greyed there. */
+    const bool visible = developAction && developAction->isChecked()
+                         && G::operationMode == G::OperationMode::Develop;
+    /* Develop operates on decoded still frames, so a video selection greys the controls
+       (see the alert rows in updateDevelopSelectionWarning) rather than leaving live-looking
+       sliders that silently do nothing -- every render entry and nearly every panel
+       method already early-returns on a video / empty path. */
+    setDevelopPanelEnabled(visible, !currentIsVideo());
 }
 
 void MW::setOperationMode(G::OperationMode mode)
@@ -2685,11 +2722,16 @@ void MW::setOperationMode(G::OperationMode mode)
     syncs the Develop "Edit: Raw / Embedded Preview" selector, and rebuilds the cache --
     which, in Develop, re-targets to just the current image (setTargetRange). Within
     Develop the Edit-source selector can still OVERRIDE to Embedded Preview. If useRaw is
-    already correct, just re-target for the mode's read-ahead change. */
+    already correct, just re-target for the mode's read-ahead change -- but NOT on a
+    video: there is no loupe to refresh (the central widget is on VideoTab) and the
+    ImageCache does not decode videos, so the forced re-decode is pure cost. The next
+    still selection re-targets the cache anyway (fileSelectionChange -> setImageCachePosition).
+    The useRaw flip itself is NOT skipped: it is a mode-level setting and must track the
+    mode so the next still decodes correctly. */
     const bool wantUseRaw = (mode == G::OperationMode::Develop);
     if (G::useRaw != wantUseRaw)
         toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);   // flips useRaw + reloads cache
-    else if (imageCache && dm && !dm->currentFilePath.isEmpty()) {
+    else if (imageCache && dm && !dm->currentFilePath.isEmpty() && !currentIsVideo()) {
         /* useRaw already matches the target, but the MODE change alone re-selects
            the decode: ImageDecoder::load() branches on (operationMode == Develop &&
            useRaw), so Preview shows the embedded preview while Develop demosaics the
@@ -2752,9 +2794,10 @@ void MW::toggleOperationMode()
 void MW::updateDevelopSelectionWarning()
 {
 /*
-    Refresh the Develop dock's red multi-image banner from the current selection. Every
-    develop edit and every Paste Settings applies to the whole selection, so the banner
-    is the standing warning that the panel is not editing one image.
+    Refresh the Develop dock's alert rows from the current selection. Every develop edit
+    and every Paste Settings applies to the whole selection, so the multi-image row is
+    the standing warning that the panel is not editing one image. Conditions STACK: a
+    video that Develop cannot touch and a multi-image selection each get their own row.
 
     It also lands any propagation the sliders have queued: that batch belongs to the
     selection that was live when the edit was made, and it must be written before the
@@ -2762,13 +2805,72 @@ void MW::updateDevelopSelectionWarning()
 */
     if (G::isLogger) G::log("MW::updateDevelopSelectionWarning");
     if (developProperties) developProperties->flushPropagation();
-    if (!developSelectionWarning) return;
-    const int n = developProperties ? developProperties->selectedEditCount() : 0;
-    developSelectionWarning->setVisible(n > 1);
-    if (n > 1)
-        developSelectionWarning->setText(
-            QString::number(n) + " images selected - every edit applies to all " +
-            QString::number(n));
+    if (!developAlertRows) return;
+
+    QStringList alerts;
+
+    /* The panel is greyed for a video (syncDevelopPanelEnabled) and nothing can be
+       edited: the user has done nothing risky, Develop simply does not apply. */
+    if (currentIsVideo()) {
+        alerts << "First image selected is a video.";
+        /* MIXED selection with the video CURRENT: the stills cannot be edited either,
+           because Develop edits the current image and fans the change out from it -- and
+           the current image is the video. selectedEditCount is 0 here (MW empties the
+           current path for a video), so the count has to come from selectedStillCount or
+           the user is told nothing about the stills they have selected. */
+        const int stills = developProperties ? developProperties->selectedStillCount() : 0;
+        if (stills > 0)
+            alerts << QString::number(stills) +
+                      (stills == 1 ? " still image is" : " still images are") +
+                      " also selected - make one of them current to develop the selection";
+    }
+    else {
+        /* Videos in a multi-image selection are not counted: selectedEditCount goes
+           through otherSelectedPaths, which skips them (a video has no develop
+           recipe). */
+        const int n = developProperties ? developProperties->selectedEditCount() : 0;
+        if (n > 1)
+            alerts << "Multiple images will have edits applied.";
+    }
+
+    setDevelopAlerts(alerts);
+}
+
+void MW::setDevelopAlerts(const QStringList &messages)
+{
+/*
+    Fill the alert rows below the Develop action row: one row per message, bright red
+    text on the panel background (no fill -- the panel stays one surface). An empty list
+    hides the whole block. Rows are pooled: labels are reused and the surplus hidden, so
+    a selection change does not churn widgets.
+*/
+    if (!developAlertRows || !developAlertRowsLayout) return;
+    if (messages.isEmpty()) {
+        developAlertRows->setVisible(false);
+        return;
+    }
+
+    const QString style = "QLabel { color: #FF4040; font-weight: bold; background: transparent; }";
+    for (int i = 0; i < messages.count(); ++i) {
+        QLabel *row = nullptr;
+        if (i < developAlertLabels.count()) {
+            row = developAlertLabels.at(i);
+        }
+        else {
+            row = new QLabel(developAlertRows);
+            row->setAlignment(Qt::AlignCenter);
+            row->setWordWrap(true);
+            row->setStyleSheet(style);
+            developAlertRowsLayout->addWidget(row);
+            developAlertLabels << row;
+        }
+        row->setText(messages.at(i));
+        row->setVisible(true);
+    }
+    for (int i = messages.count(); i < developAlertLabels.count(); ++i)
+        developAlertLabels.at(i)->setVisible(false);
+
+    developAlertRows->setVisible(true);
 }
 
 void MW::developDockVisibilityChange()

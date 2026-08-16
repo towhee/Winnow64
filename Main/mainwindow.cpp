@@ -3024,9 +3024,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
-        /* The current image counts toward the multi-image warning, so the banner has to
-           follow the current index as well as the selection set. */
-        updateDevelopSelectionWarning();
+        /* The banner and the panel's enabled state both follow the current index as well
+           as the selection set, and are refreshed together further down (once the central
+           widget has been switched to the loupe or the video player). */
     }
 
     /* SCROLL CONTROL:
@@ -3139,6 +3139,20 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 }
             }
         }
+    }
+
+    /* Develop operates on decoded still frames, so a video selection greys the whole
+       panel and raises a "not applicable" alert row (the mode itself is
+       NOT changed -- Preview/Develop is the user's choice, and auto-flipping it would
+       churn G::useRaw and the image cache on every video/still crossing in a mixed
+       folder). Selecting a still again re-enables everything. The status bar carries the
+       same message because the Develop dock may be tabbed away behind History or
+       Presets, where the alert row cannot be seen. */
+    if (G::operationMode == G::OperationMode::Develop) {
+        syncDevelopPanelEnabled();
+        updateDevelopSelectionWarning();
+        if (isVideo)
+            updateStatus(true, "Video selected - Develop applies to still images only", fun);
     }
 
     G::fileSelectionChangeSource = "";
@@ -3382,6 +3396,15 @@ void MW::refresh()
             if (!sameSourceShown)
                 videoView->load(dm->currentFilePath);
         }
+    }
+
+    /* Same reason as the video reload above: this path can leave the current row on a
+       different item without fileSelectionChange firing, so the Develop panel's greyed
+       state and banner have to be re-asserted from the current selection or they go
+       stale (live-looking sliders on a video, or a greyed panel on a still). */
+    if (G::operationMode == G::OperationMode::Develop) {
+        syncDevelopPanelEnabled();
+        updateDevelopSelectionWarning();
     }
 }
 

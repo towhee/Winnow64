@@ -1455,8 +1455,10 @@ void DevelopProperties::setPanelEnabled(bool enabled)
     setEnabled(enabled);
 
     /* The ScopeHeader band (scope dropdown + buttons + eye) sits ABOVE the tree and is a
-       sibling widget, so it must be greyed explicitly. */
+       sibling widget, so it must be greyed explicitly. Same for the RawPanel (lab UI),
+       which holds the decode controls in its own strip above the scopes list. */
     if (scopeHeader) scopeHeader->setEnabled(enabled);
+    if (rawPanel) rawPanel->setEnabled(enabled);
 
     applyItemsEnabled(enabled);
 }
@@ -2505,11 +2507,17 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                     chip->setAutoRaise(true);
                     chip->setFixedSize(18, 18);
                     chip->setToolTip(QString("Select the %1 range").arg(hueBandName(b)));
+                    /* A saturated swatch would stay vivid on a greyed panel, so the
+                       disabled chip is the same hue blended halfway into the panel
+                       background: still identifiable, visibly dead. */
+                    const QColor dimSwatch = G::dimmed(swatch);
                     chip->setStyleSheet(
                         QString("QToolButton{background:%1;border:1px solid #00000060;"
                                 "border-radius:3px;}"
-                                "QToolButton:hover{border:1px solid #ffffffc0;}")
-                            .arg(swatch.name()));
+                                "QToolButton:hover{border:1px solid #ffffffc0;}"
+                                "QToolButton:disabled{background:%2;"
+                                "border:1px solid #00000060;}")
+                            .arg(swatch.name(), dimSwatch.name()));
                     connect(chip, &QToolButton::clicked, this,
                             [this, b]{ applyColorRangeHuePreset(b); });
                     hb->addWidget(chip);
@@ -3104,12 +3112,16 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
 
     QPainter p(viewport());
     const int ruleY = bottom + kBlockCloseGap;
+    /* Greyed panel: the rail and its closing foot dim with everything else, in step with
+       the scope row band above them (which carries the same colour via :disabled). */
+    const QColor railColor = isEnabled() ? G::selectionColor
+                                         : G::dimmed(G::selectionColor);
     if (G::scopeRailW > 0) {
         /* Fit mode: down to the FOOT of the bracket (the closing rule) and no further --
            the clear gap under the rule separates this scope's block from the next scope
            row. Legacy: to the last row, since the space below is plain dock. */
         const int railBottom = fitToContents ? ruleY + G::panelBorderHeight : bottom;
-        p.fillRect(G::scopeRailX, 0, G::scopeRailW, railBottom, G::selectionColor);
+        p.fillRect(G::scopeRailX, 0, G::scopeRailW, railBottom, railColor);
     }
 
     /* Close the block: the same separator every Develop panel carries along its bottom
@@ -3126,7 +3138,7 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
         const int ruleX = fitToContents && G::scopeRailW > 0
                               ? G::scopeRailX + G::scopeRailW : 0;
         p.fillRect(ruleX, ruleY, viewport()->width() - ruleX, G::panelBorderHeight,
-                   fitToContents ? G::selectionColor : G::tabWidgetBorderColor);
+                   fitToContents ? railColor : G::tabWidgetBorderColor);
     }
 }
 
@@ -5789,6 +5801,25 @@ int DevelopProperties::selectedEditCount() const
 {
     if (currentImagePath.isEmpty()) return 0;
     return otherSelectedPaths().count() + 1;     // the current image is always included
+}
+
+int DevelopProperties::selectedStillCount() const
+{
+/*
+    Developable stills in the selection, independent of the current item. Unlike
+    selectedEditCount this does not go through currentImagePath, so it still reports the
+    stills when the CURRENT item is a video (MW empties the current path for a video, and
+    the count would otherwise collapse to 0 while the user has a dozen JPGs selected).
+*/
+    if (!mw || !mw->dm || !mw->dm->selectionModel) return 0;
+    int n = 0;
+    const QModelIndexList rows = mw->dm->selectionModel->selectedRows();
+    for (const QModelIndex &idx : rows) {
+        if (idx.siblingAtColumn(G::VideoColumn).data().toBool()) continue;
+        if (idx.data(G::PathRole).toString().isEmpty()) continue;
+        n++;
+    }
+    return n;
 }
 
 void DevelopProperties::syncPropagateBase()

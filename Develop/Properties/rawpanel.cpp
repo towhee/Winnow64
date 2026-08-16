@@ -33,8 +33,7 @@ RawPanel::RawPanel(QWidget *parent, QSettings *settings) : QWidget(parent), sett
 
 void RawPanel::buildUi()
 {
-    const QString capCss = QString("color: %1; font-size: %2pt; background: transparent;")
-                               .arg(G::textColor.name()).arg(G::strFontSize.toInt());
+    const QString capCss = G::labelCss(G::textColor, G::strFontSize.toInt());
 
     /* The bottom margin reserves the 2px separator rule paintEvent draws under every
        Develop panel (G::panelBorderHeight). */
@@ -60,8 +59,7 @@ void RawPanel::buildUi()
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
     titleLabel = new QLabel(tr("Raw"), headerBand);
-    titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
+    titleLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
     tipBtn = new BarBtn();
     tipBtn->setToolTip("About the raw decode controls");
     tipBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);

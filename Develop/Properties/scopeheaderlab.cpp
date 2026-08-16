@@ -52,8 +52,7 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleListCollapsed(); });
     titleLabel = new QLabel(tr("Edits"), headerBand);
-    titleLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
+    titleLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
     panelMenuBtn = new BarBtn();
     panelMenuBtn->setToolTip("Scope actions (new mask)");
     panelMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
@@ -110,9 +109,11 @@ void ScopeHeaderLab::paintEvent(QPaintEvent *)
        scope row and its nested details are ONE BLOCK, joined by the rail. */
     if (G::scopeRailW > 0) {
         const QRect block = activeBlockRect();
+        /* Dimmed while the panel is greyed, in step with the active row's band (which
+           carries the same :disabled colour) so the two still read as one line. */
         if (!block.isEmpty())
             p.fillRect(G::scopeRailX, block.top(), G::scopeRailW, block.height(),
-                       G::selectionColor);
+                       isEnabled() ? G::selectionColor : G::dimmed(G::selectionColor));
     }
 }
 
@@ -228,10 +229,19 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
        genuinely transparent, so the containment rail painted behind them shows through
        (see rowsContainer). The active row's band is the rail's own colour, so the rail
        simply merges into it. */
-    if (active)
-        row->setStyleSheet(QString("background: %1;").arg(G::selectionColor.name()));
-    else
+    if (active) {
+        /* Object-name selector so the rule cannot leak onto the row's children, and a
+           MUTED band when the panel is greyed -- the selection stays legible without
+           looking live. */
+        row->setObjectName("scopeRow");
+        row->setStyleSheet(QString("QWidget#scopeRow { background: %1; }"
+                                   "QWidget#scopeRow:disabled { background: %2; }")
+                               .arg(G::selectionColor.name(),
+                                    G::dimmed(G::selectionColor).name()));
+    }
+    else {
         row->setAttribute(Qt::WA_TranslucentBackground);
+    }
 
     QHBoxLayout *hb = new QHBoxLayout(row);
     hb->setContentsMargins(10, 2, 6, 2);
@@ -248,9 +258,8 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     hb->addWidget(cb);
 
     QLabel *name = new QLabel(r.name, row);
-    name->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                            .arg((active ? QColor(Qt::white) : G::textColor).name())
-                            .arg(G::strFontSize.toInt()));
+    name->setStyleSheet(G::labelCss(active ? QColor(Qt::white) : G::textColor,
+                                    G::strFontSize.toInt()));
     hb->addWidget(name);
     hb->addStretch(1);
 

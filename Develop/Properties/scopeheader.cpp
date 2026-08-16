@@ -47,8 +47,7 @@ ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
        (G::strFontSize) and colour (G::header2Color), regular weight (headers are not
        bold -- the delegate only sets the point size). Both via the stylesheet so they
        don't fight a setFont() call. */
-    scopeLabel->setStyleSheet(QString("color: %1; font-size: %2pt; background: transparent;")
-                                  .arg(G::header2Color.name()).arg(G::strFontSize.toInt()));
+    scopeLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
 
     combo = new QComboBox(this);
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);

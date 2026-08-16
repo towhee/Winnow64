@@ -4805,10 +4805,95 @@ Scope & mask model (Global + masks)
                three render entries -- applyDevelopPreviewIfEdited, renderDevelopPreview,
                renderDevelopFullResAsync -- early-return, so armed proxy/settle timers or Transform
                refreshes never try to develop a video.
-             - PERF NOTE: setCurrentImage reads the sidecar synchronously on first touch of each
-               image (cheap: no sidecar => fast empty read). Folding the develop blob into the
-               existing metadata sidecar read (a datamodel column) is a fast-follow if navigation
-               over many edited images shows latency.
+               MODE IS NOT CHANGED. Selecting a video in Develop leaves G::operationMode
+               alone -- Preview/Develop is the user's deliberate choice, and auto-flipping
+               it would churn G::useRaw and rebuild the image cache on every video/still
+               crossing in a mixed folder. The video plays on the VideoTab as in Preview.
+               WHAT THE USER SEES: syncDevelopPanelEnabled() greys the panel for a video,
+               so the sliders are visibly dead instead of live-looking and inert.
+               setDevelopPanelEnabled takes TWO flags for this: VISIBLE (developAction
+               checked AND Develop mode) and USABLE (the selection can be developed). The
+               dock itself is NOT disabled in the unusable case -- a disabled parent greys
+               every child, and a child cannot override a disabled ancestor -- so each
+               piece is greyed individually, leaving the alert rows readable. That means
+               developProperties (setPanelEnabled also reaches its sibling ScopeHeader and
+               RawPanel), the developActionRow, and the pinned Transform and Fill Replace
+               strips, which are siblings of the property panel and so are NOT covered by
+               setPanelEnabled -- miss them and a video selection leaves a live crop/heal
+               strip over a dead panel. History and Presets grey with it.
+               EVERY ITEM MUST HAVE A DISABLED STATE. setEnabled() only greys what the
+               style paints, and a Develop panel overrides the style in three ways that
+               each defeat it -- all three now carry a disabled form:
+                 - PER-WIDGET STYLESHEETS. A widget stylesheet beats the app one,
+                   including its "QLabel:disabled" rule, so a hand-rolled "color: x" stays
+                   at full strength on a greyed panel. G::labelCss(colour, ptSize) emits
+                   the normal AND the :disabled rule -- use it for every explicitly
+                   coloured label (scope header, scope + submask rows, Raw captions,
+                   Transform / Fill Replace titles and hints). Same for non-label rules:
+                   the Transform mode buttons and the Color Range hue chips spell out
+                   :disabled (and :checked:disabled) themselves.
+                 - INLINE HTML. An accented shortcut letter ("<b>C</b>rop", "<b>S</b>pot")
+                   colours the letter inside the text, where no pseudo-state reaches.
+                   G::setAccentCaption stores the two halves on the label and
+                   G::restyleAccentLabels re-renders them; the panel calls it from
+                   changeEvent on QEvent::EnabledChange.
+                 - CUSTOM PAINTING. paintEvent and item delegates draw with literal
+                   colours. The scope rail (ScopeHeaderLab and DevelopProperties each
+                   paint a segment) tests isEnabled(). PropertyDelegate paints the tree
+                   from PENS, not from the widget state: the leaf branch already honoured
+                   UR_isEnabled, and the HEADER branch now does too (the section captions
+                   Basic / Color / Calibrate / Color Grade / Effects stayed teal over dead
+                   rows). It is tested only when the role IS SET, so trees that never set
+                   it (Preferences, Embellish) keep their normal colour.
+                 - SHARED WIDGET QSS THAT FORGOT :disabled, or greyed to the WRONG grey.
+                   BarBtn::setActive paints the armed tool's accent border white and now
+                   adds a G::dimmed(white) ":disabled" border, so the armed tool is still
+                   legible on a greyed action row without looking live. SliderEditor's
+                   value field greyed to a literal "gray", brighter than every caption
+                   beside it; it uses G::disabledColor like everything else.
+                 - APP-WIDE QSS RULES THAT FORGOT :disabled. WidgetCSS::radioButton set
+                   ":checked" (cadetblue) and ":unchecked" without an ":enabled"
+                   qualifier, so a disabled radio kept full-strength text -- the Raw
+                   panel's "Raw / Embedded Preview" pair. The ":disabled" rule is added
+                   LAST: same specificity, later rule wins.
+               Colour that carries MEANING (selection band, rail, hue chip) dims via
+               G::dimmed() -- blended halfway into the panel background, so it stays
+               identifiable but visibly dead. TEXT uses G::disabledColor.
+               setDevelopPanelEnabled raises developDock only on a hidden -> visible
+               TRANSITION; it now runs on every selection change, and an unconditional
+               raise() would yank Develop to the front tab whenever the user navigated
+               with History or Presets selected.
+               ALERT ROWS: developAlertRows sits directly BELOW the Develop action row --
+               bright red text on the panel background (no filled banner), one row per
+               live condition, filled by MW::setDevelopAlerts. Conditions STACK: "First
+               image selected is a video." and the multi-image warning each get their own
+               row when both hold. The status bar carries the longer "Video selected -
+               Develop applies to still images only" (it has to explain itself: the dock
+               may be tabbed away behind History or Presets where the rows cannot be
+               seen).
+               MIXED SELECTION (video CURRENT + stills selected) IS ITS OWN CASE. MW
+               empties developProperties' current path for a video, so selectedEditCount
+               is 0 and the multi-image row would say nothing while a dozen JPGs are
+               selected. DevelopProperties::selectedStillCount counts the developable
+               stills WITHOUT going through the current path, and the alert block adds a
+               second row -- "N still images are also selected - make one of them current
+               to develop the selection". Nothing can be edited from a video current item
+               (Develop edits the current image and fans the change out from it), so the
+               row says how to reach the stills rather than promising a fan-out.
+               When the current item is a STILL, videos elsewhere in the selection need
+               no special case: selectedEditCount goes through otherSelectedPaths, which
+               already skips them, so the count is of stills only.
+               D STILL WORKS on a video (operationModeAction is never disabled) --
+               disabling it would strand the user in Preview-only navigation, and entering
+               Develop on a video is harmless. setOperationMode does skip the forced
+               re-decode / read-ahead re-target for a video current item (no loupe to
+               refresh, ImageCache does not decode videos); the useRaw flip itself is NOT
+               skipped, as it is a mode-level setting that must track the mode so the next
+               still decodes correctly.
+             - PERF NOTE: setCurrentImage reads the sidecar synchronously on first touch
+               of each image (cheap: no sidecar => fast empty read). Folding the develop
+               blob into the existing metadata sidecar read (a datamodel column) is a
+               fast-follow if navigation over many edited images shows latency.
            Increment 2 (presets): snapshot an EditStack (or subset) to a QSettings presets
            collection; apply to a selection (write each image's sidecar). Then masks/compositor.
         5. Brush masks (stroke list + rasterise) -> spatial ops with cache tier 3
@@ -6065,7 +6150,7 @@ Multi-image editing (edits apply to the whole selection)
 
     With more than one image selected, EVERY develop edit made on the current image is
     copied to every other selected image -- Lightroom's Auto Sync, always on. Paste
-    Settings and Apply Preset do the same. The Develop dock carries a red banner ("12
+    Settings and Apply Preset do the same. The Develop dock carries a red alert row ("12
     images selected -- every edit applies to all 12") whenever the selection is larger
     than one, because the images being changed are off-screen and the change is
     otherwise invisible until the user navigates to them.
@@ -6121,7 +6206,7 @@ Multi-image editing (edits apply to the whole selection)
     would leave a sidecar the pipeline never reads.
 
     STILL MISSING: thumbnails do not render develop, so a bulk edit changes nothing the
-    user can SEE in the grid. The banner is what covers that gap today; a per-row
+    user can SEE in the grid. The alert row is what covers that gap today; a per-row
     "edited" indicator in the datamodel is the real fix.
 
 
