@@ -132,7 +132,7 @@ public:
        the selection that was live when editing started, so it must land first) and
        before any operation that reads the sidecars.
 
-       selectedEditCount is what the Develop dock's red alert row reports: how many images
+       selectedEditCount is what the Develop dock's amber warning row reports: how many
        the next edit will touch (1 = just the current image). It is 0 when there is no
        current image to edit from -- notably a VIDEO current item, where MW sets the
        current path empty.
