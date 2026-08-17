@@ -2796,8 +2796,8 @@ void MW::updateDevelopSelectionWarning()
 /*
     Refresh the Develop dock's alert rows from the current selection. Every develop edit
     and every Paste Settings applies to the whole selection, so the multi-image row is
-    the standing warning that the panel is not editing one image. Conditions STACK: a
-    video that Develop cannot touch and a multi-image selection each get their own row.
+    the standing WARNING that the panel is not editing one image. A video is a SHOW
+    STOPPER: Develop cannot run on it at all. Conditions STACK, each in its own row.
 
     It also lands any propagation the sliders have queued: that batch belongs to the
     selection that was live when the edit was made, and it must be written before the
@@ -2807,12 +2807,12 @@ void MW::updateDevelopSelectionWarning()
     if (developProperties) developProperties->flushPropagation();
     if (!developAlertRows) return;
 
-    QStringList alerts;
+    QList<QPair<DevelopAlert, QString>> alerts;
 
-    /* The panel is greyed for a video (syncDevelopPanelEnabled) and nothing can be
-       edited: the user has done nothing risky, Develop simply does not apply. */
+    /* SHOW STOPPER: the panel is greyed for a video (syncDevelopPanelEnabled) and
+       nothing can be edited -- Develop does not apply at all. */
     if (currentIsVideo()) {
-        alerts << "First image selected is a video.";
+        alerts << qMakePair(AlertShowStopper, QString("First image selected is a video."));
         /* MIXED selection with the video CURRENT: the stills cannot be edited either,
            because Develop edits the current image and fans the change out from it -- and
            the current image is the video. selectedEditCount is 0 here (MW empties the
@@ -2820,38 +2820,51 @@ void MW::updateDevelopSelectionWarning()
            the user is told nothing about the stills they have selected. */
         const int stills = developProperties ? developProperties->selectedStillCount() : 0;
         if (stills > 0)
-            alerts << QString::number(stills) +
-                      (stills == 1 ? " still image is" : " still images are") +
-                      " also selected - make one of them current to develop the selection";
+            alerts << qMakePair(AlertWarning,
+                                QString::number(stills) +
+                                (stills == 1 ? " still image is" : " still images are") +
+                                " also selected - make one of them current to develop"
+                                " the selection");
     }
     else {
-        /* Videos in a multi-image selection are not counted: selectedEditCount goes
-           through otherSelectedPaths, which skips them (a video has no develop
-           recipe). */
+        /* WARNING: Develop works, it just works on more than the visible image. Videos in
+           a multi-image selection are not counted: selectedEditCount goes through
+           otherSelectedPaths, which skips them (a video has no develop recipe). */
         const int n = developProperties ? developProperties->selectedEditCount() : 0;
         if (n > 1)
-            alerts << "Multiple images will have edits applied.";
+            alerts << qMakePair(AlertWarning,
+                                QString("Multiple images will have edits applied."));
     }
 
     setDevelopAlerts(alerts);
 }
 
-void MW::setDevelopAlerts(const QStringList &messages)
+void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
 {
 /*
-    Fill the alert rows below the Develop action row: one row per message, bright red
-    text on the panel background (no fill -- the panel stays one surface). An empty list
-    hides the whole block. Rows are pooled: labels are reused and the surplus hidden, so
-    a selection change does not churn widgets.
+    Fill the alert rows below the Develop action row: one row per alert, coloured text on
+    the panel background (no fill -- the panel stays one surface). RED = show stopper
+    (Develop cannot run on this selection), AMBER = warning (it runs, but on more than the
+    visible image). Show stoppers are sorted to the top, so severity reads from position
+    as well as colour. An empty list hides the whole block.
+
+    Rows are pooled: labels are reused and the surplus hidden, so a selection change does
+    not churn widgets. The colour therefore has to be re-applied to every reused row -- a
+    row that carried a show stopper last time may carry a warning now.
 */
     if (!developAlertRows || !developAlertRowsLayout) return;
-    if (messages.isEmpty()) {
+    if (alerts.isEmpty()) {
         developAlertRows->setVisible(false);
         return;
     }
 
-    const QString style = "QLabel { color: #FF4040; font-weight: bold; background: transparent; }";
-    for (int i = 0; i < messages.count(); ++i) {
+    /* Most severe first (stable, so same-severity rows keep the caller's order). */
+    QList<QPair<DevelopAlert, QString>> ordered = alerts;
+    std::stable_sort(ordered.begin(), ordered.end(),
+                     [](const QPair<DevelopAlert, QString> &a,
+                        const QPair<DevelopAlert, QString> &b){ return a.first > b.first; });
+
+    for (int i = 0; i < ordered.count(); ++i) {
         QLabel *row = nullptr;
         if (i < developAlertLabels.count()) {
             row = developAlertLabels.at(i);
@@ -2860,14 +2873,18 @@ void MW::setDevelopAlerts(const QStringList &messages)
             row = new QLabel(developAlertRows);
             row->setAlignment(Qt::AlignCenter);
             row->setWordWrap(true);
-            row->setStyleSheet(style);
             developAlertRowsLayout->addWidget(row);
             developAlertLabels << row;
         }
-        row->setText(messages.at(i));
+        // red = show stopper, amber = warning
+        const QString colour = ordered.at(i).first == AlertShowStopper
+                                   ? "#FF4040" : "#FFB340";
+        row->setStyleSheet("QLabel { color: " + colour +
+                           "; font-weight: bold; background: transparent; }");
+        row->setText(ordered.at(i).second);
         row->setVisible(true);
     }
-    for (int i = messages.count(); i < developAlertLabels.count(); ++i)
+    for (int i = ordered.count(); i < developAlertLabels.count(); ++i)
         developAlertLabels.at(i)->setVisible(false);
 
     developAlertRows->setVisible(true);

@@ -1447,21 +1447,26 @@ private:
     /* The Presets dock's list of saved develop presets (hover previews it applied, a
        click applies it). DevelopProperties owns the store it views. */
     PresetsView *presetsView = nullptr;
-    /* Alert rows, directly below the Develop action row: bright red text on the panel
+    /* Alert rows, directly below the Develop action row: coloured text on the panel
        background, one row per live condition, refreshed from the selection by
-       updateDevelopSelectionWarning. Shown when more than one image is selected, because
-       every develop edit and every Paste Settings then lands on ALL of them
-       (DevelopProperties::flushPropagation) -- editing images you cannot see is
-       destructive and invisible, so the warning is loud -- and when the selection is a
-       video, which Develop does not apply to at all (the panel is greyed alongside).
-       Conditions stack: each gets its own row. The container hides when there is
-       nothing to say. */
+       updateDevelopSelectionWarning. Conditions stack, each in its own row; the container
+       hides when there is nothing to say.
+       TWO SEVERITIES, and they are different things:
+         ShowStopper  Develop cannot run at all on this selection (a video). RED. The
+                      panel is greyed alongside, so the row explains dead controls.
+         Warning      Develop works, but not the way an unwary user assumes: with more
+                      than one image selected every edit and every Paste Settings lands
+                      on ALL of them (DevelopProperties::flushPropagation), off-screen
+                      and invisible. AMBER -- proceed, but know what you are doing.
+       Show stoppers sort above warnings, so severity reads from position as well as
+       colour (which colour-blind users may not get). */
+    enum DevelopAlert { AlertWarning, AlertShowStopper };
     QWidget *developAlertRows = nullptr;
     QVBoxLayout *developAlertRowsLayout = nullptr;
     QList<QLabel *> developAlertLabels;      // pooled rows, surplus hidden not deleted
     void updateDevelopSelectionWarning();
-    /* Fill the alert rows, one message per row. An empty list hides the block. */
-    void setDevelopAlerts(const QStringList &messages);
+    /* Fill the alert rows, one message per row, most severe first. Empty = hide. */
+    void setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts);
     /* Develop Transform (crop + perspective) panel: a control strip below the scopes
        and above the property tree. Toggled by a button on the Develop action row and
        the "R" shortcut; visibility persists (Develop/transformVisible). */

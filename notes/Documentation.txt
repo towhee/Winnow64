@@ -112,6 +112,7 @@ Table of Contents
          - Scope & mask model (Global + masks)
          - Fill Replace (spot / fill / object heal)  [SHIPPED: SPOTS ONLY]
          - Develop dock (UI)
+         - Develop alerts and the greyed panel (severity rows, disabled states)
          - Develop scopes (histogram + vectorscope)
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
          - Overlays over a transformed image (mask space vs displayed space)
@@ -4809,80 +4810,10 @@ Scope & mask model (Global + masks)
                alone -- Preview/Develop is the user's deliberate choice, and auto-flipping
                it would churn G::useRaw and rebuild the image cache on every video/still
                crossing in a mixed folder. The video plays on the VideoTab as in Preview.
-               WHAT THE USER SEES: syncDevelopPanelEnabled() greys the panel for a video,
-               so the sliders are visibly dead instead of live-looking and inert.
-               setDevelopPanelEnabled takes TWO flags for this: VISIBLE (developAction
-               checked AND Develop mode) and USABLE (the selection can be developed). The
-               dock itself is NOT disabled in the unusable case -- a disabled parent greys
-               every child, and a child cannot override a disabled ancestor -- so each
-               piece is greyed individually, leaving the alert rows readable. That means
-               developProperties (setPanelEnabled also reaches its sibling ScopeHeader and
-               RawPanel), the developActionRow, and the pinned Transform and Fill Replace
-               strips, which are siblings of the property panel and so are NOT covered by
-               setPanelEnabled -- miss them and a video selection leaves a live crop/heal
-               strip over a dead panel. History and Presets grey with it.
-               EVERY ITEM MUST HAVE A DISABLED STATE. setEnabled() only greys what the
-               style paints, and a Develop panel overrides the style in three ways that
-               each defeat it -- all three now carry a disabled form:
-                 - PER-WIDGET STYLESHEETS. A widget stylesheet beats the app one,
-                   including its "QLabel:disabled" rule, so a hand-rolled "color: x" stays
-                   at full strength on a greyed panel. G::labelCss(colour, ptSize) emits
-                   the normal AND the :disabled rule -- use it for every explicitly
-                   coloured label (scope header, scope + submask rows, Raw captions,
-                   Transform / Fill Replace titles and hints). Same for non-label rules:
-                   the Transform mode buttons and the Color Range hue chips spell out
-                   :disabled (and :checked:disabled) themselves.
-                 - INLINE HTML. An accented shortcut letter ("<b>C</b>rop", "<b>S</b>pot")
-                   colours the letter inside the text, where no pseudo-state reaches.
-                   G::setAccentCaption stores the two halves on the label and
-                   G::restyleAccentLabels re-renders them; the panel calls it from
-                   changeEvent on QEvent::EnabledChange.
-                 - CUSTOM PAINTING. paintEvent and item delegates draw with literal
-                   colours. The scope rail (ScopeHeaderLab and DevelopProperties each
-                   paint a segment) tests isEnabled(). PropertyDelegate paints the tree
-                   from PENS, not from the widget state: the leaf branch already honoured
-                   UR_isEnabled, and the HEADER branch now does too (the section captions
-                   Basic / Color / Calibrate / Color Grade / Effects stayed teal over dead
-                   rows). It is tested only when the role IS SET, so trees that never set
-                   it (Preferences, Embellish) keep their normal colour.
-                 - SHARED WIDGET QSS THAT FORGOT :disabled, or greyed to the WRONG grey.
-                   BarBtn::setActive paints the armed tool's accent border white and now
-                   adds a G::dimmed(white) ":disabled" border, so the armed tool is still
-                   legible on a greyed action row without looking live. SliderEditor's
-                   value field greyed to a literal "gray", brighter than every caption
-                   beside it; it uses G::disabledColor like everything else.
-                 - APP-WIDE QSS RULES THAT FORGOT :disabled. WidgetCSS::radioButton set
-                   ":checked" (cadetblue) and ":unchecked" without an ":enabled"
-                   qualifier, so a disabled radio kept full-strength text -- the Raw
-                   panel's "Raw / Embedded Preview" pair. The ":disabled" rule is added
-                   LAST: same specificity, later rule wins.
-               Colour that carries MEANING (selection band, rail, hue chip) dims via
-               G::dimmed() -- blended halfway into the panel background, so it stays
-               identifiable but visibly dead. TEXT uses G::disabledColor.
-               setDevelopPanelEnabled raises developDock only on a hidden -> visible
-               TRANSITION; it now runs on every selection change, and an unconditional
-               raise() would yank Develop to the front tab whenever the user navigated
-               with History or Presets selected.
-               ALERT ROWS: developAlertRows sits directly BELOW the Develop action row --
-               bright red text on the panel background (no filled banner), one row per
-               live condition, filled by MW::setDevelopAlerts. Conditions STACK: "First
-               image selected is a video." and the multi-image warning each get their own
-               row when both hold. The status bar carries the longer "Video selected -
-               Develop applies to still images only" (it has to explain itself: the dock
-               may be tabbed away behind History or Presets where the rows cannot be
-               seen).
-               MIXED SELECTION (video CURRENT + stills selected) IS ITS OWN CASE. MW
-               empties developProperties' current path for a video, so selectedEditCount
-               is 0 and the multi-image row would say nothing while a dozen JPGs are
-               selected. DevelopProperties::selectedStillCount counts the developable
-               stills WITHOUT going through the current path, and the alert block adds a
-               second row -- "N still images are also selected - make one of them current
-               to develop the selection". Nothing can be edited from a video current item
-               (Develop edits the current image and fans the change out from it), so the
-               row says how to reach the stills rather than promising a fan-out.
-               When the current item is a STILL, videos elsewhere in the selection need
-               no special case: selectedEditCount goes through otherSelectedPaths, which
-               already skips them, so the count is of stills only.
+               WHAT THE USER SEES: the panel greys (syncDevelopPanelEnabled) and a RED
+               show-stopper alert row says why -- see "Develop alerts and the greyed
+               panel" below for the alert severities, the mixed video+stills case and
+               the disabled-state rules every Develop widget must follow.
                D STILL WORKS on a video (operationModeAction is never disabled) --
                disabling it would strand the user in Preview-only navigation, and entering
                Develop on a video is harmless. setOperationMode does skip the forced
@@ -5192,6 +5123,104 @@ Develop dock (UI)
         COMMITS, exactly as it does when the user closes the panel with R / the button.
         Esc (cancelDevelopTransform) remains the only way to discard a crop session.
 
+------------------------------------------------------------------------------------------
+Develop alerts and the greyed panel (severity rows, disabled states)
+------------------------------------------------------------------------------------------
+
+    Two halves of the same job: tell the user when Develop is not doing what the panel
+    appears to promise (ALERT ROWS), and make the controls LOOK as dead as they are
+    (the greyed panel). Both are driven from the selection, so both refresh on every
+    selection change.
+
+    ALERT ROWS. developAlertRows sits directly BELOW the Develop action row -- coloured
+    text on the panel background (no filled banner), one row per live condition, filled
+    by MW::setDevelopAlerts from MW::updateDevelopSelectionWarning. Conditions STACK:
+    each gets its own row when several hold at once.
+
+    TWO SEVERITIES (MW::DevelopAlert), and they say different things:
+
+      AlertShowStopper   Develop cannot run on this selection at all -- a video. RED
+                         #FF4040. The panel is greyed alongside, so the row is what
+                         explains the dead controls. Text: "First image selected is a
+                         video."
+      AlertWarning       Develop runs, but not on what the user thinks: with a
+                         multi-image selection every edit and every Paste Settings
+                         lands on ALL of them (DevelopProperties::flushPropagation),
+                         off-screen and invisible. AMBER #FFB340 -- proceed, knowingly.
+
+    setDevelopAlerts stable-sorts show stoppers to the TOP, so severity reads from
+    position as well as colour (colour alone fails a colour-blind user). It also
+    re-applies the colour to every REUSED row: the label pool means a row that held a
+    show stopper last time may hold a warning now.
+
+    The same text also goes to the STATUS BAR (the longer "Video selected - Develop
+    applies to still images only", which has to explain itself), because the dock may be
+    tabbed away behind History or Presets where the rows cannot be seen.
+
+    MIXED SELECTION (video CURRENT + stills selected) IS ITS OWN CASE. MW empties
+    developProperties' current path for a video, so selectedEditCount is 0 and the
+    multi-image row would say nothing while a dozen JPGs are selected.
+    DevelopProperties::selectedStillCount counts the developable stills WITHOUT going
+    through the current path, and the alert block adds a second row -- "N still images
+    are also selected - make one of them current to develop the selection". Nothing can
+    be edited from a video current item (Develop edits the current image and fans the
+    change out from it), so the row says how to reach the stills rather than promising a
+    fan-out. When the current item is a STILL, videos elsewhere in the selection need no
+    special case: selectedEditCount goes through otherSelectedPaths, which already skips
+    them, so the count is of stills only.
+
+    GREYING THE PANEL. syncDevelopPanelEnabled() greys the panel for a video, so the
+    sliders are visibly dead instead of live-looking and inert. setDevelopPanelEnabled
+    takes TWO flags: VISIBLE (developAction checked AND Develop mode) and USABLE (the
+    selection can be developed). The dock itself is NOT disabled in the unusable case --
+    a disabled parent greys every child, and a child cannot override a disabled ancestor
+    -- so each piece is greyed individually, leaving the alert rows readable:
+    developProperties (setPanelEnabled also reaches its sibling ScopeHeader and
+    RawPanel), the developActionRow, and the pinned Transform and Fill Replace strips,
+    which are siblings of the property panel and so are NOT covered by setPanelEnabled --
+    miss them and a video selection leaves a live crop/heal strip over a dead panel.
+    History and Presets grey with it. setDevelopPanelEnabled raises developDock only on a
+    hidden -> visible TRANSITION; it runs on every selection change, and an unconditional
+    raise() would yank Develop to the front tab whenever the user navigated with History
+    or Presets selected.
+
+    EVERY ITEM MUST HAVE A DISABLED STATE. setEnabled() only greys what the style paints,
+    and a Develop panel overrides the style in four ways that each defeat it -- all four
+    now carry a disabled form:
+
+      - PER-WIDGET STYLESHEETS. A widget stylesheet beats the app one, including its
+        "QLabel:disabled" rule, so a hand-rolled "color: x" stays at full strength on a
+        greyed panel. G::labelCss(colour, ptSize) emits the normal AND the :disabled rule
+        -- use it for every explicitly coloured label (scope header, scope + submask
+        rows, Raw captions, Transform / Fill Replace titles and hints). Same for
+        non-label rules: the Transform mode buttons and the Color Range hue chips spell
+        out :disabled (and :checked:disabled) themselves.
+      - INLINE HTML. An accented shortcut letter ("<b>C</b>rop", "<b>S</b>pot") colours
+        the letter inside the text, where no pseudo-state reaches. G::setAccentCaption
+        stores the two halves on the label and G::restyleAccentLabels re-renders them;
+        the panel calls it from changeEvent on QEvent::EnabledChange.
+      - CUSTOM PAINTING. paintEvent and item delegates draw with literal colours. The
+        scope rail (ScopeHeaderLab and DevelopProperties each paint a segment) tests
+        isEnabled(). PropertyDelegate paints the tree from PENS, not from the widget
+        state: the leaf branch already honoured UR_isEnabled, and the HEADER branch now
+        does too (the section captions Basic / Color / Calibrate / Color Grade / Effects
+        stayed teal over dead rows). It is tested only when the role IS SET, so trees
+        that never set it (Preferences, Embellish) keep their normal colour.
+      - SHARED / APP-WIDE QSS THAT FORGOT :disabled, or greyed to the WRONG grey.
+        BarBtn::setActive paints the armed tool's accent border white and adds a
+        G::dimmed(white) ":disabled" border, so the armed tool stays legible on a greyed
+        action row without looking live. SliderEditor's value field greyed to a literal
+        "gray", brighter than every caption beside it; it uses G::disabledColor like
+        everything else. WidgetCSS::radioButton set ":checked" (cadetblue) and
+        ":unchecked" with no ":enabled" qualifier, so a disabled radio kept full-strength
+        text -- the Raw panel's "Raw / Embedded Preview" pair; its ":disabled" rule is
+        added LAST (same specificity, later rule wins).
+
+    Colour that carries MEANING (selection band, rail, hue chip) dims via G::dimmed() --
+    blended halfway into the panel background, so it stays identifiable but visibly dead.
+    TEXT uses G::disabledColor.
+
+------------------------------------------------------------------------------------------
 Develop scopes (histogram + vectorscope)
 ------------------------------------------------------------------------------------------
 
@@ -6150,10 +6179,12 @@ Multi-image editing (edits apply to the whole selection)
 
     With more than one image selected, EVERY develop edit made on the current image is
     copied to every other selected image -- Lightroom's Auto Sync, always on. Paste
-    Settings and Apply Preset do the same. The Develop dock carries a red alert row ("12
-    images selected -- every edit applies to all 12") whenever the selection is larger
-    than one, because the images being changed are off-screen and the change is
-    otherwise invisible until the user navigates to them.
+    Settings and Apply Preset do the same. The Develop dock carries an AMBER warning row
+    ("Multiple images will have edits applied.") whenever the selection is larger than
+    one, because the images being changed are off-screen and the change is otherwise
+    invisible until the user navigates to them. Amber, not red: the edit does work, it
+    just works on more than the visible image -- red is reserved for a show stopper (see
+    "Develop alerts and the greyed panel").
 
     THE RULES (DevelopProperties, "Multi-image editing" block in the header):
 
