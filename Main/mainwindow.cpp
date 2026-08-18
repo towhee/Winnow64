@@ -5661,10 +5661,12 @@ QImage developComposite(const WorkingImage &src, const EditParams &edit, int deg
                             WorkingImageCache::OutDepth::Eight,
                         WorkingImageCache::Space space =
                             WorkingImageCache::Space::sRGB,
-                        bool upscaleToFull = true)
+                        bool upscaleToFull = true,
+                        WorkingImage *scratch = nullptr)
 {
     QImage out;
-    if (!WorkingImageCache::render(src, edit, out, timings, depth, space)) return QImage();
+    if (!WorkingImageCache::render(src, edit, out, timings, depth, space, scratch))
+        return QImage();
     QElapsedTimer probe;
     if (timings) probe.start();
     if (degrees != 0) {
@@ -6413,8 +6415,16 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
 
     QImage out;
     if (job.scopes.isEmpty()) {             // just Global -> the fast single-pass path
+        /* An unmasked image still lands here on EVERY interactive tick, and render()'s
+           working copy is proxy-sized: allocating and releasing it measured 62 ms per
+           tick on a 6.7 MP proxy, against 1 ms to fill it. Lend it the same scratch the
+           stack path uses -- the two branches are mutually exclusive, and assignReusing
+           resizes if the geometry differs. Held locally so the buffer outlives the call
+           even if the GUI thread clears the cache mid-render. */
+        std::shared_ptr<WorkingImage> scratchHold;
+        if (cache) scratchHold = cache->accScratch();
         out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings,
-                               depth, space, upscale);
+                               depth, space, upscale, scratchHold.get());
     }
     else {
         QElapsedTimer probe;
@@ -6484,13 +6494,30 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                 if (hotParamsSame) resume.layer = hot.layer;
             }
             resume.capture = hotAt;      // re-arm for the next tick of this same drag
+            /* Reusable storage for the tick's three proxy-sized intermediates, so the
+               render refills buffers instead of allocating and releasing ~38 MB each
+               time -- which measured 87 ms of a 121 ms tick. outScratch() hands back
+               whichever of the layer pair `hot.layer` is not serving, so renderStack
+               never writes a buffer the cache is still handing out as const. */
+            resume.accScratch = cache->accScratch();
+            resume.layScratch = cache->layScratch();
+            resume.outScratch = cache->outScratch();
             resumeP = &resume;
         }
         if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings, depth,
                                            space, resumeP))
             return QImage();
-        if (cache && resumeP)
+        /* setHot REPLACES the previous tick's prefix/layer, so the shared_ptrs it drops
+           free two proxy-resolution WorkingImages here. That is not bookkeeping -- it is
+           a large free landing between two timed stages -- so it gets its own number
+           rather than hiding in the compositor's unattributed remainder. */
+        if (cache && resumeP) {
+            if (timings) probe.restart();
             cache->setHot(resume.capture, resume.outPrefix, resume.outLayer);
+            resume.prefix.reset();
+            resume.layer.reset();
+            if (timings) timings->setHotMs = probe.elapsed();
+        }
         if (timings) probe.restart();           // renderStack timed its own stages
         if (degrees != 0) {
             QTransform trans;
@@ -7341,11 +7368,13 @@ void MW::renderDevelopPreview(bool fullRes)
        change -- the last because a content-range mask samples a reference built from the
        developed base (ensureRangeRef), so it can move without its components moving. */
     DevelopStackCache *cache = nullptr;
+    bool cacheSurvived = false;             // [DevTime] probe only
     if (!fullRes) {
         const QByteArray baseKey =
             QJsonDocument(EditStack::paramsToJson(mj.global))
                 .toJson(QJsonDocument::Compact);
-        developStackCache.reset(fPath, srcImg->width, srcImg->height, degrees, baseKey);
+        cacheSurvived = developStackCache.reset(fPath, srcImg->width, srcImg->height,
+                                                degrees, baseKey);
         cache = &developStackCache;
     }
 
@@ -7377,14 +7406,32 @@ void MW::renderDevelopPreview(bool fullRes)
     const std::shared_ptr<const WorkingImage> proxySrc =
         fullRes ? base : std::static_pointer_cast<const WorkingImage>(developProxy);
     const quint64 reqGen = ++developProxyReqGen;
+    /* Bump only when the geometry actually MOVES, so a frame superseded by later requests
+       that share its geometry is still safe to show (see developProxyGeomGen). */
+    auto sameGeom = [](const Geometry &a, const Geometry &b) {
+        if (a.cropX != b.cropX || a.cropY != b.cropY ||
+            a.cropW != b.cropW || a.cropH != b.cropH ||
+            a.straighten != b.straighten || a.hasWarp != b.hasWarp ||
+            a.show != b.show) return false;
+        if (a.hasWarp)
+            for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
+        return true;
+    };
+    if (!developProxyHaveLastGeom || !sameGeom(mj.geometry, developProxyLastGeom)) {
+        developProxyLastGeom = mj.geometry;
+        developProxyHaveLastGeom = true;
+        ++developProxyGeomGen;
+    }
+    const quint64 geomGen = developProxyGeomGen;
     const bool wantTime = G::isReportDevelopTime;
     const qint64 tProxyCap = tProxy;
 
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
-                            reqGen, wantTime, tProxyCap]() {
+                            reqGen, geomGen, wantTime, tProxyCap, cacheSurvived]() {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
+        rt.cacheSurvived = cacheSurvived;
         MaskBuildStats ms;
         QSize displaySize;
         QImage out = developCompositeStack(*proxySrc, mj, degrees, fullRes, fw, fh, fPath,
@@ -7397,22 +7444,36 @@ void MW::renderDevelopPreview(bool fullRes)
         const Geometry appliedGeom = mj.geometry;
         const QSize orientedSize(fw, fh);
         QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
-                                         rt, ms, tProxyCap, tRender, wantTime, proxySrc,
-                                         appliedGeom, orientedSize] {
+                                         geomGen, rt, ms, tProxyCap, tRender, wantTime,
+                                         proxySrc, appliedGeom, orientedSize] {
             developProxyInFlight = false;
-            /* Apply only if nothing newer was asked for and we are still on this image.
-               A superseded frame is DISCARDED rather than shown: the crop tool toggles
-               between geometry-applied and geometry-suppressed renders, and flashing the
-               wrong one reads as a glitch. The re-arm below renders the current state. */
+            /* Show it if we are still on this image AND its geometry still applies.
+               Being SUPERSEDED is no longer a reason to drop it: a drag delivers events
+               far faster than a render completes, so all but the last frame is
+               superseded, and dropping them left the loupe frozen until the drag stopped.
+               They are only tens of ms old and arrive in order, so showing them is a
+               smooth stream rather than a stale one. What must NOT be shown late is a
+               frame whose geometry has since changed -- the crop tool alternates
+               geometry-applied and geometry-suppressed renders and flashing the wrong one
+               reads as a glitch -- and developProxyGeomGen is what catches exactly that.
+               The re-arm below still renders the newest state either way. */
             const bool current = (dm && fPath == dm->currentFilePath)
-                                 && !developProxyPending && reqGen == developProxyReqGen;
+                                 && geomGen == developProxyGeomGen;
+            /* Now that every frame is shown, the GUI-thread cost of showing one is on the
+               hot path -- QPixmap::fromImage at proxy resolution plus the scope sample --
+               so it gets probed like every other stage rather than assumed cheap. */
+            qint64 msPreview = 0, msScopes = 0;
             if (current && !out.isNull()) {
+                QElapsedTimer pv;
+                if (wantTime) pv.start();
                 /* Pair the geometry with the pixels it produced, BEFORE they are shown:
                    the overlays map mask coordinates (pre-geometry) onto this frame, so a
                    stale pairing would draw them in the wrong place for one tick. */
                 imageView->setDevelopGeometry(appliedGeom, orientedSize);
                 imageView->setDevelopPreview(out, displaySize);
+                if (wantTime) msPreview = pv.restart();
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
+                if (wantTime) msScopes = pv.elapsed();
             }
             if (developProxyPending) {
                 developProxyPending = false;
@@ -7433,11 +7494,34 @@ void MW::renderDevelopPreview(bool fullRes)
                                    << ms.strokes << "strokes"
                                    << " setup" << ms.setupMs
                                    << " fold" << ms.foldMs << ms.comps << "comps]"
+                                   << " srcCopy" << rt.copyMs
                                    << " develop" << rt.developMs
+                                   << "[copy" << rt.stackCopyMs
+                                   << " apply" << rt.stackApplyMs
+                                   << " blend" << rt.stackBlendMs
+                                   << " free" << rt.stackFreeMs
+                                   << " OTHER" << (rt.developMs - rt.stackCopyMs
+                                                   - rt.stackApplyMs - rt.stackBlendMs
+                                                   - rt.stackFreeMs) << "]"
+                                   << " outFree" << rt.outFreeMs
+                                   << " resume" << rt.resumeStart
+                                   << "/" << rt.stackScopes
+                                   << (rt.cacheSurvived ? " cacheKept" : " cacheWiped")
+                                   << (rt.hadPrefix ? " prefix" : " noPrefix")
+                                   << (rt.hadLayer ? "+layer" : "")
                                    << " toImage" << rt.toImageMs
                                    << " orient+scale" << rt.orientScaleMs
+                                   << " setHot" << rt.setHotMs
                                    << " worker" << tRender
+                                   << " COMPOSEOTHER" << (tRender - rt.maskBuildMs
+                                                          - rt.copyMs - rt.developMs
+                                                          - rt.toImageMs - rt.outFreeMs
+                                                          - rt.orientScaleMs
+                                                          - rt.setHotMs)
                                    << " applied" << (current ? 1 : 0)
+                                   << " superseded" << (reqGen != developProxyReqGen)
+                                   << " preview" << msPreview
+                                   << " scopes" << msScopes
                                    << " tint" << developTintMs << "x" << developTintCount
                                    << "ms";
                 developTintMs = 0;
@@ -7656,6 +7740,9 @@ void MW::renderDevelopFullResAsync()
                                    << " (mask" << rt.maskBuildMs << "(" << rt.maskScopes
                                    << "scopes) copy" << rt.copyMs
                                    << " develop" << rt.developMs
+                                   << "[copy" << rt.stackCopyMs
+                                   << " apply" << rt.stackApplyMs
+                                   << " blend" << rt.stackBlendMs << "]"
                                    << " toImage" << rt.toImageMs
                                    << " orient+scale" << rt.orientScaleMs << ")ms"
                                    << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
@@ -8160,15 +8247,22 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
     if (!scopesView || !developScopesVisible) return;   // hidden: skip the sample cost
     if (shown.isNull()) { scopesView->clear(); return; }
 
-    /* One conversion to a 32-bit format for fast scanline access (avoids per-pixel QImage::pixel). */
-    QImage im = shown;
-    if (im.format() != QImage::Format_RGB32 &&
+    /* Sample the shown image IN PLACE. RGB888 gets its own branch because that is what
+       OutputTransform::ToImage produces, i.e. what every develop render hands us: routing
+       it through convertToFormat allocated and converted the WHOLE frame (~20 MB at a
+       6.7 MP proxy) just to read ~180k strided samples, on the GUI thread, on every tick.
+       The 32-bit branch stays for the other callers. */
+    const QImage &im = shown;
+    const bool rgb888 = im.format() == QImage::Format_RGB888;
+    QImage im32;
+    if (!rgb888 && im.format() != QImage::Format_RGB32 &&
         im.format() != QImage::Format_ARGB32 &&
         im.format() != QImage::Format_ARGB32_Premultiplied)
-        im = im.convertToFormat(QImage::Format_RGB32);
+        im32 = im.convertToFormat(QImage::Format_RGB32);
+    const QImage &src = im32.isNull() ? im : im32;
 
-    const int W = im.width();
-    const int H = im.height();
+    const int W = src.width();
+    const int H = src.height();
     if (W < 1 || H < 1) { scopesView->clear(); return; }
 
     constexpr qint64 budget = 180000;
@@ -8177,12 +8271,14 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
     ScopeData d;
     d.clear();
     for (int y = 0; y < H; y += step) {
-        /* constScanLine: never detaches (im may share `shown`'s buffer), so a 50MP full-res
-           `out` is sampled in place rather than deep-copied. */
-        const QRgb *line = reinterpret_cast<const QRgb*>(im.constScanLine(y));
+        /* constScanLine: never detaches (src may share `shown`'s buffer), so a 50MP
+           full-res `out` is sampled in place rather than deep-copied. */
+        const uchar *raw = src.constScanLine(y);
+        const QRgb *line = rgb888 ? nullptr : reinterpret_cast<const QRgb*>(raw);
         for (int x = 0; x < W; x += step) {
-            const QRgb p = line[x];
-            const int r = qRed(p), g = qGreen(p), b = qBlue(p);
+            int r, g, b;
+            if (rgb888) { r = raw[x*3+0]; g = raw[x*3+1]; b = raw[x*3+2]; }
+            else        { const QRgb p = line[x]; r = qRed(p); g = qGreen(p); b = qBlue(p); }
             d.hist[0][r]++;
             d.hist[1][g]++;
             d.hist[2][b]++;

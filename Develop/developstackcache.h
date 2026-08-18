@@ -83,10 +83,15 @@ public:
         QByteArray paramsKey;           // serialized EditParams of this scope
         std::shared_ptr<const std::vector<float>> mask;   // null => rebuild
     };
+    /* Full teardown: the cached data AND the render scratch. Called on folder change,
+       image change and proxy rebuild -- the points where the buffers are the wrong size
+       and the user may be leaving Develop, so holding ~150 MB would not be a cache. */
     void clear()
     {
         QMutexLocker lk(&mutex);
         clearLocked();
+        scratchAcc.reset(); scratchLay.reset();
+        scratchOutA.reset(); scratchOutB.reset();
     }
 
     /* Make the cache current for this image/geometry/base, dropping every entry if any of
@@ -179,6 +184,44 @@ public:
         return (hot.index >= 0 && size_t(hot.index) == index) ? hot : Hot();
     }
 
+    /* ---- Reusable render scratch ----
+
+       A tick allocated and released three proxy-sized WorkingImages: the accumulator,
+       the edited scope's layer, and the snapshot handed back as outLayer. At ~38 MB each
+       on a 3.1 MP proxy that measured 29 ms PER FREE against 2 ms to memcpy the same
+       bytes -- 87 ms of a 121 ms tick, i.e. the interactive Develop render spent most of
+       its time in the allocator, not on pixels. Keeping the buffers alive across ticks
+       removes all of it; see Develop/workingimage.h assignReusing.
+
+       Held here because this object already has exactly the right lifetime: it is reset
+       on image / proxy-size / orientation change, which is precisely when the buffers
+       stop being the right size. They are freed by clear(), so leaving Develop or
+       changing folder gives the memory back.
+
+       LAYER A/B. layerOut alternates between two buffers so the one renderStack WRITES
+       is never the one `hot.layer` is currently serving -- everything the cache hands
+       out is read as const, and this is the only place that rule could be broken. */
+    std::shared_ptr<WorkingImage> accScratch()
+    {
+        QMutexLocker lk(&mutex);
+        if (!scratchAcc) scratchAcc = std::make_shared<WorkingImage>();
+        return scratchAcc;
+    }
+    std::shared_ptr<WorkingImage> layScratch()
+    {
+        QMutexLocker lk(&mutex);
+        if (!scratchLay) scratchLay = std::make_shared<WorkingImage>();
+        return scratchLay;
+    }
+    /* The spare layer buffer: whichever of the pair `hot.layer` is NOT pointing at. */
+    std::shared_ptr<WorkingImage> outScratch()
+    {
+        QMutexLocker lk(&mutex);
+        if (!scratchOutA) scratchOutA = std::make_shared<WorkingImage>();
+        if (!scratchOutB) scratchOutB = std::make_shared<WorkingImage>();
+        return (hot.layer == scratchOutA) ? scratchOutB : scratchOutA;
+    }
+
     void setHot(size_t index, std::shared_ptr<const WorkingImage> prefix,
                 std::shared_ptr<const WorkingImage> layer)
     {
@@ -204,6 +247,13 @@ public:
     }
 
 private:
+    /* Drops the cached DATA. Deliberately leaves the scratch buffers alone: they are
+       storage, not data, and reset() runs this on every GLOBAL-params change -- i.e.
+       every tick of a Global slider drag. Releasing them there re-allocated four
+       proxy-sized buffers per tick and pushed the frees into the compositor instead of
+       removing them, measured as a REGRESSION from ~122 ms to ~236-394 ms per tick.
+       assignReusing resizes them if the geometry changes, so keeping them is safe; only
+       clear() (folder change, leaving Develop) actually hands the memory back. */
     void clearLocked()                   // mutex already held
     {
         path.clear(); w = h = degrees = 0; baseKey.clear(); entries.clear();
@@ -220,6 +270,8 @@ private:
        unrelated syntax errors. */
     std::vector<Slot> entries;
     Hot hot;
+    /* Render scratch -- storage, never data; see the accessors above. */
+    std::shared_ptr<WorkingImage> scratchAcc, scratchLay, scratchOutA, scratchOutB;
 };
 
 #endif // DEVELOPSTACKCACHE_H

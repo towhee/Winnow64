@@ -72,4 +72,37 @@ struct WorkingImage {
     }
 };
 
+/*
+    Copy src into dst REUSING dst's existing pixel buffer instead of replacing it.
+
+    Plain assignment (dst = src) releases dst's buffer and allocates a new one. At proxy
+    resolution that buffer is ~w*h*12 bytes -- 38 MB on a 3.1 MP proxy -- and on macOS a
+    free that size goes back to the OS, so the next tick faults every page in again. It
+    is not a rounding error: [DevTime] measured 29 ms per free against 2 ms to memcpy the
+    same bytes, and an interactive Develop tick was spending 72% of its time there.
+
+    vector::assign keeps the allocation whenever the capacity already fits, which for a
+    scratch buffer reused tick after tick at one proxy size is always. Use this anywhere
+    a WorkingImage is refilled on a hot path; use plain assignment when the destination
+    is genuinely new.
+*/
+inline void assignReusing(WorkingImage &dst, const WorkingImage &src)
+{
+    /* Nothing to reuse -- dst has no allocation big enough. Take plain assignment, which
+       is exactly what the one-shot callers (the full-res settle render, which allocates
+       locally and should give its ~290 MB back) did before this helper existed. Forcing
+       those down vector::assign's grow path instead measured 631 ms against 49 ms for
+       the same copy at 24 MP, so the fast path here is load-bearing, not a nicety. */
+    if (dst.rgb.capacity() < src.rgb.size()) {
+        dst = src;
+        return;
+    }
+    dst.width         = src.width;
+    dst.height        = src.height;
+    dst.cam           = src.cam;
+    dst.white         = src.white;
+    dst.sceneReferred = src.sceneReferred;
+    dst.rgb.assign(src.rgb.begin(), src.rgb.end());
+}
+
 #endif // WORKINGIMAGE_H
