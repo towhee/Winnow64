@@ -79,11 +79,36 @@ public:
         /* Develop sub-stages (subset of developMs). */
         qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0; qint64 dehazeMs = 0;
         qint64 vignetteMs = 0; qint64 grainMs = 0;
+        /* renderStack sub-stages (together they make up developMs on the stack path).
+           developMs alone could not tell a full-frame WorkingImage COPY from the develop
+           pass from the mask blend -- three very different fixes -- so on a params drag,
+           where all three run per tick, it was an unsplittable number. See
+           notes/Documentation.txt "Split a number before optimising anything behind it".
+             stackCopyMs  the acc = *prefix / layBuf = acc / outLayer snapshots
+             stackApplyMs Develop::Apply for the scopes' own params (not the base)
+             stackBlendMs the per-scope mask blend into the accumulator
+             stackFreeMs  releasing each scope's layer -- INSIDE developMs, so the four
+                          buckets above should sum to it
+             outFreeMs    releasing the accumulator, AFTER toImageMs, so it is outside
+                          every other stage
+           The two frees are split because a large free is real work (macOS returns big
+           allocations to the OS) and they land on opposite sides of developMs; lumped,
+           neither remainder would balance. */
+        qint64 stackCopyMs = 0; qint64 stackApplyMs = 0; qint64 stackBlendMs = 0;
+        qint64 stackFreeMs = 0; qint64 outFreeMs = 0;
         /* Filled by the caller's compositor (MW::developCompositeStack), not by
            render*(): the per-scope mask rasterisation and the EXIF-rotate +
            proxy-upscale that follow the stack render. maskScopes is how many
            scopes actually built a buffer. */
         qint64 maskBuildMs = 0; int maskScopes = 0; qint64 orientScaleMs = 0;
+        /* Also compositor-filled: re-arming the per-scope cache, whose shared_ptr drops
+           free the PREVIOUS tick's prefix and layer. */
+        qint64 setHotMs = 0;
+        /* Resume state for the tick, so a [DevTime] line says WHY it was cheap or dear:
+           which scope the stack resumed at, how many scopes there were, whether the
+           per-scope cache survived reset(), and whether a prefix was actually offered. */
+        int  resumeStart = -1; int stackScopes = 0;
+        bool cacheSurvived = false; bool hadPrefix = false; bool hadLayer = false;
     };
 
     /* Output bit depth of the final OutputTransform. Eight (Format_RGB888) is the
@@ -101,11 +126,19 @@ public:
     /* Render a WorkingImage through Develop + OutputTransform into out. Copies the image
        only when edit is non-identity (Develop mutates in place). Returns false if work is
        invalid or the output transform fails. Static and stateless: usable with a cached
-       entry or any WorkingImage the caller owns. Fills *timings when non-null. */
+       entry or any WorkingImage the caller owns. Fills *timings when non-null.
+
+       scratch, when given, is REUSED STORAGE for that copy (see assignReusing in
+       Develop/workingimage.h). The no-scope interactive path lands here every tick, and
+       allocating + releasing the copy cost 62 ms per tick on a 6.7 MP proxy against 1 ms
+       to fill it. Optional: null allocates locally, which is what the one-shot callers
+       (export, the reference builders, the settle render) want. Caller owns it and must
+       keep it alive for the call. */
     static bool render(const WorkingImage &work, const EditParams &edit, QImage &out,
                        RenderTimings *timings = nullptr,
                        OutDepth depth = OutDepth::Eight,
-                       Space space = Space::sRGB);
+                       Space space = Space::sRGB,
+                       WorkingImage *scratch = nullptr);
 
     /* One scope of a stack composite: its develop params and a 0..1 mask (row-major
        width*height, matching work; null or empty => the scope applies globally).
@@ -134,13 +167,28 @@ public:
                     (size_t(-1) = none). outPrefix/outLayer are filled with the
                     accumulator before, and the developed image of, that scope. outLayer
                     stays null when the scope's params are identity (its "layer" is just
-                    the prefix). */
+                    the prefix).
+
+       SCRATCH  accScratch / layScratch / outScratch are REUSED STORAGE, not data. A tick
+                allocates and releases three proxy-sized WorkingImages (the accumulator,
+                the scope's layer, and the snapshot handed back as outLayer); at ~38 MB
+                each on a 3.1 MP proxy that measured 29 ms per free -- 72% of the tick,
+                against 2 ms to memcpy the same bytes. Supplying these lets renderStack
+                refill existing buffers (assignReusing) instead. All three are optional:
+                null means allocate locally, which is what the full-res settle render
+                does, since it runs once and should give its ~290 MB back.
+
+                outScratch must NOT be the buffer the cache is currently handing back as
+                `layer` -- renderStack writes it, and everything a cache hands out is
+                read as const. The caller alternates two buffers to guarantee that; see
+                MW::developCompositeStack. */
     struct StackResume {
         size_t start = 0;
         std::shared_ptr<const WorkingImage> prefix;
         std::shared_ptr<const WorkingImage> layer;
         size_t capture = size_t(-1);
         std::shared_ptr<const WorkingImage> outPrefix, outLayer;
+        std::shared_ptr<WorkingImage> accScratch, layScratch, outScratch;
     };
 
     /* Stack composite, blended in scene-linear before the output transform: start from

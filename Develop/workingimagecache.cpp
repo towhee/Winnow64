@@ -146,7 +146,8 @@ void WorkingImageCache::evictLocked()
 }
 
 bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit, QImage &out,
-                               RenderTimings *timings, OutDepth depth, Space space)
+                               RenderTimings *timings, OutDepth depth, Space space,
+                               WorkingImage *scratch)
 {
     if (!work.isValid()) return false;
 
@@ -171,7 +172,9 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
        (pre-develop) entry pristine for the next slider value. */
     QElapsedTimer t;
     if (timings) t.start();
-    WorkingImage developed = work;
+    WorkingImage devLocal;
+    WorkingImage &developed = scratch ? *scratch : devLocal;
+    assignReusing(developed, work);
     if (timings) timings->copyMs = t.restart();
     Develop develop;
     Develop::StageTimings stage;
@@ -186,7 +189,13 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
         timings->grainMs = stage.grainMs;
     }
     const bool ok = toImage(developed, out);
-    if (timings) timings->toImageMs = t.elapsed();
+    if (timings) timings->toImageMs = t.restart();
+    /* Free a LOCALLY-allocated working copy where it is counted, not silently on return
+       -- see the outFreeMs note in RenderTimings. A scratch-backed one is kept for the
+       next tick and costs nothing here, which is the whole point: this free measured
+       62 ms per tick on a 6.7 MP proxy. */
+    devLocal = WorkingImage();
+    if (timings) timings->outFreeMs = t.elapsed();
     return ok;
 }
 
@@ -238,22 +247,42 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     if (timings) t.start();
     Develop develop;
 
+    /* Sub-stage probe (diagnostic only; see RenderTimings). `sub` is restarted around
+       each of the three kinds of work so a [DevTime] line can say whether a params drag
+       is dominated by the full-frame COPIES, the develop pass or the blend. */
+    QElapsedTimer sub;
+    if (timings) sub.start();
+
     /* Accumulator = Global applied globally. Owned (mutable) so scopes can blend into it.
        RESUMED: the caller already holds the accumulator as it stood before scope `start`
        -- everything below it is unchanged -- so start there and skip the base develop and
-       every scope beneath. Copied, not aliased: the blends below mutate it. */
-    WorkingImage acc;
+       every scope beneath. Copied, not aliased: the blends below mutate it.
+
+       The copy refills a caller-owned SCRATCH buffer when one is offered, so the hot path
+       neither allocates nor frees ~w*h*12 bytes per tick (see StackResume). */
+    WorkingImage accLocal;
+    WorkingImage &acc = (resume && resume->accScratch) ? *resume->accScratch : accLocal;
+
     size_t first = 0;
     const bool resumed = resume && resume->prefix && resume->prefix->isValid()
                          && resume->start <= scopes.size()
                          && size_t(resume->prefix->width) * size_t(resume->prefix->height) == n;
     if (resumed) {
-        acc = *resume->prefix;
+        assignReusing(acc, *resume->prefix);
+        if (timings) timings->stackCopyMs += sub.restart();
         first = resume->start;
     }
     else {
-        acc = work;
+        assignReusing(acc, work);
+        if (timings) timings->stackCopyMs += sub.restart();
         if (!base.isIdentity()) develop.Apply(acc, base, nullptr);
+        if (timings) timings->stackApplyMs += sub.restart();
+    }
+    if (timings) {
+        timings->resumeStart  = resumed ? int(resume->start) : -1;
+        timings->stackScopes  = int(scopes.size());
+        timings->hadPrefix    = resume && resume->prefix;
+        timings->hadLayer     = resume && resume->layer;
     }
 
     for (size_t i = first; i < scopes.size(); ++i) {
@@ -266,10 +295,12 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
            Taken here, before any mutation. When we resumed AT this scope the caller's own
            prefix is still untouched, so re-share it instead of copying it. */
         const bool capture = resume && i == resume->capture;
-        if (capture)
+        if (capture) {
             resume->outPrefix = (resumed && i == resume->start)
                                     ? resume->prefix
                                     : std::make_shared<const WorkingImage>(acc);
+            if (timings) timings->stackCopyMs += sub.restart();
+        }
 
         /* Develop this scope from the running ACCUMULATOR (the result of the scopes
            below), so where masks overlap the adjustments COMPOUND rather than the top
@@ -277,7 +308,9 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
            stops in the overlap. In scene-linear this stacking is the natural per-op
            composition (exposure multiplies, etc.). An identity scope aliases acc (no
            copy/Apply) and blends to a no-op. */
-        WorkingImage layBuf;
+        WorkingImage layLocal;
+        WorkingImage &layBuf = (resume && resume->layScratch) ? *resume->layScratch
+                                                             : layLocal;
         const WorkingImage *layP = &acc;
         std::shared_ptr<const WorkingImage> layShared;   // set only on a resumed layer
         if (!L.params.isIdentity()) {
@@ -290,8 +323,10 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
                 layP = layShared.get();
             }
             else {
-                layBuf = acc;
+                assignReusing(layBuf, acc);
+                if (timings) timings->stackCopyMs += sub.restart();
                 develop.Apply(layBuf, L.params, nullptr);
+                if (timings) timings->stackApplyMs += sub.restart();
                 layP = &layBuf;
             }
         }
@@ -300,8 +335,16 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
                so hand back nothing and let the next call re-alias. */
             if (layP == &acc)   resume->outLayer.reset();
             else if (layShared) resume->outLayer = layShared;   // resumed: re-share it
+            else if (resume->outScratch) {
+                /* Snapshot into the caller's spare buffer. It is guaranteed not to be
+                   the one being handed back as `layer` (see StackResume), so writing it
+                   cannot disturb anything the cache is still serving as const. */
+                assignReusing(*resume->outScratch, layBuf);
+                resume->outLayer = resume->outScratch;
+            }
             else                resume->outLayer =
                                     std::make_shared<const WorkingImage>(layBuf);
+            if (timings) timings->stackCopyMs += sub.restart();
         }
 
         const float *hi = layP->rgb.data();
@@ -336,13 +379,29 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
                 }
             });
         }
+        if (timings) timings->stackBlendMs += sub.restart();
+
+        /* Release this scope's intermediate HERE rather than at the closing brace, so a
+           free that does happen is attributed instead of landing between stages. With a
+           scratch buffer there is nothing to release -- that is the point -- so only the
+           locally-allocated case pays, and `free` staying at 0 is the probe confirming
+           the scratch is actually being used. */
+        layLocal = WorkingImage();
+        layShared.reset();
+        if (timings) timings->stackFreeMs += sub.restart();
     }
     if (timings) timings->developMs = t.restart();
 
     OutputTransform output;
     const bool ok = depth == OutDepth::Sixteen ? output.ToImage16(acc, out, space)
                                                : output.ToImage(acc, out, space);
-    if (timings) timings->toImageMs = t.elapsed();
+    if (timings) timings->toImageMs = t.restart();
+
+    /* Same reason: a locally-allocated accumulator is ~w*h*12 bytes and dies on return,
+       inside the caller's wall-clock but outside every stage above. A scratch-backed one
+       is kept for the next tick and costs nothing here. */
+    accLocal = WorkingImage();
+    if (timings) timings->outFreeMs = t.elapsed();
     return ok;
 }
 

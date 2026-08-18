@@ -1521,11 +1521,24 @@ private:
        interactive tick. developProxyPending is what makes it correct for the callers that
        re-render WITHOUT bumping developParamsGen (crop, warp, level): a request arriving
        mid-flight is remembered and re-armed on completion rather than dropped.
-       developProxyReqGen discards a frame that a newer request has superseded. */
+       developProxyReqGen identifies a frame that a newer request has superseded.
+
+       A superseded frame is still SHOWN, as long as the geometry it was rendered with is
+       still the geometry in force (developProxyGeomGen). A drag delivers mouse events far
+       faster than a render completes, so every frame but the last is superseded -- and
+       dropping them all meant the loupe did not update at all until the user paused,
+       which is the lag itself. The frames are only tens of ms old and strictly ordered,
+       so showing them gives a smooth stream. The ONE thing that must never be shown late
+       is a frame whose geometry no longer applies: the crop tool alternates
+       geometry-applied and geometry-suppressed renders and flashing the wrong one reads
+       as a glitch. That is what the generation counter guards -- geometry, not age. */
     QThreadPool *developProxyPool = nullptr;
     bool developProxyInFlight = false;
     bool developProxyPending = false;
     quint64 developProxyReqGen = 0;
+    quint64 developProxyGeomGen = 0;      // ++ when a request's geometry differs
+    Geometry developProxyLastGeom;        // what developProxyGeomGen counts changes to
+    bool developProxyHaveLastGeom = false;
 
     /* [DevTime] probe only (G::isReportDevelopTime): updateMaskOverlayTint accumulates
        here and renderDevelopPreview reports + resets. The COUNT matters as much as the
