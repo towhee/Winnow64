@@ -296,9 +296,19 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
            prefix is still untouched, so re-share it instead of copying it. */
         const bool capture = resume && i == resume->capture;
         if (capture) {
-            resume->outPrefix = (resumed && i == resume->start)
-                                    ? resume->prefix
-                                    : std::make_shared<const WorkingImage>(acc);
+            if (resumed && i == resume->start) {
+                resume->outPrefix = resume->prefix;      // untouched: re-share it
+            }
+            else if (resume->preScratch) {
+                /* Snapshot into the caller's spare prefix buffer -- guaranteed not to be
+                   the one being served as `prefix` (see StackResume), so writing it
+                   cannot disturb anything the cache is still handing out as const. */
+                assignReusing(*resume->preScratch, acc);
+                resume->outPrefix = resume->preScratch;
+            }
+            else {
+                resume->outPrefix = std::make_shared<const WorkingImage>(acc);
+            }
             if (timings) timings->stackCopyMs += sub.restart();
         }
 

@@ -40,20 +40,32 @@
 #          WINNOW_DEVTEST_SUBMASKS=<n>   WINNOW_DEVTEST_TICK_MS=<ms>
 #          WINNOW_DEVTEST_FOLDER=<dir>   COPIES=<n>   NOBUILD=1
 #          WINNOW_DEVTEST_SERIAL=0       (opt OUT of serial parallel-for)
+#          PRESET=<configure preset>     BUILD=<binary dir>
 #
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT" || exit 1   # `cmake --preset` must run from the dir with CMakePresets.json
 CMAKE="${CMAKE:-/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake}"
-BUILD="$ROOT/build/mac-tsan"
+# PRESET / BUILD: the configure preset and its binary dir. Overridable because
+# CMakePresets.json's mac-tsan is not always usable as-is -- outside Qt Creator the
+# Ninja generator finds no build program (ninja ships in Qt Creator's toolchain, not
+# on PATH) and _base takes CMAKE_PREFIX_PATH from $env{QT_DIR}, which is unset, so a
+# plain `--preset mac-tsan` either fails to configure or silently builds against the
+# wrong Qt. A machine-local CMakeUserPresets.json preset fixes both; point this at it:
+#     PRESET=mac-tsan-local tests/tsan/run_tsan_develop.sh
+# BUILD is separate rather than derived from PRESET, because a local preset normally
+# pins binaryDir back to build/mac-tsan so the documented paths keep working. Set it
+# only if your preset really does build somewhere else.
+PRESET="${PRESET:-mac-tsan}"
+BUILD="${BUILD:-$ROOT/build/mac-tsan}"
 APP="$BUILD/Winnow.app/Contents/MacOS/Winnow"
 LOG="${LOG:-/tmp/winnow_tsan_develop.log}"
 COPIES="${COPIES:-6}"
 
 if [[ "${NOBUILD:-0}" != "1" ]]; then
     echo "==> Configuring + building the ThreadSanitizer app (mac-tsan)…"
-    "$CMAKE" --preset mac-tsan || exit $?
+    "$CMAKE" --preset "$PRESET" || exit $?
     "$CMAKE" --build "$BUILD" --target Winnow || exit $?
 fi
 

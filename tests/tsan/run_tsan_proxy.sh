@@ -18,6 +18,7 @@
 #
 # Usage:   tests/tsan/run_tsan_proxy.sh
 # Env:     CMAKE=<cmake>  WINNOW_SELFTEST_MS=<ms>  WINNOW_TSAN_FOLDER=<dir>
+#          PRESET=<configure preset>   BUILD=<binary dir>
 #          NAV_MS=<ms>  COPIES=<n>
 #
 set -uo pipefail
@@ -25,7 +26,18 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT" || exit 1   # `cmake --preset` must run from the dir with CMakePresets.json
 CMAKE="${CMAKE:-/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake}"
-BUILD="$ROOT/build/mac-tsan"
+# PRESET / BUILD: the configure preset and its binary dir. Overridable because
+# CMakePresets.json's mac-tsan is not always usable as-is -- outside Qt Creator the
+# Ninja generator finds no build program (ninja ships in Qt Creator's toolchain, not
+# on PATH) and _base takes CMAKE_PREFIX_PATH from $env{QT_DIR}, which is unset, so a
+# plain `--preset mac-tsan` either fails to configure or silently builds against the
+# wrong Qt. A machine-local CMakeUserPresets.json preset fixes both; point this at it:
+#     PRESET=mac-tsan-local tests/tsan/run_tsan_proxy.sh
+# BUILD is separate rather than derived from PRESET, because a local preset normally
+# pins binaryDir back to build/mac-tsan so the documented paths keep working. Set it
+# only if your preset really does build somewhere else.
+PRESET="${PRESET:-mac-tsan}"
+BUILD="${BUILD:-$ROOT/build/mac-tsan}"
 APP="$BUILD/Winnow.app/Contents/MacOS/Winnow"
 FIXTURES="$ROOT/tests/fixtures/images"
 LOG_A="${LOG_A:-/tmp/winnow_tsan_proxy_A.log}"
@@ -40,7 +52,7 @@ STRESS="${STRESS:-1}"     # 1 = also pick + ingest + reverse-sort during load
 PROXY_RE='QSortFilterProxyModel|SortFilter|mapFromSource|mapToSource|filterAcceptsRow|create_mapping|source_to_proxy|proxy_to_source'
 
 echo "==> Configuring + building the ThreadSanitizer app (mac-tsan)…"
-"$CMAKE" --preset mac-tsan || exit $?
+"$CMAKE" --preset "$PRESET" || exit $?
 "$CMAKE" --build "$BUILD" --target Winnow || exit $?
 
 # --- Test folder: a real recursive tree if supplied, else a generated one ----

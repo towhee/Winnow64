@@ -94,6 +94,8 @@ private slots:
     void maskOnlyEditResumesIdentically();
     void paramsEditAtHotScopeRebuildsLayer();
     void resumeIsIgnoredWhenPrefixIsWrongSize();
+    void scratchBackedMatchesLocal();
+    void scratchSurvivesRepeatedTicks();
 
 private:
     static constexpr int W = 61;      // not a multiple of the thread chunking
@@ -227,6 +229,83 @@ void TestRenderStack::resumeIsIgnoredWhenPrefixIsWrongSize()
     QImage cold;
     QVERIFY(WorkingImageCache::renderStack(work, base, scopes, cold));
     QCOMPARE(resumed, cold);
+}
+
+
+/* The render may be handed REUSED storage for its intermediates instead of allocating
+   them (StackResume::accScratch / layScratch / outScratch). That exists purely to keep
+   the allocator off the hot path -- an interactive tick was measured spending 72% of its
+   time releasing these buffers -- so it must not change a single output pixel. */
+void TestRenderStack::scratchBackedMatchesLocal()
+{
+    const WorkingImage work = makeWork(W, H);
+    const EditParams base = params(0.2f, 0.0f, 0.0f);
+    const auto scopes = makeScopes(W, H, 0.15f, params(0.9f, -12.0f, 8.0f));
+
+    QImage local;
+    QVERIFY(WorkingImageCache::renderStack(work, base, scopes, local));
+
+    WorkingImageCache::StackResume res;
+    res.capture     = 2;
+    res.accScratch  = std::make_shared<WorkingImage>();
+    res.layScratch  = std::make_shared<WorkingImage>();
+    res.outScratch  = std::make_shared<WorkingImage>();
+    res.preScratch  = std::make_shared<WorkingImage>();
+    QImage scratched;
+    QVERIFY(WorkingImageCache::renderStack(work, base, scopes, scratched, nullptr,
+                                           WorkingImageCache::OutDepth::Eight,
+                                           WorkingImageCache::Space::sRGB, &res));
+    QCOMPARE(scratched, local);
+    QVERIFY(res.outPrefix && res.outPrefix->isValid());
+    QVERIFY(res.outLayer  && res.outLayer->isValid());
+}
+
+/* A drag re-enters with the SAME scratch tick after tick, which is the case the buffers
+   exist for and the one where a stale size or a buffer written while still being served
+   would show up. Each tick must still equal a cold render, including the tick that
+   resumes from the previous tick's captured intermediates. */
+void TestRenderStack::scratchSurvivesRepeatedTicks()
+{
+    const WorkingImage work = makeWork(W, H);
+    const EditParams base = params(0.2f, 0.0f, 0.0f);
+
+    auto accS = std::make_shared<WorkingImage>();
+    auto layS = std::make_shared<WorkingImage>();
+    /* Two output buffers, alternated exactly as DevelopStackCache::outScratch() does:
+       never hand the render the buffer it is currently serving back as `layer`. */
+    auto outA = std::make_shared<WorkingImage>();
+    auto outB = std::make_shared<WorkingImage>();
+    /* And the same for the prefix snapshot, which alternates on its own schedule -- a
+       Global drag rejects the cached prefix every tick and captures a fresh one. */
+    auto preA = std::make_shared<WorkingImage>();
+    auto preB = std::make_shared<WorkingImage>();
+
+    std::shared_ptr<const WorkingImage> prefix, layer;
+    for (int tick = 0; tick < 4; ++tick) {
+        const EditParams top = params(0.5f + 0.3f * tick, -10.0f * tick, 0.0f);
+        const auto scopes = makeScopes(W, H, 0.1f * tick, top);
+
+        WorkingImageCache::StackResume res;
+        res.start      = 2;
+        res.prefix     = prefix;
+        res.layer      = nullptr;          // params move every tick: withhold the layer
+        res.capture    = 2;
+        res.accScratch = accS;
+        res.layScratch = layS;
+        res.outScratch = (layer == outA) ? outB : outA;
+        res.preScratch = (prefix == preA) ? preB : preA;
+
+        QImage got;
+        QVERIFY(WorkingImageCache::renderStack(work, base, scopes, got, nullptr,
+                                               WorkingImageCache::OutDepth::Eight,
+                                               WorkingImageCache::Space::sRGB, &res));
+        QImage cold;
+        QVERIFY(WorkingImageCache::renderStack(work, base, scopes, cold));
+        QVERIFY2(got == cold, qPrintable(QString("tick %1 differs from cold").arg(tick)));
+
+        prefix = res.outPrefix;
+        layer  = res.outLayer;
+    }
 }
 
 QTEST_MAIN(TestRenderStack)

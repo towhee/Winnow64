@@ -1993,6 +1993,36 @@ EditScope *DevelopProperties::activeScope()
     return &s.scopes[activeScopeIndex];
 }
 
+bool DevelopProperties::selfTestNudgeAdjustment(bool globalScope, float exposure)
+{
+/*
+    TEST HOOK -- see the header. The tail of itemChange()'s adjustment branch, without the
+    property editor: write the value into the chosen scope's params, note the edit, and
+    emit paramsChanged so the coalescing proxy timer fires a render. Deliberately does NOT
+    touch the tree/editors -- repopulating them would drag in the modal UI a headless
+    driver cannot use, and the render path is what is under test.
+*/
+    if (currentImagePath.isEmpty()) return false;
+
+    EditStack &s = stackFor(currentImagePath);
+    if (s.scopes.isEmpty()) return false;
+    /* Scope 0 is always Global; the last scope is the mask scope selfTestAddMaskScope
+       built. With no mask scope yet, both requests fall back to Global. */
+    const int idx = globalScope ? 0 : s.scopes.size() - 1;
+    s.scopes[idx].params.exposure = exposure;
+
+    /* DELIBERATELY NOT noteScopeEdit(). Mirroring the real edit's bookkeeping looks
+       more faithful -- it marks the image dirty, records history and arms the debounced
+       sidecar write -- but it wrecks the test. Marking dirty PERSISTS the stack, so the
+       scope the driver builds survives the folder churn, and the driver's post-churn
+       re-arm then adds another mask scope on top of the reloaded one. Scopes compound
+       with every churn: measured 21-23 scopes and just 3 renders in 180 s, against 1-2
+       scopes and 7 renders in 60 s without it. The render path is what is under test,
+       and a driver that renders three times tests nothing. */
+    emit paramsChanged();
+    return true;
+}
+
 bool DevelopProperties::selfTestAddMaskScope(int submasks)
 {
 /*
@@ -2001,12 +2031,29 @@ bool DevelopProperties::selfTestAddMaskScope(int submasks)
     ends up with `submasks` COMMITTED brush submasks and one pending. That shape is the
     point: the render cost this exercises is per-component, so a scope with one submask
     proves nothing about the caches the drag path leans on.
+
+    IDEMPOTENT: "ensure this image has a mask scope and make it active", not "append
+    one". The driver re-arms whenever the ACTIVE scope is short of components, and an
+    image switch resets the active scope to Global -- so on a long run it appended a
+    fresh scope on every switch. Measured: 179 switches over a 180 s run left 13-14
+    scopes stacked on each image, each render composited all of them, and the render rate
+    collapsed to 2 renders in 180 s. The driver's default duration (45 s, ~2 switches)
+    was short enough to hide it.
 */
     if (currentImagePath.isEmpty()) return false;
 
     EditStack &s = stackCache[currentImagePath];
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());   // index 0 is always Global
     s.scopes[0].name = "Global";
+
+    /* Already has one: re-activate it rather than stacking another. */
+    if (s.scopes.size() > 1) {
+        activeScopeIndex = s.scopes.size() - 1;
+        selectedMaskIndex = -1;
+        refreshScopeList();
+        buildTree();
+        return true;
+    }
 
     EditScope l;
     l.name = uniqueScopeName("Mask " + QString::number(s.scopes.size()));
