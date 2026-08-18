@@ -97,6 +97,13 @@ elseif(WIN32)
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
 
+# tst_outputtransform guards the 8-bit pack's transfer LUT -- an APPROXIMATION of the
+# per-pixel pow it replaced (see the TRANSFER LUT note in outputtransform.cpp), so the
+# accuracy bound it was accepted under has to be asserted somewhere. outputtransform.cpp
+# depends only on Qt, so no OpenCV closure is needed.
+winnow_add_unit_test(tst_outputtransform unit/tst_outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+
 # tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
 winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)
 # tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).

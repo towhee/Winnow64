@@ -39,6 +39,52 @@ Race detection is by **log scan** (the self-test ends with `std::_Exit`, which
 skips TSan's atexit summary; per-race warnings still print live). Suppressions
 come from `tsan.supp` in the repo root.
 
+### Choosing the preset (`PRESET` / `BUILD`)
+
+All three `tests/tsan/*.sh` scripts default to `--preset mac-tsan` and
+`build/mac-tsan`, and both are overridable:
+
+```sh
+PRESET=mac-tsan-local tests/tsan/run_tsan_develop.sh
+```
+
+You need this whenever the stock `mac-tsan` preset is not usable as-is. Outside
+Qt Creator it usually is not: the Ninja generator finds no build program (ninja
+ships inside Qt Creator's toolchain, not on `PATH`), and `_base` takes
+`CMAKE_PREFIX_PATH` from `$env{QT_DIR}`, which is normally unset. The first
+failure is loud (`CMAKE_MAKE_PROGRAM-NOTFOUND`); the second is **silent** — the
+build succeeds against whatever Qt is on the default search path. Define the
+machine-local preset in `CMakeUserPresets.json` (gitignored) pinning both, and
+point `PRESET` at it.
+
+`BUILD` is separate from `PRESET` rather than derived from it, because a local
+preset normally pins `binaryDir` back to `build/mac-tsan` so the documented paths
+keep working. Set `BUILD` only if your preset really does build elsewhere.
+
+**Gotcha:** changing `CMAKE_PREFIX_PATH` on an EXISTING build dir does not
+re-resolve `Qt6_DIR` — CMake keeps the Qt it found on the first configure. Delete
+the build dir and configure again, or you will keep building against the old Qt
+while the cache claims otherwise.
+
+### Reading a Develop TSan result
+
+`PASS` on its own means little — the driver can pass while barely rendering. Check the
+coverage the run actually achieved:
+
+```sh
+grep -c '\[DevTime\] proxy' /tmp/winnow_tsan_develop.log      # renders, not ticks
+grep -oE 'resume -?[0-9]+ / [0-9]+' /tmp/winnow_tsan_develop.log | sort | uniq -c
+grep -c 'prefix +layer' /tmp/winnow_tsan_develop.log           # cached-layer reuse
+```
+
+A useful run reaches all three states: `noPrefix` (cold), `prefix` (cached prefix
+reused) and `prefix +layer` (cached layer reused). A reference run is 1206 ticks / 77
+renders / 56 cold / 10 prefix / 11 prefix+layer. Runs that produced 2–7 renders, or
+never left `noPrefix`, proved nothing — and looked identical at the PASS line.
+
+Scope count matters too: `resume -1 / 21` means the stack grew to 21 scopes and every
+render composited all of them, which collapses the render rate.
+
 ### Develop render (`run_tsan_develop.sh`)
 
 `run_tsan.sh` and the soak layer only exercise folder-load concurrency — neither

@@ -1754,4 +1754,18 @@ Showing every frame makes updateDevelopScopes run every tick — which includes 
 full-frame format conversion I found earlier. Let me fix that now since it's newly on the
 hot path:
 
-⏺ Bash(sed -n '81
+One caveat worth flagging: the TSan driver still only simulates a brush drag, so the adjustment path's new cache interactions aren't raced yet. Worth running
+tests/tsan/run_tsan_develop.sh before you trust this under load, and adding the adjustment tick I noted in the plan.
+
+
+
+First, tests/tsan/run_tsan_develop.sh has not been run against any of this, and I can't meaningfully run it myself — your build/mac-debug has no generator
+configured, and I've been compiling test binaries by hand. Rounds 3 and 4 changed the cache's threading contract substantially: four scratch buffers now written by
+the worker, A/B alternation as the only thing keeping the worker from writing a buffer the cache is serving as const, and the reset/in-flight reordering. That driver
+found a real crash within a minute the last time it was pointed at this code. It's the highest-value check remaining, and it still only simulates a brush drag — the
+adjustment path it now needs to cover is exactly what we've been changing.
+
+Second, if blend 15 becomes the largest item after this, that one genuinely is mask-extent-bounded work, and the cancelled bounding-box design could come back — for
+a 15 ms prize rather than the 87 ms it was originally aimed at.
+
+

@@ -123,6 +123,71 @@ inline void HighlightRolloff(float &r, float &g, float &b)
 }
 
 /*
+    TRANSFER LUT (8-bit sRGB output only).
+
+    For the sRGB path the per-channel chain collapses to a pure 1-D function of the
+    channel value: the primaries matrix is identity (skipped), and the only cross-channel
+    step, HighlightRolloff, cannot fire when the baseline tone curve ran -- BaselineTone
+    Clamp01s its own output, so nothing reaches the rolloff above 1.0. That leaves
+    SrgbGamma(BaselineTone(v)) (or SrgbGamma(v) for display-referred input), which a table
+    plus linear interpolation evaluates ~4.8x faster than the pow it replaces. Measured:
+    toImage was ~90% of an interactive Develop tick, 35 ms of 38 ms on a 5.9 MP proxy.
+
+    NOT BIT-EXACT, deliberately and with the difference bounded: about 0.001% of inputs
+    (1 in 90,000) land one level of 255 away from the pow, always by exactly 1, at values
+    that fall on a rounding boundary. A denser table does not remove them -- the residue
+    is float rounding, and an alternative formulation using exact per-level thresholds was
+    measured with the same residue and only 2.9x -- so this is the faster of two equally
+    approximate options, not a shortcut past an exact one. It is used for BOTH the preview
+    and 8-bit export so the two always agree; ToImage16 keeps the exact maths, since 16-bit
+    output is where precision is the point.
+
+    kToneDomainMax is where BaselineTone saturates: solving f(u)=1 for u=1.6v gives
+    u=7.2416, i.e. v=4.53. Past the table's end the function is flat at white, so a clamp
+    to the last entry is exact there.
+*/
+constexpr int   kLutSize       = 16384;
+constexpr float kToneDomainMax = 4.6f;      // covers BaselineTone's saturation at v=4.53
+
+struct TransferLut {
+    float v[kLutSize + 1];                  // encoded 0..1, indexed by the channel value
+    float scale;                            // value -> table index
+    float domainMax;
+};
+
+/* One table per tone mode, built once. Function-local statics are initialised
+   thread-safely, which matters: the proxy worker, the settle worker and the export
+   worker all reach this. */
+const TransferLut &ToneLut(bool tone)
+{
+    auto build = [](bool withTone) {
+        TransferLut t;
+        t.domainMax = withTone ? kToneDomainMax : 1.0f;
+        t.scale     = float(kLutSize) / t.domainMax;
+        for (int i = 0; i <= kLutSize; ++i) {
+            const float v = t.domainMax * float(i) / float(kLutSize);
+            t.v[i] = SrgbGamma(withTone ? BaselineTone(v) : v);
+        }
+        return t;
+    };
+    static const TransferLut withTone = build(true);
+    static const TransferLut noTone   = build(false);
+    return tone ? withTone : noTone;
+}
+
+inline uchar LutSample(const TransferLut &t, float v)
+{
+    const float fi = v * t.scale;
+    /* Negated compare so a NaN takes this branch too: (int)NaN is undefined behaviour,
+       and a stray NaN pixel must not be able to index off the table. */
+    if (!(fi > 0.0f)) return 0;
+    if (fi >= float(kLutSize)) return static_cast<uchar>(std::lround(t.v[kLutSize] * 255.0f));
+    const int i = static_cast<int>(fi);
+    const float fr = fi - float(i);
+    return static_cast<uchar>(std::lround((t.v[i] + (t.v[i + 1] - t.v[i]) * fr) * 255.0f));
+}
+
+/*
     Run processRows(y0, y1) over the image's rows, parallelised over disjoint row chunks
     (QtConcurrent + the global pool) exactly as Develop::applyPointOps is. Rows are
     disjoint, so the threads write into the output buffer without contention. Shared by
@@ -181,10 +246,50 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space)
     uchar *bits = out.bits();
     const qsizetype bpl = out.bytesPerLine();
 
+    /* sRGB fast path: the per-channel chain is 1-D, so a table replaces the pow. See the
+       TRANSFER LUT note above for what it costs in accuracy and why it is not exact.
+
+       With the baseline tone curve the rolloff provably cannot fire (BaselineTone
+       Clamp01s), so every pixel takes the table. WITHOUT it -- display-referred input --
+       a channel can exceed 1 and the rolloff is cross-channel, so those pixels fall back
+       to the exact maths; one compare per pixel buys that, and in-range pixels (the
+       overwhelming majority) still take the table. */
+    if (enc.identity) {
+        const TransferLut &lut = ToneLut(tone);
+        auto processRowsLut = [=, &lut](int y0, int y1) {
+            for (int y = y0; y < y1; ++y) {
+                uchar *line = bits + static_cast<qsizetype>(y) * bpl;
+                const size_t base = static_cast<size_t>(y) * W * 3;
+                for (int x = 0; x < W; ++x) {
+                    const size_t o = base + static_cast<size_t>(x) * 3;
+                    const float v0 = rgb[o + 0] * scale;
+                    const float v1 = rgb[o + 1] * scale;
+                    const float v2 = rgb[o + 2] * scale;
+                    if (!tone) {
+                        const float mx = qMax(v0, qMax(v1, v2));
+                        if (mx > 1.0f) {          // rolloff applies: exact maths
+                            float w[3] = {v0, v1, v2};
+                            HighlightRolloff(w[0], w[1], w[2]);
+                            for (int c = 0; c < 3; ++c)
+                                line[x * 3 + c] = static_cast<uchar>(
+                                    std::lround(Transfer(w[c], enc.gammaInv) * 255.0f));
+                            continue;
+                        }
+                    }
+                    line[x * 3 + 0] = LutSample(lut, v0);
+                    line[x * 3 + 1] = LutSample(lut, v1);
+                    line[x * 3 + 2] = LutSample(lut, v2);
+                }
+            }
+        };
+        RunRows(H, processRowsLut);
+        return true;
+    }
+
     /* Per-pixel float -> 8-bit: the (optional) baseline tone curve, then the primaries
-       matrix in linear, then the transfer function. This is the dominant slider-drag cost
-       (per-pixel pow), so it runs over parallel row chunks (RunRows). The sRGB path skips
-       the matrix outright rather than multiplying by an identity. */
+       matrix in linear, then the transfer function. Reached only for a non-sRGB output
+       space (export), where the primaries matrix is cross-channel and no table applies.
+       Runs over parallel row chunks (RunRows) like the fast path above. */
     auto processRows = [=](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             uchar *line = bits + static_cast<qsizetype>(y) * bpl;

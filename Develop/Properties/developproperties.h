@@ -87,9 +87,33 @@ public:
        and both of those are MODAL (a name dialog and a popup menu), so a headless driver
        cannot use them. MW::runDevelopStressTest calls this to exercise the Develop render
        path under ThreadSanitizer (tests/tsan/run_tsan_develop.sh) -- the proxy render runs
-       on a worker and nothing else in the suite goes near it. Returns false if there is no
-       current image. */
+       on a worker and nothing else in the suite goes near it.
+
+       IDEMPOTENT despite the name: if the image already has a mask scope it re-activates
+       it instead of appending another. The driver re-arms on every image switch, so
+       appending compounded the stack and collapsed the render rate on long runs.
+       Returns false if there is no current image. */
     bool selfTestAddMaskScope(int submasks);
+
+    /* TEST HOOK. Nudge one adjustment on the GLOBAL scope (scope 0) or on the last mask
+       scope, then emit paramsChanged -- i.e. exactly what an Exposure drag does, minus
+       the property editor. MW::runDevelopStressTest alternates the two under
+       ThreadSanitizer.
+
+       WHY BOTH SCOPES: they drive DIFFERENT halves of the interactive cache and each has
+       its own worker/GUI-thread interaction. A GLOBAL nudge changes the base signature,
+       so the hot prefix is rejected and recaptured every tick (and, before this was
+       narrowed, wiped every mask); a MASK-scope nudge leaves the base alone, so the
+       prefix survives and the scope's layer is what churns. The brush drag the driver
+       already simulates exercises neither -- it moves the MASK, not any params -- so
+       without this the whole adjustment path, including the render scratch buffers the
+       worker writes, went unraced.
+
+       Writes the param and emits paramsChanged ONLY -- no noteScopeEdit. Marking the
+       stack dirty persists it, which makes the driver's scopes compound across its
+       folder churn and starves the render rate to nothing; see the implementation.
+       Returns false if there is no current image. */
+    bool selfTestNudgeAdjustment(bool globalScope, float exposure);
 
     /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
        show the composited mask), plus the active scope's ordered mask tools to composite. */

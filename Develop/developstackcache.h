@@ -35,11 +35,22 @@
     -- copy the shared_ptr out under the lock and work from that, which is safe because
     everything the pointers reach is const.
 
-    VALIDITY. reset() drops everything when the image, the proxy dimensions, the EXIF
-    orientation or the GLOBAL (base) params change. The base params matter even for a
-    mask: the content-range tools (Luminance/Color Range) sample a display-referred
-    reference built from the DEVELOPED base (MW::ensureRangeRef), so a base change can
-    alter a mask's coverage without altering any of its components.
+    VALIDITY. reset() drops everything when the image, the proxy dimensions or the EXIF
+    orientation change.
+
+    The GLOBAL (base) params are deliberately NOT part of that. They used to be, and it
+    made a Global slider drag rebuild every mask on every tick. The stated reason applies
+    to exactly one family of tools: the content-range masks (Luminance/Color Range) sample
+    a display-referred reference built from the DEVELOPED base (MW::ensureRangeRef), so a
+    base change can move their coverage without moving any component. Nothing else has
+    that dependency -- every other path-registered reference (the AI fields, the object
+    coverages, the brush auto-mask guide) is keyed by PATH alone and is never rebuilt when
+    the base moves, so dropping those masks was invalidating for a dependency the code
+    does not have. The base signature is now folded into the per-scope MASK KEY only for
+    scopes that actually carry a range mask (MW::scopeMaskDependsOnBase).
+
+    The HOT intermediates are a different matter and still carry the base key explicitly:
+    `prefix` IS the developed base, so any base change invalidates it.
 
     A scope's entry is additionally skipped when a reference its components sample was
     not registered yet -- an AI field, a range reference, or the brush auto-mask guide.
@@ -92,17 +103,19 @@ public:
         clearLocked();
         scratchAcc.reset(); scratchLay.reset();
         scratchOutA.reset(); scratchOutB.reset();
+        scratchPreA.reset(); scratchPreB.reset();
     }
 
-    /* Make the cache current for this image/geometry/base, dropping every entry if any of
-       them changed. Returns true when the existing entries survived. */
-    bool reset(const QString &p, int width, int height, int deg, const QByteArray &base)
+    /* Make the cache current for this image/geometry, dropping every entry if either
+       changed. Returns true when the existing entries survived. The base params are NOT
+       part of this -- see VALIDITY above. */
+    bool reset(const QString &p, int width, int height, int deg)
     {
         QMutexLocker lk(&mutex);
-        if (path == p && w == width && h == height && degrees == deg && baseKey == base)
+        if (path == p && w == width && h == height && degrees == deg)
             return true;
         clearLocked();
-        path = p; w = width; h = height; degrees = deg; baseKey = base;
+        path = p; w = width; h = height; degrees = deg;
         return false;
     }
 
@@ -172,16 +185,20 @@ public:
        because prefix is exactly what those scopes produce. */
     struct Hot {
         int index = -1;
+        /* The base params `prefix` was developed from. Unlike a mask buffer, the prefix
+           is a FUNCTION of the base, so it is dead the moment the base moves. */
+        QByteArray baseKey;
         std::shared_ptr<const WorkingImage> prefix;
         std::shared_ptr<const WorkingImage> layer;
     };
 
     /* Copies the pair OUT under the lock (both point at const data), so the caller can
        hold them for the length of a render without blocking the GUI thread's clear(). */
-    Hot hotAt(size_t index) const
+    Hot hotAt(size_t index, const QByteArray &base) const
     {
         QMutexLocker lk(&mutex);
-        return (hot.index >= 0 && size_t(hot.index) == index) ? hot : Hot();
+        return (hot.index >= 0 && size_t(hot.index) == index && hot.baseKey == base)
+                   ? hot : Hot();
     }
 
     /* ---- Reusable render scratch ----
@@ -221,12 +238,27 @@ public:
         if (!scratchOutB) scratchOutB = std::make_shared<WorkingImage>();
         return (hot.layer == scratchOutA) ? scratchOutB : scratchOutA;
     }
+    /* Same for the prefix snapshot. It needs its own pair because the prefix is handed
+       back on a DIFFERENT schedule from the layer: during a GLOBAL slider drag the base
+       moves every tick, so hotAt() rejects the prefix every tick and a fresh one is
+       captured -- which meant allocating and releasing a proxy-sized image per tick.
+       Measured at setHot 62 ms of a 108 ms tick once the mask cache started working, the
+       same allocator churn one level down. */
+    std::shared_ptr<WorkingImage> prefixScratch()
+    {
+        QMutexLocker lk(&mutex);
+        if (!scratchPreA) scratchPreA = std::make_shared<WorkingImage>();
+        if (!scratchPreB) scratchPreB = std::make_shared<WorkingImage>();
+        return (hot.prefix == scratchPreA) ? scratchPreB : scratchPreA;
+    }
 
-    void setHot(size_t index, std::shared_ptr<const WorkingImage> prefix,
+    void setHot(size_t index, const QByteArray &base,
+                std::shared_ptr<const WorkingImage> prefix,
                 std::shared_ptr<const WorkingImage> layer)
     {
         QMutexLocker lk(&mutex);
         hot.index = int(index);
+        hot.baseKey = base;
         hot.prefix = std::move(prefix);
         hot.layer = std::move(layer);
     }
@@ -256,7 +288,7 @@ private:
        clear() (folder change, leaving Develop) actually hands the memory back. */
     void clearLocked()                   // mutex already held
     {
-        path.clear(); w = h = degrees = 0; baseKey.clear(); entries.clear();
+        path.clear(); w = h = degrees = 0; entries.clear();
         hot = Hot();
     }
 
@@ -264,14 +296,15 @@ private:
     /* What the whole cache was built against; any change invalidates every entry. */
     QString    path;
     int        w = 0, h = 0, degrees = 0;
-    QByteArray baseKey;                 // serialized GLOBAL (base) EditParams
     /* One per scope POSITION. Do NOT rename this to `slots` (the obvious name): `slots`
        is a Qt keyword macro that expands to nothing, and the failure reads as a pile of
        unrelated syntax errors. */
     std::vector<Slot> entries;
     Hot hot;
     /* Render scratch -- storage, never data; see the accessors above. */
-    std::shared_ptr<WorkingImage> scratchAcc, scratchLay, scratchOutA, scratchOutB;
+    std::shared_ptr<WorkingImage> scratchAcc, scratchLay;
+    std::shared_ptr<WorkingImage> scratchOutA, scratchOutB;   // layer snapshot A/B
+    std::shared_ptr<WorkingImage> scratchPreA, scratchPreB;   // prefix snapshot A/B
 };
 
 #endif // DEVELOPSTACKCACHE_H

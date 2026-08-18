@@ -638,6 +638,10 @@ void MW::runDevelopStressTest(const QString &folderPath, int durationMs)
       o a simulated brush drag -- the pending submask's stroke grows and is pushed through
         setActiveMaskParams, which is exactly what ImageView emits, so every tick runs
         updateMaskOverlayTint + renderDevelopPreview -> worker;
+      o a simulated ADJUSTMENT drag alternating the Global and mask scopes
+        (selfTestNudgeAdjustment). A brush drag moves the MASK; this moves PARAMS, which
+        is the path that writes the render scratch buffers and re-arms the hot
+        prefix/layer, so without it the whole adjustment side went unraced;
       o veil toggles, which flip whether the GUI thread composites at all;
       o IMAGE SWITCHES mid-drag, so a worker completes against a changed currentFilePath
         and its result must be discarded;
@@ -731,6 +735,32 @@ void MW::runDevelopStressTest(const QString &folderPath, int durationMs)
                 QString("{\"size\":22,\"flow\":100,\"autoMask\":false,\"strokes\":"
                         "[{\"size\":22,\"feather\":0,\"flow\":100,\"erase\":false,"
                         "\"autoMask\":false,\"pts\":[%1]}]}").arg(pts));
+
+            /* ADJUSTMENT drag, alternating Global and the mask scope. The brush drag
+               above moves the MASK; this moves PARAMS, which is a different path through
+               the interactive cache and the only one that touches the render scratch
+               buffers the worker writes (accScratch / layScratch / outScratch /
+               preScratch) and the A/B alternation that keeps the worker off a buffer the
+               cache is serving as const. Global and mask scope alternate because they
+               invalidate different halves: a Global nudge moves the base signature, so
+               the hot prefix is recaptured every tick; a mask-scope nudge leaves the base
+               alone, so the prefix survives and the layer churns instead.
+
+               TWO cadences, both measured rather than guessed, because a render spans
+               ~16 ticks and anything faster than that never lets a cache entry survive:
+
+                 . PAUSE the nudge for runs of ticks. Nudging every tick means a scope's
+                   params ALWAYS differ between renders, so hotParamsSame is never true
+                   and the cached LAYER is never reused -- `prefix +layer` was 0 of 79
+                   renders. The quiet windows are brush-only, which is what makes the
+                   layer survive, and that path is the whole point of the stack cache.
+                 . HOLD a scope across several windows. Alternating Global/mask per tick
+                   moves the base constantly, so hotAt() rejects the prefix every render:
+                   `resume -1 / noPrefix` on 7 of 7. Holding gave 8 of 79 resuming. */
+            const bool nudging = (*tick / 30) % 2 == 0;
+            if (nudging)
+                developProperties->selfTestNudgeAdjustment((*tick / 120) % 2 == 0,
+                                                           0.05f * float(*tick % 20) - 0.5f);
 
             if (*tick % 7 == 0)  imageView->toggleMaskTint();      // veil on/off mid-drag
             if (*tick % 11 == 0) renderDevelopPreview(false);      // the crop-style caller
@@ -6389,6 +6419,9 @@ void applySpots(QImage &img, const QVector<FillSpot> &spots, const QString &fPat
    Develop/developstackcache.h. Only the GUI-thread proxy path passes one; the off-thread
    settle render and the small verification renders pass nullptr and recompute everything,
    which is also what keeps the cache lock-free. */
+/* Defined below, next to the other stack predicates; needed here for the mask keys. */
+bool scopeMaskDependsOnBase(const DevelopProperties::StackRenderJob::Scope &L);
+
 QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
                              int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
                              WorkingImageCache::RenderTimings *timings = nullptr,
@@ -6398,7 +6431,8 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                                  WorkingImageCache::Space::sRGB,
                              DevelopStackCache *cache = nullptr,
                              QSize *displaySize = nullptr,
-                             MaskBuildStats *maskStats = nullptr)
+                             MaskBuildStats *maskStats = nullptr,
+                             const QByteArray &baseKey = QByteArray())
 {
     /* An interactive (proxy) render is normally left at PROXY resolution -- the loupe
        stretches it (ScaledPixmapItem) instead of this function allocating and filling a
@@ -6440,6 +6474,15 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
             for (size_t i = 0; i < nScopes; ++i) {
                 const DevelopProperties::StackRenderJob::Scope &L = job.scopes.at(int(i));
                 maskKeys[i] = maskComponentsSignature(L.components);
+                /* A content-range mask thresholds a reference derived from the developed
+                   base, so its coverage moves when the base does even though no component
+                   changed -- fold the base signature in for those scopes and ONLY those.
+                   Doing it for every scope is what made a Global drag rebuild a radial
+                   mask on every tick. See scopeMaskDependsOnBase. */
+                if (scopeMaskDependsOnBase(L)) {
+                    maskKeys[i] += '#';
+                    maskKeys[i] += baseKey;
+                }
                 paramsKeys[i] = QJsonDocument(EditStack::paramsToJson(L.params))
                                     .toJson(QJsonDocument::Compact);
             }
@@ -6487,7 +6530,9 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
         WorkingImageCache::StackResume resume;
         WorkingImageCache::StackResume *resumeP = nullptr;
         if (cache && nScopes) {
-            const DevelopStackCache::Hot hot = cache->hotAt(hotAt);   // copied under lock
+            /* The prefix IS the developed base, so it is keyed on the base explicitly --
+               unlike the masks, which are not a function of it. */
+            const DevelopStackCache::Hot hot = cache->hotAt(hotAt, baseKey);  // under lock
             if (hot.prefix) {
                 resume.start  = hotAt;
                 resume.prefix = hot.prefix;
@@ -6502,6 +6547,7 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
             resume.accScratch = cache->accScratch();
             resume.layScratch = cache->layScratch();
             resume.outScratch = cache->outScratch();
+            resume.preScratch = cache->prefixScratch();
             resumeP = &resume;
         }
         if (!WorkingImageCache::renderStack(src, job.global, sl, out, timings, depth,
@@ -6513,7 +6559,7 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
            rather than hiding in the compositor's unattributed remainder. */
         if (cache && resumeP) {
             if (timings) probe.restart();
-            cache->setHot(resume.capture, resume.outPrefix, resume.outLayer);
+            cache->setHot(resume.capture, baseKey, resume.outPrefix, resume.outLayer);
             resume.prefix.reset();
             resume.layer.reset();
             if (timings) timings->setHotMs = probe.elapsed();
@@ -6545,14 +6591,31 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
     return out;
 }
 
+/* True if this scope's mask COVERAGE depends on the global (base) params.
+
+   Only the content-range tools do: they threshold a display-referred reference built
+   from the developed base (MW::ensureRangeRef), so a base change can move their coverage
+   without moving any component. Every other reference a tool samples -- the AI fields,
+   the object coverages, the brush auto-mask guide -- is registered per PATH and is never
+   rebuilt when the base moves (see the guards in ensureSubjectMask / ensureSkyMask /
+   ensureDepthMask / ensureObjectMask / ImageView::ensureAutoGuide), so those masks are
+   base-independent by construction rather than by luck. This is what lets the stack cache
+   keep a radial or brush mask across a Global slider drag instead of rebuilding it on
+   every tick -- see DevelopStackCache's VALIDITY note. */
+bool scopeMaskDependsOnBase(const DevelopProperties::StackRenderJob::Scope &L)
+{
+    for (const MaskComponent &m : L.components)
+        if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange))
+            return true;
+    return false;
+}
+
 /* True if any enabled scope carries a content-range mask (Luminance/Color Range) -- these need the
    display-referred base reference (MW::ensureRangeRef) built before the composite. */
 bool stackHasRangeMask(const DevelopProperties::StackRenderJob &job)
 {
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
-        for (const MaskComponent &m : L.components)
-            if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange))
-                return true;
+        if (scopeMaskDependsOnBase(L)) return true;
     return false;
 }
 
@@ -7362,27 +7425,6 @@ void MW::renderDevelopPreview(bool fullRes)
        guideless proxy paints the full brush and the settle snaps it to the band. */
     if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
-    /* Per-scope mask cache, PROXY ONLY: the full-res path renders once on settle, and
-       its buffers are ~w*h*4 bytes, so it recomputes rather than caching. reset() drops
-       every slot when the image, the proxy size, the orientation or the GLOBAL params
-       change -- the last because a content-range mask samples a reference built from the
-       developed base (ensureRangeRef), so it can move without its components moving. */
-    DevelopStackCache *cache = nullptr;
-    bool cacheSurvived = false;             // [DevTime] probe only
-    if (!fullRes) {
-        const QByteArray baseKey =
-            QJsonDocument(EditStack::paramsToJson(mj.global))
-                .toJson(QJsonDocument::Compact);
-        cacheSurvived = developStackCache.reset(fPath, srcImg->width, srcImg->height,
-                                                degrees, baseKey);
-        cache = &developStackCache;
-    }
-
-    if (G::isReportDevelopTime) {         // reset the dab counters for this tick
-        BrushStamp::dabStats().dabs.store(0, std::memory_order_relaxed);
-        BrushStamp::dabStats().pixels.store(0, std::memory_order_relaxed);
-    }
-
     /* ---- Hand the composite to the worker ----
        Everything above had to happen here: the orientation reads the sort/filter model,
        ensureAutoGuide reads the loupe pixmap, and the ensure*Mask builders run inference
@@ -7394,11 +7436,44 @@ void MW::renderDevelopPreview(bool fullRes)
         /* One render at a time. Note the request rather than dropping it: the completion
            re-arms, so the newest state always gets rendered. Relying on developParamsGen
            instead would silently lose the crop/warp callers, which re-render without
-           bumping it. */
+           bumping it.
+
+           THIS MUST STAY ABOVE THE CACHE RESET BELOW. It used to sit after it, so every
+           mouse-move that arrived mid-render still called reset() -- wiping the per-scope
+           masks out from under the worker that was using them, then returning here. A
+           drag delivers an event about every 8 ms against a ~120 ms render, so the cache
+           was cleared a dozen times per render and NO mask ever survived: [DevTime] read
+           `cacheKept` (the reset that tick was a no-op) while still rebuilding the mask
+           every tick, and the discarded buffer's last reference died in the compositor,
+           which is what COMPOSEOTHER was measuring. */
         developProxyPending = true;
         return;
     }
     developProxyInFlight = true;
+
+    /* Per-scope mask cache, PROXY ONLY: the full-res path renders once on settle, and
+       its buffers are ~w*h*4 bytes, so it recomputes rather than caching. reset() drops
+       every slot when the image, the proxy size or the orientation changes. The GLOBAL
+       params are NOT part of that key: only a content-range mask's coverage depends on
+       them, and that dependency is carried per scope in the mask key instead (see
+       scopeMaskDependsOnBase). The base signature is still needed here, for the hot
+       prefix/layer, which ARE a function of the base. */
+    DevelopStackCache *cache = nullptr;
+    bool cacheSurvived = false;             // [DevTime] probe only
+    QByteArray baseKey;
+    if (!fullRes) {
+        baseKey = QJsonDocument(EditStack::paramsToJson(mj.global))
+                      .toJson(QJsonDocument::Compact);
+        cacheSurvived = developStackCache.reset(fPath, srcImg->width, srcImg->height,
+                                                degrees);
+        cache = &developStackCache;
+    }
+
+    if (G::isReportDevelopTime) {         // reset the dab counters for this tick
+        BrushStamp::dabStats().dabs.store(0, std::memory_order_relaxed);
+        BrushStamp::dabStats().pixels.store(0, std::memory_order_relaxed);
+    }
+
 
     /* Captured by value / shared_ptr so the worker cannot be left holding a dangling
        reference if the GUI thread moves on: `proxySrc` keeps the pixels alive even if
@@ -7427,7 +7502,8 @@ void MW::renderDevelopPreview(bool fullRes)
     const qint64 tProxyCap = tProxy;
 
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
-                            reqGen, geomGen, wantTime, tProxyCap, cacheSurvived]() {
+                            reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
+                            baseKey]() {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
@@ -7439,7 +7515,7 @@ void MW::renderDevelopPreview(bool fullRes)
                                            WorkingImageCache::OutDepth::Eight,
                                            WorkingImageCache::Space::sRGB, cache,
                                            &displaySize,
-                                           wantTime ? &ms : nullptr);
+                                           wantTime ? &ms : nullptr, baseKey);
         const qint64 tRender = wt.restart();
         const Geometry appliedGeom = mj.geometry;
         const QSize orientedSize(fw, fh);

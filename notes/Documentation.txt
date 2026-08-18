@@ -3594,6 +3594,127 @@ Scope & mask model (Global + masks)
                    exist). The run FAILS only on races naming the Develop render; the
                    folder-load / metadata-reader family is warned about, not failed, and
                    crashes always fail.
+             - ADJUSTMENT-DRAG LATENCY (2026-08): dragging a slider was slow even on an
+               image with NO edits and NO masks, and the cause was not pixel maths at all.
+               Split the [DevTime] `develop` number into copy / apply / blend / free and
+               the picture inverted: on a 2175x1447 proxy a 121 ms tick was 87 ms of
+               RELEASING MEMORY -- three ~38 MB WorkingImages at ~29 ms each -- against 1
+               ms for the scope's develop pass and 7 ms for the mask blend. The tell is
+               `copy 2` next to `free 29`: writing 38 MB takes 2 ms (~19 GB/s on an M4)
+               and releasing the same 38 MB takes fifteen times longer, because every tick
+               handed large blocks back to the OS and the next tick faulted them in again.
+               Four fixes:
+                 . BUFFER REUSE. Develop/workingimage.h assignReusing(dst, src) refills a
+                   WorkingImage through vector::assign, which keeps the existing
+                   allocation when capacity fits, and falls back to plain assignment when
+                   there is nothing to reuse. That fallback is load-bearing, not tidiness:
+                   forcing a fresh 24 MP destination down the grow path measured 631 ms
+                   against 49 ms. DevelopStackCache owns the scratch (accScratch /
+                   layScratch / outScratch), released by clear() but NOT by reset() --
+                   reset() fires on every tick of a Global drag, and dropping them there
+                   made things WORSE, four allocations per tick instead of three.
+                   outScratch() hands back whichever of an A/B pair hot.layer is not
+                   serving, so the render never writes a buffer the cache is still handing
+                   out as const. WorkingImageCache::render takes the same scratch: an
+                   UNMASKED image takes developComposite, NOT renderStack, so fixing only
+                   the stack path left the commonest case untouched (62 ms per tick).
+                   Result: 121 ms -> 35 ms.
+                 . SHOW SUPERSEDED FRAMES. `applied 0` on 6 of 7 ticks. A drag delivers
+                   mouse events far faster than a render completes, so every frame but the
+                   last was superseded and DISCARDED -- the loupe did not update at all
+                   until the user paused. That was the lag itself, and no per-stage win
+                   could fix it. Frames are tens of ms old and arrive in order (1-thread
+                   pool), so they are now shown. The documented reason for discarding was
+                   the crop tool flashing a geometry-suppressed frame; that is about
+                   GEOMETRY, not age, so developProxyGeomGen bumps only when the geometry
+                   actually moves and gates exactly that case.
+                 . TRANSFER LUT. With the above done, toImage was ~90% of the tick (35 of
+                   38 ms). On the sRGB path the per-channel chain is a pure 1-D function:
+                   the primaries matrix is identity, and HighlightRolloff cannot fire when
+                   the baseline curve ran because BaselineTone Clamp01s its own output. So
+                   a 16384-entry table plus interpolation replaces the pow, ~4.8x. NOT
+                   BIT-EXACT and deliberately so: ~0.001% of inputs land one level of 255
+                   away, always by exactly 1. A denser table does not remove them (the
+                   residue is float rounding at the .5 boundary) and an exact-threshold
+                   formulation was measured with the SAME residue at only 2.9x -- so this
+                   is the faster of two equally approximate options, not a shortcut past
+                   an exact one. Used for the preview AND 8-bit export so the two always
+                   agree; ToImage16 keeps the exact maths. Display-referred input can
+                   exceed 1, where the rolloff is cross-channel, so those pixels take the
+                   exact branch. Bound asserted by tests/unit/tst_outputtransform.
+                 . SCOPES SAMPLE IN PLACE. updateDevelopScopes ran convertToFormat(RGB32)
+                   over the WHOLE frame to read ~180k strided samples, on the GUI thread.
+                   ToImage emits RGB888, so it now samples that directly. Newly urgent
+                   once superseded frames are shown: this went from 1 tick in 7 to every
+                   tick.
+                 . CACHE WIPED UNDER THE WORKER (the one that made a Global drag with a
+                   mask slow). developStackCache.reset() ran BEFORE the
+                   developProxyInFlight early-return, so every mouse-move arriving
+                   mid-render still wiped the per-scope masks -- out from under the worker
+                   using them -- and then returned. A drag delivers an event about every
+                   8 ms against a ~120 ms render, so the cache was cleared a dozen times
+                   per render and no mask ever survived. The symptom was contradictory on
+                   purpose: [DevTime] said `cacheKept` (that tick's reset WAS a no-op)
+                   while `maskScopes 1` rebuilt the mask anyway, and the orphaned buffer's
+                   last reference died in the compositor, which is all COMPOSEOTHER ever
+                   was. Fixed by moving the in-flight check above the reset.
+                 . BASE PARAMS NO LONGER INVALIDATE MASKS. Even with the ordering fixed, a
+                   Global drag changes the base signature every render, and that was part
+                   of reset()'s key -- so every mask still died every tick. Only the
+                   content-range tools' coverage depends on the base (they threshold
+                   ensureRangeRef's reference); every other reference is keyed by PATH and
+                   is never rebuilt when the base moves, so the rest were being
+                   invalidated for a dependency the code does not have. reset() now keys
+                   on image/dims/orientation only, the base signature is folded into the
+                   per-scope MASK KEY for range-mask scopes alone
+                   (MW::scopeMaskDependsOnBase), and DevelopStackCache::Hot carries its
+                   own baseKey because the prefix IS the developed base.
+                 . PREFIX SNAPSHOT SCRATCH. With the mask cached, the next allocator cost
+                   surfaced underneath it: setHot 62 ms of a 108 ms tick. The hot PREFIX
+                   is a function of the base, so a Global drag correctly rejects it every
+                   tick -- and then captured a fresh proxy-sized snapshot every tick,
+                   whose predecessor setHot released. It now refills its own A/B scratch
+                   pair (DevelopStackCache::prefixScratch), separate from the layer's
+                   because the two are captured on different schedules. GENERAL SHAPE of
+                   this whole round: every fix uncovered the next allocation down, and the
+                   probe field that had been 0 became the largest number. Read the whole
+                   line, not the stage you just changed.
+                 . TSAN COVERAGE FOR THE ADJUSTMENT PATH. The driver only ever simulated a
+                   BRUSH drag, which moves the MASK -- so none of the above (the scratch
+                   buffers the worker writes, the A/B alternation keeping it off a buffer
+                   the cache serves as const, the reset/in-flight reordering) was raced.
+                   DevelopProperties::selfTestNudgeAdjustment is the missing half: write
+                   one param, emit paramsChanged, nothing else. Getting real coverage out
+                   of it took four runs and two fixes, and the PASS line was worthless
+                   until both landed -- read the render count and the `resume`
+                   distribution, never the PASS alone.
+                   - The hook must NOT call noteScopeEdit. Marking the stack dirty
+                     persists it, the scope then survives the folder churn, and the
+                     driver's re-arm stacks another on top: 21-23 scopes and 3 renders in
+                     180 s.
+                   - selfTestAddMaskScope had to become IDEMPOTENT. It appended a scope
+                     whenever the ACTIVE scope was short of components, and an image
+                     switch resets the active scope to Global -- so it appended one per
+                     switch (179 of them on a long run): 13-14 scopes, 2 renders in 180 s.
+                     Latent since it was written; the 45 s default (~2 switches) hid it.
+                     Fixing it took renders 2 -> 79.
+                   - The nudge CADENCE decides which branches run, because a render spans
+                     ~16 ticks. Nudging every tick means params always differ between
+                     renders, so the cached LAYER is never reused (`prefix +layer` 0 of
+                     79); alternating scope every tick moves the base constantly, so the
+                     PREFIX is never reused (`resume -1` 7 of 7). Nudge in 30-tick bursts
+                     with 30-tick brush-only gaps, holding a scope for 120, and all three
+                     branches run.
+                   - RESULT: 1206 ticks, 77 renders -- 56 cold, 10 resuming the prefix, 11
+                     resuming prefix+layer -- no races. That is the first run of this
+                     driver that actually exercised the interactive cache's reuse paths.
+               LESSON, the same one as the brush-drag round above: the plan going in was
+               to bound the develop pass and the blend to the mask's BOUNDING BOX, worked
+               out in detail down to the guard list. Measured, those two stages are 1 ms
+               and 7 ms -- the whole design would have saved 8 ms of 121 while the
+               allocator ate 87. Split the number until the stages SUM to the wall clock
+               before choosing a fix, and check allocation churn before reaching for
+               per-pixel cleverness.
              - IMAGE-SWITCH LATENCY (2026-08): switching image in Develop blocks on a full
                unpack + demosaic + RawColor before anything can be developed (Develop
                trims read-ahead to the current image). The DELIBERATE answer is
@@ -3612,8 +3733,14 @@ Scope & mask model (Global + masks)
                this is revisited; a disk cache was considered and rejected (only helps
                revisits, large files, mtime invalidation surface).
            PROBE: set G::isReportDevelopTime to log [DevTime] lines (proxy/full/full(async), dims,
-           proxyBuild / mask (+scope count) / develop / toImage / orient+scale /
-           render+compose / preview / scopes / tint ms. The TINT COUNT is the diagnostic
+           proxyBuild / mask (+scope count) / srcCopy / develop [copy apply blend free
+           OTHER] / outFree / resume / cacheKept|cacheWiped / toImage / orient+scale /
+           setHot / worker / COMPOSEOTHER / applied / superseded / preview / scopes /
+           tint ms. OTHER and COMPOSEOTHER are the REMAINDERS -- develop minus its buckets,
+           and worker minus every reported stage -- and they are the point: while either is
+           large the stages do not sum to the wall clock and any fix chosen from the named
+           numbers is aimed at a fraction of the cost. Both were ~40-80 ms, which is how
+           the allocator churn was found. The TINT COUNT is the diagnostic
            that matters for coalescing: more than one veil rebuild per render means it has
            come uncoupled again. The async line adds the develop sub-stage breakdown
            denoise/point/texture/dehaze. Off in production.

@@ -178,17 +178,22 @@ public:
                 null means allocate locally, which is what the full-res settle render
                 does, since it runs once and should give its ~290 MB back.
 
-                outScratch must NOT be the buffer the cache is currently handing back as
-                `layer` -- renderStack writes it, and everything a cache hands out is
-                read as const. The caller alternates two buffers to guarantee that; see
-                MW::developCompositeStack. */
+                preScratch does the same for the prefix snapshot, and needs its own pair
+                because it is captured on a different schedule: during a GLOBAL slider
+                drag the base moves every tick, so the cached prefix is rejected every
+                tick and a fresh one is taken.
+
+                outScratch and preScratch must NOT be the buffers the cache is currently
+                handing back as `layer` and `prefix` -- renderStack writes them, and
+                everything a cache hands out is read as const. The caller alternates two
+                buffers for each to guarantee that; see MW::developCompositeStack. */
     struct StackResume {
         size_t start = 0;
         std::shared_ptr<const WorkingImage> prefix;
         std::shared_ptr<const WorkingImage> layer;
         size_t capture = size_t(-1);
         std::shared_ptr<const WorkingImage> outPrefix, outLayer;
-        std::shared_ptr<WorkingImage> accScratch, layScratch, outScratch;
+        std::shared_ptr<WorkingImage> accScratch, layScratch, outScratch, preScratch;
     };
 
     /* Stack composite, blended in scene-linear before the output transform: start from
