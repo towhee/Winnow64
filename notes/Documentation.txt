@@ -3979,6 +3979,31 @@ Scope & mask model (Global + masks)
                refreshScopeList / buildTree, and caches each section's star state
                (hdrStar[], -1 = unknown after a rebuild) so a slider drag does not run
                five recursive findCaptionIndex searches per tick.
+               UNIFORM HEADER CONTROLS (2026-08-19): EVERY header and row in the
+               Scope/Edits panel ends with the SAME trailing pair -- an EYE (show or hide
+               that thing's changes) and then a VERTICAL ELLIPSIS menu, with the menu
+               always last. That covers the "Edits" band (its eye is the ACTIVE scope's,
+               so band and selected row read alike), each scope row incl. Global (the eye
+               replaced the leading show/hide checkbox, and Global now has a menu too --
+               New mask / Reset Global, the only actions that apply to it), the "Submasks"
+               band (its eye hides every submask at once; the [+] add button stays ahead
+               of the pair so the primary action is one click), each submask row, and
+               each section header (Basic/Color/Calibrate/Color Grade/Effects, whose menu
+               repeats the Preview + Reset items previously reachable only by
+               right-clicking). The section pair is queued into the BarBtnEditor column in
+               order (btns: eye, then menu), which right-aligns them, so "menu last" holds
+               everywhere. THE PAIR LINES UP DOWN THE WHOLE PANEL: G::headerBtnGap (6) is
+               the space between the two buttons and G::headerBtnRightInset (6) the space
+               from the panel's right edge, used by the bands, the rows AND the tree's
+               section headers. The tree can carry the gap because BarBtnEditor now reads
+               a btnsSpacing global set alongside btns (drained and reset to 0 with them),
+               so only the rows that ask for spacing get it -- the Embellish dock's button
+               pairs stay tight. The section headers align because the delegate gives the
+               editor the whole value-column rect, so BarBtnEditor's own right inset is
+               measured from the same edge as the bands'. EVERY eye and menu emission is DEFERRED a tick
+               (QTimer::singleShot(0)) because the handler rebuilds the rows or the tree
+               and so destroys the very button the click is inside -- the checkboxes this
+               replaced could emit inline only because the row survived on deleteLater.
                PREVIEW / RESET: each section header
                (Basic/Color/Effects) carries an eye BarBtn that toggles that group's Preview flag on
                the active scope; the whole-mask eye + reset live in the ScopeHeader widget
@@ -4229,7 +4254,7 @@ Scope & mask model (Global + masks)
                the scope menu row brings the combined mask back. maskTintHidden is sticky,
                so selecting another scope with a mask re-shows it explicitly
                (onScopeSelected -> maskTintShowRequested -> ImageView::showMaskTint).
-             - DISABLED SUBMASKS ARE NOT VEILED: a submask whose row checkbox is off
+             - DISABLED SUBMASKS ARE NOT VEILED: a submask whose row eye is off
                (MaskComponent::enabled == false) is dropped by the render (stackJob skips
                it), so updateMaskOverlayTint filters it out of the vector it hands
                buildMaskBuffer -- which composites what it is given and never reads the
@@ -4237,10 +4262,10 @@ Scope & mask model (Global + masks)
                not have. The filter also drives the ensure*() reference builds, so an
                unchecked AI/range submask costs nothing, and the pending index is REMAPPED
                onto the filtered vector (it is an index into the unfiltered components).
-               Uncheck the pending submask itself and it leaves the veil too -- no
+               Hide the pending submask itself and it leaves the veil too -- no
                footprint ring, no op chip -- since it then contributes nothing; the tool's
-               own live preview still draws, so editing it is not blind. Toggling the
-               checkbox emits paramsChanged, which rebuilds both render and veil.
+               own live preview still draws, so editing it is not blind. Toggling the eye
+               emits paramsChanged, which rebuilds both render and veil.
              - ONE COLOUR, OUTCOME PREVIEW (how the op is shown): the overlay does NOT
                colour-code Add/Subtract/Intersect. Instead the PENDING submask (the one
                being defined, DevelopProperties::pendingMaskIndex) is composited into the
@@ -4376,13 +4401,13 @@ Scope & mask model (Global + masks)
              - THE MASK PANEL IS NESTED UNDER ITS MASK (2026-08-13): the MaskPanel is no
                longer a transient strip above the Scopes list. It is a CHILD of the active
                mask's row in the Edits list (ScopeHeaderLab::setRowDetail, indented by
-               kDetailIndent = 22) and is up whenever a MASK scope is active, not only
+               kDetailIndent = 22, the same inset the scope captions now carry) and is up whenever a MASK scope is active, not only
                while a submask is being built:
 
-                   [x] Mask 2                          [:]     <- the scope row
-                   |  v Submasks                       [+]     <- SubmaskList (collapses)
-                   |    [x] (+) Linear Gradient        [:]
-                   |    [x] (-) Brush              *   [:]     <- open for editing
+                   Mask 2                      [eye] [:]     <- the scope row
+                   |  v Submasks           [+] [eye] [:]     <- SubmaskList (collapses)
+                   |    (+) Linear Gradient     [eye] [:]
+                   |    (-) Brush           *   [eye] [:]     <- open for editing
                    |    Feather   -----o-----                  <- embedded MaskEditor
                    |    Invert    [ ]
                    |    [    Add and Commit    ]               <- "Done" when re-editing
@@ -4405,11 +4430,14 @@ Scope & mask model (Global + masks)
                ScopeHeaderLab pattern -- a gradient header band, a rows container rebuilt
                wholesale by setSubmasks(rows, selected), and EVERY emission DEFERRED a
                tick (QTimer::singleShot(0)) because the handler loops back through
-               setSubmasks and deletes the very row widget the click is inside. Per row: a
-               show/hide checkbox (MaskComponent::enabled -- the fold skips a disabled
-               component, so it is a one-click A/B), an OP CHIP that cycles
-               Add/Subtract/Intersect, the tool name, and a [:] menu (Edit / op / Invert /
-               Move up / Move down / Duplicate / Delete). DevelopProperties owns the model
+               setSubmasks and deletes the very row widget the click is inside. Per row:
+               an OP CHIP that cycles Add/Subtract/Intersect, the tool name, then the
+               standard trailing pair -- an EYE (MaskComponent::enabled -- the fold skips a
+               disabled component, so it is a one-click A/B) and a [:] menu (Edit / op /
+               Invert / Move up / Move down / Duplicate / Delete). The band carries the
+               same pair: its eye reads "shown" while ANY submask still contributes and
+               hides them all in one click (emitted per row, since the owner has no bulk
+               slot), and its menu offers Add submask / Show all / Hide all. DevelopProperties owns the model
                side: reopenSubmask, setSubmaskEnabled, setSubmaskOp,
                toggleSubmaskInverted, moveSubmask, duplicateSubmask and deleteMask -- each
                mutates, fixes up selectedMaskIndex/pendingIdx, noteEdit()s, buildTree()s

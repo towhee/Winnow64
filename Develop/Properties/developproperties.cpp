@@ -1764,8 +1764,9 @@ void DevelopProperties::onScopeEnabledToggled(int index, bool on)
     if (G::isLogger) G::log("DevelopProperties::onScopeEnabledToggled");
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
-    /* Global (index 0) now has a checkbox too; the compositor honours scopes[0].enabled
-       (see stackJob) so a disabled Global renders with no develop adjustments. */
+    /* Global (index 0) carries the same show/hide eye as every other scope; the
+       compositor honours scopes[0].enabled (see stackJob), so a disabled Global
+       renders with no develop adjustments. */
     if (index < 0 || index >= s.scopes.size()) return;
     if (s.scopes[index].enabled == on) return;
     s.scopes[index].enabled = on;                 // compositor skips a disabled scope
@@ -2164,6 +2165,40 @@ BarBtn *DevelopProperties::makeEyeBtn(const QString &tooltip, int group)
     b->setToolTip(tooltip);
     connect(b, &BarBtn::clicked, this, [this, group]{ togglePreviewSection(group); });
     return b;
+}
+
+BarBtn *DevelopProperties::makeSectionMenuBtn(int group)
+{
+    BarBtn *b = new BarBtn();
+    b->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    b->setToolTip("Section actions (show/hide, reset)");
+    connect(b, &BarBtn::clicked, this, [this, group]{ showSectionMenu(group); });
+    return b;
+}
+
+void DevelopProperties::showSectionMenu(int group)
+{
+    if (G::isLogger) G::log("DevelopProperties::showSectionMenu");
+    const QString label = groupLabel(group);
+    EditScope *l = activeScope();
+    const bool shown = l ? *previewFlag(l, group) : true;
+
+    QMenu menu(this);
+    QAction *aPreview = menu.addAction(tr("Show %1 changes").arg(label));
+    aPreview->setCheckable(true);
+    aPreview->setChecked(shown);
+    aPreview->setEnabled(l != nullptr);
+    QAction *aReset = menu.addAction(tr("Reset %1").arg(label));
+    aReset->setEnabled(!currentImagePath.isEmpty());
+
+    QAction *chosen = menu.exec(QCursor::pos());
+    if (!chosen) return;
+    /* Both actions repopulate the tree, which destroys the button this click is being
+       handled in, so fire on the next tick (same rule as the scope + submask rows). */
+    if (chosen == aPreview)
+        QTimer::singleShot(0, this, [this, group]{ togglePreviewSection(group); });
+    else if (chosen == aReset)
+        QTimer::singleShot(0, this, [this, group]{ resetSection(group); });
 }
 
 void DevelopProperties::refreshPreviewButtons()
@@ -3219,13 +3254,17 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
     if (previewGroup >= 0) {
         /* A section header (Basic/Color/Effects): a trailing eye toggle in a BarBtn column, drained
            by BarBtnEditor. hasValue + DT_BarBtns are what create that column. */
-        BarBtn *eye = makeEyeBtn("Preview: show or ignore these settings", previewGroup);
+        BarBtn *eye = makeEyeBtn("Show or hide these changes", previewGroup);
         if      (previewGroup == PV_Basic)    basicEyeBtn    = eye;
         else if (previewGroup == PV_Color)    colorEyeBtn    = eye;
         else if (previewGroup == PV_Calibrate)  calibrateEyeBtn  = eye;
         else if (previewGroup == PV_ColorGrade) colorGradeEyeBtn = eye;
         else if (previewGroup == PV_Effects)  effectsEyeBtn  = eye;
         btns.append(eye);
+        btns.append(makeSectionMenuBtn(previewGroup));   // menu last, as on every band
+        /* Same gap the scope + submask ROWS put between their [eye] and [:], so the pair
+           lines up down the whole panel (BarBtnEditor resets this with btns). */
+        btnsSpacing = G::headerBtnGap;
         i.hasValue = true;
         i.delegateType = DT_BarBtns;
     }

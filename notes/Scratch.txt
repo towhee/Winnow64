@@ -1787,8 +1787,6 @@ Where things ended up overall, against your original request — minimize latenc
 │ global + 3 masks           │ 150–394 ms/tick                     │ 25–33 ms/tick, every frame shown │
 └────────────────────────────┴─────────────────────────────────────┴──────────────────────────────────┘
 
-The wins came from buffer reuse (72% of a tick was free), showing superseded frames instead of discarding six of seven, the cache being wiped under the running
-worker, narrowing base-param invalidation, the prefix scratch, the toImage LUT, and RGB888 scope sampling. The bounding-box plan I originally wrote and got approved
-was cancelled on measurement — it targeted 8 ms of 121.
+The wins came from buffer reuse (72% of a tick was free), showing superseded frames instead of discarding six of seven, the cache being wiped under the running worker, narrowing base-param invalidation, the prefix scratch, the toImage LUT, and RGB888 scope sampling. The bounding-box plan I originally wrote and got approved was cancelled on measurement — it targeted 8 ms of 121.
 
-
+[⋮] Menu

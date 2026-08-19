@@ -3,7 +3,6 @@
 #include "Main/global.h"
 
 #include <QLabel>
-#include <QCheckBox>
 #include <QMenu>
 #include <QAction>
 #include <QHBoxLayout>
@@ -40,7 +39,7 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     headerBand->setCursor(Qt::PointingHandCursor);
     headerBand->installEventFilter(this);        // a header click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(0, 3, 6, 3);
+    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
     hb->setSpacing(0);
     /* Collapse arrow (branch glyph) in an icon-wide button, matching the tree's section
        headers + the Raw panel: click it (or the caption) to hide/show the list. The
@@ -53,6 +52,14 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleListCollapsed(); });
     titleLabel = new QLabel(tr("Edits"), headerBand);
     titleLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
+    /* Band eye: show/hide the ACTIVE scope's changes -- the same flag its row eye
+       carries, so the two always read alike. Every band and row in this panel ends with
+       the same pair, eye then menu. */
+    bandEyeBtn = new BarBtn();
+    bandEyeBtn->setToolTip("Show or hide the selected scope's changes");
+    setEyeIcon(bandEyeBtn, true);
+    bandEyeBtn->setIconSize(QSize(16, 16));
+    connect(bandEyeBtn, &BarBtn::clicked, this, [this]{ toggleActiveEnabled(); });
     panelMenuBtn = new BarBtn();
     panelMenuBtn->setToolTip("Scope actions (new mask)");
     panelMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
@@ -62,6 +69,8 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(titleLabel);
     hb->addStretch(1);
+    hb->addWidget(bandEyeBtn);
+    hb->addSpacing(G::headerBtnGap);      // the gap every header/row's pair carries
     hb->addWidget(panelMenuBtn);
     outer->addWidget(headerBand);
     updateListCollapseIcon();
@@ -153,8 +162,13 @@ void ScopeHeaderLab::setScopeRows(const QVector<ScopeRowInfo> &rows, int active)
     activeIndex = (active >= 0 && active < rows.size()) ? active : 0;
     globalActive  = (activeIndex == 0);
     names.clear();
-    for (const ScopeRowInfo &r : rows) names << r.name;
+    enabledStates.clear();
+    for (const ScopeRowInfo &r : rows) {
+        names << r.name;
+        enabledStates << r.enabled;
+    }
     rebuild(rows, activeIndex);
+    updateBandEyeIcon();
 }
 
 void ScopeHeaderLab::setRowDetail(QWidget *detail, int slot, int indent)
@@ -188,7 +202,8 @@ void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
 {
     /* Drop the old rows. deleteLater, not delete: a rebuild can be triggered from inside
        a row child's own signal (the show/hide checkbox emits scopeEnabledToggled inline),
-       so the row must outlive the handler it is running in. But a widget taken out of a
+       so the row must outlive the handler it is running in (its eye and menu emissions
+       are deferred a tick for the same reason). But a widget taken out of a
        layout KEEPS its parent, geometry and visibility, so until the deferred delete runs
        it still paints over the rebuilt list -- that was the stale "Mask 1 selected" band
        and the orphan "Mask 2" row floating in the tree. hide() it as it comes out, and
@@ -254,18 +269,11 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     }
 
     QHBoxLayout *hb = new QHBoxLayout(row);
-    hb->setContentsMargins(10, 2, 6, 2);
-    hb->setSpacing(6);
-
-    /* Every scope -- Global included -- gets a show/hide checkbox that toggles
-       EditScope::enabled; the compositor skips a disabled scope (Global off => the image
-       renders with no develop adjustments). */
-    QCheckBox *cb = new QCheckBox(row);
-    cb->setChecked(r.enabled);
-    cb->setToolTip("Show or hide this scope's edits");
-    connect(cb, &QCheckBox::toggled, this,
-            [this, index](bool on){ emit scopeEnabledToggled(index, on); });
-    hb->addWidget(cb);
+    /* The caption starts at kDetailIndent, the same inset the details nested under this
+       row use, so a scope name and its Mask panel / section headers share one left
+       edge. */
+    hb->setContentsMargins(kDetailIndent, 2, G::headerBtnRightInset, 2);
+    hb->setSpacing(G::headerBtnGap);
 
     QLabel *name = new QLabel(r.name, row);
     name->setStyleSheet(G::labelCss(active ? QColor(Qt::white) : G::textColor,
@@ -273,16 +281,35 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     hb->addWidget(name);
     hb->addStretch(1);
 
-    if (!r.isGlobal) {
-        BarBtn *menuBtn = new BarBtn();
-        menuBtn->setToolTip("Scope actions (add to mask, reset, remove, rename)");
-        menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
-        menuBtn->setIconSize(QSize(16, 16));
-        const QString nm = r.name;
-        connect(menuBtn, &BarBtn::clicked, this,
-                [this, index, nm]{ showRowMenu(index, nm); });
-        hb->addWidget(menuBtn);
-    }
+    /* Every scope -- Global included -- ends with the same trailing pair: an eye that
+       toggles EditScope::enabled (the compositor skips a disabled scope, so Global off =>
+       the image renders with no develop adjustments), then the actions menu. */
+    BarBtn *eyeBtn = new BarBtn();
+    eyeBtn->setToolTip("Show or hide this scope's changes");
+    setEyeIcon(eyeBtn, r.enabled);
+    eyeBtn->setIconSize(QSize(16, 16));
+    const bool on = r.enabled;
+    connect(eyeBtn, &BarBtn::clicked, this, [this, index, on]{
+        /* Deferred: the toggle loops back through setScopeRows, which deletes this very
+           button (the checkbox this replaced could emit inline only because the row
+           survived on deleteLater). */
+        QTimer::singleShot(0, this, [this, index, on]{
+            emit scopeEnabledToggled(index, !on);
+        });
+    });
+    hb->addWidget(eyeBtn);
+
+    BarBtn *menuBtn = new BarBtn();
+    menuBtn->setToolTip(r.isGlobal
+                            ? "Global actions (new mask, reset)"
+                            : "Scope actions (add to mask, reset, remove, rename)");
+    menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    menuBtn->setIconSize(QSize(16, 16));
+    const QString nm = r.name;
+    const bool isGlobal = r.isGlobal;
+    connect(menuBtn, &BarBtn::clicked, this,
+            [this, index, nm, isGlobal]{ showRowMenu(index, nm, isGlobal); });
+    hb->addWidget(menuBtn);
 
     return row;
 }
@@ -290,9 +317,9 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
 bool ScopeHeaderLab::eventFilter(QObject *watched, QEvent *event)
 {
     /* A single left click anywhere on the header band (caption or empty area) toggles the
-       list collapse; the arrow + [v] buttons consume their own clicks. A click on a row
-       body (incl. its name label, which ignores the press so it propagates up) selects
-       that scope; checkbox / menu-button clicks are consumed by those widgets.
+       list collapse; the arrow + eye + [v] buttons consume their own clicks. A click on a
+       row body (incl. its name label, which ignores the press so it propagates up)
+       selects that scope; eye / menu-button clicks are consumed by those widgets.
        MouseButtonDblClick is included because Qt sends it INSTEAD of the second press:
        without it a double click would toggle once (leaving the list in the opposite
        state) rather than toggling twice back to where it started. */
@@ -339,6 +366,28 @@ void ScopeHeaderLab::updateListCollapseIcon()
     collapseBtn->setIcon(QIcon(QPixmap(path)));
 }
 
+void ScopeHeaderLab::setEyeIcon(BarBtn *b, bool shown)
+{
+    if (!b) return;
+    b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png",
+               G::iconOpacity);
+}
+
+void ScopeHeaderLab::updateBandEyeIcon()
+{
+    setEyeIcon(bandEyeBtn, enabledStates.value(activeIndex, true));
+}
+
+void ScopeHeaderLab::toggleActiveEnabled()
+{
+    /* The band eye IS the active row's eye: flip the same flag, and let the owner push
+       the new state back through setScopeRows (which re-syncs both icons). */
+    const int index = activeIndex;
+    const bool on = enabledStates.value(index, true);
+    QTimer::singleShot(0, this,
+                       [this, index, on]{ emit scopeEnabledToggled(index, !on); });
+}
+
 void ScopeHeaderLab::showPanelMenu()
 {
     QMenu menu(this);
@@ -351,7 +400,7 @@ void ScopeHeaderLab::showPanelMenu()
     menu.exec(QCursor::pos());
 }
 
-void ScopeHeaderLab::showRowMenu(int index, const QString &name)
+void ScopeHeaderLab::showRowMenu(int index, const QString &name, bool isGlobal)
 {
     if (G::isLogger) G::log("ScopeHeaderLab::showRowMenu");
 
@@ -359,15 +408,24 @@ void ScopeHeaderLab::showRowMenu(int index, const QString &name)
        selects its own row. Read the choice as an int code while the menu is alive, then
        fire everything on the next tick (the select rebuilds the rows, deleting this
        button -- must not happen inside its own click handler). */
-    enum { AddMask = 1, Reset, Remove, Rename };
+    enum { AddMask = 1, Reset, Remove, Rename, NewScope };
     QMenu menu(this);
-    QAction *aMask   = menu.addAction(tr("Modify %1 mask\tM").arg(name));
-    aMask->setData(AddMask);
-    menu.addSeparator();
-    menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
-    menu.addAction(tr("Rename %1").arg(name))->setData(Rename);
-    menu.addSeparator();
-    menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
+    if (isGlobal) {
+        /* Global applies to the whole image: it has no mask, cannot be renamed and cannot
+           be deleted, so its menu carries only what it can actually do. */
+        menu.addAction(tr("New mask\tN"))->setData(NewScope);
+        menu.addSeparator();
+        menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
+    }
+    else {
+        QAction *aMask   = menu.addAction(tr("Modify %1 mask\tM").arg(name));
+        aMask->setData(AddMask);
+        menu.addSeparator();
+        menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
+        menu.addAction(tr("Rename %1").arg(name))->setData(Rename);
+        menu.addSeparator();
+        menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
+    }
 
     QAction *chosen = menu.exec(QCursor::pos());
     const int code = chosen ? chosen->data().toInt() : 0;
@@ -381,10 +439,11 @@ void ScopeHeaderLab::showRowMenu(int index, const QString &name)
            would apply it to the wrong scope: "Remove Mask 2" would remove Mask 1. */
         if (currentScopeName() != name) return;
         switch (code) {
-            case AddMask: emit addMaskRequested();     break;
-            case Reset:   emit resetScopeRequested();  break;
-            case Remove:  emit removeScopeRequested();  break;
-            case Rename:  emit renameRequested();      break;
+            case AddMask:  emit addMaskRequested();     break;
+            case Reset:    emit resetScopeRequested();  break;
+            case Remove:   emit removeScopeRequested();  break;
+            case Rename:   emit renameRequested();      break;
+            case NewScope: emit addScopeRequested();    break;
         }
     });
 }

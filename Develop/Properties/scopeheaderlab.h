@@ -9,7 +9,6 @@
 #include <QVector>
 
 class QLabel;
-class QCheckBox;
 class QVBoxLayout;
 class BarBtn;
 
@@ -17,10 +16,14 @@ class BarBtn;
     ScopeHeaderLab (experimental, behind G::useScopeHeaderLab) -- the redesigned Develop
     dock scope control. It replaces the dropdown ScopeHeader with a VERTICAL LIST:
 
-        | Scopes                            [v] |   <- gradient header + panel menu
-        | [x] Global                              |   <- checkbox = show/hide (no [v] menu)
-        | [x] Scope 1                       [v] |   <- checkbox = show/hide, [v] = actions
-        | [ ] Scope 2                       [v] |
+        | Edits                      [eye] [v] |   <- gradient header + panel menu
+        |   Global                   [eye] [v] |   <- eye = show/hide, [v] = actions
+        |   Scope 1                  [eye] [v] |
+        |   Scope 2                  [eye] [v] |
+
+    Every band and every row carries the SAME trailing pair, eye then menu: the eye
+    shows/hides that row's changes, the vertical ellipsis opens its actions, and the menu
+    is always the last thing on the line.
 
     The ACTIVE row carries nested detail widgets (setRowDetail), in slot order: the
     MaskPanel, then the adjustment tree (DevelopProperties). A mask's submasks and the
@@ -36,12 +39,15 @@ class BarBtn;
     Interaction (all rebuild-safe -- emissions that loop back into setScopeRows are
     deferred a tick so a row widget is never deleted inside its own signal handler):
       - Click a row body        -> scopeSelected(name)      (makes it the active scope)
-      - Row checkbox            -> scopeEnabledToggled(i,on) (EditScope::enabled)
+      - Row eye                 -> scopeEnabledToggled(i,on) (EditScope::enabled)
+      - Band eye                -> scopeEnabledToggled(active,on): the ACTIVE scope,
+                                   so the band mirrors the selected row's eye
       - Panel [v]               -> addScopeRequested
       - Row  [v]                -> selects the row, then addMask / reset / remove / rename
+                                   (Global's menu carries only what applies to it)
 
     The whole-mask preview eye, collapse arrow and mask-overlay menu rows of the old
-    header are gone: show/hide is the per-row checkbox, and the mask-overlay controls
+    header are gone: show/hide is the per-row eye, and the mask-overlay controls
     move to the Mask panel. Those base setters are kept as inert state-holders so the
     interface (and DevelopProperties' existing calls) still compile and behave.
 */
@@ -64,8 +70,8 @@ public:
     enum RowDetailSlot { MaskDetail = 0, EditsDetail = 1, RowDetailSlotCount };
     void setRowDetail(QWidget *detail, int slot, int indent);
 
-    /* Left inset of a nested detail: the row's own 10px margin plus roughly the show/hide
-       checkbox, so the detail starts under the scope NAME. */
+    /* Left inset of a nested detail: the same inset the row captions carry, so a detail
+       starts under the scope NAME. */
     static constexpr int kDetailIndent = 22;
 
     void setPreviewShown(bool shown) override { previewShown = shown; }
@@ -88,7 +94,13 @@ private:
        bracket (list collapsed). */
     QRect activeBlockRect() const;
     void showPanelMenu();                 // panel [v]: New mask / Reset all edits
-    void showRowMenu(int index, const QString &name);   // row [v]: per-scope actions
+    /* Band eye: toggle the ACTIVE scope's enabled flag (the selected row's eye). */
+    void toggleActiveEnabled();
+    void updateBandEyeIcon();             // sync the band eye to the active row's state
+    static void setEyeIcon(BarBtn *b, bool shown);      // eye.png / eye_off.png
+    /* Row [v]: per-scope actions. Global gets the shorter menu (no mask, rename or
+       delete), so isGlobal picks which set is built. */
+    void showRowMenu(int index, const QString &name, bool isGlobal);
     void selectRowDeferred(const QString &name);        // emit scopeSelected next tick
     /* The header's collapse arrow: hide/show the scope LIST (not the tree). Collapsing
        falls back to Global, since no scope can be picked while the list is hidden. */
@@ -98,6 +110,7 @@ private:
     QWidget     *headerBand    = nullptr;
     BarBtn      *collapseBtn   = nullptr;
     QLabel      *titleLabel    = nullptr;
+    BarBtn      *bandEyeBtn    = nullptr;   // show/hide the ACTIVE scope's changes
     BarBtn      *panelMenuBtn  = nullptr;
     QWidget     *rowsContainer = nullptr;
     QVBoxLayout *rowsLayout    = nullptr;
@@ -114,6 +127,9 @@ private:
        BarBtn::setIcon(path, G::iconOpacity) at each call site. */
 
     QStringList names;                     // current row names (for currentScopeName)
+    /* Per-row enabled state from the last setScopeRows, so the band eye can report and
+       flip the ACTIVE row without asking the owner. */
+    QVector<bool> enabledStates;
     int  activeIndex  = 0;
     bool previewShown = true;
     bool collapsed    = false;             // base setCollapsed state (inert)

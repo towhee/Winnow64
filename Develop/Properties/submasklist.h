@@ -37,8 +37,10 @@ struct SubmaskRowInfo
 
     The op glyph is a BUTTON: clicking it cycles Add -> Subtract -> Intersect, because
     the op used to be settable only by holding a modifier at commit time and was then
-    frozen forever. The [:] menu carries the rest (edit, op, invert, move, duplicate,
-    delete).
+    frozen forever. The eye shows/hides that submask's contribution, and the [:] menu
+    carries the rest (edit, op, invert, move, duplicate, delete). The band repeats the
+    same trailing pair -- eye (all submasks) then menu -- with the menu last, matching the
+    scope rows and the section headers.
 
     Carries NO model state beyond what setSubmasks() was handed: every control emits an
     index-based signal and DevelopProperties pushes the new list straight back. Like
@@ -66,7 +68,7 @@ public:
 signals:
     void addRequested();                          // [+] / "Add submask"
     void submaskSelected(int index);              // row click: re-open it for editing
-    void enabledToggled(int index, bool on);      // row checkbox
+    void enabledToggled(int index, bool on);      // row eye (or the band eye, per row)
     void opChanged(int index, int op);            // op glyph / menu
     void invertRequested(int index);
     void deleteRequested(int index);
@@ -83,6 +85,10 @@ private:
     void rebuild();
     QWidget *makeRow(int index, const SubmaskRowInfo &r, bool selected);
     void showRowMenu(int index);
+    void showListMenu();                  // band [:]: add / show all / hide all
+    void toggleAllEnabled();              // band eye: hide everything, or bring it back
+    void updateBandEyeIcon();             // band eye follows "any submask still shown"
+    static void setEyeIcon(BarBtn *b, bool shown);      // eye.png / eye_off.png
     void toggleCollapsed();
     void updateCollapseIcon();
     /* Fire on the next tick: the handler rebuilds these rows (see the class comment). */
@@ -93,6 +99,8 @@ private:
     BarBtn      *collapseBtn   = nullptr;
     QLabel      *titleLabel    = nullptr;
     BarBtn      *addBtn        = nullptr;
+    BarBtn      *eyeBtn        = nullptr;   // band eye: show/hide every submask
+    BarBtn      *menuBtn       = nullptr;   // band [:]: list actions
     QWidget     *rowsContainer = nullptr;
     QVBoxLayout *rowsLayout    = nullptr;
 
