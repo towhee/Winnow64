@@ -23,6 +23,11 @@ public:
     explicit OrtBackend(const QString &onnxPath, InferenceDevice pref = InferenceDevice::Auto);
     ~OrtBackend() override;
 
+    /* Is ONNX Runtime compiled into this build at all (WINNOW_HAVE_ORT)? Static and free:
+       it answers "no model can ever load here" WITHOUT constructing a backend or reading a
+       file, so a UI can grey a feature up front instead of discovering it on first use. */
+    static bool IsCompiledIn();
+
     bool IsLoaded() const override;
     bool Run(const std::vector<std::string> &inNames,
              const std::vector<Tensor> &inputs,

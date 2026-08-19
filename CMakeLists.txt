@@ -802,8 +802,37 @@ if(APPLE)
     # in transitive deps like -framework AGL (Apple's removed OpenGL framework).
     # Mirrors the explicit LIBS approach in winnow64.pro.
     # Version-AGNOSTIC names (libopencv_core.dylib -> current) so a Homebrew opencv bump
-    # (e.g. 4.11 -> 4.13) doesn't need a CMake edit and can't strand a hardcoded soname.
-    target_link_directories(Winnow PRIVATE ${HOMEBREW_PREFIX}/lib)
+    # (e.g. 4.11 -> 4.14) doesn't need a CMake edit and can't strand a hardcoded soname.
+    #
+    # PREFER THE KEG-ONLY opencv@4 FORMULA. Homebrew's plain `opencv` is now OpenCV 5, and
+    # an already-installed 4.x keg is built against whatever protobuf/abseil were current
+    # THEN -- so a later brew upgrade (installing onnxruntime pulls protobuf 35 + abseil
+    # 2608) unlinks the versioned dylibs opencv_dnn hardcodes and the app dies at launch
+    # with "Library not loaded: libprotobuf.29.3.0.dylib". opencv@4 tracks the CURRENT
+    # protobuf/abseil -- the same ones onnxruntime links -- so the two coexist. Being
+    # keg-only it is NOT in ${HOMEBREW_PREFIX}/lib, hence the explicit prefix below.
+    # Falls back to plain `opencv` when opencv@4 is absent (a machine still on 4.x).
+    # Probe the CELLAR, not opt/opencv@4: "opencv@4" is also a legacy ALIAS of the plain
+    # opencv formula, so that symlink can exist and point straight back at the OpenCV 5 (or
+    # stale 4.x) keg -- its presence proves nothing. Only Cellar/opencv@4 means the real
+    # keg-only formula is installed, and opt/opencv@4 then points at it.
+    if(EXISTS "${HOMEBREW_PREFIX}/Cellar/opencv@4")
+        set(OPENCV_PREFIX "${HOMEBREW_PREFIX}/opt/opencv@4")
+    else()
+        set(OPENCV_PREFIX "${HOMEBREW_PREFIX}/opt/opencv")
+    endif()
+    # Fail HERE, not 500 files into the build with "'opencv2/core.hpp' file not found":
+    # nothing else in the configure touches OpenCV, so an absent/renamed keg sails through
+    # and surfaces as a missing header in the first .cpp that includes it.
+    if(NOT EXISTS "${OPENCV_PREFIX}/include/opencv4/opencv2/core.hpp")
+        message(FATAL_ERROR
+            "OpenCV not found at ${OPENCV_PREFIX}.\n"
+            "Install the keg-only OpenCV 4 formula:  brew install opencv@4\n"
+            "(Homebrew's plain `opencv` formula is now OpenCV 5 -- see the notes above.)")
+    endif()
+    set(WINNOW_OPENCV_PREFIX "${OPENCV_PREFIX}" CACHE INTERNAL "OpenCV prefix for tests")
+    message(STATUS "OpenCV prefix: ${OPENCV_PREFIX}")
+    target_link_directories(Winnow PRIVATE ${OPENCV_PREFIX}/lib)
     target_link_libraries(Winnow PRIVATE
         opencv_core
         opencv_imgproc
@@ -813,7 +842,7 @@ if(APPLE)
         opencv_photo        # cv::seamlessClone (LamaFill Poisson heal correction)
     )
     target_include_directories(Winnow PRIVATE
-        ${HOMEBREW_PREFIX}/opt/opencv/include/opencv4)
+        ${OPENCV_PREFIX}/include/opencv4)
 
     # libtiff (Homebrew keg-only)
     find_library(TIFF_LIB tiff

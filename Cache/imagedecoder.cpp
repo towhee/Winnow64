@@ -814,7 +814,8 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
 std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMetadata &m,
                                                                    bool denoiseRaw,
                                                                    const std::function<void(int, int)> &progress,
-                                                                   std::shared_ptr<const WorkingImage> *outClean)
+                                                                   std::shared_ptr<const WorkingImage> *outClean,
+                                                                   bool *outDenoiseApplied)
 {
 /*
     Uncached raw sensor decode -> pre-develop WorkingImage, for the "Denoise raw" base
@@ -825,6 +826,7 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     if (G::isLogger) G::log("  ImageDecoder::decodeRawWorking", m.fPath);
     const QString ext = QFileInfo(m.fPath).suffix().toLower();
     std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext);
+    if (outDenoiseApplied) *outDenoiseApplied = false;   // every failure path reads "not denoised"
     if (!rawFormat) return nullptr;                     // no in-house decoder for this format
 
     QFile file(m.fPath);
@@ -834,7 +836,7 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     const EditParams identity;
     std::shared_ptr<const WorkingImage> work;
     const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw,
-                                      progress, outClean);
+                                      progress, outClean, outDenoiseApplied);
     file.close();
     return ok ? work : nullptr;
 }

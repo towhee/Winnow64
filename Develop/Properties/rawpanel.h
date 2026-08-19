@@ -22,6 +22,7 @@ class PanelEditor;
         | Edit: (o) Raw  ( ) Embedded Preview   |
         | Demosaic   [ Winnow            v ]     |   <- Demosaic/Denoise hidden unless Raw
         | Denoise [x]            Auto run [x]    |   <- Denoise block hidden on Apple
+        |   <reason>                            |   <- only when denoise cannot run
         |   Lum   ------o------                 |
         |   Color -----------o-                 |
 
@@ -42,6 +43,11 @@ public:
     void setEngine(bool apple);                   // combo + show/hide the denoise block
     /* denoised: a PMRID base is ready (checkbox -> "Denoised", sliders enabled). */
     void setDenoiseRunState(bool denoised);
+    /* available == false greys the whole denoise group (checkbox, Auto run, amounts) and
+       shows `reason` in its place, so a denoise that CANNOT work says so up front instead
+       of accepting a click and quietly changing nothing. Sticky: setDenoiseRunState will
+       not re-enable the amounts while it is false. */
+    void setDenoiseAvailable(bool available, const QString &reason = QString());
     void setAutoRun(bool on);
     void setDenoiseValues(int luma0to100, int chroma0to100);
     void setCaptionWidth(int w);                  // align denoise sliders to the tree
@@ -86,6 +92,8 @@ private:
     QCheckBox    *denoiseCheck = nullptr;
     QCheckBox    *autoRunCheck = nullptr;
     PanelEditor  *denoiseEditor = nullptr;        // tree-styled Lum/Color sliders
+    QLabel       *denoiseNote  = nullptr;         // why the group is greyed (hidden when ok)
+    bool          denoiseAvailable = true;        // false: PMRID cannot run here
 };
 
 #endif // RAWPANEL_H

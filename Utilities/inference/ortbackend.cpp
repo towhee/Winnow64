@@ -171,6 +171,8 @@ bool OrtBackend::Run(const std::vector<std::string> &inNames,
     }
 }
 
+bool OrtBackend::IsCompiledIn() { return true; }
+
 #else  // !WINNOW_HAVE_ORT -- stub so the layer builds without ONNX Runtime.
 
 struct OrtBackend::Impl {};
@@ -188,5 +190,6 @@ bool OrtBackend::Run(const std::vector<std::string> &, const std::vector<Tensor>
 std::vector<std::string> OrtBackend::InputNames() const { return {}; }
 std::vector<std::string> OrtBackend::OutputNames() const { return {}; }
 QString OrtBackend::BackendName() const { return "none"; }
+bool OrtBackend::IsCompiledIn() { return false; }
 
 #endif // WINNOW_HAVE_ORT

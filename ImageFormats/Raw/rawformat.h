@@ -63,14 +63,21 @@ public:
        outClean (when non-null AND denoiseRaw) additionally receives the CLEAN pre-develop base --
        the same mosaic demosaiced BEFORE PMRID -- so one decode (one UnpackCfa) yields both the
        clean and denoised bases that MW::ensureRawDenoise blends, instead of two separate decodes.
-       Ignored when denoiseRaw is false (outWork is already the clean base). */
+       Ignored when denoiseRaw is false (outWork is already the clean base).
+
+       outDenoiseApplied (when non-null) reports whether PMRID ACTUALLY ran: false means the
+       model did nothing (built without ONNX Runtime, pmrid.onnx missing, non-Bayer CFA), in
+       which case the returned base is pixel-identical to the clean one. Without it a no-op
+       denoise is indistinguishable from a successful one, and the caller reports a "Denoised"
+       state it did not earn (MW::ensureRawDenoise). */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 const EditParams *edit = nullptr,
                 const QAtomicInt *abort = nullptr,
                 std::shared_ptr<const WorkingImage> *outWork = nullptr,
                 bool denoiseRaw = false,
                 const std::function<void(int, int)> &denoiseProgress = {},
-                std::shared_ptr<const WorkingImage> *outClean = nullptr);
+                std::shared_ptr<const WorkingImage> *outClean = nullptr,
+                bool *outDenoiseApplied = nullptr);
 
     QString lastError() const { return errMsg; }
 

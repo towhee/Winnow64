@@ -14,6 +14,11 @@ InferenceSession::~InferenceSession() = default;
 
 bool InferenceSession::IsLoaded() const { return backend && backend->IsLoaded(); }
 
+/* Mirrors the constructor's choice: while OrtBackend is the only backend, "a backend is
+   compiled in" is exactly "ORT is compiled in". A future per-model backend choice updates
+   both together. */
+bool InferenceSession::BackendCompiledIn() { return OrtBackend::IsCompiledIn(); }
+
 bool InferenceSession::Run(const std::vector<std::string> &inNames,
                            const std::vector<Tensor> &inputs,
                            const std::vector<std::string> &outNames,
