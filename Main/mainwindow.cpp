@@ -7818,7 +7818,12 @@ void MW::renderDevelopFullResAsync()
                                    << " develop" << rt.developMs
                                    << "[copy" << rt.stackCopyMs
                                    << " apply" << rt.stackApplyMs
-                                   << " blend" << rt.stackBlendMs << "]"
+                                   << " blend" << rt.stackBlendMs
+                                   << " free" << rt.stackFreeMs
+                                   << " OTHER" << (rt.developMs - rt.stackCopyMs
+                                                   - rt.stackApplyMs - rt.stackBlendMs
+                                                   - rt.stackFreeMs) << "]"
+                                   << " outFree" << rt.outFreeMs
                                    << " toImage" << rt.toImageMs
                                    << " orient+scale" << rt.orientScaleMs << ")ms"
                                    << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
