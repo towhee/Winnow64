@@ -3708,6 +3708,22 @@ Scope & mask model (Global + masks)
                    - RESULT: 1206 ticks, 77 renders -- 56 cold, 10 resuming the prefix, 11
                      resuming prefix+layer -- no races. That is the first run of this
                      driver that actually exercised the interactive cache's reuse paths.
+                 . SETTLE RENDER: ONE LAYER BUFFER, NOT ONE PER SCOPE. The full-res path
+                   passes no scratch (it runs once and should give its ~735 MB back), and
+                   layLocal was declared INSIDE the scope loop, so an N-scope render
+                   allocated and released N of them. Measured on a 9600x6376 file with 2
+                   mask scopes: total 5207 ms, of which `free 1735` + `outFree 572` = 2307
+                   ms (44%) was releasing memory. Hoisted out of the loop and released
+                   once. WARNING for anyone re-checking this: an ISOLATED benchmark frees
+                   the same 735 MB in ~0 ms and says there is nothing here. The cost is
+                   memory PRESSURE, not size -- it only appears with the image cache, the
+                   source image and the 245 MB mask buffers all resident -- and a micro-
+                   benchmark nearly argued this fix away. Giving the settle render a
+                   SCRATCH would recover the remaining ~1400 ms but pin ~1.5 GB at 61 MP;
+                   that option is written up with its measured cost, its footprint and
+                   the shape it should take if revisited, under "FULL-RES SCRATCH" in
+                   Develop/workingimagecache.h. It is deferred, not forgotten: the settle
+                   render is background work the user is not waiting on.
                LESSON, the same one as the brush-drag round above: the plan going in was
                to bound the develop pass and the blend to the mask's BOUNDING BOX, worked
                out in detail down to the guard list. Measured, those two stages are 1 ms
