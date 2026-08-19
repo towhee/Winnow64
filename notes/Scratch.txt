@@ -1769,3 +1769,26 @@ Second, if blend 15 becomes the largest item after this, that one genuinely is m
 a 15 ms prize rather than the 87 ms it was originally aimed at.
 
 
+
+
+FINAL NOTES FOR DEVELOP LATENCY WHEN MOVING SLIDERS:
+The hoist hasn't been confirmed in-app. I predicted free 1735 → ~870 from reasoning, and my track record on this specific question is one wrong benchmark and one
+wrong prior. With probes now off you won't see it unless you flip the flag back for one drag. Since the settle render is background work you aren't waiting on,
+that's a reasonable thing to leave unverified — but it is unverified, and the Documentation.txt entry states the pre-fix 2307 ms as measured fact while the post-fix
+figure is an estimate. Worth a single check next time the flag is on anyway.
+
+Where things ended up overall, against your original request — minimize latency when updating edit controls with a radial mask:
+
+┌────────────────────────────┬─────────────────────────────────────┬──────────────────────────────────┐
+│                            │               before                │              after               │
+├────────────────────────────┼─────────────────────────────────────┼──────────────────────────────────┤
+│ exposure on a masked scope │ 121–145 ms/tick, 1 frame in 7 shown │ —                                │
+├────────────────────────────┼─────────────────────────────────────┼──────────────────────────────────┤
+│ global + 3 masks           │ 150–394 ms/tick                     │ 25–33 ms/tick, every frame shown │
+└────────────────────────────┴─────────────────────────────────────┴──────────────────────────────────┘
+
+The wins came from buffer reuse (72% of a tick was free), showing superseded frames instead of discarding six of seven, the cache being wiped under the running
+worker, narrowing base-param invalidation, the prefix scratch, the toImage LUT, and RGB888 scope sampling. The bounding-box plan I originally wrote and got approved
+was cancelled on measurement — it targeted 8 ms of 121.
+
+
