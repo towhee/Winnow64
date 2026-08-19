@@ -5,6 +5,7 @@
 #include "Main/global.h"
 
 #include <QDir>
+#include <QFile>
 #include <QCoreApplication>
 #include <algorithm>
 #include <cmath>
@@ -258,6 +259,18 @@ static InferenceSession *SharedSession()
             G::log("PMRID::SharedSession loaded", session->BackendName());
     });
     return session.get();
+}
+
+bool IsSupportedBuild()
+{
+    if (!InferenceSession::BackendCompiledIn()) return false;
+    return QFile::exists(QDir(QCoreApplication::applicationDirPath()).filePath(kModelFile));
+}
+
+bool IsAvailable()
+{
+    InferenceSession *s = SharedSession();
+    return s && s->IsLoaded() && !s->InputNames().empty() && !s->OutputNames().empty();
 }
 
 bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progress)

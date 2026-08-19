@@ -69,7 +69,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        std::shared_ptr<const WorkingImage> *outWork,
                        bool denoiseRaw,
                        const std::function<void(int, int)> &denoiseProgress,
-                       std::shared_ptr<const WorkingImage> *outClean)
+                       std::shared_ptr<const WorkingImage> *outClean,
+                       bool *outDenoiseApplied)
 {
 /*
     Shared, camera-agnostic pipeline:
@@ -85,6 +86,11 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     BlockingQueuedConnection waits for the whole demosaic and the UI beachballs.
 */
     const auto aborted = [abort]{ return abort && abort->loadAcquire(); };
+
+    /* Reported to the caller only if PMRID really ran (see the header). Default false so
+       every early return -- unsupported format, abort, Apple engine -- reads as "not
+       denoised" rather than leaving the caller's flag untouched. */
+    if (outDenoiseApplied) *outDenoiseApplied = false;
 
     auto work = std::make_shared<WorkingImage>();
     bool decoded = false;
@@ -154,8 +160,9 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 }
                 if (aborted()) { errMsg = "Aborted"; return false; }
             }
-            PMRID::Apply(raw, m.ISONum, m.model,
-                         [&stage](int d, int t) { stage(250, 500, d, t); });
+            const bool applied = PMRID::Apply(raw, m.ISONum, m.model,
+                                              [&stage](int d, int t) { stage(250, 500, d, t); });
+            if (outDenoiseApplied) *outDenoiseApplied = applied;
             if (aborted()) { errMsg = "Aborted"; return false; }
         }
 
@@ -188,7 +195,9 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f) &&
             G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
             RawImage rawDen = raw;
-            if (PMRID::Apply(rawDen, m.ISONum, m.model)) {
+            const bool applied = PMRID::Apply(rawDen, m.ISONum, m.model);
+            if (outDenoiseApplied) *outDenoiseApplied = applied;
+            if (applied) {
                 std::vector<float> rgbDen;
                 WorkingImage pmridWork;
                 if (demosaic.Run(rawDen, rgbDen, Demosaic::Bilinear, abort) &&

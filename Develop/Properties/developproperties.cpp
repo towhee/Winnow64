@@ -576,6 +576,32 @@ void DevelopProperties::updateDenoiseRunState(bool denoised)
     setItemEnabled("denoiseChroma", denoised);
 }
 
+void DevelopProperties::updateDenoiseAvailability()
+{
+/*
+    Grey the "Denoise raw" group, with the reason in its place, when PMRID cannot run --
+    no inference backend / no pmrid.onnx in this build, or a sensor whose CFA it leaves
+    untouched. Stating it on the panel beats letting the controls look live and reporting
+    the disappointment afterwards: the user never spends a decode to find out.
+*/
+    if (!rawPanel) return;
+    QString reason;
+    const bool ok = !mw || mw->rawDenoiseAvailable(currentImagePath, &reason);
+    rawPanel->setDenoiseAvailable(ok, reason);
+    /* Legacy tree rows: no room for a reason line, so just make them inert. */
+    if (denoiseRunCheck && !ok) {
+        QSignalBlocker block(denoiseRunCheck);
+        denoiseRunCheck->setChecked(false);
+        denoiseRunCheck->setText("Denoise");
+        denoiseRunCheck->setEnabled(false);
+        setItemEnabled("denoiseLuma", false);
+        setItemEnabled("denoiseChroma", false);
+    }
+    else if (denoiseRunCheck) {
+        denoiseRunCheck->setEnabled(true);
+    }
+}
+
 void DevelopProperties::onEditSourceChanged(bool raw)
 {
     if (G::isLogger) G::log("DevelopProperties::onEditSourceChanged");
@@ -756,6 +782,7 @@ void DevelopProperties::syncRawPanel()
     rawPanel->setEngine(apple);
     rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
     rawPanel->setDenoiseRunState(mw && mw->rawDenoiseReadyForCurrent());
+    updateDenoiseAvailability();      // may grey the group + explain (after the run state)
 
     /* Push the Global scope's stored denoise amounts (0..1 -> 0..100). */
     float dl = EditParams::kDefaultDenoiseLuma, dc = EditParams::kDefaultDenoiseChroma;

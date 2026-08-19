@@ -7983,6 +7983,11 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
        is inert; bail so a slider drag doesn't trigger a full re-decode that denoises
        nothing. */
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    /* Can't work here (no inference backend / no pmrid.onnx, or this sensor's CFA). Bail
+       BEFORE the decode: the build case is known up front, and for the sensor case an
+       auto-run retry on every settle would be a full raw re-decode each time for a base
+       that comes back identical to clean. See reportRawDenoiseUnavailable. */
+    if (!rawDenoiseAvailable(fPath)) return;
     const QString key = rawDenoiseKey(fPath, base, iso);
     if (developDenoisedKey == key && developDenoised) return;   // already current
     /* ONE job at a time. Concurrent jobs (one per drag value) finish out of order and a
@@ -8024,6 +8029,11 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
            Develop anyway). Only meaningful when a decode actually ran (capturedRes). */
         PMRID::Resolution decodeRes;
         bool capturedRes = false;
+        /* Did PMRID actually run? A no-op model (built without ONNX Runtime, pmrid.onnx
+           missing, non-Bayer CFA) still returns a valid base -- one that is pixel-identical
+           to the clean one. Publishing it would show "Denoised" and enabled amount sliders
+           over an unchanged image, so the result is dropped instead (unavailable below). */
+        bool denoiseApplied = false;
         if (!pmrid || !cleanBase) {
             /* Reveal the progress row (EMPTY) as the decode starts; PMRID then fills it
                per tile. Must not updateProgress(0,1) here -- FromStart would paint the
@@ -8041,7 +8051,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                amount-change decode (clean cached, PMRID evicted) skips a demosaic. */
             std::shared_ptr<const WorkingImage> decodedClean;
             auto decodedPmrid =
-                dec.decodeRawWorking(m, true, prog, cleanBase ? nullptr : &decodedClean);
+                dec.decodeRawWorking(m, true, prog, cleanBase ? nullptr : &decodedClean,
+                                     &denoiseApplied);
             if (decodedPmrid) {
                 if (!pmrid) pmrid = decodedPmrid;
                 if (!cleanBase && decodedClean) {
@@ -8052,11 +8063,30 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                 capturedRes = true;
             }
         }
+        else {
+            /* Both bases cached -> no decode, so this is a pure re-blend of a PMRID base
+               that already proved itself when it was built. */
+            denoiseApplied = true;
+        }
         /* No in-house decoder (lossless ARW -> Apple) or the decode failed. */
         if (!pmrid || !cleanBase) {
             QMetaObject::invokeMethod(this, [this]() {
                 developDenoiseInFlightKey.clear();
                 progress->clearProgress(progressRawDenoiseRow);  // hide the row
+            });
+            return;
+        }
+        /* Decoded, but the denoiser did nothing. Keep the freshly-decoded CLEAN base (it is
+           good, and the render needs it) but publish no denoised base, so the render stays
+           on clean and the dock reports "Denoise", not "Denoised". */
+        if (!denoiseApplied) {
+            QMetaObject::invokeMethod(this, [this, freshClean, fPath]() {
+                developDenoiseInFlightKey.clear();
+                progress->clearProgress(progressRawDenoiseRow);
+                if (!dm || fPath != dm->currentFilePath) return;
+                if (freshClean && !WorkingImageCache::instance().contains(fPath))
+                    WorkingImageCache::instance().put(fPath, freshClean);
+                reportRawDenoiseUnavailable(fPath);
             });
             return;
         }
@@ -8100,6 +8130,59 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     });
 }
 
+void MW::reportRawDenoiseUnavailable(const QString &fPath)
+{
+/*
+    PMRID decoded but changed nothing. Two different causes, and they must be remembered
+    differently or the next settle launches the same fruitless full raw re-decode:
+
+      o the model cannot run AT ALL -- built without ONNX Runtime (CMake
+        WINNOW_ENABLE_ORT=OFF -> the OrtBackend stub) or pmrid.onnx is not beside the
+        binary. Permanent for the session: rawDenoiseUnavailable blocks every later
+        attempt, for every image.
+      o the model is fine but THIS sensor is not a Bayer phase PMRID handles (X-Trans).
+        Per image: remember the path only, so the next raw still gets its chance.
+
+    Either way the dock greys the whole denoise group and shows the reason in its place
+    (DevelopProperties::updateDenoiseAvailability -> RawPanel::setDenoiseAvailable), rather
+    than leaving live-looking controls that accept a click and change nothing.
+*/
+    if (G::isLogger) G::log("MW::reportRawDenoiseUnavailable");
+    if (PMRID::IsAvailable()) rawDenoiseUnsupported.insert(fPath);
+    else                      rawDenoiseUnavailable = true;
+    if (developProperties) {
+        developProperties->updateDenoiseRunState(false);
+        developProperties->updateDenoiseAvailability();   // grey the group + say why
+    }
+}
+
+bool MW::rawDenoiseAvailable(const QString &fPath, QString *reason) const
+{
+/*
+    Can "Denoise raw" do anything for this image? Answered for the DOCK, so it is cheap
+    (PMRID::IsSupportedBuild does not load the model) and returns the reason to show in
+    place of the greyed controls. Two ways to know it cannot: the build itself (no
+    inference backend / no pmrid.onnx -- known before anything runs), and a sensor whose
+    CFA PMRID left untouched (only knowable after a decode, remembered per path by
+    reportRawDenoiseUnavailable).
+*/
+    if (!PMRID::IsSupportedBuild()) {
+        if (reason)
+            *reason = tr("Not available in this build (needs ONNX Runtime and pmrid.onnx).");
+        return false;
+    }
+    if (rawDenoiseUnavailable) {     // present, but the model would not load / run
+        if (reason) *reason = tr("The denoise model could not be loaded.");
+        return false;
+    }
+    if (rawDenoiseUnsupported.contains(fPath)) {
+        if (reason) *reason = tr("Not available for this sensor (Bayer only).");
+        return false;
+    }
+    if (reason) reason->clear();
+    return true;
+}
+
 void MW::onAutoRunDenoiseToggled(bool on)
 {
     if (G::isLogger) G::log("MW::onAutoRunDenoiseToggled");
@@ -8118,6 +8201,13 @@ void MW::runRawDenoiseNow()
     if (fPath.isEmpty()) return;
     /* PMRID is Winnow-engine only; inert on Apple. */
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    /* Known not to work here: undo the tick and grey the group rather than leave a checked
+       box over an image that will never change (ensureRawDenoise would just bail). Normally
+       unreachable -- the controls are already disabled by then. */
+    if (!rawDenoiseAvailable(fPath)) {
+        reportRawDenoiseUnavailable(fPath);
+        return;
+    }
     const auto mj = developProperties->stackJob();
     ensureRawDenoise(fPath, mj.global, WorkingImageCache::instance().get(fPath),
                      currentImageIso());

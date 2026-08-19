@@ -24,6 +24,11 @@ public:
 
     bool IsLoaded() const;
 
+    /* Can ANY model load in this build (i.e. is an inference backend compiled in)? Static
+       and free -- no session, no file read -- so a feature can grey its UI up front rather
+       than after a first failed run. False means every InferenceSession here is inert. */
+    static bool BackendCompiledIn();
+
     bool Run(const std::vector<std::string> &inNames,
              const std::vector<Tensor> &inputs,
              const std::vector<std::string> &outNames,

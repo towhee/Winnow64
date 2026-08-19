@@ -1790,3 +1790,14 @@ Where things ended up overall, against your original request — minimize latenc
 The wins came from buffer reuse (72% of a tick was free), showing superseded frames instead of discarding six of seven, the cache being wiped under the running worker, narrowing base-param invalidation, the prefix scratch, the toImage LUT, and RGB888 scope sampling. The bounding-box plan I originally wrote and got approved was cancelled on measurement — it targeted 8 ms of 121.
 
 [⋮] Menu
+
+brew install onnxruntime
+cmake --preset mac-debug-local -DWINNOW_ENABLE_ORT=ON
+
+In Qt Creator, add WINNOW_ENABLE_ORT=ON to the kit's CMake configuration (Projects → Build Settings → CMake) and re-configure — otherwise the default OFF comes
+straight back. Watch for -- ONNX Runtime enabled (macOS/CoreML): … in the configure output; if the header/lib aren't found, CMake only emits a warning and the build
+proceeds inference-less.
+
+One caveat worth flagging before you install: onnxruntime shares protobuf with opencv on this machine, which is the interaction that has bitten before — if brew
+wants to bump protobuf, check opencv still loads before you spend time on the denoise.
+

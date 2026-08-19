@@ -53,6 +53,20 @@ namespace PMRID {
 using ProgressFn = std::function<void(int done, int total)>;
 bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progress = {});
 
+/* True if the model is loaded and can denoise -- false when Winnow was built without ONNX
+   Runtime (CMake WINNOW_ENABLE_ORT=OFF -> the OrtBackend stub) or pmrid.onnx is not beside
+   the binary. Lets a caller tell "denoise is unavailable in this build" (permanent, session
+   wide) from "this SENSOR is not supported" (per image), which Apply's single false cannot.
+   Loads the session on first call, like Apply. */
+bool IsAvailable();
+
+/* Could PMRID EVER run in this build -- an inference backend is compiled in and pmrid.onnx
+   is beside the binary? Cheap: no session load, no model parse, so it is safe to call from
+   the GUI thread on every panel refresh (unlike IsAvailable, whose first call loads and
+   compiles the model). Use it to grey the "Denoise raw" controls up front; use IsAvailable
+   to explain a denoise that already ran and changed nothing. */
+bool IsSupportedBuild();
+
 /* The most recent (k,b) resolution by Apply (see PMRID::resolveKB) -- surfaced in the
    Develop diagnostics so a mis-denoise can be traced to its tier without the logger.
    Written on a worker thread, read on the GUI thread; LastResolution() is a locked

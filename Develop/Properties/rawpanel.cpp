@@ -197,6 +197,16 @@ void RawPanel::buildUi()
             });
     nb->addWidget(denoiseEditor);
 
+    /* Why the group above is dead, in its place -- shown only when PMRID cannot run here
+       (setDenoiseAvailable). Wraps, indented to the row text, and dimmed so it reads as an
+       explanation rather than another control. */
+    denoiseNote = new QLabel(denoiseBlock);
+    denoiseNote->setWordWrap(true);
+    denoiseNote->setContentsMargins(10, 0, 10, 2);
+    denoiseNote->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
+    denoiseNote->setVisible(false);
+    nb->addWidget(denoiseNote);
+
     body->setVisible(!collapsed);        // honour the persisted collapse state
     updateCollapseIcon();
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -286,10 +296,34 @@ void RawPanel::setDenoiseRunState(bool denoised)
         denoiseCheck->setChecked(denoised);
         denoiseCheck->setText(denoised ? tr("Denoised") : tr("Denoise"));
     }
-    /* The amount sliders only scale a computed PMRID base -> inert until it exists. */
+    /* The amount sliders only scale a computed PMRID base -> inert until it exists, and
+       stay inert when the denoise cannot run at all (that base is never coming). */
     if (denoiseEditor) {
-        denoiseEditor->setRowEnabled("denoiseLuma", denoised);
-        denoiseEditor->setRowEnabled("denoiseChroma", denoised);
+        const bool on = denoised && denoiseAvailable;
+        denoiseEditor->setRowEnabled("denoiseLuma", on);
+        denoiseEditor->setRowEnabled("denoiseChroma", on);
+    }
+}
+
+void RawPanel::setDenoiseAvailable(bool available, const QString &reason)
+{
+    denoiseAvailable = available;
+    if (denoiseCheck) {
+        QSignalBlocker b(denoiseCheck);           // unticking must not emit a "clear" run
+        if (!available) {
+            denoiseCheck->setChecked(false);
+            denoiseCheck->setText(tr("Denoise"));
+        }
+        denoiseCheck->setEnabled(available);
+    }
+    if (autoRunCheck) autoRunCheck->setEnabled(available);
+    if (!available && denoiseEditor) {
+        denoiseEditor->setRowEnabled("denoiseLuma", false);
+        denoiseEditor->setRowEnabled("denoiseChroma", false);
+    }
+    if (denoiseNote) {
+        denoiseNote->setText(reason);
+        denoiseNote->setVisible(!available && !reason.isEmpty());
     }
 }
 

@@ -393,6 +393,10 @@ public slots:
        checked + "Denoised" when a denoised base is ready for the current image, else
        unchecked + "Denoise". Signal-blocked so it never re-triggers a run. */
     void updateDenoiseRunState(bool denoised);
+    /* Push "can the raw denoise run here" into the dock: greys the whole denoise group and
+       shows the reason in its place when it cannot (MW::rawDenoiseAvailable). Called on
+       every raw sync and whenever MW learns a denoise came back a no-op. */
+    void updateDenoiseAvailability();
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)

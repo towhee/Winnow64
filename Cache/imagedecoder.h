@@ -38,10 +38,14 @@ public:
        the supplied m (no DataModel access), so callable from the develop render pool. progress (when
        set) is forwarded to the PMRID denoiser for per-tile status-bar feedback. outClean (when
        non-null AND denoiseRaw) also receives the CLEAN pre-develop base (pre-PMRID) from the same
-       decode, so one UnpackCfa yields both bases MW::ensureRawDenoise needs. */
+       decode, so one UnpackCfa yields both bases MW::ensureRawDenoise needs. outDenoiseApplied
+       (when non-null) reports whether PMRID actually ran -- false means the returned base equals
+       the clean one (no ORT build / no pmrid.onnx / non-Bayer), which the caller must not present
+       as a denoise. */
     std::shared_ptr<const WorkingImage> decodeRawWorking(const ImageMetadata &m, bool denoiseRaw,
                                                          const std::function<void(int, int)> &progress = {},
-                                                         std::shared_ptr<const WorkingImage> *outClean = nullptr);
+                                                         std::shared_ptr<const WorkingImage> *outClean = nullptr,
+                                                         bool *outDenoiseApplied = nullptr);
 
     bool isRunning() const;
     void setIdle();

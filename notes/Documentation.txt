@@ -3041,6 +3041,29 @@ Scope & mask model (Global + masks)
           both the proxy and the full-res render start from it. ISO for the conditioning
           comes from ImageMetadata::ISONum (populated in cache mode from G::ISOColumn;
           live preview reads it via MW::currentImageIso).
+          NO SILENT NO-OP: PMRID can return an UNCHANGED mosaic -- no ORT in the build,
+          pmrid.onnx missing, or a non-Bayer CFA. RawFormat::Decode reports that through
+          outDenoiseApplied (relayed by ImageDecoder::decodeRawWorking), so
+          MW::ensureRawDenoise drops the result instead of publishing a denoised base that
+          is pixel-identical to the clean one. Without it the dock showed "Denoised" with
+          the amount sliders enabled over an unchanged image -- the failure was invisible.
+          MW::reportRawDenoiseUnavailable records WHY, via PMRID::IsAvailable(): the model
+          cannot run (session-wide, rawDenoiseUnavailable) vs this sensor is unsupported
+          (per path, rawDenoiseUnsupported). Both gate ensureRawDenoise, so a failed
+          denoise is not retried as a full raw re-decode on every settle. The freshly-
+          decoded CLEAN base is still published to WorkingImageCache -- it is good, and the
+          render needs it.
+          SAID ON THE PANEL, NOT IN A POPUP: the dock GREYS the denoise group (Denoise +
+          Auto run + Lum/Color) and shows the reason where the controls were --
+          MW::rawDenoiseAvailable -> DevelopProperties::updateDenoiseAvailability ->
+          RawPanel::setDenoiseAvailable, refreshed on every syncRawPanel. The build-level
+          case needs no decode to detect: PMRID::IsSupportedBuild() is a CHEAP check
+          (InferenceSession::BackendCompiledIn() + pmrid.onnx beside the binary -- no model
+          load, unlike PMRID::IsAvailable()), so on a build without ONNX Runtime the group
+          is dead from the moment the panel appears and no raw is ever decoded for it. The
+          per-sensor case can only be learned by running, so it greys the group on the way
+          back. RawPanel::setDenoiseAvailable is sticky: setDenoiseRunState cannot
+          re-enable the amounts while it is false.
           NOISE MODEL (k,b): the KSigma normalization needs a per-frame Poisson-Gaussian
           model (var = k*x + b, white-normalised green plane), resolved by a priority
           chain (PMRID::resolveKB): (1) a DNG NoiseProfile (tag 51041) baked into the

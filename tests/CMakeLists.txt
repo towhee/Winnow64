@@ -86,9 +86,12 @@ winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
 if(APPLE)
+    # Same prefix the app resolved (keg-only opencv@4 when present) -- see the OpenCV
+    # block in the top-level CMakeLists; a test linking a DIFFERENT OpenCV than the code
+    # under test is exactly the mismatch that strands protobuf/abseil at launch.
     target_include_directories(tst_renderstack PRIVATE
-        ${HOMEBREW_PREFIX}/opt/opencv/include/opencv4)
-    target_link_directories(tst_renderstack PRIVATE ${HOMEBREW_PREFIX}/opt/opencv/lib)
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_renderstack PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
     target_link_libraries(tst_renderstack PRIVATE opencv_core opencv_imgproc)
 elseif(WIN32)
     target_include_directories(tst_renderstack PRIVATE

@@ -619,6 +619,15 @@ private slots:
     void runRawDenoiseNow();
     void clearRawDenoiseNow();
     bool rawDenoiseReadyForCurrent();
+    /* PMRID ran but changed nothing (no ORT in this build / no pmrid.onnx, or a non-Bayer
+       sensor). Reset the "Denoise" checkbox + amount sliders instead of reporting a
+       "Denoised" state that never happened, tell the user once, and remember it so later
+       settles do not re-decode the raw for the same null result. */
+    void reportRawDenoiseUnavailable(const QString &fPath);
+    /* Can "Denoise raw" do anything for fPath (build has an inference backend + pmrid.onnx,
+       and this sensor's CFA is one PMRID handles)? Cheap -- for the dock, which greys the
+       denoise group and shows *reason in its place. */
+    bool rawDenoiseAvailable(const QString &fPath, QString *reason = nullptr) const;
     /* Show the status-bar "Demosaic" progress row while the CURRENT image's Winnow raw
        demosaic decodes with Auto-run denoise off (relayed from ImageCache). */
     void onDemosaicProgress(const QString &fPath, int done, int total);
@@ -1593,6 +1602,12 @@ private:
     // full-strength PMRID base, reused across amounts
     std::shared_ptr<const WorkingImage> developPmridFull;
     QString developPmridKey;                      // "path|iso" for developPmridFull
+    /* PMRID proved it cannot denoise: session-wide when the model itself cannot run (no
+       ONNX Runtime / no pmrid.onnx -- nothing on any image will change that), per path
+       when only that sensor's CFA is unsupported. Both gate ensureRawDenoise so a failed
+       denoise is not retried as a full raw re-decode on every settle. */
+    bool rawDenoiseUnavailable = false;
+    QSet<QString> rawDenoiseUnsupported;
     /* Diagnostic snapshot of the (k,b) noise-model tier (PMRID::resolveKB) that produced
        developPmridFull -- valid for exactly developPmridKey, so the Develop diagnostics
        report shows it ONLY for the current image's base, never a stale one. Set in
