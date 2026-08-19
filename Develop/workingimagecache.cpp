@@ -285,6 +285,16 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
         timings->hadLayer     = resume && resume->layer;
     }
 
+    /* The locally-allocated layer buffer lives OUTSIDE the loop so scopes 2..N refill it
+       instead of each allocating and releasing its own. That matters only on the path
+       with no scratch -- the full-res settle render -- and there it is not small: at
+       9600x6376 a layer is ~735 MB, and [DevTime] measured `free 1735` ms across two
+       scopes, ~870 ms per buffer. (An isolated benchmark frees the same 735 MB in ~0 ms;
+       the cost is memory PRESSURE, not size, and only shows with the image cache, the
+       source image and the mask buffers all resident. Do not re-test this in isolation
+       and conclude it is free.) */
+    WorkingImage layLocal;
+
     for (size_t i = first; i < scopes.size(); ++i) {
         const StackScope &L = scopes[i];
         const bool masked = L.mask && !L.mask->empty();
@@ -318,7 +328,6 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
            stops in the overlap. In scene-linear this stacking is the natural per-op
            composition (exposure multiplies, etc.). An identity scope aliases acc (no
            copy/Apply) and blends to a no-op. */
-        WorkingImage layLocal;
         WorkingImage &layBuf = (resume && resume->layScratch) ? *resume->layScratch
                                                              : layLocal;
         const WorkingImage *layP = &acc;
@@ -391,15 +400,18 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
         }
         if (timings) timings->stackBlendMs += sub.restart();
 
-        /* Release this scope's intermediate HERE rather than at the closing brace, so a
-           free that does happen is attributed instead of landing between stages. With a
-           scratch buffer there is nothing to release -- that is the point -- so only the
-           locally-allocated case pays, and `free` staying at 0 is the probe confirming
-           the scratch is actually being used. */
-        layLocal = WorkingImage();
         layShared.reset();
         if (timings) timings->stackFreeMs += sub.restart();
     }
+
+    /* Release the layer buffer ONCE, after every scope has finished with it, rather than
+       per scope. Attributed here rather than left to the closing brace so a free that
+       does happen is measured instead of landing between stages; with a scratch buffer
+       there is nothing to release -- that is the point -- so `free` staying at 0 is the
+       probe confirming the scratch is in use. */
+    layLocal = WorkingImage();
+    if (timings) timings->stackFreeMs += sub.restart();
+
     if (timings) timings->developMs = t.restart();
 
     OutputTransform output;

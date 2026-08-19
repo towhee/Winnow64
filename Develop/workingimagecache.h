@@ -176,7 +176,8 @@ public:
                 against 2 ms to memcpy the same bytes. Supplying these lets renderStack
                 refill existing buffers (assignReusing) instead. All three are optional:
                 null means allocate locally, which is what the full-res settle render
-                does, since it runs once and should give its ~290 MB back.
+                does -- see FULL-RES SCRATCH below for what that costs and why it is
+                still the default.
 
                 preScratch does the same for the prefix snapshot, and needs its own pair
                 because it is captured on a different schedule: during a GLOBAL slider
@@ -186,7 +187,44 @@ public:
                 outScratch and preScratch must NOT be the buffers the cache is currently
                 handing back as `layer` and `prefix` -- renderStack writes them, and
                 everything a cache hands out is read as const. The caller alternates two
-                buffers for each to guarantee that; see MW::developCompositeStack. */
+                buffers for each to guarantee that; see MW::developCompositeStack.
+
+       FULL-RES SCRATCH -- a considered, DEFERRED option, not an oversight.
+
+                The settle render passes null and allocates locally, so it pays the
+                allocator every time. MEASURED, 9600x6376 (61 MP) with two mask scopes,
+                total 5207 ms: `free 1735` + `outFree 572` = 2307 ms, 44% of the render,
+                purely releasing memory. Hoisting the layer buffer out of the scope loop
+                (renderStack) removed roughly half of that -- N scopes now share one
+                buffer instead of N -- leaving ~1400 ms, of which `outFree` (the
+                accumulator, ~735 MB, unavoidable within one render) is the floor.
+
+                WHAT A SCRATCH WOULD BUY: that remaining ~1400 ms, on a render that
+                currently takes ~5.2 s. WHAT IT WOULD COST: the accumulator and the layer
+                pinned between settle renders -- ~1.5 GB at 61 MP, against a 768 MB
+                WorkingImageCache budget and a memory governor that already exists
+                because raw decode concurrency blew the footprint once
+                (notes/Documentation.txt "Memory governor").
+
+                WHY DEFERRED: the settle render is BACKGROUND. It does not block the UI,
+                it runs once when a drag stops, and the proxy is on screen meanwhile --
+                so this trades a large permanent footprint for latency the user is not
+                waiting on. The interactive path is the one that justified pinning
+                memory, and there the buffers are proxy-sized (~38 MB) and released by
+                DevelopStackCache::clear() on image or folder change.
+
+                IF REVISITED, the honest design is a scratch OWNED BY THE SETTLE RENDER
+                and released when it completes -- reuse across the scopes of ONE render
+                (already done for the layer) plus the accumulator, without holding
+                anything between renders. That captures most of the win at no standing
+                cost. Sizing it per image would also need the memory governor consulted,
+                not just assumed.
+
+                DO NOT re-evaluate this with an isolated benchmark. A standalone test
+                frees the same 735 MB in ~0 ms and concludes there is nothing here; the
+                cost is memory PRESSURE, not size, and only appears with the image cache,
+                the source image and the 245 MB mask buffers all resident. Measure in the
+                app via [DevTime]'s free / outFree fields. */
     struct StackResume {
         size_t start = 0;
         std::shared_ptr<const WorkingImage> prefix;
