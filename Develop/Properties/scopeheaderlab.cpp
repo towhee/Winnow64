@@ -186,19 +186,29 @@ void ScopeHeaderLab::setRowDetail(QWidget *detail, int slot, int indent)
 
 void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
 {
-    /* Drop the old rows (widgets own their children; deleteLater is unnecessary here as
-       nothing captures them beyond this rebuild). The nested details are NOT ours to
-       delete: takeAt removes them from the layout WITHOUT re-parenting, so they stay
-       children of rowsContainer and are simply re-inserted below. Deliberately no
-       setParent/hide round trip -- re-parenting a QTreeView full of setIndexWidget
-       editors on every scope switch is the expensive, flicker-prone path. */
+    /* Drop the old rows. deleteLater, not delete: a rebuild can be triggered from inside
+       a row child's own signal (the show/hide checkbox emits scopeEnabledToggled inline),
+       so the row must outlive the handler it is running in. But a widget taken out of a
+       layout KEEPS its parent, geometry and visibility, so until the deferred delete runs
+       it still paints over the rebuilt list -- that was the stale "Mask 1 selected" band
+       and the orphan "Mask 2" row floating in the tree. hide() it as it comes out, and
+       drop its scopeName so a stray click cannot re-select a dead row.
+       The nested details are NOT ours to delete: takeAt removes them from the layout
+       WITHOUT re-parenting, so they stay children of rowsContainer and are simply
+       re-inserted below. Deliberately no setParent round trip for them -- re-parenting a
+       QTreeView full of setIndexWidget editors on every scope switch is the expensive,
+       flicker-prone path. */
     auto isDetail = [this](QWidget *w) {
         for (QWidget *d : detailWrap) if (d && d == w) return true;
         return false;
     };
     while (QLayoutItem *it = rowsLayout->takeAt(0)) {
         QWidget *w = it->widget();
-        if (w && !isDetail(w)) w->deleteLater();
+        if (w && !isDetail(w)) {
+            w->hide();
+            w->setProperty("scopeName", QVariant());
+            w->deleteLater();
+        }
         delete it;
     }
     activeRow = nullptr;
