@@ -361,12 +361,13 @@ void ScopeHeaderLab::showRowMenu(int index, const QString &name)
        button -- must not happen inside its own click handler). */
     enum { AddMask = 1, Reset, Remove, Rename };
     QMenu menu(this);
-    QAction *aMask   = menu.addAction(tr("Tweak %1 mask\tM").arg(name));
+    QAction *aMask   = menu.addAction(tr("Modify %1 mask\tM").arg(name));
     aMask->setData(AddMask);
     menu.addSeparator();
     menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
-    menu.addAction(tr("Remove %1").arg(name))->setData(Remove);
     menu.addAction(tr("Rename %1").arg(name))->setData(Rename);
+    menu.addSeparator();
+    menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
 
     QAction *chosen = menu.exec(QCursor::pos());
     const int code = chosen ? chosen->data().toInt() : 0;
