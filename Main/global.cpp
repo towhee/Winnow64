@@ -282,6 +282,14 @@ int propertyWidgetMarginRight = 2;
    header bands (RawPanel, ScopeHeader, ScopeHeaderLab). Raise it to give crowded titles
    more breathing room. */
 int decorationTitleGap = 3;
+/* Develop Scope/Edits panel TRAILING BUTTONS: every header and row there ends with the
+   same [eye] [:] pair (see ScopeHeaderLab / SubmaskList / DevelopProperties::addHeader).
+   headerBtnGap is the clear space between the two; headerBtnRightInset is the space from
+   the panel's right edge to the menu button. Both are shared by the widget headers and by
+   the tree's section headers (BarBtnEditor), which is what makes the pair line up on
+   every line. */
+int headerBtnGap = 6;
+int headerBtnRightInset = 6;
 /* Develop dock CONTAINMENT RAIL: a vertical accent line down the left edge, running from
    the top of the selected scope row (ScopeHeaderLab) through the whole property tree
    (DevelopProperties), so the Basic/Color/Color Grade/Effects sections read as contents

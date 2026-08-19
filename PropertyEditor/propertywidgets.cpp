@@ -1004,19 +1004,24 @@ void PlusMinusEditor::paintEvent(QPaintEvent *event)
 
 /* BARBTN EDITOR **************************************************************************/
 QVector<BarBtn*> btns;
+int btnsSpacing = 0;
 BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
     : QWidget(parent)
 {
     if (G::isLogger) G::log("BarBtnEditor::BarBtnEditor");
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(0,2,6,2);        // small right inset so buttons don't touch the edge
-    layout->setSpacing(0);
+    /* Right inset G::headerBtnRightInset so the last button lines up with the trailing
+       buttons on the widget headers outside the tree (the Edits / Submasks bands and the
+       scope + submask rows), which carry the same inset. */
+    layout->setContentsMargins(0, 2, G::headerBtnRightInset, 2);
+    layout->setSpacing(btnsSpacing);
     layout->setAlignment(Qt::AlignRight);
     for (int i = 0; i < btns.size(); ++i) {
         layout->addWidget(btns.at(i));
     }
     setLayout(layout);
     btns.clear();
+    btnsSpacing = 0;
 }
 
 void BarBtnEditor::paintEvent(QPaintEvent */*event*/)

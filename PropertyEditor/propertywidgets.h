@@ -72,6 +72,12 @@ enum UserRole
 
 // reqd as can only pass QVariant convertable type through StandardItemModel
 extern QVector<BarBtn*> btns;
+/* Gap between the buttons BarBtnEditor drains out of btns, in px. Set it alongside btns
+   (before addItem) when a row wants its buttons spaced -- the Develop section headers use
+   it so their trailing [eye] [:] pair matches the gap the scope and submask ROWS carry.
+   BarBtnEditor resets it to 0 with btns, so a row that says nothing gets the old tight
+   packing (the Embellish dock's button pairs). */
+extern int btnsSpacing;
 
 class Slider : public QSlider
 {

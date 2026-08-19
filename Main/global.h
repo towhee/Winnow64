@@ -584,6 +584,8 @@ Q_NAMESPACE
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;
     extern int decorationTitleGap;
+    extern int headerBtnGap;            // Develop headers: gap between [eye] and [:]
+    extern int headerBtnRightInset;     // ditto: inset from the panel's right edge
     extern int scopeRailX;              // Develop scope containment rail: left edge
     extern int scopeRailW;              // ditto: width (0 = no rail)
     extern int panelBorderHeight;       // Develop panel bottom separator rule height

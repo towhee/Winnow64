@@ -3,7 +3,6 @@
 #include "Main/global.h"
 
 #include <QAction>
-#include <QCheckBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLinearGradient>
@@ -39,7 +38,7 @@ void SubmaskList::buildUi()
     headerBand->setCursor(Qt::PointingHandCursor);
     headerBand->installEventFilter(this);        // a header click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(0, 3, 6, 3);
+    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
     hb->setSpacing(0);
 
     collapseBtn = new BarBtn();
@@ -55,15 +54,36 @@ void SubmaskList::buildUi()
 
     addBtn = new BarBtn();
     addBtn->setToolTip("Add a submask to this mask (M)");
-    addBtn->setIcon(":/images/icon16/addMask.png", G::iconOpacity);
+    /* new.png (the [+] plus), the same "add one of these" glyph the Embellish dock
+       uses for its New Template / Border / Text buttons. */
+    addBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     addBtn->setIconSize(QSize(16, 16));
     connect(addBtn, &BarBtn::clicked, this, [this]{ emit addRequested(); });
+
+    /* Band eye: show/hide EVERY submask's contribution in one click -- an A/B of the
+       whole mask. It reads as shown while any submask is enabled. Like every other band
+       and row in this panel, the trailing pair is eye then menu, menu last. */
+    eyeBtn = new BarBtn();
+    eyeBtn->setToolTip("Show or hide every submask's contribution");
+    setEyeIcon(eyeBtn, true);
+    eyeBtn->setIconSize(QSize(16, 16));
+    connect(eyeBtn, &BarBtn::clicked, this, [this]{ toggleAllEnabled(); });
+
+    menuBtn = new BarBtn();
+    menuBtn->setToolTip("Submask list actions (add, show or hide all)");
+    menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    menuBtn->setIconSize(QSize(16, 16));
+    connect(menuBtn, &BarBtn::clicked, this, [this]{ showListMenu(); });
 
     hb->addWidget(collapseBtn);
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(titleLabel);
     hb->addStretch(1);
     hb->addWidget(addBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(eyeBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(menuBtn);
     outer->addWidget(headerBand);
     updateCollapseIcon();
 
@@ -116,6 +136,7 @@ void SubmaskList::setSubmasks(const QVector<SubmaskRowInfo> &rows, int selected)
     infos = rows;
     selectedIndex = (selected >= 0 && selected < rows.size()) ? selected : -1;
     rebuild();
+    updateBandEyeIcon();
 }
 
 void SubmaskList::rebuild()
@@ -149,18 +170,8 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     }
 
     QHBoxLayout *hb = new QHBoxLayout(row);
-    hb->setContentsMargins(10, 1, 6, 1);
-    hb->setSpacing(6);
-
-    /* Show/hide this submask's contribution (MaskComponent::enabled). The renderer skips
-       a disabled component, so this is a one-click A/B of what it is doing. */
-    QCheckBox *cb = new QCheckBox(row);
-    cb->setChecked(r.enabled);
-    cb->setToolTip("Show or hide this submask's contribution to the mask");
-    connect(cb, &QCheckBox::toggled, this, [this, index](bool on){
-        emitDeferred([this, index, on]{ emit enabledToggled(index, on); });
-    });
-    hb->addWidget(cb);
+    hb->setContentsMargins(10, 1, G::headerBtnRightInset, 1);
+    hb->setSpacing(G::headerBtnGap);
 
     /* Op chip. The FIRST submask has nothing to combine with, so its op is inert and the
        chip is shown flat and disabled rather than hidden (the column stays aligned). */
@@ -196,12 +207,24 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     hb->addWidget(name);
     hb->addStretch(1);
 
-    BarBtn *menuBtn = new BarBtn();
-    menuBtn->setToolTip("Submask actions (edit, op, invert, move, duplicate, delete)");
-    menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
-    menuBtn->setIconSize(QSize(16, 16));
-    connect(menuBtn, &BarBtn::clicked, this, [this, index]{ showRowMenu(index); });
-    hb->addWidget(menuBtn);
+    /* Show/hide this submask's contribution (MaskComponent::enabled). The renderer skips
+       a disabled component, so this is a one-click A/B of what it is doing. */
+    BarBtn *rowEye = new BarBtn();
+    rowEye->setToolTip("Show or hide this submask's contribution to the mask");
+    setEyeIcon(rowEye, r.enabled);
+    rowEye->setIconSize(QSize(16, 16));
+    const bool on = r.enabled;
+    connect(rowEye, &BarBtn::clicked, this, [this, index, on]{
+        emitDeferred([this, index, on]{ emit enabledToggled(index, !on); });
+    });
+    hb->addWidget(rowEye);
+
+    BarBtn *rowMenu = new BarBtn();
+    rowMenu->setToolTip("Submask actions (edit, op, invert, move, duplicate, delete)");
+    rowMenu->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    rowMenu->setIconSize(QSize(16, 16));
+    connect(rowMenu, &BarBtn::clicked, this, [this, index]{ showRowMenu(index); });
+    hb->addWidget(rowMenu);
 
     return row;
 }
@@ -211,7 +234,7 @@ bool SubmaskList::eventFilter(QObject *watched, QEvent *event)
     /* A click on the header band (arrow or caption) toggles collapse; MouseButtonDblClick
        is included because Qt sends it INSTEAD of the second press, which would otherwise
        leave the list in the opposite state. A click on a row body selects that submask;
-       the checkbox / op chip / menu button consume their own clicks. */
+       the op chip / eye / menu button consume their own clicks. */
     if ((event->type() == QEvent::MouseButtonPress ||
          event->type() == QEvent::MouseButtonDblClick) && watched == headerBand) {
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
@@ -230,6 +253,61 @@ bool SubmaskList::eventFilter(QObject *watched, QEvent *event)
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+void SubmaskList::setEyeIcon(BarBtn *b, bool shown)
+{
+    if (!b) return;
+    b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png",
+               G::iconOpacity);
+}
+
+void SubmaskList::updateBandEyeIcon()
+{
+    /* Shown while ANY submask still contributes, so the band eye is "off" only when the
+       whole mask is hidden -- which is exactly the state its click undoes. */
+    bool any = false;
+    for (const SubmaskRowInfo &r : infos) if (r.enabled) { any = true; break; }
+    setEyeIcon(eyeBtn, infos.isEmpty() ? true : any);
+}
+
+void SubmaskList::toggleAllEnabled()
+{
+    /* One flag for the whole list: if anything is showing, hide everything; otherwise
+       bring it all back. Emitted per row (the owner has no bulk slot) and deferred a tick
+       like every other emission here, since each one rebuilds these rows. */
+    bool any = false;
+    for (const SubmaskRowInfo &r : infos) if (r.enabled) { any = true; break; }
+    const bool on = !any;
+    const int n = infos.size();
+    emitDeferred([this, n, on]{
+        for (int i = 0; i < n; ++i) emit enabledToggled(i, on);
+    });
+}
+
+void SubmaskList::showListMenu()
+{
+    if (G::isLogger) G::log("SubmaskList::showListMenu");
+    enum { Add = 1, ShowAll, HideAll };
+    QMenu menu(this);
+    menu.addAction(tr("Add submask\tM"))->setData(Add);
+    menu.addSeparator();
+    QAction *aShow = menu.addAction(tr("Show all submasks"));
+    aShow->setData(ShowAll);
+    QAction *aHide = menu.addAction(tr("Hide all submasks"));
+    aHide->setData(HideAll);
+    aShow->setEnabled(!infos.isEmpty());
+    aHide->setEnabled(!infos.isEmpty());
+
+    QAction *chosen = menu.exec(QCursor::pos());
+    const int code = chosen ? chosen->data().toInt() : 0;
+    if (code == 0) return;
+    const int n = infos.size();
+    emitDeferred([this, code, n]{
+        if (code == Add) { emit addRequested(); return; }
+        const bool on = (code == ShowAll);
+        for (int i = 0; i < n; ++i) emit enabledToggled(i, on);
+    });
 }
 
 void SubmaskList::showRowMenu(int index)

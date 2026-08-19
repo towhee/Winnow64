@@ -612,6 +612,12 @@ private:
     enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
                         PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
+    /* The section header's trailing menu button (the vertical ellipsis), built right after
+       its eye so every header in the dock ends with the same pair -- eye, then menu. It
+       pops the SAME Preview / Reset items the header's right-click menu carries, for the
+       users who never think to right-click. */
+    BarBtn *makeSectionMenuBtn(int group);
+    void showSectionMenu(int group);
     void togglePreviewSection(int group);   // flip the flag, refresh icon, re-render (no value change)
     void resetSection(int group);           // restore the group's defaults, repopulate, re-render
     void refreshPreviewButtons();           // sync every eye icon from the active scope's flags
