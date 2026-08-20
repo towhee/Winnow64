@@ -200,6 +200,24 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     /* RAW values under the EditStack JSON field names (see paramsToJson), NOT the dock's
        slider keys -- DevelopProperties::applyKeyToParams is the other direction and
        div-scales (0..100 -> 0..1). Keep the two apart. */
+    /* The tone curve is a STRING (ToneCurve's shared encoding), and its two preset keys
+       each own only part of the curve set: "curveComposite" carries channel 0, and
+       "curveChannels" carries R/G/B. Decode into a scratch and copy just those channels,
+       so applying one preset leaf never clears the other. */
+    auto assignCurves = [&p](const QString &enc, int from, int to) {
+        EditParams t;
+        ToneCurve::decode(enc, t.curveN, t.curveX, t.curveY);
+        for (int c = from; c <= to; ++c) {
+            p.curveN[c] = t.curveN[c];
+            for (int k = 0; k < ToneCurve::kMaxPts; ++k) {
+                p.curveX[c][k] = t.curveX[c][k];
+                p.curveY[c][k] = t.curveY[c][k];
+            }
+        }
+    };
+    if (key == "curveComposite") { assignCurves(v.toString(), 0, 0); return; }
+    if (key == "curveChannels")  { assignCurves(v.toString(), 1, 3); return; }
+
     const float f = v.toFloat();
     if      (key == "temp")                p.temp                = f;
     else if (key == "tint")                p.tint                = f;
@@ -239,6 +257,10 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "gradeGlobalLum")      p.gradeGlobalLum      = f;
     else if (key == "gradeBlending")       p.gradeBlending       = f;
     else if (key == "gradeBalance")        p.gradeBalance        = f;
+    else if (key == "sharpenAmount")       p.sharpenAmount       = f;
+    else if (key == "sharpenRadius")       p.sharpenRadius       = f;
+    else if (key == "sharpenDetail")       p.sharpenDetail       = f;
+    else if (key == "sharpenMasking")      p.sharpenMasking      = f;
     else if (key == "localDenoiseLuma")    p.localDenoiseLuma    = f;
     else if (key == "localDenoiseChroma")  p.localDenoiseChroma  = f;
     else if (key == "vignetteExposure")    p.vignetteExposure    = f;

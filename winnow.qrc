@@ -225,6 +225,15 @@
         <file>Docs/focusstackingtipshelp.html</file>
         <file>images/icon16/ellipsis.png</file>
         <file>Docs/develophelp.html</file>
+        <file>Docs/developcalibratehelp.html</file>
+        <file>Docs/developbasichelp.html</file>
+        <file>Docs/developcurveshelp.html</file>
+        <file>Docs/developcolorhelp.html</file>
+        <file>Docs/developcolorgradehelp.html</file>
+        <file>Docs/developdetailhelp.html</file>
+        <file>Docs/developeffectshelp.html</file>
+        <file>Docs/developeditshelp.html</file>
+        <file>Docs/developsubmaskshelp.html</file>
         <file>images/icon16/ellipsis_vertical.png</file>
     </qresource>
 </RCC>

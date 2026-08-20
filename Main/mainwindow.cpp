@@ -8415,8 +8415,17 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
         developVerifyVsPreviewPath = dm->currentFilePath;
     }
 
-    if (!scopesView || !developScopesVisible) return;   // hidden: skip the sample cost
-    if (shown.isNull()) { scopesView->clear(); return; }
+    /* Two consumers of the one sample: the scopes strip, and the Curves panel's plot
+       (which draws the histogram behind the curve). The strip can be hidden while the
+       Curves panel is open, so take the sample if EITHER wants it. */
+    const bool wantStrip = scopesView && developScopesVisible;
+    const bool wantCurve = developProperties && developProperties->wantsScopeData();
+    if (!wantStrip && !wantCurve) return;               // neither: skip the sample cost
+    auto clearScopes = [this, wantStrip, wantCurve] {
+        if (wantStrip) scopesView->clear();
+        if (wantCurve) developProperties->clearScopeData();
+    };
+    if (shown.isNull()) { clearScopes(); return; }
 
     /* Sample the shown image IN PLACE. RGB888 gets its own branch because that is what
        OutputTransform::ToImage produces, i.e. what every develop render hands us: routing
@@ -8434,7 +8443,7 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
 
     const int W = src.width();
     const int H = src.height();
-    if (W < 1 || H < 1) { scopesView->clear(); return; }
+    if (W < 1 || H < 1) { clearScopes(); return; }
 
     constexpr qint64 budget = 180000;
     const int step = qMax(1, static_cast<int>(std::sqrt(static_cast<double>(W) * H / budget)));
@@ -8462,7 +8471,8 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
             d.vec[(cr * ScopeData::VN) >> 8][(cb * ScopeData::VN) >> 8]++;
         }
     }
-    scopesView->setData(d);
+    if (wantStrip) scopesView->setData(d);
+    if (wantCurve) developProperties->setScopeData(d);
 }
 
 void MW::toggleDevelopScopes()

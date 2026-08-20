@@ -70,6 +70,13 @@ signals:
     /* List panel only: a scope row's show/hide checkbox was toggled (index into the
        scope stack, 0 = Global which has no checkbox). */
     void scopeEnabledToggled(int index, bool on);
+    /* List panel only: the Edits [:] menu picked an Edits layout (a G::EditsLayout value,
+       passed as int so this header needs no Develop include). The owner sets the flag and
+       rebuilds; the header does not change itself. */
+    void editsLayoutRequested(int layout);
+    /* Band [:] menu: "Edits help" -- the owner opens Docs/developeditshelp.html (the
+       header knows nothing about Docs or HtmlWindow). */
+    void helpRequested();
 };
 
 #endif // SCOPEHEADERBASE_H

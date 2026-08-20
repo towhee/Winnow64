@@ -165,6 +165,11 @@ void ScopeHeader::showScopeMenu()
                 this, [this]{ emit renameRequested(); });
     }
 
+    /* Last item, as on every band in the Develop dock: the Edits panel's help page. */
+    menu.addSeparator();
+    connect(menu.addAction(tr("Edits help")), &QAction::triggered,
+            this, [this]{ emit helpRequested(); });
+
     menu.exec(QCursor::pos());
 }
 

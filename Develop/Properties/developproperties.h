@@ -12,6 +12,7 @@
 #include "Develop/Properties/colorgradewheel.h"
 #include "Develop/Properties/primarywheel.h"
 #include "Develop/Properties/colorrangewheel.h"
+#include "Develop/Properties/curveeditor.h"
 
 class MW;
 class ToneRegionSlider;
@@ -143,6 +144,14 @@ public:
        drags to the active scope's tone-split params and keep a pointer so image switches push the
        saved positions back into it. */
     void bindToneSlider(ToneRegionSlider *slider);
+
+    /* The image's histogram, drawn behind the Curves panel's plot. Fed from the SAME
+       ScopeData MW::updateDevelopScopes builds for the scopes strip, so it costs no extra
+       sampling -- but the strip can be hidden while the Curves panel is open, which is
+       what wantsScopeData() tells MW so it still takes the sample. */
+    void setScopeData(const ScopeData &d);
+    void clearScopeData();
+    bool wantsScopeData() const;
     void flushImage(const QString &fPath);  // write one image's dirty stack to sidecar
     void flushAll();                        // write every dirty stack (quit/pre-op)
 
@@ -338,8 +347,18 @@ public slots:
     void onScopePreviewToggled(bool shown);       // [E] show/ignore the whole scope
     void onScopeEnabledToggled(int index, bool on); // list row show/hide checkbox
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the scope's items)
+    /* Edits [:] menu: switch G::developEditsLayout (Flat / Nested / Minimal -- see
+       global.h) and rebuild both halves. Session-scoped; goes away with the flag once
+       the comparison settles. Takes an int so the header's signal needs no G include. */
+    void setEditsLayout(int layout);
 
     void howThisWorks();                          // Develop help
+    /* Section help: every band [:] menu ends with "<section> help", opening that
+       section's own page (Docs/develop<section>help.html). sectionHelp takes a PV_*
+       group; editsHelp / submasksHelp serve the two bands that are not tree sections. */
+    void sectionHelp(int group);                  // Basic / Curves / ... section help
+    void editsHelp();                             // Edits (scope list) band help
+    void submasksHelp();                          // Submasks band help
 
     /* ---- Develop presets (the Presets dock) --------------------------------------
        saveDevelopPreset snapshots the current image's develop state into a named preset:
@@ -496,9 +515,11 @@ private:
        bracket's foot. Also reserved by sizeHint in fit mode. */
     static constexpr int kBlockBottomGap = 2;
     void addBasic();
+    void addCurves();
     void addColor();
     void addCalibrate();
     void addColorGrade();
+    void addDetail();
     void addEffects();
 
     /* ---- White balance row (Basic, above Temp) -----------------------------------
@@ -527,11 +548,12 @@ private:
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
     void updateSectionHeaderCaptions();   // section names + the edited " *" marker
-    /* Current " *" state of each section header (Basic/Color/Calibrate/ColorGrade/
-       Effects, in that order): 1 = starred, 0 = plain, -1 = unknown (after a tree
-       rebuild). Lets updateSectionHeaderCaptions skip the model search when nothing
-       flipped -- it runs on every params change. */
-    int hdrStar[5] = {-1, -1, -1, -1, -1};
+    /* Current " *" state of each section header: 1 = starred, 0 = plain, -1 = unknown
+       (after a tree rebuild). Indexed BY POSITION in updateSectionHeaderCaptions's hdrs[]
+       table, so this array must be at least as long as that table -- grow both together.
+       Lets updateSectionHeaderCaptions skip the model search when nothing flipped -- it
+       runs on every params change. */
+    int hdrStar[7] = {-1, -1, -1, -1, -1, -1, -1};
 
     /* ---- Calibrate (RGB primaries) ---------------------------------------------------
        Same select-then-adjust grammar as Color Grade: R/G/B checkboxes pick which
@@ -541,7 +563,31 @@ private:
     QPointer<PrimaryWheel> primaryWheel;
     int  calActiveMask = 0x1;                 // red checked by default
     void onPrimaryWheelChanged(bool commit);  // wheel drag -> active-scope cal params
-    void refreshCalibrateRow();               // push stored primaries to the wheel
+    void refreshCalibrateRow();               // push stored primaries to wheel + sliders
+    void setCalAxis(bool isHue, float v);     // write one axis to every checked primary
+    int  firstActivePrimary() const;          // lowest checked primary (drives the sliders)
+
+    /* ---- Curves (tone curve) ----------------------------------------------------------
+       An embedded index widget like the wheels, re-created on every tree rebuild. The
+       panel is a SECOND VIEW of tone: its Point curves are the only params it owns
+       (EditParams::curveN/curveX/curveY), while Parametric mode drives Basic's existing
+       Highlights / Shadows / Whites / Blacks. curveToneSlider is a second
+       ToneRegionSlider
+       shown under the plot in Parametric mode; it edits the SAME tone-split params as the
+       one under the histogram scope (see onToneSplitsChanged, which cross-pushes between
+       the two so they can never disagree). The scopes strip can be hidden entirely, which
+       is why the splits are surfaced in both places rather than only there. */
+    QPointer<CurveEditor> curveEditor;
+    QPointer<ToneRegionSlider> curveToneSlider;
+    QPointer<QComboBox> curveChannelCombo;
+    QPointer<QWidget> curveChannelRow;      // hidden in Parametric mode
+    /* 0 = Parametric, 1 = Point. UI state, not a param. */
+    int  curveModeIndex = 0;
+    void onCurveChanged(bool commit);       // point drag -> active-scope curve params
+    void onParametricChanged(int band, double value, bool commit);
+    void refreshCurveRow();                 // push stored params + splits into the editor
+    void applyCurveMode();                  // show/hide the channel combo + split slider
+    static QString curveBandKey(int band);  // band -> the Basic dock slider key it writes
 
     /* ---- Color Grade (colour grading) ------------------------------------------------
        The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
@@ -612,9 +658,11 @@ private:
        group is folded to identity at render by effectiveScopeParams). Right-clicking a header pops
        a menu to toggle Preview or Reset (restore defaults, destructive) for that group. Transform's
        preview/reset live in TransformPanel (separate widget), wired via MW. Group codes: PV_Scope =
-       whole active scope, PV_Basic/PV_Color/PV_ColorGrade/PV_Effects = a section. */
+       whole active scope, PV_Basic/PV_Color/PV_ColorGrade/PV_Effects = a section.
+       Codes are append-only: hdrStar is indexed by them. */
     enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
-                        PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4 };
+                        PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4,
+                        PV_Curves = 5, PV_Detail = 6 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     /* The section header's trailing menu button (the vertical ellipsis), built right after
        its eye so every header in the dock ends with the same pair -- eye, then menu. It
@@ -631,9 +679,10 @@ private:
     /* PV_* -> "Basic" / "Effects" / ... , for history captions. */
     static QString groupLabel(int group);
     bool *previewFlag(EditScope *l, int group);        // the bool a PV_* code maps to on a scope
-    BarBtn *basicEyeBtn = nullptr,
+    BarBtn *basicEyeBtn = nullptr, *curvesEyeBtn = nullptr,
            *colorEyeBtn = nullptr, *colorGradeEyeBtn = nullptr,
-           *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr;
+           *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr,
+           *detailEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 
@@ -916,6 +965,11 @@ private:
        ScopeHeaderLab::kDetailIndent. Its embedded editor's caption column is narrowed by
        the same amount so its VALUE column still lines up with the tree below. */
     static constexpr int kMaskPanelIndent = 22;
+    /* Caption split for the MaskPanel's embedded editor: the tree's split less however
+       far the panel is inset, so its sliders line up with the tree's. The flat Edits
+       and minimal layouts do not indent the panel (G::developEditsLayout), so there the two
+       splits are the same, as they are in the minimal layout. */
+    int maskPanelCaptionWidth() const;
     /* MaskEditor (panel) change routing -- mirrors the tree's itemChange mask blocks. */
     void onMaskEditorSetting(const QString &key, const QVariant &value);
     void onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit);

@@ -2,9 +2,11 @@
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
 
+#include <QComboBox>
 #include <QLabel>
 #include <QMenu>
 #include <QAction>
+#include <QActionGroup>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPainter>
@@ -75,6 +77,10 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     outer->addWidget(headerBand);
     updateListCollapseIcon();
 
+    /* MINIMAL layout: the one-line scope bar that stands in for the header band AND the
+       rows. Built here so a layout flip is a show/hide, never a rebuild. */
+    buildScopeBar(outer);
+
     /* Rows container: one row widget per scope, rebuilt by setScopeRows. Translucent for
        the same reason headerBand is: under the app stylesheet a plain QWidget fills its
        background opaquely, which painted over the containment rail this widget draws
@@ -88,18 +94,152 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     rowsLayout->setSpacing(0);
     outer->addWidget(rowsContainer);
 
+    /* FLAT layout only (G::developEditsLayout): the band that heads the editor region
+       below the list. It is painted in G::selectionColor with a white caption -- the SAME
+       band the selected row carries -- so the eye pairs "the highlighted row up there"
+       with "the sliders down here" by colour, which is the binding the flat layout gives
+       up by separating them. The rail runs the same colour through both.
+       Like every other band and row in this panel it ends with [eye] then [:], acting on
+       the ACTIVE scope (the same targets the header band's pair uses). */
+    editorBand = new QWidget(rowsContainer);
+    editorBand->setObjectName("scopeRow");
+    editorBand->setStyleSheet(QString("QWidget#scopeRow { background: %1; }"
+                                      "QWidget#scopeRow:disabled { background: %2; }")
+                                  .arg(G::selectionColor.name(),
+                                       G::dimmed(G::selectionColor).name()));
+    QHBoxLayout *eb = new QHBoxLayout(editorBand);
+    eb->setContentsMargins(kDetailIndent, 2, G::headerBtnRightInset, 2);
+    eb->setSpacing(G::headerBtnGap);
+    editorBandLabel = new QLabel(editorBand);
+    editorBandLabel->setStyleSheet(G::labelCss(QColor(Qt::white), G::strFontSize.toInt()));
+    editorEyeBtn = new BarBtn();
+    editorEyeBtn->setToolTip("Show or hide the selected scope's changes");
+    setEyeIcon(editorEyeBtn, true);
+    editorEyeBtn->setIconSize(QSize(16, 16));
+    connect(editorEyeBtn, &BarBtn::clicked, this, [this]{ toggleActiveEnabled(); });
+    editorMenuBtn = new BarBtn();
+    editorMenuBtn->setToolTip("Scope actions");
+    editorMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    editorMenuBtn->setIconSize(QSize(16, 16));
+    connect(editorMenuBtn, &BarBtn::clicked, this, [this]{
+        showRowMenu(activeIndex, names.value(activeIndex), activeIndex == 0);
+    });
+    eb->addWidget(editorBandLabel);
+    eb->addStretch(1);
+    eb->addWidget(editorEyeBtn);
+    eb->addWidget(editorMenuBtn);
+    editorBand->hide();                  // rebuild() shows it when the layout is flat
+    rowsLayout->addWidget(editorBand);   // rebuild() fixes the position
+
+    applyLayoutMode();                   // show the bar or the header band, not both
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+}
+
+void ScopeHeaderLab::buildScopeBar(QVBoxLayout *outer)
+{
+    /* "Scope: [Global v] [+] [eye] [:]" -- the whole scope control on one line. In the
+       minimal layout this REPLACES the header band, so it carries the band's gradient
+       (painted in paintEvent) and the trailing [eye] [:] pair, plus a [+] that promotes
+       New mask out of the menu it is buried in elsewhere. The combo lists every scope;
+       the pair acts on whichever it has selected.
+       NO collapse arrow: this layout has no scope list to hide, and the panel headers
+       below it (Submasks, Basic, Color, ...) are always visible. */
+    scopeBar = new QWidget(this);
+    scopeBar->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *hb = new QHBoxLayout(scopeBar);
+    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
+    hb->setSpacing(0);
+
+    QLabel *barLabel = new QLabel(tr("Edits"), scopeBar);
+    barLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
+
+    scopeCombo = new QComboBox(scopeBar);
+    scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    scopeCombo->setToolTip("The scope the settings below belong to:\n"
+                           "Global, or one of this image's masks");
+    /* activated (not currentIndexChanged): only a USER pick selects a scope. The refill
+       in updateScopeBar is blocked as well, but activated never fires for it anyway. */
+    connect(scopeCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+        selectRowDeferred(names.value(idx));
+    });
+
+    barAddBtn = new BarBtn();
+    barAddBtn->setToolTip("New mask");
+    /* new.png: the same [+] glyph SubmaskList's band uses for "add a submask", so the
+       two "add" affordances in the Develop dock read alike. */
+    barAddBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
+    barAddBtn->setIconSize(QSize(16, 16));
+    connect(barAddBtn, &BarBtn::clicked, this, [this]{
+        QTimer::singleShot(0, this, [this]{ emit addScopeRequested(); });
+    });
+
+    barEyeBtn = new BarBtn();
+    barEyeBtn->setToolTip("Show or hide the selected scope's changes");
+    setEyeIcon(barEyeBtn, true);
+    barEyeBtn->setIconSize(QSize(16, 16));
+    connect(barEyeBtn, &BarBtn::clicked, this, [this]{ toggleActiveEnabled(); });
+
+    barMenuBtn = new BarBtn();
+    barMenuBtn->setToolTip("Scope and panel actions");
+    barMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    barMenuBtn->setIconSize(QSize(16, 16));
+    connect(barMenuBtn, &BarBtn::clicked, this, [this]{
+        showRowMenu(activeIndex, names.value(activeIndex), activeIndex == 0);
+    });
+
+    hb->addWidget(barLabel);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(scopeCombo, 1);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(barAddBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(barEyeBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(barMenuBtn);
+    scopeBar->hide();
+    outer->addWidget(scopeBar);
+}
+
+void ScopeHeaderLab::updateScopeBar()
+{
+    /* Refill from the last setScopeRows. Blocked: setCurrentIndex must not read back as a
+       user pick. */
+    if (!scopeCombo) return;
+    const QSignalBlocker block(scopeCombo);
+    scopeCombo->clear();
+    scopeCombo->addItems(names);
+    scopeCombo->setCurrentIndex(activeIndex);
+    setEyeIcon(barEyeBtn, enabledStates.value(activeIndex, true));
+}
+
+void ScopeHeaderLab::applyLayoutMode()
+{
+    /* Exactly one scope control is up: the minimal bar, or the header band + rows. */
+    const bool minimal = (G::developEditsLayout == G::EditsLayout::Minimal);
+    if (headerBand) headerBand->setVisible(!minimal);
+    if (scopeBar)   scopeBar->setVisible(minimal);
+    /* Minimal has no collapse control of its own (the header band, which carries the
+       one arrow, is down), so a listCollapsed left over from another layout would hide
+       the editor with no way to get it back. Expand on entry. */
+    if (minimal && listCollapsed) {
+        listCollapsed = false;
+        if (rowsContainer) rowsContainer->show();
+    }
+    updateListCollapseIcon();
 }
 
 void ScopeHeaderLab::paintEvent(QPaintEvent *)
 {
-    /* The property-header gradient (backgroundShade +5 -> -15), behind the header band
-       only; the rows below sit on the dock background. */
-    if (!headerBand) return;
+    /* The property-header gradient (backgroundShade +5 -> -15), behind whichever band is
+       up -- the "Edits" header, or the minimal layout's scope bar, which stands in for
+       it. Everything below sits on the dock background. */
+    QWidget *band = (G::developEditsLayout == G::EditsLayout::Minimal) ? scopeBar
+                                                                      : headerBand;
+    if (!band || !band->isVisible()) return;
     QPainter p(this);
     const int a = G::backgroundShade + 5;
     const int b = G::backgroundShade - 15;
-    const QRect r = headerBand->geometry();
+    const QRect r = band->geometry();
     QLinearGradient g(0, r.top(), 0, r.bottom());
     g.setColorAt(0, QColor(a, a, a));
     g.setColorAt(1, QColor(b, b, b));
@@ -117,12 +257,25 @@ void ScopeHeaderLab::paintEvent(QPaintEvent *)
     /* NO panel separator along the bottom edge (unlike the other Develop panels): the
        scope row and its nested details are ONE BLOCK, joined by the rail. */
     if (G::scopeRailW > 0) {
-        const QRect block = activeBlockRect();
         /* Dimmed while the panel is greyed, in step with the active row's band (which
            carries the same :disabled colour) so the two still read as one line. */
-        if (!block.isEmpty())
-            p.fillRect(G::scopeRailX, block.top(), G::scopeRailW, block.height(),
-                       isEnabled() ? G::selectionColor : G::dimmed(G::selectionColor));
+        const QColor rail = isEnabled() ? G::selectionColor : G::dimmed(G::selectionColor);
+        auto fill = [&p, &rail](const QRect &r) {
+            if (!r.isEmpty())
+                p.fillRect(G::scopeRailX, r.top(), G::scopeRailW, r.height(), rail);
+        };
+        if (G::developEditsLayout == G::EditsLayout::Flat) {
+            /* Two pieces: the selected row, then the editor region under the list. The
+               unselected rows between them carry no rail, so the break IS the statement
+               -- these two blocks belong together and the rows in between do not. */
+            fill(activeRowRect());
+            fill(editorBlockRect());
+        }
+        else if (G::developEditsLayout == G::EditsLayout::Nested) {
+            fill(activeBlockRect());
+        }
+        /* Minimal: NO rail. It exists to say which ROWS the editor belongs to, and there
+           are no rows -- the bar and the editor are adjacent and alone. */
     }
 }
 
@@ -140,6 +293,58 @@ QRect ScopeHeaderLab::activeBlockRect() const
         bottom = qMax(bottom, d->y() + dy + d->height());
     }
     return QRect(0, top, width(), bottom - top);
+}
+
+QRect ScopeHeaderLab::activeRowRect() const
+{
+    /* Flat layout: the selected row alone -- its editor is elsewhere. */
+    if (!rowsContainer || !rowsContainer->isVisible() || !activeRow) return QRect();
+    const int top = activeRow->y() + rowsContainer->y();
+    return QRect(0, top, width(), activeRow->height());
+}
+
+QRect ScopeHeaderLab::editorBlockRect() const
+{
+    /* Flat layout: the editor region -- its band plus every visible detail under it.
+       Empty while the list is collapsed (the whole rowsContainer goes with it) or before
+       the band has been placed. */
+    if (!rowsContainer || !rowsContainer->isVisible()) return QRect();
+    if (!editorBand || !editorBand->isVisible()) return QRect();
+    const int dy = rowsContainer->y();
+    int top    = editorBand->y() + dy;
+    int bottom = top + editorBand->height();
+    for (QWidget *d : detailWrap) {
+        if (!d || !d->isVisible()) continue;
+        bottom = qMax(bottom, d->y() + dy + d->height());
+    }
+    return QRect(0, top, width(), bottom - top);
+}
+
+void ScopeHeaderLab::applyDetailIndent(int slot)
+{
+    /* The flat editor region starts at the panel edge (indent 0): there is no scope row
+       directly above it to line up under, and its rail then continues the tree's at the
+       same x. Nested keeps the caller's indent, which puts the detail under the scope
+       NAME. */
+    if (slot < 0 || slot >= RowDetailSlotCount || !detailWrap[slot]) return;
+    if (QLayout *l = detailWrap[slot]->layout()) {
+        const int indent = (G::developEditsLayout == G::EditsLayout::Nested)
+                               ? detailIndent[slot] : 0;
+        l->setContentsMargins(indent, 0, 0, 0);
+    }
+}
+
+void ScopeHeaderLab::updateEditorBand()
+{
+    /* Flat only: name the scope the sliders below belong to, and mirror its eye. */
+    if (!editorBand) return;
+    /* Flat only: nested has the row above it saying the same thing, and minimal has the
+       scope bar. */
+    if (G::developEditsLayout != G::EditsLayout::Flat) { editorBand->hide(); return; }
+    if (editorBandLabel)
+        editorBandLabel->setText(tr("Editing: %1").arg(names.value(activeIndex)));
+    setEyeIcon(editorEyeBtn, enabledStates.value(activeIndex, true));
+    editorBand->show();
 }
 
 void ScopeHeaderLab::setScopes(const QStringList &n, int currentIndex)
@@ -186,15 +391,19 @@ void ScopeHeaderLab::setRowDetail(QWidget *detail, int slot, int indent)
     rowDetail[slot] = detail;
     if (!detail) return;
 
-    /* Indent (slot's choice) so the detail reads as belonging to the scope above it: the
-       MaskPanel lines up under the scope NAME (kDetailIndent), while the adjustment tree
-       takes indent 0 so its containment rail continues this widget's at the same x. */
+    /* Indent (slot's choice) so a NESTED detail reads as belonging to the scope above it:
+       the MaskPanel lines up under the scope NAME (kDetailIndent), while the adjustment
+       tree takes indent 0 so its containment rail continues this widget's at the same x.
+       Remembered per slot: the flat layout overrides it with 0, and a live layout flip
+       has to be able to put it back. */
+    detailIndent[slot] = indent;
     detailWrap[slot] = new QWidget(rowsContainer);
     detailWrap[slot]->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *dl = new QVBoxLayout(detailWrap[slot]);
     dl->setContentsMargins(indent, 0, 0, 0);
     dl->setSpacing(0);
     dl->addWidget(detail);
+    applyDetailIndent(slot);
     rowsLayout->addWidget(detailWrap[slot]);      // rebuild() fixes the position
 }
 
@@ -214,6 +423,7 @@ void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
        QTreeView full of setIndexWidget editors on every scope switch is the expensive,
        flicker-prone path. */
     auto isDetail = [this](QWidget *w) {
+        if (w && w == editorBand) return true;      // ours, and outlives every rebuild
         for (QWidget *d : detailWrap) if (d && d == w) return true;
         return false;
     };
@@ -226,23 +436,42 @@ void ScopeHeaderLab::rebuild(const QVector<ScopeRowInfo> &rows, int active)
         }
         delete it;
     }
+    applyLayoutMode();                    // a live layout switch lands here first
     activeRow = nullptr;
-    for (int i = 0; i < rows.size(); ++i) {
-        QWidget *row = makeRow(i, rows.at(i), i == active);
-        if (i == active) activeRow = row;       // the rail brackets this row's block
-        rowsLayout->addWidget(row);
+    /* MINIMAL builds no rows at all -- the scope bar's combo IS the list -- so the editor
+       is the only thing in the container. */
+    const G::EditsLayout layout = G::developEditsLayout;
+    if (layout != G::EditsLayout::Minimal) {
+        for (int i = 0; i < rows.size(); ++i) {
+            QWidget *row = makeRow(i, rows.at(i), i == active);
+            if (i == active) activeRow = row;   // the rail brackets this row's block
+            rowsLayout->addWidget(row);
+        }
     }
 
-    /* Re-insert the details directly beneath the ACTIVE row, in slot order, so they move
-       with the selection. Their own visibility is the owner's business (DevelopProperties
-       hides the MaskPanel on Global), so the wrappers always show: an empty wrapper is 0
-       high. */
-    int pos = qBound(0, active + 1, rowsLayout->count());
-    for (QWidget *d : detailWrap) {
+    /* Re-insert the editor, in slot order. FLAT: after every row, headed by its band, so
+       the scope list stays whole and the sliders keep the same height whatever is
+       selected. NESTED: directly beneath the ACTIVE row, so the editor moves with the
+       selection. MINIMAL: it is all there is. Their own visibility is the owner's
+       business (DevelopProperties hides the MaskPanel on Global), so the wrappers always
+       show: an empty wrapper is 0 high. */
+    int pos = (layout == G::EditsLayout::Nested)
+                  ? qBound(0, active + 1, rowsLayout->count())
+                  : rowsLayout->count();
+    if (editorBand) {
+        /* Always kept in the layout, even where it is hidden (0 high), so a live layout
+           flip is one show() rather than a re-parent. */
+        rowsLayout->insertWidget(pos++, editorBand);
+        updateEditorBand();               // shows it for Flat, hides it otherwise
+    }
+    for (int slot = 0; slot < RowDetailSlotCount; ++slot) {
+        QWidget *d = detailWrap[slot];
         if (!d) continue;
+        applyDetailIndent(slot);          // the layout decides the inset
         rowsLayout->insertWidget(pos++, d);
         d->show();
     }
+    updateScopeBar();                     // minimal: refill the combo + sync its eye
 }
 
 QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
@@ -397,7 +626,53 @@ void ScopeHeaderLab::showPanelMenu()
        the sidecar record, on every selected image. DevelopProperties confirms first. */
     connect(menu.addAction(tr("Reset all edits")), &QAction::triggered,
             this, [this]{ emit resetAllEditsRequested(); });
+    addPanelActions(&menu);
+    addHelpAction(&menu);
     menu.exec(QCursor::pos());
+}
+
+void ScopeHeaderLab::addHelpAction(QMenu *menu)
+{
+    /* "Edits help", last item in every menu this panel pops -- the same place each
+       section band in the tree below carries its own help. */
+    if (!menu) return;
+    menu->addSeparator();
+    connect(menu->addAction(tr("Edits help")), &QAction::triggered,
+            this, [this]{ emit helpRequested(); });
+}
+
+void ScopeHeaderLab::addPanelActions(QMenu *menu)
+{
+    if (!menu) return;
+    /* The Edits LAYOUT picker (G::developEditsLayout): compare the candidates live, on
+       real edits. Session-scoped; the owner sets the flag and rebuilds both halves.
+       Retire this submenu with the flag once the comparison settles. */
+    menu->addSeparator();
+    QMenu *lay = menu->addMenu(tr("Edits layout"));
+    struct Opt { G::EditsLayout mode; const char *label; const char *tip; };
+    static const Opt opts[] = {
+        {G::EditsLayout::Flat,    QT_TR_NOOP("Flat"),
+         "Scope list, with the editor below the whole list"},
+        {G::EditsLayout::Nested,  QT_TR_NOOP("Nested"),
+         "Scope list, with the editor under the selected scope"},
+        {G::EditsLayout::Minimal, QT_TR_NOOP("Minimal"),
+         "No list: one scope dropdown, the editor below it, no rail"},
+    };
+    QActionGroup *group = new QActionGroup(lay);
+    group->setExclusive(true);
+    for (const Opt &o : opts) {
+        QAction *a = lay->addAction(tr(o.label));
+        a->setCheckable(true);
+        a->setChecked(G::developEditsLayout == o.mode);
+        a->setToolTip(o.tip);
+        group->addAction(a);
+        const int mode = int(o.mode);
+        connect(a, &QAction::triggered, this, [this, mode]{
+            /* Deferred like every other emission here: the switch rebuilds the rows (or
+               the bar) the menu is still standing on. */
+            QTimer::singleShot(0, this, [this, mode]{ emit editsLayoutRequested(mode); });
+        });
+    }
 }
 
 void ScopeHeaderLab::showRowMenu(int index, const QString &name, bool isGlobal)
@@ -426,6 +701,18 @@ void ScopeHeaderLab::showRowMenu(int index, const QString &name, bool isGlobal)
         menu.addSeparator();
         menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
     }
+
+    /* MINIMAL layout: there is no header band, so this bar [:] is the ONLY menu in the
+       panel -- it has to carry "Reset all edits" and the layout picker as well, or the
+       way back out of this layout would be unreachable. These actions fire through their
+       own connect (data code 0), so the per-scope dispatch below simply ignores them. */
+    if (G::developEditsLayout == G::EditsLayout::Minimal) {
+        menu.addSeparator();
+        connect(menu.addAction(tr("Reset all edits")), &QAction::triggered,
+                this, [this]{ emit resetAllEditsRequested(); });
+        addPanelActions(&menu);
+    }
+    addHelpAction(&menu);
 
     QAction *chosen = menu.exec(QCursor::pos());
     const int code = chosen ? chosen->data().toInt() : 0;

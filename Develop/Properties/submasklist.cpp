@@ -50,7 +50,7 @@ void SubmaskList::buildUi()
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
 
     titleLabel = new QLabel(tr("Submasks"), headerBand);
-    titleLabel->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
+    titleLabel->setStyleSheet(G::labelCss(G::header3Color, G::strFontSize.toInt()));
 
     addBtn = new BarBtn();
     addBtn->setToolTip("Add a submask to this mask (M)");
@@ -96,6 +96,7 @@ void SubmaskList::buildUi()
     rowsLayout = new QVBoxLayout(rowsContainer);
     rowsLayout->setContentsMargins(0, 0, 0, 0);
     rowsLayout->setSpacing(0);
+    rowsContainer->setVisible(!collapsed);      // starts collapsed (see the header)
     outer->addWidget(rowsContainer);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -298,8 +299,12 @@ void SubmaskList::showListMenu()
     aHide->setData(HideAll);
     aShow->setEnabled(!infos.isEmpty());
     aHide->setEnabled(!infos.isEmpty());
+    /* Last item, as on every band in the Develop dock: this list's own help page. */
+    menu.addSeparator();
+    QAction *aHelp = menu.addAction(tr("Submasks help"));
 
     QAction *chosen = menu.exec(QCursor::pos());
+    if (chosen == aHelp) { emitDeferred([this]{ emit helpRequested(); }); return; }
     const int code = chosen ? chosen->data().toInt() : 0;
     if (code == 0) return;
     const int n = infos.size();

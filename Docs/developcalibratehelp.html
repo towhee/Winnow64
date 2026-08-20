@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Calibrate</h1>
+
+<h2>What it does</h2>
+<p>Calibrate re-points the three <b>primaries</b> of the working colour space.  Each of
+Red, Green and Blue gets a hue shift and a saturation scale, and the three results become
+the columns of a 3&times;3 matrix that is applied to every pixel.  In effect you are
+telling Winnow &ldquo;this camera's red is a little more orange than I want&rdquo;, and the
+whole image responds to that new definition of red.</p>
+
+<p>The matrix is built so that <b>grey stays grey</b>.  Whatever you do to the primaries,
+a neutral pixel comes out neutral &mdash; calibration re-points colour without tinting the
+image or shifting the white balance.</p>
+
+<h2>The controls</h2>
+<p>The <b>Red</b>, <b>Green</b> and <b>Blue</b> checkboxes do not adjust anything: they
+choose which primaries the wheel below them writes to.  Red is checked to start with.
+Check two or three and one drag moves them all by the same amount.</p>
+
+<p>The <b>wheel</b> is the adjustment (with the Hue and Saturation sliders under it as
+its numeric twin &mdash; see <i>Small adjustments</i> below).  Each primary has a lettered dot (R, G, B) that
+starts on its own spoke at mid radius &mdash; red at 3 o'clock, green and blue 120&deg;
+and 240&deg; round.  The faint dotted lines are those home positions, so a dot's distance
+from its spoke <i>is</i> the shift you have made.  Drag a dot and:</p>
+
+<ul>
+<li><b>Around the wheel</b> shifts that primary's <b>hue</b>, up to &plusmn;30&deg; at
+full scale.  Enough to move red toward orange or toward magenta, not enough for it to
+wander into a neighbouring primary.</li>
+<li><b>In and out</b> scales that primary's <b>saturation</b>.  The rim doubles its
+chroma; the centre desaturates it completely.  Brightness is held steady, so this is a
+colour control, not a second exposure.</li>
+</ul>
+
+<p><b>Double-click</b> the wheel to return the checked primaries to their home position.
+The section's <b>[&#8942;]</b> menu has <b>Show Calibrate changes</b> (a before/after
+that keeps your values) and <b>Reset Calibrate</b>.</p>
+
+<h2>Small adjustments</h2>
+<p>Calibration is mostly a subtle control, and the whole disc is only 30&deg; of hue, so
+a plain drag is a blunt instrument.  There are two ways to work finely.</p>
+
+<ul>
+<li><b>Hold Shift while dragging.</b>  The dots then move a quarter as far as the
+pointer does.  Press Shift at any point in a drag &mdash; the dots carry on from where
+they are rather than jumping.</li>
+<li><b>Use the Hue and Saturation sliders</b> below the wheel.  They act on the same
+checked primaries the wheel does, and they show the value, which the wheel cannot.
+Click one and the <b>arrow keys</b> nudge it a single unit at a time; <b>Page Up</b> and
+<b>Page Down</b> move by ten.  Double-click a slider to return that axis to zero.</li>
+</ul>
+
+<p>The two are one control seen two ways: drag the wheel and the numbers follow, nudge a
+slider and the dot moves.  With more than one primary checked the sliders read the first
+of them and write all of them &mdash; exactly what a wheel drag does.</p>
+
+<h2>Why the sliders interact</h2>
+<p>Move red toward green and you will see green's own response drop.  That is correct,
+not a defect.  Holding white fixed while red picks up a green component means something
+has to give, and a real change of primaries behaves the same way &mdash; Lightroom's
+Calibration sliders interact for exactly the same reason.  What does survive is
+direction: a primary you have not touched keeps pointing where it did.</p>
+
+<h2>Where it sits in the pipeline</h2>
+<p>Calibration runs in <b>linear light, before the tone curve</b>, because re-pointing
+primaries is a change of colour space and belongs upstream of anything perceptual.  That
+is why it feels different from the Color panel's Hue and Saturation, which run after the
+tone curve and act on the pixels you can already see.</p>
+
+<h2>Calibrate is not the Color panel's Red / Green / Blue</h2>
+<p>The Color section's <b>Red</b>, <b>Green</b> and <b>Blue</b> sliders are per-channel
+linear <b>gains</b>, folded into the white balance &mdash; a cruder second white balance
+that <i>does</i> move neutrals.  Calibrate changes what the primaries mean and leaves
+neutrals alone.  Different maths, different place in the pipeline; both are available.</p>
+
+<h2>When to use it</h2>
+<ul>
+<li><b>The camera's colour is off in a way white balance cannot fix.</b>  Skies are
+cyan-ish, foliage too yellow, skin too orange &mdash; but the greys are already neutral.
+That is a primaries problem, and this is the panel for it.</li>
+<li><b>Matching two cameras.</b>  Shoot the same scene on both, neutralise each with
+white balance, then nudge the primaries of one until they agree.  Save the result as a
+preset and apply it to every file from that body.</li>
+<li><b>Deepening or opening up a colour globally.</b>  Pulling blue's saturation up
+enriches skies and shadows together, more naturally than a global saturation push,
+because it works on the definition of blue rather than on every colour at once.</li>
+<li><b>A look.</b>  Small hue shifts on all three primaries are how a lot of film
+emulations get their character, and being upstream of the tone curve they stay coherent
+through highlights and shadows.</li>
+</ul>
+
+<p>Work in small amounts, and judge it on a neutral reference or a colour target if you
+have one.  Because everything downstream inherits the new primaries, calibration is worth
+setting <b>before</b> the tone and colour work, not after.</p>
+
+<h2>What is saved</h2>
+<p>The six values (hue and saturation for each primary) are part of the develop recipe,
+stored per scope in the sidecar alongside every other adjustment, so they travel with
+presets, Copy/Paste Settings, History and multi-image editing like anything else.  Masked
+scopes have their own Calibrate section, so a calibration can be confined to a mask.</p>
+
+</body>
+</html>

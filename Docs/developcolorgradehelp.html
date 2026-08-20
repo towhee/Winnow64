@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Color Grade</h1>
+
+<h2>What it does</h2>
+<p>Color Grade tints the image <b>by tonal range</b>: one colour into the shadows, another
+into the midtones, a third into the highlights, and a fourth over everything.  It is the
+modern form of split toning, and it is how most "looks" are actually built &mdash; cool
+shadows and warm highlights, or the reverse, in amounts small enough that you notice the
+mood and not the tint.</p>
+
+<h2>The controls</h2>
+<p>The <b>Shadows</b>, <b>Midtones</b>, <b>Highlights</b> and <b>Global</b> checkboxes do
+not adjust anything: they choose which range(s) the wheel and the Luminance slider below
+them write to.  Check two and one drag moves both by the same amount.  Global tints every
+pixel whatever its tone, which is the quickest way to lay a uniform wash over the
+picture.</p>
+
+<p>The <b>wheel</b> is the adjustment.  Each range has its own dot; the angle is the
+<b>hue</b> and the distance from the centre is the <b>strength</b>.  Drag a dot out and
+that range takes on that colour; drag it back to the middle and the range is untouched.
+<b>Double-click</b> the wheel to return the checked ranges to neutral.</p>
+
+<p>The <b>Luminance</b> slider under the wheel brightens or darkens the checked range(s)
+&mdash; the "and slightly lift the shadows" half of a grade, without going back to the
+tone panel.  It reads the first checked range and writes all of them.</p>
+
+<h2>Blending and Balance</h2>
+<p>These two shape the <b>windows</b> the three ranges occupy, and they are panel-wide
+rather than per-range:</p>
+
+<ul>
+<li><b>Blending</b> (default 50) is how much the windows overlap.  Low values give three
+distinct zones with visible transitions; high values smear them into each other so the
+grade reads as one continuous drift from shadow colour to highlight colour.</li>
+<li><b>Balance</b> (default 0) slides the split between the ranges.  Push it right and the
+highlight colour claims more of the image; pull it left and the shadow colour does.</li>
+</ul>
+
+<p>The defaults reproduce the fixed split the panel used before these existed, so leaving
+them alone is a perfectly good answer.</p>
+
+<h2>How to use it</h2>
+<ul>
+<li>Work <b>small</b>.  A grade that is obvious as colour has usually gone too far; the
+effect you want is usually visible only in the before / after.</li>
+<li>Set the tone first.  The ranges are defined by tone, so re-doing exposure or the curve
+afterwards moves the grade around underneath you.</li>
+<li>Complementary hues in shadows and highlights (teal / orange, blue / yellow) separate
+the picture into planes; the same hue in both is a wash and reads like a film stock.</li>
+<li>Use <b>Show Color Grade changes</b> in the section's <b>[&#8942;]</b> menu to A / B it
+&mdash; the effect is subtle enough that the eye adapts to it within seconds.</li>
+</ul>
+
+<h2>Color Grade is not Calibrate</h2>
+<p>Calibrate re-points the <b>primaries</b> of the working space and holds neutrals
+neutral: it changes what red means.  Color Grade deliberately <i>does</i> tint neutrals
+&mdash; that is the effect.  Different jobs; both are available, and they stack.</p>
+
+<h2>Where it sits in the pipeline</h2>
+<p>Grading runs after the tone curve, on the rendered image, because the ranges it targets
+are the tones you can see rather than the scene's linear values.</p>
+
+<h2>What is saved</h2>
+<p>Hue, saturation and luminance for each of the four ranges, plus Blending and Balance,
+are part of the develop recipe, stored per scope in the sidecar &mdash; so a grade can be
+global or confined to a mask.  They travel with presets, Copy / Paste Settings, History and
+multi-image editing.  Which range checkboxes are ticked is UI state and does not
+travel.</p>
+
+</body>
+</html>

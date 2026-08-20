@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Curves</h1>
+
+<h2>What it does</h2>
+<p>The tone curve is the map from the tone a pixel has to the tone it ends up with.  The
+panel shows it two ways, chosen by the <b>mode</b> dropdown at the top:</p>
+
+<ul>
+<li><b>Parametric</b> &mdash; four draggable bands (blacks, shadows, highlights, whites)
+that are a picture of the Basic panel's tone sliders.</li>
+<li><b>Point</b> &mdash; a free-form curve you place points on yourself, for the
+composite RGB and for each channel separately.</li>
+</ul>
+
+<h2>Parametric mode</h2>
+<p>Drag a region of the curve up or down and the matching <b>Basic slider moves with
+it</b>: the parametric bands do not have values of their own.  That is deliberate &mdash;
+there is one set of tone numbers in the recipe, and two ways to reach them.  Drag the
+shadows band and Basic's Shadows slider follows; type into that slider and the band
+follows back.</p>
+
+<p>Under the plot are the <b>tone split handles</b>, sharing the plot's x-axis.  They
+decide where blacks end and shadows begin, where the midpoint sits, and where highlights
+give way to whites.  Widen the shadow region and the Shadows slider then covers more of
+the image.  These are the same three handles that sit under the histogram scope &mdash;
+the scopes strip can be hidden entirely, and under the parametric curve is where they
+belong anyway.</p>
+
+<h2>Point mode</h2>
+<p>Click the curve to add a point and drag to move it; <b>double-click a point</b> to
+delete it, or double-click the background to reset the channel you are editing.  The
+curve through the points is a <b>monotone</b> interpolation (Fritsch
+&ndash; Carlson), which is what stops a steep S from overshooting into a wiggle: tones
+that were lighter than their neighbours stay lighter.</p>
+
+<p>The <b>channel</b> dropdown beside the mode picks what you are drawing:</p>
+
+<ul>
+<li><b>RGB</b> is the composite, applied to all three channels &mdash; the contrast
+curve.</li>
+<li><b>Red</b>, <b>Green</b> and <b>Blue</b> layer <i>on top of</i> the RGB curve.  A
+channel curve is a colour tool: lifting the blue channel's black point is the classic
+faded-shadow look; pulling red down in the highlights cools them.</li>
+</ul>
+
+<p>All four curves and the parametric values are folded into <b>one lookup table per
+channel</b> before rendering, so a heavy curve costs the same as a light one.</p>
+
+<h2>The two modes together</h2>
+<p>Parametric and Point both contribute &mdash; switching the dropdown changes which one
+you are <i>editing</i>, not which one applies.  In practice: shape the broad tonality
+parametrically (it is hard to make an ugly curve that way), then use Point for anything
+parametric cannot say, such as a flat-toe fade or a per-channel cast.</p>
+
+<h2>Working with the panel</h2>
+<ul>
+<li><b>Double-click</b> in Point mode removes a point (or, on the background, resets
+that channel's curve); in Parametric mode it resets the band you clicked in, exactly as
+double-clicking its Basic slider would.</li>
+<li>The section's <b>[&#8942;]</b> menu has <b>Show Curves changes</b> (a before / after
+that keeps your values) and <b>Reset Curves</b>.</li>
+<li>The header reads <b>Curves *</b> when anything in the panel is off its default.</li>
+<li>Which mode and channel you are looking at is <b>not</b> part of the recipe &mdash; it
+is where the panel happens to be pointing, and does not travel with a preset.</li>
+</ul>
+
+<h2>Where it sits in the pipeline</h2>
+<p>The tone curve runs after exposure and white balance, on the tone-mapped image, and
+before the colour work that depends on it.  Because the parametric bands and Basic's tone
+sliders are the same numbers, there is no question of which of the two "wins".</p>
+
+<h2>What is saved</h2>
+<p>The point curves and the tone splits are part of the develop recipe, stored per scope
+in the sidecar, so a curve can be global or confined to a mask.  They travel with presets,
+Copy / Paste Settings, History and multi-image editing.</p>
+
+</body>
+</html>

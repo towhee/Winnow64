@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Basic</h1>
+
+<h2>What it does</h2>
+<p>Basic is the panel almost every edit starts in: the <b>white balance</b> the image is
+rendered at, the <b>tone</b> of it &mdash; exposure, contrast and the four tonal regions
+&mdash; and two <b>presence</b> controls, Texture and Dehaze.  Get Basic right and the
+rest of the module is refinement.</p>
+
+<h2>White balance</h2>
+<p>Temp and Tint are <b>absolute</b>, not relative nudges.  <b>Temp</b> is a real Kelvin
+value (2000&ndash;50000) on a logarithmic track, because a linear one would bury every
+useful daylight temperature in the first sixth of the slider.  A <i>higher</i> Kelvin says
+the light was bluer, so the picture renders warmer.  <b>Tint</b> runs green to magenta,
+&plusmn;150.</p>
+
+<p>Temp&nbsp;=&nbsp;0 is a state of its own: <b>as shot</b>, the temperature the camera
+recorded.  The <b>WB</b> row above the sliders carries the two ways in:</p>
+
+<ul>
+<li>The <b>dropper</b> (or the <b>W</b> key).  It stays armed until you click a pixel,
+press it again, or press Esc.  Click something that ought to be neutral grey &mdash; not a
+specular highlight, which carries no colour information.  <b>Opt/Alt-click</b> a lit area
+of skin instead and Winnow solves for plausible skin rather than for neutral.</li>
+<li>The <b>preset dropdown</b>: As Shot and Auto on any file, plus the named illuminants
+&mdash; Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash &mdash; on <b>raw files
+only</b>, since a display-referred file has no camera-neutral reference for them to mean
+anything against.  Custom is what the dropper and the sliders leave you in.  Double-click
+the row to go back to As Shot.</li>
+</ul>
+
+<h2>Tone</h2>
+<ul>
+<li><b>Exposure</b> is in stops (EV), &plusmn;5.00, applied in linear light &mdash; it is
+the same operation as having exposed the frame differently.</li>
+<li><b>Contrast</b> pivots the image about mid grey.</li>
+<li><b>Highlights</b> and <b>Shadows</b> recover or open up the two ends without moving
+the extremes: they are the gentle controls.</li>
+<li><b>Whites</b> and <b>Blacks</b> set the end points themselves &mdash; where the image
+clips.  These are the blunt ones, and the histogram scope is the place to watch them.</li>
+</ul>
+
+<p>The four tonal sliders act on <b>regions of the tone range</b>, and where those regions
+begin and end is adjustable: the handles under the histogram scope (and under the
+parametric curve in the Curves panel) split the range into blacks | shadows | highlights |
+whites.  Move a split and the same slider value covers more or less of the image.</p>
+
+<p>The Curves panel's <b>Parametric</b> mode is another face of these same four sliders
+&mdash; drag a band of the curve and the slider here moves with it.  There is no hidden
+second copy of the values.</p>
+
+<h2>Texture and Dehaze</h2>
+<p><b>Texture</b> works on fine detail only: positive crisps up skin pores, bark and
+fabric; negative smooths them while leaving edges and overall contrast alone.  It is not a
+sharpener &mdash; it changes contrast at a detail scale, not edge acutance.  For acutance
+&mdash; recovering the edge definition demosaic costs a raw file &mdash; use
+<b>Sharpening</b> in the Detail panel.  The two work about ten times apart in scale, so
+they do not overlap and using both is normal.</p>
+
+<p><b>Dehaze</b> removes (or adds) atmospheric veiling.  Positive values pull contrast and
+colour back out of a hazy distance; negative values lay haze on, which is a quick way to
+soften a background or fake distance.  Strong positive dehaze deepens shadows, so it often
+wants a little Shadows back afterwards.</p>
+
+<h2>Working with the sliders</h2>
+<ul>
+<li><b>Double-click</b> a slider returns it to its default.</li>
+<li>Click a slider and the <b>arrow keys</b> nudge one unit, <b>Page Up / Page Down</b>
+ten.</li>
+<li>The section's <b>[&#8942;]</b> menu has <b>Show Basic changes</b> &mdash; a before /
+after that keeps your values &mdash; and <b>Reset Basic</b>.</li>
+<li>The header reads <b>Basic *</b> whenever anything in it is off its default, so an
+edited panel is obvious while collapsed.</li>
+</ul>
+
+<h2>Where it sits in the pipeline</h2>
+<p>White balance is applied at the front, in linear light, before demosaic-time work is
+finished.  Exposure follows in linear light; the tone sliders and the tone curve are one
+combined curve applied after that; Texture and Dehaze run on the rendered image.  Because
+white balance and exposure are upstream, changing them changes what every later
+adjustment is looking at &mdash; which is why they are worth settling first.</p>
+
+<h2>What is saved</h2>
+<p>Every Basic value is part of the develop recipe, stored per scope in the sidecar, so
+Basic can be set globally or confined to a mask.  The values travel with presets, Copy /
+Paste Settings, History and multi-image editing like anything else.</p>
+
+</body>
+</html>

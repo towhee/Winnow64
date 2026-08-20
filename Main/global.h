@@ -304,6 +304,15 @@ Q_NAMESPACE
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
     extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
     extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
+    /* Develop Edits layout A/B/C -- where the scope is picked and where the editor (the
+       Mask panel + adjustment tree) sits. See global.cpp and Documentation.txt
+       "EDITS LAYOUT A/B/C". */
+    enum class EditsLayout {
+        Nested  = 0,    // scope list; editor inserted under the SELECTED row
+        Flat    = 1,    // scope list; editor below the WHOLE list, under its own band
+        Minimal = 2     // no list: one "Scope: [combo] [+] [eye] [:]" bar, no rail
+    };
+    extern EditsLayout developEditsLayout;
     extern bool useBrushEraseStroke;   // false = Opt always means Subtract, never erase
     extern int  spotFillCorrectMode;   // model-path heal correction 0-3, see global.cpp
     extern bool spotFillGrain;         // match surround grain into the heal (N toggles)

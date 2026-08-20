@@ -88,6 +88,19 @@ bool useReplaceFillModes = false;
    shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
    Scope section; retire it once the lab design is copied back over scopeheader.*. */
 bool useScopeHeaderLab = true;
+/* Develop Edits panel layout, switchable from the Edits [:] menu (live, no restart) and
+   remembered across sessions (QSettings "developEditsLayout", loaded before the docks are
+   built), so the candidates can be compared on real edits:
+   Nested  = the editor block is inserted directly under the selected scope row, so it
+             moves with the selection (the original lab layout).
+   Flat    = the scope list is a fixed selector at the top and the editor sits below the
+             WHOLE list in one region headed by the active scope's name. The sliders hold
+             still when the selection changes and the list stays whole for eye toggling.
+   Minimal = no list at all: one "Scope: [Global v] [+] [eye] [:]" bar, the editor
+             directly below it, and NO containment rail -- there is nothing left for the
+             rail to bracket, since the bar and the editor are already adjacent and alone.
+   Retire this flag once the comparison settles, deleting the losing branches. */
+EditsLayout developEditsLayout = EditsLayout::Flat;
 /* Brush/Object "erase from this stroke" (Opt while painting removes from the stroke)
    CANCELLED 2026-08-08. It existed because the developed effect only appeared on stroke
    release, so erasing inside the submask was the only way to correct a stroke you could

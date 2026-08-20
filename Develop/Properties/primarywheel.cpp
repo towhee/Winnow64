@@ -78,21 +78,55 @@ void PrimaryWheel::paintEvent(QPaintEvent *)
     }
 }
 
-/* Cursor -> hue/sat for every checked primary. The angle is taken RELATIVE to that
-   primary's home spoke and wrapped into (-180,180] before scaling, so dragging near
-   red's home never reads as a +350 deg swing. */
-void PrimaryWheel::applyPos(const QPointF &pos)
+/* Remember where a fine drag starts: the cursor's hue/sat and every primary's current
+   value. The fine branch below adds a fraction of the cursor's movement SINCE this
+   point, so taking the anchor changes nothing by itself. */
+void PrimaryWheel::takeFineAnchor(float ang, float s)
+{
+    fineAnchorHue = ang;
+    fineAnchorSat = s;
+    for (int i = 0; i < 3; ++i) {
+        anchorHueVal[i] = hueVal[i];
+        anchorSatVal[i] = satVal[i];
+    }
+}
+
+/* Cursor -> hue/sat for every checked primary.
+
+   NORMAL drag: absolute. The angle is taken RELATIVE to that primary's home spoke and
+   wrapped into (-180,180] before scaling, so dragging near red's home never reads as a
+   +350 deg swing, and the dot sits under the pointer.
+
+   FINE drag (Shift): relative. Each primary moves by kFineGain of the cursor's movement
+   since the anchor, which is what makes a one-or-two unit change reachable with a mouse
+   -- the whole disc is only +/-30 degrees of hue. Because the movement is measured as a
+   DIFFERENCE of cursor angles, the same delta applies to every checked primary whatever
+   its home angle. */
+void PrimaryWheel::applyPos(const QPointF &pos, bool fine)
 {
     float ang, s;
     hueSatAt(pos, ang, s);
+    /* Shift just went down (at press or mid-drag): anchor here and move nothing, so the
+       dots stay where they are instead of snapping under the pointer. Releasing Shift
+       needs no anchor -- absolute tracking simply resumes. */
+    if (fineStateChanged(fine) && fine) {
+        takeFineAnchor(ang, s);
+        return;
+    }
+    const float dHue = wrapDeg(ang - fineAnchorHue) / Calibrate::kMaxHueDeg * kFull;
+    const float dSat = (s - fineAnchorSat) / kMidRadius * kFull;
     bool any = false;
     for (int i = 0; i < 3; ++i) {
         if (!(activeMask & (1 << i))) continue;
-        float d = ang - homeAngle(i);
-        while (d >  180.0f) d -= 360.0f;
-        while (d < -180.0f) d += 360.0f;
-        hueVal[i] = qBound(-kFull, (d / Calibrate::kMaxHueDeg) * kFull, kFull);
-        satVal[i] = qBound(-kFull, ((s - kMidRadius) / kMidRadius) * kFull, kFull);
+        if (fine) {
+            hueVal[i] = qBound(-kFull, anchorHueVal[i] + kFineGain * dHue, kFull);
+            satVal[i] = qBound(-kFull, anchorSatVal[i] + kFineGain * dSat, kFull);
+        }
+        else {
+            const float d = wrapDeg(ang - homeAngle(i));
+            hueVal[i] = qBound(-kFull, (d / Calibrate::kMaxHueDeg) * kFull, kFull);
+            satVal[i] = qBound(-kFull, ((s - kMidRadius) / kMidRadius) * kFull, kFull);
+        }
         any = true;
     }
     if (any) {
@@ -105,18 +139,22 @@ void PrimaryWheel::mousePressEvent(QMouseEvent *e)
 {
     if (e->button() != Qt::LeftButton || activeMask == 0) return;
     dragging = true;
-    applyPos(e->position());
+    /* Every drag begins in absolute mode, so a press with Shift already down reads as
+       the flip that anchors it (and therefore does not jump the dots to the cursor). */
+    fineDrag = false;
+    applyPos(e->position(), e->modifiers() & Qt::ShiftModifier);
 }
 
 void PrimaryWheel::mouseMoveEvent(QMouseEvent *e)
 {
-    if (dragging) applyPos(e->position());
+    if (dragging) applyPos(e->position(), e->modifiers() & Qt::ShiftModifier);
 }
 
 void PrimaryWheel::mouseReleaseEvent(QMouseEvent *e)
 {
     if (e->button() != Qt::LeftButton || !dragging) return;
     dragging = false;
+    fineDrag = false;               // the next drag starts in absolute mode
     emit primaryCommitted();
 }
 
@@ -126,6 +164,7 @@ void PrimaryWheel::mouseDoubleClickEvent(QMouseEvent *e)
 {
     if (e->button() != Qt::LeftButton || activeMask == 0) return;
     dragging = false;
+    fineDrag = false;
     bool any = false;
     for (int i = 0; i < 3; ++i) {
         if (!(activeMask & (1 << i))) continue;

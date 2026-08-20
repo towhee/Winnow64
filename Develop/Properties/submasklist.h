@@ -58,7 +58,8 @@ public:
     int  count() const { return infos.size(); }
 
     /* Collapsed hides the rows AND (via collapsedChanged, in MaskPanel) the selected
-       submask's settings below them: the section is one thing to the user. */
+       submask's settings below them: the section is one thing to the user. The list
+       starts collapsed; MaskPanel::beginPending re-opens it when a submask is added. */
     bool isCollapsed() const { return collapsed; }
     void setCollapsed(bool collapse);
 
@@ -75,6 +76,7 @@ signals:
     void moveRequested(int from, int to);
     void duplicateRequested(int index);
     void collapsedChanged(bool collapsed);        // hide/show the settings below too
+    void helpRequested();                         // menu: "Submasks help"
 
 protected:
     void paintEvent(QPaintEvent *) override;      // gradient behind the header band
@@ -106,7 +108,10 @@ private:
 
     QVector<SubmaskRowInfo> infos;
     int  selectedIndex = -1;
-    bool collapsed     = false;
+    /* Collapsed by default: a mask usually has one or two submasks, so the list is
+       noise until the user goes looking for it. beginPending() re-opens the section
+       whenever a submask is actually being built. */
+    bool collapsed     = true;
 };
 
 #endif // SUBMASKLIST_H

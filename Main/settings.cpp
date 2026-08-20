@@ -74,6 +74,9 @@ void MW::writeSettings()
     settings->setValue("updateSkipVersion", updateSkipVersion);
     settings->setValue("combineRawJpg", combineRawJpg);
 
+    // develop
+    settings->setValue("developEditsLayout", static_cast<int>(G::developEditsLayout));
+
     /* ingest (moved to MW::ingest)
     */
 
@@ -493,6 +496,25 @@ bool MW::loadSettings()
 #endif
         G::decodeRawEngine = e;
     }
+    // develop
+    /* Sticky Develop Edits layout (the Edits [:] menu > Edits layout). Read here rather
+       than in the Develop dock because loadSettings runs BEFORE createDocks, so the
+       panel and ScopeHeaderLab build in the remembered layout instead of building in the
+       compiled default and being rebuilt.
+
+       VALIDATE BEFORE CASTING, as for decodeRawEngine above: the stored value is a plain
+       int and a damaged one -- or one from a build carrying more layouts -- would name a
+       branch this build has no code for. A bad value here is only cosmetic, though, so it
+       falls back to the compiled default silently rather than spending a startup warning
+       on it. Retire the key in removeDeprecatedSettings when the lab flag goes. */
+    if (settings->contains("developEditsLayout")) {
+        bool ok = false;
+        const int layout = settings->value("developEditsLayout").toInt(&ok);
+        if (ok && layout >= int(G::EditsLayout::Nested)
+               && layout <= int(G::EditsLayout::Minimal))
+            G::developEditsLayout = static_cast<G::EditsLayout>(layout);
+    }
+
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();

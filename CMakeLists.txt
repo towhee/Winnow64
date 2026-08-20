@@ -131,6 +131,7 @@ set(WINNOW_SOURCES
     Develop/Properties/primarywheel.cpp
     Develop/Properties/colorgradewheel.cpp
     Develop/Properties/colorrangewheel.cpp
+    Develop/Properties/curveeditor.cpp
     Develop/Properties/scopeheader.cpp
     Develop/Properties/scopeheaderlab.cpp
     Develop/Properties/rawpanel.cpp
@@ -393,6 +394,7 @@ set(WINNOW_HEADERS
     Develop/develop.h
     Develop/calibrate.h
     Develop/colorgrade.h
+    Develop/tonecurve.h
     Develop/editparams.h
     Develop/inputtransform.h
     Develop/maskfalloff.h
@@ -405,6 +407,7 @@ set(WINNOW_HEADERS
     Develop/Properties/primarywheel.h
     Develop/Properties/colorgradewheel.h
     Develop/Properties/colorrangewheel.h
+    Develop/Properties/curveeditor.h
     Develop/Properties/scopeheader.h
     Develop/Properties/scopeheaderbase.h
     Develop/Properties/scopeheaderlab.h

@@ -60,6 +60,24 @@ void HueSatWheel::paintDisc(QPainter &p)
     p.drawEllipse(centre, radius, radius);
 }
 
+/* Record the new Shift state, reporting whether it changed. A subclass re-anchors on a
+   true return (see the fine-drag note in the header). */
+bool HueSatWheel::fineStateChanged(bool fine)
+{
+    if (fine == fineDrag) return false;
+    fineDrag = fine;
+    return true;
+}
+
+/* Fold a difference of angles into (-180, 180], so a cursor just anticlockwise of a
+   handle reads as a small negative swing rather than +350 deg. */
+float HueSatWheel::wrapDeg(float d)
+{
+    while (d >  180.0f) d -= 360.0f;
+    while (d < -180.0f) d += 360.0f;
+    return d;
+}
+
 QPointF HueSatWheel::posFor(float hueDeg, float satUnit) const
 {
     const float rad = hueDeg * kPi / 180.0f;

@@ -73,9 +73,11 @@ struct EditScope {
        compositor semantics untouched. All default true so older sidecars are unaffected. */
     bool showScope      = true;
     bool showBasic      = true;
+    bool showCurves     = true;
     bool showColor      = true;
     bool showCalibrate  = true;
     bool showColorGrade = true;
+    bool showDetail     = true;
     bool showEffects    = true;
 };
 
@@ -85,16 +87,20 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     EditParams p = l.params;
     if (!l.showScope) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
+        EditParams::resetGroup(p, EditParams::Group::Curves);
         EditParams::resetGroup(p, EditParams::Group::Color);
         EditParams::resetGroup(p, EditParams::Group::Calibrate);
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+        EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
         return p;
     }
     if (!l.showBasic)      EditParams::resetGroup(p, EditParams::Group::Basic);
+    if (!l.showCurves)     EditParams::resetGroup(p, EditParams::Group::Curves);
     if (!l.showColor)      EditParams::resetGroup(p, EditParams::Group::Color);
     if (!l.showCalibrate)  EditParams::resetGroup(p, EditParams::Group::Calibrate);
     if (!l.showColorGrade) EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+    if (!l.showDetail)     EditParams::resetGroup(p, EditParams::Group::Detail);
     if (!l.showEffects)    EditParams::resetGroup(p, EditParams::Group::Effects);
     return p;
 }
@@ -174,9 +180,10 @@ struct EditStack {
             if (s.enabled) return false;
         for (const EditScope &l : scopes)
             if (l.enabled && (!l.params.isIdentity() || !l.components.isEmpty() ||
-                              !l.showScope || !l.showBasic || !l.showColor ||
+                              !l.showScope || !l.showBasic || !l.showCurves ||
+                              !l.showColor ||
                               !l.showCalibrate || !l.showColorGrade ||
-                              !l.showEffects))
+                              !l.showDetail || !l.showEffects))
                 return false;
         return true;
     }
@@ -204,6 +211,11 @@ struct EditStack {
         o["toneShadowCenter"]    = p.toneShadowCenter;
         o["toneCrossover"]       = p.toneCrossover;
         o["toneHighlightCenter"] = p.toneHighlightCenter;
+        /* Tone curve: ONE key holding ToneCurve's compact encoding, empty (and so
+           harmless) when every channel is the diagonal. Adding it here is what also
+           gives the per-scope render cache correct invalidation, since
+           MW::developCompositeStack keys that cache on this object's serialization. */
+        o["curves"]              = ToneCurve::encode(p.curveN, p.curveX, p.curveY);
         o["texture"]         = p.texture;
         o["dehaze"]          = p.dehaze;
         o["red"]             = p.red;
@@ -237,6 +249,10 @@ struct EditStack {
         o["denoiseChroma"]   = p.denoiseChroma;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
         o["localDenoiseChroma"]= p.localDenoiseChroma;
+        o["sharpenAmount"]   = p.sharpenAmount;
+        o["sharpenRadius"]   = p.sharpenRadius;
+        o["sharpenDetail"]   = p.sharpenDetail;
+        o["sharpenMasking"]  = p.sharpenMasking;
         o["vignetteExposure"]= p.vignetteExposure;
         o["vignetteFeather"] = p.vignetteFeather;
         o["grainAmount"]     = p.grainAmount;
@@ -261,6 +277,8 @@ struct EditStack {
         p.toneShadowCenter    = static_cast<float>(o.value("toneShadowCenter").toDouble(p.toneShadowCenter));
         p.toneCrossover       = static_cast<float>(o.value("toneCrossover").toDouble(p.toneCrossover));
         p.toneHighlightCenter = static_cast<float>(o.value("toneHighlightCenter").toDouble(p.toneHighlightCenter));
+        if (o.contains("curves"))
+            ToneCurve::decode(o.value("curves").toString(), p.curveN, p.curveX, p.curveY);
         p.texture         = static_cast<float>(o.value("texture").toDouble(p.texture));
         p.dehaze          = static_cast<float>(o.value("dehaze").toDouble(p.dehaze));
         p.red             = static_cast<float>(o.value("red").toDouble(p.red));
@@ -294,6 +312,10 @@ struct EditStack {
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
         p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
+        p.sharpenAmount   = static_cast<float>(o.value("sharpenAmount").toDouble(p.sharpenAmount));
+        p.sharpenRadius   = static_cast<float>(o.value("sharpenRadius").toDouble(p.sharpenRadius));
+        p.sharpenDetail   = static_cast<float>(o.value("sharpenDetail").toDouble(p.sharpenDetail));
+        p.sharpenMasking  = static_cast<float>(o.value("sharpenMasking").toDouble(p.sharpenMasking));
         p.vignetteExposure= static_cast<float>(o.value("vignetteExposure").toDouble(p.vignetteExposure));
         p.vignetteFeather = static_cast<float>(o.value("vignetteFeather").toDouble(p.vignetteFeather));
         p.grainAmount     = static_cast<float>(o.value("grainAmount").toDouble(p.grainAmount));
@@ -316,9 +338,11 @@ struct EditStack {
                untouched scope serializes exactly as before (forward/backward tolerant). */
             if (!l.showScope)      lo["showLayer"]      = false;
             if (!l.showBasic)      lo["showBasic"]      = false;
+            if (!l.showCurves)     lo["showCurves"]     = false;
             if (!l.showColor)      lo["showColor"]      = false;
             if (!l.showCalibrate)  lo["showCalibrate"]  = false;
             if (!l.showColorGrade) lo["showColorGrade"] = false;
+            if (!l.showDetail)     lo["showDetail"]     = false;
             if (!l.showEffects)    lo["showEffects"]    = false;
             QJsonArray marr;
             for (const MaskComponent &m : l.components) {
@@ -406,6 +430,7 @@ struct EditStack {
             l.combine = lo.value("combine").toInt(l.combine);
             l.showScope = lo.value("showLayer").toBool(l.showScope);
             l.showBasic = lo.value("showBasic").toBool(l.showBasic);
+            l.showCurves = lo.value("showCurves").toBool(l.showCurves);
             l.showColor = lo.value("showColor").toBool(l.showColor);
             l.showCalibrate = lo.value("showCalibrate").toBool(l.showCalibrate);
             /* The colour-grading section was called "Color Mix" until its rename, so
@@ -413,6 +438,7 @@ struct EditStack {
                first, then let the current one win if both are present. */
             l.showColorGrade = lo.value("showColorMix").toBool(l.showColorGrade);
             l.showColorGrade = lo.value("showColorGrade").toBool(l.showColorGrade);
+            l.showDetail = lo.value("showDetail").toBool(l.showDetail);
             l.showEffects = lo.value("showEffects").toBool(l.showEffects);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
@@ -513,6 +539,12 @@ struct EditStack {
             ++fixed;
         }
 
+        /* Tone curve: ToneCurve::sanitize repairs each channel in place (clamping,
+           re-pinning the endpoints) and falls back to the diagonal for anything it
+           cannot repair -- unordered x, too few or too many points. */
+        for (int c = 0; c < ToneCurve::kChannels; ++c)
+            if (ToneCurve::sanitize(p.curveN[c], p.curveX[c], p.curveY[c])) ++fixed;
+
         if (clampF(p.red,        -100.0f, 100.0f, def.red))        ++fixed;
         if (clampF(p.green,      -100.0f, 100.0f, def.green))      ++fixed;
         if (clampF(p.blue,       -100.0f, 100.0f, def.blue))       ++fixed;
@@ -550,6 +582,10 @@ struct EditStack {
         if (clampF(p.denoiseChroma, 0.0f, 1.0f, def.denoiseChroma)) ++fixed;
         if (clampF(p.localDenoiseLuma,   0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.localDenoiseChroma, 0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.sharpenAmount,  0.0f, 1.5f, 0.0f)) ++fixed;
+        if (clampF(p.sharpenRadius,  0.5f, 3.0f, def.sharpenRadius)) ++fixed;
+        if (clampF(p.sharpenDetail,  0.0f, 1.0f, def.sharpenDetail)) ++fixed;
+        if (clampF(p.sharpenMasking, 0.0f, 1.0f, 0.0f)) ++fixed;
 
         if (clampF(p.vignetteExposure, -5.0f, 5.0f, 0.0f)) ++fixed;
         if (clampF(p.vignetteFeather,  0.0f, 1.0f, def.vignetteFeather)) ++fixed;

@@ -23,7 +23,10 @@
 
     A drag moves every ACTIVE primary (setActiveMask, bit0 red / bit1 green / bit2 blue)
     by the SAME delta, so checking all three nudges the whole set together. Double-click
-    resets the checked primaries to 0/0.
+    resets the checked primaries to 0/0. Hold SHIFT for a fine drag -- a quarter of the
+    cursor's movement, for the small adjustments this panel is mostly about (see the
+    fine-drag note in huesatwheel.h). The Calibrate section's Hue / Saturation sliders
+    are the other way to nudge, and can be stepped from the keyboard.
 
     Emits primaryChanged live during a drag and primaryCommitted on release, matching
     ColorGradeWheel so the panel wires them the same way.
@@ -54,10 +57,15 @@ protected:
 
 private:
     QPointF dotPos(int p) const;          // primary's (hue,sat) delta -> widget px
-    void    applyPos(const QPointF &pos); // cursor -> hue/sat for every active primary
+    /* Cursor -> hue/sat for every active primary. fine (Shift) applies a fraction of the
+       cursor's movement since the anchor instead of jumping the dots to it. */
+    void    applyPos(const QPointF &pos, bool fine);
+    void    takeFineAnchor(float ang, float s);   // start (or restart) a fine drag here
 
     float hueVal[3] = {0.0f, 0.0f, 0.0f};   // -100..100, delta from the home angle
     float satVal[3] = {0.0f, 0.0f, 0.0f};   // -100..100, delta from mid radius
+    float anchorHueVal[3] = {0.0f, 0.0f, 0.0f};   // hue/sat when the fine anchor was
+    float anchorSatVal[3] = {0.0f, 0.0f, 0.0f};   // taken; the fine drag adds to these
     int   activeMask = 0x1;                 // red by default
     bool  dragging   = false;
 };
