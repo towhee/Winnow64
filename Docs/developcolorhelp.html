@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Color</h1>
+
+<h2>What it does</h2>
+<p>Color holds the blunt, global colour controls: three <b>channel gains</b>, and four
+<b>HSL</b> adjustments that act on every pixel at once.  Nothing here selects a colour or
+a tonal range &mdash; that is what Color Grade, Calibrate and the Color Range mask are
+for.  Reach for this panel when the whole picture needs the same push.</p>
+
+<h2>Red / Green / Blue</h2>
+<p>These are per-channel linear <b>gains</b>, folded into the white-balance vector before
+anything else runs.  In effect they are a second, cruder white balance: they scale a
+channel, so they <i>do</i> move neutrals &mdash; push Red and a grey card goes pink.</p>
+
+<p>That makes them the wrong tool for "the reds in this picture are too orange".  For
+that, use <b>Calibrate</b>, which re-points what red <i>means</i> and leaves neutrals
+alone.  The gains are here for cast correction that Temp and Tint cannot reach, such as
+mixed lighting or an old scan.</p>
+
+<h2>Hue, Saturation, Luminance</h2>
+<ul>
+<li><b>Hue</b> rotates every hue in the image.  Small amounts shift the overall colour
+character; large amounts are a special effect.</li>
+<li><b>Saturation</b> scales colourfulness uniformly.  &minus;100 is fully grey; positive
+values push every colour, including the ones that were already strong.</li>
+<li><b>Luminance</b> raises or lowers overall brightness after the tone curve.  It is not
+Exposure: exposure works in linear light and is the correct control for "the frame was a
+stop dark", while Luminance moves the rendered image.</li>
+</ul>
+
+<h2>Vibrance</h2>
+<p><b>Vibrance</b> is saturation weighted toward the <b>muted</b> colours: colours that
+are already saturated move little, colours that are nearly grey move most.  It is the
+safer of the two for people and skies &mdash; skin tones are moderately saturated, so they
+hold while a flat sky comes up.  A common pairing is a healthy Vibrance with a small
+negative Saturation.</p>
+
+<h2>Working with the sliders</h2>
+<ul>
+<li><b>Double-click</b> a slider returns it to its default.</li>
+<li>Click a slider and the <b>arrow keys</b> nudge one unit, <b>Page Up / Page Down</b>
+ten.</li>
+<li>The section's <b>[&#8942;]</b> menu has <b>Show Color changes</b> (a before / after
+that keeps your values) and <b>Reset Color</b>.</li>
+<li>The header reads <b>Color *</b> when anything in the panel is off its default.</li>
+</ul>
+
+<h2>Which colour panel do I want?</h2>
+<ul>
+<li><b>A cast over the whole picture</b> &mdash; Basic's Temp / Tint first, then this
+panel's Red / Green / Blue gains.</li>
+<li><b>The camera renders a colour wrongly</b> &mdash; Calibrate.</li>
+<li><b>Colour by tonal range</b> (warm highlights, cool shadows) &mdash; Color Grade.</li>
+<li><b>One colour only</b> (that shirt, those leaves) &mdash; a Color Range mask, then
+adjust inside that scope.</li>
+</ul>
+
+<h2>Where it sits in the pipeline</h2>
+<p>The RGB gains are applied with the white balance, in linear light at the front of the
+pipeline.  Hue, Saturation, Luminance and Vibrance run <b>after</b> the tone curve, on the
+pixels you can already see &mdash; which is why they feel more direct, and less forgiving,
+than Calibrate's primaries.</p>
+
+<h2>What is saved</h2>
+<p>All seven values are part of the develop recipe, stored per scope in the sidecar, so
+the panel can act globally or be confined to a mask.  They travel with presets, Copy /
+Paste Settings, History and multi-image editing.</p>
+
+</body>
+</html>

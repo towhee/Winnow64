@@ -66,6 +66,16 @@ struct WorkingImage {
        OutputTransform only re-applies the display gamma. */
     bool sceneReferred = false;
 
+    /* This render's long edge as a fraction of the FULL-RESOLUTION long edge: 1.0 for a
+       full-res (settle / export) render, ~0.3 for a typical screen proxy. Every Develop
+       spatial op but one scales its radius to max(w,h) and so is scale-invariant by
+       construction; Sharpen has an ABSOLUTE pixel radius (acutance belongs to the pixel
+       grid) and is the only op that must know how much the image has been downscaled.
+       Deliberately NOT an EditParams field: EditParams is the sidecar format AND the
+       per-scope render-cache key, so a render detail there would be persisted to every
+       sidecar and make the proxy and settle renders miss each other's cache entries. */
+    float renderScale = 1.0f;
+
     bool isValid() const {
         return width > 0 && height > 0 &&
                rgb.size() == static_cast<size_t>(width) * static_cast<size_t>(height) * 3;
@@ -102,6 +112,7 @@ inline void assignReusing(WorkingImage &dst, const WorkingImage &src)
     dst.cam           = src.cam;
     dst.white         = src.white;
     dst.sceneReferred = src.sceneReferred;
+    dst.renderScale   = src.renderScale;
     dst.rgb.assign(src.rgb.begin(), src.rgb.end());
 }
 

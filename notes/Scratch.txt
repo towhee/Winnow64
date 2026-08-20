@@ -1801,3 +1801,48 @@ proceeds inference-less.
 One caveat worth flagging before you install: onnxruntime shares protobuf with opencv on this machine, which is the interaction that has bitten before — if brew
 wants to bump protobuf, check opencv still loads before you spend time on the denoise.
 
+Develop Edits layout options.
+
+Option 1 (Nested)
+
+Edits
+  Global
+    Basic
+    ColorCalibrate
+    Color Grade
+    Effects
+---------------------------
+  Mask 1
+  Mask 2
+  Mask 3
+---------------------------
+
+
+Option 2 (Flat)
+
+Edits
+  Global // selected
+  Mask 1
+  Mask 2
+  Mask 3
+---------------------------
+  Basic (Global)
+  ColorCalibrate (Global)
+  Color Grade (Global)
+  Effects(Global)
+---------------------------
+
+Option 3  (Minimal)
+
+Scope: [Global              ]  [+] [eye] [⋮]
+  Submaasks  // hidden when Global selected
+  Basic
+  Color Calibrate
+  Color Grade
+  Effects
+
+Where [Global              ] is a dropdown menu that includes all masks
+and [eye] applies to the currently selected scope
+Eliminate rail
+
+

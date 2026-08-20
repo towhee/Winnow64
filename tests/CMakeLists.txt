@@ -70,6 +70,11 @@ winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
 winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
 # tst_calibrate tests Develop/calibrate.h (header-only, same as colorgrade).
 winnow_add_unit_test(tst_calibrate unit/tst_calibrate.cpp)
+# tst_tonecurve tests Develop/tonecurve.h (header-only; needs Qt Core only, for the
+# QString encoding the sidecar and presets share).
+winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)
+# tst_sharpen tests Develop/sharpen.h (header-only: no OpenCV / develop.cpp needed).
+winnow_add_unit_test(tst_sharpen unit/tst_sharpen.cpp)
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)

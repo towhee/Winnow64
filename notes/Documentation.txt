@@ -70,6 +70,7 @@ Table of Contents
          - Editing Help Formatting Globally
          - VS Code Workflow
          - Entry Points
+         - Develop panel help pages (one page per band [:] menu)
          - Orphaned Help Documents
 
     8. ACTION ENABLE/DISABLE RULES
@@ -117,6 +118,7 @@ Table of Contents
          - Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
          - Overlays over a transformed image (mask space vs displayed space)
          - White balance (absolute, Kelvin)
+         - Curves panel (tone curve)
          - Calibrate panel (RGB primaries)
          - Color Grade panel (colour grading)
          - Develop presets (the Presets dock)
@@ -1641,9 +1643,51 @@ Entry Points
         FindDuplicatesDlg::on_deltaThresholdToolBtn_clicked  ->  pixeldeltahelp.html
     Ingest dialog "?" button
         IngestDlg::on_helpBtn_clicked  ->  ingestautopath.html
+    Develop dock, Raw panel "?" button
+        RawPanel::tipsRequested -> DevelopProperties::howThisWorks  ->  develophelp.html
+    Develop dock, every band [:] menu — see "Develop panel help pages" below
+        DevelopProperties::sectionHelp / editsHelp / submasksHelp
 
     Not converted to HtmlWindow (intentionally):
       • MW::helpShortcuts (helpform shortcutsform.ui) — interactive QTreeWidget, not HTML.
+
+------------------------------------------------------------------------------------------
+Develop panel help pages (one page per band [:] menu)
+------------------------------------------------------------------------------------------
+
+    EVERY header band in the Develop dock ends its [:] menu with a "<band> help" item,
+    after a separator, opening that band's own page in an HtmlWindow. One page per panel,
+    not one long module page: each panel has its own grammar, and the help a user wants
+    is the help for the band they are standing on. develophelp.html remains the
+    module-wide page (Raw panel "?" and PV_Scope).
+
+        Band / section          Menu item            Docs/ page
+        ------------------      -----------------    ----------------------------
+        Edits (scope list)      Edits help           developeditshelp.html
+        Submasks                Submasks help        developsubmaskshelp.html
+        Basic                   Basic help           developbasichelp.html
+        Curves                  Curves help          developcurveshelp.html
+        Color                   Color help           developcolorhelp.html
+        Calibrate               Calibrate help       developcalibratehelp.html
+        Color Grade             Color Grade help     developcolorgradehelp.html
+        Detail                  Detail help          developdetailhelp.html
+        Effects                 Effects help         developeffectshelp.html
+
+    Wiring:
+      • Tree SECTIONS (Basic .. Effects): DevelopProperties::showSectionMenu adds
+        tr("%1 help").arg(groupLabel(group)) last and calls sectionHelp(group), which
+        maps the PV_* code to its page. A new section therefore needs only a case in
+        sectionHelp (PV_Scope falls back to howThisWorks) plus the page + qrc entry.
+      • The two BAND widgets own no Docs knowledge: ScopeHeaderBase::helpRequested and
+        SubmaskList::helpRequested are emitted from their menus and connected in
+        bindScopeHeader / the SubmaskList block of DevelopProperties to editsHelp /
+        submasksHelp. ScopeHeaderLab::addHelpAction appends the item to every menu the
+        panel pops (header band, editor band, minimal-layout bar, scope rows), so the
+        item is reachable in all three Edits layouts; the legacy ScopeHeader carries it
+        too. SubmaskList emits deferred, like every other emission there (the menu's
+        button is destroyed by a rebuild).
+      • Pages must be listed in winnow.qrc (":/Docs/<name>.html") or the window opens
+        empty.
 
 ------------------------------------------------------------------------------------------
 Orphaned Help Documents
@@ -2680,6 +2724,11 @@ Architecture
         4. Contrast                     S-curve about mid-grey
         5. Highlights/Shadows/          luminance-masked parametric tone
            Whites/Blacks
+        5a. Tone curve                  the Curves panel's point curves, composed into the
+                                        SAME perceptual LUT right after #4/#5 (Lightroom's
+                                        order): the RGB composite first, then the per-
+                                        channel Red/Green/Blue curve. Free at render -- the
+                                        LUT is built anyway (Curves panel below)
         2b. Calibration                 3x3 primary re-point (R/G/B hue + sat), in LINEAR
                                         light after #2 and BEFORE the tone curve; rows sum
                                         to 1 so neutrals are fixed (Calibrate panel below)
@@ -2695,8 +2744,11 @@ Architecture
         6. Texture                      mid-frequency local contrast
         7. Dehaze                       local contrast + black-point, haze estimate
         8. Vignette                     radial corner exposure falloff (exposure/feather)
+        8.5 Sharpen                     capture sharpening: unsharp mask on luminance,
+                                        edge-gated (amount/radius/detail/masking). The ONE
+                                        op with an ABSOLUTE pixel radius -- see below
         9. Grain                        monochromatic film grain (amount/size/roughness)
-        (room left for Clarity/Sharpen)
+        (room left for Clarity)
 
     Two ops are special for RAW: white balance and denoise give better results applied inside
     the raw pipeline (WB at the camera-RGB stage; denoise on the CFA mosaic) rather than
@@ -3286,7 +3338,7 @@ Scope & mask model (Global + masks)
            luminance = uniform gain (-100 -> black, +100 -> 2x). hslActive gates the
            block; identity sliders leave the pass untouched.
 
-           SPATIAL ops (Texture #6, Dehaze #7, Vignette #8, Grain #9) run AFTER the fused
+           SPATIAL ops (Texture #6, Dehaze #7, Vignette #8, Sharpen #8.5, Grain #9) run AFTER the fused
            point pass, each owning a full-image pass (like Denoise) -- they need a
            neighbourhood (or, for Vignette/Grain, pixel coordinates / a noise field) so
            cannot join the per-pixel kernel. Texture and Dehaze are ratio-preserving on LUMINANCE (chroma
@@ -3311,12 +3363,39 @@ Scope & mask model (Global + masks)
            midtones (fades to 0 at black/white) and scaled by Amount. The fixed seed keeps
            the pattern stable across re-renders (no shimmer). These are global (no-mask)
            now; the scope compositor will bound them to a mask bbox later.
-           Costs land only on the full-res settle render (proxy filters ~3MP). The Effects
+           Costs land only on the full-res settle render (proxy filters ~3MP). The Detail
            "Denoise" is two 0..100 sliders (mapped to 0..1) into Develop::Denoise: "Denoise"
            (localDenoiseLuma) = luminance NR via a perceptual bilateral (ratio-preserving), and
            "Denoise Color" (localDenoiseChroma) = chroma NR via a downscaled opponent-chroma
            (R-Y, B-Y) blur that keeps luma exact. Luma runs first, then chroma. All ten Basic
            sliders are now live.
+
+           SHARPEN (#8.5) IS THE ONE SCALE-DEPENDENT OP, and the exception to the rule two
+           paragraphs up. Every other spatial op derives its radius from max(w,h) precisely
+           so the proxy and the settle render shape the same RELATIVE band. Acutance is a
+           property of the PIXEL GRID, so sharpenRadius is an ABSOLUTE pixel radius (0.5..3
+           px at full res) and cannot be scale-invariant. Instead WorkingImage::renderScale
+           carries this render's long edge as a fraction of the full-res long edge (set in
+           WorkingImageCache::downscaled, carried through assignReusing), and
+           Sharpen::effectiveSigma multiplies the radius by it: the drag proxy shows a
+           scale-honest approximation, the settle render shows the truth, and the panel
+           tells the user to judge at 1:1. renderScale is deliberately NOT an EditParams
+           field -- EditParams is both the sidecar format and the per-scope render-cache key
+           (MW::developCompositeStack), so a render detail there would persist to every
+           sidecar and make the proxy and settle renders miss each other's cache entries.
+
+           The op itself is an unsharp mask on perceptual luminance, ratio-preserving like
+           Texture: a small Gaussian base gives hp = yp - base, which Detail soft-thresholds
+           (suppressing the smallest amplitudes as noise, sign preserved) and Masking gates
+           by the gradient magnitude of the BLURRED luma (so noise does not read as an
+           edge). Scalar math is header-only in Develop/sharpen.h so it is unit-testable
+           (tests/unit/tst_sharpen.cpp) the way colorgrade.h / tonecurve.h are; develop.cpp
+           owns only the OpenCV blur/Sobel and the parallelFor. The Sobel pair is skipped
+           entirely at Masking 0. Placed after Vignette (darkened corners are not
+           detail-boosted) and before Grain (film grain is never itself sharpened).
+           DISTINCT FROM TEXTURE, which is resolution-proportional mid-frequency (~13px on
+           an 8640px edge, ungated): sharpening is ~1px and edge-gated, so the two occupy
+           disjoint bands and stack without double-counting.
 
            SLIDER-DRAG LATENCY: the naive path re-rendered the full image synchronously on the
            GUI thread every tick. For a 50MP RAW that measured ~520 ms/tick (probe below),
@@ -3874,13 +3953,15 @@ Scope & mask model (Global + masks)
                Calibrate, Color Grade and Effects headers show their plain section name
                only ("Basic", "Color") via updateSectionHeaderCaptions() -- the active
                scope is already shown selected in the scope list, so the old
-               "Global: Basic" prefix was redundant. Each header is INDENTED to line up
+               "Global: Basic" prefix was redundant. A header may be INDENTED to line up
                under the scope name it belongs to, while its child rows are NOT -- the
                sliders keep their full width. The indent is UR_ExtraIndent on the header
                CAPTION index, read by PropertyDelegate::paint: a bool means one
                indentation() level (the legacy dock), an int means that many pixels
-               (the nested dock uses kMaskPanelIndent = 22, the same inset as the Mask
-               panel). Only the header's arrow + caption shift. They carry NO band at all
+               (the NESTED lab layout uses kMaskPanelIndent = 22, the same inset as the
+               Mask panel; the FLAT and MINIMAL layouts use 0 -- see "EDITS LAYOUT A/B/C"
+               below, where the tree is its own region and has no row above to line up
+               under). Only the header's arrow + caption shift. They carry NO band at all
                (UR_HeaderFlat): they sit on the panel background, like the rows below
                them. The gradient marks a PANEL-level band (Raw, Scope, Transform), and
                a section belongs to the scope selected in the Scope band above it, so it
@@ -3891,15 +3972,16 @@ Scope & mask model (Global + masks)
                previewGroup; PropertyDelegate::paint reads UR_HeaderFlat from the CAPTION
                index (both column passes read the same sibling, so a value-column-only
                repaint does not put the gradient back).
-               TREE NESTED UNDER THE SELECTED SCOPE: the adjustment tree is not a strip
-               below the scope list -- it is a ROW DETAIL of ScopeHeaderLab, inserted
-               directly under the SELECTED scope row (setRowDetail(widget, slot, indent);
-               slot EditsDetail follows slot MaskDetail, the Mask panel). Scope rows below
-               the selected one therefore sit BELOW the sections, and collapsing the
-               "Edits" header hides the sections with the list. The tree's detail indent
-               is 0, so its left edge -- and the rail it paints -- coincide with the
-               list's; the visible nesting comes from the section-header indent above.
-               Since it is nested the tree cannot scroll itself:
+               TREE INSIDE THE SCOPE LIST: the adjustment tree is not an independent strip
+               under the dock -- it is a DETAIL widget of ScopeHeaderLab
+               (setRowDetail(widget, slot, indent); slot EditsDetail follows slot
+               MaskDetail, the Mask panel), so collapsing the "Edits" header hides the
+               sections with the list. Whether it lands below the whole list, nested under
+               the selected row, or under a single scope bar with no list at all is
+               G::developEditsLayout -- see "EDITS LAYOUT A/B/C" below. The tree's detail
+               indent is 0, so its left edge -- and any rail it paints -- coincide with
+               the list's; the visible nesting comes from the section-header indent above.
+               Since it sits inside the list the tree cannot scroll itself:
                DevelopProperties::setFitToContentHeight(true) turns off both scrollbars
                and makes sizeHint() = viewportSizeHint() (the bottom of the LAST VISIBLE
                row, hidden rows and collapsed sections already excluded) plus the closing
@@ -3920,15 +4002,91 @@ Scope & mask model (Global + masks)
                sections to raise the vertical scrollbar clipped the value column and the
                eye buttons instead of reflowing. The tree has no intrinsic minimum width:
                the caption column is fixed and the value column stretches.
+               EDITS LAYOUT A/B/C (G::developEditsLayout, an enum in global.h): HOW THE
+               SCOPE IS PICKED and WHERE the editor block -- the Mask panel + the
+               adjustment tree -- sits, switchable at run time from the Edits [:] menu
+               ("Edits layout" submenu), so the candidates can be compared on real edits
+               without a restart.
+                 FLAT (the default): the scope list is a fixed selector -- every row,
+                 uninterrupted -- and the editor sits BELOW the whole list, headed by its
+                 own band ("Editing: Mask 1"). The sliders therefore keep the same height
+                 whatever is selected, the whole list stays visible for A/B eye toggling,
+                 and nothing implies a scope owns an expandable subtree (there is only
+                 ever ONE tree -- buildTree repopulates it on every switch).
+                 NESTED: the editor is inserted directly under the SELECTED row, so it
+                 moves with the selection and the rows below it sit under the sections.
+                 This is the original lab layout.
+                 MINIMAL: no list at all. One bar -- "Scope [Global v] [+] [eye] [:]" --
+                 stands in for BOTH the "Edits" header band and the rows, with the editor
+                 directly below it and NO containment rail. The combo carries every scope,
+                 [+] promotes New mask out of the menu it is buried in elsewhere, and the
+                 [eye] [:] pair acts on whichever scope the combo has selected. The
+                 submask list is hidden on Global exactly as in the other layouts (that is
+                 syncMaskPanel, not a layout rule).
+               ScopeHeaderLab::rebuild() carries the difference: MINIMAL builds no rows at
+               all, and the editor's insert position is rowsLayout->count() (flat and
+               minimal) or active + 1 (nested). Everything else follows from the flag --
+               which band is up and which carries the header gradient (applyLayoutMode +
+               paintEvent), the detail wrapper indents (setRowDetail remembers the NESTED
+               indent per slot; applyDetailIndent drops it to 0 otherwise, there being no
+               row above to line up under), the section-header caption indent
+               (addHeader/UR_ExtraIndent: kMaskPanelIndent nested, 0 otherwise), the
+               MaskPanel editor's caption split (maskPanelCaptionWidth) and the rail (see
+               below). The switch is DevelopProperties::setEditsLayout, reached via
+               ScopeHeaderBase::editsLayoutRequested: it re-runs buildTree (the headers'
+               indent) then refreshScopeList (which re-runs rebuild, moving the block),
+               and re-pushes the caption split to any OPEN submask editor. Menu emissions
+               are deferred a tick like every other emission here -- the switch rebuilds
+               the rows (or the bar) the menu is standing on.
+               STICKY: persisted in QSettings as "developEditsLayout" (an int, written in
+               MW::writeSettings next to "combineRawJpg", read in MW::loadSettings beside
+               "decodeRawEngine" with the same validate-before-cast guard -- an
+               out-of-range value falls back to the compiled default, and silently,
+               because a wrong layout is only cosmetic). It is read in loadSettings rather
+               than in the Develop dock because loadSettings runs BEFORE createDocks: the
+               panel and ScopeHeaderLab then BUILD in the remembered layout instead of
+               building in the default and being rebuilt. Drop the key in
+               removeDeprecatedSettings when the flag retires.
+               The scope bar and the editor band are both built ONCE in the
+               ctor and stay in their layouts, hidden and 0 high where they do not apply,
+               so a switch is a show/hide and never a re-parent.
+               The editor band, like every band and row in this panel, ends with [eye]
+               then [:], both acting on the ACTIVE scope. It is painted in the SAME
+               G::selectionColor band the selected row carries, so the eye pairs the
+               highlighted row with the sliders below by colour -- that is the binding the
+               flat layout gives up by separating them.
+               THE MINIMAL BAR'S [:] IS THE ONLY MENU in that layout (there is no header
+               band), so showRowMenu appends "Reset all edits" and the layout picker to it
+               when minimal is active -- otherwise the way back OUT of the layout would be
+               unreachable. Those actions fire through their own connect and carry no data
+               code, so showRowMenu's per-scope dispatch ignores them. The bar carries
+               NO collapse arrow (removed 2026-08-20): the minimal layout has no scope
+               list to hide, and the panel headers below it (Submasks, Basic, Color, ...)
+               are always visible. applyLayoutMode expands a listCollapsed left over from
+               another layout on entry, since nothing in this one could undo it.
+               Retire the flag and delete the losing branches once the comparison settles.
                CONTAINMENT RAIL: a 3px G::selectionColor line down the panel's left edge
                (G::scopeRailX / G::scopeRailW; scopeRailW = 0 removes it) ties the
                sections to the scope they belong to. It brackets the SELECTED SCOPE ONLY
-               -- its row plus everything nested under it -- so an unselected scope row
-               carries no rail: it is just a name until it is picked.
-               It is drawn in TWO halves that meet at the widget boundary:
-               ScopeHeaderLab::paintEvent runs it over activeBlockRect() (the active row's
-               geometry extended to the bottom of the last visible detail wrapper -- the
-               Mask panel and the tree -- offset by rowsContainer's position), and
+               -- its row plus its editor -- so an unselected scope row carries no rail:
+               it is just a name until it is picked. In the FLAT layout the row and its
+               editor are no longer adjacent, so ScopeHeaderLab paints TWO segments at the
+               same x -- activeRowRect() and editorBlockRect() (the editor band down to
+               the bottom of the last visible detail wrapper) -- and the unrailed rows
+               between them ARE the statement: these two blocks belong together and the
+               rows in between do not.
+               The MINIMAL layout has NO RAIL, in either half. The rail's whole job is to
+               pick the editor's owner out of a list of candidates, and there is no list:
+               one bar sits directly above one editor. DevelopProperties::paintEvent also
+               reverts its closing rule there to the ordinary panel separator
+               (G::tabWidgetBorderColor, full width) -- with no rail to turn the corner
+               into, a rail-coloured foot starting at the rail's right edge would be a
+               stub of a line going nowhere.
+               Otherwise it is drawn in TWO halves that meet at the widget boundary:
+               ScopeHeaderLab::paintEvent runs it over activeBlockRect() when nested (the
+               active row's geometry extended to the bottom of the last visible detail
+               wrapper -- the Mask panel and the tree -- offset by rowsContainer's
+               position), or the two segments above when flat, and
                DevelopProperties::paintEvent paints the tree's own stretch. In FIT mode
                that stretch ends at the BOTTOM OF THE CLOSING RULE -- the foot of the
                bracket -- and never runs past it, so the kBlockBottomGap clear space below
@@ -4013,7 +4171,8 @@ Scope & mask model (Global + masks)
                of the pair so the primary action is one click), each submask row, and
                each section header (Basic/Color/Calibrate/Color Grade/Effects, whose menu
                repeats the Preview + Reset items previously reachable only by
-               right-clicking). The section pair is queued into the BarBtnEditor column in
+               right-clicking; Calibrate adds a third item, "Calibrate help", see the
+               Calibrate panel section). The section pair is queued into the BarBtnEditor column in
                order (btns: eye, then menu), which right-aligns them, so "menu last" holds
                everywhere. THE PAIR LINES UP DOWN THE WHOLE PANEL: G::headerBtnGap (6) is
                the space between the two buttons and G::headerBtnRightInset (6) the space
@@ -4070,9 +4229,17 @@ Scope & mask model (Global + masks)
                lab UI those controls live in the Raw panel instead, so showRawDemosaic
                just un-collapses that panel (and folds its peers away under Solo).
                Group->keys mapping follows the UI (texture/dehaze are Basic; tone
-               splits are Basic for Reset only; localDenoiseLuma -- the Effects "Denoise" (local NR,
-               key "localDenoise") -- is in Effects; denoiseLuma/denoiseChroma are the Global "Denoise
-               raw" (decode-time global NR, key "denoise") and in no group). eye.png/eye_off.png live
+               splits are Basic for Reset only; the sharpen* quartet and localDenoiseLuma/
+               localDenoiseChroma -- the Detail "Sharpening" (key "sharpenAmount") and
+               "Denoise" (local NR, key "localDenoise") -- are in Detail, the denoise pair
+               having MOVED there from Effects on 2026-08-20; denoiseLuma/denoiseChroma are
+               the Global "Denoise raw" (decode-time global NR, key "denoise") and in no
+               group). NOTE the migration: a scope's showDetail, not showEffects, now gates
+               the local denoise pair. Old sidecars carry no showDetail key and
+               paramsFromJson is forward-tolerant, so it defaults to true (visible) --
+               values are unaffected. The saved PRESET format did not change at all:
+               presets store a flat map of EditParams field names and section titles only
+               group the checklist UI, so no key was renamed or rescaled. eye.png/eye_off.png live
                in images/icon16. Transform has its
                own Preview eye + Reset in TransformPanel, wired to MW (previewToggled/resetRequested);
                its eye is a live result toggle, not a group fold (see the Transform section below).
@@ -4115,7 +4282,7 @@ Scope & mask model (Global + masks)
                rows, and adding a tool selects it, so the placeholder is present precisely when no mask
                is selected. Each tool is a top-level tree
                row (caption "Add/Subtract <tool>" with a [-] remove button; the tools sit ABOVE the
-               Basic/Color/Effects sections, added by addMaskItems in buildTree). The rows are
+               Basic/Color/Detail/Effects sections, added by addMaskItems in buildTree). The rows are
                header-style for the single-line full-width caption + expand arrow, but flagged
                UR_LeafSingleLine (new role) so the delegate paints them in the LEAF colour, not
                category teal. UR_ShowDecoration forces the delegate to draw the expand arrow even when
@@ -4473,7 +4640,11 @@ Scope & mask model (Global + masks)
                label, MaskEditor, commit row) down with them, since
                those settings belong to a submask inside the collapsed list. Starting a
                new submask (beginPending) re-expands the section, so a pending edit can
-               never be stranded behind a closed header.
+               never be stranded behind a closed header. The section STARTS COLLAPSED
+               (SubmaskList::collapsed defaults true, honoured in buildUi): most masks
+               hold one or two submasks, so the list is noise until the user goes
+               looking for it, and the one path that needs it open -- adding a submask
+               -- opens it.
              - COMMITTED SUBMASKS RE-OPEN (2026-08-13): commitPendingMask() used to set
                selectedMaskIndex = -1 ("flatten: committed submasks don't re-open"), which
                made the mask a WRITE-ONLY PILE: a committed submask could not be
@@ -5467,6 +5638,14 @@ Develop scopes (histogram + vectorscope)
     DevelopProperties::bindToneSlider() connects the slider (drag -> onToneSplitsChanged) and
     populateSlidersFromStack() pushes the saved positions back on image switch.
 
+    THE SAME HANDLES ALSO APPEAR IN THE CURVES PANEL, under its plot in Parametric mode --
+    one set of params, two ToneRegionSlider instances. onToneSplitsChanged cross-pushes to
+    whichever instance did not originate the change (setPositions emits nothing, so it
+    cannot loop). They stayed here as well as there because this is where they align with
+    real histogram data, and G can cycle this strip away entirely -- which would otherwise
+    leave the Curves panel's parametric bands with no way to move their boundaries. See
+    "Curves panel (tone curve)".
+
     Cursor readout: hovering the loupe marks the pixel under the cursor on both scopes -- vertical
     R/G/B ticks on the histogram, a ring at its Cb/Cr on the vectorscope. ImageView (mouse tracking
     on) emits cursorImagePos (normalized) / cursorLeftImage; MW::onImageCursorPos samples that one
@@ -5976,11 +6155,20 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
         Color    Red, Green, Blue (per-channel gain); Hue, Saturation, Vibrance, Luminance
                  (global HSL).
                  Integer -100..100 sliders, all default 0 (identity).
-        Effects  Denoise (localDenoiseLuma, luminance NR) + Denoise Color
+        Detail   Sharpening (sharpenAmount, 0..150 -> 0..1.5, default 0) + Radius
+                 (sharpenRadius, 50..300 -> 0.50..3.00 PIXELS at full res, default 1.0) +
+                 Detail (sharpenDetail, 0..100 -> 0..1, default 25) + Masking
+                 (sharpenMasking, 0..100 -> 0..1, default 0): capture sharpening, an
+                 edge-gated unsharp mask (see #8.5 above). Radius/Detail/Masking are inert
+                 until Amount is non-zero. THE ONLY control in Develop measured in absolute
+                 pixels, so it is judged at 1:1 -- everything else is a fraction of the
+                 image. Also Denoise (localDenoiseLuma, luminance NR) + Denoise Color
                  (localDenoiseChroma, chroma NR) -- two 0..100 sliders (mapped to 0..1),
                  default 0. Local, maskable, post-demosaic. Distinct from the Global scope's
-                 "Denoise raw" (PMRID pre-demosaic, denoiseLuma/denoiseChroma). Also
-                 Vignette (vignetteExposure, EV -5.00..5.00, default 0) + Vignette Feather
+                 "Denoise raw" (PMRID pre-demosaic, denoiseLuma/denoiseChroma). The denoise
+                 pair MOVED here from Effects (2026-08-20): NR and sharpening are one
+                 decision, so they share a panel as they do in Lightroom.
+        Effects  Vignette (vignetteExposure, EV -5.00..5.00, default 0) + Vignette Feather
                  (vignetteFeather, 0..100 -> 0..1, default 50): a global radial
                  corner-exposure falloff (see #8 above); shaped vignettes use masks. Also
                  Grain (grainAmount, 0..100 -> 0..1, default 0) + grain Size (grainSize,
@@ -5991,6 +6179,91 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
     Each scope maps onto one EditParams (DevelopProperties::editParams()). Binding a
     value change to a re-decode is deferred: itemChange() persists the value to settings
     and emits paramsChanged() so the hook is ready.
+
+
+Curves panel (tone curve)
+--------------------------
+
+    Lightroom's Tone Curve, as its own Develop section (DevelopProperties::addCurves,
+    header "CurvesHeader", preview group PV_Curves, EditParams::Group::Curves), placed
+    directly under Basic because that is the order it is reached in.
+
+    TWO MODES over one square plot (Develop/Properties/curveeditor.{h,cpp}), with the
+    image's histogram drawn behind it:
+
+      Point       the free-form curve. A channel combo picks RGB -- the COMPOSITE, applied
+                  to every channel -- or Red / Green / Blue, which layer on top of the
+                  composite for that channel alone. Drag a point; click empty space to add
+                  one (it lands ON the current curve, so adding an anchor changes nothing
+                  until it is moved); double-click a point to delete it; double-click the
+                  background to reset the channel. Endpoints are pinned in x but FREE in y
+                  -- that is the black-point / white-point move. Max 16 points per channel.
+
+      Parametric  the curve Basic's tone sliders already produce, drawn from
+                  Develop::ParametricCurve. Dragging inside one of the four tonal bands
+                  writes that band's EXISTING Basic slider (blacks | shadows | highlights |
+                  whites, in x order) and moves the slider itself; double-clicking a band
+                  zeroes it.
+
+    THERE ARE NO PARAMETRIC PARAMS. The Curves panel is a SECOND VIEW of Basic's tone
+    controls, not a second tone system -- Winnow already had Lightroom's four parametric
+    regions as Basic sliders driven by the tone splits, and duplicating them would have
+    left two sets of fields that could disagree about the same image. Which mode you are
+    looking at, and which channel, are UI state and are deliberately not in the recipe.
+
+    THE TONE SPLITS LIVE IN TWO PLACES, ON PURPOSE. The three split handles (blacks |
+    shadows | highlights | whites -- see "Develop scopes") appear BOTH under the histogram
+    scope and under this panel's plot in Parametric mode. One set of params
+    (toneShadowCenter / toneCrossover / toneHighlightCenter), two ToneRegionSlider
+    instances; DevelopProperties::onToneSplitsChanged cross-pushes to whichever did not
+    originate the change (setPositions emits nothing, so it cannot loop). They were not
+    MOVED out of the scopes strip because the strip is where they align with real
+    histogram data; they were not left there alone because G cycles the strip away
+    entirely, which would have made them unreachable while the panel that depends on them
+    was open.
+
+    CURVE MATH. Develop/tonecurve.h, header-only beside calibrate.h / colorgrade.h and
+    unit-tested by tst_tonecurve. MONOTONE CUBIC HERMITE (Fritsch-Carlson), not
+    Catmull-Rom: a plain cubic overshoots between closely spaced control points, and an
+    overshoot in a tone curve is a locally INVERTED tone -- a bright halo inside a shadow
+    ramp. The limiter is the whole reason for the choice, so
+    tst_tonecurve::monotoneControlPointsGiveMonotoneCurve is the test not to "tidy" away.
+    Past x = 1 the curve continues with its END SLOPE rather than clamping, so pulling the
+    white point down scales the ~3 stops of highlight headroom the LUT spans instead of
+    flattening it into one value.
+
+    PIPELINE. Stage 5a: composed into the SAME perceptual tone LUT that already bakes
+    contrast and the region lifts (Develop::buildPointCoeffs), after them, matching
+    Lightroom's order -- so the curve costs LUT-build time and nothing per pixel.
+    PointCoeffs::toneLut became toneLut[3][kLutSize], one table per channel, because the
+    per-channel curves differ; the three are byte-identical when only the composite is in
+    play, and the hot loop does the same single lookup either way. The parametric shape
+    itself was factored into buildToneShape / applyToneShape in develop.cpp so
+    ParametricCurve (what the panel DRAWS) and buildPointCoeffs (what actually RENDERS)
+    cannot drift apart.
+
+    DATA. EditParams gains curveN[4] + curveX[4][16] + curveY[4][16] -- fixed-size arrays,
+    not a container, so operator== stays defaulted, the struct stays cheap to copy per
+    render and per history snapshot, and sanitizeParams stays numeric. UNLIKE the tone
+    splits, the curve IS a primary control and DOES count towards isIdentity(). One
+    sidecar key, "curves", holds ToneCurve::encode's compact string ("ch:x,y,...;ch:..."
+    with identity channels omitted, so an untouched image adds nothing) -- and because
+    MW::developCompositeStack keys the per-scope render cache on paramsToJson's output,
+    adding that key is also what gives the curve correct cache invalidation.
+
+    THE ONE ENCODING. ToneCurve::encode / decode are shared by the sidecar, the preset
+    collector and DevelopPresets::assignParam, so the two key namespaces the adjustment
+    checklist warns about cannot drift here. Presets carry TWO leaves -- "curveRgb"
+    (composite) and "curveChannels" (R/G/B) -- because a look built on the composite curve
+    is often wanted without the colour crossover that came with it; each is encoded over a
+    copy with the other channels reset, and assignParam merges each key back into only its
+    own channels, so ticking one never clears the other.
+
+    MULTI-IMAGE. The curve cannot go in kFloatFields (that table is scalar member
+    pointers). It gets one pseudo-field, "curves", with curvesDiffer / copyCurves as the
+    two halves -- the same discipline the table enforces for scalars, and the thing to
+    remember if the curve ever grows another channel.
+
 
 
 Calibrate panel (RGB primaries)
@@ -6016,7 +6289,35 @@ Calibrate panel (RGB primaries)
         blue 240), shown with a faint home spoke. Angle swept from home = hue (-100..100
         -> +/-30 deg); radius about the mid point = sat (-100 = grey, +100 = 2x chroma).
       • A drag moves every CHECKED primary by the same delta; double-click returns them
-        to 0/0.
+        to 0/0. HOLD SHIFT for a fine drag: the dots move by kFineGain (1/4) of the
+        cursor's movement since an anchor taken when Shift goes DOWN, so entering fine
+        mode mid-drag never jumps them (releasing Shift resumes absolute tracking, which
+        rejoins the dots to the cursor). The anchor/blend state lives in HueSatWheel, so
+        the grade and range wheels can adopt the same gesture for free.
+      • NUDGING is the Hue and Saturation SLIDERS below the wheel (keys "calHue" /
+        "calSat"), not the wheel: a mouse cannot pick out one unit of a +/-30 degree
+        disc, and the wheel shows no numbers at all. They write every checked primary
+        (setCalAxis) and READ the lowest checked one (firstActivePrimary) -- the exact
+        relationship Color Grade's Luminance slider has to ITS wheel, and consistent
+        because a wheel drag also lands ONE value on every checked primary. Arrow keys
+        step one unit, PageUp/Dn ten (Slider::keyPressEvent).
+        The pair is kept in sync in three directions: itemChange -> setCalAxis ->
+        refreshCalibrateRow moves the dot with the slider; onPrimaryWheelChanged ->
+        refreshCalibrateRow moves the numbers with the drag; and the R/G/B checkboxes
+        call it so the sliders re-point at the newly checked primary. Every push is
+        wrapped in isPopulating or setValue echoes back through itemChange as an edit.
+      • KEYBOARD NUDGE ON THE WHEEL ITSELF WAS REJECTED. MW::developShortcutIntercept
+        yields arrows only to a focused QAbstractSlider / QAbstractSpinBox / QLineEdit;
+        a focused wheel is none of those, so rule 2 would swallow them as selection keys.
+        Making it work means widening that guard AND giving a wheel focus + a focus cue,
+        for something the sliders already do.
+
+      • THE CHECKBOXES ADJUST NOTHING. They only pick which primaries the wheel writes,
+        which is easy to misread as "the R/G/B control" and then to report the panel as
+        unwired. No caption was added (the row stays clean); instead the section's [:]
+        menu carries CALIBRATE HELP -> Docs/developcalibratehelp.html. This was the FIRST
+        such item; every band in the dock now carries one -- see "Develop panel help
+        pages" below.
 
     ALL THREE hue/sat wheels share one base, HueSatWheel (Develop/Properties/
     huesatwheel.*), extracted when this panel added the third: it owns the cached HSV
@@ -6044,6 +6345,13 @@ Calibrate panel (RGB primaries)
     real primary change does, and Lightroom's calibration sliders interact the same way.
     What does survive is direction: an untouched primary's column stays parallel to its
     own axis and is only rescaled.
+
+    THE SECTION MUST BE ADDED TO EVERY PER-GROUP SWEEP. Three were missed when the panel
+    landed and were fixed later: refreshPreviewButtons (the Calibrate eye never redrew as
+    eye_off), resetSection(PV_Scope) ("Reset all" left the calibration in place), and
+    buildTree's eye-pointer clear (calibrateEyeBtn/colorGradeEyeBtn dangled between
+    removeRows and the rebuild). None of them affected the render, which is exactly why
+    they survived -- a new section is only done when it appears in ALL of them.
 
 
 Color Grade panel (colour grading)
@@ -6210,15 +6518,21 @@ Develop presets (the Presets dock)
                           raw NR only apply to raw files, and raw NR (PMRID) is the
                           Winnow engine only; both stay listed but are pre-checked only
                           when relevant.
-        Basic / Color /   one checkable tri-state group per Develop section, each with
-        Calibrate /       its own [All] / [None] buttons. Leaves follow the panel's own
+        Basic / Curves /  one checkable tri-state group per Develop section, each with
+        Color /           its own [All] / [None] buttons. Leaves follow the panel's own
+        Calibrate /
         Color Grade /
+        Detail /
         Effects           controls, so a control that folds several params in is ONE
                           tick: White balance = temp + tint, each Color Grade range =
                           its hue + sat + lum (Global included), Blending + Balance share
                           one tick, each Calibrate primary = its hue + sat,
+                          Sharpening folds in radius + detail + masking,
                           Denoise = luma + chroma, Vignette folds in its feather, Grain
-                          folds in size + roughness.
+                          folds in size + roughness. Curves SPLITS rather than folds --
+                          "Tone curve (RGB)" and "Tone curve (Red / Green / Blue)" are
+                          separate ticks, because a look built on the composite curve is
+                          often wanted without the per-channel colour that came with it.
 
     Items that differ from their default IN THE SELECTED SCOPE are pre-checked and their
     group pre-expanded, so the user can Save immediately or fine-tune. Moving the Scope
@@ -6590,16 +6904,21 @@ Adding or changing a develop adjustment (checklist)
          • the function, declared in develop.h and implemented in develop.cpp
          • the call in Develop::Apply(), at the right place in the fixed pipeline order
            (Denoise #1 -> fused point pass -> Texture #6 -> Dehaze #7 -> Vignette #8 ->
-           Grain #9). A POINT op costs nothing extra if folded into buildPointCoeffs /
+           Sharpen #8.5 -> Grain #9). A POINT op costs nothing extra if folded into
+           buildPointCoeffs /
            applyPointOps; a SPATIAL op owns its own pass.
          • parallelFor every per-pixel loop; downscale for large-radius blurs.
 
     3. Develop/editstack.h -- paramsToJson() AND paramsFromJson(). paramsFromJson is
        forward tolerant (an absent key keeps its default), so ADDING a field needs no
-       version bump and old sidecars stay valid.
+       version bump and old sidecars stay valid. Add the range clamp to
+       EditStack::sanitizeParams() in the same pass -- a field with no clamp line is one a
+       hand-edited sidecar can feed to the pipeline unchecked. paramsToJson is ALSO the
+       per-scope render cache's invalidation key (MW::developCompositeStack), so a field
+       added to the pipeline but not here renders stale from cache AND never persists.
 
-    4. developproperties.cpp, addBasic / addColor / addCalibrate / addColorGrade /
-       addEffects -- the
+    4. developproperties.cpp, addBasic / addCurves / addColor / addCalibrate /
+       addColorGrade / addDetail / addEffects -- the
        addSlider call: dock key, caption, tooltip, section header, min, max, divisor,
        colours, default. A sub-control of the slider above it uses a "   "-indented
        caption ("   Feather", "   Size").
@@ -6612,8 +6931,8 @@ Adding or changing a develop adjustment (checklist)
        further every time the user navigates away and back.
 
     7-9. Presets -- four functions, and NOTE THE KEY NAMESPACE CHANGE:
-         • kBasicLeaves / kColorLeaves / kCalibrateLeaves / kColorGradeLeaves /
-           kEffectsLeaves in
+         • kBasicLeaves / kCurvesLeaves / kColorLeaves / kCalibrateLeaves /
+           kColorGradeLeaves / kDetailLeaves / kEffectsLeaves in
            developproperties.cpp -- the checklist row's key + label. Params the panel
            treats as one control fold into ONE leaf (Grain = amount + size + roughness).
          • leafChanged() -- is this leaf non-default? Tests the PRIMARY param(s) only,
@@ -6630,6 +6949,9 @@ Adding or changing a develop adjustment (checklist)
         a pointer to the member. The diff and the copy both walk that table, so a field
         missing from it is a field that silently does NOT propagate to the rest of the
         selection while every other slider does -- the worst kind of bug to notice.
+        A NON-SCALAR field (the tone curve's arrays) cannot use a member pointer: give it
+        a named pseudo-field plus a differs/copy pair beside the table, and wire both into
+        diffParamFields AND copyParamFields -- see curvesDiffer / copyCurves.
 
     11. History -- FREE for a normal slider: the generic tree-edit handler calls noteEdit
         with the caption and value, and noteEdit snapshots the whole EditStack. NOT free
@@ -6645,6 +6967,26 @@ Adding or changing a develop adjustment (checklist)
     13. Docs/develophelp.html -- the in-app user help. Currently LAGS the panel (no
         Vignette or Grain entry), so this step is a known gap rather than an established
         habit.
+
+    A WHOLE NEW SECTION (rather than a slider in an existing one) adds a fixed set of
+    bookkeeping on top of the thirteen, and every item is one that fails SILENTLY if
+    missed. Working examples: the Curves panel (grep PV_Curves) and the Detail panel
+    (grep PV_Detail), which also shows what MOVING an existing control between sections
+    costs -- see "Group->keys mapping" above.
+      • DevelopProperties::PreviewGroup gains PV_<Name>, and hdrStar[] grows by one.
+      • paramsGroup() / groupLabel() / previewFlag() -- three switches, plus a new
+        EditParams::Group and its resetGroup() case.
+      • EditScope gains show<Name>, effectiveScopeParams() folds it,
+        EditStack::isIdentity tests it, and toJson/fromJson read + write its key.
+      • updateSectionHeaderCaptions()'s hdrs[] table (the " *" edited marker) -- and
+        GROW hdrStar[] with it: it is indexed by POSITION in hdrs[], so a new row with a
+        too-short array walks off the end.
+      • buildTree(): the add<Name>() call in pipeline order, the eye-button reset, and
+        the expand-state save/restore pair.
+      • kSections gains the section's leaf table.
+      • sectionHelp()'s switch + a Docs/develop<name>help.html page + its winnow.qrc entry.
+      • buildTree()'s <name>EyeBtn nulling, addHeader()'s eye-assignment chain, the
+        expand-state capture/restore pair, and persistSectionExpanded()'s name list.
 
     MASKABLE OR GLOBAL-ONLY? A per-scope adjustment belongs to a Group and is edited on
     whichever scope is active. A Global-only one (denoiseLuma / denoiseChroma, the tone

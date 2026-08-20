@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Effects</h1>
+
+<h2>What it does</h2>
+<p>Effects holds two finishing controls that work on the <b>rendered</b> image, after
+demosaic and after the tone and colour work: a vignette and film grain.  Like every other
+section it is per scope, so either can be confined to a mask.</p>
+
+<p>Noise reduction used to live here.  It now sits in the <b>Detail</b> panel alongside
+Sharpening, because the two are one decision &mdash; noise reduction removes exactly the
+detail sharpening puts back.</p>
+
+<h2>Vignette</h2>
+<ul>
+<li><b>Vignette</b> is corner exposure in stops (EV), &plusmn;5.00: negative darkens the
+corners (the familiar look), positive brightens them, which is how you correct a lens that
+falls off.</li>
+<li><b>Feather</b> is how far the falloff reaches in toward the centre.  Low values keep
+it in the corners; high values make it a broad, soft dome.</li>
+</ul>
+
+<p>The vignette is radial about the <b>image centre</b>.  For an off-centre or shaped
+darkening &mdash; around a subject that is not in the middle &mdash; use a radial gradient
+mask and put an exposure adjustment in that scope instead.</p>
+
+<h2>Grain</h2>
+<p>Monochromatic grain added to luminance, which is what film grain actually is.  Size and
+Roughness are sub-controls of Amount and do nothing until Amount is above zero.</p>
+
+<ul>
+<li><b>Grain</b> &mdash; the strength.</li>
+<li><b>Size</b> &mdash; particle size, fine to coarse.  It is scaled to the image, so what
+you see on the editing proxy is what you get at full resolution.</li>
+<li><b>Roughness</b> &mdash; how patchy and irregular the grain is.  Low is an even
+sprinkle; high clumps it, which reads as a faster, older stock.</li>
+</ul>
+
+<p>Grain is also a practical tool, not only a look: a little of it hides banding in smooth
+skies and disguises the plastic texture that heavy noise reduction leaves behind.</p>
+
+<h2>Working with the sliders</h2>
+<ul>
+<li><b>Double-click</b> a slider returns it to its default (Feather 50, Size 25,
+Roughness 50, Vignette and Grain 0).</li>
+<li>Click a slider and the <b>arrow keys</b> nudge one unit, <b>Page Up / Page Down</b>
+ten.</li>
+<li>The section's <b>[&#8942;]</b> menu has <b>Show Effects changes</b> (a before / after
+that keeps your values) and <b>Reset Effects</b>.</li>
+<li>The header reads <b>Effects *</b> when anything in the panel is off its default.</li>
+</ul>
+
+<h2>Where it sits in the pipeline</h2>
+<p>Both run late, on the rendered image: the vignette, then sharpening (in the Detail
+panel), then grain last of all &mdash; grain belongs on top of the finished picture, not
+underneath a vignette that would modulate it, and not under a sharpener that would crisp
+it up.</p>
+
+<h2>What is saved</h2>
+<p>All five values are part of the develop recipe, stored per scope in the sidecar, and
+travel with presets, Copy / Paste Settings, History and multi-image editing.</p>
+
+</body>
+</html>

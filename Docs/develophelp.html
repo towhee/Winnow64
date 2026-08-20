@@ -14,6 +14,15 @@
 
 <p>Additional layers each contain a layer mask.  The layer mask is created and modified using mask tools (linear gradient, brush ...).  Each mask tool can add to or subtract from the layer mask.  While a mask is active, the edits to Basic, Color and Effects are localized to the layer mask.
  
+<h2>Curves</h2>
+<p>The <b>Curves</b> panel shapes tone directly, and works two ways.</p>
+
+<p><b>Parametric</b> draws the curve your Basic tone sliders are already making, over the image's histogram.  Drag up or down <i>inside</i> one of the four bands &mdash; blacks, shadows, highlights, whites &mdash; and that band's Basic slider moves with you; double-click a band to set it back to zero.  The three handles under the plot set where the bands begin and end.  They are the same handles that sit under the histogram at the top of the Develop panel, so moving one moves the other.</p>
+
+<p><b>Point</b> is the free-form curve.  Click anywhere on the curve to add a point, drag it to move it, and double-click a point to remove it.  Double-click the background to start over.  The two end points cannot move sideways, but you can drag them up and down to set the black and white points.</p>
+
+<p>The channel list next to the mode chooses which curve you are editing.  <b>RGB</b> is the main curve and affects everything &mdash; an S shape adds contrast, a lifted bottom-left corner gives the faded, matte look.  <b>Red</b>, <b>Green</b> and <b>Blue</b> edit one channel on top of the RGB curve, which is how you tint the shadows one colour and the highlights another.</p>
+
 <h2>Editing more than one image</h2>
 <p>Develop edits apply to <b>every selected image</b>.  If more than one image is selected a red banner appears at the top of the Develop panel telling you how many, because the other images are not on screen while you edit.  Each adjustment is copied to the other images as an absolute value, so Exposure +0.5 means +0.5 on all of them, whatever they started from.  Only settings that you actually change are copied &mdash; the rest of each image's recipe is left alone.</p>
 

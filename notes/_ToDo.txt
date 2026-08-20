@@ -6,6 +6,7 @@ WHAT'S NEW
 BUGS / TO DO
 - Radial gradient mask: Shift drag grab pt maintain radial shape while resize.
 Mouse wheel/touchscroll while cursor in radial shape should do the same thing.
+- Eliminate Edits layouts except Minimal
 - Check if libheif library is in Winnow (use for windows platform)
 - Masks still different colors, need to maintain mask tool history as before
 - Develop copy / paste
@@ -18,7 +19,9 @@ Mouse wheel/touchscroll while cursor in radial shape should do the same thing.
 - Spot fill quality issue (reassess)
 - Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
-- Add Sharpen and Soften sliders
+- Sharpen: DONE 2026-08-20 (Develop op #8.5, new "Detail" panel: Amount/Radius/Detail/
+  Masking; local Denoise moved there from Effects). Soften NOT done -- declined, negative
+  Texture and Denoise already cover it. See RawDecode_ToDo #32.
 - Review what is needed in ReleaseExtras
 - Drag dock tabify to the right (last) - WIP
 - Reformat the documentation.txt (when have lots of tokens)

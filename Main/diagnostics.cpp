@@ -424,6 +424,9 @@ QString MW::developDiagnostics()
         rpt << "\n" << indent << "toneShadowCenter = " << G::s(p.toneShadowCenter)
             << "   toneCrossover = " << G::s(p.toneCrossover)
             << "   toneHighlightCenter = " << G::s(p.toneHighlightCenter);
+        /* The whole curve set in its shared encoding -- empty when untouched. */
+        rpt << "\n" << indent << "curves = "
+            << G::s(ToneCurve::encode(p.curveN, p.curveX, p.curveY));
         rpt << "\n" << indent << "texture = " << G::s(p.texture)
             << "   dehaze = " << G::s(p.dehaze);
         rpt << "\n" << indent << "red = " << G::s(p.red) << "   green = " << G::s(p.green)

@@ -10,6 +10,7 @@
 
 class QLabel;
 class QVBoxLayout;
+class QComboBox;
 class BarBtn;
 
 /*
@@ -25,12 +26,31 @@ class BarBtn;
     shows/hides that row's changes, the vertical ellipsis opens its actions, and the menu
     is always the last thing on the line.
 
-    The ACTIVE row carries nested detail widgets (setRowDetail), in slot order: the
-    MaskPanel, then the adjustment tree (DevelopProperties). A mask's submasks and the
-    Basic/Color/... sections therefore sit under the scope they belong to rather than in
-    separate strips below the whole list. They are the caller's widgets: rebuild() leaves
-    them parented to rowsContainer while it deletes the rows, then re-inserts them under
-    the new active row.
+    The detail widgets (setRowDetail), in slot order: the MaskPanel, then the adjustment
+    tree (DevelopProperties). They are the caller's widgets: rebuild() leaves them
+    parented to rowsContainer while it deletes the rows, then re-inserts them.
+
+    WHERE they are re-inserted -- and whether the scope list exists at all -- is what
+    G::developEditsLayout settles:
+
+      Flat                     Nested                   Minimal
+      | Edits      [eye][v] |  | Edits      [eye][v] |  | Scope [Global v][+][eye][v] |
+      |   Global   [eye][v] |  |   Global   [eye][v] |  |   MaskPanel                 |
+      |   Mask 1   [eye][v] |  |   Mask 1   [eye][v] |  |   Basic / Color / ...       |
+      |   Mask 2   [eye][v] |  |     MaskPanel       |
+      | Mask 1     [eye][v] |  |     Basic / Color   |
+      |   MaskPanel         |  |   Mask 2   [eye][v] |
+      |   Basic / Color     |
+
+    FLAT keeps the scope list whole and the sliders at a fixed height whatever is
+    selected; the editor region below carries its own band naming the active scope
+    (editorBand), since it no longer touches the row it belongs to. NESTED puts the
+    editor directly under its row, so it moves with the selection. MINIMAL drops the list
+    for a one-line scope bar -- a dropdown carrying every scope, plus [+] new mask, the
+    active scope's [eye] and its [:] -- with the editor straight below and NO containment
+    rail: with one bar and one editor adjacent and alone there is nothing left to
+    bracket. Every layout has only ONE editor: DevelopProperties::buildTree repopulates
+    it on every switch.
 
     Still a ScopeHeaderBase, so DevelopProperties binds it exactly like the dropdown
     (bindScopeHeader) and drives it via setScopeRows(); the class name stays
@@ -62,11 +82,13 @@ public:
     /* Primary refresh: rebuild the list from names + per-scope enabled + Global flag. */
     void setScopeRows(const QVector<ScopeRowInfo> &rows, int active) override;
 
-    /* Widgets nested UNDER the active scope's row, drawn top to bottom in slot order:
-       MaskDetail is the MaskPanel (indented under the scope name); EditsDetail is the
-       adjustment tree, which is NOT indented so its containment rail lines up with this
-       widget's. Each is owned by the CALLER and survives every rebuild. Pass nullptr to
-       detach a slot. */
+    /* The editor widgets, drawn top to bottom in slot order: MaskDetail is the MaskPanel,
+       EditsDetail the adjustment tree (NOT indented, so its containment rail lines up
+       with this widget's). Each is owned by the CALLER and survives every rebuild. Pass
+       nullptr to detach a slot.
+       The indent is the NESTED-layout indent (the detail starts under the scope NAME);
+       the flat and minimal layouts drop it to 0, since there is no row above to line up
+       with. It is remembered per slot so a live layout flip can re-apply the right one. */
     enum RowDetailSlot { MaskDetail = 0, EditsDetail = 1, RowDetailSlotCount };
     void setRowDetail(QWidget *detail, int slot, int indent);
 
@@ -93,7 +115,22 @@ private:
        coordinates -- what the containment rail brackets. Empty if there is nothing to
        bracket (list collapsed). */
     QRect activeBlockRect() const;
+    /* Flat layout: the rail comes in two pieces, since the selected row and its editor
+       are no longer adjacent -- the row's own band, and the editor region below the
+       list. Both at the same x, so they read as one interrupted line. */
+    QRect activeRowRect() const;
+    QRect editorBlockRect() const;
+    void applyDetailIndent(int slot);     // wrapper margin for the current layout
+    void updateEditorBand();              // caption + visibility of the editor band
+    void buildScopeBar(QVBoxLayout *outer);   // minimal layout: one-line scope selector
+    void updateScopeBar();                // refill the combo + sync its eye (no signal)
+    void applyLayoutMode();               // show the bar or the list, per the layout
     void showPanelMenu();                 // panel [v]: New mask / Reset all edits
+    /* The actions that belong to the PANEL rather than to one scope -- Reset all edits
+       and the Edits layout picker. Appended to the row menu as well in the minimal
+       layout, where the bar's [:] is the only menu there is. */
+    void addPanelActions(QMenu *menu);
+    void addHelpAction(QMenu *menu);      // trailing "Edits help" on every menu here
     /* Band eye: toggle the ACTIVE scope's enabled flag (the selected row's eye). */
     void toggleActiveEnabled();
     void updateBandEyeIcon();             // sync the band eye to the active row's state
@@ -122,6 +159,25 @@ private:
        by the row teardown. */
     QWidget     *rowDetail[RowDetailSlotCount]  = {};
     QWidget     *detailWrap[RowDetailSlotCount] = {};
+    int          detailIndent[RowDetailSlotCount] = {};   // nested-layout indent
+    /* Flat layout only: the band heading the editor region ("Editing: Mask 1"), so the
+       sliders below it still name the scope they belong to. Hidden when nested, where
+       adjacency says it instead. Carries the same trailing [eye][:] pair as every other
+       band and row here, acting on the ACTIVE scope. */
+    QWidget     *editorBand      = nullptr;
+    QLabel      *editorBandLabel = nullptr;
+    BarBtn      *editorEyeBtn    = nullptr;
+    BarBtn      *editorMenuBtn   = nullptr;
+
+    /* MINIMAL layout only: the whole scope control on one line, replacing the header band
+       AND the rows -- "Scope: [Global v] [+] [eye] [:]". The combo carries every scope,
+       and the trailing pair acts on whichever it has selected. Built once, hidden in the
+       other layouts. */
+    QWidget     *scopeBar        = nullptr;
+    QComboBox   *scopeCombo      = nullptr;
+    BarBtn      *barAddBtn       = nullptr;   // [+] new mask (buried in [:] elsewhere)
+    BarBtn      *barEyeBtn       = nullptr;
+    BarBtn      *barMenuBtn      = nullptr;
 
     /* menuIcon removed: the scope menu buttons now load ellipsis_vertical.png through
        BarBtn::setIcon(path, G::iconOpacity) at each call site. */

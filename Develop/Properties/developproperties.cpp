@@ -269,7 +269,10 @@ void DevelopProperties::buildTree()
         return idx.isValid() ? isExpanded(idx) : def;
     };
     const bool exBasic   = expandedOr("BasicHeader",   sectionExpanded("BasicHeader",   true));
+    const bool exCurves  = expandedOr("CurvesHeader",
+                                      sectionExpanded("CurvesHeader", false));
     const bool exColor   = expandedOr("ColorHeader",   sectionExpanded("ColorHeader",   false));
+    const bool exDetail  = expandedOr("DetailHeader",  sectionExpanded("DetailHeader",  false));
     const bool exEffects = expandedOr("EffectsHeader", sectionExpanded("EffectsHeader", false));
 
     isPopulating = true;
@@ -279,7 +282,8 @@ void DevelopProperties::buildTree()
        scope: its top items first, then the adjustment sections. close() before removeRows so the
        setIndexWidget editors are freed rather than leaked on each rebuild. */
     btns.clear();
-    basicEyeBtn = colorEyeBtn = effectsEyeBtn = nullptr;
+    basicEyeBtn = curvesEyeBtn = colorEyeBtn = calibrateEyeBtn = colorGradeEyeBtn =
+        detailEyeBtn = effectsEyeBtn = nullptr;
     if (model->rowCount() > 0) {
         close(QModelIndex());
         model->removeRows(0, model->rowCount());
@@ -296,9 +300,11 @@ void DevelopProperties::buildTree()
     if (activeScopeIndex == 0) { if (!G::useScopeHeaderLab) addCoreItems(); }
     else                       addMaskItems();      // this scope's mask tool rows
     addBasic();
+    addCurves();        // Lightroom's order: the tone curve sits directly under Basic
     addColor();
     addCalibrate();
     addColorGrade();
+    addDetail();        // sharpening + local NR, in pipeline order before Effects
     addEffects();
     /* The headers were just re-added with their plain captions, so the cached " *"
        state is stale -- force a full re-evaluation. */
@@ -315,7 +321,9 @@ void DevelopProperties::buildTree()
         if (idx.isValid()) setExpanded(idx, on);
     };
     setExpandOn("BasicHeader",   exBasic);
+    setExpandOn("CurvesHeader",  exCurves);
     setExpandOn("ColorHeader",   exColor);
+    setExpandOn("DetailHeader",  exDetail);
     setExpandOn("EffectsHeader", exEffects);
 
     populateSlidersFromStack();
@@ -340,7 +348,8 @@ void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expa
     /* Only the three adjustment section headers persist (mask tool rows also expand/
        collapse, but their state is transient). */
     const QString name = idx.data(UR_Name).toString();
-    if (name == "BasicHeader" || name == "ColorHeader" || name == "EffectsHeader")
+    if (name == "BasicHeader" || name == "ColorHeader" || name == "DetailHeader" ||
+        name == "EffectsHeader")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
 
@@ -727,6 +736,8 @@ void DevelopProperties::bindScopeHeader(ScopeHeaderBase *header)
     connect(scopeHeader, &ScopeHeaderBase::previewToggled,      this, &DevelopProperties::onScopePreviewToggled);
     connect(scopeHeader, &ScopeHeaderBase::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
     connect(scopeHeader, &ScopeHeaderBase::scopeEnabledToggled, this, &DevelopProperties::onScopeEnabledToggled);
+    connect(scopeHeader, &ScopeHeaderBase::editsLayoutRequested, this, &DevelopProperties::setEditsLayout);
+    connect(scopeHeader, &ScopeHeaderBase::helpRequested,       this, &DevelopProperties::editsHelp);
 
     /* Seed the dropdown + eye from the current stack. */
     refreshScopeList();
@@ -839,6 +850,7 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(sl, &SubmaskList::moveRequested,     this, &DevelopProperties::moveSubmask);
         connect(sl, &SubmaskList::duplicateRequested, this, &DevelopProperties::duplicateSubmask);
         connect(sl, &SubmaskList::deleteRequested,   this, &DevelopProperties::deleteMask);
+        connect(sl, &SubmaskList::helpRequested,     this, &DevelopProperties::submasksHelp);
     }
 }
 
@@ -906,7 +918,7 @@ void DevelopProperties::reopenSubmask(int index)
     maskPanelOpen = false;           // nothing outstanding, so nothing to confirm
     const MaskComponent &m = scope->components.at(index);
     if (MaskEditor *ed = maskPanel ? maskPanel->editor() : nullptr) {
-        ed->setCaptionWidth(captionColumnWidth - kMaskPanelIndent);
+        ed->setCaptionWidth(maskPanelCaptionWidth());
         ed->showTool(m);
         if (m.tool == int(MaskTool::ColorRange))
             ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
@@ -1203,7 +1215,7 @@ void DevelopProperties::beginMaskTool(int tool)
         /* Populate the panel's embedded settings tree, aligned to the tree's split (less
            the indent the nested panel sits at -- see kMaskPanelIndent). */
         if (MaskEditor *ed = maskPanel->editor()) {
-            ed->setCaptionWidth(captionColumnWidth - kMaskPanelIndent);
+            ed->setCaptionWidth(maskPanelCaptionWidth());
             ed->showTool(m);
             if (tool == int(MaskTool::ColorRange))
                 ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
@@ -1798,6 +1810,12 @@ void DevelopProperties::onScopeEnabledToggled(int index, bool on)
     if (s.scopes[index].enabled == on) return;
     s.scopes[index].enabled = on;                 // compositor skips a disabled scope
     noteScopeEdit(s.scopes[index].name, on ? "Show" : "Hide");
+    /* Push the new flag back into the header. Without this the eyes keep the state they
+       were built with: every eye in ScopeHeaderLab (row, header band, editor band and the
+       minimal bar) reads its icon and its next toggle target from the last setScopeRows,
+       so a stale cache made the SECOND click re-send the value already stored, which this
+       slot drops as a no-op -- the eye appeared dead after one toggle. */
+    refreshScopeList();
     emit paramsChanged();                          // re-composite with the scope on/off
 }
 
@@ -1813,6 +1831,33 @@ void DevelopProperties::setTreeCollapsed(bool collapsed)
        collapse its peers -- the three adjustment sections and the Raw panel (they would
        otherwise stay open alongside the scope). */
     if (!collapsed) soloCollapseOthers(SoloOwner::ScopeRow);
+}
+
+int DevelopProperties::maskPanelCaptionWidth() const
+{
+    /* Only the NESTED layout insets the Mask panel; the others start it at the panel
+       edge, so there its split is the tree's split unchanged. */
+    return captionColumnWidth
+           - (G::developEditsLayout == G::EditsLayout::Nested ? kMaskPanelIndent : 0);
+}
+
+void DevelopProperties::setEditsLayout(int layout)
+{
+    if (G::isLogger) G::log("DevelopProperties::setEditsLayout");
+    const G::EditsLayout mode = G::EditsLayout(layout);
+    if (G::developEditsLayout == mode) return;
+    G::developEditsLayout = mode;
+    /* Both halves have to follow: buildTree re-emits the section headers (their caption
+       indent differs between the layouts -- addHeader/UR_ExtraIndent), and
+       refreshScopeList re-runs ScopeHeaderLab::rebuild, which is what actually moves the
+       editor block. Tree first: the list places the tree, so it should already be the
+       right shape when it lands. */
+    buildTree();
+    refreshScopeList();
+    /* An OPEN submask keeps the editor it was populated with, so its caption split has to
+       be re-pushed by hand: the panel's inset just changed under it. */
+    if (maskPanel)
+        if (MaskEditor *ed = maskPanel->editor()) ed->setCaptionWidth(maskPanelCaptionWidth());
 }
 
 void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepSection)
@@ -1863,6 +1908,24 @@ void DevelopProperties::bindToneSlider(ToneRegionSlider *slider)
     populateSlidersFromStack();
 }
 
+void DevelopProperties::setScopeData(const ScopeData &d)
+{
+    if (curveEditor) curveEditor->setScopeData(d);
+}
+
+void DevelopProperties::clearScopeData()
+{
+    if (curveEditor) curveEditor->clearScopeData();
+}
+
+/* True only when the plot is actually on screen: the Curves section exists in the tree
+   after every rebuild, so isVisible() (not just non-null) is what says the histogram
+   sample is worth taking. */
+bool DevelopProperties::wantsScopeData() const
+{
+    return curveEditor && curveEditor->isVisible();
+}
+
 void DevelopProperties::onToneSplitsChanged(double shadow, double crossover, double highlight)
 {
     if (G::isLogger) G::log("DevelopProperties::onToneSplitsChanged");
@@ -1873,6 +1936,17 @@ void DevelopProperties::onToneSplitsChanged(double shadow, double crossover, dou
     p.toneShadowCenter    = static_cast<float>(shadow);
     p.toneCrossover       = static_cast<float>(crossover);
     p.toneHighlightCenter = static_cast<float>(highlight);
+
+    /* The splits have TWO editors -- the slider under the histogram scope and the one
+       under the Curves panel's plot. Cross-push to whichever did not originate this
+       change; setPositions deliberately emits nothing, so this cannot loop. The Curves
+       plot also redraws its band boundaries from the new positions. */
+    const QObject *src = sender();
+    if (toneSlider && src != toneSlider)
+        toneSlider->setPositions(shadow, crossover, highlight);
+    if (curveToneSlider && src != curveToneSlider)
+        curveToneSlider->setPositions(shadow, crossover, highlight);
+    if (curveEditor) curveEditor->setParams(p);
 
     /* The splits move only the shadows/highlights centres (blacks/whites are pinned), so they
        change pixels only when one of those two is engaged. Skip the re-render otherwise -- the
@@ -2151,9 +2225,11 @@ int DevelopProperties::activeMaskIndex() const
 EditParams::Group DevelopProperties::paramsGroup(int group)
 {
     switch (group) {
+    case PV_Curves:     return EditParams::Group::Curves;
     case PV_Color:      return EditParams::Group::Color;
     case PV_Calibrate:  return EditParams::Group::Calibrate;
     case PV_ColorGrade: return EditParams::Group::ColorGrade;
+    case PV_Detail:     return EditParams::Group::Detail;
     case PV_Effects:    return EditParams::Group::Effects;
     default:          return EditParams::Group::Basic;   // PV_Basic (+ PV_Scope, unused)
     }
@@ -2163,9 +2239,11 @@ EditParams::Group DevelopProperties::paramsGroup(int group)
 QString DevelopProperties::groupLabel(int group)
 {
     switch (group) {
+    case PV_Curves:     return "Curves";
     case PV_Color:      return "Color";
     case PV_Calibrate:  return "Calibrate";
     case PV_ColorGrade: return "Color Grade";
+    case PV_Detail:     return "Detail";
     case PV_Effects:    return "Effects";
     case PV_Scope:      return "all";
     default:            return "Basic";
@@ -2177,9 +2255,11 @@ bool *DevelopProperties::previewFlag(EditScope *l, int group)
     if (!l) return nullptr;
     switch (group) {
     case PV_Scope:      return &l->showScope;
+    case PV_Curves:     return &l->showCurves;
     case PV_Color:      return &l->showColor;
     case PV_Calibrate:  return &l->showCalibrate;
     case PV_ColorGrade: return &l->showColorGrade;
+    case PV_Detail:     return &l->showDetail;
     case PV_Effects:    return &l->showEffects;
     default:          return &l->showBasic;             // PV_Basic
     }
@@ -2217,6 +2297,10 @@ void DevelopProperties::showSectionMenu(int group)
     aPreview->setEnabled(l != nullptr);
     QAction *aReset = menu.addAction(tr("Reset %1").arg(label));
     aReset->setEnabled(!currentImagePath.isEmpty());
+    /* Every section carries its own help page (Docs/develop<section>help.html), always
+       the last item, so "what does this panel do?" is one click from the panel. */
+    menu.addSeparator();
+    QAction *aHelp = menu.addAction(tr("%1 help").arg(label));
 
     QAction *chosen = menu.exec(QCursor::pos());
     if (!chosen) return;
@@ -2226,6 +2310,8 @@ void DevelopProperties::showSectionMenu(int group)
         QTimer::singleShot(0, this, [this, group]{ togglePreviewSection(group); });
     else if (chosen == aReset)
         QTimer::singleShot(0, this, [this, group]{ resetSection(group); });
+    else if (chosen == aHelp)
+        sectionHelp(group);
 }
 
 void DevelopProperties::refreshPreviewButtons()
@@ -2236,8 +2322,11 @@ void DevelopProperties::refreshPreviewButtons()
         b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png", G::iconOpacity);
     };
     set(basicEyeBtn,    l ? l->showBasic    : true);
+    set(curvesEyeBtn,   l ? l->showCurves   : true);
     set(colorEyeBtn,    l ? l->showColor    : true);
+    set(calibrateEyeBtn,  l ? l->showCalibrate  : true);
     set(colorGradeEyeBtn, l ? l->showColorGrade : true);
+    set(detailEyeBtn,   l ? l->showDetail   : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
     /* The whole-mask eye lives in the ScopeHeader widget, not the tree. */
     if (scopeHeader) scopeHeader->setPreviewShown(l ? l->showScope : true);
@@ -2263,7 +2352,9 @@ void DevelopProperties::resetSection(int group)
     if (group == PV_Scope) {
         EditParams::resetGroup(p, EditParams::Group::Basic);
         EditParams::resetGroup(p, EditParams::Group::Color);
+        EditParams::resetGroup(p, EditParams::Group::Calibrate);
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+        EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
     }
     else {
@@ -3225,7 +3316,14 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        the scope row band above them (which carries the same colour via :disabled). */
     const QColor railColor = isEnabled() ? G::selectionColor
                                          : G::dimmed(G::selectionColor);
-    if (G::scopeRailW > 0) {
+    /* The MINIMAL layout has no rail at all (see ScopeHeaderLab::paintEvent): with a
+       single scope bar directly above the editor there are no rows for a bracket to pick
+       the editor's owner out of. The closing rule then reverts to the ordinary panel
+       separator -- with no rail to turn the corner into, a rail-coloured foot starting
+       at the rail's right edge would be a stub of a line that goes nowhere. */
+    const bool rail = G::scopeRailW > 0 &&
+                      G::developEditsLayout != G::EditsLayout::Minimal;
+    if (rail) {
         /* Fit mode: down to the FOOT of the bracket (the closing rule) and no further --
            the clear gap under the rule separates this scope's block from the next scope
            row. Legacy: to the last row, since the space below is plain dock. */
@@ -3244,10 +3342,10 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        bracket around the selected scope, so it reads as the rail turning the corner
        rather than as a divider cutting across it. */
     if (fitToContents || ruleY < viewport()->height() - G::panelBorderHeight) {
-        const int ruleX = fitToContents && G::scopeRailW > 0
-                              ? G::scopeRailX + G::scopeRailW : 0;
+        const bool foot = fitToContents && rail;      // the bracket's foot, not a divider
+        const int ruleX = foot ? G::scopeRailX + G::scopeRailW : 0;
         p.fillRect(ruleX, ruleY, viewport()->width() - ruleX, G::panelBorderHeight,
-                   fitToContents ? railColor : G::tabWidgetBorderColor);
+                   foot ? railColor : G::tabWidgetBorderColor);
     }
 }
 
@@ -3283,9 +3381,11 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
            by BarBtnEditor. hasValue + DT_BarBtns are what create that column. */
         BarBtn *eye = makeEyeBtn("Show or hide these changes", previewGroup);
         if      (previewGroup == PV_Basic)    basicEyeBtn    = eye;
+        else if (previewGroup == PV_Curves)   curvesEyeBtn   = eye;
         else if (previewGroup == PV_Color)    colorEyeBtn    = eye;
         else if (previewGroup == PV_Calibrate)  calibrateEyeBtn  = eye;
         else if (previewGroup == PV_ColorGrade) colorGradeEyeBtn = eye;
+        else if (previewGroup == PV_Detail)   detailEyeBtn   = eye;
         else if (previewGroup == PV_Effects)  effectsEyeBtn  = eye;
         btns.append(eye);
         btns.append(makeSectionMenuBtn(previewGroup));   // menu last, as on every band
@@ -3306,9 +3406,16 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
        sliders keep their full width. In the lab UI the tree sits INSIDE the scope row
        list, so the headers indent by the same inset as the other nested details
        (kMaskPanelIndent) and line up under the scope NAME; the legacy dock keeps the
-       original one-indent-level nudge. */
-    model->setData(capIdx, G::useScopeHeaderLab ? QVariant(kMaskPanelIndent)
-                                                : QVariant(true), UR_ExtraIndent);
+       original one-indent-level nudge.
+       The FLAT and MINIMAL lab layouts (G::developEditsLayout) have no scope row above
+       the tree to line up under -- the editor is its own region below the list, or below
+       a single scope bar -- so their headers start at the panel edge, like the band
+       heading them. */
+    QVariant extraIndent(true);                        // legacy: one indent level
+    if (G::useScopeHeaderLab)
+        extraIndent = QVariant(G::developEditsLayout == G::EditsLayout::Nested
+                                   ? kMaskPanelIndent : 0);
+    model->setData(capIdx, extraIndent, UR_ExtraIndent);
     /* A section header belongs to the scope selected in the Scope band above, so it is a
        tier BELOW that band: a flat band, not the panel-header gradient the Scope and Raw
        bands use. Without this the sections read as siblings of Scope rather than as its
@@ -3824,6 +3931,233 @@ void DevelopProperties::addBasic()
     // addSlider("red", "red", "red.", parIdx, "BasicHeader", -100, 100, 0, G::darkred, G::lightred);
 }
 
+/* -------------------------------------------------------------------------------------
+   Curves (tone curve)
+   ----------------------------------------------------------------------------------- */
+
+/* The Basic dock slider each parametric band writes, so a band drag moves the slider the
+   user already knows rather than a hidden duplicate. Order matches CurveEditor's
+   bands. */
+QString DevelopProperties::curveBandKey(int band)
+{
+    switch (band) {
+    case 0:  return "blacks";
+    case 1:  return "shadows";
+    case 2:  return "highlights";
+    default: return "whites";
+    }
+}
+
+void DevelopProperties::addCurves()
+{
+    if (G::isLogger) G::log("DevelopProperties::addCurves");
+    addHeader("CurvesHeader", "???", "Curves",
+              "Tone curve: a parametric view of the Basic tone sliders, and free-form "
+              "point curves for RGB and each channel.", PV_Curves);
+    QModelIndex parIdx = capIdx;
+
+    /* Mode + channel on one spanned row, the same plain-widget idiom as the Color Grade
+       range checkboxes. Both are UI state (curveModeIndex / the combo), not EditParams:
+       which curve you are LOOKING at is not part of the recipe. */
+    clearItemInfo(i);
+    i.name = "curveMode";
+    i.parIdx = parIdx;
+    i.parentName = "CurvesHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex modeIdx = capIdx;
+    model->setData(modeIdx, 6, UR_ExtraRowHeight);
+    setFirstColumnSpanned(modeIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
+        hb->setSpacing(8);
+        QComboBox *mode = new QComboBox(rw);
+        mode->addItems({"Parametric", "Point"});
+        mode->setCurrentIndex(curveModeIndex);
+        mode->setToolTip("Parametric edits the Basic tone sliders through their tonal "
+                         "bands; Point edits a free-form curve.");
+        QComboBox *chan = new QComboBox(rw);
+        chan->addItems({"RGB", "Red", "Green", "Blue"});
+        chan->setToolTip("Which curve Point mode edits. RGB is the composite, applied to "
+                         "every channel; Red / Green / Blue layer on top of it.");
+        curveChannelCombo = chan;
+        connect(mode, &QComboBox::currentIndexChanged, this, [this](int idx){
+            curveModeIndex = idx;
+            applyCurveMode();
+        });
+        connect(chan, &QComboBox::currentIndexChanged, this, [this](int idx){
+            if (curveEditor) curveEditor->setChannel(idx);
+        });
+        hb->addWidget(mode);
+        hb->addWidget(chan);
+        hb->addStretch(1);
+        curveChannelRow = chan;      // the widget applyCurveMode shows / hides
+        setIndexWidget(modeIdx, rw);
+    }
+
+    /* The plot: a tall full-width spanned row, like the colour wheels. */
+    clearItemInfo(i);
+    i.name = "curvePlot";
+    i.parIdx = parIdx;
+    i.parentName = "CurvesHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex plotIdx = capIdx;
+    model->setData(plotIdx, 190, UR_ExtraRowHeight);
+    setFirstColumnSpanned(plotIdx.row(), parIdx, true);
+    {
+        CurveEditor *ed = new CurveEditor;
+        curveEditor = ed;
+        connect(ed, &CurveEditor::curveChanged,   this, [this]{ onCurveChanged(false); });
+        connect(ed, &CurveEditor::curveCommitted, this, [this]{ onCurveChanged(true); });
+        connect(ed, &CurveEditor::parametricChanged, this, [this](int b, double v){
+            onParametricChanged(b, v, false);
+        });
+        connect(ed, &CurveEditor::parametricCommitted, this, [this]{
+            onParametricChanged(-1, 0.0, true);
+        });
+        setIndexWidget(plotIdx, ed);
+    }
+
+    /* The tone-split handles, directly under the plot and sharing its x-axis -- the same
+       three params the histogram scope's slider edits (see onToneSplitsChanged). They
+       live
+       in BOTH places on purpose: the scopes strip can be hidden entirely (G cycles it
+       away), and under the parametric curve is where they belong anyway. */
+    clearItemInfo(i);
+    i.name = "curveSplits";
+    i.parIdx = parIdx;
+    i.parentName = "CurvesHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex splitIdx = capIdx;
+    model->setData(splitIdx, 20, UR_ExtraRowHeight);
+    setFirstColumnSpanned(splitIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        /* Inset by the plot's own margin so the handles sit under the curve's x-axis. */
+        hb->setContentsMargins(QTreeView::indentation() + 4 + CurveEditor::kPlotMargin, 0,
+                               CurveEditor::kPlotMargin, 0);
+        hb->setSpacing(0);
+        ToneRegionSlider *ts = new ToneRegionSlider(rw);
+        ts->setToolTip("Split the tonal range into blacks | shadows | highlights | "
+                       "whites. "
+                       "These are the same handles as under the histogram.");
+        curveToneSlider = ts;
+        connect(ts, &ToneRegionSlider::valueChanged,
+                this, &DevelopProperties::onToneSplitsChanged);
+        hb->addWidget(ts);
+        setIndexWidget(splitIdx, rw);
+    }
+
+    addDivider(dividerHeight, 1, divColor, parIdx, "CurvesHeader", "CurvesEndDivider");
+
+    applyCurveMode();
+}
+
+/* Point mode shows the channel combo; Parametric mode shows the split handles. Called on
+   build and whenever the mode combo changes. */
+void DevelopProperties::applyCurveMode()
+{
+    const bool point = (curveModeIndex == 1);
+    if (curveEditor)
+        curveEditor->setMode(point ? CurveEditor::Point : CurveEditor::Parametric);
+    if (curveChannelRow) curveChannelRow->setVisible(point);
+    const QModelIndex splitIdx = findCaptionIndex("curveSplits");
+    if (splitIdx.isValid())
+        setRowHidden(splitIdx.row(), splitIdx.parent(), point);
+    scheduleContentFit();        // setRowHidden emits nothing: re-fit the block ourselves
+}
+
+/* Point-curve drag -> the active scope's curve params, then preview. commit marks the
+   drag-release, when the debounced sidecar write is scheduled (live moves only render;
+   dirty is set every move so navigating away still persists). */
+void DevelopProperties::onCurveChanged(bool commit)
+{
+    if (G::isLogger) G::log("DevelopProperties::onCurveChanged");
+    if (isPopulating) return;
+    if (currentImagePath.isEmpty() || !curveEditor) return;
+    if (maskOverlayActive()) emit maskTintHideRequested();
+
+    EditParams &p = activeParams();
+    const EditParams &e = curveEditor->params();
+    for (int c = 0; c < ToneCurve::kChannels; ++c) {
+        p.curveN[c] = e.curveN[c];
+        for (int k = 0; k < ToneCurve::kMaxPts; ++k) {
+            p.curveX[c][k] = e.curveX[c][k];
+            p.curveY[c][k] = e.curveY[c][k];
+        }
+    }
+    /* A custom editor does not get History for free. The mergeKey collapses a whole drag
+       into ONE history row instead of one per mouse-move; keying it on the channel keeps
+       consecutive edits to different curves separate. */
+    static const char *chName[] = {"RGB", "Red", "Green", "Blue"};
+    const int ch = qBound(0, curveEditor->channel(), 3);
+    noteEdit(QString("Tone curve %1").arg(chName[ch]), QString(),
+             QString("curve/%1").arg(ch));
+    Q_UNUSED(commit)
+    emit paramsChanged();
+}
+
+/* Parametric-band drag -> the EXISTING Basic tone slider for that band. The Curves panel
+   owns no parametric params: it is a second view of Basic's tone controls, so the drag
+   writes Basic's field AND moves Basic's slider. band < 0 means "drag released". */
+void DevelopProperties::onParametricChanged(int band, double value, bool commit)
+{
+    if (G::isLogger) G::log("DevelopProperties::onParametricChanged");
+    if (isPopulating) return;
+    if (currentImagePath.isEmpty()) return;
+    if (commit || band < 0) return;                  // release: nothing further to write
+    if (maskOverlayActive()) emit maskTintHideRequested();
+
+    EditParams &p = activeParams();
+    const float v = static_cast<float>(value);
+    switch (band) {
+    case 0:  p.blacks = v;     break;
+    case 1:  p.shadows = v;    break;
+    case 2:  p.highlights = v; break;
+    default: p.whites = v;     break;
+    }
+    /* Keep the Basic slider in step -- the same value now has two editors. */
+    const bool wasPopulating = isPopulating;
+    isPopulating = true;                             // setSliderReal must not echo back
+    setSliderReal(curveBandKey(band), value);
+    isPopulating = wasPopulating;
+
+    static const char *bandCaption[] = {"Blacks", "Shadows", "Highlights", "Whites"};
+    noteEdit(bandCaption[qBound(0, band, 3)], QString::number(qRound(value)),
+             QString("curve/param/%1").arg(band));
+    emit paramsChanged();
+}
+
+/* Push the stored params into the plot + the split handles. The exact inverse of the two
+   handlers above, called from populateSlidersFromStack. */
+void DevelopProperties::refreshCurveRow()
+{
+    if (!curveEditor) return;
+    const EditParams &p = activeParams();
+    curveEditor->setParams(p);                       // no signal: programmatic sync
+    if (curveToneSlider)
+        curveToneSlider->setPositions(p.toneShadowCenter, p.toneCrossover,
+                                      p.toneHighlightCenter);
+    if (curveChannelCombo && curveChannelCombo->currentIndex() != curveEditor->channel())
+        curveChannelCombo->setCurrentIndex(curveEditor->channel());
+}
+
 void DevelopProperties::addColor()
 {
     if (G::isLogger) G::log("DevelopProperties::addColor");
@@ -3898,6 +4232,7 @@ void DevelopProperties::addCalibrate()
                             (green->isChecked() ? 0x2 : 0) |
                             (blue->isChecked()  ? 0x4 : 0);
             if (primaryWheel) primaryWheel->setActiveMask(calActiveMask);
+            refreshCalibrateRow();       // the sliders now read a different primary
         };
         connect(red,   &QCheckBox::toggled, this, [upd](bool){ upd(); });
         connect(green, &QCheckBox::toggled, this, [upd](bool){ upd(); });
@@ -3932,7 +4267,41 @@ void DevelopProperties::addCalibrate()
                 [this]{ onPrimaryWheelChanged(true); });
         setIndexWidget(wheelIdx, wheel);
     }
+
+    /* The wheel's two axes as sliders, so the primaries can be NUDGED (arrow keys step
+       one unit, PageUp/Dn ten) and read as numbers -- the wheel alone shows neither.
+       They write whichever primaries are checked, exactly as a wheel drag does, which is
+       the Color Grade Luminance slider's relationship to ITS wheel (see setGradeLum). */
+    addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateWheelDivider");
+    addSlider("calHue", "Hue",
+              "Hue shift of the checked primaries (+/-30 degrees at full scale).",
+              parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
+    addSlider("calSat", "Saturation",
+              "Chroma scale of the checked primaries (-100 = grey, +100 = 2x).",
+              parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
     addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateEndDivider");
+}
+
+/* Lowest checked primary: which one the Hue / Saturation sliders READ (they write all of
+   them). Mirrors firstActiveGradeRange. */
+int DevelopProperties::firstActivePrimary() const
+{
+    if (calActiveMask & 0x1) return 0;   // red
+    if (calActiveMask & 0x2) return 1;   // green
+    if (calActiveMask & 0x4) return 2;   // blue
+    return 0;                            // nothing checked: default to red
+}
+
+/* One axis of the Hue / Saturation sliders -> every CHECKED primary, the same absolute
+   write a wheel drag makes (a drag also lands one value on every checked primary), so
+   the two controls are two faces of one adjustment. Mirrors setGradeLum. */
+void DevelopProperties::setCalAxis(bool isHue, float v)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditParams &p = activeParams();
+    if (calActiveMask & 0x1) { if (isHue) p.calRedHue   = v; else p.calRedSat   = v; }
+    if (calActiveMask & 0x2) { if (isHue) p.calGreenHue = v; else p.calGreenSat = v; }
+    if (calActiveMask & 0x4) { if (isHue) p.calBlueHue  = v; else p.calBlueSat  = v; }
 }
 
 /* Wheel drag -> the active scope's cal params for every checked primary, then preview.
@@ -3957,11 +4326,14 @@ void DevelopProperties::onPrimaryWheelChanged(bool commit)
     }
     noteEdit("Calibrate", QString(),
              QString("cal/wheel/%1").arg(calActiveMask));
+    refreshCalibrateRow();       // the Hue / Saturation readout tracks the drag
     emit paramsChanged();
 }
 
-/* Push the active scope's stored primaries into the wheel dots. Called on image/scope
-   load, from populateSlidersFromStack. */
+/* Push the active scope's stored primaries into the wheel dots AND the Hue / Saturation
+   sliders. Called on image/scope load (populateSlidersFromStack), on every wheel drag and
+   slider nudge (so the two faces of the adjustment track each other), and when the R/G/B
+   checkboxes change which primary the sliders read. */
 void DevelopProperties::refreshCalibrateRow()
 {
     EditParams p;
@@ -3976,6 +4348,27 @@ void DevelopProperties::refreshCalibrateRow()
         primaryWheel->setPrimary(1, p.calGreenHue, p.calGreenSat);
         primaryWheel->setPrimary(2, p.calBlueHue,  p.calBlueSat);
         primaryWheel->setActiveMask(calActiveMask);
+    }
+    /* The sliders show the LOWEST checked primary (they write all of them), the same
+       compromise the Color Grade Luminance slider makes. Guarded, or setValue echoes
+       back through itemChange as a fresh edit. */
+    const int c = firstActivePrimary();
+    const float hue = (c == 0) ? p.calRedHue : (c == 1) ? p.calGreenHue : p.calBlueHue;
+    const float sat = (c == 0) ? p.calRedSat : (c == 1) ? p.calGreenSat : p.calBlueSat;
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setSliderReal("calHue", hue);
+    setSliderReal("calSat", sat);
+    isPopulating = wasPop;
+    /* No primary checked = nothing for them to write (the wheel ignores clicks too), so
+       grey the pair rather than leave live-looking sliders that do nothing. The reason is
+       in view: the unchecked R/G/B row directly above. Guarded because setItemEnabled
+       dereferences the row's editor, which a tree rebuild may not have realized yet. */
+    const bool anyPrimary = calActiveMask != 0;
+    for (const QString &k : {QStringLiteral("calHue"), QStringLiteral("calSat")}) {
+        const QModelIndex vIdx = sourceIdx.value(k);
+        if (vIdx.isValid() && vIdx.data(UR_Editor).value<void*>() != nullptr)
+            setItemEnabled(k, anyPrimary);
     }
 }
 
@@ -4332,23 +4725,69 @@ void DevelopProperties::onColorRangeWheelChanged(bool commit)
    Effects
    ---------------------------------------------------------------------------------------- */
 
+void DevelopProperties::addDetail()
+{
+    if (G::isLogger) G::log("DevelopProperties::addDetail");
+    addHeader("DetailHeader", "???", "Detail",
+              "Sharpening and noise reduction.\n"
+              "Judge both at 1:1 zoom -- a fit view hides noise AND hides the\n"
+              "smearing and halos the cures introduce.", PV_Detail);
+    QModelIndex parIdx = capIdx;
+
+    /* Sharpening: capture sharpening, an unsharp mask on luminance (see Develop::Sharpen
+       and Develop/sharpen.h). Amount is the strength (0..150 -> 0..1.5); Radius, Detail
+       and Masking are sub-controls (indented "   " captions, like the vignette feather)
+       and are inert until Amount is non-zero.
+
+       Radius is the ONE Develop control measured in absolute pixels -- every other
+       spatial radius is a fraction of the image's long edge. It is therefore only true
+       at 1:1, which is what the note row below the group says. Radius is a 2-decimal
+       slider (50..300 -> 0.50..3.00 px); the other three are 0..100 mapped to 0..1.
+
+       Distinct from Basic's Texture, which is a resolution-PROPORTIONAL mid-frequency
+       band: Texture changes detail contrast, this changes edge acutance. */
+    addSlider("sharpenAmount", "Sharpening:",
+              "Sharpen edge detail (capture sharpening).\n"
+              "Judge at 1:1: while you drag, the proxy shows a scale-honest\n"
+              "approximation and the full-resolution render follows a moment later.",
+              parIdx, "DetailHeader", 0, 150, 0, G::darkgray, G::lightgray);
+    addSlider("sharpenRadius", "   Radius",
+              "Sharpening radius in PIXELS at full resolution (0.50-3.00).\n"
+              "The only Develop radius not scaled to the image, so it is the\n"
+              "only one that must be judged at 1:1. ~1.0 suits most subjects;\n"
+              "wider is what produces visible halos.",
+              parIdx, "DetailHeader", 50, 300, 100, G::darkgray, G::lightgray, 1.0);
+    addSlider("sharpenDetail", "   Detail", "How much fine detail is sharpened vs. "
+              "suppressed as noise.",
+              parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray, 25);
+    addSlider("sharpenMasking", "   Masking",
+              "Confine sharpening to edges, protecting flat areas like sky and\n"
+              "skin where sharpening only amplifies noise. 0 sharpens everything.",
+              parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
+
+    addDivider(dividerHeight, 1, divColor, parIdx, "DetailHeader", "DenoiseDivider");
+
+    /* Local noise reduction: per-scope, maskable Develop ops on the decoded image
+       (localDenoiseLuma / localDenoiseChroma). Lives here rather than under Effects
+       because NR and sharpening are the two halves of one decision -- NR removes the
+       detail sharpening amplifies. Distinct from the Global scope's "Denoise raw"
+       (decode-time global raw NR, denoiseLuma/denoiseChroma) -- different function,
+       different keys. Two 0..100 strength sliders (mapped to 0..1): Denoise = luminance
+       NR (ratio-preserving), Denoise Color = chroma NR (opponent-chroma blur, luma kept
+       exact) -- see Develop::Denoise. */
+    addSlider("localDenoise", "Denoise:", "Local luminance noise reduction on the rendered image.",
+              parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    addSlider("localDenoiseChroma", "   Color", "Local colour (chroma) noise reduction.",
+              parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
+
+    addDivider(dividerHeight, 1, divColor, parIdx, "DetailHeader", "DetailEndDivider");
+}
+
 void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
     addHeader("EffectsHeader", "???", "Effects", "Local (post-demosaic) effects.", PV_Effects);
     QModelIndex parIdx = capIdx;
-
-    /* Local noise reduction: per-scope, maskable Develop ops on the decoded image
-       (localDenoiseLuma / localDenoiseChroma). Distinct from the Global scope's "Denoise raw"
-       (decode-time global raw NR, denoiseLuma/denoiseChroma) -- different function, different keys.
-       Two 0..100 strength sliders (mapped to 0..1): Denoise = luminance NR (ratio-preserving),
-       Denoise Color = chroma NR (opponent-chroma blur, luma kept exact) -- see Develop::Denoise. */
-    addSlider("localDenoise", "Denoise:", "Local luminance noise reduction on the rendered image.",
-              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
-    addSlider("localDenoiseChroma", "   Color", "Local colour (chroma) noise reduction.",
-              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
-
-    addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "VignetteDevider");
 
     /* Vignette: a global radial exposure falloff about the image centre (see
        Develop::Vignette). Two sliders: Exposure (a 2-decimal EV slider like Basic
@@ -4393,9 +4832,11 @@ void DevelopProperties::updateSectionHeaderCaptions()
     struct HdrDef { const char *name; const char *label; int group; };
     static const HdrDef hdrs[] = {
         {"BasicHeader",      "Basic",       PV_Basic},
+        {"CurvesHeader",     "Curves",      PV_Curves},
         {"ColorHeader",      "Color",       PV_Color},
         {"CalibrateHeader",  "Calibrate",   PV_Calibrate},
         {"ColorGradeHeader", "Color Grade", PV_ColorGrade},
+        {"DetailHeader",     "Detail",      PV_Detail},
         {"EffectsHeader",    "Effects",     PV_Effects},
     };
     const EditStack s = stackCache.value(currentImagePath);
@@ -4555,6 +4996,20 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
+    /* Calibrate Hue / Saturation sliders: write every primary the R/G/B checkboxes
+       select (not plain applyKeyToParams keys -- they need calActiveMask context). The
+       history key carries the mask, so nudging red then green reads as two steps. */
+    if (source == "calHue" || source == "calSat") {
+        if (currentImagePath.isEmpty()) return;
+        if (maskOverlayActive()) emit maskTintHideRequested();
+        setCalAxis(source == "calHue", v.toFloat());
+        noteEdit("Calibrate", historyValueText(idx, v),
+                 QString("cal/%1/%2").arg(source).arg(calActiveMask));
+        refreshCalibrateRow();          // move the wheel dot with the slider
+        emit paramsChanged();
+        return;
+    }
+
     /* Write the changed adjustment into the CURRENT IMAGE's active-scope params, mark it
        dirty, and drive the live preview. Persistence to the sidecar happens on navigate-
        away / quit / pre-op (always) and, if G::isDevelopDebounceWrite, once edits settle. */
@@ -4565,6 +5020,10 @@ void DevelopProperties::itemChange(QModelIndex idx)
            Color/Effects sliders and any future adjustment key via applyKeyToParams. */
         if (maskOverlayActive()) emit maskTintHideRequested();
         applyKeyToParams(source, v, activeParams());
+        /* The Curves panel's Parametric view DRAWS Basic's tone sliders, so any of them
+           moving has to redraw the plot. Cheap (a copy + an update), and it keeps the two
+           views of the same params from disagreeing. */
+        if (curveEditor) curveEditor->setParams(activeParams());
         /* History caption = the row's own caption ("Exposure"); the whole drag folds
            into one entry (mergeKey), so the list reads one step per slider. */
         noteEdit(idx.siblingAtColumn(0).data().toString(), historyValueText(idx, v),
@@ -4599,6 +5058,10 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "luminance")  p.luminance  = f;
     else if (key == "denoiseLuma")   p.denoiseLuma   = f / 100.0f;   // Global "Denoise raw" (0..100 -> 0..1)
     else if (key == "denoiseChroma") p.denoiseChroma = f / 100.0f;
+    else if (key == "sharpenAmount")      p.sharpenAmount      = f / 100.0f;  // 0..1.5
+    else if (key == "sharpenRadius")      p.sharpenRadius      = f;           // px, div 100
+    else if (key == "sharpenDetail")      p.sharpenDetail      = f / 100.0f;
+    else if (key == "sharpenMasking")     p.sharpenMasking     = f / 100.0f;
     else if (key == "localDenoise")       p.localDenoiseLuma   = f / 100.0f;  // "Denoise"
     else if (key == "localDenoiseChroma") p.localDenoiseChroma = f / 100.0f;
     else if (key == "vignetteExposure")   p.vignetteExposure   = f;           // EV
@@ -5045,6 +5508,12 @@ const PresetLeafDef kBasicLeaves[] = {
     {"texture",      "Texture"},
     {"dehaze",       "Dehaze"},
 };
+/* Two leaves, not one: a look built on the composite curve is often wanted WITHOUT the
+   per-channel colour crossover that came with it. */
+const PresetLeafDef kCurvesLeaves[] = {
+    {"curveRgb",      "Tone curve (RGB)"},
+    {"curveChannels", "Tone curve (Red / Green / Blue)"},
+};
 const PresetLeafDef kColorLeaves[] = {
     {"red",        "Red"},
     {"green",      "Green"},
@@ -5066,8 +5535,13 @@ const PresetLeafDef kColorGradeLeaves[] = {
     {"gradeGlobal", "Global"},
     {"gradeShape",  "Blending + Balance"},
 };
-const PresetLeafDef kEffectsLeaves[] = {
+/* Sharpening's four params fold into ONE leaf, as Grain's three do: the panel treats
+   them as a single control, so a preset ticks "Sharpening" and gets all four. */
+const PresetLeafDef kDetailLeaves[] = {
+    {"sharpen",  "Sharpening"},
     {"denoise",  "Denoise"},
+};
+const PresetLeafDef kEffectsLeaves[] = {
     {"vignette", "Vignette"},
     {"grain",    "Grain"},
 };
@@ -5079,9 +5553,11 @@ struct PresetSectionDef {
 };
 const PresetSectionDef kSections[] = {
     {"Basic",     kBasicLeaves,    int(sizeof(kBasicLeaves)    / sizeof(PresetLeafDef))},
+    {"Curves",    kCurvesLeaves,   int(sizeof(kCurvesLeaves)   / sizeof(PresetLeafDef))},
     {"Color",     kColorLeaves,    int(sizeof(kColorLeaves)    / sizeof(PresetLeafDef))},
     {"Calibrate", kCalibrateLeaves, int(sizeof(kCalibrateLeaves) / sizeof(PresetLeafDef))},
     {"Color Grade", kColorGradeLeaves, int(sizeof(kColorGradeLeaves) / sizeof(PresetLeafDef))},
+    {"Detail",    kDetailLeaves,   int(sizeof(kDetailLeaves)   / sizeof(PresetLeafDef))},
     {"Effects",   kEffectsLeaves,  int(sizeof(kEffectsLeaves)  / sizeof(PresetLeafDef))},
 };
 
@@ -5100,6 +5576,13 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "blacks")       return p.blacks     != def.blacks;
     if (key == "texture")      return p.texture    != def.texture;
     if (key == "dehaze")       return p.dehaze     != def.dehaze;
+    if (key == "curveRgb")
+        return !ToneCurve::isIdentity(p.curveX[0], p.curveY[0], p.curveN[0]);
+    if (key == "curveChannels") {
+        for (int c = 1; c < ToneCurve::kChannels; ++c)
+            if (!ToneCurve::isIdentity(p.curveX[c], p.curveY[c], p.curveN[c])) return true;
+        return false;
+    }
     if (key == "red")          return p.red        != def.red;
     if (key == "green")        return p.green      != def.green;
     if (key == "blue")         return p.blue       != def.blue;
@@ -5123,6 +5606,7 @@ bool leafChanged(const QString &key, const EditParams &p)
                                       p.gradeGlobalLum != def.gradeGlobalLum;
     if (key == "gradeShape")   return p.gradeBlending != def.gradeBlending ||
                                       p.gradeBalance  != def.gradeBalance;
+    if (key == "sharpen")      return p.sharpenAmount != def.sharpenAmount;
     if (key == "denoise")      return p.localDenoiseLuma   != def.localDenoiseLuma ||
                                       p.localDenoiseChroma != def.localDenoiseChroma;
     if (key == "vignette")     return p.vignetteExposure != def.vignetteExposure;
@@ -5172,6 +5656,20 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("tint", p.tint);
         out.insert("wbPreset", p.wbPreset);
     }
+    /* Tone curve. Each leaf is encoded over a COPY with the channels it does not own
+       reset to the diagonal, and DevelopPresets::assignParam merges each key back into
+       only its own channels -- so ticking one leaf never clears the other. */
+    if (lk.contains("curveRgb")) {
+        EditParams t = p;
+        for (int c = 1; c < ToneCurve::kChannels; ++c)
+            ToneCurve::setIdentity(t.curveN[c], t.curveX[c], t.curveY[c]);
+        out.insert("curveComposite", ToneCurve::encode(t.curveN, t.curveX, t.curveY));
+    }
+    if (lk.contains("curveChannels")) {
+        EditParams t = p;
+        ToneCurve::setIdentity(t.curveN[0], t.curveX[0], t.curveY[0]);
+        out.insert("curveChannels", ToneCurve::encode(t.curveN, t.curveX, t.curveY));
+    }
     if (lk.contains("calRed")) {
         out.insert("calRedHue", p.calRedHue);
         out.insert("calRedSat", p.calRedSat);
@@ -5207,6 +5705,12 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
     if (lk.contains("gradeShape")) {
         out.insert("gradeBlending", p.gradeBlending);
         out.insert("gradeBalance", p.gradeBalance);
+    }
+    if (lk.contains("sharpen")) {
+        out.insert("sharpenAmount", p.sharpenAmount);
+        out.insert("sharpenRadius", p.sharpenRadius);
+        out.insert("sharpenDetail", p.sharpenDetail);
+        out.insert("sharpenMasking", p.sharpenMasking);
     }
     if (lk.contains("denoise")) {
         out.insert("localDenoiseLuma", p.localDenoiseLuma);
@@ -5846,6 +6350,10 @@ const FloatField kFloatFields[] = {
     {"denoiseChroma",       &EditParams::denoiseChroma},
     {"localDenoiseLuma",    &EditParams::localDenoiseLuma},
     {"localDenoiseChroma",  &EditParams::localDenoiseChroma},
+    {"sharpenAmount",       &EditParams::sharpenAmount},
+    {"sharpenRadius",       &EditParams::sharpenRadius},
+    {"sharpenDetail",       &EditParams::sharpenDetail},
+    {"sharpenMasking",      &EditParams::sharpenMasking},
     {"vignetteExposure",    &EditParams::vignetteExposure},
     {"vignetteFeather",     &EditParams::vignetteFeather},
     {"grainAmount",         &EditParams::grainAmount},
@@ -5857,6 +6365,35 @@ const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
 };
 
+/* The tone curve cannot go in kFloatFields: it is three ARRAYS, and the table above is
+   built on scalar member pointers. It gets one pseudo-field, "curves", covering all four
+   channels together -- a curve is edited as a whole, so there is nothing to gain by
+   splitting it. Both halves are here so the diff and the copy stay in step, exactly as
+   the table does for the scalars. */
+constexpr const char *kCurvesField = "curves";
+
+bool curvesDiffer(const EditParams &a, const EditParams &b)
+{
+    for (int c = 0; c < ToneCurve::kChannels; ++c) {
+        if (a.curveN[c] != b.curveN[c]) return true;
+        for (int k = 0; k < a.curveN[c]; ++k)
+            if (a.curveX[c][k] != b.curveX[c][k] || a.curveY[c][k] != b.curveY[c][k])
+                return true;
+    }
+    return false;
+}
+
+void copyCurves(const EditParams &src, EditParams &dst)
+{
+    for (int c = 0; c < ToneCurve::kChannels; ++c) {
+        dst.curveN[c] = src.curveN[c];
+        for (int k = 0; k < ToneCurve::kMaxPts; ++k) {
+            dst.curveX[c][k] = src.curveX[c][k];
+            dst.curveY[c][k] = src.curveY[c][k];
+        }
+    }
+}
+
 }   // namespace
 
 QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const EditParams &b)
@@ -5866,6 +6403,7 @@ QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const Edit
         if (a.*(f.m) != b.*(f.m)) changed.insert(QString::fromLatin1(f.name));
     for (const IntField &f : kIntFields)
         if (a.*(f.m) != b.*(f.m)) changed.insert(QString::fromLatin1(f.name));
+    if (curvesDiffer(a, b)) changed.insert(QString::fromLatin1(kCurvesField));
     return changed;
 }
 
@@ -5876,6 +6414,7 @@ void DevelopProperties::copyParamFields(const EditParams &src, EditParams &dst,
         if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
     for (const IntField &f : kIntFields)
         if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
+    if (fields.contains(QString::fromLatin1(kCurvesField))) copyCurves(src, dst);
 }
 
 EditStack &DevelopProperties::stackFor(const QString &fPath)
@@ -6073,6 +6612,10 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("luminance",  p.luminance);
     setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Global "Denoise raw" (0..1 -> 0..100)
     setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
+    setSliderReal("sharpenAmount",      p.sharpenAmount      * 100.0);   // "Sharpening"
+    setSliderReal("sharpenRadius",      p.sharpenRadius);                    // div 100
+    setSliderReal("sharpenDetail",      p.sharpenDetail      * 100.0);
+    setSliderReal("sharpenMasking",     p.sharpenMasking     * 100.0);
     setSliderReal("localDenoise",       p.localDenoiseLuma   * 100.0);   // "Denoise"
     setSliderReal("localDenoiseChroma", p.localDenoiseChroma * 100.0);
     setSliderReal("vignetteExposure",   p.vignetteExposure);            // "Vignette" (EV)
@@ -6082,7 +6625,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("grainRoughness",     p.grainRoughness     * 100.0);
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
-    refreshCalibrateRow();            // push primaries into the Calibrate wheel
+    refreshCurveRow();
+    refreshCalibrateRow();            // primaries -> the wheel + the Hue/Sat sliders
     refreshColorGradeRow();           // push grade values into the wheel + Lum slider
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
@@ -6116,6 +6660,48 @@ QString DevelopProperties::diagnostics()
     rs << "Develop scopes: " << scopeList.join(", ") << "\n";
     rs << "Current scope: " << currentScopeNames().value(activeScopeIndex) << "\n";
     return rpt;
+}
+
+/* Each band's own help page, opened from the "<section> help" item at the foot of its
+   [:] menu. Separate pages, not one long module page (howThisWorks), because each panel
+   has its own grammar -- what the sliders mean, how they interact, when to reach for
+   them -- and the help a user wants is the help for the band they are standing on. */
+void DevelopProperties::sectionHelp(int group)
+{
+    if (G::isLogger) G::log("DevelopProperties::sectionHelp");
+    QString doc;
+    switch (group) {
+    case PV_Basic:      doc = "developbasichelp";      break;
+    case PV_Curves:     doc = "developcurveshelp";     break;
+    case PV_Color:      doc = "developcolorhelp";      break;
+    case PV_Calibrate:  doc = "developcalibratehelp";  break;
+    case PV_ColorGrade: doc = "developcolorgradehelp"; break;
+    case PV_Detail:     doc = "developdetailhelp";     break;
+    case PV_Effects:    doc = "developeffectshelp";    break;
+    default:            howThisWorks();  return;       // PV_Scope: the module page
+    }
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - " + groupLabel(group),
+                   ":/Docs/" + doc + ".html",
+                   QSize(700, 600), r, window());
+}
+
+void DevelopProperties::editsHelp()
+{
+    if (G::isLogger) G::log("DevelopProperties::editsHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Edits",
+                   ":/Docs/developeditshelp.html",
+                   QSize(700, 600), r, window());
+}
+
+void DevelopProperties::submasksHelp()
+{
+    if (G::isLogger) G::log("DevelopProperties::submasksHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Submasks",
+                   ":/Docs/developsubmaskshelp.html",
+                   QSize(700, 600), r, window());
 }
 
 void DevelopProperties::howThisWorks()

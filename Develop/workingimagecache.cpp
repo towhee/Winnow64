@@ -448,6 +448,13 @@ WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLo
     dst.white = src.white;
     dst.sceneReferred = src.sceneReferred;
     dst.cam = src.cam;      // white balance must resolve identically on the proxy
+    /* Carry the downscale into renderScale (compounding, in case a proxy is proxied
+       again). Develop::Sharpen is the one op with an absolute pixel radius, so it needs
+       to know how far from full resolution this buffer is; everything else derives its
+       radius from max(w,h) and is scale-invariant without help. */
+    const float achieved = static_cast<float>(std::max(dw, dh)) /
+                           static_cast<float>(longEdge);
+    dst.renderScale = src.renderScale * achieved;
     dst.rgb.resize(static_cast<size_t>(dw) * static_cast<size_t>(dh) * 3);
     cv::Mat dstMat(dh, dw, CV_32FC3, dst.rgb.data());
     cv::resize(srcMat, dstMat, cv::Size(dw, dh), 0, 0, cv::INTER_AREA);

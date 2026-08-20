@@ -1,6 +1,8 @@
 #ifndef EDITPARAMS_H
 #define EDITPARAMS_H
 
+#include "Develop/tonecurve.h"
+
 /*
     Parametric, non-destructive develop adjustments (Lightroom-style). One versioned
     struct, identity defaults, so an unset / absent EditParams is a no-op and changes
@@ -47,6 +49,32 @@ struct EditParams {
     float toneShadowCenter    = 0.25f;
     float toneCrossover       = 0.50f;
     float toneHighlightCenter = 0.75f;
+
+    /* Tone curve (Curves panel) -- Lightroom's Tone Curve. FOUR independent point curves:
+       channel 0 is the RGB composite (applied to every channel) and 1/2/3 are Red / Green
+       / Blue (applied on top of the composite, to that channel alone). Control points are
+       (x, y) in the PERCEPTUAL 0..1 domain, ordered by x with both endpoints pinned at
+       x = 0 and x = 1 (y free, which is what gives the black-/white-point moves).
+
+       Fixed-size arrays rather than a container so operator== stays defaulted, the struct
+       stays trivially copyable for the per-render / per-history-snapshot copies, and
+       EditStack::sanitizeParams stays purely numeric. curveN[c] == 2 with the diagonal
+       is identity, and the defaults below are exactly that -- so an untouched image
+       writes no sidecar. UNLIKE the tone splits above, the curve IS a primary control
+       and so DOES count towards isIdentity(). Maths, repair and the shared string
+       encoding are all in Develop/tonecurve.h. */
+    int   curveN[ToneCurve::kChannels] = {2, 2, 2, 2};
+    float curveX[ToneCurve::kChannels][ToneCurve::kMaxPts] =
+        {{0.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 1.0f}};
+    float curveY[ToneCurve::kChannels][ToneCurve::kMaxPts] =
+        {{0.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 1.0f}};
+
+    /* True when all four curves are the 2-point diagonal. */
+    bool curvesAreIdentity() const {
+        for (int c = 0; c < ToneCurve::kChannels; ++c)
+            if (!ToneCurve::isIdentity(curveX[c], curveY[c], curveN[c])) return false;
+        return true;
+    }
 
     /* Presence. */
     float texture = 0.0f;
@@ -125,6 +153,35 @@ struct EditParams {
     float localDenoiseLuma = 0.0f;
     float localDenoiseChroma = 0.0f;
 
+    /* Sharpen (Detail SPATIAL op, runs after Vignette and before Grain -- so film grain
+       is never itself sharpened and the vignette's darkened corners do not get
+       amplitude-boosted detail). Capture sharpening: an unsharp mask on perceptual
+       luminance, ratio-preserving like Texture and Denoise.
+
+       This is the ONLY Develop op with an ABSOLUTE pixel radius. Every other spatial op
+       scales its radius to max(w,h) so the proxy preview matches the full-res render;
+       acutance is a property of the pixel grid, so sharpening cannot. It reads
+       WorkingImage::renderScale instead and is judged at 1:1 -- see Develop/sharpen.h.
+
+       Distinct from Texture, which is a resolution-PROPORTIONAL mid-frequency band
+       (~13 px on an 8640 px edge, ungated): the two occupy disjoint bands and stack.
+
+         sharpenAmount   0..1.5  strength. 0 = off. The primary control (isIdentity).
+         sharpenRadius   0.5..3  unsharp radius in PIXELS at full resolution.
+         sharpenDetail   0..1    how much of the finest band survives: low soft-thresholds
+                                 the smallest amplitudes away (treats them as noise), high
+                                 passes everything through (more bite, more halo).
+         sharpenMasking  0..1    edge gate. 0 sharpens everything, 1 edges only -- this
+                                 is what stops sharpening amplifying sky/skin noise.
+
+       Radius / detail / masking are inert while sharpenAmount is 0, so they are NOT part
+       of isIdentity() -- same rule as vignetteFeather and grainSize. There is no
+       negative amount ("soften"): negative Texture and Denoise already cover it. */
+    float sharpenAmount  = 0.0f;
+    float sharpenRadius  = 1.0f;
+    float sharpenDetail  = 0.25f;
+    float sharpenMasking = 0.0f;
+
     /* Vignette (Effects SPATIAL op, runs last). A radial exposure falloff about the image
        centre: vignetteExposure is the EV applied at the corners (negative darkens = the
        classic vignette, positive brightens), ramping smoothly to 0 at the centre.
@@ -154,13 +211,18 @@ struct EditParams {
        group is a fixed subset of the fields above. Note the grouping follows the UI, not the field
        comments -- texture/dehaze sit under Basic, and the tone splits belong to Basic for
        Reset (they are irrelevant to Preview since the tone sliders they modulate are zeroed anyway).
-       localDenoiseLuma ("Denoise", local post-demosaic NR) is under Effects. denoiseLuma/denoiseChroma
+       localDenoiseLuma ("Denoise", local post-demosaic NR) is under Detail. denoiseLuma/denoiseChroma
        are decode-time global NR (the Global scope's "Denoise raw", baked before Develop runs) so they
        are in NO group and cannot be previewed/reset via params. */
     /* ColorGrade = the nine colour-grading fields, Calibrate = the six primary fields;
        each is its own group so its panel's Preview/Reset are independent of the Color
        panel's RGB/HSL group. */
-    enum class Group { Basic, Color, Calibrate, ColorGrade, Effects };
+    /* Detail = sharpening + the local (post-demosaic) NR pair. The two fight each other
+       -- NR removes the detail sharpening amplifies -- so they share a panel, as they do
+       in Lightroom. localDenoise* moved here from Effects; the saved preset format is
+       unaffected (presets store a flat map of field names, section titles only group the
+       checklist UI), but a scope's showDetail rather than showEffects now gates them. */
+    enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
        fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
@@ -177,6 +239,13 @@ struct EditParams {
             p.toneShadowCenter = def.toneShadowCenter;
             p.toneCrossover = def.toneCrossover;
             p.toneHighlightCenter = def.toneHighlightCenter;
+            break;
+        case Group::Curves:
+            /* Every channel back to the diagonal. The tone splits are NOT reset here:
+               they are shared with Basic's shadows/highlights (the Curves panel only
+               mirrors them), and Basic owns them for Reset. */
+            for (int c = 0; c < ToneCurve::kChannels; ++c)
+                ToneCurve::setIdentity(p.curveN[c], p.curveX[c], p.curveY[c]);
             break;
         case Group::Color:
             p.red = def.red; p.green = def.green; p.blue = def.blue;
@@ -200,9 +269,15 @@ struct EditParams {
             p.gradeGlobalLum = def.gradeGlobalLum;
             p.gradeBlending = def.gradeBlending; p.gradeBalance = def.gradeBalance;
             break;
-        case Group::Effects:
+        case Group::Detail:
+            p.sharpenAmount = def.sharpenAmount;             // "Sharpening" (capture USM)
+            p.sharpenRadius = def.sharpenRadius;
+            p.sharpenDetail = def.sharpenDetail;
+            p.sharpenMasking = def.sharpenMasking;
             p.localDenoiseLuma = def.localDenoiseLuma;       // "Denoise" (local NR)
             p.localDenoiseChroma = def.localDenoiseChroma;   // "Denoise Color" (chroma)
+            break;
+        case Group::Effects:
             p.vignetteExposure = def.vignetteExposure;       // "Vignette" (radial)
             p.vignetteFeather = def.vignetteFeather;
             p.grainAmount = def.grainAmount;                 // "Grain" (film grain)
@@ -245,7 +320,9 @@ struct EditParams {
                gradeGlobalSat == 0.0f && gradeGlobalLum == 0.0f &&
                denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
-               vignetteExposure == 0.0f && grainAmount == 0.0f;
+               sharpenAmount == 0.0f &&
+               vignetteExposure == 0.0f && grainAmount == 0.0f &&
+               curvesAreIdentity();
     }
 };
 

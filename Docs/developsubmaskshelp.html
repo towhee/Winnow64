@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Submasks</h1>
+
+<h2>What it does</h2>
+<p>A mask scope selects part of the image, and it is built out of <b>submasks</b>: a
+gradient, a brush stroke, a colour range, an AI selection.  Each one is a shape or a
+selection in its own right, and the Submasks list is where they are combined into the one
+mask the scope applies.</p>
+
+<p>The terms are worth keeping straight: the <b>mask</b> is what the scope applies; each
+<b>submask</b> is a building block folded into it, in list order.</p>
+
+<h2>The tools</h2>
+<ul>
+<li><b>Linear Gradient</b> and <b>Radial Gradient</b> &mdash; drag on the image to place
+them; both can be moved, rotated and re-shaped afterwards.</li>
+<li><b>Brush</b> &mdash; paint the selection by hand; Opt/Alt erases.</li>
+<li><b>Color Range</b> and <b>Luminance Range</b> &mdash; content-based: sample a colour
+or set a band of tones and the selection follows the picture, not a shape.</li>
+<li><b>Subject</b>, <b>Sky</b>, <b>Background</b>, <b>Depth Range</b> and <b>Object</b>
+&mdash; AI selections.  Subject / Sky / Background need nothing but a click; Depth Range
+selects a band of distance; Object asks you to trace the boundary of the thing you
+want and refines the result to its edge.</li>
+</ul>
+
+<h2>Adding one</h2>
+<p><b>[+]</b> on the band (or <b>M</b>, or <b>Add submask</b> in the band's
+<b>[&#8942;]</b> menu) offers the tool list.  The new submask is <b>pending</b>: it exists,
+and you can see it, but it is discarded if you press Esc or leave the image.  Define it on
+the picture, then commit it with the button below the settings &mdash; and the button's
+label is where the combine happens:</p>
+
+<ul>
+<li>no modifier &mdash; <b>Add and Commit</b>: the new area joins the mask.</li>
+<li><b>Opt/Alt</b> &mdash; <b>Subtract and Commit</b>: the new area is cut out of it.</li>
+<li><b>Shift+Opt/Alt</b> &mdash; <b>Intersect and Commit</b>: only where the two overlap
+survives.</li>
+</ul>
+
+<p>Hold the modifier before you commit and the overlay previews the outcome, so you see
+the resulting mask rather than having to imagine it.  The first submask in an empty mask
+has nothing to combine with, so the modifiers are inert there.  Return commits as well.
+Re-open an existing submask from the list and the button just reads <b>Done</b>: its edits
+are already real, and its op is changed on its own row instead.</p>
+
+<h2>The list</h2>
+<p>Each row shows the tool, its combine op and whether it is inverted.  Click the row to
+re-open that submask for editing.  Then:</p>
+
+<ul>
+<li>The <b>eye</b> shows or hides that submask's contribution &mdash; a one-click A / B of
+what it is actually doing to the mask.  The band eye does the same for all of them.</li>
+<li>The <b>[&#8942;]</b> menu holds <b>Edit</b>, the op (<b>Add</b> / <b>Subtract</b> /
+<b>Intersect</b>, offered from the second row down), <b>Invert</b>, <b>Move up</b> /
+<b>Move down</b>, <b>Duplicate</b> and <b>Delete</b>.</li>
+</ul>
+
+<p><b>Order matters.</b>  Submasks fold together from the top down, so subtracting before
+you add gives a different mask than adding then subtracting.  If a result surprises you,
+walk the list with the row eyes.</p>
+
+<h2>Feather and Invert</h2>
+<p>The selected submask's own settings appear below the list &mdash; Feather, Invert, and
+whatever else the tool needs (size for a brush, the sampled colours for a Color Range).
+<b>Feather</b> softens that submask's edge, and every mask in Winnow uses the same
+calibrated falloff, so a feather of 50 means the same thing whichever tool drew it.
+<b>Invert</b> flips that one submask, which is often quicker than describing the opposite:
+select the sky, invert, and you have everything but the sky.</p>
+
+<h2>Seeing the mask</h2>
+<p>Press <b>O</b> to show or hide the mask overlay on the image.  The tint colour and the
+grayscale backdrop are set from the Develop action row's tint button (right-click it)
+&mdash; they describe the veil, not any one submask, which is why they are not in this
+panel.</p>
+
+<h2>What is saved</h2>
+<p>The submask list &mdash; each tool, its op, its inverted and enabled flags, its feather
+and its geometry or samples &mdash; is part of the develop recipe, stored with the scope in
+the image's sidecar.  Masks are per image and never travel with a preset, Copy / Paste
+Settings, or a multi-image edit: they describe these pixels.</p>
+
+</body>
+</html>

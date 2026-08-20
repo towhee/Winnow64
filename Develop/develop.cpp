@@ -2,6 +2,8 @@
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
 #include "Develop/colorgrade.h"
+#include "Develop/tonecurve.h"
+#include "Develop/sharpen.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QElapsedTimer>
@@ -94,6 +96,57 @@ inline float toneWeight(float s, float center, float sigma)
 constexpr float kToneSigmaSpan = kToneSigma / 0.25f;   // 0.72
 constexpr float kToneSigmaMin  = 0.05f;
 
+/* The PARAMETRIC tone shape -- the contrast slope plus the four Gaussian region lifts --
+   resolved from the params once. Shared by Develop::buildPointCoeffs (which bakes it into
+   the tone LUT) and Develop::ParametricCurve (which the Curves panel's Parametric view
+   draws), so the curve the user sees and the curve that actually renders cannot diverge.
+   Everything here is in the PERCEPTUAL (gamma) domain. */
+struct ToneShape {
+    float pivot = 0.0f, slope = 1.0f;
+    float hi = 0.0f, sh = 0.0f, wh = 0.0f, bk = 0.0f;
+    float shC = 0.25f, hiC = 0.75f;
+    float shSig = kToneSigma, hiSig = kToneSigma;
+    bool  active = false;
+};
+
+inline ToneShape buildToneShape(const EditParams &p)
+{
+    ToneShape t;
+    t.pivot = std::pow(0.18f, kInvGamma);
+    t.slope = (p.contrast != 0.0f)
+                  ? 1.0f + kContrastSlopeRange * (p.contrast / kContrastFullScale)
+                  : 1.0f;
+    t.hi = p.highlights / kToneFullScale;     // -1..1, + brightens
+    t.sh = p.shadows    / kToneFullScale;
+    t.wh = p.whites     / kToneFullScale;
+    t.bk = p.blacks     / kToneFullScale;
+    /* Region slider: shadows/highlights centres move with the handles; blacks (0) and
+       whites (1) stay pinned. The crossover sets each movable region's reach (sigma).
+       Defaults 0.25/0.50/0.75 give the old fixed centres and kToneSigma, so this is a
+       no-op until moved. Clamped defensively so a hand-edited / corrupt sidecar can never
+       invert the order (qBound requires min <= max): shC <= 0.94 leaves room for hiC,
+       which sits at least 0.04 above it, and the crossover stays strictly between. */
+    t.shC = qBound(0.02f, p.toneShadowCenter, 0.94f);
+    t.hiC = qBound(t.shC + 0.04f, p.toneHighlightCenter, 0.98f);
+    const float crX = qBound(t.shC + 0.01f, p.toneCrossover, t.hiC - 0.01f);
+    t.shSig = std::max(kToneSigmaMin, (crX - t.shC) * kToneSigmaSpan);
+    t.hiSig = std::max(kToneSigmaMin, (t.hiC - crX) * kToneSigmaSpan);
+    t.active = (t.slope != 1.0f) || (t.hi != 0.0f) || (t.sh != 0.0f) ||
+               (t.wh != 0.0f) || (t.bk != 0.0f);
+    return t;
+}
+
+/* Contrast slope about mid-grey, then the four region shifts. */
+inline float applyToneShape(const ToneShape &t, float s)
+{
+    s = t.pivot + (s - t.pivot) * t.slope;
+    const float lift = t.hi * toneWeight(s, t.hiC, t.hiSig)
+                     + t.sh * toneWeight(s, t.shC, t.shSig)
+                     + t.wh * toneWeight(s, kWhitesCenter, kToneSigma)
+                     + t.bk * toneWeight(s, kBlacksCenter, kToneSigma);
+    return s + kToneShift * lift;
+}
+
 /* Texture (spatial op): mid-frequency luminance local contrast. The base-blur radius is a
    fraction of the image's longer edge so the proxy and full-res renders shape the same band;
    kTextureGain sets how hard a positive slider amplifies the detail (negative smooths it). */
@@ -111,6 +164,12 @@ constexpr float kDehazeLocalGain  = 1.0f;      // local-contrast strength
 constexpr float kDehazeContrast   = 0.3f;      // contrast about the low pivot
 constexpr float kDehazePivot      = 0.3f;      // perceptual pivot (below mid-grey)
 constexpr float kDehazeSat        = 0.3f;      // saturation lift at full slider
+
+/* Sharpen (#8.5) has NO tuning constants here. Its amount is stored pre-scaled (0..1.5,
+   like grainAmount / localDenoise*, the panel applies the divisor) and, uniquely, its
+   radius is ABSOLUTE pixels rather than a fraction of max(w,h) -- so the sigma and the
+   detail/mask knees all come from Develop/sharpen.h, scaled by WorkingImage::render-
+   Scale instead of by image size. See the Sharpen() comment. */
 
 /* Vignette (spatial op #8): a radial exposure falloff about the image centre. The mask is
    pow(rn, k) where rn is the elliptical radius normalised to 1 at the corners, so it is 0
@@ -174,7 +233,8 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     /* Fixed pipeline order: spatial ops own a pass, point ops share the fused pass.
        See notes/Documentation.txt "DEVELOP / IMAGE EDIT". Denoise (#1) -> fused point
        pass (#2-5: WB, exposure, contrast, tone regions) -> Texture (#6) -> Dehaze (#7) ->
-       Vignette (#8, a final radial exposure falloff) -> Grain (#9, film grain, last). */
+       Vignette (#8, a radial exposure falloff) -> Sharpen (#8.5, capture USM) ->
+       Grain (#9, film grain, last). */
     Denoise(img, p);
     if (t) t->denoiseMs = probe.restart();
 
@@ -190,6 +250,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 
     Vignette(img, p);
     if (t) t->vignetteMs = probe.restart();
+
+    Sharpen(img, p);
+    if (t) t->sharpenMs = probe.restart();
 
     Grain(img, p);
     if (t) t->grainMs = probe.restart();
@@ -556,6 +619,92 @@ void Develop::Vignette(WorkingImage &img, const EditParams &p)
     });
 }
 
+/* Sharpen (spatial op #8.5, between Vignette and Grain). Capture sharpening: an unsharp
+   mask on perceptual luminance, folded back as a ratio-preserving RGB scale so hue and
+   chroma are untouched -- the same house idiom as Texture / Denoise / Grain.
+
+   THE ONE OP THAT IS NOT SCALE-INVARIANT. Texture and Dehaze derive their sigma from
+   max(w,h) so the proxy and the full-res settle render shape the same RELATIVE band.
+   Acutance is a property of the pixel grid, so sharpenRadius is an ABSOLUTE pixel radius
+   and the effective sigma is scaled by img.renderScale instead: the proxy shows a
+   scale-honest preview, but the true result is the full-res one, judged at 1:1.
+
+   Detail soft-thresholds the smallest amplitudes away; Masking gates the whole thing by
+   local edge strength so flat sky / skin is left alone. Both live in Develop/sharpen.h.
+   The Gaussian here is small (sigma <= 3), so unlike Texture there is no downscale
+   trick -- a separable blur at this radius is already cheap. No-op at amount 0. */
+void Develop::Sharpen(WorkingImage &img, const EditParams &p)
+{
+    const float amount = qMax(0.0f, p.sharpenAmount);
+    if (amount == 0.0f) return;
+
+    const int w = img.width;
+    const int h = img.height;
+    if (w < 3 || h < 3) return;                      // no neighbourhood to work with
+    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
+    float *rgb = img.rgb.data();
+    const float white = (img.white > 0.0f) ? img.white : 1.0f;
+    const float invWhite = 1.0f / white;
+
+    /* Perceptual, white-normalised luminance; Ylin keeps the scene-linear luma for the
+       ratio fold-back (identical prep to Texture). */
+    cv::Mat Yp(h, w, CV_32FC1);
+    std::vector<float> Ylin(n);
+    float *yp = Yp.ptr<float>();
+    float *ylin = Ylin.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            ylin[i] = Y;
+            float nrm = Y * invWhite;
+            if (nrm < 0.0f) nrm = 0.0f;
+            yp[i] = std::pow(nrm, kInvGamma);
+        }
+    });
+
+    const float scale = (img.renderScale > 0.0f) ? img.renderScale : 1.0f;
+    const float sigma = Sharpen::effectiveSigma(p.sharpenRadius, scale);
+
+    cv::Mat base;
+    cv::GaussianBlur(Yp, base, cv::Size(0, 0), sigma);
+
+    /* Edge strength for the mask gate. Only computed when Masking is actually engaged --
+       at 0 the gate is 1 everywhere and the Sobel pair would be pure waste. */
+    const float masking = qBound(0.0f, p.sharpenMasking, 1.0f);
+    cv::Mat grad;
+    if (masking > 0.0f) {
+        /* Gradient of the BLURRED luma, so noise does not read as an edge. The 3x3 Sobel
+           kernel has a gain of 8 (a ramp of slope s answers 8s), so scale by 1/8 to get
+           the TRUE per-pixel slope -- Sharpen::kMaskKnee is expressed in perceptual-luma
+           units per pixel, and unscaled Sobel would open the gate ~8x too easily. */
+        constexpr double kSobelNorm = 1.0 / 8.0;
+        cv::Mat gx, gy;
+        cv::Sobel(base, gx, CV_32F, 1, 0, 3, kSobelNorm);
+        cv::Sobel(base, gy, CV_32F, 0, 1, 3, kSobelNorm);
+        cv::magnitude(gx, gy, grad);
+    }
+
+    const float detail = qBound(0.0f, p.sharpenDetail, 1.0f);
+    const float *bp = base.ptr<float>();
+    const float *gp = grad.empty() ? nullptr : grad.ptr<float>();
+    constexpr float kEps = 1e-6f;
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float Y = ylin[i];
+            if (Y <= kEps) continue;                 // keep true black black
+            const float gm = gp ? gp[i] : 0.0f;
+            const float s = Sharpen::applyPixel(yp[i], bp[i], gm,
+                                                amount, detail, masking, scale);
+            const float Yd = std::pow(s, kGamma) * white;
+            const float r = Yd / Y;
+            rgb[i * 3 + 0] *= r;
+            rgb[i * 3 + 1] *= r;
+            rgb[i * 3 + 2] *= r;
+        }
+    });
+}
+
 /* Grain (spatial op #9, runs LAST). Monochromatic film grain: a deterministic noise field
    is generated on a coarse grain-cell grid (size sets the cell), bilinearly upsampled,
    its amplitude modulated by a lower-frequency roughness field. It is added to PERCEPTUAL
@@ -659,8 +808,8 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
 
     c.white = (img.white > 0.0f ? img.white : 1.0f);
 
-    /* Perceptual tone curve = contrast + the four tone-region controls, baked into a 1-D LUT
-       (see PointCoeffs). Everything here is in the PERCEPTUAL (gamma) domain, NOT scene-linear:
+    /* Perceptual tone curve = contrast + the four tone-region controls + the Curves
+       panel's point curves, baked into a per-channel 1-D LUT (see PointCoeffs). Everything here is in the PERCEPTUAL (gamma) domain, NOT scene-linear:
        a contrast/tone curve in linear pivots around 0.18 and sends highlights (several stops
        above the pivot) far too high. Encoding to ~gamma first puts mid-grey near 0.46 so the
        curve shapes tones evenly, like a normal tone control.
@@ -668,41 +817,36 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
        Contrast is a gentle slope about mid-grey: the -100..100 slider normalises to amount
        -1..1, mapping to 1 + 0.4*amount -> [0.6, 1.4] (kContrastSlopeRange); >1 steepens.
        The tone regions add a Gaussian-weighted lift on top (see kToneShift / toneWeight). */
-    const float slope = (p.contrast != 0.0f)
-                            ? 1.0f + kContrastSlopeRange * (p.contrast / kContrastFullScale)
-                            : 1.0f;
-    const float hi = p.highlights / kToneFullScale;     // -1..1, + brightens
-    const float sh = p.shadows    / kToneFullScale;
-    const float wh = p.whites     / kToneFullScale;
-    const float bk = p.blacks     / kToneFullScale;
+    const ToneShape shape = buildToneShape(p);
 
-    c.toneActive = (slope != 1.0f) || (hi != 0.0f) || (sh != 0.0f) || (wh != 0.0f) || (bk != 0.0f);
+    /* The Curves panel's tone curve (Develop/tonecurve.h). Channel 0 is the RGB
+       composite; 1/2/3 are the per-channel Red / Green / Blue curves layered on top of
+       it. Built once here (n <= 16 control points each), then evaluated per LUT entry --
+       never per pixel. */
+    ToneCurve::Spline curve[ToneCurve::kChannels];
+    for (int ch = 0; ch < ToneCurve::kChannels; ++ch)
+        curve[ch].build(p.curveX[ch], p.curveY[ch], p.curveN[ch]);
+    const bool curveActive = !p.curvesAreIdentity();
+
+    c.toneActive = shape.active || curveActive;
     if (c.toneActive) {
-        const float pivot = std::pow(0.18f, kInvGamma);
-        const float sMax  = std::pow(kToneLutMaxN, kInvGamma);
+        const float sMax = std::pow(kToneLutMaxN, kInvGamma);
         c.toneLutSMax = sMax;
-        /* Region slider: shadows/highlights centres move with the handles; blacks (0) and whites
-           (1) stay pinned. The crossover sets each movable region's reach (sigma). Defaults
-           0.25/0.50/0.75 give the old fixed centres and kToneSigma, so this is a no-op until moved. */
-        /* Clamp defensively so a hand-edited / corrupt sidecar can never invert the order
-           (qBound requires min <= max): shC <= 0.94 leaves room for hiC, which sits at least
-           0.04 above it, and the crossover stays strictly between them. */
-        const float shC = qBound(0.02f, p.toneShadowCenter, 0.94f);
-        const float hiC = qBound(shC + 0.04f, p.toneHighlightCenter, 0.98f);
-        const float crX = qBound(shC + 0.01f, p.toneCrossover, hiC - 0.01f);
-        const float shSig = std::max(kToneSigmaMin, (crX - shC) * kToneSigmaSpan);
-        const float hiSig = std::max(kToneSigmaMin, (hiC - crX) * kToneSigmaSpan);
         for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
             /* s = the perceptual input value this table entry represents. */
             float s = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
-            s = pivot + (s - pivot) * slope;                 // contrast slope about mid-grey
-            const float lift = hi * toneWeight(s, hiC, hiSig)
-                             + sh * toneWeight(s, shC, shSig)
-                             + wh * toneWeight(s, kWhitesCenter, kToneSigma)
-                             + bk * toneWeight(s, kBlacksCenter, kToneSigma);
-            s += kToneShift * lift;                          // tone-region shifts
-            if (s < 0.0f) s = 0.0f;                          // crush blacks gracefully
-            c.toneLut[j] = std::pow(s, kGamma);              // decode -> white-normalised linear
+            s = applyToneShape(shape, s);                    // contrast + tone regions
+            /* The tone curve runs AFTER the parametric controls above, matching
+               Lightroom's order: the RGB composite first, then that channel's own curve
+               on the composite's output. Both extrapolate past x = 1 with their end
+               slope, so the ~3 stops of highlight headroom in this table stay smooth. */
+            if (curveActive) s = curve[0].eval(s);
+            for (int ch = 0; ch < 3; ++ch) {
+                float sc = curveActive ? curve[ch + 1].eval(s) : s;
+                if (sc < 0.0f) sc = 0.0f;                    // crush blacks gracefully
+                /* decode -> white-normalised linear */
+                c.toneLut[ch][j] = std::pow(sc, kGamma);
+            }
         }
     }
 
@@ -772,6 +916,20 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     return c;
 }
 
+/* Sample the parametric tone shape over the DISPLAY range [0,1] for the Curves panel.
+   Clamped to [0,1] because it is drawn inside a unit plot; the LUT itself is not clamped
+   (it carries ~3 stops of headroom above white), so this is a view of the visible part of
+   the same curve, not a different curve. */
+void Develop::ParametricCurve(const EditParams &p, float *out, int n)
+{
+    if (!out || n < 2) return;
+    const ToneShape shape = buildToneShape(p);
+    for (int i = 0; i < n; ++i) {
+        const float s = static_cast<float>(i) / (n - 1);
+        out[i] = qBound(0.0f, applyToneShape(shape, s), 1.0f);
+    }
+}
+
 void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
 {
     const int w = img.width;
@@ -820,10 +978,14 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
        buildPointCoeffs). The table is indexed by the perceptual value s = (v/white)^(1/gamma)
        and already returns the white-normalised linear output, so the only transcendental in the
        hot loop is the single encode pow. Constants are local so they fold into the inner loop. */
-    const float *lut = c.toneLut;
+    const float *lutR = c.toneLut[0];
+    const float *lutG = c.toneLut[1];
+    const float *lutB = c.toneLut[2];
     const int lutLast = PointCoeffs::kLutSize - 1;
     const float lutScale = lutLast / c.toneLutSMax;
-    auto toneCh = [=](float v) -> float {
+    /* `lut` is the channel's own table -- the three differ only when a per-channel
+       Curves R/G/B curve is in play, and are byte-identical otherwise. */
+    auto toneCh = [=](const float *lut, float v) -> float {
         float n = v * invWhite;
         if (n < 0.0f) n = 0.0f;
         const float s = std::pow(n, kInvGamma);
@@ -857,9 +1019,9 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                     px[2] = (cb < 0.0f) ? 0.0f : cb;
                 }
                 if (doTone) {
-                    px[0] = toneCh(px[0]);
-                    px[1] = toneCh(px[1]);
-                    px[2] = toneCh(px[2]);
+                    px[0] = toneCh(lutR, px[0]);
+                    px[1] = toneCh(lutG, px[1]);
+                    px[2] = toneCh(lutB, px[2]);
                 }
                 if (doHsl) {
                     float r = px[0], g = px[1], b = px[2];

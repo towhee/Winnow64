@@ -41,6 +41,23 @@ protected:
     QPointF posFor(float hueDeg, float satUnit) const;        // hue/sat -> widget px
     void    hueSatAt(const QPointF &pos, float &hueDeg, float &sat) const;   // inverse
 
+    /* FINE (Shift) DRAG. A wheel drag jumps the handle to the cursor, which is far too
+       coarse for a small adjustment: the whole disc is only +/-30 deg of primary hue.
+       While Shift is held a subclass instead moves its handle by a FRACTION of the
+       cursor's movement since the anchor, so a full sweep of the widget buys a quarter
+       of what it normally would. The anchor is taken when Shift goes DOWN (mid-drag or
+       at press), and taking it moves nothing -- Shift+press grabs the handle where it
+       already is instead of snapping it under the pointer. Releasing Shift mid-drag
+       returns to absolute tracking, which rejoins the handle to the cursor.
+       The state lives in the base so all three wheels can behave alike. */
+    static constexpr float kFineGain = 0.25f;
+    bool    fineStateChanged(bool fine);    // true when it flipped; caller re-anchors
+    static float wrapDeg(float d);          // fold a degree delta into (-180, 180]
+
+    bool    fineDrag = false;               // Shift state as of the last mouse event
+    float   fineAnchorHue = 0.0f;           // cursor hue (deg) when the anchor was taken
+    float   fineAnchorSat = 0.0f;           // cursor sat (0..1) when the anchor was taken
+
     float   discMargin = 12.0f;             // px between the disc rim and the widget edge
     QImage  wheelCache;
     QPointF centre;

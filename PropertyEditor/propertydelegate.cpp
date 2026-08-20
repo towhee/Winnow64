@@ -512,9 +512,14 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            and its role flags from this sibling (in the caption-column branch it IS index). */
         QModelIndex capIndex = index.sibling(index.row(), CapColumn);
         const QString capText = capIndex.data().toString();
+        /* A UR_HeaderFlat header is a subordinate SECTION inside a panel (Develop's
+           Basic / Color / Calibrate / Color Grade / Effects), so its caption is a tier
+           below a panel header: header3Color rather than the panel-header teal. */
+        const bool flatHdr = capIndex.data(UR_HeaderFlat).toBool();
         /* Header caption pen. UR_LeafSingleLine rows want the header's single-line full-width
            layout but the ordinary LEAF text colour (not category teal). */
-        QPen capPen = capIndex.data(UR_LeafSingleLine).toBool() ? regPen : catPen;
+        QPen capPen = capIndex.data(UR_LeafSingleLine).toBool() ? regPen
+                                                                : (flatHdr ? hdrPen : catPen);
         /* Optional per-row caption colour (e.g. a mask tool row tinted by its
            Add/Subtract role). Overrides the leaf/category pen when set. */
         const QVariant capColorV = capIndex.data(UR_CaptionColor);
@@ -535,7 +540,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            reads from the caption and the containment rail rather than from banding.
            Skipping the fill (rather than filling with a matching colour) keeps it exact
            in any theme: the view has already painted the row in the palette base. */
-        const bool flatHdr = capIndex.data(UR_HeaderFlat).toBool();
         const bool fillHdr = index.data(UR_isBackgroundGradient).toBool() && !flatHdr;
 
         /* Right edge for a header caption that spans the row, in VIEWPORT coordinates so it is the

@@ -236,11 +236,23 @@ REMAINING DEVELOP-MODULE WORK (beyond raw decode; verified vs tree 2026-07-11)
                  radiance recovery); ~120-150 lines, heavier on the settle
                  render. Would slot behind the same slider (see #15 CONSIDER).
 
-32   [idea]      Sharpness (Effects, new). A separate op from Texture: small
-                 ABSOLUTE-pixel unsharp radius (Texture is resolution-
-                 proportional mid-frequency), a threshold/masking control to
-                 protect noise, applied full-res only (output sharpening breaks
-                 the proxy-match), placed last in the pipeline (near Grain).
+32   [DONE]      Sharpening. Shipped 2026-08-20 as Develop op #8.5, in a NEW
+                 "Detail" panel (not Effects) alongside the local denoise pair,
+                 which moved there from Effects -- NR and sharpening are one
+                 decision. Four controls: Amount / Radius / Detail / Masking.
+                 Absolute-pixel unsharp radius as sketched, edge-gated by
+                 Masking, with Detail soft-thresholding small amplitudes.
+                 TWO DEPARTURES from this sketch:
+                 (a) NOT full-res only. WorkingImage::renderScale carries the
+                     proxy's downscale, so the drag preview is scale-honest and
+                     the settle render is the truth; the panel says judge at 1:1.
+                     renderScale is on WorkingImage, NOT EditParams (which is the
+                     sidecar format AND the render-cache key).
+                 (b) Placed after Vignette but BEFORE Grain, not last -- grain
+                     must not itself be sharpened.
+                 Math is header-only in Develop/sharpen.h with unit tests
+                 (tests/unit/tst_sharpen.cpp). Soften was declined: negative
+                 Texture and Denoise already cover it.
 
 33   [todo]      Develop presets. Save a develop recipe as a named preset and
                  apply it to one or many selected images (Lightroom-style). Store
