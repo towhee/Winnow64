@@ -285,6 +285,11 @@ bool SliderEditor::sliderHasFocus() const
     return slider && slider->hasFocus();
 }
 
+bool SliderEditor::sliderIsDown() const
+{
+    return slider && slider->isSliderDown();
+}
+
 void SliderEditor::sliderMoved()
 {
     if (G::isLogger) G::log("SliderEditor::sliderMoved");

@@ -4,6 +4,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QMouseEvent>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <QResizeEvent>
 #include <QPainter>
 
@@ -30,6 +32,10 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     rowLay->addLayout(leftCol, 3);      // histogram column left, wider
     rowLay->addWidget(vectorscope, 2);  // vectorscope right
 
+    /* Each scope builds its own context-menu items and hands the part-built menu up;
+       relay it to MW, which appends the shared scopes-layout section and shows it. */
+    connect(histogram, &HistogramView::menuRequested, this, &ScopesView::menuRequested);
+    connect(vectorscope, &VectorscopeView::menuRequested, this, &ScopesView::menuRequested);
     /* Re-emit the vectorscope's menu choices so MW can persist them. */
     connect(vectorscope, &VectorscopeView::zoomChanged,
             this, &ScopesView::vectorscopeZoomChanged);
@@ -41,7 +47,8 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     closeBtn = new BarBtn();
     closeBtn->setParent(this);
     closeBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    closeBtn->setToolTip(tr("Close the histogram and vectorscope. Press (G) to cycle scopes."));
+    closeBtn->setToolTip(tr("Close the histogram and vectorscope. Right click for "
+                            "the scopes menu."));
     connect(closeBtn, &BarBtn::clicked, this, &ScopesView::closeRequested);
 
     /* Fixed strip at the top of the dock; the property tree below takes the stretch. The
@@ -128,4 +135,16 @@ void ScopesView::setVectorscopeSkinLine(bool on)
 void ScopesView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     event->accept();   // consume so the dock does not treat it as un/redock
+}
+
+void ScopesView::contextMenuEvent(QContextMenuEvent *event)
+{
+/*
+    A right-click that no scope handled (the tone-region slider, or the strip's margins):
+    the same menu with no scope-specific items, i.e. just the scopes-layout section.
+*/
+    if (G::isLogger) G::log("ScopesView::contextMenuEvent");
+    QMenu menu(this);
+    event->accept();
+    emit menuRequested(&menu, event->globalPos());
 }

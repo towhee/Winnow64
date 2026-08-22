@@ -756,7 +756,7 @@
          <string>E   or   Return / Enter</string>
         </property>
         <property name="text">
-         <string/>
+         <string>In Develop mode returns to Preview mode, in loupe view</string>
         </property>
        </item>
        <item>
@@ -767,7 +767,7 @@
          <string>G</string>
         </property>
         <property name="text">
-         <string/>
+         <string>In Develop mode returns to Preview mode, in grid view</string>
         </property>
        </item>
        <item>
@@ -778,7 +778,7 @@
          <string>T</string>
         </property>
         <property name="text">
-         <string/>
+         <string>In Develop mode returns to Preview mode, in table view</string>
         </property>
        </item>
        <item>
@@ -789,7 +789,7 @@
          <string>C</string>
         </property>
         <property name="text">
-         <string/>
+         <string>Preview mode only (Compare needs two or more selected images)</string>
         </property>
        </item>
        <item>
@@ -1073,13 +1073,13 @@
        </property>
        <item>
         <property name="text">
-         <string>Operation Mode</string>
+         <string>Develop Mode</string>
         </property>
         <property name="text">
          <string>D</string>
         </property>
         <property name="text">
-         <string>Toggle Preview / Develop operation mode (works in either mode)</string>
+         <string>Enter Develop operation mode.  To go back to Preview mode press E (loupe), G (grid) or T (table).</string>
         </property>
        </item>
        <item>
@@ -1087,10 +1087,10 @@
          <string>Develop Mode keys</string>
         </property>
         <property name="text">
-         <string>R  N  M  O  S  X  H</string>
+         <string>R  N  M  O  S  W  X  H  P</string>
         </property>
         <property name="text">
-         <string>These eight keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, X is Reject, O is Open Folder, P is Pick, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
+         <string>These nine keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, W is New Workspace, X is Reject, O is Open Folder, P is Pick, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
         </property>
        </item>
        <item>
@@ -1179,6 +1179,17 @@
         </property>
         <property name="text">
          <string>The overlay previews the mask reduced to where it OVERLAPS the submask, and Update / Return commits it that way; while a submask is being defined</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Show Sharpening Mask</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + drag Masking</string>
+        </property>
+        <property name="text">
+         <string>Held while dragging the Detail panel's Masking slider, the photo is replaced by the sharpening mask in black and white - white is sharpened, black is protected - so the slider can be set by looking at the whole frame. Shown only for the duration of the drag</string>
         </property>
        </item>
        <item>
@@ -1355,17 +1366,6 @@
         </property>
         <property name="text">
          <string>Hold Space to temporarily zoom/pan over any mask, spot or crop tool (click toggles zoom, drag pans); release resumes the tool. The mouse wheel / two-finger scroll zooms the image; while a Spot or Brush tool is armed the wheel resizes it, so hold Space to zoom with the wheel there. In Develop mode</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Histogram / Vectorscope</string>
-        </property>
-        <property name="text">
-         <string>G</string>
-        </property>
-        <property name="text">
-         <string>Steps the scopes strip through both scopes, histogram only (fills the strip), vectorscope only (fills the strip) and hidden; in Develop mode. In Preview, G is Grid view</string>
         </property>
        </item>
        <item>

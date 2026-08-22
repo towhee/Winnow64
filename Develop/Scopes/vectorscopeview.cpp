@@ -58,6 +58,13 @@ void VectorscopeView::setSkinLine(bool on)
 
 void VectorscopeView::contextMenuEvent(QContextMenuEvent *event)
 {
+/*
+    The vectorscope's own items (zoom, skin-tone line) go in first; the shared
+    scopes-layout section is appended below them, after a separator, by
+    MW::showDevelopScopesMenu -- which also execs the menu, so it is the one place the
+    layout choices are built for every scope. See HistogramView::contextMenuEvent.
+*/
+    if (G::isLogger) G::log("VectorscopeView::contextMenuEvent");
     QMenu menu(this);
     const double zooms[3] = { 1.0, 1.5, 2.0 };
     const char *labels[3] = { "100%", "150%", "200%" };
@@ -78,7 +85,8 @@ void VectorscopeView::contextMenuEvent(QContextMenuEvent *event)
         setSkinLine(on);
         emit skinLineChanged(on);   // MW persists the choice
     });
-    menu.exec(event->globalPos());
+    event->accept();
+    emit menuRequested(&menu, event->globalPos());
 }
 
 QSize VectorscopeView::sizeHint() const

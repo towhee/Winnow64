@@ -4,6 +4,7 @@
 #include "Develop/colorgrade.h"
 #include "Develop/tonecurve.h"
 #include "Develop/sharpen.h"
+#include "Develop/localcontrast.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QElapsedTimer>
@@ -154,6 +155,17 @@ constexpr float kTextureFullScale = 100.0f;
 constexpr float kTextureSigmaFrac = 0.0015f;   // ~13px on a 8640px edge
 constexpr float kTextureGain      = 1.5f;      // amount=+1 -> detail *2.5
 
+/* Clarity (spatial op #6.5): mid-radius luminance local contrast, between Texture's fine
+   detail band and Dehaze's atmospheric one. Two things keep it from being "Texture with a
+   bigger number": the effect is weighted toward the MIDTONES (so it cannot crush blacks
+   or flatten highlights the way a flat wide band does) and rolls off at strong edges,
+   where a band this wide rings. Gentler gain than Texture because a wider band reads
+   much stronger per unit. See Develop/localcontrast.h. */
+constexpr float kClarityFullScale = 100.0f;
+constexpr float kClaritySigmaFrac = 0.007f;    // ~60px on a 8640px edge
+constexpr float kClarityGain      = 0.8f;      // vs kTextureGain 1.5, at 5x the radius
+constexpr float kClarityHaloKnee  = 0.15f;     // excursion counting as a hard edge
+
 /* Dehaze (spatial op, APPROXIMATION): a large-radius luminance local-contrast boost, a contrast
    pull about a low pivot (deepens shadows, the hallmark of clearing haze), and a saturation
    lift. Radius is a larger fraction of the image; the box blur (cv::blur) is used because its
@@ -220,6 +232,102 @@ inline void parallelFor(size_t n, F fn)
     }
     for (QFuture<void> &f : futures) f.waitForFinished();
 }
+
+/* ------------------------------------------------------------------------------------
+   Shared perceptual-luminance band pass
+
+   Texture (#6), Clarity (#6.5), Dehaze (#7) and Sharpen (#8.5) all do the same three
+   things: lift a perceptual luminance off the RGB, reshape it against a blurred base,
+   and fold the result back as a RATIO on RGB so hue and chroma are untouched. Only the
+   middle step differs. These two helpers own the first and third, so each op is just its
+   own blur plus its own shape function -- see Develop/localcontrast.h for the shared
+   scalar math and tests/unit/tst_localcontrast.cpp for the characterization gate that
+   pins what Texture and Dehaze rendered before this was extracted.
+   ------------------------------------------------------------------------------------ */
+
+/* Perceptual, white-normalised luminance into a blurrable cv::Mat, plus the scene-linear
+   luma kept alongside for the ratio fold-back. */
+inline void buildPerceptualLuma(const WorkingImage &img, cv::Mat &Yp,
+                                std::vector<float> &Ylin)
+{
+    const int w = img.width, h = img.height;
+    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
+    const float white = (img.white > 0.0f) ? img.white : 1.0f;
+    const float invWhite = 1.0f / white;
+    const float *rgb = img.rgb.data();
+
+    Yp.create(h, w, CV_32FC1);
+    Ylin.resize(n);
+    float *yp = Yp.ptr<float>();
+    float *ylin = Ylin.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            ylin[i] = Y;
+            float nrm = Y * invWhite;
+            if (nrm < 0.0f) nrm = 0.0f;
+            yp[i] = std::pow(nrm, kInvGamma);
+        }
+    });
+}
+
+/* Gaussian base for a band op, with the large-sigma downscale trick.
+
+   sigmaFrac is a fraction of the image's LONGER EDGE, so the proxy and the full-res
+   settle render shape the same relative band (the invariant every spatial op but Sharpen
+   holds). The base is a smooth low-frequency signal, so for a large sigma the costly
+   Gaussian runs on a DOWNSCALED luminance image and is upsampled -- visually identical to
+   a full-res blur, but the cost drops ~kDown^2, and GaussianBlur is the dominant cost of
+   these ops at full resolution. The downscale targets a well-sampled small-image working
+   sigma (~3px) and is capped so the base stays smooth; a sigma <= ~3 (e.g. on the proxy)
+   blurs at full size. Shared by Texture (#6) and Clarity (#6.5); Dehaze uses a box blur
+   instead because at its much larger radius a running-sum blur is cheaper still. */
+inline cv::Mat gaussianBase(const cv::Mat &Yp, float sigmaFrac, int w, int h)
+{
+    const double sigma = qMax(1.0, static_cast<double>(sigmaFrac) * qMax(w, h));
+    const int kDown = qBound(1, static_cast<int>(sigma / 3.0), 4);
+    cv::Mat base;
+    if (kDown > 1 && w >= kDown * 2 && h >= kDown * 2) {
+        cv::Mat small;
+        cv::resize(Yp, small, cv::Size(w / kDown, h / kDown), 0, 0, cv::INTER_AREA);
+        cv::GaussianBlur(small, small, cv::Size(0, 0), sigma / kDown);
+        cv::resize(small, base, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+    } else {
+        cv::GaussianBlur(Yp, base, cv::Size(0, 0), sigma);
+    }
+    return base;
+}
+
+/* Reshape the perceptual luma and fold it back onto RGB as a ratio.
+
+   shape(i, yp[i]) returns the new perceptual luma for pixel i; the op's own lambda closes
+   over its blurred base. TEMPLATED ON PURPOSE: the shape inlines into this loop, so the
+   op still costs ONE parallel pass and no extra buffer, exactly as the hand-written
+   versions did. Pixels at or below black are skipped so true black stays black (a ratio
+   is meaningless there). */
+template <class Shape>
+inline void shapeAndFoldLuma(WorkingImage &img, const float *yp, const float *ylin,
+                             Shape shape)
+{
+    const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
+    const float white = (img.white > 0.0f) ? img.white : 1.0f;
+    float *rgb = img.rgb.data();
+    constexpr float kEps = 1e-6f;
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            const float Y = ylin[i];
+            if (Y <= kEps) continue;
+            float s = shape(i, yp[i]);
+            if (s < 0.0f) s = 0.0f;
+            const float Yd = std::pow(s, kGamma) * white;
+            const float r = Yd / Y;
+            rgb[i * 3 + 0] *= r;
+            rgb[i * 3 + 1] *= r;
+            rgb[i * 3 + 2] *= r;
+        }
+    });
+}
 }
 
 bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
@@ -232,7 +340,8 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 
     /* Fixed pipeline order: spatial ops own a pass, point ops share the fused pass.
        See notes/Documentation.txt "DEVELOP / IMAGE EDIT". Denoise (#1) -> fused point
-       pass (#2-5: WB, exposure, contrast, tone regions) -> Texture (#6) -> Dehaze (#7) ->
+       pass (#2-5: WB, exposure, contrast, tone regions) -> Texture (#6) ->
+       Clarity (#6.5, mid-radius local contrast) -> Dehaze (#7) ->
        Vignette (#8, a radial exposure falloff) -> Sharpen (#8.5, capture USM) ->
        Grain (#9, film grain, last). */
     Denoise(img, p);
@@ -244,6 +353,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 
     Texture(img, p);
     if (t) t->textureMs = probe.restart();
+
+    Clarity(img, p);
+    if (t) t->clarityMs = probe.restart();
 
     Dehaze(img, p);
     if (t) t->dehazeMs = probe.restart();
@@ -433,64 +545,54 @@ void Develop::Texture(WorkingImage &img, const EditParams &p)
     const float amt = p.texture / kTextureFullScale;     // -1..1
     if (amt == 0.0f) return;
 
-    const int w = img.width;
-    const int h = img.height;
-    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
-    float *rgb = img.rgb.data();
-    const float white = (img.white > 0.0f) ? img.white : 1.0f;
-    const float invWhite = 1.0f / white;
+    cv::Mat Yp;
+    std::vector<float> Ylin;
+    buildPerceptualLuma(img, Yp, Ylin);
 
-    /* Perceptual, white-normalised luminance; Ylin keeps the scene-linear luma for the ratio. */
-    cv::Mat Yp(h, w, CV_32FC1);
-    std::vector<float> Ylin(n);
-    float *yp = Yp.ptr<float>();
-    float *ylin = Ylin.data();
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-            ylin[i] = Y;
-            float nrm = Y * invWhite;
-            if (nrm < 0.0f) nrm = 0.0f;
-            yp[i] = std::pow(nrm, kInvGamma);
-        }
-    });
+    /* Mid-frequency base; sigma scales with the long edge so proxy and full-res match. */
+    const cv::Mat base = gaussianBase(Yp, kTextureSigmaFrac, img.width, img.height);
 
-    /* Mid-frequency base; sigma scales with the longer edge so proxy and full-res match. The base
-       is a smooth low-frequency band, so for a large sigma compute the (costly) Gaussian on a
-       DOWNSCALED luminance image and upsample -- visually identical to a full-res blur but the
-       blur cost drops ~kDown^2 (GaussianBlur is the dominant texture cost at full res). The
-       downscale factor targets a well-sampled small-image working sigma (~3px) and is capped so
-       the base stays smooth; sigma <= ~3 (e.g. the proxy) blurs at full size as before. */
-    const double sigma = qMax(1.0, static_cast<double>(kTextureSigmaFrac) * qMax(w, h));
-    cv::Mat base;
-    const int kDown = qBound(1, static_cast<int>(sigma / 3.0), 4);
-    if (kDown > 1 && w >= kDown * 2 && h >= kDown * 2) {
-        cv::Mat small;
-        cv::resize(Yp, small, cv::Size(w / kDown, h / kDown), 0, 0, cv::INTER_AREA);
-        cv::GaussianBlur(small, small, cv::Size(0, 0), sigma / kDown);
-        cv::resize(small, base, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
-    } else {
-        cv::GaussianBlur(Yp, base, cv::Size(0, 0), sigma);
-    }
-
-    /* base + factor*(detail): factor>1 amplifies the band, factor in [0,1) smooths toward base.
-       Positive uses the stronger kTextureGain; negative scales the detail down to zero at -1. */
-    const float factor = qMax(0.0f, 1.0f + amt * (amt >= 0.0f ? kTextureGain : 1.0f));
+    /* Positive uses the stronger kTextureGain; negative scales the detail down to zero
+       at -1 (bandFactor clamps, so it lands on the base rather than inverting). */
+    const float factor =
+        LocalContrast::bandFactor(amt, (amt >= 0.0f) ? kTextureGain : 1.0f);
     const float *bp = base.ptr<float>();
-    constexpr float kEps = 1e-6f;
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float Y = ylin[i];
-            if (Y <= kEps) continue;
-            float s = bp[i] + factor * (yp[i] - bp[i]);
-            if (s < 0.0f) s = 0.0f;
-            const float Yd = std::pow(s, kGamma) * white;
-            const float r = Yd / Y;
-            rgb[i * 3 + 0] *= r;
-            rgb[i * 3 + 1] *= r;
-            rgb[i * 3 + 2] *= r;
-        }
+    shapeAndFoldLuma(img, Yp.ptr<float>(), Ylin.data(), [=](size_t i, float yp) {
+        return LocalContrast::applyBand(yp, bp[i], factor);
+    });
+}
+
+/* Clarity (spatial op #6.5). Ratio-preserving luminance local contrast at a MID radius --
+   between Texture (#6, ~13px) and Dehaze (#7, ~170px) on an 8640px edge -- so the three
+   stack rather than compete. Positive adds midtone punch, negative gives a soft glow.
+
+   Unlike Texture the band is WEIGHTED per pixel before it is scaled: midtoneWeight fades
+   the effect toward black and white, and haloGuard rolls it off where the high-pass
+   excursion is large, i.e. at the strong edges where a band this wide would otherwise
+   ring. Weighting the AMOUNT (rather than the result) means the two guards simply pull
+   the band factor back toward 1, so they can never invert or overshoot the band.
+
+   Shares gaussianBase with Texture (the downscale trick keeps the wider blur cheap) and
+   the perceptual-luma prep / ratio fold-back with every other band op. Math in
+   Develop/localcontrast.h; no-op at 0. */
+void Develop::Clarity(WorkingImage &img, const EditParams &p)
+{
+    const float amt = p.clarity / kClarityFullScale;     // -1..1
+    if (amt == 0.0f) return;
+
+    cv::Mat Yp;
+    std::vector<float> Ylin;
+    buildPerceptualLuma(img, Yp, Ylin);
+
+    const cv::Mat base = gaussianBase(Yp, kClaritySigmaFrac, img.width, img.height);
+    const float *bp = base.ptr<float>();
+
+    shapeAndFoldLuma(img, Yp.ptr<float>(), Ylin.data(), [=](size_t i, float yp) {
+        const float b = bp[i];
+        const float w = LocalContrast::midtoneWeight(yp) *
+                        LocalContrast::haloGuard(yp - b, kClarityHaloKnee);
+        const float factor = LocalContrast::bandFactor(amt * w, kClarityGain);
+        return LocalContrast::applyBand(yp, b, factor);
     });
 }
 
@@ -507,49 +609,31 @@ void Develop::Dehaze(WorkingImage &img, const EditParams &p)
     const int h = img.height;
     const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
     float *rgb = img.rgb.data();
-    const float white = (img.white > 0.0f) ? img.white : 1.0f;
-    const float invWhite = 1.0f / white;
 
-    cv::Mat Yp(h, w, CV_32FC1);
-    std::vector<float> Ylin(n);
-    float *yp = Yp.ptr<float>();
-    float *ylin = Ylin.data();
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-            ylin[i] = Y;
-            float nrm = Y * invWhite;
-            if (nrm < 0.0f) nrm = 0.0f;
-            yp[i] = std::pow(nrm, kInvGamma);
-        }
-    });
+    cv::Mat Yp;
+    std::vector<float> Ylin;
+    buildPerceptualLuma(img, Yp, Ylin);
 
-    /* Large-radius base via a box blur: its running-sum cost is ~independent of the kernel size,
-       so the wide blur stays cheap even at full resolution. */
+    /* Large-radius base via a box blur: its running-sum cost is ~independent of kernel
+       size, so the wide blur stays cheap even at full resolution -- which is why this op
+       does NOT use gaussianBase like Texture and Clarity. */
     const int rad = qMax(1, static_cast<int>(std::lround(static_cast<double>(kDehazeSigmaFrac) * qMax(w, h))));
     const int ksz = rad * 2 + 1;
     cv::Mat base;
     cv::blur(Yp, base, cv::Size(ksz, ksz));
 
-    /* Stage 1: luminance local contrast + low-pivot contrast (ratio-preserving). */
-    const float local = amt * kDehazeLocalGain;
+    /* Stage 1: luminance local contrast + low-pivot contrast (ratio-preserving). The
+       local
+       contrast is the shared band expression: this op historically wrote it as
+       yp + k*(yp-base), which is the same thing as base + (1+k)*(yp-base) in exact
+       arithmetic and differs only in float rounding (~1e-7, far below one 8-bit code
+       value). tst_localcontrast pins the pre-extraction render to prove it stayed put. */
+    const float factor = LocalContrast::bandFactor(amt, kDehazeLocalGain);
     const float cont  = amt * kDehazeContrast;
     const float *bp = base.ptr<float>();
-    constexpr float kEps = 1e-6f;
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float Y = ylin[i];
-            if (Y <= kEps) continue;
-            float s = yp[i] + local * (yp[i] - bp[i]);              // amplify local detail
-            s = kDehazePivot + (s - kDehazePivot) * (1.0f + cont);  // deepen shadows / extend range
-            if (s < 0.0f) s = 0.0f;
-            const float Yd = std::pow(s, kGamma) * white;
-            const float r = Yd / Y;
-            rgb[i * 3 + 0] *= r;
-            rgb[i * 3 + 1] *= r;
-            rgb[i * 3 + 2] *= r;
-        }
+    shapeAndFoldLuma(img, Yp.ptr<float>(), Ylin.data(), [=](size_t i, float yp) {
+        const float s = LocalContrast::applyBand(yp, bp[i], factor);
+        return kDehazePivot + (s - kDehazePivot) * (1.0f + cont);   // deepen shadows
     });
 
     /* Stage 2: saturation about per-pixel luminance (haze desaturates; dehaze restores). */
@@ -641,27 +725,10 @@ void Develop::Sharpen(WorkingImage &img, const EditParams &p)
     const int w = img.width;
     const int h = img.height;
     if (w < 3 || h < 3) return;                      // no neighbourhood to work with
-    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
-    float *rgb = img.rgb.data();
-    const float white = (img.white > 0.0f) ? img.white : 1.0f;
-    const float invWhite = 1.0f / white;
 
-    /* Perceptual, white-normalised luminance; Ylin keeps the scene-linear luma for the
-       ratio fold-back (identical prep to Texture). */
-    cv::Mat Yp(h, w, CV_32FC1);
-    std::vector<float> Ylin(n);
-    float *yp = Yp.ptr<float>();
-    float *ylin = Ylin.data();
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-            ylin[i] = Y;
-            float nrm = Y * invWhite;
-            if (nrm < 0.0f) nrm = 0.0f;
-            yp[i] = std::pow(nrm, kInvGamma);
-        }
-    });
+    cv::Mat Yp;
+    std::vector<float> Ylin;
+    buildPerceptualLuma(img, Yp, Ylin);
 
     const float scale = (img.renderScale > 0.0f) ? img.renderScale : 1.0f;
     const float sigma = Sharpen::effectiveSigma(p.sharpenRadius, scale);
@@ -676,7 +743,7 @@ void Develop::Sharpen(WorkingImage &img, const EditParams &p)
     if (masking > 0.0f) {
         /* Gradient of the BLURRED luma, so noise does not read as an edge. The 3x3 Sobel
            kernel has a gain of 8 (a ramp of slope s answers 8s), so scale by 1/8 to get
-           the TRUE per-pixel slope -- Sharpen::kMaskKnee is expressed in perceptual-luma
+           the TRUE per-pixel slope -- Sharpen::maskKnee is expressed in perceptual-luma
            units per pixel, and unscaled Sobel would open the gate ~8x too easily. */
         constexpr double kSobelNorm = 1.0 / 8.0;
         cv::Mat gx, gy;
@@ -688,20 +755,9 @@ void Develop::Sharpen(WorkingImage &img, const EditParams &p)
     const float detail = qBound(0.0f, p.sharpenDetail, 1.0f);
     const float *bp = base.ptr<float>();
     const float *gp = grad.empty() ? nullptr : grad.ptr<float>();
-    constexpr float kEps = 1e-6f;
-    parallelFor(n, [=](size_t i0, size_t i1) {
-        for (size_t i = i0; i < i1; ++i) {
-            const float Y = ylin[i];
-            if (Y <= kEps) continue;                 // keep true black black
-            const float gm = gp ? gp[i] : 0.0f;
-            const float s = Sharpen::applyPixel(yp[i], bp[i], gm,
-                                                amount, detail, masking, scale);
-            const float Yd = std::pow(s, kGamma) * white;
-            const float r = Yd / Y;
-            rgb[i * 3 + 0] *= r;
-            rgb[i * 3 + 1] *= r;
-            rgb[i * 3 + 2] *= r;
-        }
+    shapeAndFoldLuma(img, Yp.ptr<float>(), Ylin.data(), [=](size_t i, float yp) {
+        const float gm = gp ? gp[i] : 0.0f;
+        return Sharpen::applyPixel(yp, bp[i], gm, amount, detail, masking, scale);
     });
 }
 
@@ -765,8 +821,9 @@ void Develop::Grain(WorkingImage &img, const EditParams &p)
             if (nrm < 0.0f) nrm = 0.0f;
             const float s = std::pow(nrm, kInvGamma);
             /* Midtone weight: peaks at mid-grey, fades to 0 at black / white; sqrt broadens
-               it so shadows and highlights still carry some grain. */
-            const float lw = std::sqrt(qMax(0.0f, 4.0f * s * (1.0f - s)));
+               it so shadows and highlights still carry some grain. Shared with Clarity --
+               the expression is unchanged, so grain renders exactly as before. */
+            const float lw = LocalContrast::midtoneWeight(s);
             /* Roughness: mean-1 amplitude that varies more as roughness rises (u in [0,1]). */
             const float amp = rp ? (1.0f - rough01 + rough01 * 2.0f * rp[i]) : 1.0f;
             float s2 = s + strength * lw * amp * gp[i];

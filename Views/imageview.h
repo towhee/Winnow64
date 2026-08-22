@@ -200,6 +200,16 @@ public slots:
     void setScopeMaskTint(const QImage &tint);
     void clearScopeMaskTint();
 
+    /* The Detail panel's SHARPENING mask preview (MW::updateSharpenMaskPreview): the
+       sharpen edge gate as a GRAYSCALE image -- white sharpened, black protected -- shown
+       over the photo while Opt is held during a Masking drag, as Lightroom does it. It is
+       opaque and covers the photo; that is the point, and it is why it lives only for the
+       duration of the drag. Unlike the mask veil it is derived from the DISPLAYED
+       developed frame, so it is already in displayed (post-geometry) space and is
+       stretched straight over the pixmap -- it must NOT go through maskNormToItem. */
+    void setSharpenMaskImage(const QImage &mask);
+    void clearSharpenMaskImage();
+
     /* The develop GEOMETRY (crop / straighten / warp) the displayed image was rendered
        WITH, plus the oriented full-frame size it was applied to. Geometry is the LAST
        render stage, while every mask / spot coordinate is normalized in its INPUT space
@@ -700,6 +710,7 @@ private:
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
     QString renderingHint;                          // non-empty => chip shown
     QImage  scopeMaskTint;                          // whole-mask composite coverage tint (output-oriented), all tools
+    QImage  sharpenMaskImage;                       // sharpening gate, grayscale (displayed space)
     bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint
     /* The geometry the displayed render carries (see setDevelopGeometry), with the
        input->output pixel transform and output size cached: the warp case builds a

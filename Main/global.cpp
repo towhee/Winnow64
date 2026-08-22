@@ -13,6 +13,9 @@
 namespace G
 {
 
+// Rory version (expanded cache pref, focus stack pref, update default workspace)
+bool isRory = false;
+
 QSettings *settings;
 
 // LOG
@@ -40,8 +43,6 @@ bool showAllEvents = false;
 QStringList issueList;
 
 
-// Rory version (expanded cache pref, focus stack pref)
-bool isRory = false;
 
 // mutex
 QWaitCondition waitCondition;

@@ -1055,7 +1055,7 @@ void MW::createUtilActions()
     developAction->setObjectName("develop");
     developAction->setCheckable(true);
     developAction->setChecked(settings->value("Develop/enabled", true).toBool());
-    /* D is reassigned to the Operation Mode toggle (operationModeAction, below). developAction
+    /* D is reassigned to Develop mode (operationModeAction, below). developAction
        (enable/disable the Develop panel) stays in the Utilities menu but is now shortcut-less. */
     developAction->setShortcutVisibleInContextMenu(true);
     addAction(developAction);
@@ -1067,13 +1067,19 @@ void MW::createUtilActions()
         settings->setValue("Develop/enabled", checked);
     });
 
-    // Operation Mode toggle (Preview <-> Develop). D shortcut; also on the status-bar dropdown.
-    operationModeAction = new QAction(tr("Toggle Preview / Develop Mode"), this);
+    /* Enter Develop mode. D is one-way (it ENTERS Develop, it does not toggle): the way
+       back to Preview is the view key for the view you want -- E (Loupe), G (Grid) or
+       T (Table), each of which leaves Develop and shows that view (see asLoupeAction /
+       asGridAction / asTableAction).
+       The status-bar dropdown still switches either way. */
+    operationModeAction = new QAction(tr("Develop Mode"), this);
     operationModeAction->setObjectName("operationMode");
     operationModeAction->setShortcut(QKeySequence("D"));
     operationModeAction->setShortcutVisibleInContextMenu(true);
     addAction(operationModeAction);
-    connect(operationModeAction, &QAction::triggered, this, &MW::toggleOperationMode);
+    connect(operationModeAction, &QAction::triggered, this, [this]() {
+        setOperationMode(G::OperationMode::Develop);
+    });
 
     /* ---- Develop mode local shortcuts ------------------------------------------------
        These actions are given NO key sequence.  Qt allows only one QAction per sequence
@@ -1149,14 +1155,34 @@ void MW::createUtilActions()
     addAction(developPasteSettingsAction);
     connect(developPasteSettingsAction, &QAction::triggered, this, &MW::developPasteSettings);
 
-    /* Not checkable: each trigger steps the scopes strip on through both scopes ->
-       histogram only -> vectorscope only -> hidden -> both ... The action-row button
-       beside the Develop dock title is the plain show/hide (and carries the state). */
-    developScopesAction = new QAction(tr("Histogram / Vectorscope\tG"), this);
-    developScopesAction->setObjectName("developScopes");
-    developScopesAction->setShortcutVisibleInContextMenu(true);
-    addAction(developScopesAction);
-    connect(developScopesAction, &QAction::triggered, this, &MW::cycleDevelopScopes);
+    /* Scopes strip: one exclusive checkable action per state, shown BOTH in the Develop
+       menu's Scopes submenu and in the strip's own right-click menu (ScopesView emits
+       menuRequested). There is no shortcut: the state is picked, not cycled, so a key
+       that stepped blindly through four states was the wrong control (G is Grid view).
+       The action-row button beside the Develop dock title stays the plain show/hide. */
+    developScopesGroup = new QActionGroup(this);
+    developScopesGroup->setExclusive(true);
+    struct { QAction **act; const char *name; QString text; int choice; } scopeItems[] = {
+        { &developScopesBothAction, "developScopesBoth",
+          tr("Histogram and Vectorscope"),  ScopesView::Both },
+        { &developScopesHistAction, "developScopesHistogram",
+          tr("Histogram only"),             ScopesView::HistogramOnly },
+        { &developScopesVectAction, "developScopesVectorscope",
+          tr("Vectorscope only"),           ScopesView::VectorscopeOnly },
+        { &developScopesHideAction, "developScopesHide",
+          tr("Hide scopes"),                kDevelopScopesHidden },
+    };
+    for (const auto &item : scopeItems) {
+        QAction *a = new QAction(item.text, this);
+        a->setObjectName(QString::fromLatin1(item.name));
+        a->setCheckable(true);
+        a->setShortcutVisibleInContextMenu(true);
+        developScopesGroup->addAction(a);
+        addAction(a);
+        const int choice = item.choice;
+        connect(a, &QAction::triggered, this, [this, choice]{ setDevelopScopesChoice(choice); });
+        *item.act = a;
+    }
 
     // Embellish menu
     int n;          // used to populate action lists
@@ -1363,9 +1389,13 @@ void MW::createViewActions()
     //                                  || setting->value("isEmbelDisplay").toBool()
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
-    // connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
-    connect(asLoupeAction, &QAction::triggered, this,
-            [this](){this->loupeDisplay("asLoupeAction");});
+    /* E is the way OUT of Develop mode into the loupe (D only enters Develop), so leave
+       Develop first: setOperationMode restores the Preview decode / read-ahead and greys
+       the Develop panel before the view is shown. A no-op when already in Preview. */
+    connect(asLoupeAction, &QAction::triggered, this, [this]() {
+        setOperationMode(G::OperationMode::Preview);
+        loupeDisplay("asLoupeAction");
+    });
 
     asGridAction = new QAction(tr("Grid Mode"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
@@ -1373,7 +1403,11 @@ void MW::createViewActions()
     if (isSettings && settings->contains("isGridDisplay")) asGridAction->setChecked(settings->value("isGridDisplay").toBool());
     else asGridAction->setChecked(true);
     addAction(asGridAction);
-    connect(asGridAction, &QAction::triggered, this, &MW::gridDisplay);
+    // G leaves Develop into the grid, the same way E leaves it into the loupe (above).
+    connect(asGridAction, &QAction::triggered, this, [this]() {
+        setOperationMode(G::OperationMode::Preview);
+        gridDisplay();
+    });
 
     asTableAction = new QAction(tr("Table Mode"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);
@@ -1381,7 +1415,11 @@ void MW::createViewActions()
     if (isSettings && settings->contains("isTableDisplay")) asTableAction->setChecked(settings->value("isTableDisplay").toBool());
     else asTableAction->setChecked(false);
     addAction(asTableAction);
-    connect(asTableAction, &QAction::triggered, this, &MW::tableDisplay);
+    // T leaves Develop into the table, the same way E / G leave it (above).
+    connect(asTableAction, &QAction::triggered, this, [this]() {
+        setOperationMode(G::OperationMode::Preview);
+        tableDisplay();
+    });
 
     asCompareAction = new QAction(tr("Compare Mode"), this);
     asCompareAction->setShortcutVisibleInContextMenu(true);
@@ -2171,7 +2209,7 @@ void MW::createUtilMenu()
     developGroupAct->setMenu(developMenu);
 
     developMenu->addAction(developAction);          // enable/disable the Develop panel
-    developMenu->addAction(operationModeAction);    // D: works in both modes
+    developMenu->addAction(operationModeAction);    // D: enter Develop (E / G / T leave it)
     developMenu->addSeparator();
     developMenu->addAction(developNewScopeAction);
     developMenu->addAction(developAddToMaskAction);
@@ -2181,7 +2219,15 @@ void MW::createUtilMenu()
     developMenu->addAction(developSpotAction);
     developMenu->addAction(developWbSamplerAction);
     developMenu->addSeparator();
-    developMenu->addAction(developScopesAction);
+    /* Scopes submenu: the same four actions the strip's right-click menu shows. Ticked
+       to match the strip as it opens (syncDevelopScopesMenu). */
+    developScopesMenu = developMenu->addMenu(tr("Scopes"));
+    developScopesMenu->addAction(developScopesBothAction);
+    developScopesMenu->addAction(developScopesHistAction);
+    developScopesMenu->addAction(developScopesVectAction);
+    developScopesMenu->addSeparator();
+    developScopesMenu->addAction(developScopesHideAction);
+    connect(developScopesMenu, &QMenu::aboutToShow, this, &MW::syncDevelopScopesMenu);
     developMenu->addAction(developExportAction);
     /* Export with preset: the same batch as developExportAction but with no dialog, one
        item per saved export preset. Rebuilt from the store on every show, the way
@@ -2877,13 +2923,14 @@ void MW::enableSelectionDependentMenus()
 
     // View menu
     /* View modes require a loaded folder; Compare needs at least two selected images.
-       Develop mode allows only Loupe: Grid/Table/Compare are disabled (which also
-       disables their G/T/C shortcuts) until the user returns to Preview. */
+       Loupe (E), Grid (G) and Table (T) stay ENABLED in Develop: they are the way back
+       out of it, switching to Preview and showing that view. Only Compare is disabled
+       (which also disables its C shortcut) until the user returns to Preview. */
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QString needPreview = "not available in Develop mode";
     gate(asLoupeAction, dmHasRows, needFolder);
-    gate(asGridAction, dmHasRows && !inDevelop, inDevelop ? needPreview : needFolder);
-    gate(asTableAction, dmHasRows && !inDevelop, inDevelop ? needPreview : needFolder);
+    gate(asGridAction, dmHasRows, needFolder);
+    gate(asTableAction, dmHasRows, needFolder);
     gate(asCompareAction, has2Selected && !inDevelop, inDevelop ? needPreview : need2Sel);
     gate(copyInfoTextToClipboardAction, dmHasRows, needFolder);
 
@@ -3214,7 +3261,9 @@ void MW::loadDevelopShortcuts()
        runs before this table), so it reaches the dropper only when no Transform is up. */
     developShortcuts[Qt::Key_W] = developWbSamplerAction;   // global: New Workspace
     developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
-    developShortcuts[Qt::Key_G] = developScopesAction;      // global: Grid view
+    /* No Develop-local G: the scopes strip is chosen from its right-click menu and the
+       Develop menu's Scopes submenu, so G keeps its global meaning -- and in Develop that
+       meaning is the way out: Preview mode, Grid view (see asGridAction). */
     developShortcuts[Qt::Key_H] = historyDockVisibleAction; // global: unbound
     developShortcuts[Qt::Key_P] = presetsDockVisibleAction; // global: Pick
 }
@@ -3224,21 +3273,24 @@ void MW::syncDevelopMenuEnabled()
 /*
     Called as the Develop menu opens.  Every item below the first separator is Develop
     mode local, so outside Develop mode its key means something else entirely and the item
-    must not offer it.  developAction (enable the panel) and operationModeAction (D) work
-    in both modes and stay enabled.
+    must not offer it.  developAction (enable the panel) and operationModeAction (D, enter
+    Develop mode) are meaningful in both modes and stay enabled.
 */
     if (G::isLogger) G::log("MW::syncDevelopMenuEnabled");
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QList<QAction *> modeLocal {
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
         developTransformAction, developSpotAction, developWbSamplerAction,
-        developScopesAction, developExportAction,
+        developExportAction,
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
 
     /* The Export with preset submenu is Develop-local for the same reason, but it is a
        QMenu (no action of its own), and it is meaningless with no saved presets. */
+    /* The Scopes submenu is Develop-local too (it drives the Develop dock's strip). */
+    if (developScopesMenu) developScopesMenu->setEnabled(inDevelop);
+
     if (developExportPresetMenu) {
         if (!exportPresets) exportPresets = new ExportPresets(settings, this);
         developExportPresetMenu->setEnabled(inDevelop && !exportPresets->names().isEmpty());

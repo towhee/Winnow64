@@ -242,6 +242,16 @@ public:
        Intersect, neither = Add. The ONE place that mapping exists -- the button label,
        the veil preview and the commit all read it, so they cannot disagree. */
     static int maskOpFromModifiers();
+    /* SHARPENING MASK PREVIEW (Detail panel), as Lightroom's Alt-drag does it. Sharpening's
+       Masking slider gates the effect by local edge strength, and which pixels survive
+       that gate is invisible in the result until you are at 1:1 on the right part of the
+       frame. Holding Opt while DRAGGING Masking replaces the photo with the gate in
+       grayscale -- white sharpened, black protected.
+
+       Momentary and read from the LIVE state, like the mask combine modifiers: active
+       means Opt is down AND the Masking slider's handle is held. MW polls it on every Opt
+       edge and mouse press/release (syncSharpenMaskPreview) and builds the image. */
+    bool sharpenMaskPreviewActive() const;
     /* True while the mask panel is up (a submask is being defined). */
     bool isMaskPanelOpen() const { return maskPanelOpen; }
     /* True while ANY submask is open in the panel -- a pending one OR one re-opened from
@@ -313,6 +323,10 @@ public slots:
     void setActiveMaskFeather(double feather);
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
+    /* Re-read the sharpening-mask-preview state (Opt edge, mouse press/release, app
+       activation) and emit sharpenMaskPreviewChanged when it flips, so MW builds or drops
+       the preview. */
+    void syncSharpenMaskPreview();
     /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
     void setMaskOverlayShown(bool shown);
     /* Set the overlay colour / grayscale-under-the-veil flag (the action-row tint
@@ -484,9 +498,16 @@ signals:
     /* Repaint the view alone: neither the image nor the veil changed, only how the view
        draws them (the overlay grayscale toggle). Cheaper again than a veil rebuild. */
     void maskOverlayRepaintRequested();
+    /* The sharpening mask preview turned on or off (Opt pressed/released during a Masking
+       drag, or the drag ended) -> MW builds or drops the grayscale mask image. */
+    void sharpenMaskPreviewChanged(bool active);
 
 private:
     void initialize();
+
+    /* Last state sharpenMaskPreviewChanged reported, so syncSharpenMaskPreview only
+       emits on an edge (it is called from every focus change in the app). */
+    bool sharpenMaskPreviewOn = false;
 
     /* Build/rebuild the whole tree for the ACTIVE scope: the scope's top items (Core rows for Global,
        else mask tool rows) followed by the Basic / Color / Effects sections. Called on image change,

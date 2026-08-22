@@ -1338,6 +1338,22 @@ void ImageView::clearScopeMaskTint()
     viewport()->update();
 }
 
+void ImageView::setSharpenMaskImage(const QImage &mask)
+{
+    /* Sharpening mask preview (Detail panel). Independent of the mask veil and of its
+       "M"/"O" hide state: it is a momentary, modifier-held preview of a GLOBAL op, not
+       part of mask editing, so nothing here touches maskTintAvailable. */
+    sharpenMaskImage = mask;
+    viewport()->update();
+}
+
+void ImageView::clearSharpenMaskImage()
+{
+    if (sharpenMaskImage.isNull()) return;
+    sharpenMaskImage = QImage();
+    viewport()->update();
+}
+
 void ImageView::setMaskLegend(const QString &submaskName, int op, bool showHint)
 {
     maskLegendSubmask = submaskName;
@@ -2218,6 +2234,22 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         if (sbr.width() > 0 && sbr.height() > 0) drawSpotOverlay(painter, sbr);
         return;
     }
+    /* Sharpening MASK preview: the edge gate in grayscale, drawn OPAQUELY over the photo
+       while Opt is held during a Masking drag (Lightroom's Alt-drag). Built by MW from the
+       frame on screen, so it maps 1:1 onto the pixmap and is drawn directly rather than
+       through maskDrawSpaceImage (which is for rasters built in the uncropped mask space).
+       Drawn before the mask veil so a mask being edited still reads on top. */
+    if (!sharpenMaskImage.isNull() && pmItem && pmItem->isVisible()) {
+        const QRectF sbr2 = pmItem->boundingRect();
+        if (sbr2.width() > 0 && sbr2.height() > 0) {
+            painter->save();
+            painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+            painter->drawImage(pmItem->mapRectToScene(sbr2), sharpenMaskImage,
+                               QRectF(sharpenMaskImage.rect()));
+            painter->restore();
+        }
+    }
+
     /* Whole-mask coverage: while any tool is expanded (maskEditMode), the composite of the
        Add/Subtract tools is shown as a red coverage tint (built by MW). It is NOT hover-gated -- the
        whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's

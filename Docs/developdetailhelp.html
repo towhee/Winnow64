@@ -33,9 +33,19 @@ noisy or high-ISO frame; high passes everything through for maximum bite on clea
 detailed files.</li>
 <li><b>Masking</b> &mdash; confines sharpening to edges.  At 0 everything is sharpened,
 including flat sky and skin, where sharpening only amplifies noise.  Raise it and smooth
-areas are progressively protected while real edges keep the full effect.  On portraits
-and skies this is usually the difference between usable and unusable.</li>
+areas are progressively protected while real edges keep the full effect.  Most of the
+strong protection lives in the <i>top third</i> of the slider, so do not be shy with it on
+a noisy file.  On portraits and skies this is usually the difference between usable and
+unusable.</li>
 </ul>
+
+<h3>Seeing the mask</h3>
+<p><b>Hold Opt</b> (Alt on Windows) and <b>drag the Masking slider</b>: the photo is
+replaced by the mask itself, in black and white.  <b>White is sharpened, black is
+protected</b>, and the greys in between get a proportional amount.  As you raise the
+slider you watch the sky and the skin go black while the edges stay white, which is far
+quicker than hunting for the transition at 1:1.  The mask shows only while you are
+dragging &mdash; let go of the handle, or of Opt, and the photo comes back.</p>
 
 <h3>Radius is the one control measured in pixels</h3>
 <p>Every other spatial radius in Develop &mdash; Texture, Dehaze, the vignette, grain size
@@ -87,7 +97,7 @@ here is a plain image-space filter that works on any file and can be masked.</p>
 <li>Set <b>Denoise Color</b> first &mdash; it is nearly free in detail.</li>
 <li>Add <b>Denoise</b> only until the speckle stops distracting, not until it is gone.</li>
 <li>Bring up <b>Sharpening</b>, then raise <b>Masking</b> until the flat areas go quiet
-again.</li>
+again &mdash; Opt-drag the slider to watch them turn black in the mask.</li>
 <li>Drop <b>Detail</b> if the remaining noise is still being sharpened.</li>
 </ol>
 

@@ -38,8 +38,30 @@ constexpr float kMaxRadius = 3.0f;
 constexpr float kDetailKnee = 0.06f;
 
 /* Edge-strength (gradient magnitude, perceptual-luma units per pixel) that counts as a
-   full edge at maximum Masking. Below it the gate rolls off toward zero. */
-constexpr float kMaskKnee = 0.10f;
+   full edge -- the knee the gate rolls off below. It is a function of the Masking slider
+   rather than a single constant, because a LINEAR ramp ran out of travel: at the top of
+   the slider a knee of 0.10/px still passed ordinary texture (~0.05/px) at half strength,
+   so "maximum masking" could not actually quiet a noisy sky or skin.
+
+   knee(m) = m * (kMaskKnee + (kMaskKneeMax - kMaskKnee) * m^2)
+
+   -- linear at the bottom, cubic at the top. The low end keeps the feel it had (m = 0.25
+   moves the knee 0.031 against 0.025 before), while the top end reaches 5x as far, so the
+   last third of the slider is where the strong protection now lives. Values are per
+   FULL-RESOLUTION pixel; edgeGate scales the result by the render scale.
+
+   NOTE this re-calibrates what a STORED sharpenMasking means (2026-08-21): the key and its
+   0..1 range are unchanged -- so nothing needs migrating -- but a sidecar written before
+   this protects more than it used to above the middle of the slider. Sharpening shipped
+   in the previous commit, so there is nothing older than that to be wrong about. */
+constexpr float kMaskKnee    = 0.10f;    // linear term: the low end's feel
+constexpr float kMaskKneeMax = 0.50f;    // the knee at Masking 1
+
+inline float maskKnee(float masking)
+{
+    const float m = std::clamp(masking, 0.0f, 1.0f);
+    return m * (kMaskKnee + (kMaskKneeMax - kMaskKnee) * m * m);
+}
 
 /* A proxy Gaussian narrower than this is pointless -- it degenerates to a no-op kernel
    and the slider would look dead during a drag. */
@@ -84,15 +106,15 @@ inline float shapeDetail(float hp, float detail, float renderScale)
 /* Edge gate from a local gradient magnitude.
 
    masking == 0 returns 1 everywhere (sharpen everything). As masking rises the gate
-   demands more edge strength, so flat regions fall to zero and only real edges keep a
-   full gate. Like the detail knee, the threshold scales with the render so a proxy gates
-   comparably. */
+   demands more edge strength -- along maskKnee's ramp, so the top of the slider has real
+   travel -- and flat regions fall to zero while only real edges keep a full gate. Like
+   the detail knee, the threshold scales with the render so a proxy gates comparably. */
 inline float edgeGate(float gradMag, float masking, float renderScale)
 {
     const float m = std::clamp(masking, 0.0f, 1.0f);
     if (m <= 0.0f) return 1.0f;
     const float s = (renderScale > 0.0f) ? renderScale : 1.0f;
-    const float knee = kMaskKnee * m * s;
+    const float knee = maskKnee(m) * s;
     if (knee <= 0.0f) return 1.0f;
     /* Roll in from zero to the knee, then blend the gate toward "open" by (1 - masking)
        so intermediate settings soften rather than switch. */

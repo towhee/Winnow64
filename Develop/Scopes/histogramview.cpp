@@ -1,6 +1,8 @@
 #include "Develop/Scopes/histogramview.h"
 #include "Main/global.h"
 #include <QPainter>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <QPainterPath>
 #include <QMouseEvent>
 
@@ -43,6 +45,21 @@ void HistogramView::clearMarker()
 QSize HistogramView::sizeHint() const
 {
     return QSize(180, 140);
+}
+
+void HistogramView::contextMenuEvent(QContextMenuEvent *event)
+{
+/*
+    The histogram's context menu. It has NO items of its own yet: future histogram-only
+    entries (per-channel visibility, log scale, the neutral-core opacity...) are added to
+    `menu` here, and the shared scopes-layout section is appended below them by
+    MW::showDevelopScopesMenu (with a separator when this section is not empty). The
+    vectorscope follows the same pattern with its zoom / skin-line items.
+*/
+    if (G::isLogger) G::log("HistogramView::contextMenuEvent");
+    QMenu menu(this);
+    event->accept();
+    emit menuRequested(&menu, event->globalPos());
 }
 
 void HistogramView::mouseDoubleClickEvent(QMouseEvent *event)

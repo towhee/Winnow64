@@ -1227,7 +1227,8 @@ void MW::createStatusBar()
 
     // Operation Mode dropdown at the EXTREME LEFT of the status bar (Preview / Develop). A standout
     // orange background makes the current mode obvious. Item order matches G::OperationMode
-    // (0 = Preview, 1 = Develop). Toggled here or via the D shortcut (operationModeAction).
+    /* (0 = Preview, 1 = Develop). Switched either way here; the D shortcut
+       (operationModeAction) only ENTERS Develop, and E / G / T leave it. */
     operationModeCombo = new QComboBox;
     operationModeCombo->setObjectName("operationModeCombo");
     operationModeCombo->addItem("Preview");
@@ -1937,6 +1938,10 @@ void MW::createDevelopDock()
        re-read the combine modifiers on each edge. */
     connect(imageView, &ImageView::maskStrokeStateChanged, this,
             [this](bool){ syncPendingMaskOp(); });
+    /* Opt held during a Detail-panel Masking drag -> show the sharpening gate in grayscale
+       over the photo (and drop it when the key or the handle is released). */
+    connect(developProperties, &DevelopProperties::sharpenMaskPreviewChanged,
+            this, [this](bool){ updateSharpenMaskPreview(); });
     /* A shaping action (stroke / handle drag) began: the modifier held at that instant
        becomes what the submask DOES, and stays put when the key is released. */
     connect(imageView, &ImageView::maskOpActionStarted,
@@ -1981,7 +1986,8 @@ void MW::createDevelopDock()
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
        Visibility is user-toggled from the action row above and persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
-    /* Which scopes the strip shows ("G" cycles both / histogram / vectorscope). */
+    /* Which scopes the strip shows (picked from the strip's right-click menu or the
+       Develop menu's Scopes submenu: both / histogram / vectorscope). */
     developScopesLayout = settings->value("Develop/scopesLayout", ScopesView::Both).toInt();
     if (developScopesLayout < ScopesView::Both ||
         developScopesLayout > ScopesView::VectorscopeOnly)
@@ -2253,9 +2259,11 @@ void MW::createDevelopDock()
     scopesView->setVectorscopeSkinLine(settings->value("Develop/vectorscopeSkinLine", false).toBool());
     connect(scopesView, &ScopesView::vectorscopeSkinLineChanged, this,
             [this](bool on){ settings->setValue("Develop/vectorscopeSkinLine", on); });
-    /* The strip's [X] (top right corner): hide the scopes ("G" or the action-row
-       button brings them back with the same layout). */
+    /* The strip's [X] (top right corner): hide the scopes (the action-row button or the
+       Scopes menu brings them back with the same layout). */
     connect(scopesView, &ScopesView::closeRequested, this, &MW::closeDevelopScopes);
+    /* Right-click any scope: the scope's own items (if any) plus the scopes-layout menu. */
+    connect(scopesView, &ScopesView::menuRequested, this, &MW::showDevelopScopesMenu);
     developDock->setFloating(false);
     developDock->setVisible(true);
     // prevent MW splitter resizing developDock so the header - and + buttons stay visible
@@ -2279,7 +2287,8 @@ void MW::createDevelopDock()
     developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
     developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.  "
-                                 "(G) cycles: both > histogram > vectorscope > hidden");
+                                 "Right click the scopes (or use Develop > Scopes) to "
+                                 "choose which scopes are shown.");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developActionLayout->addWidget(developScopesBtn);
@@ -2693,10 +2702,10 @@ void MW::setOperationMode(G::OperationMode mode)
         operationModeCombo->setCurrentIndex(int(mode));
     }
 
-    /* Develop shows a single image, so only Loupe is allowed: force Loupe on entry, and
-       refresh the View-menu gating (enableSelectionDependentMenus disables Grid/Table/
-       Compare -- and their G/T/C shortcuts -- while in Develop, re-enabling on return to
-       Preview). */
+    /* Develop shows a single image, so it always runs in Loupe: force Loupe on entry, and
+       refresh the View-menu gating (enableSelectionDependentMenus disables Compare -- and
+       its C shortcut -- while in Develop, re-enabling on return to Preview). Loupe (E),
+       Grid (G) and Table (T) stay enabled: they are the way back to Preview. */
     if (mode == G::OperationMode::Develop && G::mode != "Loupe")
         loupeDisplay("MW::setOperationMode");
     enableSelectionDependentMenus();
@@ -2782,13 +2791,6 @@ void MW::setOperationMode(G::OperationMode mode)
        image are added/removed to match the new mode. */
     if (thumbView) thumbView->viewport()->update();
     if (gridView) gridView->viewport()->update();
-}
-
-void MW::toggleOperationMode()
-{
-    if (G::isLogger) G::log("MW::toggleOperationMode");
-    setOperationMode(G::operationMode == G::OperationMode::Develop
-                         ? G::OperationMode::Preview : G::OperationMode::Develop);
 }
 
 void MW::updateDevelopSelectionWarning()

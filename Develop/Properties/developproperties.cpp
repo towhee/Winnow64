@@ -1237,6 +1237,42 @@ void DevelopProperties::beginMaskTool(int tool)
     emit paramsChanged();        // overlay/tint (red committed, blue pending)
 }
 
+bool DevelopProperties::sharpenMaskPreviewActive() const
+{
+/*
+    The Detail panel's Masking slider shows its edge gate while Opt is held, the way
+    Lightroom's Alt-drag does: the photo is replaced by the mask in grayscale -- white is
+    sharpened, black is protected -- so the gate can be set by looking at the whole frame
+    instead of hunting for the transition at 1:1.
+
+    Two conditions, both live: Opt is down, and the Masking slider is BEING WORKED (its
+    handle held). Gating on the drag rather than on focus is the Lightroom behaviour and
+    the reason the preview can be this loud -- it covers the photo, so it must not be able
+    to sit there once you have let go.
+
+    queryKeyboardModifiers (not keyboardModifiers) for the same reason maskOpFromModifiers
+    uses it: this is called from the Opt KeyPress itself, whose event modifiers do not yet
+    include the key being pressed.
+*/
+    if (G::operationMode != G::OperationMode::Develop) return false;
+    /* A modifier held as the app loses focus is no longer ours -- the release goes to
+       whoever took the focus -- so the preview drops with the window. */
+    if (!isActiveWindow()) return false;
+    const QModelIndex vIdx = sourceIdx.value("sharpenMasking");
+    if (!vIdx.isValid()) return false;
+    auto *se = static_cast<SliderEditor*>(vIdx.data(UR_Editor).value<void*>());
+    if (!se || !se->sliderIsDown()) return false;
+    return QGuiApplication::queryKeyboardModifiers().testFlag(Qt::AltModifier);
+}
+
+void DevelopProperties::syncSharpenMaskPreview()
+{
+    const bool on = sharpenMaskPreviewActive();
+    if (on == sharpenMaskPreviewOn) return;
+    sharpenMaskPreviewOn = on;
+    emit sharpenMaskPreviewChanged(on);
+}
+
 int DevelopProperties::maskOpFromModifiers()
 {
     const Qt::KeyboardModifiers m = QGuiApplication::queryKeyboardModifiers();
@@ -3916,6 +3952,7 @@ void DevelopProperties::addBasic()
     addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ToneDevider");
     addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
+    addSlider("clarity",    "Clarity",    "Midtone punch (+) or soft glow (-).", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "BasicEndDivider");
     // demo colors
@@ -4762,7 +4799,9 @@ void DevelopProperties::addDetail()
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray, 25);
     addSlider("sharpenMasking", "   Masking",
               "Confine sharpening to edges, protecting flat areas like sky and\n"
-              "skin where sharpening only amplifies noise. 0 sharpens everything.",
+              "skin where sharpening only amplifies noise. 0 sharpens everything.\n"
+              "Opt-drag this slider to see the mask in black and white: white\n"
+              "is sharpened, black is protected.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
 
     addDivider(dividerHeight, 1, divColor, parIdx, "DetailHeader", "DenoiseDivider");
@@ -5046,6 +5085,7 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "whites")     p.whites     = f;
     else if (key == "blacks")     p.blacks     = f;
     else if (key == "texture")    p.texture    = f;
+    else if (key == "clarity")    p.clarity    = f;
     else if (key == "dehaze")     p.dehaze     = f;
     else if (key == "red")        p.red        = f;
     else if (key == "green")      p.green      = f;
@@ -5506,6 +5546,7 @@ const PresetLeafDef kBasicLeaves[] = {
     {"whites",       "Whites"},
     {"blacks",       "Blacks"},
     {"texture",      "Texture"},
+    {"clarity",      "Clarity"},
     {"dehaze",       "Dehaze"},
 };
 /* Two leaves, not one: a look built on the composite curve is often wanted WITHOUT the
@@ -5575,6 +5616,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "whites")       return p.whites     != def.whites;
     if (key == "blacks")       return p.blacks     != def.blacks;
     if (key == "texture")      return p.texture    != def.texture;
+    if (key == "clarity")      return p.clarity    != def.clarity;
     if (key == "dehaze")       return p.dehaze     != def.dehaze;
     if (key == "curveRgb")
         return !ToneCurve::isIdentity(p.curveX[0], p.curveY[0], p.curveN[0]);
@@ -5639,6 +5681,7 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         {"whites",     "whites",     p.whites},
         {"blacks",     "blacks",     p.blacks},
         {"texture",    "texture",    p.texture},
+        {"clarity",    "clarity",    p.clarity},
         {"dehaze",     "dehaze",     p.dehaze},
         {"red",        "red",        p.red},
         {"green",      "green",      p.green},
@@ -6318,6 +6361,7 @@ const FloatField kFloatFields[] = {
     {"toneCrossover",       &EditParams::toneCrossover},
     {"toneHighlightCenter", &EditParams::toneHighlightCenter},
     {"texture",             &EditParams::texture},
+    {"clarity",             &EditParams::clarity},
     {"dehaze",              &EditParams::dehaze},
     {"red",                 &EditParams::red},
     {"green",               &EditParams::green},
@@ -6600,6 +6644,7 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("whites",     p.whites);
     setSliderReal("blacks",     p.blacks);
     setSliderReal("texture",    p.texture);
+    setSliderReal("clarity",            p.clarity);
     setSliderReal("dehaze",     p.dehaze);
     setSliderReal("red",        p.red);
     setSliderReal("green",      p.green);

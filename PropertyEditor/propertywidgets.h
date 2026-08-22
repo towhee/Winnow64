@@ -110,6 +110,10 @@ public:
     double value();
     void focusSlider();     // give keyboard focus to the inner slider (nudge target)
     bool sliderHasFocus() const;   // true while the inner slider owns keyboard focus
+    /* True while the handle is held down (a drag in progress, or a click on the track).
+       The Develop sharpening-mask preview is gated on it: it shows only WHILE the slider
+       is being worked, as Lightroom's Alt-drag does. */
+    bool sliderIsDown() const;
 
 protected:
     void paintEvent(QPaintEvent *event);
