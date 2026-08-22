@@ -229,6 +229,7 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "whites")              p.whites              = f;
     else if (key == "blacks")              p.blacks              = f;
     else if (key == "texture")             p.texture             = f;
+    else if (key == "clarity")             p.clarity             = f;
     else if (key == "dehaze")              p.dehaze              = f;
     else if (key == "red")                 p.red                 = f;
     else if (key == "green")               p.green               = f;

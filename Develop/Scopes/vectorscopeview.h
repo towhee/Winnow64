@@ -5,6 +5,7 @@
 #include "Develop/Scopes/scopedata.h"
 
 class QPainter;
+class QMenu;
 
 /*
     A live vectorscope of the image currently shown in the loupe: a 2-D Cb/Cr
@@ -34,10 +35,15 @@ public:
 signals:
     void zoomChanged(double z);             // right-click menu choice (MW persists it)
     void skinLineChanged(bool on);          // right-click menu toggle (MW persists it)
+    /* Right-click: `menu` already holds this scope's own zoom / skin-line items and the
+       receiver (ScopesView -> MW) appends the shared scopes-layout section and shows it.
+       The menu lives on the emitter's stack, so handling must be synchronous. */
+    void menuRequested(QMenu *menu, QPoint globalPos);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
-    void contextMenuEvent(QContextMenuEvent *event) override;   // 100/150/200% zoom menu
+    /* 100/150/200% zoom + skin line, then the shared scopes-layout section. */
+    void contextMenuEvent(QContextMenuEvent *event) override;
     /* Consume double-clicks so they do not bubble to the dock (which would un/redock). */
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 

@@ -4,12 +4,13 @@ WHAT'S NEW
 - Develop Presets panel
 
 BUGS / TO DO
+- D develop E loupe  G grid  C compare
 - Radial gradient mask: Shift drag grab pt maintain radial shape while resize.
 Mouse wheel/touchscroll while cursor in radial shape should do the same thing.
 - Eliminate Edits layouts except Minimal
 - Check if libheif library is in Winnow (use for windows platform)
-- Masks still different colors, need to maintain mask tool history as before
 - Develop copy / paste
+- Add profiles (including AgX) to Calibrate
 - List stuff to disable in Develop Mode (menu items and shortcuts)
 - WB undo
 - Do not show MetaRead and ImageCache status lights in Develop mode.
@@ -19,6 +20,9 @@ Mouse wheel/touchscroll while cursor in radial shape should do the same thing.
 - Spot fill quality issue (reassess)
 - Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
+- Clarity: DONE 2026-08-20 (Develop op #6.5 in Basic, between Texture and Dehaze;
+  midtone-weighted + halo-guarded). Shipped with the Develop/localcontrast.h extraction
+  that de-duplicated Texture/Clarity/Dehaze/Sharpen. See RawDecode_ToDo #32b.
 - Sharpen: DONE 2026-08-20 (Develop op #8.5, new "Detail" panel: Amount/Radius/Detail/
   Masking; local Denoise moved there from Effects). Soften NOT done -- declined, negative
   Texture and Denoise already cover it. See RawDecode_ToDo #32.

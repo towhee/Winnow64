@@ -75,6 +75,24 @@ winnow_add_unit_test(tst_calibrate unit/tst_calibrate.cpp)
 winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)
 # tst_sharpen tests Develop/sharpen.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_sharpen unit/tst_sharpen.cpp)
+# tst_localcontrast is the CHARACTERIZATION gate for the local-contrast family: it pins
+# what Texture and Dehaze rendered before they were extracted onto the shared kernel, so
+# it compiles develop.cpp (and therefore needs OpenCV) like tst_renderstack does. It also
+# unit-tests the header-only Develop/localcontrast.h kernel.
+winnow_add_unit_test(tst_localcontrast unit/tst_localcontrast.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
+if(APPLE)
+    target_include_directories(tst_localcontrast PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_localcontrast PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_localcontrast PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_localcontrast PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_localcontrast PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)

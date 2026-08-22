@@ -11,6 +11,8 @@
 #include "Develop/depthmask.h"
 #include "Develop/objectmask.h"
 #include "Develop/develop.h"
+#include "Develop/sharpen.h"        // updateSharpenMaskPreview: the edge gate
+#include <opencv2/imgproc.hpp>     // updateSharpenMaskPreview: GaussianBlur + Sobel
 #include "ImageFormats/Raw/pmrid.h"
 #include "Utilities/inference/miganfill.h"
 #include "Utilities/inference/lamafill.h"
@@ -1684,6 +1686,32 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DEVELOP MODE: the sharpening MASK preview is momentary in TWO inputs -- Opt held,
+       and the Masking slider's handle held -- so both edges have to be reported: the Opt
+       key (reached only when the mask combine modifiers above did not consume it; while a
+       submask is open, mask editing owns Opt) and the mouse press/release that starts and
+       ends the drag. The Alt press is NOT accepted: it carries no action of its own here,
+       and swallowing it would take Alt away from everything else in the window.
+       DevelopProperties decides whether the Masking slider is the one being dragged; this
+       only reports that something changed. */
+    if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
+        && developProperties) {
+        const QEvent::Type t = event->type();
+        if (t == QEvent::KeyPress || t == QEvent::KeyRelease) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            if (e->key() == Qt::Key_Alt && !e->isAutoRepeat())
+                developProperties->syncSharpenMaskPreview();
+        }
+        /* Posted AFTER the press/release has been delivered: the slider sets isSliderDown
+           in its own handler, so reading it here (before it runs) would be one event
+           stale -- the preview would appear on the release and vanish on the press. */
+        else if (t == QEvent::MouseButtonPress || t == QEvent::MouseButtonRelease) {
+            QMetaObject::invokeMethod(developProperties,
+                                      &DevelopProperties::syncSharpenMaskPreview,
+                                      Qt::QueuedConnection);
+        }
+    }
+
     /* Clear the Space zoom/pan override if the app deactivates while Space is held -- a
        release delivered to another app would otherwise leave the override stuck on. */
     if (event->type() == QEvent::ApplicationDeactivate && imageView)
@@ -1692,6 +1720,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* A modifier released while another app had the focus never reaches us, which would
        leave the overlay previewing Subtract for ever; re-read it on the way back in. */
     if (event->type() == QEvent::ApplicationActivate) syncPendingMaskOp();
+    /* Same for the sharpening mask preview, in both directions: deactivating with Opt
+       held must drop the tint, since the release will be delivered elsewhere. */
+    if ((event->type() == QEvent::ApplicationActivate
+         || event->type() == QEvent::ApplicationDeactivate) && developProperties)
+        developProperties->syncSharpenMaskPreview();
 
     /* KEYPRESS INTERCEPT (NAVIGATION and MODIFIERS) */
     {
@@ -2897,6 +2930,8 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     developPmridResHadNP = false;
     developProxy.reset();
     developProxyPath.clear();
+    developFrame = QImage();           // the frame the sharpening mask preview derives from
+    developFramePath.clear();
     developStackCache.clear();         // its entries are sized to the old proxy
     maskFoldCacheClear();              // ditto, and its refs belong to the old folder
     developWorkTriedPath.clear();
@@ -7289,6 +7324,96 @@ void MW::updateMaskOverlayTint()
         imageView->setMaskLegend(QString(), -1, false);
 }
 
+void MW::updateSharpenMaskPreview()
+{
+/*
+    SHARPENING MASK PREVIEW, as Lightroom's Alt-drag does it. Sharpening's Masking slider
+    gates the effect by local edge strength; which pixels survive that gate cannot be seen
+    in the result without hunting around at 1:1. Holding Opt while dragging Masking
+    replaces the photo with the gate itself in GRAYSCALE -- white is sharpened, black is
+    protected -- so the slider can be set by looking at the whole frame. It lives only for
+    the duration of the drag (see DevelopProperties::sharpenMaskPreviewActive), which is
+    what lets it be this loud.
+
+    BUILT FROM THE FRAME ON SCREEN, not from the render. The true gate lives inside
+    Develop::Sharpen, several stages deep in a worker-thread stack render, and plumbing a
+    buffer back out of it would cost a pipeline seam and land a tick late. The displayed
+    frame is the same image one op later, so the same blur + Sobel + Sharpen::edgeGate over
+    its luma reproduces the gate closely enough to set the slider by -- and it is always in
+    step with what the user is looking at. Two known approximations, neither material at the
+    job this does: the frame carries sharpening (and grain, if any) that the real gate is
+    measured before, and its perceptual luma is sRGB-encoded gray rather than the
+    pipeline's own encode.
+
+    The result is in DISPLAYED space (post-geometry, oriented) because its source is, so
+    ImageView draws it straight over the pixmap -- the one Develop overlay that must NOT go
+    through maskNormToItem.
+*/
+    if (G::isLogger) G::log("MW::updateSharpenMaskPreview");
+    if (!imageView) return;
+    if (!developProperties || !developProperties->sharpenMaskPreviewActive()
+        || developFrame.isNull() || !dm || developFramePath != dm->currentFilePath) {
+        imageView->clearSharpenMaskImage();
+        return;
+    }
+
+    const QImage frame = developFrame;
+    const int w = frame.width(), h = frame.height();
+    if (w < 3 || h < 3) { imageView->clearSharpenMaskImage(); return; }
+
+    /* The gate's knee is expressed per FULL-RESOLUTION pixel, so it scales with this
+       frame's render scale exactly as Develop::Sharpen scales it for a proxy (the one
+       scale-dependent op -- see Develop/sharpen.h). */
+    float scale = 1.0f;
+    if (auto work = WorkingImageCache::instance().get(developFramePath)) {
+        const int degrees = work->sceneReferred
+                                ? developOrientationDegrees(*work, developFramePath) : 0;
+        int fw = work->width, fh = work->height;
+        if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+        const int fullEdge = qMax(fw, fh);
+        if (fullEdge > 0) scale = float(qMax(w, h)) / float(fullEdge);
+    }
+    scale = qBound(0.05f, scale, 1.0f);
+
+    const EditParams p = developProperties->editParams();
+    const float masking = qBound(0.0f, p.sharpenMasking, 1.0f);
+    const float sigma   = Sharpen::effectiveSigma(p.sharpenRadius, scale);
+
+    /* Perceptual luma of the displayed frame, blurred exactly as the op blurs it, then
+       the 1/8-normalised Sobel pair the gate reads (see Develop::Sharpen for why the
+       gradient is taken on the BLURRED luma and why the Sobel gain is divided out). */
+    QImage gray = frame.convertToFormat(QImage::Format_Grayscale8);
+    cv::Mat g8(h, w, CV_8UC1, gray.bits(), size_t(gray.bytesPerLine()));
+    cv::Mat yp;
+    g8.convertTo(yp, CV_32F, 1.0 / 255.0);
+    cv::Mat base;
+    cv::GaussianBlur(yp, base, cv::Size(0, 0), sigma);
+    constexpr double kSobelNorm = 1.0 / 8.0;
+    cv::Mat gx, gy, grad;
+    cv::Sobel(base, gx, CV_32F, 1, 0, 3, kSobelNorm);
+    cv::Sobel(base, gy, CV_32F, 0, 1, 3, kSobelNorm);
+    cv::magnitude(gx, gy, grad);
+
+    /* The gate straight out as 8-bit gray: 255 = full sharpening, 0 = fully protected.
+       Grayscale8 rather than a tint, so the preview IS the mask (Lightroom's reading) and
+       the intermediate greys show the soft roll-off rather than hiding it. */
+    QImage mask(w, h, QImage::Format_Grayscale8);
+    const float *gp = grad.ptr<float>();
+    uchar *const bits = mask.bits();
+    const qsizetype bpl = mask.bytesPerLine();
+    developParallelRows(w, h, [&](int y0, int y1) {
+        for (int y = y0; y < y1; ++y) {
+            uchar *row = bits + qsizetype(y) * bpl;
+            const float *grow = gp + size_t(y) * w;
+            for (int x = 0; x < w; ++x) {
+                const float gate = Sharpen::edgeGate(grow[x], masking, scale);
+                row[x] = uchar(qBound(0.0f, gate, 1.0f) * 255.0f + 0.5f);
+            }
+        }
+    });
+    imageView->setSharpenMaskImage(mask);
+}
+
 void MW::syncPendingMaskOp()
 {
 /*
@@ -7547,6 +7672,12 @@ void MW::renderDevelopPreview(bool fullRes)
                    stale pairing would draw them in the wrong place for one tick. */
                 imageView->setDevelopGeometry(appliedGeom, orientedSize);
                 imageView->setDevelopPreview(out, displaySize);
+                /* Keep the frame: the sharpening mask preview is derived from the pixels
+                   on screen, so it must be rebuilt from each one -- a Masking drag with
+                   Opt held is exactly the case that has to stay live. */
+                developFrame = out;
+                developFramePath = fPath;
+                updateSharpenMaskPreview();
                 if (wantTime) msPreview = pv.restart();
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
                 if (wantTime) msScopes = pv.elapsed();
@@ -8505,42 +8636,77 @@ void MW::setDevelopScopesVisible(bool isVisible)
     }
 }
 
-void MW::cycleDevelopScopes()
+void MW::setDevelopScopesChoice(int choice)
 {
 /*
-    "G" in Develop mode (also the Develop menu item): step the scopes strip through
+    Apply a scopes-strip choice made in the strip's right-click menu or the Develop menu's
+    Scopes submenu:
 
-        both scopes -> histogram only -> vectorscope only -> hidden -> both ...
+        Both / HistogramOnly / VectorscopeOnly  ->  show the strip with that layout
+        kDevelopScopesHidden                    ->  hide the strip, keeping its layout
 
     The single-scope layouts expand to fill the strip. Both the layout and the visibility
-    are persisted, so the strip comes back the way it was left in the next session.
+    are persisted, so the strip comes back the way it was left in the next session, and
+    the layout is kept while hidden so the action-row button restores the same scopes.
 */
-    if (G::isLogger) G::log("MW::cycleDevelopScopes");
+    if (G::isLogger) G::log("MW::setDevelopScopesChoice");
     if (!scopesView) return;
 
-    if (!developScopesVisible) {
-        /* Hidden: reappear at the start of the cycle. */
-        developScopesLayout = ScopesView::Both;
-        scopesView->setScopeLayout(ScopesView::Both);
-        settings->setValue("Develop/scopesLayout", developScopesLayout);
-        setDevelopScopesVisible(true);
-        return;
-    }
-
-    switch (developScopesLayout) {
-    case ScopesView::Both:
-        developScopesLayout = ScopesView::HistogramOnly;
-        break;
-    case ScopesView::HistogramOnly:
-        developScopesLayout = ScopesView::VectorscopeOnly;
-        break;
-    default:
-        /* Last layout: hide the strip (the layout it reappears with is set above). */
+    if (choice == kDevelopScopesHidden) {
         setDevelopScopesVisible(false);
         return;
     }
+    if (choice < ScopesView::Both || choice > ScopesView::VectorscopeOnly) return;
+
+    developScopesLayout = choice;
     scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
     settings->setValue("Develop/scopesLayout", developScopesLayout);
+    if (!developScopesVisible) setDevelopScopesVisible(true);
+}
+
+void MW::syncDevelopScopesMenu()
+{
+/*
+    Tick the item matching the strip's current state as the menu opens. The actions are an
+    exclusive QActionGroup, so checking one unchecks the rest.
+*/
+    if (G::isLogger) G::log("MW::syncDevelopScopesMenu");
+    QAction *a = developScopesHideAction;
+    if (developScopesVisible) {
+        switch (developScopesLayout) {
+        case ScopesView::HistogramOnly:   a = developScopesHistAction; break;
+        case ScopesView::VectorscopeOnly: a = developScopesVectAction; break;
+        default:                          a = developScopesBothAction; break;
+        }
+    }
+    if (a) a->setChecked(true);
+}
+
+void MW::showDevelopScopesMenu(QMenu *menu, QPoint globalPos)
+{
+/*
+    Right-click in the scopes strip. Every scope shows the SAME scopes-layout section
+    (both scopes / histogram only / vectorscope only / hidden), so it is appended here
+    rather than built in each scope: the scope under the cursor builds its own items
+    first (VectorscopeView's zoom + skin line; HistogramView has none yet, and is the
+    place to add histogram-only entries), hands the part-built menu up through
+    ScopesView::menuRequested, and this adds the layout section -- after a separator when
+    the scope contributed anything -- and execs.
+
+    The menu belongs to the emitting scope (a stack QMenu), so it must be shown before
+    returning and nothing here may outlive the call. The actions are MW's, and a QMenu
+    does not own actions added to it, so they survive the menu's destruction.
+*/
+    if (G::isLogger) G::log("MW::showDevelopScopesMenu");
+    if (!menu || !developScopesBothAction) return;
+    syncDevelopScopesMenu();
+    if (!menu->isEmpty()) menu->addSeparator();
+    menu->addAction(developScopesBothAction);
+    menu->addAction(developScopesHistAction);
+    menu->addAction(developScopesVectAction);
+    menu->addSeparator();
+    menu->addAction(developScopesHideAction);
+    menu->exec(globalPos);
 }
 
 void MW::closeDevelopScopes()

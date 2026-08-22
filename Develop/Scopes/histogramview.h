@@ -13,6 +13,8 @@
     Counts come from MW::updateDevelopScopes (a strided sample of the displayed image),
     so cost is independent of the file's resolution.
 */
+class QMenu;
+
 class HistogramView : public QWidget
 {
     Q_OBJECT
@@ -24,8 +26,16 @@ public:
     void clearMarker();
     QSize sizeHint() const override;
 
+signals:
+    /* Right-click: `menu` holds this scope's OWN items (none yet -- see contextMenuEvent)
+       and the receiver (ScopesView -> MW) appends the shared scopes-layout section and
+       shows it. The menu lives on the emitter's stack, so handling must be synchronous. */
+    void menuRequested(QMenu *menu, QPoint globalPos);
+
 protected:
     void paintEvent(QPaintEvent *event) override;
+    /* Builds the histogram's section of the context menu, then hands it up. */
+    void contextMenuEvent(QContextMenuEvent *event) override;
     /* Consume double-clicks so they do not bubble to the dock (which would un/redock). */
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 

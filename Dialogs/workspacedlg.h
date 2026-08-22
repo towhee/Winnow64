@@ -16,12 +16,14 @@ class WorkspaceDlg : public QDialog
     Q_OBJECT
 
 public:
+    inline static const QString defaultWorkspaceName = "Winnow default workspace";
     explicit WorkspaceDlg(QList<QString> *wsList, QWidget *parent = 0) ;
     ~WorkspaceDlg();
     Ui::Workspacedlg *ui;
 
 signals:
     void deleteWorkspace(int);
+    void updateDefaultWorkspace();
     void reassignWorkspace(int);
     void renameWorkspace(int, QString);
     void reportWorkspaceNum(int n);
@@ -39,6 +41,15 @@ private:
     QWidget *mainWindow;
     bool editMode;
     void report(QString signalName);
+    /* When G::isRory the dropdown lists the Winnow default workspace, a separator, and
+       then the saved workspaces, so the combo index of saved workspace n is
+       n + firstWorkspaceIndex.  Otherwise only the saved workspaces are listed and
+       firstWorkspaceIndex is 0.  Both are set in the constructor. */
+    int defaultIndex;
+    int firstWorkspaceIndex;
+    bool isDefaultSelected() const;
+    int workspaceIndex() const;
+    void updateForSelection();
 };
 
 #endif // WORKSPACEDLG_H

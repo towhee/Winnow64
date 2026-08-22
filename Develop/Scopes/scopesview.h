@@ -9,6 +9,7 @@
 
 class QVBoxLayout;
 class QHBoxLayout;
+class QMenu;
 class BarBtn;
 
 /*
@@ -19,7 +20,10 @@ class BarBtn;
 
     setScopeLayout() switches which scopes the strip shows: both side-by-side, the
     histogram alone or the vectorscope alone, the single scope expanding to fill the
-    strip. G cycles the layouts (MW::cycleDevelopScopes) and MW persists the choice.
+    strip. The layout is picked from the right-click menu of EITHER scope (each scope
+    builds its own items, this widget relays the part-built menu out as menuRequested and
+    MW::showDevelopScopesMenu appends the shared layout section and shows it) or from the
+    Develop menu's Scopes submenu; MW persists the choice.
 
     setData() fans one ScopeData out to both child scopes; clear() blanks them when no
     image is shown. MW owns this widget and feeds it from updateDevelopScopes().
@@ -55,11 +59,19 @@ signals:
     void vectorscopeZoomChanged(double z);     // user picked a zoom from the vectorscope menu
     void vectorscopeSkinLineChanged(bool on);  // user toggled the skin line
     void closeRequested();                     // user clicked the strip's [X]
+    /* Right-click anywhere in the strip. `menu` carries whatever items the scope under
+       the cursor added (the vectorscope's zoom / skin line; none from the histogram yet);
+       MW appends the shared scopes-layout section and execs it. The menu lives on the
+       emitting scope's stack, so the receiver must handle it synchronously. */
+    void menuRequested(QMenu *menu, QPoint globalPos);
 
 protected:
     /* Consume double-clicks landing on the strip's margins so they do not bubble to
        the dock (which would un/redock); the child scopes consume their own. */
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    /* Right-clicks that no scope claimed (the tone slider, the strip's margins): an
+       empty menu, so only the shared scopes-layout section shows. */
+    void contextMenuEvent(QContextMenuEvent *event) override;
     /* Keep the floating [X] pinned to the top right corner. */
     void resizeEvent(QResizeEvent *event) override;
     /* Separator rule (G::panelBorderHeight in G::tabWidgetBorderColor) across the bottom

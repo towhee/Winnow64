@@ -91,6 +91,36 @@ private slots:
         QVERIFY(out > yp + 0.05f);
     }
 
+    /* THE MASKING RAMP has to have travel at the TOP of the slider -- the reason
+       maskKnee is a curve and not a constant times m. Ordinary texture (a slope around
+       0.05/px, well short of a real edge) has to survive the middle of the slider and be
+       protected near the end of it; a linear ramp left it at half strength even at 1. */
+    void maskingHasRangeAtTheTop()
+    {
+        const float texture = 0.05f;                    // per-pixel slope of fine detail
+        const float mid  = Sharpen::edgeGate(texture, 0.5f, 1.0f);
+        const float high = Sharpen::edgeGate(texture, 1.0f, 1.0f);
+        QVERIFY(mid > 0.4f);                            // still largely sharpened
+        QVERIFY(high < 0.15f);                          // and now genuinely protected
+
+        /* A real edge is not thrown away with it, at any setting. */
+        QVERIFY(Sharpen::edgeGate(0.6f, 1.0f, 1.0f) > 0.9f);
+    }
+
+    /* The knee itself: zero at 0, monotonically rising, and no flat stretch at the top
+       (which is exactly what the linear ramp had, in effect, once it saturated). */
+    void maskKneeRisesMonotonically()
+    {
+        float prev = -1.0f;
+        for (float m : {0.0f, 0.25f, 0.5f, 0.75f, 1.0f}) {
+            const float knee = Sharpen::maskKnee(m);
+            QVERIFY(knee > prev);
+            prev = knee;
+        }
+        QCOMPARE(Sharpen::maskKnee(0.0f), 0.0f);
+        QVERIFY(Sharpen::maskKnee(1.0f) > 4.0f * Sharpen::maskKnee(0.5f));
+    }
+
     /* The gate is monotonic in edge strength: a stronger edge is never sharpened less. */
     void edgeGateRisesWithEdgeStrength()
     {

@@ -55,18 +55,40 @@ whites.  Move a split and the same slider value covers more or less of the image
 &mdash; drag a band of the curve and the slider here moves with it.  There is no hidden
 second copy of the values.</p>
 
-<h2>Texture and Dehaze</h2>
-<p><b>Texture</b> works on fine detail only: positive crisps up skin pores, bark and
-fabric; negative smooths them while leaving edges and overall contrast alone.  It is not a
-sharpener &mdash; it changes contrast at a detail scale, not edge acutance.  For acutance
-&mdash; recovering the edge definition demosaic costs a raw file &mdash; use
-<b>Sharpening</b> in the Detail panel.  The two work about ten times apart in scale, so
-they do not overlap and using both is normal.</p>
+<h2>Texture, Clarity and Dehaze</h2>
+<p>These three are the same kind of control &mdash; local contrast &mdash; at three very
+different scales.  That is the whole trick to using them: they act on different sizes of
+detail, so they stack instead of fighting, and reaching for the right one is a question of
+how big the thing you want to change is.</p>
 
-<p><b>Dehaze</b> removes (or adds) atmospheric veiling.  Positive values pull contrast and
-colour back out of a hazy distance; negative values lay haze on, which is a quick way to
-soften a background or fake distance.  Strong positive dehaze deepens shadows, so it often
-wants a little Shadows back afterwards.</p>
+<ul>
+<li><b>Texture</b> &mdash; the finest scale.  Positive crisps up skin pores, bark and
+fabric; negative smooths them while leaving edges and overall contrast alone.</li>
+<li><b>Clarity</b> &mdash; about five times wider.  This is midtone <i>punch</i>: it makes
+a landscape read as more three-dimensional without touching fine detail.  Negative gives a
+soft glow, which flatters portraits and mist.</li>
+<li><b>Dehaze</b> &mdash; the widest.  It removes (or adds) atmospheric veiling: positive
+pulls contrast and colour back out of a hazy distance, negative lays haze on, which is a
+quick way to soften a background or fake distance.</li>
+</ul>
+
+<p><b>Clarity is not just a wider Texture.</b>  Two things hold it back where a wide
+local-contrast boost normally goes wrong.  It is weighted toward the <b>midtones</b>, so
+it
+will not crush your blacks or flatten your highlights the way a heavy-handed clarity does
+elsewhere; and it eases off at <b>strong edges</b>, which is where a control at this scale
+would otherwise leave a bright halo &mdash; the giveaway rim around a tree against a
+bright
+sky.  You can push it further than you would expect before it looks processed.</p>
+
+<p>None of the three is a sharpener.  They change contrast at a detail scale, not edge
+acutance.  For acutance &mdash; recovering the edge definition demosaic costs a raw file
+&mdash; use <b>Sharpening</b> in the Detail panel, which works about sixty times finer
+than
+Clarity.  Using all four together is normal.</p>
+
+<p>Strong positive Dehaze deepens shadows, so it often wants a little Shadows back
+afterwards.  Clarity does not, which is frequently the reason to reach for it instead.</p>
 
 <h2>Working with the sliders</h2>
 <ul>

@@ -311,7 +311,8 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
 void MW::manageWorkspaces()
 {
 /*
-    Delete, rename and reassign workspaces.
+    Delete, rename and reassign workspaces, and update the Winnow default workspace
+    (the layout invoked by Ctrl+Shift+W) to the current layout.
 */
     if (G::isLogger) G::log("MW::manageWorkspaces");
     // Update a list of workspace names for the manager dialog
@@ -322,6 +323,8 @@ void MW::manageWorkspaces()
     connect(workspaceDlg, &WorkspaceDlg::deleteWorkspace, this, &MW::deleteWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reassignWorkspace, this, &MW::reassignWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::renameWorkspace, this, &MW::renameWorkspace);
+    connect(workspaceDlg, &WorkspaceDlg::updateDefaultWorkspace,
+            this, &MW::updateDefaultWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reportWorkspaceNum, this, &MW::reportWorkspaceNum);
 
     // connect(workspaceDlg, SIGNAL(deleteWorkspace(int)),
@@ -384,8 +387,26 @@ void MW::defaultWorkspace()
     The defaultWorkspace is used the first time the app is run on a new machine and
     there are not any QSettings to read.  It is also useful if part or all of the
     app is "stranded" on secondary monitors that are not attached.
+
+    If the user has redefined the default workspace (Manage Workspaces > "Winnow default
+    workspace" > Update to current layout) then that layout is used, otherwise the
+    built-in Winnow layout is used.
 */
     if (G::isLogger) G::log("MW::defaultWorkspace");
+
+    if (isCustomDefaultWorkspace) {
+        invokeWorkspace(defaultWs);
+        return;
+    }
+    builtInDefaultWorkspace();
+}
+
+void MW::builtInDefaultWorkspace()
+{
+/*
+    The layout Winnow ships with.  See MW::defaultWorkspace.
+*/
+    if (G::isLogger) G::log("MW::builtInDefaultWorkspace");
     QRect desktop = QGuiApplication::screens().first()->geometry();
 //    QRect desktop = qApp->desktop()->availableGeometry();
 //    qDebug() << "MW::defaultWorkspace" << desktop << desktop1;
@@ -463,8 +484,8 @@ void MW::defaultWorkspace()
     infoVisibleAction->setChecked(true);
     sortReverseAction->setChecked(false);
     sortColumn = 0;
-    sortChange("MW::defaultWorkspace");
-    ws.name = "Default";
+    sortChange("MW::builtInDefaultWorkspace");
+    ws.name = WorkspaceDlg::defaultWorkspaceName;
     updateState();
 }
 
@@ -631,6 +652,140 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         ;
 }
 
+void MW::readWorkspaceSettings(WorkspaceData &wsd)
+{
+/*
+    Read one workspace from the current QSettings position (array index or group).
+    Used by MW::loadWorkspaces and MW::loadDefaultWorkspace.
+*/
+    // Workspace
+    wsd.name = settings->value("name").toString();
+
+    // State
+    wsd.geometry = settings->value("geometry").toByteArray();
+    wsd.state = settings->value("state").toByteArray();
+    RecoverGeometry r;
+    recoverGeometry(wsd.geometry, r);
+    wsd.screenNumber = r.screenNumber;
+    wsd.geometryRect = settings->value("geometryRect").toRect();
+    wsd.isFullScreen = settings->value("isFullScreen").toBool();
+    wsd.isMaximised = settings->value("isMaximised").toBool();
+
+    // Visibility
+    wsd.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
+    //wsd.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
+    wsd.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
+    wsd.isFolderDockVisible = settings->value("isFolderDockVisible").toBool();
+    wsd.isFavDockVisible = settings->value("isFavDockVisible").toBool();
+    wsd.isFilterDockVisible = settings->value("isFilterDockVisible").toBool();
+    wsd.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
+    wsd.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
+    wsd.isDevelopDockVisible = settings->value("isDevelopDockVisible").toBool();
+    wsd.isHistoryDockVisible = settings->value("isHistoryDockVisible").toBool();
+    wsd.isPresetsDockVisible = settings->value("isPresetsDockVisible").toBool();
+    wsd.isThumbDockVisible = settings->value("isThumbDockVisible").toBool();
+
+    // View
+    wsd.isLoupeDisplay = settings->value("isLoupeDisplay").toBool();
+    wsd.isGridDisplay = settings->value("isGridDisplay").toBool();
+    wsd.isTableDisplay = settings->value("isTableDisplay").toBool();
+    wsd.isCompareDisplay = settings->value("isCompareDisplay").toBool();
+
+    // ThumbView
+    wsd.thumbSpacing = settings->value("thumbSpacing").toInt();
+    wsd.thumbPadding = settings->value("thumbPadding").toInt();
+    wsd.thumbWidth = settings->value("thumbWidth").toInt();
+    wsd.thumbHeight = settings->value("thumbHeight").toInt();
+    wsd.labelFontSize = settings->value("labelFontSize").toInt();
+    wsd.showThumbLabels = settings->value("showThumbLabels").toBool();
+
+    // GridView
+    wsd.thumbSpacingGrid = settings->value("thumbSpacingGrid").toInt();
+    wsd.thumbPaddingGrid = settings->value("thumbPaddingGrid").toInt();
+    wsd.thumbWidthGrid = settings->value("thumbWidthGrid").toInt();
+    wsd.thumbHeightGrid = settings->value("thumbHeightGrid").toInt();
+    wsd.labelFontSizeGrid = settings->value("labelFontSizeGrid").toInt();
+    wsd.showThumbLabelsGrid = settings->value("showThumbLabelsGrid").toBool();
+    wsd.labelChoice = settings->value("labelChoice").toString();
+
+    // ImageView
+    wsd.isImageInfoVisible = settings->value("isImageInfoVisible").toBool();
+    // wsd.isEmbelDisplay = settings->value("isEmbelDisplay").toBool();
+
+    // Processes
+    wsd.isColorManage = settings->value("isColorManage").toBool();
+    wsd.sortColumn = settings->value("sortColumn").toInt();
+    /* Sanitize a persisted sortColumn that is out of range (e.g. saved by a build with a
+       different column layout; G::TotalColumns is one past the last real column). Left
+       unchecked it reaches dm->sf->sort() as a phantom column — see IconView::sortThumbs. */
+    if (wsd.sortColumn < 0 || wsd.sortColumn >= G::TotalColumns) wsd.sortColumn = G::NameColumn;
+    wsd.isReverseSort = settings->value("isReverseSort").toBool();
+}
+
+void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
+{
+/*
+    Write one workspace to the current QSettings position (array index or group).
+    Used by MW::saveWorkspaces and MW::saveDefaultWorkspace.
+*/
+    // Workspace
+    settings->setValue("name", wsd.name);
+
+    // State
+    settings->setValue("geometry", wsd.geometry);
+    settings->setValue("state", wsd.state);
+    settings->setValue("screenNumber", wsd.screenNumber);
+    settings->setValue("geometryRect", wsd.geometryRect);                        // need?
+    settings->setValue("isFullScreen", wsd.isFullScreen);                        // need?
+    settings->setValue("isMaximised", wsd.isMaximised);                          // need?
+
+    // Visibility
+    settings->setValue("isWindowTitleBarVisible", wsd.isWindowTitleBarVisible);  // need? Not used.
+    //settings->setValue("isMenuBarVisible", wsd.isMenuBarVisible);
+    settings->setValue("isStatusBarVisible", wsd.isStatusBarVisible);
+    settings->setValue("isFolderDockVisible", wsd.isFolderDockVisible);
+    settings->setValue("isFavDockVisible", wsd.isFavDockVisible);
+    settings->setValue("isFilterDockVisible", wsd.isFilterDockVisible);
+    settings->setValue("isMetadataDockVisible", wsd.isMetadataDockVisible);
+    settings->setValue("isEmbelDockVisible", wsd.isEmbelDockVisible);
+    settings->setValue("isDevelopDockVisible", wsd.isDevelopDockVisible);
+    settings->setValue("isHistoryDockVisible", wsd.isHistoryDockVisible);
+    settings->setValue("isPresetsDockVisible", wsd.isPresetsDockVisible);
+    settings->setValue("isThumbDockVisible", wsd.isThumbDockVisible);
+
+    // View
+    settings->setValue("isLoupeDisplay", wsd.isLoupeDisplay);
+    settings->setValue("isGridDisplay", wsd.isGridDisplay);
+    settings->setValue("isTableDisplay", wsd.isTableDisplay);
+    settings->setValue("isCompareDisplay", wsd.isCompareDisplay);
+
+    // ThumbView
+    settings->setValue("thumbSpacing", wsd.thumbSpacing);                        // need?
+    settings->setValue("thumbPadding", wsd.thumbPadding);
+    settings->setValue("thumbWidth", wsd.thumbWidth);
+    settings->setValue("thumbHeight", wsd.thumbHeight);
+    settings->setValue("labelFontSize", wsd.labelFontSize);
+    settings->setValue("showThumbLabels", wsd.showThumbLabels);
+
+    // GridView
+    settings->setValue("thumbSpacingGrid", wsd.thumbSpacingGrid);
+    settings->setValue("thumbPaddingGrid", wsd.thumbPaddingGrid);
+    settings->setValue("thumbWidthGrid", wsd.thumbWidthGrid);
+    settings->setValue("thumbHeightGrid", wsd.thumbHeightGrid);
+    settings->setValue("labelFontSizeGrid", wsd.labelFontSizeGrid);
+    settings->setValue("showThumbLabelsGrid", wsd.showThumbLabelsGrid);
+    settings->setValue("labelChoice", wsd.labelChoice);
+
+    // ImageView
+    settings->setValue("isImageInfoVisible", wsd.isImageInfoVisible);
+    // settings->setValue("isEmbelDisplay", wsd.isEmbelDisplay);                 // need?
+
+    // Processes
+    settings->setValue("isColorManage", wsd.isColorManage);
+    settings->setValue("sortColumn", wsd.sortColumn);
+    settings->setValue("isReverseSort", wsd.isReverseSort);
+}
+
 void MW::loadWorkspaces()
 {
     if (G::isLogger) G::log("MW::loadWorkspaces");
@@ -638,74 +793,14 @@ void MW::loadWorkspaces()
 
     // replace with the current list of workspaces
     int size = settings->beginReadArray("Workspaces");
-    //qDebug() << "MW::loadWorkspaces" << size;
     for (int i = 0; i < size; ++i) {
-        // Workspace
         settings->setArrayIndex(i);
-        ws.name = settings->value("name").toString();
-
-        // State
-        ws.geometry = settings->value("geometry").toByteArray();
-        ws.state = settings->value("state").toByteArray();
-        RecoverGeometry r;
-        recoverGeometry(ws.geometry, r);
-        ws.screenNumber = r.screenNumber;
-        ws.geometryRect = settings->value("geometryRect").toRect();
-        ws.isFullScreen = settings->value("isFullScreen").toBool();
-        ws.isMaximised = settings->value("isMaximised").toBool();
-
-        // Visibility
-        ws.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
-        //ws.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
-        ws.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
-        ws.isFolderDockVisible = settings->value("isFolderDockVisible").toBool();
-        ws.isFavDockVisible = settings->value("isFavDockVisible").toBool();
-        ws.isFilterDockVisible = settings->value("isFilterDockVisible").toBool();
-        ws.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
-        ws.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
-        ws.isDevelopDockVisible = settings->value("isDevelopDockVisible").toBool();
-        ws.isHistoryDockVisible = settings->value("isHistoryDockVisible").toBool();
-        ws.isPresetsDockVisible = settings->value("isPresetsDockVisible").toBool();
-        ws.isThumbDockVisible = settings->value("isThumbDockVisible").toBool();
-
-        // View
-        ws.isLoupeDisplay = settings->value("isLoupeDisplay").toBool();
-        ws.isGridDisplay = settings->value("isGridDisplay").toBool();
-        ws.isTableDisplay = settings->value("isTableDisplay").toBool();
-        ws.isCompareDisplay = settings->value("isCompareDisplay").toBool();
-
-        // ThumbView
-        ws.thumbSpacing = settings->value("thumbSpacing").toInt();
-        ws.thumbPadding = settings->value("thumbPadding").toInt();
-        ws.thumbWidth = settings->value("thumbWidth").toInt();
-        ws.thumbHeight = settings->value("thumbHeight").toInt();
-        ws.labelFontSize = settings->value("labelFontSize").toInt();
-        ws.showThumbLabels = settings->value("showThumbLabels").toBool();
-
-        // GridView
-        ws.thumbSpacingGrid = settings->value("thumbSpacingGrid").toInt();
-        ws.thumbPaddingGrid = settings->value("thumbPaddingGrid").toInt();
-        ws.thumbWidthGrid = settings->value("thumbWidthGrid").toInt();
-        ws.thumbHeightGrid = settings->value("thumbHeightGrid").toInt();
-        ws.labelFontSizeGrid = settings->value("labelFontSizeGrid").toInt();
-        ws.showThumbLabelsGrid = settings->value("showThumbLabelsGrid").toBool();
-        ws.labelChoice = settings->value("labelChoice").toString();
-
-        // ImageView
-        ws.isImageInfoVisible = settings->value("isImageInfoVisible").toBool();
-        // ws.isEmbelDisplay = settings->value("isEmbelDisplay").toBool();
-
-        // Processes
-        ws.isColorManage = settings->value("isColorManage").toBool();
-        ws.sortColumn = settings->value("sortColumn").toInt();
-        /* Sanitize a persisted sortColumn that is out of range (e.g. saved by a build with a
-           different column layout; G::TotalColumns is one past the last real column). Left
-           unchecked it reaches dm->sf->sort() as a phantom column — see IconView::sortThumbs. */
-        if (ws.sortColumn < 0 || ws.sortColumn >= G::TotalColumns) ws.sortColumn = G::NameColumn;
-        ws.isReverseSort = settings->value("isReverseSort").toBool();
+        readWorkspaceSettings(ws);
         workspaces->append(ws);
     }
     settings->endArray();
+
+    loadDefaultWorkspace();
 }
 
 void MW::saveWorkspaces()
@@ -717,69 +812,52 @@ void MW::saveWorkspaces()
 
     int size = workspaces->count();
     settings->beginWriteArray("Workspaces", size);
-    qDebug() << "MW::saveWorkspaces" << size;
     for (int i = 0; i < size; ++i) {
-        // Workspace
-        ws = workspaces->at(i);
         settings->setArrayIndex(i);
-        settings->setValue("name", ws.name);
-
-        // State
-        settings->setValue("geometry", ws.geometry);
-        settings->setValue("state", ws.state);
-        settings->setValue("screenNumber", ws.screenNumber);
-        settings->setValue("geometryRect", ws.geometryRect);                        // need?
-        settings->setValue("isFullScreen", ws.isFullScreen);                        // need?
-        settings->setValue("isMaximised", ws.isMaximised);                          // need?
-
-        // Visibility
-        settings->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);  // need? Not used.
-        //settings->setValue("isMenuBarVisible", ws.isMenuBarVisible);
-        settings->setValue("isStatusBarVisible", ws.isStatusBarVisible);
-        settings->setValue("isFolderDockVisible", ws.isFolderDockVisible);
-        settings->setValue("isFavDockVisible", ws.isFavDockVisible);
-        settings->setValue("isFilterDockVisible", ws.isFilterDockVisible);
-        settings->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
-        settings->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
-        settings->setValue("isDevelopDockVisible", ws.isDevelopDockVisible);
-        settings->setValue("isHistoryDockVisible", ws.isHistoryDockVisible);
-        settings->setValue("isPresetsDockVisible", ws.isPresetsDockVisible);
-        settings->setValue("isThumbDockVisible", ws.isThumbDockVisible);
-
-        // View
-        settings->setValue("isLoupeDisplay", ws.isLoupeDisplay);
-        settings->setValue("isGridDisplay", ws.isGridDisplay);
-        settings->setValue("isTableDisplay", ws.isTableDisplay);
-        settings->setValue("isCompareDisplay", ws.isCompareDisplay);
-
-        // ThumbView
-        settings->setValue("thumbSpacing", ws.thumbSpacing);                        // need?
-        settings->setValue("thumbPadding", ws.thumbPadding);
-        settings->setValue("thumbWidth", ws.thumbWidth);
-        settings->setValue("thumbHeight", ws.thumbHeight);
-        settings->setValue("labelFontSize", ws.labelFontSize);
-        settings->setValue("showThumbLabels", ws.showThumbLabels);
-
-        // GridView
-        settings->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
-        settings->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
-        settings->setValue("thumbWidthGrid", ws.thumbWidthGrid);
-        settings->setValue("thumbHeightGrid", ws.thumbHeightGrid);
-        settings->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
-        settings->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
-        settings->setValue("labelChoice", ws.labelChoice);
-
-        // ImageView
-        settings->setValue("isImageInfoVisible", ws.isImageInfoVisible);
-        // settings->setValue("isEmbelDisplay", ws.isEmbelDisplay);                    // need?
-
-        // Processes
-        settings->setValue("isColorManage", ws.isColorManage);
-        settings->setValue("sortColumn", ws.sortColumn);
-        settings->setValue("isReverseSort", ws.isReverseSort);
+        writeWorkspaceSettings(workspaces->at(i));
     }
     settings->endArray();
-    //setting->setValue("Workpaces.size", size);
+}
+
+void MW::loadDefaultWorkspace()
+{
+/*
+    Read the user defined default workspace (see MW::updateDefaultWorkspace).  If it has
+    never been defined then the built-in Winnow layout is used instead.
+*/
+    if (G::isLogger) G::log("MW::loadDefaultWorkspace");
+    if (!isSettings) return;
+
+    settings->beginGroup("DefaultWorkspace");
+    isCustomDefaultWorkspace = settings->contains("state");
+    if (isCustomDefaultWorkspace) readWorkspaceSettings(defaultWs);
+    settings->endGroup();
+    defaultWs.name = WorkspaceDlg::defaultWorkspaceName;
+}
+
+void MW::saveDefaultWorkspace()
+{
+    if (G::isLogger) G::log("MW::saveDefaultWorkspace");
+
+    settings->remove("DefaultWorkspace");
+    settings->beginGroup("DefaultWorkspace");
+    writeWorkspaceSettings(defaultWs);
+    settings->endGroup();
+}
+
+void MW::updateDefaultWorkspace()
+{
+/*
+    Save the current layout as the default workspace (Ctrl+Shift+W).  Called from the
+    Manage Workspaces dialog when "Winnow default workspace" is selected and the
+    "Update to current layout" button is pressed.
+*/
+    if (G::isLogger) G::log("MW::updateDefaultWorkspace");
+
+    snapshotWorkspace(defaultWs);
+    defaultWs.name = WorkspaceDlg::defaultWorkspaceName;
+    isCustomDefaultWorkspace = true;
+    saveDefaultWorkspace();
 }
 
 void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r)

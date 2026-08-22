@@ -235,6 +235,24 @@ REMAINING DEVELOP-MODULE WORK (beyond raw decode; verified vs tree 2026-07-11)
                  (atmospheric light + transmission map, guided-filter refine,
                  radiance recovery); ~120-150 lines, heavier on the settle
                  render. Would slot behind the same slider (see #15 CONSIDER).
+                 STRONGER CASE NOW (2026-08-20): Clarity #6.5 has taken the
+                 mid-radius local-contrast role, so Dehaze no longer needs to
+                 double as one -- it is free to become physical. Its stage-1
+                 band already routes through LocalContrast::applyBand, so a DCP
+                 rewrite replaces the band + pivot with a transmission map and
+                 leaves the shared prep / fold-back untouched. Note the guard:
+                 tests/unit/tst_localcontrast.cpp pins today's Dehaze render, so
+                 a rewrite MUST consciously re-bless those goldens (that is the
+                 point -- it changes saved recipes).
+
+32b  [DONE]      Clarity. Shipped 2026-08-20 as Develop op #6.5, in Basic between
+                 Texture and Dehaze, completing the local-contrast ladder
+                 (1px Sharpen / 13px Texture / 60px Clarity / 170px Dehaze on an
+                 8640px edge). Midtone-weighted and halo-guarded so it is not
+                 merely a wider Texture. Landed together with the extraction of
+                 Develop/localcontrast.h + develop.cpp's buildPerceptualLuma /
+                 shapeAndFoldLuma / gaussianBase, which de-duplicated Texture,
+                 Dehaze, Sharpen and (partly) Grain. 61ms at 49.8MP.
 
 32   [DONE]      Sharpening. Shipped 2026-08-20 as Develop op #8.5, in a NEW
                  "Detail" panel (not Effects) alongside the local denoise pair,

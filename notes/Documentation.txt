@@ -22,6 +22,7 @@ Table of Contents
          - Dock Window State (versioning)
          - Responsive dock tab titles (text <-> graphic)
          - Dropped dock lands last (rightmost tab)  [WORK IN PROGRESS - DISABLED]
+         - Workspaces (and the Winnow default workspace)
 
     2. FOLDER LOADING PIPELINE
          - Overview
@@ -261,6 +262,51 @@ Dropped dock lands last (rightmost tab)   [WORK IN PROGRESS - DISABLED]
     mode. (Reordering by dragging a TAB within a group is left to Qt -- only drops that
     fire dockLocationChanged are forced last.) A new dock added to the connect loop in
     initialize() inherits this.
+
+
+------------------------------------------------------------------------------------------
+Workspaces (and the Winnow default workspace)
+------------------------------------------------------------------------------------------
+
+    A workspace is a snapshot of the app appearance: window screen/geometry/maximised,
+    the QMainWindow dock state, dock and status bar visibility, the central view (loupe,
+    grid, table, compare), thumbView/gridView icon parameters, and a few process settings
+    (colour manage, sort column/direction).  See `Main/workspaces.cpp`.
+
+    Up to 10 user workspaces live in MW::workspaces (Ctrl+0 .. Ctrl+9, Window >
+    Workspace).  They are persisted as the QSettings array "Workspaces".
+    MW::readWorkspaceSettings / MW::writeWorkspaceSettings read and write ONE workspace
+    at the current QSettings position, so the array loops and the default workspace
+    below share the same field list -- add a new WorkspaceData field in those two
+    functions plus MW::snapshotWorkspace and MW::invokeWorkspace.
+
+    THE DEFAULT WORKSPACE (Ctrl+Shift+W, Window > Default Workspace) is separate from
+    the 10 user workspaces.  It is also what is applied on a first run, when there are
+    no QSettings to restore, and is the way back when part of the app is "stranded" on
+    a monitor that is no longer attached.
+
+        • MW::builtInDefaultWorkspace is the hard-coded layout Winnow ships with.
+        • The user can replace it: Window > Manage Workspaces, select "Winnow default
+          workspace" (the first dropdown item, above a separator and the saved
+          workspaces -- G::isRory only, the item and its separator are omitted
+          otherwise) and press "Update to current layout".  MW::updateDefaultWorkspace
+          snapshots the current layout into MW::defaultWs, sets isCustomDefaultWorkspace
+          and saves it to the QSettings group "DefaultWorkspace".
+        • MW::defaultWorkspace dispatches: the saved layout if isCustomDefaultWorkspace
+          (set by MW::loadDefaultWorkspace when the group exists), else the built-in one.
+        • The default workspace cannot be deleted or renamed in the dialog (the Delete
+          button is disabled and the combo's line edit is read-only while it is
+          selected), and it never appears in the Ctrl+0..9 workspace menu.
+
+    In WorkspaceDlg the dropdown index is NOT the workspace number: index 0 is the
+    default workspace, index 1 is a separator, and saved workspace n is at index
+    n + firstWorkspaceIndex (2, or 0 when the default item is not shown).  Use
+    WorkspaceDlg::workspaceIndex(), which returns -1 for the default and the separator.
+
+    The stylesheet also matters here: WidgetCSS::comboBox styles the popup
+    ("QComboBox QAbstractItemView::item"), so QStyleSheetStyle paints Qt's separator item
+    as a blank row and the line vanishes.  ComboSeparatorDelegate (workspacedlg.cpp)
+    draws it.  Any other styled combo needing a separator has the same problem.
 
 
 ******************************************************************************************
@@ -1406,8 +1452,8 @@ Resizing Icons or the Icon Viewport
             • MW::saveWorkspace / MW::invokeWorkspace  - per-workspace save/restore for
               both thumbView and gridView (save assignedIconWidth; on restore set
               assignedIconWidth = iconWidth before rejustify()).
-            • MW::defaultWorkspace  - sets assignedIconWidth = iconWidth before rejustify()
-              so the hard-coded defaults (thumb 100, grid 160) are honoured.
+            • MW::builtInDefaultWorkspace  - sets assignedIconWidth = iconWidth before
+              rejustify() so the hard-coded defaults (thumb 100, grid 160) are honoured.
 
 
 ******************************************************************************************
@@ -1877,7 +1923,7 @@ Disabled Shortcut Feedback
 Develop Mode Local Shortcuts
 ------------------------------------------------------------------------------------------
 
-    Ten keys mean something different in Develop mode than in Preview mode:
+    Nine keys mean something different in Develop mode than in Preview mode:
 
         R   Crop / Transform panel      developTransformAction   (Preview: unbound)
         N   New Mask                    developNewScopeAction    (Preview: unbound)
@@ -1886,7 +1932,6 @@ Develop Mode Local Shortcuts
         S   Spot removal tool           developSpotAction        (Preview: Slideshow)
         W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
         X   Export developed images     developExportAction      (Preview: Reject)
-        G   Scopes layout cycle         developScopesAction      (Preview: Grid view)
         H   Develop History panel       historyDockVisibleAction (Preview: unbound)
         P   Develop Presets panel       presetsDockVisibleAction (Preview: Pick)
 
@@ -2651,10 +2696,24 @@ OPERATION MODE (Preview vs Develop)
                cache miss for a raw, RE-DECODES to the scene-linear image rather than falling back
                to the tone-mapped display image (that fallback is only correct for non-raw files).
     UI: a standout (Apple-blue) dropdown at the EXTREME LEFT of the status bar (createStatusBar,
-    width pinned via stylesheet min/max-width to beat the global "QComboBox { min-width:6em }"), and
-    the D shortcut (operationModeAction) -- both call MW::setOperationMode / toggleOperationMode.
+    width pinned via stylesheet min/max-width to beat the global "QComboBox { min-width:6em }"),
+    and the D shortcut (operationModeAction) -- both call MW::setOperationMode.
     (D previously enabled/disabled the Develop panel via developAction; that action is now
     shortcut-less in the Utilities menu.)
+
+    The KEYS are asymmetric, and deliberately so: leaving Develop you always have a view in
+    mind, so the view key does both jobs.
+      D    ENTERS Develop mode (it is not a toggle; pressing it again does nothing).  Develop
+           always runs in Loupe, so entering forces Loupe.
+      E    leaves Develop -> Preview mode, Loupe view   (asLoupeAction)
+      G    leaves Develop -> Preview mode, Grid  view   (asGridAction)
+      T    leaves Develop -> Preview mode, Table view   (asTableAction)
+    All three view actions call setOperationMode(Preview) BEFORE their display function, so
+    the Preview decode / read-ahead is restored and the Develop panel greyed before the view
+    is shown; in Preview the mode call is a no-op and they behave exactly as they always have.
+    C (Compare) remains Preview-only -- it needs two selected images, which contradicts
+    Develop's single image, so enableSelectionDependentMenus disables asCompareAction in
+    Develop (a disabled QAction's shortcut does not fire) and re-enables it on return.
 
     The mode also OWNS whether the Develop panel is usable: it is enabled only when the user's
     Develop toggle (developAction) is on AND the mode is Develop -- Preview always greys it out.
@@ -2742,13 +2801,16 @@ Architecture
                                         range; after HSL in the same fused point-op pass
                                         (Color Grade panel below)
         6. Texture                      mid-frequency local contrast
+        6.5 Clarity                     MID-radius local contrast, midtone-weighted and
+                                        halo-guarded (sits between Texture and Dehaze)
         7. Dehaze                       local contrast + black-point, haze estimate
         8. Vignette                     radial corner exposure falloff (exposure/feather)
         8.5 Sharpen                     capture sharpening: unsharp mask on luminance,
                                         edge-gated (amount/radius/detail/masking). The ONE
-                                        op with an ABSOLUTE pixel radius -- see below
+                                        op with an ABSOLUTE pixel radius, and Opt + a
+                                        Masking drag shows the gate -- see below
         9. Grain                        monochromatic film grain (amount/size/roughness)
-        (room left for Clarity)
+        (the local-contrast ladder is now complete: 1px / 13px / 60px / 170px)
 
     Two ops are special for RAW: white balance and denoise give better results applied inside
     the raw pipeline (WB at the camera-RGB stage; denoise on the CFA mosaic) rather than
@@ -2991,7 +3053,7 @@ Scope & mask model (Global + masks)
     every other row is a MASK ("Mask 1", or renamed "Sky"/"Subject"). In code the unit is
     an EditScope (EditStack::scopes); its mask is EditScope::components, an ordered
     list of MaskComponents. Do not confuse this "scope" with the Develop SCOPES panel
-    (histogram + vectorscope, developScopes*/G) -- unrelated feature, same word.
+    (histogram + vectorscope, developScopes*) -- unrelated feature, same word.
 
     GOAL. Apply any edit either globally or through one or more masks, with the SAME
     edit set shared across a scope's masks, performance critical. The user-facing
@@ -3338,7 +3400,8 @@ Scope & mask model (Global + masks)
            luminance = uniform gain (-100 -> black, +100 -> 2x). hslActive gates the
            block; identity sliders leave the pass untouched.
 
-           SPATIAL ops (Texture #6, Dehaze #7, Vignette #8, Sharpen #8.5, Grain #9) run AFTER the fused
+           SPATIAL ops (Texture #6, Clarity #6.5, Dehaze #7, Vignette #8, Sharpen #8.5,
+           Grain #9) run AFTER the fused
            point pass, each owning a full-image pass (like Denoise) -- they need a
            neighbourhood (or, for Vignette/Grain, pixel coordinates / a noise field) so
            cannot join the per-pixel kernel. Texture and Dehaze are ratio-preserving on LUMINANCE (chroma
@@ -3370,6 +3433,46 @@ Scope & mask model (Global + masks)
            (R-Y, B-Y) blur that keeps luma exact. Luma runs first, then chroma. All ten Basic
            sliders are now live.
 
+           ONE OPERATION AT FOUR RADII (the local-contrast family). Texture, Clarity and
+           Dehaze's first stage are the SAME band operation -- split a frequency band off
+           a blurred base and scale it -- differing only in radius and weighting. Sharpen
+           is the same shape again at ~1px. On an 8640px edge:
+
+               Sharpen  ~1px ABSOLUTE     edge-gated            acutance
+               Texture  0.0015 x edge     ungated               fine detail contrast
+               Clarity  0.007  x edge     midtone + halo        midtone punch / glow
+               Dehaze   0.02   x edge     ungated (+ pivot)     atmospheric veiling
+
+           An order of magnitude apart, so they STACK rather than compete. The scalar math
+           is header-only in Develop/localcontrast.h (applyBand / bandFactor /
+           midtoneWeight / haloGuard) and the duplicated perceptual-luma prep and ratio
+           fold-back live in develop.cpp's buildPerceptualLuma + shapeAndFoldLuma.
+           shapeAndFoldLuma is TEMPLATED on the shape functor on purpose: it inlines, so
+           each op still costs ONE parallel pass and no extra buffer. gaussianBase carries
+           Texture's downscale-blur-upscale trick and is shared with Clarity; Dehaze keeps
+           a box blur: at its far larger radius a running-sum blur is cheaper still.
+           Grain borrows only midtoneWeight (it needs no blurred base, so it keeps its own
+           fused loop rather than allocating a cv::Mat it does not otherwise want).
+
+           CLARITY (#6.5) is what stops that ladder having a 13x gap in the middle, and is
+           deliberately more than "Texture with a bigger radius": the band is weighted by
+           midtoneWeight (so it cannot crush blacks or flatten highlights) and rolled off
+           by haloGuard where the high-pass excursion is large (the strong edges where a
+           band this wide rings). The weights multiply the AMOUNT, not the result, so they
+           only ever pull the band factor back toward 1 -- they can never invert or
+           overshoot the band. Measured on an M4 at 49.8MP: clarity 61ms, texture 83ms,
+           dehaze 141ms.
+
+           REFACTOR SAFETY. Extracting the shared kernel rewrote three ops that already
+           shape saved recipes, so tests/unit/tst_localcontrast.cpp is a CHARACTERIZATION
+           test: its golden values were captured from the build immediately BEFORE the
+           extraction. Texture, Sharpen and Grain came out bit-identical; Dehaze was
+           re-expressed from yp + k*(yp-base) to base + (1+k)*(yp-base) (equal in exact
+           arithmetic) and measured at most 6e-7 different over a full frame -- 1.5e-4 of
+           one 8-bit code value, i.e. 25x below even a 16-bit quantum. If one of those
+           tests fails, a saved recipe now renders differently; do not re-bless the
+           numbers without proving the change is intended.
+
            SHARPEN (#8.5) IS THE ONE SCALE-DEPENDENT OP, and the exception to the rule two
            paragraphs up. Every other spatial op derives its radius from max(w,h) precisely
            so the proxy and the settle render shape the same RELATIVE band. Acutance is a
@@ -3388,7 +3491,19 @@ Scope & mask model (Global + masks)
            Texture: a small Gaussian base gives hp = yp - base, which Detail soft-thresholds
            (suppressing the smallest amplitudes as noise, sign preserved) and Masking gates
            by the gradient magnitude of the BLURRED luma (so noise does not read as an
-           edge). Scalar math is header-only in Develop/sharpen.h so it is unit-testable
+           edge). The Masking knee is a CURVE, not a constant times the slider
+           (Sharpen::maskKnee, knee = m*(0.10 + 0.40*m^2), recalibrated 2026-08-21): a
+           linear ramp topped out at 0.10/px, which still passed ordinary texture
+           (~0.05/px) at half strength, so the top of the slider could not quiet a noisy
+           sky. It is now linear at the bottom (the old feel) and cubic at the top, so the
+           last third of the travel is where strong protection lives. The stored key and
+           its 0..1 range are unchanged -- nothing to migrate -- but a sharpenMasking
+           written before this now protects more above the middle. The remaining limiter
+           on protection is the (1 - m) blend in edgeGate, which keeps flat areas at
+           (1 - m) of full sharpening so intermediate settings soften rather than switch;
+           raise its shape too if even more travel is wanted.
+
+           Scalar math is header-only in Develop/sharpen.h so it is unit-testable
            (tests/unit/tst_sharpen.cpp) the way colorgrade.h / tonecurve.h are; develop.cpp
            owns only the OpenCV blur/Sobel and the parallelFor. The Sobel pair is skipped
            entirely at Masking 0. Placed after Vignette (darkened corners are not
@@ -3396,6 +3511,40 @@ Scope & mask model (Global + masks)
            DISTINCT FROM TEXTURE, which is resolution-proportional mid-frequency (~13px on
            an 8640px edge, ungated): sharpening is ~1px and edge-gated, so the two occupy
            disjoint bands and stack without double-counting.
+
+           SEEING THE MASK (Opt + drag Masking), Lightroom's Alt-drag. Which pixels the
+           edge gate protects is invisible in the result without hunting around at 1:1, so
+           holding Opt while DRAGGING the Detail panel's Masking slider replaces the photo
+           with the gate itself in GRAYSCALE -- white sharpened, black protected, greys
+           the soft roll-off. Momentary in two inputs: it needs Opt down AND the slider's
+           handle held, so releasing either (or the app deactivating) brings it back. The
+           drag gate, rather than mere row focus, is what lets the preview be this loud --
+           it covers the photo, so it must not be able to sit there once you have let go.
+
+           It is built from the DEVELOPED FRAME ON SCREEN (MW::updateSharpenMaskPreview
+           keeps a copy in developFrame as each render is applied), NOT from inside the
+           pipeline: the true gate lives several stages deep in a worker-thread stack
+           render, and plumbing a buffer back out of it would cost a pipeline seam and
+           land a tick late. The same blur + 1/8-Sobel + Sharpen::edgeGate over that
+           frame's luma reproduces the gate closely enough to set the slider by, and it is
+           always in step with what is on screen. Two approximations, neither material
+           here: the frame carries sharpening (and grain) the real gate is measured
+           before, and its perceptual luma is sRGB-encoded gray rather than the
+           pipeline's own encode.
+
+           THE ONE DEVELOP OVERLAY THAT IS NOT IN MASK SPACE. Because its source is the
+           displayed frame, the image is already post-geometry and oriented, so ImageView
+           (setSharpenMaskImage / drawForeground) stretches it straight over the pixmap --
+           putting it through maskNormToItem, which is right for every mask raster, would
+           put it in the wrong place on a cropped image.
+
+           Wiring: DevelopProperties::sharpenMaskPreviewActive (live Opt state +
+           SliderEditor::sliderIsDown) -> syncSharpenMaskPreview (called from MW's event
+           filter on each Opt edge and, QUEUED, on each mouse press/release -- queued
+           because the slider sets isSliderDown in its own handler, so reading it inline
+           would be one event stale -- and on app activate/deactivate) ->
+           sharpenMaskPreviewChanged -> MW::updateSharpenMaskPreview, which also re-runs
+           after every applied render so the mask follows the drag.
 
            SLIDER-DRAG LATENCY: the naive path re-rendered the full image synchronously on the
            GUI thread every tick. For a 50MP RAW that measured ~520 ms/tick (probe below),
@@ -5608,21 +5757,44 @@ Develop scopes (histogram + vectorscope)
     in-tree spanned row so the scope stays pinned rather than scrolling away; see
     notes/Develop_Scopes_Plan.txt for the rejected alternative.)
 
-    Layout cycle: "G" in Develop mode (and the Develop menu's "Histogram / Vectorscope",
-    which is NOT checkable because it steps rather than toggles) runs
-    MW::cycleDevelopScopes:
+    Layout choice (was "G" cycling both -> histogram -> vectorscope -> hidden until
+    2026-08-22; the key and MW::cycleDevelopScopes are gone). The four states are now
+    PICKED from two places showing the same four exclusive checkable actions
+    (developScopesBoth/Hist/Vect/HideAction, one QActionGroup, no shortcut):
 
-        both scopes -> histogram only -> vectorscope only -> hidden -> both ...
+        - right-click ANY scope in the strip. The layout section is identical everywhere,
+          so it is built in ONE place and each scope contributes only its own items:
 
-    ScopesView::setScopeLayout hides the scope(s) not wanted -- a hidden widget is an
-    empty layout item, and the stretches are re-set to 0 as well -- so the surviving
-    scope expands to fill the strip. The tone-region slider shares the histogram's
-    x-axis and so follows the histogram. The layout persists as Settings
-    "Develop/scopesLayout" (the ScopesView::ScopeLayout values 0/1/2, so do not
-    renumber the enum) and is re-applied in createDevelopDock, i.e. the strip returns
-    in the state it was left in. Hiding is the last step of the cycle rather than a
-    separate key, and re-showing (by G or the button) repopulates the scopes, which go
-    stale while hidden.
+              scope widget contextMenuEvent   builds a stack QMenu with its own items
+                  HistogramView                   none yet -- add histogram-only entries
+                                                  (channel visibility, log scale, the
+                                                  neutral-core opacity) here
+                  VectorscopeView                 100/150/200% zoom + skin-tone line
+                  ScopesView                      nothing: the fallback for right-clicks
+                                                  no scope claimed (tone slider, margins)
+                    |
+                    | menuRequested(QMenu *menu, QPoint globalPos), relayed by ScopesView
+                    v
+              MW::showDevelopScopesMenu       appends a separator (only if the scope added
+                                              items) + the four layout actions, then execs
+
+          The QMenu is on the EMITTING scope's stack, so the receiver must handle it
+          synchronously and keep no pointer to it; the actions belong to MW and a QMenu
+          does not own actions added to it, so they outlive the menu.
+        - the Develop menu's "Scopes" submenu (developScopesMenu), Develop-mode gated
+          like the rest of the menu and ticked from the strip's current state on
+          aboutToShow (MW::syncDevelopScopesMenu).
+
+    Both routes call MW::setDevelopScopesChoice(int), where the choice is a
+    ScopesView::ScopeLayout or MW::kDevelopScopesHidden (-1). ScopesView::setScopeLayout
+    hides the scope(s) not wanted -- a hidden widget is an empty layout item, and the
+    stretches are re-set to 0 as well -- so the surviving scope expands to fill the
+    strip. The tone-region slider shares the histogram's x-axis and so follows the
+    histogram. The layout persists as Settings "Develop/scopesLayout" (the
+    ScopesView::ScopeLayout values 0/1/2, so do not renumber the enum) and is re-applied
+    in createDevelopDock, i.e. the strip returns in the state it was left in. Picking a
+    layout while the strip is hidden also shows it, and showing it repopulates the
+    scopes, which go stale while hidden.
 
     Tone-region slider (ToneRegionSlider, under the histogram, sharing its x-axis): a black->white
     track with three draggable handles that split the tonal range into blacks | shadows |
@@ -6148,7 +6320,8 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  active). Its helpers (readLayerList / setCurrentLayer / layerRootPath /
                  layerValue) were deleted in the 2026-07-30 rename.
         Basic    WB (dropper + preset dropdown), Temp, Tint, Exposure, Contrast,
-                 Highlights, Shadows, Whites, Blacks, Texture, Dehaze. Integer -100..100
+                 Highlights, Shadows, Whites, Blacks, Texture, Clarity, Dehaze.
+                 Integer -100..100
                  except Exposure (EV, -5.00..5.00), Temp (KELVIN, 2000..50000, log ramp)
                  and Tint (-150..150). All default to 0 (identity). See "White balance
                  (absolute, Kelvin)" below for the WB row.
@@ -6160,10 +6333,12 @@ Develop Transform panel (crop + perspective)  [UI PROTOTYPE]
                  Detail (sharpenDetail, 0..100 -> 0..1, default 25) + Masking
                  (sharpenMasking, 0..100 -> 0..1, default 0): capture sharpening, an
                  edge-gated unsharp mask (see #8.5 above). Radius/Detail/Masking are inert
-                 until Amount is non-zero. THE ONLY control in Develop measured in absolute
-                 pixels, so it is judged at 1:1 -- everything else is a fraction of the
-                 image. Also Denoise (localDenoiseLuma, luminance NR) + Denoise Color
-                 (localDenoiseChroma, chroma NR) -- two 0..100 sliders (mapped to 0..1),
+                 until Amount is non-zero. Opt + a Masking DRAG shows the gate in
+                 grayscale (see "Seeing the mask" under #8.5). THE ONLY control in Develop
+                 measured in absolute pixels, so it is judged at 1:1 -- everything else is
+                 a fraction of the image. Also Denoise (localDenoiseLuma, luminance NR) +
+                 Denoise Color (localDenoiseChroma, chroma NR) -- two 0..100 sliders
+                 (mapped to 0..1),
                  default 0. Local, maskable, post-demosaic. Distinct from the Global scope's
                  "Denoise raw" (PMRID pre-demosaic, denoiseLuma/denoiseChroma). The denoise
                  pair MOVED here from Effects (2026-08-20): NR and sharpening are one
@@ -6903,11 +7078,16 @@ Adding or changing a develop adjustment (checklist)
          • tuning constants in the constexpr block at the top of develop.cpp
          • the function, declared in develop.h and implemented in develop.cpp
          • the call in Develop::Apply(), at the right place in the fixed pipeline order
-           (Denoise #1 -> fused point pass -> Texture #6 -> Dehaze #7 -> Vignette #8 ->
-           Sharpen #8.5 -> Grain #9). A POINT op costs nothing extra if folded into
-           buildPointCoeffs /
-           applyPointOps; a SPATIAL op owns its own pass.
+           (Denoise #1 -> fused point pass -> Texture #6 -> Clarity #6.5 -> Dehaze #7 ->
+           Vignette #8 -> Sharpen #8.5 -> Grain #9). A POINT op costs nothing extra
+           if folded into buildPointCoeffs / applyPointOps; a SPATIAL op owns its
+           own pass.
          • parallelFor every per-pixel loop; downscale for large-radius blurs.
+         • A LOCAL-CONTRAST op does NOT hand-roll its luma prep or fold-back: use
+           buildPerceptualLuma + shapeAndFoldLuma (and gaussianBase if the radius is a
+           fraction of the long edge), with the scalar math in Develop/localcontrast.h.
+           Adding one should be ~15 lines in develop.cpp -- if it is more, it is
+           duplicating something that already exists.
 
     3. Develop/editstack.h -- paramsToJson() AND paramsFromJson(). paramsFromJson is
        forward tolerant (an absent key keeps its default), so ADDING a field needs no
@@ -6967,6 +7147,14 @@ Adding or changing a develop adjustment (checklist)
     13. Docs/develophelp.html -- the in-app user help. Currently LAGS the panel (no
         Vignette or Grain entry), so this step is a known gap rather than an established
         habit.
+
+    CHANGING AN EXISTING OP'S MATH is a different job from adding a slider, and a riskier
+    one: the ops shape recipes users have already saved, so a "harmless" rewrite silently
+    re-renders their pictures. tests/unit/tst_localcontrast.cpp is the worked example --
+    capture golden values from the CURRENT build FIRST, confirm they pass before touching
+    anything, then refactor and require them still to pass. Mutation-check the gate too (a
+    0.1% change in any tuning constant should fail it); a characterization test whose
+    goldens match its own inputs proves nothing.
 
     A WHOLE NEW SECTION (rather than a slider in an existing one) adds a fixed set of
     bookkeeping on top of the thirteen, and every item is one that fails SILENTLY if

@@ -217,6 +217,7 @@ struct EditStack {
            MW::developCompositeStack keys that cache on this object's serialization. */
         o["curves"]              = ToneCurve::encode(p.curveN, p.curveX, p.curveY);
         o["texture"]         = p.texture;
+        o["clarity"]         = p.clarity;
         o["dehaze"]          = p.dehaze;
         o["red"]             = p.red;
         o["green"]           = p.green;
@@ -280,6 +281,7 @@ struct EditStack {
         if (o.contains("curves"))
             ToneCurve::decode(o.value("curves").toString(), p.curveN, p.curveX, p.curveY);
         p.texture         = static_cast<float>(o.value("texture").toDouble(p.texture));
+        p.clarity         = static_cast<float>(o.value("clarity").toDouble(p.clarity));
         p.dehaze          = static_cast<float>(o.value("dehaze").toDouble(p.dehaze));
         p.red             = static_cast<float>(o.value("red").toDouble(p.red));
         p.green           = static_cast<float>(o.value("green").toDouble(p.green));
@@ -525,6 +527,7 @@ struct EditStack {
         if (clampF(p.whites,     -100.0f, 100.0f, def.whites))     ++fixed;
         if (clampF(p.blacks,     -100.0f, 100.0f, def.blacks))     ++fixed;
         if (clampF(p.texture,    -100.0f, 100.0f, def.texture))    ++fixed;
+        if (clampF(p.clarity, -100.0f, 100.0f, 0.0f)) ++fixed;
         if (clampF(p.dehaze,     -100.0f, 100.0f, def.dehaze))     ++fixed;
 
         if (clampF(p.toneShadowCenter,    0.0f, 1.0f, def.toneShadowCenter))    ++fixed;

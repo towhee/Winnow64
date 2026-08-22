@@ -76,8 +76,19 @@ struct EditParams {
         return true;
     }
 
-    /* Presence. */
+    /* Presence -- three local-contrast controls at three radii, all -100..100, all stored
+       RAW (no divisor: the panel writes the slider value straight through).
+
+         texture  ~0.0015 x long edge (~13px on 8640)   fine detail contrast
+         clarity  ~0.007  x long edge (~60px on 8640)   midtone punch / glow
+         dehaze   ~0.02   x long edge (~170px on 8640)  atmospheric veiling
+
+       An order of magnitude apart, so they stack rather than compete. Clarity is midtone-
+       weighted and halo-guarded, which is what separates it from a wider Texture -- see
+       Develop::Clarity and Develop/localcontrast.h. Sharpening (Detail panel) is the same
+       family again at ~1px absolute. */
     float texture = 0.0f;
+    float clarity = 0.0f;
     float dehaze  = 0.0f;
 
     /* Colour -- RGB. Per-channel scene-linear gain (-100..100). Folded into the fused point
@@ -235,7 +246,8 @@ struct EditParams {
             p.exposure = def.exposure; p.contrast = def.contrast;
             p.highlights = def.highlights; p.shadows = def.shadows;
             p.whites = def.whites; p.blacks = def.blacks;
-            p.texture = def.texture; p.dehaze = def.dehaze;
+            p.texture = def.texture; p.clarity = def.clarity;
+            p.dehaze = def.dehaze;
             p.toneShadowCenter = def.toneShadowCenter;
             p.toneCrossover = def.toneCrossover;
             p.toneHighlightCenter = def.toneHighlightCenter;
@@ -308,7 +320,7 @@ struct EditParams {
                exposure == 0.0f && contrast == 0.0f &&
                highlights == 0.0f && shadows == 0.0f &&
                whites == 0.0f && blacks == 0.0f &&
-               texture == 0.0f && dehaze == 0.0f &&
+               texture == 0.0f && clarity == 0.0f && dehaze == 0.0f &&
                red == 0.0f && green == 0.0f && blue == 0.0f &&
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&

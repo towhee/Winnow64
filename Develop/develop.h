@@ -32,8 +32,9 @@ public:
     /* Per-stage wall-clock timings for one Apply(), filled when a non-null pointer is passed.
        A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use. */
     struct StageTimings { qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0;
-                          qint64 dehazeMs = 0; qint64 vignetteMs = 0;
-                          qint64 sharpenMs = 0; qint64 grainMs = 0; };
+                          qint64 clarityMs = 0; qint64 dehazeMs = 0;
+                          qint64 vignetteMs = 0; qint64 sharpenMs = 0;
+                          qint64 grainMs = 0; };
 
     /* Apply p to img in place. Returns true on success (and trivially when p is identity,
        leaving img untouched). Fills *t when non-null. */
@@ -74,6 +75,15 @@ private:
        image size so the proxy preview matches the full-res result. Runs AFTER the point pass.
        No-op when EditParams::texture is 0. */
     void Texture(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (pipeline #6.5): mid-radius luminance local contrast, between Texture
+       (~13px) and Dehaze (~170px) on an 8640px edge, so the three occupy separate bands
+       and stack. Positive adds midtone punch, negative gives a soft glow. What makes it
+       more than "Texture with a bigger radius": the band is weighted toward the MIDTONES
+       (it will not crush blacks or flatten highlights) and rolled off at strong edges
+       (where a band this wide would ring). Ratio-preserving on luminance like the rest;
+       shares gaussianBase with Texture. Math in Develop/localcontrast.h. No-op at 0. */
+    void Clarity(WorkingImage &img, const EditParams &p);
 
     /* Spatial op (pipeline #7): an APPROXIMATE dehaze (not dark-channel-prior) -- large-radius
        luminance local contrast + a contrast pull about a low pivot (deepens shadows / extends

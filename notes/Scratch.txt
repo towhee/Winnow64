@@ -1845,4 +1845,66 @@ Where [Global              ] is a dropdown menu that includes all masks
 and [eye] applies to the currently selected scope
 Eliminate rail
 
+------------------------------------------------------------------------
 
+AgX?
+
+Short answer: yes, worth doing — but as a selectable view transform, not as a replacement for your current baseline. Here's the reasoning against what's actually in
+  the pipeline today.
+
+  What you have now
+
+  Develop/outputtransform.cpp does, for scene-referred (raw) data only:
+
+  1. BaselineTone — fixed exposure lift + ACES (Narkowicz) filmic shoulder, per channel, then Clamp01
+  2. linear 3×3 to output primaries
+  3. HighlightRolloff — your cross-channel bleed, which by your own comment (outputtransform.cpp:130) cannot fire when the baseline tone curve ran, because
+  BaselineTone already clamped
+
+  So the raw path is a per-channel filmic curve, and the one piece of hue-preserving machinery you wrote is dead on that path. AgX is essentially a principled,
+  wide-range version of exactly what HighlightRolloff was reaching for.
+
+  What AgX would change
+
+  AgX is: log2 encode over a defined EV window → inset 3×3 (pull chromaticities toward the achromatic axis) → sigmoid in log → outset 3×3 (restore some purity) →
+  transfer. Structurally it drops straight into your existing shape: matrix, 1-D LUT, matrix. Your TransferLut machinery already handles the LUT half.
+
+  Pros
+
+  - Highlight hue integrity. Per-channel filmic is where the "notorious six" skews come from — saturated reds march to orange, blues to purple, as channels clip one at
+  a time. AgX desaturates toward white smoothly, film-like, over many stops instead of only above 1.0. Sunsets, neon, LED/stage lighting, fire, specular on saturated
+  paint all stop breaking.
+  - It fixes the mask-clipping complaint in your own comment. A brightened radial/gradient mask currently drives the core to a flat clipped patch, destroying the
+  falloff you spent effort calibrating (maskfalloff.h). AgX's shoulder is far longer, so local exposure pushes keep gradation instead of flattening.
+  - Wide-latitude raw handled properly. With scene-linear input from your own decoders, you have real headroom above 1.0 that the current clamp throws away.
+  - Cheap. Two 3×3s plus a 1-D LUT, or bake the whole thing as a 3-D LUT. Not a perf question at all given your parallelFor pipeline.
+  - Subsumes HighlightRolloff with something continuous rather than a threshold hack, and removes the dead-code asymmetry between the raw and display-referred paths.
+
+  Cons
+
+  - It looks flat. This is the real objection. AgX out of the box is markedly less saturated and lower contrast than ACES or any camera-maker rendering. Users arriving
+  from Lightroom will read it as "muddy" or "washed out." It needs a look transform (the "punchy" variant, or your own) layered on before it's presentable as a
+  default.
+  - It silently rescales every stored recipe. Your CLAUDE.md rule — preset keys are a published format, never rescale in place — applies here even though no key
+  changes. Contrast slope, the parametric tone-region lifts, the Fritsch-Carlson curve, every mask exposure value, every existing preset and sidecar was tuned against
+  BaselineTone. Swapping the baseline re-renders all of them differently. That alone rules out an in-place replacement.
+  - Widens the raw/JPEG divergence. img.sceneReferred gates baseline tone, so display-referred files skip it. Today raw and JPEG of the same frame differ somewhat;
+  under AgX they'd differ a lot.
+  - Slider semantics shift. A log-domain sigmoid changes what "+1 EV exposure" feels like — mostly for the better (it stops running into a wall), but your Basic
+  sliders were calibrated against the current response and would want re-checking.
+  - Licensing needs a look. Sobotka's original and the compact analytic approximations have differing terms; verify whichever you port before it ships.
+
+  What I'd actually build
+
+  A view transform selector in Develop — it belongs in the Calibrate section, alongside where camera profiles conceptually live, since that's the Lightroom mental
+  model (Adobe Color / Camera Standard) and the darktable one (filmic / sigmoid / AgX).
+
+  - New preset key, e.g. viewTransform, defaulting to Legacy = today's BaselineTone + HighlightRolloff. Absent key → Legacy, so every existing sidecar renders
+  byte-identically. Additive, no rescale, rule respected.
+  - Add AgX and AgX Punchy as options. Keep Legacy as the default until AgX proves out in real use — the same pattern you used keeping the old Color panel around while
+  Color Mix was unverified.
+  - Implement as inset-matrix → shared 1-D LUT → outset-matrix inside OutputTransform, so ToImage and ToImage16 stay one code path and export matches the loupe.
+  - Check the histogram scope reads post-view-transform, or the scope and the image will disagree once the transform is switchable.
+
+  The migration risk is entirely in "which one is default," and making it a key with a Legacy default prices that decision separately from building the transform — you
+  can ship AgX, live with it for a while, and flip the default later if it earns it.

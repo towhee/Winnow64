@@ -269,6 +269,12 @@ public:
     WorkspaceData *w;
     QList<WorkspaceData> *workspaces;
 
+    /* The default workspace (Ctrl+Shift+W).  If the user has updated it to the current
+       layout (Manage Workspaces) then isCustomDefaultWorkspace is true and defaultWs
+       holds the saved layout, otherwise the built-in Winnow layout is used. */
+    WorkspaceData defaultWs;
+    bool isCustomDefaultWorkspace = false;
+
     // recoverGeometry info
     struct RecoverGeometry {
         QRect frameGeometry;
@@ -520,11 +526,17 @@ public slots:
     void renameWorkspace(int n, QString name);
     void reassignWorkspace(int n);
     void defaultWorkspace();
+    void builtInDefaultWorkspace();
+    void updateDefaultWorkspace();
+    void loadDefaultWorkspace();
+    void saveDefaultWorkspace();
     QString reportWorkspaces();
     void reportWorkspaceNum(int n);
     void reportWorkspace(WorkspaceData &ws, QString src = "");
     void loadWorkspaces();
     void saveWorkspaces();
+    void readWorkspaceSettings(WorkspaceData &wsd);
+    void writeWorkspaceSettings(const WorkspaceData &wsd);
     void matFromQImage(QString fPath, ImageMetadata m, cv::Mat &mat);
 
 private slots:
@@ -668,9 +680,17 @@ private slots:
     /* Apply a scopes-strip visibility, repopulating the scopes when it is shown;
        persists. */
     void setDevelopScopesVisible(bool isVisible);
-    /* "G" in Develop mode: step the scopes strip through both scopes -> histogram only ->
-       vectorscope only -> hidden -> both ... ; persists the layout and the visibility. */
-    void cycleDevelopScopes();
+    /* Apply a scopes-strip choice picked from the scopes context menu or the Develop
+       menu's Scopes submenu: both scopes / histogram only / vectorscope only / hidden.
+       Persists the layout and the visibility. */
+    void setDevelopScopesChoice(int choice);
+    /* Right-click in the scopes strip: `menu` arrives part-built with whatever items the
+       scope under the cursor added; append the shared scopes-layout section and show it
+       at globalPos. The menu is owned by the emitting scope (stack), so this must not
+       keep it. */
+    void showDevelopScopesMenu(QMenu *menu, QPoint globalPos);
+    /* Tick the Scopes submenu item matching the strip's current state (aboutToShow). */
+    void syncDevelopScopesMenu();
     /* The scopes strip's own [X]: hide the strip, keeping its layout; persists. */
     void closeDevelopScopes();
     /* Show/hide the Develop Transform panel (action-row toggle / "R"); persists. */
@@ -1178,7 +1198,15 @@ private:
     BarBtn *developSpotBtn = nullptr;
     BarBtn *developMaskTintBtn = nullptr;  // mask overlay tint on/off (O)
     BarBtn *developPresetBtn = nullptr;    // shows/raises the Presets dock (P)
-    QAction *developScopesAction;       // G
+    /* Scopes-strip "choice" = a ScopesView::ScopeLayout, or this sentinel for hidden. */
+    static constexpr int kDevelopScopesHidden = -1;
+    /* Scopes strip choice: one exclusive checkable action per state. They fill both the
+       Develop menu's Scopes submenu and the strip's right-click menu (no shortcut). */
+    QActionGroup *developScopesGroup = nullptr;
+    QAction *developScopesBothAction = nullptr;
+    QAction *developScopesHistAction = nullptr;
+    QAction *developScopesVectAction = nullptr;
+    QAction *developScopesHideAction = nullptr;
     // developTransformAction (R) and toggleMaskOverlayAction (O) live with the docks
 
     // Embellish
@@ -1405,11 +1433,11 @@ private:
        input changes. */
     void syncDevelopPanelEnabled();
     /* Operation mode (G::operationMode): Preview (fast review) vs Develop (best-quality single
-       image). setOperationMode applies a mode and syncs the status-bar dropdown; toggleOperationMode
-       flips between the two (D shortcut). Behavior wiring (suspend read-ahead, raw re-decode on
-       Develop) is layered on in setOperationMode as it lands. */
+       image). setOperationMode applies a mode and syncs the status-bar dropdown. There is no
+       toggle: D enters Develop (operationModeAction), and E / G leave it into the Loupe / Grid
+       view (asLoupeAction / asGridAction); the status-bar dropdown goes either way. Behavior
+       wiring (suspend read-ahead, raw re-decode on Develop) lives in setOperationMode. */
     void setOperationMode(G::OperationMode mode);
-    void toggleOperationMode();
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
@@ -1505,6 +1533,11 @@ private:
        path), coalesced so a fast drag collapses to one render; a settle timer then renders the
        full-resolution image once the slider stops. See MW::developParamsChange /
        renderDevelopPreview and notes/Documentation.txt "DEVELOP / IMAGE EDIT". */
+    /* The developed frame last shown in the loupe, kept only so a preview that is derived
+       from what is ON SCREEN (the sharpening mask preview) can be rebuilt without re-running
+       the pipeline. Replaced by every applied proxy / full-res render. */
+    QImage developFrame;
+    QString developFramePath;
     std::shared_ptr<WorkingImage> developProxy;
     QString developProxyPath;
     /* Per-scope intermediates for the PROXY tick, so a mask drag re-rasterizes only the
@@ -1651,6 +1684,12 @@ private:
        single-colour veil and hand it to ImageView. Cheap (capped resolution); a
        no-op when nothing is being edited. */
     void updateMaskOverlayTint();
+    /* Build (or clear) the SHARPENING mask preview: while Opt is held during a Masking
+       drag, show the sharpen edge gate in grayscale over the photo (white sharpened,
+       black protected), as Lightroom's Alt-drag does. Derived from the developed frame on
+       screen (developFrame), so it costs one blur + Sobel at proxy resolution and needs
+       nothing from the render path. */
+    void updateSharpenMaskPreview();
     /* Read Opt/Shift+Opt while a submask is being defined and push the previewed op into
        DevelopProperties (Opt = Subtract, Shift+Opt = Intersect, neither = Add). Ignored
        mid-stroke, where Opt means "erase from this stroke". */
@@ -1713,6 +1752,7 @@ private:
     ImageExporter *imageExporter = nullptr;
     ExportPresets *exportPresets = nullptr;
     QMenu         *developExportPresetMenu = nullptr;
+    QMenu         *developScopesMenu = nullptr;
     LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;
     WorkspaceDlg *workspaceDlg;
