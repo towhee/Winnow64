@@ -11,6 +11,6 @@
   `ctest --test-dir build/<preset> --output-on-failure`. See `tests/README.md`.
 - **Develop settings:** adding or changing an adjustment (Exposure, Grain, ...) touches
   ~12 files across the pipeline, sidecar, panel, presets and docs — follow "Adding or
-  changing a develop adjustment (checklist)" in `notes/Documentation.txt`. Preset keys
+  Changing a Develop Adjustment (Checklist)" in `notes/Documentation.txt`. Preset keys
   are a published format: add freely, never rename or rescale in place (see "Stale
-  presets and history").
+  Presets and History (Schema Drift)").

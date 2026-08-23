@@ -1908,3 +1908,16 @@ Short answer: yes, worth doing — but as a selectable view transform, not as a 
 
   The migration risk is entirely in "which one is default," and making it a key with a Legacy default prices that decision separately from building the transform — you
   can ship AgX, live with it for a while, and flip the default later if it earns it.
+
+
+
+I want to change how Documentation.txt is formatted.  I want to change to a text wrap == true environment.  Create a scratch file where we can test the format
+  changes before implementing in Documentation.txt.  I want each section title to show the full bread crumb (ie Folder Loading Pipeline ⏺ Concurrent Flow - New
+  Folder Selected).  Top level sections should be all caps for the first instance, and caps for start of each word in bread crumb title for subsections.  Keep
+  indentation to a minimum.  Use row breaks to separate paragraphs and multi-line (likely to wrap) bullets.  Show me the path to the test scratch file so I can
+  review and finetune formatting.
+
+c
+
+
+
