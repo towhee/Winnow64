@@ -1917,7 +1917,8 @@ I want to change how Documentation.txt is formatted.  I want to change to a text
   indentation to a minimum.  Use row breaks to separate paragraphs and multi-line (likely to wrap) bullets.  Show me the path to the test scratch file so I can
   review and finetune formatting.
 
-c
+file:///Users/roryhill/Pictures/_test1/2008-08-20_0072.tif
+/Users/roryhill/Pictures/_ThumbTest/NEF D800E Landscape.NEF
 
 
 

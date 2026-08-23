@@ -1270,33 +1270,26 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     }
     raw.white = uint16_t((1u << bps) - 1);
 
-    /* Black level. Modern bodies record the per-channel pedestal in MakerNote tag 0x3d (4 SHORTs;
-       e.g. D850 400, D810 600, Z9 1008); use it directly. The decoded frame minimum is a poor
-       substitute -- a single sub-pedestal hot/noisy pixel drags it below the true black, so the
-       shared SubtractBlack then under-subtracts and the image renders washed-out and low-contrast
-       (seen on the D850, whose darkest pixel was 78 vs a true 400). Older bodies (D2H, D100, D800E)
-       omit 0x3d and have a ~0 pedestal, so fall back to the decoded minimum (at/near zero there). */
-    bool haveBlack = false;
-    if (mn.contains(0x3d)) {
-        const QVector<quint32> bl = mr.u32s(mn[0x3d]);
-        if (bl.size() == 4) {
-            for (int i = 0; i < 4; ++i) raw.black[i] = uint16_t(bl[i]);
-            haveBlack = true;
-        }
-    }
-    if (!haveBlack)
-        for (int i = 0; i < 4; ++i) raw.black[i] = lo;   // self-calibrated fallback (no 0x3d)
-
     const QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
 
-    /* Active-area crop. Most NEFs store exactly the active area, but a few older bodies pad the
-       frame with masked (optical-black) columns that, demosaiced, fringe the left/right edges
-       magenta. libraw crops these to a per-model active area; mirror its margins here. Margins
-       are even, so the CFA phase at the cropped origin is unchanged (the CFAPattern read above
-       still holds). Add a row per affected model as encountered; modern bodies need no crop. */
+    /* Active-area crop. Most NEFs store exactly the active area, but a number of bodies pad the
+       frame with non-image columns that, demosaiced, fringe the left/right edges magenta (the pad
+       sits at or below black, so after black subtraction the red/blue white-balance gains amplify
+       what is left into magenta noise). libraw crops these to a per-model active area; mirror its
+       margins here. Margins are even, so the CFA phase at the cropped origin is unchanged (the
+       CFAPattern read above still holds). Add a row per affected model as encountered.
+
+       The pad is not always optical black: the D800/D800E store 7424 columns for a 7378-column
+       active area, and the 46-column tail is 14 columns of a constant 600, then 2 saturated
+       (16382) columns, then 30 columns of literal 1. Only the right edge is padded on that body
+       (the left column and every row carry image data), which is why it showed a single magenta
+       stripe down the right side. */
     {
         int left = 0, top = 0, cw = W, ch = H;
         if (model == "NIKON D2H" && W == 2496 && H == 1648) { left = 6; cw = 2482; }  // libraw margins
+        /* libraw trims 46 columns off the right for the D3200/D600/D800/D800E; only the D800E is
+           verified here against a real file, so add the others when a sample turns up. */
+        if ((model == "NIKON D800" || model == "NIKON D800E") && W == 7424 && H == 4924) cw = 7378;
         if (left != 0 || top != 0 || cw != W || ch != H) {
             std::vector<uint16_t> cropped(size_t(cw) * size_t(ch));
             for (int y = 0; y < ch; ++y) {
@@ -1307,8 +1300,38 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
             raw.cfa.swap(cropped);
             raw.width = cw;
             raw.height = ch;
+            /* Re-measure the running minimum over the ACTIVE area. The pad can read below the true
+               pedestal (the D800E tail is full of 1s), which would otherwise pin the
+               self-calibrated black fallback below black on every body that lacks tag 0x3d. */
+            lo = 0xFFFF;
+            for (uint16_t v : raw.cfa) if (v < lo) lo = v;
         }
     }
+
+    /* Black level. Modern bodies record the per-channel pedestal in MakerNote tag 0x3d (4 SHORTs;
+       e.g. D850 400, D810 600, Z9 1008); use it directly. The decoded frame minimum is a poor
+       substitute -- a single sub-pedestal hot/noisy pixel drags it below the true black, so the
+       shared SubtractBlack then under-subtracts and the image renders washed-out and low-contrast
+       (seen on the D850, whose darkest pixel was 78 vs a true 400). Older bodies (D2H, D100, D800E)
+       omit 0x3d and have a ~0 pedestal, so fall back to the decoded minimum (at/near zero there).
+
+       0x3d is always written in the body's NATIVE 14-bit units, even when the frame was shot as a
+       12-bit NEF -- the 12-bit samples are the 14-bit readout shifted down two stops, so the tag
+       must be shifted the same way. Taking it at face value on a 12-bit file subtracts 4x the true
+       pedestal and clamps everything but the specular highlights to zero: the frame renders nearly
+       black with a heavy green cast, because the green photosites sit ~40% above red/blue and are
+       the only ones left above the clamp (seen on a 12-bit D7200, tag 600 vs a true ~150). */
+    bool haveBlack = false;
+    if (mn.contains(0x3d)) {
+        const QVector<quint32> bl = mr.u32s(mn[0x3d]);
+        if (bl.size() == 4) {
+            const int shift = 14 - bps;                  // bps is 12 or 14 (validated above)
+            for (int i = 0; i < 4; ++i) raw.black[i] = uint16_t(bl[i] >> shift);
+            haveBlack = true;
+        }
+    }
+    if (!haveBlack)
+        for (int i = 0; i < 4; ++i) raw.black[i] = lo;   // self-calibrated fallback (no 0x3d)
 
     xyzToCamForModel(model, raw.xyzToCam);               // identity fallback if unknown
 

@@ -4,16 +4,14 @@ WHAT'S NEW
 - Develop Presets panel
 
 BUGS / TO DO
-- D develop E loupe  G grid  C compare
-- Radial gradient mask: Shift drag grab pt maintain radial shape while resize.
-Mouse wheel/touchscroll while cursor in radial shape should do the same thing.
+- Test DnD to Folders
+- Add Develop to Preferences dialog
 - Eliminate Edits layouts except Minimal
 - Check if libheif library is in Winnow (use for windows platform)
-- Develop copy / paste
+- Develop copy / paste fine tuning
 - Add profiles (including AgX) to Calibrate
 - List stuff to disable in Develop Mode (menu items and shortcuts)
 - WB undo
-- Do not show MetaRead and ImageCache status lights in Develop mode.
 - Raw demosaic Winnow wrong for /Users/roryhill/Pictures/_test_raw/NEF D7200.NEF
 - Expand/contract layer mask or submask (shrink/grow)
 - Change submask feather, rebuild submask?

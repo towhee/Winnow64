@@ -576,7 +576,9 @@ private:
     QElapsedTimer      maskStrokeLiveClock;
     bool               maskStrokeLivePending = false;   // a trailing emit is scheduled
     static constexpr int kMaskStrokeLiveMs = 100;
-    enum class LiveEmit { Brush, Handle };              // which gesture is emitting
+    /* Wheel = a wheel / two-finger resize of the Radial ellipse: there is no mouse
+       button held, so it has no `live` flag of its own -- see maskEmitLiveGeometry. */
+    enum class LiveEmit { Brush, Handle, Wheel };       // which gesture is emitting
     std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask luminance guide (this image)
     std::shared_ptr<const BrushStamp::Guide> maskBrushSamField;  // AI stroke's SAM field (kept alive
                                                           // while maskStrokeAM.guide points into it)
@@ -739,6 +741,12 @@ private:
     void    maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const;
     /* Radial: the rotate handle (viewport px), a stub beyond the +x axis handle. */
     QPointF maskRadialRotateHandleVp(const QRectF &br) const;
+    /* Radial: is the viewport point inside the CORE of the ellipse (the solid part
+       within the half-coverage ring), as opposed to the feathered falloff outside it? */
+    bool    maskRadialCoreContains(QPoint vp) const;
+    /* Radial: wheel / two-finger resize -- scales BOTH semi-axes by `factor`, keeping
+       the aspect and the centre (the Shift + handle-drag gesture, without the handle). */
+    void    adjustRadialSize(double factor);
 
     /* ------- Develop crop editing (Transform panel) -------
        The crop tool NEVER changes the view transform (no zoom, no auto-pan). cropN (normalized
