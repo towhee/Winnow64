@@ -2159,6 +2159,53 @@ void ImageView::maskRadialAxisHandles(const QRectF &br, QPointF h[4]) const
     h[2] = place(c + uy); h[3] = place(c - uy);      // +y, -y  (resize ry)
 }
 
+bool ImageView::maskRadialCoreContains(QPoint vp) const
+{
+    /* The CORE is the solid middle of the ellipse -- everything inside the dashed
+       half-coverage ring drawn by drawRadialMask -- as opposed to the feathered falloff
+       between that ring and the nominal boundary. Worked in MASK-frame px (where rx/ry
+       and the angle are defined), so a crop / straighten doesn't skew the test. */
+    if (maskTool != 1) return false;
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) return false;
+    const double fw = fr.width(), fh = fr.height();
+    const double ax = qMax(1.0, maskRx*fw), ay = qMax(1.0, maskRy*fh);
+    const double k = (maskFeather > 0.0) ? MaskFalloff::shapeFor(maskFeather).h : 1.0;
+    if (k <= 0.0) return false;
+    const QPointF n = maskViewportToNorm(vp);
+    const double dx = n.x()*fw - maskC.x()*fw, dy = n.y()*fh - maskC.y()*fh;
+    const double a = maskAngle * 0.017453292519943295;
+    const double ca = std::cos(a), sa = std::sin(a);
+    const double lx =  dx*ca + dy*sa, ly = -dx*sa + dy*ca;   // un-rotated local px
+    const double u = lx / (k*ax), v = ly / (k*ay);
+    return (u*u + v*v) <= 1.0;
+}
+
+void ImageView::adjustRadialSize(double factor)
+{
+    /* Wheel / two-finger drag inside the core: the same PROPORTIONAL resize as a
+       Shift + axis-handle drag (both semi-axes scaled by one factor, centre and angle
+       fixed), so an on-screen circle stays a circle even when the frame is not square.
+       Clamped in frame px at both ends: never smaller than the 2 px floor the drag path
+       uses, never larger than four frame diagonals. */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty() || factor <= 0.0) return;
+    const double fw = fr.width(), fh = fr.height();
+    const double diag = std::hypot(fw, fh);
+    double ax = qMax(2.0, maskRx*fw) * factor;
+    double ay = qMax(2.0, maskRy*fh) * factor;
+    /* One clamp for the PAIR -- clamping them independently would change the aspect. */
+    double lim = 1.0;
+    if (ax < 2.0 || ay < 2.0)               lim = qMax(2.0/ax, 2.0/ay);
+    else if (ax > 4*diag || ay > 4*diag)    lim = qMin(4*diag/ax, 4*diag/ay);
+    ax *= lim; ay *= lim;
+    const double rx = ax / fw, ry = ay / fh;
+    if (rx == maskRx && ry == maskRy) return;
+    maskRx = rx; maskRy = ry;
+    viewport()->update();
+    maskEmitLiveGeometry(LiveEmit::Wheel);
+}
+
 QPointF ImageView::maskRadialRotateHandleVp(const QRectF &br) const
 {
     /* A constant on-screen stub beyond the +x axis handle (viewport coords) so it stays grabbable
@@ -2797,7 +2844,11 @@ void ImageView::maskEmitLiveGeometry(LiveEmit kind)
     ONE throttle serves both gestures: a brush stroke and a handle drag are mutually
     exclusive (mousePressEvent takes one branch or the other), so they cannot interleave.
 */
-    const bool live = (kind == LiveEmit::Brush) ? maskPainting : (maskDrag >= 0);
+    /* Wheel is a buttonless gesture (no press/release bracket), so it is always live:
+       its trailing emit below is what carries the settled geometry. */
+    const bool live = (kind == LiveEmit::Wheel) ? true
+                    : (kind == LiveEmit::Brush) ? maskPainting
+                                                : (maskDrag >= 0);
     if (!live) return;
     if (kind == LiveEmit::Brush && maskStrokePts.size() < 2)
         return;                                   // a single dab: nothing to render yet
@@ -4273,6 +4324,21 @@ void ImageView::wheelEvent(QWheelEvent *event)
         (event->modifiers() & Qt::ShiftModifier) &&
         (maskTool == 0 || maskTool == 1 || maskIsBrush())) {   // 0 Linear, 1 Radial
         adjustMaskFeather(wheelDelta(event) * 0.15);     // up = softer
+        event->accept();
+        return;
+    }
+
+    /* Radial gradient, cursor inside the CORE ellipse: a two-finger drag (or wheel)
+       resizes the ellipse proportionally -- the Shift + axis-handle gesture without the
+       handle. Over the feathered rim or outside it the wheel still zooms, and Shift is
+       already taken by the feather above. Space held bypasses it. */
+    if (!spacePanOverride && maskEditMode && maskTool == 1 && maskHandlesEditable() &&
+        maskRadialCoreContains(event->position().toPoint())) {
+        const QPoint pd = event->pixelDelta();
+        const double factor = !pd.isNull()
+                ? std::pow(1.0015, pd.y())                            // trackpad
+                : std::pow(1.08, event->angleDelta().y() / 120.0);    // wheel notches
+        adjustRadialSize(factor);                    // up = larger
         event->accept();
         return;
     }
