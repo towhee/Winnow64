@@ -1,6 +1,8 @@
 #ifndef DEVELOPPROPERTIES_H
 #define DEVELOPPROPERTIES_H
 
+#include <functional>
+
 #include <QtWidgets>
 #include "PropertyEditor/propertyeditor.h"
 #include "Develop/editparams.h"
@@ -60,6 +62,8 @@ public:
             EditParams             params;
             QVector<MaskComponent> components;   // empty => applies to the whole image
             int                    combine = 0;  // MaskCombine across the components
+            float                  maskEdge = 0; // grow/shrink the FOLDED mask, full-res px
+            float                  maskHalo = 0; // halo suppression on the FOLDED mask
         };
         EditParams     global;                  // scope 0 params (whole image)
         QVector<Scope> scopes;                  // masks, in order, enabled only
@@ -123,6 +127,13 @@ public:
        settings, like clicking its caption again) and return true; else false. */
     bool escapeMaskTool();
     QVector<MaskComponent> activeScopeComponents() const;
+    /* The active scope's mask-level Edge (EditScope::maskEdge), so the loupe veil grows
+       and shrinks the composited mask exactly as the render does. 0 on the Global scope
+       and when there is no image. */
+    float activeScopeMaskEdge() const;
+    /* The active scope's mask-level Halo, so the loupe veil suppresses the halo on the
+       composited mask exactly as the render does. 0 on Global and with no image. */
+    float activeScopeMaskHalo() const;
     /* Index into activeScopeComponents() of the tool whose settings are expanded (the one
        the user clicked in the scope panel), or -1. MW tints this component in its own
        colour so the user can see the selected tool's share of the mask. */
@@ -154,6 +165,47 @@ public:
     bool wantsScopeData() const;
     void flushImage(const QString &fPath);  // write one image's dirty stack to sidecar
     void flushAll();                        // write every dirty stack (quit/pre-op)
+
+    /* Bring BOTH preview tiers up to date for fPath when the render has already produced
+       a faithful frame. Costs a JPEG encode of pixels that were rendered anyway -- it
+       never causes a decode or a render.
+
+       This covers an image that was edited in an EARLIER session and merely visited in
+       this one: nothing is dirty, so flushImage does not run, and without this such an
+       image would never get a preview no matter how often it was opened. Every image
+       edited before cached previews existed is in exactly that state.
+
+       The two tiers are updated TOGETHER and the gate tests BOTH, so they cannot drift
+       apart -- a thumbnail showing one thing while the loupe placeholder shows another
+       would be worse than neither. That does mean visiting an edited image can rewrite
+       its sidecar (preview attributes and modifydate only; the recipe is untouched). */
+    void topUpPreviews(const QString &fPath);
+
+    /* Supplies the cached develop previews written alongside the recipe in flushImage.
+       MW registers this at startup and answers from the screen-resolution developProxy it
+       already holds, so a preview costs a downscale plus a JPEG encode rather than a
+       render. Returns false when fPath is not the image currently proxied -- multi-image
+       propagation targets have no proxy, and a stale preview must be cleared rather than
+       kept. See Cache/developpreviewcache.h and notes/Documentation.txt.
+
+       thumbJpg  256px JPEG, base64-encoded into the sidecar (winnow:DevelopPreview)
+       loupeJpg  screen-resolution JPEG for the out-of-band loupe cache */
+    /* Does what the develop render is currently producing actually correspond to the
+       STORED recipe? It does not when a History row is being hovered (previewActive
+       renders a different stack entirely), when the Transform preview eye is off
+       (geometry bypassed, so the frame is uncropped and unstraightened), or when the
+       Replace eye is off (heals bypassed). A cached preview taken from such a frame
+       would be keyed to a recipe it does not depict. See flushImage. */
+    bool renderMatchesStoredRecipe() const;
+
+    /* The base64 recipe currently in effect for fPath, or "" when it is identity. Reads
+       the in-memory stack, which during the write debounce may be AHEAD of the sidecar --
+       so a preview keyed on this is matched against what the user actually sees. */
+    QString developBlobFor(const QString &fPath);
+
+    using PreviewProvider =
+        std::function<bool(const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg)>;
+    void setPreviewProvider(PreviewProvider provider);
 
     /* ---- Multi-image editing (edits apply to the whole selection) -------------------
        When more than one image is selected, a Global adjustment made on the current
@@ -433,6 +485,10 @@ public slots:
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
+    /* An image's edits were just written to its sidecar, together with a new cached
+       thumbnail preview (or, when thumb is null, with the old one cleared because no
+       preview could be made for the new recipe). MW updates the grid from this. */
+    void developPreviewUpdated(const QString &fPath, const QImage &thumb);
     /* A History row is being hovered (or the hover ended): re-render the PROXY preview
        only. Deliberately not paramsChanged -- that also arms the full-res settle render,
        which a passing cursor must not trigger. */
@@ -820,6 +876,13 @@ private:
     QHash<QString, EditStack> stackCache;
     QSet<QString> dirty;
     QString currentImagePath;
+    PreviewProvider previewProvider;   // set by MW; see setPreviewProvider
+    /* The last (path, recipe) topUpPreviews brought up to date, so re-entry is free.
+       flushAll runs before EVERY file operation (FileOps::flushPendingEdits), and a
+       multi-image paste or ingest would otherwise re-parse the same sidecar once per
+       file just to discover there is nothing to do. */
+    QString toppedUpPath;
+    QByteArray toppedUpKey;
     /* stackCache entry for any image, loading it from the sidecar on first touch. The
        propagation path needs stacks for images the user has never visited. */
     EditStack &stackFor(const QString &fPath);
@@ -971,8 +1034,16 @@ private:
        reopenSubmask makes a committed submask the active one again -- its settings load
        into the panel's editor and buildTree's updateMaskEdit re-arms the on-canvas
        overlay (handles, brush buffers, range swatches). Nothing else is needed because
-       every mask mutator already writes through selectedMaskIndex. */
+       every mask mutator already writes through selectedMaskIndex. Clicking the row of
+       the submask that is ALREADY open closes it instead (closeSubmaskEditing) -- the
+       row is the only affordance the list has, so if it opens it must also close, the
+       way every other disclosure in the dock does. A PENDING submask is exempt: closing
+       it would take away the commit button it still needs. */
     void reopenSubmask(int index);
+    /* End the editing session on a COMMITTED submask: deselect it, take its handles off
+       the canvas and hide its settings, leaving the submask and the mask untouched. What
+       the panel's "Done" button does, and what a click on the open row does. */
+    void closeSubmaskEditing();
     void setSubmaskEnabled(int index, bool on);
     void setSubmaskOp(int index, int op);
     void toggleSubmaskInverted(int index);
@@ -993,6 +1064,14 @@ private:
     int maskPanelCaptionWidth() const;
     /* MaskEditor (panel) change routing -- mirrors the tree's itemChange mask blocks. */
     void onMaskEditorSetting(const QString &key, const QVariant &value);
+    /* MaskPanel's MASK-level editor (currently just Edge). Separate from the per-submask
+       handler because it must work with NO submask selected -- it edits the scope, not a
+       component. */
+    void onMaskLevelSetting(const QString &key, const QVariant &value);
+    /* Mask band [:] "Reset mask Edge and Halo": both back to 0 on the active scope. The
+       submasks' own Edge values are untouched -- this row is the mask-level pair, and
+       silently flattening the parts would be a much bigger edit than the menu says. */
+    void resetMaskLevel();
     void onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit);
     bool spotMode = false;              // regenerative spot-fill brushing is armed
     bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed

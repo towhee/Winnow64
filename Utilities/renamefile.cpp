@@ -1,4 +1,5 @@
 #include "renamefile.h"
+#include "Utilities/fileops.h"
 #include "ui_renamefiledlg.h"
 #include "Main/global.h"
 #include "Utilities/tokenfilename.h"
@@ -185,6 +186,7 @@ void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
             QString oldPath = inf.at(i).filePath();
             QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).suffix();
             QFile(oldPath).rename(newPath);
+            FileOps::onMoved(oldPath, newPath);
             if (isDebug) qDebug() << "RenameFileDlg::renameFileBase Renamed file oldPath ="
                                   << oldPath << "to newPath =" << newPath;
         }
@@ -475,6 +477,7 @@ void RenameFileDlg::rename()
         // temp unique rename file
         QFile(oldPath).rename(uniquePath);
         QFile(oldPath).close();
+        FileOps::onMoved(oldPath, uniquePath);
 
         // update datamodel
         QModelIndex idx = dm->proxyIndexFromPath(oldPath);
@@ -585,6 +588,9 @@ void RenameFileDlg::rename()
 
         // File rename oldPath to newPath
         QFile(oldPath).rename(newPath);
+        /* Keep the cached develop preview with the file. The sidecar (and with it the
+           thumbnail preview) is carried by the basename scan above. */
+        FileOps::onMoved(oldPath, newPath);
         /*
         // Update datamodel
 //        if (isDebug) debugShowDM("Check if dm->fPathRow contains " + oldPath);
@@ -602,6 +608,7 @@ void RenameFileDlg::rename()
 //        if (isDebug) qDebug() << "found =" << found << oldPath;  */
 
         // update datamodel
+        FileOps::onMoved(oldPath, newPath);
         if (dm->fPathRow.contains(oldPath)) {
             renameDatamodel(oldPath, newPath, newName);
         }

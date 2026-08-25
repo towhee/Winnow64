@@ -1,4 +1,6 @@
 #include "File/bookmarks.h"
+#include "Utilities/fileops.h"
+#include <QSet>
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
 #include <QStyleFactory>
@@ -527,8 +529,6 @@ void BookMarks::dropEvent(QDropEvent *event)
 
     G::stopCopyingFiles = false;
     G::isCopyingFiles = true;
-    bool isInternal;
-    event->source() ? isInternal = true : isInternal = false;
     QString srcPath;
     QStringList srcPaths;
     int sidecarCount = 0;
@@ -556,33 +556,38 @@ void BookMarks::dropEvent(QDropEvent *event)
     G::popup->showPopup(msg, 0, true, 1);
 
     QString issue;
+
+    /* Sidecars belonging to images in this same drop. FileOps carries a companion with
+       its image, so a sidecar the user ALSO dragged explicitly must not be copied a
+       second time -- that would report a spurious "already in destination folder". */
+    QSet<QString> droppedCompanions;
+    for (int i = 0; i < count; i++) {
+        const QString p = event->mimeData()->urls().at(i).toLocalFile();
+        if (!metadata->supportedFormats.contains(Utilities::getSuffix(p))) continue;
+        const QStringList c = FileOps::companions(p);
+        for (const QString &s : c) droppedCompanions.insert(s);
+    }
+
     // iterate files
     for (int i = 0; i < count; i++) {
         G::popup->setProgress(i+1);
-        if (G::useProcessEvents) qApp->processEvents();        // processEvents is necessary
+        if (G::useProcessEvents) qApp->processEvents(); // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
         }
         srcPath = event->mimeData()->urls().at(i).toLocalFile();
+        if (droppedCompanions.contains(srcPath)) continue;
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
 
-        // copy the files
-        bool copied = QFile::copy(srcPath, destPath);
+        /* FileOps copies the image AND its sidecars. Previously sidecars were inferred
+           only for internal drags, so a file dropped from Finder/Explorer arrived
+           without its develop recipe, ratings or labels. */
+        bool copied = FileOps::copyFile(srcPath, destPath);
 
         if (copied) {
             // make list of src files to delete if Qt::MoveAction
             srcPaths << srcPath;
-            // infer and copy/move any sidecars if internal drag operation
-            if (isInternal) {
-                QStringList srcSidecarPaths = Utilities::getSidecarPaths(srcPath);
-                sidecarCount += srcSidecarPaths.count();
-                foreach (QString srcSidecarPath, srcSidecarPaths) {
-                    if (QFile(srcSidecarPath).exists()) {
-                        QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
-                        QFile::copy(srcSidecarPath, destSidecarPath);
-                    }
-                }
-            }
+            sidecarCount += FileOps::companions(srcPath).count();
         }
         else if (QFile(destPath).exists()) {
             issue += "<br>" + Utilities::getFileName(srcPath) +
@@ -645,8 +650,9 @@ void BookMarks::dropEvent(QDropEvent *event)
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
 
-    // update folder image counts if only copy
-    if (event->dropAction() == Qt::CopyAction) emit updateCounts();
+    /* Refresh folder counts for ANY drop. Gating this on CopyAction left the counts
+       stale after a move drop, which also adds files to the destination. */
+    emit updateCounts();
 
     event->acceptProposedAction();
 

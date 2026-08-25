@@ -1,5 +1,6 @@
 #include "Metadata/metadata.h"
 #include <QDebug>
+#include <QCryptographicHash>
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
@@ -563,14 +564,29 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
     sidecarFile.close();
 }
 
-void Metadata::writeDevelopSidecar(QString fPath, QString blob)
+QString Metadata::developPreviewKey(const QString &blob)
+{
+    if (blob.isEmpty()) return QString();
+    const QByteArray h = QCryptographicHash::hash(blob.toLatin1(),
+                                                  QCryptographicHash::Sha1);
+    return QString::fromLatin1(h.toHex().left(12));
+}
+
+void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB64)
 {
 /*
-    Persist the per-image Develop edit state (base64 of the EditStack JSON) to the image's XMP
-    sidecar winnow:Develop attribute. Develop edits are Winnow-private and always live in the
-    sidecar (never written into the source file), so there is no ExifTool branch. An empty blob
-    clears the attribute (image reset to identity); we avoid creating a sidecar just to store
-    nothing. Mirrors writeOrientation and is safe to call off the GUI thread via QtConcurrent.
+    Persist the per-image Develop edit state (base64 of the EditStack JSON) to the
+    image's XMP sidecar winnow:Develop attribute. Develop edits are Winnow-private and
+    always live in the sidecar (never written into the source file), so there is no
+    ExifTool branch. An empty blob clears the attribute (image reset to identity); we
+    avoid creating a sidecar just to store nothing. Mirrors writeOrientation and is safe
+    to call off the GUI thread via QtConcurrent.
+
+    previewB64 is the cached 256px developed thumbnail (base64 JPEG) that feeds the icon
+    grid, written here rather than in a second pass so the recipe, the preview and the
+    key that ties them together are always one atomic sidecar write. An empty preview
+    CLEARS the pair: a preview that does not match the recipe beside it would show the
+    user a stale image, which is worse than showing the camera thumbnail.
 */
     if (G::isLogger) G::log("Metadata::writeDevelopSidecar");
 
@@ -594,6 +610,14 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob)
     Xmp xmp(sidecarFile, G::dmInstance);
     if (!xmp.isValid) xmp.fix();
     xmp.setItem("develop", blob.toLatin1());        // "" removes the attribute
+
+    /* The preview and its key are written in the same pass as the recipe, so the three
+       are never out of step. No recipe means no preview, whatever the caller passed. */
+    const QString preview = blob.isEmpty() ? QString() : previewB64;
+    xmp.setItem("developpreview", preview.toLatin1());
+    xmp.setItem("developpreviewkey",
+                preview.isEmpty() ? QByteArray() : developPreviewKey(blob).toLatin1());
+
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     xmp.setItem("modifydate", modifyDate.toLatin1());
@@ -622,6 +646,37 @@ QString Metadata::readDevelopSidecar(QString fPath)
     QString blob = xmp.getItem("develop");
     sidecarFile.close();
     return blob;
+}
+
+QByteArray Metadata::readDevelopPreview(QString fPath)
+{
+/*
+    Read the cached 256px developed thumbnail (base64 JPEG) from winnow:DevelopPreview.
+
+    Returns "" unless the stored winnow:DevelopPreviewKey matches the recipe currently in
+    winnow:Develop. Both are written together by writeDevelopSidecar, so a mismatch means
+    another application rewrote the sidecar and the pixels no longer describe the current
+    edit -- in which case the caller falls back to the camera's embedded thumbnail. This
+    runs on the Reader worker threads during folder load, so callers should first check
+    that a sidecar exists at all (G::SidecarColumn) rather than paying an open per image.
+*/
+    if (G::isLogger) G::log("Metadata::readDevelopPreview");
+
+    QFileInfo info(fPath);
+    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    if (!QFileInfo::exists(sidecarPath)) return QByteArray();
+
+    QFile sidecarFile(sidecarPath);
+    if (!sidecarFile.open(QIODevice::ReadOnly)) return QByteArray();
+    Xmp xmp(sidecarFile, G::dmInstance);
+    const QString blob = xmp.getItem("develop");
+    const QString preview = xmp.getItem("developpreview");
+    const QString key = xmp.getItem("developpreviewkey");
+    sidecarFile.close();
+
+    if (blob.isEmpty() || preview.isEmpty()) return QByteArray();
+    if (key != developPreviewKey(blob)) return QByteArray();
+    return QByteArray::fromBase64(preview.toLatin1());
 }
 
 bool Metadata::writeXMP(const QString &fPath, QString src)
@@ -978,6 +1033,11 @@ bool Metadata::parseSidecar()
     if (G::isLogger) G::log("Metadata::parseSidecar");
     if (G::stop) return false;
 
+    /* metadata->m is reused for every file, so this must be cleared on EVERY path
+       through here -- including the early returns below -- or the previous image's
+       develop badge leaks onto this one. */
+    m.developEdited = false;
+
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
     QFile sidecarFile(sidecarPath);
@@ -1005,6 +1065,10 @@ bool Metadata::parseSidecar()
 
     // parse sidecar
     Xmp xmp(sidecarFile, p.instance);
+
+    /* Does this image carry Develop edits? Read while the sidecar is already open and
+       parsed on this worker thread, so the develop badge costs no extra I/O. */
+    if (xmp.isValid) m.developEdited = !xmp.getItem("develop").isEmpty();
 
     // report
     if (p.report) {

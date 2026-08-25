@@ -1,4 +1,5 @@
 #include "Views/iconview.h"
+#include "Utilities/fileops.h"
 #include "Main/mainwindow.h"
 
 /*  IconView Overview
@@ -1955,9 +1956,12 @@ void IconView::startDrag(Qt::DropActions)
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
         paths << fPath;
-        QString xmpPath = Utilities::assocXmpPath(fPath);
-        if (!QFile(xmpPath).exists()) continue;
-        if (G::includeSidecars && xmpPath.length() > 0) urls << QUrl::fromLocalFile(xmpPath);
+        /* FileOps::companions finds .txt sidecars and case variants (.XMP) that the old
+           hardcoded "<base>.xmp" probe missed. G::includeSidecars still decides whether
+           they leave the application at all. */
+        if (!G::includeSidecars) continue;
+        foreach (const QString &c, FileOps::companions(fPath))
+            urls << QUrl::fromLocalFile(c);
     }
 
     QDrag *drag = new QDrag(this);

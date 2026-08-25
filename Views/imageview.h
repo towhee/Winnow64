@@ -133,7 +133,11 @@ public slots:
        scene-linear RAW decode runs (Develop mode). Cheap (embedded JPG, not the sensor
        decode); the real developed image replaces it when the decode lands. Returns false
        (shows nothing) if the preview can't be read. */
-    bool loadImageInterim(QString fPath);
+    /* Placeholder while the slow scene-linear RAW decode runs. Uses the embedded JPG
+       unless `substitute` supplies pixels -- a cached develop preview, which shows the
+       DEVELOPED look instead of the untouched camera render. Framing is identical either
+       way: both are reduced-resolution stand-ins for the same image. */
+    bool loadImageInterim(QString fPath, const QImage &substitute = QImage());
     /* Record the zoom/pan of the outgoing image for a Develop navigation to fPath.
        Must be called before the displayed pixmap is replaced, while the live scroll
        state is still that of the image being left. */

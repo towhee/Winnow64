@@ -32,6 +32,10 @@ public:
     bool ingested = false;
     bool video = false;
     bool sidecar = false;
+    /* The sidecar holds a non-identity Develop recipe. Set by Metadata::parseSidecar,
+       which is already parsing that file, and copied to G::DevelopColumn to drive the
+       develop badge in the icon grid. */
+    bool developEdited = false;
     bool metadataReading = false;           // all metadata except thumb
     // Read outcome (all metadata except thumb). See G::MetaStatus.
     int metaStatus = G::MetaNotAttempted;

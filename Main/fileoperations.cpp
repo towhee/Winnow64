@@ -1,4 +1,6 @@
 #include "Main/mainwindow.h"
+#include "Utilities/fileops.h"
+#include <QSet>
 
 /*  *******************************************************************************************
 
@@ -12,7 +14,7 @@ void MW::copyFiles()
     if (selection.isEmpty()) return;
 
     // flush unsaved per-image Develop edits so copied sidecars are current
-    if (developProperties) developProperties->flushAll();
+    FileOps::flushPendingEdits();
 
     bool isSidecar = false;
     int n = selection.count();
@@ -25,7 +27,7 @@ void MW::copyFiles()
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
         // add sidecar path(s)
-        QStringList sidecarPaths = Utilities::getSidecarPaths(fPath);
+        QStringList sidecarPaths = FileOps::companions(fPath);
         foreach (QString sidecarPath, sidecarPaths) {
             urls << QUrl::fromLocalFile(sidecarPath);
             isSidecar = true;
@@ -72,17 +74,39 @@ void MW::pasteFiles(QString folderPath)
     }
 
     const QMimeData *mimeData = QGuiApplication::clipboard()->mimeData();
-    QList<QUrl> urls;
     QStringList newPaths;
-    foreach (QUrl url, mimeData->urls()) {
-        qDebug() << url.path();
-        QString srcPath = url.path();
-        QFileInfo fi(url.path());
-        if (QFile(srcPath).exists()) {
-            QString destPath = folderPath + "/" + fi.fileName();
-            QFile::copy(url.path(), destPath);
-            newPaths << destPath;
+
+    /* Two passes. MW::copyFiles puts the sidecars on the clipboard as URLs of their own,
+       but a clipboard filled by Finder/Explorer holds images only. So route every image
+       through FileOps (which carries its companions either way) and then paste only those
+       clipboard sidecars FileOps did not already account for -- otherwise an internal
+       copy/paste would copy each sidecar twice. */
+    QStringList srcImages;
+    QStringList srcOthers;
+    foreach (const QUrl &url, mimeData->urls()) {
+        const QString srcPath = url.toLocalFile();
+        if (srcPath.isEmpty() || !QFile::exists(srcPath)) continue;
+        if (metadata->supportedFormats.contains(Utilities::getSuffix(srcPath)))
+            srcImages << srcPath;
+        else
+            srcOthers << srcPath;
+    }
+
+    QSet<QString> handled;
+    foreach (const QString &srcPath, srcImages) {
+        const QString destPath = folderPath + "/" + QFileInfo(srcPath).fileName();
+        if (!FileOps::copyFile(srcPath, destPath)) continue;
+        newPaths << destPath;
+        foreach (const QString &c, FileOps::companions(srcPath)) {
+            handled.insert(c);
+            newPaths << folderPath + "/" + QFileInfo(c).fileName();
         }
+    }
+
+    foreach (const QString &srcPath, srcOthers) {
+        if (handled.contains(srcPath)) continue;
+        const QString destPath = folderPath + "/" + QFileInfo(srcPath).fileName();
+        if (QFile::copy(srcPath, destPath)) newPaths << destPath;
     }
 
     // dynamically update datamodel etc
@@ -179,6 +203,10 @@ void MW::renameSelectedFiles()
                              RenameFileDlg::lockedFilesMsg(lockedFiles));
         return;
     }
+
+    /* A rename inside the 2s Develop debounce would otherwise let the pending write
+       land afterwards and recreate a sidecar at the OLD name. */
+    FileOps::flushPendingEdits();
 
     RenameFileDlg rf(this, folderPath, selection, filenameTemplates,
                      dm, metadata, imageCache);
@@ -481,18 +509,9 @@ void MW::deleteFiles(QStringList paths)
                 QString msg = "File is locked.";
                 G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
             }
-            if (QFile(fPath).moveToTrash()) {
-                QStringList srcSidecarPaths = Utilities::getSidecarPaths(fPath);
-                foreach (QString sidecarPath, srcSidecarPaths) {
-                    if (QFile(sidecarPath).exists()) {
-                        QFile(sidecarPath).moveToTrash();
-                    }
-                }
-            }
-            else {
-                QString msg = "Unable to move to trash.";
-                G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
-            }
+            /* FileOps carries the sidecars and drops the cached develop preview.
+               It reports its own failures. */
+            FileOps::trashFile(fPath);
         }
         else {
             QString msg = "File does not exist.";

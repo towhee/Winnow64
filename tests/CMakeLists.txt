@@ -14,6 +14,11 @@
 
 set(WINNOW_CORE_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/Utilities/utilities.cpp
+    # Utilities::backup carries an image's sidecars via FileOps, which keeps the develop
+    # preview cache in step -- so the closure now reaches both. Qt Core only (no OpenCV,
+    # no MainWindow), so the closure stays bounded as the comment above requires.
+    ${CMAKE_SOURCE_DIR}/Utilities/fileops.cpp
+    ${CMAKE_SOURCE_DIR}/Cache/developpreviewcache.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/inputdlg.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/popup.cpp
     ${CMAKE_SOURCE_DIR}/Main/global.cpp
@@ -96,6 +101,31 @@ endif()
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)
+# tst_maskedge tests Develop/maskedge.h, the grow/shrink morphology behind the Edge
+# slider (header-only, and deliberately free of Qt apart from the test harness).
+winnow_add_unit_test(tst_maskedge unit/tst_maskedge.cpp)
+# tst_maskhalo tests Develop/maskhalo.h, the halo suppression behind the Halo slider.
+# Header-only like tst_maskedge, but its Scharr/dilate/box passes are OpenCV, so it takes
+# the same extra link/include as tst_localcontrast rather than widening the shared
+# closure.
+winnow_add_unit_test(tst_maskhalo unit/tst_maskhalo.cpp)
+if(APPLE)
+    target_include_directories(tst_maskhalo PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_maskhalo PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_maskhalo PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_maskhalo PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_maskhalo PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
+# tst_developpreview tests Cache/developpreviewcache.cpp, the on-disk cache of develop
+# previews (already in the shared closure above).
+winnow_add_unit_test(tst_developpreview unit/tst_developpreview.cpp)
+# tst_fileops tests Utilities/fileops.cpp, the choke point every image file operation goes
+# through (already in the shared closure above).
+winnow_add_unit_test(tst_fileops unit/tst_fileops.cpp)
 # tst_whitebalance compiles Develop/whitebalance.cpp (depends only on workingimage.h).
 winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)

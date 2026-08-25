@@ -203,8 +203,9 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
                                     : r.enabled ? G::textColor
                                                 : G::disabledColor,
                                     G::strFontSize.toInt()));
-    name->setToolTip(r.pending ? tr("Being built -- commit or cancel it")
-                               : tr("Click to edit this submask again"));
+    name->setToolTip(r.pending  ? tr("Being built -- commit or cancel it")
+                     : selected ? tr("Open -- click to close its settings")
+                                : tr("Click to edit this submask again"));
     hb->addWidget(name);
     hb->addStretch(1);
 
@@ -325,7 +326,16 @@ void SubmaskList::showRowMenu(int index)
        every action rebuilds these rows, deleting the button whose click we are inside. */
     enum { Edit = 1, OpAdd, OpSubtract, OpIntersect, Invert, Up, Down, Dup, Del };
     QMenu menu(this);
-    menu.addAction(tr("Edit %1").arg(r.toolName))->setData(Edit);
+    /* Selecting the submask that is ALREADY open closes it (DevelopProperties::
+       reopenSubmask), so this item has to say so -- it emits the same signal the row
+       click does, and an "Edit" that closed the settings would be a lie. Left ENABLED on
+       a PENDING submask, which cannot actually be closed (it still needs its commit
+       button): the handler explains that, and one route with one explanation beats a
+       greyed item here and a working one on the row. */
+    const bool isOpen = (index == selectedIndex);
+    QAction *aEdit = menu.addAction(isOpen ? tr("Close %1 settings").arg(r.toolName)
+                                           : tr("Edit %1").arg(r.toolName));
+    aEdit->setData(Edit);
     menu.addSeparator();
     /* Op is meaningless on the first submask -- there is nothing under it to combine
        with -- so offer it only from the second one down. */

@@ -1,9 +1,13 @@
 ﻿#include "Main/mainwindow.h"
+#include "Utilities/fileops.h"
+#include "Cache/developpreviewcache.h"
 #include "Main/global.h"
 #include "Develop/workingimage.h"
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
 #include "Develop/brushstamp.h"
+#include "Develop/maskedge.h"
+#include "Develop/maskhalo.h"
 #include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
@@ -992,6 +996,10 @@ void MW::closeEvent(QCloseEvent *event)
 
     // persist any unsaved per-image Develop edits to their sidecars before teardown
     if (developProperties) developProperties->flushAll();
+
+    /* Persist the develop-preview index. Cheap (one small JSON write) and skipped when
+       nothing changed. Losing it costs only re-renders, so it is not worth guarding. */
+    DevelopPreviewCache::instance().save();
 
     stop("MW::closeEvent");
 
@@ -3185,7 +3193,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                (refreshViewsOnCacheChange). */
             else if (G::operationMode == G::OperationMode::Develop && G::useRaw
                      && isFileRaw(fPath) && !icd->contains(fPath)) {
-                if (imageView->loadImageInterim(fPath)) {
+                /* Prefer a cached develop preview over the camera's embedded JPG: for
+                   an edited image the embedded JPG shows the UNDEVELOPED picture, so the
+                   loupe used to spend those 2-3s displaying the one thing the user had
+                   already decided to change. */
+                const QImage cachedPreview = cachedDevelopPreview(fPath);
+                developInterimIsPreview = !cachedPreview.isNull();
+                if (imageView->loadImageInterim(fPath, cachedPreview)) {
                     if (G::mode == "Loupe" ||
                         G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                         loupeDisplay(fun);
@@ -4189,6 +4203,69 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     }
 }
 
+QImage MW::cachedDevelopPreview(const QString &fPath)
+{
+/*
+    The cached screen-resolution develop preview for fPath, or a null QImage.
+
+    Keyed on the recipe currently in effect (which during the write debounce may be ahead
+    of the sidecar), so the pixels always match what the user last saw. A miss is normal
+    and costs nothing -- the caller falls back to the embedded camera JPG.
+*/
+    if (G::isLogger) G::log("MW::cachedDevelopPreview");
+    if (fPath.isEmpty() || !developProperties) return QImage();
+
+    const QString blob = developProperties->developBlobFor(fPath);
+    if (blob.isEmpty()) return QImage();          // no edits: the camera JPG is correct
+
+    const QByteArray jpg = DevelopPreviewCache::instance().get(
+        fPath, Metadata::developPreviewKey(blob).toLatin1());
+    if (jpg.isEmpty()) return QImage();
+
+    QImage im;
+    if (!im.loadFromData(jpg, "JPG") || im.isNull()) return QImage();
+    return im;
+}
+
+void MW::developPreviewUpdated(const QString &fPath, const QImage &thumb)
+{
+/*
+    A develop edit has just been written to fPath's sidecar. Bring the grid into line.
+
+    thumb non-null : the newly rendered 256px preview -> paint it now.
+    thumb null     : no preview could be made for the new recipe (the usual case is a
+                     multi-image propagation target, which has no proxy in memory), so the
+                     thumbnail on screen is now stale. Forget it and let the icon loader
+                     re-read the camera thumbnail.
+
+    Both views keep a per-row scaled QPixmap in their delegate, so the row's cache entry
+    has to be dropped or they keep painting the old thumb.
+*/
+    if (G::isLogger) G::log("MW::developPreviewUpdated");
+    if (fPath.isEmpty() || !dm) return;
+
+    const int dmRow = dm->rowFromPath(fPath);
+    if (dmRow < 0) return;
+
+    /* Keep the develop badge in step with the recipe that was just written. */
+    const bool edited = !developProperties->developBlobFor(fPath).isEmpty();
+    dm->setData(dm->index(dmRow, G::DevelopColumn), edited);
+
+    if (!thumb.isNull()) dm->setDevelopIcon(dmRow, thumb);
+    else dm->clearDevelopIcon(dmRow);
+
+    const int sfRow = dm->proxyRowFromPath(fPath);
+    if (sfRow >= 0) {
+        if (thumbView && thumbView->iconViewDelegate)
+            thumbView->iconViewDelegate->clearCacheItem(sfRow);
+        if (gridView && gridView->iconViewDelegate)
+            gridView->iconViewDelegate->clearCacheItem(sfRow);
+    }
+
+    // the cleared row needs the loader to run again to get its camera thumb back
+    if (thumb.isNull()) reloadIconChunk();
+}
+
 void MW::folderChangeCompleted()
 {
 /*
@@ -4206,6 +4283,19 @@ void MW::folderChangeCompleted()
         G::log("MW::folderChangeCompleted", msg);
     }
     QString fun = "MW::folderChangeCompleted";
+
+    /* One-shot develop-preview cache sweep, deferred to here so it never competes with
+       the folder load the user is waiting for, and run off the GUI thread because it
+       stats every cached entry. Deliberately NOT at shutdown: closeEvent is already
+       doing synchronous teardown, and a force-quit or crash would skip it entirely.
+       See Cache/developpreviewcache.h for why it demotes rather than deletes. */
+    if (!developPreviewSweepDone) {
+        developPreviewSweepDone = true;
+        QThreadPool::globalInstance()->start([]{
+            DevelopPreviewCache::instance().sweep();
+            DevelopPreviewCache::instance().save();
+        });
+    }
 
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
@@ -5759,6 +5849,7 @@ struct MaskComp {
     double feat = 0.0;              // feather fraction 0..1
     /* Linear */
     double p1x = 0, p1y = 0, dx = 0, dy = 0, invLen2 = 0, invSigma = 0;
+    double tShift = 0.0;            // Edge, as a shift of the 0.5 crossing in t
     /* Radial (output-pixel space) */
     double cpx = 0, cpy = 0, iax = 0, iay = 0, cosA = 1, sinA = 0;
     /* Feather profile (MaskFalloff). Radial reads the table; Linear uses the CDF and
@@ -5766,7 +5857,10 @@ struct MaskComp {
     MaskFalloff::Lut falloff;
 };
 
-MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
+/* edgePx is the Edge slider as a signed radius in OUTPUT pixels. Both parametric tools
+   fold it into their geometry rather than morphing a buffer: for these two the result is
+   analytic and costs nothing. */
+MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho, double edgePx)
 {
     MaskComp g;
     g.tool = m.tool;
@@ -5787,6 +5881,17 @@ MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
         const double len2 = g.dx*g.dx + g.dy*g.dy;
         if (len2 <= 1e-12) return g;
         g.invLen2 = 1.0 / len2;
+        /* Edge: move the 0.5 crossing by edgePx along the gradient's normal. t is
+           normalized along p1->p2 in OUTPUT-NORMALIZED coords, so one pixel of x moves t
+           by dx/(len2*Wo) and one pixel of y by dy/(len2*Ho); the magnitude of that
+           gradient converts a pixel distance into a t distance. This is EXACT, not an
+           approximation -- dilating a ramp that is monotone along its normal by a
+           disc is precisely a translation, so the whole feather profile rides along,
+           which is what the buffer morphology does for every other tool. */
+        if (edgePx != 0.0 && Wo > 0.0 && Ho > 0.0) {
+            const double gx = g.dx / Wo, gy = g.dy / Ho;
+            g.tShift = edgePx * std::sqrt(gx * gx + gy * gy) * g.invLen2;
+        }
         const double sigma = MaskFalloff::gradientSigma(m.feather);
         g.hardStep = (sigma <= 0.0);
         g.invSigma = g.hardStep ? 0.0 : 1.0 / sigma;
@@ -5796,8 +5901,24 @@ MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho)
         if (!o.contains("cx") || !o.contains("cy") || !o.contains("rx") || !o.contains("ry")) return g;
         const double cx = o["cx"].toDouble(), cy = o["cy"].toDouble();
         const double rx = o["rx"].toDouble(), ry = o["ry"].toDouble();
-        const double ax = rx * Wo, ay = ry * Ho;        // semi-axes in output pixels
-        if (ax <= 1e-6 || ay <= 1e-6) return g;
+        double ax = rx * Wo, ay = ry * Ho;              // semi-axes in output pixels
+        if (ax <= 1e-6 || ay <= 1e-6) return g;         // authored-degenerate: no ellipse
+        /* Edge grows/shrinks the ellipse by edgePx. Exact for a circle and the standard
+           approximation for an ellipse (a constant normal offset of an ellipse is not an
+           ellipse; the error is zero at all four vertices and grows with eccentricity).
+           The feather rides the radius here rather than translating, because for a radial
+           the feather has always BEEN a fraction of the radius -- Edge therefore behaves
+           exactly like dragging the radius handle, which is the least surprising thing it
+           can do on this tool. */
+        ax += edgePx;
+        ay += edgePx;
+        /* A large negative Edge can push the ellipse through zero. Clamp rather than
+           invalidate: the caller DROPS an invalid component, and dropping is not the same
+           as an empty one -- under Intersect an empty component must zero the mask
+           and under Subtract it must be a no-op. Authoring rx=0 is unreachable from the
+           UI, so this path was dead until Edge made shrinking a radial a normal drag. */
+        ax = qMax(ax, 1e-3);
+        ay = qMax(ay, 1e-3);
         const double ang = o["angle"].toDouble() * 0.017453292519943295;   // deg -> rad
         g.cpx = cx * Wo; g.cpy = cy * Ho;
         g.iax = 1.0 / ax; g.iay = 1.0 / ay;
@@ -5825,8 +5946,8 @@ inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, 
     }
     else {                          // Linear: projection along p1->p2
         const double t = ((onx - g.p1x)*g.dx + (ony - g.p1y)*g.dy) * g.invLen2;
-        v = g.hardStep ? (t >= 0.5 ? 1.0 : 0.0)
-                       : MaskFalloff::cdf((t - 0.5) * g.invSigma);
+        v = g.hardStep ? (t >= 0.5 - g.tShift ? 1.0 : 0.0)
+                       : MaskFalloff::cdf((t - 0.5 + g.tShift) * g.invSigma);
     }
     const float r = float(v);       // both paths already produced the final 0..1 mask value
     return g.inverted ? 1.0f - r : r;
@@ -5841,8 +5962,12 @@ struct MaskBuildStats {
     qint64 rasterMs = 0;    // BrushStamp::rasterize (replays every stroke's dabs)
     qint64 setupMs  = 0;    // component parse + reference lookups, minus rasterMs
     qint64 foldMs   = 0;    // the per-pixel fold over the scope's components
+    qint64 morphMs  = 0;    // MaskEdge grow/shrink passes (submask + mask level)
+    qint64 haloMs   = 0;    // MaskHalo refine/damp pass over the folded mask
     int    strokes  = 0;    // brush strokes replayed
     int    comps    = 0;    // components folded
+    int    morphs   = 0;    // components (plus the scope) that needed a morph
+    int    halos    = 0;    // scopes whose folded mask needed a halo pass
 };
 
 /* Cache of rasterized brush masks (work-space coverage, before component invert). A render replays
@@ -5976,7 +6101,53 @@ struct CompDesc {
     bool   rangeValid = false;
     std::vector<RangeMask::ColorSample> samples;          // colour samples (opponent space)
     /* Subject (AI saliency) component -- coverage is the shared SubjectRef; feather/inverted above. */
+
+    /* Edge slider, as a signed radius in THIS BUFFER's pixels (pixelScale already
+       applied). Non-zero means this component cannot be evaluated inline in the fold --
+       growing or shrinking a boundary is a neighbourhood operation -- so it is
+       materialized to a buffer, morphed by MaskEdge, and folded from there. The two
+       analytic tools never set this: Linear and Radial carry their edge in their geometry
+       instead (see parseMaskComp), which costs no buffer at all. Below
+       MaskEdge::kMinRadius it is left at 0, so a sub-threshold nudge stays on the cheap
+       path rather than paying a materialize for a no-op. */
+    double edgePx = 0.0;
 };
+
+/*
+    One component's coverage at one pixel. This is the whole per-tool switch, in ONE
+    place, so the inline fold and the Edge materializer below cannot drift apart. `k` is
+    the buffer index (a brush raster is indexed directly, not sampled); onx/ony are
+    output-normalized coords. Every branch applies the component's own `inverted` --
+    which is what puts invert BEFORE the Edge morphology, so growing an inverted mask
+    shrinks the original, as the overlay shows it.
+*/
+inline float evalCompAt(const CompDesc &d, double onx, double ony, size_t k,
+                        const RangeMask::RangeRef *refp,
+                        const SubjectMask::SubjectRef *subjp,
+                        const SkyMask::SkyRef *skyp,
+                        const DepthMask::DepthRef *depthp,
+                        double Wo, double Ho)
+{
+    if (d.isBrush) { const float c = (*d.brush)[k]; return d.inverted ? 1.0f - c : c; }
+    if (d.isRange)
+        return (d.rangeTool == int(MaskTool::LuminanceRange))
+                 ? RangeMask::lumCoverage(*refp, onx, ony, d.rlo, d.rhi, d.feather,
+                                          d.inverted)
+                 : RangeMask::colorCoverage(*refp, onx, ony, d.samples,
+                                            d.hueLo, d.hueHi, d.satLo, d.satHi,
+                                            d.feather, d.inverted);
+    if (d.isSubject)
+        return SubjectMask::coverage(*subjp, onx, ony, float(d.feather),
+                                     d.inverted ^ d.subjectBaseInvert);
+    if (d.isSky)
+        return SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
+    if (d.isDepth)
+        return DepthMask::coverage(*depthp, onx, ony, d.rlo, d.rhi, d.feather,
+                                   d.inverted);
+    if (d.isObject)
+        return ObjectMask::coverage(*d.objRef, onx, ony, float(d.feather), d.inverted);
+    return evalMaskComp(d.param, onx, ony, Wo, Ho);            // invert applied inside
+}
 
 /* ObjectRef store key: path + a hash of the brush blob. Unlike Subject/Sky/Depth (one param-
    independent ref per path), an object mask's coverage depends on its brush, so each component's
@@ -6034,18 +6205,21 @@ void maskFoldCacheClear()
     g_maskFoldCache.clear();
 }
 
-/* Split h rows across the global pool; fn(y0, y1) processes a disjoint half-open row
-   band. Serial below a threshold, where the dispatch would cost more than the pass
-   itself. Same idiom as Develop::parallelFor and WorkingImageCache's maskParallelFor,
-   which are file-local there; this is the row-oriented mask/overlay version. */
+/* Split `count` items across the global pool; fn(i0, i1) processes a disjoint half-open
+   band. `work` is the total pixel count the pass touches, used only to stay serial below
+   the threshold where dispatch would cost more than the pass itself. Same idiom as
+   Develop::parallelFor and WorkingImageCache's maskParallelFor, which are file-local
+   there. Rows are the common case (developParallelRows); MaskEdge's diagonal passes band
+   over diagonals instead, which is why this takes a plain count. */
 template <class F>
-inline void developParallelRows(int w, int h, F fn)
+inline void developParallelBands(int count, size_t work, F fn)
 {
     const int maxThreads = qMax(1, QThreadPool::globalInstance()->maxThreadCount());
-    if (maxThreads == 1 || size_t(w) * size_t(h) < (size_t(1) << 16)) {
-        fn(0, h);
+    if (maxThreads == 1 || count <= 1 || work < (size_t(1) << 16)) {
+        fn(0, count);
         return;
     }
+    const int h = count;
     const int chunks = qMin(maxThreads, h);
     const int per = (h + chunks - 1) / chunks;
     QVector<QFuture<void>> futs;
@@ -6058,6 +6232,13 @@ inline void developParallelRows(int w, int h, F fn)
     for (QFuture<void> &f : futs) f.waitForFinished();
 }
 
+/* The row-oriented case: fn(y0, y1) over a disjoint half-open row band. */
+template <class F>
+inline void developParallelRows(int w, int h, F fn)
+{
+    developParallelBands(h, size_t(w) * size_t(h), fn);
+}
+
 /* Rasterize the scope's mask to a 0..1 buffer at the WorkingImage (pre-orientation) resolution, so
    it aligns with the linear blend before developComposite applies the EXIF rotation. Each pixel is
    mapped work-normalized -> output-normalized (output = work rotated CW by degrees) before each
@@ -6068,15 +6249,107 @@ inline void developParallelRows(int w, int h, F fn)
    registered yet, in which case that component contributes nothing and the buffer is a
    placeholder. A caller must not cache such a buffer: the real one lands once the
    reference does, and nothing about the components changes to retire it. */
+/*
+    Perceptual luminance of a working image, on ITS OWN grid, for MaskHalo's guide.
+
+    THE UNDEVELOPED IMAGE ON PURPOSE. A guide taken from the developed result would move
+    every time a slider moved, so the mask would reshape itself in response to the very
+    adjustment it is masking -- a feedback loop, and the oscillation the content-range
+    masks avoid by keying off the base only. The working image cannot move, so the halo
+    refinement is stable under a drag.
+
+    PERCEPTUAL, NOT SCENE-LINEAR. The guided filter weights neighbours by how similar the
+    guide says they are. In scene-linear a shadow-side edge is numerically tiny and would
+    barely steer the filter, which is exactly where mask errors hide; the same gamma 2.2
+    the mask BLEND uses (maskEnc, workingimagecache.cpp) puts dark and bright edges on
+    comparable footing.
+
+    Built ONCE per render tick and shared by every scope -- it depends only on the source.
+*/
+void buildHaloGuide(const WorkingImage &src, std::vector<float> &guide)
+{
+    const int w = src.width, h = src.height;
+    if (w <= 0 || h <= 0) { guide.clear(); return; }
+    guide.resize(size_t(w) * size_t(h));
+    const float *rgb = src.rgb.data();
+    float *g = guide.data();
+    developParallelRows(w, h, [&](int y0, int y1) {
+        for (size_t k = size_t(y0) * w, e = size_t(y1) * w; k < e; ++k) {
+            /* Rec.709 luma -- the working image's primaries (workingimage.h). */
+            const float lum = 0.2126f * rgb[k*3+0] + 0.7152f * rgb[k*3+1]
+                            + 0.0722f * rgb[k*3+2];
+            g[k] = lum <= 0.0f ? 0.0f : std::pow(lum, 1.0f / 2.2f);
+        }
+    });
+}
+
+/*
+    pixelScale converts an Edge slider value (which is FULL-RESOLUTION pixels, so it means
+    the same thing in the sidecar whatever this render's size) into pixels of THIS buffer:
+    this render's long edge over the full-res long edge. 1.0 for a settle or export, ~0.3
+    for a screen proxy. scopeEdge is EditScope::maskEdge, applied to the folded mask.
+*/
 std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int w, int h, int degrees,
                                    const QString &fPath, bool *refsReady = nullptr,
-                                   MaskBuildStats *stats = nullptr)
+                                   MaskBuildStats *stats = nullptr,
+                                   double pixelScale = 1.0, float scopeEdge = 0.0f,
+                                   float scopeHalo = 0.0f,
+                                   const std::vector<float> *haloGuide = nullptr)
 {
     QElapsedTimer buildProbe;
     const qint64 rasterMsOnEntry = stats ? stats->rasterMs : 0;
     if (stats) buildProbe.start();
     std::vector<float> out(size_t(w) * size_t(h), 0.0f);
     if (w <= 0 || h <= 0) return out;
+
+    /* ONE morph scratch for the whole call: every Edge-bearing submask reuses it in turn,
+       and so does the mask-level pass. At 45 MP that is 90 MB held once instead of 180 MB
+       of float per submask -- the difference between a transient allocation and an OOM on
+       a 22-submask scope. uint16 because MaskFalloff::kCutoff is 1/512, so 16 bits is ~7
+       bits finer than anything the coverage profile promises. */
+    std::vector<uint16_t> edgeBuf;
+    auto par = [&](int count, auto &&fn) {
+        developParallelBands(count, size_t(w) * size_t(h), fn);
+    };
+    /* Mask-level Edge: grow/shrink the mask every submask has been folded into. Kept as a
+       lambda because it has to run on EVERY exit path -- including the one where the fold
+       prefix already covered every component, which is exactly the path a drag of this
+       slider takes (no component signature changes, so nothing is re-folded). */
+    const double scopeEdgePx = double(scopeEdge) * pixelScale;
+    auto applyScopeEdge = [&]() {
+        if (std::fabs(scopeEdgePx) < MaskEdge::kMinRadius) return;
+        QElapsedTimer morphProbe;
+        if (stats) morphProbe.start();
+        edgeBuf.resize(size_t(w) * size_t(h));
+        developParallelRows(w, h, [&](int y0, int y1) {
+            for (size_t k = size_t(y0) * w, e = size_t(y1) * w; k < e; ++k)
+                edgeBuf[k] = MaskEdge::toU16(out[k]);
+        });
+        MaskEdge::apply(edgeBuf, w, h, scopeEdgePx, par);
+        developParallelRows(w, h, [&](int y0, int y1) {
+            for (size_t k = size_t(y0) * w, e = size_t(y1) * w; k < e; ++k)
+                out[k] = MaskEdge::toFloat(edgeBuf[k]);
+        });
+        if (stats) { stats->morphMs += morphProbe.elapsed(); ++stats->morphs; }
+    };
+
+    /* Mask-level Halo: pull the folded mask's transition band onto the image's real edge
+       (and/or damp it there), so a boundary that misses the subject stops spilling the
+       adjustment onto a rim of background. Runs AFTER applyScopeEdge on every exit path
+       -- Edge is a deliberate uniform offset and Halo then snaps that offset boundary to
+       the picture; morphing afterwards would smear the edge Halo just found.
+
+       The guide is the caller's working image, already on this buffer's grid. No guide
+       (the veil before a proxy exists, a caller that has none) = no halo pass rather than
+       a wrong one. */
+    auto applyScopeHalo = [&]() {
+        if (!haloGuide || scopeHalo < MaskHalo::kMinAmount) return;
+        if (haloGuide->size() != size_t(w) * size_t(h)) return;
+        QElapsedTimer haloProbe;
+        if (stats) haloProbe.start();
+        MaskHalo::apply(out, *haloGuide, w, h, scopeHalo, pixelScale, par);
+        if (stats) { stats->haloMs += haloProbe.elapsed(); ++stats->halos; }
+    };
 
     /* Resume the fold from the deepest still-valid prefix (see the fold-prefix cache
        above), so only the submask the user is actually editing -- and anything after
@@ -6168,6 +6441,12 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
     for (int ci = start; ci < components.size(); ++ci) {
         if (ci == newK) { splitIdx = comps.size(); prefixRefsReady = refsHereReady; }
         const MaskComponent &m = components.at(ci);
+        /* Edge, in this buffer's pixels. Below kMinRadius it is dropped to 0 so a
+           sub-threshold nudge stays on the cheap inline path instead of paying a
+           materialize for a no-op. The two parametric tools ignore it here -- they take
+           it through parseMaskComp and stay analytic. */
+        const double edgePx = double(m.edge) * pixelScale;
+        const double morphPx = (std::fabs(edgePx) >= MaskEdge::kMinRadius) ? edgePx : 0.0;
         if (m.tool == 2) {                                // Brush: rasterize (cached) strokes
             CompDesc d;
             d.isBrush = true;
@@ -6175,6 +6454,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
                                         &refsHereReady, stats);
             d.op = m.op;
             d.inverted = m.inverted;
+            d.edgePx = morphPx;
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
@@ -6189,6 +6469,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.edgePx    = morphPx;
             if (m.tool == int(MaskTool::LuminanceRange)) {
                 d.rlo = o.value("lo").toDouble(0.0);
                 d.rhi = o.value("hi").toDouble(1.0);
@@ -6220,6 +6501,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.edgePx    = morphPx;
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Sky)) {
@@ -6232,6 +6514,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.edgePx    = morphPx;
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Depth)) {
@@ -6245,6 +6528,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.edgePx    = morphPx;
             d.rlo       = o.value("lo").toDouble(0.0);      // depth band [lo,hi], 0=near..1=far
             d.rhi       = o.value("hi").toDouble(0.5);
             comps.append(d);
@@ -6263,10 +6547,11 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.edgePx    = morphPx;
             comps.append(d);
         }
         else {
-            const MaskComp g = parseMaskComp(m, Wo, Ho);
+            const MaskComp g = parseMaskComp(m, Wo, Ho, edgePx);
             if (!g.valid) continue;
             CompDesc d;
             d.param = g;
@@ -6276,7 +6561,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
     }
     if (splitIdx < 0) { splitIdx = comps.size(); prefixRefsReady = refsHereReady; }
     if (refsReady && !refsHereReady) *refsReady = false;
-    if (comps.isEmpty()) return out;     // nothing new to fold -> the prefix (or zeros)
+    /* Nothing new to fold -> the prefix (or zeros). The mask-level Edge still applies:
+       dragging THAT slider changes no component signature, so this is the path it takes
+       on every tick. */
+    if (comps.isEmpty()) { applyScopeEdge(); applyScopeHalo(); return out; }
     const RangeMask::RangeRef *refp = ref ? ref.get() : nullptr;
     const SubjectMask::SubjectRef *subjp = subjRef ? subjRef.get() : nullptr;
     const SkyMask::SkyRef *skyp = skyRef ? skyRef.get() : nullptr;
@@ -6304,25 +6592,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
                 float m = row[x];
                 for (int di = c0; di < c1; ++di) {
                     const CompDesc &d = comps.at(di);
-                    float c;
-                    if (d.isBrush) { c = (*d.brush)[k]; if (d.inverted) c = 1.0f - c; }
-                    else if (d.isRange) {
-                        c = (d.rangeTool == int(MaskTool::LuminanceRange))
-                              ? RangeMask::lumCoverage(*refp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted)
-                              : RangeMask::colorCoverage(*refp, onx, ony, d.samples,
-                                                         d.hueLo, d.hueHi, d.satLo, d.satHi,
-                                                         d.feather, d.inverted);
-                    }
-                    else if (d.isSubject)
-                        c = SubjectMask::coverage(*subjp, onx, ony, float(d.feather),
-                                                  d.inverted ^ d.subjectBaseInvert);
-                    else if (d.isSky)
-                        c = SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
-                    else if (d.isDepth)
-                        c = DepthMask::coverage(*depthp, onx, ony, d.rlo, d.rhi, d.feather, d.inverted);
-                    else if (d.isObject)
-                        c = ObjectMask::coverage(*d.objRef, onx, ony, float(d.feather), d.inverted);
-                    else           c = evalMaskComp(d.param, onx, ony, Wo, Ho);  // invert inside
+                    const float c = evalCompAt(d, onx, ony, k, refp, subjp, skyp, depthp,
+                                               Wo, Ho);
                     /* Sequential fold: Subtract removes, Intersect keeps overlap,
                        Add unions. */
                     if      (d.op == int(MaskOp::Subtract))  m *= (1.0f - c);
@@ -6340,9 +6611,65 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
                                    - (stats->rasterMs - rasterMsOnEntry);
                  stats->comps += comps.size(); }
 
+    /*
+        Fold [c0,c1). Components with NO Edge keep the original interleaved fold verbatim,
+        so a mask nobody has run the slider on costs exactly what it cost before.
+
+        A component WITH an Edge cannot be evaluated inline -- moving a boundary needs
+        neighbours, and the fold is a per-pixel scalar loop -- so it is materialized into
+        the shared scratch, morphed, and folded from there on its own. Doing them one at
+        a time keeps the peak at ONE scratch buffer rather than one per submask.
+    */
+    auto foldEdgeComp = [&](const CompDesc &d) {
+        QElapsedTimer morphProbe;
+        if (stats) morphProbe.start();
+        edgeBuf.resize(size_t(w) * size_t(h));
+        developParallelRows(w, h, [&](int y0, int y1) {
+            for (int y = y0; y < y1; ++y) {
+                const double wny = (y + 0.5) * invH;
+                for (int x = 0; x < w; ++x) {
+                    const double wnx = (x + 0.5) * invW;
+                    double onx, ony;
+                    switch (degrees) {       // work-normalized -> output-normalized
+                        case 90:  onx = 1.0 - wny; ony = wnx;       break;
+                        case 180: onx = 1.0 - wnx; ony = 1.0 - wny; break;
+                        case 270: onx = wny;       ony = 1.0 - wnx; break;
+                        default:  onx = wnx;       ony = wny;       break;
+                    }
+                    const size_t k = size_t(y) * w + x;
+                    edgeBuf[k] = MaskEdge::toU16(
+                        evalCompAt(d, onx, ony, k, refp, subjp, skyp, depthp, Wo, Ho));
+                }
+            }
+        });
+        MaskEdge::apply(edgeBuf, w, h, d.edgePx, par);
+        developParallelRows(w, h, [&](int y0, int y1) {
+            for (int y = y0; y < y1; ++y) {
+                float *row = out.data() + size_t(y) * w;
+                const uint16_t *src = edgeBuf.data() + size_t(y) * w;
+                for (int x = 0; x < w; ++x) {
+                    const float c = MaskEdge::toFloat(src[x]);
+                    if      (d.op == int(MaskOp::Subtract))  row[x] *= (1.0f - c);
+                    else if (d.op == int(MaskOp::Intersect)) row[x] *= c;
+                    else                                     row[x] = qMax(row[x], c);
+                }
+            }
+        });
+        if (stats) { stats->morphMs += morphProbe.elapsed(); ++stats->morphs; }
+    };
+    auto foldSegments = [&](int c0, int c1) {
+        int i = c0;
+        while (i < c1) {
+            if (comps.at(i).edgePx != 0.0) { foldEdgeComp(comps.at(i)); ++i; continue; }
+            int j = i;
+            while (j < c1 && comps.at(j).edgePx == 0.0) ++j;
+            developParallelRows(w, h, [&](int y0, int y1){ rows(i, j, y0, y1); });
+            i = j;
+        }
+    };
+
     /* Fold the part that belongs to the next prefix, snapshot it, then fold the rest. */
-    if (splitIdx > 0)
-        developParallelRows(w, h, [&](int y0, int y1){ rows(0, splitIdx, y0, y1); });
+    foldSegments(0, splitIdx);
 
     if (prefixRefsReady) {
         /* When nothing new was folded, `out` is still exactly the buffer we were seeded
@@ -6381,9 +6708,12 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         e.prefix = std::move(snapshot);
     }
 
-    if (splitIdx < comps.size())
-        developParallelRows(w, h,
-                            [&](int y0, int y1){ rows(splitIdx, comps.size(), y0, y1); });
+    foldSegments(splitIdx, comps.size());
+
+    /* AFTER the snapshot, never before: the prefix is a PARTIAL fold, and morphing it
+       would hand every later resume a shape that is not a prefix of anything. */
+    applyScopeEdge();
+    applyScopeHalo();
     if (stats) stats->foldMs += buildProbe.elapsed();
     return out;
 }
@@ -6508,7 +6838,8 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
         if (cache) {
             for (size_t i = 0; i < nScopes; ++i) {
                 const DevelopProperties::StackRenderJob::Scope &L = job.scopes.at(int(i));
-                maskKeys[i] = maskComponentsSignature(L.components);
+                maskKeys[i] = maskComponentsSignature(L.components, L.maskEdge,
+                                                      L.maskHalo);
                 /* A content-range mask thresholds a reference derived from the developed
                    base, so its coverage moves when the base does even though no component
                    changed -- fold the base signature in for those scopes and ONLY those.
@@ -6529,6 +6860,16 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
         const bool hotParamsSame =
             cache && nScopes && cache->paramsKeyAt(hotAt) == paramsKeys[hotAt];
 
+        /* One guide for the whole tick, and only when some scope actually asks for it --
+           a pass over the source is not free and most stacks carry no halo. */
+        std::vector<float> haloGuide;
+        for (int i = 0; i < job.scopes.size(); ++i) {
+            if (job.scopes.at(i).maskHalo >= MaskHalo::kMinAmount) {
+                buildHaloGuide(src, haloGuide);
+                break;
+            }
+        }
+
         std::vector<WorkingImageCache::StackScope> sl;
         sl.reserve(nScopes);
         for (size_t i = 0; i < nScopes; ++i) {
@@ -6543,7 +6884,10 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                     bool refsReady = true;
                     s.mask = std::make_shared<const std::vector<float>>(
                         buildMaskBuffer(L.components, src.width, src.height, degrees,
-                                        fPath, &refsReady, maskStats));
+                                        fPath, &refsReady, maskStats,
+                                        double(src.renderScale), L.maskEdge,
+                                        L.maskHalo,
+                                        haloGuide.empty() ? nullptr : &haloGuide));
                     if (timings) ++timings->maskScopes;
                     /* A buffer built without one of its references is a placeholder --
                        cache it and nothing would ever retire it (the components do not
@@ -7217,6 +7561,9 @@ void MW::updateMaskOverlayTint()
     int mw = work->width, mh = work->height;
     if (mw <= 0 || mh <= 0) { imageView->clearScopeMaskTint(); return; }
     int bw, bh;
+    /* This buffer's long edge over the FULL-RESOLUTION long edge -- what turns an Edge
+       slider value (full-res pixels) into pixels of this buffer. */
+    double edgeScale = 1.0;
     if (developProxy && developProxyPath == fPath && developProxy->isValid()) {
         /* Build at the PROXY's exact dimensions, not an independent cap. The
            per-component brush rasters are cached by (paramsJson, dims, degrees), so
@@ -7225,17 +7572,38 @@ void MW::updateMaskOverlayTint()
            which was why `tint` cost about as much as `mask` again on every tick. */
         bw = developProxy->width;
         bh = developProxy->height;
+        /* renderScale is COMPOUNDING -- it is measured against the ORIGINAL full res, not
+           against `work` -- so take the proxy's own value rather than deriving bw/mw, or
+           the veil's Edge would disagree with the render's whenever `work` is itself
+           capped. */
+        edgeScale = double(developProxy->renderScale);
     }
     else {
         const int cap = 1600;
         const double sc = qMin(1.0, double(cap) / qMax(mw, mh));
         bw = qMax(1, int(mw * sc));
         bh = qMax(1, int(mh * sc));
+        edgeScale = sc * double(work->renderScale);
     }
+    /* The veil has to show the SAME mask the render composites, so it needs the same halo
+       guide -- on ITS grid. That is only free on the proxy branch above, where bw/bh are
+       the proxy's own dimensions. On the capped fallback (no proxy for this file yet)
+       there is no working image at bw/bh to build a guide from, so the veil draws the
+       unrefined mask for the moment before the proxy lands rather than a guide resampled
+       from the wrong grid. */
+    std::vector<float> veilGuide;
+    const float veilHalo = developProperties->activeScopeMaskHalo();
+    if (veilHalo >= MaskHalo::kMinAmount && developProxy
+        && developProxyPath == fPath && developProxy->isValid()
+        && developProxy->width == bw && developProxy->height == bh)
+        buildHaloGuide(*developProxy, veilGuide);
+
     MaskBuildStats tintStats;
     const std::vector<float> buf =
         buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
-                        G::isReportDevelopTime ? &tintStats : nullptr);
+                        G::isReportDevelopTime ? &tintStats : nullptr,
+                        edgeScale, developProperties->activeScopeMaskEdge(),
+                        veilHalo, veilGuide.empty() ? nullptr : &veilGuide);
 
     /* RESULT VEIL: the whole-mask composite as a flat coverage tint in the one overlay
        colour, alpha by coverage. This is the TRUE resulting mask -- Subtract holes stay
@@ -7275,9 +7643,13 @@ void MW::updateMaskOverlayTint()
         const float T = 0.5f;
         MaskComponent c = masks[pendIdx];
         c.op = int(MaskOp::Add);                 // ring the footprint, not the sign
+        /* The submask's OWN footprint, so the mask-level Edge is deliberately NOT passed:
+           the ring must track the submask being dragged, not the assembled mask. The
+           submask's own Edge travels inside `c` and does apply. */
         const std::vector<float> cov =
             buildMaskBuffer({c}, bw, bh, degrees, fPath, nullptr,
-                            G::isReportDevelopTime ? &tintStats : nullptr);
+                            G::isReportDevelopTime ? &tintStats : nullptr,
+                            edgeScale, 0.0f);
         const int a = 235, thick = 1;
         /* Row-parallel: each band writes only its own scanlines and reads cov (const),
            so the y+-thick neighbour lookups cross band boundaries safely. The scanline
@@ -7315,7 +7687,8 @@ void MW::updateMaskOverlayTint()
                            << " raster" << tintStats.rasterMs
                            << tintStats.strokes << "strokes"
                            << " setup" << tintStats.setupMs
-                           << " fold" << tintStats.foldMs << tintStats.comps << "comps";
+                           << " fold" << tintStats.foldMs << tintStats.comps << "comps"
+                           << " morph" << tintStats.morphMs << tintStats.morphs;
 
     if (hasPending)
         imageView->setMaskLegend(DevelopProperties::maskToolName(masks[pendIdx].tool),
@@ -7623,12 +7996,16 @@ void MW::renderDevelopPreview(bool fullRes)
         ++developProxyGeomGen;
     }
     const quint64 geomGen = developProxyGeomGen;
+    /* Pair the frame with whether it actually depicts the STORED recipe. Captured here,
+       on the GUI thread with the job, because the view overrides it reflects (History
+       hover, Transform eye, Replace eye) can change while the render is in flight. */
+    const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe();
     const bool wantTime = G::isReportDevelopTime;
     const qint64 tProxyCap = tProxy;
 
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
                             reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
-                            baseKey]() {
+                            baseKey, faithful]() {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
@@ -7646,7 +8023,7 @@ void MW::renderDevelopPreview(bool fullRes)
         const QSize orientedSize(fw, fh);
         QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
                                          geomGen, rt, ms, tProxyCap, tRender, wantTime,
-                                         proxySrc, appliedGeom, orientedSize] {
+                                         proxySrc, appliedGeom, orientedSize, faithful] {
             developProxyInFlight = false;
             /* Show it if we are still on this image AND its geometry still applies.
                Being SUPERSEDED is no longer a reason to drop it: a drag delivers events
@@ -7677,6 +8054,7 @@ void MW::renderDevelopPreview(bool fullRes)
                    Opt held is exactly the case that has to stay live. */
                 developFrame = out;
                 developFramePath = fPath;
+                developFrameFaithful = faithful;
                 updateSharpenMaskPreview();
                 if (wantTime) msPreview = pv.restart();
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
@@ -7700,7 +8078,8 @@ void MW::renderDevelopPreview(bool fullRes)
                                    << "Mpx) [raster" << ms.rasterMs
                                    << ms.strokes << "strokes"
                                    << " setup" << ms.setupMs
-                                   << " fold" << ms.foldMs << ms.comps << "comps]"
+                                   << " fold" << ms.foldMs << ms.comps << "comps"
+                                   << " morph" << ms.morphMs << ms.morphs << "]"
                                    << " srcCopy" << rt.copyMs
                                    << " develop" << rt.developMs
                                    << "[copy" << rt.stackCopyMs
@@ -8006,11 +8385,15 @@ void MW::updateDevelopRenderingHint()
     frame on screen for long enough to be mistaken for the final one. The interactive
     proxy tick is sub-second and is the normal editing state, so it says nothing.
 
-    NOTE this is the deliberate ZERO-MEMORY answer to image-switch latency: show what is
+    NOTE this was the deliberate ZERO-MEMORY answer to image-switch latency: show what is
     already decoded, and label it, rather than pre-decoding neighbours. A proxy cache or
     neighbour read-ahead would make the switch instant but costs 46 MB per cached proxy
     (and a full scene-linear WorkingImage is 12 bytes/pixel -- ~600 MB on a 50 MP file).
     That trade was weighed and deferred; see notes/Documentation.txt.
+
+    The develop-preview cache changes what is on screen during that wait but not this
+    trade: it holds a JPEG on DISK, not a decoded proxy in memory, and only for images the
+    user has actually edited. The decode still takes just as long.
 */
     if (!imageView) return;
     if (G::operationMode != G::OperationMode::Develop) {
@@ -8020,9 +8403,19 @@ void MW::updateDevelopRenderingHint()
     const QString fPath = dm ? dm->currentFilePath : QString();
     if (fPath.isEmpty()) { imageView->clearRenderingHint(); return; }
 
-    if (developWorkInFlight == fPath) imageView->setRenderingHint(tr("Decoding raw"));
+    /* Distinguish the two placeholders. Showing a cached develop preview already looks
+       like the finished picture, so the chip has to say the pixels are provisional --
+       otherwise the later swap to the real render reads as an unexplained flicker. */
+    if (developWorkInFlight == fPath) {
+        imageView->setRenderingHint(developInterimIsPreview
+                                        ? tr("Cached preview - decoding raw")
+                                        : tr("Decoding raw"));
+    }
     else if (developFullResInFlight)  imageView->setRenderingHint(tr("Rendering full"));
-    else                              imageView->clearRenderingHint();
+    else {
+        imageView->clearRenderingHint();
+        developInterimIsPreview = false;   // the real render is on screen now
+    }
 }
 
 void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen)
@@ -9814,6 +10207,11 @@ void MW::ingest()
                                   ingestDescriptionCompleter,
                                   autoIngestFolderPath,
                                   G::css);
+
+        /* Ingest copies the sidecars off the card, so any Develop edit still sitting in
+           the 2s debounce has to be on disk first or the ingested copy misses it. Covers
+           the modal ingest below and the background ingest started further down. */
+        FileOps::flushPendingEdits();
 
         bool okToIngest = ingestDlg->exec();
         // do not delete ingestDlg: scrambles QMap objects for some reason

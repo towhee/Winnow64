@@ -1,4 +1,5 @@
 #include "utilities.h"
+#include "Utilities/fileops.h"
 #include "Main/global.h"
 #include <filesystem>
 #ifdef Q_OS_MAC
@@ -407,6 +408,18 @@ bool Utilities::backup(QString fPath, QString subfolderName)
     if (!QFile::copy(fPath, backupPath)) {
         G::issue("Warning", "Failed to copy file to backup.", "Utilities::backup", -1, fPath);
         return false;
+    }
+
+    /* Carry the sidecars. A backup taken to protect the original is worthless if
+       restoring it loses every rating, label and develop edit the image had. */
+    const QFileInfo bi(backupPath);
+    foreach (const QString &companion, FileOps::companions(fPath)) {
+        QString cDest = backupFolder + "/" + bi.baseName() + "." +
+                        QFileInfo(companion).suffix();
+        if (!QFile::copy(companion, cDest)) {
+            G::issue("Warning", "Failed to copy sidecar to backup.",
+                     "Utilities::backup", -1, companion);
+        }
     }
     return true;
 }

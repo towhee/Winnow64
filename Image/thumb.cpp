@@ -435,6 +435,32 @@ void Thumb::presetOffset(uint offset, uint length)
     isPresetOffset = true;
 }
 
+bool Thumb::loadFromDevelopPreview(QString &fPath, QImage &image)
+{
+/*
+    The 256px JPEG of the developed image cached in the XMP sidecar
+    (winnow:DevelopPreview), or false when there is none.
+
+    Metadata::readDevelopPreview returns nothing unless the stored key still matches the
+    recipe beside it, so a sidecar rewritten by another application can never show stale
+    pixels here -- it just falls through to the camera thumbnail. It also returns
+    immediately when no sidecar exists, which is the common case and costs one stat.
+
+    The image arrives already oriented and cropped (developCompositeStack applies EXIF
+    rotation and geometry), so the caller must NOT rotate it again.
+*/
+    const QByteArray jpg = Metadata::readDevelopPreview(fPath);
+    if (jpg.isEmpty()) return false;
+    if (!image.loadFromData(jpg, "JPG") || image.isNull()) return false;
+
+    /* Written at G::maxIconSize, but a preview from an older build or a larger icon
+       setting must not paint over its cell. */
+    if (image.width() > thumbMax.width() || image.height() > thumbMax.height())
+        image = image.scaled(thumbMax, Qt::KeepAspectRatio, Qt::FastTransformation);
+    image.convertTo(QImage::Format_RGB32);
+    return true;
+}
+
 bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
                       const ImageMetadata &m, QString src)
 {
@@ -492,6 +518,17 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
             idle = true;
             return true;
         }
+    }
+
+    /* A cached develop preview wins over the camera's embedded thumbnail: it is what the
+       image actually looks like now. Checked here, BEFORE the permission fiddling and the
+       retry loop, because it reads the sidecar and never touches the image file -- and
+       before the tail below, which scales and applies checkOrientation. The preview comes
+       out of developCompositeStack already rotated and cropped, so running it through
+       that tail would rotate it a second time. */
+    if (!abort && loadFromDevelopPreview(fPath, image)) {
+        setIdle();
+        return true;
     }
 
     // check permissions

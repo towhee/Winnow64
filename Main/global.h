@@ -181,6 +181,10 @@ Q_NAMESPACE
         ShootingInfoColumn,
         SearchTextColumn,
         ErrColumn,
+        /* True when the image has a non-identity Develop recipe in its sidecar. Drives the
+           develop badge in the icon delegate. Appended (not inserted) so saved table
+           column order/width settings, which are keyed by index, still line up. */
+        DevelopColumn,
         TotalColumns    // insert additional columns before this
     };
 
