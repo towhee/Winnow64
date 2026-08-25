@@ -4279,8 +4279,14 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
             gridView->iconViewDelegate->clearCacheItem(sfRow);
     }
 
-    // the cleared row needs the loader to run again to get its camera thumb back
-    if (thumb.isNull()) reloadIconChunk();
+    /* The cleared row needs the loader to run again to get its camera thumb back -- and it
+       needs MetaRead told that a loaded icon was discarded, or in the default brute-force
+       icon chunk it refuses to re-read the row and the thumbnail just disappears. See
+       MetaRead::invalidateLoadedIcons and MW::setPreviewSource. */
+    if (thumb.isNull()) {
+        QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
+        reloadIconChunk();
+    }
 }
 
 void MW::folderChangeCompleted()

@@ -106,6 +106,12 @@ public slots:
     void dispatchReaders();
     void dispatch(int id, bool isReturning);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
+    /* Icons already loaded have been DISCARDED by something outside the loader (the
+       Original / Developed switch is the one case -- see MW::setPreviewSource), so the
+       next setStartRow must re-arm them. Without this they are never re-read: see the
+       JIT re-arm block in setStartRow for why. Thread-safe; call it queued, before the
+       setStartRow that should act on it. */
+    void invalidateLoadedIcons();
     void dispatchFinished(QString src);
     void allFinished(QString src);
     void abortProcessing();
@@ -132,6 +138,8 @@ private:
     std::atomic<int> awaitingDecodeRow{-1};   // sfRow we're waiting on; -1 = no wait
     QElapsedTimer awaitingDecodeTimer;        // wall-clock safety bound
     std::atomic<bool> idle{false};
+    /* Set by invalidateLoadedIcons, consumed (and reset) by setStartRow. */
+    std::atomic<bool> loadedIconsInvalidated{false};
     void setIdle();
     void setBusy();
 

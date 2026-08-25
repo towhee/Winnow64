@@ -743,14 +743,27 @@ void MW::setPreviewSource(G::PreviewSource source)
 
     /* Drop the icons and re-read them. The delegates keep their own scaled QPixmap per
        row, so they have to be told too or they keep painting the old thumbnail. */
+    bool anyCleared = false;
     for (int row = 0; row < dm->rowCount(); ++row) {
-        if (!dm->index(row, G::DevPreviewKeyColumn).data().toString().isEmpty())
+        if (!dm->index(row, G::DevPreviewKeyColumn).data().toString().isEmpty()) {
             dm->clearDevelopIcon(row);
+            anyCleared = true;
+        }
     }
     if (thumbView && thumbView->iconViewDelegate)
         thumbView->iconViewDelegate->clearAllCache();
     if (gridView && gridView->iconViewDelegate)
         gridView->iconViewDelegate->clearAllCache();
+
+    /* MetaRead remembers every row a reader has already returned for this folder and
+       refuses to read it again (readSuccessThisCycle / needToRead). It re-arms rows whose
+       icon is missing only when the icon chunk is a WINDOW -- in the default brute-force
+       mode it assumes a loaded icon stays loaded, which was true until this function
+       started discarding them. Tell it otherwise, or the cleared thumbnails are never
+       re-read and simply disappear. Queued ahead of reloadIconChunk's own queued call, so
+       it is observed by the setStartRow that has to act on it. */
+    if (anyCleared)
+        QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
     reloadIconChunk();
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
