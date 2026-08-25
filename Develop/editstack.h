@@ -53,6 +53,11 @@ struct MaskComponent {
     bool    enabled  = true;
     bool    inverted = false;
     float   feather  = 50.0f;
+    /* Grow (+) or shrink (-) this submask's boundary, in FULL-RESOLUTION pixels. Feather
+       softens an edge; edge MOVES it, which is the only way to choke or spread a cutout
+       (see Develop/maskedge.h). Applied to this submask's own coverage before it is
+       folded into the mask; EditScope::maskEdge does the same to the folded result. */
+    float   edge     = 0.0f;
     QString paramsJson;                 // opaque per-tool geometry/sample blob (forward-tolerant)
 };
 
@@ -63,6 +68,20 @@ struct EditScope {
     bool       enabled = true;
     int        combine = int(MaskCombine::Union);   // how this scope's masks combine
     QVector<MaskComponent> components;       // empty (Global scope) = whole image
+    /* Grow (+) or shrink (-) the COMBINED mask -- every submask folded together -- in
+       full-resolution pixels, so an assembled mask can be choked or spread without
+       walking each submask. Composes with MaskComponent::edge. Meaningless with no
+       components, and the panel hides its row there. */
+    float      maskEdge = 0.0f;
+    /* Halo suppression on the COMBINED mask, 0..100, 0 = off. Where the mask boundary
+       does not land on the subject's real edge, the masked adjustment spills onto a rim
+       of background; this refines the alpha against the image so it follows that edge.
+       Needs a real edge to find, so it is meaningless on a purely gradient mask and the
+       panel disables its row there. See Develop/maskhalo.h. */
+    float      maskHalo = 0.0f;
+    /* RETIRED KEY: sidecars written during the halo evaluation carry "maskHaloMode", the
+       algorithm selector. Only one algorithm survived, so it is no longer read or
+       written -- but the NAME must never be reused for anything else. */
     EditParams params;
 
     /* Preview (show/ignore) flags for the panel's per-section eye toggles. NON-DESTRUCTIVE: false
@@ -336,6 +355,8 @@ struct EditStack {
             lo["opacity"] = l.opacity;
             lo["enabled"] = l.enabled;
             lo["combine"] = l.combine;
+            lo["maskEdge"] = l.maskEdge;
+            lo["maskHalo"] = l.maskHalo;
             /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
                untouched scope serializes exactly as before (forward/backward tolerant). */
             if (!l.showScope)      lo["showLayer"]      = false;
@@ -354,6 +375,7 @@ struct EditStack {
                 mo["enabled"]  = m.enabled;
                 mo["inverted"] = m.inverted;
                 mo["feather"]  = m.feather;
+                mo["edge"]     = m.edge;
                 if (!m.paramsJson.isEmpty()) mo["params"] = m.paramsJson;
                 marr.append(mo);
             }
@@ -430,6 +452,8 @@ struct EditStack {
             l.opacity = static_cast<float>(lo.value("opacity").toDouble(l.opacity));
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
+            l.maskEdge = static_cast<float>(lo.value("maskEdge").toDouble(l.maskEdge));
+            l.maskHalo = static_cast<float>(lo.value("maskHalo").toDouble(l.maskHalo));
             l.showScope = lo.value("showLayer").toBool(l.showScope);
             l.showBasic = lo.value("showBasic").toBool(l.showBasic);
             l.showCurves = lo.value("showCurves").toBool(l.showCurves);
@@ -451,6 +475,7 @@ struct EditStack {
                 m.enabled  = mo.value("enabled").toBool(m.enabled);
                 m.inverted = mo.value("inverted").toBool(m.inverted);
                 m.feather  = static_cast<float>(mo.value("feather").toDouble(m.feather));
+                m.edge     = static_cast<float>(mo.value("edge").toDouble(m.edge));
                 m.paramsJson = mo.value("params").toString();
                 l.components.append(m);
             }
@@ -631,6 +656,8 @@ struct EditStack {
             if (l.combine < 0 || l.combine > int(MaskCombine::Intersect))
                 l.combine = int(MaskCombine::Union);
             clampF(l.opacity, 0.0f, 1.0f, 1.0f);
+            clampF(l.maskEdge, -100.0f, 100.0f, 0.0f);
+            clampF(l.maskHalo, 0.0f, 100.0f, 0.0f);
             for (int i = l.components.size() - 1; i >= 0; --i) {
                 MaskComponent &m = l.components[i];
                 /* tool / op are serialized as int and both enums are APPEND ONLY, so a
@@ -643,6 +670,7 @@ struct EditStack {
                     continue;
                 }
                 clampF(m.feather, 0.0f, 100.0f, 50.0f);
+                clampF(m.edge, -100.0f, 100.0f, 0.0f);
             }
             sanitizeParams(l.params, l.name.isEmpty() ? QStringLiteral("Scope") : l.name,
                            issues);

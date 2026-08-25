@@ -21,6 +21,12 @@
     drives it unchanged. Edit freely; swap over scopeheader.* once it proves out.
 */
 
+/* Scope captions (Global, Mask 1, ...) are yellow so the scope names read apart from the
+   section headers and slider captions in the same panel. The ACTIVE scope takes the full
+   colour; inactive rows take G::dimmed() of the same hue, keeping the active/inactive
+   contrast the previous white/grey pair carried. */
+static const QColor kScopeTextColor(Qt::yellow);
+
 ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
 {
     if (G::isLogger) G::log("ScopeHeaderLab::ScopeHeaderLab");
@@ -31,7 +37,12 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
        brightness as the "?" tip buttons above it. */
 
     QVBoxLayout *outer = new QVBoxLayout(this);
-    outer->setContentsMargins(0, 0, 0, 0);
+    /* 4 px of dock background ABOVE the band, so "Edits" is not welded to whatever ends
+       directly above it. It goes on the layout rather than the band's own padding: the
+       band is the click target for collapse and paintEvent fills band->geometry() with
+       the header gradient, so padding it would grow both the hit area and the gradient
+       instead of leaving a gap. */
+    outer->setContentsMargins(0, 4, 0, 0);
     outer->setSpacing(0);
 
     /* Header band: "Scopes" caption + a trailing [v] panel menu. Transparent background
@@ -111,7 +122,7 @@ ScopeHeaderLab::ScopeHeaderLab(QWidget *parent) : ScopeHeaderBase(parent)
     eb->setContentsMargins(kDetailIndent, 2, G::headerBtnRightInset, 2);
     eb->setSpacing(G::headerBtnGap);
     editorBandLabel = new QLabel(editorBand);
-    editorBandLabel->setStyleSheet(G::labelCss(QColor(Qt::white), G::strFontSize.toInt()));
+    editorBandLabel->setStyleSheet(G::labelCss(kScopeTextColor, G::strFontSize.toInt()));
     editorEyeBtn = new BarBtn();
     editorEyeBtn->setToolTip("Show or hide the selected scope's changes");
     setEyeIcon(editorEyeBtn, true);
@@ -157,6 +168,13 @@ void ScopeHeaderLab::buildScopeBar(QVBoxLayout *outer)
     scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     scopeCombo->setToolTip("The scope the settings below belong to:\n"
                            "Global, or one of this image's masks");
+    /* The scope name (Global, Subject, Mask 1 ...) is yellow so the thing the panel below
+       is editing reads apart from the section headers and slider captions under it. Only
+       the text colour is set: every other QComboBox property still comes from
+       WidgetCSS::comboBox(), and the disabled rule is repeated here because a widget's
+       own stylesheet outranks the application one. */
+    scopeCombo->setStyleSheet("QComboBox { color: " + kScopeTextColor.name() + "; }"
+                              "QComboBox:disabled { color: " + G::disabledColor.name() + "; }");
     /* activated (not currentIndexChanged): only a USER pick selects a scope. The refill
        in updateScopeBar is blocked as well, but activated never fires for it anyway. */
     connect(scopeCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
@@ -505,7 +523,7 @@ QWidget *ScopeHeaderLab::makeRow(int index, const ScopeRowInfo &r, bool active)
     hb->setSpacing(G::headerBtnGap);
 
     QLabel *name = new QLabel(r.name, row);
-    name->setStyleSheet(G::labelCss(active ? QColor(Qt::white) : G::textColor,
+    name->setStyleSheet(G::labelCss(active ? kScopeTextColor : G::dimmed(kScopeTextColor),
                                     G::strFontSize.toInt()));
     hb->addWidget(name);
     hb->addStretch(1);

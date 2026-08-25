@@ -298,6 +298,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::DevelopColumn, new QStandardItem("Developed")); horizontalHeaderItem(G::DevelopColumn)->setData(false, G::GeekRole);
     // "🔎" was title for search column
 }
 
@@ -1294,6 +1295,12 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
     setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SidecarColumn), QFile(sidecarPath).exists());
+    /* G::DevelopColumn is NOT set here. Deciding whether an image has a develop recipe
+       means parsing the sidecar, and this runs on the folder-load path -- the one place
+       where per-image work has repeatedly cost visible lag. Metadata::parseSidecar is
+       already parsing that same file on a worker thread, so the flag rides in on
+       ImageMetadata::developEdited via addMetadataForItem instead. */
+    setData(index(row, G::DevelopColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SidecarColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     uint p = static_cast<uint>(fileInfo.permissions());
     setData(index(row, G::PermissionsColumn), p);
@@ -1825,6 +1832,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (m.rating == "0") m.rating = "";
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    /* Develop badge. Comes from Metadata::parseSidecar, which already had the sidecar
+       open, so no extra I/O lands on the folder-load path. */
+    setData(index(row, G::DevelopColumn), m.developEdited);
     // if (m._rating == "") m.rating = "No Rating";
     // if (m._rating == "0") m.rating = "No Rating";
     if (m._rating == "0") m.rating = "";
@@ -2596,6 +2606,61 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     setData(index(dmIdx.row(), G::IconLoadedColumn), true);
     setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
     updateIconChunkLoaded();
+}
+
+void DataModel::setDevelopIcon(int dmRow, const QImage &im)
+{
+/*
+    Replace a row's thumbnail with a newly rendered develop preview, so the grid follows
+    an edit as soon as it is flushed.
+
+    setIcon1 refuses to replace a live icon on purpose: several loaders race to deliver a
+    thumbnail for the same row, and destroying a QIcon under memory pressure has crashed
+    in QPixmapIconEngine. That guard is about UNSOLICITED duplicate deliveries. This is
+    the opposite case -- a single, user-initiated, GUI-thread replacement of a thumbnail
+    the user just changed -- so it overwrites by design. The memoryOverrunFlag bail is
+    kept, because that one is about libmalloc state, not about duplicates.
+
+    The delegate caches its own scaled QPixmap per row, so it has to be told too or it
+    keeps painting the old thumb.
+*/
+    if (G::isLogger) G::log("DataModel::setDevelopIcon");
+
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+    if (im.isNull()) return;
+
+    QModelIndex dmIdx = index(dmRow, 0);
+    if (!dmIdx.isValid()) return;
+
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, QVariant(QIcon(QPixmap::fromImage(im))), Qt::DecorationRole);
+        setData(index(dmRow, G::IconLoadedColumn), true);
+        /* A crop changes the aspect ratio, and the delegate lays the cell out from it. */
+        if (im.height() > 0)
+            setData(index(dmRow, G::IconAspectRatioColumn),
+                    (qreal)im.width() / im.height());
+    }
+    emit dataChanged(dmIdx, index(dmRow, columnCount() - 1));
+}
+
+void DataModel::clearDevelopIcon(int dmRow)
+{
+/*
+    Drop a row's icon and its loaded flag so the icon loader fetches it again. setIcon1
+    skips rows that already have an icon, so clearing is what makes a re-read happen.
+    Mirrors clearIconsOutsideChunkRange, which uses the same mechanism for eviction.
+*/
+    if (G::isLogger) G::log("DataModel::clearDevelopIcon");
+
+    QModelIndex dmIdx = index(dmRow, 0);
+    if (!dmIdx.isValid()) return;
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, QVariant(), Qt::DecorationRole);
+        setData(index(dmRow, G::IconLoadedColumn), false);
+    }
+    emit dataChanged(dmIdx, index(dmRow, columnCount() - 1));
 }
 
 void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)

@@ -71,11 +71,18 @@ inline QByteArray maskComponentSignature(const MaskComponent &m)
     sig += m.enabled  ? '1' : '0';
     sig += m.inverted ? '1' : '0';          sig += ':';
     sig += QByteArray::number(double(m.feather), 'g', 9);   sig += ':';
+    sig += QByteArray::number(double(m.edge), 'g', 9);      sig += ':';
     sig += QByteArray::number(qulonglong(qHash(m.paramsJson)));
     return sig;
 }
 
-inline QByteArray maskComponentsSignature(const QVector<MaskComponent> &components)
+/* scopeEdge is EditScope::maskEdge -- it grows/shrinks the FOLDED mask, so it belongs to
+   this key even though it lives on no component. Leave it out and the mask-level Edge
+   slider moves nothing: the cached buffer is still keyed as current. scopeHalo
+   (EditScope::maskHalo) reshapes the same folded mask and is here for the same reason. */
+inline QByteArray maskComponentsSignature(const QVector<MaskComponent> &components,
+                                          float scopeEdge = 0.0f,
+                                          float scopeHalo = 0.0f)
 {
     QByteArray sig;
     sig.reserve(components.size() * 40);
@@ -83,6 +90,8 @@ inline QByteArray maskComponentsSignature(const QVector<MaskComponent> &componen
         sig += maskComponentSignature(m);
         sig += '|';
     }
+    sig += QByteArray::number(double(scopeEdge), 'g', 9);   sig += ':';
+    sig += QByteArray::number(double(scopeHalo), 'g', 9);
     return sig;
 }
 

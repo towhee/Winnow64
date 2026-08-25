@@ -537,14 +537,15 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     }
 }
 
-bool ImageView::loadImageInterim(QString fPath)
+bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
 {
 /*
     Show the embedded JPG preview immediately as a placeholder while the slow
     scene-linear RAW decode runs (Develop mode). The caller (MW::fileSelectionChange)
     reaches here only on a genuine image-cache miss, so this fills the otherwise-blank
     loupe until the developed image lands (MW::refreshViewsOnCacheChange -> loadImage).
-    Sourced from the embedded JPG (Pixmap::load), not the sensor decode, so it is cheap.
+    Sourced from the embedded JPG (Pixmap::load), not the sensor decode, so it is cheap
+    -- or from `substitute`, the cached develop preview, when the caller has one.
     The real load runs with replace=true and refits, so this need not leave the fit
     machinery in any special state. Returns false (shows nothing) if the preview can't
     be read, preserving prior behaviour.
@@ -552,9 +553,14 @@ bool ImageView::loadImageInterim(QString fPath)
     if (G::isLogger) G::log("ImageView::loadImageInterim", fPath);
     if (fPath.isEmpty()) return false;
 
-    QImage preview;
-    if (!pixmap->load(fPath, preview, "ImageView::loadImageInterim") || preview.isNull())
-        return false;
+    /* A cached develop preview, when we have one, is strictly better than the camera's
+       embedded JPG: it is what the image actually looks like with the user's edits. Both
+       are low-resolution stand-ins, so the framing maths below is unchanged. */
+    QImage preview = substitute;
+    if (preview.isNull()) {
+        if (!pixmap->load(fPath, preview, "ImageView::loadImageInterim") || preview.isNull())
+            return false;
+    }
 
     /* Capture the zoom/pan in effect (from the outgoing image) BEFORE the pixmap swap, so
        the developed image can restore it -- see setDevelopPreview. MW normally captures

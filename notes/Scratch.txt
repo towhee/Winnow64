@@ -1920,5 +1920,10 @@ I want to change how Documentation.txt is formatted.  I want to change to a text
 file:///Users/roryhill/Pictures/_test1/2008-08-20_0072.tif
 /Users/roryhill/Pictures/_ThumbTest/NEF D800E Landscape.NEF
 
+Add a mask header row, which contains the mask edge and halo sliders.
 
+I want to replicate lightroom library / develop functionality in a limited manner.  Unlike lightroom, I do not want to maintain a library of all the images: just the ones in
+the datamodel.  However, I would like to cache a preview of develop edits that can be used by the thumbnail and shown when develop mode is engaged until the image develop render pipeline has executed.  Could we embed a jpg blob in the xmp sidecar? How would you suggest we accomplish this?  The goal is to provide the user with a speedy workflow.
 
+/Users/roryhill/Pictures/_test1/2017-03-11_0035.NEF
+/Users/roryhill/Pictures/_test1/2008-08-20_0072.tif

@@ -51,7 +51,10 @@ are already real, and its op is changed on its own row instead.</p>
 
 <h2>The list</h2>
 <p>Each row shows the tool, its combine op and whether it is inverted.  Click the row to
-re-open that submask for editing.  Then:</p>
+re-open that submask for editing, and click the open row again to close its settings and
+put its handles away.  A submask you are still building cannot be closed that way &mdash;
+click its row and Winnow says so &mdash; because its commit button would go with it:
+commit it with <b>Return</b> or discard it with <b>Esc</b> first.  Then:</p>
 
 <ul>
 <li>The <b>eye</b> shows or hides that submask's contribution &mdash; a one-click A / B of
@@ -65,13 +68,42 @@ what it is actually doing to the mask.  The band eye does the same for all of th
 you add gives a different mask than adding then subtracting.  If a result surprises you,
 walk the list with the row eyes.</p>
 
-<h2>Feather and Invert</h2>
-<p>The selected submask's own settings appear below the list &mdash; Feather, Invert, and
-whatever else the tool needs (size for a brush, the sampled colours for a Color Range).
+<h2>Feather, Edge, Halo and Invert</h2>
+<p>The selected submask's own settings appear below the list &mdash; Feather, Edge, Invert,
+and whatever else the tool needs (size for a brush, the sampled colours for a Color Range).
 <b>Feather</b> softens that submask's edge, and every mask in Winnow uses the same
 calibrated falloff, so a feather of 50 means the same thing whichever tool drew it.
 <b>Invert</b> flips that one submask, which is often quicker than describing the opposite:
 select the sky, invert, and you have everything but the sky.</p>
+
+<p><b>Edge</b> does what Feather cannot: it <i>moves</i> the boundary instead of softening
+it. Positive values grow the submask, negative values shrink it, and one unit is one pixel
+of the full-size image &mdash; so the same setting means the same thing on screen and on
+export. It is most useful on the AI masks: when Select Subject lands a pixel or two inside
+your subject and leaves a pale halo of background, an Edge of +2 pushes the cutout out past
+it. On a Color or Luminance Range, a small negative Edge is a quick way to drop the speckle
+that any content-based selection picks up, and a small positive one closes pinholes.</p>
+
+<p>At the top of the panel, in the <b>Mask</b> section above the Submasks row, there is a
+second <b>Edge</b> belonging to the mask as a whole. It grows or shrinks the finished mask
+&mdash; every submask folded together &mdash; so you can choke or spread the assembled
+result without visiting each submask in turn. The two add up: a submask at +5 inside a
+mask at &minus;3 ends up 2 pixels out. The section appears as soon as the mask has a
+submask to work on, and stays put when you collapse the Submasks list; its <b>[:]</b> menu
+puts both of its sliders back to zero, leaving each submask's own Edge alone.</p>
+
+<p><b>Halo</b>, the other row in that Mask section, is for the case Edge cannot fix. When a mask
+boundary does not quite follow your subject, whatever you do to that mask spills onto a
+thin rim of background and reads as a glow around the subject &mdash; most obvious when
+you have brightened the subject. Edge only slides the whole boundary by the same amount
+everywhere, so if the mask is out by different amounts in different places it just moves
+the problem. Halo instead finds the edges <i>in the picture</i> near the mask boundary and
+fades the adjustment out across them, so the rim stops reading as an outline. Raise it
+until the rim disappears. It does nothing until it reaches far enough to find the real
+edge, so if nothing seems to be happening, keep going &mdash; and if you push it hard, a
+narrow band just inside your subject can end up slightly under-adjusted, which is the
+trade. A mask made only of Linear or Radial Gradients has no edge in the picture to work
+from, and there the control is greyed out.</p>
 
 <h2>Seeing the mask</h2>
 <p>Press <b>O</b> to show or hide the mask overlay on the image.  The tint colour and the
@@ -82,7 +114,7 @@ panel.</p>
 <h2>What is saved</h2>
 <p>The submask list &mdash; each tool, its op, its inverted and enabled flags, its feather
 and its geometry or samples &mdash; is part of the develop recipe, stored with the scope in
-the image's sidecar.  Masks are per image and never travel with a preset, Copy / Paste
+the image's sidecar, as are the mask's own Edge and Halo.  Masks are per image and never travel with a preset, Copy / Paste
 Settings, or a multi-image edit: they describe these pixels.</p>
 
 </body>

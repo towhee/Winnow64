@@ -1,4 +1,5 @@
 #include "Develop/Properties/developproperties.h"
+#include "Cache/developpreviewcache.h"
 #include "Develop/Properties/scopeheaderbase.h"
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
@@ -833,6 +834,9 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
        active mask component (onMaskEditorSetting mirrors the main tree's itemChange). */
+    if (MaskEditor *ed = maskPanel->levelEditor())
+        connect(ed, &MaskEditor::settingChanged,
+                this, &DevelopProperties::onMaskLevelSetting);
     if (MaskEditor *ed = maskPanel->editor()) {
         connect(ed, &MaskEditor::settingChanged, this, &DevelopProperties::onMaskEditorSetting);
         connect(ed, &MaskEditor::wheelChanged,   this, &DevelopProperties::onMaskEditorWheel);
@@ -852,6 +856,31 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(sl, &SubmaskList::deleteRequested,   this, &DevelopProperties::deleteMask);
         connect(sl, &SubmaskList::helpRequested,     this, &DevelopProperties::submasksHelp);
     }
+
+    /* The Mask band's [:] menu. Its help opens the same page as the Submasks band: Edge
+       and Halo are documented there, and one mask page beats two half ones. */
+    connect(maskPanel, &MaskPanel::resetMaskLevelRequested,
+            this, &DevelopProperties::resetMaskLevel);
+    connect(maskPanel, &MaskPanel::helpRequested, this, &DevelopProperties::submasksHelp);
+}
+
+/*
+    Has this mask an EDGE IN THE PICTURE for Halo to snap to?
+
+    The two gradients are pure geometry -- their coverage is a ramp the user placed, with
+    no relationship to anything in the image -- so refining them against the image would
+    either do nothing or drag the ramp onto an unrelated edge. Every other tool is either
+    content-derived (the ranges, the AI cutouts) or painted onto content (the brush), and
+    all of them can be misregistered, which is the case Halo exists for.
+*/
+static bool maskHasRealEdge(const EditScope &l)
+{
+    for (const MaskComponent &m : l.components) {
+        if (!m.enabled) continue;
+        if (m.tool != int(MaskTool::LinearGradient) &&
+            m.tool != int(MaskTool::RadialGradient)) return true;
+    }
+    return false;
 }
 
 void DevelopProperties::syncMaskPanel()
@@ -886,6 +915,14 @@ void DevelopProperties::syncMaskPanel()
         rows.append(r);
     }
     maskPanel->list()->setSubmasks(rows, selectedMaskIndex);
+    /* MASK-level Edge, under the list. Always up while the mask HAS submasks -- unlike
+       the settings block below it, it does not depend on one being selected. With no
+       submasks there is no mask to grow or shrink, so the row goes away entirely. */
+    if (MaskEditor *ed = maskPanel->levelEditor()) {
+        ed->setCaptionWidth(maskPanelCaptionWidth());
+        ed->showMaskLevel(scope->maskEdge, scope->maskHalo, maskHasRealEdge(*scope));
+    }
+    maskPanel->showMaskLevel(!scope->components.isEmpty());
     /* Settings + commit only make sense with a submask open; an empty mask shows nothing
        but its [+]. */
     const bool open = (selectedMaskIndex >= 0 &&
@@ -901,7 +938,20 @@ void DevelopProperties::reopenSubmask(int index)
     if (G::isLogger) G::log("DevelopProperties::reopenSubmask");
     EditScope *scope = activeScope();
     if (!scope || index < 0 || index >= scope->components.size()) return;
-    if (index == selectedMaskIndex) return;          // already the one being edited
+    /* Clicking the OPEN submask closes it: the row is the list's only disclosure, so it
+       has to work both ways. Not while it is pending -- that would hide the commit
+       button the submask still needs (and Esc/[x] is how a pending one is dropped) --
+       and a click that simply does nothing reads as a broken row, so SAY WHY. */
+    if (index == selectedMaskIndex) {
+        if (pendingIdx < 0) { closeSubmaskEditing(); return; }
+        if (G::popup) {
+            const QString tool = maskToolName(scope->components.at(index).tool);
+            G::popup->showPopup(tool + " has not been committed yet, so its settings "
+                                "have to stay open.\n\nReturn (or the button below) "
+                                "folds it into the mask; Esc discards it.", 3000);
+        }
+        return;
+    }
     /* Switching away from a submask that is still PENDING would discard it silently, the
        same trap as leaving the scope -- ask with the same dialog. */
     if (!confirmPendingMask()) { syncMaskPanel(); return; }
@@ -1014,6 +1064,10 @@ void DevelopProperties::duplicateSubmask(int index)
 static QString maskSettingLabel(const QString &key)
 {
     if (key == "maskFeather")      return "Feather";
+    if (key == "maskEdge")         return "Edge";
+    /* Distinct from the submask's "Edge" so the History dock says which level moved. */
+    if (key == "scopeMaskEdge")    return "Mask edge";
+    if (key == "scopeHalo")        return "Mask halo";
     if (key == "maskInvert")       return "Invert";
     if (key == "maskSize")         return "Brush size";
     if (key == "maskFlow")         return "Brush flow";
@@ -1147,15 +1201,47 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
         emit maskRangeChanged(mm->paramsJson);
         emit paramsChanged();
     }
-    /* Feather (non-brush) / Invert: change the mask -> overlay + re-composite. */
-    else if (key == "maskFeather" || key == "maskInvert") {
-        if (key == "maskFeather") { mm->feather = v.toFloat(); emit maskFeatherChanged(v.toDouble()); }
-        else                      { mm->inverted = v.toBool(); emit maskInvertChanged(v.toBool()); }
+    /* Feather (non-brush) / Edge / Invert: change the mask -> overlay + re-composite. */
+    else if (key == "maskFeather" || key == "maskEdge" || key == "maskInvert") {
+        if      (key == "maskFeather") { mm->feather = v.toFloat();
+                                         emit maskFeatherChanged(v.toDouble()); }
+        else if (key == "maskEdge")    { mm->edge = v.toFloat(); }
+        else                           { mm->inverted = v.toBool();
+                                         emit maskInvertChanged(v.toBool()); }
         emit paramsChanged();
     }
     else return;
     noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v),
              "mask/" + key);
+}
+
+/* MASK level: reshape the folded mask (Edge, Halo). Edits the SCOPE, so unlike every
+   other row in the panel it does not need -- or look for -- a selected submask. */
+void DevelopProperties::onMaskLevelSetting(const QString &key, const QVariant &v)
+{
+    if (G::isLogger) G::log("DevelopProperties::onMaskLevelSetting");
+    EditScope *l = activeScope();
+    if (!l) return;
+    if      (key == "scopeMaskEdge") l->maskEdge = v.toFloat();
+    else if (key == "scopeHalo")     l->maskHalo = v.toFloat();
+    else return;
+    noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v), "mask/" + key);
+    emit paramsChanged();
+}
+
+void DevelopProperties::resetMaskLevel()
+{
+    if (G::isLogger) G::log("DevelopProperties::resetMaskLevel");
+    EditScope *l = activeScope();
+    if (!l) return;
+    if (l->maskEdge == 0.0f && l->maskHalo == 0.0f) return;
+    l->maskEdge = 0.0f;
+    l->maskHalo = 0.0f;
+    /* No mergeKey: this is one discrete act, not a slider settling, so it gets its own
+       history entry rather than folding into the last Edge drag. */
+    noteEdit(tr("Reset mask edge and halo"));
+    syncMaskPanel();                    // push the zeroed rows back into the sliders
+    emit paramsChanged();
 }
 
 void DevelopProperties::onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit)
@@ -1330,6 +1416,23 @@ void DevelopProperties::latchMaskOp()
     setPendingMaskOp(latchedMaskOp);
 }
 
+/*
+    End the editing session on a COMMITTED submask, leaving it (and the mask) exactly as
+    it is: its edits went into the mask as they were made, so there is nothing to fold in
+    and nothing to discard. Reached from the panel's "Done" button and from a click on the
+    open submask's row.
+*/
+void DevelopProperties::closeSubmaskEditing()
+{
+    if (G::isLogger) G::log("DevelopProperties::closeSubmaskEditing");
+    if (selectedMaskIndex < 0) return;
+    selectedMaskIndex = -1;
+    maskLatched = true;              // the combined mask stays "O"-toggleable
+    buildTree();                     // updateMaskEdit -> take the handles off canvas
+    emit paramsChanged();
+    emit maskTintHideRequested();
+}
+
 void DevelopProperties::commitPendingMask()
 {
     if (G::isLogger) G::log("DevelopProperties::commitPendingMask");
@@ -1337,15 +1440,7 @@ void DevelopProperties::commitPendingMask()
     /* Re-editing an already committed submask: the button reads "Done" and there is
        nothing to fold in -- its edits went into the mask as they were made. Just close
        the editing session, leaving the submask (and the mask) exactly as it is. */
-    if (pendingIdx < 0) {
-        if (selectedMaskIndex < 0) return;
-        selectedMaskIndex = -1;
-        maskLatched = true;              // the combined mask stays "O"-toggleable
-        buildTree();                     // updateMaskEdit -> take the handles off canvas
-        emit paramsChanged();
-        emit maskTintHideRequested();
-        return;
-    }
+    if (pendingIdx < 0) { closeSubmaskEditing(); return; }
     if (!scope || pendingIdx >= scope->components.size()) return;
     /* Commit what the user is LOOKING AT: pendingOp is what the veil, the render and the
        button label have all been previewing (the held modifier, else the latched op).
@@ -1401,6 +1496,7 @@ bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
     return m.tool     == pendingPristine.tool
         && m.inverted == pendingPristine.inverted
         && m.feather  == pendingPristine.feather
+        && m.edge     == pendingPristine.edge
         && m.paramsJson == pendingPristine.paramsJson;
 }
 
@@ -1892,8 +1988,11 @@ void DevelopProperties::setEditsLayout(int layout)
     refreshScopeList();
     /* An OPEN submask keeps the editor it was populated with, so its caption split has to
        be re-pushed by hand: the panel's inset just changed under it. */
-    if (maskPanel)
-        if (MaskEditor *ed = maskPanel->editor()) ed->setCaptionWidth(maskPanelCaptionWidth());
+    if (maskPanel) {
+        const int w = maskPanelCaptionWidth();
+        if (MaskEditor *ed = maskPanel->editor())      ed->setCaptionWidth(w);
+        if (MaskEditor *ed = maskPanel->levelEditor()) ed->setCaptionWidth(w);
+    }
 }
 
 void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepSection)
@@ -2240,6 +2339,27 @@ QVector<MaskComponent> DevelopProperties::activeScopeComponents() const
     if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return {};
     return s.scopes[activeScopeIndex].components;
 }
+
+float DevelopProperties::activeScopeMaskEdge() const
+{
+    if (currentImagePath.isEmpty()) return 0.0f;
+    auto it = stackCache.constFind(currentImagePath);
+    if (it == stackCache.constEnd()) return 0.0f;
+    const EditStack &s = it.value();
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return 0.0f;
+    return s.scopes[activeScopeIndex].maskEdge;
+}
+
+float DevelopProperties::activeScopeMaskHalo() const
+{
+    if (currentImagePath.isEmpty()) return 0.0f;
+    auto it = stackCache.constFind(currentImagePath);
+    if (it == stackCache.constEnd()) return 0.0f;
+    const EditStack &s = it.value();
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return 0.0f;
+    return s.scopes[activeScopeIndex].maskHalo;
+}
+
 
 int DevelopProperties::activeMaskIndex() const
 {
@@ -2662,6 +2782,10 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soft edge added OUTSIDE the brush size (0 = crisp).",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskEdge", "Edge",
+                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
+                      "full-size image. Feather softens an edge; Edge moves it.",
+                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFlow", "Flow", "How much each stroke builds up.",
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskAutoMask", "Auto mask",
@@ -2673,6 +2797,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
             setSliderReal("maskSize", brushNum(m.paramsJson, "size", 20));
             setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskEdge", m.edge);
             setSliderReal("maskFlow", brushNum(m.paramsJson, "flow", 100));
             setCheckboxValue("maskAutoMask", brushBool(m.paramsJson, "autoMask", false));
             setCheckboxValue("maskAutoMaskAi", brushStr(m.paramsJson, "autoMaskMode", "lum") == "ai");
@@ -2687,10 +2812,15 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soften the band edges.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskEdge", "Edge",
+                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
+                      "full-size image. Feather softens an edge; Edge moves it.",
+                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
             setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.25) * 100.0);
             setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.75) * 100.0);
             setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskEdge", m.edge);
             setCheckboxValue("maskInvert", m.inverted);
         }
         else if (m.tool == int(MaskTool::Depth)) {
@@ -2702,10 +2832,15 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soften the depth-band edges.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskEdge", "Edge",
+                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
+                      "full-size image. Feather softens an edge; Edge moves it.",
+                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
             setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.0) * 100.0);
             setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.5) * 100.0);
             setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskEdge", m.edge);
             setCheckboxValue("maskInvert", m.inverted);
         }
         else if (m.tool == int(MaskTool::ColorRange)) {
@@ -2803,12 +2938,17 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soften the selection edge.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskEdge", "Edge",
+                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
+                      "full-size image. Feather softens an edge; Edge moves it.",
+                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
             setSliderReal("maskHueLo", brushNum(m.paramsJson, "hueLo", 20));
             setSliderReal("maskHueHi", brushNum(m.paramsJson, "hueHi", 20));
             setSliderReal("maskSatLo", brushNum(m.paramsJson, "satLo", 25));
             setSliderReal("maskSatHi", brushNum(m.paramsJson, "satHi", 25));
             setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskEdge", m.edge);
             setCheckboxValue("maskInvert", m.inverted);
         }
         else if (m.tool == int(MaskTool::Object)) {
@@ -2818,16 +2958,26 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soften the refined cutout edge.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskEdge", "Edge",
+                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
+                      "full-size image. Feather softens an edge; Edge moves it.",
+                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
             setSliderReal("maskSize", brushNum(m.paramsJson, "size", 8));
             setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskEdge", m.edge);
             setCheckboxValue("maskInvert", m.inverted);
         }
         else {
             addSlider("maskFeather", "Feather", "Soften the mask edge.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
+            addSlider("maskEdge", "Edge",
+                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
+                      "full-size image. Feather softens an edge; Edge moves it.",
+                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
             setSliderReal("maskFeather", m.feather);
+            setSliderReal("maskEdge", m.edge);
             setCheckboxValue("maskInvert", m.inverted);
         }
         expand(toolIdx);
@@ -4964,12 +5114,15 @@ void DevelopProperties::itemChange(QModelIndex idx)
 
     /* The selected mask tool's settings write into the active scope's mask model. Feather/Invert
        change the mask, so they update the live overlay AND re-composite the masked scope. */
-    if (source == "maskFeather" || source == "maskInvert") {
+    if (source == "maskFeather" || source == "maskEdge" || source == "maskInvert") {
         EditScope *l = activeScope();
         if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size()) {
             if (source == "maskFeather") {
                 l->components[selectedMaskIndex].feather = v.toFloat();
                 emit maskFeatherChanged(v.toDouble());      // live-update the overlay ramp
+            }
+            else if (source == "maskEdge") {
+                l->components[selectedMaskIndex].edge = v.toFloat();
             }
             else {
                 l->components[selectedMaskIndex].inverted = v.toBool();
@@ -5188,6 +5341,8 @@ DevelopProperties::buildStackJob(const EditStack &s, bool useGeometry, bool useS
         StackRenderJob::Scope lj;
         lj.params  = ep;
         lj.combine = l.combine;
+        lj.maskEdge = l.maskEdge;
+        lj.maskHalo = l.maskHalo;
         for (const MaskComponent &m : l.components) {
             if (!m.enabled) continue;
             /* Content-derived AI masks (Select Subject/Sky/Background) carry NO paramsJson -- their
@@ -5327,6 +5482,10 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        diff base moves to the new image. */
     flushPropagation();
     flushImage(currentImagePath);              // persist edits to the image being left
+    /* The image being left may have been rendered without being edited (its recipe came
+       from an earlier session), in which case flushImage did nothing. Capture its
+       previews now, while the frame still exists. */
+    topUpPreviews(currentImagePath);
     cancelWbDropper();                  // an armed dropper does not follow the image
     currentImagePath = fPath;
     if (fPath.isEmpty()) {
@@ -6313,15 +6472,131 @@ void DevelopProperties::reportStackIssues(const QString &fPath, int status,
     }
 }
 
+bool DevelopProperties::renderMatchesStoredRecipe() const
+{
+/*
+    stackJob() applies three view overrides that make the rendered frame diverge from the
+    stored recipe: a hovered History row (previewActive), the Transform preview eye
+    (geometry.show -- off means the frame is UNCROPPED and unstraightened), and the
+    Replace eye (spotsShown). Any of them makes the frame unsafe to cache as "what this
+    image looks like".
+*/
+    if (previewActive) return false;
+    if (!spotsShown) return false;
+    if (currentImagePath.isEmpty()) return false;
+    return stackCache.value(currentImagePath).geometry.show;
+}
+
+QString DevelopProperties::developBlobFor(const QString &fPath)
+{
+    if (fPath.isEmpty()) return QString();
+    const EditStack &s = stackFor(fPath);
+    return s.isIdentity() ? QString() : s.toBase64();
+}
+
+void DevelopProperties::setPreviewProvider(PreviewProvider provider)
+{
+    previewProvider = std::move(provider);
+}
+
+void DevelopProperties::topUpPreviews(const QString &fPath)
+{
+/*
+    See the header. Fills in the previews for an image whose edits predate this session,
+    from the frame the develop render already produced.
+
+    Both tiers are gated together: if EITHER is missing or stale for the recipe in force,
+    both are rewritten. Checking only one would let the grid thumbnail and the loupe
+    placeholder come from different recipes.
+*/
+    if (fPath.isEmpty() || !previewProvider) return;
+
+    const QString blob = developBlobFor(fPath);
+    if (blob.isEmpty()) return;                       // unedited: camera render is correct
+
+    const QByteArray key = Metadata::developPreviewKey(blob).toLatin1();
+    if (fPath == toppedUpPath && key == toppedUpKey) return;   // already handled
+
+    const bool loupeOk = DevelopPreviewCache::instance().contains(fPath, key);
+    /* readDevelopPreview returns nothing unless the stored key matches the recipe, so
+       this is a staleness check as well as a presence check. */
+    const bool thumbOk = !Metadata::readDevelopPreview(fPath).isEmpty();
+    if (loupeOk && thumbOk) {
+        toppedUpPath = fPath;
+        toppedUpKey = key;
+        return;
+    }
+
+    QByteArray thumbJpg;
+    QByteArray loupeJpg;
+    if (!previewProvider(fPath, thumbJpg, loupeJpg)) return;   // no faithful frame
+    if (thumbJpg.isEmpty() && loupeJpg.isEmpty()) return;
+
+    if (!loupeJpg.isEmpty()) DevelopPreviewCache::instance().put(fPath, key, loupeJpg);
+
+    if (!thumbJpg.isEmpty()) {
+        /* Rewrites the sidecar for an image the user only VIEWED. Deliberate: the two
+           tiers must stay in step, and the recipe itself is passed through unchanged --
+           only the preview attributes and modifydate move. */
+        Metadata::writeDevelopSidecar(fPath, blob,
+                                      QString::fromLatin1(thumbJpg.toBase64()));
+        QImage thumb;
+        if (thumb.loadFromData(thumbJpg, "JPG"))
+            emit developPreviewUpdated(fPath, thumb);   // refresh the grid icon
+    }
+
+    toppedUpPath = fPath;
+    toppedUpKey = key;
+}
+
 void DevelopProperties::flushImage(const QString &fPath)
 {
+/*
+    Write one image's edit state to its sidecar, together with the cached 256px develop
+    preview that feeds the thumbnail grid and the screen-resolution preview that feeds
+    the loupe while a raw decodes.
+
+    The previews are a byproduct: the provider hands back the developProxy MW already has
+    in memory, so this costs a downscale and a JPEG encode, not a render. No raw is ever
+    decoded to make a preview.
+
+    When the provider declines -- which it does for every image that is not the one
+    currently proxied, i.e. every multi-image propagation target -- the previews are
+    CLEARED rather than left behind. A preview that no longer matches its recipe would
+    show the user a stale image; falling back to the camera thumbnail is honest. The
+    develop badge is driven by the recipe, not the preview, so those images still read as
+    edited in the grid.
+*/
     if (fPath.isEmpty() || !dirty.contains(fPath)) return;
     dirty.remove(fPath);
     const EditStack &s = stackCache[fPath];
-    /* Identity => write "" so writeDevelopSidecar clears the attribute (or skips if no sidecar),
-       rather than persisting an empty edit. */
+    /* Identity => write "" so writeDevelopSidecar clears the attribute (or skips if
+       there is no sidecar), rather than persisting an empty edit. */
     const QString blob = s.isIdentity() ? QString() : s.toBase64();
-    Metadata::writeDevelopSidecar(fPath, blob);   // synchronous; sidecar is a few KB, never on a drag
+
+    QByteArray thumbJpg;
+    QByteArray loupeJpg;
+    if (!blob.isEmpty() && previewProvider) previewProvider(fPath, thumbJpg, loupeJpg);
+
+    // synchronous; sidecar is a few KB plus ~20 KB of preview, and never on a drag
+    Metadata::writeDevelopSidecar(fPath, blob,
+                                  QString::fromLatin1(thumbJpg.toBase64()));
+
+    if (!blob.isEmpty() && !loupeJpg.isEmpty()) {
+        DevelopPreviewCache::instance().put(
+            fPath, Metadata::developPreviewKey(blob).toLatin1(), loupeJpg);
+    }
+    else {
+        /* No usable preview for this recipe: drop any older one so the loupe never paints
+           pixels from a recipe the user has moved on from. */
+        DevelopPreviewCache::instance().onDeleted(fPath);
+    }
+
+    /* Tell the grid. A null image means "this row's thumbnail is now wrong" rather than
+       "here is the new one", and MW makes the loader re-read it. */
+    QImage thumb;
+    if (!thumbJpg.isEmpty()) thumb.loadFromData(thumbJpg, "JPG");
+    emit developPreviewUpdated(fPath, thumb);
 }
 
 void DevelopProperties::flushAll()
@@ -6329,6 +6604,10 @@ void DevelopProperties::flushAll()
     flushPropagation();      // a queued batch is an edit; it must reach the sidecars too
     const QList<QString> paths = dirty.values();
     for (const QString &p : paths) flushImage(p);
+    /* Leaving Develop, quitting, or any file operation: the current image may have been
+       rendered without ever being edited, so capture its previews before the frame goes
+       away. No-op when it is unedited or both tiers are already current. */
+    topUpPreviews(currentImagePath);
 }
 
 /* --------------------------------------------------------------------------------

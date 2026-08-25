@@ -286,6 +286,15 @@ public slots:
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     bool iconRowVisible(const QModelIndex &dmIdx);  // true if row in visible range (or flag off)
     void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "");
+
+    /* Replace a row's icon with a freshly rendered develop preview. Unlike setIcon1 this
+       DELIBERATELY overwrites an existing icon -- see the implementation for why that is
+       safe here and not there. Call after an edit is flushed, on the GUI thread. */
+    void setDevelopIcon(int dmRow, const QImage &im);
+
+    /* Forget a row's icon so the normal loader re-reads it. Used when an image's develop
+       preview became invalid and no replacement could be rendered. */
+    void clearDevelopIcon(int dmRow);
     void setIconFromVideoFrame(int dmRow, QImage im, int fromInstance, qint64 duration,
                                FrameDecoder *frameDecoder);
     void clearVideoReadingFlag(int dmRow, int fromInstance);

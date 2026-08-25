@@ -142,8 +142,19 @@ public:
        winnow:Develop attribute. Static and self-contained (open the sidecar, one Xmp item), so
        writeDevelopSidecar can run off the GUI thread via QtConcurrent like writeOrientation.
        An empty blob removes nothing here; the dock only writes when the stack is non-identity. */
-    static void writeDevelopSidecar(QString fPath, QString blob);
+    static void writeDevelopSidecar(QString fPath, QString blob,
+                                    QString previewB64 = QString());
     static QString readDevelopSidecar(QString fPath);
+
+    /* The cached 256px develop preview (base64 JPEG) from winnow:DevelopPreview, or ""
+       when there is none or its winnow:DevelopPreviewKey does not match the recipe now
+       in the sidecar. A mismatch means something outside Winnow rewrote the file, so the
+       pixels can no longer be trusted to show the current edit. */
+    static QByteArray readDevelopPreview(QString fPath);
+
+    /* 12-char hash identifying a develop blob, stamped beside the preview so staleness is
+       detectable. One definition, used by both the writer and every reader. */
+    static QString developPreviewKey(const QString &blob);
 
 
     QFile file;

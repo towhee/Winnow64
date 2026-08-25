@@ -506,12 +506,32 @@ void Xmp::initialize()
     e.schema = "winnow";
     definedElements["winnowaddthumb"] = e;
 
-    // winnow per-image develop edit state (base64 of the EditStack JSON; see Develop/editstack.h)
+    /* winnow per-image develop edit state (base64 of the EditStack JSON;
+       see Develop/editstack.h) */
     e.name = "winnow:Develop";
     e.parentName = "rdf:Description";
     e.type = ElementType::Attribute;
     e.schema = "winnow";
     definedElements["develop"] = e;
+
+    /* Cached 256px JPEG of the developed image (base64), so the thumbnail grid can show
+       the developed look without decoding the raw. Lives in the sidecar rather than a
+       cache folder so it travels with the image. See Cache/developpreviewcache.h for the
+       larger loupe-sized tier, which does NOT live here. */
+    e.name = "winnow:DevelopPreview";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "winnow";
+    definedElements["developpreview"] = e;
+
+    /* Hash of the winnow:Develop blob the preview above was rendered from. Both are
+       written in one pass so they cannot disagree -- unless another application rewrites
+       the sidecar, which is exactly what this guards against. */
+    e.name = "winnow:DevelopPreviewKey";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "winnow";
+    definedElements["developpreviewkey"] = e;
 
     // orientation
     e.name = "tiff:Orientation";

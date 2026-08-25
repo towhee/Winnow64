@@ -54,6 +54,13 @@ ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
     combo->setIconSize(QSize(iconPx, iconPx));
     combo->setToolTip("The scope whose settings are shown below:\n"
                       "Global, or one of this image's masks");
+    /* The scope name (Global, Subject, Mask 1 ...) is yellow so the thing the panel below
+       is editing reads apart from the section headers and slider captions under it. Only
+       the text colour is set here: every other QComboBox property still comes from
+       WidgetCSS::comboBox(), and the disabled rule is repeated because a widget's own
+       stylesheet outranks the application one. */
+    combo->setStyleSheet("QComboBox { color: " + QColor(Qt::yellow).name() + "; }"
+                         "QComboBox:disabled { color: " + G::disabledColor.name() + "; }");
     /* The combo lists only scopes, so every activated row is a scope selection. */
     connect(combo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
         emit scopeSelected(combo->itemText(idx));

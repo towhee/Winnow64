@@ -124,6 +124,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     cacheColor = QColor(200,0,0);
     cacheBorderColor = QColor(l20,l20,l20);
     sidecarColor = QColor(5,82,56);                 // dark teal
+    developColor = QColor(150,110,20);              // amber: image has develop edits
     ratingBackgoundColor = QColor(Qt::yellow);
     // ratingBackgoundColor = QColor(b,b,b,50);
     labelTextColor = G::textColor;
@@ -250,6 +251,11 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     sidecarRect.setRect(dotDiam - dotOffset,
                              itemSize.height() - dotDiam - dotOffset /*+ 2*/,
                              dotDiam, dotDiam);
+
+    // Develop badge (to the right of the sidecar dot)
+    developRect.setRect(sidecarRect.right() + 2 + 12 + 2,
+                        itemSize.height() - dotDiam - dotOffset,
+                        dotDiam, dotDiam);
 
     // Lock Icon (To the right of Missing Thumb)
     int lockSize = 12; // Adjusted for SVG
@@ -403,6 +409,7 @@ QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &option
 
     // 1. Static Symbols (Pre-calculated in setThumbDimensions)
     if (symbol == "Thumb") return thumbRect;
+    if (symbol == "Develop") return developRect.translated(origin);
     if (symbol == "Sidecar") return sidecarRect.translated(origin);
     if (symbol == "Lock") return lockRect.translated(origin);
     if (symbol == "CombineRawJpg") return combineRawJpgRect.translated(origin);
@@ -478,13 +485,16 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     bool isCombineRawJpg = sf->index(row, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
 
     bool sidecarVisible = isSidecar && !G::isSlideShow;
+    bool developVisible = sf->index(row, G::DevelopColumn).data().toBool() && !G::isSlideShow;
     bool lockVisible = !isReadWrite;
     bool combineRawJpgVisible = isCombineRawJpg;
     bool cacheVisible = !isCached && !isVideo && metaLoaded && !G::isSlideShow &&
                         G::operationMode != G::OperationMode::Develop;
     bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
 
-    if (sidecarVisible && getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
+    if (developVisible && getSymbolRect("Develop", option.rect, index).contains(viewPos))
+        tooltip = "Image has develop edits";
+    else if (sidecarVisible && getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
         tooltip = "Image has a sidecar file";
     else if (lockVisible && getSymbolRect("Lock", option.rect, index).contains(viewPos))
         tooltip = "Image file is locked";
@@ -589,6 +599,7 @@ textRect         = a rectangle below itemRect
     bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
     // bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
     bool isSidecar = index.model()->index(sfRow, G::SidecarColumn).data().toBool();
+    bool isDeveloped = index.model()->index(sfRow, G::DevelopColumn).data().toBool();
     bool metaLoaded = index.model()->index(sfRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
     bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
@@ -740,6 +751,16 @@ textRect         = a rectangle below itemRect
         painter->setPen(cacheBorderColor);
         painter->setBrush(sidecarColor);
         painter->drawEllipse(sidecarRect.translated(origin));
+    }
+    /* Develop badge: this image carries a non-identity Develop recipe. Driven by the
+       RECIPE, not by whether a cached preview exists, so an edited image whose preview
+       could not be rendered still reads as edited. Shown in BOTH operation modes -- the
+       thumbnail is developed in both, so hiding the badge in Preview mode would make the
+       grid lie about why the thumbnails look the way they do. */
+    if (isDeveloped && !G::isSlideShow) {
+        painter->setPen(cacheBorderColor);
+        painter->setBrush(developColor);
+        painter->drawEllipse(developRect.translated(origin));
     }
 
     // Render icon number overlay

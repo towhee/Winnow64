@@ -1,4 +1,5 @@
 #include "ingestdlg.h"
+#include "Utilities/fileops.h"
 #include "ui_ingestdlg.h"
 #include "Utilities/htmlwindow.h"
 #include "Utilities/tokenfilename.h"
@@ -397,9 +398,6 @@ void IngestDlg::ingest()
         emit updateProgress(progress);
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
-        QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
-        QString sourceBaseName = fileInfo.baseName();
-        QString sourceSidecarPath = sourceFolderPath + "/" + sourceBaseName + ".xmp";
 
         // thumb # for user
         QString thumbNum = " Thumbnail " + QString::number(dm->proxyRowFromPath(sourcePath) + 1) + ": ";
@@ -415,19 +413,14 @@ void IngestDlg::ingest()
         QString suffix = fileInfo.suffix().toLower();
         QString dotSuffix = "." + suffix;
         QString destFileName = destBaseName + dotSuffix;
-        QString sidecarName = destBaseName + ".xmp";
 
         // check if image already exists at destination folder
         QString destinationPath = folderPath + destFileName;
         QString backupPath = folderPath2 + destFileName;
-        QString destSidecarPath = folderPath + sidecarName;
-        QString backupSidecarPath = folderPath2 + sidecarName;
 
         // rename destination and fileName if already exists
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
-        // rename destination and xmp file if already exists
-        renameIfExists(destSidecarPath, destBaseName, ".xmp");
 
         // set the metadataChangedSourcePath depending on combineRawJpg
         QString metadataChangedSourcePath = sourcePath;
@@ -482,41 +475,51 @@ void IngestDlg::ingest()
             }
         }
 
-        // if sidecar exists copy to destination
-        bool sidecarOk = false;
-        if (copyOk && QFile(sourceSidecarPath).exists()) {
-            sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
-            if (!sidecarOk) {
-                QString msg = "Failer to copy " + sourceSidecarPath + " to " + destSidecarPath + ".";
+        /* Copy every companion sidecar, renamed to follow the image's new base name.
+           FileOps::companions also finds .txt sidecars and case variants (.XMP), which
+           the old hardcoded "<base>.xmp" probe silently left behind on the card.
+           Mirrored in Ingest::run -- keep the two in step. */
+        foreach (const QString &companion, FileOps::companions(sourcePath)) {
+            if (!copyOk) break;   // no image at the destination for it to belong to
+
+            const QString cSuffix = "." + QFileInfo(companion).suffix();
+            const QString destSidecarPath = folderPath + destBaseName + cSuffix;
+            const QString backupSidecarPath = folderPath2 + destBaseName + cSuffix;
+
+            if (!QFile::copy(companion, destSidecarPath)) {
+                QString msg = "Failed to copy " + companion + " to " + destSidecarPath + ".";
                 G::issue("Warning", msg, "IngestDlg::ingest");
-                failedToCopy << thumbNum + sourceSidecarPath + " to " + destSidecarPath;
+                failedToCopy << thumbNum + companion + " to " + destSidecarPath;
+                continue;
             }
 
-        }
-
-        // check if copied xmp = original xmp
-        if (copyOk && integrityCheck) {
-            if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                QString msg = "Integrity failure, " + sourceSidecarPath + " not same as " + destSidecarPath + ".";
+            /* Only check a sidecar we actually copied. The old code ran this whenever the
+               IMAGE copied, reporting a spurious integrity failure for every image that
+               simply had no sidecar. */
+            if (integrityCheck && !Utilities::integrityCheck(companion, destSidecarPath)) {
+                QString msg = "Integrity failure, " + companion +
+                              " not same as " + destSidecarPath + ".";
                 G::issue("Warning", msg, "IngestDlg::ingest");
-                integrityFailure << thumbNum + sourceSidecarPath + " not same as " + destSidecarPath;
+                integrityFailure << thumbNum + companion + " not same as " + destSidecarPath;
             }
-        }
 
-        // copy sidecar from destination to backup
-        if (isBackup && sidecarOk) {
-            bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
-            if (!backupSidecarCopyOk) {
-                QString msg = "Failed to copy " + destSidecarPath + " to " + backupSidecarPath + ".";
+            if (!isBackup) continue;
+            if (!QFile::copy(destSidecarPath, backupSidecarPath)) {
+                /* Reported as a copy failure, not an integrity failure -- the old code
+                   filed this under integrity, and against the wrong pair of paths. */
+                QString msg = "Failed to copy " + destSidecarPath +
+                              " to " + backupSidecarPath + ".";
                 G::issue("Warning", msg, "IngestDlg::ingest");
-                integrityFailure << thumbNum + sourceSidecarPath + " not same as " + destSidecarPath;
+                failedToCopy << thumbNum + destSidecarPath + " to " + backupSidecarPath;
+                continue;
             }
-            if (copyOk && integrityCheck) {
-                if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                    QString msg = "Integrity failure, " + destSidecarPath + " not same as " + backupSidecarPath + ".";
-                    G::issue("Warning", msg, "IngestDlg::ingest");
-                    integrityFailure << thumbNum + destSidecarPath + " not same as " + backupSidecarPath;
-                }
+            if (integrityCheck &&
+                !Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
+                QString msg = "Integrity failure, " + destSidecarPath +
+                              " not same as " + backupSidecarPath + ".";
+                G::issue("Warning", msg, "IngestDlg::ingest");
+                integrityFailure << thumbNum + destSidecarPath +
+                                    " not same as " + backupSidecarPath;
             }
         }
 

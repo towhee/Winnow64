@@ -1,5 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Develop/workingimagecache.h"
+#include "Utilities/fileops.h"
+#include "Cache/developpreviewcache.h"
 
 void MW::initialize()
 {
@@ -1814,6 +1816,62 @@ void MW::createDevelopDock()
     if (G::isLogger) G::log("MW::createDevelopDock");
     developProperties = new DevelopProperties(this, settings);
 
+    /* Every file operation flushes debounced Develop edits through this hook before it
+       touches a file, so a pending sidecar write cannot land at the old path after a
+       rename or resurrect a sidecar that was just deleted. Registered here because this
+       is where developProperties comes into existence. See Utilities/fileops.h. */
+    FileOps::setFlushHook([this]{
+        if (developProperties) developProperties->flushAll();
+    });
+
+    /* Cached develop previews are a byproduct of editing, never a reason to decode a raw.
+       developFrame is the proxy frame the develop render already produced and kept (it
+       also feeds the sharpening mask preview), so making both preview tiers is a scale
+       plus a JPEG encode -- a few ms. Declining when the requested image is not the one
+       on screen is what makes multi-image propagation targets clear their stale preview
+       instead of keeping one. See DevelopProperties::flushImage. */
+    developProperties->setPreviewProvider(
+        [this](const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg) -> bool {
+            if (fPath.isEmpty() || fPath != developFramePath) return false;
+            if (developFrame.isNull()) return false;
+            /* The frame on screen is not always what the recipe says. With the Transform
+               preview eye off it is UNCROPPED and unstraightened; with the Replace eye
+               off the heals are missing; on a History hover it is a different stack
+               altogether. Caching any of those against the stored recipe's hash would
+               key a preview to a picture it does not depict. Decline instead, which
+               clears the stale preview -- the next faithful render writes a real one. */
+            if (!developFrameFaithful) return false;
+
+            auto encode = [](const QImage &im, int quality, QByteArray &out) {
+                QBuffer buf(&out);
+                if (!buf.open(QIODevice::WriteOnly)) return false;
+                return im.save(&buf, "JPG", quality);
+            };
+
+            /* Thumbnail tier: G::maxIconSize is what Thumb scales embedded thumbs to, so
+               matching it means the grid never up-scales a develop preview. */
+            const QImage thumb = developFrame.scaled(G::maxIconSize, G::maxIconSize,
+                                                     Qt::KeepAspectRatio,
+                                                     Qt::SmoothTransformation);
+            if (!encode(thumb, 85, thumbJpg)) thumbJpg.clear();
+
+            /* Loupe tier: the frame as rendered, but capped. A crop makes
+               developCompositeStack upscale to full resolution, and caching a 50MP JPEG
+               to stand in for a 2-3s decode is a poor trade. */
+            constexpr int kLoupeMaxEdge = 2560;
+            QImage loupe = developFrame;
+            if (qMax(loupe.width(), loupe.height()) > kLoupeMaxEdge) {
+                loupe = loupe.scaled(kLoupeMaxEdge, kLoupeMaxEdge,
+                                     Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            }
+            if (!encode(loupe, 88, loupeJpg)) loupeJpg.clear();
+
+            return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
+        });
+
+    connect(developProperties, &DevelopProperties::developPreviewUpdated,
+            this, &MW::developPreviewUpdated);
+
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
     /* History hover preview: PROXY render only. developParamsChange would also arm the
        full-res settle render, and a cursor passing down the History list must not queue
@@ -2724,6 +2782,38 @@ void MW::setOperationMode(G::OperationMode mode)
         developVerifyPreviewBaselinePath = dm->currentFilePath;
         developVerifyVsPreviewMaxAbs = -1;   // reset until the display populates it
         developVerifyVsPreviewPath.clear();
+    }
+
+    /* Paint the cached develop preview NOW, before the re-decode below is even armed.
+
+       Entering Develop re-decodes the current image (~2-3s on a raw), and until that
+       lands the loupe keeps showing the PREVIEW-mode render -- the untouched camera
+       picture, i.e. exactly what the user's edits changed. A cached preview is the
+       developed look and is already on disk, so show it and let the real render replace
+       it.
+
+       Routed through loadImageInterim, the SAME path fileSelectionChange uses, rather
+       than setDevelopPreview. setDevelopPreview exists for the drag case, where only the
+       pixels change and the displayed dimensions are the current image's -- and that is
+       exactly wrong here. A cropped preview has a DIFFERENT shape from the uncropped
+       Preview-mode image still on screen, so presenting it at that image's display size
+       stretched it to fill the frame until the render landed. loadImageInterim fits from
+       the pixmap's own bounding rect, so the crop's aspect ratio survives, and it already
+       captures and restores zoom/pan across the swap.
+
+       This is a SEPARATE hook from the one in fileSelectionChange. That one fires on an
+       image-cache MISS; a mode switch is a cache HIT (the Preview decode is still
+       cached), so it never reaches that branch. */
+    if (mode == G::OperationMode::Develop && imageView && dm && !currentIsVideo()) {
+        const QString fPath = dm->currentFilePath;
+        const QImage cached = cachedDevelopPreview(fPath);
+        if (!cached.isNull()) {
+            imageView->captureDevelopView(fPath);
+            if (imageView->loadImageInterim(fPath, cached)) {
+                developInterimIsPreview = true;
+                updateDevelopRenderingHint();
+            }
+        }
     }
 
     /* The mode owns the raw/preview decode: Develop decodes RAW sensor data (best

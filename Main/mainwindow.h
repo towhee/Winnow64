@@ -834,6 +834,11 @@ private slots:
 
     void updateIconRange(QString src = "");
     void reloadIconChunk();             // re-dispatch MetaRead after a JIT chunk resize
+    /* An image's develop edits were flushed: refresh its grid thumbnail from the new
+       cached preview, or forget it so the loader re-reads the camera thumb. */
+    void developPreviewUpdated(const QString &fPath, const QImage &thumb);
+    /* Cached screen-res develop preview for the loupe placeholder, or null on a miss. */
+    QImage cachedDevelopPreview(const QString &fPath);
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
@@ -1538,6 +1543,9 @@ private:
        the pipeline. Replaced by every applied proxy / full-res render. */
     QImage developFrame;
     QString developFramePath;
+    /* developFrame depicts the STORED recipe (not a History hover, and with the Transform
+       and Replace preview eyes on). Only a faithful frame may be cached as a preview. */
+    bool developFrameFaithful = false;
     std::shared_ptr<WorkingImage> developProxy;
     QString developProxyPath;
     /* Per-scope intermediates for the PROXY tick, so a mask drag re-rasterizes only the
@@ -1575,6 +1583,12 @@ private:
        geometry-applied and geometry-suppressed renders and flashing the wrong one reads
        as a glitch. That is what the generation counter guards -- geometry, not age. */
     QThreadPool *developProxyPool = nullptr;
+    /* One-shot guard for the develop-preview cache sweep, run from
+       folderChangeCompleted (see Cache/developpreviewcache.h). */
+    /* True when the loupe placeholder currently showing is a cached DEVELOP preview
+       rather than the camera's embedded JPG, so the rendering hint can say so. */
+    bool developInterimIsPreview = false;
+    bool developPreviewSweepDone = false;
     bool developProxyInFlight = false;
     bool developProxyPending = false;
     quint64 developProxyReqGen = 0;

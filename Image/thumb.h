@@ -56,6 +56,9 @@ private:
     QFileDevice::Permissions oldPermissions;
 
     void setImageDimensions(QString &fPath, QSize size, int row);
+    /* Cached developed thumbnail from the XMP sidecar. Tried before every other source
+       in loadThumb; see Cache/developpreviewcache.h for the system it belongs to. */
+    bool loadFromDevelopPreview(QString &fPath, QImage &image);
     Status loadFromJpgData(QString &fPath, QImage &image);
     Status loadFromTiff(QString &fPath, QImage &image, int row, const ImageMetadata &m);
     Status loadFromHeic(QString &fPath, QImage &image);
