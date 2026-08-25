@@ -120,8 +120,8 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = 0;
 //    if (!m.width || !m.height) getDimensions(p, m);
-    m.widthPreview = m.width;
-    m.heightPreview = m.height;
+    m.widthOrigPreview = m.width;
+    m.heightOrigPreview = m.height;
 
     // EXIF: created datetime
     QString createdExif;
@@ -326,8 +326,8 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     int h = heif_image_get_height(img, heif_channel_interleaved);
 //    m.width = w;
 //    m.height = h;
-//    m.widthPreview = w;
-//    m.heightPreview = h;
+//    m.widthOrigPreview = w;
+//    m.heightOrigPreview = h;
 
     int stride = 0;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
@@ -539,8 +539,8 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = 0;
-    m.widthPreview = m.width;
-    m.heightPreview = m.height;
+    m.widthOrigPreview = m.width;
+    m.heightOrigPreview = m.height;
 
     // EXIF: created datetime
     QString createdExif;

@@ -189,11 +189,11 @@ bool DNG::parse(MetadataParameters &p,
             }
         }
         if (jpgs.length() > 0) {
-            m.widthPreview = static_cast<uint>(jpgs.at(largeJpg).width);
-            m.heightPreview = static_cast<uint>(jpgs.at(largeJpg).height);
-            if (m.widthPreview > m.width) {
-                m.width = m.widthPreview;
-                m.height = m.heightPreview;
+            m.widthOrigPreview = static_cast<uint>(jpgs.at(largeJpg).width);
+            m.heightOrigPreview = static_cast<uint>(jpgs.at(largeJpg).height);
+            if (m.widthOrigPreview > m.width) {
+                m.width = m.widthOrigPreview;
+                m.height = m.heightOrigPreview;
             }
             m.offsetFull = static_cast<uint>(jpgs.at(largeJpg).offset);
             m.lengthFull = static_cast<uint>(jpgs.at(largeJpg).length);

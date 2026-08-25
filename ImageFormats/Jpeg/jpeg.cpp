@@ -273,8 +273,8 @@ bool Jpeg::parse(MetadataParameters &p,
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = 0;
     if (!m.width || !m.height) getDimensions2(p, m);
-    m.widthPreview = m.width;
-    m.heightPreview = m.height;
+    m.widthOrigPreview = m.width;
+    m.heightOrigPreview = m.height;
 
     QString msg = "row = " + QString::number(m.row) +
                   " width = " + QString::number(m.width);

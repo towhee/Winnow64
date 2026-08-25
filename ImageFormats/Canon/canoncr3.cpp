@@ -1010,18 +1010,18 @@ void CanonCR3::parseIfd0()
     ifd->readIFD(*p);
 
     quint32 startOffset = ifd0Offset + 8;
-    m->widthPreview = ifd->ifdDataHash.value(256).tagValue;
-    m->heightPreview = ifd->ifdDataHash.value(257).tagValue;
-    m->width = m->widthPreview;
-    m->height = m->heightPreview;
+    m->widthOrigPreview = ifd->ifdDataHash.value(256).tagValue;
+    m->heightOrigPreview = ifd->ifdDataHash.value(257).tagValue;
+    m->width = m->widthOrigPreview;
+    m->height = m->heightOrigPreview;
     m->make = u.getString(p->file, ifd->ifdDataHash.value(271).tagValue + startOffset, ifd->ifdDataHash.value(271).tagCount);
     m->model = u.getString(p->file, ifd->ifdDataHash.value(272).tagValue + startOffset, ifd->ifdDataHash.value(272).tagCount);
     m->orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m->copyright = u.getString(p->file, ifd->ifdDataHash.value(33432).tagValue + startOffset, ifd->ifdDataHash.value(33432).tagCount);
     /*
     qDebug() << "CanonCR3::parseIfd0"
-             << m->widthPreview
-             << m->heightPreview
+             << m->widthOrigPreview
+             << m->heightOrigPreview
              << m->make
              << m->model
              << m->orientation

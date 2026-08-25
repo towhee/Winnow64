@@ -202,7 +202,7 @@ bool Fuji::parse(MetadataParameters &p,
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = m.offsetFull;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
-    jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
+    jpeg->getWidthHeight(p, m.widthOrigPreview, m.heightOrigPreview);
 
     // EXIF: created datetime
     if (ifd->ifdDataHash.contains(36868)) {

@@ -1071,7 +1071,9 @@ void MW::createUtilActions()
        back to Preview is the view key for the view you want -- E (Loupe), G (Grid) or
        T (Table), each of which leaves Develop and shows that view (see asLoupeAction /
        asGridAction / asTableAction).
-       The status-bar dropdown still switches either way. */
+       The status-bar dropdown does NOT enter Develop -- it chooses which PICTURE is
+       shown (Original / Developed) and is not a mode control; picking either item while
+       in Develop is one more way OUT of it. */
     operationModeAction = new QAction(tr("Develop Mode"), this);
     operationModeAction->setObjectName("operationMode");
     operationModeAction->setShortcut(QKeySequence("D"));
@@ -1080,6 +1082,50 @@ void MW::createUtilActions()
     connect(operationModeAction, &QAction::triggered, this, [this]() {
         setOperationMode(G::OperationMode::Develop);
     });
+
+    /* Which of an image's two pictures the grid and the loupe show outside Develop mode.
+       An exclusive pair, mirroring the first two rows of the status-bar dropdown -- the
+       menu is where the feature is discoverable, the dropdown is where it is quick.
+
+       Y toggles the pair. It is deliberately NOT in developShortcuts: in Develop mode the
+       key falls through to this global action, and togglePreviewSource then LEAVES
+       Develop, which is what makes Y usable as a before/after key while editing. */
+    previewSourceGroup = new QActionGroup(this);
+    previewSourceGroup->setExclusive(true);
+
+    previewSourceOriginalAction = new QAction(tr("Show Original"), this);
+    previewSourceOriginalAction->setObjectName("previewSourceOriginal");
+    previewSourceOriginalAction->setShortcutVisibleInContextMenu(true);
+    previewSourceOriginalAction->setCheckable(true);
+    previewSourceOriginalAction->setChecked(G::previewSource == G::PreviewSource::Original);
+    previewSourceGroup->addAction(previewSourceOriginalAction);
+    addAction(previewSourceOriginalAction);
+    connect(previewSourceOriginalAction, &QAction::triggered, this, [this]() {
+        if (G::operationMode == G::OperationMode::Develop)
+            setOperationMode(G::OperationMode::Preview);
+        setPreviewSource(G::PreviewSource::Original);
+    });
+
+    previewSourceDevelopedAction = new QAction(tr("Show Developed"), this);
+    previewSourceDevelopedAction->setObjectName("previewSourceDeveloped");
+    previewSourceDevelopedAction->setShortcutVisibleInContextMenu(true);
+    previewSourceDevelopedAction->setCheckable(true);
+    previewSourceDevelopedAction->setChecked(G::previewSource == G::PreviewSource::Developed);
+    previewSourceGroup->addAction(previewSourceDevelopedAction);
+    addAction(previewSourceDevelopedAction);
+    connect(previewSourceDevelopedAction, &QAction::triggered, this, [this]() {
+        if (G::operationMode == G::OperationMode::Develop)
+            setOperationMode(G::OperationMode::Preview);
+        setPreviewSource(G::PreviewSource::Developed);
+    });
+
+    togglePreviewSourceAction = new QAction(tr("Original / Developed"), this);
+    togglePreviewSourceAction->setObjectName("togglePreviewSource");
+    togglePreviewSourceAction->setShortcut(QKeySequence("Y"));
+    togglePreviewSourceAction->setShortcutVisibleInContextMenu(true);
+    addAction(togglePreviewSourceAction);
+    connect(togglePreviewSourceAction, &QAction::triggered,
+            this, &MW::togglePreviewSource);
 
     /* ---- Develop mode local shortcuts ------------------------------------------------
        These actions are given NO key sequence.  Qt allows only one QAction per sequence
@@ -1118,6 +1164,25 @@ void MW::createUtilActions()
     developExportAction->setShortcutVisibleInContextMenu(true);
     addAction(developExportAction);
     connect(developExportAction, &QAction::triggered, this, &MW::developExport);
+
+    /* Build developed previews for images that are not open in Develop -- edits made in an
+       earlier session, and multi-image paste targets, which have a recipe but no render and
+       so no preview. Unlike the Develop-mode items above these are meaningful in BOTH
+       modes (in fact the builder declines to run inside Develop, see devPreviewBuildNext),
+       so they are added before the mode-local separator and stay enabled. */
+    buildDevPreviewsAction = new QAction(tr("Build Developed Previews"), this);
+    buildDevPreviewsAction->setObjectName("buildDevPreviews");
+    buildDevPreviewsAction->setShortcutVisibleInContextMenu(true);
+    addAction(buildDevPreviewsAction);
+    connect(buildDevPreviewsAction, &QAction::triggered,
+            this, &MW::buildDevPreviewsForSelection);
+
+    clearDevPreviewCacheAction = new QAction(tr("Clear Developed Preview Cache"), this);
+    clearDevPreviewCacheAction->setObjectName("clearDevPreviewCache");
+    clearDevPreviewCacheAction->setShortcutVisibleInContextMenu(true);
+    addAction(clearDevPreviewCacheAction);
+    connect(clearDevPreviewCacheAction, &QAction::triggered,
+            this, &MW::clearDevPreviewCache);
 
     /* Save Develop Preset. Unlike the bare-key Develop actions above (dispatched by
        developShortcutIntercept, which only arbitrates unmodified keys), this is a
@@ -2210,6 +2275,8 @@ void MW::createUtilMenu()
 
     developMenu->addAction(developAction);          // enable/disable the Develop panel
     developMenu->addAction(operationModeAction);    // D: enter Develop (E / G / T leave it)
+    developMenu->addAction(buildDevPreviewsAction);
+    developMenu->addAction(clearDevPreviewCacheAction);
     developMenu->addSeparator();
     developMenu->addAction(developNewScopeAction);
     developMenu->addAction(developAddToMaskAction);
@@ -2296,6 +2363,10 @@ void MW::createViewMenu()
     viewMenu->addSeparator();
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(previewSourceOriginalAction);
+    viewMenu->addAction(previewSourceDevelopedAction);
+    viewMenu->addAction(togglePreviewSourceAction);
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(iconNumberVisibleAction);

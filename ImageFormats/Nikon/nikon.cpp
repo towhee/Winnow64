@@ -791,14 +791,14 @@ bool Nikon::parse(MetadataParameters &p,
                 m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
                 m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
                 p.offset = m.offsetFull;
-                jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
+                jpeg->getWidthHeight(p, m.widthOrigPreview, m.heightOrigPreview);
             }
             else {
             // D2H and older
                 m.width = ifd->ifdDataHash.value(256).tagValue;
                 m.height = ifd->ifdDataHash.value(257).tagValue;
-                m.widthPreview = m.width;
-                m.heightPreview = m.height;
+                m.widthOrigPreview = m.width;
+                m.heightOrigPreview = m.height;
             }
         }
 

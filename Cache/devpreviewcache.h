@@ -1,5 +1,5 @@
-#ifndef DEVELOPPREVIEWCACHE_H
-#define DEVELOPPREVIEWCACHE_H
+#ifndef DEVPREVIEWCACHE_H
+#define DEVPREVIEWCACHE_H
 
 #include <QString>
 #include <QByteArray>
@@ -7,20 +7,29 @@
 #include <QMutex>
 
 /*
-    On-disk cache of screen-resolution develop previews -- the "Tier 2" half of the
-    cached-preview system. See notes/Documentation.txt "Cached Develop Previews".
+    On-disk cache of full-resolution devPreviews -- the large tier of the develop-preview
+    system. See notes/Documentation.txt "Original and Developed Previews".
 
     WHAT IT IS FOR
 
-    Entering Develop on a RAW costs a ~2-3s scene-linear sensor decode. Until that lands
-    the loupe can only show the camera's embedded JPEG, i.e. the UNDEVELOPED image. This
-    cache holds a JPEG of the developed result at roughly screen resolution so the loupe
-    can paint the developed look immediately and let the real render replace it.
+    An image the user has developed has two pictures: the camera's embedded JPEG (the
+    origPreview) and the render of its develop recipe (the devPreview). This cache holds
+    the devPreview, as a JPEG at full sensor resolution by default (G::devPreviewMaxEdge),
+    so that outside Develop mode the loupe can show -- and zoom -- the developed picture
+    without decoding the raw at all, and so entering Develop paints the developed look
+    immediately instead of showing the UNDEVELOPED image for the ~2-3s the scene-linear
+    sensor decode takes.
+
+    FULL RESOLUTION IS WHY THE CAP IS LARGE. At sensor resolution an entry is several MB
+    rather than a few hundred KB, so the LRU byte cap below is load-bearing rather than
+    theoretical, and the user can trade disk for zoom quality with the "Developed preview
+    size" preference.
 
     The small 256px thumbnail preview that feeds the icon grid is NOT here -- it lives
-    inside the image's XMP sidecar (winnow:DevelopPreview), so it travels with the file
-    and needs no cache, no index and no orphan handling. This class holds only the large,
-    cheap-to-lose tier.
+    inside the image's XMP sidecar (winnow:DevelopPreview -- an on-disk attribute name that
+    predates the origPreview/devPreview terminology and must not be renamed), so it travels
+    with the file and needs no cache, no index and no orphan handling. This class holds
+    only the large, cheap-to-lose tier.
 
     WHY THE FILES ARE NAMED BY AN OPAQUE ID
 
@@ -60,10 +69,10 @@
     happens under that mutex, which is acceptable because the payloads are a few hundred
     KB and puts are debounced -- never on a drag.
 */
-class DevelopPreviewCache
+class DevPreviewCache
 {
 public:
-    static DevelopPreviewCache &instance();
+    static DevPreviewCache &instance();
 
     /* Where the cache lives. Defaults to AppDataLocation/PreviewCache; the app never
        calls this, tests point it at a temp dir. Does NOT read the index -- that happens
@@ -107,8 +116,8 @@ public:
     int count() const;
 
 private:
-    DevelopPreviewCache() = default;
-    Q_DISABLE_COPY(DevelopPreviewCache)
+    DevPreviewCache() = default;
+    Q_DISABLE_COPY(DevPreviewCache)
 
     struct Entry {
         quint64 id = 0;         // names the file on disk: <id in hex>.jpg
@@ -141,9 +150,9 @@ private:
     QString dir;
     quint64 nextId = 1;
     qint64 bytes = 0;
-    qint64 capBytes = 2LL * 1024 * 1024 * 1024;   // 2 GB
+    qint64 capBytes = 20LL * 1024 * 1024 * 1024;  // 20 GB; see G::devPreviewCacheMaxBytes
     bool dirty = false;
     bool loaded = false;
 };
 
-#endif // DEVELOPPREVIEWCACHE_H
+#endif // DEVPREVIEWCACHE_H

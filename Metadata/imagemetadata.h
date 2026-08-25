@@ -36,6 +36,11 @@ public:
        which is already parsing that file, and copied to G::DevelopColumn to drive the
        develop badge in the icon grid. */
     bool developEdited = false;
+    /* Hash of the develop recipe the sidecar holds (Metadata::devPreviewKey), or empty
+       when there is none. Read in the same sidecar pass as developEdited and copied to
+       G::DevPreviewKeyColumn, so a decoder thread can ask the devPreview cache for this
+       image's preview without touching DevelopProperties on the GUI thread. */
+    QString devPreviewKey = "";
     bool metadataReading = false;           // all metadata except thumb
     // Read outcome (all metadata except thumb). See G::MetaStatus.
     int metaStatus = G::MetaNotAttempted;
@@ -54,8 +59,8 @@ public:
     int width = 0;                          // width of raw image
     int height = 0;                         // height of raw image
     QString dimensions = "";
-    int widthPreview = 0;                   // width of preview (ImageView image width)
-    int heightPreview = 0;                  // height of preview (ImageView image height)
+    int widthOrigPreview = 0;               // width of the embedded camera preview
+    int heightOrigPreview = 0;              // height of the embedded camera preview
     float megapixels = 0;
     int loadMsecPerMp;
     float aspectRatio = 1;

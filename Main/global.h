@@ -151,8 +151,8 @@ Q_NAMESPACE
         // binary helpers
         OffsetFullColumn,
         LengthFullColumn,
-        WidthPreviewColumn,
-        HeightPreviewColumn,
+        WidthOrigPreviewColumn,
+        HeightOrigPreviewColumn,
         OffsetThumbColumn,
         LengthThumbColumn,
         samplesPerPixelColumn,
@@ -185,6 +185,9 @@ Q_NAMESPACE
            develop badge in the icon delegate. Appended (not inserted) so saved table
            column order/width settings, which are keyed by index, still line up. */
         DevelopColumn,
+        /* Hash of that recipe, so a decoder thread can look this image's devPreview up in
+           the devPreview cache. Appended for the same reason as DevelopColumn. */
+        DevPreviewKeyColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -228,9 +231,29 @@ Q_NAMESPACE
                   cache of upcoming images.
          Develop  view/edit a SINGLE image at best quality (scene-linear raw decode); maintaining
                   a large forward cache is a low priority here.
-       Toggled by the D shortcut and the status-bar Operation Mode dropdown (extreme left). */
+       Entered with D; the status-bar dropdown at the extreme left switches either way
+       (see PreviewSource below -- one control covers both). */
     enum class OperationMode : quint8 { Preview, Develop };
     Q_ENUM_NS(OperationMode)
+
+    /* Which of an image's two pictures the grid and the loupe show when NOT in Develop
+       mode (in Develop the developed picture is the only sensible answer):
+
+         Original   the camera's embedded preview / the plain decode -- as shot.
+         Developed  the image rendered through its saved develop recipe (the devPreview),
+                    falling back to Original when no devPreview exists.
+
+       Persisted, unlike operationMode. Set through MW::setPreviewSource, which rebuilds
+       the icons and the image cache because it changes what a cached decode MEANS. */
+    enum class PreviewSource : quint8 { Original, Developed };
+    Q_ENUM_NS(PreviewSource)
+
+    /* Long-edge cap, in pixels, for the devPreview written to the devPreview cache.
+       kDevPreviewSizeFull (0) means no cap -- encode at full sensor resolution, which is
+       what makes a developed image browsable and zoomable without a raw decode. */
+    constexpr int kDevPreviewSizeFull = 0;
+    constexpr int kDevPreviewSizeLarge = 4096;
+    constexpr int kDevPreviewSizeScreen = 2560;
 
     // Generic stringify function
     template <typename Enum>
@@ -455,6 +478,16 @@ Q_NAMESPACE
        winnowDecodeRawEngine. A/B knob for the Core Image vs in-house decode paths. */
     extern DecodeRawEngine decodeRawEngine;
     extern OperationMode operationMode;     // Preview (fast review) vs Develop (best-quality single image)
+    extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)
+    /* Long-edge cap for a written devPreview; one of the kDevPreviewSize* values. */
+    extern int devPreviewMaxEdge;
+    /* LRU byte cap for the on-disk devPreview cache. Applied to DevPreviewCache at
+       startup and whenever the preference changes. */
+    extern qint64 devPreviewCacheMaxBytes;
+    /* When true, a folder load queues a background devPreview build for every edited
+       image that has no current devPreview. OFF by default: building one means decoding
+       and rendering the image, which is exactly the work the byproduct rule avoids. */
+    extern bool buildDevPreviewsInBackground;
 
     /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
        timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant

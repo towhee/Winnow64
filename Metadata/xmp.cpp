@@ -516,7 +516,7 @@ void Xmp::initialize()
 
     /* Cached 256px JPEG of the developed image (base64), so the thumbnail grid can show
        the developed look without decoding the raw. Lives in the sidecar rather than a
-       cache folder so it travels with the image. See Cache/developpreviewcache.h for the
+       cache folder so it travels with the image. See Cache/devpreviewcache.h for the
        larger loupe-sized tier, which does NOT live here. */
     e.name = "winnow:DevelopPreview";
     e.parentName = "rdf:Description";

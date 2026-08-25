@@ -179,14 +179,14 @@ public:
        apart -- a thumbnail showing one thing while the loupe placeholder shows another
        would be worse than neither. That does mean visiting an edited image can rewrite
        its sidecar (preview attributes and modifydate only; the recipe is untouched). */
-    void topUpPreviews(const QString &fPath);
+    void topUpDevPreviews(const QString &fPath);
 
     /* Supplies the cached develop previews written alongside the recipe in flushImage.
        MW registers this at startup and answers from the screen-resolution developProxy it
        already holds, so a preview costs a downscale plus a JPEG encode rather than a
        render. Returns false when fPath is not the image currently proxied -- multi-image
        propagation targets have no proxy, and a stale preview must be cleared rather than
-       kept. See Cache/developpreviewcache.h and notes/Documentation.txt.
+       kept. See Cache/devpreviewcache.h and notes/Documentation.txt.
 
        thumbJpg  256px JPEG, base64-encoded into the sidecar (winnow:DevelopPreview)
        loupeJpg  screen-resolution JPEG for the out-of-band loupe cache */
@@ -203,9 +203,9 @@ public:
        so a preview keyed on this is matched against what the user actually sees. */
     QString developBlobFor(const QString &fPath);
 
-    using PreviewProvider =
+    using DevPreviewProvider =
         std::function<bool(const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg)>;
-    void setPreviewProvider(PreviewProvider provider);
+    void setDevPreviewProvider(DevPreviewProvider provider);
 
     /* ---- Multi-image editing (edits apply to the whole selection) -------------------
        When more than one image is selected, a Global adjustment made on the current
@@ -488,7 +488,7 @@ signals:
     /* An image's edits were just written to its sidecar, together with a new cached
        thumbnail preview (or, when thumb is null, with the old one cleared because no
        preview could be made for the new recipe). MW updates the grid from this. */
-    void developPreviewUpdated(const QString &fPath, const QImage &thumb);
+    void devPreviewUpdated(const QString &fPath, const QImage &thumb);
     /* A History row is being hovered (or the hover ended): re-render the PROXY preview
        only. Deliberately not paramsChanged -- that also arms the full-res settle render,
        which a passing cursor must not trigger. */
@@ -876,8 +876,8 @@ private:
     QHash<QString, EditStack> stackCache;
     QSet<QString> dirty;
     QString currentImagePath;
-    PreviewProvider previewProvider;   // set by MW; see setPreviewProvider
-    /* The last (path, recipe) topUpPreviews brought up to date, so re-entry is free.
+    DevPreviewProvider devPreviewProvider;   // set by MW; see setDevPreviewProvider
+    /* The last (path, recipe) topUpDevPreviews brought up to date, so re-entry is free.
        flushAll runs before EVERY file operation (FileOps::flushPendingEdits), and a
        multi-image paste or ingest would otherwise re-parse the same sidecar once per
        file just to discover there is nothing to do. */

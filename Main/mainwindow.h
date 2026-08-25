@@ -608,7 +608,8 @@ private slots:
     bool currentIsVideo() const;
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
-    void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen);
+    void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
+                               bool faithful);
     /* Global image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
        the Global scope has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
        clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
@@ -836,9 +837,9 @@ private slots:
     void reloadIconChunk();             // re-dispatch MetaRead after a JIT chunk resize
     /* An image's develop edits were flushed: refresh its grid thumbnail from the new
        cached preview, or forget it so the loader re-reads the camera thumb. */
-    void developPreviewUpdated(const QString &fPath, const QImage &thumb);
+    void devPreviewUpdated(const QString &fPath, const QImage &thumb);
     /* Cached screen-res develop preview for the loupe placeholder, or null on a miss. */
-    QImage cachedDevelopPreview(const QString &fPath);
+    QImage devPreview(const QString &fPath);
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
@@ -1182,7 +1183,14 @@ private:
 
     // Develop
     QAction *developAction;
-    QAction *operationModeAction;   // D shortcut: toggle Preview <-> Develop mode
+    QAction *operationModeAction;   // D shortcut: enter Develop mode
+    /* Original / Developed: which of an image's two pictures is shown outside Develop. */
+    QActionGroup *previewSourceGroup = nullptr;
+    QAction *previewSourceOriginalAction = nullptr;
+    QAction *previewSourceDevelopedAction = nullptr;
+    QAction *togglePreviewSourceAction = nullptr;   // Y shortcut
+    QAction *buildDevPreviewsAction = nullptr;
+    QAction *clearDevPreviewCacheAction = nullptr;
 
     /* Develop mode local shortcuts (see loadDevelopShortcuts).  These actions carry NO
        QKeySequence -- their keys live in developShortcuts and are dispatched by
@@ -1384,7 +1392,7 @@ private:
     BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
-    QComboBox *operationModeCombo = nullptr;   // status-bar Operation Mode dropdown (Preview/Develop)
+    QComboBox *previewSourceCombo = nullptr;   // status-bar Original / Developed dropdown
     BarBtn *panToFocusToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
@@ -1443,6 +1451,30 @@ private:
        view (asLoupeAction / asGridAction); the status-bar dropdown goes either way. Behavior
        wiring (suspend read-ahead, raw re-decode on Develop) lives in setOperationMode. */
     void setOperationMode(G::OperationMode mode);
+    /* Which of an image's two pictures the grid and the loupe show outside Develop mode.
+       Rebuilds the icons and the image cache, because it changes what a cached decode
+       MEANS -- the same modelling as toggleUseRaw. A no-op if already set. */
+    void setPreviewSource(G::PreviewSource source);
+
+    /* devPreview builder (Main/devpreviewbuilder.cpp). Renders devPreviews for images that
+       are NOT open in Develop -- earlier-session edits and multi-image paste targets --
+       one at a time on developPixelSource. Never runs unasked. */
+    void buildDevPreviews(const QStringList &paths, const QString &src);
+    void buildDevPreviewsForSelection();
+    void queueBackgroundDevPreviewBuild();
+    void cancelDevPreviewBuild();
+    void clearDevPreviewCache();
+    bool devPreviewNeedsBuild(const QString &fPath) const;
+    void devPreviewBuildNext();
+    void devPreviewStore(const QString &fPath, const QImage &full);
+    void devPreviewBuildFinish(const QString &reason = QString());
+    void updateDevPreviewBuildProgress();
+    QStringList devPreviewBuildQueue;
+    QString devPreviewBuildCurrent;      // the render in flight; not abortable
+    int devPreviewBuildTotal = 0;        // 0 = no build running
+    int devPreviewBuildDone = 0;
+    bool devPreviewBuildCancelled = false;
+    void togglePreviewSource();
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
@@ -1546,6 +1578,16 @@ private:
     /* developFrame depicts the STORED recipe (not a History hover, and with the Transform
        and Replace preview eyes on). Only a faithful frame may be cached as a preview. */
     bool developFrameFaithful = false;
+    /* The FULL-RESOLUTION settle render, retained so the devPreview tier can be
+       encoded at sensor resolution rather than from the screen-resolution proxy in
+       developFrame. Set by onDevelopFullResReady under the same currency guard that
+       decides the render may be shown, so if it is non-null for the current path it
+       depicts the current recipe. The devPreview provider prefers it and falls back
+       to developFrame, which keeps a preview a byproduct of a render that happened
+       anyway. */
+    QImage developFullFrame;
+    QString developFullFramePath;
+    bool developFullFrameFaithful = false;
     std::shared_ptr<WorkingImage> developProxy;
     QString developProxyPath;
     /* Per-scope intermediates for the PROXY tick, so a mask drag re-rasterizes only the
@@ -1584,11 +1626,11 @@ private:
        as a glitch. That is what the generation counter guards -- geometry, not age. */
     QThreadPool *developProxyPool = nullptr;
     /* One-shot guard for the develop-preview cache sweep, run from
-       folderChangeCompleted (see Cache/developpreviewcache.h). */
+       folderChangeCompleted (see Cache/devpreviewcache.h). */
     /* True when the loupe placeholder currently showing is a cached DEVELOP preview
        rather than the camera's embedded JPG, so the rendering hint can say so. */
-    bool developInterimIsPreview = false;
-    bool developPreviewSweepDone = false;
+    bool developInterimIsDevPreview = false;
+    bool devPreviewSweepDone = false;
     bool developProxyInFlight = false;
     bool developProxyPending = false;
     quint64 developProxyReqGen = 0;

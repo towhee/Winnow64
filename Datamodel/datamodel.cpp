@@ -270,8 +270,12 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::ReadWriteColumn, new QStandardItem("R/W")); horizontalHeaderItem(G::ReadWriteColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::WidthPreviewColumn, new QStandardItem("WidthPreview")); horizontalHeaderItem(G::WidthPreviewColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::HeightPreviewColumn, new QStandardItem("HeightPreview")); horizontalHeaderItem(G::HeightPreviewColumn)->setData(true, G::GeekRole);
+    /* The two OrigPreview header STRINGS deliberately keep their original text.
+       TableView column visibility is persisted in QSettings under the header string
+       (see MW::settings "TableFields"), so renaming them to match the origPreview /
+       devPreview terminology would silently reset the user's show/hide choice. */
+    setHorizontalHeaderItem(G::WidthOrigPreviewColumn, new QStandardItem("WidthPreview")); horizontalHeaderItem(G::WidthOrigPreviewColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::HeightOrigPreviewColumn, new QStandardItem("HeightPreview")); horizontalHeaderItem(G::HeightOrigPreviewColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::samplesPerPixelColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelColumn)->setData(true, G::GeekRole);
@@ -299,6 +303,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::DevelopColumn, new QStandardItem("Developed")); horizontalHeaderItem(G::DevelopColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::DevPreviewKeyColumn, new QStandardItem("DevPreviewKey")); horizontalHeaderItem(G::DevPreviewKeyColumn)->setData(true, G::GeekRole);
     // "🔎" was title for search column
 }
 
@@ -1441,8 +1446,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     /* Raw sensor unpack info (raw files only) -- stored at metadata-read time so the RAW
        decode path can use it instead of re-walking the file. */
     fPathRawInfoGet(fPath, m.rawInfo);
-    m.widthPreview = index(row, G::WidthPreviewColumn).data().toInt();
-    m.heightPreview = index(row, G::HeightPreviewColumn).data().toInt();
+    m.widthOrigPreview = index(row, G::WidthOrigPreviewColumn).data().toInt();
+    m.heightOrigPreview = index(row, G::HeightOrigPreviewColumn).data().toInt();
     m.dimensions = index(row, G::DimensionsColumn).data().toString();
     m.megapixels = index(row, G::MegaPixelsColumn).data().toFloat();
     m.loadMsecPerMp = index(row, G::LoadMsecPerMpColumn).data().toInt();
@@ -1835,6 +1840,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     /* Develop badge. Comes from Metadata::parseSidecar, which already had the sidecar
        open, so no extra I/O lands on the folder-load path. */
     setData(index(row, G::DevelopColumn), m.developEdited);
+    setData(index(row, G::DevPreviewKeyColumn), m.devPreviewKey);
     // if (m._rating == "") m.rating = "No Rating";
     // if (m._rating == "0") m.rating = "No Rating";
     if (m._rating == "0") m.rating = "";
@@ -1931,8 +1937,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::OffsetFullColumn), m.offsetFull);
     setData(index(row, G::LengthFullColumn), m.lengthFull);
-    setData(index(row, G::WidthPreviewColumn), m.widthPreview);
-    setData(index(row, G::HeightPreviewColumn), m.heightPreview);
+    setData(index(row, G::WidthOrigPreviewColumn), m.widthOrigPreview);
+    setData(index(row, G::HeightOrigPreviewColumn), m.heightOrigPreview);
     setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
     setData(index(row, G::LengthThumbColumn), m.lengthThumb);
     setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
@@ -1970,8 +1976,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     // calc size in MB req'd to store image in cache
     if (!m.video) {
         int w, h;
-        m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
-        m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+        m.widthOrigPreview > 0 ? w = m.widthOrigPreview : w = m.width;
+        m.heightOrigPreview > 0 ? h = m.heightOrigPreview : h = m.height;
         // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
         float mb;
         if (w == 0 || h == 0) mb = m.size / 1000000;
@@ -4243,8 +4249,8 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("_url", dots) << G::s(index(row, G::_UrlColumn).data());
     rpt << "\n  " << G::sj("offsetFull", dots) << G::s(index(row, G::OffsetFullColumn).data());
     rpt << "\n  " << G::sj("lengthFull", dots) << G::s(index(row, G::LengthFullColumn).data());
-    rpt << "\n  " << G::sj("widthPreview", dots) << G::s(index(row, G::WidthPreviewColumn).data());
-    rpt << "\n  " << G::sj("heightPreview", dots) << G::s(index(row, G::HeightPreviewColumn).data());
+    rpt << "\n  " << G::sj("widthOrigPreview", dots) << G::s(index(row, G::WidthOrigPreviewColumn).data());
+    rpt << "\n  " << G::sj("heightOrigPreview", dots) << G::s(index(row, G::HeightOrigPreviewColumn).data());
     rpt << "\n  " << G::sj("offsetThumb", dots) << G::s(index(row, G::OffsetThumbColumn).data());
     rpt << "\n  " << G::sj("lengthThumb", dots) << G::s(index(row, G::LengthThumbColumn).data());
     rpt << "\n  " << G::sj("isBigEndian", dots) << G::s(index(row, G::isBigEndianColumn).data());

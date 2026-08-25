@@ -18,7 +18,7 @@ set(WINNOW_CORE_TEST_SOURCES
     # preview cache in step -- so the closure now reaches both. Qt Core only (no OpenCV,
     # no MainWindow), so the closure stays bounded as the comment above requires.
     ${CMAKE_SOURCE_DIR}/Utilities/fileops.cpp
-    ${CMAKE_SOURCE_DIR}/Cache/developpreviewcache.cpp
+    ${CMAKE_SOURCE_DIR}/Cache/devpreviewcache.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/inputdlg.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/popup.cpp
     ${CMAKE_SOURCE_DIR}/Main/global.cpp
@@ -120,9 +120,9 @@ elseif(WIN32)
     target_link_libraries(tst_maskhalo PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
-# tst_developpreview tests Cache/developpreviewcache.cpp, the on-disk cache of develop
+# tst_devpreview tests Cache/devpreviewcache.cpp, the on-disk cache of develop
 # previews (already in the shared closure above).
-winnow_add_unit_test(tst_developpreview unit/tst_developpreview.cpp)
+winnow_add_unit_test(tst_devpreview unit/tst_devpreview.cpp)
 # tst_fileops tests Utilities/fileops.cpp, the choke point every image file operation goes
 # through (already in the shared closure above).
 winnow_add_unit_test(tst_fileops unit/tst_fileops.cpp)

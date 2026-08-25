@@ -238,6 +238,12 @@ bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only f
 
 // Mode (Preview / Develop)
 OperationMode operationMode = OperationMode::Preview;   // start in fast-review Preview mode
+/* Show the developed picture by default: an image the user has edited should look
+   edited everywhere. Falls back to the camera render wherever no devPreview exists. */
+PreviewSource previewSource = PreviewSource::Developed;
+int devPreviewMaxEdge = kDevPreviewSizeFull;
+qint64 devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;   // 20 GB
+bool buildDevPreviewsInBackground = false;
 
 bool useBatchedFolderInsert = true;    // batched per-folder insert (one rowsInserted + one dataChanged); cuts Phase-1 insert ~34%. Z-A reorder fixed: dynamic sort disabled during load, restored once at end (see DataModel::scheduleProcessing / restoreProxySortAfterLoad)
 bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lines (A/B load-pipeline changes); off in production

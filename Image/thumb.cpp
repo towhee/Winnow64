@@ -136,9 +136,9 @@ void Thumb::setImageDimensions(QString &fPath, QSize size, int row)
     QString src = "Thumb::setImageDimensions";
 
     emit setValDm(row, G::WidthColumn, w, instance, src, Qt::EditRole, Qt::AlignCenter);
-    emit setValDm(row, G::WidthPreviewColumn, w, instance, src);
+    emit setValDm(row, G::WidthOrigPreviewColumn, w, instance, src);
     emit setValDm(row, G::HeightColumn, h, instance, src, Qt::EditRole, Qt::AlignCenter);
-    emit setValDm(row, G::HeightPreviewColumn, h, instance, src);
+    emit setValDm(row, G::HeightOrigPreviewColumn, h, instance, src);
     emit setValDm(row, G::AspectRatioColumn, a, instance, src, Qt::EditRole, alignRight);
     emit setValDm(row, G::DimensionsColumn, d, instance, src, Qt::EditRole, Qt::AlignCenter);
 
@@ -435,13 +435,13 @@ void Thumb::presetOffset(uint offset, uint length)
     isPresetOffset = true;
 }
 
-bool Thumb::loadFromDevelopPreview(QString &fPath, QImage &image)
+bool Thumb::loadDevThumb(QString &fPath, QImage &image)
 {
 /*
     The 256px JPEG of the developed image cached in the XMP sidecar
     (winnow:DevelopPreview), or false when there is none.
 
-    Metadata::readDevelopPreview returns nothing unless the stored key still matches the
+    Metadata::readDevThumb returns nothing unless the stored key still matches the
     recipe beside it, so a sidecar rewritten by another application can never show stale
     pixels here -- it just falls through to the camera thumbnail. It also returns
     immediately when no sidecar exists, which is the common case and costs one stat.
@@ -449,7 +449,13 @@ bool Thumb::loadFromDevelopPreview(QString &fPath, QImage &image)
     The image arrives already oriented and cropped (developCompositeStack applies EXIF
     rotation and geometry), so the caller must NOT rotate it again.
 */
-    const QByteArray jpg = Metadata::readDevelopPreview(fPath);
+    /* Original: the user has asked for the camera's picture, so the developed thumbnail is
+       the wrong answer even where one exists. Develop mode always shows developed -- you
+       cannot edit what you cannot see -- regardless of the setting. */
+    if (G::operationMode != G::OperationMode::Develop
+        && G::previewSource != G::PreviewSource::Developed) return false;
+
+    const QByteArray jpg = Metadata::readDevThumb(fPath);
     if (jpg.isEmpty()) return false;
     if (!image.loadFromData(jpg, "JPG") || image.isNull()) return false;
 
@@ -526,7 +532,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
        before the tail below, which scales and applies checkOrientation. The preview comes
        out of developCompositeStack already rotated and cropped, so running it through
        that tail would rotate it a second time. */
-    if (!abort && loadFromDevelopPreview(fPath, image)) {
+    if (!abort && loadDevThumb(fPath, image)) {
         setIdle();
         return true;
     }

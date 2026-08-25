@@ -1,4 +1,5 @@
 #include "imagedecoder.h"
+#include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "Develop/develop.h"
@@ -144,6 +145,7 @@ void ImageDecoder::decode(int row, int instance)
     status = Status::Undefined;
     fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
     image = QImage();
+    loadedFromDevPreview = false;
     errMsg = "";
     if (isLog || G::isLogger) G::log("ImageDecoder::decode", "sfRow = " + QString::number(sfRow));
 
@@ -192,8 +194,12 @@ void ImageDecoder::decode(int row, int instance)
                 << "ms =" << t.elapsed()
                 << fPath;
         }
-        if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
-        if (!abort.loadAcquire()) applyDevelop();
+        /* A devPreview is already oriented, cropped and developed (see loadDevPreview),
+           so both of these would be a second application. */
+        if (!loadedFromDevPreview) {
+            if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
+            if (!abort.loadAcquire()) applyDevelop();
+        }
         if (G::colorManage && !abort.loadAcquire()) colorManage();
         if (image.isNull()) status = Status::Failed;
     }
@@ -226,6 +232,55 @@ void ImageDecoder::decode(int row, int instance)
                   int(Qt::AlignRight | Qt::AlignVCenter));
 
     emit done(threadId, int(status), sfRow, image, fPath, nsToDecode);
+}
+
+bool ImageDecoder::loadDevPreview()
+{
+/*
+    Serve the cached developed preview (devPreview) for this image instead of decoding the
+    image file. This is what makes browsing a folder of developed RAWs as fast as browsing
+    JPEGs: the developed picture is already on disk at sensor resolution, so there is no
+    demosaic, no develop pipeline and no float buffer -- just a JPEG decode.
+
+    ONLY OUTSIDE DEVELOP MODE. In Develop the loupe must show the live render of the recipe
+    being edited, which the cached preview is by definition one step behind. The devPreview
+    is still used there, but as the interim placeholder during the sensor decode
+    (MW::devPreview), not as the cached image.
+
+    ONLY IN Developed PREVIEW SOURCE. With G::previewSource == Original the user has asked
+    for the as-shot picture, so a developed one would be the wrong answer.
+
+    NEVER FOR AN INDEPENDENT DECODE. Focus stacking and the other independent callers need
+    the actual image, at full fidelity, not a JPEG of a display-referred render.
+
+    KEYED ON THE RECIPE. G::DevPreviewKeyColumn holds the hash of the recipe in the image's
+    sidecar (Metadata::parseSidecar). The cache returns a hit only when its stored hash
+    matches, so an edit made by another Winnow instance, another machine or another
+    application can never show stale pixels here -- it misses and the file is decoded.
+
+    The pixels arrive already EXIF-rotated, cropped and developed (developCompositeStack
+    applies all three), in sRGB, so the caller must not rotate or develop them again --
+    loadedFromDevPreview says so.
+*/
+    if (isIndependent) return false;
+    if (G::operationMode == G::OperationMode::Develop) return false;
+    if (G::previewSource != G::PreviewSource::Developed) return false;
+
+    const QString key =
+        dm->sf->index(sfRow, G::DevPreviewKeyColumn).data().toString();
+    if (key.isEmpty()) return false;          // no develop recipe: the file is correct
+
+    const QByteArray jpg =
+        DevPreviewCache::instance().get(fPath, key.toLatin1());
+    if (jpg.isEmpty()) return false;          // no preview, or one for an older recipe
+
+    if (!image.loadFromData(jpg, "JPG") || image.isNull()) return false;
+
+    loadedFromDevPreview = true;
+    developApplied = true;                    // the recipe is already in these pixels
+    decoderToUse = DevPreview;
+    status = Status::Success;
+    return true;
 }
 
 bool ImageDecoder::load()
@@ -270,6 +325,10 @@ bool ImageDecoder::load()
         status = Status::Video;
         return false;
     }
+
+    /* A cached developed preview short-circuits the whole decode. Checked before the file
+       is even opened, because a hit means the file is not read at all. */
+    if (!abort.loadAcquire() && loadDevPreview()) return true;
 
     QFile imFile(fPath);
 
@@ -769,9 +828,16 @@ void ImageDecoder::colorManage()
         if (image.isNull()) return;
     }
 
-    QByteArray iccBuf = isIndependent
-        ? indMeta.iccBuf
-        : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+    /* A devPreview left the develop pipeline in sRGB, so the image file's embedded
+       profile is not its source space -- using it would be a wrong transform, not merely a
+       redundant one. An empty buffer makes ICC::transform assume sRGB, which is exactly
+       right here. */
+    QByteArray iccBuf;
+    if (!loadedFromDevPreview) {
+        iccBuf = isIndependent
+            ? indMeta.iccBuf
+            : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+    }
     ICC::transform(iccBuf, image);
 }
 

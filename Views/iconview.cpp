@@ -1812,8 +1812,8 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     if (G::isInitializing) return;
 
     // preview scene dimensions
-    qreal iW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toReal();
-    qreal iH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toReal();
+    qreal iW = dm->sf->index(idx.row(), G::WidthOrigPreviewColumn).data().toReal();
+    qreal iH = dm->sf->index(idx.row(), G::HeightOrigPreviewColumn).data().toReal();
     qreal iA = dm->sf->index(idx.row(), G::AspectRatioColumn).data().toReal();
     // swap width / height if portrait
     if (iA < 1) {

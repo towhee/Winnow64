@@ -150,11 +150,11 @@ public:
        when there is none or its winnow:DevelopPreviewKey does not match the recipe now
        in the sidecar. A mismatch means something outside Winnow rewrote the file, so the
        pixels can no longer be trusted to show the current edit. */
-    static QByteArray readDevelopPreview(QString fPath);
+    static QByteArray readDevThumb(QString fPath);
 
     /* 12-char hash identifying a develop blob, stamped beside the preview so staleness is
        detectable. One definition, used by both the writer and every reader. */
-    static QString developPreviewKey(const QString &blob);
+    static QString devPreviewKey(const QString &blob);
 
 
     QFile file;
