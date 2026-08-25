@@ -22,6 +22,14 @@ private:
     void addModify();
     void addUserInterface();
     void addProductivity();
+    void addDevPreviews();
+
+    /* devPreview settings are shown as words but stored as numbers. These two pairs are the
+       only place the mapping lives, so a label and its value cannot drift apart. */
+    static QString devPreviewSizeLabel(int maxEdge);
+    static int devPreviewSizeValue(const QString &label);
+    static QString devPreviewCacheLabel(qint64 bytes);
+    static qint64 devPreviewCacheValue(const QString &label);
     void addSlideShow();
     void addFullScreen();
     void addMetadataPanel();

@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Cache/devpreviewcache.h"
 
 void MW::writeSetting(QString key, QVariant value)
 {
@@ -76,6 +77,10 @@ void MW::writeSettings()
 
     // develop
     settings->setValue("developEditsLayout", static_cast<int>(G::developEditsLayout));
+    settings->setValue("previewSource", static_cast<int>(G::previewSource));
+    settings->setValue("devPreviewMaxEdge", G::devPreviewMaxEdge);
+    settings->setValue("devPreviewCacheMaxBytes", G::devPreviewCacheMaxBytes);
+    settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
 
     /* ingest (moved to MW::ingest)
     */
@@ -333,6 +338,12 @@ bool MW::loadSettings()
         // files
         G::colorManage = true;
         G::useRaw = false;
+
+        // develop previews
+        G::previewSource = G::PreviewSource::Developed;
+        G::devPreviewMaxEdge = G::kDevPreviewSizeFull;
+        G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
+        G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
         checkIfUpdate = true;
         updateSkipVersion = "";
@@ -514,6 +525,33 @@ bool MW::loadSettings()
                && layout <= int(G::EditsLayout::Minimal))
             G::developEditsLayout = static_cast<G::EditsLayout>(layout);
     }
+
+    /* Develop previews. previewSource is VALIDATED BEFORE CASTING for the same reason as
+       the two enums above -- a damaged int would name a branch this build has no code
+       for. The two sizes are plain numbers, but a negative or absurd one would either
+       disable the cache or let it eat the disk, so both are clamped. */
+    if (settings->contains("previewSource")) {
+        bool ok = false;
+        const int src = settings->value("previewSource").toInt(&ok);
+        if (ok && src >= int(G::PreviewSource::Original)
+               && src <= int(G::PreviewSource::Developed))
+            G::previewSource = static_cast<G::PreviewSource>(src);
+    }
+    if (settings->contains("devPreviewMaxEdge")) {
+        const int edge = settings->value("devPreviewMaxEdge").toInt();
+        /* 0 = Full (no cap). Anything else must be big enough to be worth caching. */
+        if (edge == G::kDevPreviewSizeFull || edge >= 1024) G::devPreviewMaxEdge = edge;
+    }
+    if (settings->contains("devPreviewCacheMaxBytes")) {
+        const qint64 cap = settings->value("devPreviewCacheMaxBytes").toLongLong();
+        if (cap >= 256LL * 1024 * 1024) G::devPreviewCacheMaxBytes = cap;
+    }
+    if (settings->contains("buildDevPreviewsInBackground"))
+        G::buildDevPreviewsInBackground =
+            settings->value("buildDevPreviewsInBackground").toBool();
+    /* The cache reads its index lazily, on first use, so applying the cap here (before any
+       folder loads) is early enough and does not force a load. */
+    DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);
 
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21

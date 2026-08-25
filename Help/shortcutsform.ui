@@ -1084,6 +1084,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Original / Developed</string>
+        </property>
+        <property name="text">
+         <string>Y</string>
+        </property>
+        <property name="text">
+         <string>Switch the thumbnails and the loupe between the camera&apos;s picture (Original) and your develop edits (Developed).  Pressed in Develop mode it leaves Develop, so it also serves as a before / after key while editing.  Also on the status bar dropdown at the far left and in the View menu.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Develop Mode keys</string>
         </property>
         <property name="text">

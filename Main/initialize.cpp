@@ -1,7 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Develop/workingimagecache.h"
 #include "Utilities/fileops.h"
-#include "Cache/developpreviewcache.h"
+#include "Cache/devpreviewcache.h"
 
 void MW::initialize()
 {
@@ -1227,37 +1227,55 @@ void MW::createStatusBar()
 
     setCacheRunningLightsWidth();
 
-    // Operation Mode dropdown at the EXTREME LEFT of the status bar (Preview / Develop). A standout
-    // orange background makes the current mode obvious. Item order matches G::OperationMode
-    /* (0 = Preview, 1 = Develop). Switched either way here; the D shortcut
-       (operationModeAction) only ENTERS Develop, and E / G / T leave it. */
-    operationModeCombo = new QComboBox;
-    operationModeCombo->setObjectName("operationModeCombo");
-    operationModeCombo->addItem("Preview");
-    operationModeCombo->addItem("Develop");
-    operationModeCombo->setCurrentIndex(int(G::operationMode));
-    operationModeCombo->setFocusPolicy(Qt::NoFocus);
-    operationModeCombo->setToolTip("Operation mode:\n  Preview — fast image review (embedded previews)\n"
-                                   "  Develop — edit image (including raw data)\nShortcut: D");
+    /* Which PICTURE the grid and the loupe show, at the EXTREME LEFT of the status bar:
+
+         0 Original   the camera's picture, as shot     G::PreviewSource::Original
+         1 Developed  the develop recipe rendered       G::PreviewSource::Developed
+
+       The rows ARE the G::PreviewSource values, so no mapping table is needed.
+
+       DELIBERATELY NOT A MODE CONTROL. Develop mode is entered with D (operationModeAction)
+       and left with E / G / T, and it is a different kind of thing from these two -- an
+       editing mode, not a choice of picture. Putting it in here made the third item read
+       as a peer of the other two when it is not.
+       Picking either item while in Develop mode LEAVES Develop, the same as the View menu
+       items and Y do; setPreviewSource / setOperationMode put the combo back in step. */
+    previewSourceCombo = new QComboBox;
+    previewSourceCombo->setObjectName("previewSourceCombo");
+    previewSourceCombo->addItem("Original");
+    previewSourceCombo->addItem("Developed");
+    previewSourceCombo->setCurrentIndex(int(G::previewSource));
+    previewSourceCombo->setFocusPolicy(Qt::NoFocus);
+    previewSourceCombo->setToolTip(
+        "What you are looking at:\n"
+        "  Original — the camera's picture, as shot\n"
+        "  Developed — your develop edits applied\n"
+        "Shortcut: Y\n\n"
+        "Develop mode (D) always shows the developed image.");
     /* Pin the width to the widest item via the STYLESHEET min-width/max-width. The global widget
        CSS (widgetcss.cpp) sets "QComboBox { min-width: 6em }", and in Qt a stylesheet min-width
        OVERRIDES setFixedWidth() -- so the width must be a stylesheet property here to win. Width =
        widest bold label + padding(12) + arrow(14) + slack. */
-    QFont opModeBold = operationModeCombo->font(); opModeBold.setBold(true);
-    const int opModeW = qMax(QFontMetrics(opModeBold).horizontalAdvance("Preview"),
-                             QFontMetrics(opModeBold).horizontalAdvance("Develop")) + 12 + 4;
-    operationModeCombo->setStyleSheet(QString(
+    QFont opModeBold = previewSourceCombo->font(); opModeBold.setBold(true);
+    const int opModeW = qMax(QFontMetrics(opModeBold).horizontalAdvance("Original"),
+                             QFontMetrics(opModeBold).horizontalAdvance("Developed")) + 12 + 4;
+    previewSourceCombo->setStyleSheet(QString(
         "QComboBox {background-color:#445f76; color:white;"
         " padding:1px 6px; border:none; border-radius:3px; margin:0 4px;"
         " min-width:%1px; max-width:%1px;}"
         "QComboBox::drop-down {border:none; width:14px;} "
         "QComboBox QAbstractItemView {background-color:#445f76; color:white;"
         " selection-background-color:#445f76;}").arg(opModeW));
-    connect(operationModeCombo, &QComboBox::activated, this, [this](int i) {
-        setOperationMode(i == int(G::OperationMode::Develop) ? G::OperationMode::Develop
-                                                             : G::OperationMode::Preview);
+    connect(previewSourceCombo, &QComboBox::activated, this, [this](int i) {
+        /* Leave Develop FIRST, so the flush, the read-ahead restore and the re-decode all
+           happen before the picture choice is applied to the rebuilt cache. */
+        if (G::operationMode == G::OperationMode::Develop)
+            setOperationMode(G::OperationMode::Preview);
+        setPreviewSource(i == int(G::PreviewSource::Developed)
+                             ? G::PreviewSource::Developed
+                             : G::PreviewSource::Original);
     });
-    statusBar()->addWidget(operationModeCombo);
+    statusBar()->addWidget(previewSourceCombo);
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;
@@ -1824,23 +1842,37 @@ void MW::createDevelopDock()
         if (developProperties) developProperties->flushAll();
     });
 
-    /* Cached develop previews are a byproduct of editing, never a reason to decode a raw.
-       developFrame is the proxy frame the develop render already produced and kept (it
-       also feeds the sharpening mask preview), so making both preview tiers is a scale
-       plus a JPEG encode -- a few ms. Declining when the requested image is not the one
-       on screen is what makes multi-image propagation targets clear their stale preview
-       instead of keeping one. See DevelopProperties::flushImage. */
-    developProperties->setPreviewProvider(
+    /* devPreviews are a byproduct of a render that already happened, never a reason to
+       decode a raw. Two frames can supply them:
+
+         developFullFrame  the full-resolution settle render (onDevelopFullResReady). This
+                           is the one that matters -- a devPreview encoded from it is the
+                           real picture at sensor resolution, so the loupe can browse and
+                           zoom it without decoding the raw at all.
+         developFrame      the screen-resolution proxy, the fallback while the settle
+                           render has not landed yet (or was superseded). Still correct,
+                           just soft at 100%.
+
+       Either way the tiers are a scale plus a JPEG encode -- a few ms. Declining when the
+       requested image is not the one on screen is what makes multi-image propagation
+       targets clear their stale preview instead of keeping one.
+       See DevelopProperties::flushImage. */
+    developProperties->setDevPreviewProvider(
         [this](const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg) -> bool {
-            if (fPath.isEmpty() || fPath != developFramePath) return false;
-            if (developFrame.isNull()) return false;
+            if (fPath.isEmpty()) return false;
+
             /* The frame on screen is not always what the recipe says. With the Transform
                preview eye off it is UNCROPPED and unstraightened; with the Replace eye
                off the heals are missing; on a History hover it is a different stack
                altogether. Caching any of those against the stored recipe's hash would
                key a preview to a picture it does not depict. Decline instead, which
                clears the stale preview -- the next faithful render writes a real one. */
-            if (!developFrameFaithful) return false;
+            const bool haveFull = fPath == developFullFramePath
+                                  && !developFullFrame.isNull() && developFullFrameFaithful;
+            const bool haveProxy = fPath == developFramePath
+                                   && !developFrame.isNull() && developFrameFaithful;
+            if (!haveFull && !haveProxy) return false;
+            const QImage &src = haveFull ? developFullFrame : developFrame;
 
             auto encode = [](const QImage &im, int quality, QByteArray &out) {
                 QBuffer buf(&out);
@@ -1849,28 +1881,30 @@ void MW::createDevelopDock()
             };
 
             /* Thumbnail tier: G::maxIconSize is what Thumb scales embedded thumbs to, so
-               matching it means the grid never up-scales a develop preview. */
-            const QImage thumb = developFrame.scaled(G::maxIconSize, G::maxIconSize,
-                                                     Qt::KeepAspectRatio,
-                                                     Qt::SmoothTransformation);
+               matching it means the grid never up-scales a devPreview. */
+            const QImage thumb = src.scaled(G::maxIconSize, G::maxIconSize,
+                                            Qt::KeepAspectRatio,
+                                            Qt::SmoothTransformation);
             if (!encode(thumb, 85, thumbJpg)) thumbJpg.clear();
 
-            /* Loupe tier: the frame as rendered, but capped. A crop makes
-               developCompositeStack upscale to full resolution, and caching a 50MP JPEG
-               to stand in for a 2-3s decode is a poor trade. */
-            constexpr int kLoupeMaxEdge = 2560;
-            QImage loupe = developFrame;
-            if (qMax(loupe.width(), loupe.height()) > kLoupeMaxEdge) {
-                loupe = loupe.scaled(kLoupeMaxEdge, kLoupeMaxEdge,
-                                     Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            /* devPreview tier: the frame as rendered, capped only if the user asked for a
+               cap. At the default (Full) this is a full sensor-resolution JPEG -- several
+               MB rather than a few hundred KB, which is why the cache cap is measured in
+               tens of GB. q90 rather than q88: these pixels are now displayed at 100%,
+               not just used as a placeholder during a decode. */
+            QImage loupe = src;
+            const int cap = G::devPreviewMaxEdge;
+            if (cap > 0 && qMax(loupe.width(), loupe.height()) > cap) {
+                loupe = loupe.scaled(cap, cap, Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation);
             }
-            if (!encode(loupe, 88, loupeJpg)) loupeJpg.clear();
+            if (!encode(loupe, 90, loupeJpg)) loupeJpg.clear();
 
             return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
         });
 
-    connect(developProperties, &DevelopProperties::developPreviewUpdated,
-            this, &MW::developPreviewUpdated);
+    connect(developProperties, &DevelopProperties::devPreviewUpdated,
+            this, &MW::devPreviewUpdated);
 
     connect(developProperties, &DevelopProperties::paramsChanged, this, &MW::developParamsChange);
     /* History hover preview: PROXY render only. developParamsChange would also arm the
@@ -2755,9 +2789,13 @@ void MW::setOperationMode(G::OperationMode mode)
        running lights in Develop and shows them in Preview. */
     updateStatusBar();
 
-    if (operationModeCombo) {
-        QSignalBlocker block(operationModeCombo);   // setCurrentIndex must not re-fire
-        operationModeCombo->setCurrentIndex(int(mode));
+    /* The combo shows the PICTURE, not the mode, so a mode change does not move it. It is
+       synced here only because Develop can be entered before any picture choice was ever
+       pushed to it (first run), and because leaving Develop must show the picture the user
+       last chose. setPreviewSource owns it the rest of the time. */
+    if (previewSourceCombo) {
+        QSignalBlocker block(previewSourceCombo);   // setCurrentIndex must not re-fire
+        previewSourceCombo->setCurrentIndex(int(G::previewSource));
     }
 
     /* Develop shows a single image, so it always runs in Loupe: force Loupe on entry, and
@@ -2806,11 +2844,11 @@ void MW::setOperationMode(G::OperationMode mode)
        cached), so it never reaches that branch. */
     if (mode == G::OperationMode::Develop && imageView && dm && !currentIsVideo()) {
         const QString fPath = dm->currentFilePath;
-        const QImage cached = cachedDevelopPreview(fPath);
+        const QImage cached = devPreview(fPath);
         if (!cached.isNull()) {
             imageView->captureDevelopView(fPath);
             if (imageView->loadImageInterim(fPath, cached)) {
-                developInterimIsPreview = true;
+                developInterimIsDevPreview = true;
                 updateDevelopRenderingHint();
             }
         }

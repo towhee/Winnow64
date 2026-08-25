@@ -691,6 +691,81 @@ void MW::toggleColorManage(Tog n)
     emit imageCacheColorManageChange();
 }
 
+void MW::togglePreviewSource()
+{
+/*
+    Flip between the camera's picture and the developed one. In Develop mode this is not a
+    question -- the developed picture is the only sensible answer and the loupe is showing
+    a live render of it -- so the toggle LEAVES Develop rather than doing nothing, which is
+    what makes it usable as a before/after key while editing.
+*/
+    if (G::isLogger) G::log("MW::togglePreviewSource");
+    if (G::operationMode == G::OperationMode::Develop)
+        setOperationMode(G::OperationMode::Preview);
+    setPreviewSource(G::previewSource == G::PreviewSource::Developed
+                         ? G::PreviewSource::Original
+                         : G::PreviewSource::Developed);
+}
+
+void MW::setPreviewSource(G::PreviewSource source)
+{
+/*
+    Choose which of an image's two pictures the grid and the loupe show outside Develop
+    mode: the camera's (Original) or the render of its develop recipe (Developed).
+
+    THIS CHANGES WHAT A CACHED DECODE MEANS, exactly as toggleUseRaw does, so both caches
+    have to be rebuilt rather than merely repainted:
+
+      - the icons, because Thumb::loadDevThumb is gated on this and the developed thumbnail
+        OVERWRITES the row's icon (DataModel::setDevelopIcon) -- the camera thumb is not
+        kept alongside it, so getting it back means re-reading it. reloadIconChunk
+        re-dispatches MetaRead, which loads the visible rows first.
+      - the full-size image cache, because ImageDecoder::loadDevPreview consults this flag
+        to decide whether to serve the devPreview or decode the file.
+
+    Only images that HAVE a devPreview change appearance; the rest re-read to the same
+    pixels. That is wasted work for an unedited folder, which is why this is a deliberate
+    user action and not something that fires on selection.
+*/
+    if (G::isLogger) G::log("MW::setPreviewSource");
+    if (G::previewSource == source) return;
+    G::previewSource = source;
+
+    if (previewSourceCombo) previewSourceCombo->setCurrentIndex(int(source));
+    if (previewSourceOriginalAction)
+        previewSourceOriginalAction->setChecked(source == G::PreviewSource::Original);
+    if (previewSourceDevelopedAction)
+        previewSourceDevelopedAction->setChecked(source == G::PreviewSource::Developed);
+
+    settings->setValue("previewSource", static_cast<int>(G::previewSource));
+
+    if (dm->rowCount() == 0) return;
+
+    /* Drop the icons and re-read them. The delegates keep their own scaled QPixmap per
+       row, so they have to be told too or they keep painting the old thumbnail. */
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        if (!dm->index(row, G::DevPreviewKeyColumn).data().toString().isEmpty())
+            dm->clearDevelopIcon(row);
+    }
+    if (thumbView && thumbView->iconViewDelegate)
+        thumbView->iconViewDelegate->clearAllCache();
+    if (gridView && gridView->iconViewDelegate)
+        gridView->iconViewDelegate->clearAllCache();
+    reloadIconChunk();
+
+    // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
+        refreshViewsOnCacheChange(fPath, false, "MW::setPreviewSource");
+    }
+
+    // let ImageView know that the image changed
+    imageView->currentImageHasChanged = true;
+
+    // reload image cache
+    emit imageCacheColorManageChange();
+}
+
 void MW::toggleUseRawClick()
 {
 /*

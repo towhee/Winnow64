@@ -429,8 +429,8 @@ bool PNG::parse(MetadataParameters &p,
     }
 
     if (m.width <= 0 || m.height <= 0) return false;
-    m.widthPreview = m.width;
-    m.heightPreview = m.height;
+    m.widthOrigPreview = m.width;
+    m.heightOrigPreview = m.height;
 
     // EXIF (eXIf chunk) — reuse JPEG-style IFD/Exif/GPS handoff.
     if (exifChunkOffset && exifChunkLength >= 8) {

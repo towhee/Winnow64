@@ -266,8 +266,8 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::ReadWriteColumn] = fm.boundingRect("=false=").width();
     defaultColumnWidth[G::OffsetFullColumn] = fm.boundingRect("=OffsetFullColumn=").width();
     defaultColumnWidth[G::LengthFullColumn] = fm.boundingRect("=LengthFullColumn=").width();
-    defaultColumnWidth[G::WidthPreviewColumn] = fm.boundingRect("=WidthPreview=").width();
-    defaultColumnWidth[G::HeightPreviewColumn] = fm.boundingRect("=HeightPreview=").width();
+    defaultColumnWidth[G::WidthOrigPreviewColumn] = fm.boundingRect("=WidthPreview=").width();
+    defaultColumnWidth[G::HeightOrigPreviewColumn] = fm.boundingRect("=HeightPreview=").width();
     defaultColumnWidth[G::OffsetThumbColumn] = fm.boundingRect("=OffsetThumbColumn=").width();
     defaultColumnWidth[G::LengthThumbColumn] = fm.boundingRect("=LengthThumbColumn=").width();
     defaultColumnWidth[G::samplesPerPixelColumn] = fm.boundingRect("=samplesPerPixelFullColumn=").width();

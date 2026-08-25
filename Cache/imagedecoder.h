@@ -47,6 +47,11 @@ public:
                                                          std::shared_ptr<const WorkingImage> *outClean = nullptr,
                                                          bool *outDenoiseApplied = nullptr);
 
+    /* Serve the cached developed preview for fPath instead of decoding the image file.
+       See the implementation for when this is allowed. Returns false on any miss, which
+       simply falls through to the normal decode. */
+    bool loadDevPreview();
+
     bool isRunning() const;
     void setIdle();
     void setBusy();
@@ -102,7 +107,8 @@ public:
         MacOS,          // use MacOS to decode heic
         LibHeif,        // use libheif to decode heic
         Rory,           // use my decoder
-        Raw             // full-sensor demosaic via the RawFormat pipeline
+        Raw,            // full-sensor demosaic via the RawFormat pipeline
+        DevPreview      // cached developed preview; no decode of the image file at all
     } decoderToUse;
 
     QStringList decodersText {
@@ -113,7 +119,8 @@ public:
         "MacOS",
         "LibHeif",
         "Rory",
-        "Raw"
+        "Raw",
+        "DevPreview"
     };
 
 public slots:
@@ -171,6 +178,12 @@ private:
     */
     EditParams editParams;
     bool developApplied = false;
+    /* This decode came out of the devPreview cache rather than out of the image file:
+       loadDevPreview() found a cached JPEG of the developed image matching the recipe in
+       force. Those pixels are already EXIF-rotated, cropped and developed, in sRGB, so
+       decode() must skip rotate() and applyDevelop(), and colorManage() must treat the
+       source as sRGB rather than as the raw file's embedded profile. */
+    bool loadedFromDevPreview = false;
     // ImageCacheData::CacheItem n;
     unsigned char *buf;
     QString ext;

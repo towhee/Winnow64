@@ -108,7 +108,7 @@ qt_standard_project_setup()
 set(WINNOW_SOURCES
     # Cache
     Cache/cachedata.cpp
-    Cache/developpreviewcache.cpp
+    Cache/devpreviewcache.cpp
     Cache/framedecoder.cpp
     Cache/imagecache.cpp
     Cache/imagedecoder.cpp
@@ -289,6 +289,7 @@ set(WINNOW_SOURCES
     Log/log.cpp
 
     # Main
+    Main/devpreviewbuilder.cpp
     Main/diagnostics.cpp
     Main/dockwidget.cpp
     Main/draganddrop.cpp
@@ -382,7 +383,7 @@ set(WINNOW_SOURCES
 # -----------------------------------------------------------------------------
 set(WINNOW_HEADERS
     Cache/cachedata.h
-    Cache/developpreviewcache.h
+    Cache/devpreviewcache.h
     Cache/framedecoder.h
     Cache/imagecache.h
     Cache/imagedecoder.h

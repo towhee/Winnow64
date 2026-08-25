@@ -4,7 +4,7 @@
 #include <QTemporaryDir>
 
 #include "Utilities/fileops.h"
-#include "Cache/developpreviewcache.h"
+#include "Cache/devpreviewcache.h"
 
 /*
     FileOps -- the single choke point every image file operation goes through.
@@ -58,7 +58,7 @@ void tst_fileops::init()
     QDir d(tmp.path());
     for (const QString &f : d.entryList(QDir::Files | QDir::Hidden)) d.remove(f);
 
-    DevelopPreviewCache &c = DevelopPreviewCache::instance();
+    DevPreviewCache &c = DevPreviewCache::instance();
     c.clear();
     c.setCacheDir(cacheTmp.path());
     c.clear();
@@ -160,7 +160,7 @@ void tst_fileops::moveCarriesCompanionsAndPreview()
     touch("DSC_050.NEF", "image");
     touch("DSC_050.xmp", "recipe");
 
-    DevelopPreviewCache &c = DevelopPreviewCache::instance();
+    DevPreviewCache &c = DevPreviewCache::instance();
     const QByteArray payload(1024, 'p');
     c.put(p("DSC_050.NEF"), "recipe1", payload);
 

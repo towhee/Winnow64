@@ -1,6 +1,6 @@
 ﻿#include "Main/mainwindow.h"
 #include "Utilities/fileops.h"
-#include "Cache/developpreviewcache.h"
+#include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 #include "Develop/workingimage.h"
 #include "Develop/workingimagecache.h"
@@ -999,7 +999,7 @@ void MW::closeEvent(QCloseEvent *event)
 
     /* Persist the develop-preview index. Cheap (one small JSON write) and skipped when
        nothing changed. Losing it costs only re-renders, so it is not worth guarding. */
-    DevelopPreviewCache::instance().save();
+    DevPreviewCache::instance().save();
 
     stop("MW::closeEvent");
 
@@ -2940,6 +2940,9 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     developProxyPath.clear();
     developFrame = QImage();           // the frame the sharpening mask preview derives from
     developFramePath.clear();
+    developFullFrame = QImage();       // the full-res frame the devPreview is encoded from
+    developFullFramePath.clear();
+    developFullFrameFaithful = false;
     developStackCache.clear();         // its entries are sized to the old proxy
     maskFoldCacheClear();              // ditto, and its refs belong to the old folder
     developWorkTriedPath.clear();
@@ -3197,8 +3200,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    an edited image the embedded JPG shows the UNDEVELOPED picture, so the
                    loupe used to spend those 2-3s displaying the one thing the user had
                    already decided to change. */
-                const QImage cachedPreview = cachedDevelopPreview(fPath);
-                developInterimIsPreview = !cachedPreview.isNull();
+                const QImage cachedPreview = devPreview(fPath);
+                developInterimIsDevPreview = !cachedPreview.isNull();
                 if (imageView->loadImageInterim(fPath, cachedPreview)) {
                     if (G::mode == "Loupe" ||
                         G::fileSelectionChangeSource == "IconMouseDoubleClick") {
@@ -3528,6 +3531,11 @@ void MW::stop(QString src)
     // stop flags
     G::stop = true;
     dm->abort = true;
+
+    /* Abandon any devPreview build: its queue holds paths from the folder being left, and
+       the render in flight is about to be irrelevant. The queue is rebuilt from what is
+       actually missing next time the command runs, so nothing is lost by dropping it. */
+    cancelDevPreviewBuild();
 
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
     stopped.clear();
@@ -4203,7 +4211,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     }
 }
 
-QImage MW::cachedDevelopPreview(const QString &fPath)
+QImage MW::devPreview(const QString &fPath)
 {
 /*
     The cached screen-resolution develop preview for fPath, or a null QImage.
@@ -4212,14 +4220,14 @@ QImage MW::cachedDevelopPreview(const QString &fPath)
     of the sidecar), so the pixels always match what the user last saw. A miss is normal
     and costs nothing -- the caller falls back to the embedded camera JPG.
 */
-    if (G::isLogger) G::log("MW::cachedDevelopPreview");
+    if (G::isLogger) G::log("MW::devPreview");
     if (fPath.isEmpty() || !developProperties) return QImage();
 
     const QString blob = developProperties->developBlobFor(fPath);
     if (blob.isEmpty()) return QImage();          // no edits: the camera JPG is correct
 
-    const QByteArray jpg = DevelopPreviewCache::instance().get(
-        fPath, Metadata::developPreviewKey(blob).toLatin1());
+    const QByteArray jpg = DevPreviewCache::instance().get(
+        fPath, Metadata::devPreviewKey(blob).toLatin1());
     if (jpg.isEmpty()) return QImage();
 
     QImage im;
@@ -4227,7 +4235,7 @@ QImage MW::cachedDevelopPreview(const QString &fPath)
     return im;
 }
 
-void MW::developPreviewUpdated(const QString &fPath, const QImage &thumb)
+void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
 {
 /*
     A develop edit has just been written to fPath's sidecar. Bring the grid into line.
@@ -4241,15 +4249,24 @@ void MW::developPreviewUpdated(const QString &fPath, const QImage &thumb)
     Both views keep a per-row scaled QPixmap in their delegate, so the row's cache entry
     has to be dropped or they keep painting the old thumb.
 */
-    if (G::isLogger) G::log("MW::developPreviewUpdated");
+    if (G::isLogger) G::log("MW::devPreviewUpdated");
     if (fPath.isEmpty() || !dm) return;
 
     const int dmRow = dm->rowFromPath(fPath);
     if (dmRow < 0) return;
 
-    /* Keep the develop badge in step with the recipe that was just written. */
-    const bool edited = !developProperties->developBlobFor(fPath).isEmpty();
-    dm->setData(dm->index(dmRow, G::DevelopColumn), edited);
+    /* Keep the develop badge and the devPreview key in step with the recipe that was just
+       written. The key is what a decoder thread matches against the devPreview cache, so
+       leaving it stale would keep serving the picture the user has just changed. */
+    const QString blob = developProperties->developBlobFor(fPath);
+    dm->setData(dm->index(dmRow, G::DevelopColumn), !blob.isEmpty());
+    dm->setData(dm->index(dmRow, G::DevPreviewKeyColumn),
+                blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob));
+
+    /* The full-size image cached for this path was decoded from the OLD recipe (or from
+       the camera render), so it no longer depicts the image. Drop it: the next visit
+       re-reads, which outside Develop mode now means loading the new devPreview. */
+    if (icd) icd->remove(fPath);
 
     if (!thumb.isNull()) dm->setDevelopIcon(dmRow, thumb);
     else dm->clearDevelopIcon(dmRow);
@@ -4288,16 +4305,22 @@ void MW::folderChangeCompleted()
        the folder load the user is waiting for, and run off the GUI thread because it
        stats every cached entry. Deliberately NOT at shutdown: closeEvent is already
        doing synchronous teardown, and a force-quit or crash would skip it entirely.
-       See Cache/developpreviewcache.h for why it demotes rather than deletes. */
-    if (!developPreviewSweepDone) {
-        developPreviewSweepDone = true;
+       See Cache/devpreviewcache.h for why it demotes rather than deletes. */
+    if (!devPreviewSweepDone) {
+        devPreviewSweepDone = true;
         QThreadPool::globalInstance()->start([]{
-            DevelopPreviewCache::instance().sweep();
-            DevelopPreviewCache::instance().save();
+            DevPreviewCache::instance().sweep();
+            DevPreviewCache::instance().save();
         });
     }
 
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
+
+    /* Optional background devPreview build for edited images in this folder that have no
+       current preview. Off by default: building one means decoding and rendering the
+       image, which is the work the byproduct rule exists to avoid. Queued here, after the
+       load, for the same reason as the sweep above. */
+    queueBackgroundDevPreviewBuild();
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -8214,10 +8237,18 @@ void MW::renderDevelopFullResAsync()
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
     auto mj = developProperties->stackJob();          // full stack, captured on the GUI thread
-    if (developCropEditing && !developCropShowResult) {   // suppress crop, keep warp (see renderDevelopPreview)
+    const bool cropSuppressed = developCropEditing && !developCropShowResult;
+    if (cropSuppressed) {                 // suppress crop, keep warp (see renderDevelopPreview)
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
+    /* Pair the frame with whether it actually depicts the STORED recipe, captured here on
+       the GUI thread with the job because the view overrides it reflects can change while
+       the render is in flight (same reason as the proxy path). Suppressing the crop for an
+       interactive crop drag also makes the frame the wrong SHAPE for the stored recipe, so
+       it cannot be cached either. Only a faithful frame may become a devPreview. */
+    const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe()
+                          && !cropSuppressed;
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
 
@@ -8264,7 +8295,7 @@ void MW::renderDevelopFullResAsync()
     updateDevelopRenderingHint();
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
     std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
-    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen]() {
+    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen, faithful]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
@@ -8318,7 +8349,7 @@ void MW::renderDevelopFullResAsync()
         const bool vRecipeIdentity = mj.global.isIdentity() && mj.scopes.isEmpty();
         const bool vGeometryActive = !mj.geometry.isIdentity();
 
-        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt,
+        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt, faithful,
                                          vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive]() {
             if (G::isReportDevelopTime)
                 qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
@@ -8346,7 +8377,7 @@ void MW::renderDevelopFullResAsync()
                 developVerifyGeometryActive = vGeometryActive;
                 developVerifyPath = fPath;
             }
-            onDevelopFullResReady(out, fPath, gen);
+            onDevelopFullResReady(out, fPath, gen, faithful);
         });
     });
 }
@@ -8407,18 +8438,19 @@ void MW::updateDevelopRenderingHint()
        like the finished picture, so the chip has to say the pixels are provisional --
        otherwise the later swap to the real render reads as an unexplained flicker. */
     if (developWorkInFlight == fPath) {
-        imageView->setRenderingHint(developInterimIsPreview
+        imageView->setRenderingHint(developInterimIsDevPreview
                                         ? tr("Cached preview - decoding raw")
                                         : tr("Decoding raw"));
     }
     else if (developFullResInFlight)  imageView->setRenderingHint(tr("Rendering full"));
     else {
         imageView->clearRenderingHint();
-        developInterimIsPreview = false;   // the real render is on screen now
+        developInterimIsDevPreview = false;   // the real render is on screen now
     }
 }
 
-void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen)
+void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
+                               bool faithful)
 {
 /*
     GUI-thread completion for a background full-res render. Apply the image only if it is still
@@ -8426,6 +8458,12 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
     params arrived while it ran, re-arm the settle timer so the latest settled value still gets a
     crisp render -- this also covers the case where the timer fired and was skipped because a render
     was already in flight.
+
+    The frame is also RETAINED (developFullFrame) so the devPreview provider can encode the
+    devPreview tier at sensor resolution instead of from the screen-resolution proxy. It is kept
+    only under the same currency test that decides the frame may be shown, so a retained frame
+    always depicts the recipe in force. Retaining costs one full-res QImage per edited image --
+    the same buffer that was just handed to the loupe.
 */
     if (G::isLogger) G::log("MW::onDevelopFullResReady");
     developFullResInFlight = false;
@@ -8438,6 +8476,9 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
         pushDevelopGeometryToView();
         imageView->setDevelopPreview(out);
         updateDevelopScopes(out);
+        developFullFrame = out;
+        developFullFramePath = fPath;
+        developFullFrameFaithful = faithful;
     }
 
     if (currentImage && gen != developParamsGen)

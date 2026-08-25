@@ -1,5 +1,5 @@
 #include "Utilities/fileops.h"
-#include "Cache/developpreviewcache.h"
+#include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 
 #include <QDir>
@@ -163,10 +163,10 @@ void FileOps::onCopied(const QString &srcPath, const QString &dstPath)
 
 void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
 {
-    DevelopPreviewCache::instance().onMoved(srcPath, dstPath);
+    DevPreviewCache::instance().onMoved(srcPath, dstPath);
 }
 
 void FileOps::onDeleted(const QString &fPath)
 {
-    DevelopPreviewCache::instance().onDeleted(fPath);
+    DevPreviewCache::instance().onDeleted(fPath);
 }

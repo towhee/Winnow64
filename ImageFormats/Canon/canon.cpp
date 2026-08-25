@@ -139,7 +139,7 @@ bool Canon::parse(MetadataParameters &p,
     m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
     m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
     p.offset = m.offsetFull;
-    jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
+    jpeg->getWidthHeight(p, m.widthOrigPreview, m.heightOrigPreview);
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) {

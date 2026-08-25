@@ -1,4 +1,4 @@
-#include "Cache/developpreviewcache.h"
+#include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 
 #include <QCoreApplication>
@@ -28,9 +28,9 @@ QString defaultCacheDir()
 
 }  // namespace
 
-DevelopPreviewCache &DevelopPreviewCache::instance()
+DevPreviewCache &DevPreviewCache::instance()
 {
-    static DevelopPreviewCache cache;
+    static DevPreviewCache cache;
     return cache;
 }
 
@@ -38,7 +38,7 @@ DevelopPreviewCache &DevelopPreviewCache::instance()
    Location and capacity
    --------------------------------------------------------------------------------- */
 
-void DevelopPreviewCache::setCacheDir(const QString &d)
+void DevPreviewCache::setCacheDir(const QString &d)
 {
 /*
     Point the cache at a directory. Deliberately does NOT read the index here: lazy load
@@ -56,40 +56,40 @@ void DevelopPreviewCache::setCacheDir(const QString &d)
     dir = d;
 }
 
-QString DevelopPreviewCache::cacheDir() const
+QString DevPreviewCache::cacheDir() const
 {
     QMutexLocker lk(&mutex);
     return dir.isEmpty() ? defaultCacheDir() : dir;
 }
 
-void DevelopPreviewCache::setMaxBytes(qint64 b)
+void DevPreviewCache::setMaxBytes(qint64 b)
 {
     QMutexLocker lk(&mutex);
     capBytes = qMax(0LL, b);
     evictLocked();
 }
 
-qint64 DevelopPreviewCache::maxBytes() const
+qint64 DevPreviewCache::maxBytes() const
 {
     QMutexLocker lk(&mutex);
     return capBytes;
 }
 
-qint64 DevelopPreviewCache::totalBytes() const
+qint64 DevPreviewCache::totalBytes() const
 {
     QMutexLocker lk(&mutex);
-    const_cast<DevelopPreviewCache*>(this)->ensureLoadedLocked();
+    const_cast<DevPreviewCache*>(this)->ensureLoadedLocked();
     return bytes;
 }
 
-int DevelopPreviewCache::count() const
+int DevPreviewCache::count() const
 {
     QMutexLocker lk(&mutex);
-    const_cast<DevelopPreviewCache*>(this)->ensureLoadedLocked();
+    const_cast<DevPreviewCache*>(this)->ensureLoadedLocked();
     return entries.count();
 }
 
-QString DevelopPreviewCache::filePathLocked(quint64 id) const
+QString DevPreviewCache::filePathLocked(quint64 id) const
 {
     const QString d = dir.isEmpty() ? defaultCacheDir() : dir;
     return d + "/" + QString::number(id, 16) + ".jpg";
@@ -107,7 +107,7 @@ QString DevelopPreviewCache::filePathLocked(quint64 id) const
    /Volumes/Photos/a.nef resolves to /Volumes/Photos and not to "/".
    --------------------------------------------------------------------------------- */
 
-QString DevelopPreviewCache::volumeRootOf(const QString &path)
+QString DevPreviewCache::volumeRootOf(const QString &path)
 {
     QString best;
     const QString p = QDir::fromNativeSeparators(path);
@@ -123,7 +123,7 @@ QString DevelopPreviewCache::volumeRootOf(const QString &path)
     return best;
 }
 
-bool DevelopPreviewCache::volumeMounted(const QString &volRoot)
+bool DevPreviewCache::volumeMounted(const QString &volRoot)
 {
     /* An entry written before volRoot was recorded, or one on the boot volume, is
        treated as mounted -- the boot volume is always there. */
@@ -140,7 +140,7 @@ bool DevelopPreviewCache::volumeMounted(const QString &volRoot)
    Core store
    --------------------------------------------------------------------------------- */
 
-void DevelopPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
+void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
                               const QByteArray &jpg)
 {
     if (fPath.isEmpty() || blobHash.isEmpty() || jpg.isEmpty()) return;
@@ -189,7 +189,7 @@ void DevelopPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
     evictLocked();
 }
 
-QByteArray DevelopPreviewCache::get(const QString &fPath, const QByteArray &blobHash)
+QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash)
 {
     QMutexLocker lk(&mutex);
     ensureLoadedLocked();
@@ -212,15 +212,15 @@ QByteArray DevelopPreviewCache::get(const QString &fPath, const QByteArray &blob
     return jpg;
 }
 
-bool DevelopPreviewCache::contains(const QString &fPath, const QByteArray &blobHash) const
+bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash) const
 {
     QMutexLocker lk(&mutex);
-    const_cast<DevelopPreviewCache*>(this)->ensureLoadedLocked();
+    const_cast<DevPreviewCache*>(this)->ensureLoadedLocked();
     auto it = entries.constFind(fPath);
     return it != entries.constEnd() && it->blobHash == blobHash;
 }
 
-void DevelopPreviewCache::removeLocked(const QString &fPath)
+void DevPreviewCache::removeLocked(const QString &fPath)
 {
     auto it = entries.find(fPath);
     if (it == entries.end()) return;
@@ -230,7 +230,7 @@ void DevelopPreviewCache::removeLocked(const QString &fPath)
     dirty = true;
 }
 
-void DevelopPreviewCache::touchLocked(const QString &fPath)
+void DevPreviewCache::touchLocked(const QString &fPath)
 {
     auto it = entries.find(fPath);
     if (it == entries.end()) return;
@@ -240,7 +240,7 @@ void DevelopPreviewCache::touchLocked(const QString &fPath)
 
 /* Evict until we are inside the cap. Demoted entries (source file missing at the last
    sweep) go first, then genuine LRU. */
-void DevelopPreviewCache::evictLocked()
+void DevPreviewCache::evictLocked()
 {
     if (bytes <= capBytes) return;
 
@@ -263,7 +263,7 @@ void DevelopPreviewCache::evictLocked()
    File-operation sync (see Utilities/fileops.h)
    --------------------------------------------------------------------------------- */
 
-void DevelopPreviewCache::onMoved(const QString &srcPath, const QString &dstPath)
+void DevPreviewCache::onMoved(const QString &srcPath, const QString &dstPath)
 {
     if (srcPath.isEmpty() || dstPath.isEmpty() || srcPath == dstPath) return;
 
@@ -290,14 +290,14 @@ void DevelopPreviewCache::onMoved(const QString &srcPath, const QString &dstPath
     dirty = true;
 }
 
-void DevelopPreviewCache::onDeleted(const QString &fPath)
+void DevPreviewCache::onDeleted(const QString &fPath)
 {
     QMutexLocker lk(&mutex);
     ensureLoadedLocked();
     removeLocked(fPath);
 }
 
-void DevelopPreviewCache::clear()
+void DevPreviewCache::clear()
 {
     QMutexLocker lk(&mutex);
     ensureLoadedLocked();
@@ -318,7 +318,7 @@ void DevelopPreviewCache::clear()
    Orphan sweep
    --------------------------------------------------------------------------------- */
 
-int DevelopPreviewCache::sweep()
+int DevPreviewCache::sweep()
 {
     QMutexLocker lk(&mutex);
     ensureLoadedLocked();
@@ -340,18 +340,18 @@ int DevelopPreviewCache::sweep()
         }
     }
     if (demoted && G::isLogger)
-        G::log("DevelopPreviewCache::sweep", "demoted " + QString::number(demoted));
+        G::log("DevPreviewCache::sweep", "demoted " + QString::number(demoted));
     return demoted;
 }
 
-void DevelopPreviewCache::reconcile()
+void DevPreviewCache::reconcile()
 {
     QMutexLocker lk(&mutex);
     ensureLoadedLocked();
     reconcileLocked();
 }
 
-void DevelopPreviewCache::reconcileLocked()
+void DevPreviewCache::reconcileLocked()
 {
     const QString d = dir.isEmpty() ? defaultCacheDir() : dir;
 
@@ -389,21 +389,21 @@ void DevelopPreviewCache::reconcileLocked()
    which costs nothing but a re-render.
    --------------------------------------------------------------------------------- */
 
-void DevelopPreviewCache::ensureLoadedLocked()
+void DevPreviewCache::ensureLoadedLocked()
 {
     if (loaded) return;
     loadLocked();
     reconcileLocked();
 }
 
-void DevelopPreviewCache::load()
+void DevPreviewCache::load()
 {
     QMutexLocker lk(&mutex);
     loadLocked();
     reconcileLocked();
 }
 
-void DevelopPreviewCache::loadLocked()
+void DevPreviewCache::loadLocked()
 {
     {
         const QString d = dir.isEmpty() ? defaultCacheDir() : dir;
@@ -442,14 +442,14 @@ void DevelopPreviewCache::loadLocked()
             }
             else {
                 QString msg = "Preview cache index unreadable; starting a new cache.";
-                G::issue("Warning", msg, "DevelopPreviewCache::load", -1, f.fileName());
+                G::issue("Warning", msg, "DevPreviewCache::load", -1, f.fileName());
             }
         }
         dirty = false;
     }
 }
 
-void DevelopPreviewCache::save()
+void DevPreviewCache::save()
 {
     QMutexLocker lk(&mutex);
     ensureLoadedLocked();

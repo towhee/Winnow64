@@ -314,8 +314,8 @@ bool Tiff::parse(MetadataParameters &p,
     (ifd->ifdDataHash.contains(257))
         ? m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue)
         : m.height = 0;
-    m.widthPreview = m.width;
-    m.heightPreview = m.height;
+    m.widthOrigPreview = m.width;
+    m.heightOrigPreview = m.height;
 
     // IFD0: samplesPerPixelFull (cannot decode if > 3)
     (ifd->ifdDataHash.contains(277))
@@ -350,7 +350,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // start thumbnail dimensions
     int thumbLongside;
-    m.widthPreview > m.heightPreview ? thumbLongside = m.widthPreview : thumbLongside = m.heightPreview;
+    m.widthOrigPreview > m.heightOrigPreview ? thumbLongside = m.widthOrigPreview : thumbLongside = m.heightOrigPreview;
     m.isEmbeddedThumbMissing = true;
 
     // IRB ********************************************************************

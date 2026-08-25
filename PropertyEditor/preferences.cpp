@@ -2,6 +2,7 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include <QDebug>
+#include "Cache/devpreviewcache.h"
 
 // this works because propertyeditor and preferences are friend classes of MW
 extern MW *mw;
@@ -195,6 +196,29 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "maxIconSize") {
         G::maxIconSize = v.toInt();
+    }
+
+    /* Developed previews. Only NEW previews are written at a changed size -- the ones
+       already cached stay valid, because the staleness test is the recipe hash, not the
+       dimensions. Shrinking the setting therefore reclaims disk gradually; "Clear
+       developed preview cache" on the Develop menu is the immediate route. */
+    if (source == "devPreviewSize") {
+        G::devPreviewMaxEdge = devPreviewSizeValue(v.toString());
+        mw->settings->setValue("devPreviewMaxEdge", G::devPreviewMaxEdge);
+    }
+
+    if (source == "devPreviewCacheSize") {
+        G::devPreviewCacheMaxBytes = devPreviewCacheValue(v.toString());
+        mw->settings->setValue("devPreviewCacheMaxBytes", G::devPreviewCacheMaxBytes);
+        /* Applied now, not next launch: lowering the limit should reclaim the disk while
+           the user is looking at the setting they just changed. */
+        DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);
+    }
+
+    if (source == "buildDevPreviewsInBackground") {
+        G::buildDevPreviewsInBackground = v.toBool();
+        mw->settings->setValue("buildDevPreviewsInBackground",
+                               G::buildDevPreviewsInBackground);
     }
 
     if (source == "imageCacheSize") {
@@ -467,6 +491,7 @@ void Preferences::addItems()
     addModify();
     addUserInterface();
     addProductivity();
+    addDevPreviews();
     addSlideShow();
     addFullScreen();
     addMetadataPanel();
@@ -1089,6 +1114,125 @@ void Preferences::addUserInterface()
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
+    addItem(i);
+}
+
+QString Preferences::devPreviewSizeLabel(int maxEdge)
+{
+    if (maxEdge == G::kDevPreviewSizeLarge)  return "Large (4096 px)";
+    if (maxEdge == G::kDevPreviewSizeScreen) return "Screen (2560 px)";
+    return "Full size";                      // kDevPreviewSizeFull, and the fallback
+}
+
+int Preferences::devPreviewSizeValue(const QString &label)
+{
+    if (label.startsWith("Large"))  return G::kDevPreviewSizeLarge;
+    if (label.startsWith("Screen")) return G::kDevPreviewSizeScreen;
+    return G::kDevPreviewSizeFull;
+}
+
+QString Preferences::devPreviewCacheLabel(qint64 bytes)
+{
+    const qint64 gb = bytes / (1024LL * 1024 * 1024);
+    /* Snap to the nearest offered size rather than inventing a label the combo has no
+       item for -- an unmatched value would leave the control blank. */
+    const QList<qint64> sizes {5, 10, 20, 50, 100, 200};
+    qint64 best = sizes.first();
+    for (qint64 s : sizes) if (qAbs(s - gb) < qAbs(best - gb)) best = s;
+    return QString("%1 GB").arg(best);
+}
+
+qint64 Preferences::devPreviewCacheValue(const QString &label)
+{
+    const qint64 gb = label.split(' ').first().toLongLong();
+    return (gb > 0 ? gb : 20) * 1024LL * 1024 * 1024;
+}
+
+void Preferences::addDevPreviews()
+{
+/*
+    Developed previews (devPreviews). An edited image has two pictures -- the camera's
+    embedded preview and the render of its develop recipe -- and these settings govern how
+    the second one is stored. See notes/Documentation.txt "Original and Developed Previews".
+*/
+    // Developed previews header (Root)
+    i.name = "DevPreviewHeader";
+    i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Developed previews";
+    i.tooltip = "How Winnow stores the developed version of images you have edited.";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // devPreview size
+    i.name = "devPreviewSize";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Developed preview size";
+    i.tooltip = "How large a developed preview is written.\n\n"
+                "Full size lets the loupe show and zoom a developed image to 100%\n"
+                "without decoding the raw file, at a cost of several MB each.\n"
+                "The smaller sizes still show the developed look, but go soft\n"
+                "when you zoom in."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewSizeLabel(G::devPreviewMaxEdge);
+    i.key = "devPreviewSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "Full size"
+               << "Large (4096 px)"
+               << "Screen (2560 px)"
+        ;
+    addItem(i);
+
+    // devPreview cache limit
+    i.name = "devPreviewCacheSize";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Developed preview cache size";
+    i.tooltip = "Disk space the developed preview cache may use.\n\n"
+                "When it is exceeded the least recently used previews are\n"
+                "deleted. Losing one costs a re-render, never an edit --\n"
+                "your develop settings live in each image's sidecar."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewCacheLabel(G::devPreviewCacheMaxBytes);
+    i.key = "devPreviewCacheSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "5 GB"
+               << "10 GB"
+               << "20 GB"
+               << "50 GB"
+               << "100 GB"
+               << "200 GB"
+        ;
+    addItem(i);
+
+    // Build devPreviews in the background
+    i.name = "buildDevPreviewsInBackground";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Build developed previews in background";
+    i.tooltip = "When a folder loads, render a developed preview for every edited\n"
+                "image that does not have a current one.\n\n"
+                "This decodes and renders those images in the background, so it\n"
+                "costs CPU and battery. With it off, only images you open in\n"
+                "Develop get a preview -- use Develop > Build Developed Previews\n"
+                "when you want the rest."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::buildDevPreviewsInBackground;
+    i.key = "buildDevPreviewsInBackground";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
     addItem(i);
 }
 

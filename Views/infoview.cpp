@@ -538,8 +538,8 @@ void InfoView::updateInfo(const int &row)
 
     s = dm->sf->index(row, G::DimensionsColumn).data().toString();
     ok->setData(ok->index(DimensionsRow, 1, fileInfoIdx), s);
-    s = dm->sf->index(row, G::WidthPreviewColumn).data().toString() + "x" +
-        dm->sf->index(row, G::HeightPreviewColumn).data().toString();
+    s = dm->sf->index(row, G::WidthOrigPreviewColumn).data().toString() + "x" +
+        dm->sf->index(row, G::HeightOrigPreviewColumn).data().toString();
     ok->setData(ok->index(PreviewDimensionsRow, 1, fileInfoIdx), s);
     s = dm->sf->index(row, G::MegaPixelsColumn).data().toString();
     ok->setData(ok->index(MegaPixelsRow, 1, fileInfoIdx), s);

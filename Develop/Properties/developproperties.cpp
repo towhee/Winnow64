@@ -1,5 +1,5 @@
 #include "Develop/Properties/developproperties.h"
-#include "Cache/developpreviewcache.h"
+#include "Cache/devpreviewcache.h"
 #include "Develop/Properties/scopeheaderbase.h"
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
@@ -5485,7 +5485,7 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     /* The image being left may have been rendered without being edited (its recipe came
        from an earlier session), in which case flushImage did nothing. Capture its
        previews now, while the frame still exists. */
-    topUpPreviews(currentImagePath);
+    topUpDevPreviews(currentImagePath);
     cancelWbDropper();                  // an armed dropper does not follow the image
     currentImagePath = fPath;
     if (fPath.isEmpty()) {
@@ -6494,12 +6494,12 @@ QString DevelopProperties::developBlobFor(const QString &fPath)
     return s.isIdentity() ? QString() : s.toBase64();
 }
 
-void DevelopProperties::setPreviewProvider(PreviewProvider provider)
+void DevelopProperties::setDevPreviewProvider(DevPreviewProvider provider)
 {
-    previewProvider = std::move(provider);
+    devPreviewProvider = std::move(provider);
 }
 
-void DevelopProperties::topUpPreviews(const QString &fPath)
+void DevelopProperties::topUpDevPreviews(const QString &fPath)
 {
 /*
     See the header. Fills in the previews for an image whose edits predate this session,
@@ -6509,18 +6509,18 @@ void DevelopProperties::topUpPreviews(const QString &fPath)
     both are rewritten. Checking only one would let the grid thumbnail and the loupe
     placeholder come from different recipes.
 */
-    if (fPath.isEmpty() || !previewProvider) return;
+    if (fPath.isEmpty() || !devPreviewProvider) return;
 
     const QString blob = developBlobFor(fPath);
     if (blob.isEmpty()) return;                       // unedited: camera render is correct
 
-    const QByteArray key = Metadata::developPreviewKey(blob).toLatin1();
+    const QByteArray key = Metadata::devPreviewKey(blob).toLatin1();
     if (fPath == toppedUpPath && key == toppedUpKey) return;   // already handled
 
-    const bool loupeOk = DevelopPreviewCache::instance().contains(fPath, key);
-    /* readDevelopPreview returns nothing unless the stored key matches the recipe, so
+    const bool loupeOk = DevPreviewCache::instance().contains(fPath, key);
+    /* readDevThumb returns nothing unless the stored key matches the recipe, so
        this is a staleness check as well as a presence check. */
-    const bool thumbOk = !Metadata::readDevelopPreview(fPath).isEmpty();
+    const bool thumbOk = !Metadata::readDevThumb(fPath).isEmpty();
     if (loupeOk && thumbOk) {
         toppedUpPath = fPath;
         toppedUpKey = key;
@@ -6529,10 +6529,10 @@ void DevelopProperties::topUpPreviews(const QString &fPath)
 
     QByteArray thumbJpg;
     QByteArray loupeJpg;
-    if (!previewProvider(fPath, thumbJpg, loupeJpg)) return;   // no faithful frame
+    if (!devPreviewProvider(fPath, thumbJpg, loupeJpg)) return;   // no faithful frame
     if (thumbJpg.isEmpty() && loupeJpg.isEmpty()) return;
 
-    if (!loupeJpg.isEmpty()) DevelopPreviewCache::instance().put(fPath, key, loupeJpg);
+    if (!loupeJpg.isEmpty()) DevPreviewCache::instance().put(fPath, key, loupeJpg);
 
     if (!thumbJpg.isEmpty()) {
         /* Rewrites the sidecar for an image the user only VIEWED. Deliberate: the two
@@ -6542,7 +6542,7 @@ void DevelopProperties::topUpPreviews(const QString &fPath)
                                       QString::fromLatin1(thumbJpg.toBase64()));
         QImage thumb;
         if (thumb.loadFromData(thumbJpg, "JPG"))
-            emit developPreviewUpdated(fPath, thumb);   // refresh the grid icon
+            emit devPreviewUpdated(fPath, thumb);   // refresh the grid icon
     }
 
     toppedUpPath = fPath;
@@ -6576,27 +6576,27 @@ void DevelopProperties::flushImage(const QString &fPath)
 
     QByteArray thumbJpg;
     QByteArray loupeJpg;
-    if (!blob.isEmpty() && previewProvider) previewProvider(fPath, thumbJpg, loupeJpg);
+    if (!blob.isEmpty() && devPreviewProvider) devPreviewProvider(fPath, thumbJpg, loupeJpg);
 
     // synchronous; sidecar is a few KB plus ~20 KB of preview, and never on a drag
     Metadata::writeDevelopSidecar(fPath, blob,
                                   QString::fromLatin1(thumbJpg.toBase64()));
 
     if (!blob.isEmpty() && !loupeJpg.isEmpty()) {
-        DevelopPreviewCache::instance().put(
-            fPath, Metadata::developPreviewKey(blob).toLatin1(), loupeJpg);
+        DevPreviewCache::instance().put(
+            fPath, Metadata::devPreviewKey(blob).toLatin1(), loupeJpg);
     }
     else {
         /* No usable preview for this recipe: drop any older one so the loupe never paints
            pixels from a recipe the user has moved on from. */
-        DevelopPreviewCache::instance().onDeleted(fPath);
+        DevPreviewCache::instance().onDeleted(fPath);
     }
 
     /* Tell the grid. A null image means "this row's thumbnail is now wrong" rather than
        "here is the new one", and MW makes the loader re-read it. */
     QImage thumb;
     if (!thumbJpg.isEmpty()) thumb.loadFromData(thumbJpg, "JPG");
-    emit developPreviewUpdated(fPath, thumb);
+    emit devPreviewUpdated(fPath, thumb);
 }
 
 void DevelopProperties::flushAll()
@@ -6607,7 +6607,7 @@ void DevelopProperties::flushAll()
     /* Leaving Develop, quitting, or any file operation: the current image may have been
        rendered without ever being edited, so capture its previews before the frame goes
        away. No-op when it is unedited or both tiers are already current. */
-    topUpPreviews(currentImagePath);
+    topUpDevPreviews(currentImagePath);
 }
 
 /* --------------------------------------------------------------------------------

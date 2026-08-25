@@ -371,8 +371,8 @@ void Metadata::reportMetadata()
     p.rpt << "\n";
     p.rpt << G::sj("width", n) << G::s(m.width) << "\n";
     p.rpt << G::sj("height", n) << G::s(m.height) << "\n";
-    p.rpt << G::sj("widthPreview", n) << G::s(m.widthPreview) << "\n";
-    p.rpt << G::sj("heightPreview", n) << G::s(m.heightPreview) << "\n";
+    p.rpt << G::sj("widthOrigPreview", n) << G::s(m.widthOrigPreview) << "\n";
+    p.rpt << G::sj("heightOrigPreview", n) << G::s(m.heightOrigPreview) << "\n";
     p.rpt << G::sj("dimensions", n) << G::s(m.dimensions) << "\n";
     p.rpt << G::sj("megapixels", n) << G::s(m.megapixels) << "\n";
     p.rpt << G::sj("loadMsecPerMp", n) << G::s(m.loadMsecPerMp) << "\n";
@@ -564,7 +564,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
     sidecarFile.close();
 }
 
-QString Metadata::developPreviewKey(const QString &blob)
+QString Metadata::devPreviewKey(const QString &blob)
 {
     if (blob.isEmpty()) return QString();
     const QByteArray h = QCryptographicHash::hash(blob.toLatin1(),
@@ -616,7 +616,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     const QString preview = blob.isEmpty() ? QString() : previewB64;
     xmp.setItem("developpreview", preview.toLatin1());
     xmp.setItem("developpreviewkey",
-                preview.isEmpty() ? QByteArray() : developPreviewKey(blob).toLatin1());
+                preview.isEmpty() ? QByteArray() : devPreviewKey(blob).toLatin1());
 
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
@@ -648,7 +648,7 @@ QString Metadata::readDevelopSidecar(QString fPath)
     return blob;
 }
 
-QByteArray Metadata::readDevelopPreview(QString fPath)
+QByteArray Metadata::readDevThumb(QString fPath)
 {
 /*
     Read the cached 256px developed thumbnail (base64 JPEG) from winnow:DevelopPreview.
@@ -660,7 +660,7 @@ QByteArray Metadata::readDevelopPreview(QString fPath)
     runs on the Reader worker threads during folder load, so callers should first check
     that a sidecar exists at all (G::SidecarColumn) rather than paying an open per image.
 */
-    if (G::isLogger) G::log("Metadata::readDevelopPreview");
+    if (G::isLogger) G::log("Metadata::readDevThumb");
 
     QFileInfo info(fPath);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
@@ -675,7 +675,7 @@ QByteArray Metadata::readDevelopPreview(QString fPath)
     sidecarFile.close();
 
     if (blob.isEmpty() || preview.isEmpty()) return QByteArray();
-    if (key != developPreviewKey(blob)) return QByteArray();
+    if (key != devPreviewKey(blob)) return QByteArray();
     return QByteArray::fromBase64(preview.toLatin1());
 }
 
@@ -1037,6 +1037,7 @@ bool Metadata::parseSidecar()
        through here -- including the early returns below -- or the previous image's
        develop badge leaks onto this one. */
     m.developEdited = false;
+    m.devPreviewKey.clear();
 
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
@@ -1068,7 +1069,14 @@ bool Metadata::parseSidecar()
 
     /* Does this image carry Develop edits? Read while the sidecar is already open and
        parsed on this worker thread, so the develop badge costs no extra I/O. */
-    if (xmp.isValid) m.developEdited = !xmp.getItem("develop").isEmpty();
+    if (xmp.isValid) {
+        const QString blob = xmp.getItem("develop");
+        m.developEdited = !blob.isEmpty();
+        /* Keyed on the RECIPE, not on the stored preview key, so the value means "what
+           this image should look like" rather than "what was last rendered". A devPreview
+           whose key does not match simply misses. */
+        if (m.developEdited) m.devPreviewKey = devPreviewKey(blob);
+    }
 
     // report
     if (p.report) {
@@ -1142,8 +1150,8 @@ void Metadata::clearMetadata()
     m.metaStatus = G::MetaNotAttempted;
     m.offsetFull = 0;
     m.lengthFull = 0;
-    m.widthPreview = 0;
-    m.heightPreview = 0;
+    m.widthOrigPreview = 0;
+    m.heightOrigPreview = 0;
     m.offsetThumb = 0;
     m.lengthThumb = 0;
     m.isBigEnd = false;
@@ -1151,8 +1159,8 @@ void Metadata::clearMetadata()
     m.ifd0Offset = 0;
     m.offsetFull = 0;
     m.lengthFull = 0;
-    m.widthPreview = 0;
-    m.heightPreview = 0;
+    m.widthOrigPreview = 0;
+    m.heightOrigPreview = 0;
     m.offsetThumb = 0;
     m.lengthThumb = 0;
     m.xmpSegmentOffset = 0;
