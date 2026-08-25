@@ -223,6 +223,19 @@ MetaRead::~MetaRead()
     // delete thumb;
 }
 
+void MetaRead::invalidateLoadedIcons()
+{
+/*
+    Tell the next setStartRow that icons it believes are loaded may have been discarded,
+    so it must re-arm them. See the JIT re-arm block there.
+
+    A flag rather than a direct edit of readSuccessThisCycle: that set belongs to the
+    dispatch loop on this thread, and the caller is the GUI thread.
+*/
+    if (G::isLogger) G::log("MetaRead::invalidateLoadedIcons");
+    loadedIconsInvalidated.store(true);
+}
+
 void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 {
 /*
@@ -282,9 +295,18 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
        needToRead short-circuits on that set, so when the chunk later moves or shrinks
        (scroll, jump, Layer 2 refine, Layer 3 eviction) those rows would be skipped and
        their thumbnails never (re)load. Drop any in-range row whose icon is genuinely not
-       loaded so it becomes eligible again. Only needed when the chunk is a window
-       (iconChunkSize < rowCount); in brute force every icon is already loaded. */
-    if (dm->iconChunkSize < sfRowCount) {
+       loaded so it becomes eligible again.
+
+       TWO WAYS TO GET HERE. A windowed chunk (iconChunkSize < rowCount) re-arms on every
+       call, because the window moves constantly. Brute force normally cannot need it --
+       every icon is already loaded -- so it is skipped to keep this off the hot path:
+       setStartRow runs on every file selection, and in brute force the loop below is
+       every row in the folder. But "every icon is already loaded" is only true while
+       nothing outside the loader discards one, and MW::setPreviewSource does exactly
+       that when the user switches Original <-> Developed. It announces it through
+       invalidateLoadedIcons, and that is what this flag is. Without it the switched
+       thumbnails are cleared and never re-read -- they simply vanish. */
+    if (dm->iconChunkSize < sfRowCount || loadedIconsInvalidated.exchange(false)) {
         const int first = qMax(0, firstIconRow);
         const int last  = qMin(sfRowCount - 1, lastIconRow);
         for (int row = first; row <= last; ++row) {
