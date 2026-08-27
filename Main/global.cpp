@@ -242,7 +242,7 @@ OperationMode operationMode = OperationMode::Preview;   // start in fast-review 
    edited everywhere. Falls back to the camera render wherever no devPreview exists. */
 PreviewSource previewSource = PreviewSource::Developed;
 int devPreviewMaxEdge = kDevPreviewSizeFull;
-int devPreviewQuality = kDevPreviewQualityHigh;
+int devPreviewQuality = kDevPreviewQualityDefault;
 qint64 devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;   // 20 GB
 bool buildDevPreviewsInBackground = false;
 

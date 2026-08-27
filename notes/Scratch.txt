@@ -1939,3 +1939,5 @@ Add a UI Original/Developed toggle for previews shown in thumbnails and the loup
 What are your thoughts on this?
 
 /Users/roryhill/Library/Application Support/Winnow/PreviewCache
+
+make the devPreview quality a preference

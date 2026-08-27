@@ -255,14 +255,15 @@ Q_NAMESPACE
     constexpr int kDevPreviewSizeLarge = 4096;
     constexpr int kDevPreviewSizeScreen = 2560;
 
-    /* JPEG quality for the devPreview tier. Qt's JPEG handler disables chroma subsampling
-       only ABOVE 90, so 95 is a real step up (4:4:4) rather than a nudge, and 90 is the
-       best quality that still subsamples. The sidecar THUMBNAIL tier is not covered by
-       this -- it is a 256 px grid icon and stays at its own fixed quality. */
-    constexpr int kDevPreviewQualityMaximum = 95;
-    constexpr int kDevPreviewQualityHigh = 90;
-    constexpr int kDevPreviewQualityMedium = 85;
-    constexpr int kDevPreviewQualitySmall = 75;
+    /* JPEG quality for the devPreview tier, entered as a number. 90 is the default and
+       Qt's JPEG handler disables chroma subsampling only ABOVE it, so 91+ writes 4:4:4 at
+       roughly double the size. The floor is 40 rather than 1 because below it JPEG starts
+       showing blocking on smooth tone at any zoom, which defeats a preview meant to be
+       looked at. The sidecar THUMBNAIL tier is not covered by this -- it is a 256 px grid
+       icon and stays at its own fixed quality. */
+    constexpr int kDevPreviewQualityDefault = 90;
+    constexpr int kDevPreviewQualityMin = 40;
+    constexpr int kDevPreviewQualityMax = 100;
 
     // Generic stringify function
     template <typename Enum>

@@ -521,8 +521,10 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setAlignment(Qt::AlignLeft);
     spinBox->setMinimum(min);
     spinBox->setMaximum(max);
+    /* Match LineEditor: no negative margin.  A negative margin-left pulls the
+       spinbox frame outside the editor widget rect and clips the first digit. */
     spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
-                           "padding:0px; border-radius:0px; margin-left:-7;}"
+                           "padding:0px; border-radius:0px; margin-left:0px;}"
                            "QSpinBox:disabled {color:gray}");
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
@@ -546,6 +548,10 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     layout->addSpacing(20);
     layout->addWidget(label);
     layout->addWidget(btn);
+    /* propertyWidgetMarginLeft - 2 puts the digits in the value column: QSpinBox
+       indents its own line edit ~2 px, so it needs that much less than the combo.  Do
+       not use a negative stylesheet margin to nudge it left - that pushes the spin box
+       outside the editor widget rect and clips the first digit. */
     layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
     setLayout(layout);
 
@@ -609,7 +615,7 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
                                      "border:none;"
 //                                     "margin-top:-1;"                 // nada
 //                                     "margin-bottom:-2;"
-                                     "margin-left:-7;"
+                                     "margin-left:0px;"     // negative clips 1st digit
                                  "}"
                                   "QDoubleSpinBox:disabled {color:gray}"
                                  );
@@ -633,7 +639,6 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
    // connect(doubleSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [=](double i){change(i);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->addSpacing(3);
     layout->addWidget(doubleSpinBox/*, Qt::AlignLeft*/);
     // layout->addSpacing(20);
     // layout->addStretch();

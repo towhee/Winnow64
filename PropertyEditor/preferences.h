@@ -24,12 +24,11 @@ private:
     void addProductivity();
     void addDevPreviews();
 
-    /* devPreview settings are shown as words but stored as numbers. These pairs are the
-       only place the mapping lives, so a label and its value cannot drift apart. */
+    /* The devPreview size and cache limit are shown as words but stored as numbers. These
+       two pairs are the only place the mapping lives, so a label and its value cannot
+       drift apart. Quality is not among them -- it is typed in as the number itself. */
     static QString devPreviewSizeLabel(int maxEdge);
     static int devPreviewSizeValue(const QString &label);
-    static QString devPreviewQualityLabel(int quality);
-    static int devPreviewQualityValue(const QString &label);
     static QString devPreviewCacheLabel(qint64 bytes);
     static qint64 devPreviewCacheValue(const QString &label);
     void addSlideShow();

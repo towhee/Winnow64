@@ -10,7 +10,7 @@ BUGS / TO DO
 - Object mask post feather not working
 - Test DnD to Folders
 - Review menu disabled ie Go
-- Add Develop to Preferences dialog (cache cap and clear preveiw cache)
+- Add Develop to Preferences dialog (cache cap and clear preview cache)
 - Eliminate Edits layouts except Minimal
 - Check if libheif library is in Winnow (use for windows platform)
 - Develop copy / paste fine tuning
