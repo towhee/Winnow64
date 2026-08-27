@@ -343,7 +343,7 @@ bool MW::loadSettings()
         // develop previews
         G::previewSource = G::PreviewSource::Developed;
         G::devPreviewMaxEdge = G::kDevPreviewSizeFull;
-        G::devPreviewQuality = G::kDevPreviewQualityHigh;
+        G::devPreviewQuality = G::kDevPreviewQualityDefault;
         G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
@@ -547,9 +547,11 @@ bool MW::loadSettings()
     }
     if (settings->contains("devPreviewQuality")) {
         const int q = settings->value("devPreviewQuality").toInt();
-        /* A JPEG quality outside this band is either a damaged setting or a file so soft
-           it is not worth the disk it saves, so it is ignored rather than clamped. */
-        if (q >= 50 && q <= 100) G::devPreviewQuality = q;
+        /* A JPEG quality outside the band the spinbox offers is a damaged setting, so it
+           is ignored rather than clamped -- adopting it would write every future preview
+           at a quality no control can show or undo. */
+        if (q >= G::kDevPreviewQualityMin && q <= G::kDevPreviewQualityMax)
+            G::devPreviewQuality = q;
     }
     if (settings->contains("devPreviewCacheMaxBytes")) {
         const qint64 cap = settings->value("devPreviewCacheMaxBytes").toLongLong();
