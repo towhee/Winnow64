@@ -691,17 +691,119 @@ void MW::toggleColorManage(Tog n)
     emit imageCacheColorManageChange();
 }
 
+void MW::refreshDevelopThumbs()
+{
+/*
+    Re-read the thumbnail of every image that has a devPreview, because which picture that
+    thumbnail should show has just changed.
+
+    THE EFFECTIVE SOURCE IS NOT G::previewSource ALONE -- it is
+
+        (G::operationMode == Develop) ? Developed : G::previewSource
+
+    (the test Thumb::loadDevThumb makes). So this has to run on a MODE change as well as on
+    a picture change: entering Develop while set to Original must replace the camera thumbs
+    with developed ones, and leaving it must put them back. Callers decide when the
+    effective source actually moved; this function just does the work.
+
+    Only rows that carry a devPreview key are touched. The rest have one picture, so
+    re-reading them would cost a folder's worth of I/O to produce identical pixels.
+*/
+    if (G::isLogger) G::log("MW::refreshDevelopThumbs");
+    if (!dm || dm->rowCount() == 0) return;
+
+    /* Drop the icons and re-read them. The developed thumbnail OVERWRITES the row's icon
+       (DataModel::setDevelopIcon) -- the camera thumb is not kept alongside it -- so
+       getting either one back means re-reading it. */
+    bool anyCleared = false;
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        if (!dm->index(row, G::DevPreviewKeyColumn).data().toString().isEmpty()) {
+            dm->clearDevelopIcon(row);
+            anyCleared = true;
+        }
+    }
+    if (!anyCleared) return;            // nothing in this folder is developed
+
+    /* The delegates keep their own scaled QPixmap per row, so they have to be told too or
+       they keep painting the old thumbnail. */
+    if (thumbView && thumbView->iconViewDelegate)
+        thumbView->iconViewDelegate->clearAllCache();
+    if (gridView && gridView->iconViewDelegate)
+        gridView->iconViewDelegate->clearAllCache();
+
+    /* MetaRead remembers every row a reader has already returned for this folder and
+       refuses to read it again (readSuccessThisCycle / needToRead). It re-arms rows whose
+       icon is missing only when the icon chunk is a WINDOW -- in the default brute-force
+       mode it assumes a loaded icon stays loaded, which was true until previews started
+       discarding them. Tell it otherwise, or the cleared thumbnails are never re-read and
+       simply disappear. Queued ahead of reloadIconChunk's own queued call, so it is
+       observed by the setStartRow that has to act on it. */
+    QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
+    reloadIconChunk();
+}
+
+void MW::syncPreviewSourceEnabled()
+{
+/*
+    Original / Developed is a Preview-mode choice only. DEVELOP MODE ALWAYS SHOWS THE
+    DEVELOPED IMAGE -- in the loupe, which is a live render of the recipe being edited, and
+    in the thumbnails, which must agree with it. Offering the choice there would let the
+    user ask for a picture Develop is not able to show.
+
+    So in Develop the combo is DISABLED and reads Developed, and the two menu items and Y
+    are disabled with a reason (a disabled QAction greys its menu item AND stops its
+    shortcut firing, so one gate covers both -- the reason surfaces through the Disabled
+    Shortcut Feedback path).
+
+    THE PREFERENCE ITSELF IS NOT CHANGED. G::previewSource keeps whatever the user chose
+    for Preview mode, and the combo shows Developed as a statement about the mode rather
+    than as a new setting. Entering Develop must not silently rewrite a Preview-mode
+    preference the user will get back the moment they leave.
+*/
+    if (G::isLogger) G::log("MW::syncPreviewSourceEnabled");
+    const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    const QString reason = "Develop mode always shows the developed image";
+
+    if (previewSourceCombo) {
+        QSignalBlocker block(previewSourceCombo);
+        previewSourceCombo->setEnabled(!inDevelop);
+        previewSourceCombo->setCurrentIndex(inDevelop ? int(G::PreviewSource::Developed)
+                                                      : int(G::previewSource));
+        previewSourceCombo->setToolTip(
+            inDevelop
+                ? QString("Develop mode always shows the developed image.\n"
+                          "Leave Develop (E, G or T) to see the original.")
+                : QString("What you are looking at:\n"
+                          "  Original \u2014 the camera's picture, as shot\n"
+                          "  Developed \u2014 your develop edits applied\n"
+                          "Shortcut: Y"));
+    }
+
+    for (QAction *a : {previewSourceOriginalAction, previewSourceDevelopedAction,
+                       togglePreviewSourceAction}) {
+        if (!a) continue;
+        a->setEnabled(!inDevelop);
+        a->setProperty("disabledReason", reason);
+    }
+    /* The radio pair still reports the stored choice, so returning to Preview shows the
+       picture the user last asked for rather than whatever Develop implied. */
+    if (previewSourceOriginalAction)
+        previewSourceOriginalAction->setChecked(G::previewSource == G::PreviewSource::Original);
+    if (previewSourceDevelopedAction)
+        previewSourceDevelopedAction->setChecked(G::previewSource == G::PreviewSource::Developed);
+}
+
 void MW::togglePreviewSource()
 {
 /*
-    Flip between the camera's picture and the developed one. In Develop mode this is not a
-    question -- the developed picture is the only sensible answer and the loupe is showing
-    a live render of it -- so the toggle LEAVES Develop rather than doing nothing, which is
-    what makes it usable as a before/after key while editing.
+    Flip between the camera's picture and the developed one.
+
+    Unreachable in Develop mode: syncPreviewSourceEnabled disables the action there, and a
+    disabled QAction's shortcut does not fire. The guard below is belt and braces for a
+    direct call.
 */
     if (G::isLogger) G::log("MW::togglePreviewSource");
-    if (G::operationMode == G::OperationMode::Develop)
-        setOperationMode(G::OperationMode::Preview);
+    if (G::operationMode == G::OperationMode::Develop) return;
     setPreviewSource(G::previewSource == G::PreviewSource::Developed
                          ? G::PreviewSource::Original
                          : G::PreviewSource::Developed);
@@ -731,40 +833,13 @@ void MW::setPreviewSource(G::PreviewSource source)
     if (G::previewSource == source) return;
     G::previewSource = source;
 
-    if (previewSourceCombo) previewSourceCombo->setCurrentIndex(int(source));
-    if (previewSourceOriginalAction)
-        previewSourceOriginalAction->setChecked(source == G::PreviewSource::Original);
-    if (previewSourceDevelopedAction)
-        previewSourceDevelopedAction->setChecked(source == G::PreviewSource::Developed);
+    syncPreviewSourceEnabled();     // combo row + the radio pair
 
     settings->setValue("previewSource", static_cast<int>(G::previewSource));
 
     if (dm->rowCount() == 0) return;
 
-    /* Drop the icons and re-read them. The delegates keep their own scaled QPixmap per
-       row, so they have to be told too or they keep painting the old thumbnail. */
-    bool anyCleared = false;
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        if (!dm->index(row, G::DevPreviewKeyColumn).data().toString().isEmpty()) {
-            dm->clearDevelopIcon(row);
-            anyCleared = true;
-        }
-    }
-    if (thumbView && thumbView->iconViewDelegate)
-        thumbView->iconViewDelegate->clearAllCache();
-    if (gridView && gridView->iconViewDelegate)
-        gridView->iconViewDelegate->clearAllCache();
-
-    /* MetaRead remembers every row a reader has already returned for this folder and
-       refuses to read it again (readSuccessThisCycle / needToRead). It re-arms rows whose
-       icon is missing only when the icon chunk is a WINDOW -- in the default brute-force
-       mode it assumes a loaded icon stays loaded, which was true until this function
-       started discarding them. Tell it otherwise, or the cleared thumbnails are never
-       re-read and simply disappear. Queued ahead of reloadIconChunk's own queued call, so
-       it is observed by the setStartRow that has to act on it. */
-    if (anyCleared)
-        QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
-    reloadIconChunk();
+    refreshDevelopThumbs();
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {

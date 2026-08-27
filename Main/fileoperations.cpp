@@ -1,11 +1,25 @@
 #include "Main/mainwindow.h"
 #include "Utilities/fileops.h"
+#include "Cache/devpreviewcache.h"
 #include <QSet>
 
 /*  *******************************************************************************************
 
 
 */
+
+/*
+    Folder-level refusal for the develop preview cache. FileOps guards the per-file
+    operations, but deleting the folder or pasting into it are one step above that, and
+    both would take the cache with them. See Cache/devpreviewcache.h.
+*/
+static bool refuseCacheFolder(const QString &path)
+{
+    if (!DevPreviewCache::instance().isCachePath(path)) return false;
+    if (G::popup)
+        G::popup->showPopup("Not allowed: " + DevPreviewCache::readOnlyReason() + ".", 3000);
+    return true;
+}
 
 void MW::copyFiles()
 {
@@ -72,6 +86,8 @@ void MW::pasteFiles(QString folderPath)
 
         folderPath = dm->folderList.at(0);
     }
+
+    if (refuseCacheFolder(folderPath)) return;
 
     const QMimeData *mimeData = QGuiApplication::clipboard()->mimeData();
     QStringList newPaths;
@@ -564,6 +580,8 @@ void MW::deleteFolder()
     else if (senderObject == "deleteFSTreeFolder") {
         dirToDelete = mouseOverFolderPath;
     }
+
+    if (refuseCacheFolder(dirToDelete)) return;
 
     if (!QFile(dirToDelete).exists()) {
         QString msg = dirToDelete + " does not exist";

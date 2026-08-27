@@ -2,6 +2,8 @@
 #include "Main/global.h"
 #include "Utilities/utilities.h"
 
+#include <QSaveFile>
+
 /*
 
 Xmp reads xmp tags from from the source file buffer (xmpBa), which could be from an image
@@ -745,11 +747,47 @@ bool Xmp::writeJPG(QByteArray &buffer)
 
 bool Xmp::writeSidecar(QFile &sidecarFile)
 {
+/*
+    Replace the sidecar with the current document, ATOMICALLY.
+
+    The sidecar is the only copy of the user's develop recipe (winnow:Develop), and of
+    rating, label, title, creator and copyright, so an interrupted write here loses data
+    rather than costing a re-render -- unlike the develop preview cache beside it, which
+    is disposable by design. This used to truncate the open handle with resize(0) and
+    write in place, so a crash, a power loss or a full volume between the two left an
+    empty or half-written sidecar. QSaveFile writes a temporary and renames it over the
+    original, so what is on disk is either the whole old document or the whole new one.
+
+    The window this closes is not theoretical any more: develop previews put a base64
+    256px JPEG in the sidecar, roughly ten times the bytes the file used to carry, and
+    DevelopProperties::topUpDevPreviews rewrites sidecars for images the user merely
+    VIEWED.
+
+    THE CALLER'S HANDLE IS CLOSED HERE. On Windows the rename inside commit() fails while
+    another handle to the target is open, and every caller opens the sidecar ReadWrite to
+    construct the Xmp. Closing is safe: no caller reads from the handle after writing, and
+    all of them close it again afterwards, which is a no-op.
+
+    A SHORT WRITE IS A FAILURE. Only a return of 0 used to be tested, so a partial write
+    on a full volume was reported to the caller as success.
+*/
     if (G::isLogger) G::log("Xmp::writeSidecar");
-    sidecarFile.resize(0);
-    qint64 bytesWritten = sidecarFile.write(docToQString().toUtf8());
-    if (bytesWritten == 0) return false;
-    return true;
+
+    /* Serialise before closing the handle: docToQString walks the document, and the
+       document must not depend on a file this function has already shut. */
+    const QByteArray doc = docToQString().toUtf8();
+
+    const QString path = sidecarFile.fileName();
+    if (path.isEmpty()) return false;
+    sidecarFile.close();
+
+    QSaveFile f(path);
+    if (!f.open(QIODevice::WriteOnly)) return false;
+    if (f.write(doc) != doc.size()) {
+        f.cancelWriting();
+        return false;
+    }
+    return f.commit();
 }
 
 //QString Xmp::getItem(QByteArray item)

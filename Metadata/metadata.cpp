@@ -4,6 +4,7 @@
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
+#include "Cache/devpreviewcache.h"
 #include "ImageFormats/Video/mov.h"
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
@@ -516,6 +517,20 @@ int Metadata::getNewOrientation(int orientation, int rotation)
     return orientationFromDegrees[degrees];
 }
 
+/*
+    The develop preview cache folder holds renders, not photographs, and the cache deletes
+    any file its index does not name -- so a sidecar written beside a cached preview is
+    both meaningless and gone at the next launch. Every sidecar writer refuses there.
+    See DevPreviewCache::isCachePath.
+*/
+static bool isPreviewCachePath(const QString &fPath, const QString &src)
+{
+    if (!DevPreviewCache::instance().isCachePath(fPath)) return false;
+    G::issue("Warning", "Refusing to write sidecar: "
+             + DevPreviewCache::readOnlyReason() + ".", src, -1, fPath);
+    return true;
+}
+
 void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 {
 /*
@@ -524,6 +539,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
     to an XMP sidecar (created if absent) so the rotation survives a reload.
 */
     if (G::isLogger) G::log("Metadata::writeOrientation");
+    if (isPreviewCachePath(fPath, "Metadata::writeOrientation")) return;
     if (G::modifySourceFiles) {
         if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup")) {
             G::issue("Warning", "Backup failed; orientation not written.",
@@ -589,6 +605,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     user a stale image, which is worse than showing the camera thumbnail.
 */
     if (G::isLogger) G::log("Metadata::writeDevelopSidecar");
+    if (isPreviewCachePath(fPath, "Metadata::writeDevelopSidecar")) return;
 
     QFileInfo info(fPath);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
@@ -698,6 +715,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 */
     QString srcFun = "Metadata::writeXMP";
     if (G::isLogger) G::log(srcFun);
+    if (isPreviewCachePath(fPath, srcFun)) return false;
     bool isDebug = false;
 
     // is xmp supported for this file

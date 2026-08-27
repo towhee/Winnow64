@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Cache/devpreviewcache.h"
 
 void MW::createActions()
 {
@@ -711,6 +712,16 @@ void MW::createGoActions()
     addAction(jumpAction);
     connect(jumpAction, &QAction::triggered, this, &MW::jump);
 
+    gotoFolderAction = new QAction(tr("Go to Folder..."), this);
+    gotoFolderAction->setObjectName("gotoFolder");
+    /* Set here, not in loadShortcuts' default block: that block only runs for a profile
+       with no saved Shortcuts group, so an existing user would never see a new default.
+       loadShortcuts still overrides this if the user has customised the key. */
+    gotoFolderAction->setShortcut(QKeySequence("Ctrl+Shift+G"));
+    gotoFolderAction->setShortcutVisibleInContextMenu(true);
+    addAction(gotoFolderAction);
+    connect(gotoFolderAction, &QAction::triggered, this, &MW::gotoFolder);
+
     keyScrollLeftAction = new QAction(tr("Scroll Left"), this);
     keyScrollLeftAction->setObjectName("scrollLeft");
     keyScrollLeftAction->setShortcutVisibleInContextMenu(true);
@@ -1083,13 +1094,17 @@ void MW::createUtilActions()
         setOperationMode(G::OperationMode::Develop);
     });
 
-    /* Which of an image's two pictures the grid and the loupe show outside Develop mode.
-       An exclusive pair, mirroring the first two rows of the status-bar dropdown -- the
-       menu is where the feature is discoverable, the dropdown is where it is quick.
+    /* Which of an image's two pictures the grid and the loupe show. An exclusive pair
+       mirroring the status-bar dropdown -- the menu is where the feature is discoverable,
+       the dropdown is where it is quick -- plus Y for the toggle.
 
-       Y toggles the pair. It is deliberately NOT in developShortcuts: in Develop mode the
-       key falls through to this global action, and togglePreviewSource then LEAVES
-       Develop, which is what makes Y usable as a before/after key while editing. */
+       ALL THREE ARE DISABLED IN DEVELOP MODE by syncPreviewSourceEnabled, because Develop
+       always shows the developed image. A disabled QAction greys its menu item AND stops
+       its shortcut firing, so that one gate covers the items and Y together, and the
+       reason reaches the user through the Disabled Shortcut Feedback path.
+
+       Y is deliberately NOT in developShortcuts: it has no Develop-local meaning, so it
+       falls through to this action, which is disabled there. */
     previewSourceGroup = new QActionGroup(this);
     previewSourceGroup->setExclusive(true);
 
@@ -1100,11 +1115,8 @@ void MW::createUtilActions()
     previewSourceOriginalAction->setChecked(G::previewSource == G::PreviewSource::Original);
     previewSourceGroup->addAction(previewSourceOriginalAction);
     addAction(previewSourceOriginalAction);
-    connect(previewSourceOriginalAction, &QAction::triggered, this, [this]() {
-        if (G::operationMode == G::OperationMode::Develop)
-            setOperationMode(G::OperationMode::Preview);
-        setPreviewSource(G::PreviewSource::Original);
-    });
+    connect(previewSourceOriginalAction, &QAction::triggered, this,
+            [this]() { setPreviewSource(G::PreviewSource::Original); });
 
     previewSourceDevelopedAction = new QAction(tr("Show Developed"), this);
     previewSourceDevelopedAction->setObjectName("previewSourceDeveloped");
@@ -1113,11 +1125,8 @@ void MW::createUtilActions()
     previewSourceDevelopedAction->setChecked(G::previewSource == G::PreviewSource::Developed);
     previewSourceGroup->addAction(previewSourceDevelopedAction);
     addAction(previewSourceDevelopedAction);
-    connect(previewSourceDevelopedAction, &QAction::triggered, this, [this]() {
-        if (G::operationMode == G::OperationMode::Develop)
-            setOperationMode(G::OperationMode::Preview);
-        setPreviewSource(G::PreviewSource::Developed);
-    });
+    connect(previewSourceDevelopedAction, &QAction::triggered, this,
+            [this]() { setPreviewSource(G::PreviewSource::Developed); });
 
     togglePreviewSourceAction = new QAction(tr("Original / Developed"), this);
     togglePreviewSourceAction->setObjectName("togglePreviewSource");
@@ -2176,6 +2185,7 @@ void MW::createGoMenu()
     goMenu = new QMenu(this);
     goGroupAct = new QAction("Go", this);
     goGroupAct->setMenu(goMenu);
+    goMenu->addAction(gotoFolderAction);
     goMenu->addAction(jumpAction);
     goMenu->addSeparator();
     // moved to MW::eventFilter
@@ -2856,6 +2866,21 @@ void MW::renameEraseMemCardFromContextMenu(QString path)
     eraseUsbActionFromContextMenu->setText(text);
 }
 
+bool MW::isPreviewCacheFolderLoaded() const
+{
+/*
+    Winnow's develop preview cache is a folder of JPEGs, so nothing stops the user
+    browsing to it -- but its files are renders the cache owns, named by an id only its
+    index can attribute to an image, and it deletes anything its index does not name.
+    Every write is therefore refused (FileOps, the sidecar writers, Develop). This reports
+    whether the current load is that folder, so the actions are GREYED with a reason
+    rather than firing into a silent refusal.
+*/
+    for (const QString &f : dm->folderList)
+        if (DevPreviewCache::instance().isCachePath(f)) return true;
+    return false;
+}
+
 void MW::enableSelectionDependentMenus()
 {
 /*
@@ -2877,6 +2902,12 @@ void MW::enableSelectionDependentMenus()
     const QString need2Sel      = "select at least two images";
     const QString needGridTable = "switch to Grid or Table view";
     const QString needClipboard = "copy files to the clipboard first";
+    /* The develop preview cache is browsable but read-only: everything that writes an
+       image, a sidecar or the folder itself is greyed while it is loaded. */
+    const bool isCacheFolder = isPreviewCacheFolderLoaded();
+    const bool canWrite = dmHasRows && !isCacheFolder;
+    const QString needWritable = isCacheFolder
+        ? DevPreviewCache::readOnlyReason() : needFolder;
 
     /* gate() sets the enabled state and records why it would be disabled. */
     auto gate = [](QAction *a, bool enabled, const QString &reason) {
@@ -2912,7 +2943,7 @@ void MW::enableSelectionDependentMenus()
     gate(reportMetadataAction, dmHasRows, needFolder);
     gate(copyFolderPathFromContextAction, dmHasRows, needFolder);
     gate(copyImagePathFromContextAction, dmHasRows, needFolder);
-    gate(renameAction, dmHasRows, needFolder);
+    gate(renameAction, canWrite, needWritable);
     gate(saveAsFileAction, dmHasRows, needFolder);
 
     //Edit menu
@@ -2921,19 +2952,27 @@ void MW::enableSelectionDependentMenus()
     gate(shareFilesAction, dmHasRows, needFolder);
     gate(copyFilesAction, dmHasRows, needFolder);
     gate(copyImageAction, dmHasRows, needFolder);
-    gate(pasteFilesAction, Utilities::clipboardHasUrls(), needClipboard);
+    gate(pasteFilesAction, Utilities::clipboardHasUrls() && !isCacheFolder,
+         isCacheFolder ? needWritable : needClipboard);
 
-    gate(deleteImagesAction, dmHasRows, needFolder);
+    gate(deleteImagesAction, canWrite, needWritable);
     gate(pickAction, dmHasRows, needFolder);
     gate(pickMouseOverAction, dmHasRows, needFolder);
     gate(rejectAction, dmHasRows, needFolder);
     gate(pickUnlessRejectedAction, dmHasRows, needFolder);
     gate(popPickHistoryAction, dmHasRows, needFolder);
     gate(tokenTemplateEditorAction, dmHasRows, needFolder);
-    setMenuEnabled(ratingsMenu, dmHasRows, needFolder);
-    setMenuEnabled(labelsMenu, dmHasRows, needFolder);
-    gate(rotateRightAction, dmHasRows, needFolder);
-    gate(rotateLeftAction, dmHasRows, needFolder);
+    /* Develop writes the recipe to the image's sidecar, so it is refused in the cache
+       folder like every other write. Gating the action greys the Develop menu item AND
+       makes D inert, with the reason reaching the user through the Disabled Shortcut
+       Feedback path. */
+    if (operationModeAction) gate(operationModeAction, !isCacheFolder, needWritable);
+    if (developAction) gate(developAction, !isCacheFolder, needWritable);
+
+    setMenuEnabled(ratingsMenu, canWrite, needWritable);
+    setMenuEnabled(labelsMenu, canWrite, needWritable);
+    gate(rotateRightAction, canWrite, needWritable);
+    gate(rotateLeftAction, canWrite, needWritable);
     /* Utilities children (mediaReadSpeed, visCmpImages) operate on the loaded images;
        meanStack and focusStack need at least two selected images to stack */
     setMenuEnabled(utilitiesMenu, dmHasRows, needFolder);
@@ -2941,7 +2980,12 @@ void MW::enableSelectionDependentMenus()
     gate(focusStackAction, has2Selected, need2Sel);
 
     // Go menu
-    goMenu->setEnabled(dmHasRows);
+    /* The Go menu itself stays enabled: "Go to Folder..." is a way IN to a folder, so it
+       must be reachable with nothing loaded.  Every other child is gated individually
+       below (disabling the QMenu would grey the menu bar entry but leave the children's
+       window-level shortcuts live -- see setMenuEnabled above). */
+    goMenu->setEnabled(true);
+    /* gotoFolderAction is deliberately never gated - it is always available. */
 
     /* Horizontal / home / end / page navigation works in any view */
     gate(jumpAction, dmHasRows, needFolder);

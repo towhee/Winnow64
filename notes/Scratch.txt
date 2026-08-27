@@ -1937,3 +1937,5 @@ When Winnow is in loupe mode and there is a devPreview then the imageCache shoul
 Add a UI Original/Developed toggle for previews shown in thumbnails and the loupe in loupe and grid modes.
 
 What are your thoughts on this?
+
+/Users/roryhill/Library/Application Support/Winnow/PreviewCache

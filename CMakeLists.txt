@@ -96,8 +96,10 @@ if(APPLE AND NOT TARGET WrapOpenGL::WrapOpenGL)
     target_link_libraries(WrapOpenGL::WrapOpenGL INTERFACE "-framework OpenGL")
 endif()
 
+# Sql: the local index database (Cache/cachedb.cpp) behind the develop preview cache,
+# via the QSQLITE driver. macdeployqt/windeployqt copy the sqldrivers plugin themselves.
 find_package(Qt6 REQUIRED COMPONENTS
-    Core Widgets Multimedia MultimediaWidgets Concurrent Svg Test Network
+    Core Widgets Multimedia MultimediaWidgets Concurrent Svg Test Network Sql
 )
 
 qt_standard_project_setup()
@@ -108,6 +110,7 @@ qt_standard_project_setup()
 set(WINNOW_SOURCES
     # Cache
     Cache/cachedata.cpp
+    Cache/cachedb.cpp
     Cache/devpreviewcache.cpp
     Cache/framedecoder.cpp
     Cache/imagecache.cpp
@@ -757,6 +760,7 @@ target_link_libraries(Winnow PRIVATE
     Qt6::Svg
     Qt6::Test
     Qt6::Network
+    Qt6::Sql
 )
 
 # Mirrors `macx-clang: QMAKE_CXXFLAGS += -include arm_acle.h`

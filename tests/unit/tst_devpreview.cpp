@@ -4,8 +4,13 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QtConcurrent>
+#include <QSqlDatabase>
+#include <QStandardPaths>
+#include <QSqlQuery>
 #include <QTemporaryDir>
 
+#include "Cache/cachedb.h"
 #include "Cache/devpreviewcache.h"
 
 /*
@@ -19,12 +24,19 @@
       o the orphan sweep NEVER acts on an unmounted volume (an ejected card must not
         look like a folder full of deleted images)
       o the byte cap actually bounds the cache, evicting demoted entries first
+      o a path reused by a DIFFERENT image never serves the previous occupant's preview,
+        even when the two share a recipe (which a preset makes the normal case)
+      o an existing JSON index is carried into the database rather than abandoned
+      o the same image spelled two ways is ONE entry, not two
+      o the payload is read without the cache mutex, so decoder threads run in parallel
 */
 class tst_devpreview : public QObject
 {
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+    void cleanupTestCase();
     void init();
     void putGetRoundTrip();
     void staleRecipeMisses();
@@ -36,8 +48,14 @@ private slots:
     void sweepDemotesMissingSource();
     void sweepSkipsUnmountedVolume();
     void indexSurvivesReload();
+    void putCommitsIndexWithoutAnExplicitSave();
     void lazyLoadPreservesIdsAcrossSessions();
     void reconcileDropsStrayFiles();
+    void reusedPathDoesNotServeThePreviousImage();
+    void pathSpellingDoesNotSplitTheEntry();
+    void concurrentGetsAreNotSerialised();
+    void legacyJsonIndexIsImported();
+    void isCachePathIdentifiesTheProtectedFolder();
 
 private:
     QString imagePath(const QString &name) const;
@@ -56,6 +74,22 @@ QString tst_devpreview::imagePath(const QString &name) const
 QByteArray tst_devpreview::jpg(int fill, int kb)
 {
     return QByteArray(kb * 1024, char(fill));
+}
+
+void tst_devpreview::initTestCase()
+{
+/*
+    Keep every path this test touches inside the test sandbox. init() calls clear() before
+    it has pointed the cache anywhere, which without this resolves to the real
+    AppDataLocation -- and clear() deletes what it finds there.
+*/
+    QStandardPaths::setTestModeEnabled(true);
+}
+
+void tst_devpreview::cleanupTestCase()
+{
+    /* Release the database handle before QTemporaryDir removes the directory under it. */
+    CacheDb::instance().closeThisThread();
 }
 
 void tst_devpreview::init()
@@ -278,21 +312,14 @@ void tst_devpreview::sweepSkipsUnmountedVolume()
     c.put(p, "recipe1", jpg(0x46));
     c.save();
 
-    // rewrite the index so the entry claims to live on a volume that is not mounted
-    const QString indexPath = QDir(c.cacheDir()).absoluteFilePath("index.json");
-    QFile idx(indexPath);
-    QVERIFY(idx.open(QIODevice::ReadOnly));
-    QJsonObject root = QJsonDocument::fromJson(idx.readAll()).object();
-    idx.close();
-    QJsonArray entries = root.value("entries").toArray();
-    QCOMPARE(entries.size(), 1);
-    QJsonObject e = entries.at(0).toObject();
-    e.insert("vol", "/Volumes/__WinnowNoSuchVolume__");
-    entries.replace(0, e);
-    root.insert("entries", entries);
-    QVERIFY(idx.open(QIODevice::WriteOnly));
-    idx.write(QJsonDocument(root).toJson(QJsonDocument::Compact));
-    idx.close();
+    // rewrite the row so the entry claims to live on a volume that is not mounted
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QVERIFY(db.isOpen());
+        QSqlQuery q(db);
+        QVERIFY(q.exec("UPDATE devpreview SET vol = '/Volumes/__WinnowNoSuchVolume__'"));
+        QCOMPARE(q.numRowsAffected(), 1);
+    }
 
     c.setCacheDir(QString());               // force a genuine reload below
     c.setCacheDir(cacheTmp.path());
@@ -312,6 +339,33 @@ void tst_devpreview::indexSurvivesReload()
     c.save();
 
     c.setCacheDir(QString());               // point elsewhere, then back
+    c.setCacheDir(cacheTmp.path());
+
+    QCOMPARE(c.count(), 1);
+    QCOMPARE(c.get(p, "recipe1"), payload);
+}
+
+void tst_devpreview::putCommitsIndexWithoutAnExplicitSave()
+{
+/*
+    REGRESSION. The index was committed only by MW::closeEvent. Any abnormal exit --
+    force quit, crash, power loss -- therefore did not merely FORGET the previews written
+    that session: the next launch's reconcile() deleted the .jpg files the index did not
+    name, while the 256px thumbnails written to the sidecars in the same flush survived.
+    That left exactly the state this cache exists to prevent -- the grid showing the
+    developed picture and the loupe showing the camera's, with no way back short of
+    re-rendering the folder.
+
+    put() now commits the index with the payload, so a session that never reaches
+    closeEvent still leaves a usable cache.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("a.nef");
+    const QByteArray payload = jpg(0x61);
+    c.put(p, "recipe1", payload);
+    // NO c.save() -- stands in for a session that never shut down cleanly
+
+    c.setCacheDir(QString());               // a new session, same directory
     c.setCacheDir(cacheTmp.path());
 
     QCOMPARE(c.count(), 1);
@@ -378,6 +432,229 @@ void tst_devpreview::reconcileDropsStrayFiles()
 
     QVERIFY(!QFile::exists(stray));
     QCOMPARE(c.count(), 1);          // the real entry is untouched
+}
+
+
+void tst_devpreview::reusedPathDoesNotServeThePreviousImage()
+{
+/*
+    The recipe hash identifies a RECIPE, not an image. Presets, Paste Settings and
+    multi-image edits give whole folders a byte-identical recipe, so the hash cannot tell
+    two images apart at all. If a path is reused by a different image behind Winnow's back
+    -- renamed in Finder while it was closed, restored from a backup, renumbered by the
+    camera -- both the path and the hash still match, and the previous occupant's picture
+    would be served as though it were correct.
+
+    The entry also records the source image's length and modification time, which is what
+    makes this a miss.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("DSC_0001.nef");
+
+    // the first image, and its preview
+    {
+        QFile f(p);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("first image");
+        f.close();
+    }
+    const QByteArray payload = jpg(0x71);
+    c.put(p, "sharedRecipe", payload);
+    QCOMPARE(c.get(p, "sharedRecipe"), payload);
+
+    // a DIFFERENT image takes the same path, carrying the same recipe
+    QVERIFY(QFile::remove(p));
+    {
+        QFile f(p);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("a completely different image");
+        f.close();
+    }
+
+    QVERIFY(c.get(p, "sharedRecipe").isEmpty());
+    QVERIFY(!c.contains(p, "sharedRecipe"));
+    // and the entry is gone rather than left to be matched again
+    QCOMPARE(c.count(), 0);
+}
+
+void tst_devpreview::pathSpellingDoesNotSplitTheEntry()
+{
+/*
+    The same file arrives spelled several ways -- QFileInfo::filePath() from a folder
+    scan, dropDir + "/" + name from a paste (which doubles a separator when the folder
+    already ends in one), QUrl::toLocalFile() from a Finder drag, and either case on the
+    case-insensitive filesystems both supported platforms use by default.
+
+    Keyed byte-exactly, each spelling is a different image: the same picture is stored
+    TWICE at several MB each so the byte cap bites sooner, lookups under the other
+    spelling silently re-decode the raw, and the FileOps move/delete hooks quietly find
+    nothing to update. All of them are one entry now (Cache/pathkey.h).
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+
+    const QString canonical = imagePath("Spelling.nef");
+    {
+        QFile f(canonical);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("x");
+        f.close();
+    }
+    const QByteArray payload = jpg(0x74);
+    c.put(canonical, "recipe1", payload);
+    QCOMPARE(c.count(), 1);
+
+    // every one of these names the same file
+    QStringList spellings;
+    spellings << QDir(tmp.path()).absoluteFilePath("./Spelling.nef")     // dot component
+              << tmp.path() + "//Spelling.nef"                           // doubled slash
+              << canonical.toLower();                                    // case
+#ifdef Q_OS_WIN
+    spellings << QDir::toNativeSeparators(canonical);                    // backslashes
+#endif
+
+    for (const QString &sp : spellings) {
+        QVERIFY2(c.contains(sp, "recipe1"), qPrintable(sp));
+        QCOMPARE(c.get(sp, "recipe1"), payload);
+    }
+
+    // and a put under another spelling UPDATES the entry rather than adding a second
+    const QByteArray payload2 = jpg(0x75);
+    c.put(spellings.first(), "recipe2", payload2);
+    QCOMPARE(c.count(), 1);
+    QCOMPARE(c.get(canonical, "recipe2"), payload2);
+    QCOMPARE(c.totalBytes(), qint64(payload2.size()));
+
+    // one payload on disk, not two
+    QDir cacheDir(c.cacheDir());
+    QCOMPARE(cacheDir.entryList(QStringList() << "*.jpg", QDir::Files).size(), 1);
+}
+
+void tst_devpreview::concurrentGetsAreNotSerialised()
+{
+/*
+    get() must not hold the cache mutex while it reads the payload. Every one of
+    ImageCache's decoderCount threads comes through here, and at full sensor resolution
+    the read is multi-MB; serialising them would undo the parallel read-ahead that makes
+    browsing developed raws fast, and a put() (which writes a payload the same way) would
+    stall all of them.
+
+    Concurrency is hard to assert on directly without being flaky, so this pins the part
+    that matters and is deterministic: many threads reading at once all get the right
+    bytes, and the accounting survives it.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+
+    QStringList paths;
+    QList<QByteArray> payloads;
+    for (int i = 0; i < 8; ++i) {
+        const QString p = imagePath(QString("conc%1.nef").arg(i));
+        QFile f(p);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("x");
+        f.close();
+        paths << p;
+        payloads << jpg(0x80 + i, 512);
+        c.put(p, "recipe1", payloads.last());
+    }
+    QCOMPARE(c.count(), 8);
+
+    QAtomicInt mismatches(0);
+    QList<QFuture<void>> running;
+    for (int rep = 0; rep < 4; ++rep) {
+        for (int i = 0; i < paths.size(); ++i) {
+            running << QtConcurrent::run([&, i] {
+                if (c.get(paths.at(i), "recipe1") != payloads.at(i))
+                    mismatches.fetchAndAddOrdered(1);
+            });
+        }
+    }
+    for (QFuture<void> &f : running) f.waitForFinished();
+
+    QCOMPARE(mismatches.loadAcquire(), 0);
+    QCOMPARE(c.count(), 8);
+}
+
+void tst_devpreview::legacyJsonIndexIsImported()
+{
+/*
+    The index used to be a JSON array. Users upgrading have one, with cache files beside
+    it. If the database opened empty, reconcile() would delete every one of those payloads
+    -- minutes of re-rendering per folder, for a change meant to be invisible.
+
+    The JSON is renamed rather than deleted, so a bad import is recoverable by hand.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+
+    // stand in for a previous version's cache: one payload plus the JSON naming it
+    const QString p = imagePath("legacy.nef");
+    const QByteArray payload = jpg(0x72);
+    const QString cacheDir = cacheTmp.path();
+    {
+        QFile f(QDir(cacheDir).absoluteFilePath("7.jpg"));
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(payload);
+        f.close();
+    }
+    QJsonObject e;
+    e.insert("path", p);
+    e.insert("id", 7);
+    e.insert("hash", "legacyRecipe");
+    e.insert("bytes", double(payload.size()));
+    e.insert("used", 1000);
+    e.insert("live", true);
+    e.insert("vol", "");
+    QJsonObject root;
+    root.insert("version", 1);
+    root.insert("nextId", 8);
+    root.insert("entries", QJsonArray{e});
+    const QString jsonPath = QDir(cacheDir).absoluteFilePath("index.json");
+    {
+        QFile f(jsonPath);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(QJsonDocument(root).toJson(QJsonDocument::Compact));
+        f.close();
+    }
+
+    // first use of the new database imports it
+    c.setCacheDir(QString());
+    c.setCacheDir(cacheDir);
+
+    QCOMPARE(c.count(), 1);
+    QCOMPARE(c.get(p, "legacyRecipe"), payload);
+    QCOMPARE(c.totalBytes(), qint64(payload.size()));
+
+    // the JSON is set aside, not deleted, and not imported twice
+    QVERIFY(!QFile::exists(jsonPath));
+    QVERIFY(QFile::exists(jsonPath + ".migrated"));
+
+    // ids continue past the imported one rather than clobbering it
+    c.put(imagePath("after.nef"), "recipe1", jpg(0x73));
+    QCOMPARE(c.count(), 2);
+    QCOMPARE(c.get(p, "legacyRecipe"), payload);
+}
+
+void tst_devpreview::isCachePathIdentifiesTheProtectedFolder()
+{
+/*
+    The cache folder is browsable, so every write path asks isCachePath before it acts.
+    A false negative silently lets an edit corrupt the cache; a false positive would
+    refuse writes to ordinary photo folders. Both directions are checked, including the
+    case-insensitive match the two supported platforms need and a sibling folder whose
+    name merely starts with the cache folder's.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString d = cacheTmp.path();
+
+    QVERIFY(c.isCachePath(d));
+    QVERIFY(c.isCachePath(d + "/0000001.jpg"));
+    QVERIFY(c.isCachePath(d + "/index.db"));
+    QVERIFY(c.isCachePath(d.toUpper()));
+    QVERIFY(c.isCachePath(d + "/./0000001.jpg"));
+
+    QVERIFY(!c.isCachePath(QString()));
+    QVERIFY(!c.isCachePath(imagePath("a.nef")));
+    // a sibling whose path is a string prefix of the cache folder is NOT inside it
+    QVERIFY(!c.isCachePath(d + "Extra/a.jpg"));
 }
 
 QTEST_MAIN(tst_devpreview)

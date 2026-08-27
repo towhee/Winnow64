@@ -61,9 +61,26 @@ QString companionDest(const QString &companion, const QString &dstPath)
 
 }  // namespace
 
+/*
+    The develop preview cache folder is browsable but read-only: its files are named by an
+    opaque id that only the cache index can attribute to an image, and the cache deletes
+    any file its index does not name. Renaming, moving or trashing in there detaches
+    previews from their images; copying in there drops the copy (and its sidecar) at the
+    next reconcile. So every operation that writes refuses on either side of the path.
+    See DevPreviewCache::isCachePath.
+*/
+static bool isProtected(const QString &path, const QString &src)
+{
+    if (!DevPreviewCache::instance().isCachePath(path)) return false;
+    G::issue("Warning", "Refusing to write: "
+             + DevPreviewCache::readOnlyReason() + ".", src, -1, path);
+    return true;
+}
+
 bool FileOps::copyFile(const QString &srcPath, const QString &dstPath)
 {
     if (G::isLogger) G::log("FileOps::copyFile");
+    if (isProtected(dstPath, "FileOps::copyFile")) return false;
     flushPendingEdits();
 
     if (!QFile::copy(srcPath, dstPath)) {
@@ -89,6 +106,8 @@ bool FileOps::copyFile(const QString &srcPath, const QString &dstPath)
 bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
 {
     if (G::isLogger) G::log("FileOps::moveFile");
+    if (isProtected(srcPath, "FileOps::moveFile")) return false;
+    if (isProtected(dstPath, "FileOps::moveFile")) return false;
     flushPendingEdits();
 
     /* Companions first: if the image move fails we have not orphaned anything, because
@@ -118,6 +137,7 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
 bool FileOps::trashFile(const QString &fPath)
 {
     if (G::isLogger) G::log("FileOps::trashFile");
+    if (isProtected(fPath, "FileOps::trashFile")) return false;
     flushPendingEdits();
 
     const auto sidecars = companions(fPath);

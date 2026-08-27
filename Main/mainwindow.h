@@ -552,6 +552,9 @@ private slots:
     void exportEmbelFromAction(QAction *embelExportAction);
     void exportEmbel();
     void enableSelectionDependentMenus();
+    /* True when any loaded folder is the develop preview cache, which is browsable but
+       read-only (see Cache/devpreviewcache.h). Gates every menu action that writes. */
+    bool isPreviewCacheFolderLoaded() const;
     void enableStatusBarBtns();
     void renameEjectUsbMenu(QString path);
     void renameAddBookmarkAction(QString path);
@@ -609,7 +612,7 @@ private slots:
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
     void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
-                               bool faithful);
+                               bool faithful, const QByteArray &recipe);
     /* Global image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
        the Global scope has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
        clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
@@ -840,6 +843,10 @@ private slots:
     void devPreviewUpdated(const QString &fPath, const QImage &thumb);
     /* Cached screen-res develop preview for the loupe placeholder, or null on a miss. */
     QImage devPreview(const QString &fPath);
+    /* devPreviewKey of the recipe currently in force for fPath (empty when unedited).
+       Captured when a develop render is launched and compared when its frame is about to
+       be cached as a preview -- see developFrameRecipe. */
+    QByteArray developRecipeKey(const QString &fPath);
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
@@ -943,6 +950,7 @@ private slots:
     void reportState(QString title);
 
     void openFolder();
+    void gotoFolder();
     void openUsbFolder();
     void saveAsFile();
     void revealWinnets();
@@ -1112,6 +1120,7 @@ private:
     QAction *keyEndAddToSelectionAction;
 
     QAction *jumpAction;                    // shortcut "J", "="
+    QAction *gotoFolderAction;              // shortcut "Ctrl+Shift+G"
 
     QAction *keyScrollLeftAction;
     QAction *keyScrollRightAction;
@@ -1401,13 +1410,14 @@ private:
     BarBtn *rawJpgStatusBtn;
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
-    Progress *progress;
+    Progress *progress = nullptr;    // created in createDataModel, before any row driver runs
     /* Progress rows added at runtime (ImageCache is owned by Progress itself).
        Each is driven with progress->updateProgress(id, ...)/clearProgress(id). */
     int progressMetaReadRow = -1;
     int progressFocusStackRow = -1;
     int progressRawDenoiseRow = -1;
     int progressDemosaicRow = -1;
+    int progressDevPreviewRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -1474,7 +1484,20 @@ private:
     int devPreviewBuildTotal = 0;        // 0 = no build running
     int devPreviewBuildDone = 0;
     bool devPreviewBuildCancelled = false;
+    /* True when the run came from Develop > Build Developed Previews rather than from the
+       background preference. Progress is shown the same way either way (the status-bar
+       row), but only a run the user ASKED for reports its result in a popup -- a
+       background build that announces itself is the noise this row replaced. */
+    bool devPreviewBuildFromMenu = false;
     void togglePreviewSource();
+    /* Develop mode always shows the developed image, so the Original / Developed control
+       is disabled there (and reads Developed). Called by setOperationMode and
+       setPreviewSource; owns the combo row and the checked state of the menu pair. */
+    void syncPreviewSourceEnabled();
+    /* Re-read the thumbnails of developed images because which picture they should show
+       has changed. The effective source is (Develop mode ? Developed : G::previewSource),
+       so a MODE change moves it too -- not only setPreviewSource. */
+    void refreshDevelopThumbs();
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
@@ -1578,16 +1601,29 @@ private:
     /* developFrame depicts the STORED recipe (not a History hover, and with the Transform
        and Replace preview eyes on). Only a faithful frame may be cached as a preview. */
     bool developFrameFaithful = false;
+    /* THE RECIPE THIS FRAME DEPICTS -- devPreviewKey of the blob captured when the render
+       was LAUNCHED, or empty when the frame is not faithful.
+
+       Path + faithful is not enough to say a retained frame may be cached as a preview.
+       A frame is replaced only when a render COMPLETES, and a render completes only if
+       one was armed and its result was still current when it landed; edit, then leave
+       Develop / switch image / quit inside the settle window and the retained frame is
+       the PREVIOUS recipe's -- with the same path and the same faithful flag. Writing it
+       out stamps old pixels with the new recipe's hash, which is worse than having no
+       preview: the key matches, so every staleness check downstream passes and nothing
+       ever repairs it. The devPreview provider compares this against the recipe it is
+       flushing and declines on a mismatch. */
+    QByteArray developFrameRecipe;
     /* The FULL-RESOLUTION settle render, retained so the devPreview tier can be
        encoded at sensor resolution rather than from the screen-resolution proxy in
        developFrame. Set by onDevelopFullResReady under the same currency guard that
-       decides the render may be shown, so if it is non-null for the current path it
-       depicts the current recipe. The devPreview provider prefers it and falls back
+       decides the render may be shown. The devPreview provider prefers it and falls back
        to developFrame, which keeps a preview a byproduct of a render that happened
        anyway. */
     QImage developFullFrame;
     QString developFullFramePath;
     bool developFullFrameFaithful = false;
+    QByteArray developFullFrameRecipe;      // see developFrameRecipe
     std::shared_ptr<WorkingImage> developProxy;
     QString developProxyPath;
     /* Per-scope intermediates for the PROXY tick, so a mask drag re-rasterizes only the

@@ -255,6 +255,15 @@ Q_NAMESPACE
     constexpr int kDevPreviewSizeLarge = 4096;
     constexpr int kDevPreviewSizeScreen = 2560;
 
+    /* JPEG quality for the devPreview tier. Qt's JPEG handler disables chroma subsampling
+       only ABOVE 90, so 95 is a real step up (4:4:4) rather than a nudge, and 90 is the
+       best quality that still subsamples. The sidecar THUMBNAIL tier is not covered by
+       this -- it is a 256 px grid icon and stays at its own fixed quality. */
+    constexpr int kDevPreviewQualityMaximum = 95;
+    constexpr int kDevPreviewQualityHigh = 90;
+    constexpr int kDevPreviewQualityMedium = 85;
+    constexpr int kDevPreviewQualitySmall = 75;
+
     // Generic stringify function
     template <typename Enum>
     inline QString enumClassToString(Enum value)
@@ -481,6 +490,8 @@ Q_NAMESPACE
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)
     /* Long-edge cap for a written devPreview; one of the kDevPreviewSize* values. */
     extern int devPreviewMaxEdge;
+    /* JPEG quality for a written devPreview; one of the kDevPreviewQuality* values. */
+    extern int devPreviewQuality;
     /* LRU byte cap for the on-disk devPreview cache. Applied to DevPreviewCache at
        startup and whenever the preference changes. */
     extern qint64 devPreviewCacheMaxBytes;

@@ -1,9 +1,11 @@
 #include <QtTest>
 #include <QDir>
 #include <QFile>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 
 #include "Utilities/fileops.h"
+#include "Cache/cachedb.h"
 #include "Cache/devpreviewcache.h"
 
 /*
@@ -20,6 +22,8 @@ class tst_fileops : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+    void cleanupTestCase();
     void init();
     void companionsFindsXmpAndTxt();
     void companionsIsCaseInsensitive();
@@ -27,6 +31,7 @@ private slots:
     void copyCarriesCompanions();
     void copyRenamesCompanionsToDestinationBase();
     void moveCarriesCompanionsAndPreview();
+    void refusesToWriteInThePreviewCacheFolder();
 
 private:
     QString p(const QString &name) const;
@@ -47,6 +52,19 @@ void tst_fileops::touch(const QString &name, const QByteArray &data) const
     QVERIFY(f.open(QIODevice::WriteOnly));
     f.write(data);
     f.close();
+}
+
+void tst_fileops::initTestCase()
+{
+    /* init() clears the preview cache before pointing it anywhere; without this that
+       resolves to the real AppDataLocation. See tst_devpreview. */
+    QStandardPaths::setTestModeEnabled(true);
+}
+
+void tst_fileops::cleanupTestCase()
+{
+    /* Release the index database before QTemporaryDir removes the directory under it. */
+    CacheDb::instance().closeThisThread();
 }
 
 void tst_fileops::init()
@@ -174,6 +192,43 @@ void tst_fileops::moveCarriesCompanionsAndPreview()
 
     QCOMPARE(c.get(dst, "recipe1"), payload);
     QVERIFY(c.get(p("DSC_050.NEF"), "recipe1").isEmpty());
+}
+
+void tst_fileops::refusesToWriteInThePreviewCacheFolder()
+{
+/*
+    The preview cache folder is browsable, so the user can select it and reach every file
+    operation from there. Its files are named by an id only the cache index can attribute
+    to an image, and the cache DELETES any file its index does not name -- so a move out
+    of it detaches a preview from its image, and a copy into it is dropped at the next
+    launch along with any sidecar written beside it. Every operation refuses on either
+    side of the path, and refusing means changing nothing on disk.
+*/
+    const QDir cache(cacheTmp.path());
+    const QString cached = cache.absoluteFilePath("0000001.jpg");
+    QFile f(cached);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("preview");
+    f.close();
+
+    touch("DSC_060.NEF");
+
+    // out of the cache
+    QVERIFY(!FileOps::moveFile(cached, p("stolen.jpg")));
+    QVERIFY(QFile::exists(cached));
+    QVERIFY(!QFile::exists(p("stolen.jpg")));
+
+    // into the cache
+    const QString intruder = cache.absoluteFilePath("DSC_060.NEF");
+    QVERIFY(!FileOps::copyFile(p("DSC_060.NEF"), intruder));
+    QVERIFY(!QFile::exists(intruder));
+    QVERIFY(!FileOps::moveFile(p("DSC_060.NEF"), intruder));
+    QVERIFY(!QFile::exists(intruder));
+    QVERIFY(QFile::exists(p("DSC_060.NEF")));
+
+    // and the cache file is not trashed (the one trashFile case safe to run: it refuses)
+    QVERIFY(!FileOps::trashFile(cached));
+    QVERIFY(QFile::exists(cached));
 }
 
 QTEST_MAIN(tst_fileops)
