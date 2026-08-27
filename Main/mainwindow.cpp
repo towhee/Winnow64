@@ -2920,6 +2920,25 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
              << "recurse =" << recurse
              << folderPath; //*/
 
+    /* The develop preview cache folder can be browsed -- it is a folder of JPEGs like any
+       other -- but nothing in it may be written. Say so up front, on selection, rather
+       than letting the user rate or rename a preview and only then explain: the write
+       guards below the UI refuse silently by design. See "The Preview Cache Folder
+       Is Read-Only" in notes/Documentation.txt. */
+    if (op == G::FolderOp::Add && DevPreviewCache::instance().isCachePath(folderPath)) {
+        if (G::popup) {
+            QString msg = "This is Winnow's develop preview cache.<p>"
+                          "The images here can be viewed, but not edited, renamed, <br>"
+                          "rated, deleted or developed -- they are renders Winnow <br>"
+                          "manages itself, and editing them would corrupt the cache.";
+            G::popup->showPopup(msg, 8000);
+        }
+        /* Leave Develop on the way in: setOperationMode refuses to ENTER it here, but the
+           user may already be in it from the previous folder. */
+        if (G::operationMode == G::OperationMode::Develop)
+            setOperationMode(G::OperationMode::Preview);
+    }
+
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
@@ -2940,9 +2959,12 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     developProxyPath.clear();
     developFrame = QImage();           // the frame the sharpening mask preview derives from
     developFramePath.clear();
+    developFrameFaithful = false;
+    developFrameRecipe.clear();
     developFullFrame = QImage();       // the full-res frame the devPreview is encoded from
     developFullFramePath.clear();
     developFullFrameFaithful = false;
+    developFullFrameRecipe.clear();
     developStackCache.clear();         // its entries are sized to the old proxy
     maskFoldCacheClear();              // ditto, and its refs belong to the old folder
     developWorkTriedPath.clear();
@@ -4233,6 +4255,20 @@ QImage MW::devPreview(const QString &fPath)
     QImage im;
     if (!im.loadFromData(jpg, "JPG") || im.isNull()) return QImage();
     return im;
+}
+
+QByteArray MW::developRecipeKey(const QString &fPath)
+{
+/*
+    The hash of the develop recipe fPath carries RIGHT NOW (empty when it has none). A
+    render captures this when it is launched; the devPreview provider compares it against
+    the recipe being flushed, so a frame rendered from an earlier recipe can never be
+    written out as a preview of a later one. See MW::developFrameRecipe.
+*/
+    if (fPath.isEmpty() || !developProperties) return QByteArray();
+    const QString blob = developProperties->developBlobFor(fPath);
+    if (blob.isEmpty()) return QByteArray();
+    return Metadata::devPreviewKey(blob).toLatin1();
 }
 
 void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
@@ -8029,12 +8065,22 @@ void MW::renderDevelopPreview(bool fullRes)
        on the GUI thread with the job, because the view overrides it reflects (History
        hover, Transform eye, Replace eye) can change while the render is in flight. */
     const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe();
+    /* Only a faithful frame can ever be cached, so only a faithful one pays for the hash. */
+    const QByteArray recipe = faithful ? developRecipeKey(fPath) : QByteArray();
+    /* Arm the full-resolution settle render for the callers that re-render WITHOUT going
+       through developParamsChange -- crop, warp, level and the mask tools. Without this
+       developFullFrame is never refreshed for a geometry edit, so it stays at the recipe
+       in force before the crop (the provider now declines it, which costs the devPreview
+       tier its sensor-resolution source). Restarting an already-armed timer is what the
+       slider path does too, so a burst still settles into ONE render. */
+    if (!fullRes && faithful && developFullResTimer)
+        developFullResTimer->start(kDevelopSettleMs);
     const bool wantTime = G::isReportDevelopTime;
     const qint64 tProxyCap = tProxy;
 
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
                             reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
-                            baseKey, faithful]() {
+                            baseKey, faithful, recipe]() {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
@@ -8052,7 +8098,8 @@ void MW::renderDevelopPreview(bool fullRes)
         const QSize orientedSize(fw, fh);
         QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
                                          geomGen, rt, ms, tProxyCap, tRender, wantTime,
-                                         proxySrc, appliedGeom, orientedSize, faithful] {
+                                         proxySrc, appliedGeom, orientedSize, faithful,
+                                         recipe] {
             developProxyInFlight = false;
             /* Show it if we are still on this image AND its geometry still applies.
                Being SUPERSEDED is no longer a reason to drop it: a drag delivers events
@@ -8084,6 +8131,7 @@ void MW::renderDevelopPreview(bool fullRes)
                 developFrame = out;
                 developFramePath = fPath;
                 developFrameFaithful = faithful;
+                developFrameRecipe = recipe;
                 updateSharpenMaskPreview();
                 if (wantTime) msPreview = pv.restart();
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
@@ -8255,6 +8303,10 @@ void MW::renderDevelopFullResAsync()
        it cannot be cached either. Only a faithful frame may become a devPreview. */
     const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe()
                           && !cropSuppressed;
+    /* The recipe this render depicts, captured with the job (see MW::developFrameRecipe).
+       gen alone cannot stand in for it: the crop / warp / level callers re-render without
+       bumping developParamsGen, so a gen match does not mean the recipe has not moved. */
+    const QByteArray recipe = faithful ? developRecipeKey(fPath) : QByteArray();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     const quint64 gen = developParamsGen;
 
@@ -8301,7 +8353,8 @@ void MW::renderDevelopFullResAsync()
     updateDevelopRenderingHint();
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
     std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
-    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen, faithful]() {
+    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen, faithful,
+                              recipe]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
@@ -8355,7 +8408,7 @@ void MW::renderDevelopFullResAsync()
         const bool vRecipeIdentity = mj.global.isIdentity() && mj.scopes.isEmpty();
         const bool vGeometryActive = !mj.geometry.isIdentity();
 
-        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt, faithful,
+        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt, faithful, recipe,
                                          vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive]() {
             if (G::isReportDevelopTime)
                 qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
@@ -8383,7 +8436,7 @@ void MW::renderDevelopFullResAsync()
                 developVerifyGeometryActive = vGeometryActive;
                 developVerifyPath = fPath;
             }
-            onDevelopFullResReady(out, fPath, gen, faithful);
+            onDevelopFullResReady(out, fPath, gen, faithful, recipe);
         });
     });
 }
@@ -8456,7 +8509,7 @@ void MW::updateDevelopRenderingHint()
 }
 
 void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
-                               bool faithful)
+                               bool faithful, const QByteArray &recipe)
 {
 /*
     GUI-thread completion for a background full-res render. Apply the image only if it is still
@@ -8466,10 +8519,12 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
     was already in flight.
 
     The frame is also RETAINED (developFullFrame) so the devPreview provider can encode the
-    devPreview tier at sensor resolution instead of from the screen-resolution proxy. It is kept
-    only under the same currency test that decides the frame may be shown, so a retained frame
-    always depicts the recipe in force. Retaining costs one full-res QImage per edited image --
-    the same buffer that was just handed to the loupe.
+    devPreview tier at sensor resolution instead of from the screen-resolution proxy, together
+    with the RECIPE it was rendered from. The currency test here only says the frame may be
+    SHOWN now; it says nothing about later, because the next edit does not replace this frame
+    -- only the next completed render does. The recipe is what lets the provider tell a
+    current frame from one the user has since edited past. Retaining costs one full-res QImage
+    per edited image -- the same buffer that was just handed to the loupe.
 */
     if (G::isLogger) G::log("MW::onDevelopFullResReady");
     developFullResInFlight = false;
@@ -8485,6 +8540,7 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
         developFullFrame = out;
         developFullFramePath = fPath;
         developFullFrameFaithful = faithful;
+        developFullFrameRecipe = recipe;
     }
 
     if (currentImage && gen != developParamsGen)
@@ -10561,6 +10617,109 @@ void MW::openFolder()
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (dirPath == "") return;
     fsTree->select(dirPath);
+}
+
+void MW::gotoFolder()
+{
+/*
+    Go > Go to Folder... (Ctrl+Shift+G).  Type or paste a folder path and Winnow selects
+    it in the Folders dock, exactly as if it had been clicked there.  Unlike Open
+    Folder..., which has to be navigated, this is the fast route to a path the user
+    already knows (or has on the clipboard), and it can include subfolders.
+
+    The OK button is enabled only once the text names an existing folder; the reason it is
+    not is shown inline beneath the field rather than as a popup after the fact.
+*/
+    if (G::isLogger) G::log("MW::gotoFolder");
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Go to Folder"));
+
+    QLabel *label = new QLabel(tr("Folder path:"), &dlg);
+    QLineEdit *pathEdit = new QLineEdit(&dlg);
+    pathEdit->setMinimumWidth(QFontMetrics(dlg.font())
+                              .boundingRect("/Users/xxxxxxxxxx/Pictures/xxxxxxxxxxxxxxx").width());
+    pathEdit->setClearButtonEnabled(true);
+    pathEdit->setPlaceholderText(QDir::homePath());
+
+    /* Inline completion over folders only, so the path can be typed a segment at a time. */
+    QFileSystemModel *completerModel = new QFileSystemModel(&dlg);
+    completerModel->setRootPath(QDir::rootPath());
+    completerModel->setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
+    QCompleter *completer = new QCompleter(completerModel, &dlg);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    pathEdit->setCompleter(completer);
+
+    QPushButton *browseBtn = new QPushButton(tr("Browse..."), &dlg);
+    QCheckBox *recurseCB = new QCheckBox(tr("Include subfolders"), &dlg);
+    QLabel *reason = new QLabel(&dlg);
+    reason->setObjectName("gotoFolderReason");
+
+    QDialogButtonBox *buttons =
+        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    buttons->button(QDialogButtonBox::Ok)->setText(tr("Go"));
+    buttons->button(QDialogButtonBox::Ok)->setDefault(true);
+
+    QGridLayout *layout = new QGridLayout(&dlg);
+    layout->addWidget(label, 0, 0);
+    layout->addWidget(pathEdit, 0, 1);
+    layout->addWidget(browseBtn, 0, 2);
+    layout->addWidget(recurseCB, 1, 1);
+    layout->addWidget(reason, 2, 1, 1, 2);
+    layout->addWidget(buttons, 3, 0, 1, 3);
+
+    /* Seed with the loaded folder so the field is a starting point, not a blank. */
+    if (dm->folderList.count() == 1) pathEdit->setText(dm->folderList.at(0));
+
+    auto expand = [](QString path) {
+        path = path.trimmed();
+        /* Drag/drop and copy-as-pathname often deliver a quoted or file:// form. */
+        if (path.startsWith('"') && path.endsWith('"') && path.length() > 1)
+            path = path.mid(1, path.length() - 2);
+        if (path.startsWith("file://")) path = QUrl(path).toLocalFile();
+        if (path == "~") path = QDir::homePath();
+        else if (path.startsWith("~/")) path = QDir::homePath() + path.mid(1);
+        return path;
+    };
+
+    auto validate = [&] {
+        const QString path = expand(pathEdit->text());
+        bool ok = false;
+        /* An empty field needs no reason -- the label already says what goes here. */
+        if (path.isEmpty()) reason->clear();
+        else if (QFileInfo(path).isFile()) reason->setText(tr("That is a file, not a folder"));
+        else if (!QDir(path).exists()) reason->setText(tr("Folder not found"));
+        else {
+            reason->clear();
+            ok = true;
+        }
+        buttons->button(QDialogButtonBox::Ok)->setEnabled(ok);
+    };
+    connect(pathEdit, &QLineEdit::textChanged, &dlg, validate);
+    validate();
+
+    connect(browseBtn, &QPushButton::clicked, &dlg, [&] {
+        QString start = expand(pathEdit->text());
+        if (!QDir(start).exists()) start = QDir::homePath();
+        QString dirPath = QFileDialog::getExistingDirectory(&dlg, tr("Go to Folder"), start,
+             QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+        if (!dirPath.isEmpty()) pathEdit->setText(dirPath);
+    });
+
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    pathEdit->setFocus();
+    pathEdit->selectAll();
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    const QString dirPath = expand(pathEdit->text());
+    if (dirPath.isEmpty()) return;
+
+    /* The Folders dock is where the selection lands, so show it if it is hidden -
+       otherwise the folder loads with no visible sign of where it came from. */
+    if (!folderDock->isVisible()) showFolderDock();
+    fsTree->select(dirPath, recurseCB->isChecked() ? "Recurse" : "None", "MW::gotoFolder");
 }
 
 void MW::openUsbFolder()

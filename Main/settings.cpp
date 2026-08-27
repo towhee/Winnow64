@@ -79,6 +79,7 @@ void MW::writeSettings()
     settings->setValue("developEditsLayout", static_cast<int>(G::developEditsLayout));
     settings->setValue("previewSource", static_cast<int>(G::previewSource));
     settings->setValue("devPreviewMaxEdge", G::devPreviewMaxEdge);
+    settings->setValue("devPreviewQuality", G::devPreviewQuality);
     settings->setValue("devPreviewCacheMaxBytes", G::devPreviewCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
 
@@ -342,6 +343,7 @@ bool MW::loadSettings()
         // develop previews
         G::previewSource = G::PreviewSource::Developed;
         G::devPreviewMaxEdge = G::kDevPreviewSizeFull;
+        G::devPreviewQuality = G::kDevPreviewQualityHigh;
         G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
@@ -528,8 +530,9 @@ bool MW::loadSettings()
 
     /* Develop previews. previewSource is VALIDATED BEFORE CASTING for the same reason as
        the two enums above -- a damaged int would name a branch this build has no code
-       for. The two sizes are plain numbers, but a negative or absurd one would either
-       disable the cache or let it eat the disk, so both are clamped. */
+       for. The sizes and the quality are plain numbers, but an absurd one would either
+       disable the cache, let it eat the disk, or write previews nothing can use, so each
+       is range-checked and a value outside its band is ignored rather than adopted. */
     if (settings->contains("previewSource")) {
         bool ok = false;
         const int src = settings->value("previewSource").toInt(&ok);
@@ -541,6 +544,12 @@ bool MW::loadSettings()
         const int edge = settings->value("devPreviewMaxEdge").toInt();
         /* 0 = Full (no cap). Anything else must be big enough to be worth caching. */
         if (edge == G::kDevPreviewSizeFull || edge >= 1024) G::devPreviewMaxEdge = edge;
+    }
+    if (settings->contains("devPreviewQuality")) {
+        const int q = settings->value("devPreviewQuality").toInt();
+        /* A JPEG quality outside this band is either a damaged setting or a file so soft
+           it is not worth the disk it saves, so it is ignored rather than clamped. */
+        if (q >= 50 && q <= 100) G::devPreviewQuality = q;
     }
     if (settings->contains("devPreviewCacheMaxBytes")) {
         const qint64 cap = settings->value("devPreviewCacheMaxBytes").toLongLong();

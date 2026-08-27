@@ -22,6 +22,11 @@
     developRenderPool. Reusing it means the builder cannot drift from what an export or a
     real develop render produces.
 
+    PROGRESS IS A STATUS-BAR ROW, not a popup. A build is minutes of rendering the user is
+    not waiting on -- they carry on browsing -- so it reports where the other background
+    work reports (Metadata, Raw Denoise, Demosaicing), not under a popup parked over the
+    image. Only a run the user explicitly asked for says anything when it ends.
+
     Images are processed strictly sequentially -- the next one starts when the previous
     one's render returns. That is what keeps the builder inside the raw-decoder
     concurrency budget (see ImageCache::rawDecodeLimit and the memory-overrun history
@@ -55,13 +60,11 @@ void MW::buildDevPreviews(const QStringList &paths, const QString &src)
     }
 
     devPreviewBuildTotal = devPreviewBuildQueue.count() + devPreviewBuildDone;
-    if (G::popup) {
-        G::popup->setProgressVisible(true);
-        G::popup->setProgressMax(devPreviewBuildTotal);
-        G::popup->setProgress(0);
-        G::popup->showPopup("Building developed previews for " +
-                            QString::number(devPreviewBuildTotal) + " images", 0, true, 1);
-    }
+    devPreviewBuildFromMenu = (src == "menu");
+    /* Reveal the row EMPTY. updateProgress paints FromStart, so calling it here with
+       item 0 would fill the first cell before anything has been rendered (and the whole
+       bar when there is one image). devPreviewBuildNext paints each item as it starts. */
+    if (progress) progress->showRow(progressDevPreviewRow, true);
     devPreviewBuildNext();
 }
 
@@ -144,6 +147,9 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full)
         return im.save(&buf, "JPG", quality);
     };
 
+    /* Thumbnail tier: a 256 px grid icon in the sidecar, fixed at 85. It is deliberately
+       NOT governed by the "Developed preview quality" preference -- that setting is about
+       what the loupe shows at 100%, and a few KB of icon is not where disk is spent. */
     QByteArray thumbJpg;
     const QImage thumb = full.scaled(G::maxIconSize, G::maxIconSize,
                                      Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -154,7 +160,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full)
     const int cap = G::devPreviewMaxEdge;
     if (cap > 0 && qMax(preview.width(), preview.height()) > cap)
         preview = preview.scaled(cap, cap, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    if (!encode(preview, 90, previewJpg)) previewJpg.clear();
+    if (!encode(preview, G::devPreviewQuality, previewJpg)) previewJpg.clear();
 
     if (thumbJpg.isEmpty() && previewJpg.isEmpty()) return;
 
@@ -172,8 +178,14 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full)
 
 void MW::updateDevPreviewBuildProgress()
 {
-    if (!devPreviewBuildTotal || !G::popup) return;
-    G::popup->setProgress(devPreviewBuildDone);
+/*
+    Paint the status-bar row. devPreviewBuildDone is the count COMPLETED, which is also
+    the 0-based index of the image now rendering, so the bar includes the one in flight --
+    the same reading as the other sequential rows (Raw Denoise, Demosaicing).
+*/
+    if (!devPreviewBuildTotal || !progress) return;
+    progress->updateProgress(progressDevPreviewRow, devPreviewBuildDone,
+                             devPreviewBuildTotal);
 }
 
 void MW::devPreviewBuildFinish(const QString &reason)
@@ -195,11 +207,19 @@ void MW::devPreviewBuildFinish(const QString &reason)
     devPreviewBuildDone = 0;
     devPreviewBuildCancelled = false;
 
+    const bool fromMenu = devPreviewBuildFromMenu;
+    devPreviewBuildFromMenu = false;
+
+    /* Clear the bar and hide the row. Done unconditionally: a run that never started
+       still leaves nothing behind, and clearProgress on an already-hidden row is a
+       no-op. */
+    if (progress) progress->clearProgress(progressDevPreviewRow);
+
     if (!wasRunning) return;
 
-    if (!G::popup) return;
-    G::popup->setProgressVisible(false);
-    G::popup->reset();
+    /* Only a run the user asked for reports. A background build is meant to be
+       unnoticed -- the row said it was happening and the grid shows the result. */
+    if (!fromMenu || !G::popup) return;
     if (!reason.isEmpty())
         G::popup->showPopup(QString("Developed previews: %1 built, %2.")
                                 .arg(done).arg(reason), 3000);

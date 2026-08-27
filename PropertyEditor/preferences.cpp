@@ -198,13 +198,19 @@ void Preferences::itemChange(QModelIndex idx)
         G::maxIconSize = v.toInt();
     }
 
-    /* Developed previews. Only NEW previews are written at a changed size -- the ones
-       already cached stay valid, because the staleness test is the recipe hash, not the
-       dimensions. Shrinking the setting therefore reclaims disk gradually; "Clear
-       developed preview cache" on the Develop menu is the immediate route. */
+    /* Developed previews. Only NEW previews are written at a changed size or quality --
+       the ones already cached stay valid, because the staleness test is the recipe hash,
+       not the dimensions or the encoding. Lowering either setting therefore reclaims disk
+       gradually; "Clear developed preview cache" on the Develop menu is the immediate
+       route. */
     if (source == "devPreviewSize") {
         G::devPreviewMaxEdge = devPreviewSizeValue(v.toString());
         mw->settings->setValue("devPreviewMaxEdge", G::devPreviewMaxEdge);
+    }
+
+    if (source == "devPreviewQuality") {
+        G::devPreviewQuality = devPreviewQualityValue(v.toString());
+        mw->settings->setValue("devPreviewQuality", G::devPreviewQuality);
     }
 
     if (source == "devPreviewCacheSize") {
@@ -1131,6 +1137,22 @@ int Preferences::devPreviewSizeValue(const QString &label)
     return G::kDevPreviewSizeFull;
 }
 
+QString Preferences::devPreviewQualityLabel(int quality)
+{
+    if (quality >= G::kDevPreviewQualityMaximum) return "Maximum (95)";
+    if (quality >= G::kDevPreviewQualityHigh)    return "High (90)";
+    if (quality >= G::kDevPreviewQualityMedium)  return "Medium (85)";
+    return "Small files (75)";
+}
+
+int Preferences::devPreviewQualityValue(const QString &label)
+{
+    if (label.startsWith("Maximum")) return G::kDevPreviewQualityMaximum;
+    if (label.startsWith("Medium"))  return G::kDevPreviewQualityMedium;
+    if (label.startsWith("Small"))   return G::kDevPreviewQualitySmall;
+    return G::kDevPreviewQualityHigh;
+}
+
 QString Preferences::devPreviewCacheLabel(qint64 bytes)
 {
     const qint64 gb = bytes / (1024LL * 1024 * 1024);
@@ -1188,6 +1210,30 @@ void Preferences::addDevPreviews()
     i.dropList << "Full size"
                << "Large (4096 px)"
                << "Screen (2560 px)"
+        ;
+    addItem(i);
+
+    // devPreview quality
+    i.name = "devPreviewQuality";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Developed preview quality";
+    i.tooltip = "JPEG quality a developed preview is written at.\n\n"
+                "Maximum keeps full colour detail (no chroma subsampling) and\n"
+                "roughly doubles the file size; the lower settings trade a little\n"
+                "colour and edge detail for disk space. This affects only NEW\n"
+                "previews -- previews already cached are not rewritten."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewQualityLabel(G::devPreviewQuality);
+    i.key = "devPreviewQuality";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "Maximum (95)"
+               << "High (90)"
+               << "Medium (85)"
+               << "Small files (75)"
         ;
     addItem(i);
 

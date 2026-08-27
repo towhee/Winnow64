@@ -517,6 +517,17 @@
        </property>
        <item>
         <property name="text">
+         <string>Go to Folder</string>
+        </property>
+        <property name="text">
+         <string>Ctrl + Shift + G</string>
+        </property>
+        <property name="text">
+         <string>Enter a folder path</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Jump</string>
         </property>
         <property name="text">
@@ -1090,7 +1101,7 @@
          <string>Y</string>
         </property>
         <property name="text">
-         <string>Switch the thumbnails and the loupe between the camera&apos;s picture (Original) and your develop edits (Developed).  Pressed in Develop mode it leaves Develop, so it also serves as a before / after key while editing.  Also on the status bar dropdown at the far left and in the View menu.</string>
+         <string>Switch the thumbnails and the loupe between the camera&apos;s picture (Original) and your develop edits (Developed).  Not available in Develop mode, which always shows the developed image.  Also on the status bar dropdown at the far left and in the View menu.</string>
         </property>
        </item>
        <item>

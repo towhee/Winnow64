@@ -34,10 +34,12 @@ private:
     Sony metadata parser above: different lifetime (one per decode, on a decoder thread) and
     no shared state. See notes/Documentation.txt "RAW DECODING".
 
-    SCOPE: handles UNCOMPRESSED ARW only (e.g. Sony A9 II uncompressed: 14-bit samples stored
-    as little-endian uint16, Bayer). Compressed ARW (Compression != 1) returns false, so
-    ImageDecoder falls back to the embedded JPG. The unpack walks the file's TIFF/EP IFDs
-    itself rather than relying on ImageMetadata.
+    SCOPE: UNCOMPRESSED ARW (e.g. Sony A9 II: 14-bit samples stored as little-endian uint16,
+    Bayer) and lossy "ARW Compressed" (Compression 32767). The newer "Lossless Compressed RAW"
+    (Compression JPEG, e.g. A1 / A7R5) is not handled yet, so ImageDecoder falls back to the
+    embedded JPG for those. Either way the sensor levels come from the ENCRYPTED SR2Private
+    block, not from any plaintext IFD -- see applySr2Levels in sony.cpp. The unpack can walk
+    the file's TIFF/EP IFDs itself rather than relying on ImageMetadata.
 */
 class SonyRaw : public RawFormat
 {

@@ -3,6 +3,8 @@
 #include "ImageFormats/Raw/cameramatrix.h"
 #include "ImageFormats/Raw/tiffwalk.h"
 #include <QSet>
+#include <QtEndian>
+#include <cstring>
 #include <vector>
 
 Sony::Sony()
@@ -412,10 +414,10 @@ bool Sony::parse(MetadataParameters &p,
         if (ifd->ifdDataHash.contains(50717))      // 0xC61D WhiteLevel
             ri.white = ifd->ifdDataHash.value(50717).tagValue;
 
-        /* BlackLevel (0x7310, SHORT x4, RGGB order) and the as-shot WB_RGGBLevels (0x7313,
-           SSHORT x4, R G1 G2 B) live in this SubIFD (Sony's "SR2" tags, stored in the clear on
-           ARW). Their four values exceed 4 bytes, so the IFD entry holds an offset -- seek to
-           it and read the four samples. */
+        /* BlackLevel (0x7310) and the as-shot WB_RGGBLevels (0x7313) are read here only for the
+           rare file that carries them in the clear in this SubIFD. A real ARW does NOT: they
+           live in the encrypted SR2Private block, which SonyRaw::UnpackCfa decrypts and applies
+           (applySr2Levels) after the mosaic is unpacked, overriding whatever lands here. */
         if (ifd->ifdDataHash.contains(0x7310)) {
             p.file.seek(ifd->ifdDataHash.value(0x7310).tagValue);
             for (int i = 0; i < 4; ++i)
@@ -784,6 +786,207 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
 }
 
 /*
+    Sony SR2Private -- the ENCRYPTED metadata block that holds an ARW's real sensor levels.
+
+    BlackLevel (0x7310), the as-shot WB_RGGBLevels (0x7313) and WhiteLevel (0x787f) are NOT in
+    the raw SubIFD and are not in the makernote proper: they live in an SR2SubIFD reached from
+    IFD0's DNGPrivateData (0xC634), and that sub-IFD is obfuscated with Sony's LFSR stream
+    cipher. Reading the tag numbers straight out of any plaintext IFD silently finds nothing --
+    which is what Winnow used to do, leaving every ARW on a hard-coded black of 512. Bodies whose
+    real pedestal is 512 (most E-mount) rendered correctly by luck; a DSC-RX100 (pedestal 800)
+    came out washed out, its blacks lifted ~2% of full scale, and NO Sony ever got its as-shot
+    white balance.
+
+    Layout: DNGPrivateData holds the file offset of a small plaintext IFD carrying
+    0x7200 = SR2SubIFD offset, 0x7201 = length, 0x7221 = key. Decrypt that many bytes at that
+    offset (sonyDecrypt) and the result is an ordinary IFD whose value offsets are still absolute
+    file offsets, so a tag's data sits at (offset - sr2Offset) in the decrypted buffer.
+
+    Ported from dcraw/libraw (parse_minolta / sony_decrypt) and validated tag-for-tag against
+    ExifTool on nine ARW bodies (RX100, A7R2/4/5, A9/A9II/A9III, A1II).
+*/
+struct Sr2Levels {
+    bool   valid = false;
+    quint16 black[4]  = {0, 0, 0, 0};   // R, G1, G2, B (2x2 position order for an RGGB mosaic)
+    float   camMul[4] = {0, 0, 0, 0};   // R, G, B, G2 (RawImage::camMul order)
+    quint16 white = 0;                  // Sony's declared saturation; informational, see below
+};
+
+/*
+    dcraw's sony_decrypt: a 127-word LFSR pad seeded from the key, XORed over the block a
+    32-bit word at a time. The pad words are byte-swapped to big-endian (dcraw's htonl) before
+    use, so the XOR is effectively bytewise and host endianness does not matter. The generator
+    index starts at 127 -- where dcraw's initialisation loop leaves it -- not at 0.
+*/
+void sonyDecrypt(quint32 *data, int len, quint32 key)
+{
+    quint32 pad[128];
+    int p;
+    for (p = 0; p < 4; ++p) pad[p] = key = key * 48828125u + 1u;
+    pad[3] = (pad[3] << 1) | ((pad[0] ^ pad[2]) >> 31);
+    for (p = 4; p < 127; ++p)
+        pad[p] = ((pad[p - 4] ^ pad[p - 2]) << 1) | ((pad[p - 3] ^ pad[p - 1]) >> 31);
+    for (p = 0; p < 127; ++p) pad[p] = qToBigEndian(pad[p]);
+    pad[127] = 0;
+    p = 127;
+    while (len--) {
+        pad[p & 127] = pad[(p + 1) & 127] ^ pad[(p + 65) & 127];
+        *data++ ^= pad[p & 127];
+        ++p;
+    }
+}
+
+bool readSr2Levels(QFile &file, Sr2Levels &out)
+{
+    using namespace TiffWalk;
+    Reader r;
+    if (!r.init(&file)) return false;
+
+    Ifd ifd0; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), ifd0, subs, next)) return false;
+    if (!ifd0.contains(0xC634)) return false;                   // no DNGPrivateData -> not an ARW
+
+    /* DNGPrivateData is BYTE[4] holding the offset of the plaintext SR2Private IFD. Longer
+       blocks (other vendors' layout) keep that offset in their first 4 bytes. */
+    const Entry &priv = ifd0[0xC634];
+    const int privSize = Reader::typeSize(priv.type) * int(priv.count);
+    quint32 privOff = 0;
+    if (privSize <= 4) {
+        privOff = r.ifdPointer(priv);
+    }
+    else {
+        const QByteArray b = r.bytes(priv);
+        if (b.size() < 4) return false;
+        const uchar *u = reinterpret_cast<const uchar *>(b.constData());
+        privOff = r.big() ? qFromBigEndian<quint32>(u) : qFromLittleEndian<quint32>(u);
+    }
+    if (privOff == 0) return false;
+
+    Ifd sr2Ptr; QList<quint32> subs2; quint32 next2 = 0;
+    if (!r.readIfd(privOff, sr2Ptr, subs2, next2)) return false;
+    if (!sr2Ptr.contains(0x7200) || !sr2Ptr.contains(0x7201) || !sr2Ptr.contains(0x7221))
+        return false;
+
+    /* All three are 4-byte values; SHORT-typed variants must be read as a scalar so the
+       padding bytes in the entry are not folded in. */
+    auto word = [&r](const Entry &e) -> quint32 {
+        return (e.type == 3 || e.type == 8) ? r.scalar(e) : r.ifdPointer(e);
+    };
+    const quint32 sr2Off = word(sr2Ptr[0x7200]);
+    const quint32 sr2Len = word(sr2Ptr[0x7201]);
+    const quint32 sr2Key = word(sr2Ptr[0x7221]);
+    if (sr2Off == 0 || sr2Len < 2 || sr2Len > (16u << 20)) return false;
+
+    if (!file.seek(sr2Off)) return false;
+    const QByteArray enc = file.read(int(sr2Len));
+    if (quint32(enc.size()) < sr2Len) return false;
+
+    /* Decrypt a whole number of 32-bit words (dcraw decrypts sr2Len/4), then work from the
+       plaintext bytes. Copy through an aligned vector rather than casting the QByteArray. */
+    const int words = int(sr2Len / 4);
+    if (words < 1) return false;
+    std::vector<quint32> buf(static_cast<size_t>(words));
+    memcpy(buf.data(), enc.constData(), size_t(words) * 4);
+    sonyDecrypt(buf.data(), words, sr2Key);
+    QByteArray dec(size_t(words) * 4, Qt::Uninitialized);
+    memcpy(dec.data(), buf.data(), size_t(words) * 4);
+
+    /* Walk the decrypted IFD by hand: it is a plain TIFF directory at buffer offset 0 whose
+       value offsets are still absolute file offsets (hence the -sr2Off rebase). */
+    const uchar *d = reinterpret_cast<const uchar *>(dec.constData());
+    const int n = dec.size();
+    const bool big = r.big();
+    auto g16 = [big](const uchar *p) -> quint16 {
+        return big ? qFromBigEndian<quint16>(p) : qFromLittleEndian<quint16>(p);
+    };
+    auto g32 = [big](const uchar *p) -> quint32 {
+        return big ? qFromBigEndian<quint32>(p) : qFromLittleEndian<quint32>(p);
+    };
+
+    const int count = g16(d);
+    if (count <= 0 || 2 + count * 12 > n) return false;
+
+    /* Read up to four values of a tag as signed ints; returns how many were available. */
+    auto readVals = [&](int entry, int *v, int want) -> int {
+        const uchar *e = d + entry;
+        const quint16 type = g16(e + 2);
+        const quint32 cnt  = g32(e + 4);
+        const int tsz = Reader::typeSize(type);
+        const int have = int(qMin<quint32>(cnt, quint32(want)));
+        const uchar *src;
+        if (tsz * int(cnt) <= 4) {
+            src = e + 8;
+        }
+        else {
+            const qint64 off = qint64(g32(e + 8)) - qint64(sr2Off);
+            if (off < 0 || off + qint64(tsz) * have > n) return 0;
+            src = d + off;
+        }
+        for (int i = 0; i < have; ++i) {
+            const uchar *s = src + i * tsz;
+            switch (type) {
+            case 3:  v[i] = int(g16(s)); break;                     // SHORT
+            case 8:  v[i] = int(qint16(g16(s))); break;             // SSHORT
+            case 4:  v[i] = int(g32(s)); break;                     // LONG
+            case 9:  v[i] = int(qint32(g32(s))); break;             // SLONG
+            default: return 0;
+            }
+        }
+        return have;
+    };
+
+    int v[4];
+    for (int i = 0; i < count; ++i) {
+        const int entry = 2 + i * 12;
+        switch (g16(d + entry)) {
+        case 0x7310:                                    // BlackLevel, R G1 G2 B
+            if (readVals(entry, v, 4) == 4) {
+                for (int c = 0; c < 4; ++c)
+                    out.black[c] = quint16(v[c] < 0 ? 0 : v[c]);
+                out.valid = true;
+            }
+            break;
+        case 0x7313:                                    // WB_RGGBLevels, R G1 G2 B
+            if (readVals(entry, v, 4) == 4 && v[0] > 0 && v[1] > 0 && v[3] > 0) {
+                out.camMul[0] = float(v[0]);            // R
+                out.camMul[1] = float(v[1]);            // G
+                out.camMul[2] = float(v[3]);            // B
+                out.camMul[3] = float(v[2]);            // G2
+                out.valid = true;
+            }
+            break;
+        case 0x787f:                                    // WhiteLevel
+            if (readVals(entry, v, 1) == 1 && v[0] > 0) out.white = quint16(v[0]);
+            break;
+        default:
+            break;
+        }
+    }
+    return out.valid;
+}
+
+/*
+    Apply the SR2Private levels to a freshly unpacked mosaic. Authoritative: it overrides
+    whatever the plaintext IFD walk or ImageMetadata::rawInfo guessed, and it is the ONLY place
+    an ARW's as-shot white balance comes from, so both the compressed and uncompressed unpack
+    paths call it. A file that does not yield the block keeps the caller's defaults.
+
+    raw.white is deliberately NOT taken from out.white. Sony declares 15360 but the ARW tone
+    curve expands sensor values past it, so libraw -- against which this unpack is validated
+    byte-for-byte -- saturates at 16383. Adopting 15360 would brighten every Sony render by ~7%
+    away from the reference.
+*/
+void applySr2Levels(QFile &file, RawImage &raw)
+{
+    Sr2Levels lv;
+    if (!readSr2Levels(file, lv)) return;
+    if (lv.black[0] || lv.black[1] || lv.black[2] || lv.black[3])
+        for (int i = 0; i < 4; ++i) raw.black[i] = lv.black[i];
+    if (lv.camMul[0] > 0.0f && lv.camMul[1] > 0.0f && lv.camMul[2] > 0.0f)
+        for (int i = 0; i < 4; ++i) raw.camMul[i] = lv.camMul[i];
+}
+
+/*
     Sony "ARW Compressed" (Compression 32767, the lossy ARW2 scheme). Each 16-byte group encodes
     16 photosites of one Bayer colour across 32 columns: an 11-bit max and min, the indices of
     the pixels holding them, then 7-bit deltas (shifted to fit max-min). The 11-bit values are
@@ -886,22 +1089,13 @@ int decodeSonyArw2(QFile &file, RawImage &raw, QString &err)
         }
     }
 
-    /* Levels / pattern / colour, read from the same SR2 tags as the uncompressed path. */
+    /* Levels / pattern / colour. white 16383 is libraw's ARW2 saturation (see applySr2Levels);
+       black 512 is only the pedestal used if the SR2Private block cannot be read -- it is the
+       real value on most E-mount bodies but NOT on all of them (RX100 = 800). */
     raw.pattern = CfaPattern::RGGB;
     raw.white = rawIfd.contains(50717) ? uint16_t(r.scalar(rawIfd[50717])) : 16383;
-    uint16_t black = 512;
-    if (rawIfd.contains(0x7310)) {
-        const QVector<quint32> bl = r.u32s(rawIfd[0x7310]);
-        if (!bl.isEmpty()) black = uint16_t(bl[0]);
-    }
-    for (int i = 0; i < 4; ++i) raw.black[i] = black;
-    if (rawIfd.contains(0x7313)) {
-        const QVector<quint32> wb = r.u32s(rawIfd[0x7313]);   // R G1 G2 B
-        if (wb.size() >= 4 && wb[0] && wb[1] && wb[3]) {
-            raw.camMul[0] = wb[0]; raw.camMul[1] = wb[1];
-            raw.camMul[2] = wb[3]; raw.camMul[3] = wb[2];
-        }
-    }
+    for (int i = 0; i < 4; ++i) raw.black[i] = 512;
+    applySr2Levels(file, raw);
     QString model;
     if (haveIfd0 && ifd0.contains(272)) model = "Sony " + r.ascii(ifd0[272]);
     xyzToCamForModel(model, raw.xyzToCam);
@@ -960,8 +1154,10 @@ bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 
     raw.white = info.white ? quint16(info.white) : quint16((1u << bps) - 1);
 
-    /* BlackLevel is absent from the ARW IFD (Sony keeps it in the makernote). Use a
-       reasonable default until the makernote value is plumbed (see real-RawColor task). */
+    /* BlackLevel and the as-shot white balance are absent from the ARW's plaintext IFDs --
+       they live in the encrypted SR2Private block, read below. What info carries is at best a
+       DNG-tag fallback, at worst the 512 default, so start from it and let applySr2Levels
+       overwrite it once the strip has been read. */
     const quint16 blackDefault = 512;
     const bool haveBlack = info.black[0] || info.black[1] || info.black[2] || info.black[3];
     for (int i = 0; i < 4; ++i)
@@ -992,5 +1188,6 @@ bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
             raw.cfa[i] = quint16((quint16(s[2*i + 1]) << 8 | s[2*i]) & mask);
     }
 
+    applySr2Levels(file, raw);
     return true;
 }

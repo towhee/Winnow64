@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Develop/workingimagecache.h"
+#include "Cache/devpreviewcache.h"
 #include "ui_metadatareport.h"
 
 #if defined(Q_OS_WIN)
@@ -442,6 +443,35 @@ QString MW::developDiagnostics()
         return w ? QString("%1 x %2").arg(w->width).arg(w->height) : QString("(none)");
     };
 
+    /* Trailing section: every folder holding on-disk devPreviews. Appended by both
+       return paths, so it is reported even when no image is selected -- it describes
+       the cache, not the current image. */
+    auto dumpDevPreviewFolders = [&rpt]() {
+        DevPreviewCache &c = DevPreviewCache::instance();
+        const QList<DevPreviewCache::FolderStat> folders = c.folderStats();
+        auto mb = [](qint64 b) {
+            return QString::number(double(b) / (1024.0 * 1024.0), 'f', 1) + " MB";
+        };
+        rpt << "\n" << Utilities::centeredRptHdr('-', "Folders with cached devPreviews");
+        rpt << "\n" << "  cache dir = " << c.cacheDir();
+        rpt << "\n" << "  total = " << G::s(c.count()) << " previews in "
+            << G::s((int)folders.count()) << " folders   (" << mb(c.totalBytes())
+            << " of " << mb(c.maxBytes()) << " cap)";
+        if (folders.isEmpty()) {
+            rpt << "\n" << "  (no cached devPreviews)";
+        }
+        for (const DevPreviewCache::FolderStat &f : folders) {
+            rpt << "\n" << "  " << f.folder;
+            rpt << "\n" << "      previews = " << G::s(f.count)
+                << "   live = " << G::s(f.live)
+                << "   size = " << mb(f.bytes)
+                << (f.live < f.count
+                        ? "   (missing source images -- deleted, or on an unmounted volume)"
+                        : "");
+        }
+        rpt << "\n";
+    };
+
     // OPERATION MODE / RAW ENGINE
     rpt << "\n" << "OPERATION MODE";
     rpt << "\n" << "  G::operationMode = "
@@ -461,6 +491,7 @@ QString MW::developDiagnostics()
     if (fPath.isEmpty()) {
         rpt << "\n" << "  (no image selected -- nothing further to report)";
         rpt << "\n";
+        dumpDevPreviewFolders();
         return reportString;
     }
     rpt << "\n" << "  isFileRaw = " << G::s(isFileRaw(fPath));
@@ -631,6 +662,9 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  depth  = " << (developDepthRefPath.isEmpty()   ? "(none)" : developDepthRefPath);
     rpt << "\n" << "  object = " << (developObjectImagePath.isEmpty()? "(none)" : developObjectImagePath);
     rpt << "\n";
+
+    // FOLDERS WITH CACHED DEVPREVIEWS
+    dumpDevPreviewFolders();
 
     return reportString;
 }

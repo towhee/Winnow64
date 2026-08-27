@@ -19,6 +19,8 @@ set(WINNOW_CORE_TEST_SOURCES
     # no MainWindow), so the closure stays bounded as the comment above requires.
     ${CMAKE_SOURCE_DIR}/Utilities/fileops.cpp
     ${CMAKE_SOURCE_DIR}/Cache/devpreviewcache.cpp
+    # The develop preview index lives in the shared local index database.
+    ${CMAKE_SOURCE_DIR}/Cache/cachedb.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/inputdlg.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/popup.cpp
     ${CMAKE_SOURCE_DIR}/Main/global.cpp
@@ -55,6 +57,7 @@ function(winnow_add_unit_test name)
         Qt6::Widgets
         Qt6::Concurrent
         Qt6::Test
+        Qt6::Sql
     )
     if(APPLE)
         # Mirror the app's `-include arm_acle.h` (some sources assume it).

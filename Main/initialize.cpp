@@ -1171,6 +1171,14 @@ void MW::createStatusBar()
     progressDemosaicRow = progress->addRow("Demosaic", 2, QColor("#3a97c9"),
                                            Progress::Fill::FromStart);
     progress->setRowText(progressDemosaicRow, "Demosaicing");
+    /* Building devPreviews for images edited in an earlier session (Develop > Build
+       Developed Previews, or the background preference). Minutes of rendering that the
+       user is not waiting on, so it belongs in the status bar next to the other caching
+       work rather than under a popup parked over the image. Violet: unclaimed by the
+       rows above. */
+    progressDevPreviewRow = progress->addRow("DevPreview", 2, QColor("#8f7fd1"),
+                                             Progress::Fill::FromStart);
+    progress->setRowText(progressDevPreviewRow, "Dev Previews");
     connect(progress, &Progress::clicked, this, [this]() {
         preferences("CacheHeader");
     });
@@ -1238,8 +1246,10 @@ void MW::createStatusBar()
        and left with E / G / T, and it is a different kind of thing from these two -- an
        editing mode, not a choice of picture. Putting it in here made the third item read
        as a peer of the other two when it is not.
-       Picking either item while in Develop mode LEAVES Develop, the same as the View menu
-       items and Y do; setPreviewSource / setOperationMode put the combo back in step. */
+
+       DISABLED IN DEVELOP MODE, where it reads Developed: Develop always shows the
+       developed image, so the choice does not exist there. MW::syncPreviewSourceEnabled
+       owns that, and setPreviewSource / setOperationMode call it. */
     previewSourceCombo = new QComboBox;
     previewSourceCombo->setObjectName("previewSourceCombo");
     previewSourceCombo->addItem("Original");
@@ -1267,10 +1277,6 @@ void MW::createStatusBar()
         "QComboBox QAbstractItemView {background-color:#445f76; color:white;"
         " selection-background-color:#445f76;}").arg(opModeW));
     connect(previewSourceCombo, &QComboBox::activated, this, [this](int i) {
-        /* Leave Develop FIRST, so the flush, the read-ahead restore and the re-decode all
-           happen before the picture choice is applied to the rebuilt cache. */
-        if (G::operationMode == G::OperationMode::Develop)
-            setOperationMode(G::OperationMode::Preview);
         setPreviewSource(i == int(G::PreviewSource::Developed)
                              ? G::PreviewSource::Developed
                              : G::PreviewSource::Original);
@@ -1867,10 +1873,21 @@ void MW::createDevelopDock()
                altogether. Caching any of those against the stored recipe's hash would
                key a preview to a picture it does not depict. Decline instead, which
                clears the stale preview -- the next faithful render writes a real one. */
+            /* ... and a frame only depicts the recipe it was RENDERED from. Nothing
+               replaces a retained frame when an edit is made -- only a render that
+               completes and is still current does -- so after an edit inside the settle
+               window (leave Develop, switch image, quit) the frame on hand is the
+               PREVIOUS recipe's, with the same path and the same faithful flag. Caching
+               it would stamp old pixels with the new recipe's hash, and since every
+               staleness check downstream is that hash, the wrong picture would then look
+               correct forever. Compare the recipes and decline on a mismatch. */
+            const QByteArray recipe = developRecipeKey(fPath);
             const bool haveFull = fPath == developFullFramePath
-                                  && !developFullFrame.isNull() && developFullFrameFaithful;
+                                  && !developFullFrame.isNull() && developFullFrameFaithful
+                                  && !recipe.isEmpty() && developFullFrameRecipe == recipe;
             const bool haveProxy = fPath == developFramePath
-                                   && !developFrame.isNull() && developFrameFaithful;
+                                   && !developFrame.isNull() && developFrameFaithful
+                                   && !recipe.isEmpty() && developFrameRecipe == recipe;
             if (!haveFull && !haveProxy) return false;
             const QImage &src = haveFull ? developFullFrame : developFrame;
 
@@ -1890,15 +1907,16 @@ void MW::createDevelopDock()
             /* devPreview tier: the frame as rendered, capped only if the user asked for a
                cap. At the default (Full) this is a full sensor-resolution JPEG -- several
                MB rather than a few hundred KB, which is why the cache cap is measured in
-               tens of GB. q90 rather than q88: these pixels are now displayed at 100%,
-               not just used as a placeholder during a decode. */
+               tens of GB. Quality is the "Developed preview quality" preference and
+               defaults HIGH (90, not the 85 of the thumbnail tier) because these pixels
+               are displayed at 100%, not just used as a placeholder during a decode. */
             QImage loupe = src;
             const int cap = G::devPreviewMaxEdge;
             if (cap > 0 && qMax(loupe.width(), loupe.height()) > cap) {
                 loupe = loupe.scaled(cap, cap, Qt::KeepAspectRatio,
                                      Qt::SmoothTransformation);
             }
-            if (!encode(loupe, 90, loupeJpg)) loupeJpg.clear();
+            if (!encode(loupe, G::devPreviewQuality, loupeJpg)) loupeJpg.clear();
 
             return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
         });
@@ -2765,6 +2783,17 @@ void MW::setOperationMode(G::OperationMode mode)
     if (G::isLogger)
         G::log("MW::setOperationMode", mode == G::OperationMode::Develop ? "Develop" : "Preview");
 
+    /* Develop persists its recipe to the image's XMP sidecar, and the develop preview
+       cache folder takes no writes (see Cache/devpreviewcache.h). Refuse the mode rather
+       than opening a panel whose every edit would be silently dropped. The D shortcut is
+       already greyed by enableSelectionDependentMenus; this covers the other callers. */
+    if (mode == G::OperationMode::Develop && isPreviewCacheFolderLoaded()) {
+        if (G::popup)
+            G::popup->showPopup("Develop is not available here: "
+                                + DevPreviewCache::readOnlyReason() + ".", 3000);
+        return;
+    }
+
     /* Only show develop (and its History / Presets panels) in Develop Mode. Those two
        first, so Develop ends up the front tab (see setDevelopPanelEnabled). */
     const bool inDevelop = (mode == G::OperationMode::Develop);
@@ -2789,14 +2818,19 @@ void MW::setOperationMode(G::OperationMode mode)
        running lights in Develop and shows them in Preview. */
     updateStatusBar();
 
-    /* The combo shows the PICTURE, not the mode, so a mode change does not move it. It is
-       synced here only because Develop can be entered before any picture choice was ever
-       pushed to it (first run), and because leaving Develop must show the picture the user
-       last chose. setPreviewSource owns it the rest of the time. */
-    if (previewSourceCombo) {
-        QSignalBlocker block(previewSourceCombo);   // setCurrentIndex must not re-fire
-        previewSourceCombo->setCurrentIndex(int(G::previewSource));
-    }
+    /* Develop always shows the developed image, so the picture choice is disabled (and
+       reads Developed) while in Develop and restored to the user's Preview-mode choice on
+       the way out. G::previewSource itself is untouched by the mode. */
+    syncPreviewSourceEnabled();
+
+    /* ... and the thumbnails have to follow, because the mode is half of which picture
+       they show: the effective source is (Develop ? Developed : G::previewSource). With
+       Original chosen, entering Develop must replace the camera thumbs with developed
+       ones and leaving must put them back. With Developed chosen the effective source is
+       Developed in both modes, so there is nothing to redo -- and skipping it matters,
+       since that is the default and this would otherwise re-read every developed
+       thumbnail on each D press. */
+    if (G::previewSource == G::PreviewSource::Original) refreshDevelopThumbs();
 
     /* Develop shows a single image, so it always runs in Loupe: force Loupe on entry, and
        refresh the View-menu gating (enableSelectionDependentMenus disables Compare -- and
