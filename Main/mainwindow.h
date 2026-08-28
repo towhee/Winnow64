@@ -1769,13 +1769,6 @@ private:
        has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
     void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
                            double feather);
-    /* ImageView is starting a Brush stroke in "AI" auto-mask mode: synchronously decode the SAM
-       object under the stroke's seed point so the live preview can confine the stroke to it.
-       Connected to ImageView::maskBrushSamFieldRequested (direct, same thread). */
-    void onBrushSamFieldRequested(double onx, double ony);
-    /* Pre-warm the SAM 2 encoder for the current image when Brush "AI" auto-mask is enabled via the
-       dock checkbox (the tool is already active, so maskEditBegin does not re-fire). */
-    void warmBrushSamEncoder();
     /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a
        submask is being defined: composite the active scope's submasks -- INCLUDING
        the pending one, with the op the modifiers are previewing -- into a
@@ -1814,23 +1807,14 @@ private:
        several object masks on one image coexist. Lazily loads sam2_encoder/decoder.onnx. */
     void ensureObjectMask(const QString &fPath, const WorkingImage &work,
                           const EditParams &base, int degrees, const QString &paramsJson);
-    /* Shared with the Brush "AI" auto-mask: lazily load the predictor and ensure a SAM 2 encoder
-       embedding covering normRoi (output-normalized) is cached (Phase 1). The guide is scaled so
+    /* Lazily load the predictor and ensure a SAM 2 encoder embedding covering normRoi
+       (output-normalized) is cached (Phase 1). The guide is scaled so
        that ROI resolves at ~1024 px and only the ROI is encoded -- fine structure needs the
        resolution, and the encoder's input is a fixed 1024^2 either way. Outputs the FULL oriented
        guide dims (gw,gh) plus the encoded sub-rect within them. False + nothing cached on failure. */
     bool ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
                              const EditParams &base, int degrees, const QRectF &normRoi,
                              int &gw, int &gh, QRect &crop);
-    /* Brush "AI" auto-mask (2nd auto-mask mode): decode the SAM 2 object under a stroke's seed point
-       (output-normalized) and register it in the BrushStamp SAM-field store, so the brush rasterizer
-       (preview + render) confines the stroke to that object. Reuses objectMaskPredictor's encoder. */
-    void ensureBrushSamField(const QString &fPath, const WorkingImage &work,
-                             const EditParams &base, int degrees, double seedOnx, double seedOny);
-    /* Ensure the SAM field for every AI-auto-mask stroke in a Brush component's paramsJson (render
-       pre-pass; a no-op for luminance/plain strokes and already-decoded fields). */
-    void ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
-                              const EditParams &base, int degrees, const QString &paramsJson);
     QString developObjectImagePath;   // path whose encoder embedding is cached in objectMaskPredictor
     /* What that cached embedding actually covers, so ensureObjectEncoder can reuse it instead of
        paying the ~1s encode again: the output-normalized region requested, the full guide dims it

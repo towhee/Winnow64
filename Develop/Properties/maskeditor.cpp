@@ -34,21 +34,18 @@ void MaskEditor::showTool(const MaskComponent &m)
 
     switch (m.tool) {
     case int(MaskTool::Brush):
-        addSlider("maskSize", "Size", "Brush diameter (% of the long edge).", 1, 100);
+        addSlider("maskSize", "Size", "Brush diameter (% of the long edge).", 1, 1000, 10);
         addSlider("maskFeather", "Feather", "Soft edge outside the brush size (0 = crisp).", 0, 100);
         addSlider("maskEdge", "Edge", kEdgeTip, -100, 100);
         addSlider("maskFlow", "Flow", "How much each stroke builds up.", 1, 100);
         addCheckbox("maskAutoMask", "Auto mask",
-                    "Limit the brush to the edge under the stroke start. Toggle with A.");
-        addCheckbox("maskAutoMaskAi", "AI edge (SAM)",
-                    "On = SAM object under the stroke start; off = similar-luminance band.");
+                    "Keep the brush inside the edges under the cursor. Toggle with A.");
         addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.");
         setSliderReal("maskSize", pnum(o, "size", 20));
         setSliderReal("maskFeather", feather);
         setSliderReal("maskEdge", edge);
         setSliderReal("maskFlow", pnum(o, "flow", 100));
         setCheckboxValue("maskAutoMask", o.value("autoMask").toBool(false));
-        setCheckboxValue("maskAutoMaskAi", o.value("autoMaskMode").toString("lum") == "ai");
         setCheckboxValue("maskInvert", m.inverted);
         break;
 
@@ -97,7 +94,7 @@ void MaskEditor::showTool(const MaskComponent &m)
         break;
 
     case int(MaskTool::Object):
-        addSlider("maskSize", "Size", "Perimeter brush diameter (% of the long edge).", 1, 100);
+        addSlider("maskSize", "Size", "Perimeter brush diameter (% of the long edge).", 1, 1000, 10);
         addSlider("maskFeather", "Feather", "Soften the refined cutout edge.", 0, 100);
         addSlider("maskEdge", "Edge", kEdgeTip, -100, 100);
         addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.");

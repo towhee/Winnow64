@@ -236,6 +236,22 @@ public slots:
     void setMaskLegend(const QString &submaskName, int op, bool showHint);
     /* True while a brush/object stroke is being painted. */
     bool maskStrokeInFlight() const { return maskPainting || maskObjDrawing; }
+    /* True while the brush/object tool's OWN live preview stands in for the whole-mask
+       veil: during a stroke, and on past the release until MW pushes a veil that includes
+       that stroke (maskBrushVeilStale). Without the second half the coverage blinked back
+       to the pre-stroke veil the moment the mouse came up -- the stroke just painted
+       vanished until the render tick caught up, exactly when the user is lining up the
+       next stroke. Not for a Subtract/Intersect stroke: there the local preview paints
+       where coverage is being REMOVED, so the real veil is the honest picture. */
+    bool maskBrushOwnsTint() const
+    {
+        if ((maskTool != 2 && !maskIsObject()) || maskLegendOp > 0) return false;
+        if (maskStrokeInFlight()) return true;
+        /* Past the release the stand-in only holds while it is actually being drawn:
+           the per-tool draw is hover-gated, so off the image the (stale) veil is still
+           better than no coverage at all. */
+        return maskBrushVeilStale && maskHover && !maskBrushPreview.isNull();
+    }
     /* Whether the whole-mask veil would actually be PAINTED. MW asks before building
        it: the veil is a full-resolution overlay rebuilt on every drag tick, and while
        it is hidden drawForeground ignores it, so building it is pure cost. */
@@ -262,8 +278,7 @@ public slots:
     void showMaskTint();
     void setMaskFeather(double feather);
     void setMaskInverted(bool inverted);
-    void setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
-                              const QString &autoMaskMode = QStringLiteral("lum"));
+    void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
     /* Content-range tools (Luminance/Color Range): the dock changed lo/hi/refine (or samples) ->
        rebuild the coverage tint from the shared RangeRef. */
     void setMaskRangeParams(const QString &paramsJson);
@@ -344,10 +359,6 @@ signals:
     void maskFeatherRequested(double feather);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
     void maskBrushAutoMaskRequested(bool on);
-    /* Starting a Brush stroke in "AI" auto-mask mode: ask MW to decode the SAM object under the
-       stroke's seed point (output-normalized) so the live stroke can be confined to it. Direct-
-       connected (synchronous), so the field is in the BrushStamp store when this returns. */
-    void maskBrushSamFieldRequested(double onx, double ony);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
     /* A level line was drawn: the leveling angle to ADD to the straighten (degrees, nearest H/V). */
@@ -563,7 +574,6 @@ private:
     /* Brush current settings (0..100; for the cursor + the next stroke). */
     double  maskBrushSize = 20.0, maskBrushFlow = 100.0;
     bool    maskBrushAutoMask = false;
-    QString maskBrushAutoMaskMode = QStringLiteral("lum");   // "lum" (luminance) | "ai" (SAM)
     /* Brush painting state. Preview buffers are in output-oriented space, capped resolution. main =
        committed strokes; stroke = current in-progress stroke coverage; preview = cached tint image.
        strokePts is the flat [x0,y0,...] normalized point list being painted. */
@@ -571,6 +581,9 @@ private:
     std::vector<float> maskBrushMain, maskBrushStroke, maskBrushScratch;
     QImage             maskBrushPreview;
     bool               maskPainting = false, maskBrushErase = false;
+    /* Set when a stroke is released, cleared when MW pushes (or drops) the rebuilt veil:
+       the window in which scopeMaskTint is one stroke out of date. See maskBrushOwnsTint. */
+    bool               maskBrushVeilStale = false;
     QVector<double>    maskStrokePts;
     QJsonArray         maskBrushStrokesJson;   // committed strokes (paramsJson on commit)
     /* Throttle shared by every LIVE (mid-gesture) mask-geometry emit -- brush strokes and
@@ -583,9 +596,10 @@ private:
     /* Wheel = a wheel / two-finger resize of the Radial ellipse: there is no mouse
        button held, so it has no `live` flag of its own -- see maskEmitLiveGeometry. */
     enum class LiveEmit { Brush, Handle, Wheel };       // which gesture is emitting
-    std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask luminance guide (this image)
-    std::shared_ptr<const BrushStamp::Guide> maskBrushSamField;  // AI stroke's SAM field (kept alive
-                                                          // while maskStrokeAM.guide points into it)
+    std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask colour guide (this image)
+    /* Guide pixels the brush DIAMETER should span; ensureAutoGuide sizes the guide from it
+       and the current brush, so a small brush gets a finer guide (see there). */
+    static constexpr double kGuidePxPerDab = 96.0;
     BrushStamp::AutoMaskCtx maskStrokeAM;      // current stroke's auto-mask context
     QPointF            maskBrushLast;          // last stamped point, buffer-pixel coords
     /* Distance travelled since the last SPACED dab, carried across mouse-moves so a
@@ -668,7 +682,12 @@ private:
     void    brushEnsureBuffers();                           // rebuild if the pixmap size changed
     void    brushRebuildPreview(QRect region = QRect());    // composite main+stroke -> tint (region or all)
     QRect   brushSegRect(QPointF a, QPointF b) const;       // buffer-px bbox of a dab/segment
-    void    adjustBrushSize(double delta);                  // [ ] / two-finger; clamps + syncs dock
+    void    scaleBrushSize(double factor);                  // two-finger / wheel: relative resize
+    void    setBrushSize(double size);                      // quantise + clamp + sync dock
+    double  maskBrushSizeMin() const;                       // min size % == 3px diameter
+    /* The brush size step (a % of the long edge). The canvas gestures, the dock slider
+       (div 10) and the sidecar all quantise to it, so they can never disagree. */
+    static constexpr double kBrushSizeStep = 0.1;
     void    brushUndoStroke();                              // remove + re-raster stroke
     QJsonObject brushStrokeJson() const;                    // the stroke under the cursor
     /* The Brush submask's paramsJson: committed strokes, plus the in-progress one when

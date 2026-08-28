@@ -1072,7 +1072,6 @@ static QString maskSettingLabel(const QString &key)
     if (key == "maskSize")         return "Brush size";
     if (key == "maskFlow")         return "Brush flow";
     if (key == "maskAutoMask")     return "Auto mask";
-    if (key == "maskAutoMaskAi")   return "Auto mask AI";
     if (key == "maskRangeLo" || key == "maskRangeHi") return "Range";
     if (key.startsWith("maskHue") || key.startsWith("maskSat")) return "Color range";
     return "Mask setting";
@@ -1139,7 +1138,7 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
     /* Brush next-stroke settings (size/flow/autoMask + brush feather): refresh the
        cursor, do NOT re-composite (existing strokes keep their snapshot). */
     const bool brushLike = key == "maskSize" || key == "maskFlow" ||
-                           key == "maskAutoMask" || key == "maskAutoMaskAi" ||
+                           key == "maskAutoMask" ||
                            (key == "maskFeather" && mm->tool == int(MaskTool::Brush));
     if (brushLike) {
         /* THREE SCOPES, one slider. Size/feather/flow/auto-mask are baked into each
@@ -1175,13 +1174,11 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
             if (lastOnly)   mm->paramsJson = brushLastStrokeWith(mm->paramsJson, "feather", v.toInt());
             else if (retro) mm->paramsJson = brushStrokesWith(mm->paramsJson, "feather", v.toInt());
         }
-        else if (key == "maskSize")     put("size", v.toInt());
+        /* Size is a 0.1-resolution double (div 10 slider) -- toInt would floor every
+           sub-1% brush back to the old, far too coarse, whole-percent grid. */
+        else if (key == "maskSize")     put("size", v.toDouble());
         else if (key == "maskFlow")     put("flow", v.toInt());
         else if (key == "maskAutoMask") put("autoMask", v.toBool());
-        else if (key == "maskAutoMaskAi") {
-            put("autoMaskMode", v.toBool() ? "ai" : "lum");
-            if (v.toBool()) emit maskBrushAiEnabled();      // pre-warm the SAM encoder
-        }
         emitBrushSettings(*mm);
         /* A stroke that is already down changed -> re-composite. Arming the next stroke
            changes nothing on screen but the cursor. */
@@ -2779,7 +2776,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
     if (selected) {
         if (m.tool == int(MaskTool::Brush)) {
             addSlider("maskSize", "Size", "Brush diameter (% of the long edge).",
-                      toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
+                      toolIdx, "", 1, 1000, 10, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soft edge added OUTSIDE the brush size (0 = crisp).",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskEdge", "Edge",
@@ -2789,10 +2786,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             addSlider("maskFlow", "Flow", "How much each stroke builds up.",
                       toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
             addCheckbox("maskAutoMask", "Auto mask",
-                        "Limit the brush to the edge under the stroke start. Toggle with A.",
-                        toolIdx, "", false);
-            addCheckbox("maskAutoMaskAi", "AI edge (SAM)",
-                        "Auto mask mode: on = SAM object under the stroke start; off = similar-luminance band.",
+                        "Keep the brush inside the edges under the cursor. Toggle with A.",
                         toolIdx, "", false);
             addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
             setSliderReal("maskSize", brushNum(m.paramsJson, "size", 20));
@@ -2800,7 +2794,6 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             setSliderReal("maskEdge", m.edge);
             setSliderReal("maskFlow", brushNum(m.paramsJson, "flow", 100));
             setCheckboxValue("maskAutoMask", brushBool(m.paramsJson, "autoMask", false));
-            setCheckboxValue("maskAutoMaskAi", brushStr(m.paramsJson, "autoMaskMode", "lum") == "ai");
             setCheckboxValue("maskInvert", m.inverted);
         }
         else if (m.tool == int(MaskTool::LuminanceRange)) {
@@ -2955,7 +2948,7 @@ void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComp
             /* Perimeter-paint: trace the object boundary with a solid brush (Alt erases;
                [ ] or two-finger drag resize). Size = diameter; Feather softens edge. */
             addSlider("maskSize", "Size", "Perimeter brush diameter (% of the long edge).",
-                      toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
+                      toolIdx, "", 1, 1000, 10, G::darkgray, G::lightgray);
             addSlider("maskFeather", "Feather", "Soften the refined cutout edge.",
                       toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
             addSlider("maskEdge", "Edge",
@@ -3034,7 +3027,6 @@ QString DevelopProperties::defaultMaskParams(int tool)
         o["size"] = 20;
         o["flow"] = 100;
         o["autoMask"] = false;
-        o["autoMaskMode"] = "lum";      // "lum" (luminance band) | "ai" (SAM object)
         o["strokes"] = QJsonArray();
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
@@ -3164,13 +3156,15 @@ void DevelopProperties::setActiveBrushSize(double size)
     if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
     MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::Brush) && m.tool != int(MaskTool::Object)) return;
-    const int s = qBound(1, int(size + 0.5), 100);
+    /* Quantised to ImageView's 0.1% step (the canvas gesture already is) -- the old
+       whole-percent round made the smallest brush ~1% of the long edge. */
+    const double s = qBound(0.1, qRound(size * 10.0) / 10.0, 100.0);
     /* Same split as the panel slider (onMaskEditorSetting): while the submask is being
        built this arms the next stroke, on a re-opened one it resizes what is there. */
     const bool retro = (pendingIdx < 0);
     m.paramsJson = retro ? brushStrokesWith(m.paramsJson, "size", s)
                          : brushWith(m.paramsJson, "size", s);
-    noteEdit("Brush size", QString::number(s), "mask/brushSize");
+    noteEdit("Brush size", QString::number(s, 'f', 1), "mask/brushSize");
     syncMaskSlider("maskSize", s);
     if (retro) emit paramsChanged();
 }
@@ -3238,8 +3232,7 @@ void DevelopProperties::emitBrushSettings(const MaskComponent &m)
     emit maskBrushSettingsChanged(brushNum(m.paramsJson, "size", 20),
                                   m.feather,
                                   brushNum(m.paramsJson, "flow", 100),
-                                  brushBool(m.paramsJson, "autoMask", false),
-                                  brushStr(m.paramsJson, "autoMaskMode", "lum"));
+                                  brushBool(m.paramsJson, "autoMask", false));
 }
 
 void DevelopProperties::setMaskOverlayShown(bool shown)
@@ -5064,19 +5057,14 @@ void DevelopProperties::itemChange(QModelIndex idx)
        strokes keep their own snapshot, so these do NOT re-composite -- they just refresh the cursor
        and brush state in ImageView. (Invert still flips the whole mask -- handled below.) */
     if (source == "maskSize" || source == "maskFlow" || source == "maskAutoMask" ||
-        source == "maskAutoMaskAi" ||
         (source == "maskFeather" && activeMaskTool() == int(MaskTool::Brush))) {
         EditScope *l = activeScope();
         if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size()) {
             MaskComponent &mm = l->components[selectedMaskIndex];
             if      (source == "maskFeather")  mm.feather = v.toFloat();
-            else if (source == "maskSize")     mm.paramsJson = brushWith(mm.paramsJson, "size", v.toInt());
+            else if (source == "maskSize")     mm.paramsJson = brushWith(mm.paramsJson, "size", v.toDouble());
             else if (source == "maskFlow")     mm.paramsJson = brushWith(mm.paramsJson, "flow", v.toInt());
             else if (source == "maskAutoMask") mm.paramsJson = brushWith(mm.paramsJson, "autoMask", v.toBool());
-            else if (source == "maskAutoMaskAi") {
-                mm.paramsJson = brushWith(mm.paramsJson, "autoMaskMode", v.toBool() ? "ai" : "lum");
-                if (v.toBool()) emit maskBrushAiEnabled();   // pre-warm the SAM encoder
-            }
             noteEdit(maskSettingLabel(source), historyValueText(idx, v),
                      "mask/" + source);
             emitBrushSettings(mm);

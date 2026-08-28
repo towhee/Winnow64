@@ -68,13 +68,6 @@ public:
     bool refine(const std::vector<float>& fillCov, const std::vector<float>& bandCov,
                 int bw, int bh, std::vector<float>& cov, int& w, int& h);
 
-    /* Point-prompt variant for the Brush tool's "AI" auto-mask mode: segment the object under a
-       single click (output-normalized onx/ony) so a brush stroke can be confined to it. Uses the
-       SAME fixed-shape 2-point decoder as refine() -- one positive point (label 1) + one padding
-       point (label -1), has_mask_input=0. Fills cov (w*h, output-oriented, matching the cached
-       guide). Requires setImage() first. Returns false if no image is set or inference failed. */
-    bool refinePoint(double onx, double ony, std::vector<float>& cov, int& w, int& h);
-
 private:
     /* SAM 2 encoder preprocessing: RGB, resize to inputSize^2, (px/255 - ImageNet mean)/std, NCHW. */
     cv::Mat preprocess(const QImage& image) const;

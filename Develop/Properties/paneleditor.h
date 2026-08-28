@@ -26,8 +26,10 @@ public:
     explicit PanelEditor(QWidget *parent = nullptr);
 
     void clearRows();          // drop all rows (call before rebuilding)
+    /* min/max are in SLIDER units: with div > 0 the row shows value/div (e.g. min 1,
+       max 1000, div 10 = 0.1 .. 100.0), matching DevelopProperties::addSlider. */
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
-                   int min, int max);
+                   int min, int max, int div = 0);
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip);
     void setSliderReal(const QString &key, double real);
     void setCheckboxValue(const QString &key, bool on);

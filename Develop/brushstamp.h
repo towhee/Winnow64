@@ -39,13 +39,18 @@
 namespace BrushStamp {
 
 /* ---- Auto-mask guide ----
-   A small luminance map of the displayed image (output-normalized orientation), shared between the
-   ImageView live preview and the develop render so auto-masked strokes evaluate identically. It is
-   computed once (when the brush activates) from the loupe pixmap and registered by image path. */
+   A small COLOUR map of the displayed image (output-normalized orientation), shared between the
+   ImageView live preview and the develop render so auto-masked strokes evaluate identically. Built
+   once per image (ImageView::ensureAutoGuide) and registered by path.
+
+   YCbCr, not luminance: the auto-mask has to separate a brown cone from a grey background of the
+   SAME lightness, which a luminance band cannot do at all -- it is the chroma that differs. Y and
+   the two chroma channels are stored interleaved as bytes (a few MB even at a high guide
+   resolution, where floats would be tens of MB). */
 struct Guide {
-    std::vector<float> lum;     // 0..1 luminance, row-major, output-oriented
+    std::vector<uchar> ycc;     // interleaved Y,Cb,Cr (0..255), row-major, output-oriented
     int w = 0, h = 0;
-    bool valid() const { return w > 0 && h > 0 && lum.size() == size_t(w) * h; }
+    bool valid() const { return w > 0 && h > 0 && ycc.size() == size_t(w) * h * 3; }
 };
 
 inline QMutex &guideMutex() { static QMutex m; return m; }
@@ -55,7 +60,7 @@ inline QHash<QString, std::shared_ptr<const Guide>> &guideStore()
 inline void putGuide(const QString &path, std::shared_ptr<const Guide> g)
 {
     QMutexLocker lk(&guideMutex());
-    if (guideStore().size() > 8) guideStore().clear();   // crude cap (each guide is a few MB)
+    if (guideStore().size() > 3) guideStore().clear();   // crude cap (a guide is tens of MB)
     guideStore().insert(path, std::move(g));
 }
 
@@ -66,76 +71,204 @@ inline std::shared_ptr<const Guide> getGuide(const QString &path)
     return it != guideStore().end() ? it.value() : nullptr;
 }
 
-/* ---- SAM auto-mask field (2nd auto-mask mode: "AI") ----
-   For the "AI" auto-mask a stroke is confined to the SAM-segmented object under its START point,
-   rather than to a luminance band. That object coverage is a 0..1 field in output-normalized space
-   -- the same shape as a luminance Guide -- so it reuses the Guide struct. Unlike the single per-
-   image luminance guide, each AI stroke has its OWN field (keyed by its seed point), decoded by
-   MW::ensureBrushSamField (SAM 2 point prompt) and read here by rasterize(). Populated on the GUI
-   thread; read (getSamField) from the render worker -- both mutex-guarded. Reuses guideMutex. */
-inline QHash<QString, std::shared_ptr<const Guide>> &samFieldStore()
-{ static QHash<QString, std::shared_ptr<const Guide>> s; return s; }
+/* ---- Auto-mask: how a dab is confined ---------------------------------------------------
+   Lightroom's model, and the one thing the first implementation got wrong three ways at once.
+   It used to be: one reference LUMINANCE sampled at the stroke's START, a fixed +-0.15 band,
+   and the test applied per pixel INDEPENDENTLY. On a brown cone against a grey background of
+   the same lightness that paints the background (equal luminance), speckles the object (a
+   fixed band cannot cover a textured surface), and -- because a lone pixel needs no route
+   back to the brush -- happily paints matching pixels on the FAR side of the edge.
 
-/* Stable key for a stroke's SAM field: path + rounded seed point (must match between the ImageView
-   preview and the develop render so they sample the SAME field). */
-inline QString samFieldKey(const QString &path, double onx, double ony)
-{
-    return path + "|sam|" + QString::number(onx, 'f', 4) + "," + QString::number(ony, 'f', 4);
-}
+   The replacement, per DAB (all of it in guide space):
+     1. REFERENCE = the median colour of a small window at the dab centre, re-sampled for
+        every dab as the brush travels (Lightroom re-seeds under the crosshair; a stroke-start
+        reference goes stale the moment the brush moves onto a different part of the subject).
+     2. TOLERANCE adapts to that window's own spread (75th percentile of the distance to the
+        reference, x kTolK, clamped): a busy texture widens it and a smooth area keeps it
+        tight, which is what stops the speckling without letting the mask run.
+     3. DISTANCE is Y + double-weighted chroma, so equal-lightness / different-hue reads as
+        far apart.
+     4. CONNECTIVITY: a flood fill from the dab centre keeps only the accepted region the
+        brush centre can actually REACH. This is what holds the mask on the near side of an
+        edge -- matching pixels across the boundary are no longer painted just for matching.
+   The result is a 0..1 acceptance field over the dab's box, bilinearly sampled by the dab's
+   pixel loop, so the preview and the full-res render confine identically. */
+constexpr double kAutoChromaWeight = 2.0;    // chroma counts double against Y in the distance
+constexpr double kTolK             = 2.5;    // tolerance = kTolK * local spread
+constexpr double kTolFloor         = 10.0;   // ... never tighter than this (sensor noise)
+constexpr double kTolCeil          = 70.0;   // ... never looser than this (or it masks nothing)
+constexpr float  kAcceptCut        = 0.35f;  // acceptance treated as "in" for the flood fill
 
-inline void putSamField(const QString &key, std::shared_ptr<const Guide> f)
-{
-    QMutexLocker lk(&guideMutex());
-    if (samFieldStore().size() > 16) samFieldStore().clear();   // crude cap (a few MB each)
-    samFieldStore().insert(key, std::move(f));
-}
-
-inline std::shared_ptr<const Guide> getSamField(const QString &key)
-{
-    QMutexLocker lk(&guideMutex());
-    auto it = samFieldStore().find(key);
-    return it != samFieldStore().end() ? it.value() : nullptr;
-}
-
-/* Per-stroke auto-mask state: limit a dab to pixels whose luminance is near the stroke-start
-   luminance (lumRef), within tol. degrees maps a TARGET pixel back to output-normalized (0 for the
-   output-space preview; the render's EXIF degrees for work space). */
 struct AutoMaskCtx {
-    const float *guide = nullptr;
-    int    gw = 0, gh = 0;
-    float  lumRef = 0.0f;
-    float  tol = 0.15f;
-    int    degrees = 0;
+    const Guide *g = nullptr;
+    int    degrees = 0;        // target-norm -> output-norm rotation (0 for the preview)
     bool   on = false;
-    bool   aiField = false;    // guide is a SAM object coverage field (0..1), not a luminance map
 };
 
-inline float guideLumAt(const AutoMaskCtx &a, double onx, double ony)
+/* One dab's acceptance field, in GUIDE pixels. bypass = paint the dab unconfined (no guide,
+   or the seed fell outside its own region -- better to paint than to swallow the stroke). */
+struct DabField {
+    int x0 = 0, y0 = 0, w = 0, h = 0;
+    std::vector<float> a;
+    bool bypass = true;
+    /* Bilinear sample at a continuous guide-pixel coordinate; 0 outside the box. */
+    float at(double gx, double gy) const
+    {
+        if (bypass) return 1.0f;
+        const double u = gx - 0.5 - x0, v = gy - 0.5 - y0;
+        if (u <= -1.0 || v <= -1.0 || u >= w || v >= h) return 0.0f;
+        const int i0 = int(std::floor(u)), j0 = int(std::floor(v));
+        const double tx = u - i0, ty = v - j0;
+        auto px = [&](int i, int j) -> float {
+            if (i < 0 || j < 0 || i >= w || j >= h) return 0.0f;
+            return a[size_t(j) * w + i];
+        };
+        const float top = float(px(i0, j0) * (1 - tx) + px(i0 + 1, j0) * tx);
+        const float bot = float(px(i0, j0 + 1) * (1 - tx) + px(i0 + 1, j0 + 1) * tx);
+        return float(top * (1 - ty) + bot * ty);
+    }
+};
+
+inline double yccDist(const uchar *p, const double ref[3])
 {
-    int gx = std::clamp(int(onx * a.gw), 0, a.gw - 1);
-    int gy = std::clamp(int(ony * a.gh), 0, a.gh - 1);
-    return a.guide[size_t(gy) * a.gw + gx];
+    const double dy = double(p[0]) - ref[0];
+    const double db = double(p[1]) - ref[1];
+    const double dr = double(p[2]) - ref[2];
+    return std::sqrt(dy * dy + kAutoChromaWeight * (db * db + dr * dr));
 }
 
-inline float edgeFactor(const AutoMaskCtx &a, int x, int y, int w, int h)
+/* Build the acceptance field for one dab centred at (gcx,gcy) with radius rg, all in guide px. */
+inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, DabField &f)
 {
-    const double tnx = (x + 0.5) / w, tny = (y + 0.5) / h;
-    double onx, ony;
-    switch (a.degrees) {                 // target-norm -> output-norm (CW), matches buildMaskBuffer
-        case 90:  onx = 1.0 - tny; ony = tnx;       break;
-        case 180: onx = 1.0 - tnx; ony = 1.0 - tny; break;
-        case 270: onx = tny;       ony = 1.0 - tnx; break;
-        default:  onx = tnx;       ony = tny;       break;
+    f.bypass = true;
+    const double r = std::max(rg, 2.0);          // a sub-pixel dab still needs a box to grow in
+    const int x0 = std::max(0,      int(std::floor(gcx - r)) - 1);
+    const int x1 = std::min(g.w - 1, int(std::ceil (gcx + r)) + 1);
+    const int y0 = std::max(0,      int(std::floor(gcy - r)) - 1);
+    const int y1 = std::min(g.h - 1, int(std::ceil (gcy + r)) + 1);
+    const int bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    if (bw < 3 || bh < 3) return;
+    const int ix = std::clamp(int(gcx), x0, x1), iy = std::clamp(int(gcy), y0, y1);
+
+    /* 1 + 2: reference colour and tolerance, from a small window at the dab centre. */
+    const int wr = std::max(1, int(r * 0.15));
+    const int wx0 = std::max(0, ix - wr), wx1 = std::min(g.w - 1, ix + wr);
+    const int wy0 = std::max(0, iy - wr), wy1 = std::min(g.h - 1, iy + wr);
+    static thread_local std::vector<uchar> chan;
+    static thread_local std::vector<double> dists;
+    const int n = (wx1 - wx0 + 1) * (wy1 - wy0 + 1);
+    double ref[3];
+    for (int c = 0; c < 3; ++c) {
+        chan.clear(); chan.reserve(n);
+        for (int y = wy0; y <= wy1; ++y) {
+            const uchar *row = g.ycc.data() + (size_t(y) * g.w + wx0) * 3 + c;
+            for (int x = wx0; x <= wx1; ++x, row += 3) chan.push_back(*row);
+        }
+        auto mid = chan.begin() + chan.size() / 2;
+        std::nth_element(chan.begin(), mid, chan.end());
+        ref[c] = double(*mid);
     }
-    if (a.aiField)                       // AI mode: the field IS the confinement coverage (0..1)
-        return guideLumAt(a, onx, ony);
-    const double d = std::abs(double(guideLumAt(a, onx, ony)) - double(a.lumRef));
-    const double half = a.tol * 0.5;
-    if (d <= half)    return 1.0f;
-    if (d >= a.tol)   return 0.0f;
-    double s = (d - half) / half;
-    s = s * s * s * (s * (s * 6.0 - 15.0) + 10.0);   // smootherstep falloff at the edge
-    return float(1.0 - s);
+    dists.clear(); dists.reserve(n);
+    for (int y = wy0; y <= wy1; ++y) {
+        const uchar *row = g.ycc.data() + (size_t(y) * g.w + wx0) * 3;
+        for (int x = wx0; x <= wx1; ++x, row += 3) dists.push_back(yccDist(row, ref));
+    }
+    double spread = 0.0;
+    if (dists.size() > 3) {
+        auto q = dists.begin() + (dists.size() * 3) / 4;
+        std::nth_element(dists.begin(), q, dists.end());
+        spread = *q;
+    }
+    const double tol = std::clamp(kTolK * spread, kTolFloor, kTolCeil);
+    const double ramp = std::max(tol * 0.5, 1.0);
+
+    /* 3: per-pixel acceptance over the box. */
+    f.x0 = x0; f.y0 = y0; f.w = bw; f.h = bh;
+    f.a.assign(size_t(bw) * bh, 0.0f);
+    for (int y = 0; y < bh; ++y) {
+        const uchar *row = g.ycc.data() + (size_t(y + y0) * g.w + x0) * 3;
+        float *out = f.a.data() + size_t(y) * bw;
+        for (int x = 0; x < bw; ++x, row += 3) {
+            const double d = yccDist(row, ref);
+            out[x] = d <= tol ? 1.0f : float(std::max(0.0, 1.0 - (d - tol) / ramp));
+        }
+    }
+
+    /* 4: flood fill from the dab centre -- drop every accepted pixel it cannot reach. */
+    const int si = ix - x0, sj = iy - y0;
+    if (f.a[size_t(sj) * bw + si] <= kAcceptCut) return;      // seed is an outlier: unconfined
+    static thread_local std::vector<uchar> seen;
+    static thread_local std::vector<int> stack;
+    seen.assign(size_t(bw) * bh, 0);
+    stack.clear();
+    stack.push_back(sj * bw + si);
+    seen[size_t(sj) * bw + si] = 1;
+    while (!stack.empty()) {
+        const int k = stack.back(); stack.pop_back();
+        const int cy = k / bw, cx = k - cy * bw;
+        for (int dy = -1; dy <= 1; ++dy) {
+            const int ny = cy + dy;
+            if (ny < 0 || ny >= bh) continue;
+            for (int dx = -1; dx <= 1; ++dx) {
+                const int nx = cx + dx;
+                if ((dx | dy) == 0 || nx < 0 || nx >= bw) continue;
+                const size_t nk = size_t(ny) * bw + nx;
+                if (seen[nk] || f.a[nk] <= kAcceptCut) continue;
+                seen[nk] = 1;
+                stack.push_back(int(nk));
+            }
+        }
+    }
+    for (size_t k = 0; k < f.a.size(); ++k) if (!seen[k]) f.a[k] = 0.0f;
+
+    /* 3x3 box blur: the fill's boundary is a hard staircase at guide resolution, and the dab
+       samples this field bilinearly at a much finer target resolution. */
+    static thread_local std::vector<float> tmp;
+    tmp = f.a;
+    for (int y = 0; y < bh; ++y) {
+        for (int x = 0; x < bw; ++x) {
+            float sum = 0.0f; int cnt = 0;
+            for (int dy = -1; dy <= 1; ++dy) {
+                const int ny = y + dy;
+                if (ny < 0 || ny >= bh) continue;
+                for (int dx = -1; dx <= 1; ++dx) {
+                    const int nx = x + dx;
+                    if (nx < 0 || nx >= bw) continue;
+                    sum += tmp[size_t(ny) * bw + nx]; ++cnt;
+                }
+            }
+            f.a[size_t(y) * bw + x] = cnt ? sum / cnt : 0.0f;
+        }
+    }
+    f.bypass = false;
+}
+
+/* Target pixel -> guide pixel. `degrees` maps a TARGET pixel back to output-normalized (0 for
+   the output-space preview; the render's EXIF degrees for work space), matching buildMaskBuffer.
+   The map is AFFINE in every case, so it is solved once per dab into
+       gx = m[0] + m[1]*tx + m[2]*ty        gy = m[3] + m[4]*tx + m[5]*ty
+   rather than re-deriving two divisions and a switch for each of the dab's pixels. */
+struct GuideMap { double m[6]; };
+
+inline GuideMap guideMapFor(const AutoMaskCtx &a, int w, int h)
+{
+    const double gw = a.g->w, gh = a.g->h;
+    const double kx = gw / w, ky = gh / h;      // if the axes are NOT swapped
+    const double sx = gw / h, sy = gh / w;      // if they are (90 / 270)
+    GuideMap g{};
+    switch (a.degrees) {
+        case 90:  g = {{ gw, 0.0,  -sx, 0.0, sy, 0.0 }}; break;   // gx=(1-ty/h)gw, gy=(tx/w)gh
+        case 180: g = {{ gw, -kx,  0.0,  gh, 0.0, -ky }}; break;
+        case 270: g = {{ 0.0, 0.0,  sx,  gh, -sy, 0.0 }}; break;  // gx=(ty/h)gw, gy=(1-tx/w)gh
+        default:  g = {{ 0.0, kx,  0.0, 0.0, 0.0,  ky }}; break;
+    }
+    return g;
+}
+
+inline void targetToGuide(const GuideMap &g, double tx, double ty, double &gx, double &gy)
+{
+    gx = g.m[0] + g.m[1] * tx + g.m[2] * ty;
+    gy = g.m[3] + g.m[4] * tx + g.m[5] * ty;
 }
 
 /* ---- Dab cost counters (diagnostic) ----
@@ -190,7 +323,29 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
     dabStats().dabs.fetch_add(1, std::memory_order_relaxed);
     dabStats().pixels.fetch_add(quint64(x1 - x0 + 1) * quint64(y1 - y0 + 1),
                                 std::memory_order_relaxed);
-    const bool auto_ = am && am->on && am->guide;
+    /* Auto-mask: build this dab's acceptance field ONCE (guide space, see buildDabField),
+       then the pixel loop just samples it. Consecutive dabs along a stroke sit a quarter
+       radius apart and often land on the same guide pixel, so the field is cached and
+       reused when the centre has not moved a guide pixel -- the fill is the only part of
+       the brush that is not embarrassingly parallel. thread_local: the render worker and
+       the GUI both stamp dabs. */
+    const bool auto_ = am && am->on && am->g && am->g->valid();
+    static thread_local DabField field;
+    static thread_local const Guide *fieldGuide = nullptr;
+    static thread_local double fieldCx = 0, fieldCy = 0, fieldR = -1;
+    double gcx = 0, gcy = 0, grad = 0;
+    GuideMap gmap{};
+    if (auto_) {
+        gmap = guideMapFor(*am, w, h);
+        targetToGuide(gmap, cx, cy, gcx, gcy);
+        grad = radius * double(std::max(am->g->w, am->g->h)) / std::max(w, h);
+        if (fieldGuide != am->g || std::abs(grad - fieldR) > 0.01 ||
+            std::abs(gcx - fieldCx) > 0.5 || std::abs(gcy - fieldCy) > 0.5) {
+            buildDabField(*am->g, gcx, gcy, grad, field);
+            fieldGuide = am->g; fieldCx = gcx; fieldCy = gcy; fieldR = grad;
+        }
+    }
+    const DabField *fld = auto_ ? &field : nullptr;
     const double r2    = radius * radius;
     const bool   hard  = (f <= 0.0);                  // flat disc, no profile to sample
     const double invR  = 1.0 / radius;
@@ -202,6 +357,9 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
             float *row = cov + size_t(y) * w;
             const double dy = y + 0.5 - cy;
             const double dy2 = dy * dy;
+            /* Row constants of the affine guide map (the x term is added per pixel). */
+            const double gx0 = gmap.m[0] + gmap.m[1] * 0.5 + gmap.m[2] * (y + 0.5);
+            const double gy0 = gmap.m[3] + gmap.m[4] * 0.5 + gmap.m[5] * (y + 0.5);
             for (int x = x0; x <= x1; ++x) {
                 const double dx = x + 0.5 - cx;
                 const double d2 = dx * dx + dy2;
@@ -212,7 +370,10 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
                     c = lut.at(std::sqrt(d2) * invR);
                     if (c <= 0.0f) continue;
                 }
-                if (auto_) { c *= edgeFactor(*am, x, y, w, h); if (c <= 0.0f) continue; }
+                if (auto_) {
+                    c *= fld->at(gx0 + gmap.m[1] * x, gy0 + gmap.m[4] * x);
+                    if (c <= 0.0f) continue;
+                }
                 if (c > row[x]) row[x] = c;
             }
         }
@@ -307,8 +468,7 @@ inline QPointF point(const QJsonArray &pts, int i, int degrees, int w, int h)
    w*h buffer for the per-stroke coverage. `guide` (optional) enables auto-mask on strokes flagged
    for it. */
 inline void rasterize(const QJsonArray &strokes, float *mask, std::vector<float> &scratch,
-                      int w, int h, int degrees, const Guide *guide = nullptr,
-                      const QString &fPath = QString())
+                      int w, int h, int degrees, const Guide *guide = nullptr)
 {
     if (w <= 0 || h <= 0) return;
     const double longEdge = std::max(w, h);
@@ -323,24 +483,12 @@ inline void rasterize(const QJsonArray &strokes, float *mask, std::vector<float>
         const bool  erase = so.value("erase").toBool(false);
         const double radius = (size / 200.0) * longEdge;
 
+        /* autoMaskMode ("lum" | "ai") is a RETIRED key: there is one auto-mask now (see
+           the Auto-mask section above). Old strokes carrying it still read, and get the
+           new confinement. */
         AutoMaskCtx am;
-        std::shared_ptr<const Guide> samHold;    // keep the AI field alive across this stroke's dabs
-        if (so.value("autoMask").toBool(false)) {
-            if (so.value("autoMaskMode").toString("lum") == "ai") {
-                /* AI mode: confine to the SAM object under the stroke's seed (per-stroke field). If
-                   the field is not decoded yet (cold render), paint unconfined. */
-                samHold = getSamField(samFieldKey(fPath, pts.at(0).toDouble(), pts.at(1).toDouble()));
-                if (samHold && samHold->valid()) {
-                    am.on = true; am.aiField = true;
-                    am.guide = samHold->lum.data(); am.gw = samHold->w; am.gh = samHold->h;
-                    am.degrees = degrees;
-                }
-            }
-            else if (guide && guide->valid()) {
-                am.on = true; am.guide = guide->lum.data(); am.gw = guide->w; am.gh = guide->h;
-                am.degrees = degrees;
-                am.lumRef = guideLumAt(am, pts.at(0).toDouble(), pts.at(1).toDouble());
-            }
+        if (so.value("autoMask").toBool(false) && guide && guide->valid()) {
+            am.on = true; am.g = guide; am.degrees = degrees;
         }
         const AutoMaskCtx *amp = am.on ? &am : nullptr;
 
