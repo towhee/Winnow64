@@ -533,11 +533,7 @@ signals:
        ImageView rebuilds its coverage tint. */
     void maskRangeChanged(const QString &paramsJson);
     /* Brush current settings (for the cursor + the next stroke). size/flow 0..100. */
-    void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask,
-                                  const QString &autoMaskMode);
-    /* Brush "AI edge (SAM)" was just enabled in the dock -> MW pre-warms the SAM
-       encoder. */
-    void maskBrushAiEnabled();
+    void maskBrushSettingsChanged(double size, double feather, double flow, bool autoMask);
     /* An adjustment slider (Basic/Color/Effects) was changed while a mask overlay is
        shown -> ImageView hides the red coverage tint so the effect on the masked pixels
        is visible. */

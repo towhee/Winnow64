@@ -46,7 +46,7 @@ void PanelEditor::clearRows()
 }
 
 void PanelEditor::addSlider(const QString &key, const QString &caption,
-                            const QString &tooltip, int min, int max)
+                            const QString &tooltip, int min, int max, int div)
 {
     clearItemInfo(i);
     i.name = key;
@@ -62,10 +62,10 @@ void PanelEditor::addSlider(const QString &key, const QString &caption,
     i.path = "";
     i.value = i.defaultValue;
     i.delegateType = DT_Slider;
-    i.type = "int";                 // div 0 = integer slider (0..max)
+    i.type = (div == 0) ? "int" : "double";     // div 0 = integer slider, else double
     i.min = min;
     i.max = max;
-    i.div = 0;
+    i.div = div;
     i.logScale = false;
     i.step = 1;
     i.color = G::darkgray;

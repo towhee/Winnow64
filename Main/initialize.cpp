@@ -2026,8 +2026,6 @@ void MW::createDevelopDock()
     connect(imageView, &ImageView::maskBrushSizeRequested, developProperties, &DevelopProperties::setActiveBrushSize);
     connect(imageView, &ImageView::maskFeatherRequested, developProperties, &DevelopProperties::setActiveMaskFeather);
     connect(imageView, &ImageView::maskBrushAutoMaskRequested, developProperties, &DevelopProperties::setActiveBrushAutoMask);
-    connect(imageView, &ImageView::maskBrushSamFieldRequested, this, &MW::onBrushSamFieldRequested);
-    connect(developProperties, &DevelopProperties::maskBrushAiEnabled, this, &MW::warmBrushSamEncoder);
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,
             imageView, &ImageView::hideMaskTint);

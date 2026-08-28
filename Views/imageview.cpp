@@ -746,6 +746,7 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
         else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
     }
     maskPainting = false;
+    maskBrushVeilStale = false;
     maskGuide.reset();                                   // recompute the auto-mask guide for this image
     if (maskTool == 2) brushBuildBuffers(paramsJson);    // raster committed strokes into the preview
     if (maskIsObject()) {                                // Object: restore perimeter
@@ -787,6 +788,7 @@ void ImageView::endMaskEdit()
     maskDrag = -1;
     maskPainting = false;
     maskObjDrawing = false;
+    maskBrushVeilStale = false;
     maskObjClosed = false;
     maskObjPerim.clear(); maskObjFill.clear();
     maskBrushCursorOn = false;
@@ -1332,12 +1334,14 @@ void ImageView::setScopeMaskTint(const QImage &tint)
        the active tool's handles while any tool is expanded. */
     const bool wasAvailable = maskTintAvailable();
     scopeMaskTint = tint;
+    maskBrushVeilStale = false;     // this veil includes the last released stroke
     if (maskTintAvailable() != wasAvailable) emit maskTintAvailabilityChanged(!wasAvailable);
     viewport()->update();       // may be a committed-mask display (not in maskEditMode)
 }
 
 void ImageView::clearScopeMaskTint()
 {
+    maskBrushVeilStale = false;
     if (scopeMaskTint.isNull()) return;
     scopeMaskTint = QImage();
     if (!maskTintAvailable()) emit maskTintAvailabilityChanged(false);
@@ -1491,14 +1495,12 @@ QColor ImageView::maskTintColor() const
     return G::maskOverlayColor;
 }
 
-void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask,
-                                     const QString &autoMaskMode)
+void ImageView::setMaskBrushSettings(double size, double feather, double flow, bool autoMask)
 {
     maskBrushSize = size;
     maskFeather = feather;
     maskBrushFlow = flow;
     maskBrushAutoMask = autoMask;
-    maskBrushAutoMaskMode = autoMaskMode;
     if (maskEditMode && maskHover) viewport()->update();   // cursor preview (Stage 2)
 }
 
@@ -1994,7 +1996,6 @@ bool ImageView::parseMaskParams(const QString &json)
         maskBrushSize = o.value("size").toDouble(20);
         maskBrushFlow = o.value("flow").toDouble(100);
         maskBrushAutoMask = o.value("autoMask").toBool(false);
-        maskBrushAutoMaskMode = o.value("autoMaskMode").toString("lum");
         return true;
     }
     if (maskTool == 1) {            // Radial
@@ -2308,17 +2309,16 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        whole mask stays visible whenever a tool is expanded -- and is drawn UNDER the active tool's
        handles. When it is present the per-tool draw skips its own tint (it would double up) and draws
        only its handles/guides/cursor/swatches. */
-    /* While an ADD stroke is swiped, the whole-mask composite (scopeMaskTint) lags it (it
-       rebuilds on the throttled live emit). Suppress it there so the per-brush live
-       preview (maskBrushPreview, updated on every move) shows the stroke building up in
-       real time. NOT for a SUBTRACT/INTERSECT stroke (maskLegendOp > 0): that preview
-       paints the overlay colour where the mask is being REMOVED, which reads as adding,
-       so the real veil -- rebuilt live by MW for exactly this case -- stays on and shows
-       the outcome instead. maskLegendOp is -1 when nothing is pending: suppress, as for
-       Add. */
-    const bool brushStroking = ((maskTool == 2 && maskPainting) ||
-                                (maskIsObject() && maskObjDrawing))
-                               && maskLegendOp <= 0;
+    /* While an ADD stroke is swiped -- and on until MW's veil catches up with it -- the
+       whole-mask composite (scopeMaskTint) lags the brush, so suppress it and let the
+       per-brush preview (maskBrushPreview, updated on every move and rebuilt on release)
+       show the coverage instead. It must NOT blink back to the pre-stroke veil at mouse-up:
+       the user reads the mask he just painted while placing the next stroke.
+       NOT for a SUBTRACT/INTERSECT stroke (maskLegendOp > 0): that preview paints the
+       overlay colour where the mask is being REMOVED, which reads as adding, so the real
+       veil -- rebuilt live by MW for exactly this case -- stays on and shows the outcome
+       instead. maskLegendOp is -1 when nothing is pending: suppress, as for Add. */
+    const bool brushStroking = maskBrushOwnsTint();
     const bool showTint = !maskTintHidden;                  // "M"/"O" toggles the tint
     /* The tint is drawn whenever MW has pushed one (its presence == "overlay wanted"), so
        it survives past maskEditMode -- e.g. the combined result stays visible after a
@@ -2630,7 +2630,7 @@ void ImageView::brushEnsureBuffers()
     maskBrushStroke.assign(size_t(w) * h, 0.0f);
     ensureAutoGuide();                  // committed auto-mask strokes need the guide to re-raster
     BrushStamp::rasterize(maskBrushStrokesJson, maskBrushMain.data(), maskBrushScratch,
-                          w, h, 0, maskGuide.get(), currentImagePath);
+                          w, h, 0, maskGuide.get());
     brushRebuildPreview();
 }
 
@@ -2701,13 +2701,42 @@ void ImageView::brushStampTo(QPointF bufPt)
     maskBrushLast = bufPt;
 }
 
-void ImageView::adjustBrushSize(double delta)
+/* Minimum mask brush size as a % of the long edge = a ~3 px diameter on the image, never
+   finer than the shared kBrushSizeStep the dock slider works in (maskBrushSize is
+   diameter/long-edge * 100). Mirrors spotSizeMin so both brushes reach the same floor. */
+double ImageView::maskBrushSizeMin() const
 {
-    const double sz = qBound(1.0, maskBrushSize + delta, 100.0);
-    if (sz == maskBrushSize) return;
+    const QRectF br = pmItem ? pmItem->boundingRect() : QRectF();
+    const double longE = std::max(br.width(), br.height());
+    if (longE <= 0) return kBrushSizeStep;
+    return std::clamp(300.0 / longE, kBrushSizeStep, 100.0);   // 3px / longE, as a percent
+}
+
+void ImageView::setBrushSize(double size)
+{
+    /* Quantised to kBrushSizeStep so the cursor, the dock slider and the sidecar all hold
+       the same number -- rounding it to a whole percent (as the dock once did) is what
+       made small brushes unreachable. */
+    const double q = std::round(size / kBrushSizeStep) * kBrushSizeStep;
+    const double sz = qBound(maskBrushSizeMin(), q, 100.0);
+    if (std::abs(sz - maskBrushSize) < kBrushSizeStep / 2.0) return;
     maskBrushSize = sz;
     emit maskBrushSizeRequested(maskBrushSize);     // sync the dock + persist
     if (maskEditMode && maskHover) viewport()->update();   // cursor circle
+}
+
+/* Relative resize (two-finger drag / wheel, and the [ ] keys). A fixed delta is useless at
+   both ends of a 0.1..100 range: it crawls at 80 and jumps from 0.5 to 5. Scaling keeps
+   the gesture feeling the same at any size. */
+void ImageView::scaleBrushSize(double factor)
+{
+    const double target = maskBrushSize * factor;
+    /* Below ~1% a proportional step is smaller than the quantum, so the size would stick;
+       fall back to one step in the gesture's direction. */
+    if (std::abs(target - maskBrushSize) < kBrushSizeStep)
+        setBrushSize(maskBrushSize + (factor >= 1.0 ? kBrushSizeStep : -kBrushSizeStep));
+    else
+        setBrushSize(target);
 }
 
 void ImageView::adjustMaskFeather(double delta)
@@ -2724,29 +2753,45 @@ void ImageView::adjustMaskFeather(double delta)
 
 void ImageView::ensureAutoGuide()
 {
-    /* Build a small luminance guide from the displayed image, once per image, and
-       register it by path so the develop render samples the SAME guide as this preview.
-       The guide is sampled in MASK space (BrushStamp works in the geometry stage's input
-       coords), so a cropped/straightened/warped display is placed back into that frame
-       first -- else the auto-mask would confine strokes to the wrong content. What the
-       geometry threw away has no pixels to offer and is left mid-grey; strokes there are
-       outside the photo anyway. */
+    /* Build the auto-mask colour guide (YCbCr, see BrushStamp) from the displayed image and
+       register it by path so the develop render samples the SAME guide as this preview. The
+       guide is sampled in MASK space (BrushStamp works in the geometry stage's input coords),
+       so a cropped/straightened/warped display is placed back into that frame first -- else
+       the auto-mask would confine strokes to the wrong content. What the geometry threw away
+       has no pixels to offer and is left mid-grey; strokes there are outside the photo anyway.
+
+       RESOLUTION FOLLOWS THE BRUSH. A fixed 1024px guide was the second half of the auto-mask
+       failure: it is the whole FRAME, so a small brush on a big file covered ~10 guide pixels
+       and every decision -- reference colour, tolerance, the flood fill -- was made on a
+       handful of mush. The guide long edge is chosen so the brush DIAMETER spans at least
+       kGuidePxPerDab guide pixels, clamped to [1024, 3072] (a 3072px YCbCr guide is ~19 MB). */
+    /* The SMALLEST brush the guide has to serve: the one loaded now, and any auto-masked
+       stroke already committed -- re-opening a submask must re-rasterize its strokes against
+       a guide at least as fine as the one they were painted with, or the mask would shift. */
+    double finest = qBound(0.1, maskBrushSize, 100.0);
+    for (const QJsonValue &sv : maskBrushStrokesJson) {
+        const QJsonObject so = sv.toObject();
+        if (!so.value("autoMask").toBool(false)) continue;
+        finest = std::min(finest, qBound(0.1, so.value("size").toDouble(20), 100.0));
+    }
+    const int wantLong = int(qBound(1024.0, kGuidePxPerDab / (finest / 100.0), 3072.0));
     if (maskGuide && maskGuide->valid()) {
-        /* Already built for this image, but the shared store may have evicted it (crude
-           size cap) -- re-register so the render's getGuide() never comes up empty and
-           paints unconfined. */
-        if (!currentImagePath.isEmpty() && !BrushStamp::getGuide(currentImagePath))
-            BrushStamp::putGuide(currentImagePath, maskGuide);
-        return;
+        /* Good enough for this brush? (Re-registering is still needed: the shared store has a
+           crude size cap, and the render's getGuide() must never come up empty and paint
+           unconfined.) */
+        if (std::max(maskGuide->w, maskGuide->h) >= int(wantLong * 0.9)) {
+            if (!currentImagePath.isEmpty() && !BrushStamp::getGuide(currentImagePath))
+                BrushStamp::putGuide(currentImagePath, maskGuide);
+            return;
+        }
     }
     if (!pmItem || pmItem->pixmap().isNull() || currentImagePath.isEmpty()) return;
     const QImage img = pmItem->pixmap().toImage();
     if (img.isNull()) return;
     const QSizeF fr = maskNormFrameSize();
     if (fr.width() <= 0 || fr.height() <= 0) return;
-    const int cap = 1024;
     const double longE = std::max(fr.width(), fr.height());
-    const double s = (longE > cap) ? cap / longE : 1.0;
+    const double s = (longE > wantLong) ? wantLong / longE : 1.0;
     const int gw = std::max(1, int(fr.width()  * s));
     const int gh = std::max(1, int(fr.height() * s));
     QImage small(gw, gh, QImage::Format_ARGB32);
@@ -2770,13 +2815,17 @@ void ImageView::ensureAutoGuide()
         p.drawImage(0, 0, img);
     }
     auto g = std::make_shared<BrushStamp::Guide>();
-    g->w = gw; g->h = gh; g->lum.resize(size_t(gw) * gh);
+    g->w = gw; g->h = gh; g->ycc.resize(size_t(gw) * gh * 3);
     for (int y = 0; y < gh; ++y) {
         const QRgb *line = reinterpret_cast<const QRgb*>(small.constScanLine(y));
-        for (int x = 0; x < gw; ++x) {
+        uchar *out = g->ycc.data() + size_t(y) * gw * 3;
+        for (int x = 0; x < gw; ++x, out += 3) {
             const QRgb p = line[x];
-            g->lum[size_t(y)*gw + x] =
-                float((0.299*qRed(p) + 0.587*qGreen(p) + 0.114*qBlue(p)) / 255.0);
+            const double r = qRed(p), gr = qGreen(p), b = qBlue(p);
+            const double Y = 0.299 * r + 0.587 * gr + 0.114 * b;    // BT.601, display-referred
+            out[0] = uchar(std::clamp(Y, 0.0, 255.0));
+            out[1] = uchar(std::clamp(128.0 + 0.564 * (b - Y), 0.0, 255.0));    // Cb
+            out[2] = uchar(std::clamp(128.0 + 0.713 * (r - Y), 0.0, 255.0));    // Cr
         }
     }
     maskGuide = g;
@@ -2816,7 +2865,6 @@ QJsonObject ImageView::brushStrokeJson() const
     stroke["flow"]         = maskBrushFlow;
     stroke["erase"]        = maskBrushErase;
     stroke["autoMask"]     = maskBrushAutoMask;
-    stroke["autoMaskMode"] = maskBrushAutoMaskMode;
     return stroke;
 }
 
@@ -2828,7 +2876,6 @@ QString ImageView::brushParamsJson(bool withLiveStroke) const
     o["size"]         = maskBrushSize;
     o["flow"]         = maskBrushFlow;
     o["autoMask"]     = maskBrushAutoMask;
-    o["autoMaskMode"] = maskBrushAutoMaskMode;
     o["strokes"]      = strokes;
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
@@ -2979,7 +3026,6 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
         painter->resetTransform();
         painter->setRenderHint(QPainter::Antialiasing, true);
         painter->setBrush(Qt::NoBrush);
-        const bool aiAuto = maskBrushAutoMask && maskBrushAutoMaskMode == "ai";
         /* Is the pending work REMOVING coverage? Two independent paths:
            - the erase stroke (Opt while painting), only when G::useBrushEraseStroke is
              on. maskBrushErase is latched at mouse-press, so on hover it still describes
@@ -3003,10 +3049,9 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
         const bool altNow = (mods & Qt::AltModifier) && !eraseNow;
         const bool intersectNow = (altNow && (mods & Qt::ShiftModifier)) || maskLegendOp == 2;
         const bool subtractNow = !intersectNow && (eraseNow || altNow || maskLegendOp == 1);
-        const QColor cur = eraseNow ? QColor(255, 170, 170, 235)         // erase
-                         : aiAuto          ? QColor(150, 200, 255, 235)   // AI (SAM) auto-mask
-                         : maskBrushAutoMask ? QColor(150, 255, 150, 235) // luminance auto-mask
-                                             : QColor(255, 255, 255, 235);
+        const QColor cur = eraseNow           ? QColor(255, 170, 170, 235)   // erase
+                         : maskBrushAutoMask  ? QColor(150, 255, 150, 235)   // auto-mask
+                                              : QColor(255, 255, 255, 235);
         /* Draw each ring twice: a dark halo underneath then the coloured line on top, so the cursor
            stays visible on light AND dark images (the plain white line vanished on white). Mirrors
            the crop Level tool's halo idiom. */
@@ -4353,7 +4398,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
        not the image. Vertical delta; pixelDelta on a trackpad, angleDelta on a wheel.
        Space held bypasses this so the wheel zooms instead. */
     if (!spacePanOverride && maskEditMode && (maskTool == 2 || maskIsObject()) && maskHover) {
-        adjustBrushSize(wheelDelta(event) * 0.15);     // up = larger
+        scaleBrushSize(std::pow(1.0075, wheelDelta(event)));    // up = larger
         event->accept();
         return;
     }
@@ -4587,8 +4632,8 @@ void ImageView::keyPressEvent(QKeyEvent *event){
     }
     /* Object shortcuts: [ / ] resize, Cmd/Ctrl+Z undo the last perimeter stroke. */
     if (maskEditMode && maskIsObject()) {
-        if (event->key() == Qt::Key_BracketLeft)  { adjustBrushSize(-2); return; }
-        if (event->key() == Qt::Key_BracketRight) { adjustBrushSize(+2); return; }
+        if (event->key() == Qt::Key_BracketLeft)  { scaleBrushSize(1.0 / 1.15); return; }
+        if (event->key() == Qt::Key_BracketRight) { scaleBrushSize(1.15); return; }
         if (event->key() == Qt::Key_Z && (event->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
             && !(event->modifiers() & Qt::AltModifier)) {
             objUndoStroke();
@@ -4597,8 +4642,8 @@ void ImageView::keyPressEvent(QKeyEvent *event){
     }
     /* Brush shortcuts: [ / ] resize, Cmd/Ctrl+Z undo the last stroke. */
     if (maskEditMode && maskTool == 2) {
-        if (event->key() == Qt::Key_BracketLeft)  { adjustBrushSize(-2); return; }
-        if (event->key() == Qt::Key_BracketRight) { adjustBrushSize(+2); return; }
+        if (event->key() == Qt::Key_BracketLeft)  { scaleBrushSize(1.0 / 1.15); return; }
+        if (event->key() == Qt::Key_BracketRight) { scaleBrushSize(1.15); return; }
         if (event->key() == Qt::Key_A && event->modifiers() == Qt::NoModifier) { toggleAutoMask(); return; }
         if (event->key() == Qt::Key_Z && (event->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
             && !(event->modifiers() & Qt::AltModifier)) {
@@ -4814,30 +4859,16 @@ void ImageView::mousePressEvent(QMouseEvent *event)
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
             std::fill(maskBrushStroke.begin(), maskBrushStroke.end(), 0.0f);
-            /* Auto-mask context for this stroke (preview buffer is output space -> degrees 0). Two
-               modes: "ai" confines to the SAM object under the seed (decoded by MW, synchronous via
-               maskBrushSamFieldRequested); "lum" confines to a luminance band (local guide). */
+            /* Auto-mask context for this stroke (preview buffer is output space -> degrees 0).
+               The confinement itself is per DAB and lives in BrushStamp; all the stroke has to
+               carry is the guide. */
             maskStrokeAM = BrushStamp::AutoMaskCtx();
-            maskBrushSamField.reset();
-            if (maskBrushAutoMask && maskBrushAutoMaskMode == "ai") {
-                emit maskBrushSamFieldRequested(n.x(), n.y());   // MW decodes + stores (blocking)
-                maskBrushSamField = BrushStamp::getSamField(
-                    BrushStamp::samFieldKey(currentImagePath, n.x(), n.y()));
-                if (maskBrushSamField && maskBrushSamField->valid()) {
-                    maskStrokeAM.on = true; maskStrokeAM.aiField = true;
-                    maskStrokeAM.guide = maskBrushSamField->lum.data();
-                    maskStrokeAM.gw = maskBrushSamField->w; maskStrokeAM.gh = maskBrushSamField->h;
-                    maskStrokeAM.degrees = 0;
-                }
-            }
-            else if (maskBrushAutoMask) {
+            if (maskBrushAutoMask) {
                 ensureAutoGuide();
                 if (maskGuide && maskGuide->valid()) {
                     maskStrokeAM.on = true;
-                    maskStrokeAM.guide = maskGuide->lum.data();
-                    maskStrokeAM.gw = maskGuide->w; maskStrokeAM.gh = maskGuide->h;
+                    maskStrokeAM.g = maskGuide.get();
                     maskStrokeAM.degrees = 0;
-                    maskStrokeAM.lumRef = BrushStamp::guideLumAt(maskStrokeAM, n.x(), n.y());
                 }
             }
             maskBrushLast = brushNormToBuf(n);
@@ -5338,6 +5369,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        fill to the object edge; an open perimeter yields no coverage yet. */
     if (!spacePanOverride && maskEditMode && maskIsObject() && maskObjDrawing) {
         maskObjDrawing = false;
+        maskBrushVeilStale = true;      // keep the local preview up until MW's veil catches up
         emit maskStrokeStateChanged(false);      // Opt goes back to meaning subtract
         isLeftMouseBtnPressed = false;
         BrushStamp::composite(maskBrushMain.data(), maskBrushStroke.data(),
@@ -5367,6 +5399,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        and persist the updated paramsJson (which triggers the masked re-render in stage 3). */
     if (!spacePanOverride && maskEditMode && maskTool == 2 && maskPainting) {
         maskPainting = false;
+        maskBrushVeilStale = true;      // keep the local preview up until MW's veil catches up
         emit maskStrokeStateChanged(false);      // Opt goes back to meaning subtract
         isLeftMouseBtnPressed = false;
         const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;

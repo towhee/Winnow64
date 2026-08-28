@@ -6098,8 +6098,14 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees,
        drag. The full-res buffer is huge (~w*h*4 bytes) and built once per settle, so we skip caching
        it rather than risk hundreds of MB per entry. */
     const bool cacheable = (size_t(w) * h) <= 4'000'000;
+    const auto guide = BrushStamp::getGuide(fPath);   // guide the preview used
+    /* The GUIDE IS PART OF THE KEY (via its dimensions). ensureAutoGuide re-builds it at a
+       finer resolution when the brush gets small, and an auto-masked stroke rasterized
+       against the old, coarser guide is a different buffer -- without this the stale one
+       is served for the rest of the session. */
     const QString key = fPath + "|" + paramsJson + "|" + QString::number(w) + "x" + QString::number(h)
-                      + "@" + QString::number(degrees);
+                      + "@" + QString::number(degrees)
+                      + "|g" + QString::number(guide ? guide->w : 0);
     if (cacheable) {
         QMutexLocker lk(&g_brushCacheMutex);
         auto it = g_brushCache.find(key);
@@ -6109,33 +6115,26 @@ brushRasterCached(const QString &paramsJson, int w, int h, int degrees,
     std::vector<float> scratch;
     const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
                                    .object().value("strokes").toArray();
-    const auto guide = BrushStamp::getGuide(fPath);   // guide the preview used
 
-    /* An auto-mask stroke rasterized before its confinement input is registered paints
-       UNCONFINED (full brush). Detect that so we don't cache the poisoned buffer: a lum
-       stroke needs the guide; an "ai" stroke needs its SAM field. Caching a guideless
+    /* An auto-mask stroke rasterized before the guide is registered paints UNCONFINED
+       (full brush). Detect that so we don't cache the poisoned buffer: caching a guideless
        result would replay the full brush on every later slider tick (the proxy is cached)
        while the settle render -- uncached -- rebuilds it confined once the guide lands,
-       so the preview flashes broad then snaps to the auto-mask band. */
+       so the preview flashes broad then snaps to the auto-masked shape. */
     bool autoInputsReady = true;
     for (const QJsonValue &sv : strokes) {
         const QJsonObject so = sv.toObject();
         if (!so.value("autoMask").toBool(false)) continue;
         const QJsonArray pts = so.value("pts").toArray();
         if (pts.size() < 2) continue;
-        if (so.value("autoMaskMode").toString("lum") == "ai") {
-            if (!BrushStamp::getSamField(
-                    BrushStamp::samFieldKey(fPath, pts.at(0).toDouble(), pts.at(1).toDouble())))
-                autoInputsReady = false;
-        }
-        else if (!guide || !guide->valid()) autoInputsReady = false;
+        if (!guide || !guide->valid()) autoInputsReady = false;
     }
 
     if (inputsReady && !autoInputsReady) *inputsReady = false;
 
     QElapsedTimer rasterProbe;
     if (stats) { rasterProbe.start(); stats->strokes += strokes.size(); }
-    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get(), fPath);
+    BrushStamp::rasterize(strokes, buf->data(), scratch, w, h, degrees, guide.get());
     if (stats) stats->rasterMs += rasterProbe.elapsed();
     if (cacheable && autoInputsReady) {
         QMutexLocker lk(&g_brushCacheMutex);
@@ -7102,10 +7101,10 @@ bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
     return false;
 }
 
-/* True if any enabled scope carries a Brush mask with a LUMINANCE auto-mask stroke -- it
-   needs the guide registered (ImageView::ensureAutoGuide) before the composite, else the
-   stroke rasterizes unconfined. ("ai" strokes instead use SAM fields.) */
-bool stackHasLumAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
+/* True if any enabled scope carries a Brush mask with an auto-mask stroke -- it needs the
+   colour guide registered (ImageView::ensureAutoGuide) before the composite, else the
+   stroke rasterizes unconfined. */
+bool stackHasAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
 {
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
         for (const MaskComponent &m : L.components) {
@@ -7114,9 +7113,7 @@ bool stackHasLumAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
                                            .object().value("strokes").toArray();
             for (const QJsonValue &sv : strokes) {
                 const QJsonObject so = sv.toObject();
-                if (so.value("autoMask").toBool(false) &&
-                    so.value("autoMaskMode").toString("lum") != "ai")
-                    return true;
+                if (so.value("autoMask").toBool(false)) return true;
             }
         }
     return false;
@@ -7541,70 +7538,6 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     return true;
 }
 
-void MW::ensureBrushSamField(const QString &fPath, const WorkingImage &work,
-                             const EditParams &base, int degrees, double seedOnx, double seedOny)
-{
-/*
-    Brush "AI" auto-mask (2nd auto-mask mode). Decode the SAM 2 object under a stroke's seed point
-    (a single positive point prompt) and register the coverage as a BrushStamp SAM field keyed by
-    the seed, so BrushStamp::rasterize (preview AND render) confines the stroke to that object.
-    Two-phase like ensureObjectMask, sharing the encoder embedding via ensureObjectEncoder. A no-op
-    once this seed is decoded. GUI thread (busy cursor); ~40ms decode after the one-time encode.
-*/
-    if (G::isLogger) G::log("MW::ensureBrushSamField");
-    const QString key = BrushStamp::samFieldKey(fPath, seedOnx, seedOny);
-    if (BrushStamp::getSamField(key)) return;               // this stroke already decoded
-
-    /* WHOLE frame, unlike the Object Mask: there is no traced region to crop to -- only a seed
-       point -- and the resulting field is sampled over the full frame by BrushStamp::rasterize.
-       Requesting the full ROI also guarantees the cached guide is un-cropped, so refinePoint's
-       output-normalized seed maps directly onto it. */
-    int gw, gh; QRect crop;
-    if (!ensureObjectEncoder(fPath, work, base, degrees, QRectF(0, 0, 1, 1), gw, gh, crop)) return;
-
-    auto field = std::make_shared<BrushStamp::Guide>();
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
-    const bool ok = objectMaskPredictor->refinePoint(seedOnx, seedOny, field->lum, field->w, field->h);
-    QGuiApplication::restoreOverrideCursor();
-    if (!ok || !field->valid()) return;
-
-    BrushStamp::putSamField(key, field);
-}
-
-void MW::ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
-                              const EditParams &base, int degrees, const QString &paramsJson)
-{
-    /* Render pre-pass: ensure a SAM field exists for every AI-auto-mask stroke in a Brush component,
-       so the render confines them exactly as the preview did. No-op for luminance/plain strokes. */
-    const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
-                                   .object().value("strokes").toArray();
-    for (const QJsonValue &sv : strokes) {
-        const QJsonObject so = sv.toObject();
-        if (!so.value("autoMask").toBool(false)) continue;
-        if (so.value("autoMaskMode").toString("lum") != "ai") continue;
-        const QJsonArray pts = so.value("pts").toArray();
-        if (pts.size() < 2) continue;
-        ensureBrushSamField(fPath, work, base, degrees, pts.at(0).toDouble(), pts.at(1).toDouble());
-    }
-}
-
-void MW::onBrushSamFieldRequested(double onx, double ony)
-{
-/*
-    ImageView started a Brush stroke in AI auto-mask mode. Decode the SAM object under the seed now
-    (synchronous -- direct-connected on the GUI thread), so the caller can read the field back from
-    the BrushStamp store immediately and confine the live stroke. Same prep as onAiMaskEditBegin.
-*/
-    if (G::isLogger) G::log("MW::onBrushSamFieldRequested");
-    const QString fPath = dm->currentFilePath;
-    if (fPath.isEmpty()) return;
-    auto work = WorkingImageCache::instance().get(fPath);
-    if (!work) return;
-    const auto mj = developProperties->stackJob();
-    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    ensureBrushSamField(fPath, *work, mj.global, degrees, onx, ony);
-}
-
 void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
                            const QString &paramsJson, double /*feather*/)
 {
@@ -7618,12 +7551,7 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     const bool isSky        = (tool == int(MaskTool::Sky));
     const bool isDepth      = (tool == int(MaskTool::Depth));
     const bool isObject     = (tool == int(MaskTool::Object));
-    /* Brush in "AI" auto-mask mode: warm the SAM 2 encoder now (encode-only) so the first stroke's
-       decode is instant instead of paying the ~1s encode. */
-    const bool isBrushAi    = (tool == int(MaskTool::Brush) &&
-                               QJsonDocument::fromJson(paramsJson.toUtf8()).object()
-                                   .value("autoMaskMode").toString("lum") == "ai");
-    if (!needsSubject && !isSky && !isDepth && !isObject && !isBrushAi) return;
+    if (!needsSubject && !isSky && !isDepth && !isObject) return;
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
     auto work = WorkingImageCache::instance().get(fPath);
@@ -7634,28 +7562,7 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     else if (isSky)     ensureSkyMask(fPath, *work, mj.global, degrees);
     else if (isDepth)   ensureDepthMask(fPath, *work, mj.global, degrees);
     else if (isObject)  ensureObjectMask(fPath, *work, mj.global, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
-    /* isBrushAi: warm only, on the WHOLE frame (a point prompt has no traced region to crop to). */
-    else { int gw, gh; QRect crop;
-           ensureObjectEncoder(fPath, *work, mj.global, degrees, QRectF(0, 0, 1, 1), gw, gh, crop); }
     imageView->viewport()->update();   // heal the tint now the ref exists
-}
-
-void MW::warmBrushSamEncoder()
-{
-/*
-    The Brush "AI edge (SAM)" checkbox was just turned on (the tool is already active, so maskEditBegin
-    won't re-fire). Warm the shared SAM 2 encoder for the current image now, so the first AI stroke
-    only pays the ~40ms decode. Encode is cached, so this is a no-op if already warm.
-*/
-    if (G::isLogger) G::log("MW::warmBrushSamEncoder");
-    const QString fPath = dm->currentFilePath;
-    if (fPath.isEmpty()) return;
-    auto work = WorkingImageCache::instance().get(fPath);
-    if (!work) return;
-    const auto mj = developProperties->stackJob();
-    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    int gw, gh; QRect crop;
-    ensureObjectEncoder(fPath, *work, mj.global, degrees, QRectF(0, 0, 1, 1), gw, gh, crop);
 }
 
 void MW::updateMaskOverlayTint()
@@ -7686,7 +7593,10 @@ void MW::updateMaskOverlayTint()
     /* Mid-stroke on an ADD submask the veil is not drawn at all -- ImageView stands the
        live brush preview in for it (drawMaskOverlay's brushStroking gate) -- so a rebuild
        on every live tick is invisible work on top of that tick's develop render. The
-       release re-emits paramsChanged, which rebuilds it from the finished stroke.
+       release re-emits paramsChanged, which rebuilds it from the finished stroke -- and
+       ImageView keeps the stand-in up until that rebuilt veil arrives
+       (ImageView::maskBrushVeilStale, cleared by setScopeMaskTint), so the coverage does
+       not blink back to the pre-stroke veil at mouse-up.
        A SUBTRACT/INTERSECT stroke is the opposite case and must pay for the rebuild: its
        local preview paints coverage in the overlay colour exactly where the mask is being
        REMOVED, which reads as adding. Keeping the real veil live there shows the outcome
@@ -7759,11 +7669,6 @@ void MW::updateMaskOverlayTint()
     for (const MaskComponent &m : masks)
         if (m.tool == int(MaskTool::Object))
             ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
-    /* Brush "AI" auto-mask strokes need their SAM object fields before the tint
-       composites. */
-    for (const MaskComponent &m : masks)
-        if (m.tool == int(MaskTool::Brush))
-            ensureBrushSamFields(fPath, *work, base, degrees, m.paramsJson);
 
     /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
        is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
@@ -8122,15 +8027,10 @@ void MW::renderDevelopPreview(bool fullRes)
             for (const MaskComponent &m : L.components)
                 if (m.tool == int(MaskTool::Object))
                     ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
-    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before rendering. */
-    for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
-        for (const MaskComponent &m : L.components)
-            if (m.tool == int(MaskTool::Brush))
-                ensureBrushSamFields(fPath, *work, mj.global, degrees, m.paramsJson);
     /* Brush luminance auto-mask: guarantee the guide is registered (built from the loupe,
        the same one the overlay samples) so proxy and settle confine identically -- else a
        guideless proxy paints the full brush and the settle snaps it to the band. */
-    if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
+    if (stackHasAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
     /* ---- Hand the composite to the worker ----
        Everything above had to happen here: the orientation reads the sort/filter model,
@@ -8484,14 +8384,9 @@ void MW::renderDevelopFullResAsync()
             for (const MaskComponent &m : L.components)
                 if (m.tool == int(MaskTool::Object))
                     ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
-    /* Brush "AI" auto-mask strokes: ensure each stroke's SAM field before the render. */
-    for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
-        for (const MaskComponent &m : L.components)
-            if (m.tool == int(MaskTool::Brush))
-                ensureBrushSamFields(fPath, *work, mj.global, degrees, m.paramsJson);
     /* Register the brush luminance auto-mask guide (GUI thread) before dispatching the
        worker, so the off-thread render confines the stroke the same as the proxy did. */
-    if (stackHasLumAutoMaskBrush(mj)) imageView->ensureAutoGuide();
+    if (stackHasAutoMaskBrush(mj)) imageView->ensureAutoGuide();
 
     developFullResInFlight = true;
     updateDevelopRenderingHint();
@@ -9795,10 +9690,6 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                     for (const MaskComponent &c : L.components)
                         if (c.tool == int(MaskTool::Object))
                             ensureObjectMask(fPath, *work, mj.global, degrees, c.paramsJson);
-            for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
-                for (const MaskComponent &c : L.components)
-                    if (c.tool == int(MaskTool::Brush))
-                        ensureBrushSamFields(fPath, *work, mj.global, degrees, c.paramsJson);
 
             /* Step 3 (worker): the composite itself. src is the raw-denoised base when
                "Denoise raw" is set, else the clean one. work is kept alive alongside it
