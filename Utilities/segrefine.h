@@ -43,19 +43,45 @@ inline void guidedFilterGray(const cv::Mat &I, const cv::Mat &p, cv::Mat &q, int
     q = mean_a.mul(I) + mean_b;
 }
 
+/*
+    How refine() turns the model's raw output into alpha.
+
+    Saliency (Subject / Sky, the original behaviour): the net emits a sigmoid-ish map whose absolute
+    scale means little, so min-max stretch it, then CONTRAST it around 0.5 to crush the residual
+    halo into a clean 1-2 px cutout edge.
+
+    AlphaLogits (Object Mask): the net emits signed logits whose ZERO CROSSING is the decision
+    boundary, so a sigmoid is both the correct mapping and a natural soft ramp -- min-max would put
+    the 0.5 level wherever the extremes happened to land, systematically growing or shrinking the
+    mask. And the contrast step is SKIPPED: on fur, hair or foliage the fractional alpha in the
+    fringe IS the result, and stretching it to near-binary is what produced a blobby cutout.
+*/
+enum class Mode {
+    Saliency,       // min-max stretch + halo-killing contrast (Subject, Sky)
+    AlphaLogits     // sigmoid of logits, partial alpha preserved (Object Mask)
+};
+
 /* rawSal: the model's single-channel target as a 2D CV_32F (any resolution / range). image: the
    developed base (output-oriented) used as the edge guide. Fills cov (w*h) + dims. */
 inline bool refine(const cv::Mat &rawSal, const QImage &image,
-                   std::vector<float> &cov, int &w, int &h)
+                   std::vector<float> &cov, int &w, int &h, Mode mode = Mode::Saliency)
 {
     if (rawSal.empty()) return false;
 
-    /* Min-max stretch to 0..1 (handles both sigmoid probabilities and raw logits). */
-    double lo = 0.0, hi = 0.0;
-    cv::minMaxLoc(rawSal, &lo, &hi);
     cv::Mat sal;
-    if (hi - lo > 1e-6) rawSal.convertTo(sal, CV_32F, 1.0 / (hi - lo), -lo / (hi - lo));
-    else                sal = cv::Mat::zeros(rawSal.size(), CV_32F);
+    if (mode == Mode::AlphaLogits) {
+        /* alpha = sigmoid(logit): 0 logits -> 0.5 exactly, so the threshold downstream lands on the
+           model's own boundary, and the few-logit-wide transition becomes a real soft edge. */
+        cv::exp(-rawSal, sal);                     // sal = exp(-x)
+        sal = 1.0f / (1.0f + sal);
+    }
+    else {
+        /* Min-max stretch to 0..1. */
+        double lo = 0.0, hi = 0.0;
+        cv::minMaxLoc(rawSal, &lo, &hi);
+        if (hi - lo > 1e-6) rawSal.convertTo(sal, CV_32F, 1.0 / (hi - lo), -lo / (hi - lo));
+        else                sal = cv::Mat::zeros(rawSal.size(), CV_32F);
+    }
 
     const QImage guideRgb = image.convertToFormat(QImage::Format_RGB888);
     const int ow = guideRgb.width(), oh = guideRgb.height();
@@ -75,14 +101,16 @@ inline bool refine(const cv::Mat &rawSal, const QImage &image,
     const int radius = std::max(2, int(std::lround(std::max(ow, oh) / 256.0)));
     guidedFilterGray(guide, salUp, refined, radius, 1e-6);
 
-    /* Narrow the transition band (contrast around 0.5): pushes the faint low-alpha fringe to 0 and
-       the solid interior to 1, removing the residual halo while leaving a 1-2 px anti-aliased edge. */
+    /* Saliency only: narrow the transition band (contrast around 0.5), pushing the faint low-alpha
+       fringe to 0 and the solid interior to 1 -- removes the residual halo but destroys any real
+       partial alpha, which is why AlphaLogits leaves the matte alone. */
+    const float k = (mode == Mode::AlphaLogits) ? 1.0f : 1.6f;
     cov.resize(size_t(ow) * oh);
     for (int y = 0; y < oh; ++y) {
         const float *rp = refined.ptr<float>(y);
         for (int x = 0; x < ow; ++x) {
             const float a = std::clamp(rp[x], 0.0f, 1.0f);
-            cov[size_t(y) * ow + x] = std::clamp((a - 0.5f) * 1.6f + 0.5f, 0.0f, 1.0f);
+            cov[size_t(y) * ow + x] = std::clamp((a - 0.5f) * k + 0.5f, 0.0f, 1.0f);
         }
     }
     w = ow; h = oh;

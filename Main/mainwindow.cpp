@@ -7314,7 +7314,8 @@ namespace {
    Returns false (no coverage) unless the perimeter forms a CLOSED loop -- an open trace
    is not a selection yet (mirrors the preview's amber/green signal). Uses the SAME
    BrushStamp rasterize + ObjectMask::fillEnclosed as the overlay so the two agree. */
-bool parseObjectBrush(const QString &paramsJson, int W, int H, std::vector<float> &cov)
+bool parseObjectBrush(const QString &paramsJson, int W, int H,
+                     std::vector<float> &cov, std::vector<float> &band)
 {
     if (paramsJson.isEmpty() || W <= 0 || H <= 0) return false;
     const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
@@ -7327,11 +7328,76 @@ bool parseObjectBrush(const QString &paramsJson, int W, int H, std::vector<float
     std::vector<float> perim(size_t(W) * size_t(H), 0.0f), scratch;
     BrushStamp::rasterize(strokes, perim.data(), scratch, W, H, /*degrees*/0);
 
+    /* band = the thickened painted wall, handed on as SAM's "unknown" region: the trace
+       straddles the boundary, so claiming it as foreground paints the dabs into the mask. */
     std::vector<float> fill;
-    const bool closed = ObjectMask::fillEnclosed(perim, W, H, ObjectMask::bridgePx(W, H), fill);
+    const bool closed = ObjectMask::fillEnclosed(perim, W, H, ObjectMask::bridgePx(W, H), fill,
+                                                 /*minAreaFrac*/0.0008, &band);
     if (!closed) return false;                 // open perimeter -> no selection yet
     cov = std::move(fill);
     return true;
+}
+
+/*
+    The traced object's extent in OUTPUT-NORMALIZED coords, padded for context -- the region worth
+    encoding at high resolution. Computed straight from the stroke JSON (points expanded by the
+    brush radius) rather than by rasterizing, so it is available BEFORE the guide size is chosen.
+    fw/fh are the oriented frame dims (any scale; only the aspect is used), because a brush size is
+    a percentage of the LONG edge and therefore a different fraction of each axis.
+    Returns the full frame if the strokes carry no usable points.
+*/
+QRectF objectBrushRoi(const QString &paramsJson, int fw, int fh)
+{
+    const QRectF whole(0.0, 0.0, 1.0, 1.0);
+    if (paramsJson.isEmpty() || fw <= 0 || fh <= 0) return whole;
+    const QJsonArray strokes = QJsonDocument::fromJson(paramsJson.toUtf8())
+                                   .object().value("strokes").toArray();
+    const double longE = std::max(fw, fh);
+    double x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const QJsonValue &sv : strokes) {
+        const QJsonObject so = sv.toObject();
+        const QJsonArray pts = so.value("pts").toArray();
+        if (pts.size() < 2) continue;
+        /* Dab radius is size/200 of the long edge -- a different normalized amount per axis. */
+        const double rN = std::clamp(so.value("size").toDouble(20), 0.0, 100.0) / 200.0;
+        const double rx = rN * longE / fw, ry = rN * longE / fh;
+        for (int i = 0; i*2 + 1 < pts.size(); ++i) {
+            const double px = pts.at(i*2).toDouble(), py = pts.at(i*2 + 1).toDouble();
+            x0 = std::min(x0, px - rx); x1 = std::max(x1, px + rx);
+            y0 = std::min(y0, py - ry); y1 = std::max(y1, py + ry);
+        }
+    }
+    if (x1 <= x0 || y1 <= y0) return whole;
+
+    /* Context margin: SAM needs to see past the object, and a soft fringe (fur, hair) extends
+       beyond the trace. 12% of the ROI's long side, applied equally in PIXELS on both axes. */
+    const double marginPx = 0.12 * std::max((x1 - x0) * fw, (y1 - y0) * fh);
+    x0 -= marginPx / fw; x1 += marginPx / fw;
+    y0 -= marginPx / fh; y1 += marginPx / fh;
+
+    /* Quantize OUTWARD to a coarse grid so extending a trace by a few pixels keeps landing inside
+       the already-encoded region -- see ensureObjectEncoder's containment test. Re-encoding costs
+       ~1s, and it must not happen on every stroke. */
+    const double q = 1.0 / 16.0;
+    x0 = std::floor(x0 / q) * q; y0 = std::floor(y0 / q) * q;
+    x1 = std::ceil (x1 / q) * q; y1 = std::ceil (y1 / q) * q;
+    return QRectF(QPointF(std::max(0.0, x0), std::max(0.0, y0)),
+                  QPointF(std::min(1.0, x1), std::min(1.0, y1)));
+}
+
+/* Extract `crop` (pixels within a gw*gh map) from src into dst. Used to express the brush prompt
+   in the encoded crop's frame. An empty src yields an empty dst (the band is optional). */
+void cropCoverage(const std::vector<float> &src, int gw, int gh, const QRect &crop,
+                  std::vector<float> &dst)
+{
+    dst.clear();
+    if (src.size() != size_t(gw) * size_t(gh) || crop.isEmpty()) return;
+    const int cw = crop.width(), ch = crop.height();
+    dst.resize(size_t(cw) * size_t(ch));
+    for (int y = 0; y < ch; ++y) {
+        const float *sp = src.data() + size_t(y + crop.y()) * gw + crop.x();
+        std::copy(sp, sp + cw, dst.data() + size_t(y) * cw);
+    }
 }
 } // namespace
 
@@ -7351,31 +7417,66 @@ void MW::ensureObjectMask(const QString &fPath, const WorkingImage &work,
     const QString refKey = objectRefKey(fPath, paramsJson);
     if (ObjectMask::getRef(refKey)) return;                 // this brush already decoded
 
-    /* Phase 1: lazily load the predictor + encode the base ONCE per image (cached). */
-    int gw, gh;
-    if (!ensureObjectEncoder(fPath, work, base, degrees, gw, gh)) return;
+    /* The traced region -- what gets encoded, and at what resolution. Only the aspect of the
+       oriented frame is needed here, so the un-downscaled work dims will do. */
+    int fw = work.width, fh = work.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    const QRectF roi = objectBrushRoi(paramsJson, fw, fh);
+
+    /* Phase 1: lazily load the predictor + encode the ROI (cached; re-encoded only when the
+       trace outgrows the encoded region). */
+    int gw, gh; QRect crop;
+    if (!ensureObjectEncoder(fPath, work, base, degrees, roi, gw, gh, crop)) return;
 
     /* Phase 2: decode the brush stroke. No stroke yet -> encoder is warmed, nothing to register. */
-    std::vector<float> brushCov;
-    if (!parseObjectBrush(paramsJson, gw, gh, brushCov)) return;
+    std::vector<float> fillCov, bandCov;
+    if (!parseObjectBrush(paramsJson, gw, gh, fillCov, bandCov)) return;
+
+    /* The prompt must be expressed in the CROP's frame, since that is what was encoded. */
+    std::vector<float> fillCrop, bandCrop;
+    cropCoverage(fillCov, gw, gh, crop, fillCrop);
+    cropCoverage(bandCov, gw, gh, crop, bandCrop);
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
     auto r = std::make_shared<ObjectMask::ObjectRef>();
-    const bool ok = objectMaskPredictor->refine(brushCov, gw, gh, r->cov, r->w, r->h);
+    const bool ok = objectMaskPredictor->refine(fillCrop, bandCrop, crop.width(), crop.height(),
+                                                r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
-    if (!ok || !r->valid()) return;
+    if (!ok) return;
+
+    /* Store crop-local: the ref carries the crop's normalized extent and reads 0 outside it, so a
+       tightly-traced object keeps its full decoded resolution instead of being flattened into a
+       whole-frame map (see ObjectMask::ObjectRef). */
+    r->x0 = double(crop.x())     / gw;   r->x1 = double(crop.x() + crop.width())  / gw;
+    r->y0 = double(crop.y())     / gh;   r->y1 = double(crop.y() + crop.height()) / gh;
+    if (!r->valid()) return;
 
     ObjectMask::putRef(refKey, r);
 }
 
 bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
-                             const EditParams &base, int degrees, int &gw, int &gh)
+                             const EditParams &base, int degrees, const QRectF &normRoi,
+                             int &gw, int &gh, QRect &crop)
 {
 /*
-    Phase 1 shared by the Object Mask and the Brush "AI" auto-mask: lazily load the SAM 2 encoder+
-    decoder (next to u2net.onnx in the executable dir) and encode the developed base ONCE per image,
-    caching image_embed + high_res_feats in objectMaskPredictor (keyed by developObjectImagePath).
-    ~1s CPU. Outputs the oriented guide dims. Returns false if the model is missing or encode failed.
+    Phase 1 shared by the Object Mask and the Brush "AI" auto-mask: lazily load the SAM 2 encoder +
+    decoder (next to u2net.onnx in the executable dir) and encode the developed base, caching
+    image_embed + high_res_feats in objectMaskPredictor. ~1s CPU. Outputs the full oriented guide
+    dims (gw,gh -- the space the brush rasterizes in) and the sub-rect of it that was encoded.
+    Returns false if the model is missing or the encode failed.
+
+    RESOLUTION. The encoder input is a fixed 1024^2 whatever it is fed, so encoding the WHOLE frame
+    spends that budget mostly on background: an object covering a third of the frame gets ~340 px,
+    and SAM's 256^2 mask head then resolves it at ~85. That is why the old whole-frame path produced
+    blobby edges on fine structure -- the detail was never representable, no refinement downstream
+    could recover it. So the guide is scaled such that the caller's ROI lands at ~1024 px on its long
+    side and only the ROI is encoded, capped at kMaxGuideLong to bound the develop + matting cost.
+    Encoding cost is UNCHANGED (still one 1024^2 forward); only the crop's detail goes up.
+
+    CACHING. Re-encoding is the ~1s step, so it must not fire per stroke. The cached encode is reused
+    whenever the requested ROI still fits inside it and is not wildly smaller (which would mean the
+    user erased back to a much tighter trace and is now paying for resolution they no longer need).
+    objectBrushRoi's outward quantization is what makes a growing trace keep hitting this path.
 */
     if (!objectMaskPredictor) {
         const QDir dir(QCoreApplication::applicationDirPath());
@@ -7387,19 +7488,56 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     }
     if (!objectMaskPredictor->isLoaded()) return false;
 
-    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    const QRectF roi = normRoi.isEmpty() ? QRectF(0, 0, 1, 1) : normRoi.intersected(QRectF(0, 0, 1, 1));
+    if (roi.isEmpty()) return false;
+
+    /* Reuse the cached encode when it still covers the request (see CACHING above). */
+    const bool sameImage = (developObjectImagePath == fPath) && objectMaskPredictor->hasImage();
+    const bool covers    = sameImage && developObjectRoi.contains(roi);
+    const bool tooCoarse = covers && (developObjectRoi.width() * developObjectRoi.height()
+                                      > 2.5 * roi.width() * roi.height());
+    if (covers && !tooCoarse) {
+        gw = developObjectGuideW; gh = developObjectGuideH; crop = developObjectCrop;
+        return true;
+    }
+
+    /* Guide long edge that puts the ROI at ~kEncode px on its long side. gw/gh scale linearly with
+       it, so one closed-form step is exact. */
+    constexpr int kEncode = 1024;            // the encoder's own input size
+    constexpr int kMaxGuideLong = 4096;      // bounds the develop + guided-filter cost
+    int fw = work.width, fh = work.height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    if (fw <= 0 || fh <= 0) return false;
+    const double frameLong = std::max(fw, fh);
+    const double q = std::max(roi.width() * fw, roi.height() * fh) / frameLong;   // ROI long / frame long
+    const int nativeLong = int(std::max(work.width, work.height));
+    const int longEdge = std::clamp(q > 1e-6 ? int(std::lround(kEncode / q)) : kEncode,
+                                    kEncode, std::min(kMaxGuideLong, std::max(nativeLong, kEncode)));
+
+    const WorkingImage small = WorkingImageCache::downscaled(work, longEdge);
     gw = small.width; gh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(gw, gh);
+    if (gw <= 0 || gh <= 0) return false;
 
-    if (developObjectImagePath != fPath || !objectMaskPredictor->hasImage()) {
-        const QImage img = developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
-        if (img.isNull()) return false;
-        QGuiApplication::setOverrideCursor(Qt::BusyCursor);
-        const bool okEnc = objectMaskPredictor->setImage(img);
-        QGuiApplication::restoreOverrideCursor();
-        if (!okEnc) return false;
-        developObjectImagePath = fPath;
-    }
+    /* ROI -> guide pixels, rounded OUTWARD so nothing the user traced falls outside. */
+    QRect r;
+    r.setCoords(int(std::floor(roi.left()  * gw)),     int(std::floor(roi.top()    * gh)),
+                int(std::ceil (roi.right() * gw)) - 1, int(std::ceil (roi.bottom() * gh)) - 1);
+    crop = r.intersected(QRect(0, 0, gw, gh));
+    if (crop.width() < 8 || crop.height() < 8) return false;
+
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
+    if (img.isNull()) return false;
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    const bool okEnc = objectMaskPredictor->setImage(crop == QRect(0, 0, gw, gh) ? img
+                                                                                 : img.copy(crop));
+    QGuiApplication::restoreOverrideCursor();
+    if (!okEnc) return false;
+
+    developObjectImagePath = fPath;
+    developObjectRoi = roi;
+    developObjectGuideW = gw; developObjectGuideH = gh;
+    developObjectCrop = crop;
     return true;
 }
 
@@ -7417,8 +7555,12 @@ void MW::ensureBrushSamField(const QString &fPath, const WorkingImage &work,
     const QString key = BrushStamp::samFieldKey(fPath, seedOnx, seedOny);
     if (BrushStamp::getSamField(key)) return;               // this stroke already decoded
 
-    int gw, gh;
-    if (!ensureObjectEncoder(fPath, work, base, degrees, gw, gh)) return;
+    /* WHOLE frame, unlike the Object Mask: there is no traced region to crop to -- only a seed
+       point -- and the resulting field is sampled over the full frame by BrushStamp::rasterize.
+       Requesting the full ROI also guarantees the cached guide is un-cropped, so refinePoint's
+       output-normalized seed maps directly onto it. */
+    int gw, gh; QRect crop;
+    if (!ensureObjectEncoder(fPath, work, base, degrees, QRectF(0, 0, 1, 1), gw, gh, crop)) return;
 
     auto field = std::make_shared<BrushStamp::Guide>();
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
@@ -7492,7 +7634,9 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     else if (isSky)     ensureSkyMask(fPath, *work, mj.global, degrees);
     else if (isDepth)   ensureDepthMask(fPath, *work, mj.global, degrees);
     else if (isObject)  ensureObjectMask(fPath, *work, mj.global, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
-    else { int gw, gh; ensureObjectEncoder(fPath, *work, mj.global, degrees, gw, gh); }   // isBrushAi: warm only
+    /* isBrushAi: warm only, on the WHOLE frame (a point prompt has no traced region to crop to). */
+    else { int gw, gh; QRect crop;
+           ensureObjectEncoder(fPath, *work, mj.global, degrees, QRectF(0, 0, 1, 1), gw, gh, crop); }
     imageView->viewport()->update();   // heal the tint now the ref exists
 }
 
@@ -7510,8 +7654,8 @@ void MW::warmBrushSamEncoder()
     if (!work) return;
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
-    int gw, gh;
-    ensureObjectEncoder(fPath, *work, mj.global, degrees, gw, gh);
+    int gw, gh; QRect crop;
+    ensureObjectEncoder(fPath, *work, mj.global, degrees, QRectF(0, 0, 1, 1), gw, gh, crop);
 }
 
 void MW::updateMaskOverlayTint()

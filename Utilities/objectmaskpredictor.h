@@ -22,10 +22,17 @@
                      to image_embed + high_res_feats and caches them (+ the guide). ~1s CPU. This is
                      the expensive step; it does NOT depend on the brush, so it is not re-run per
                      stroke.
-      refine()    -- run PER brush stroke. Feeds the user's painted-and-filled mask as the decoder's
-                     dense mask_input prompt (has_mask_input=1) plus the stroke's bounding box, picks
-                     the best of SAM's 3 candidate masks by predicted IoU, morphologically cleans the
+      refine()    -- run PER brush stroke. Feeds the user's painted silhouette as the decoder's dense
+                     mask_input prompt (has_mask_input=1) plus the stroke's bounding box, picks the
+                     best of SAM's 3 candidate masks by predicted IoU, morphologically cleans the
                      result, then edge-refines it against the guide (shared SegRefine). ~40ms decode.
+
+    THREE-LEVEL DENSE PROMPT. The silhouette is not simply "foreground": the traced perimeter
+    straddles the true boundary, so the painted band is roughly half background. Handing that band
+    to SAM as confident foreground bakes the brush dabs into the mask -- soft dab-shaped blobs
+    spilling onto the background, with SAM given no way to disagree. refine() therefore takes the
+    fill and the band SEPARATELY and prompts interior=+logit, exterior=-logit, band=0 ("no opinion",
+    decide from the image). See ObjectMask::fillEnclosed, which produces both.
 
     Coverage output matches SubjectPredictor::predict: cov is row-major w*h, 0..1, output-oriented,
     so it drops straight into ObjectMask's ObjectRef store (Develop/objectmask.h) and is sampled by
@@ -52,12 +59,14 @@ public:
        if the encoder is not loaded or inference failed. */
     bool setImage(const QImage& image);
 
-    /* Refine the rough brush mask to the object edge. brushCov: the painted-and-filled mask, row-
-       major bw*bh, output-oriented, 0..1 (any resolution -- it is sampled by normalized coords, so
-       it need not match the guide size). Fills cov (w*h, output-oriented, matching the cached guide)
-       + dims. Returns false if no image is set or inference failed. */
-    bool refine(const std::vector<float>& brushCov, int bw, int bh,
-                std::vector<float>& cov, int& w, int& h);
+    /* Refine the rough brush silhouette to the object edge. Both maps are row-major bw*bh,
+       output-oriented, 0..1, covering the SAME region as the cached (possibly cropped) guide:
+         fillCov -- the painted-and-filled silhouette (perimeter band + enclosed interior)
+         bandCov -- the painted perimeter band alone, marked "unknown" in the prompt (see above).
+       Pass an empty bandCov to prompt the whole fill as foreground (the old behaviour). Fills cov
+       (w*h, matching the cached guide) + dims. False if no image is set or inference failed. */
+    bool refine(const std::vector<float>& fillCov, const std::vector<float>& bandCov,
+                int bw, int bh, std::vector<float>& cov, int& w, int& h);
 
     /* Point-prompt variant for the Brush tool's "AI" auto-mask mode: segment the object under a
        single click (output-normalized onx/ony) so a brush stroke can be confined to it. Uses the
