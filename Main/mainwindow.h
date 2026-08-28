@@ -624,11 +624,11 @@ private slots:
        already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */
     void ensureRawDenoise(const QString &fPath, const EditParams &base,
                           const std::shared_ptr<const WorkingImage> &clean, int iso);
-    /* Dock "auto run denoise" checkbox handler: store developAutoRunDenoise (+ persist);
+    /* Dock "auto run denoise" checkbox handler: store G::autoRunDenoise (+ persist);
        turning it ON runs the denoise for the current image immediately. */
     void onAutoRunDenoiseToggled(bool on);
     /* Dock "Denoise" checkbox handlers: runRawDenoiseNow forces ensureRawDenoise for the
-       current image + Global params regardless of developAutoRunDenoise; clearRawDenoiseNow
+       current image + Global params regardless of G::autoRunDenoise; clearRawDenoiseNow
        drops the denoised base and re-renders clean. rawDenoiseReadyForCurrent reports
        whether a denoised base is cached for the current image + params (drives the
        "Denoise"/"Denoised" checkbox state). */
@@ -1467,16 +1467,27 @@ private:
     void setPreviewSource(G::PreviewSource source);
 
     /* devPreview builder (Main/devpreviewbuilder.cpp). Renders devPreviews for images that
-       are NOT open in Develop -- earlier-session edits and multi-image paste targets --
-       one at a time on developPixelSource. Never runs unasked. */
+       are NOT open in Develop -- earlier-session edits, multi-image paste targets, and the
+       DEFAULT RENDER of any raw with a sensor decoder -- one at a time on
+       developPixelSource. Never runs unasked. */
     void buildDevPreviews(const QStringList &paths, const QString &src);
     void buildDevPreviewsForSelection();
     void queueBackgroundDevPreviewBuild();
     void cancelDevPreviewBuild();
     void clearDevPreviewCache();
-    bool devPreviewNeedsBuild(const QString &fPath) const;
+    /* The key fPath's devPreview should carry: the recipe hash when it has edits, the
+       renderer hash (Metadata::defaultRenderKey) for an unedited raw, empty when it should
+       have no preview at all. */
+    QString devPreviewBuildKey(const QString &fPath) const;
+    /* GUI-thread continuation of buildDevPreviews, once the off-thread cache filter has
+       said which paths actually need rendering. instance guards against the folder having
+       changed while that ran. */
+    void startDevPreviewBuild(const QStringList &paths, const QString &src, int instance);
     void devPreviewBuildNext();
-    void devPreviewStore(const QString &fPath, const QImage &full);
+    /* expectKey is the key captured when this render was dispatched; the write is dropped
+       if the image has moved under it since. */
+    void devPreviewStore(const QString &fPath, const QImage &full,
+                         const QString &expectKey);
     void devPreviewBuildFinish(const QString &reason = QString());
     void updateDevPreviewBuildProgress();
     QStringList devPreviewBuildQueue;
@@ -1717,11 +1728,6 @@ private:
        edits reuse the base. With no denoise the render uses the clean cached image unchanged. See
        developRawDenoisedBase / ensureRawDenoise. */
     std::shared_ptr<const WorkingImage> developDenoised;
-    /* Run mode for the heavy PMRID denoise. true (default): run automatically on image
-       select / entering Develop / a denoise-param settle (the auto call sites gate on
-       this). false: run only when the dock's "Run Denoise" button is clicked
-       (runRawDenoiseNow). Persisted to QSettings Develop/autoRunDenoise. */
-    bool developAutoRunDenoise = true;
     QString developDenoisedKey;                   // "path|dnL|dnC|iso"; empty when clean
     QString developDenoiseInFlightKey;            // key currently being computed (coalesce guard)
     // full-strength PMRID base, reused across amounts

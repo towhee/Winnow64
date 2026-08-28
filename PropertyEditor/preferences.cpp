@@ -1248,12 +1248,17 @@ void Preferences::addDevPreviews()
     i.name = "buildDevPreviewsInBackground";
     i.parentName = "DevPreviewHeader";
     i.captionText = "Build developed previews in background";
-    i.tooltip = "When a folder loads, render a developed preview for every edited\n"
-                "image that does not have a current one.\n\n"
-                "This decodes and renders those images in the background, so it\n"
-                "costs CPU and battery. With it off, only images you open in\n"
-                "Develop get a preview -- use Develop > Build Developed Previews\n"
-                "when you want the rest."
+    i.tooltip = "When a folder loads, render and cache a developed preview for\n"
+                "every edited image, and for every raw file, that does not\n"
+                "already have a current one.\n\n"
+                "Once built, a raw opens from its preview instead of being\n"
+                "demosaiced, so the folder browses as fast as JPEGs and shows\n"
+                "Winnow's rendering rather than the camera's.\n\n"
+                "The build is slow and thorough: a 1000-image raw folder takes\n"
+                "hours of background CPU and several GB of preview cache. It\n"
+                "runs one image at a time, pauses in Develop, and is abandoned\n"
+                "when you leave the folder. With it off, use Develop > Build\n"
+                "Developed Previews on the folders you want."
         ;
     i.hasValue = true;
     i.captionIsEditable = false;

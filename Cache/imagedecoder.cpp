@@ -266,9 +266,22 @@ bool ImageDecoder::loadDevPreview()
     if (G::operationMode == G::OperationMode::Develop) return false;
     if (G::previewSource != G::PreviewSource::Developed) return false;
 
-    const QString key =
-        dm->sf->index(sfRow, G::DevPreviewKeyColumn).data().toString();
-    if (key.isEmpty()) return false;          // no develop recipe: the file is correct
+    QString key = dm->sf->index(sfRow, G::DevPreviewKeyColumn).data().toString();
+    if (key.isEmpty()) {
+        /* No develop recipe. For a raw that Winnow can demosaic there may still be a cached
+           DEFAULT RENDER -- the pipeline run with identity adjustments -- and serving it is
+           the whole point of building those: the loupe shows Winnow's rendering of the raw
+           without a demosaic, instead of the camera's embedded JPEG.
+
+           Synthesized, not read: the key column is filled from the sidecar, and an unedited
+           image has no sidecar to fill it from. defaultRenderKey hashes the renderer, so
+           switching raw engine or auto-denoise misses here rather than serving pixels built
+           under the old setting.
+
+           Any other format falls through: its file already IS the default render. */
+        if (!RawFormat::HasSensorDecoder(ext)) return false;
+        key = Metadata::defaultRenderKey();
+    }
 
     const QByteArray jpg =
         DevPreviewCache::instance().get(fPath, key.toLatin1());

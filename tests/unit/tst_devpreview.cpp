@@ -256,7 +256,7 @@ void tst_devpreview::containsAgreesWithGet()
 {
 /*
     contains() is what decides whether an image needs a devPreview built
-    (MW::devPreviewNeedsBuild) and whether topUpDevPreviews has work to do. If it could
+    (MW::devPreviewBuildKey) and whether topUpDevPreviews has work to do. If it could
     disagree with get() the builder would either skip images that have no usable preview
     or re-render ones that do -- silently, and for every image in the folder.
 */
