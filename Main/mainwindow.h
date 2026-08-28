@@ -1814,11 +1814,14 @@ private:
        several object masks on one image coexist. Lazily loads sam2_encoder/decoder.onnx. */
     void ensureObjectMask(const QString &fPath, const WorkingImage &work,
                           const EditParams &base, int degrees, const QString &paramsJson);
-    /* Shared with the Brush "AI" auto-mask: lazily load the predictor and ensure the SAM 2 encoder
-       embedding for fPath is cached (Phase 1). Returns false + leaves nothing cached on failure;
-       outputs the oriented guide dims. */
+    /* Shared with the Brush "AI" auto-mask: lazily load the predictor and ensure a SAM 2 encoder
+       embedding covering normRoi (output-normalized) is cached (Phase 1). The guide is scaled so
+       that ROI resolves at ~1024 px and only the ROI is encoded -- fine structure needs the
+       resolution, and the encoder's input is a fixed 1024^2 either way. Outputs the FULL oriented
+       guide dims (gw,gh) plus the encoded sub-rect within them. False + nothing cached on failure. */
     bool ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
-                             const EditParams &base, int degrees, int &gw, int &gh);
+                             const EditParams &base, int degrees, const QRectF &normRoi,
+                             int &gw, int &gh, QRect &crop);
     /* Brush "AI" auto-mask (2nd auto-mask mode): decode the SAM 2 object under a stroke's seed point
        (output-normalized) and register it in the BrushStamp SAM-field store, so the brush rasterizer
        (preview + render) confines the stroke to that object. Reuses objectMaskPredictor's encoder. */
@@ -1829,6 +1832,12 @@ private:
     void ensureBrushSamFields(const QString &fPath, const WorkingImage &work,
                               const EditParams &base, int degrees, const QString &paramsJson);
     QString developObjectImagePath;   // path whose encoder embedding is cached in objectMaskPredictor
+    /* What that cached embedding actually covers, so ensureObjectEncoder can reuse it instead of
+       paying the ~1s encode again: the output-normalized region requested, the full guide dims it
+       was computed at, and the crop within them that was fed to the encoder. */
+    QRectF developObjectRoi;
+    int    developObjectGuideW = 0, developObjectGuideH = 0;
+    QRect  developObjectCrop;
     class ObjectMaskPredictor *objectMaskPredictor = nullptr;
     Preferences *pref = nullptr;
     StressTest *stressTest;

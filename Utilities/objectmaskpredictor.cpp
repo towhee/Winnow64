@@ -134,29 +134,44 @@ void ObjectMaskPredictor::cleanupMask(cv::Mat& logits256)
     }
 }
 
-bool ObjectMaskPredictor::refine(const std::vector<float>& brushCov, int bw, int bh,
+bool ObjectMaskPredictor::refine(const std::vector<float>& fillCov,
+                                 const std::vector<float>& bandCov, int bw, int bh,
                                  std::vector<float>& cov, int& w, int& h)
 {
     if (G::isLogger) G::log("ObjectMaskPredictor::refine");
     if (!imageSet || decoder.empty()) return false;
-    if (bw <= 0 || bh <= 0 || brushCov.size() != size_t(bw) * size_t(bh)) return false;
+    if (bw <= 0 || bh <= 0 || fillCov.size() != size_t(bw) * size_t(bh)) return false;
+    const bool haveBand = bandCov.size() == size_t(bw) * size_t(bh);
 
     const int S = inputSize;
 
     /* Brush fill -> cv::Mat, and its bounding box (stroke extent) for the box prompt. */
-    cv::Mat brush(bh, bw, CV_32F, const_cast<float*>(brushCov.data()));
+    cv::Mat brush(bh, bw, CV_32F, const_cast<float*>(fillCov.data()));
     cv::Mat bin = brush > 0.5f;                     // CV_8U
     const cv::Rect bb = cv::boundingRect(bin);
     if (bb.width <= 0 || bb.height <= 0) return false;   // empty stroke
 
-    /* Dense prompt: painted fill -> 256^2 logits (+kMaskLogit inside / -kMaskLogit outside). */
+    /* Dense prompt -> 256^2 logits, THREE levels (see the header): interior +kMaskLogit, exterior
+       -kMaskLogit, and the painted perimeter band faded to 0 = "no opinion, read the image". The
+       band is a continuous 0..1 weight after the downsample, so confidence ramps off smoothly
+       rather than stepping -- SAM's own evidence takes over exactly where the trace is uncertain. */
     cv::Mat brush256; cv::resize(brush, brush256, cv::Size(256, 256), 0, 0, cv::INTER_LINEAR);
+    cv::Mat band256;
+    if (haveBand) {
+        cv::Mat band(bh, bw, CV_32F, const_cast<float*>(bandCov.data()));
+        cv::resize(band, band256, cv::Size(256, 256), 0, 0, cv::INTER_LINEAR);
+    }
     const int miDims[4] = {1, 1, 256, 256};
     cv::Mat mask_input(4, miDims, CV_32F);
     for (int y = 0; y < 256; ++y) {
         const float* b = brush256.ptr<float>(y);
+        const float* u = haveBand ? band256.ptr<float>(y) : nullptr;
         float* m = mask_input.ptr<float>(0, 0, y);
-        for (int x = 0; x < 256; ++x) m[x] = b[x] > 0.5f ? kMaskLogit : -kMaskLogit;
+        for (int x = 0; x < 256; ++x) {
+            const float sign = b[x] > 0.5f ? kMaskLogit : -kMaskLogit;
+            const float conf = u ? (1.0f - std::clamp(u[x], 0.0f, 1.0f)) : 1.0f;
+            m[x] = sign * conf;
+        }
     }
     const int hmDims[1] = {1};
     cv::Mat has_mask_input(1, hmDims, CV_32F);
@@ -203,7 +218,9 @@ bool ObjectMaskPredictor::refine(const std::vector<float>& brushCov, int bw, int
     cv::Mat low(M, M, CV_32F, masks.ptr<float>(0, best));
     cv::Mat logits = low.clone();
     cleanupMask(logits);
-    return SegRefine::refine(logits, guideImage, cov, w, h);
+    /* AlphaLogits: sigmoid, partial alpha kept -- a fur/hair fringe is fractional coverage, and the
+       Saliency mode's halo-killing contrast would crush it back to a blobby cutout. */
+    return SegRefine::refine(logits, guideImage, cov, w, h, SegRefine::Mode::AlphaLogits);
 }
 
 bool ObjectMaskPredictor::refinePoint(double onx, double ony,
@@ -261,5 +278,5 @@ bool ObjectMaskPredictor::refinePoint(double onx, double ony,
     cv::Mat low(M, M, CV_32F, masks.ptr<float>(0, best));
     cv::Mat logits = low.clone();
     cleanupMask(logits);
-    return SegRefine::refine(logits, guideImage, cov, w, h);
+    return SegRefine::refine(logits, guideImage, cov, w, h, SegRefine::Mode::AlphaLogits);
 }
