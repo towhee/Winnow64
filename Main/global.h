@@ -500,6 +500,15 @@ Q_NAMESPACE
        image that has no current devPreview. OFF by default: building one means decoding
        and rendering the image, which is exactly the work the byproduct rule avoids. */
     extern bool buildDevPreviewsInBackground;
+    /* Run mode for the heavy PMRID raw denoise (the Develop dock's "Auto run" checkbox).
+       true: run automatically on select / entering Develop / a denoise-param settle.
+       false: only when "Denoise" is ticked by hand. Persisted to QSettings
+       Develop/autoRunDenoise.
+
+       Global rather than an MW member because it is part of the RENDER IDENTITY: it decides
+       whether PMRID is baked into a default-render devPreview, so Metadata::defaultRenderKey
+       must hash it, and that runs on ImageCache decoder threads which cannot reach MW. */
+    extern bool autoRunDenoise;
 
     /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
        timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant

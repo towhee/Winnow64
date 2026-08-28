@@ -245,6 +245,7 @@ int devPreviewMaxEdge = kDevPreviewSizeFull;
 int devPreviewQuality = kDevPreviewQualityDefault;
 qint64 devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;   // 20 GB
 bool buildDevPreviewsInBackground = false;
+bool autoRunDenoise = true;
 
 bool useBatchedFolderInsert = true;    // batched per-folder insert (one rowsInserted + one dataChanged); cuts Phase-1 insert ~34%. Z-A reorder fixed: dynamic sort disabled during load, restored once at end (see DataModel::scheduleProcessing / restoreProxySortAfterLoad)
 bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lines (A/B load-pipeline changes); off in production

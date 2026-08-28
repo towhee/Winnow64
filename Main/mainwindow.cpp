@@ -3235,7 +3235,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    the start and produces the clean + PMRID bases in one pass, publishing
                    the clean base so the ImageCache decode reuses it. No-op without a
                    denoise edit or off the Winnow engine. */
-                if (developProperties && developAutoRunDenoise) {
+                if (developProperties && G::autoRunDenoise) {
                     const auto mj = developProperties->stackJob();
                     ensureRawDenoise(fPath, mj.global,
                                      WorkingImageCache::instance().get(fPath),
@@ -8321,7 +8321,7 @@ void MW::renderDevelopFullResAsync()
            manual "Denoise" already ran) -- an amount change is then only a cheap re-blend
            (reuses developPmridFull) and must NOT fall through to the clean render, which
            would drop the denoise. */
-        if (developAutoRunDenoise || rawDenoiseReadyForCurrent()) {
+        if (G::autoRunDenoise || rawDenoiseReadyForCurrent()) {
             ensureRawDenoise(fPath, mj.global, work, currentImageIso());
             return;   // wait for the (re)blended base; PMRID re-arms this render
         }
@@ -8813,7 +8813,7 @@ bool MW::rawDenoiseAvailable(const QString &fPath, QString *reason) const
 void MW::onAutoRunDenoiseToggled(bool on)
 {
     if (G::isLogger) G::log("MW::onAutoRunDenoiseToggled");
-    developAutoRunDenoise = on;
+    G::autoRunDenoise = on;
     settings->setValue("Develop/autoRunDenoise", on);
     /* Turning auto ON behaves "as currently done": run the denoise for the current image
        now so it updates without waiting for the next param change. */
@@ -8873,7 +8873,7 @@ void MW::onDemosaicProgress(const QString &fPath, int done, int total)
        for the CURRENT image's Winnow raw demosaic while Auto-run denoise is off (with it
        on, the "Denoise raw" path shows its own row). Cleared when the current image
        finishes caching (setCached, wired in createImageCache). */
-    if (developAutoRunDenoise) return;
+    if (G::autoRunDenoise) return;
     if (G::operationMode != G::OperationMode::Develop || !G::useRaw) return;
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
     if (!dm || fPath != dm->currentFilePath) return;
@@ -8908,7 +8908,7 @@ void MW::ensureDevelopWork(const QString &fPath)
     /* Show the Winnow raw demosaic progress on this develop-open decode -- the "Denoise
        raw" path (ensureRawDenoise) shows its own row and runs only when Auto run is on,
        so this covers the manual (Auto run off) case. Raw + in-house engine only. */
-    const bool showDemosaic = !developAutoRunDenoise && G::useRaw && isFileRaw(fPath)
+    const bool showDemosaic = !G::autoRunDenoise && G::useRaw && isFileRaw(fPath)
         && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine;
 
     developRenderPool->start([this, fPath, m, gen, showDemosaic]() mutable {
@@ -9547,9 +9547,38 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     if (m.fPath.isEmpty()) m.fPath = fPath;
     if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
 
+    /* "Denoise raw" is a property of the BASE, applied before the composite. The
+       interactive path gets there through developRawDenoisedBase / ensureRawDenoise, and
+       NEITHER is reachable from here -- both are keyed to the image on screen. Without the
+       block below an export, and a devPreview written by the builder, would come out CLEAN
+       while the loupe showed a denoised render, and the devPreview would carry a recipe key
+       asserting the two match.
+
+       Gated on the GUI thread: rawDenoiseAvailable reads session state (the unsupported-
+       sensor set). Only the heavy PMRID decode goes to the worker.
+       GATED ON G::autoRunDenoise, not on the amounts alone. EditParams defaults denoiseLuma
+       to 0.75 and denoiseChroma to 1.0 -- NON-ZERO -- so "amounts > 0" is true for every raw
+       including an unedited one, and testing only that would run PMRID on every image the
+       exporter and the preview builder touch. Auto-run is the closest thing to stored intent
+       there is (the recipe does not record whether denoise was wanted), and it is what the
+       interactive render gates on too. */
+    const bool wantDenoise =
+        G::autoRunDenoise &&
+        (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
+        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine &&
+        rawDenoiseAvailable(fPath);
+    /* Reuse the live session's full-strength PMRID base when it belongs to THIS image, so
+       exporting the image being edited does not re-run the model. It is amount-independent
+       (keyed path+iso), so it is valid whatever the stored amounts are. Read here rather
+       than on the worker because developPmridFull/developPmridKey are GUI-thread state. */
+    std::shared_ptr<const WorkingImage> pmridCached;
+    if (wantDenoise && developPmridFull && developPmridKey == pmridBaseKey(fPath, m.ISONum))
+        pmridCached = developPmridFull;
+
     /* Step 1 (worker): make sure the scene-linear WorkingImage exists. decodeIndependent
        caches it as a side effect, so an image already visited is a cache hit. */
-    developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, done]() mutable {
+    developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
+                              pmridCached, done]() mutable {
         auto work = WorkingImageCache::instance().get(fPath);
         bool decodedHere = false;
         if (!work) {
@@ -9574,9 +9603,41 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             return;
         }
 
+        /* Raw denoise -> the base the COMPOSITE starts from. PMRID is pre-demosaic, so the
+           denoised base comes from re-decoding the mosaic with the denoiser on and blending
+           toward the clean base by the two stored amounts -- the same two steps
+           ensureRawDenoise performs interactively, minus its caching, which is keyed to the
+           current image and would be wrong to disturb from a batch.
+
+           Only the composite gets it. Orientation and the mask prerequisites below stay on
+           the CLEAN base, exactly as renderDevelopFullResAsync splits src from work, so a
+           mask selects the same pixels whether or not denoise is on.
+
+           A PMRID that cannot run (built without ONNX Runtime, pmrid.onnx absent, non-Bayer
+           sensor) still returns a valid base -- one identical to the clean one -- so the
+           blend is skipped on applied == false rather than mixing in an unchanged image.
+           Nothing is recorded as unavailable here: reportRawDenoiseUnavailable drives the
+           dock, and this render is not the user's edit session. */
+        std::shared_ptr<const WorkingImage> src = work;
+        if (wantDenoise) {
+            std::shared_ptr<const WorkingImage> pmrid = pmridCached;
+            bool applied = (pmrid != nullptr);
+            if (!pmrid) {
+                ImageDecoder dec(0, dm, metadata);
+                pmrid = dec.decodeRawWorking(m, /*denoiseRaw*/true, nullptr, nullptr,
+                                             &applied);
+            }
+            if (pmrid && applied) {
+                auto blended = std::make_shared<WorkingImage>();
+                Develop::BlendRawDenoise(*work, *pmrid, mj.global.denoiseLuma,
+                                         mj.global.denoiseChroma, *blended);
+                src = blended;
+            }
+        }
+
         /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
            concurrently with the live session's use of the same path-keyed caches. */
-        QMetaObject::invokeMethod(this, [this, fPath, work, mj, depth, space, outSpace,
+        QMetaObject::invokeMethod(this, [this, fPath, work, src, mj, depth, space, outSpace,
                                          decodedHere, done]() {
             const int degrees = work->sceneReferred
                                     ? developOrientationDegrees(*work, fPath) : 0;
@@ -9595,10 +9656,12 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                     if (c.tool == int(MaskTool::Brush))
                         ensureBrushSamFields(fPath, *work, mj.global, degrees, c.paramsJson);
 
-            /* Step 3 (worker): the composite itself. */
-            developRenderPool->start([this, fPath, work, mj, degrees, depth, space,
+            /* Step 3 (worker): the composite itself. src is the raw-denoised base when
+               "Denoise raw" is set, else the clean one. work is kept alive alongside it
+               because the mask fields registered above are keyed to those pixels. */
+            developRenderPool->start([this, fPath, work, src, mj, degrees, depth, space,
                                       outSpace, decodedHere, done]() {
-                QImage out = developCompositeStack(*work, mj, degrees,
+                QImage out = developCompositeStack(*src, mj, degrees,
                                                    /*fullRes*/true, 0, 0, fPath,
                                                    nullptr, depth, space);
                 /* Tag at the export boundary, not inside the composite: the geometry and

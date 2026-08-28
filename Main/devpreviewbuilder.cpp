@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
+#include "ImageFormats/Raw/rawformat.h"
 
 /*
     BUILDING devPreviews FOR IMAGES THAT ARE NOT OPEN IN DEVELOP
@@ -14,6 +15,28 @@
     exactly what the byproduct rule exists to avoid. So it never happens unasked: either
     the user runs Develop > Build Developed Previews, or they turn on "Build developed
     previews in background" and accept the cost.
+
+    TWO POPULATIONS ARE BUILT, and the second is much the larger:
+
+      edited      an image with a develop recipe, keyed on the hash of that recipe. This is
+                  the original purpose above -- usually a handful of images per folder.
+      unedited    ANY raw Winnow has a sensor decoder for, keyed on the renderer instead
+                  (Metadata::defaultRenderKey). What gets cached is the DEFAULT RENDER: the
+                  pipeline run with identity adjustments, which is what the user would see
+                  on entering Develop without touching a slider.
+
+    The second exists purely for browsing speed. With it cached, the loupe serves a raw from
+    a JPEG decode instead of a demosaic (ImageDecoder::loadDevPreview), so an unedited raw
+    folder browses like a folder of JPEGs -- and it shows WINNOW's rendering of the sensor
+    data rather than the camera's embedded JPEG. The cost is paid once, up front, and it is
+    steep: a thousand-raw folder is a thousand full decodes and composites, run one at a
+    time, so hours rather than seconds. That trade -- a long one-off build for permanently
+    fast browsing -- is the whole point, and it is why the preference is off by default.
+
+    ONLY THE LARGE TIER FOR AN UNEDITED RAW. The 256px grid thumbnail lives in the image's
+    XMP sidecar, and an image the user never edited should not gain a sidecar as a side
+    effect of a cache fill. The grid keeps the camera-embedded thumbnail, which was already
+    read during the metadata pass and is no slower. See devPreviewStore.
 
     ONE AT A TIME, ON THE EXISTING ENGINE. The work is done by MW::developPixelSource --
     the exporter's render path -- which already stages a full-resolution render correctly:
@@ -37,27 +60,82 @@
 void MW::buildDevPreviews(const QStringList &paths, const QString &src)
 {
 /*
-    Queue devPreviews for paths that carry a develop recipe but have no CURRENT preview.
-    Re-running it after a partial build is free: everything already done is filtered out
-    here, so the queue only ever holds real work.
+    Queue devPreviews for paths that should have one and do not. Re-running after a partial
+    build is free: everything already done is filtered out, so the queue only ever holds
+    real work.
+
+    TWO PASSES, ON TWO THREADS, because the two halves of "does this need building?" have
+    very different costs:
+
+      GUI thread   which key the image should carry (devPreviewBuildKey). Model reads and,
+                   for the few edited images, a sidecar read. No I/O for the rest.
+      worker       whether the cache already holds that key -- one SQLite query AND one
+                   stat() per path (DevPreviewCache::contains).
+
+    The second pass used to run here. That was survivable when only edited images were
+    queued (a handful), but a background build now offers every raw in the folder: on the
+    1000-image folders this feature exists for, that is a thousand queries and a thousand
+    stats on the GUI thread, at the moment the folder finishes loading. Off-thread it costs
+    the user nothing, and the build starting a beat later is invisible against a run
+    measured in hours.
 */
     if (G::isLogger) G::log("MW::buildDevPreviews", src);
     if (!developProperties || !dm) return;
 
+    QVector<QPair<QString, QString>> candidates;     // path + the key it should carry
+    candidates.reserve(paths.count());
     for (const QString &fPath : paths) {
         if (fPath.isEmpty()) continue;
         if (devPreviewBuildQueue.contains(fPath)) continue;
         if (fPath == devPreviewBuildCurrent) continue;
-        if (!devPreviewNeedsBuild(fPath)) continue;
-        devPreviewBuildQueue.append(fPath);
+        const QString key = devPreviewBuildKey(fPath);
+        if (key.isEmpty()) continue;                 // nothing to depict for this file
+        candidates.append({fPath, key});
     }
-
-    if (devPreviewBuildQueue.isEmpty()) {
-        if (src == "menu")
-            G::popup->showPopup("Every edited image already has a developed preview.",
+    if (candidates.isEmpty()) {
+        if (src == "menu" && G::popup)
+            G::popup->showPopup("Every image already has a current developed preview.",
                                 2000);
         return;
     }
+
+    /* Guard the hand-back: a folder change while this pass runs makes every path in it
+       irrelevant, and MW::stop has already cleared the queue by then. */
+    const int instance = dm->instance.load();
+    QThreadPool::globalInstance()->start([this, candidates, src, instance]() {
+        QStringList need;
+        for (const auto &c : candidates) {
+            if (G::stop) return;
+            if (!DevPreviewCache::instance().contains(c.first, c.second.toLatin1()))
+                need << c.first;
+        }
+        QMetaObject::invokeMethod(this, [this, need, src, instance]() {
+            startDevPreviewBuild(need, src, instance);
+        });
+    });
+}
+
+void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int instance)
+{
+/*
+    GUI-thread continuation of buildDevPreviews: everything here needs the filtered list
+    that the worker just produced.
+*/
+    if (G::isLogger) G::log("MW::startDevPreviewBuild", src);
+    if (!dm || dm->instance.load() != instance) return;   // different folder now
+
+    if (paths.isEmpty()) {
+        if (src == "menu" && G::popup)
+            G::popup->showPopup("Every image already has a current developed preview.",
+                                2000);
+        return;
+    }
+    for (const QString &fPath : paths) {
+        if (devPreviewBuildQueue.contains(fPath)) continue;
+        if (fPath == devPreviewBuildCurrent) continue;
+        devPreviewBuildQueue.append(fPath);
+    }
+    if (devPreviewBuildQueue.isEmpty()) return;
 
     devPreviewBuildTotal = devPreviewBuildQueue.count() + devPreviewBuildDone;
     devPreviewBuildFromMenu = (src == "menu");
@@ -68,21 +146,42 @@ void MW::buildDevPreviews(const QStringList &paths, const QString &src)
     devPreviewBuildNext();
 }
 
-bool MW::devPreviewNeedsBuild(const QString &fPath) const
+QString MW::devPreviewBuildKey(const QString &fPath) const
 {
 /*
-    True when fPath has a develop recipe and the devPreview cache does not hold a preview
-    matching it. Keyed on the RECIPE rather than on the stored preview key, so an image
-    edited by another Winnow instance or on another machine is picked up too.
+    The devPreview key fPath SHOULD have, or empty when it should have none. Two kinds:
 
-    Only the large tier is tested. The 256px thumbnail lives in the sidecar and is written
-    in the same pass, so if one is missing both are.
+      edited      hash of the develop recipe (Metadata::devPreviewKey). Keyed on the recipe
+                  rather than on the key stored in the sidecar, so an image edited by another
+                  Winnow instance or on another machine is picked up too.
+      unedited    a raw with a sensor decoder gets the DEFAULT RENDER key -- the image put
+                  through the pipeline with identity adjustments. Caching that is what makes
+                  browsing an unedited raw folder as fast as browsing JPEGs, since the loupe
+                  then never demosaics.
+
+    Anything else -- a JPEG, a raw with no sensor decoder -- returns empty. For those the
+    file on disk already IS the default render, so a preview would be a re-encode of it: pure
+    cost, no gain.
+
+    The DevelopColumn is consulted rather than developBlobFor for the unedited case on
+    purpose. developBlobFor -> stackFor reads the sidecar on first touch, and a background
+    build over a 1000-raw folder would turn that into 1000 synchronous sidecar reads on the
+    GUI thread. The column was filled from the same sidecars during the metadata read.
 */
-    if (fPath.isEmpty() || !developProperties) return false;
-    const QString blob = developProperties->developBlobFor(fPath);
-    if (blob.isEmpty()) return false;                   // no edits: nothing to depict
-    return !DevPreviewCache::instance().contains(
-        fPath, Metadata::devPreviewKey(blob).toLatin1());
+    if (fPath.isEmpty() || !developProperties) return QString();
+
+    const int row = dm ? dm->rowFromPath(fPath) : -1;
+    const bool edited = row >= 0 &&
+                        dm->index(row, G::DevelopColumn).data().toBool();
+
+    /* Only an edited image pays the sidecar read. A recipe reset to identity reads back
+       empty here and correctly falls through to the default render. */
+    const QString blob = edited ? developProperties->developBlobFor(fPath) : QString();
+    if (!blob.isEmpty()) return Metadata::devPreviewKey(blob);
+
+    if (!RawFormat::HasSensorDecoder(QFileInfo(fPath).suffix().toLower()))
+        return QString();
+    return Metadata::defaultRenderKey();
 }
 
 void MW::devPreviewBuildNext()
@@ -106,40 +205,61 @@ void MW::devPreviewBuildNext()
 
     devPreviewBuildCurrent = devPreviewBuildQueue.takeFirst();
     const QString fPath = devPreviewBuildCurrent;
+    /* The key this render is ABOUT to depict, captured before it starts. devPreviewStore
+       re-derives it on the way out and writes only if the two agree, so an edit made while
+       the image rendered cannot stamp the pre-edit pixels with the post-edit key. */
+    const QString expectKey = devPreviewBuildKey(fPath);
 
     updateDevPreviewBuildProgress();
 
     /* 8-bit sRGB: a devPreview is a JPEG for the screen, not an export master. */
     developPixelSource(fPath, /*want16Bit*/false, OutputTransform::Space::sRGB,
-        [this, fPath](bool ok, const QImage &out) {
-            if (ok && !out.isNull()) devPreviewStore(fPath, out);
+        [this, fPath, expectKey](bool ok, const QImage &out) {
+            if (ok && !out.isNull()) devPreviewStore(fPath, out, expectKey);
             ++devPreviewBuildDone;
             devPreviewBuildCurrent.clear();
             devPreviewBuildNext();
         });
 }
 
-void MW::devPreviewStore(const QString &fPath, const QImage &full)
+void MW::devPreviewStore(const QString &fPath, const QImage &full,
+                         const QString &expectKey)
 {
 /*
-    Write both tiers for a freshly rendered full-resolution image: the 256px thumbnail
-    into the image's XMP sidecar, and the devPreview into the on-disk cache.
+    Write the freshly rendered full-resolution image to the preview cache, and -- for an
+    EDITED image only -- the 256px thumbnail into its XMP sidecar.
 
     This deliberately mirrors the provider lambda in initialize.cpp rather than calling it
     -- the provider serves the image on screen and reads developFrame / developFullFrame,
     neither of which describes an image the builder just rendered off-thread.
 
-    THE RECIPE IS RE-READ HERE, not captured when the image was queued. A render takes
-    seconds and the user may have edited this image in between; keying the preview to the
-    recipe in force at queue time would stamp it with a recipe it does not depict. If it
-    has changed, the write is skipped and the image simply misses again.
+    THE KEY IS RE-DERIVED HERE and checked against the one captured when the render started.
+    A render takes seconds and the user may have edited the image, or switched raw engine, in
+    between; either would make the pixels in hand depict something other than what the key
+    now says. On a mismatch the write is skipped and the image simply misses again -- it will
+    be rebuilt, correctly, next time.
+
+    NO SIDECAR FOR AN UNEDITED RAW. Its preview is the default render, which the user never
+    asked for by editing anything, so creating an XMP file beside it would be writing to their
+    library as a side effect of a cache fill. The grid keeps the camera-embedded thumbnail --
+    already read during the metadata pass, and just as fast. Only the large tier is cached,
+    which is the tier that saves the demosaic.
 */
     if (G::isLogger) G::log("MW::devPreviewStore");
     if (!developProperties) return;
 
+    const QString key = devPreviewBuildKey(fPath);
+    if (key.isEmpty() || key != expectKey) return;   // moved under us; drop this render
+
+    /* Which TIER this render belongs to, decided from the recipe itself rather than from
+       how devPreviewBuildKey happened to answer. A non-empty recipe whose hash is not the
+       key we are about to write under means the two disagree -- the develop badge and the
+       stack cache are out of step -- and writing either tier would record a picture under a
+       description it does not match. Drop it; the next pass rebuilds from a settled state. */
     const QString blob = developProperties->developBlobFor(fPath);
-    if (blob.isEmpty()) return;                 // edits removed while this rendered
-    const QString key = Metadata::devPreviewKey(blob);
+    const QString recipeKey = Metadata::devPreviewKey(blob);   // empty when blob is empty
+    if (!recipeKey.isEmpty() && recipeKey != key) return;
+    const bool edited = !recipeKey.isEmpty();
 
     auto encode = [](const QImage &im, int quality, QByteArray &out) {
         QBuffer buf(&out);
@@ -151,9 +271,12 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full)
        NOT governed by the "Developed preview quality" preference -- that setting is about
        what the loupe shows at 100%, and a few KB of icon is not where disk is spent. */
     QByteArray thumbJpg;
-    const QImage thumb = full.scaled(G::maxIconSize, G::maxIconSize,
-                                     Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    if (!encode(thumb, 85, thumbJpg)) thumbJpg.clear();
+    QImage thumb;
+    if (edited) {
+        thumb = full.scaled(G::maxIconSize, G::maxIconSize,
+                            Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        if (!encode(thumb, 85, thumbJpg)) thumbJpg.clear();
+    }
 
     QByteArray previewJpg;
     QImage preview = full;
@@ -172,8 +295,24 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full)
     if (!previewJpg.isEmpty())
         DevPreviewCache::instance().put(fPath, key.toLatin1(), previewJpg);
 
-    /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */
-    devPreviewUpdated(fPath, thumbJpg.isEmpty() ? QImage() : thumb);
+    if (edited) {
+        /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */
+        devPreviewUpdated(fPath, thumbJpg.isEmpty() ? QImage() : thumb);
+        return;
+    }
+
+    /* DEFAULT RENDER: devPreviewUpdated would be actively harmful here. It is written for an
+       edit, so a null thumbnail means "the icon on screen is now stale" and it clears the
+       row, tells MetaRead to re-arm (invalidateLoadedIcons) and calls reloadIconChunk. None
+       of that is true of an unedited raw -- its camera thumbnail is correct and unchanged --
+       and doing it once per image through a thousand-image build would thrash the grid for
+       the whole run.
+
+       The one thing worth doing is dropping the full-size image cached for this path: it was
+       decoded from the camera JPEG, and the next visit should serve the devPreview just
+       written instead. Skipped for the image ON SCREEN, whose loupe pixmap is that cached
+       decode -- it picks the preview up on the next visit rather than blinking now. */
+    if (icd && dm && fPath != dm->currentFilePath) icd->remove(fPath);
 }
 
 void MW::updateDevPreviewBuildProgress()
@@ -266,19 +405,39 @@ void MW::buildDevPreviewsForSelection()
 void MW::queueBackgroundDevPreviewBuild()
 {
 /*
-    Called once per folder load when the preference is on. Queues every edited image in
-    the folder that has no current preview.
+    Called once per folder load when the preference is on. Queues two populations:
+
+      o every EDITED image with no current preview -- the original purpose. Cheap to find
+        (G::DevelopColumn came from the sidecar during the metadata read) and usually a
+        handful of images.
+      o every RAW with a sensor decoder, edited or not, so its DEFAULT RENDER is cached and
+        the loupe never has to demosaic it again.
+
+    The second is a different order of magnitude: a thousand-raw folder is a thousand full
+    sensor decodes and composites, run strictly one at a time, so hours rather than seconds.
+    That is the deliberate trade -- a long one-off cost for a folder that browses like JPEGs
+    afterwards. It is why the work stays off the GUI thread, yields to Develop mode, and is
+    abandoned wholesale when the user leaves the folder (MW::stop -> cancelDevPreviewBuild).
+
+    Rows already holding a current preview are filtered out downstream by buildDevPreviews
+    (off the GUI thread), so re-opening a folder that finished building queues nothing.
 */
-    if (G::isLogger) G::log("MW::buildDevPreviewsInBackground");
+    if (G::isLogger) G::log("MW::queueBackgroundDevPreviewBuild");
     if (!G::buildDevPreviewsInBackground) return;
     if (!dm || dm->rowCount() == 0) return;
 
     QStringList paths;
     for (int row = 0; row < dm->rowCount(); ++row) {
-        /* G::DevelopColumn is set from the sidecar during the metadata read, so this
-           skips the unedited majority without opening a single file. */
-        if (!dm->index(row, G::DevelopColumn).data().toBool()) continue;
-        paths << dm->index(row, G::PathColumn).data(G::PathRole).toString();
+        const QString fPath =
+            dm->index(row, G::PathColumn).data(G::PathRole).toString();
+        if (fPath.isEmpty()) continue;
+        const bool edited = dm->index(row, G::DevelopColumn).data().toBool();
+        /* Extension test only -- no file is opened here. buildDevPreviews makes the real
+           (and more expensive) per-path decision, on a worker thread. */
+        if (!edited &&
+            !RawFormat::HasSensorDecoder(QFileInfo(fPath).suffix().toLower()))
+            continue;
+        paths << fPath;
     }
     if (paths.isEmpty()) return;
     buildDevPreviews(paths, "background");

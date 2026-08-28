@@ -155,6 +155,9 @@ public:
     /* 12-char hash identifying a develop blob, stamped beside the preview so staleness is
        detectable. One definition, used by both the writer and every reader. */
     static QString devPreviewKey(const QString &blob);
+    /* devPreview key for a raw with no recipe (the default render); hashes the renderer,
+       not the recipe. See the .cpp. */
+    static QString defaultRenderKey();
 
 
     QFile file;

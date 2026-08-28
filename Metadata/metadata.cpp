@@ -588,6 +588,37 @@ QString Metadata::devPreviewKey(const QString &blob)
     return QString::fromLatin1(h.toHex().left(12));
 }
 
+QString Metadata::defaultRenderKey()
+{
+/*
+    The devPreview key for a raw with NO develop recipe -- the "default render": the image
+    put through the normal develop pipeline with identity adjustments, which is what the
+    user would see on entering Develop without touching a slider. Cheap enough to call per
+    image (one SHA-1 over a short string).
+
+    devPreviewKey cannot serve here: it hashes the recipe, and an unedited image has none
+    (it returns empty, and an empty key is what ImageDecoder::loadDevPreview treats as "no
+    preview"). So the key hashes the RENDERER instead -- everything outside the recipe that
+    changes the pixels:
+
+      engine   Winnow demosaic vs Apple Core Image produce visibly different images.
+      denoise  With G::autoRunDenoise on, PMRID is baked into the render; toggling it must
+               therefore MISS every preview built under the other setting rather than serve
+               it. This is why autoRunDenoise is a global (see Main/global.h).
+      v        Bump when a pipeline change makes existing default renders wrong. Previews
+               under the old key are simply never asked for again and age out via the LRU;
+               nothing has to find and delete them.
+
+    Prefixed 'R' -- not a hex digit -- so the default-render and recipe key spaces are
+    provably disjoint and a recipe hash can never be mistaken for a render hash.
+*/
+    const QString d = QString("defaultRender|v1|engine=%1|autoDenoise=%2")
+                          .arg(int(G::decodeRawEngine))
+                          .arg(G::autoRunDenoise ? 1 : 0);
+    const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
+    return "R" + QString::fromLatin1(h.toHex().left(11));
+}
+
 void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB64)
 {
 /*

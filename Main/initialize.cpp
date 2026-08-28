@@ -2102,7 +2102,7 @@ void MW::createDevelopDock()
     if (developScopesLayout < ScopesView::Both ||
         developScopesLayout > ScopesView::VectorscopeOnly)
         developScopesLayout = ScopesView::Both;
-    developAutoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
+    G::autoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
@@ -2932,7 +2932,7 @@ void MW::setOperationMode(G::OperationMode mode)
                otherwise it would not fire until the clean decode + settle. Produces the
                clean + PMRID bases in one pass and publishes the clean base (which
                ImageDecoder::load then reuses). No-op without a denoise edit / on Apple. */
-            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty() && developAutoRunDenoise) {
+            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty() && G::autoRunDenoise) {
                 const auto mj = developProperties->stackJob();
                 ensureRawDenoise(dm->currentFilePath, mj.global,
                                  WorkingImageCache::instance().get(dm->currentFilePath),
