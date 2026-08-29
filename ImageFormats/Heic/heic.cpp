@@ -1,5 +1,6 @@
 #include "heic.h"
 #include "Main/global.h"
+#include <QColorSpace>
 
 Heic::Heic(/*QFile &file*/)
 {
@@ -863,36 +864,70 @@ bool Heic::urnBox(quint32 &offset, quint32 &length)
     return true;
 }
 
+/*
+    The colr box -- the file's colour space. HEIC carries it in a box inside the item
+    properties (ipco), NOT in a JPEG-style APP2 segment, which is why the segment-based
+    ICC read copied from the JPEG parser could never have worked here and sat commented
+    out instead.
+
+    WHY IT MATTERS: iPhone HEICs are Display P3. With nothing captured here, iccBuf stayed
+    null, "null means sRGB" applied, and every one of them rendered visibly undersaturated
+    -- in ORDINARY BROWSING, not just Develop.
+
+    Two forms, per ISO 23008-12:
+      prof / rICC   a full ICC profile, taken verbatim -- ICC::transform consumes it.
+      nclx          numeric codes (ITU-T H.273) for primaries / transfer / matrix, with no
+                    profile attached, so one has to be synthesised. QColorSpace already
+                    knows these spaces and can emit the ICC bytes, which avoids
+                    hand-building a profile with lcms.
+
+    SDR ONLY, DELIBERATELY. PQ (transfer 16) and HLG (18) are HDR: they need tone mapping
+    to an SDR display, and treating their code values as if they were SDR would be far
+    worse than the status quo. Those fall through untouched -- still assumed sRGB, exactly
+    as before this function stored anything -- and remain a separate piece of work.
+
+    An sRGB profile is deliberately NOT stored: null already means sRGB, and keeping the
+    bytes would put a redundant profile on every row of the datamodel. Same reasoning as
+    the JPEG reader.
+*/
 bool Heic::colrBox(quint32 &offset, quint32 &length)
 {
-    if (isDebug) {
-        file->seek(offset + 8);
-        QString colrType = file->read(4);
-        qDebug() << "Heic::colrBox" << "colrType =" << colrType;
-        QByteArray colorProfile;
-        if (colrType == "nclx") {
-            quint16 colour_primaries = Utilities::get16(file->read(2));
-            quint16 transfer_characteristics = Utilities::get16(file->read(2));
-            quint16 matrix_coefficients = Utilities::get16(file->read(2));
-            quint8 x = Utilities::get8(file->read(1));
-            quint8 full_range_flag = (x & 0b10000000) >> 7;             // first 1 bit
-            qDebug() << "Heic::colrBox"
-                     << "colour_primaries =" << colour_primaries
-                     << "transfer_characteristics =" << transfer_characteristics
-                     << "matrix_coefficients =" << matrix_coefficients
-                     << "full_range_flag =" << full_range_flag;
-        }
-        else if (colrType == "rICC" || colrType == "prof") {
-            colorProfile = file->read(length - 8);
-            qDebug() << "Heic::colrBox" << colorProfile;
-        }
-        else {
-            // err
-            qDebug() << "Heic::colrBox" << "*** color type" << colrType << "is not recognized";
-            offset += length;
-            return false;
+    /* Guard: the type alone is 4 bytes past the 8-byte box header. */
+    if (length < 12) {
+        offset += length;
+        return true;
+    }
+
+    file->seek(offset + 8);
+    const QString colrType = file->read(4);
+
+    if (colrType == "rICC" || colrType == "prof") {
+        const quint32 profLen = length - 12;
+        if (profLen > 0) {
+            const QByteArray profile = file->read(profLen);
+            /* The ICC header's data colour space is at byte 16, and the profile
+               description we report is not worth parsing -- record the box form. */
+            if (!profile.isEmpty()) {
+                m->iccBuf = profile;
+                m->iccSpace = colrType;
+            }
         }
     }
+    else if (colrType == "nclx") {
+        const quint16 primaries = Utilities::get16(file->read(2));
+        const quint16 transfer  = Utilities::get16(file->read(2));
+
+        /* 1 = BT.709 (sRGB primaries), 11 = DCI-P3, 12 = Display P3 (P3-D65),
+           9 = BT.2020. Transfer 1 = BT.709, 13 = sRGB; 16 = PQ and 18 = HLG are HDR. */
+        const bool sdrTransfer = (transfer == 1 || transfer == 13);
+        if (sdrTransfer && (primaries == 12 || primaries == 11)) {
+            const QColorSpace p3(QColorSpace::DisplayP3);
+            m->iccBuf = p3.iccProfile();
+            m->iccSpace = "P3";
+        }
+        /* primaries 1 (sRGB) needs nothing stored; HDR transfers are left alone. */
+    }
+
     offset += length;
     return true;
 }

@@ -1,7 +1,14 @@
 #include "Develop/whitebalance.h"
+#include "Develop/colorspace.h"
 #include <cmath>
 #include <algorithm>
 #include <vector>
+
+/* Working-space luma weights (see Develop/colorspace.h) -- used by the auto-WB and skin
+   samplers to weight and threshold pixels by brightness. */
+using ColorSpaceMath::kLumR;
+using ColorSpaceMath::kLumG;
+using ColorSpaceMath::kLumB;
 
 namespace {
 
@@ -120,8 +127,8 @@ bool renderIlluminant(const CameraColor &cam, double kelvin, double tint, double
     for (int i = 0; i < 3; ++i) camRaw[i] *= cam.asShotMul[i];
 
     for (int i = 0; i < 3; ++i)
-        s[i] = cam.camToSrgb[i][0] * camRaw[0] + cam.camToSrgb[i][1] * camRaw[1]
-             + cam.camToSrgb[i][2] * camRaw[2];
+        s[i] = cam.camToWorking[i][0] * camRaw[0] + cam.camToWorking[i][1] * camRaw[1]
+             + cam.camToWorking[i][2] * camRaw[2];
 
     /* An extreme temperature/tint combination can put the illuminant outside the sRGB
        gamut, giving a non-positive channel. Clamp rather than fail: the solve's
@@ -372,13 +379,19 @@ bool autoWhiteBalance(const WorkingImage &img, float &kelvin, float &tint)
     /* Subsample big images; the estimate does not need every pixel. */
     const size_t stride = std::max<size_t>(1, n / 200000);
 
+    /* Brightness weights for the space img is ACTUALLY in -- camera-native for a raw
+       (see lumaWeightsFor, workingimage.h). Only used to rank pixels by brightness for
+       the percentile threshold, but ranking sensor channels with sRGB weights would pick
+       a measurably different "brightest 20%" to average. */
+    const ColorSpaceMath::Luma LW = lumaWeightsFor(img);
+
     std::vector<float> luma;
     luma.reserve(n / stride + 1);
     for (size_t i = 0; i < n; i += stride) {
         const float r = img.rgb[i * 3], g = img.rgb[i * 3 + 1], b = img.rgb[i * 3 + 2];
         if (r >= clip || g >= clip || b >= clip) continue;
         if (r <= 0.0f || g <= 0.0f || b <= 0.0f) continue;
-        luma.push_back(0.2126f * r + 0.7152f * g + 0.0722f * b);
+        luma.push_back(LW.r * r + LW.g * g + LW.b * b);
     }
     if (luma.size() < 64) return false;
 
@@ -393,17 +406,21 @@ bool autoWhiteBalance(const WorkingImage &img, float &kelvin, float &tint)
         const float r = img.rgb[i * 3], g = img.rgb[i * 3 + 1], b = img.rgb[i * 3 + 2];
         if (r >= clip || g >= clip || b >= clip) continue;
         if (r <= 0.0f || g <= 0.0f || b <= 0.0f) continue;
-        if (0.2126f * r + 0.7152f * g + 0.0722f * b < thresh) continue;
+        if (LW.r * r + LW.g * g + LW.b * b < thresh) continue;
         sum[0] += r; sum[1] += g; sum[2] += b;
         ++count;
     }
     if (count < 32) return false;
 
-    return solve(img.cam,
-                 static_cast<float>(sum[0] / count),
-                 static_cast<float>(sum[1] / count),
-                 static_cast<float>(sum[2] / count),
-                 kelvin, tint);
+    /* The average is sampled from the PRE-develop image, which for a raw is still in
+       camera-native primaries; solve() expects a working-space colour. Converting the
+       AVERAGE is exact because the transform is linear, and it is one matrix instead of
+       one per sampled pixel. No-op for non-raw. */
+    float ar = static_cast<float>(sum[0] / count);
+    float ag = static_cast<float>(sum[1] / count);
+    float ab = static_cast<float>(sum[2] / count);
+    toWorkingColor(img, ar, ag, ab);
+    return solve(img.cam, ar, ag, ab, kelvin, tint);
 }
 
 } // namespace WhiteBalance

@@ -17,10 +17,17 @@ class QImage;
     workingimage.h) keyed by file path, so an interactive develop edit can re-render an
     image without re-decoding or re-demosaicing it.
 
-    The expensive part of showing a RAW is UnpackCfa -> Demosaic -> RawColor, which produces
-    the WorkingImage. Develop + OutputTransform that follow are comparatively cheap. So when
+    The expensive part of showing a RAW is UnpackCfa -> Demosaic, which produces the
+    WorkingImage. Develop + OutputTransform that follow are comparatively cheap. So when
     the user drags a slider, the right work is: keep the WorkingImage, re-run only
     Develop + OutputTransform. That is what render() does, fed from this cache:
+
+    WHAT IS CACHED IS CAMERA-NATIVE, NOT WORKING-SPACE. RawColor deliberately does not
+    apply the white balance or the colour matrix (see rawcolor.h), so the cached pixels
+    are still in the sensor's own primaries and every colour decision -- input profile,
+    white balance, calibration -- happens DOWNSTREAM of this cache, in Develop. That is
+    what makes changing a camera profile or the temperature a re-render instead of a full
+    re-decode. Anything baked in before put() could only be undone by decoding again.
 
         first view of an image   : full decode -> put() the pre-develop WorkingImage
         every later slider change : get() the WorkingImage -> render() -> QImage

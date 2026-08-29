@@ -23,7 +23,7 @@
                   -> XYZ
                   -> camera RGB              (cam.xyzToCam)
                   -> the as-shot WB the decode already baked in  (cam.asShotMul)
-                  -> linear sRGB             (cam.camToSrgb)
+                  -> linear sRGB             (cam.camToWorking)
                   = s, the rendered colour of that illuminant's neutral
 
     gains() then returns (s.g/s.r, 1, s.g/s.b): the per-channel scene-linear gains

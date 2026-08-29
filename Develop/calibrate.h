@@ -2,6 +2,7 @@
 #define CALIBRATE_H
 
 #include <cmath>
+#include "Develop/colorspace.h"
 
 /*
     Pure camera-calibration math, shared by the Develop point-op pipeline
@@ -34,11 +35,13 @@ namespace Calibrate {
 constexpr float kFullScale  = 100.0f;
 constexpr float kMaxHueDeg  = 30.0f;
 
-/* Rec.709 luma weights, used to hold a primary's brightness steady while its chroma is
-   scaled. */
-constexpr float kLumR = 0.2126f;
-constexpr float kLumG = 0.7152f;
-constexpr float kLumB = 0.0722f;
+/* The WORKING SPACE's luma weights, used to hold a primary's brightness steady while its
+   chroma is scaled. Taken from Develop/colorspace.h rather than written out: these were
+   Rec.709 literals, which are only correct while the working space is sRGB, and a
+   saturation that weights the wrong primaries is not luma-preserving at all. */
+using ColorSpaceMath::kLumR;
+using ColorSpaceMath::kLumG;
+using ColorSpaceMath::kLumB;
 
 /* Rodrigues rotation of v about the neutral axis (1,1,1)/sqrt(3) by angle radians, the
    same construction Develop's HSL hue slider uses. Neutral colours lie ON the axis and so

@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <memory>
 #include "Develop/maskfalloff.h"
+#include "Develop/colorspace.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
@@ -68,7 +69,11 @@ inline float smoother(double v)
     return float(v * v * v * (v * (v * 6.0 - 15.0) + 10.0));   // smootherstep (quintic)
 }
 
-inline float luma(float r, float g, float b) { return 0.299f * r + 0.587f * g + 0.114f * b; }
+/* Working-space luma (Develop/colorspace.h). This was the Rec.601 triple
+   (0.299/0.587/0.114) while every other op used Rec.709 -- an inconsistency, not a
+   decision: a Luminance Range mask picked a slightly different set of pixels than the
+   luma every other Develop op computed for the same image. */
+inline float luma(float r, float g, float b) { return ColorSpaceMath::luma(r, g, b); }
 
 /* Sample the reference RGB at output-normalized (onx,ony). */
 inline void sampleRGB(const RangeRef &ref, double onx, double ony, float &r, float &g, float &b)

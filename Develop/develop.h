@@ -40,6 +40,25 @@ public:
        leaving img untouched). Fills *t when non-null. */
     bool Apply(WorkingImage &img, const EditParams &p, StageTimings *t = nullptr);
 
+    /*
+        STAGE 0 -- camera-native primaries -> the working space, in place.
+
+        A raw decode stops at the sensor's own primaries (RawColor::ToCameraNative), so
+        that changing a camera profile is a re-render off the WorkingImageCache rather
+        than a re-decode. This is the step that finishes the job: it applies the as-shot
+        multipliers and cam.camToWorking, then re-tags img.space.
+
+        MOST RENDERS NEVER CALL IT. buildPointCoeffs folds the same transform into
+        PointCoeffs::preMat, where it costs nothing because the fused pass already
+        touches every pixel. This standalone pass exists for the two cases that cannot
+        wait for the point pass: an identity edit (which has no point pass at all), and
+        an active Denoise (op #1, which runs BEFORE the point pass and must see
+        working-space pixels so its results do not depend on the sensor's primaries).
+
+        A no-op unless img.space is CameraNative, so calling it twice is safe.
+    */
+    static void ToWorkingSpace(WorkingImage &img);
+
     /* Blend a full-strength raw-denoised image toward the clean one, per the Global "Denoise raw"
        amounts (the interactive slider blend for the PMRID pre-demosaic denoiser -- see
        MW::ensureRawDenoise). The (denoised - clean) correction is split, in scene-linear RGB, into
@@ -158,6 +177,37 @@ private:
            are fixed. calActive == false => identity (skip the block). */
         bool  calActive = false;
         float calMat[9] = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+        /*
+            THE FUSED FRONT MATRIX -- the input profile, the per-channel gains and the
+            calibration matrix collapsed into ONE 3x3 (row-major).
+
+            A raw arrives in CAMERA-NATIVE primaries (RawColor no longer converts it, so
+            that a profile change is a re-render off the cache rather than a re-decode).
+            The front of the pipeline is then a run of linear stages:
+
+                calMat . diag(channelGain) . camToWorking . diag(asShotMul)
+
+            Every one of those is a matrix or a diagonal, so the product is a single 3x3
+            computed once here. The hot loop does 9 multiplies instead of a matrix, three
+            gains and a second matrix -- fewer than TODAY's per-pixel cost, even though it
+            now does the colour conversion the decoder used to do.
+
+            When this is active, channelGain and calMat have been folded in and must NOT
+            be applied again. It is inactive for input that is already in the working
+            space (a JPEG), which keeps that path on the cheap diagonal-only gain.
+        */
+        bool  preMatActive = false;
+        float preMat[9] = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+        /* Set when the CALIBRATE matrix was one of the stages folded in. The standalone
+           calibrate block clamps its output to >= 0, so the fold has to clamp too or the
+           two routes disagree -- and which route runs depends on whether Denoise is on,
+           which would make the denoise slider appear to shift colour. Only set when
+           calibrate actually folded: with no calibration there is no clamp in the
+           sequence either, and inventing one would throw away the out-of-gamut sensor
+           values the decode deliberately stopped clamping. */
+        bool  preMatClamps = false;
 
         /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the
            tone curve in the same fused pass (it mixes the three channels, so unlike the

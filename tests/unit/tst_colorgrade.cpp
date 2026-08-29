@@ -1,6 +1,7 @@
 #include <QtTest>
 #include <cmath>
 #include "Develop/colorgrade.h"
+#include "Develop/colorspace.h"
 
 /*
     Colour-grading math (Develop/colorgrade.h) -- the shared kernel behind the Color Grade
@@ -14,9 +15,15 @@ class tst_colorgrade : public QObject
 {
     Q_OBJECT
 
+    /* WORKING-SPACE luma, shared with the code under test rather than restated here.
+       gradeTintVector produces a push with zero luma AS THE WORKING SPACE DEFINES IT, so
+       a test that measures with its own hardcoded Rec.709 triple is asserting against a
+       different definition -- it agreed only while both were hardcoded, and broke the
+       moment the working space widened to Rec.2020. Sharing the definition is the point
+       of the assertion: the tint must not shift brightness in whatever space it runs in. */
     static float luma(const float v[3])
     {
-        return 0.2126f * v[0] + 0.7152f * v[1] + 0.0722f * v[2];
+        return ColorSpaceMath::luma(v[0], v[1], v[2]);
     }
 
     /* The pipeline's tuning constants, mirrored so the split-point tests can assert the

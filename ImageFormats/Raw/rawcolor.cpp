@@ -1,5 +1,6 @@
 #include "ImageFormats/Raw/rawcolor.h"
 #include "Develop/whitebalance.h"
+#include "Develop/colorspace.h"
 #include <cmath>
 
 namespace {
@@ -34,9 +35,9 @@ bool Invert3x3(const double a[3][3], double inv[3][3])
 
 } // namespace
 
-bool RawColor::ToWorking(const RawImage &raw,
-                         const std::vector<float> &rgb,
-                         WorkingImage &out)
+bool RawColor::ToCameraNative(const RawImage &raw,
+                              const std::vector<float> &rgb,
+                              WorkingImage &out)
 {
     const int W = raw.width;
     const int H = raw.height;
@@ -93,15 +94,25 @@ bool RawColor::ToWorking(const RawImage &raw,
         static_cast<float>(mul[0] / g), 1.0f, static_cast<float>(mul[2] / g)
     };
 
-    /* cam -> linear sRGB matrix as float for the hot loop. */
+    /* camera -> the WORKING space: rgbCam lands in linear sRGB, so compose it with
+       sRGB -> kWorking. That second matrix is the identity while the working space is
+       sRGB, and becomes a real matrix the day it widens -- composing here means the
+       widening is a one-line change in colorspace.h and nothing else moves. */
+    const ColorSpaceMath::Matrix3 toWork =
+        ColorSpaceMath::matrix(ColorSpaceMath::ColorSpace::LinearSRGB,
+                               ColorSpaceMath::kWorking);
     float m[3][3];
     for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j) m[i][j] = static_cast<float>(rgbCam[i][j]);
+        for (int j = 0; j < 3; ++j) {
+            double s = 0.0;
+            for (int k = 0; k < 3; ++k) s += toWork.m[i][k] * rgbCam[k][j];
+            m[i][j] = static_cast<float>(s);
+        }
 
-    /* Hand the colour characterisation to the Develop stage so its white balance can be
-       ABSOLUTE (Kelvin + tint) instead of a relative nudge: the model matrix, the
-       as-shot multipliers applied just above, and the camera->sRGB matrix.
-       resolveAsShot then back-solves the temperature the shot was balanced for,
+    /* Hand the colour characterisation to the Develop stage. It needs it for two jobs
+       now: the ABSOLUTE white balance (Kelvin + tint solved against the model matrix),
+       and the INPUT PROFILE ITSELF -- because this function no longer applies the
+       matrix. resolveAsShot back-solves the temperature the shot was balanced for,
        which is what the Temp slider reads before the user touches it. See
        Develop/whitebalance.h. */
     out.cam.valid = true;
@@ -109,7 +120,7 @@ bool RawColor::ToWorking(const RawImage &raw,
         out.cam.asShotMul[i] = wb[i];
         for (int j = 0; j < 3; ++j) {
             out.cam.xyzToCam[i][j] = raw.xyzToCam[i][j];
-            out.cam.camToSrgb[i][j] = m[i][j];
+            out.cam.camToWorking[i][j] = m[i][j];
         }
     }
     WhiteBalance::resolveAsShot(out.cam);
@@ -117,26 +128,25 @@ bool RawColor::ToWorking(const RawImage &raw,
     out.width = W;
     out.height = H;
     out.white = 1.0f;       // rgb was scaled to 0..1 by Demosaic using raw.white
-    out.sceneReferred = true;   // sensor data -> OutputTransform applies the baseline tone curve
-    out.rgb.assign(static_cast<size_t>(W) * static_cast<size_t>(H) * 3, 0.0f);
+    out.sceneReferred = true;   // sensor data -> output stage applies a view transform
+    out.space = ColorSpaceMath::ColorSpace::CameraNative;
 
-    for (int y = 0; y < H; ++y) {
-        for (int x = 0; x < W; ++x) {
-            const size_t o = (static_cast<size_t>(y) * W + x) * 3;
-            /* White balance in camera space. */
-            const float cam[3] = {
-                rgb[o + 0] * wb[0],
-                rgb[o + 1] * wb[1],
-                rgb[o + 2] * wb[2]
-            };
-            /* Camera -> linear sRGB. Clamp negatives (out-of-gamut) but keep highlight
-               headroom (values may exceed 1) so OutputTransform's baseline tone curve can roll
-               highlights off instead of hard-clipping them here. */
-            for (int c = 0; c < 3; ++c) {
-                const float v = m[c][0] * cam[0] + m[c][1] * cam[1] + m[c][2] * cam[2];
-                out.rgb[o + c] = v < 0.0f ? 0.0f : v;
-            }
-        }
-    }
+    /*
+        THE PIXELS PASS THROUGH UNCHANGED.
+
+        The white balance and the colour matrix used to be applied right here. They are
+        now Develop's stage 0 (Develop::ToWorkingSpace, normally folded into
+        PointCoeffs::preMat), for one reason: this buffer is what WorkingImageCache
+        stores, so anything baked in here can only be changed by DECODING THE RAW AGAIN.
+        With the conversion downstream of the cache, changing a camera profile or the
+        white balance is a re-render off pixels we already have.
+
+        Nothing is clamped either. The old code clamped negatives to zero, which threw
+        away every colour outside the working gamut before the user had touched the
+        image -- irrecoverably, since a later stage cannot invent data that was zeroed.
+        Out-of-gamut values now survive to the output stage, which is the only place that
+        knows what gamut it is rendering into.
+    */
+    out.rgb = rgb;
     return true;
 }

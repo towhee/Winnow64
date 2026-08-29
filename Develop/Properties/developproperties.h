@@ -604,6 +604,14 @@ private:
     void addWhiteBalanceRow(QModelIndex parIdx);
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
+
+    /* View transform (Calibrate). Always written to scope 0: it maps the WHOLE image for
+       display, so it is not a per-mask adjustment. Consumed by OutputTransform, not by
+       Develop::Apply -- see EditParams::viewTransform. */
+    void addViewTransformRow(const QModelIndex &parIdx);
+    void setViewTransform(int vt);
+    void refreshViewTransformRow();
+    static QString viewTransformName(int vt);
     void setWbDropperActive(bool on);
     /* Double-click reset for the Temp / Tint rows: back to AS SHOT, not to the slider's
        0 default (see mouseDoubleClickEvent). */
@@ -618,6 +626,7 @@ private:
     std::shared_ptr<const WorkingImage> ensureWorkingImage();
     static QIcon dropperIcon(bool armed);   // drawn, not a resource
     QPointer<QComboBox> wbCombo;
+    QPointer<QComboBox> viewTransformCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
     void updateSectionHeaderCaptions();   // section names + the edited " *" marker

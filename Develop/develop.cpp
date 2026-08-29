@@ -1,4 +1,5 @@
 #include "Develop/develop.h"
+#include "Develop/colorspace.h"
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
 #include "Develop/colorgrade.h"
@@ -16,6 +17,14 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
+/* Luma weights for the WORKING space, folded at compile time from
+   ColorSpaceMath::kWorking. These used to be the literals 0.2126 / 0.7152 / 0.0722
+   written out at every site; they now follow the working space automatically, so
+   widening it does not silently leave the ops weighting the wrong primaries. */
+using ColorSpaceMath::kLumR;
+using ColorSpaceMath::kLumG;
+using ColorSpaceMath::kLumB;
 
 namespace {
 /* Contrast is applied in a perceptual (~sRGB gamma) domain so the slope steepens the tone
@@ -263,7 +272,7 @@ inline void buildPerceptualLuma(const WorkingImage &img, cv::Mat &Yp,
     parallelFor(n, [=](size_t i0, size_t i1) {
         for (size_t i = i0; i < i1; ++i) {
             const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            const float Y = kLumR * r + kLumG * g + kLumB * b;
             ylin[i] = Y;
             float nrm = Y * invWhite;
             if (nrm < 0.0f) nrm = 0.0f;
@@ -330,9 +339,47 @@ inline void shapeAndFoldLuma(WorkingImage &img, const float *yp, const float *yl
 }
 }
 
+void Develop::ToWorkingSpace(WorkingImage &img)
+{
+    if (img.space != ColorSpaceMath::ColorSpace::CameraNative) return;
+    if (!img.isValid()) return;
+
+    /* camToWorking . diag(asShotMul), the same product buildPointCoeffs folds into
+       preMat. An invalid characterisation leaves the pixels alone and just re-tags:
+       an unknown camera renders approximately rather than not at all. */
+    float m[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};
+    if (img.cam.valid) {
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                m[i][j] = img.cam.camToWorking[i][j] * img.cam.asShotMul[j];
+
+        float *rgb = img.rgb.data();
+        const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
+        parallelFor(n, [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                float *px = rgb + i * 3;
+                const float r = px[0], g = px[1], b = px[2];
+                px[0] = m[0][0] * r + m[0][1] * g + m[0][2] * b;
+                px[1] = m[1][0] * r + m[1][1] * g + m[1][2] * b;
+                px[2] = m[2][0] * r + m[2][1] * g + m[2][2] * b;
+            }
+        });
+    }
+    img.space = ColorSpaceMath::kWorking;
+}
+
 bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 {
     if (!img.isValid()) return false;
+
+    /* The input profile is NOT an edit -- a raw arrives in camera-native primaries and
+       has to be converted whatever the params say, so this precedes the identity
+       early-out. Denoise (#1) runs before the fused point pass, so when it is active the
+       conversion has to happen here as its own pass; otherwise it is left to
+       buildPointCoeffs, which folds it into preMat for free. */
+    const bool denoiseActive = (p.localDenoiseLuma > 0.0f || p.localDenoiseChroma > 0.0f);
+    if (p.isIdentity() || denoiseActive) ToWorkingSpace(img);
+
     if (p.isIdentity()) return true;    // nothing to do; serve image as-is
 
     QElapsedTimer probe;
@@ -349,6 +396,10 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 
     PointCoeffs c = buildPointCoeffs(p, img);
     if (c.active) applyPointOps(img, c);
+    /* preMat carried the camera-native -> working conversion, so the pixels are in the
+       working space now and the tag has to say so: every op after this point, and
+       OutputTransform, read img.space to pick their luma weights and matrices. */
+    if (c.preMatActive) img.space = ColorSpaceMath::kWorking;
     if (t) t->pointMs = probe.restart();
 
     Texture(img, p);
@@ -406,7 +457,7 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
         parallelFor(n, [=](size_t i0, size_t i1) {
             for (size_t i = i0; i < i1; ++i) {
                 const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-                const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                const float Y = kLumR * r + kLumG * g + kLumB * b;
                 ylin[i] = Y;
                 float nrm = Y * invWhite;
                 if (nrm < 0.0f) nrm = 0.0f;
@@ -468,7 +519,7 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
                 const float r = rgb[i * 3 + 0] * invWhite;
                 const float g = rgb[i * 3 + 1] * invWhite;
                 const float b = rgb[i * 3 + 2] * invWhite;
-                const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                const float Y = kLumR * r + kLumG * g + kLumB * b;
                 yn[i] = Y;
                 cp[i * 3 + 0] = r - Y;            // Cr
                 cp[i * 3 + 1] = b - Y;            // Cb
@@ -494,7 +545,7 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
                 const float Y = yn[i];
                 const float R = Y + cpd[i * 3 + 0];
                 const float B = Y + cpd[i * 3 + 1];
-                const float G = (Y - 0.2126f * R - 0.0722f * B) / 0.7152f;
+                const float G = (Y - kLumR * R - kLumB * B) / kLumG;
                 rgb[i * 3 + 0] = std::max(0.0f, R * white);
                 rgb[i * 3 + 1] = std::max(0.0f, G * white);
                 rgb[i * 3 + 2] = std::max(0.0f, B * white);
@@ -513,8 +564,15 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
     highlight-preserving split used by the old post-demosaic path: highlights (correction ~0) pass
     through untouched.
 */
-    out = clean;                                    // dims/white/sceneReferred + fallback
+    out = clean;                            // dims/white/space/sceneReferred + fallback
     if (clean.width != den.width || clean.height != den.height) return;
+
+    /* Luma weights for the space the buffers are ACTUALLY in. Since RawColor stops at
+       camera-native this blend now runs on SENSOR primaries, where the working space's
+       weights are the wrong numbers -- a camera's green channel does not carry 0.72 of
+       its luminance. lumaWeightsFor (workingimage.h) returns the right ones. */
+    const ColorSpaceMath::Luma LW = lumaWeightsFor(clean);
+    const float wR = LW.r, wG = LW.g, wB = LW.b;
     lum = std::clamp(lum, 0.0f, 1.0f);
     chr = std::clamp(chr, 0.0f, 1.0f);
     const float cAmt = std::max(lum, chr);
@@ -529,7 +587,7 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
             const float dr = d[i * 3 + 0] - c[i * 3 + 0];
             const float dg = d[i * 3 + 1] - c[i * 3 + 1];
             const float db = d[i * 3 + 2] - c[i * 3 + 2];
-            const float dY = 0.2126f * dr + 0.7152f * dg + 0.0722f * db;   // luma of the correction
+            const float dY = wR * dr + wG * dg + wB * db;   // luma of the correction
             o[i * 3 + 0] = c[i * 3 + 0] + lum * dY + cAmt * (dr - dY);
             o[i * 3 + 1] = c[i * 3 + 1] + lum * dY + cAmt * (dg - dY);
             o[i * 3 + 2] = c[i * 3 + 2] + lum * dY + cAmt * (db - dY);
@@ -641,7 +699,7 @@ void Develop::Dehaze(WorkingImage &img, const EditParams &p)
     parallelFor(n, [=](size_t i0, size_t i1) {
         for (size_t i = i0; i < i1; ++i) {
             const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y2 = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            const float Y2 = kLumR * r + kLumG * g + kLumB * b;
             float nr = Y2 + sat * (r - Y2);
             float ng = Y2 + sat * (g - Y2);
             float nb = Y2 + sat * (b - Y2);
@@ -815,7 +873,7 @@ void Develop::Grain(WorkingImage &img, const EditParams &p)
     parallelFor(n, [=](size_t i0, size_t i1) {
         for (size_t i = i0; i < i1; ++i) {
             const float r = rgb[i * 3 + 0], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
-            const float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            const float Y = kLumR * r + kLumG * g + kLumB * b;
             if (Y <= kEps) continue;
             float nrm = Y * invWhite;
             if (nrm < 0.0f) nrm = 0.0f;
@@ -967,9 +1025,57 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
                                  kGradeSplitMin, kGradeSplitMax,
                                  c.gradeShadowEnd, c.gradeHighStart);
 
+    /*
+        FOLD THE FRONT OF THE PIPELINE INTO ONE MATRIX.
+
+        For camera-native input (a raw that RawColor deliberately left unconverted) the
+        first three stages are all linear:
+
+            camToWorking . diag(asShotMul)   the input profile -- what the decoder used
+                                             to bake in, moved here so a profile change
+                                             is a re-render, not a re-decode
+            diag(channelGain)                white balance x exposure x RGB sliders
+            calMat                           the Calibrate primaries rotation
+
+        so they multiply out to a single 3x3. channelGain and calMat are then cleared:
+        they are IN preMat, and applying them twice is the obvious bug here.
+    */
+    if (img.space == ColorSpaceMath::ColorSpace::CameraNative && img.cam.valid) {
+        /* camToWorking . diag(asShotMul) -- scaling a matrix's COLUMN j by asShotMul[j]
+           is what right-multiplying by a diagonal does. */
+        float m[3][3];
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                m[i][j] = img.cam.camToWorking[i][j] * img.cam.asShotMul[j];
+
+        /* diag(channelGain) . m -- a diagonal on the LEFT scales ROW i. */
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) m[i][j] *= c.channelGain[i];
+
+        /* calMat . m, when the Calibrate panel is doing anything. */
+        if (c.calActive) {
+            float o[3][3];
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j) {
+                    float s = 0.0f;
+                    for (int k = 0; k < 3; ++k) s += c.calMat[i * 3 + k] * m[k][j];
+                    o[i][j] = s;
+                }
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j) m[i][j] = o[i][j];
+        }
+
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) c.preMat[i * 3 + j] = m[i][j];
+        c.preMatActive = true;
+        c.preMatClamps = c.calActive;    // the calibrate block clamps; the fold must too
+        c.calActive    = false;                                  // folded into preMat
+        c.channelGain[0] = c.channelGain[1] = c.channelGain[2] = 1.0f;   // ditto
+    }
+
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
-               c.hslActive || c.gradeActive;
+               c.hslActive || c.gradeActive || c.preMatActive;
     return c;
 }
 
@@ -1001,8 +1107,15 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
     const bool doGain = (g0 != 1.0f) || (g1 != 1.0f) || (g2 != 1.0f);
     const bool doTone = c.toneActive;
     const bool doCal  = c.calActive;
+    const bool doPre  = c.preMatActive;
+    const bool doPreClamp = c.preMatClamps;
     const bool doHsl  = c.hslActive;
     const bool doGrade = c.gradeActive;
+
+    /* Fused front matrix (input profile + gains + calibrate), local like the rest. */
+    const float pm0 = c.preMat[0], pm1 = c.preMat[1], pm2 = c.preMat[2];
+    const float pm3 = c.preMat[3], pm4 = c.preMat[4], pm5 = c.preMat[5];
+    const float pm6 = c.preMat[6], pm7 = c.preMat[7], pm8 = c.preMat[8];
 
     /* Calibration matrix, local so the block folds into the inner loop like the rest. */
     const float cm0 = c.calMat[0], cm1 = c.calMat[1], cm2 = c.calMat[2];
@@ -1063,6 +1176,28 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
             float *row = rgb + static_cast<size_t>(y) * span;
             for (int x = 0; x < w; ++x) {
                 float *px = row + static_cast<size_t>(x) * 3;
+                if (doPre) {
+                    /* Camera-native -> working space, with the white balance, exposure,
+                       RGB sliders and Calibrate all folded into this one matrix (see
+                       PointCoeffs::preMat). Replaces the gain and calibrate blocks
+                       below -- buildPointCoeffs cleared them so they cannot double up.
+
+                       The clamp fires only when CALIBRATE was folded in, because that is
+                       the only stage in the sequence that clamps. Without it, negatives
+                       are KEPT: an out-of-gamut sensor colour is real data, and the
+                       output stage is what decides how to bring it back, not a clamp
+                       buried mid-pipeline. */
+                    const float r = px[0], g = px[1], b = px[2];
+                    float pr = pm0 * r + pm1 * g + pm2 * b;
+                    float pg = pm3 * r + pm4 * g + pm5 * b;
+                    float pb = pm6 * r + pm7 * g + pm8 * b;
+                    if (doPreClamp) {
+                        if (pr < 0.0f) pr = 0.0f;
+                        if (pg < 0.0f) pg = 0.0f;
+                        if (pb < 0.0f) pb = 0.0f;
+                    }
+                    px[0] = pr; px[1] = pg; px[2] = pb;
+                }
                 if (doGain) { px[0] *= g0; px[1] *= g1; px[2] *= g2; }
                 if (doCal) {
                     /* Re-point the primaries in LINEAR light, before any tone shaping.
@@ -1090,7 +1225,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                        per-pixel boost weighted by (1 - HSV saturation), so muted pixels
                        move more than already-saturated ones; the two factors combine
                        multiplicatively. */
-                    const float Y = 0.2126f * hr + 0.7152f * hg + 0.0722f * hb;
+                    const float Y = kLumR * hr + kLumG * hg + kLumB * hb;
                     float sF = satF;
                     if (doVib) {
                         const float mx = (hr > hg ? (hr > hb ? hr : hb) : (hg > hb ? hg : hb));
@@ -1114,7 +1249,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                        rides in at weight 1. Tint is in 0..1 RGB units, scaled to the
                        working range by white. The perceptual encode pow is the only
                        transcendental. */
-                    float Yg = 0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2];
+                    float Yg = kLumR * px[0] + kLumG * px[1] + kLumB * px[2];
                     float n = Yg * invWhite;
                     if (n < 0.0f) n = 0.0f; else if (n > 1.0f) n = 1.0f;
                     const float L = std::pow(n, kInvGamma);          // perceptual 0..1

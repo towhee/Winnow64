@@ -48,15 +48,64 @@ public:
        depend on Export. ImageExporter maps between them. */
     enum class Space { sRGB, DisplayP3, AdobeRGB };
 
+    /*
+        THE VIEW TRANSFORM -- how scene-linear data is mapped to a displayable range.
+
+        This used to be a hardcoded constant (a fixed exposure lift plus an ACES shoulder)
+        welded into the transfer stage, which made the app's whole look one number nobody
+        could choose. It is now a value, and the output stage is three composable steps:
+
+            view transform  ->  output primaries  ->  transfer function
+
+        Only the first is a creative decision; the other two are colour management.
+
+        SCENE-REFERRED ONLY. A view transform tone-maps; a display-referred file (a JPEG)
+        already carries its camera's tone curve, so applying one would tone-map twice.
+        The transform is therefore forced to None when img.sceneReferred is false, and
+        callers do not have to special-case it.
+    */
+    /*
+        THE NUMBERING IS A PUBLISHED FORMAT. These values are what EditParams stores and
+        what lands in the sidecar, so they may be ADDED TO but never renumbered. Filmic
+        is 0 deliberately: it is the default, and a default that is not zero means every
+        default-constructed EditParams has to remember to say so -- which is exactly the
+        bug this ordering was written to fix (0 previously resolved to None, so an
+        untouched raw would have rendered with no tone mapping at all).
+    */
+    enum class ViewTransform {
+        Filmic = 0, // the default: +0.68 EV then an ACES/Narkowicz shoulder
+        AgX    = 1, // log2 window + inset/outset gamut compression (see the .cpp)
+        None   = 2  // no tone mapping -- scene-linear straight to the transfer function
+    };
+
+    /* EditParams::viewTransform (an int, so it rides the existing int machinery) -> the
+       enum. An unrecognised value resolves to the DEFAULT rather than asserting: a
+       sidecar written by a later build that added a transform must still open here and
+       render, showing the default look. */
+    static ViewTransform ViewFromInt(int v)
+    {
+        switch (v) {
+        case int(ViewTransform::AgX):  return ViewTransform::AgX;
+        case int(ViewTransform::None): return ViewTransform::None;
+        default: break;
+        }
+        return ViewTransform::Filmic;
+    }
+
     /* The QColorSpace to TAG output produced for space with. */
     static QColorSpace ColorSpaceOf(Space space);
 
-    /* Scene-linear float -> 8-bit QImage (Format_RGB888) in space. */
-    bool ToImage(const WorkingImage &img, QImage &out, Space space = Space::sRGB);
+    /* Scene-linear float -> 8-bit QImage (Format_RGB888) in space.
+       view defaults to Filmic, which is what every render used before the transform
+       became selectable, so an un-updated caller renders exactly as it always did. */
+    bool ToImage(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
+                 ViewTransform view = ViewTransform::Filmic);
 
-    /* Scene-linear float -> 16-bit QImage (Format_RGBX64), for export. Same tone curve,
-       primaries and transfer function as ToImage, quantised to 16 bits instead of 8. */
-    bool ToImage16(const WorkingImage &img, QImage &out, Space space = Space::sRGB);
+    /* Scene-linear float -> 16-bit QImage (Format_RGBX64), for export. Same view
+       transform, primaries and transfer function as ToImage, quantised to 16 bits
+       instead of 8 -- one shared code path, so export cannot drift from the loupe. */
+    bool ToImage16(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
+                   ViewTransform view = ViewTransform::Filmic);
 };
 
 #endif // OUTPUTTRANSFORM_H

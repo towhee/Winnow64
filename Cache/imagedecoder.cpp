@@ -820,7 +820,14 @@ void ImageDecoder::applyDevelop()
 
     /* Re-render through Develop + OutputTransform. render() copies the cached image (Develop
        mutates in place) and leaves the cache entry pristine for the next slider value. */
-    WorkingImageCache::render(*work, editParams, image);
+    if (!WorkingImageCache::render(*work, editParams, image)) return;
+
+    /* These pixels came out of OutputTransform, so they are in ITS output space (sRGB),
+       not the space the file's embedded profile describes. Saying so is what stops
+       colorManage() applying that profile to them -- see the note there. The devPreview
+       and RAW paths already set this for the same reason; this was the one route that
+       developed the image and then let the stale profile be applied on top. */
+    developApplied = true;
 }
 
 void ImageDecoder::colorManage()
@@ -841,12 +848,20 @@ void ImageDecoder::colorManage()
         if (image.isNull()) return;
     }
 
-    /* A devPreview left the develop pipeline in sRGB, so the image file's embedded
-       profile is not its source space -- using it would be a wrong transform, not merely a
-       redundant one. An empty buffer makes ICC::transform assume sRGB, which is exactly
-       right here. */
+    /* ANY image that has been through the develop pipeline left it in OutputTransform's
+       space (sRGB), so the image file's embedded profile is no longer its source space --
+       using it would be a wrong transform, not merely a redundant one. An empty buffer
+       makes ICC::transform assume sRGB, which is exactly right here.
+
+       developApplied covers all three routes that render through OutputTransform: a
+       devPreview, a RAW sensor decode, and applyDevelop() on a non-raw file. It was
+       previously gated on loadedFromDevPreview alone, which caught only the first -- so a
+       wide-gamut JPEG or TIFF with saved edits was developed to sRGB and then transformed
+       again as though it were still AdobeRGB. Note the RAW path that falls back to the
+       EMBEDDED PREVIEW deliberately does not set the flag: that image really is in the
+       file's own space and does need the profile. */
     QByteArray iccBuf;
-    if (!loadedFromDevPreview) {
+    if (!developApplied) {
         iccBuf = isIndependent
             ? indMeta.iccBuf
             : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();

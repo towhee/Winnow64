@@ -1,6 +1,7 @@
 #include <QtTest>
 #include <cmath>
 #include "Develop/calibrate.h"
+#include "Develop/colorspace.h"
 
 /*
     Camera-calibration math (Develop/calibrate.h) -- the primary-rotation kernel behind
@@ -23,11 +24,19 @@ class tst_calibrate : public QObject
         out[2] = m[6] * in[0] + m[7] * in[1] + m[8] * in[2];
     }
 
-    /* Rec.709 luma -- NOT what the calibration maths preserves (it preserves the
-       equal-weight sum), which is exactly what one of the tests below pins down. */
+    /* Working-space luma -- NOT what the calibration maths preserves (it preserves the
+       equal-weight sum), which is exactly what one of the tests below pins down.
+
+       Taken from ColorSpaceMath rather than written out as literals. It used to carry its
+       own copy of the Rec.709 triple, which made satScaleIsLumaPreserving a test of
+       "scaleChroma preserves luma AS THIS FILE DEFINES IT" rather than as the code under
+       test defines it -- the two silently agreed only while both were hardcoded, and the
+       test failed the moment calibrate.h moved to the exact sRGB-primary weights (a
+       ~1.5e-5 drift against a 1e-5 tolerance). Sharing the definition is the point of the
+       assertion: scaleChroma must preserve the luma of whatever the working space is. */
     static float luma(const float v[3])
     {
-        return 0.2126f * v[0] + 0.7152f * v[1] + 0.0722f * v[2];
+        return ColorSpaceMath::luma(v[0], v[1], v[2]);
     }
 
 private slots:

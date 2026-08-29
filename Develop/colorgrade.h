@@ -2,6 +2,7 @@
 #define COLORGRADE_H
 
 #include <cmath>
+#include "Develop/colorspace.h"
 
 /*
     Pure colour-grading math, shared by the Develop point-op pipeline (Develop::build /
@@ -9,14 +10,18 @@
     testable in isolation. Two pieces:
 
       gradeTintVector    hue (0..360 deg) + sat (0..1) -> a ZERO-LUMA RGB push (adds the
-                         hue's chroma without shifting Rec.709 luma), by `strength`.
+                         hue's chroma without shifting WORKING-SPACE luma), by `strength`.
       gradeTonalWeights  a pixel's perceptual lightness L (0..1) -> three smooth weights
                          for shadows / midtones / highlights that partition tone (sum ~1).
 */
 namespace ColorGrade {
 
-/* HSV(hueDeg, 1, 1) -> RGB (each 0..1), then subtract Rec.709 luma so the result only
-   pushes chroma. Scaled by sat*strength. sat <= 0 yields the zero vector. */
+using ColorSpaceMath::kLumR;
+using ColorSpaceMath::kLumG;
+using ColorSpaceMath::kLumB;
+
+/* HSV(hueDeg, 1, 1) -> RGB (each 0..1), then subtract the working space's luma so the
+   result only pushes chroma. Scaled by sat*strength. sat <= 0 yields the zero vector. */
 inline void gradeTintVector(float hueDeg, float sat, float strength, float out[3])
 {
     out[0] = out[1] = out[2] = 0.0f;
@@ -33,7 +38,7 @@ inline void gradeTintVector(float hueDeg, float sat, float strength, float out[3
     case 4:  r = ff;     g = 0;      b = 1;      break;
     default: r = 1;      g = 0;      b = 1 - ff; break;
     }
-    const float y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+    const float y = kLumR * r + kLumG * g + kLumB * b;
     const float k = sat * strength;
     out[0] = (r - y) * k;
     out[1] = (g - y) * k;
