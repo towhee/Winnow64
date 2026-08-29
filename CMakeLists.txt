@@ -401,6 +401,7 @@ set(WINNOW_HEADERS
     Develop/develop.h
     Develop/calibrate.h
     Develop/colorgrade.h
+    Develop/colorspace.h
     Develop/tonecurve.h
     Develop/editparams.h
     Develop/inputtransform.h

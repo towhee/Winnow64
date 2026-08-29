@@ -152,10 +152,14 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     if (!work.isValid()) return false;
 
     OutputTransform output;
-    /* One place decides the final quantisation and colour space, for both paths below. */
-    auto toImage = [&output, depth, space](const WorkingImage &src, QImage &dst) {
-        return depth == OutDepth::Sixteen ? output.ToImage16(src, dst, space)
-                                          : output.ToImage(src, dst, space);
+    /* One place decides the final quantisation, colour space AND view transform, for both
+       paths below. The view transform is a whole-image property, so it comes from the
+       params being rendered rather than from any per-mask scope. */
+    const OutputTransform::ViewTransform view =
+        OutputTransform::ViewFromInt(edit.viewTransform);
+    auto toImage = [&output, depth, space, view](const WorkingImage &src, QImage &dst) {
+        return depth == OutDepth::Sixteen ? output.ToImage16(src, dst, space, view)
+                                          : output.ToImage(src, dst, space, view);
     };
 
     /* Identity edit: no Develop, no copy -- transform the cached image straight to
@@ -415,8 +419,12 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     if (timings) timings->developMs = t.restart();
 
     OutputTransform output;
-    const bool ok = depth == OutDepth::Sixteen ? output.ToImage16(acc, out, space)
-                                               : output.ToImage(acc, out, space);
+    /* From the BASE (scope 0) params: the view transform maps the whole image, so a
+       per-scope value would mean different looks in different parts of one picture. */
+    const OutputTransform::ViewTransform view =
+        OutputTransform::ViewFromInt(base.viewTransform);
+    const bool ok = depth == OutDepth::Sixteen ? output.ToImage16(acc, out, space, view)
+                                               : output.ToImage(acc, out, space, view);
     if (timings) timings->toImageMs = t.restart();
 
     /* Same reason: a locally-allocated accumulator is ~w*h*12 bytes and dies on return,
@@ -445,9 +453,11 @@ WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLo
     WorkingImage dst;
     dst.width = dw;
     dst.height = dh;
-    dst.white = src.white;
-    dst.sceneReferred = src.sceneReferred;
-    dst.cam = src.cam;      // white balance must resolve identically on the proxy
+    /* Every non-pixel field, from the one place that lists them (workingimage.h) -- the
+       white balance must resolve identically on the proxy, and so must the COLOUR SPACE:
+       a proxy that loses its space tag renders as raw sensor data. renderScale is set
+       below, after this, because the downscale is exactly what changes it. */
+    copyMetadata(dst, src);
     /* Carry the downscale into renderScale (compounding, in case a proxy is proxied
        again). Develop::Sharpen is the one op with an absolute pixel radius, so it needs
        to know how far from full resolution this buffer is; everything else derives its

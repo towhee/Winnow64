@@ -11,6 +11,7 @@
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
 #include "Develop/whitebalance.h"
+#include "Develop/outputtransform.h"
 #include "Develop/rangemask.h"
 #include "Develop/workingimagecache.h"
 #include "Dialogs/savedeveloppresetdlg.h"
@@ -3906,9 +3907,16 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
     }
     if (count == 0) return;
 
-    const float sr = float(sum[0] / count);
-    const float sg = float(sum[1] / count);
-    const float sb = float(sum[2] / count);
+    float sr = float(sum[0] / count);
+    float sg = float(sum[1] / count);
+    float sb = float(sum[2] / count);
+
+    /* The sample came out of the PRE-develop WorkingImage, which for a raw is still in
+       camera-native primaries (RawColor stops there). WhiteBalance::solve's forward chain
+       ENDS in the working space, so an unconverted sample would be solved against the
+       wrong space and hand back the wrong temperature. Converting the AVERAGE rather than
+       each of the 25 samples is exact -- the transform is linear. No-op for non-raw. */
+    toWorkingColor(*work, sr, sg, sb);
 
     float k = 0.0f, t = 0.0f;
     if (skin) {
@@ -4075,6 +4083,23 @@ void DevelopProperties::addBasic()
     /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
        Exposure is a 2-decimal EV slider (-5.00..5.00, div 100). All default to 0
        (identity), matching EditParams. */
+    /*
+        VIEW TRANSFORM -- the FIRST row in Develop, above white balance.
+
+        It sits here, not in Calibrate, for three reasons. It runs LAST in the pipeline
+        (OutputTransform), where Calibrate runs mid-Develop in linear -- grouping them
+        would imply an adjacency that does not exist. It re-scopes every slider below it
+        (AgX leaves far more highlight room before anything clips), so it belongs above
+        them. And it is the analogue of Lightroom's Profile, which is at the top of Basic;
+        Lightroom's CALIBRATION panel is the R/G/B primary rotation, which is what
+        Winnow's Calibrate already is.
+
+        A combo in the value cell, modelled on the WB preset row -- addItem(name, enum),
+        activated (not currentIndexChanged, which would also fire on programmatic
+        repopulation), and re-synced by findData under a QSignalBlocker.
+    */
+    addViewTransformRow(parIdx);
+
     /* White balance: a dropper + preset dropdown, then the two absolute sliders. Temp is
        a KELVIN slider (2000..50000) on a LOG ramp -- linear would bury every useful
        temperature in the first sixth of the track. Its gradient runs blue -> yellow with
@@ -4459,7 +4484,123 @@ void DevelopProperties::addCalibrate()
     addSlider("calSat", "Saturation",
               "Chroma scale of the checked primaries (-100 = grey, +100 = 2x).",
               parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
+
     addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateEndDivider");
+}
+
+/*
+    View transform -> the GLOBAL scope (scope 0), never the active one: it maps the whole
+    image for display, so it is not a per-mask adjustment and applying it to a scope would
+    make it mean different things in different parts of one picture.
+
+    A combo gets no history for free (the generic tree-edit handler only covers sliders),
+    hence the explicit noteEdit -- see the checklist in notes/Documentation.txt.
+*/
+/*
+    Build the View row. Raw-only in EFFECT -- OutputTransform forces the transform to None
+    for display-referred input, because a JPEG already carries its camera's tone curve and
+    tone-mapping it twice would wreck it. So for a non-raw file the control is DISABLED
+    with the reason shown in place of the value, rather than left live and silently doing
+    nothing.
+*/
+void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
+{
+    const bool raw = currentIsRaw();
+
+    clearItemInfo(i);
+    i.name = "viewTransform";
+    i.parIdx = parIdx;
+    i.parentName = "BasicHeader";
+    i.captionText = "View";
+    i.tooltip = raw
+        ? "How scene brightness is mapped for display.\n"
+          "Filmic: the default look.\n"
+          "AgX: longer, wider roll-off -- saturated highlights desaturate toward white "
+          "instead of shifting hue.\n"
+          "None: no tone mapping (scene-linear)."
+        : "Only raw files need a view transform. This file already carries the tone "
+          "mapping its camera applied.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "viewTransform";
+    i.delegateType = DT_None;       // we own the value cell
+    addItem(i);
+    setItemEnabled("viewTransform", raw);
+
+    const QModelIndex valIdx = findValueIndex("viewTransform");
+    if (!valIdx.isValid()) return;
+
+    QWidget *cell = new QWidget;
+    cell->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *vhb = new QHBoxLayout(cell);
+    vhb->setContentsMargins(0, 0, 10, 0);
+    vhb->setSpacing(0);
+
+    if (!raw) {
+        /* The REASON, in the value cell where the control would have been -- the rule is
+           greyed control + brief inline reason, never a popup after the fact. */
+        QLabel *why = new QLabel("raw only");
+        why->setEnabled(false);
+        why->setAttribute(Qt::WA_TransparentForMouseEvents);
+        vhb->addWidget(why);
+        vhb->addStretch(1);
+        viewTransformCombo = nullptr;
+        setIndexWidget(valIdx, cell);
+        return;
+    }
+
+    QComboBox *combo = new QComboBox;
+    combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    combo->addItem("Filmic", int(OutputTransform::ViewTransform::Filmic));
+    combo->addItem("AgX",    int(OutputTransform::ViewTransform::AgX));
+    combo->addItem("None",   int(OutputTransform::ViewTransform::None));
+    connect(combo, QOverload<int>::of(&QComboBox::activated), this,
+            [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
+    viewTransformCombo = combo;
+    vhb->addWidget(combo);
+    setIndexWidget(valIdx, cell);
+}
+
+void DevelopProperties::setViewTransform(int vt)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    if (s.scopes[0].params.viewTransform == vt) return;
+    s.scopes[0].params.viewTransform = vt;      // always scope 0, whichever is active
+    noteScopeEdit("Global", "View transform", viewTransformName(vt),
+                  "global/viewTransform");
+    emit paramsChanged();
+}
+
+/* The label for a stored value, shared by the combo and the history entry so the two can
+   never disagree. An unknown value reads as the default rather than as a number. */
+QString DevelopProperties::viewTransformName(int vt)
+{
+    switch (static_cast<OutputTransform::ViewTransform>(vt)) {
+    case OutputTransform::ViewTransform::AgX:  return "AgX";
+    case OutputTransform::ViewTransform::None: return "None";
+    default: break;
+    }
+    return "Filmic";
+}
+
+/* Push the stored value back into the combo. Blocked so re-populating on image change
+   cannot look like a user edit and write a history entry. */
+void DevelopProperties::refreshViewTransformRow()
+{
+    if (!viewTransformCombo) return;
+    int stored = 0;
+    if (!currentImagePath.isEmpty()) {
+        const EditStack &s = stackCache[currentImagePath];
+        if (!s.scopes.isEmpty()) stored = s.scopes[0].params.viewTransform;
+    }
+    const int ix = viewTransformCombo->findData(stored);
+    if (ix >= 0) {
+        QSignalBlocker block(viewTransformCombo);
+        viewTransformCombo->setCurrentIndex(ix);
+    }
 }
 
 /* Lowest checked primary: which one the Hue / Saturation sliders READ (they write all of
@@ -5685,6 +5826,8 @@ struct PresetLeafDef { const char *key; const char *label; };
    A leaf that folds several params in (white balance, a grade range, denoise, vignette,
    grain) is ONE tick -- the panel treats them as one control. */
 const PresetLeafDef kBasicLeaves[] = {
+    /* First, matching its position in the panel: it re-scopes everything below it. */
+    {"viewTransform", "View transform"},
     {"whiteBalance", "White balance (Temp + Tint)"},
     {"exposure",     "Exposure"},
     {"contrast",     "Contrast"},
@@ -5785,6 +5928,7 @@ bool leafChanged(const QString &key, const EditParams &p)
                                       p.calGreenSat != def.calGreenSat;
     if (key == "calBlue")      return p.calBlueHue  != def.calBlueHue ||
                                       p.calBlueSat  != def.calBlueSat;
+    if (key == "viewTransform") return p.viewTransform != def.viewTransform;
     if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
                                       p.gradeShadowLum != def.gradeShadowLum;
     if (key == "gradeMid")     return p.gradeMidSat != def.gradeMidSat ||
@@ -5872,6 +6016,7 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("calBlueHue", p.calBlueHue);
         out.insert("calBlueSat", p.calBlueSat);
     }
+    if (lk.contains("viewTransform")) out.insert("viewTransform", p.viewTransform);
     if (lk.contains("gradeShadow")) {
         out.insert("gradeShadowHue", p.gradeShadowHue);
         out.insert("gradeShadowSat", p.gradeShadowSat);
@@ -6674,6 +6819,7 @@ const FloatField kFloatFields[] = {
 struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
+    {"viewTransform", &EditParams::viewTransform},
 };
 
 /* The tone curve cannot go in kFloatFields: it is three ARRAYS, and the table above is
@@ -6942,6 +7088,7 @@ void DevelopProperties::populateSlidersFromStack()
     refreshColorGradeRow();           // push grade values into the wheel + Lum slider
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
+    refreshViewTransformRow();      // the Calibrate view-transform combo
     refreshPreviewButtons();        // sync the eye icons to this scope's Preview flags
     updateSectionHeaderCaptions();  // " *" on sections holding non-default values
 }

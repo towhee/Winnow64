@@ -32,7 +32,7 @@ private:
             c.asShotMul[i] = 1.0f;
             for (int j = 0; j < 3; ++j) {
                 c.xyzToCam[i][j] = m[i][j];
-                c.camToSrgb[i][j] = (i == j) ? 1.0f : 0.0f;
+                c.camToWorking[i][j] = (i == j) ? 1.0f : 0.0f;
             }
         }
         WhiteBalance::resolveAsShot(c);

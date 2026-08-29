@@ -1849,8 +1849,9 @@ Eliminate rail
 
 AgX?
 
-Short answer: yes, worth doing — but as a selectable view transform, not as a replacement for your current baseline. Here's the reasoning against what's actually in
-  the pipeline today.
+Short answer: yes, worth doing — but as a selectable view transform, not as a replacement
+for your current baseline. Here's the reasoning against what's actually in the pipeline
+today.
 
   What you have now
 
@@ -1861,13 +1862,16 @@ Short answer: yes, worth doing — but as a selectable view transform, not as a 
   3. HighlightRolloff — your cross-channel bleed, which by your own comment (outputtransform.cpp:130) cannot fire when the baseline tone curve ran, because
   BaselineTone already clamped
 
-  So the raw path is a per-channel filmic curve, and the one piece of hue-preserving machinery you wrote is dead on that path. AgX is essentially a principled,
-  wide-range version of exactly what HighlightRolloff was reaching for.
+  So the raw path is a per-channel filmic curve, and the one piece of hue-preserving
+  machinery you wrote is dead on that path. AgX is essentially a principled, wide-range
+  version of exactly what HighlightRolloff was reaching for.
 
   What AgX would change
 
-  AgX is: log2 encode over a defined EV window → inset 3×3 (pull chromaticities toward the achromatic axis) → sigmoid in log → outset 3×3 (restore some purity) →
-  transfer. Structurally it drops straight into your existing shape: matrix, 1-D LUT, matrix. Your TransferLut machinery already handles the LUT half.
+  AgX is: log2 encode over a defined EV window → inset 3×3 (pull chromaticities toward
+  the achromatic axis) → sigmoid in log → outset 3×3 (restore some purity) → transfer.
+  Structurally it drops straight into your existing shape: matrix, 1-D LUT, matrix. Your
+  TransferLut machinery already handles the LUT half.
 
   Pros
 
@@ -1882,17 +1886,28 @@ Short answer: yes, worth doing — but as a selectable view transform, not as a 
 
   Cons
 
-  - It looks flat. This is the real objection. AgX out of the box is markedly less saturated and lower contrast than ACES or any camera-maker rendering. Users arriving
-  from Lightroom will read it as "muddy" or "washed out." It needs a look transform (the "punchy" variant, or your own) layered on before it's presentable as a
-  default.
-  - It silently rescales every stored recipe. Your CLAUDE.md rule — preset keys are a published format, never rescale in place — applies here even though no key
-  changes. Contrast slope, the parametric tone-region lifts, the Fritsch-Carlson curve, every mask exposure value, every existing preset and sidecar was tuned against
-  BaselineTone. Swapping the baseline re-renders all of them differently. That alone rules out an in-place replacement.
-  - Widens the raw/JPEG divergence. img.sceneReferred gates baseline tone, so display-referred files skip it. Today raw and JPEG of the same frame differ somewhat;
+  - It looks flat. This is the real objection. AgX out of the box is markedly less
+  saturated and lower contrast than ACES or any camera-maker rendering. Users arriving
+  from Lightroom will read it as "muddy" or "washed out." It needs a look transform (the
+  "punchy" variant, or your own) layered on before it's presentable as a default.
+
+  - It silently rescales every stored recipe. Your CLAUDE.md rule — preset keys are a
+  published format, never rescale in place — applies here even though no key changes.
+  Contrast slope, the parametric tone-region lifts, the Fritsch-Carlson curve, every mask
+  exposure value, every existing preset and sidecar was tuned against BaselineTone.
+  Swapping the baseline re-renders all of them differently. That alone rules out an
+  in-place replacement.
+
+  - Widens the raw/JPEG divergence. img.sceneReferred gates baseline tone, so
+  display-referred files skip it. Today raw and JPEG of the same frame differ somewhat;
   under AgX they'd differ a lot.
-  - Slider semantics shift. A log-domain sigmoid changes what "+1 EV exposure" feels like — mostly for the better (it stops running into a wall), but your Basic
-  sliders were calibrated against the current response and would want re-checking.
-  - Licensing needs a look. Sobotka's original and the compact analytic approximations have differing terms; verify whichever you port before it ships.
+
+  - Slider semantics shift. A log-domain sigmoid changes what "+1 EV exposure" feels like
+  — mostly for the better (it stops running into a wall), but your Basic sliders were
+  calibrated against the current response and would want re-checking.
+
+  - Licensing needs a look. Sobotka's original and the compact analytic approximations
+  have differing terms; verify whichever you port before it ships.
 
   What I'd actually build
 
@@ -1909,7 +1924,647 @@ Short answer: yes, worth doing — but as a selectable view transform, not as a 
   The migration risk is entirely in "which one is default," and making it a key with a Legacy default prices that decision separately from building the transform — you
   can ship AgX, live with it for a while, and flip the default later if it earns it.
 
+AgX / Profiles Part 2
 
+Adding Profiles (incl. AgX) to Develop — Things to Consider First
+
+Context
+
+notes/_ToDo.txt:18 says "Add profiles (including AgX) to Calibrate", and
+notes/Scratch.txt:1850-1912 already works through an AgX design. This
+document is the pre-work that sits under that: what the code does today, which
+of your existing patterns the feature should reuse, and the decisions that must
+be made before the 13-step adjustment checklist starts — several of which are
+one-way doors (published sidecar keys, silently re-rendered saved recipes, an
+invalidated devPreview store).
+
+Your Scratch.txt design — a viewTransform key defaulting to Legacy,
+implemented as inset 3x3 → shared 1-D LUT → outset 3x3 inside
+OutputTransform — is sound and is what the code supports. Most of what
+follows either confirms it or names a specific thing it doesn't yet cover.
+
+---
+What the code does today (verified)
+
+The colour chain spans three files; only one is inside Develop.
+
+1. Raw decode — ImageFormats/Raw/rawcolor.cpp RawColor::ToWorking()
+WB in camera space, then cam → linear sRGB. The matrix comes from
+cameramatrix.cpp — a generated port of libraw's adobe_coeff, one matrix per
+model, case-insensitive longest-prefix match. Only DNG reads real colour tags
+(ColorMatrix1/2, AsShotNeutral); CameraCalibration and ForwardMatrix
+are never read — they exist only as tag names in the metadata report.
+Negatives clamped, highlights kept above 1.0. Sets sceneReferred = true.
+
+2. Non-raw decode — Develop/inputtransform.cpp
+sRGB un-gamma to linear via a synthetic "camera" (asShotMul = 1,
+camToSrgb = identity). Header states it is a scaffold that assumes sRGB.
+Sets sceneReferred = false.
+
+3. Develop ops, including Calibrate — Develop/develop.cpp
+buildPointCoeffs sets calActive and builds calMat; applyPointOps
+applies it in linear, after channel gain, before the tone LUT. Math is
+header-only in Develop/calibrate.h.
+
+4. Baseline look + display encode — Develop/outputtransform.cpp
+BaselineTone(): kBaselineExposure = 1.6f (+0.68 EV) then the
+Narkowicz/ACES shoulder, only when sceneReferred. Then
+HighlightRolloff(), the primaries matrix, and the transfer — served from
+ToneLut(bool tone), a 16384-entry LUT with exactly two static instances.
+
+Two facts drive most of what follows:
+
+1. The camera matrix is applied at decode, not in Develop. By the time
+Calibrate runs, pixels are already linear-sRGB-primaries. Calibrate rotates
+working-space primaries; it is not a camera-profile slot.
+2. A fixed look already ships. BaselineTone() is a hard-coded tone
+mapper. "Add AgX" means "make the existing view transform selectable" — not
+filling an empty slot.
+
+---
+The considerations
+
+1. Three different things are called "profile" — pick one
+
+- Camera/input profile (DCP: ColorMatrix + ForwardMatrix +
+HueSatMap + LookTable) — "Adobe Standard", "Camera Vivid".
+- Creative look — a 3D LUT / .cube.
+- View / display transform — AgX, ACES, Filmic. A tone mapper.
+
+AgX is the third, and it is by far the cheapest. The first is a separate
+project (see §14). Bundling them is how this becomes a multi-month job.
+
+2. Calibrate is arguably the wrong home for a view transform
+
+Calibrate rotates primaries in linear, mid-Develop. A view transform runs
+last, in OutputTransform, after every Develop op. Siting it in Calibrate
+gives one UI section driving two stages several steps apart.
+
+Two better homes, both with existing precedent:
+
+- A Profile row at the top of Global, mirroring Lightroom.
+- RawPanel (Develop/Properties/rawpanel.h, behind
+G::useScopeHeaderLab) — a raw-only strip above the Scopes list that already
+hosts a combo (Demosaic engine), already greys controls with an inline
+reason, and whose params live on Global scope 0.
+
+This is a UI-placement call, not a blocker — Calibrate works if you prefer the
+grouping. A camera profile genuinely does belong near Calibrate.
+
+3. OutputTransform currently takes no parameters
+
+ToImage(const WorkingImage&, QImage&, Space) — no EditParams. A selectable
+transform needs a signature change or a field on WorkingImage, and the call
+sites are spread: Main/devpreviewbuilder.cpp:216, ~6 paths in
+Main/mainwindow.cpp, Export/imageexporter.cpp:247-291,
+Cache/imagedecoder.cpp:386.
+
+ToneLut(bool tone) also becomes a keyed cache rather than two statics.
+
+4. Performance — the biggest hidden cost, and it is designable
+
+The 8-bit sRGB path collapses into a 1-D transfer LUT precisely because the
+primaries matrix is identity and HighlightRolloff provably cannot fire once
+BaselineTone has clamped. The file records the measurement: toImage was ~90%
+of an interactive Develop tick, 35 ms of 38 ms on a 5.9 MP proxy, and the LUT
+bought 4.8x.
+
+AgX is cross-channel and breaks that invariant. Your Scratch.txt answer —
+inset 3x3 → shared 1-D LUT → outset 3x3, with the 3x3s folded into the
+primaries matrix that already runs there — preserves the fast path and is the
+right one. A 33³ tetrahedral 3D LUT is the alternative: more code, slower.
+Per the instrument-don't-guess rule, measure the chosen form on a real proxy.
+
+5. The working space is too narrow for AgX to do its whole job
+
+Working space is linear sRGB / Rec.709 primaries, D65, and RawColor
+clamps negatives. AgX's signature behaviour — highlights desaturating to white
+without blue-LED and sunset hue skews — comes from inset/outset compression in
+a wide space (AP1 / Rec.2020) with out-of-gamut values still present.
+
+In clamped Rec.709 you get the shoulder and the smooth rolloff but not the
+gamut fix. Options:
+
+- Accept a reduced AgX now — still a real improvement on the ACES curve.
+- Widen the working space. Develop/workingimage.h deliberately reserved a
+colour-space tag for this. But widening recalibrates every downstream op —
+Calibrate's Rec.709 luma weights, colorgrade.h, rangemask.h, HSL,
+localcontrast.h — i.e. it silently re-renders every saved recipe. Its own
+project, priced separately.
+
+Recommendation: ship AgX in the current space; wide-gamut AgX later as a
+separately-keyed profile.
+
+6. Non-raw images, and the ordering bug next door
+
+InputTransform sets sceneReferred = false; JPEG/HEIC already carry the
+camera's tone curve, which is why BaselineTone skips them. A view transform
+there would double-tone-map — so the control is raw-only, and per your standing
+preference it should grey out with a brief inline reason, never a popup.
+PMRID::IsSupportedBuild() vs IsAvailable() plus
+RawPanel::setDenoiseAvailable(bool, reason) is the exact two-tier pattern to
+copy.
+
+Worth knowing while you are in this code: in ImageDecoder::decode
+(imagedecoder.cpp:201-203) applyDevelop() runs before colorManage(),
+so an AdobeRGB-tagged JPEG is un-gamma'd as sRGB, developed, re-encoded as
+sRGB, and only then lcms-transformed as though its embedded profile still
+described it. Pre-existing and separate — but it widens the raw/JPEG divergence
+that a view transform also widens.
+
+7. The Apple raw engine bypasses the whole chain
+
+ImageFormats/Raw/applerawdecode.mm (engine A, G::decodeRawEngine) decodes
+Core Image straight to a WorkingImage — no UnpackCfa, no Demosaic, no
+RawColor, no camera matrix of ours. A view transform in OutputTransform
+still applies (good). A camera profile applied in RawColor would silently
+not apply under engine A — decide whether to disable it there with a reason, or
+accept the divergence.
+
+8. Changing the default look re-renders everyone's pictures
+
+This is the "CHANGING AN EXISTING OP'S MATH" case from the checklist — the
+riskier job. Two distinct problems:
+
+- Numbers keep their meaning, pictures don't. Every saved sidecar was tuned
+against 1.6x + ACES. AgX pivots middle grey differently, so the same
+Exposure/Contrast/Curves values yield a different image.
+- So the legacy look must be pinned. A sidecar with no key must resolve to
+Legacy, never to the new default; only new images get AgX. Your Scratch.txt
+design already does this, which is what makes absent-key renders
+byte-identical. It also needs an entry under "Stale Presets and History
+(Schema Drift)".
+
+The key is a published format the moment it ships: add freely, never rename or
+rescale in place.
+
+9. Cache invalidation — on disk, not just in memory
+
+- EditStack::paramsToJson() is both the sidecar serialiser and the
+per-scope render-cache key (MW::developCompositeStack, keys built at
+mainwindow.cpp:6916). A transform living in OutputTransform but absent
+from paramsToJson invalidates nothing and renders stale. This is the
+trap; it is the one item that must not be missed.
+- Metadata::defaultRenderKey() (Metadata/metadata.cpp:591) hashes
+"defaultRender|v1|engine=%1|autoDenoise=%2". The v1 must be bumped,
+or every cached unedited-raw devPreview keeps serving the old look.
+(devPreviewKey() hashes the recipe blob, so edited images self-invalidate.)
+- DevelopStackCache prefix/layer intermediates follow from the base key.
+- Scopes are safe: updateDevelopScopes (mainwindow.cpp:8181) is fed the
+post-OutputTransform QImage, so histogram and vectorscope will correctly
+read the new transform — they will simply move, which is expected.
+
+10. Use wbPreset as the template — the int-enum path is already proven
+
+EditParams has no string field; every field is a float or int. But
+EditParams::wbPreset is an existing int field driven by a real
+QComboBox in a Develop row: addWhiteBalanceRow()
+(developproperties.cpp:3808-3836) uses addItem(name, int(enumValue)),
+QComboBox::activated, setIndexWidget, and re-syncs in refreshWbRow() with
+a QSignalBlocker + findData(). It is serialised in editstack.h, clamped
+in sanitizeParams, and listed in kIntFields.
+
+A viewTransform enum follows that field exactly. Recommended.
+
+A string field (needed only for a user-supplied profile library) would be the
+first non-scalar: tolerant sanitizeParams (unknown name → fallback, never
+fail), the two key namespaces (applyKeyToParams = dock keys/scaled vs
+DevelopPresets::assignParam = JSON names/raw — the checklist calls this the
+easiest thing in Develop to get wrong), and a differs/copy pair beside
+kFloatFields in the curvesDiffer/copyCurves shape.
+
+11. Presets, history and multi-image each need an explicit decision
+
+- Does a profile travel with a preset? Masks deliberately don't. A profile
+probably should — but then a preset shared to a machine lacking that profile
+needs a defined fallback (nearest built-in plus a warning), the ONNX
+warn-if-absent shape. Built-in-only enums sidestep this entirely.
+- History: a combo is not a slider, so it misses the free generic
+tree-edit handler — it needs its own noteEdit(action, value, mergeKey).
+- Multi-image: add it to kIntFields, or it silently fails to propagate
+across the selection while every other control does.
+
+12. Export and the wider output spaces
+
+BaselineTone runs before the primaries matrix, and an AgX outset is
+defined against a specific display space — so sRGB / DisplayP3 / AdobeRGB each
+need the right outset or P3 exports come out wrong. Keeping one code path for
+ToImage and ToImage16 (as your note proposes) is what guarantees export
+matches the loupe; their mathematical identity is a documented invariant.
+
+13. Licensing, and the packaging tail if profiles become files
+
+Check AgX's licence terms for the specific implementation you port (the
+Blender/Troy Sobotka lineage and the various sigmoid re-derivations differ) —
+your Scratch.txt already lists this as an open item.
+
+No DCP, .cube or HaldCLUT support exists anywhere. lcms2 is vendored
+(Lcms2/, used for monitor colour management via Utilities/icc.cpp) but
+Develop deliberately does not use it. Data-file profiles would need
+ReleaseExtras/ + the warn-if-absent CMake shape + packaging/
+(verify_bundle.command, winnow.iss) on both platforms.
+
+Built-in AgX ships as code and avoids that tail entirely — another reason
+to do it first. If profiles ever do need per-camera data, the established
+pattern is a generated header (tools/gen_cameramatrix.py,
+tools/gen_pmrid_tables.py → compiled-in tables), not a runtime file.
+
+14. Camera-matching profiles are a much larger project
+
+cameramatrix.cpp gives one matrix per model, and ForwardMatrix /
+CameraCalibration are not read even from DNGs that carry them. Real "Camera
+Standard/Vivid" needs full DCP parsing: dual-illuminant interpolation,
+ForwardMatrix, a 2.5-D HueSatMap, a LookTable — plus sourcing per-camera
+DCPs, plus the engine-A divergence in §7. Do not price this with AgX.
+
+If you do build it, PMRID::resolveKB()'s priority chain with a
+diagnostics-visible source tier (Main/diagnostics.cpp:511-540) is the right
+precedent for "which profile was used, and why".
+
+15. Tests
+
+- tests/unit/tst_outputtransform.cpp deliberately re-implements the chain
+with its own copy of the 1.6 and ACES constants (BaselineToneRef) and
+asserts every byte within 1. That is by design: the change must be made
+twice. It will need a Legacy-path assertion that still passes untouched,
+plus a new AgX reference.
+- tst_calibrate, tst_whitebalance, tst_tonecurve, tst_colorgrade,
+tst_renderstack, tst_devpreview are the neighbours.
+- There is no raw-decode correctness test and no raw fixtures — only
+generated JPEG/TIFF/PNG. A camera-profile project would have to build that
+scaffolding first; AgX does not need it.
+- Discipline for math changes: capture goldens from the current build
+first, confirm they pass, then change anything — and mutation-check the gate.
+
+---
+Recommendation
+
+Split into two, and do only the first now:
+
+1. View transform selector — Legacy (ACES baseline) / AgX /
+AgX Punchy. Built-in, int enum modelled on wbPreset, raw-only,
+inset/outset folded into the primaries matrix so the 1-D LUT survives,
+Legacy pinned for any sidecar without the key, defaultRenderKey v-bump.
+This is your Scratch.txt design, and it is the right first step.
+2. Camera profiles (DCP) — later, separately scoped, near Calibrate.
+
+Expect to also touch Docs/developcalibratehelp.html (or a new sibling) and
+notes/Documentation.txt + its TOC.
+
+Decisions needed before implementation
+
+1. Home for the control: Calibrate as _ToDo says, RawPanel, or a Profile
+row above Basic.
+2. AgX in the current Rec.709 space now, or block on widening the working
+space (accepting a reduced AgX either way in the short term).
+3. Int enum (built-ins only) vs string (user profile library).
+4. Does a profile travel with a preset?
+5. Rebuild the devPreview/CacheDb store eagerly on a look change, or bump
+defaultRenderKey and let it rebuild lazily.
+6. Whether Legacy stays selectable forever, or is a compatibility-only value.
+
+Verification
+
+- tst_outputtransform still passes unmodified for the Legacy path —
+proving absent-key renders are byte-identical — before any new assertions.
+- Round trip: set profile, navigate away, return, panel repopulates; sidecar
+re-read; preset save/apply; copy/paste across a multi-selection.
+- Render-cache proof: change only the profile and confirm the image actually
+re-renders (the paramsToJson trap), and that an unedited raw's cached
+devPreview rebuilds (the defaultRenderKey trap).
+- Perf: measure toImage on a 5.9 MP proxy against the recorded 35 ms of
+38 ms; a regression means the 1-D LUT path was lost.
+- Export sRGB / P3 / AdobeRGB at 8- and 16-bit; loupe and export must match.
+- Both raw engines: Winnow and Apple Core Image.
+- Non-raw: control greyed with its reason; JPEG render unchanged.
+- An old sidecar with no key opens looking exactly as before.
+
+Let's take a step back. At present, Winnow has not shipped with any develop code, so
+there are no legacy considerations: everything in the decode / develop architecture is on
+the table. Does the current implementation support future changes to incorporate camera
+profiles / profiles / color transforms. Factor in two considerations: I want Winnow to
+deliver the best results possible and I want Winnow to be very fast. I understand these
+are sometimes contrary goals. As part of your response, please include a terse outline of
+the image processing pipeline from decode to final result with edits.
+
+⏺ Stepping back — with no shipped Develop code, the question is architectural fitness rather than migration. Short answer: the skeleton is right, but three things are
+  in the wrong place, and all three are cheap to move now and expensive later.
+
+  Current pipeline
+
+  RAW    UnpackCfa → SubtractBlack → [PMRID] → Demosaic(bilinear)
+         → RawColor::ToWorking     ← WB in camera space, cam→linear sRGB 3×3,
+                                      NEGATIVES CLAMPED, sets sceneReferred=true
+  JPEG   QImage → InputTransform   ← assumes sRGB, un-gamma, synthetic identity "camera"
+
+         ────────────── WorkingImage: float RGB, linear, Rec.709/D65, no space tag ──────────────
+
+  Develop::Apply   1 Denoise
+                   2 fused point pass: channel gain (WB×exposure×RGB) → Calibrate 3×3
+                     → per-channel tone LUT (contrast, regions, curves) → HSL → ColorGrade
+                   3 Texture → Clarity → Dehaze → Vignette → Sharpen → Grain
+
+  OutputTransform  BaselineTone (1.6× + Narkowicz ACES, raw only, hardcoded)
+                   → HighlightRolloff → primaries 3×3 → transfer → 8/16-bit
+
+  What's right
+
+  WorkingImage as the convergence point with CameraColor travelling alongside it; the Input/Develop/Output bracket; header-only pure-math ops with unit tests
+  (calibrate.h, tonecurve.h, colorgrade.h); the fused point pass; the per-scope prefix/layer render cache. That factoring is better than most of what this normally
+  looks like, and none of it needs to change.
+
+  The three misplacements
+
+  1. Colour conversion lives in the decoder. RawColor::ToWorking bakes cam→linear-sRGB. A camera profile is that step — so the profile slot currently sits inside a
+  format-decode file, upstream of every cache and every edit. Changing profile means re-decoding the raw. That hurts both your goals at once: it's the wrong place to
+  do good colour, and it makes the one operation you'd want interactive the most expensive one.
+
+  Fix: RawColor stops at camera-native linear and hands over the matrices. Camera→working becomes the first stage of Develop (or an explicit InputProfile stage). Then
+  the cache boundary sits on the demosaiced camera-native buffer and profile changes are a cheap re-render.
+
+  2. The working space is Rec.709 and clips before you edit. No space tag on WorkingImage (the comment reserves one; the field doesn't exist), and RawColor clamps
+  negatives. Saturated reds and blues from a wide-gamut sensor are destroyed at decode, and nothing downstream recovers them — a hard quality ceiling, and the reason
+  AgX can't do its gamut work. Rec.709 luma weights are also hardcoded in at least three places (calibrate.h, localcontrast.h, the grade windows).
+
+  Fix while it's free: linear AP1/ACEScg or Rec.2020 as the working space, an enum tag on WorkingImage, drop the negative clamp, and one shared luma-weights header.
+
+  3. OutputTransform conflates a creative look with an encoder. kBaselineExposure = 1.6f plus an ACES shoulder is a fixed aesthetic decision welded into the transfer
+  stage, gated on a bool, served from two static LUTs.
+
+  Fix: split into three composable stages — view transform (AgX/ACES/none) → output primaries → transfer/encode — with a keyed LUT cache instead of two statics.
+
+  Two smaller ones
+
+  - sceneReferred is a bool doing colour-management work. It can't express which space in which state, so raw/JPEG divergence is a branch rather than a conversion.
+  Replace with a small ColorState { space, encoding } and make InputTransform ICC-aware — lcms2 is already vendored, just unused by Develop. Related: applyDevelop()
+  runs before colorManage() in imagedecoder.cpp, so an AdobeRGB JPEG is currently developed as sRGB then transformed as if it weren't.
+  - One matrix per camera. cameramatrix.cpp is single-illuminant libraw adobe_coeff; ForwardMatrix and CameraCalibration aren't read even from DNGs that carry them.
+  That's your camera-colour floor — colour drifts under tungsten and shade. Dual-illuminant interpolation needs the solved WB temperature as its input, and
+  whitebalance.cpp already computes exactly that.
+
+  On fast vs. best — they mostly aren't contrary here
+
+  The 1-D transfer LUT in outputtransform.cpp (4.8×, on what was 90% of an interactive tick) is the right instinct but a fragile one: it works only because the chain
+  degenerates to per-channel. Under profiles it won't.
+
+  The durable version is the same idea generalised, and it costs no quality: collapse every 3×3 in the chain into a single matrix at coefficient-build time — input
+  profile, working-space change, calibration, AgX inset — and keep 1-D LUTs for the per-channel nonlinearities, with the outset folded into the output primaries
+  matrix. That's already the shape of buildPointCoeffs; it wants extending, not replacing. No 3D LUT approximation, no interpolation error.
+
+  The real speed lever isn't op cost, it's cache boundary placement — which is exactly what fix (1) buys. Independent of profiles, the actual quality ceiling right now
+  is Demosaic::Run: bilinear only, with X-Trans as a 5×5 same-colour average.
+
+  Verdict
+
+  Nothing here needs unwinding — it needs three things moved before more is built on top. Do those and camera profiles, DCP, AgX, and wide-gamut editing all become
+  additive rather than surgical.
+
+Rethink architecture:
+
+Develop Colour Architecture — Restructuring for Profiles and Speed
+
+ Context
+
+ Winnow has not shipped Develop, so there is no sidecar, preset or render
+ compatibility to preserve — the whole decode/develop colour architecture is
+ open. The goal is to reach a structure where camera profiles, creative
+ profiles and view transforms (AgX) are additive rather than surgical,
+ without giving up interactive speed.
+
+ The existing factoring is largely right and is kept: WorkingImage as the
+ convergence point, the Input/Develop/Output bracket, header-only pure-math ops
+ with unit tests, the fused point pass, and the per-scope render cache.
+
+ Three things are in the wrong place:
+
+ 1. Colour conversion happens in the decoder (RawColor::ToWorking), so the
+ camera-profile slot sits upstream of every cache — changing profile means
+ re-decoding the raw.
+ 2. The working space is Rec.709 and clips negatives at decode, destroying
+ saturated sensor colour before any edit runs. Rec.709 luma weights are
+ hardcoded in ~15 sites, and rangemask.h inconsistently uses Rec.601.
+ 3. OutputTransform welds a creative look to the encoder — a hardcoded
+ 1.6x + ACES shoulder, gated on a bool, with two static LUTs.
+
+ Moving these three now is cheap. Every phase after them is additive.
+
+ ---
+ Target pipeline
+
+ RAW    UnpackCfa -> SubtractBlack -> [PMRID] -> Demosaic
+        -> RawColor::ToCameraNative        scale only; NO wb, NO matrix, NO clamp
+                                           carries CameraColor + ColorState{CameraNative}
+
+ JPEG   QImage -> InputTransform            ICC-aware decode -> working space
+                                            ColorState{Working, DisplayReferred}
+
+        -------- WorkingImage: float RGB, linear, tagged ColorState --------
+                 cached here (WorkingImageCache) -- upstream of all colour
+
+ Develop::Apply
+   0  InputProfile      camera-native -> working space   (profile-driven 3x3 [+ LUTs])
+   1  Denoise
+   2  fused point pass  white balance -> Calibrate -> tone LUT -> HSL -> ColorGrade
+                        ** all 3x3s in 0 and 2 folded into ONE matrix at coeff-build **
+   3  Texture -> Clarity -> Dehaze -> Vignette -> Sharpen -> Grain
+
+ Output
+   A  ViewTransform     None | Filmic | AgX | AgX Punchy   (inset 3x3 -> 1-D LUT -> outset)
+   B  OutputPrimaries   working -> sRGB / DisplayP3 / AdobeRGB / Rec.2020
+   C  Encode            transfer function -> 8-bit or 16-bit
+                        ** A.outset and B folded into one matrix; A's curve is a 1-D LUT **
+
+ The two invariants that make it fast: every 3x3 in a run of matrices folds
+ into one at coefficient-build time, and every per-channel nonlinearity is a
+ 1-D LUT. No 3-D LUTs, no interpolation error, and the 4.8x transfer-LUT win
+ already measured in outputtransform.cpp generalises instead of being lost.
+
+ ---
+ Phase 1 — Widen and tag the working space
+
+ Why. RawColor clamps negatives into Rec.709 at decode. That is a hard
+ quality ceiling: out-of-gamut sensor colour is gone before the first edit, and
+ AgX's gamut compression has nothing to work with. Fixing it later means
+ recalibrating every op.
+
+ Working space: linear Rec.2020, D65. It covers essentially every camera
+ gamut, and D65 keeps it consistent with the existing white-balance machinery.
+ ACEScg/AP1 is the other candidate but its D60 white adds an adaptation step
+ through code (Develop/whitebalance.cpp) that is D65-centric throughout; AgX
+ can inset from Rec.2020 just as well.
+
+ Work
+
+ - New Develop/colorspace.h — header-only, in the shape of calibrate.h:
+ enum class ColorSpace { CameraNative, LinearSRGB, LinearP3, LinearRec2020, LinearAdobeRGB }, the primaries matrices between them, and lumaWeights()
+ per space.
+ - Replace WorkingImage::sceneReferred (a bool doing colour-management work)
+ with struct ColorState { ColorSpace space; bool sceneReferred; }.
+ - Delete the negative clamp in ImageFormats/Raw/rawcolor.cpp.
+ - Replace every hardcoded 0.2126/0.7152/0.0722 with lumaWeights():
+ ~10 sites in Develop/develop.cpp, plus calibrate.h, colorgrade.h,
+ whitebalance.cpp. Fix rangemask.h, which is on Rec.601 today — that is a
+ live inconsistency, not a deliberate choice.
+ - Ops that assume a 0..1 domain need review once negatives survive: the tone
+ LUT's lower bound in buildPointCoeffs, and rangemask.h's luma binning.
+
+ Phase 2 — Move colour conversion out of the decoder
+
+ Why. This is the structural fix. It relocates the camera-profile slot from
+ inside a format decoder to inside the pipeline, which moves the cache boundary
+ upstream — so a profile or white-balance change becomes a re-render off a
+ cached buffer, not a re-decode. Quality and speed are served by the same move.
+
+ Work
+
+ - RawColor::ToWorking becomes RawColor::ToCameraNative
+ (ImageFormats/Raw/rawcolor.{h,cpp}): scaling only. It applies no white
+ balance and no matrix; it fills CameraColor (xyzToCam, asShotMul,
+ the model's matrices) and tags ColorState{ CameraNative, sceneReferred }.
+ - Develop gains stage 0, InputProfile: camera-native -> working space.
+ Implemented as a 3x3 built in buildPointCoeffs, so it costs nothing extra —
+ it folds into the same matrix as Calibrate and the white-balance gains.
+ - White balance moves fully into Develop. Today as-shot gains are applied
+ at decode and Develop then works in relativeGains off them. With decode
+ applying nothing, absolute (K, tint) is the only representation and as-shot
+ is simply its solved value — the indirection disappears and identity at
+ as-shot is still exact.
+ - WorkingImageCache (Develop/workingimagecache.h) now caches the
+ camera-native buffer. Its doc comment describing the cached image as
+ post-RawColor needs updating; its structure does not change.
+ - Simplification that falls out: ImageFormats/Raw/rawformat.cpp:140-210
+ currently runs Demosaic + ToWorking twice for the PMRID denoise blend.
+ With colour out of the decoder, Develop::BlendRawDenoise blends in
+ camera-native and only one colour conversion happens, at render.
+ - applerawdecode.mm (engine A) bypasses RawColor entirely. It must now
+ declare its output state honestly — Core Image hands back display-space RGB,
+ so it tags a working/display-referred state and skips stage 0. A camera
+ profile is meaningless there; the profile control greys out with a reason
+ under engine A, using the PMRID::IsSupportedBuild +
+ RawPanel::setDenoiseAvailable(bool, reason) two-tier pattern.
+
+ Phase 3 — Split OutputTransform into three stages
+
+ Why. A fixed aesthetic (kBaselineExposure = 1.6f + Narkowicz ACES) is
+ currently fused into the transfer stage. Separating look from encode is what
+ makes AgX a value rather than a rewrite.
+
+ Work (Develop/outputtransform.{h,cpp})
+
+ - enum class ViewTransform { None, Filmic, AgX, AgXPunchy } — Filmic is
+ today's BaselineTone, retained as a look, no longer a default constant.
+ - Three composable stages: view transform, output primaries, encode.
+ AgX = inset 3x3 -> per-channel log2 + sigmoid -> outset 3x3; the inset folds
+ backwards into the working-space matrix, the outset forwards into the output
+ primaries matrix, leaving a pure 1-D LUT — the existing fast path, preserved.
+ - ToneLut(bool tone)'s two statics become a keyed cache on
+ {ViewTransform, Space, bitDepth}.
+ - ToImage and ToImage16 stay one code path, which is what guarantees export
+ matches the loupe.
+ - The selector is an int enum field on EditParams, modelled exactly on the
+ existing wbPreset — which already has a real QComboBox in a Develop row
+ (developproperties.cpp addWhiteBalanceRow), sanitizeParams clamping,
+ kIntFields membership, and preset round-trip. It must be in
+ EditStack::paramsToJson, which is also the render-cache invalidation key.
+
+ Phase 4 — The profile layer (now additive)
+
+ Why. With stages 0 and A in place, a camera profile is data feeding stage 0
+ and a creative profile is data feeding stage A. Neither needs new plumbing.
+
+ Work
+
+ - Develop/Profiles/cameraprofile.h — struct CameraProfile: two
+ XYZ->camera matrices with their calibration illuminants, optional
+ ForwardMatrix, optional HueSatMap, baseline exposure.
+ - Dual-illuminant interpolation, the main colour-accuracy win over today's
+ single matrix. It is keyed on correlated colour temperature, which
+ WhiteBalance::solve already computes — the inputs are in hand.
+ - DNG: read ColorMatrix1/2, ForwardMatrix1/2, CalibrationIlluminant1/2,
+ AsShotNeutral in ImageFormats/Dng/dng.cpp (only ColorMatrix1/2 and
+ AsShotNeutral are read today; the TIFF walker is already there).
+ - Non-DNG: cameramatrix.cpp's generated libraw table stays as a fallback
+ tier. Use PMRID::resolveKB's priority chain with a diagnostics-visible
+ source tier (Main/diagnostics.cpp:511-540) as the precedent, so "which
+ profile was used and why" is always answerable.
+ - Profile selector: a second int enum on EditParams, same wbPreset shape.
+
+ Phase 5 — ICC-aware non-raw input
+
+ Why. InputTransform assumes sRGB by its own admission, and
+ ImageDecoder::decode runs applyDevelop() before colorManage() — so an
+ AdobeRGB JPEG is un-gamma'd as sRGB, developed, re-encoded as sRGB, then
+ lcms-transformed as though its embedded profile still described it. lcms2 is
+ already vendored (Lcms2/, used for monitor management via Utilities/icc.cpp)
+ but unused by Develop.
+
+ Work: InputTransform converts from the embedded profile
+ (ImageMetadata::iccBuf) into the working space, tags ColorState, and the
+ develop/colour-manage ordering in Cache/imagedecoder.cpp:201-203 is corrected.
+ Raw and non-raw then genuinely converge and downstream ops stop branching on a
+ bool. HEIC ICC reads are currently commented out (heic.cpp:221,656) and should
+ be restored.
+
+ ---
+ Sequencing
+
+ Phases 1 and 2 are entangled and should land together as one change — the space
+ widening is what makes the relocated conversion worth doing, and both touch
+ WorkingImage. Phase 3 is independent and can land in parallel. Phases 4 and 5
+ are additive and can be scheduled freely once 1-3 are in.
+
+ Speed notes
+
+ - Matrix folding is the core technique: buildPointCoeffs already builds a
+ combined transform; extend it to absorb the input profile and view-transform
+ inset rather than adding passes.
+ - Cache boundary matters more than op cost. Phase 2 puts it upstream of all
+ colour, so profile, white balance, exposure and view transform all become
+ re-renders. DevelopStackCache's prefix/layer resume is unchanged.
+ - Wider space costs nothing per pixel — same float count, same loops.
+ - Do not add a 3-D LUT. The fold-plus-1-D-LUT decomposition is both faster
+ and exact; a 3-D LUT would be an approximation bought at a higher price.
+ - Measure, don't infer: WorkingImageCache::RenderTimings already breaks a
+ render into copy/develop/toImage plus per-op sub-stages. The reference figure
+ is toImage at ~35 ms of a 38 ms tick on a 5.9 MP proxy before the LUT.
+
+ Out of scope (real, but separate)
+
+ - Demosaic quality. Demosaic::Run offers Bilinear only, with X-Trans as
+ a 5x5 same-colour average. This is the largest remaining quality ceiling and
+ is independent of colour — it deserves its own plan.
+ - .cube / HaldCLUT creative-look loading, DCP files loaded from disk, and
+ HueSatMap application. All become straightforward once Phase 4's struct
+ exists; none should be attempted before it.
+
+ Verification
+
+ - Characterization first. Capture goldens from the current build before
+ touching anything, per the tst_localcontrast pattern. Note that
+ tests/unit/tst_outputtransform.cpp deliberately re-implements the chain
+ with its own copy of the constants — the split in Phase 3 must be made in
+ both places, which is the intended design.
+ - Colour correctness against an oracle. There is no raw-decode test and no
+ raw fixtures today. Use the established libraw/rawpy Python oracle to compare
+ camera-native output and the profiled working-space result on a known file
+ (the uncompressed Sony ARW is the usual first target).
+ - Round-trip identity: as-shot white balance must still be exactly identity
+ after WB moves into Develop; ViewTransform::None + LinearSRGB output must
+ reproduce a known ramp bit-exactly.
+ - Gamut: confirm a saturated sensor colour that previously clamped now
+ survives to the view transform and desaturates smoothly rather than clipping.
+ - Perf: toImage on a 5.9 MP proxy against the recorded baseline; a
+ regression means a matrix stopped folding or a LUT stopped being 1-D.
+ Confirm a profile change re-renders without re-decoding.
+ - Both raw engines (Winnow and Apple Core Image) and the non-raw path;
+ profile control greyed with its reason where it does not apply.
+ - Export sRGB / P3 / AdobeRGB at 8- and 16-bit; loupe and export must match.
+ - notes/Documentation.txt pipeline-order section and its TOC updated in the
+ same pass.
+
+This session is called 'develop-color-architecture'
+
+---------------------------------
 
 I want to change how Documentation.txt is formatted.  I want to change to a text wrap == true environment.  Create a scratch file where we can test the format
   changes before implementing in Documentation.txt.  I want each section title to show the full bread crumb (ie Folder Loading Pipeline ⏺ Concurrent Flow - New

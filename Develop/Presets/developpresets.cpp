@@ -222,6 +222,7 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     if      (key == "temp")                p.temp                = f;
     else if (key == "tint")                p.tint                = f;
     else if (key == "wbPreset")            p.wbPreset            = v.toInt();
+    else if (key == "viewTransform")       p.viewTransform       = v.toInt();
     else if (key == "exposure")            p.exposure            = f;
     else if (key == "contrast")            p.contrast            = f;
     else if (key == "highlights")          p.highlights          = f;

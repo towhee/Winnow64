@@ -156,6 +156,27 @@ elseif(WIN32)
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
 
+# tst_inputprofile guards Develop's stage 0 -- the camera-native -> working-space
+# conversion that RawColor stopped doing. Its central assertion is that the transform
+# folded into PointCoeffs::preMat equals applying the stages one at a time, since the
+# pipeline picks between those two routes depending on whether Denoise is active.
+# Same OpenCV wiring as tst_renderstack: it links develop.cpp, which uses cv::.
+winnow_add_unit_test(tst_inputprofile unit/tst_inputprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+if(APPLE)
+    target_include_directories(tst_inputprofile PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_inputprofile PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_inputprofile PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_inputprofile PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_inputprofile PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
+
 # tst_outputtransform guards the 8-bit pack's transfer LUT -- an APPROXIMATION of the
 # per-pixel pow it replaced (see the TRANSFER LUT note in outputtransform.cpp), so the
 # accuracy bound it was accepted under has to be asserted somewhere. outputtransform.cpp

@@ -6337,11 +6337,15 @@ void buildHaloGuide(const WorkingImage &src, std::vector<float> &guide)
     guide.resize(size_t(w) * size_t(h));
     const float *rgb = src.rgb.data();
     float *g = guide.data();
+    /* Weights for the space src is ACTUALLY in. The guide is built from the PRE-develop
+       image, which for a raw is still camera-native (RawColor stops there), so the
+       Rec.709 triple this used to hardcode would weight sensor channels as though they
+       were sRGB primaries. See lumaWeightsFor in workingimage.h. */
+    const ColorSpaceMath::Luma LW = lumaWeightsFor(src);
     developParallelRows(w, h, [&](int y0, int y1) {
         for (size_t k = size_t(y0) * w, e = size_t(y1) * w; k < e; ++k) {
-            /* Rec.709 luma -- the working image's primaries (workingimage.h). */
-            const float lum = 0.2126f * rgb[k*3+0] + 0.7152f * rgb[k*3+1]
-                            + 0.0722f * rgb[k*3+2];
+            const float lum = LW.r * rgb[k*3+0] + LW.g * rgb[k*3+1]
+                            + LW.b * rgb[k*3+2];
             g[k] = lum <= 0.0f ? 0.0f : std::pow(lum, 1.0f / 2.2f);
         }
     });

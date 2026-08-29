@@ -251,6 +251,11 @@ struct EditStack {
         o["calGreenSat"]     = p.calGreenSat;
         o["calBlueHue"]      = p.calBlueHue;
         o["calBlueSat"]      = p.calBlueSat;
+        /* Consumed by OutputTransform, not Develop -- but it must be HERE, because this
+           function is both the sidecar format AND the per-scope render-cache key
+           (MW::developCompositeStack). A field the pipeline reads but this omits renders
+           stale from cache and never persists. */
+        o["viewTransform"]   = p.viewTransform;
         o["gradeShadowHue"]  = p.gradeShadowHue;
         o["gradeShadowSat"]  = p.gradeShadowSat;
         o["gradeShadowLum"]  = p.gradeShadowLum;
@@ -315,6 +320,7 @@ struct EditStack {
         p.calGreenSat     = static_cast<float>(o.value("calGreenSat").toDouble(p.calGreenSat));
         p.calBlueHue      = static_cast<float>(o.value("calBlueHue").toDouble(p.calBlueHue));
         p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
+        p.viewTransform   = o.value("viewTransform").toInt(p.viewTransform);
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
         p.gradeShadowSat  = static_cast<float>(o.value("gradeShadowSat").toDouble(p.gradeShadowSat));
         p.gradeShadowLum  = static_cast<float>(o.value("gradeShadowLum").toDouble(p.gradeShadowLum));
@@ -588,6 +594,13 @@ struct EditStack {
         if (clampF(p.calGreenSat, -100.0f, 100.0f, def.calGreenSat)) ++fixed;
         if (clampF(p.calBlueHue,  -100.0f, 100.0f, def.calBlueHue))  ++fixed;
         if (clampF(p.calBlueSat,  -100.0f, 100.0f, def.calBlueSat))  ++fixed;
+        /* An UNKNOWN value falls back to the default rather than failing: a sidecar
+           written by a later build that added a transform must still open here, showing
+           the default look, not refuse to load. */
+        if (p.viewTransform < 0 || p.viewTransform > 2) {
+            p.viewTransform = def.viewTransform;
+            ++fixed;
+        }
 
         /* Colour grading: hue degrees wrap, sat 0..1, lum -100..100. */
         float *hues[] = {&p.gradeShadowHue, &p.gradeMidHue, &p.gradeHighHue,

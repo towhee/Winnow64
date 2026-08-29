@@ -34,10 +34,20 @@ bool InputTransform::FromImage(const QImage &in, WorkingImage &out)
     out.height = H;
     out.white = 1.0f;
     out.sceneReferred = false;  // display-referred: already carries the camera tone curve
+    /* Unlike the raw path this arrives ALREADY converted: the sRGB -> working matrix is
+       applied in the pixel loop below, so Develop's stage 0 is a no-op here and the
+       cheap diagonal-gain path in applyPointOps is what runs. */
+    out.space = ColorSpaceMath::kWorking;
+
+    /* sRGB primaries -> the working space. Identity while the working space is sRGB. */
+    float toWork[3][3];
+    ColorSpaceMath::matrixF(ColorSpaceMath::ColorSpace::LinearSRGB,
+                            ColorSpaceMath::kWorking, toWork);
+    const bool convert = (ColorSpaceMath::kWorking != ColorSpaceMath::ColorSpace::LinearSRGB);
 
     /* A synthetic "camera" whose response IS linear sRGB, so the absolute white balance
        works uniformly on non-raw files: nothing was baked in (asShotMul = 1) and no
-       matrix follows (camToSrgb = identity), leaving XYZ -> linear sRGB as the whole
+       matrix follows (camToWorking = identity), leaving XYZ -> linear sRGB as the whole
        chain. That resolves the as-shot temperature to sRGB's own white point, D65
        (~6500 K), which is the correct reading for a display-referred file. */
     out.cam.valid = true;
@@ -45,7 +55,11 @@ bool InputTransform::FromImage(const QImage &in, WorkingImage &out)
         out.cam.asShotMul[i] = 1.0f;
         for (int j = 0; j < 3; ++j) {
             out.cam.xyzToCam[i][j]  = kXyzToSrgbIn[i][j];
-            out.cam.camToSrgb[i][j] = (i == j) ? 1.0f : 0.0f;
+            /* The synthetic camera's response IS linear sRGB, so its "camera -> working"
+               matrix is exactly the sRGB -> working matrix the pixels take below. The
+               white-balance solver walks this chain, so it has to match what the pixels
+               actually did or the as-shot temperature comes out wrong. */
+            out.cam.camToWorking[i][j] = toWork[i][j];
         }
     }
     WhiteBalance::resolveAsShot(out.cam);
@@ -55,8 +69,10 @@ bool InputTransform::FromImage(const QImage &in, WorkingImage &out)
         const uchar *line = src.constScanLine(y);
         for (int x = 0; x < W; ++x) {
             const size_t o = (static_cast<size_t>(y) * W + x) * 3;
-            for (int c = 0; c < 3; ++c)
-                out.rgb[o + c] = SrgbInvGamma(line[x * 3 + c] / 255.0f);
+            float v[3];
+            for (int c = 0; c < 3; ++c) v[c] = SrgbInvGamma(line[x * 3 + c] / 255.0f);
+            if (convert) ColorSpaceMath::apply(toWork, v[0], v[1], v[2]);
+            for (int c = 0; c < 3; ++c) out.rgb[o + c] = v[c];
         }
     }
     return true;

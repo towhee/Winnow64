@@ -109,7 +109,18 @@ bool Decode(const QString &path, WorkingImage &out, QString &err)
             out.width  = W;
             out.height = H;
             out.white  = 1.0f;
-            out.sceneReferred = true;   // sensor data: scene-referred linear with headroom
+            out.sceneReferred = true;   // sensor data: scene-linear, with headroom
+            /*
+                Core Image has ALREADY applied its own camera profile and handed back
+                linear sRGB primaries, so unlike the Winnow engine this path arrives in
+                the working space and Develop's stage 0 is a no-op for it. Tagged
+                explicitly rather than left to the default: the whole point of the tag is
+                that no stage has to guess, and `cam` is left invalid here, which is what
+                tells Develop there is no camera characterisation to profile with. A
+                camera-profile control is therefore meaningless under this engine and
+                must be disabled (with a reason) rather than silently ignored.
+            */
+            out.space = ColorSpaceMath::kWorking;
             out.rgb.resize(pixels * 3);
             for (size_t i = 0; i < pixels; ++i) {
                 out.rgb[i * 3 + 0] = rgba[i * 4 + 0];

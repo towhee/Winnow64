@@ -77,9 +77,14 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         UnpackCfa()         per-format bitstream -> normalised CFA mosaic   (virtual)
         SubtractBlack()                                                      (shared)
         Demosaic::Run()     mosaic -> linear camera RGB                      (shared)
-        RawColor::ToWorking() white balance + matrix -> LINEAR WorkingImage  (shared)
-        Develop::Apply()    parametric adjustments in linear space           (shared, opt)
-        OutputTransform::ToImage() gamma/ICC -> display QImage               (shared)
+        RawColor::ToCameraNative() characterise ONLY -> CameraNative WorkingImage (shared)
+        Develop::Apply()    input profile (stage 0) + adjustments, in linear  (shared)
+        OutputTransform::ToImage() view transform + primaries + gamma         (shared)
+
+    NOTE the decode deliberately stops at CAMERA-NATIVE primaries: no white balance, no
+    colour matrix, no clamp. Those moved into Develop so that the buffer cached by
+    WorkingImageCache sits UPSTREAM of every colour decision -- changing a profile or the
+    white balance is then a re-render, not a re-decode. See rawcolor.h.
 
     abort is polled between stages (and inside the demosaic loop) so a long decode bails
     promptly when the decoder thread is asked to stop -- otherwise ImageCache::stop()'s
@@ -155,7 +160,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 auto cleanWork = std::make_shared<WorkingImage>();
                 auto cleanProg = [&stage](int d, int t) { stage(0, 250, d, t); };
                 if (cleanDemosaic.Run(raw, rgbClean, Demosaic::Bilinear, abort, cleanProg) &&
-                    cleanColor.ToWorking(raw, rgbClean, *cleanWork)) {
+                    cleanColor.ToCameraNative(raw, rgbClean, *cleanWork)) {
                     *outClean = cleanWork;
                 }
                 if (aborted()) { errMsg = "Aborted"; return false; }
@@ -180,7 +185,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         }
 
         RawColor color;
-        if (!color.ToWorking(raw, rgb, *work)) {
+        if (!color.ToCameraNative(raw, rgb, *work)) {
             errMsg = "Colour conversion failed.";
             return false;
         }
@@ -201,7 +206,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 std::vector<float> rgbDen;
                 WorkingImage pmridWork;
                 if (demosaic.Run(rawDen, rgbDen, Demosaic::Bilinear, abort) &&
-                    color.ToWorking(rawDen, rgbDen, pmridWork)) {
+                    color.ToCameraNative(rawDen, rgbDen, pmridWork)) {
                     denoisedBase = std::make_shared<WorkingImage>();
                     Develop::BlendRawDenoise(*work, pmridWork, edit->denoiseLuma,
                                              edit->denoiseChroma, *denoisedBase);

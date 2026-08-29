@@ -10,6 +10,14 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 input=$(cat)
 f=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
+
+# notes/Documentation.txt is EXEMPT: it is soft-wrapped (the editor wraps it), so one
+# paragraph is one line by design and hard-wrapping it to 90 would be the bug, not the
+# fix. Everything else in notes/ still follows the rule.
+case "$f" in
+  */notes/Documentation.txt) exit 0 ;;
+esac
+
 case "$f" in
   *.txt|*.md|*.cpp|*.h|*.hpp|*.cc|*.c|*.mm|*.cxx) ;;
   *) exit 0 ;;

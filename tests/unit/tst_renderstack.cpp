@@ -21,6 +21,7 @@
 
 #include "Develop/workingimagecache.h"
 #include "Develop/workingimage.h"
+#include "Develop/colorspace.h"
 #include "Develop/editparams.h"
 
 namespace {
@@ -90,6 +91,7 @@ class TestRenderStack : public QObject
     Q_OBJECT
 
 private slots:
+    void downscaledPreservesColourState();
     void capturingDoesNotChangeOutput();
     void maskOnlyEditResumesIdentically();
     void paramsEditAtHotScopeRebuildsLayer();
@@ -306,6 +308,42 @@ void TestRenderStack::scratchSurvivesRepeatedTicks()
         prefix = res.outPrefix;
         layer  = res.outLayer;
     }
+}
+
+/*
+    A PROXY MUST CARRY THE SOURCE'S COLOUR STATE.
+
+    WorkingImageCache::downscaled builds the interactive proxy. It copies the non-pixel
+    fields by hand, and a field added to WorkingImage but missed there does NOT fail to
+    compile -- it silently ships the default.
+
+    That shipped once: `space` was missed, so the proxy claimed to be in the working space
+    while holding camera-native sensor pixels. Develop skipped its input-profile stage and
+    every interactive render came out strongly green (camera-native green is ~2x the other
+    channels), snapping to the correct colour on the full-res settle pass, which still had
+    the tag. Both fields are asserted here because both have exactly this failure mode:
+    wrong colour, no error, only while dragging.
+*/
+void TestRenderStack::downscaledPreservesColourState()
+{
+    WorkingImage src = makeWork(400, 300);
+    src.space         = ColorSpaceMath::ColorSpace::CameraNative;
+    src.sceneReferred = true;
+    src.white         = 0.75f;
+    src.cam.valid     = true;
+    src.cam.asShotMul[0] = 1.9f;
+    src.cam.asShotMul[2] = 1.45f;
+
+    const WorkingImage proxy = WorkingImageCache::downscaled(src, 100);
+    QVERIFY(proxy.width < src.width);                  // it really did downscale
+    QCOMPARE(proxy.space, src.space);
+    QCOMPARE(proxy.sceneReferred, src.sceneReferred);
+    QCOMPARE(proxy.white, src.white);
+    QCOMPARE(proxy.cam.valid, src.cam.valid);
+    QCOMPARE(proxy.cam.asShotMul[0], src.cam.asShotMul[0]);
+    QCOMPARE(proxy.cam.asShotMul[2], src.cam.asShotMul[2]);
+    /* renderScale is the one field that SHOULD change: the downscale is what changes it. */
+    QVERIFY(proxy.renderScale < src.renderScale);
 }
 
 QTEST_MAIN(TestRenderStack)

@@ -120,6 +120,26 @@ struct EditParams {
     float calGreenHue = 0.0f, calGreenSat = 0.0f;
     float calBlueHue  = 0.0f, calBlueSat  = 0.0f;
 
+    /* The VIEW TRANSFORM (the first row of the Basic panel) -- how scene-linear data is
+       mapped to a
+       displayable range. An OutputTransform::ViewTransform cast to int: 0 = Filmic (the
+       default look), 1 = AgX, 2 = None. Stored as an int for the same reason wbPreset
+       is: it rides the existing int machinery (sanitizeParams clamp, kIntFields, the
+       preset round trip) instead of being the first non-scalar field in EditParams.
+
+       NOT A DEVELOP OP. Every other field here is consumed by Develop::Apply; this one
+       is consumed by OutputTransform, three stages later. It lives in EditParams anyway
+       because it has to persist to the sidecar, travel in a preset and propagate across
+       a multi-image selection like any other adjustment.
+
+       It applies to the WHOLE IMAGE, not to a mask: only scope 0 (Global) is read. See
+       "THE VIEW TRANSFORM" in notes/Documentation.txt.
+
+       Values are a PUBLISHED FORMAT once written to a sidecar -- add freely, never
+       renumber. Identity is Filmic (0), which is what every render did before the
+       transform became selectable. */
+    int   viewTransform = 0;
+
     /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
        each ADDS a chroma tint of the given hue at the given saturation and NUDGES that
@@ -251,6 +271,7 @@ struct EditParams {
             p.toneShadowCenter = def.toneShadowCenter;
             p.toneCrossover = def.toneCrossover;
             p.toneHighlightCenter = def.toneHighlightCenter;
+            p.viewTransform = def.viewTransform;
             break;
         case Group::Curves:
             /* Every channel back to the diagonal. The tone splits are NOT reset here:
@@ -325,6 +346,7 @@ struct EditParams {
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&
                calBlueHue == 0.0f && calBlueSat == 0.0f &&
+               viewTransform == 0 &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
                gradeShadowSat == 0.0f && gradeShadowLum == 0.0f &&
                gradeMidSat == 0.0f && gradeMidLum == 0.0f &&

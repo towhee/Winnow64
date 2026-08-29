@@ -165,6 +165,12 @@ void Metadata::initSupportedFiles()
                         << "rw2"
                         << "sr2"
                         << "tif"
+                        /* HEIC was missing: iPhone files are Display P3 and were being
+                           rendered as sRGB (visibly undersaturated) because nothing here
+                           opted them into colour management. Heic::colrBox now captures
+                           the profile -- see the note there. */
+                        << "heic"
+                        << "hif"
                            ;
 
     noMetadataFormats   << "bmp"
