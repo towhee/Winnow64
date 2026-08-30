@@ -428,6 +428,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->fullScreenDocks.isFilters = v.toBool();
     }
 
+    if (source == "fullScreenShowCatalog") {
+        mw->fullScreenDocks.isCatalog = v.toBool();
+    }
+
     if (source == "fullScreenShowMetadata") {
         mw->fullScreenDocks.isMetadata = v.toBool();
     }
@@ -1546,6 +1550,19 @@ void Preferences::addFullScreen()
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isFilters;
     i.key = "fullScreenShowFilters";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show catalog
+    i.name = "fullScreenShowCatalog";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show catalog";
+    i.tooltip = "When you switch to full screen show the catalog dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isCatalog;
+    i.key = "fullScreenShowCatalog";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

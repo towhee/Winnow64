@@ -100,6 +100,7 @@ void MW::reportWorkspaceState()
              << "\nisFolderDockVisible" << w.isFolderDockVisible
              << "\nisFavDockVisible" << w.isFavDockVisible
              << "\nisFilterDockVisible" << w.isFilterDockVisible
+             << "\nisCatalogDockVisible" << w.isCatalogDockVisible
              << "\nisMetadataDockVisible" << w.isMetadataDockVisible
              << "\nisEmbelDockVisible" << w.isEmbelDockVisible
              << "\nisDevelopDockVisible" << w.isDevelopDockVisible
@@ -339,6 +340,7 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isFolders = " << G::s(fullScreenDocks.isFolders);
     rpt << "\n" << "fullScreenDocks.isFavs = " << G::s(fullScreenDocks.isFavs);
     rpt << "\n" << "fullScreenDocks.isFilters = " << G::s(fullScreenDocks.isFilters);
+    rpt << "\n" << "fullScreenDocks.isCatalog = " << G::s(fullScreenDocks.isCatalog);
     rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isMetadata);
     rpt << "\n" << "fullScreenDocks.isDevelop = " << G::s(fullScreenDocks.isDevelop);
     rpt << "\n" << "fullScreenDocks.isHistory = " << G::s(fullScreenDocks.isHistory);

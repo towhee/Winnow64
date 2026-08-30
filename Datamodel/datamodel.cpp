@@ -254,6 +254,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email")); horizontalHeaderItem(G::EmailColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::KeywordPathsColumn, new QStandardItem("KeywordPaths")); horizontalHeaderItem(G::KeywordPathsColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataReadingColumn, new QStandardItem("Meta Reading")); horizontalHeaderItem(G::MetadataReadingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataStatusColumn, new QStandardItem("Meta Status")); horizontalHeaderItem(G::MetadataStatusColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
@@ -996,6 +997,134 @@ void DataModel::addFolder(const QString &folderPath)
     }
 }
 
+void DataModel::addPaths(const QStringList &fPaths)
+{
+/*
+    Load an arbitrary set of image paths as ONE virtual folder -- the catalog search
+    result. See notes/Documentation.txt "The Catalog (Cross-folder Search)".
+
+    WHY THIS EXISTS ALONGSIDE addFolder. Everything else that fills the model starts from
+    a directory: the folder queue's unit is a folder, and addFolder enumerates one. A
+    search result is a list of files that may come from a hundred different folders, so
+    there is no directory to enumerate. What it must NOT be is a special kind of model --
+    the point of loading results into the datamodel is that the grid, the loupe, filters,
+    sorting, ratings and Develop all work on them exactly as on a folder.
+
+    EVERY DISTINCT PARENT FOLDER IS REGISTERED in folderList / folderSet /
+    folderImageCount. Those are what the Folders filter category, removeFolder and
+    isFolderLoaded all read; leaving them empty would give a model whose rows belong to no
+    folder at all, and removeFolder would silently find nothing to remove.
+
+    THE CALLER HAS ALREADY STOPPED the previous load and reset the caches (see
+    MW::loadCatalogResults) -- this is the model half only.
+*/
+    QString fun = "DataModel::addPaths";
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, QString::number(fPaths.size()) + " paths");
+
+    QMutexLocker locker(&dmMutex);
+    abort = false;
+    loadingModel = true;
+    locker.unlock();
+
+    /* Same proxy bracket as scheduleProcessing, and needed for the same reason: the one
+       wide dataChanged below would otherwise make the sorted proxy re-sort the inserted
+       block (Z-A if the retained sort order is descending). restoreProxySortAfterLoad
+       puts it back in one pass, in source order. */
+    if (G::useBatchedFolderInsert && !sfSortDisabledForLoad) {
+        sfSortDisabledForLoad = true;
+        sf->setDynamicSortFilter(false);
+    }
+
+    /* The catalog is an index, not a guarantee: a row can name a file that has since been
+       deleted or is on an unmounted volume. sweep() demotes those, but only when it has
+       run since, so the existence check happens here as well -- offering a result that
+       cannot be opened is worse than quietly returning fewer. */
+    QList<QFileInfo> infos;
+    infos.reserve(fPaths.size());
+    for (const QString &fPath : fPaths) {
+        if (abort) break;
+        const QFileInfo fi(fPath);
+        if (!fi.exists() || !fi.isFile()) continue;
+        if (fi.size() == 0) continue;
+        const QString suffix = fi.suffix().toLower();
+        if (!supportedExtSet.contains(suffix)) continue;
+        infos.append(fi);
+    }
+    if (abort) {
+        endLoad(false);
+        restoreProxySortAfterLoad();
+        emit folderChange(abort);
+        return;
+    }
+
+    /* Same ordering rule as addFolder, and for the same reason: with Combine Raw+Jpg on,
+       the raw of a pair must precede its JPG or addFileDataForRow cannot pair them. */
+    if (combineRawJpg)
+        std::sort(infos.begin(), infos.end(), lessThanCombineRawJpg);
+    else
+        std::sort(infos.begin(), infos.end(), lessThan);
+
+    /* One structural insert for the whole result set, cells filled with signals blocked
+       and a single dataChanged for the range -- the batched path from addFolder. A
+       result set is routinely thousands of rows from many folders, which is exactly the
+       shape that made per-row signals the folder-load bottleneck. */
+    int row = rowCount();
+    const int first = row;
+    QList<QFileInfo> valid;
+    valid.reserve(infos.size());
+    for (const QFileInfo &fi : infos) {
+        if (abort) break;
+        if (fPathRowContains(fi.filePath())) continue;   // already loaded
+        valid.append(fi);
+    }
+    if (abort) {
+        endLoad(false);
+        restoreProxySortAfterLoad();
+        emit folderChange(abort);
+        return;
+    }
+
+    if (!valid.isEmpty()) {
+        setRowCount(row + valid.size());
+        if (!columnCount()) setColumnCount(G::TotalColumns);
+        {
+            const QSignalBlocker blocker(this);
+            for (const QFileInfo &fi : valid) {
+                addFileDataForRow(row, fi);
+                row++;
+            }
+        }
+        emit dataChanged(index(first, 0), index(row - 1, columnCount() - 1));
+    }
+
+    /* Register the folders the results came from. */
+    {
+        QMutexLocker lk(&dmMutex);
+        for (const QFileInfo &fi : valid) {
+            const QString folder = fi.absoluteDir().path();
+            if (!folderSet.contains(folder)) {
+                folderList.append(folder);
+                folderSet.insert(folder);
+            }
+            folderImageCount[folder] = folderImageCount.value(folder) + 1;
+        }
+    }
+
+    if (first == 0 && rowCount() > 0) {
+        firstFolderPathWithImages = valid.isEmpty() ? QString()
+                                                    : valid.first().absoluteDir().path();
+        setCurrent(index(0, 0), instance);
+    }
+
+    endLoad(true);
+    restoreProxySortAfterLoad();
+    /* The same signal a folder load ends with, so MW::folderChanged and then
+       folderChangeCompleted run unchanged -- which is what starts MetaRead, the icon
+       chunks and the catalog commit for this set. */
+    emit folderChange(abort);
+}
+
 void DataModel::removeFolder(const QString &folderPath)
 {
     QString fun = "DataModel::removeFolder";
@@ -1373,6 +1502,79 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     return true;
 }
 
+QVector<CatalogRow> DataModel::catalogRows() const
+{
+/*
+    Every fully-read row of this model, as plain values for the catalog.
+
+    ONE PASS ON THE GUI THREAD, then the result travels to a pool thread to be inserted.
+    QStandardItemModel is not thread-safe and the folder the user is looking at is live,
+    so the copy is the price of not doing SQL on the GUI thread. At a few hundred bytes a
+    row it is cheap next to the metadata read that just finished.
+
+    ROWS THAT ARE NOT MetaLoaded ARE SKIPPED. A row still being read has empty keywords
+    and no title, and cataloguing that is worse than cataloguing nothing: the freshness
+    stamp would match on the next visit, so the blank entry would be treated as current
+    and the image would stay wrong in search results until its file changed on disk.
+*/
+    if (G::isLogger) G::log("DataModel::catalogRows");
+
+    QVector<CatalogRow> rows;
+    const int n = rowCount();
+    rows.reserve(n);
+
+    for (int row = 0; row < n; ++row) {
+        if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) continue;
+
+        const QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
+        if (fPath.isEmpty()) continue;
+        /* Videos have no keywords or camera metadata worth searching, and the catalog is
+           a photo index. */
+        if (index(row, G::VideoColumn).data().toBool()) continue;
+
+        CatalogRow r;
+        r.path = fPath;
+        const QFileInfo fi(fPath);
+        r.folder = fi.absoluteDir().path();
+        r.filename = fi.fileName();
+        r.ext = fi.suffix().toLower();
+        r.srcSize = index(row, G::ByteSizeColumn).data().toLongLong();
+        r.srcMtime = index(row, G::ModifiedColumn).data().toDateTime().toSecsSinceEpoch();
+
+        /* The sidecar's timestamp is what makes a keyword edited in Lightroom -- which
+           rewrites the .xmp and never touches the raw -- reindex the next time this
+           folder is opened. SidecarColumn was set during the file scan, so the stat below
+           is paid only by images that actually have one. */
+        if (index(row, G::SidecarColumn).data().toBool()) {
+            const QFileInfo si(metadata->sidecarPath(fPath));
+            if (si.exists()) r.sidecarMtime = si.lastModified().toSecsSinceEpoch();
+        }
+
+        r.captured = index(row, G::CreatedColumn).data().toDateTime();
+        r.rating = index(row, G::RatingColumn).data().toString().toInt();
+        r.label = index(row, G::LabelColumn).data().toString();
+        r.pick = index(row, G::PickColumn).data().toString() == "Picked";
+        r.title = index(row, G::TitleColumn).data().toString();
+        r.creator = index(row, G::CreatorColumn).data().toString();
+        r.copyright = index(row, G::CopyrightColumn).data().toString();
+        r.make = index(row, G::CameraMakeColumn).data().toString();
+        r.model = index(row, G::CameraModelColumn).data().toString();
+        r.lens = index(row, G::LensColumn).data().toString();
+        r.iso = index(row, G::ISOColumn).data().toInt();
+        r.aperture = index(row, G::ApertureColumn).data().toDouble();
+        r.shutter = index(row, G::ShutterspeedColumn).data().toDouble();
+        r.focalLength = index(row, G::FocalLengthColumn).data().toDouble();
+        r.width = index(row, G::WidthColumn).data().toInt();
+        r.height = index(row, G::HeightColumn).data().toInt();
+        r.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
+        r.keywords = index(row, G::KeywordsColumn).data().toStringList();
+        r.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
+
+        rows.append(r);
+    }
+    return rows;
+}
+
 ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 {
 /*
@@ -1482,6 +1684,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.focusY = index(row, G::FocusYColumn).data().toFloat();
     m.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
     m.keywords = index(row, G::KeywordsColumn).data().toStringList();
+    m.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
     m.duration = index(row, G::DurationColumn).data().toString();
 
@@ -1908,6 +2111,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::KeywordsColumn), QVariant(m.keywords));
     setData(index(row, G::KeywordsColumn), Utilities::stringListToString(m.keywords), Qt::ToolTipRole);
     search += Utilities::stringListToString(m.keywords);
+    setData(index(row, G::KeywordPathsColumn), QVariant(m.keywordPaths));
+    setData(index(row, G::KeywordPathsColumn), Utilities::stringListToString(m.keywordPaths), Qt::ToolTipRole);
+    /* Ancestor names are only in the hierarchical form, so folding it into the search
+       text is what lets a search for "Wildlife" find an image keyworded only "Heron". */
+    search += Utilities::stringListToString(m.keywordPaths);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
@@ -4237,6 +4445,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("foxusY", dots) << G::s(index(row, G::FocusYColumn).data());
     rpt << "\n  " << G::sj("gpsCoord", dots) << G::s(index(row, G::GPSCoordColumn).data());
     rpt << "\n  " << G::sj("keywords", dots) << G::s(index(row, G::KeywordsColumn).data());
+    rpt << "\n  " << G::sj("keywordPaths", dots) << G::s(index(row, G::KeywordPathsColumn).data());
     rpt << "\n  " << G::sj("title", dots) << G::s(index(row, G::TitleColumn).data());
     rpt << "\n  " << G::sj("_title", dots) << G::s(index(row, G::_TitleColumn).data());
     rpt << "\n  " << G::sj("creator", dots) << G::s(index(row, G::CreatorColumn).data());

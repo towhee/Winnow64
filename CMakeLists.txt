@@ -96,8 +96,8 @@ if(APPLE AND NOT TARGET WrapOpenGL::WrapOpenGL)
     target_link_libraries(WrapOpenGL::WrapOpenGL INTERFACE "-framework OpenGL")
 endif()
 
-# Sql: the local index database (Cache/cachedb.cpp) behind the develop preview cache,
-# via the QSQLITE driver. macdeployqt/windeployqt copy the sqldrivers plugin themselves.
+# Sql: the local index database (Cache/cachedb.cpp) behind the develop preview cache
+# and the catalog, via the QSQLITE driver. macdeployqt/windeployqt copy the sqldrivers plugin themselves.
 find_package(Qt6 REQUIRED COMPONENTS
     Core Widgets Multimedia MultimediaWidgets Concurrent Svg Test Network Sql
 )
@@ -111,6 +111,7 @@ set(WINNOW_SOURCES
     # Cache
     Cache/cachedata.cpp
     Cache/cachedb.cpp
+    Cache/catalog.cpp
     Cache/devpreviewcache.cpp
     Cache/framedecoder.cpp
     Cache/imagecache.cpp
@@ -293,6 +294,7 @@ set(WINNOW_SOURCES
     Log/log.cpp
 
     # Main
+    Main/catalogscanner.cpp
     Main/devpreviewbuilder.cpp
     Main/diagnostics.cpp
     Main/dockwidget.cpp
@@ -376,6 +378,7 @@ set(WINNOW_SOURCES
     Views/iconviewdelegate.cpp
     Views/imageview.cpp
     Views/infostring.cpp
+    Views/catalogview.cpp
     Views/infoview.cpp
     Views/tableview.cpp
     Views/videoview.cpp
@@ -387,7 +390,9 @@ set(WINNOW_SOURCES
 # -----------------------------------------------------------------------------
 set(WINNOW_HEADERS
     Cache/cachedata.h
+    Cache/catalog.h
     Cache/devpreviewcache.h
+    Cache/mountsnapshot.h
     Cache/framedecoder.h
     Cache/imagecache.h
     Cache/imagedecoder.h
@@ -552,6 +557,7 @@ set(WINNOW_HEADERS
 
     Main/dockwidget.h
     Main/global.h
+    Main/catalogscanner.h
     Main/mainwindow.h
     Main/qtlocalpeer.h
     Main/qtlockedfile.h
@@ -571,6 +577,7 @@ set(WINNOW_HEADERS
     Metadata/rapidxml.h
     Metadata/rapidxml_print_rgh.h
     Metadata/xmp.h
+    Metadata/xmpapply.h
 
     PropertyEditor/preferences.h
     PropertyEditor/propertydelegate.h
@@ -617,6 +624,7 @@ set(WINNOW_HEADERS
     Views/iconviewdelegate.h
     Views/imageview.h
     Views/infostring.h
+    Views/catalogview.h
     Views/infoview.h
     Views/tableview.h
     Views/videoview.h

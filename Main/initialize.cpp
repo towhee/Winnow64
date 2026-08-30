@@ -395,6 +395,47 @@ void MW::createMetaRead()
     metaRead->metaReadThread.start();
 }
 
+void MW::createCatalogScanner()
+{
+/*
+    The background scan over the user's designated roots. It owns its own low-priority
+    thread (Main/catalogscanner.h), so nothing here belongs on the GUI thread but the
+    signal wiring.
+*/
+    if (G::isLogger) G::log("MW::createCatalogScanner");
+
+    catalogScanner = new CatalogScanner;
+
+    connect(catalogScanner, &CatalogScanner::progress, this,
+            [this](int done, int total) {
+                if (progress && total > 0)
+                    progress->updateProgress(progressCatalogRow, done, total,
+                                             QColor("#3fa8a0"));
+            }, Qt::QueuedConnection);
+
+    connect(catalogScanner, &CatalogScanner::finished, this,
+            [this](int scanned, int indexed, bool aborted) {
+                Q_UNUSED(scanned)
+                if (progress) progress->clearProgress(progressCatalogRow);
+                if (catalogView) catalogView->setScanning(false);
+                /* The row already said it was happening and the panel shows the result,
+                   so a background scan finishes silently -- the same rule the devPreview
+                   build follows. Only the counts the user can act on are surfaced, and
+                   those are in the Catalog panel. */
+                if (catalogView && catalogDock && catalogDock->isVisible())
+                    catalogView->refresh();
+                if (G::isLogger)
+                    G::log("MW::createCatalogScanner",
+                           "catalog scan finished, indexed = " +
+                           QString::number(indexed) +
+                           (aborted ? " (stopped early)" : ""));
+            }, Qt::QueuedConnection);
+
+    connect(catalogScanner, &CatalogScanner::status, this, [this](const QString &msg) {
+        if (progress) progress->setRowText(progressCatalogRow, msg);
+    }, Qt::QueuedConnection);
+}
+
 void MW::createImageCache()
 {
     if (G::isLogger) G::log("MW::createImageCache");
@@ -1179,6 +1220,12 @@ void MW::createStatusBar()
     progressDevPreviewRow = progress->addRow("DevPreview", 2, QColor("#8f7fd1"),
                                              Progress::Fill::FromStart);
     progress->setRowText(progressDevPreviewRow, "Dev Previews");
+    /* The background catalog scan over the user's designated roots. Minutes to hours of
+       reading the user is not waiting on, so it reports here beside the other background
+       work rather than under a popup. Teal: unclaimed by the rows above. */
+    progressCatalogRow = progress->addRow("Catalog", 2, QColor("#3fa8a0"),
+                                          Progress::Fill::FromStart);
+    progress->setRowText(progressCatalogRow, "Catalog");
     connect(progress, &Progress::clicked, this, [this]() {
         preferences("CacheHeader");
     });
@@ -1599,6 +1646,98 @@ void MW::createFilterDock()
     QFrame *frame = new QFrame;
     frame->setLayout(filterLayout);
     filterDock->setWidget(frame);
+}
+
+void MW::createCatalogDock()
+{
+/*
+    The Catalog dock -- search every image Winnow has catalogued, not just the folder
+    that is loaded. See notes/Documentation.txt "The Catalog (Cross-folder Search)".
+
+    Its results are LOADED rather than filtered, so it is a sibling of the Folders and
+    Bookmarks docks (things that put images in the model) as much as of Filters (which
+    narrows what is already there). It is tabbed with them on the left for that reason.
+*/
+    if (G::isLogger) G::log("MW::createCatalogDock");
+
+    catalogDockTabText = "Catalog";
+    dockTextNames << catalogDockTabText;
+    catalogDock = new DockWidget(catalogDockTabText, "CatalogDock", this);
+
+    QHBoxLayout *catalogTitleLayout = new QHBoxLayout();
+    catalogTitleLayout->setContentsMargins(0, 0, 0, 0);
+    catalogTitleLayout->setSpacing(0);
+    catalogTitleBar = new DockTitleBar("Catalog", catalogTitleLayout);
+    catalogDock->setTitleBarWidget(catalogTitleBar);
+    catalogTitleBar->setToolTip(dockTabToolTip(catalogDockTabText));
+    connect(catalogDock, &DockWidget::focus, this, &MW::focusOnDock);
+
+    // refresh button -- re-read the keyword facets and the catalog size
+    BarBtn *catalogRefreshBtn = new BarBtn();
+    catalogRefreshBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
+    catalogRefreshBtn->setToolTip("Update the catalog keyword list");
+    connect(catalogRefreshBtn, &BarBtn::clicked, this, [this]{ catalogView->refresh(); });
+    catalogTitleLayout->addWidget(catalogRefreshBtn);
+
+    catalogTitleLayout->addSpacing(10);
+
+    BarBtn *catalogGearBtn = new BarBtn();
+    catalogGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
+    catalogGearBtn->setToolTip("Preferences");
+    connect(catalogGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
+    catalogTitleLayout->addWidget(catalogGearBtn);
+
+    catalogTitleLayout->addSpacing(10);
+
+    if (G::useDWCollapse) {
+        BarBtn *catalogCollapseBtn = new BarBtn();
+        catalogCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        catalogCollapseBtn->setToolTip("Collapse panel.");
+        connect(catalogCollapseBtn, &BarBtn::clicked, catalogDock,
+                &DockWidget::toggleCollapsed);
+        connect(catalogDock, &DockWidget::collapsedChanged, catalogCollapseBtn,
+                [catalogCollapseBtn](bool c){
+                    catalogCollapseBtn->setIcon(
+                        QIcon(c ? ":/images/icon16/expand.png"
+                                : ":/images/icon16/collapse.png"));
+                    catalogCollapseBtn->setToolTip(c ? "Expand panel."
+                                                    : "Collapse panel.");
+                });
+        catalogTitleLayout->addWidget(catalogCollapseBtn);
+        catalogTitleLayout->addSpacing(10);
+    }
+
+    BarBtn *catalogCloseBtn = new BarBtn();
+    catalogCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    catalogCloseBtn->setToolTip("Hide the Catalog Panel");
+    connect(catalogCloseBtn, &BarBtn::clicked, this, &MW::closeCatalogDock);
+    catalogTitleLayout->addWidget(catalogCloseBtn);
+
+    catalogTitleLayout->addSpacing(5);
+
+    catalogView = new CatalogView;
+    catalogDock->setWidget(catalogView);
+
+    /* The view never touches the datamodel: it reports paths, MW decides what loading
+       them means (the same reset a folder change does). */
+    connect(catalogView, &CatalogView::loadResults, this, &MW::loadCatalogResults);
+
+    /* MW owns the root list and its persistence; the view is only the editor. */
+    catalogView->setRoots(catalogRoots, catalogRootsRecurse);
+    connect(catalogView, &CatalogView::rootsChanged, this,
+            [this](const QStringList &roots, bool recurse) {
+                catalogRoots = roots;
+                catalogRootsRecurse = recurse;
+            });
+    connect(catalogView, &CatalogView::scanRequested, this, &MW::startCatalogScan);
+    connect(catalogView, &CatalogView::stopScanRequested, this, &MW::stopCatalogScan);
+
+    /* Refresh the facets when the dock is actually shown, rather than on every folder
+       load: rebuilding the keyword tree is a query plus a tree build, and it is only
+       worth doing for a panel someone is looking at. */
+    connect(catalogDock, &QDockWidget::visibilityChanged, this, [this](bool visible){
+        if (visible) catalogView->refresh();
+    });
 }
 
 void MW::createMetadataDock()
@@ -3187,6 +3326,7 @@ void MW::createDocks()
     createFolderDock();
     createFavDock();
     createFilterDock();
+    createCatalogDock();
     if (G::useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
@@ -3199,6 +3339,7 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
+    addDockWidget(Qt::LeftDockWidgetArea, catalogDock);
     if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
@@ -3210,7 +3351,10 @@ void MW::createDocks()
     MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
-    if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
+    /* Catalog sits beside Filters: both answer "which images?", one over what is
+       loaded and one over everything indexed. */
+    MW::tabifyDockWidget(filterDock, catalogDock);
+    if (G::useInfoView) MW::tabifyDockWidget(catalogDock, metadataDock);
     /* Do NOT tabify the LEFT-area metadataDock with the RIGHT-area embelDock: that cross-area
        tabify drags embel (and the develop dock tabbed onto it below) into the LEFT group, so
        every dock ends up crammed in one left tab group. There the raised develop tab can't get
@@ -3227,8 +3371,8 @@ void MW::createDocks()
     // Re-evaluate responsive dock tab titles when a dock is dragged between
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
-    for (DockWidget *d : {folderDock, favDock, filterDock, metadataDock, embelDock,
-                          developDock, historyDock, presetsDock}) {
+    for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, metadataDock,
+                          embelDock, developDock, historyDock, presetsDock}) {
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
         /* WORK IN PROGRESS - DISABLED.
@@ -3249,6 +3393,7 @@ void MW::createDocks()
     wireSolo(folderDock);
     wireSolo(favDock);
     wireSolo(filterDock);
+    wireSolo(catalogDock);
     if (G::useInfoView) wireSolo(metadataDock);
     wireSolo(thumbDock);
     wireSolo(embelDock);

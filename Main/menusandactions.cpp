@@ -1603,6 +1603,20 @@ void MW::createWindowActions()
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
+    catalogDockVisibleAction = new QAction(tr("Catalog Panel"), this);
+    catalogDockVisibleAction->setObjectName("toggleCatalog");
+    catalogDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    catalogDockVisibleAction->setCheckable(true);
+    if (isSettings && settings->contains("isCatalogDockVisible")) {
+        catalogDockVisibleAction->setChecked(
+            settings->value("isCatalogDockVisible").toBool());
+    }
+    /* Off by default: it is a new panel, and an empty catalog has nothing to say until
+       the user has opened a folder or two. */
+    else catalogDockVisibleAction->setChecked(false);
+    addAction(catalogDockVisibleAction);
+    connect(catalogDockVisibleAction, &QAction::triggered, this, &MW::showCatalogDock);
+
     metadataDockVisibleAction = new QAction(tr("Metadata Panel"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
@@ -2352,6 +2366,7 @@ void MW::createViewMenu()
     viewMenu->addAction(folderDockVisibleAction);
     viewMenu->addAction(favDockVisibleAction);
     viewMenu->addAction(filterDockVisibleAction);
+    viewMenu->addAction(catalogDockVisibleAction);
     viewMenu->addAction(metadataDockVisibleAction);
     viewMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
@@ -2415,6 +2430,7 @@ void MW::createWindowMenu()
     windowMenu->addAction(folderDockVisibleAction);
     windowMenu->addAction(favDockVisibleAction);
     windowMenu->addAction(filterDockVisibleAction);
+    windowMenu->addAction(catalogDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
@@ -3125,6 +3141,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[folderDockVisibleAction->objectName()] = folderDockVisibleAction;
     actionKeys[favDockVisibleAction->objectName()] = favDockVisibleAction;
     actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
+    actionKeys[catalogDockVisibleAction->objectName()] = catalogDockVisibleAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
     actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
     //    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
@@ -3277,6 +3294,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 
         filterSearchAction->setShortcut(QKeySequence("F2"));
+        /* Shift+F2 = "search everywhere" beside F2 = "search here". The dock
+           F-keys F3-F9 are taken, and pairing it with the in-folder search
+           says what it does better than the next free F-key would. */
+        catalogDockVisibleAction->setShortcut(QKeySequence("Shift+F2"));
 
         filterRating1Action->setShortcut(QKeySequence("Shift+1"));
         filterRating2Action->setShortcut(QKeySequence("Shift+2"));

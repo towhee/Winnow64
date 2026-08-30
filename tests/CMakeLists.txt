@@ -21,6 +21,9 @@ set(WINNOW_CORE_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/Cache/devpreviewcache.cpp
     # The develop preview index lives in the shared local index database.
     ${CMAKE_SOURCE_DIR}/Cache/cachedb.cpp
+    # The catalog is the database's second tenant, and tst_devpreview's fixtures share a
+    # file with it, so the closure carries both.
+    ${CMAKE_SOURCE_DIR}/Cache/catalog.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/inputdlg.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/popup.cpp
     ${CMAKE_SOURCE_DIR}/Main/global.cpp
@@ -201,6 +204,17 @@ winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp
 winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/metareport.cpp)
+# tst_xmpkeywords compiles Metadata/xmp.cpp. It pins the keyword read that every raw
+# format used to miss: dc:subject reached only the JPEG/PNG parsers, and Lightroom's
+# lr:hierarchicalSubject was not in the vocabulary at all. Also covers the shared
+# Metadata/xmpapply.h that replaced eight copies of the same XMP block.
+winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
+# tst_catalog covers the catalog tables in the shared index database (schema 3).
+# Catalog.cpp is already in WINNOW_CORE_TEST_SOURCES, so no extra source is needed.
+# Several cases test the BOUNDARY with the devPreview tenant: the migration must not
+# disturb devpreview rows, and clearing one tenant must not clear the other.
+winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest

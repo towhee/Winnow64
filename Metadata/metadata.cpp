@@ -1187,6 +1187,17 @@ bool Metadata::parseSidecar()
     s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
     s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
     s = xmp.getItem("orientation"); if (!s.isEmpty()) {m.orientation = s.toInt(); m._orientation = s.toInt();}
+
+    /* KEYWORDS. This is the only route by which keywords reach a raw file: Lightroom
+       does not write into a NEF, CR2, ARW or RW2, it writes a .xmp beside it, so a
+       sidecar read that skipped dc:subject -- as this one did -- lost every keyword the
+       user had ever applied to their raw library.
+
+       Unlike the scalars above these are NOT guarded on isEmpty(). An empty list in a
+       sidecar that is otherwise newer means the keywords were REMOVED, and honouring
+       that is the whole point of the newer-wins rule this function already applies. */
+    m.keywords = xmp.getItemList("subject");
+    m.keywordPaths = xmp.getItemList("hierarchicalsubject");
     /*
     qDebug() << "Metadata::parseSidecar" << s << sidecarPath;
     //*/
@@ -1261,6 +1272,7 @@ void Metadata::clearMetadata()
     m.focusY = -1;
     m.gpsCoord = "";
     m.keywords.clear();
+    m.keywordPaths.clear();
     m.title = "";
     m.lens = "";
     m.creator = "";

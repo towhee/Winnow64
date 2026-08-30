@@ -11,12 +11,17 @@
 
     WHAT LIVES HERE
 
-    Today: the develop-preview index (Cache/devpreviewcache.cpp, table devpreview). It is
-    deliberately not called "the preview database": the schema is versioned and additive,
-    and the next tenant is expected to be indexed keywords, which want their own tables
-    (keyword, image_keyword, very likely an FTS5 index over them) in the SAME file so that
-    a keyword search and a preview lookup are one connection, one transaction boundary and
-    one thing to back up, clear or repair.
+    Two tenants, which is why it is deliberately not called "the preview database":
+
+      o the develop-preview index (Cache/devpreviewcache.cpp, table devpreview)
+      o the catalog (Cache/catalog.cpp, tables image / keyword / image_keyword and the
+        image_fts full-text index), added at schema 3
+
+    They share this file rather than having one each so that a keyword search and a
+    preview lookup are one connection, one transaction boundary, and one thing to back
+    up, clear or repair. Their tables do not reference each other, but both key on the
+    same normalised path (Cache/pathkey.h), so a row in one can always be matched to a
+    row in the other.
 
     NOTHING IRREPLACEABLE GOES IN HERE. Everything in this file is derived from the images
     and their sidecars, so losing it costs re-rendering and re-scanning, never data. That
@@ -35,8 +40,8 @@
 
     SQLite gives an indexed lookup instead of a hash of every path, an O(1) write instead
     of a full rewrite, real transactions, and -- the reason that matters most here -- a
-    file format that survives being extended. Keywords can be added as tables next year
-    without touching how previews are stored.
+    file format that survives being extended -- which is exactly what happened: the
+    catalog's tables were added at schema 3 without touching how previews are stored.
 
     THREADING
 

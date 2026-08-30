@@ -164,6 +164,12 @@ void MW::setFilterDockVisibility()
     filterDock->setVisible(filterDockVisibleAction->isChecked());
 }
 
+void MW::setCatalogDockVisibility()
+{
+    if (G::isLogger) G::log("MW::setCatalogDockVisibility");
+    catalogDock->setVisible(catalogDockVisibleAction->isChecked());
+}
+
 void MW::setMetadataDockVisibility()
 {
     if (G::isLogger) G::log("MW::setMetadataDockVisibility");
@@ -284,6 +290,11 @@ void MW::closeFilterDock()
     filterDock->setVisible(false);
     filterDockVisibleAction->setChecked(false);
 }
+void MW::closeCatalogDock()
+{
+    catalogDock->setVisible(false);
+    catalogDockVisibleAction->setChecked(false);
+}
 void MW::closeMetadataDock()
 {
     metadataDock->setVisible(false);
@@ -329,6 +340,23 @@ void MW::showFavDock() {
         favDock->raise();
         favDockVisibleAction->setChecked(true);
     }
+}
+
+void MW::showCatalogDock()
+/*
+    Show (or raise) the Catalog dock and put the cursor in its search box. Focusing the
+    box is the point of the shortcut: the user pressed it to search, and a panel that
+    appears with the cursor somewhere else just asks them to click.
+*/
+{
+    if (G::isLogger) G::log("MW::showCatalogDock");
+    if (G::isInitializing) return;
+
+    catalogDock->setVisible(true);
+    catalogDock->raise();
+    catalogDockVisibleAction->setChecked(true);
+    catalogView->refresh();
+    catalogView->focusSearch();
 }
 
 void MW::showFilterDock()
