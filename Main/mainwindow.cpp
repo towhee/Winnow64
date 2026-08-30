@@ -8866,6 +8866,31 @@ int MW::currentImageIso() const
     return dm->sf->index(dm->currentSfRow, G::ISOColumn).data().toInt();
 }
 
+bool MW::rawDenoiseCleanBaseOk(const std::shared_ptr<const WorkingImage> &w)
+{
+/*
+    May w be used as the CLEAN side of the "Denoise raw" blend? The denoised side always
+    comes out of the raw decode as camera-native scene-linear pixels (RawColor::
+    ToCameraNative), and Develop::BlendRawDenoise adds a difference of the two -- so the
+    clean side has to be in that same colour state.
+
+    The WorkingImageCache is keyed by path alone and, despite what its header promises,
+    does not hold only camera-native raw decodes: Preview mode and the display-referred
+    paths (ImageDecoder::applyDevelop, MW::ensureWorkingImageNow) build a WorkingImage
+    from the 8-bit decoded QImage (InputTransform::FromImage -- working space, white
+    balanced, display-referred) and put THAT under the raw's path. Blending one of those
+    against a camera-native PMRID base tints the whole image, because the sensor's green
+    sits far above its red/blue until the white balance runs: the difference is dominated
+    by green and the render lands on a magenta (or green) cast.
+
+    So an entry that fails this test is not fixed up here -- it is dropped, and the decode
+    produces a fresh clean base of its own (outClean), which then replaces it in the
+    cache.
+*/
+    return w && w->isValid() && w->sceneReferred &&
+           w->space == ColorSpaceMath::ColorSpace::CameraNative;
+}
+
 std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
     const QString &fPath, const EditParams &base,
     const std::shared_ptr<const WorkingImage> &clean)
@@ -8937,8 +8962,9 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     std::shared_ptr<const WorkingImage> pmridCached =
         (developPmridKey == pkey && developPmridFull) ? developPmridFull : nullptr;
 
-    // clean base if the caller had one (may be null on select)
-    std::shared_ptr<const WorkingImage> src = clean;
+    /* Clean base if the caller had one (may be null on select) -- but only when it is in
+       the colour state the PMRID base will be in. See rawDenoiseCleanBaseOk. */
+    std::shared_ptr<const WorkingImage> src = rawDenoiseCleanBaseOk(clean) ? clean : nullptr;
     const EditParams b = base;
     developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
         /* Resolve both bases. The PMRID base and the clean base come from ONE decode
@@ -8946,8 +8972,10 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
            skips the decode and just re-blends. clean is taken from the caller, else
            WorkingImageCache, else the decode's outClean. */
         std::shared_ptr<const WorkingImage> pmrid = pmridCached;
-        std::shared_ptr<const WorkingImage> cleanBase =
-            src ? src : WorkingImageCache::instance().get(fPath);
+        std::shared_ptr<const WorkingImage> cached = WorkingImageCache::instance().get(fPath);
+        const bool cachedOk = rawDenoiseCleanBaseOk(cached);
+        std::shared_ptr<const WorkingImage> cleanBase = src ? src
+                                                            : (cachedOk ? cached : nullptr);
         // freshClean is published to WorkingImageCache if the decode produced it
         std::shared_ptr<const WorkingImage> freshClean;
         /* Diagnostic: the (k,b) tier PMRID used for THIS decode (captured right after the
@@ -9010,7 +9038,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                 developDenoiseInFlightKey.clear();
                 progress->clearProgress(progressRawDenoiseRow);
                 if (!dm || fPath != dm->currentFilePath) return;
-                if (freshClean && !WorkingImageCache::instance().contains(fPath))
+                if (freshClean && !rawDenoiseCleanBaseOk(
+                                      WorkingImageCache::instance().get(fPath)))
                     WorkingImageCache::instance().put(fPath, freshClean);
                 reportRawDenoiseUnavailable(fPath);
             });
@@ -9031,8 +9060,12 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                it so it can't re-publish a Winnow base the Apple render would ignore. */
             if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
             /* Publish the freshly-decoded clean base so renderDevelopPreview /
-               ensureDevelopWork reuse it, not trigger another scene-linear decode. */
-            if (freshClean && !WorkingImageCache::instance().contains(fPath))
+               ensureDevelopWork reuse it, not trigger another scene-linear decode. It
+               also REPLACES a display-referred entry left under this path by Preview
+               mode -- that entry is what the blend had to reject to get here, and
+               leaving it would send the next denoise straight back to it. */
+            if (freshClean &&
+                !rawDenoiseCleanBaseOk(WorkingImageCache::instance().get(fPath)))
                 WorkingImageCache::instance().put(fPath, freshClean);
             developPmridFull = pmrid;      // cache the full base for other amounts
             developPmridKey = pkey;
@@ -9884,6 +9917,17 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, done]() mutable {
         auto work = WorkingImageCache::instance().get(fPath);
+        /* A cached base is only usable here if it IS the sensor image. The cache is keyed
+           by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
+           typically 1024 px), so reusing it would render this image's export -- or its
+           devPreview, the thing the loupe shows at 100% -- from a thumbnail. Compare
+           against the CFA active area and decode again when the entry is nowhere near it;
+           half the long edge separates a preview from a sensor image (which lands on the
+           active area or the slightly smaller default crop) without being brittle. */
+        if (work && G::useRaw && m.rawInfo.isRaw && m.rawInfo.width > 0) {
+            const int sensorEdge = qMax(m.rawInfo.width, m.rawInfo.height);
+            if (qMax(work->width, work->height) * 2 < sensorEdge) work.reset();
+        }
         bool decodedHere = false;
         if (!work) {
             ImageDecoder dec(0, dm, metadata);

@@ -479,6 +479,25 @@ bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash)
                                             q.value(2).toLongLong());
 }
 
+QString DevPreviewCache::payloadPath(const QString &fPath) const
+{
+/*
+    See the header: where this image's payload lives, for the Develop diagnostics. No
+    recipe hash and no LRU touch -- this reports the mapping, not a cache hit.
+*/
+    if (fPath.isEmpty()) return QString();
+    QMutexLocker lk(&mutex);
+    auto *self = const_cast<DevPreviewCache *>(this);
+    QSqlDatabase db = self->dbLocked();
+    if (!db.isOpen()) return QString();
+
+    QSqlQuery q(db);
+    q.prepare("SELECT id FROM devpreview WHERE pathkey = ?");
+    q.addBindValue(cachePathKey(fPath));
+    if (!q.exec() || !q.next()) return QString();
+    return self->filePathLocked(q.value(0).toULongLong());
+}
+
 void DevPreviewCache::removeLocked(QSqlDatabase &db, const QString &key)
 {
 /*

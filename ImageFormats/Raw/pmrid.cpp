@@ -217,14 +217,31 @@ const char *kbSourceName(KBSource s)
    1) a DNG NoiseProfile baked into the file, 2) a measured per-model table, 3) blind
    per-image estimation from the CFA, 4) a generic full-frame table as a last-ditch guard
    (so we never denoise with nonsense coefficients when 1-3 all decline). */
+/* Is (k,b) a physically possible noise model? var = k*x + b lives in the white-normalised
+   [0,1] domain, so the variance at full scale (k + b) is a small fraction of 1 -- even a
+   very noisy high-ISO frame is well under 0.01. These bounds are deliberately loose (they
+   pass anything remotely sensor-like) and exist to catch values that are WRONG BY ORDERS
+   OF MAGNITUDE, which is what a misparsed tag looks like.
+
+   Not hypothetical: TiffWalk::Reader::reals() had no case for TIFF DOUBLE, so every DNG
+   NoiseProfile came back as the low 4 mantissa bytes read as an integer (k ~ 3.8e9). That
+   made cvt_k ~ 2.7e-13, which multiplies the image away to a constant before the net sees
+   it and then divides the result by 2.7e-13 -- the mosaic clamped to black and the render
+   came out magenta. A bad tier must FALL THROUGH to the next one, not denoise with it. */
+bool kbPlausible(double k, double b)
+{
+    return k > 0.0 && k <= 0.5 && b >= 0.0 && b <= 0.1 && std::isfinite(k) && std::isfinite(b);
+}
+
 KBSource resolveKB(const RawImage &raw, const QString &model, int iso, double &k, double &b)
 {
-    if (raw.hasNoiseProfile && raw.npScale > 0.0) {
+    if (raw.hasNoiseProfile && raw.npScale > 0.0 &&
+        kbPlausible(raw.npScale, raw.npOffset)) {
         k = raw.npScale; b = raw.npOffset;
         return KBSource::DngNoiseProfile;
     }
     if (modelKB(model, iso, k, b))   return KBSource::ModelTable;
-    if (estimateKB(raw, k, b))       return KBSource::BlindEstimate;
+    if (estimateKB(raw, k, b) && kbPlausible(k, b)) return KBSource::BlindEstimate;
     lookupKB(kA7R5, int(sizeof(kA7R5) / sizeof(kA7R5[0])), iso, k, b);
     return KBSource::GenericFallback;
 }

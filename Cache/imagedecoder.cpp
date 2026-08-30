@@ -373,8 +373,19 @@ bool ImageDecoder::load()
         the DataModel's per-file store (populated during the metadata read) via the
         lock-guarded getter -- cheaper and thread-safer than rebuilding the whole
         ImageMetadata, since UnpackCfa only consults rawInfo.
+
+        THE MODE GATE IS FOR THE BROWSE PATH ONLY, exactly as in applyDevelop() below:
+        Preview mode skips the demosaic to stay fast, but an INDEPENDENT decode is not the
+        user browsing -- it is the focus stacker, the exporter, or the devPreview builder
+        asking for this image's real pixels, and each of them wants the sensor image
+        whatever screen the user happens to be looking at. Gating them on operationMode
+        made the devPreview builder write the EMBEDDED PREVIEW whenever it swept outside
+        Develop: a 1024 px JPEG stored as the full-resolution preview the loupe then shows
+        at 100% instead of decoding the raw. G::useRaw still applies -- that one is a
+        deliberate user choice ("Edit: Raw" / the Decode Raw button), not transient UI
+        state, so honouring it keeps a preview consistent with what Develop would show.
     */
-    if (G::operationMode == G::OperationMode::Develop && G::useRaw) {
+    if ((isIndependent || G::operationMode == G::OperationMode::Develop) && G::useRaw) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
             /* Reuse an already-decoded clean base (e.g. one MW::ensureRawDenoise
                published on select) instead of repeating the costly

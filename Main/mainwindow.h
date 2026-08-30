@@ -626,6 +626,11 @@ private slots:
     std::shared_ptr<const WorkingImage> developRawDenoisedBase(
         const QString &fPath, const EditParams &base,
         const std::shared_ptr<const WorkingImage> &clean);
+    /* May w be the CLEAN side of the "Denoise raw" blend? Only a camera-native,
+       scene-linear WorkingImage may: the WorkingImageCache also holds display-referred
+       entries under a raw's path (Preview mode), and blending one of those against the
+       camera-native PMRID base casts the image magenta/green. See the definition. */
+    static bool rawDenoiseCleanBaseOk(const std::shared_ptr<const WorkingImage> &w);
     /* Compute the raw-denoised base for the current Global params OFF the GUI thread (developRenderPool),
        cache it (developDenoised), then repaint. Coalesced (one in flight); no-op if already current or
        already computing this key. Called from the settle path so a drag does not spawn many DNN runs. */

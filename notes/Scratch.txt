@@ -2599,3 +2599,14 @@ make the devPreview quality a preference
 
 Two unrelated pre-existing failures in the suite, untouched by this change: tst_localcontrast golden drift (~1e-4, consistent with the OpenCV 4.13 bump) and smoke_launch aborting on a qnumeric.h assert
 at startup
+
+At ISO 250 with this DNG's NoiseProfile, KSigma gives cvt_k = 14.6, which scales the net input to ~3746 and leaves the correction at ~0.15% — the denoise is effectively doing nothing on this file even
+when it works. That's inherent to reusing the OPPO anchor at low ISO, not a bug I've fixed. If you want low-ISO frames to actually denoise, that needs a decision (clamp cvt_k, or skip/grey the feature
+below some ISO) — say the word and I'll dig into it.
+
+Two things I'd note in the meantime. The guard from the first pass is worth keeping
+regardless — it's correct for the mismatch it covers — but it clearly wasn't your
+failure, and I should have instrumented before shipping a fix off static reading. And
+separately: at ISO 250 this file's KSigma cvt_k is 14.6, so even a fully working denoise
+changes it by ~0.15% — once the cast is fixed you'll likely find the feature does almost
+nothing here, which is its own conversation.
