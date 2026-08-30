@@ -177,6 +177,35 @@ struct EditParams {
     float denoiseLuma   = kDefaultDenoiseLuma;
     float denoiseChroma = kDefaultDenoiseChroma;
 
+    /*
+        WHETHER that denoise runs at all -- TRI-STATE, because the amounts above cannot
+        say it: their defaults are NON-ZERO, so "amount > 0" is true for every raw,
+        including one nobody has touched. Before this the intent lived only in
+        G::autoRunDenoise (a global preference) and in a session cache filled by the manual
+        "Denoise" checkbox, so a manual run was invisible to the exporter, to the devPreview
+        builder and to the next launch -- the loupe showed a denoised image while the stored
+        preview stayed clean and its recipe hash claimed the two matched.
+
+          -1  unset  follow the "Auto run" preference. THE DEFAULT, and omitted from the
+                     sidecar (see paramsToJson), so an untouched raw keeps the recipe --
+                     and therefore the devPreview key -- it has always had, and browsing a
+                     folder of raws in Develop still writes no sidecars.
+           0  off    not denoised, even with Auto run on.
+           1  on     denoised, even with Auto run off.
+
+        Read it through wantsDenoiseRaw(), never directly: every render site needs the
+        same unset -> preference fallback, and spelling that out per site is how they
+        drift apart.
+    */
+    int denoiseRaw = -1;
+
+    /* Does this recipe want the raw denoise? `autoRun` is the ambient preference
+       (G::autoRunDenoise), passed in rather than read here so EditParams stays free of
+       Main/global.h -- the unit tests and the standalone decoders include this header. */
+    bool wantsDenoiseRaw(bool autoRun) const {
+        return denoiseRaw >= 0 ? denoiseRaw > 0 : autoRun;
+    }
+
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
        "Scope & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
@@ -353,6 +382,7 @@ struct EditParams {
                gradeHighSat == 0.0f && gradeHighLum == 0.0f &&
                gradeGlobalSat == 0.0f && gradeGlobalLum == 0.0f &&
                denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
+               denoiseRaw < 0 &&        // unset = "follow the preference" = untouched
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&

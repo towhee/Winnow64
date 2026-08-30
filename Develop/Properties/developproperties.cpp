@@ -512,6 +512,7 @@ void DevelopProperties::addCoreItems()
             denCb->setChecked(denoised);
             denCb->setToolTip("Run the raw denoise; shows \"Denoised\" when complete.");
             connect(denCb, &QCheckBox::toggled, this, [this](bool on){
+                setDenoiseRawFlag(on);
                 if (on) emit runRawDenoiseRequested();
                 else    emit clearRawDenoiseRequested();
             });
@@ -761,6 +762,7 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
         if (rawPanel) rawPanel->setEngine(apple);
     });
     connect(rawPanel, &RawPanel::denoiseRunToggled, this, [this](bool on){
+        setDenoiseRawFlag(on);
         if (on) emit runRawDenoiseRequested(); else emit clearRawDenoiseRequested();
     });
     connect(rawPanel, &RawPanel::autoRunToggled, this, [this](bool on){
@@ -805,6 +807,34 @@ void DevelopProperties::syncRawPanel()
         dc = s.scopes.at(0).params.denoiseChroma;
     }
     rawPanel->setDenoiseValues(qRound(dl * 100.0f), qRound(dc * 100.0f));
+}
+
+void DevelopProperties::setDenoiseRawFlag(bool on)
+{
+/*
+    The "Denoise" checkbox records its state IN THE RECIPE (EditParams::denoiseRaw), so
+    the decision outlives the session cache the run itself fills. Without this the render,
+    the export and the devPreview builder each had to guess from G::autoRunDenoise, and a
+    manual run reached none of them: the loupe showed a denoised image while the stored
+    preview stayed clean under a recipe hash that claimed they matched.
+
+    Written EXPLICITLY (1 / 0), not folded back to "unset" when it happens to agree with
+    the preference: the user said something about THIS image, and a later flip of Auto run
+    must not silently undo it.
+
+    Global scope (0) whatever scope is active, like the two amount sliders -- the denoise
+    is baked into the pre-develop WorkingImage, so it cannot mean different things per
+    mask. noteScopeEdit is what puts it in History, marks the image edited and propagates
+    it across a multi-image selection.
+*/
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    const int want = on ? 1 : 0;
+    if (s.scopes[0].params.denoiseRaw == want) return;
+    s.scopes[0].params.denoiseRaw = want;
+    noteScopeEdit("Global", "Denoise raw", on ? "On" : "Off", "global/denoiseRaw");
+    emit paramsChanged();
 }
 
 void DevelopProperties::setGlobalDenoise(bool luma, int value0to100)
@@ -3744,6 +3774,201 @@ QIcon DevelopProperties::dropperIcon(bool armed)
     return QIcon(pm);
 }
 
+QIcon DevelopProperties::detailTargetIcon(bool armed)
+{
+/*
+    The Detail preview's "pick a location" target, drawn rather than shipped for the same
+    reasons dropperIcon is (see its note, including the LOGICAL-coordinates warning): a
+    ring with four tick marks, the universal aim glyph, and the same shape ImageView draws
+    on the image at the sample point so the button and the marker read as one thing.
+
+    ARMED goes to the accent colour, matching the blue border BarBtn::setActive draws.
+    Unlike the dropper this stays SOLID when armed: the dropper's ghost says "the tool is
+    in your hand", but here the marker on the image is what moves, and the button keeps
+    standing for the location -- hollowing it out would suggest the point was lost.
+*/
+    const qreal dpr = 2.0;
+    const int S = 16;
+    QPixmap pm(int(S * dpr), int(S * dpr));
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    if (!armed) p.setOpacity(G::iconOpacity);
+    const QColor c = armed ? QColor(G::appleBlue.red(), G::appleBlue.green(),
+                                    G::appleBlue.blue(), 230)
+                           : QColor(225, 225, 225);
+    p.setPen(QPen(c, 1.5, Qt::SolidLine, Qt::RoundCap));
+    p.setBrush(Qt::NoBrush);
+    p.drawEllipse(QPointF(8.0, 8.0), 4.4, 4.4);
+    p.drawLine(QPointF(8.0, 1.4), QPointF(8.0, 3.0));       // N
+    p.drawLine(QPointF(8.0, 13.0), QPointF(8.0, 14.6));     // S
+    p.drawLine(QPointF(1.4, 8.0), QPointF(3.0, 8.0));       // W
+    p.drawLine(QPointF(13.0, 8.0), QPointF(14.6, 8.0));     // E
+    p.setBrush(QBrush(c));
+    p.drawEllipse(QPointF(8.0, 8.0), 1.0, 1.0);             // centre dot
+    p.end();
+    return QIcon(pm);
+}
+
+void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
+{
+/*
+    The 1:1 preview at the head of the Detail section: a caption row carrying the label
+    and the target button, then the preview itself as a tall spanned row -- the same
+    two-part shape the Curves panel uses for its mode row + plot.
+*/
+    if (G::isLogger) G::log("DevelopProperties::addDetailPreviewRow");
+
+    /* Caption row: "1:1" plus the target button, in the caption cell. */
+    clearItemInfo(i);
+    i.name = "detailPreviewRow";
+    i.parIdx = parIdx;
+    i.parentName = "DetailHeader";
+    i.captionText = "1:1";
+    i.tooltip = "A patch of the image at 100%, live while you drag.\n"
+                "Sharpening is measured in pixels, so it can only be judged at 1:1 --\n"
+                "in a fit view the screen downsamples away the detail the slider added.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "detailPreviewRow";
+    i.delegateType = DT_None;           // we own the cells
+    addItem(i);
+    const QModelIndex rowCapIdx = capIdx;
+    model->setData(rowCapIdx, 4, UR_ExtraRowHeight);
+
+    if (rowCapIdx.isValid()) {
+        QWidget *capW = new QWidget;
+        capW->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *chb = new QHBoxLayout(capW);
+        chb->setContentsMargins(0, 0, 0, 0);
+        chb->setSpacing(6);
+        QLabel *lbl = new QLabel("1:1");
+        lbl->setAttribute(Qt::WA_TransparentForMouseEvents);   // clicks reach the tree
+        BarBtn *tgt = new BarBtn();
+        tgt->setIcon(detailTargetIcon(false));
+        tgt->setIconSize(QSize(16, 16));
+        tgt->setToolTip("Choose which part of the image the 1:1 preview shows:\n"
+                        "click here, then click the spot on the photo. Esc cancels.\n"
+                        "You can also drag inside the preview to move around.");
+        tgt->setEnabled(!currentImagePath.isEmpty());
+        connect(tgt, &BarBtn::clicked, this, &DevelopProperties::toggleDetailPick);
+        detailPickBtn = tgt;
+        chb->addWidget(lbl);
+        chb->addWidget(tgt);
+        chb->addStretch(1);
+        setIndexWidget(rowCapIdx, capW);
+    }
+
+    /* The preview: a tall full-width spanned row, like the curve plot. Square-ish -- the
+       widget shows a square patch centred in whatever width the dock happens to be. */
+    clearItemInfo(i);
+    i.name = "detailPreview";
+    i.parIdx = parIdx;
+    i.parentName = "DetailHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex prevIdx = capIdx;
+    model->setData(prevIdx, 170, UR_ExtraRowHeight);
+    setFirstColumnSpanned(prevIdx.row(), parIdx, true);
+    {
+        DetailPreview *dp = new DetailPreview;
+        detailPreview = dp;
+        connect(dp, &DetailPreview::pointNudged, this,
+                &DevelopProperties::nudgeDetailPoint);
+        setIndexWidget(prevIdx, dp);
+    }
+}
+
+/* True when a patch render is worth doing at all: the widget is genuinely on screen (the
+   Detail section exists in the tree after every rebuild, so isVisible() is the test --
+   the same one wantsScopeData uses for the histogram) and a point has been picked. */
+bool DevelopProperties::detailPreviewWanted() const
+{
+    return detailPreview && detailPreview->isVisible() && detailPtSet;
+}
+
+int DevelopProperties::detailRoiSize() const
+{
+    if (!detailPreview || !detailPreview->isVisible()) return 0;
+    return detailPreview->roiSize();
+}
+
+void DevelopProperties::setDetailRoiImage(const QImage &img)
+{
+    if (detailPreview) detailPreview->setImage(img);
+}
+
+void DevelopProperties::setDetailMessage(const QString &text)
+{
+    if (detailPreview) detailPreview->setMessage(text);
+}
+
+void DevelopProperties::setDetailPoint(QPointF n)
+{
+    /* Clamped, not rejected: a drag that runs off the edge should stop at the edge
+       rather than stop responding. */
+    const QPointF p(qBound(0.0, n.x(), 1.0), qBound(0.0, n.y(), 1.0));
+    if (detailPtSet && p == detailPt) return;
+    detailPt = p;
+    detailPtSet = true;
+    emit detailRoiNeeded();
+}
+
+void DevelopProperties::clearDetailPoint()
+{
+    if (!detailPtSet) return;
+    detailPtSet = false;
+    detailPt = QPointF();
+    emit detailRoiNeeded();          // drops the marker; nothing left to render
+}
+
+void DevelopProperties::nudgeDetailPoint(int dx, int dy)
+{
+/*
+    A drag inside the preview, in IMAGE pixels of the ORIENTED frame. Turning that into a
+    step in the normalized point needs the oriented frame's dimensions, i.e. the image's
+    size AND its EXIF rotation -- both of which MW owns (developOrientationDegrees reads
+    the sort/filter model, which is GUI-thread state the dock deliberately does not touch,
+    see MW::renderDevelopPreview). So the drag is forwarded rather than resolved here, and
+    MW calls setDetailPoint with the result.
+*/
+    if (!detailPtSet) return;
+    emit detailPointNudged(dx, dy);
+}
+
+void DevelopProperties::cancelDetailPick()
+{
+    setDetailPickActive(false);
+}
+
+void DevelopProperties::toggleDetailPick()
+{
+    /* Arming needs an image to pick on -- the button is disabled without one, and this
+       keeps any other caller (a shortcut later) from arming a tool that can only fail. */
+    if (!detailPickActive && currentImagePath.isEmpty()) return;
+    setDetailPickActive(!detailPickActive);
+}
+
+void DevelopProperties::setDetailPickActive(bool on)
+{
+    if (detailPickActive == on) return;
+    detailPickActive = on;
+    if (detailPickBtn) {
+        detailPickBtn->setActive(on);
+        detailPickBtn->setIcon(detailTargetIcon(on));
+    }
+    if (on) {
+        setDetailMessage(tr("Click the part of the photo to inspect"));
+        emit detailPickBegin();
+    }
+    else emit detailPickEnd();
+}
+
 void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
 {
     if (G::isLogger) G::log("DevelopProperties::addWhiteBalanceRow");
@@ -4083,23 +4308,6 @@ void DevelopProperties::addBasic()
     /* Lightroom-like ranges. Most adjustments are integer sliders -100..100 (div 0).
        Exposure is a 2-decimal EV slider (-5.00..5.00, div 100). All default to 0
        (identity), matching EditParams. */
-    /*
-        VIEW TRANSFORM -- the FIRST row in Develop, above white balance.
-
-        It sits here, not in Calibrate, for three reasons. It runs LAST in the pipeline
-        (OutputTransform), where Calibrate runs mid-Develop in linear -- grouping them
-        would imply an adjacency that does not exist. It re-scopes every slider below it
-        (AgX leaves far more highlight room before anything clips), so it belongs above
-        them. And it is the analogue of Lightroom's Profile, which is at the top of Basic;
-        Lightroom's CALIBRATION panel is the R/G/B primary rotation, which is what
-        Winnow's Calibrate already is.
-
-        A combo in the value cell, modelled on the WB preset row -- addItem(name, enum),
-        activated (not currentIndexChanged, which would also fire on programmatic
-        repopulation), and re-synced by findData under a QSignalBlocker.
-    */
-    addViewTransformRow(parIdx);
-
     /* White balance: a dropper + preset dropdown, then the two absolute sliders. Temp is
        a KELVIN slider (2000..50000) on a LOG ramp -- linear would bury every useful
        temperature in the first sixth of the track. Its gradient runs blue -> yellow with
@@ -4112,6 +4320,31 @@ void DevelopProperties::addBasic()
               G::lightblue, G::lightyellow, 0, /*logScale*/ true);
     addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -150, 150, 0,   G::lightgreen, G::lightmagenta);
     addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "WBDevider");
+
+    /*
+        TONE MAPPING heads the tone group -- above Exposure, below white balance.
+
+        The name and the position say the same thing: this control decides the overall
+        mapping from scene brightness to display, and the sliders under it adjust WITHIN
+        that mapping. General to specific, which is a real dependency (AgX leaves far more
+        highlight room before anything clips, so the same Exposure value does not mean the
+        same thing under both) rather than a visual grouping.
+
+        NOT called "View": Winnow already spends that word on the central widget modes
+        (loupe / grid / table / compare, the View menu), and a second meaning for it in
+        the Develop dock would be a collision. The stored key stays `viewTransform` -- it
+        is a published sidecar format, and a label is free to change without it.
+
+        Deliberately NOT next to Lightroom's Profile slot at the top of the panel: when
+        camera profiles land they go there, because a profile characterises the CAMERA and
+        feeds white balance. This governs the tone sliders, so it lives with them.
+
+        A combo in the value cell, modelled on the WB preset row -- addItem(name, enum),
+        activated (not currentIndexChanged, which would also fire on programmatic
+        repopulation), and re-synced by findData under a QSignalBlocker.
+    */
+    addViewTransformRow(parIdx);
+
     addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, G::darkgray, G::lightgray);
     addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("highlights", "Highlights", "Recover or lift the highlights.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
@@ -4489,7 +4722,7 @@ void DevelopProperties::addCalibrate()
 }
 
 /*
-    View transform -> the GLOBAL scope (scope 0), never the active one: it maps the whole
+    Tone mapping -> the GLOBAL scope (scope 0), never the active one: it maps the whole
     image for display, so it is not a per-mask adjustment and applying it to a scope would
     make it mean different things in different parts of one picture.
 
@@ -4497,11 +4730,11 @@ void DevelopProperties::addCalibrate()
     hence the explicit noteEdit -- see the checklist in notes/Documentation.txt.
 */
 /*
-    Build the View row. Raw-only in EFFECT -- OutputTransform forces the transform to None
-    for display-referred input, because a JPEG already carries its camera's tone curve and
-    tone-mapping it twice would wreck it. So for a non-raw file the control is DISABLED
-    with the reason shown in place of the value, rather than left live and silently doing
-    nothing.
+    Build the Tone mapping row. Raw-only in EFFECT -- OutputTransform forces the transform
+    to None for display-referred input, because a JPEG already carries its camera's tone
+    curve and tone-mapping it twice would wreck it. So for a non-raw file the control is
+    DISABLED with the reason shown in place of the value, rather than left live and
+    silently doing nothing.
 */
 void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
 {
@@ -4511,12 +4744,12 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     i.name = "viewTransform";
     i.parIdx = parIdx;
     i.parentName = "BasicHeader";
-    i.captionText = "View";
+    i.captionText = "Tone mapping";
     i.tooltip = raw
         ? "How scene brightness is mapped for display.\n"
           "Filmic: the default look.\n"
-          "AgX: longer, wider roll-off -- saturated highlights desaturate toward white "
-          "instead of shifting hue.\n"
+          "Soft roll-off: longer, wider roll-off -- saturated highlights desaturate "
+          "toward white instead of shifting hue.\n"
           "None: no tone mapping (scene-linear)."
         : "Only raw files need a view transform. This file already carries the tone "
           "mapping its camera applied.";
@@ -4526,6 +4759,11 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     i.key = "viewTransform";
     i.delegateType = DT_None;       // we own the value cell
     addItem(i);
+    /* Breathing room between the white-balance divider above and this row. The delegate
+       splits UR_ExtraRowHeight top+bottom around the vertically-centred content (see
+       PropertyDelegate::sizeHint), so 6 buys the 3px gap above -- and the same 3px below,
+       which suits a row that heads a group rather than belonging to the one above it. */
+    model->setData(capIdx, 6, UR_ExtraRowHeight);
     setItemEnabled("viewTransform", raw);
 
     const QModelIndex valIdx = findValueIndex("viewTransform");
@@ -4553,7 +4791,11 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     QComboBox *combo = new QComboBox;
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     combo->addItem("Filmic", int(OutputTransform::ViewTransform::Filmic));
-    combo->addItem("AgX",    int(OutputTransform::ViewTransform::AgX));
+    /* LABELS, not identifiers. The enum, the sidecar key and the constants all stay
+       "AgX" -- it is the published name of the transform and what the maths implements.
+       The USER-FACING label says what it does instead, because "AgX" ("silver halide")
+       is guessable by nobody. The help page names AgX so the term stays searchable. */
+    combo->addItem("Soft roll-off", int(OutputTransform::ViewTransform::AgX));
     combo->addItem("None",   int(OutputTransform::ViewTransform::None));
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
             [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
@@ -4569,7 +4811,7 @@ void DevelopProperties::setViewTransform(int vt)
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());
     if (s.scopes[0].params.viewTransform == vt) return;
     s.scopes[0].params.viewTransform = vt;      // always scope 0, whichever is active
-    noteScopeEdit("Global", "View transform", viewTransformName(vt),
+    noteScopeEdit("Global", "Tone mapping", viewTransformName(vt),
                   "global/viewTransform");
     emit paramsChanged();
 }
@@ -4579,7 +4821,7 @@ void DevelopProperties::setViewTransform(int vt)
 QString DevelopProperties::viewTransformName(int vt)
 {
     switch (static_cast<OutputTransform::ViewTransform>(vt)) {
-    case OutputTransform::ViewTransform::AgX:  return "AgX";
+    case OutputTransform::ViewTransform::AgX:  return "Soft roll-off";
     case OutputTransform::ViewTransform::None: return "None";
     default: break;
     }
@@ -5054,6 +5296,10 @@ void DevelopProperties::addDetail()
               "Judge both at 1:1 zoom -- a fit view hides noise AND hides the\n"
               "smearing and halos the cures introduce.", PV_Detail);
     QModelIndex parIdx = capIdx;
+
+    /* The 1:1 preview FIRST, as Lightroom has it: everything below is judged in it, and
+       both halves of the panel (sharpening and noise reduction) need it. */
+    addDetailPreviewRow(parIdx);
 
     /* Sharpening: capture sharpening, an unsharp mask on luminance (see Develop::Sharpen
        and Develop/sharpen.h). Amount is the strength (0..150 -> 0..1.5); Radius, Detail
@@ -5827,7 +6073,7 @@ struct PresetLeafDef { const char *key; const char *label; };
    grain) is ONE tick -- the panel treats them as one control. */
 const PresetLeafDef kBasicLeaves[] = {
     /* First, matching its position in the panel: it re-scopes everything below it. */
-    {"viewTransform", "View transform"},
+    {"viewTransform", "Tone mapping"},
     {"whiteBalance", "White balance (Temp + Tint)"},
     {"exposure",     "Exposure"},
     {"contrast",     "Contrast"},
@@ -6084,6 +6330,9 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
     if (gk.contains("rawNoise")) {
         preset.globals.insert("denoiseLuma", base.denoiseLuma);
         preset.globals.insert("denoiseChroma", base.denoiseChroma);
+        /* WHETHER it runs travels with the amounts -- the panel treats the checkbox and
+           its two sliders as one control, and amounts alone cannot express "off". */
+        preset.globals.insert("denoiseRaw", base.denoiseRaw);
     }
     if (gk.contains("histogram")) {
         preset.globals.insert("toneShadowCenter", base.toneShadowCenter);
@@ -6132,7 +6381,8 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
     const bool usingApple =
         G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
     const bool rawNoiseChanged =
-        base.denoiseLuma != def.denoiseLuma || base.denoiseChroma != def.denoiseChroma;
+        base.denoiseLuma != def.denoiseLuma || base.denoiseChroma != def.denoiseChroma ||
+        base.denoiseRaw != def.denoiseRaw;
 
     PresetGroup gg;
     gg.title = "Global settings";
@@ -6820,6 +7070,7 @@ struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
     {"viewTransform", &EditParams::viewTransform},
+    {"denoiseRaw", &EditParams::denoiseRaw},
 };
 
 /* The tone curve cannot go in kFloatFields: it is three ARRAYS, and the table above is

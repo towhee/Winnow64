@@ -15,6 +15,7 @@
 #include "Develop/Properties/primarywheel.h"
 #include "Develop/Properties/colorrangewheel.h"
 #include "Develop/Properties/curveeditor.h"
+#include "Develop/Properties/detailpreview.h"
 
 class MW;
 class ToneRegionSlider;
@@ -474,6 +475,28 @@ public slots:
     void toggleWbDropper();         // "W" in Develop mode, and the row's dropper button
     bool isWbDropperActive() const { return wbDropperActive; }
 
+    /* ---- Detail panel 1:1 preview -------------------------------------------------
+       The square window at the head of the Detail section showing one patch of the image
+       at full resolution, so sharpening and noise reduction can be judged without zooming
+       the loupe (see Develop/Properties/detailpreview.h for why that is necessary at
+       all). The panel owns the sample point and the armed state; MW renders the patch
+       (MW::renderDetailRoi) and hands it back through setDetailRoiImage.
+
+       The point is a VIEW setting, not an edit: it is not in EditParams, not in the
+       sidecar, and not in a preset. It resets to the image centre on image change. */
+    bool detailPreviewWanted() const;      // on screen, so a render is worth doing
+    QPointF detailPoint() const { return detailPt; }
+    bool detailHasPoint() const { return detailPtSet; }
+    void clearDetailPoint();               // back to "not picked yet"
+    int  detailRoiSize() const;            // ROI side in image px, 0 when not wanted
+    void setDetailRoiImage(const QImage &img);
+    void setDetailMessage(const QString &text);
+    void setDetailPoint(QPointF n);        // from a loupe pick or a preview drag
+    void nudgeDetailPoint(int dx, int dy); // preview drag, in image px
+    void cancelDetailPick();               // Esc / image change / another tool
+    void toggleDetailPick();               // the target button
+    bool isDetailPickActive() const { return detailPickActive; }
+
     /* MW-driven raw-denoise completion state for the "Denoise"/"Denoised" checkbox:
        checked + "Denoised" when a denoised base is ready for the current image, else
        unchecked + "Denoise". Signal-blocked so it never re-triggers a run. */
@@ -518,6 +541,14 @@ signals:
     /* White-balance dropper: arm/disarm ImageView's sample-a-neutral mode. */
     void wbDropperBegin();
     void wbDropperEnd();
+    /* Detail 1:1 preview: arm/disarm ImageView's pick-a-location mode, and ask MW to
+       re-render the patch (the point moved, or the panel just became visible). */
+    void detailPickBegin();
+    void detailPickEnd();
+    void detailRoiNeeded();
+    /* The user dragged inside the preview: move the sample point by this many image
+       pixels. Resolved by MW, which owns the image's orientation. */
+    void detailPointNudged(int dx, int dy);
     /* The pre-develop WorkingImage for fPath is needed NOW (a WB dropper sample / Auto
        white balance) and is not in WorkingImageCache. MW builds it -- synchronously for
        a display-referred file, or by starting the async scene-linear decode for raw --
@@ -605,14 +636,17 @@ private:
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
 
-    /* View transform (Calibrate). Always written to scope 0: it maps the WHOLE image for
-       display, so it is not a per-mask adjustment. Consumed by OutputTransform, not by
-       Develop::Apply -- see EditParams::viewTransform. */
+    /* Tone mapping -- the view transform, at the head of Basic's tone group. Always
+       written to scope 0: it maps the WHOLE image for display, so it is not a per-mask
+       adjustment. Consumed by OutputTransform, not by Develop::Apply. The identifiers
+       keep the name `viewTransform` because that is the published sidecar key; only the
+       LABEL is "Tone mapping". See EditParams::viewTransform. */
     void addViewTransformRow(const QModelIndex &parIdx);
     void setViewTransform(int vt);
     void refreshViewTransformRow();
     static QString viewTransformName(int vt);
     void setWbDropperActive(bool on);
+    void setDetailPickActive(bool on);
     /* Double-click reset for the Temp / Tint rows: back to AS SHOT, not to the slider's
        0 default (see mouseDoubleClickEvent). */
     void resetWbAxisToAsShot(bool isTemp);
@@ -629,6 +663,18 @@ private:
     QPointer<QComboBox> viewTransformCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
+    /* Detail 1:1 preview. detailPt is normalized over the ORIENTED full-res frame (the
+       space ImageView::maskViewportToNorm reports and Develop/detailroi.h maps back to
+       source pixels). "Not picked yet" is its own FLAG rather than a null QPointF: a
+       point of exactly (0,0) is a legitimate pick (the image's top-left corner) and a
+       null-point sentinel would silently read it as unset. */
+    static QIcon detailTargetIcon(bool armed);   // drawn, like dropperIcon
+    QPointer<DetailPreview> detailPreview;
+    QPointer<BarBtn> detailPickBtn;
+    QPointF detailPt;
+    bool detailPtSet = false;
+    bool detailPickActive = false;
+    void addDetailPreviewRow(QModelIndex parIdx);
     void updateSectionHeaderCaptions();   // section names + the edited " *" marker
     /* Current " *" state of each section header: 1 = starred, 0 = plain, -1 = unknown
        (after a tree rebuild). Indexed BY POSITION in updateSectionHeaderCaptions's hdrs[]
@@ -1109,6 +1155,11 @@ private:
     RawPanel *rawPanel = nullptr;
     void syncRawPanel();
     void setGlobalDenoise(bool luma, int value0to100);
+    /* The "Denoise" checkbox writes its state into the Global scope's
+       EditParams::denoiseRaw (explicit on/off), so the intent is part of the saved recipe
+       rather than of the session -- the render, the export and the devPreview builder all
+       read it from there. */
+    void setDenoiseRawFlag(bool on);
     /* "Denoise" run/state checkbox in the Core (raw) section. MW calls
        updateDenoiseRunState to reflect completion: checked + "Denoised" when a denoised
        base is ready for the current image, else unchecked + "Denoise". QPointer --

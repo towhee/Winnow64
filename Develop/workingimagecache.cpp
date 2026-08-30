@@ -163,10 +163,31 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     };
 
     /* Identity edit: no Develop, no copy -- transform the cached image straight to
-       QImage. */
+       QImage.
+
+       EXCEPT for camera-native pixels. The input profile is NOT an edit (see
+       Develop::Apply, which converts BEFORE its own identity early-out): a raw arrives
+       in sensor primaries and has to be converted whatever the params say. Skipping it
+       does not fail loudly -- ColorSpaceMath::matrix returns the IDENTITY for
+       CameraNative, so OutputTransform quietly renders sensor data, which reads as the
+       green cast of an unbalanced raw. The cached entry stays pristine, so the
+       conversion runs on a copy (the caller's scratch when it offered one). */
     if (edit.isIdentity()) {
         QElapsedTimer t;
         if (timings) t.start();
+        if (work.space == ColorSpaceMath::ColorSpace::CameraNative) {
+            WorkingImage cnvLocal;
+            WorkingImage &converted = scratch ? *scratch : cnvLocal;
+            assignReusing(converted, work);
+            if (timings) timings->copyMs = t.restart();
+            Develop::ToWorkingSpace(converted);
+            if (timings) timings->developMs = t.restart();
+            const bool ok = toImage(converted, out);
+            if (timings) timings->toImageMs = t.restart();
+            cnvLocal = WorkingImage();       // freed where it is counted (see outFreeMs)
+            if (timings) timings->outFreeMs = t.elapsed();
+            return ok;
+        }
         const bool ok = toImage(work, out);
         if (timings) timings->toImageMs = t.elapsed();
         return ok;
@@ -188,8 +209,10 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
         timings->denoiseMs = stage.denoiseMs;
         timings->pointMs   = stage.pointMs;
         timings->textureMs = stage.textureMs;
+        timings->clarityMs = stage.clarityMs;
         timings->dehazeMs  = stage.dehazeMs;
         timings->vignetteMs = stage.vignetteMs;
+        timings->sharpenMs = stage.sharpenMs;
         timings->grainMs = stage.grainMs;
     }
     const bool ok = toImage(developed, out);
@@ -279,7 +302,12 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
     else {
         assignReusing(acc, work);
         if (timings) timings->stackCopyMs += sub.restart();
-        if (!base.isIdentity()) develop.Apply(acc, base, nullptr);
+        /* Unconditional: Apply's OWN identity early-out still runs stage 0 (the input
+           profile), which is not an edit -- camera-native pixels have to reach the
+           working space whatever the base params say, or OutputTransform renders sensor
+           data (a green cast, since CameraNative has no conversion matrix). For an
+           already-converted image the call costs a tag test. */
+        develop.Apply(acc, base, nullptr);
         if (timings) timings->stackApplyMs += sub.restart();
     }
     if (timings) {

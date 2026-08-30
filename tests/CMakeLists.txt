@@ -81,8 +81,14 @@ winnow_add_unit_test(tst_calibrate unit/tst_calibrate.cpp)
 # tst_tonecurve tests Develop/tonecurve.h (header-only; needs Qt Core only, for the
 # QString encoding the sidecar and presets share).
 winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)
+# tst_denoiseraw pins the tri-state EditParams::denoiseRaw ("is the raw denoise wanted?")
+# through editparams.h + editstack.h -- both header-only, so Qt Core (JSON) is enough.
+winnow_add_unit_test(tst_denoiseraw unit/tst_denoiseraw.cpp)
 # tst_sharpen tests Develop/sharpen.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_sharpen unit/tst_sharpen.cpp)
+# tst_detailroi tests Develop/detailroi.h -- the Detail 1:1 preview's ROI mapping
+# (header-only integer geometry, same closure as tst_sharpen).
+winnow_add_unit_test(tst_detailroi unit/tst_detailroi.cpp)
 # tst_localcontrast is the CHARACTERIZATION gate for the local-contrast family: it pins
 # what Texture and Dehaze rendered before they were extracted onto the shared kernel, so
 # it compiles develop.cpp (and therefore needs OpenCV) like tst_renderstack does. It also

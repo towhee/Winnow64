@@ -23,6 +23,7 @@
 #include "Develop/workingimage.h"
 #include "Develop/colorspace.h"
 #include "Develop/editparams.h"
+#include "Develop/develop.h"
 
 namespace {
 
@@ -59,6 +60,27 @@ std::shared_ptr<const std::vector<float>> makeMask(int w, int h, float phase)
             (*m)[size_t(y) * w + x] = t;
         }
     return m;
+}
+
+/* The same scene, but tagged as it leaves RawColor: sensor primaries, with a
+   characterisation Develop's stage 0 is expected to apply. The matrix is asymmetric (rows
+   sum to 1, so a neutral sensor reading stays neutral) and the multipliers are the
+   green-dominant shape a real as-shot balance has, so an image that skips the conversion
+   is visibly wrong rather than subtly so. */
+WorkingImage makeCameraNative(int w, int h)
+{
+    WorkingImage img = makeWork(w, h);
+    img.space = ColorSpaceMath::ColorSpace::CameraNative;
+    img.cam.valid = true;
+    const float m[3][3] = {{ 1.30f, -0.25f, -0.05f},
+                           {-0.18f,  1.32f, -0.14f},
+                           { 0.05f, -0.42f,  1.37f}};
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) img.cam.camToWorking[i][j] = m[i][j];
+    img.cam.asShotMul[0] = 1.9f;
+    img.cam.asShotMul[1] = 1.0f;
+    img.cam.asShotMul[2] = 1.45f;
+    return img;
 }
 
 EditParams params(float exposure, float contrast, float saturation)
@@ -98,6 +120,8 @@ private slots:
     void resumeIsIgnoredWhenPrefixIsWrongSize();
     void scratchBackedMatchesLocal();
     void scratchSurvivesRepeatedTicks();
+    void identityRenderStillAppliesInputProfile();
+    void identityStackBaseStillAppliesInputProfile();
 
 private:
     static constexpr int W = 61;      // not a multiple of the thread chunking
@@ -344,6 +368,61 @@ void TestRenderStack::downscaledPreservesColourState()
     QCOMPARE(proxy.cam.asShotMul[2], src.cam.asShotMul[2]);
     /* renderScale is the one field that SHOULD change: the downscale is what changes it. */
     QVERIFY(proxy.renderScale < src.renderScale);
+}
+
+/*
+    THE INPUT PROFILE IS NOT AN EDIT. Both render entry points have an "identity edit"
+    fast path, and both used to hand the cached image straight to OutputTransform -- which
+    has NO matrix for CameraNative (ColorSpaceMath::matrix returns the identity for it),
+    so sensor values went out unconverted and unbalanced: a strong green cast. It showed as
+    "double-clicking a Develop caption turns the image green" -- the double click resets
+    that adjustment, which on an otherwise untouched image makes the params identity.
+
+    Asserted against the hand-converted image rather than against a golden, so the test
+    says "the fast path equals stage 0 + the fast path" and cannot drift with the matrix.
+*/
+void TestRenderStack::identityRenderStillAppliesInputProfile()
+{
+    const WorkingImage cameraNative = makeCameraNative(W, H);
+    const EditParams identity;
+    QVERIFY(identity.isIdentity());
+
+    QImage got;
+    QVERIFY(WorkingImageCache::render(cameraNative, identity, got));
+
+    WorkingImage converted = cameraNative;
+    Develop::ToWorkingSpace(converted);
+    QCOMPARE(converted.space, ColorSpaceMath::kWorking);
+    QImage want;
+    QVERIFY(WorkingImageCache::render(converted, identity, want));
+    QCOMPARE(got, want);
+
+    /* And the conversion must be doing something: an image MIS-TAGGED as already
+       converted renders differently, which is exactly the bug's output. */
+    WorkingImage misTagged = cameraNative;
+    misTagged.space = ColorSpaceMath::kWorking;
+    QImage unconverted;
+    QVERIFY(WorkingImageCache::render(misTagged, identity, unconverted));
+    QVERIFY(unconverted != got);
+}
+
+/* Same rule for the stack path, whose base (scope 0) params are what a caption
+   double-click resets. Masked scopes above it develop on their own copies, so a skipped
+   base conversion leaves the accumulator in sensor primaries and blends two spaces. */
+void TestRenderStack::identityStackBaseStillAppliesInputProfile()
+{
+    const WorkingImage cameraNative = makeCameraNative(W, H);
+    const EditParams identityBase;
+    const auto scopes = makeScopes(W, H, 0.0f, params(1.0f, -15.0f, 0.0f));
+
+    QImage got;
+    QVERIFY(WorkingImageCache::renderStack(cameraNative, identityBase, scopes, got));
+
+    WorkingImage converted = cameraNative;
+    Develop::ToWorkingSpace(converted);
+    QImage want;
+    QVERIFY(WorkingImageCache::renderStack(converted, identityBase, scopes, want));
+    QCOMPARE(got, want);
 }
 
 QTEST_MAIN(TestRenderStack)

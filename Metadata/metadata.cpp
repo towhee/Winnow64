@@ -588,8 +588,23 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 
 QString Metadata::devPreviewKey(const QString &blob)
 {
+/*
+    The devPreview key for an EDITED image: the recipe, plus the same two renderer facts
+    defaultRenderKey hashes for an unedited one.
+
+    THE RECIPE IS NOT THE WHOLE STORY. Raw engine (Winnow demosaic vs Apple Core Image)
+    and Auto-run denoise change the pixels while leaving the recipe untouched, so on the
+    recipe alone a preference toggle left every edited image serving pixels built under the
+    old setting -- the unedited half of the folder re-rendered and the edited half did not.
+    Auto run matters even to a recipe that DOES carry EditParams::denoiseRaw, because the
+    unset state means "follow the preference"; hashing it unconditionally costs one extra
+    rebuild for images that pinned it, and never shows the wrong picture.
+*/
     if (blob.isEmpty()) return QString();
-    const QByteArray h = QCryptographicHash::hash(blob.toLatin1(),
+    const QString d = blob + QString("|engine=%1|autoDenoise=%2")
+                                 .arg(int(G::decodeRawEngine))
+                                 .arg(G::autoRunDenoise ? 1 : 0);
+    const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
     return QString::fromLatin1(h.toHex().left(12));
 }

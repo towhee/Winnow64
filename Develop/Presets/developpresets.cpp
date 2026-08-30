@@ -273,6 +273,8 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     /* Global-only (always scope 0), listed here so one function covers every raw key. */
     else if (key == "denoiseLuma")         p.denoiseLuma         = f;
     else if (key == "denoiseChroma")       p.denoiseChroma       = f;
+    /* Tri-state, so toInt() not toFloat(): -1 unset / 0 off / 1 on. */
+    else if (key == "denoiseRaw")          p.denoiseRaw          = v.toInt();
     else if (key == "toneShadowCenter")    p.toneShadowCenter    = f;
     else if (key == "toneCrossover")       p.toneCrossover       = f;
     else if (key == "toneHighlightCenter") p.toneHighlightCenter = f;

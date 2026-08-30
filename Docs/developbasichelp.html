@@ -13,35 +13,6 @@ rendered at, the <b>tone</b> of it &mdash; exposure, contrast and the four tonal
 &mdash; and two <b>presence</b> controls, Texture and Dehaze.  Get Basic right and the
 rest of the module is refinement.</p>
 
-<h2>View</h2>
-<p><b>View</b> is the first control in Develop, and the one with the widest reach.  It
-chooses how the huge brightness range a raw file records is squeezed into the much smaller
-range a screen or a print can show.  Every photograph needs this step &mdash; the choice is
-only ever <i>which</i> one.  It sits at the top because it changes what every slider below
-it does.</p>
-
-<ul>
-<li><b>Filmic</b> is the default and the look Winnow has always had: a brightness lift and
-a smooth highlight roll-off.  Familiar and contrasty.</li>
-<li><b>AgX</b> rolls highlights off far more gradually, and &mdash; the real difference
-&mdash; a bright saturated colour fades toward <i>white</i> as it brightens instead of
-changing hue.  Under Filmic a saturated red pushed hard drifts toward orange, and a blue
-toward purple, because the channels run out one at a time.  Reach for AgX on sunsets,
-stage and neon lighting, fire, and anything with a bright saturated subject.  It looks
-flatter and less punchy at first glance; that is the trade for keeping the colour.</li>
-<li><b>None</b> applies no mapping at all.  The image will look very dark and flat.  It is
-there for checking what the sensor actually recorded, not for finishing a picture.</li>
-</ul>
-
-<p>The setting applies to the <b>whole image</b>, not to a mask, so it stays the same
-whichever scope you are editing.  On JPEGs and other non-raw files it is greyed out and
-reads <i>raw only</i>: those already carry the tone mapping their camera applied, and doing
-it twice would wreck them.</p>
-
-<p>Changing <b>View</b> changes what the Basic sliders feel like &mdash; AgX has much more
-room in the highlights before anything clips &mdash; so an image set up under one is worth
-a second look under the other.</p>
-
 <h2>White balance</h2>
 <p>Temp and Tint are <b>absolute</b>, not relative nudges.  <b>Temp</b> is a real Kelvin
 value (2000&ndash;50000) on a logarithmic track, because a linear one would bury every
@@ -63,6 +34,39 @@ only</b>, since a display-referred file has no camera-neutral reference for them
 anything against.  Custom is what the dropper and the sliders leave you in.  Double-click
 the row to go back to As Shot.</li>
 </ul>
+
+<h2>Tone mapping</h2>
+<p><b>Tone mapping</b> chooses how the huge brightness range a raw file records is
+squeezed into the much smaller range a screen or a print can show.  Every photograph needs
+this step &mdash; the choice is only ever <i>which</i> one.</p>
+
+<p>It sits at the head of the tone controls because that is the relationship: it sets the
+overall mapping, and the sliders below it &mdash; Exposure, Contrast, Highlights and the
+rest &mdash; adjust <i>within</i> that mapping.  The same Exposure value does not mean quite
+the same thing under each setting, which is why it is worth choosing first.</p>
+
+<ul>
+<li><b>Filmic</b> is the default and the look Winnow has always had: a brightness lift and
+a smooth highlight roll-off.  Familiar and contrasty.</li>
+<li><b>Soft roll-off</b> rolls highlights off far more gradually, and &mdash; the real
+difference &mdash; a bright saturated colour fades toward <i>white</i> as it brightens
+instead of changing hue.  Under Filmic a saturated red pushed hard drifts toward orange,
+and a blue toward purple, because the channels run out one at a time.  Reach for it on
+sunsets, stage and neon lighting, fire, and anything with a bright saturated subject.  It
+looks flatter and less punchy at first glance; that is the trade for keeping the colour.
+(This is the transform published as <i>AgX</i>, if you have read about it elsewhere.)</li>
+<li><b>None</b> applies no mapping at all.  The image will look very dark and flat.  It is
+there for checking what the sensor actually recorded, not for finishing a picture.</li>
+</ul>
+
+<p>The setting applies to the <b>whole image</b>, not to a mask, so it stays the same
+whichever scope you are editing.  On JPEGs and other non-raw files it is greyed out and
+reads <i>raw only</i>: those already carry the tone mapping their camera applied, and doing
+it twice would wreck them.</p>
+
+<p>Changing <b>Tone mapping</b> changes what the Basic sliders feel like &mdash; AgX has much more
+room in the highlights before anything clips &mdash; so an image set up under one is worth
+a second look under the other.</p>
 
 <h2>Tone</h2>
 <ul>

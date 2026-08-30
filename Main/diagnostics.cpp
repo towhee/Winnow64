@@ -435,7 +435,9 @@ QString MW::developDiagnostics()
         rpt << "\n" << indent << "hue = " << G::s(p.hue) << "   saturation = " << G::s(p.saturation)
             << "   luminance = " << G::s(p.luminance);
         rpt << "\n" << indent << "denoiseLuma (raw) = " << G::s(p.denoiseLuma)
-            << "   denoiseChroma (raw) = " << G::s(p.denoiseChroma);
+            << "   denoiseChroma (raw) = " << G::s(p.denoiseChroma)
+            << "   denoiseRaw = " << (p.denoiseRaw < 0 ? "unset (follows Auto run)"
+                                                       : (p.denoiseRaw ? "on" : "off"));
         rpt << "\n" << indent << "localDenoiseLuma = " << G::s(p.localDenoiseLuma)
             << "   localDenoiseChroma = " << G::s(p.localDenoiseChroma);
     };
@@ -568,6 +570,9 @@ QString MW::developDiagnostics()
     rpt << "\n" << "DENOISE 'RAW' (PMRID) CACHE STATE";
     rpt << "\n" << "  Global denoiseLuma/Chroma = " << G::s(mj.global.denoiseLuma)
         << " / " << G::s(mj.global.denoiseChroma)
+        << "   denoiseRaw = " << (mj.global.denoiseRaw < 0
+                                      ? "unset" : (mj.global.denoiseRaw ? "on" : "off"))
+        << "   wanted = " << G::s(mj.global.wantsDenoiseRaw(G::autoRunDenoise))
         << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine
                 ? "" : "   (inert: PMRID needs the CFA mosaic, not available on the Apple engine)");
     rpt << "\n" << "  developDenoised = " << dims(developDenoised)

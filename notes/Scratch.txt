@@ -2596,3 +2596,6 @@ What are your thoughts on this?
 /Users/roryhill/Library/Application Support/Winnow/PreviewCache
 
 make the devPreview quality a preference
+
+Two unrelated pre-existing failures in the suite, untouched by this change: tst_localcontrast golden drift (~1e-4, consistent with the OpenCV 4.13 bump) and smoke_launch aborting on a qnumeric.h assert
+at startup

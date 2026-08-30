@@ -272,6 +272,11 @@ struct EditStack {
         o["gradeBalance"]    = p.gradeBalance;
         o["denoiseLuma"]     = p.denoiseLuma;
         o["denoiseChroma"]   = p.denoiseChroma;
+        /* Written only when SET. -1 means "follow the Auto run preference", i.e. nothing
+           was decided -- and this object is also the devPreview key and the per-scope
+           render cache's invalidation key, so emitting it unconditionally would change
+           the hash of every recipe ever saved to record an absence. */
+        if (p.denoiseRaw >= 0) o["denoiseRaw"] = p.denoiseRaw;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
         o["localDenoiseChroma"]= p.localDenoiseChroma;
         o["sharpenAmount"]   = p.sharpenAmount;
@@ -337,6 +342,7 @@ struct EditStack {
         p.gradeBalance    = static_cast<float>(o.value("gradeBalance").toDouble(p.gradeBalance));
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
+        p.denoiseRaw      = o.value("denoiseRaw").toInt(p.denoiseRaw);   // absent = unset
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
         p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
         p.sharpenAmount   = static_cast<float>(o.value("sharpenAmount").toDouble(p.sharpenAmount));
@@ -621,6 +627,10 @@ struct EditStack {
 
         if (clampF(p.denoiseLuma,   0.0f, 1.0f, def.denoiseLuma))   ++fixed;
         if (clampF(p.denoiseChroma, 0.0f, 1.0f, def.denoiseChroma)) ++fixed;
+        /* Tri-state: anything outside -1/0/1 is a damaged sidecar, and "unset" is the
+           safe way back -- it renders as the preference says, which is what the image did
+           before it was ever denoised. */
+        if (p.denoiseRaw < -1 || p.denoiseRaw > 1) { p.denoiseRaw = def.denoiseRaw; ++fixed; }
         if (clampF(p.localDenoiseLuma,   0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.localDenoiseChroma, 0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.sharpenAmount,  0.0f, 1.5f, 0.0f)) ++fixed;

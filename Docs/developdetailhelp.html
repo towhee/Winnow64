@@ -13,9 +13,25 @@
 setting of one changes what the other should be.  That is why they share a panel.  Like
 every other section it is per scope, so either can be confined to a mask.</p>
 
-<p>Judge this whole panel at <b>1:1 zoom</b>.  A fit-to-window view hides noise
-<i>and</i> hides the smearing and halos the cures introduce, so it will lie to you in both
-directions.</p>
+<p>Judge this whole panel at <b>1:1</b>.  A fit-to-window view hides noise <i>and</i> hides
+the smearing and halos the cures introduce, so it will lie to you in both directions.</p>
+
+<h2>The 1:1 preview</h2>
+<p>The square window at the top of the panel is how you judge everything below it.  It
+shows one patch of the photo at <b>100%</b> &mdash; one image pixel per screen pixel
+&mdash; and it is <i>live</i>: it re-renders on every slider move, at full resolution,
+however the loupe itself happens to be zoomed.</p>
+
+<p>To choose the patch, click the <b>target</b> button beside the <b>1:1</b> label, then
+click the spot on the photo.  A marker shows where the preview is looking.  You can also
+drag inside the preview to move around, and Esc cancels an armed target.  The location is
+a view setting: it is not saved with the image, and it resets when you move to the next
+one.</p>
+
+<p>This exists because sharpening genuinely cannot be seen any other way.  At fit-to-window
+the screen throws away the very pixels the slider is working on, so the picture barely
+changes no matter how far you push it &mdash; the effect is real, but it is a
+pixel-level effect and the fit view has no pixels to show it in.</p>
 
 <h2>Sharpening</h2>
 <p>This is <b>capture sharpening</b>: it restores the acutance every demosaic costs you.
@@ -53,9 +69,11 @@ dragging &mdash; let go of the handle, or of Opt, and the photo comes back.</p>
 resolution.  Sharpening cannot work that way, because acutance is a property of the pixel
 grid itself: one pixel is one pixel whatever the image size.</p>
 
-<p>While you drag, Winnow shows a scale-honest approximation on the proxy so the slider
-responds; a moment after you stop, the full-resolution render replaces it with the true
-result.  <b>The full-resolution render, viewed at 1:1, is the one to trust.</b></p>
+<p>The loupe shows a scale-honest approximation while you drag &mdash; on the editing proxy
+the effect is genuinely much weaker &mdash; and a moment after you stop, the
+full-resolution render replaces it with the true result.  <b>The 1:1 preview at the top of
+this panel is always the full-resolution answer</b>, which is why it is there: it does not
+wait for the settle render and it does not care what the loupe is zoomed to.</p>
 
 <h3>Sharpening is not Texture</h3>
 <p>Basic's <b>Texture</b> also makes detail look crisper, but the two work on completely
