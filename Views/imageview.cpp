@@ -854,6 +854,69 @@ void ImageView::endWbPick()
     viewport()->update();
 }
 
+void ImageView::beginDetailPick()
+{
+    if (G::isLogger) G::log("ImageView::beginDetailPick");
+    detailPickMode = true;
+    setCursor(Qt::CrossCursor);         // "click the patch you want to inspect"
+    viewport()->update();
+}
+
+void ImageView::endDetailPick()
+{
+    if (!detailPickMode) return;
+    if (G::isLogger) G::log("ImageView::endDetailPick");
+    detailPickMode = false;
+    unsetCursor();
+    viewport()->update();
+}
+
+void ImageView::setDetailPoint(QPointF n)
+{
+    if (detailPointOn && n == detailPoint) return;
+    detailPoint = n;
+    detailPointOn = true;
+    viewport()->update();               // redraw the marker at its new home
+}
+
+void ImageView::clearDetailPoint()
+{
+    if (!detailPointOn) return;
+    detailPointOn = false;
+    viewport()->update();
+}
+
+/* The marker showing WHERE the Detail panel's 1:1 preview is looking. Drawn whenever a
+   point is set and the Detail panel is showing it, because a magnified patch with no
+   indication of its origin is a puzzle rather than a tool. A hairline square the size of
+   the ROI would be invisible on a fit view of a 50MP file (300px on an 8000px edge), so
+   this is a fixed-size screen marker instead: it says WHERE, and the preview itself says
+   WHAT. */
+void ImageView::drawDetailPointMarker(QPainter *p)
+{
+    if (!detailPointOn || !pmItem) return;
+    const QPointF vp = maskNormToViewport(detailPoint);
+    constexpr qreal kR = 7.0;
+    p->save();
+    p->setRenderHint(QPainter::Antialiasing, true);
+    /* Dark halo under a light stroke, so it reads on both a blown highlight and a
+       black shadow -- the same two-pass trick the crop and mask overlays use. */
+    p->setBrush(Qt::NoBrush);
+    p->setPen(QPen(QColor(0, 0, 0, 160), 3.0));
+    p->drawEllipse(vp, kR, kR);
+    p->drawLine(QPointF(vp.x() - kR - 4, vp.y()), QPointF(vp.x() - kR + 1, vp.y()));
+    p->drawLine(QPointF(vp.x() + kR - 1, vp.y()), QPointF(vp.x() + kR + 4, vp.y()));
+    p->drawLine(QPointF(vp.x(), vp.y() - kR - 4), QPointF(vp.x(), vp.y() - kR + 1));
+    p->drawLine(QPointF(vp.x(), vp.y() + kR - 1), QPointF(vp.x(), vp.y() + kR + 4));
+    p->setPen(QPen(QColor(120, 200, 195), 1.4));
+    p->drawEllipse(vp, kR, kR);
+    p->drawLine(QPointF(vp.x() - kR - 4, vp.y()), QPointF(vp.x() - kR + 1, vp.y()));
+    p->drawLine(QPointF(vp.x() + kR - 1, vp.y()), QPointF(vp.x() + kR + 4, vp.y()));
+    p->drawLine(QPointF(vp.x(), vp.y() - kR - 4), QPointF(vp.x(), vp.y() - kR + 1));
+    p->drawLine(QPointF(vp.x(), vp.y() + kR - 1), QPointF(vp.x(), vp.y() + kR + 4));
+    p->restore();
+}
+
 void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
                                 const QString &tip, bool accent)
 {
@@ -1063,6 +1126,13 @@ void ImageView::paintEvent(QPaintEvent *event)
         QPainter p(viewport());
         drawSampleLoupe(p, rangeLoupeVp, "Sample a colour:", "Shift-click: add a colour", false);
     }
+    /* Where the Detail panel's 1:1 preview is looking. Painted here, in viewport coords
+       and after the scene, for the same reason the loupe is: drawForeground returns early
+       in crop and spot modes, and this marker has to stay visible in all of them. */
+    if (detailPointOn && pmItem && pmItem->isVisible()) {
+        QPainter p(viewport());
+        drawDetailPointMarker(&p);
+    }
     /* Last, so it survives drawForeground's early returns (crop and spot modes each own
        the overlay and return before the mask chips are drawn). */
     if (!renderingHint.isEmpty()) {
@@ -1162,7 +1232,8 @@ double ImageView::spotSizeMin() const
    interaction, so with one active a click behaves like the normal loupe (zoom / pan). */
 bool ImageView::developToolActive() const
 {
-    return cropActive() || maskToolUsesMouse() || spotEditMode || wbPickMode;
+    return cropActive() || maskToolUsesMouse() || spotEditMode || wbPickMode
+           || detailPickMode;
 }
 
 /* Hold Space in Develop mode to temporarily borrow the loupe zoom/pan gesture over the
@@ -4601,6 +4672,12 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         emit wbPickExited();
         return;
     }
+    /* Detail preview picker: Escape disarms, same arrangement as the dropper above (the
+       dock owns the state, so it is told rather than changed here). */
+    if (detailPickMode && event->key() == Qt::Key_Escape) {
+        emit detailPickExited();
+        return;
+    }
     /* Spot removal: [ / ] resize the brush, Escape disarms the tool. */
     if (spotEditMode) {
         if (event->key() == Qt::Key_BracketLeft)  {
@@ -4720,6 +4797,18 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         const bool skin = (event->modifiers() & Qt::AltModifier);
         if (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0)
             emit wbSampled(n.x(), n.y(), skin);
+        return;
+    }
+
+    /* Detail 1:1 preview picker: same contract as the dropper above -- report the
+       normalized point, consume the click, and let the dock disarm us. suppressClickZoom
+       for the same reason: the dock disarms synchronously, so developToolActive() is
+       already false when the RELEASE arrives and would otherwise zoom the loupe. */
+    if (!spacePanOverride && detailPickMode && event->button() == Qt::LeftButton) {
+        suppressClickZoom = true;
+        const QPointF n = maskViewportToNorm(event->pos());
+        if (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0)
+            emit detailPointPicked(n.x(), n.y());
         return;
     }
 
@@ -5017,6 +5106,15 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
         const QPointF n = maskViewportToNorm(event->pos());
         wbLoupeOn = (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0);
         viewport()->update();
+        event->accept();
+        return;
+    }
+
+    /* Detail preview picker: re-assert the crosshair for the same reason the dropper
+       above re-asserts the pipette (the base view resets the cursor over the canvas), and
+       consume the move so the canvas cannot pan while aiming. */
+    if (!spacePanOverride && detailPickMode) {
+        setCursor(Qt::CrossCursor);
         event->accept();
         return;
     }

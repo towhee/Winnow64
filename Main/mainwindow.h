@@ -595,6 +595,13 @@ private slots:
        large RAW does not freeze the drag. At most one runs at a time; the result is applied via
        onDevelopFullResReady only if still current. */
     void renderDevelopFullResAsync();
+    /* Detail panel 1:1 preview (see the DetailRoiJob note in mainwindow.cpp): the loupe
+       picker landed, the point moved / the panel opened, a drag inside the preview, and
+       the per-image reset. The point is VIEW state -- no EditParams, no sidecar. */
+    void onDetailPointPicked(double nx, double ny);
+    void onDetailRoiNeeded();
+    void onDetailPointNudged(int dx, int dy);
+    void resetDetailPoint();
     /* After the current image's loupe pixmap is shown, render its saved Develop edits over it (if
        any). No-op for an unedited image. Reuses the coalesced proxy + async settle pipeline. */
     void applyDevelopPreviewIfEdited();

@@ -16,6 +16,7 @@
 #include "Develop/objectmask.h"
 #include "Develop/develop.h"
 #include "Develop/sharpen.h"        // updateSharpenMaskPreview: the edge gate
+#include "Develop/detailroi.h"      // Detail panel 1:1 preview: the patch geometry
 #include <opencv2/imgproc.hpp>     // updateSharpenMaskPreview: GaussianBlur + Sobel
 #include "ImageFormats/Raw/pmrid.h"
 #include "Utilities/inference/miganfill.h"
@@ -1282,13 +1283,21 @@ static bool isSelectionKey(const QKeyEvent *e)
 
 /* Is the focus widget a place where a typed LETTER is text rather than a shortcut? Only
    the search field and an editable combo qualify. A spin box's internal QLineEdit does
-   NOT: it takes numbers, so a letter typed there is a Develop shortcut. */
+   NOT: it takes numbers, so a letter typed there is a Develop shortcut.
+
+   A READ-ONLY combo does not qualify either, and the distinction is not academic: the
+   Develop dock's rows are combos (View transform is the very first row, WB preset the
+   next), a combo keeps the focus after a pick, and treating it as text entry bailed out
+   of the whole arbiter -- so the next R/S/O/N/M/W/X/H/P went to the global action bound
+   to that key (usually nothing) instead of the Develop one. All a read-only combo loses
+   is its type-to-select-an-item search, which the mode-local keys outrank. */
 static bool isTextEntryWidget(const QWidget *fw)
 {
     if (!fw) return false;
     if (const QLineEdit *le = qobject_cast<const QLineEdit *>(fw))
         return !qobject_cast<QAbstractSpinBox *>(le->parentWidget());
-    return qobject_cast<const QComboBox *>(fw) != nullptr;
+    const QComboBox *cb = qobject_cast<const QComboBox *>(fw);
+    return cb && cb->isEditable();
 }
 
 bool MW::developShortcutIntercept(QEvent *event)
@@ -1369,6 +1378,16 @@ bool MW::developShortcutIntercept(QEvent *event)
         && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
         event->accept();
         if (!isOverride) developProperties->cancelWbDropper();
+        return true;
+    }
+
+    /* 1b(ii). Esc disarms the Detail preview's location picker, for exactly the reason
+       the dropper above needs it here: it is armed from the Develop dock, so focus is in
+       the dock and ImageView::keyPressEvent never sees the key. */
+    if (developProperties && developProperties->isDetailPickActive()
+        && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
+        event->accept();
+        if (!isOverride) developProperties->cancelDetailPick();
         return true;
     }
 
@@ -3122,6 +3141,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
+        /* The Detail preview's sample point named a place in the PREVIOUS picture, so it
+           goes with it -- keeping it would silently magnify a different subject. */
+        resetDetailPoint();
         /* The banner and the panel's enabled state both follow the current index as well
            as the selection set, and are refreshed together further down (once the central
            widget has been switched to the loupe or the video player). */
@@ -3235,11 +3257,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    the start and produces the clean + PMRID bases in one pass, publishing
                    the clean base so the ImageCache decode reuses it. No-op without a
                    denoise edit or off the Winnow engine. */
-                if (developProperties && G::autoRunDenoise) {
-                    const auto mj = developProperties->stackJob();
-                    ensureRawDenoise(fPath, mj.global,
-                                     WorkingImageCache::instance().get(fPath),
-                                     currentImageIso());
+                /* Gated on the RECIPE (EditParams::denoiseRaw), which falls back to the
+                   Auto run preference when the image says nothing -- so a manual
+                   "Denoise" is honoured here too, not just in the session that made it.
+                   stackJobFor(fPath), not stackJob(): the panel may still be pointed at
+                   the image being left. */
+                if (developProperties) {
+                    const auto mj = developProperties->stackJobFor(fPath);
+                    if (mj.global.wantsDenoiseRaw(G::autoRunDenoise))
+                        ensureRawDenoise(fPath, mj.global,
+                                         WorkingImageCache::instance().get(fPath),
+                                         currentImageIso());
                 }
             }
         }
@@ -6848,6 +6876,121 @@ void applySpots(QImage &img, const QVector<FillSpot> &spots, const QString &fPat
     }
 }
 
+/*
+    THE DETAIL PANEL'S 1:1 PREVIEW.
+
+    A request to render one small patch of the image at FULL RESOLUTION alongside the
+    interactive proxy, for the square window at the head of the Detail section. Passed
+    into developCompositeStack because that is where the scopes' mask buffers already
+    exist for this tick; the patch is rendered from them rather than rebuilding anything.
+
+    WHY IT CANNOT JUST CROP THE PROXY. Sharpening's radius is in ABSOLUTE pixels, so it is
+    the one op the proxy renders wrongly by design (Develop/sharpen.h): at proxy scale the
+    effective sigma hits its floor and the slider moves acutance ~5% instead of ~70%.
+    Cropping the proxy would magnify that wrong answer. The patch is therefore cut from
+    the FULL-RES base with renderScale 1.0 -- the same pixels the settle render produces,
+    for a few hundred px square instead of 50 MP.
+
+    THE ONE APPROXIMATION: a masked scope's coverage is sampled from the mask this tick
+    already rasterized at PROXY resolution, not rebuilt at full res. Coverage is a smooth
+    field, so magnifying it costs a slightly softer mask EDGE inside the patch; rebuilding
+    a 50 MP mask per tick to sharpen a 170 px window would cost orders of magnitude more
+    than the render it feeds. Documented in notes/Documentation.txt.
+*/
+struct DetailRoiJob {
+    bool wanted = false;
+    double nx = 0.5, ny = 0.5;          // sample point, normalized, ORIENTED frame
+    int size = 0;                       // patch side, full-res px
+    const WorkingImage *fullSrc = nullptr;   // full-res base to cut the patch from
+    QImage out;                         // the render's product
+};
+
+/* Cut the ROI out of the full-res base. renderScale is forced to 1.0 -- that is the whole
+   point of the exercise, and copyMetadata would otherwise carry the base's own value. */
+static WorkingImage cutDetailRoi(const WorkingImage &full, const DetailRoi::Rect &r)
+{
+    WorkingImage roi;
+    if (r.isEmpty() || !full.isValid()) return roi;
+    roi.width = r.w;
+    roi.height = r.h;
+    copyMetadata(roi, full);
+    roi.renderScale = 1.0f;
+    roi.rgb.resize(size_t(r.w) * size_t(r.h) * 3);
+    for (int y = 0; y < r.h; ++y) {
+        const float *srcRow = full.rgb.data() + (size_t(y + r.y) * full.width + r.x) * 3;
+        float *dstRow = roi.rgb.data() + size_t(y) * r.w * 3;
+        std::copy(srcRow, srcRow + size_t(r.w) * 3, dstRow);
+    }
+    return roi;
+}
+
+/* A scope's coverage over the ROI, sampled from its proxy-resolution buffer (see the
+   approximation note above). Nearest-neighbour would alias the mask edge into a visible
+   staircase inside a magnified patch, so this is bilinear. */
+static std::shared_ptr<const std::vector<float>>
+sampleMaskRoi(const std::vector<float> &mask, int mw, int mh,
+              const DetailRoi::Rect &r, int fullW, int fullH)
+{
+    auto out = std::make_shared<std::vector<float>>(size_t(r.w) * size_t(r.h), 1.0f);
+    if (mw <= 0 || mh <= 0 || fullW <= 0 || fullH <= 0) return out;
+    if (mask.size() != size_t(mw) * size_t(mh)) return out;
+    const double sx = double(mw) / double(fullW);
+    const double sy = double(mh) / double(fullH);
+    float *o = out->data();
+    for (int y = 0; y < r.h; ++y) {
+        const double my = std::clamp((y + r.y + 0.5) * sy - 0.5, 0.0, double(mh - 1));
+        const int y0 = int(my), y1 = std::min(y0 + 1, mh - 1);
+        const float fy = float(my - y0);
+        for (int x = 0; x < r.w; ++x) {
+            const double mx = std::clamp((x + r.x + 0.5) * sx - 0.5, 0.0, double(mw - 1));
+            const int x0 = int(mx), x1 = std::min(x0 + 1, mw - 1);
+            const float fx = float(mx - x0);
+            const float a = mask[size_t(y0) * mw + x0], b = mask[size_t(y0) * mw + x1];
+            const float c = mask[size_t(y1) * mw + x0], d = mask[size_t(y1) * mw + x1];
+            o[size_t(y) * r.w + x] = (a + (b - a) * fx)
+                                   + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy;
+        }
+    }
+    return out;
+}
+
+/* Render the patch. scopes carry THIS tick's proxy masks (empty for a global-only stack);
+   maskW/maskH are the proxy dimensions those masks were rasterized at. */
+static QImage renderDetailRoiImage(const DetailRoiJob &job,
+                                   const DevelopProperties::StackRenderJob &stackJob,
+                                   const std::vector<WorkingImageCache::StackScope> &scopes,
+                                   int maskW, int maskH, int degrees)
+{
+    const WorkingImage &full = *job.fullSrc;
+    const DetailRoi::Rect r =
+        DetailRoi::sourceRoi(job.nx, job.ny, full.width, full.height, degrees, job.size);
+    WorkingImage roi = cutDetailRoi(full, r);
+    if (!roi.isValid()) return QImage();
+
+    std::vector<WorkingImageCache::StackScope> roiScopes;
+    roiScopes.reserve(scopes.size());
+    for (const WorkingImageCache::StackScope &s : scopes) {
+        WorkingImageCache::StackScope rs;
+        rs.params = s.params;
+        if (s.mask) rs.mask = sampleMaskRoi(*s.mask, maskW, maskH, r,
+                                            full.width, full.height);
+        roiScopes.push_back(std::move(rs));
+    }
+
+    QImage out;
+    if (!WorkingImageCache::renderStack(roi, stackJob.global, roiScopes, out))
+        return QImage();
+    /* Orientation only: geometry (crop / warp) is deliberately not applied -- see the
+       header note in Develop/detailroi.h. Smooth, not fast: the patch is tiny and it is
+       being examined at 1:1, which is exactly where a nearest-neighbour rotate shows. */
+    if (degrees != 0 && !out.isNull()) {
+        QTransform trans;
+        trans.rotate(degrees);
+        out = out.transformed(trans, Qt::SmoothTransformation);
+    }
+    return out;
+}
+
 /* cache (optional) is the interactive proxy's per-scope intermediate store -- see
    Develop/developstackcache.h. Only the GUI-thread proxy path passes one; the off-thread
    settle render and the small verification renders pass nullptr and recompute everything,
@@ -6865,7 +7008,8 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                              DevelopStackCache *cache = nullptr,
                              QSize *displaySize = nullptr,
                              MaskBuildStats *maskStats = nullptr,
-                             const QByteArray &baseKey = QByteArray())
+                             const QByteArray &baseKey = QByteArray(),
+                             DetailRoiJob *roiJob = nullptr)
 {
     /* An interactive (proxy) render is normally left at PROXY resolution -- the loupe
        stretches it (ScaledPixmapItem) instead of this function allocating and filling a
@@ -6892,6 +7036,10 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
         if (cache) scratchHold = cache->accScratch();
         out = developComposite(src, job.global, degrees, fullRes, fullW, fullH, timings,
                                depth, space, upscale, scratchHold.get());
+        /* Global-only stack: the patch has no masks to sample, just the base params. */
+        if (roiJob && roiJob->wanted && roiJob->fullSrc)
+            roiJob->out = renderDetailRoiImage(*roiJob, job, {}, src.width, src.height,
+                                               degrees);
     }
     else {
         QElapsedTimer probe;
@@ -7011,6 +7159,11 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
             resume.layer.reset();
             if (timings) timings->setHotMs = probe.elapsed();
         }
+        /* The patch, while sl still holds this tick's masks. Before the rotate below so
+           it reads the same state the composite did. */
+        if (roiJob && roiJob->wanted && roiJob->fullSrc)
+            roiJob->out = renderDetailRoiImage(*roiJob, job, sl, src.width, src.height,
+                                               degrees);
         if (timings) probe.restart();           // renderStack timed its own stages
         if (degrees != 0) {
             QTransform trans;
@@ -8126,9 +8279,29 @@ void MW::renderDevelopPreview(bool fullRes)
     const bool wantTime = G::isReportDevelopTime;
     const qint64 tProxyCap = tProxy;
 
+    /* The Detail panel's 1:1 patch, rendered with this tick so it is live during a drag
+       (the whole reason it exists -- see the DetailRoiJob note). The full-res base is
+       carried by the same shared_ptr the settle render uses, so the worker cannot outlive
+       the pixels it reads. Skipped entirely when the panel is closed or no point has been
+       picked, which is the common case. */
+    DetailRoiJob roiJob;
+    std::shared_ptr<const WorkingImage> roiHold;
+    if (!fullRes && developProperties && developProperties->detailPreviewWanted()) {
+        const int size = developProperties->detailRoiSize();
+        const QPointF n = developProperties->detailPoint();
+        if (size > 0) {
+            roiHold = base;                     // keeps the full-res pixels alive
+            roiJob.wanted = true;
+            roiJob.nx = n.x();
+            roiJob.ny = n.y();
+            roiJob.size = size;
+            roiJob.fullSrc = roiHold.get();
+        }
+    }
+
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
                             reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
-                            baseKey, faithful, recipe]() {
+                            baseKey, faithful, recipe, roiJob, roiHold]() mutable {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
@@ -8140,14 +8313,16 @@ void MW::renderDevelopPreview(bool fullRes)
                                            WorkingImageCache::OutDepth::Eight,
                                            WorkingImageCache::Space::sRGB, cache,
                                            &displaySize,
-                                           wantTime ? &ms : nullptr, baseKey);
+                                           wantTime ? &ms : nullptr, baseKey,
+                                           roiJob.wanted ? &roiJob : nullptr);
+        const QImage roiOut = roiJob.out;
         const qint64 tRender = wt.restart();
         const Geometry appliedGeom = mj.geometry;
         const QSize orientedSize(fw, fh);
         QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
                                          geomGen, rt, ms, tProxyCap, tRender, wantTime,
                                          proxySrc, appliedGeom, orientedSize, faithful,
-                                         recipe] {
+                                         recipe, roiOut] {
             developProxyInFlight = false;
             /* Show it if we are still on this image AND its geometry still applies.
                Being SUPERSEDED is no longer a reason to drop it: a drag delivers events
@@ -8180,6 +8355,10 @@ void MW::renderDevelopPreview(bool fullRes)
                 developFramePath = fPath;
                 developFrameFaithful = faithful;
                 developFrameRecipe = recipe;
+                /* The 1:1 patch, if this tick rendered one. Pushed with the frame it was
+                   rendered alongside, so the preview and the loupe never show different
+                   slider values. */
+                if (!roiOut.isNull()) developProperties->setDetailRoiImage(roiOut);
                 updateSharpenMaskPreview();
                 if (wantTime) msPreview = pv.restart();
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
@@ -8365,11 +8544,15 @@ void MW::renderDevelopFullResAsync()
     if (base == work &&
         (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
         G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
-        /* Run PMRID when Auto run is on, OR when the PMRID base is already cached (a
-           manual "Denoise" already ran) -- an amount change is then only a cheap re-blend
-           (reuses developPmridFull) and must NOT fall through to the clean render, which
-           would drop the denoise. */
-        if (G::autoRunDenoise || rawDenoiseReadyForCurrent()) {
+        /* Run PMRID when the RECIPE wants it: EditParams::denoiseRaw, falling back to the
+           Auto run preference when the image says nothing. This used to be "Auto run OR a
+           PMRID base is already cached", the second half being how a manual-mode amount
+           change stayed denoised instead of reverting to clean -- the recipe answers that
+           now (the checkbox pins denoiseRaw = 1), and the old OR would render a
+           deliberately UN-denoised image denoised whenever a base happened to be cached
+           for it. An amount change is still only a cheap re-blend: ensureRawDenoise
+           reuses developPmridFull, which is amount-independent. */
+        if (mj.global.wantsDenoiseRaw(G::autoRunDenoise)) {
             ensureRawDenoise(fPath, mj.global, work, currentImageIso());
             return;   // wait for the (re)blended base; PMRID re-arms this render
         }
@@ -8470,8 +8653,11 @@ void MW::renderDevelopFullResAsync()
                                    << " toImage" << rt.toImageMs
                                    << " orient+scale" << rt.orientScaleMs << ")ms"
                                    << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
-                                   << " texture" << rt.textureMs << " dehaze" << rt.dehazeMs
-                                   << " vignette" << rt.vignetteMs << " grain" << rt.grainMs << "]";
+                                   << " texture" << rt.textureMs << " clarity" << rt.clarityMs
+                                   << " dehaze" << rt.dehazeMs
+                                   << " vignette" << rt.vignetteMs
+                                   << " sharpen" << rt.sharpenMs
+                                   << " grain" << rt.grainMs << "]";
             if (dm && fPath == dm->currentFilePath) {
                 developVerifyMaxAbs = vMaxAbs;
                 developVerifyMeanAbs = vMeanAbs;
@@ -8482,6 +8668,76 @@ void MW::renderDevelopFullResAsync()
             onDevelopFullResReady(out, fPath, gen, faithful, recipe);
         });
     });
+}
+
+void MW::onDetailPointPicked(double nx, double ny)
+{
+/*
+    The loupe's Detail picker landed. Disarm (auto-dismiss, like the WB dropper), store
+    the point, mark it on the image, and re-render so the patch appears immediately rather
+    than at the next slider move.
+*/
+    if (G::isLogger) G::log("MW::onDetailPointPicked");
+    if (!developProperties) return;
+    developProperties->cancelDetailPick();
+    developProperties->setDetailPoint(QPointF(nx, ny));   // emits detailRoiNeeded
+}
+
+void MW::onDetailRoiNeeded()
+{
+/*
+    The Detail preview needs a fresh patch: the point moved, or the panel just opened.
+    The patch is rendered as part of the normal proxy tick (see the DetailRoiJob note),
+    so this only has to ask for a tick -- deliberately WITHOUT bumping developParamsGen,
+    because nothing about the recipe changed and a bump would discard an in-flight settle
+    render.
+*/
+    if (G::isLogger) G::log("MW::onDetailRoiNeeded");
+    if (!developProperties) return;
+    if (imageView) {
+        if (developProperties->detailHasPoint())
+            imageView->setDetailPoint(developProperties->detailPoint());
+        else imageView->clearDetailPoint();
+    }
+    if (G::operationMode != G::OperationMode::Develop) return;
+    if (!developProperties->detailPreviewWanted()) return;   // nothing to render
+    if (!developProxyRenderTimer->isActive()) developProxyRenderTimer->start(0);
+}
+
+void MW::onDetailPointNudged(int dx, int dy)
+{
+/*
+    A drag inside the preview, in image pixels of the ORIENTED frame. Resolved here rather
+    than in the dock because the oriented frame needs developOrientationDegrees, which
+    reads the sort/filter model (GUI-thread state the dock does not touch).
+*/
+    if (!developProperties) return;
+    const QString fPath = dm ? dm->currentFilePath : QString();
+    if (fPath.isEmpty()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work || !work->isValid()) return;
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    int fw = work->width, fh = work->height;
+    if (degrees == 90 || degrees == 270) std::swap(fw, fh);
+    if (fw <= 0 || fh <= 0) return;
+    const QPointF p = developProperties->detailPoint();
+    developProperties->setDetailPoint(QPointF(p.x() + double(dx) / fw,
+                                              p.y() + double(dy) / fh));
+}
+
+void MW::resetDetailPoint()
+{
+/*
+    A new image: drop the picked point (it meant a place in the PREVIOUS picture) and put
+    the preview back to its "pick a location" prompt. Called from the image-change path
+    alongside the other per-image Develop view state.
+*/
+    if (!developProperties) return;
+    developProperties->cancelDetailPick();
+    developProperties->clearDetailPoint();
+    developProperties->setDetailRoiImage(QImage());
+    developProperties->setDetailMessage(tr("Pick a location in the image"));
+    if (imageView) imageView->clearDetailPoint();
 }
 
 void MW::pushDevelopGeometryToView()
@@ -8859,8 +9115,13 @@ void MW::onAutoRunDenoiseToggled(bool on)
     G::autoRunDenoise = on;
     settings->setValue("Develop/autoRunDenoise", on);
     /* Turning auto ON behaves "as currently done": run the denoise for the current image
-       now so it updates without waiting for the next param change. */
-    if (on) runRawDenoiseNow();
+       now so it updates without waiting for the next param change. NOT for an image whose
+       recipe pins denoiseRaw OFF -- the preference is the fallback for images that said
+       nothing, and it must not override one that did. */
+    if (!on) return;
+    const bool pinnedOff = developProperties &&
+                           developProperties->stackJob().global.denoiseRaw == 0;
+    if (!pinnedOff) runRawDenoiseNow();
 }
 
 void MW::runRawDenoiseNow()
@@ -9599,14 +9860,14 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
 
        Gated on the GUI thread: rawDenoiseAvailable reads session state (the unsupported-
        sensor set). Only the heavy PMRID decode goes to the worker.
-       GATED ON G::autoRunDenoise, not on the amounts alone. EditParams defaults denoiseLuma
-       to 0.75 and denoiseChroma to 1.0 -- NON-ZERO -- so "amounts > 0" is true for every raw
+       GATED ON THE RECIPE, not on the amounts alone. EditParams defaults denoiseLuma to
+       0.75 and denoiseChroma to 1.0 -- NON-ZERO -- so "amounts > 0" is true for every raw
        including an unedited one, and testing only that would run PMRID on every image the
-       exporter and the preview builder touch. Auto-run is the closest thing to stored intent
-       there is (the recipe does not record whether denoise was wanted), and it is what the
-       interactive render gates on too. */
+       exporter and the preview builder touch. EditParams::denoiseRaw carries the stored
+       intent (falling back to the Auto run preference when the image says nothing), so
+       this reads the same answer the interactive render does. */
     const bool wantDenoise =
-        G::autoRunDenoise &&
+        mj.global.wantsDenoiseRaw(G::autoRunDenoise) &&
         (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
         G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine &&
         rawDenoiseAvailable(fPath);

@@ -193,6 +193,19 @@ public slots:
        solve -- ImageView only reports where). */
     void beginWbPick();
     void endWbPick();
+    /* Detail 1:1 preview location picker: arm/disarm "click the patch to inspect". A
+       click emits detailPointPicked with the normalized image point and the tool disarms
+       itself, exactly like the WB dropper -- ImageView only reports where. The point is
+       a VIEW setting (which patch the Detail panel magnifies), not an edit, so nothing
+       here touches EditParams. */
+    void beginDetailPick();
+    void endDetailPick();
+    bool detailPickArmed() const { return detailPickMode; }
+    /* The sample point currently shown by the Detail preview (normalized), so the loupe
+       can mark it while Detail is open, and clearing it when nothing is picked. Separate
+       calls rather than a null-point sentinel: (0,0) is a legitimate pick. */
+    void setDetailPoint(QPointF n);
+    void clearDetailPoint();
     /* Replace-panel mode (FillSpotGeom::Kind): Spot = click only (no drag), Fill/Object
        = drag a brush stroke. The committed paramsJson carries it as "kind". */
     void setSpotReplaceMode(int mode);
@@ -372,6 +385,9 @@ signals:
        Opt/Alt was held: correct from a SKIN sample rather than a neutral one. */
     void wbSampled(double nx, double ny, bool skin);
     void wbPickExited();            // dismissed with Esc
+    /* The Detail 1:1 preview's location picker was clicked at this normalized point. */
+    void detailPointPicked(double nx, double ny);
+    void detailPickExited();        // dismissed with Esc
     /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
     void spotRemoveRequested(int index);
     void spotToolExited();
@@ -509,6 +525,13 @@ private:
     /* ------- Regenerative spot fill ------- */
     bool    spotEditMode = false;       // the spot-removal brush is armed
     bool    wbPickMode = false;         // the white-balance dropper is armed
+    /* Detail 1:1 preview picker: armed = the next click picks the patch to magnify.
+       detailPoint is the point currently magnified (a null QPointF for none), drawn as a
+       small marker whenever it is set so the user can see WHERE the preview is looking --
+       without it the preview is a patch of pixels with no context. */
+    bool    detailPickMode = false;
+    QPointF detailPoint;
+    bool    detailPointOn = false;
     /* White-balance loupe: the "pick a target neutral" panel that follows the cursor
        while the dropper is armed -- a magnified 5x5 grid of the pixels under the tip
        (exactly the patch onWbSampled averages) plus their RGB readout. The pixels are
@@ -516,6 +539,8 @@ private:
        stale preview and nothing large is held while armed. See drawSampleLoupe. */
     void    drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
                             const QString &tip, bool accent);
+    /* Marker for the Detail preview's sample point (see setDetailPoint). */
+    void    drawDetailPointMarker(QPainter *p);
     QPoint  wbLoupeVp;                  // cursor position (viewport px)
     bool    wbLoupeOn = false;          // cursor is over the image -> draw the panel
     /* Opt/Alt held = the next click samples SKIN, not a neutral. Read from the mouse

@@ -195,8 +195,14 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
            PMRID is pre-demosaic, so denoise a COPY of the mosaic, demosaic it a second time, and
            blend toward the clean *work by the saved amounts -- matching the interactive render
            (MW::ensureRawDenoise) while leaving *work (the cached base) clean. Winnow engine + Bayer
-           only; PMRID::Apply returns false otherwise, so we skip the extra work. */
-        if (!denoiseRaw && edit &&
+           only; PMRID::Apply returns false otherwise, so we skip the extra work.
+
+           WANTED, not merely non-zero: the two amounts default NON-ZERO, so they cannot
+           say whether denoise was asked for -- EditParams::denoiseRaw does (falling back
+           to the Auto run preference when the recipe says nothing). Note the two spellings
+           in this scope: the `denoiseRaw` PARAMETER is "this decode is the full-strength
+           PMRID pass", edit->denoiseRaw is the stored intent. */
+        if (!denoiseRaw && edit && edit->wantsDenoiseRaw(G::autoRunDenoise) &&
             (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f) &&
             G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
             RawImage rawDen = raw;
@@ -230,12 +236,19 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        leaving *work clean, and the develop pass renders from that base so the exported/displayed
        image matches the interactive preview (MW::ensureRawDenoise). */
     OutputTransform output;
+    /* The view transform is part of the recipe, so it has to travel with it here too:
+       ToImage defaults to Filmic, which would render an AgX (or None) image as Filmic
+       whenever it came through this decode instead of the interactive path. No recipe
+       (edit == nullptr) keeps the default. */
+    const OutputTransform::ViewTransform view =
+        edit ? OutputTransform::ViewFromInt(edit->viewTransform)
+             : OutputTransform::ViewTransform::Filmic;
     if (edit && !edit->isIdentity()) {
         WorkingImage developed = denoisedBase ? *denoisedBase : *work;
         Develop develop;
         develop.Apply(developed, *edit);
         if (aborted()) { errMsg = "Aborted"; return false; }
-        if (!output.ToImage(developed, out)) {
+        if (!output.ToImage(developed, out, OutputTransform::Space::sRGB, view)) {
             errMsg = "Output transform failed.";
             return false;
         }
@@ -243,7 +256,23 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 
-    if (!output.ToImage(*work, out)) {
+    /* No (or identity) edits, so Develop::Apply never ran -- but its STAGE 0 is not an
+       edit: the in-house engine hands over CameraNative pixels, and OutputTransform has
+       no matrix for those (ColorSpaceMath::matrix returns the identity for CameraNative),
+       so passing them straight through renders sensor data -- the green cast of an
+       unbalanced raw. Convert a COPY: *work is the shared cache base and must stay
+       camera-native for the develop path's own stage 0. */
+    if (work->space == ColorSpaceMath::ColorSpace::CameraNative) {
+        WorkingImage converted = *work;
+        Develop::ToWorkingSpace(converted);
+        if (!output.ToImage(converted, out, OutputTransform::Space::sRGB, view)) {
+            errMsg = "Output transform failed.";
+            return false;
+        }
+        return true;
+    }
+
+    if (!output.ToImage(*work, out, OutputTransform::Space::sRGB, view)) {
         errMsg = "Output transform failed.";
         return false;
     }

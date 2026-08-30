@@ -380,11 +380,22 @@ bool ImageDecoder::load()
                published on select) instead of repeating the costly
                UnpackCfa+Demosaic+RawColor: transform it straight to the display image.
                This removes the redundant second decode when the develop denoise path has
-               run first. Skipped when nothing scene-linear is cached. */
+               run first. Skipped when nothing scene-linear is cached.
+
+               Through WorkingImageCache::render, NOT OutputTransform::ToImage: the base
+               is the same one RawFormat::Decode hands back, so it is CAMERA-NATIVE and
+               carries no edits. Rendering it raw skipped both -- the input profile (stage
+               0, not an edit: ColorSpaceMath::matrix has no matrix for CameraNative, so
+               sensor primaries went straight to the display as the green cast of an
+               unbalanced raw) and the saved recipe (the same shortcut sets
+               developApplied, so applyDevelop would not put it back). It showed up only
+               when a base happened to be cached at decode time -- which is why it looked
+               intermittent. render() does stage 0, the recipe and the recipe's view
+               transform, on a copy, leaving the cached base camera-native for the
+               interactive develop path's own stage 0. */
             if (auto cached = WorkingImageCache::instance().get(fPath);
                 cached && cached->sceneReferred && !abort.loadAcquire()) {
-                OutputTransform output;
-                if (output.ToImage(*cached, image)) {
+                if (WorkingImageCache::render(*cached, editParams, image)) {
                     decoderToUse = Raw;
                     developApplied = true;
                     imFile.close();

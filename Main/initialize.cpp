@@ -1909,14 +1909,46 @@ void MW::createDevelopDock()
                MB rather than a few hundred KB, which is why the cache cap is measured in
                tens of GB. Quality is the "Developed preview quality" preference and
                defaults HIGH (90, not the 85 of the thumbnail tier) because these pixels
-               are displayed at 100%, not just used as a placeholder during a decode. */
-            QImage loupe = src;
+               are displayed at 100%, not just used as a placeholder during a decode.
+
+               THE PROXY IS NOT GOOD ENOUGH FOR THIS TIER. The thumbnail above is 256 px,
+               so the interactive proxy (sized to the VIEW, typically ~1600 px) serves it
+               perfectly -- but this preview is what the loupe shows INSTEAD of decoding
+               the raw, at 100%, and a proxy-sized one is visibly softer than the camera
+               preview it replaces. It looked current forever, too: staleness is keyed on
+               the recipe hash, which says nothing about resolution. And it was the common
+               case rather than a corner: the retained full frame carries the recipe it
+               was rendered from, so ANY edit inside the settle window (leave Develop,
+               switch image, quit) failed the haveFull test and fell through to the proxy.
+
+               So: full frame, or a proxy that already meets a finite cap. Otherwise
+               decline the tier -- flushImage then drops any older entry, the loupe
+               decodes the raw and shows the right pixels, and the build queued below
+               writes a proper one. */
             const int cap = G::devPreviewMaxEdge;
-            if (cap > 0 && qMax(loupe.width(), loupe.height()) > cap) {
-                loupe = loupe.scaled(cap, cap, Qt::KeepAspectRatio,
-                                     Qt::SmoothTransformation);
+            const QImage *loupeSrc = nullptr;
+            if (haveFull) loupeSrc = &developFullFrame;
+            else if (cap > 0 && qMax(developFrame.width(), developFrame.height()) >= cap)
+                loupeSrc = &developFrame;
+
+            if (loupeSrc) {
+                QImage loupe = *loupeSrc;
+                if (cap > 0 && qMax(loupe.width(), loupe.height()) > cap) {
+                    loupe = loupe.scaled(cap, cap, Qt::KeepAspectRatio,
+                                         Qt::SmoothTransformation);
+                }
+                if (!encode(loupe, G::devPreviewQuality, loupeJpg)) loupeJpg.clear();
             }
-            if (!encode(loupe, G::devPreviewQuality, loupeJpg)) loupeJpg.clear();
+            else {
+                /* Render one properly, off the GUI thread, through the same builder the
+                   menu and the folder-load sweep use (developPixelSource decodes and
+                   composites at full resolution). Queued, not called: this runs inside a
+                   flush, which happens on folder change and on quit. The builder yields
+                   while Develop is open, so an edit session is never interleaved. */
+                QMetaObject::invokeMethod(this, [this, fPath]{
+                    buildDevPreviews(QStringList(fPath), "flush");
+                }, Qt::QueuedConnection);
+            }
 
             return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
         });
@@ -1997,6 +2029,22 @@ void MW::createDevelopDock()
             developProperties, &DevelopProperties::onWbSampled);
     connect(imageView, &ImageView::wbPickExited,
             developProperties, &DevelopProperties::cancelWbDropper);
+    /* Detail 1:1 preview: the same arrangement as the dropper above -- the dock arms the
+       loupe's pick mode, and a click comes back as a normalized point.
+       onDetailPointPicked disarms and re-renders; the nudge is the drag INSIDE the
+       preview, which MW resolves because it owns the image's orientation. */
+    connect(developProperties, &DevelopProperties::detailPickBegin,
+            imageView, &ImageView::beginDetailPick);
+    connect(developProperties, &DevelopProperties::detailPickEnd,
+            imageView, &ImageView::endDetailPick);
+    connect(imageView, &ImageView::detailPointPicked,
+            this, &MW::onDetailPointPicked);
+    connect(imageView, &ImageView::detailPickExited,
+            developProperties, &DevelopProperties::cancelDetailPick);
+    connect(developProperties, &DevelopProperties::detailRoiNeeded,
+            this, &MW::onDetailRoiNeeded);
+    connect(developProperties, &DevelopProperties::detailPointNudged,
+            this, &MW::onDetailPointNudged);
     /* The dropper / Auto WB need the pre-develop WorkingImage before the image has been
        edited, which for a display-referred file nothing has built yet. DIRECT (same
        thread), so the dock can use the result the moment emit returns. */
@@ -2930,11 +2978,14 @@ void MW::setOperationMode(G::OperationMode mode)
                otherwise it would not fire until the clean decode + settle. Produces the
                clean + PMRID bases in one pass and publishes the clean base (which
                ImageDecoder::load then reuses). No-op without a denoise edit / on Apple. */
-            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty() && G::autoRunDenoise) {
+            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty()) {
+                /* Gated on the RECIPE (EditParams::denoiseRaw), which falls back to the
+                   Auto run preference when the image says nothing. */
                 const auto mj = developProperties->stackJob();
-                ensureRawDenoise(dm->currentFilePath, mj.global,
-                                 WorkingImageCache::instance().get(dm->currentFilePath),
-                                 currentImageIso());
+                if (mj.global.wantsDenoiseRaw(G::autoRunDenoise))
+                    ensureRawDenoise(dm->currentFilePath, mj.global,
+                                     WorkingImageCache::instance().get(dm->currentFilePath),
+                                     currentImageIso());
             }
         }
         else {
@@ -2945,6 +2996,14 @@ void MW::setOperationMode(G::OperationMode mode)
         updateDevelopSelectionWarning();
     }
     syncDevelopPanelEnabled();
+
+    /* Re-enable (or grey) the Develop menu's mode-local items for the mode just entered.
+       It also runs on the menu's aboutToShow, but that is not enough on its own: opening
+       the menu in Preview DISABLES those actions, and a disabled QAction::trigger() is a
+       no-op -- so the mode-local keys the arbiter dispatches through them (R Transform, S
+       Spot, ...) would stay dead in Develop until the user happened to open the menu
+       again. */
+    syncDevelopMenuEnabled();
 
     /* The isCached red-dot indicator is suppressed in Develop Mode (drawn per-paint in
        IconViewDelegate). Repaint the icon views so dots on rows other than the current
