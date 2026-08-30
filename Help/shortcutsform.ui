@@ -997,6 +997,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Catalog Panel</string>
+        </property>
+        <property name="text">
+         <string>Shift + F2</string>
+        </property>
+        <property name="text">
+         <string>Search all catalogued images</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Metadata Panel</string>
         </property>
         <property name="text">

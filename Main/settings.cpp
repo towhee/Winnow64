@@ -28,6 +28,7 @@ void MW::writeSettings()
     settings->setValue("isFullScreenFolders", fullScreenDocks.isFolders);
     settings->setValue("isFullScreenFavs", fullScreenDocks.isFavs);
     settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
+    settings->setValue("isFullScreenCatalog", fullScreenDocks.isCatalog);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
     settings->setValue("isFullScreenHistory", fullScreenDocks.isHistory);
@@ -137,6 +138,15 @@ void MW::writeSettings()
     settings->setValue("isFolderDockVisible", folderDockVisibleAction->isChecked());
     settings->setValue("isFavDockVisible", favDockVisibleAction->isChecked());
     settings->setValue("isFilterDockVisible", filterDockVisibleAction->isChecked());
+    settings->setValue("isCatalogDockVisible",
+                       catalogDockVisibleAction->isChecked());
+
+    /* The folders the user nominated for background cataloguing. These live HERE and not
+       in the index database: CacheDb::moveAside discards that file without asking when it
+       will not open, and losing the user's choice of what to index is not the same kind
+       of loss as discarding a rebuildable index. */
+    settings->setValue("catalogRoots", catalogRoots);
+    settings->setValue("catalogRootsRecurse", catalogRootsRecurse);
     settings->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
@@ -604,6 +614,8 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenFolders")) fullScreenDocks.isFolders = settings->value("isFullScreenFolders").toBool();
     if (settings->contains("isFullScreenFavs")) fullScreenDocks.isFavs = settings->value("isFullScreenFavs").toBool();
     if (settings->contains("isFullScreenFilters")) fullScreenDocks.isFilters = settings->value("isFullScreenFilters").toBool();
+    if (settings->contains("isFullScreenCatalog"))
+        fullScreenDocks.isCatalog = settings->value("isFullScreenCatalog").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
     if (settings->contains("isFullScreenDevelop")) fullScreenDocks.isDevelop = settings->value("isFullScreenDevelop").toBool();
     if (settings->contains("isFullScreenHistory")) fullScreenDocks.isHistory = settings->value("isFullScreenHistory").toBool();
@@ -636,6 +648,12 @@ bool MW::loadSettings()
         //qDebug() << "Save FileNameTokens" << key;
     }
     settings->endGroup();
+
+    /* read the catalog roots (see the write side for why they are not in the db) */
+    if (settings->contains("catalogRoots"))
+        catalogRoots = settings->value("catalogRoots").toStringList();
+    if (settings->contains("catalogRootsRecurse"))
+        catalogRootsRecurse = settings->value("catalogRootsRecurse").toBool();
 
     /* read recent folders */
     settings->beginGroup("RecentFolders");

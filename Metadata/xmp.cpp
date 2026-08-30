@@ -445,6 +445,16 @@ void Xmp::initialize()
     e.schema = "dc";
     definedElements["subject"] = e;
 
+    /* Hierarchical keywords, as Lightroom writes them: one rdf:li per keyword path,
+       ancestors separated by '|' ie "Wildlife|Birds|Heron". dc:subject carries the
+       same keywords flattened to leaf names, so the two are read together and the
+       hierarchy is additional information, never a replacement. */
+    e.name = "lr:hierarchicalSubject";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::List;
+    e.schema = "lr";
+    definedElements["hierarchicalsubject"] = e;
+
     // title
     e.name = "dc:title";
     e.parentName = "rdf:Description";
@@ -617,6 +627,11 @@ void Xmp::initialize()
     e.name = "xmlns:dc";
     e.value = "http://purl.org/dc/elements/1.1/";
     definedElements["dc"] = e;
+
+    // lr (Lightroom) schema namespace, for lr:hierarchicalSubject
+    e.name = "xmlns:lr";
+    e.value = "http://ns.adobe.com/lightroom/1.0/";
+    definedElements["lr"] = e;
 
     // aus schema namespace
     e.name = "xmlns:aux";

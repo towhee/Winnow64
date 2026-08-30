@@ -173,6 +173,12 @@ Follow the format conventions above for anything new. In particular, do not hard
 19. IMAGE COLOUR MANAGEMENT (EMBEDDED PROFILES)
      HEIC and the colr Box
 
+20. KEYWORDS AND CATALOGUING
+     Reading Keywords (dc:subject and lr:hierarchicalSubject)
+     The Catalog (Cross-folder Search)
+     The Catalog Dock and Loading Results
+     Cataloguing Designated Roots (the Background Scanner)
+
 
 *** INITIALIZATION ***
 
@@ -3282,3 +3288,115 @@ SDR ONLY, DELIBERATELY: PQ (transfer 16) and HLG (18) are HDR and need tone mapp
 The chain from here is generic: Heic::colrBox fills m->iccBuf, DataModel writes it to G::ICCBufColumn, and ImageDecoder::colorManage reads it back (gated on Metadata::iccFormats, which is what the missing "heic"/"hif" entries defeated).
 
 (Unrelated quirk noticed while doing this: "hif" is listed in noMetadataFormats, but that list only feeds a display string in Views/infostring.cpp and does not gate parsing, so it affects none of the above.)
+
+
+*** KEYWORDS AND CATALOGUING ***
+
+⏺ Keywords and Cataloguing > Reading Keywords (dc:subject and lr:hierarchicalSubject)
+
+WINNOW USED TO LOSE ALMOST EVERY KEYWORD IT WAS SHOWN. Two properties carry them: dc:subject, the flat list of leaf names that every application writes, and lr:hierarchicalSubject, Lightroom's parallel list of full keyword paths with '|' separators ie "Location|Canada|BC|Vancouver Island". Winnow read the first in exactly two places -- Jpeg::parse and PNG::parse -- and the second nowhere at all: it was not even in Xmp::definedElements, so getItemList would have refused the name.
+
+THE CONSEQUENCE WAS WORST FOR RAW, which is most of a photographer's library. Nikon, Canon CR2, DNG, Tiff and Panasonic all build a valid Xmp from IFD tag 700 and read rating, label, title and creator out of it -- then simply did not ask for the keywords. Worse, Metadata::parseSidecar is the ONLY route by which a raw file's keywords can arrive at all, because Lightroom does not write into a NEF, CR2, CR3 or ARW; it writes a .xmp beside it. parseSidecar read rating, label, title, creator, rights, email, url and orientation, and skipped dc:subject. So a raw library keyworded over years showed an empty Filters > Keywords category, and nothing in the app hinted why.
+
+ONE DEFINITION NOW, IN Metadata/xmpapply.h. The seven parsers above each carried a byte-identical twelve-line copy of the same XMP block, which is how they came to disagree in the first place: the keyword line was added to the JPEG copies and to no others. applyXmp() is that block, once, and each parser calls it. The saving is incidental; the point is that the next field added arrives everywhere at once.
+
+IT IS A FREE FUNCTION IN ITS OWN HEADER, not a Metadata member, because Metadata/metadata.h includes every parser header -- so a parser including it back would compile only as long as its own header happened to be first, and would drag QtWidgets into seven more translation units. xmpapply.h depends on nothing but xmp.h and imagemetadata.h, which every parser already has. Same reasoning as Cache/pathkey.h.
+
+PNG DELIBERATELY KEEPS ITS OWN COPY. It guards several fields on isEmpty() and mirrors the exif:/tiff: namespaces into the camera fields, because Lightroom and Photoshop drop the eXIf chunk when they write a PNG and put the camera data in the XMP instead. Folding it into the shared helper would change what a PNG reports.
+
+THE SIDECAR READ IS NOT GUARDED ON isEmpty(), unlike the scalars beside it. An empty keyword list in a sidecar that is otherwise newer means the keywords were REMOVED, and honouring that is the whole point of the newer-wins rule parseSidecar already applies a few lines above. Guarding it would make keyword deletion impossible to sync.
+
+HIERARCHY IS STORED, NOT FLATTENED. G::KeywordPathsColumn holds the paths beside G::KeywordsColumn's leaf names, and both are folded into G::SearchTextColumn. The ancestor names exist ONLY in the hierarchical form -- the flat list has just the leaf -- so keeping it is what lets a search for "Wildlife" find an image whose only keyword is "Heron". The column is appended before TotalColumns and marked GeekRole, like DevelopColumn and DevPreviewKeyColumn, because saved table column widths are keyed by index.
+
+WRITING KEYWORDS IS NOT IMPLEMENTED and is deliberately separate work. Xmp::setItem can only write an ATTRIBUTE on rdf:Description; no code path emits an rdf:Bag of rdf:li, so there is currently no way to write either property. ImageMetadata also has no _keywords shadow, which is what Metadata::writeXMP's change detection depends on. Until that exists, keywords are read-only and the files remain whatever Lightroom made them.
+
+tests/unit/tst_xmpkeywords.cpp pins all of it: both properties off a Lightroom-shaped fixture, an absent-keyword document staying quiet rather than warning, applyXmp filling both lists, and applyXmp still taking the underscore snapshot that writeXMP needs.
+
+
+⏺ Keywords and Cataloguing > The Catalog (Cross-folder Search)
+
+WHAT IT IS. A local index of what Winnow has learned about images it has seen, so a keyword or title search answers ACROSS FOLDERS instead of only inside the one currently loaded. Tables image / keyword / image_keyword plus the image_fts full-text index, added at schema 3 of the shared local index database (Cache/cachedb.h). Cache/catalog.h is the class.
+
+IT IS AN INDEX, NOT A LIBRARY, and that distinction is the whole design. Winnow still keeps no catalogue in the Lightroom sense: the XMP sidecar remains the per-image database and the only source of truth, nothing here is ever written back to anyone's photographs, and every column is re-readable from the image and its sidecar. That is what lets the catalog share the preview cache's move-it-aside-and-rebuild failure policy -- losing this file costs a rescan, never data.
+
+THE ONE THING THAT IS NOT DERIVED LIVES SOMEWHERE ELSE. The folders the user nominates for background scanning are user intent, not rebuildable, and CacheDb::moveAside discards this file without asking. So the root list goes in QSettings. Putting it in the database would mean a corrupt index silently forgot what the user asked to be indexed.
+
+ROWS ARRIVE FROM MW::folderChangeCompleted, alongside the devPreview sweep and for the same reasons: metadata is complete by then, the user is no longer waiting, and the work runs off the GUI thread. DataModel::catalogRows() reads the model ON THE GUI THREAD into plain values -- QStandardItemModel is not thread-safe -- and only those values cross to the pool thread that inserts them. Commit is deliberately NOT called per image from addMetadataForItem: that fires once per image on a Reader thread whose backpressure is already tuned, and a database write there is the per-row signal fan-out that has twice been the cause of folder-load lag.
+
+ROWS THAT ARE NOT MetaLoaded ARE SKIPPED. Cataloguing a half-read row is worse than cataloguing nothing: it would be stored with empty keywords, and its freshness stamp would then MATCH on the next visit, so the blank entry would look current and the image would stay missing from search results until its file changed on disk.
+
+FRESHNESS IS (srcsize, srcmtime, sidecarmtime). The sidecar stamp is the load-bearing one for a raw library: Lightroom edits keywords by rewriting the .xmp and never touches the NEF, so a check that looked only at the image would never notice. Unchanged rows are skipped before any write, which matters because the opportunistic capture runs on EVERY folder change -- without the skip, a user pacing between two folders would rewrite both indefinitely.
+
+KEYWORDS ARE NORMALISED into keyword + image_keyword rather than kept as text on the image row, so the facet list the UI wants ("every keyword, with counts") is an index scan rather than a quarter of a million string splits. A hierarchical keyword inserts one row per ANCESTOR as well, wired by parent, and links the image to all of them -- which is what lets a search for "Fauna" reach an image whose only flat keyword is "Heron". The free-text index agrees by replacing '|' with spaces so every ancestor becomes its own token; the facet and the search box must not disagree about the same picture. Links are REPLACED on re-index, not added to, so a keyword deleted in Lightroom disappears here too.
+
+THE FULL-TEXT TABLE IS A PLAIN fts5, not contentless and not external-content. Contentless needs the original text handed back on every delete, so a second copy is kept anyway; external-content cannot span the image_keyword join. The duplicated text costs ~200 bytes an image and buys prefix search, AND/OR/NOT, phrase queries and BM25 ranking with no query code of Winnow's own. Bare words typed in the search box are quoted, prefixed and AND-ed; anything containing FTS syntax the user clearly meant is passed through. Quoting the terms is not cosmetic -- an unquoted term containing punctuation is a MATCH syntax error, and a syntax error fails the whole query, so a user typing an apostrophe or a hyphen mid-word would see the search break rather than narrow.
+
+EVERY VALUE IS BOUND, NEVER INTERPOLATED, including the FTS expression. The search box is user text and the catalog shares its file with the preview index, so a query that pasted text into SQL would put the previews one apostrophe away from damage. tst_catalog::searchTextIsNotInjectable pins it.
+
+TEXT COLUMNS ARE NOT NULL AND BIND THROUGH A HELPER. A default-constructed QString is SQL NULL to QSqlQuery, not '', and an image with no title, no lens or no GPS is the ORDINARY case -- so binding QString() directly aborted the whole folder's transaction on the first such row ("NOT NULL constraint failed: image.label"). The columns stay NOT NULL, so searching never has to reason about the difference between "no title" and "unknown title", and Catalog's text() supplies the empty string.
+
+NEITHER TENANT MAY OVERRIDE THE OTHER'S DATABASE LOCATION. Both open lazily and either may be first, so Catalog::ensureLoadedLocked only supplies the DEFAULT path when nothing has been set. An unconditional setPath there would be a bug with teeth: setPath closes every open connection and bumps the generation, so a catalog call arriving after DevPreviewCache::setCacheDir had pointed the database elsewhere -- a test at a temp dir, or a future "move the cache" preference -- would silently drag it back to AppDataLocation and strand the previews.
+
+CLEARING ONE TENANT DOES NOT CLEAR THE OTHER. "Clear preview cache" deletes devpreview rows and payload JPEGs only; clearing the catalog leaves the previews alone. They share a file, not a lifetime, and rebuilding a catalog means rescanning a library. tst_catalog::clearingPreviewsLeavesTheCatalog pins both directions.
+
+SWEEP DEMOTES, NEVER DELETES, and skips unmounted volumes -- the same rule as the devPreview sweep and for the same reason: Winnow browses memory cards and external drives constantly, and an ejected drive must not read as a mass deletion. A demoted row stops appearing in searches (which would otherwise offer images that cannot be loaded) but survives, and the next commit that sees the file promotes it again. A delete Winnow performs ITSELF is certain rather than inferred, so FileOps::onDeleted removes the row outright -- including its image_fts row, which has no foreign key and would otherwise keep matching text for an image that no longer exists.
+
+MountSnapshot AND SrcStamp MOVED to Cache/mountsnapshot.h when the catalog became the second thing that had to answer "which volumes are mounted" and "is this still the same file". Both tenants index paths across removable media and both have the same dangerous verdict to avoid, so they must decide it identically or the two indexes will disagree about the same file.
+
+STILL TO COME: the search dock and results-as-a-virtual-folder, then the background scanner over designated roots. Writing keywords back to files remains deliberately out of scope -- see the previous subsection.
+
+
+⏺ Keywords and Cataloguing > The Catalog Dock and Loading Results
+
+THE CATALOG DOCK (Shift+F2, Window > Catalog Panel, Views/catalogview.cpp) searches the INDEX; the Filters dock searches the DATAMODEL. That is the whole distinction, and it is why they are separate docks rather than another Filters category: Filters narrows what is already loaded, the Catalog finds images that are not loaded at all and offers to load them. Shift+F2 pairs with F2 ("search here") because the dock F-keys F3-F9 are all taken, and the pairing says what it does better than the next free key would.
+
+IT DOES NOT SHOW THUMBNAILS. A picture list in a narrow dock would be a worse version of the grid Winnow already has, so the dock reports how many images matched and offers to LOAD them. The images then appear in the ordinary views, where the loupe, Develop, ratings and filtering all work on them exactly as on a folder -- which is the entire point of loading results into the datamodel instead of inventing a second kind of model.
+
+SEARCHING IS DEBOUNCED (250 ms), not run per keystroke: the query hits SQLite and FTS5 on the GUI thread, and at the 250,000 rows the database is sized for a query per character would be felt. The delay also stops half-typed FTS syntax from being executed at every intermediate state -- "hero" on the way to "heron OR eagle" is a valid query with a wrong answer.
+
+AN EMPTY QUERY DELIBERATELY DOES NOTHING. Matching the whole catalog and offering to load a quarter of a million images is not a useful answer to having typed nothing, so with no text, no keyword and no rating the panel just reports how many images are catalogued and leaves Load disabled.
+
+THE KEYWORD FACET IS A TREE built from the stored hierarchy: the catalog holds one row per hierarchy NODE with its full path, so the tree walks each path creating any missing ancestor as it goes (rows arrive ordered by path, so a parent is always seen before its children). Counts come from the catalog rather than by summing children, because an ancestor row is already linked to every image beneath it. Clicking the selected keyword AGAIN clears it -- otherwise the only way out of a keyword search is to know that ctrl-click deselects.
+
+WHEN THERE IS NO CATALOG THE PANEL SAYS SO, INLINE, and the controls are disabled. Two cases: the index will not open, or it is open and empty (nothing has been browsed yet). Letting the user type a search and only then explaining that nothing is indexed is exactly the post-hoc popup this avoids.
+
+LOADING RESULTS IS THE SAME RESET AS A FOLDER CHANGE. MW::loadCatalogResults does what folderSelectionChange does -- stop(), drop the develop caches, refill, let folderChangeCompleted run -- because everything downstream of the model (MetaRead, the icon chunks, the image cache, Develop) assumes that when the model's contents are replaced it was told to stop first. The develop-cache reset is now MW::resetDevelopCachesForNewFolder, shared by both, so a cache added in future cannot be dropped on one path and forgotten on the other.
+
+THE FOLDER PANEL DELIBERATELY DOES NOT FOLLOW. The results span many folders, so there is no one folder to select, and highlighting an arbitrary one of them would misrepresent what is loaded.
+
+DataModel::addPaths IS THE MODEL HALF. Every other load path starts from a directory -- the folder queue's unit is a folder and addFolder enumerates one -- but a result set is a list of files from any number of folders, so there is nothing to enumerate. It reuses addFolder's BATCHED insert (one setRowCount, signals blocked, one wide dataChanged) because a result set is routinely thousands of rows, which is the exact shape that made per-row signals the folder-load bottleneck. It takes the same proxy-sort bracket as scheduleProcessing, or the one wide dataChanged would make the sorted proxy re-sort the inserted block Z-A. It registers EVERY distinct parent folder in folderList / folderSet / folderImageCount, because those are what the Folders filter category, removeFolder and isFolderLoaded read -- without them the rows would belong to no folder at all. And it ends by emitting folderChange, the same signal a folder load ends with, so nothing downstream needs to know where the images came from.
+
+IT CHECKS THAT THE FILES ARE STILL THERE. The catalog is an index, not a guarantee: a row can name a file that has since been deleted or sits on an unmounted volume. Sweep demotes those, but only when it has run since, so addPaths stats each path as well -- returning fewer results is better than offering one that cannot be opened.
+
+THE PANEL REFRESHES when the dock becomes visible and after a catalog commit completes, the latter only when the dock is actually visible (the facet rebuild is a query plus a tree build, and the commit is on a pool thread precisely to keep catalog work off the GUI thread during a load). The refresh button in the title bar is the manual path.
+
+DOCK REGISTRATION followed the checklist in "Responsive Dock Tab Titles": images/icon16/catalog_white.png (a magnifier, matching the existing glyph weight), registered in winnow.qrc, added to graphicFor / dockFor / dockForTabText, appended to dockTextNames, given a dockTabToolTip case, and winnowStateVersion bumped to 4. It is also wired into the solo-mode and dock-tab-update loops, the collapsed-state restore, workspaces, the full-screen dock set and its preference. Missing any one of those is what makes a tab bar flicker or a workspace restore inconsistent.
+
+OFF BY DEFAULT in the shipped layout: it is a new panel, an empty catalog has nothing to say, and the left group is already several tabs deep.
+
+
+⏺ Keywords and Cataloguing > Cataloguing Designated Roots (the Background Scanner)
+
+WHY THE OPPORTUNISTIC CAPTURE IS NOT ENOUGH. Opening a folder catalogues it, which is free -- the metadata has just been read anyway. But that only ever covers folders the user has visited, so search on a fresh install finds nothing and there is no way to say "index my library". Main/catalogscanner.cpp is that way: a list of nominated roots, walked in the background.
+
+THE ROOT LIST LIVES IN QSettings, NOT IN THE INDEX DATABASE. Everything else about the catalog is derived and rebuildable, which is what lets CacheDb::moveAside discard the file without asking when it will not open. The root list is the one piece that is USER INTENT, and losing "these are the folders I want indexed" to a corrupt index is a different kind of loss from discarding a rebuildable index. Keys: catalogRoots, catalogRootsRecurse.
+
+IT READS METADATA AND NOTHING ELSE -- no icon, no decode, no preview. A catalog row is text; rendering anything would turn a background index into hours of GPU work. isLoadXmp is passed TRUE, because the keywords are the entire point: without it dc:subject and lr:hierarchicalSubject are never read and every row would be catalogued blank.
+
+IT OWNS ITS OWN Metadata INSTANCE, created on the scanner thread rather than in the constructor (which runs on the GUI thread, before moveToThread). Metadata holds one reusable ImageMetadata and one parser set and is not safe to share, which is why Cache/reader.cpp does the same.
+
+ONE LOW-PRIORITY THREAD, NOT A POOL, and that is the point rather than an economy. Browsing must not get slower because an index is being built, so the scan gives way rather than competing: it pauses whenever the datamodel is being modified and resumes when the load finishes.
+
+G::stop IS A PAUSE HERE, NOT AN ABORT, and getting that wrong is the subtle failure. G::stop is a TRANSIENT teardown latch -- MW::stop sets it and clears it around every folder change, and the memory-overrun path sets it while it drains. A scanner that treated it as an abort would die the first time the user clicked a folder, so a library scan could never finish on a session anybody was actually using. Pausing gives those callers what they want (no further allocation from here while they tear down) without throwing the pass away. Only an explicit Stop, or the object being destroyed, actually ends a scan.
+
+IT SKIPS WORK ALREADY DONE, which is what makes "Scan Now" cheap enough to offer as a button. Each folder is stat'd into bare CatalogRows (path, size, mtime, sidecar mtime -- no parsing) and handed to Catalog::staleOf; only what comes back is opened. A rescan of an unchanged root is therefore one stat per file and no parsing at all. tst_catalog::staleOfSkipsUnchangedOnRescan pins it.
+
+COMMITS ARE CHUNKED (200 rows) rather than one transaction per folder. A folder can hold tens of thousands of images, and the whole batch is lost if the app quits mid-scan; chunking bounds what a quit costs to a few hundred files re-stat'd. Nothing is lost either way -- the scan resumes from staleOf.
+
+PROGRESS IS A STATUS-BAR ROW (progressCatalogRow), beside Metadata, Dev Previews and Raw Denoise. Minutes to hours of reading the user is not waiting on does not belong under a popup parked over the pictures. The row counts FOLDERS, not files: the file count is not known until each folder is enumerated, and a total that kept growing would make the bar run backwards. A background scan finishes silently -- the row already said it was happening and the panel shows the result.
+
+REMOVING A ROOT DOES NOT UN-CATALOGUE WHAT IT CONTRIBUTED. Those images are still real and still findable, and silently dropping thousands of rows because a folder was taken off the scan list would be a surprising amount of deletion for an action that reads as "stop scanning this". Sweep still demotes them if they actually disappear.
+
+THE ROOTS CONTROLS STAY ENABLED WHEN THE CATALOG IS EMPTY, even though the search half is disabled with its inline explanation. They are how the user FILLS it -- disabling them would leave no way out of "nothing is catalogued yet", which is the exact trap the disable-with-a-reason rule exists to avoid. They are disabled only when the database will not open at all, where scanning genuinely cannot achieve anything.
+
+WHILE A SCAN RUNS the button becomes Stop and the root list is frozen: editing the roots underneath a running scan would leave the user unsure whether the folder they just added is being scanned or not.

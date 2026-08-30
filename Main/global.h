@@ -188,6 +188,10 @@ Q_NAMESPACE
         /* Hash of that recipe, so a decoder thread can look this image's devPreview up in
            the devPreview cache. Appended for the same reason as DevelopColumn. */
         DevPreviewKeyColumn,
+        /* Hierarchical keyword paths from lr:hierarchicalSubject ie "Wildlife|Birds|
+           Heron", parallel to KeywordsColumn's flat leaf names. Appended for the same
+           reason as DevelopColumn. */
+        KeywordPathsColumn,
         TotalColumns    // insert additional columns before this
     };
 

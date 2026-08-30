@@ -9,6 +9,7 @@
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
 #include "Cache/framedecoder.h"
+#include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
 
@@ -68,6 +69,14 @@ public:
     bool contains(QString &path);
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
+
+    /* Every fully-read row as plain values, for Cache/catalog.h.
+
+       Read on the GUI thread and handed to a pool thread to insert, because the model is
+       not thread-safe. Rows whose metadata has not finished loading are skipped: a
+       half-read row would be catalogued with empty keywords and then look FRESH to the
+       next commit, so the image would stay wrong until its file changed. */
+    QVector<CatalogRow> catalogRows() const;
     bool isAnyPick();
     void clearPicks();
     void remove(QString fPath);
@@ -123,6 +132,11 @@ public:
     int recurseImageCount(QString &parentFolder);
 
     void removeFolder(const QString &folderPath);
+
+    /* Load an arbitrary set of image paths as one virtual folder -- the catalog search
+       result. Unlike every other load path this does not start from a directory, because
+       the results routinely span many. See the .cpp. */
+    void addPaths(const QStringList &fPaths);
 
     QMutex dmMutex;
     QReadWriteLock fPathRowLock;

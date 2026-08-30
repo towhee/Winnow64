@@ -680,6 +680,9 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (tabText == folderDockTabText)   return tip(folderDockTabText,   "F3");
     if (tabText == favDockTabText)      return tip(favDockTabText,      "F4");
     if (tabText == filterDockTabText)   return tip(filterDockTabText,   "F5");
+    /* Catalog searches the INDEX (every image seen), where Filters searches the
+       datamodel (what is loaded). Shift+F2 pairs it with F2, "search here". */
+    if (tabText == catalogDockTabText)  return tip(catalogDockTabText,  "Shift+F2");
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
@@ -784,6 +787,7 @@ void MW::applyDockCollapseState()
     apply(folderDock,   "FolderDock");
     apply(favDock,      "BookmarkDock");
     apply(filterDock,   "FilterDock");
+    apply(catalogDock,  "CatalogDock");
     apply(metadataDock, "MetadataDock");
     apply(thumbDock,    "ThumbDock");
     apply(embelDock,    "EmbelDock");

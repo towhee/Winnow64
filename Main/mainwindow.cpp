@@ -1,5 +1,6 @@
 ﻿#include "Main/mainwindow.h"
 #include "Utilities/fileops.h"
+#include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 #include "Develop/workingimage.h"
@@ -90,6 +91,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {folderDockTabText,   ":/images/icon16/foldertree_white.png"},
         {favDockTabText,      ":/images/icon16/bookmarks_white.png"},
         {filterDockTabText,   ":/images/icon16/filters_white.png"},
+        {catalogDockTabText,  ":/images/icon16/catalog_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
@@ -100,6 +102,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {folderDockTabText,   folderDock},
         {favDockTabText,      favDock},
         {filterDockTabText,   filterDock},
+        {catalogDockTabText,  catalogDock},
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
@@ -260,6 +263,7 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     if (tabText == folderDockTabText)   return folderDock;
     if (tabText == favDockTabText)      return favDock;
     if (tabText == filterDockTabText)   return filterDock;
+    if (tabText == catalogDockTabText)  return catalogDock;
     if (tabText == metadataDockTabText) return metadataDock;
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
@@ -387,6 +391,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on DataModel, Metadata, ThumbView, Filters, BuildFilters
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createMetaRead();            // dependent on DataModel, Metadata, ThumbView, VideoView, ImageCache
+    createCatalogScanner();      // dependent on nothing but Catalog + the progress bar
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
     createVideoView();          // dependent on centralWidget, ThumbView
     createCompareView();        // dependent on centralWidget
@@ -1007,6 +1012,11 @@ void MW::closeEvent(QCloseEvent *event)
     // metaRead->stopReaders();
     metaRead->stop();
     imageCache->stop();
+
+    /* End the background catalog scan. Its thread checks between files, so this returns
+       promptly, and anything already committed is kept -- the scan resumes from staleOf
+       next time rather than starting over. */
+    if (catalogScanner) catalogScanner->stop();
 
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -2904,6 +2914,43 @@ void MW::handleStartupArgs(const QString &args)
     return;
 }
 
+void MW::resetDevelopCachesForNewFolder()
+{
+/*
+    A new set of images invalidates the current image's develop caches -- they hold the
+    PREVIOUS image's ~60MP bases. Drop them so revisiting an image RE-DECODES (showing
+    progress again) rather than short-circuiting on a stale hit, and so hundreds of MB are
+    not pinned across a folder change. The pre-develop WorkingImageCache is cleared
+    separately on the ImageCache thread (its folder reset).
+
+    Shared by folderSelectionChange and loadCatalogResults: a catalog result set replaces
+    the model's contents exactly as a folder change does, so it must invalidate exactly
+    the same caches. Missing one here would show the previous image's pixels.
+*/
+    if (G::isLogger) G::log("MW::resetDevelopCachesForNewFolder");
+
+    developDenoised.reset();
+    developDenoisedKey.clear();
+    developPmridFull.reset();
+    developPmridKey.clear();
+    developPmridResSource.clear();     // drop the noise-model snapshot with its base
+    developPmridResK = developPmridResB = 0.0;
+    developPmridResHadNP = false;
+    developProxy.reset();
+    developProxyPath.clear();
+    developFrame = QImage();           // the frame the sharpening mask preview derives from
+    developFramePath.clear();
+    developFrameFaithful = false;
+    developFrameRecipe.clear();
+    developFullFrame = QImage();       // the full-res frame the devPreview is encoded from
+    developFullFramePath.clear();
+    developFullFrameFaithful = false;
+    developFullFrameRecipe.clear();
+    developStackCache.clear();         // its entries are sized to the old proxy
+    maskFoldCacheClear();              // ditto, and its refs belong to the old folder
+    developWorkTriedPath.clear();
+}
+
 void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDataModel, bool recurse)
 {
 /*
@@ -2962,31 +3009,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
 
-    /* A new folder invalidates the current image's develop denoise caches (they hold the
-       previous folder image's ~60MP bases). Drop them so revisiting an image RE-DECODES
-       (showing progress again) rather than short-circuiting on a stale hit, and so we
-       don't pin hundreds of MB across folders. The pre-develop WorkingImageCache is
-       cleared separately on the ImageCache thread (its folder reset). */
-    developDenoised.reset();
-    developDenoisedKey.clear();
-    developPmridFull.reset();
-    developPmridKey.clear();
-    developPmridResSource.clear();     // drop the noise-model snapshot with its base
-    developPmridResK = developPmridResB = 0.0;
-    developPmridResHadNP = false;
-    developProxy.reset();
-    developProxyPath.clear();
-    developFrame = QImage();           // the frame the sharpening mask preview derives from
-    developFramePath.clear();
-    developFrameFaithful = false;
-    developFrameRecipe.clear();
-    developFullFrame = QImage();       // the full-res frame the devPreview is encoded from
-    developFullFramePath.clear();
-    developFullFrameFaithful = false;
-    developFullFrameRecipe.clear();
-    developStackCache.clear();         // its entries are sized to the old proxy
-    maskFoldCacheClear();              // ditto, and its refs belong to the old folder
-    developWorkTriedPath.clear();
+    resetDevelopCachesForNewFolder();
 
     // block repeated clicks to folders or bookmarks while processing this one.
     bookmarks->setEnabled(false);
@@ -3037,6 +3060,74 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     // dm->enqueueFolderSelection(folderPath, op, recurse);
     // qDebug() << fun << "finished dm->enqueueFolderSelection";
 
+}
+
+void MW::startCatalogScan()
+{
+/*
+    Kick off the background scan over the folders the user nominated. Queued onto the
+    scanner's own thread; nothing here blocks.
+*/
+    if (G::isLogger) G::log("MW::startCatalogScan");
+    if (!catalogScanner) return;
+    if (catalogScanner->isRunning()) return;
+    if (catalogRoots.isEmpty()) return;
+
+    if (progress) {
+        progress->setRowText(progressCatalogRow, "Catalog");
+        progress->showRow(progressCatalogRow, true);
+    }
+    if (catalogView) catalogView->setScanning(true);
+    QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
+                              Q_ARG(QStringList, catalogRoots),
+                              Q_ARG(bool, catalogRootsRecurse));
+}
+
+void MW::stopCatalogScan()
+{
+    if (G::isLogger) G::log("MW::stopCatalogScan");
+    if (catalogScanner) catalogScanner->stop();
+}
+
+void MW::loadCatalogResults(const QStringList &paths)
+{
+/*
+    Replace the datamodel with a catalog search result -- images from any number of
+    folders, loaded as one browsable set. See notes/Documentation.txt "The Catalog".
+
+    THIS IS THE SAME RESET AS A FOLDER CHANGE, deliberately. Everything downstream of the
+    model -- MetaRead, the icon chunks, the image cache, Develop -- assumes that when the
+    model's contents are replaced it was told to stop first and its caches were dropped.
+    A result set replaces the contents just as thoroughly as a folder does, so it takes
+    the identical path: stop(), reset the develop caches, then fill and let
+    folderChangeCompleted run as usual.
+
+    THE FOLDER PANEL DELIBERATELY DOES NOT FOLLOW. The results span many folders, so there
+    is no one folder to select; highlighting an arbitrary one of them would misrepresent
+    what is loaded. The dock's own result header is what says where these came from.
+*/
+    QString fun = "MW::loadCatalogResults";
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, QString::number(paths.size()) + " results");
+
+    if (paths.isEmpty()) return;
+
+    G::allMetadataAttempted = false;
+    G::iconChunkLoaded = false;
+    G::isModifyingDatamodel = true;
+
+    resetDevelopCachesForNewFolder();
+
+    bookmarks->setEnabled(false);
+    fsTree->setEnabled(false);
+
+    setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
+    stop(fun);
+
+    dm->abort = false;
+    /* Queued for the same reason enqueueFolderSelection is: stop() has just torn down the
+       reader threads, and the fill must not run inside the signal that asked for it. */
+    QTimer::singleShot(0, this, [this, paths]{ dm->addPaths(paths); });
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
@@ -4384,6 +4475,41 @@ void MW::folderChangeCompleted()
         });
     }
 
+    /* Catalog the folder that just loaded, so its keywords, titles and camera data stay
+       searchable after the user navigates away. Deferred to here and run off the GUI
+       thread for the same reasons as the sweep above: metadata is complete, and the load
+       the user was waiting on must not carry the insert.
+
+       The rows are read from the model HERE, on the GUI thread -- the model is not
+       thread-safe -- and only the resulting values cross to the pool. Unchanged rows are
+       skipped inside commit(), so pacing back and forth between two folders is a read of
+       one row per image and no writes at all. */
+    {
+        const QVector<CatalogRow> rows = dm->catalogRows();
+        if (!rows.isEmpty()) {
+            QThreadPool::globalInstance()->start([this, rows]{
+                Catalog::instance().commit(rows);
+                /* Tell the panel what just changed, but only if someone is looking at
+                   it: the keyword facets are a query plus a tree rebuild, and the whole
+                   point of doing the commit out here is to not spend GUI time on the
+                   catalog during a folder load. Back on the GUI thread -- the widget
+                   must not be touched from the pool. */
+                QMetaObject::invokeMethod(this, [this]{
+                    if (catalogDock && catalogDock->isVisible()) catalogView->refresh();
+                }, Qt::QueuedConnection);
+            });
+        }
+    }
+
+    /* One-shot catalog sweep, paired with the devPreview one above and for the same
+       reason: rows whose image is gone should stop appearing in searches. It demotes
+       rather than deletes, and skips unmounted volumes, so an ejected card is not a mass
+       deletion. */
+    if (!catalogSweepDone) {
+        catalogSweepDone = true;
+        QThreadPool::globalInstance()->start([]{ Catalog::instance().sweep(); });
+    }
+
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
     /* Optional background devPreview build for edited images in this folder that have no
@@ -5617,6 +5743,8 @@ void MW::toggleFullScreen()
         favDock->setVisible(fullScreenDocks.isFavs);
         filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
         filterDock->setVisible(fullScreenDocks.isFilters);
+        catalogDockVisibleAction->setChecked(fullScreenDocks.isCatalog);
+        catalogDock->setVisible(fullScreenDocks.isCatalog);
         if (G::useInfoView) {
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
@@ -10472,6 +10600,7 @@ void MW::updateState()
     setFolderDockVisibility();
     setFavDockVisibility();
     setFilterDockVisibility();
+    setCatalogDockVisibility();
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setDevelopDockVisibility();

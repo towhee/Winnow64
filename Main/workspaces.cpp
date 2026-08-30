@@ -153,6 +153,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     folderDockVisibleAction->setChecked(w.isFolderDockVisible);
     favDockVisibleAction->setChecked(w.isFavDockVisible);
     filterDockVisibleAction->setChecked(w.isFilterDockVisible);
+    catalogDockVisibleAction->setChecked(w.isCatalogDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
     developDockVisibleAction->setChecked(w.isDevelopDockVisible);
@@ -270,6 +271,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isFolderDockVisible = folderDockVisibleAction->isChecked();
     wsd.isFavDockVisible = favDockVisibleAction->isChecked();
     wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
+    wsd.isCatalogDockVisible = catalogDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
     wsd.isDevelopDockVisible = developDockVisibleAction->isChecked();
@@ -420,6 +422,9 @@ void MW::builtInDefaultWorkspace()
     folderDockVisibleAction->setChecked(true);
     favDockVisibleAction->setChecked(true);
     filterDockVisibleAction->setChecked(true);
+    /* Off in the shipped layout: an empty catalog has nothing to show, and the
+       left group is already four tabs deep. Shift+F2 or the Window menu opens it. */
+    catalogDockVisibleAction->setChecked(false);
     metadataDockVisibleAction->setChecked(true);
     embelDockVisibleAction->setChecked(false);
     thumbDockVisibleAction->setChecked(true);
@@ -548,6 +553,7 @@ QString MW::reportWorkspaces()
             << "\n  isFolderDockVisible       " << G::s(ws.isFolderDockVisible)
             << "\n  isFavDockVisible          " << G::s(ws.isFavDockVisible)
             << "\n  isFilterDockVisible       " << G::s(ws.isFilterDockVisible)
+            << "\n  isCatalogDockVisible      " << G::s(ws.isCatalogDockVisible)
             << "\n  isMetadataDockVisible     " << G::s(ws.isMetadataDockVisible)
             << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
             << "\n  isDevelopDockVisible      " << G::s(ws.isDevelopDockVisible)
@@ -620,6 +626,7 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisFolderDockVisible" << ws.isFolderDockVisible
         << "\nisFavDockVisible" << ws.isFavDockVisible
         << "\nisFilterDockVisible" << ws.isFilterDockVisible
+        << "\nisCatalogDockVisible" << ws.isCatalogDockVisible
         << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
         << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
         << "\nisDevelopDockVisible" << ws.isDevelopDockVisible
@@ -678,6 +685,7 @@ void MW::readWorkspaceSettings(WorkspaceData &wsd)
     wsd.isFolderDockVisible = settings->value("isFolderDockVisible").toBool();
     wsd.isFavDockVisible = settings->value("isFavDockVisible").toBool();
     wsd.isFilterDockVisible = settings->value("isFilterDockVisible").toBool();
+    wsd.isCatalogDockVisible = settings->value("isCatalogDockVisible").toBool();
     wsd.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
     wsd.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
     wsd.isDevelopDockVisible = settings->value("isDevelopDockVisible").toBool();
@@ -746,6 +754,7 @@ void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
     settings->setValue("isFolderDockVisible", wsd.isFolderDockVisible);
     settings->setValue("isFavDockVisible", wsd.isFavDockVisible);
     settings->setValue("isFilterDockVisible", wsd.isFilterDockVisible);
+    settings->setValue("isCatalogDockVisible", wsd.isCatalogDockVisible);
     settings->setValue("isMetadataDockVisible", wsd.isMetadataDockVisible);
     settings->setValue("isEmbelDockVisible", wsd.isEmbelDockVisible);
     settings->setValue("isDevelopDockVisible", wsd.isDevelopDockVisible);

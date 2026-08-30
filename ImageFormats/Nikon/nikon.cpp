@@ -1,4 +1,5 @@
 #include "nikon.h"
+#include "Metadata/xmpapply.h"
 #include "Main/global.h"
 #include "Metadata/iptc.h"      // req'd to report embedded jpeg
 #include "Metadata/ExifTool.h"  // req'd for some Nikon lenses not in lookup
@@ -1037,30 +1038,7 @@ bool Nikon::parse(MetadataParameters &p,
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
-        if (xmp.isValid) {
-            p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
-            m.rating = xmp.getItem("Rating");
-            m.label = xmp.getItem("Label");
-            m.title = xmp.getItem("title");
-            m.cameraSN = xmp.getItem("SerialNumber");
-            if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
-            m.lensSN = xmp.getItem("LensSerialNumber");
-            if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
-            m.copyright = xmp.getItem("rights");
-            m.email = xmp.getItem("email");
-            m.url = xmp.getItem("url");
-        }
-
-        // save original values so can determine if edited when writing changes
-        m._rating = m.rating;
-        m._label = m.label;
-        m._title = m.title;
-        m._creator = m.creator;
-        m._copyright = m.copyright;
-        m._email  = m.email ;
-        m._url = m.url;
-        m._orientation = m.orientation;
-        m._rotationDegrees = m.rotationDegrees;
+        applyXmp(xmp, m, p);
 
         if (p.report) p.xmpString = xmp.docToQString();
 //        if (p.report) p.xmpString = xmp.xmpAsString();

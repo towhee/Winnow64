@@ -457,7 +457,10 @@ bool PNG::parse(MetadataParameters &p,
                 if (m.copyright.isEmpty()) m.copyright = xmp.getItem("rights");
                 m.email = xmp.getItem("email");
                 m.url = xmp.getItem("url");
+                /* Not routed through applyXmp (Metadata/xmpapply.h): the guards below
+                   and the exif:/tiff: mirroring that follows are PNG-specific. */
                 m.keywords = xmp.getItemList("subject");
+                m.keywordPaths = xmp.getItemList("hierarchicalsubject");
 
                 // EXIF camera fields — Lightroom/Photoshop drop the eXIf chunk
                 // and mirror these into the XMP exif:/tiff: namespaces.

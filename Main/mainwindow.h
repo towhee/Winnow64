@@ -37,6 +37,8 @@
 #include "Views/imageview.h"
 #include "Views/videoview.h"
 #include "Views/infoview.h"
+#include "Views/catalogview.h"
+#include "Main/catalogscanner.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
@@ -183,8 +185,8 @@ public:
     /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes so a
        window state saved by an older build (missing the new dock) is rejected rather than
        restored into an inconsistent layout. v1: added developDock. v2: added historyDock.
-       v3: added presetsDock. */
-    static constexpr int winnowStateVersion = 3;
+       v3: added presetsDock. v4: added catalogDock. */
+    static constexpr int winnowStateVersion = 4;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -230,6 +232,7 @@ public:
         bool isFolderDockVisible;
         bool isFavDockVisible;
         bool isFilterDockVisible;
+        bool isCatalogDockVisible;
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
         bool isDevelopDockVisible;
@@ -289,6 +292,7 @@ public:
         bool isFolders = false;
         bool isFavs = false;
         bool isFilters = false;
+        bool isCatalog = false;
         bool isMetadata = false;
         bool isDevelop = false;
         bool isHistory = false;
@@ -479,6 +483,16 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
+    /* Replace the datamodel with a catalog search result -- images from any number of
+       folders loaded as one set. Same reset as a folder change; see the .cpp. */
+    void loadCatalogResults(const QStringList &paths);
+    /* Start / stop the background scan over catalogRoots. */
+    void startCatalogScan();
+    void stopCatalogScan();
+    /* Drop the develop caches that belong to the images being replaced. Shared by
+       folderSelectionChange and loadCatalogResults. */
+    void resetDevelopCachesForNewFolder();
+
     void folderSelectionChange(QString folderPath = "",
                                G::FolderOp op = G::FolderOp::Add,
                                bool resetDataModel = true, bool recurse = false);
@@ -928,6 +942,7 @@ private slots:
     void setFolderDockVisibility();
     void setFavDockVisibility();
     void setFilterDockVisibility();
+    void setCatalogDockVisibility();
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
@@ -944,6 +959,7 @@ private slots:
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();
+    void closeCatalogDock();
     void closeMetadataDock();
     void showThumbDock();
     void showEmbelDock();
@@ -953,6 +969,7 @@ private slots:
     void showFolderDock();
     void showFavDock();
     void showFilterDock();
+    void showCatalogDock();
     void showMetadataDock();
 
     void setMenuBarVisibility();
@@ -1289,6 +1306,7 @@ private:
     QAction *folderDockVisibleAction;
     QAction *favDockVisibleAction;
     QAction *filterDockVisibleAction;
+    QAction *catalogDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
@@ -1430,6 +1448,8 @@ private:
     int progressRawDenoiseRow = -1;
     int progressDemosaicRow = -1;
     int progressDevPreviewRow = -1;
+    /* Background catalog scan over the user's designated roots. */
+    int progressCatalogRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -1441,6 +1461,7 @@ private:
     DockWidget *folderDock;
     DockWidget *favDock;
     DockWidget *filterDock;
+    DockWidget *catalogDock;
     DockWidget *metadataDock;
     DockWidget *thumbDock;
     DockWidget *propertiesDock;
@@ -1524,6 +1545,7 @@ private:
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
+    DockTitleBar *catalogTitleBar;
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
@@ -1533,6 +1555,15 @@ private:
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
+    /* The Catalog dock's body: cross-folder search over the local index. */
+    CatalogView *catalogView;
+    /* Walks the designated roots on its own low-priority thread. */
+    CatalogScanner *catalogScanner = nullptr;
+    /* Folders the user nominated for cataloguing. In QSettings, NOT in the index
+       database: CacheDb::moveAside discards that file without asking, and this is
+       user intent rather than derived data. */
+    QStringList catalogRoots;
+    bool catalogRootsRecurse = true;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
@@ -1690,6 +1721,9 @@ private:
        rather than the camera's embedded JPG, so the rendering hint can say so. */
     bool developInterimIsDevPreview = false;
     bool devPreviewSweepDone = false;
+    /* One-shot guard for the catalog sweep, run from folderChangeCompleted
+       (see Cache/catalog.h). */
+    bool catalogSweepDone = false;
     bool developProxyInFlight = false;
     bool developProxyPending = false;
     quint64 developProxyReqGen = 0;
@@ -1957,6 +1991,7 @@ private:
     QString folderDockTabRichText;
     QString favDockTabText;
     QString filterDockTabText;
+    QString catalogDockTabText;
     QString metadataDockTabText;
     QString embelDockTabText;
     QString developDockTabText;
@@ -1973,6 +2008,7 @@ private:
     void createFolderDock();
     void createFavDock();
     void createFilterDock();
+    void createCatalogDock();
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();
@@ -2033,6 +2069,7 @@ private:
     void createBookmarks();
     void createLinearMetaRead();
     void createMetaRead();
+    void createCatalogScanner();
     void createImageCache();
     void createCentralWidget();
     void createCompareView();

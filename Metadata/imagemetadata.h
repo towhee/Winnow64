@@ -93,6 +93,9 @@ public:
     QString gpsCoord;
     QString shootingInfo = "";
     QStringList keywords;
+    /* Hierarchical keyword paths from lr:hierarchicalSubject ie "Wildlife|Birds|Heron".
+       Parallel to keywords, not a replacement: a file can carry either or both. */
+    QStringList keywordPaths;
 
     QString title = "";
     QString creator = "";

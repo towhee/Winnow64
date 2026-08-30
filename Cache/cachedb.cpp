@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 2;
+constexpr int kSchemaVersion = 3;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -221,9 +221,9 @@ bool CacheDb::migrate(QSqlDatabase &db)
     ADDITIVE ONLY, and the version is a floor rather than an exact match: a file written
     by a NEWER Winnow is refused (returning false, so it is moved aside and rebuilt)
     rather than downgraded, because a rebuild costs re-rendering while a downgrade would
-    silently discard whatever the newer build was keeping. New tables -- keywords being
-    the expected next one -- get a new version number and a new block below; existing
-    tables are extended with ALTER TABLE ADD COLUMN, never redefined in place.
+    silently discard whatever the newer build was keeping. New tables get a new version
+    number and a new block below (version 3 added the catalog); existing tables are
+    extended with ALTER TABLE ADD COLUMN, never redefined in place.
 */
     QSqlQuery q(db);
 
@@ -326,6 +326,104 @@ bool CacheDb::migrate(QSqlDatabase &db)
                        " ON devpreview(pathkey)")) {
             db.rollback();
             return false;
+        }
+    }
+
+    if (version < 3) {
+        /* THE CATALOG. Everything Winnow has learned about images it has seen, so a
+           keyword or title search can answer across folders instead of only inside the
+           one currently loaded. See notes/Documentation.txt "Keywords and Cataloguing".
+
+           STILL DERIVED, STILL REBUILDABLE. Every column here is re-readable from the
+           image and its sidecar, which is what keeps the failure policy of this whole
+           file ("move it aside and rebuild") honest. The ONE thing that would not be
+           rebuildable -- the list of folders the user nominated for background scanning
+           -- deliberately lives in QSettings instead, because moveAside() discards this
+           file without asking and user intent is not derived data.
+
+           image.folder is denormalised, like devpreview.folder, so a folder facet or a
+           prune-by-folder is an index seek rather than a quarter of a million paths
+           taken apart in memory. */
+        const char *ddl[] = {
+            "CREATE TABLE IF NOT EXISTS image ("
+            "  id           INTEGER PRIMARY KEY,"
+            "  pathkey      TEXT    NOT NULL,"
+            "  path         TEXT    NOT NULL,"
+            "  folder       TEXT    NOT NULL,"
+            "  vol          TEXT    NOT NULL DEFAULT '',"
+            "  filename     TEXT    NOT NULL DEFAULT '',"
+            "  ext          TEXT    NOT NULL DEFAULT '',"
+            /* Freshness. sidecarmtime is what makes an edit made in Lightroom -- which
+               rewrites the .xmp and never touches the raw -- reindex on next sight. */
+            "  srcsize      INTEGER NOT NULL DEFAULT 0,"
+            "  srcmtime     INTEGER NOT NULL DEFAULT 0,"
+            "  sidecarmtime INTEGER NOT NULL DEFAULT 0,"
+            "  indexed      INTEGER NOT NULL DEFAULT 0,"
+            "  live         INTEGER NOT NULL DEFAULT 1,"
+            /* Facets and range filters. */
+            "  captured     INTEGER,"
+            "  rating       INTEGER NOT NULL DEFAULT 0,"
+            "  label        TEXT    NOT NULL DEFAULT '',"
+            "  pick         INTEGER NOT NULL DEFAULT 0,"
+            "  title        TEXT    NOT NULL DEFAULT '',"
+            "  creator      TEXT    NOT NULL DEFAULT '',"
+            "  copyright    TEXT    NOT NULL DEFAULT '',"
+            "  make         TEXT    NOT NULL DEFAULT '',"
+            "  model        TEXT    NOT NULL DEFAULT '',"
+            "  lens         TEXT    NOT NULL DEFAULT '',"
+            "  iso          INTEGER NOT NULL DEFAULT 0,"
+            "  aperture     REAL    NOT NULL DEFAULT 0,"
+            "  shutter      REAL    NOT NULL DEFAULT 0,"
+            "  focallength  REAL    NOT NULL DEFAULT 0,"
+            "  width        INTEGER NOT NULL DEFAULT 0,"
+            "  height       INTEGER NOT NULL DEFAULT 0,"
+            "  gpscoord     TEXT    NOT NULL DEFAULT '')",
+            "CREATE UNIQUE INDEX IF NOT EXISTS image_pathkey ON image(pathkey)",
+            "CREATE INDEX IF NOT EXISTS image_folder   ON image(folder)",
+            "CREATE INDEX IF NOT EXISTS image_captured ON image(captured)",
+            "CREATE INDEX IF NOT EXISTS image_model    ON image(model)",
+            "CREATE INDEX IF NOT EXISTS image_lens     ON image(lens)",
+            "CREATE INDEX IF NOT EXISTS image_live     ON image(live, id)",
+
+            /* Keywords, normalised. A flat dc:subject keyword has path = ''. A
+               hierarchical one carries its full Lightroom path, and one row is inserted
+               per ANCESTOR as well, wired by parent -- which is what lets a search for
+               "Wildlife" reach an image whose only keyword is "Heron". */
+            "CREATE TABLE IF NOT EXISTS keyword ("
+            "  id       INTEGER PRIMARY KEY,"
+            "  name     TEXT NOT NULL,"
+            "  namefold TEXT NOT NULL,"
+            "  path     TEXT NOT NULL DEFAULT '',"
+            "  pathfold TEXT NOT NULL DEFAULT '',"
+            "  parent   INTEGER REFERENCES keyword(id) ON DELETE SET NULL)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS keyword_key"
+            " ON keyword(pathfold, namefold)",
+            "CREATE INDEX        IF NOT EXISTS keyword_name ON keyword(namefold)",
+
+            /* PRAGMA foreign_keys is ON (applyPragmas), so these cascades really fire:
+               deleting an image row takes its keyword links with it. */
+            "CREATE TABLE IF NOT EXISTS image_keyword ("
+            "  image_id   INTEGER NOT NULL REFERENCES image(id)   ON DELETE CASCADE,"
+            "  keyword_id INTEGER NOT NULL REFERENCES keyword(id) ON DELETE CASCADE,"
+            "  PRIMARY KEY (image_id, keyword_id)) WITHOUT ROWID",
+            "CREATE INDEX IF NOT EXISTS image_keyword_kw"
+            " ON image_keyword(keyword_id, image_id)",
+
+            /* Free text. rowid == image.id, so a hit joins straight back with no mapping
+               table. A PLAIN fts5 table, not contentless and not external-content:
+               contentless needs the original text handed back on every delete (so a
+               second copy is kept anyway) and external-content cannot span the
+               image_keyword join. The duplicate text costs ~200 bytes an image and buys
+               prefix, AND/OR/NOT, phrase and BM25 ranking with no query code of ours. */
+            "CREATE VIRTUAL TABLE IF NOT EXISTS image_fts USING fts5("
+            "  keywords, title, creator, copyright, gear, filename,"
+            "  tokenize = 'unicode61 remove_diacritics 2')",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
         }
     }
 

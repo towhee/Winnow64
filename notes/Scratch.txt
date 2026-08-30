@@ -2604,6 +2604,48 @@ At ISO 250 with this DNG's NoiseProfile, KSigma gives cvt_k = 14.6, which scales
 when it works. That's inherent to reusing the OPPO anchor at low ISO, not a bug I've fixed. If you want low-ISO frames to actually denoise, that needs a decision (clamp cvt_k, or skip/grey the feature
 below some ISO) — say the word and I'll dig into it.
 
+tst_localcontrast fails with 10 golden-value drifts (dehaze, sharpen, clarity — e.g.
+sharpenMasked drifted 0.791 → 0.766, tolerance 1e-05). I confirmed by stashing my changes
+and rebuilding at HEAD that this is pre-existing on master, not caused by this work —
+identical 10 failures either way. Given the test's own message is "a saved develop recipe
+now renders differently," it's worth a look independently; likely fallout from the recent
+sharpen patch or the OpenCV 4.13 bump.
+
+----------------------
+
+Phase 0 — Metadata/xmp.cpp, Metadata/metadata.{h,cpp},
+Metadata/imagemetadata.h, Main/global.h, Datamodel/datamodel.cpp, and the eight
+parsers (ImageFormats/ Jpeg/jpeg.cpp, Jpeg/jpeg2.cpp, Nikon/nikon.cpp,
+Canon/canon.cpp, Dng/dng.cpp, Tiff/tiff.cpp, Panasonic/panasonic.cpp, Png/png.cpp),
+each losing ~12 lines to the shared helper.
+
+Phase 1 — Cache/cachedb.cpp, new Cache/catalog.{h,cpp},
+Datamodel/datamodel.{h,cpp}, Main/mainwindow.cpp:4356, CMakeLists.txt,
+tests/CMakeLists.txt.
+
+Phase 2 — new Views/catalogdock.{h,cpp}, Main/initialize.cpp,
+Main/menusandactions.cpp, Main/workspaces.cpp, Main/settings.cpp,
+Datamodel/datamodel.cpp, Help/shortcutsform.ui, icon plus .qrc,
+winnowStateVersion.
+
+Phase 3 — new Main/catalogscanner.{h,cpp}, Main/settings.cpp, dock UI.
+
+
+1. Point at a folder of Lightroom-keyworded NEF/DNG. Filters > Keywords populates
+   where it was previously empty — this alone proves the read gap is closed.
+2. Visit three such folders, then restart Winnow. Catalog search for a keyword present
+   only in the third folder returns its images with no folder loaded.
+3. Load Results: the grid fills with matches from several folders at once. Check sort
+   order after metadata finishes landing, not only at insert.
+4. Add a root, run a scan, browse away — the status-bar row advances, the UI stays
+   responsive, and folder navigation during a scan is not slowed.
+5. Rename and delete an image through Winnow (Utilities/fileops.h), then re-search:
+   no stale hit. Delete one in Finder, reload the folder, confirm Sweep demotes it.
+6. Quit and relaunch mid-scan; nothing is corrupted, and the scan resumes via
+   StaleOf.
+
+
+
 Two things I'd note in the meantime. The guard from the first pass is worth keeping
 regardless — it's correct for the mismatch it covers — but it clearly wasn't your
 failure, and I should have instrumented before shipping a fix off static reading. And
