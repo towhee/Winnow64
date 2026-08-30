@@ -145,6 +145,19 @@ QVector<double> Reader::reals(const Entry &e)
             quint32 bits = g32(q); float f; memcpy(&f, &bits, 4); out << double(f);
             break;
         }
+        case 12: {  // DOUBLE (IEEE 754 binary64)
+            /* g32 already byte-swaps within each 4-byte half, so only the ORDER of the
+               two halves depends on endianness: big-endian puts the high word first.
+               Without this case a DOUBLE fell to the default below and returned the low
+               4 bytes of the mantissa as an integer -- DNG's NoiseProfile (51041) is
+               DOUBLE, so PMRID's (k,b) came back as ~1e9 instead of ~1e-5 and the
+               denoiser clamped the whole mosaic to black. */
+            const quint32 w0 = g32(q), w1 = g32(q + 4);
+            const quint64 bits = isBig ? (quint64(w0) << 32) | w1
+                                       : (quint64(w1) << 32) | w0;
+            double d; memcpy(&d, &bits, 8); out << d;
+            break;
+        }
         case 3:          out << double(g16(q)); break;
         case 8:          out << double(qint16(g16(q))); break;
         case 1: case 7:  out << double(q[0]); break;

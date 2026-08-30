@@ -501,6 +501,42 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  ISO = " << G::s(currentImageIso());
     rpt << "\n" << "  Camera model = "
         << dm->sf->index(dm->currentSfRow, G::CameraModelColumn).data().toString();
+
+    /* WHICH FILE IN THE PREVIEW CACHE IS THIS IMAGE'S? Payloads are named by index row id
+       in hex ("537.jpg"), so the mapping is otherwise invisible without querying index.db
+       by hand -- and picking the wrong file by eye is easy. The PIXEL SIZE is the point
+       of reporting it: a devPreview is meant to be full sensor resolution, and one that
+       comes back at the file's embedded-preview size (1024 px wide for an Adobe DNG) says
+       the render behind it was not the sensor decode. Read from the JPEG header only.
+       This is the mapping, NOT a cache hit: no recipe hash is checked here, so a listed
+       file may still be stale for the recipe in force -- DEVELOP PREVIEW below answers
+       that. A row naming a file that no longer exists is reported as missing rather than
+       hidden, since that is itself worth seeing. */
+    const QString devPrevPath = DevPreviewCache::instance().payloadPath(fPath);
+    rpt << "\n" << "  devPreview = "
+        << (devPrevPath.isEmpty() ? "(none in cache index)" : devPrevPath);
+    if (!devPrevPath.isEmpty()) {
+        QFileInfo pfi(devPrevPath);
+        if (!pfi.exists()) {
+            rpt << "\n" << "    (indexed, but the file is MISSING from the cache folder)";
+        }
+        else {
+            const QSize sz = QImageReader(devPrevPath).size();
+            rpt << "\n" << "    " << G::s(sz.width()) << " x " << G::s(sz.height())
+                << "   " << QString::number(pfi.size() / 1048576.0, 'f', 2) << " MB";
+            /* Compare against the sensor, so "is this full size?" needs no arithmetic. */
+            RawSensorInfo ri;
+            dm->fPathRawInfoGet(fPath, ri);
+            if (ri.isRaw && ri.width > 0) {
+                const int sensorEdge = qMax(ri.width, ri.height);
+                const int prevEdge = qMax(sz.width(), sz.height());
+                rpt << "   sensor " << G::s(ri.width) << " x " << G::s(ri.height);
+                if (prevEdge * 2 < sensorEdge)
+                    rpt << "  <-- FAR SMALLER THAN THE SENSOR (built from the embedded "
+                           "preview, not the raw decode?)";
+            }
+        }
+    }
     rpt << "\n";
 
     // DEVELOP BASE (cached scene-linear WorkingImage)

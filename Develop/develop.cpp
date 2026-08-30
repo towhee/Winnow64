@@ -567,6 +567,24 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
     out = clean;                            // dims/white/space/sceneReferred + fallback
     if (clean.width != den.width || clean.height != den.height) return;
 
+    /* Both sides must be in the SAME colour state. den always comes from the raw decode
+       (camera-native, scene-linear); clean can come from the WorkingImageCache, which --
+       despite what its header promises -- also holds display-referred working-space
+       entries built from the 8-bit decode (InputTransform::FromImage, what Preview mode
+       leaves under a raw's path). Adding a camera-native difference to white-balanced
+       pixels tints the whole image: the sensor's green sits far above its red/blue
+       before the white balance, so the difference is dominated by green and the render
+       goes magenta/green. A caller that hands over mismatched buffers gets the clean
+       image back, not a cast. */
+    if (clean.space != den.space || clean.sceneReferred != den.sceneReferred) {
+        qWarning("Develop::BlendRawDenoise: colour-state mismatch (space %d vs %d, "
+                 "sceneReferred %d vs %d) -- serving the clean base",
+                 int(clean.space), int(den.space), int(clean.sceneReferred),
+                 int(den.sceneReferred));
+        return;
+    }
+
+
     /* Luma weights for the space the buffers are ACTUALLY in. Since RawColor stops at
        camera-native this blend now runs on SENSOR primaries, where the working space's
        weights are the wrong numbers -- a camera's green channel does not carry 0.72 of

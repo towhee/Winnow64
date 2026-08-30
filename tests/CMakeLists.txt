@@ -192,6 +192,11 @@ winnow_add_unit_test(tst_outputtransform unit/tst_outputtransform.cpp
 
 # tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
 winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)
+# tst_tiffwalk compiles ImageFormats/Raw/tiffwalk.cpp (Qt Core only -- it reads a QFile).
+# It pins TIFF type decoding in Reader::reals(), where an unnamed type falls to a silent
+# integer default: that is how DNG NoiseProfile (DOUBLE) reached PMRID as ~1e9.
+winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 # tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).
 winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp

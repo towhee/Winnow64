@@ -149,6 +149,15 @@ public:
 
     bool contains(const QString &fPath, const QByteArray &blobHash) const;
 
+    /* Full path of the payload file holding fPath's preview, or "" when the index has no
+       row for it. DIAGNOSTIC ONLY -- it answers "which JPEG in the cache folder is this
+       image's?", which is otherwise invisible because payloads are named by index row id
+       (hex) rather than by anything derived from the image. Unlike get() it does NOT take
+       a recipe hash and does NOT touch used/LRU: it reports where the file for this image
+       IS, not whether that file depicts the recipe in force. The row can name a file that
+       has since been deleted, so the caller checks existence itself. */
+    QString payloadPath(const QString &fPath) const;
+
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);
