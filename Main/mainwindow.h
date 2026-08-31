@@ -182,10 +182,15 @@ public:
     bool isShiftOnOpen;               // used when opening if shift key pressed
     QString args;                     // opening args
 
-    /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes so a
-       window state saved by an older build (missing the new dock) is rejected rather than
-       restored into an inconsistent layout. v1: added developDock. v2: added historyDock.
-       v3: added presetsDock. v4: added catalogDock. */
+    /* Version tag for saveState()/restoreState(). BUMP whenever the set of docks changes,
+       and add the new dock to the table in MW::placeDocksAddedSince. The version is what
+       tells a restore which docks did not exist when the state was saved: those docks are
+       missing from it, and left to Qt they are dumped loose into whatever area they happen
+       to be in (which is how developDock once ended up as orphaned, flickering empty tab
+       bars). MW::restoreWindowState restores the state at its own version and then places
+       the newer docks, so a dock addition MIGRATES the user's layout rather than discarding
+       it. v1: added developDock. v2: added historyDock. v3: added presetsDock.
+       v4: added catalogDock. */
     static constexpr int winnowStateVersion = 4;
 
     // debugging flags
@@ -220,6 +225,11 @@ public:
         // State
         QByteArray geometry;
         QByteArray state;
+        /* Which dock set the state above was saved with (MW::winnowStateVersion). The
+           blob itself is written unversioned so an older workspace still restores; this
+           says which docks did not exist when it was saved, so MW::placeDocksAddedSince
+           can put the newer ones where they belong instead of leaving them stranded. */
+        int stateVersion = 0;
         int screenNumber;
         QScreen *screen;
         QRect geometryRect;
@@ -540,6 +550,10 @@ public slots:
     void renameWorkspace(int n, QString name);
     void reassignWorkspace(int n);
     void defaultWorkspace();
+    /* Restore the main window dock layout, migrating a state saved by a build with fewer
+       docks instead of throwing it away.  See MW::winnowStateVersion. */
+    bool restoreWindowState(const QByteArray &state);
+    void placeDocksAddedSince(int stateVersion);
     void builtInDefaultWorkspace();
     void updateDefaultWorkspace();
     void loadDefaultWorkspace();

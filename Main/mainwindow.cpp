@@ -898,18 +898,21 @@ void MW::showEvent(QShowEvent *event)
 
     // restore prior geometry and state
     if (isSettings) {
-        /* Versioned restore (winnowStateVersion). A WindowState saved by a build that predates
-           developDock has no place for it; restoring it leaves develop's dock group orphaned as
-           empty zombie tab bars, and the QMainWindow dock layout then never converges -- the
-           tabbed docks flicker continuously (diagnosed via persistent count==0 tab bars in a
-           perpetual LayoutRequest loop). With a version tag, restoreState() rejects the stale
-           state (returns false, changes nothing) and the clean layout built in initialize()
-           stands. The state is re-saved with the current version on exit, so this self-heals
-           after one launch (cost: a one-time reset of saved dock sizes/positions). */
+        /* Versioned restore (winnowStateVersion). A WindowState saved by a build that
+           predates a dock has no place for it; left to Qt that dock is dumped loose into
+           an area, which is how developDock once ended up as orphaned empty tab bars whose
+           layout never converged (the tabbed docks flickered continuously -- diagnosed via
+           persistent count==0 tab bars in a perpetual LayoutRequest loop). The version tag
+           is what identifies such a state, but it is MIGRATED, not discarded:
+           restoreWindowState() restores it at its own version and then docks the panels
+           added since (see MW::placeDocksAddedSince). Rejecting it instead, as this used
+           to, quietly reset the user's entire layout -- thumbDock included, which fell
+           back to the left area under the folder group -- every time a dock was added. */
         restoreGeometry(settings->value("Geometry").toByteArray());
-        restoreState(settings->value("WindowState").toByteArray(), winnowStateVersion);
+        bool restored = restoreWindowState(settings->value("WindowState").toByteArray());
         restoreGeometry(settings->value("Geometry").toByteArray());
-        restoreState(settings->value("WindowState").toByteArray(), winnowStateVersion);
+        // unreadable state (or none): the initialize() layout is not a usable one
+        if (!restored) defaultWorkspace();
     }
     else {
         defaultWorkspace();
