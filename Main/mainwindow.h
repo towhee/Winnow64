@@ -39,6 +39,7 @@
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
 #include "Main/catalogscanner.h"
+#include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
@@ -493,12 +494,17 @@ public slots:
     void whenActivated(Qt::ApplicationState state);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
-    /* Replace the datamodel with a catalog search result -- images from any number of
-       folders loaded as one set. Same reset as a folder change; see the .cpp. */
-    void loadCatalogResults(const QStringList &paths);
+    /* Load a catalog search result -- images from any number of folders as one set.
+       append = false REPLACES what is loaded (the same reset as a folder change);
+       append = true adds to it, the way ctrl-clicking a second folder does. */
+    void loadCatalogResults(const QStringList &paths, bool append = false);
     /* Start / stop the background scan over catalogRoots. */
     void startCatalogScan();
     void stopCatalogScan();
+    /* Open the Catalogued Folders editor -- which folders are indexed in the background.
+       Created on first use and kept, so it can stay open while a scan runs. Reachable
+       from the Catalog panel and from Preferences > Catalog. */
+    void manageCatalogRoots();
     /* Drop the develop caches that belong to the images being replaced. Shared by
        folderSelectionChange and loadCatalogResults. */
     void resetDevelopCachesForNewFolder();
@@ -1578,6 +1584,9 @@ private:
        user intent rather than derived data. */
     QStringList catalogRoots;
     bool catalogRootsRecurse = true;
+    /* The roots editor. Null until first opened; MW owns the list itself, so the dialog
+       may come and go without the setting being at risk. */
+    CatalogRootsDlg *catalogRootsDlg = nullptr;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;

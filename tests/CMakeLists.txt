@@ -210,10 +210,17 @@ winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
 # Metadata/xmpapply.h that replaced eight copies of the same XMP block.
 winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
-# tst_catalog covers the catalog tables in the shared index database (schema 3).
+# tst_searchterms is header-only (Utilities/searchterms.h, Qt Core). It pins the ONE
+# grammar behind both search boxes: F2 over the datamodel and Shift+F2 over the index are
+# paired as "here"/"everywhere", and used to disagree -- "heron OR eagle" was a literal
+# string to QString::contains.
+winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
+# tst_catalog covers the catalog tables in the shared index database (schema 4).
 # Catalog.cpp is already in WINNOW_CORE_TEST_SOURCES, so no extra source is needed.
 # Several cases test the BOUNDARY with the devPreview tenant: the migration must not
-# disturb devpreview rows, and clearing one tenant must not clear the other.
+# disturb devpreview rows, and clearing one tenant must not clear the other. It also
+# builds a version 3 file by hand and migrates it, because an existing catalog must merge
+# its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
 # -----------------------------------------------------------------------------

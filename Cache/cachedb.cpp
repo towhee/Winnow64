@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 3;
+constexpr int kSchemaVersion = 4;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -388,7 +388,12 @@ bool CacheDb::migrate(QSqlDatabase &db)
             /* Keywords, normalised. A flat dc:subject keyword has path = ''. A
                hierarchical one carries its full Lightroom path, and one row is inserted
                per ANCESTOR as well, wired by parent -- which is what lets a search for
-               "Wildlife" reach an image whose only keyword is "Heron". */
+               "Wildlife" reach an image whose only keyword is "Heron".
+
+               SUPERSEDED AT VERSION 4, which re-keys this table on the name alone and
+               blanks path/pathfold/parent. This block stays as written because it
+               describes what a version 3 FILE contains, which is what the migration below
+               has to read; it is not what a current database looks like. */
             "CREATE TABLE IF NOT EXISTS keyword ("
             "  id       INTEGER PRIMARY KEY,"
             "  name     TEXT NOT NULL,"
@@ -418,6 +423,90 @@ bool CacheDb::migrate(QSqlDatabase &db)
             "CREATE VIRTUAL TABLE IF NOT EXISTS image_fts USING fts5("
             "  keywords, title, creator, copyright, gear, filename,"
             "  tokenize = 'unicode61 remove_diacritics 2')",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+    }
+
+    if (version < 4) {
+        /* FLAT KEYWORDS. A keyword's identity becomes its NAME, where schema 3 keyed it
+           on (path, name) and so stored a hierarchical tag TWICE -- once as the flat
+           dc:subject leaf and once as the hierarchy node -- which put the same keyword in
+           the facet list twice with the image counts split between the entries. See
+           Metadata/keywordflatten.h for why flat, and notes/Documentation.txt.
+
+           THIS MIGRATES IN PLACE AND RE-READS NOTHING. Everything needed is already here:
+           schema 3's writer linked the image to every ANCESTOR as well as the leaf, so
+           the flat link set is already correct and only the rows need merging. Rebuilding
+           instead would mean re-parsing an entire library to recover facts the database
+           already holds.
+
+           ORDER MATTERS. Contexts are derived BEFORE the surplus rows are deleted,
+           because they are derived from those rows' parent pointers. */
+        const char *ddl[] = {
+            /* Which parents a keyword name has been seen under. This is all that remains
+               of the hierarchy, and it exists for one purpose: a name recorded under more
+               than one parent is AMBIGUOUS ("Vancouver" under both Canada and USA), which
+               the docks colour and the user resolves with an exclude filter. */
+            "CREATE TABLE IF NOT EXISTS keyword_context ("
+            "  keyword_id INTEGER NOT NULL REFERENCES keyword(id) ON DELETE CASCADE,"
+            "  parent_id  INTEGER NOT NULL REFERENCES keyword(id) ON DELETE CASCADE,"
+            "  PRIMARY KEY (keyword_id, parent_id)) WITHOUT ROWID",
+            "CREATE INDEX IF NOT EXISTS keyword_context_kw"
+            " ON keyword_context(keyword_id)",
+
+            /* old id -> the id that survives for that name. MIN(id) is arbitrary but
+               stable; whichever row wins, its name column already holds the leaf name,
+               because schema 3 stored a hierarchy node's name as its leaf. */
+            "CREATE TEMP TABLE kw_canon ("
+            "  old_id INTEGER PRIMARY KEY,"
+            "  new_id INTEGER NOT NULL)",
+            "INSERT INTO kw_canon (old_id, new_id)"
+            " SELECT k.id,"
+            "        (SELECT MIN(k2.id) FROM keyword k2 WHERE k2.namefold = k.namefold)"
+            " FROM keyword k",
+
+            /* Contexts, from the old parent pointers, mapped through the canonical ids.
+               The new_id <> parent guard drops a node that would end up its own parent
+               (a path like "A|A"), which is not a meaningful ambiguity. */
+            "INSERT OR IGNORE INTO keyword_context (keyword_id, parent_id)"
+            " SELECT c.new_id, p.new_id"
+            " FROM keyword k"
+            " JOIN kw_canon c ON c.old_id = k.id"
+            " JOIN kw_canon p ON p.old_id = k.parent"
+            " WHERE k.parent IS NOT NULL AND c.new_id <> p.new_id",
+
+            /* Re-point the image links, then drop the ones that pointed at a row about to
+               go. INSERT OR IGNORE because two rows for the same name on the same image
+               -- exactly the Lightroom double this migration exists to remove -- collapse
+               onto the (image_id, keyword_id) primary key. */
+            "INSERT OR IGNORE INTO image_keyword (image_id, keyword_id)"
+            " SELECT ik.image_id, c.new_id"
+            " FROM image_keyword ik"
+            " JOIN kw_canon c ON c.old_id = ik.keyword_id"
+            " WHERE c.new_id <> ik.keyword_id",
+            "DELETE FROM image_keyword WHERE keyword_id IN"
+            " (SELECT old_id FROM kw_canon WHERE new_id <> old_id)",
+
+            "DELETE FROM keyword WHERE id IN"
+            " (SELECT old_id FROM kw_canon WHERE new_id <> old_id)",
+
+            /* One row per name now, so the name alone can carry the unique index. */
+            "DROP INDEX IF EXISTS keyword_key",
+            "CREATE UNIQUE INDEX IF NOT EXISTS keyword_namekey ON keyword(namefold)",
+
+            /* path/pathfold/parent are DEAD from here on -- kept as columns because this
+               file's rule is additive-only (a dropped column cannot be walked back if an
+               older build opens the file), but blanked so nothing can read them and
+               believe the hierarchy is still maintained. keyword_context is the only
+               record of it now. */
+            "UPDATE keyword SET path = '', pathfold = '', parent = NULL",
+
+            "DROP TABLE kw_canon",
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {

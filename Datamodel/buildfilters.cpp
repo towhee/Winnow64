@@ -580,7 +580,7 @@ void BuildFilters::updateUnfilteredCounts()
     for (int row = 0; row < rows; row++) {
         if (abort) return;
         if (isHiddenRaw(row)) continue;
-        QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
+        QStringList x = dm->index(row, G::KeywordsAllColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
     filters->updateUnfilteredCountPerItem(map, filters->keywords);
@@ -713,7 +713,7 @@ void BuildFilters::updateFilteredCounts()
 
     for (int row = 0; row < rows; row++) {
         if (abort) return;
-        QStringList x = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
+        QStringList x = dm->sf->index(row, G::KeywordsAllColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
     filters->updateFilteredCountPerItem(map, filters->keywords);
@@ -1049,7 +1049,7 @@ void BuildFilters::appendUniqueItems()
     for (int row = 0; row < rows; row++) {
         if (abort) return;
         if (isHiddenRaw(row)) continue;
-        QStringList x = dm->index(row, G::KeywordsColumn).data().toStringList();
+        QStringList x = dm->index(row, G::KeywordsAllColumn).data().toStringList();
         for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
     }
     filters->addCategoryItems(map, filters->keywords);

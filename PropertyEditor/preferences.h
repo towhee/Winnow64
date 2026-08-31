@@ -23,6 +23,7 @@ private:
     void addUserInterface();
     void addProductivity();
     void addDevPreviews();
+    void addCatalog();
 
     /* The devPreview size and cache limit are shown as words but stored as numbers. These
        two pairs are the only place the mapping lives, so a label and its value cannot

@@ -502,6 +502,7 @@ void Preferences::addItems()
     addUserInterface();
     addProductivity();
     addDevPreviews();
+    addCatalog();
     addSlideShow();
     addFullScreen();
     addMetadataPanel();
@@ -1439,6 +1440,55 @@ void Preferences::addProductivity()
     // i.type = "QString";
     // i.color = G::disabledColor.name();
     // availMBMsgWidget = addItem(i);
+}
+
+void Preferences::addCatalog()
+{
+/*
+    The catalog -- the local index that lets a keyword or title search answer across
+    folders instead of only inside the one that is loaded. See notes/Documentation.txt
+    "Keywords and Cataloguing".
+
+    THE ROOT LIST IS EDITED IN ITS OWN DIALOG, opened from the button here. A variable
+    length list of folders with add/remove is not a scalar property and does not fit the
+    tree this panel is; what belongs here is the ENTRY POINT, because Preferences is where
+    a user looks for "what does Winnow index". The same dialog opens from the Catalog
+    panel's Manage button.
+*/
+    // Catalog header (Root)
+    i.name = "CatalogHeader";
+    i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Catalog";
+    i.tooltip = "Searching across every folder Winnow has seen, not just the one that "
+                "is loaded.";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // Catalogued folders -- opens the roots dialog
+    i.name = "manageCatalogRoots";
+    i.parentName = "CatalogHeader";
+    i.captionText = "Catalogued folders";
+    i.tooltip = "Choose which folders are indexed in the background, and scan them now.\n\n"
+                "Folders you browse are catalogued automatically. This is only needed\n"
+                "to index a library you have not visited yet.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    btns.clear();
+    {
+        BarBtn *manageBtn = new BarBtn();
+        manageBtn->setIcon(":/images/icon16/foldertree.png", G::iconOpacity);
+        manageBtn->setToolTip("Manage catalogued folders");
+        connect(manageBtn, &BarBtn::clicked, this, []{ mw->manageCatalogRoots(); });
+        btns.append(manageBtn);
+    }
+    addItem(i);
+    btns.clear();
 }
 
 void Preferences::addSlideShow()

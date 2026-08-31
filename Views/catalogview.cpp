@@ -1,8 +1,11 @@
 #include "Views/catalogview.h"
 #include "Main/global.h"
+#include "Metadata/keywordflatten.h"
 
+#include <QApplication>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QMenu>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -10,9 +13,9 @@
 
 namespace {
 
-/* The tree stores the keyword's full hierarchical path here; the visible column shows
-   only the leaf, so a deep hierarchy stays readable in a narrow dock. */
-constexpr int kPathRole = Qt::UserRole + 1;
+/* The keyword name, kept beside the display text because the visible label carries the
+   image count too ("Heron  (128)") and the query needs the bare name. */
+constexpr int kNameRole = Qt::UserRole + 1;
 
 /* Keystrokes are coalesced into one query. Long enough that ordinary typing produces a
    single search, short enough to feel immediate when the user stops. */
@@ -39,9 +42,13 @@ CatalogView::CatalogView(QWidget *parent)
     keywordTree->setHeaderHidden(true);
     keywordTree->setColumnCount(1);
     keywordTree->setUniformRowHeights(true);
-    keywordTree->setToolTip("Click a keyword to search for it. Click it again to clear.\n"
-                            "A parent keyword also finds images tagged only with its "
-                            "children.");
+    keywordTree->setToolTip("Click a keyword to include it, Opt+click to exclude it, or "
+                            "right-click for both.\nClick again to clear.\n\n"
+                            "Keywords are flat: a hierarchy contributes each of its "
+                            "levels as its own keyword,\nso including a parent name "
+                            "finds everything that was beneath it. A keyword used\nunder "
+                            "more than one parent is highlighted -- exclude a parent to "
+                            "tell them apart.");
 
     resultLabel = new QLabel;
     resultLabel->setWordWrap(true);
@@ -52,7 +59,7 @@ CatalogView::CatalogView(QWidget *parent)
     unavailableLabel->setWordWrap(true);
     unavailableLabel->setVisible(false);
 
-    loadBtn = new QPushButton("Load Results");
+    loadBtn = new QPushButton("Load");
     loadBtn->setEnabled(false);
     loadBtn->setToolTip("Load the matching images into the grid, replacing what is "
                         "loaded now.");
@@ -60,46 +67,42 @@ CatalogView::CatalogView(QWidget *parent)
        which otherwise becomes a hard floor on how narrow this dock can be made. */
     loadBtn->setStyleSheet("QPushButton { min-width: 0; }");
 
+    /* Add rather than replace, so two searches can be compared side by side. Without it
+       every search throws the previous one away, which makes "the herons AND the eagles"
+       impossible to assemble however the query is written. */
+    addBtn = new QPushButton("Add");
+    addBtn->setEnabled(false);
+    addBtn->setToolTip("Add the matching images to what is already loaded, instead of "
+                       "replacing it.");
+    addBtn->setStyleSheet("QPushButton { min-width: 0; }");
+
+    QHBoxLayout *loadRow = new QHBoxLayout;
+    loadRow->setContentsMargins(0, 0, 0, 0);
+    loadRow->addWidget(loadBtn, 1);
+    loadRow->addWidget(addBtn, 1);
+
     QHBoxLayout *topRow = new QHBoxLayout;
     topRow->setContentsMargins(0, 0, 0, 0);
     topRow->addWidget(searchEdit, 1);
     topRow->addWidget(minRating);
 
-    /* The designated roots -- folders scanned in the background so search covers a
-       library the user has not browsed yet. Grouped and placed below the search so the
-       panel reads top-down as "find things" then "what is indexed". */
-    rootList = new QListWidget;
-    rootList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    rootList->setToolTip("Folders scanned in the background so their images are "
-                         "searchable before you open them.");
-    rootList->setMaximumHeight(90);
+    /* What is indexed, and the way in to changing it. The editor is a separate dialog:
+       the root list is configuration, revisited rarely, and it was taking the lower third
+       of a panel used constantly. The status line is what stops that being a hidden
+       feature -- it says what is catalogued, right where a search that found nothing
+       would make the user wonder. */
+    catalogStatusLabel = new QLabel;
+    catalogStatusLabel->setWordWrap(true);
 
-    recurseBox = new QCheckBox("Include subfolders");
-    recurseBox->setChecked(true);
+    manageRootsBtn = new QPushButton("Manage...");
+    manageRootsBtn->setToolTip("Choose which folders are indexed in the background, and "
+                               "scan them now.");
+    manageRootsBtn->setStyleSheet("QPushButton { min-width: 0; }");
 
-    addRootBtn = new QPushButton("Add...");
-    removeRootBtn = new QPushButton("Remove");
-    scanBtn = new QPushButton("Scan Now");
-    for (QPushButton *b : {addRootBtn, removeRootBtn, scanBtn})
-        b->setStyleSheet("QPushButton { min-width: 0; }");
-    removeRootBtn->setEnabled(false);
-
-    QHBoxLayout *rootBtns = new QHBoxLayout;
-    rootBtns->setContentsMargins(0, 0, 0, 0);
-    rootBtns->addWidget(addRootBtn);
-    rootBtns->addWidget(removeRootBtn);
-    rootBtns->addStretch(1);
-    rootBtns->addWidget(scanBtn);
-
-    QVBoxLayout *rootsLayout = new QVBoxLayout;
-    rootsLayout->setContentsMargins(4, 4, 4, 4);
-    rootsLayout->setSpacing(4);
-    rootsLayout->addWidget(rootList);
-    rootsLayout->addWidget(recurseBox);
-    rootsLayout->addLayout(rootBtns);
-
-    QGroupBox *rootsBox = new QGroupBox("Catalogued folders");
-    rootsBox->setLayout(rootsLayout);
+    QHBoxLayout *statusRow = new QHBoxLayout;
+    statusRow->setContentsMargins(0, 0, 0, 0);
+    statusRow->addWidget(catalogStatusLabel, 1);
+    statusRow->addWidget(manageRootsBtn);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
@@ -108,8 +111,8 @@ CatalogView::CatalogView(QWidget *parent)
     layout->addLayout(topRow);
     layout->addWidget(keywordTree, 1);
     layout->addWidget(resultLabel);
-    layout->addWidget(loadBtn);
-    layout->addWidget(rootsBox);
+    layout->addLayout(loadRow);
+    layout->addLayout(statusRow);
 
     debounce = new QTimer(this);
     debounce->setSingleShot(true);
@@ -121,56 +124,49 @@ CatalogView::CatalogView(QWidget *parent)
     connect(searchEdit, &QLineEdit::returnPressed, this, &CatalogView::runSearch);
     connect(minRating, &QSpinBox::valueChanged, this, [this]{ debounce->start(); });
 
+    /* Click includes, Opt+click excludes -- the same modifier idiom the mask combine
+       tools use, so the gesture is one the user has already met. Clicking an item that is
+       already in that state clears it, which is the way back out; without that the only
+       exit from a keyword filter would be to know some other gesture. */
     connect(keywordTree, &QTreeWidget::itemClicked, this,
             [this](QTreeWidgetItem *item, int) {
-                const QString path = item->data(0, kPathRole).toString();
-                /* Clicking the selected keyword again clears it -- otherwise the only way
-                   out of a keyword search is to know that ctrl-click deselects. */
-                selectedKeyword = (path == selectedKeyword) ? QString() : path;
-                if (selectedKeyword.isEmpty()) keywordTree->clearSelection();
-                runSearch();
+                const bool opt = QApplication::keyboardModifiers() & Qt::AltModifier;
+                const Qt::CheckState want = opt ? Qt::PartiallyChecked : Qt::Checked;
+                setKeywordState(item,
+                                item->checkState(0) == want ? Qt::Unchecked : want);
+            });
+
+    /* The discoverable path to the same three states: a modifier nobody is told about is
+       not a feature. */
+    keywordTree->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(keywordTree, &QTreeWidget::customContextMenuRequested, this,
+            [this](const QPoint &pos) {
+                QTreeWidgetItem *item = keywordTree->itemAt(pos);
+                if (!item) return;
+                QMenu menu(this);
+                QAction *inc = menu.addAction("Include");
+                QAction *exc = menu.addAction("Exclude");
+                QAction *clr = menu.addAction("Clear");
+                inc->setCheckable(true);
+                exc->setCheckable(true);
+                inc->setChecked(item->checkState(0) == Qt::Checked);
+                exc->setChecked(item->checkState(0) == Qt::PartiallyChecked);
+                QAction *chosen = menu.exec(keywordTree->viewport()->mapToGlobal(pos));
+                if (chosen == inc)      setKeywordState(item, Qt::Checked);
+                else if (chosen == exc) setKeywordState(item, Qt::PartiallyChecked);
+                else if (chosen == clr) setKeywordState(item, Qt::Unchecked);
             });
 
     connect(loadBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results);
+        if (!results.isEmpty()) emit loadResults(results, false);
     });
 
-    connect(rootList, &QListWidget::itemSelectionChanged, this, [this]{
-        removeRootBtn->setEnabled(!scanning && !rootList->selectedItems().isEmpty());
+    connect(addBtn, &QPushButton::clicked, this, [this]{
+        if (!results.isEmpty()) emit loadResults(results, true);
     });
 
-    connect(addRootBtn, &QPushButton::clicked, this, [this]{
-        const QString dir = QFileDialog::getExistingDirectory(
-            this, "Choose a folder to catalogue");
-        if (dir.isEmpty()) return;
-        /* Adding a folder already covered would scan it twice. An exact duplicate is
-           caught here; an overlapping subtree is left alone, because the scanner
-           de-duplicates the expanded folder list anyway. */
-        for (int i = 0; i < rootList->count(); ++i)
-            if (rootList->item(i)->text() == dir) return;
-        rootList->addItem(dir);
-        emit rootsChanged(roots(), recurseBox->isChecked());
-    });
-
-    connect(removeRootBtn, &QPushButton::clicked, this, [this]{
-        const auto chosen = rootList->selectedItems();
-        for (QListWidgetItem *item : chosen)
-            delete rootList->takeItem(rootList->row(item));
-        emit rootsChanged(roots(), recurseBox->isChecked());
-        /* Removing a root does NOT un-catalogue what it contributed. Those images are
-           still real and still findable, and silently dropping thousands of rows because
-           a folder was taken off the scan list would be a surprising amount of deletion
-           for what reads as "stop scanning this". */
-    });
-
-    connect(recurseBox, &QCheckBox::toggled, this, [this](bool on){
-        emit rootsChanged(roots(), on);
-    });
-
-    connect(scanBtn, &QPushButton::clicked, this, [this]{
-        if (scanning) emit stopScanRequested();
-        else emit scanRequested();
-    });
+    connect(manageRootsBtn, &QPushButton::clicked, this,
+            &CatalogView::manageRootsRequested);
 
     setAvailability();
 }
@@ -187,38 +183,44 @@ void CatalogView::setAvailability()
     const int n = open ? Catalog::instance().count() : 0;
     const bool usable = open && n > 0;
 
-    /* Only the SEARCH half is disabled. The roots controls below stay live even with an
-       empty catalog -- they are how the user fills it, and disabling them would leave no
-       way out of "nothing is catalogued yet". */
+    /* Only the SEARCH half is disabled. Manage stays live even with an empty catalog --
+       it is how the user fills it, and disabling it would leave no way out of "nothing is
+       catalogued yet". It is disabled only when the database will not open, where
+       indexing genuinely cannot achieve anything. */
     searchEdit->setEnabled(usable);
     minRating->setEnabled(usable);
     keywordTree->setEnabled(usable);
+    manageRootsBtn->setEnabled(open && !scanning);
 
     if (!open) {
         unavailableLabel->setText(
             "The catalog is unavailable -- the local index database could not be "
             "opened. Browsing is unaffected; searching is not available until it can "
             "be rebuilt.");
-        /* Nothing can be indexed either, so scanning is pointless here. */
-        addRootBtn->setEnabled(false);
-        scanBtn->setEnabled(false);
     }
     else if (n == 0) {
         unavailableLabel->setText(
             "Nothing is catalogued yet. Folders are catalogued as you open them, or "
-            "add a folder below and press Scan Now to index it in the background.");
-        addRootBtn->setEnabled(!scanning);
-        scanBtn->setEnabled(true);
-    }
-    else {
-        addRootBtn->setEnabled(!scanning);
-        scanBtn->setEnabled(true);
+            "press Manage to choose folders to index in the background.");
     }
     unavailableLabel->setVisible(!usable);
+
+    /* Always says what is indexed, whether or not a search has been run: a search that
+       found nothing means something quite different when the catalog is empty, and the
+       user should not have to open a dialog to find out which case they are in. */
+    if (!open) catalogStatusLabel->setText("Catalog unavailable.");
+    else if (scanning) catalogStatusLabel->setText("Scanning...");
+    else catalogStatusLabel->setText(
+        QString("%1 %2 catalogued in %3 %4.")
+            .arg(n)
+            .arg(n == 1 ? "image" : "images")
+            .arg(Catalog::instance().folderCount())
+            .arg(Catalog::instance().folderCount() == 1 ? "folder" : "folders"));
 
     if (!usable) {
         resultLabel->clear();
         loadBtn->setEnabled(false);
+        addBtn->setEnabled(false);
     }
 }
 
@@ -232,83 +234,114 @@ void CatalogView::refresh()
 {
     if (G::isLogger) G::log("CatalogView::refresh");
     setAvailability();
-    rebuildKeywordTree();
+    rebuildKeywordList();
     /* Re-run whatever is in the box, so the counts reflect a catalog that just grew. */
     if (searchEdit->isEnabled()) runSearch();
 }
 
-void CatalogView::rebuildKeywordTree()
+void CatalogView::styleKeywordItem(QTreeWidgetItem *item) const
 {
 /*
-    Render the keyword vocabulary as a tree.
-
-    The catalog stores one row per hierarchy NODE with its full path, so the tree is built
-    by walking each path and creating any missing ancestor as it goes -- the rows arrive
-    ordered by path, which means a parent is always seen before its children. Flat
-    keywords (path empty) have no ancestors and sit at the top level.
-
-    Counts come from the catalog, not from summing children: an ancestor row is linked to
-    every image beneath it, so its count is already the total.
+    One row's appearance, from its state. Two independent signals that must COMPOSE
+    rather than compete: exclusion is a font (strikethrough), ambiguity is a colour, so an
+    excluded ambiguous keyword still reads as both.
 */
-    const QString wasSelected = selectedKeyword;
-    keywordTree->clear();
-    if (!Catalog::instance().isAvailable()) return;
+    const QString name = item->data(0, kNameRole).toString();
+    const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
+    const bool ambiguous = ambiguousKeywords.contains(keywordFold(name));
 
-    QHash<QString, QTreeWidgetItem *> byPath;
-    QTreeWidgetItem *toSelect = nullptr;
+    QFont f = keywordTree->font();
+    f.setStrikeOut(excluded);
+    item->setFont(0, f);
+
+    if (excluded) item->setForeground(0, QBrush(QColor(0xd0, 0x60, 0x60)));
+    else if (ambiguous) item->setForeground(0, QBrush(QColor(0xd0, 0xa0, 0x40)));
+    else item->setForeground(0, QBrush(G::textColor));
+}
+
+void CatalogView::setKeywordState(QTreeWidgetItem *item, Qt::CheckState state)
+{
+    if (!item) return;
+    const QString name = item->data(0, kNameRole).toString();
+    if (name.isEmpty()) return;
+
+    includedKeywords.remove(name);
+    excludedKeywords.remove(name);
+    if (state == Qt::Checked) includedKeywords.insert(name);
+    else if (state == Qt::PartiallyChecked) excludedKeywords.insert(name);
+
+    QSignalBlocker block(keywordTree);      // this is the handler, not a fresh edit
+    item->setCheckState(0, state);
+    styleKeywordItem(item);
+    runSearch();
+}
+
+void CatalogView::rebuildKeywordList()
+{
+/*
+    Render the keyword vocabulary as a FLAT list.
+
+    There is no tree to build because there is no hierarchy left to render: a path like
+    "Location|Canada|BC" is flattened into three ordinary keywords before it is ever
+    indexed (Metadata/keywordflatten.h), so "Canada" is a keyword in its own right rather
+    than a node to expand. That is also why the counts need no summing -- an ancestor name
+    is linked directly to every image beneath it.
+
+    AMBIGUITY IS THE ONE THING FLATTENING LOSES, so it is the one thing this marks: a name
+    the catalog has seen under more than one parent is coloured and lists its parents in
+    its tooltip, which is what tells the user that "Vancouver" is two places before they
+    decide what to exclude.
+
+    THE SELECTION SURVIVES A REBUILD because it lives in includedKeywords /
+    excludedKeywords rather than in the widget. A refresh after a folder load must not
+    silently drop the filter the user is looking at.
+*/
+    keywordTree->clear();
+    if (!Catalog::instance().isAvailable()) {
+        ambiguousKeywords.clear();
+        return;
+    }
+
+    ambiguousKeywords = Catalog::instance().ambiguousKeywords();
+
+    /* Names that no longer exist in the catalog cannot go on restricting the search --
+       the restriction would be invisible, because the row that described it is gone. */
+    QSet<QString> live;
 
     for (const CatalogKeyword &k : Catalog::instance().keywords()) {
-        const QString label = QString("%1  (%2)").arg(k.name).arg(k.count);
+        live.insert(k.name);
 
-        if (k.path.isEmpty()) {
-            /* A flat dc:subject keyword. Keyed by name so it cannot collide with a
-               hierarchy node of the same name, which is a different fact. */
-            QTreeWidgetItem *item = new QTreeWidgetItem(keywordTree);
-            item->setText(0, label);
-            item->setData(0, kPathRole, k.name);
-            if (k.name == wasSelected) toSelect = item;
-            continue;
-        }
+        QTreeWidgetItem *item = new QTreeWidgetItem(keywordTree);
+        item->setText(0, QString("%1  (%2)").arg(k.name).arg(k.count));
+        item->setData(0, kNameRole, k.name);
 
-        /* Find or create every ancestor, then this node. */
-        QTreeWidgetItem *parent = nullptr;
-        QString acc;
-        const QStringList parts = k.path.split('|', Qt::SkipEmptyParts);
-        for (const QString &part : parts) {
-            acc = acc.isEmpty() ? part : acc + '|' + part;
-            QTreeWidgetItem *node = byPath.value(acc, nullptr);
-            if (!node) {
-                node = parent ? new QTreeWidgetItem(parent)
-                              : new QTreeWidgetItem(keywordTree);
-                node->setText(0, part);
-                node->setData(0, kPathRole, acc);
-                byPath.insert(acc, node);
-            }
-            parent = node;
-        }
-        if (parent) {
-            parent->setText(0, label);
-            if (k.path == wasSelected) toSelect = parent;
-        }
+        Qt::CheckState state = Qt::Unchecked;
+        if (includedKeywords.contains(k.name)) state = Qt::Checked;
+        else if (excludedKeywords.contains(k.name)) state = Qt::PartiallyChecked;
+        item->setCheckState(0, state);
+
+        QString tip = k.contexts.size() > 1
+            ? QString("\"%1\" is used under more than one parent:\n    %2\n\n"
+                      "Include it and exclude a parent to narrow it down.")
+                  .arg(k.name, k.contexts.join("\n    "))
+            : QString("Click to include. Opt+click to exclude.");
+        item->setToolTip(0, tip);
+
+        styleKeywordItem(item);
     }
+
+    includedKeywords.intersect(live);
+    excludedKeywords.intersect(live);
 
     keywordTree->sortItems(0, Qt::AscendingOrder);
-    if (toSelect) {
-        toSelect->setSelected(true);
-        keywordTree->scrollToItem(toSelect);
-    }
-    else {
-        /* The keyword is gone from the catalog (its last image was removed), so the
-           restriction it described no longer means anything. */
-        selectedKeyword.clear();
-    }
 }
 
 CatalogQuery CatalogView::currentQuery() const
 {
     CatalogQuery q;
     q.text = searchEdit->text();
-    q.keyword = selectedKeyword;
+    q.keywords = QStringList(includedKeywords.begin(), includedKeywords.end());
+    q.excludeKeywords = QStringList(excludedKeywords.begin(), excludedKeywords.end());
     q.minRating = minRating->value();
     return q;
 }
@@ -324,12 +357,14 @@ void CatalogView::runSearch()
     /* An empty query would match the whole catalog. Reporting "247,000 images" and
        offering to load them is not a useful answer to having typed nothing, so the panel
        stays quiet until the user has actually asked for something. */
-    if (q.text.trimmed().isEmpty() && q.keyword.isEmpty() && q.minRating == 0) {
+    if (q.text.trimmed().isEmpty() && q.keywords.isEmpty()
+        && q.excludeKeywords.isEmpty() && q.minRating == 0) {
         results.clear();
         totalMatches = 0;
         resultLabel->setText(QString("%1 images catalogued.")
                                  .arg(Catalog::instance().count()));
         loadBtn->setEnabled(false);
+        addBtn->setEnabled(false);
         return;
     }
 
@@ -349,41 +384,17 @@ void CatalogView::runSearch()
                                  .arg(totalMatches == 1 ? "image" : "images"));
     }
     loadBtn->setEnabled(!results.isEmpty());
-}
-
-void CatalogView::setRoots(const QStringList &r, bool recurse)
-{
-    rootList->clear();
-    rootList->addItems(r);
-    QSignalBlocker block(recurseBox);       // this is a restore, not a user edit
-    recurseBox->setChecked(recurse);
-    removeRootBtn->setEnabled(false);
-    setAvailability();
-}
-
-QStringList CatalogView::roots() const
-{
-    QStringList out;
-    for (int i = 0; i < rootList->count(); ++i) out << rootList->item(i)->text();
-    return out;
-}
-
-bool CatalogView::rootsRecurse() const
-{
-    return recurseBox->isChecked();
+    addBtn->setEnabled(!results.isEmpty());
 }
 
 void CatalogView::setScanning(bool on)
 {
 /*
-    While a scan runs the button becomes Stop and the list is frozen: editing the roots
-    underneath a running scan would leave the user unsure whether the folder they just
-    added is being scanned or not.
+    The panel only REPORTS a scan now -- starting and stopping one is in the Catalogued
+    Folders dialog. Manage is disabled while a scan runs for the same reason the dialog
+    freezes its own list: editing the roots underneath a running scan would leave the user
+    unsure whether the folder they just added is being scanned.
 */
     scanning = on;
-    scanBtn->setText(on ? "Stop" : "Scan Now");
-    rootList->setEnabled(!on);
-    recurseBox->setEnabled(!on);
-    addRootBtn->setEnabled(!on);
-    removeRootBtn->setEnabled(!on && !rootList->selectedItems().isEmpty());
+    setAvailability();
 }

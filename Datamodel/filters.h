@@ -76,6 +76,13 @@ public:
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
 
+    /* Set one item to include (Qt::Checked), exclude (Qt::PartiallyChecked) or off, then
+       restyle it and emit filterChange. The one way an item's filter state changes. */
+    void setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state);
+    /* Re-read which keywords the catalog has seen under more than one parent and repaint
+       the Keywords category. GUI thread only -- it queries the catalog. */
+    void refreshAmbiguousKeywords();
+
     QString diagnostics();
 
     bool combineRawJpg;
@@ -137,6 +144,7 @@ public slots:
     void howThisWorks();
 
 protected:
+    void contextMenuEvent(QContextMenuEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -155,9 +163,24 @@ private:
     bool hdrJustClicked;
     QModelIndex searchTrueIdx;
     bool debugFilters = false;
+    /* Paint one item for its state: excluded (struck through, red) and, in the Keywords
+       category, ambiguous (amber). The two compose -- an excluded ambiguous keyword must
+       still read as both. */
+    void styleFilterItem(QTreeWidgetItem *item);
+    /* True when this item may be included/excluded at all -- a child, enabled, and not
+       one of the Search category's two fixed rows. */
+    bool isFilterableItem(QTreeWidgetItem *item) const;
+    /* Keyword names the catalog has seen under more than one parent, case-folded. Empty
+       also means "no catalog", in which case nothing is marked -- we do not know. */
+    QSet<QString> ambiguousKeywords;
+    QColor itemIsExcludedColor;
+    QColor itemIsAmbiguousColor;
     struct ItemState {
         QString parent;
         QString item;
+        /* Qt::Checked (include) or Qt::PartiallyChecked (exclude). Unchecked items are
+           not saved at all, so this is never Unchecked. */
+        Qt::CheckState state = Qt::Checked;
     };
     QList<ItemState>itemStates;
     QString searchText;

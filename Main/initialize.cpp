@@ -418,6 +418,7 @@ void MW::createCatalogScanner()
                 Q_UNUSED(scanned)
                 if (progress) progress->clearProgress(progressCatalogRow);
                 if (catalogView) catalogView->setScanning(false);
+                if (catalogRootsDlg) catalogRootsDlg->setScanning(false);
                 /* The row already said it was happening and the panel shows the result,
                    so a background scan finishes silently -- the same rule the devPreview
                    build follows. Only the counts the user can act on are surfaced, and
@@ -1718,19 +1719,17 @@ void MW::createCatalogDock()
     catalogView = new CatalogView;
     catalogDock->setWidget(catalogView);
 
-    /* The view never touches the datamodel: it reports paths, MW decides what loading
-       them means (the same reset a folder change does). */
+    /* The view never touches the datamodel: it reports paths and whether the user asked
+       to Load (replace) or Add (append), and MW decides what either means. Both end in
+       DataModel::addPaths, which emits folderChange, so MetaRead and then
+       folderChangeCompleted run and the filters are rebuilt over the new row count
+       without this having to arrange it. */
     connect(catalogView, &CatalogView::loadResults, this, &MW::loadCatalogResults);
 
-    /* MW owns the root list and its persistence; the view is only the editor. */
-    catalogView->setRoots(catalogRoots, catalogRootsRecurse);
-    connect(catalogView, &CatalogView::rootsChanged, this,
-            [this](const QStringList &roots, bool recurse) {
-                catalogRoots = roots;
-                catalogRootsRecurse = recurse;
-            });
-    connect(catalogView, &CatalogView::scanRequested, this, &MW::startCatalogScan);
-    connect(catalogView, &CatalogView::stopScanRequested, this, &MW::stopCatalogScan);
+    /* Which folders are indexed is CONFIGURATION and lives in its own dialog now, not in
+       the lower third of the search panel. MW still owns the list and its persistence. */
+    connect(catalogView, &CatalogView::manageRootsRequested, this,
+            &MW::manageCatalogRoots);
 
     /* Refresh the facets when the dock is actually shown, rather than on every folder
        load: rebuilding the keyword tree is a query plus a tree build, and it is only
