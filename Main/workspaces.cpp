@@ -237,6 +237,13 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         restoreState(w.state);
     }
 
+    /* A workspace saved before a dock existed has no place for it, and Qt leaves such a
+       dock loose in whatever area it is in. Dock it where it belongs (same migration the
+       main window state gets -- see MW::placeDocksAddedSince). Workspace states stay
+       UNVERSIONED so an old one still restores; w.stateVersion is what says which docks
+       it predates. */
+    if (w.stateVersion < winnowStateVersion) placeDocksAddedSince(w.stateVersion);
+
     // recover selection
     QItemSelection selection;
     foreach (QModelIndex dmIdx, selectedRows) {
@@ -259,6 +266,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     // State
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
+    wsd.stateVersion = winnowStateVersion;   // the dock set this layout was saved with
     wsd.screen = screen();
     wsd.screenNumber = QGuiApplication::screens().indexOf(screen());
     wsd.geometryRect = geometry();
@@ -403,6 +411,76 @@ void MW::defaultWorkspace()
     builtInDefaultWorkspace();
 }
 
+bool MW::restoreWindowState(const QByteArray &state)
+{
+/*
+    Restore the main window dock layout saved by MW::writeSettings.
+
+    The state is tagged with MW::winnowStateVersion, which names the dock set that wrote
+    it. A state written by an older build is still perfectly good for every dock that
+    existed then, so it is restored AT ITS OWN VERSION and the docks added since are
+    placed afterwards (placeDocksAddedSince). Previously such a state was simply rejected,
+    which silently reset the user's whole layout -- most visibly, thumbDock fell back to
+    the left area under the folder group -- every time a dock was added.
+
+    Returns false only if the state is unreadable at any version; the caller then falls
+    back to the default workspace.
+*/
+    if (G::isLogger) G::log("MW::restoreWindowState");
+
+    if (state.isEmpty()) return false;
+
+    for (int v = winnowStateVersion; v >= 0; --v) {
+        if (!restoreState(state, v)) continue;
+        // second restoreState req'd for going from docked to floating docks
+        restoreState(state, v);
+        if (v < winnowStateVersion) placeDocksAddedSince(v);
+        return true;
+    }
+    return false;
+}
+
+void MW::placeDocksAddedSince(int stateVersion)
+{
+/*
+    Dock the panels that did not exist when a restored layout was saved.
+
+    A dock missing from a restored state is not dropped: Qt leaves it wherever it happens
+    to sit, untabbed, so it shows up as a stray panel squatting in an area (and, when it
+    is the front of an empty group, as the flickering zombie tab bars developDock once
+    produced). Each entry below says which group its dock belongs to, so the migrated
+    layout matches what createDocks() would have built. Visibility comes from the dock's
+    action -- ie the user's saved preference, or off for a panel that has never existed
+    for this user -- never from the stale state.
+
+    BUMP winnowStateVersion and add a row here whenever a dock is added.
+*/
+    if (G::isLogger) G::log("MW::placeDocksAddedSince");
+
+    struct AddedDock {
+        int version;                // winnowStateVersion that introduced the dock
+        DockWidget *dock;
+        DockWidget *tabWith;        // group it belongs to, nullptr = leave where it is
+        QAction *visibleAction;
+    };
+    const QVector<AddedDock> added {
+        {1, developDock, hideEmbellish ? nullptr : embelDock, developDockVisibleAction},
+        {2, historyDock, developDock, historyDockVisibleAction},
+        {3, presetsDock, developDock, presetsDockVisibleAction},
+        {4, catalogDock, filterDock, catalogDockVisibleAction},
+    };
+
+    for (const AddedDock &a : added) {
+        if (stateVersion >= a.version) continue;
+        if (a.dock == nullptr) continue;
+        /* Do not drag a floating target back into a dock area -- tabifying onto it would
+           do exactly that. The new dock keeps the area Qt left it in. */
+        if (a.tabWith && !a.tabWith->isFloating() && !a.dock->isFloating())
+            tabifyDockWidget(a.tabWith, a.dock);
+        if (a.visibleAction) a.dock->setVisible(a.visibleAction->isChecked());
+    }
+}
+
 void MW::builtInDefaultWorkspace()
 {
 /*
@@ -543,6 +621,7 @@ QString MW::reportWorkspaces()
             << "\n  fullScreen                " << G::s(r.fullScreen)
             << "\nState:"
             << "\n  geometryRect              " << G::s(ws.geometryRect)
+            << "\n  stateVersion              " << G::s(ws.stateVersion)
             << "\n  screenNumber              " << G::s(ws.screenNumber)
             << "\n  isFullScreen              " << G::s(ws.isFullScreen)
             << "\n  isMaximised               " << G::s(ws.isMaximised)
@@ -671,6 +750,8 @@ void MW::readWorkspaceSettings(WorkspaceData &wsd)
     // State
     wsd.geometry = settings->value("geometry").toByteArray();
     wsd.state = settings->value("state").toByteArray();
+    // absent = saved before the key existed, ie predates every versioned dock
+    wsd.stateVersion = settings->value("stateVersion", 0).toInt();
     RecoverGeometry r;
     recoverGeometry(wsd.geometry, r);
     wsd.screenNumber = r.screenNumber;
@@ -742,6 +823,7 @@ void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
     // State
     settings->setValue("geometry", wsd.geometry);
     settings->setValue("state", wsd.state);
+    settings->setValue("stateVersion", wsd.stateVersion);
     settings->setValue("screenNumber", wsd.screenNumber);
     settings->setValue("geometryRect", wsd.geometryRect);                        // need?
     settings->setValue("isFullScreen", wsd.isFullScreen);                        // need?

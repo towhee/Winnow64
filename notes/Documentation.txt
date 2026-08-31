@@ -218,13 +218,19 @@ The QMainWindow dock layout is persisted with saveState()/restoreState() under Q
 
   MW::winnowStateVersion.
 
-History: v1 added developDock, v2 added historyDock, v3 added presetsDock.
+History: v1 added developDock, v2 added historyDock, v3 added presetsDock, v4 added catalogDock.
 
-RULE: BUMP winnowStateVersion whenever the SET of docks changes (added or removed). A WindowState saved by an older build does not contain the new dock, and restoring it leaves that dock's group orphaned as empty "zombie" tab bars; the dock layout then never converges and the tabbed docks flicker continuously. The version tag makes restoreState() reject the stale state (returns false, changes nothing) so the layout built in MW::createDocks/initialize() stands; the state is re-saved at the current version on exit, so it self-heals after one launch (cost: a one-time reset of dock sizes/positions).
+RULE: BUMP winnowStateVersion whenever the SET of docks changes (added or removed), AND add the new dock to the table in MW::placeDocksAddedSince. A WindowState saved by an older build does not contain the new dock; left to Qt that dock is dumped loose into whatever area it happens to be in, which leaves its group orphaned as empty "zombie" tab bars -- the dock layout then never converges and the tabbed docks flicker continuously.
 
-Because that fallback layout is what shows after a reject, keep it sane: do NOT tabify a dock in one area with a dock in another area (e.g. the left-area metadataDock with the right-area embelDock) -- a cross-area tabify drags both into one area and crams every dock into a single tab group, where the raised tab oscillates against the squeezed central widget. embel + develop + history + presets tab together on the RIGHT (see initialize() tabifyDockWidget calls).
+MIGRATION, NOT REJECTION. The version tag identifies a state written by a different dock set; MW::restoreWindowState then restores that state AT ITS OWN VERSION (walking winnowStateVersion down until restoreState() accepts it) and calls MW::placeDocksAddedSince to tabify the docks added since into the group they belong to, taking their visibility from their dock action rather than from the stale state. The user keeps their layout across an upgrade. Only a state that is unreadable at every version falls through, and then MW::showEvent calls defaultWorkspace() rather than leaving the raw createDocks() layout on screen.
 
-developDock (added with the raw editor) was the first dock to trip this: the pre-existing saved state predated it AND, once saved during a flicker, the corrupt state perpetuated itself across launches until the version bump discarded it.
+This replaced a straight reject (restoreState returns false, changes nothing, the createDocks/initialize() layout stands, re-saved at the current version on exit). That "self-healed after one launch" but silently reset the user's ENTIRE layout every time a dock was added -- most visibly thumbDock, which fell back from the bottom to the left area under the folder group. Adding catalogDock (v4) is what surfaced it.
+
+WORKSPACES get the same migration. Their state blobs are written UNVERSIONED (plain saveState(), so an old workspace still restores), and a separate "stateVersion" key in each workspace's settings records the dock set it was saved with -- absent means 0. MW::invokeWorkspace calls placeDocksAddedSince with it after restoring; without that, invoking a pre-catalog workspace left the Catalog panel squatting loose in the left area.
+
+Keep the built-in fallback layout sane regardless: do NOT tabify a dock in one area with a dock in another area (e.g. the left-area metadataDock with the right-area embelDock) -- a cross-area tabify drags both into one area and crams every dock into a single tab group, where the raised tab oscillates against the squeezed central widget. embel + develop + history + presets tab together on the RIGHT (see initialize() tabifyDockWidget calls).
+
+developDock (added with the raw editor) was the first dock to trip the zombie-tab-bar flicker: the pre-existing saved state predated it AND, once saved during a flicker, the corrupt state perpetuated itself across launches until the version bump discarded it.
 
 
 ⏺ Initialization > Responsive Dock Tab Titles (Text <-> Graphic)
@@ -241,7 +247,7 @@ RULE: EVERY dock that can be tabbed into the group MUST register a glyph. When a
 3. Add <dockTabText> -> ":/images/icon16/<name>_white.png" to the graphicFor hash AND <dockTabText> -> <dock> to the dockFor hash, both in MW::updateDockTabGraphics.
 4. Append <dockTabText> to dockTextNames in initialize() (dock-bar detection).
 5. Add a tooltip case in MW::dockTabToolTip (dock name + shortcut).
-6. Bump winnowStateVersion (see "Dock Window State" above -- the set of docks changed).
+6. Bump winnowStateVersion AND add a row for the dock to MW::placeDocksAddedSince (see "Dock Window State" above -- the set of docks changed, and a state saved before it existed has to be told where the dock goes).
 
 A missing glyph resource is handled gracefully at runtime (the tab keeps its text title), but that just reproduces the flicker when the group is too narrow, so treat steps 1-3 as mandatory, not optional.
 
@@ -3370,7 +3376,7 @@ IT CHECKS THAT THE FILES ARE STILL THERE. The catalog is an index, not a guarant
 
 THE PANEL REFRESHES when the dock becomes visible and after a catalog commit completes, the latter only when the dock is actually visible (the facet rebuild is a query plus a tree build, and the commit is on a pool thread precisely to keep catalog work off the GUI thread during a load). The refresh button in the title bar is the manual path.
 
-DOCK REGISTRATION followed the checklist in "Responsive Dock Tab Titles": images/icon16/catalog_white.png (a magnifier, matching the existing glyph weight), registered in winnow.qrc, added to graphicFor / dockFor / dockForTabText, appended to dockTextNames, given a dockTabToolTip case, and winnowStateVersion bumped to 4. It is also wired into the solo-mode and dock-tab-update loops, the collapsed-state restore, workspaces, the full-screen dock set and its preference. Missing any one of those is what makes a tab bar flicker or a workspace restore inconsistent.
+DOCK REGISTRATION followed the checklist in "Responsive Dock Tab Titles": images/icon16/catalog_white.png (a magnifier, matching the existing glyph weight), registered in winnow.qrc, added to graphicFor / dockFor / dockForTabText, appended to dockTextNames, given a dockTabToolTip case, winnowStateVersion bumped to 4, and a row added to MW::placeDocksAddedSince so a layout saved before the panel existed tabs it beside Filters instead of stranding it in the left area. It is also wired into the solo-mode and dock-tab-update loops, the collapsed-state restore, workspaces, the full-screen dock set and its preference. Missing any one of those is what makes a tab bar flicker or a workspace restore inconsistent.
 
 OFF BY DEFAULT in the shipped layout: it is a new panel, an empty catalog has nothing to say, and the left group is already several tabs deep.
 
