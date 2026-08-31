@@ -1,4 +1,5 @@
 #include "Main/catalogscanner.h"
+#include "Metadata/keywordflatten.h"
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
@@ -124,7 +125,10 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     row.width = m.width;
     row.height = m.height;
     row.gpsCoord = m.gpsCoord;
-    row.keywords = m.keywords;
+    /* The FLAT vocabulary, exactly as DataModel::catalogRows supplies it -- the scanner
+       and the opportunistic capture must index the same image the same way, or a folder
+       would be catalogued differently depending on which of them saw it first. */
+    row.keywords = flattenKeywords(m.keywords, m.keywordPaths);
     row.keywordPaths = m.keywordPaths;
     return true;
 }

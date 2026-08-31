@@ -3081,9 +3081,52 @@ void MW::startCatalogScan()
         progress->showRow(progressCatalogRow, true);
     }
     if (catalogView) catalogView->setScanning(true);
+    if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
                               Q_ARG(QStringList, catalogRoots),
                               Q_ARG(bool, catalogRootsRecurse));
+}
+
+void MW::manageCatalogRoots()
+{
+/*
+    Open the Catalogued Folders editor.
+
+    KEPT RATHER THAN REBUILT, so it can stay open across a scan and be raised again
+    without losing what the user was looking at. It is a Qt::Tool window and not modal:
+    a scan runs for minutes, and this is where its state is shown.
+
+    MW REMAINS THE OWNER of catalogRoots. The dialog is only an editor and hands back
+    what changed -- the root list is the one piece of catalog state that is user intent
+    rather than derived data, so it must not depend on a widget's lifetime.
+*/
+    if (G::isLogger) G::log("MW::manageCatalogRoots");
+
+    if (!catalogRootsDlg) {
+        catalogRootsDlg = new CatalogRootsDlg(this);
+        connect(catalogRootsDlg, &CatalogRootsDlg::rootsChanged, this,
+                [this](const QStringList &roots, bool recurse) {
+                    catalogRoots = roots;
+                    catalogRootsRecurse = recurse;
+                });
+        connect(catalogRootsDlg, &CatalogRootsDlg::scanRequested,
+                this, &MW::startCatalogScan);
+        connect(catalogRootsDlg, &CatalogRootsDlg::stopScanRequested,
+                this, &MW::stopCatalogScan);
+    }
+
+    catalogRootsDlg->setRoots(catalogRoots, catalogRootsRecurse);
+    catalogRootsDlg->setScanning(catalogScanner && catalogScanner->isRunning());
+    catalogRootsDlg->setCatalogStatus(
+        Catalog::instance().isAvailable()
+            ? QString("%1 images catalogued in %2 folders.")
+                  .arg(Catalog::instance().count())
+                  .arg(Catalog::instance().folderCount())
+            : QString("The catalog is unavailable -- the local index database could "
+                      "not be opened, so nothing can be indexed."));
+    catalogRootsDlg->show();
+    catalogRootsDlg->raise();
+    catalogRootsDlg->activateWindow();
 }
 
 void MW::stopCatalogScan()
@@ -3092,18 +3135,29 @@ void MW::stopCatalogScan()
     if (catalogScanner) catalogScanner->stop();
 }
 
-void MW::loadCatalogResults(const QStringList &paths)
+void MW::loadCatalogResults(const QStringList &paths, bool append)
 {
 /*
-    Replace the datamodel with a catalog search result -- images from any number of
-    folders, loaded as one browsable set. See notes/Documentation.txt "The Catalog".
+    Load a catalog search result -- images from any number of folders, as one browsable
+    set. See notes/Documentation.txt "The Catalog".
 
-    THIS IS THE SAME RESET AS A FOLDER CHANGE, deliberately. Everything downstream of the
-    model -- MetaRead, the icon chunks, the image cache, Develop -- assumes that when the
-    model's contents are replaced it was told to stop first and its caches were dropped.
-    A result set replaces the contents just as thoroughly as a folder does, so it takes
-    the identical path: stop(), reset the develop caches, then fill and let
+    REPLACE IS THE SAME RESET AS A FOLDER CHANGE, deliberately. Everything downstream of
+    the model -- MetaRead, the icon chunks, the image cache, Develop -- assumes that when
+    the model's contents are replaced it was told to stop first and its caches were
+    dropped. A result set replaces the contents just as thoroughly as a folder does, so it
+    takes the identical path: stop(), reset the develop caches, then fill and let
     folderChangeCompleted run as usual.
+
+    APPEND DOES NOT RESET ANY OF THAT, and must not. The rows already loaded stay, the
+    image being viewed stays selected, and its develop caches are still describing the
+    right picture -- dropping them would make the current image re-decode for no reason
+    the user could see. This is the same shape as ctrl-clicking a second folder
+    (G::FolderOp::Add), and it is what makes comparing two searches possible at all:
+    without it, every search throws the previous one away.
+
+    DataModel::addPaths IS ALREADY ADDITIVE -- it starts at rowCount() and skips paths
+    already in the model -- so append is a matter of NOT tearing down first, rather than a
+    second load path. That is also why a path in both searches is not loaded twice.
 
     THE FOLDER PANEL DELIBERATELY DOES NOT FOLLOW. The results span many folders, so there
     is no one folder to select; highlighting an arbitrary one of them would misrepresent
@@ -3111,7 +3165,8 @@ void MW::loadCatalogResults(const QStringList &paths)
 */
     QString fun = "MW::loadCatalogResults";
     if (G::isLogger || G::isFlowLogger)
-        G::log(fun, QString::number(paths.size()) + " results");
+        G::log(fun, QString::number(paths.size()) + (append ? " results (add)"
+                                                            : " results"));
 
     if (paths.isEmpty()) return;
 
@@ -3119,17 +3174,22 @@ void MW::loadCatalogResults(const QStringList &paths)
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
 
-    resetDevelopCachesForNewFolder();
+    if (!append) {
+        resetDevelopCachesForNewFolder();
 
-    bookmarks->setEnabled(false);
-    fsTree->setEnabled(false);
+        bookmarks->setEnabled(false);
+        fsTree->setEnabled(false);
 
-    setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
-    stop(fun);
+        setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
+        stop(fun);
+    }
 
     dm->abort = false;
     /* Queued for the same reason enqueueFolderSelection is: stop() has just torn down the
-       reader threads, and the fill must not run inside the signal that asked for it. */
+       reader threads, and the fill must not run inside the signal that asked for it. On
+       the append path nothing was torn down, but the queueing is kept so both paths reach
+       addPaths the same way -- one of them running inline would be a difference waiting
+       to matter. */
     QTimer::singleShot(0, this, [this, paths]{ dm->addPaths(paths); });
 }
 

@@ -23,5 +23,41 @@ color class red or blue.</p>
 
 <p><img src="images/filters2.png"></p>
 
+<h1>Excluding items</h1>
+
+<p>As well as choosing what to include, you can choose what to leave
+<span class="highlight">out</span>. <span class="highlight">Opt+click</span>
+(Alt+click on Windows) an item to exclude it &mdash; it is shown struck through in
+red. Right-click any item for <span class="highlight">Include</span>,
+<span class="highlight">Exclude</span> and <span class="highlight">Clear</span> by
+name. Clicking an excluded item again clears it.</p>
+
+<p>An exclusion always wins. If an image carries an excluded item it is left out
+whatever else it matches, and that applies across every category, not just within
+the one you excluded from.</p>
+
+<p>A category holding only exclusions subtracts rather than narrows: excluding the
+color class red shows everything that is not red, not "nothing, because no image is
+in the empty set of included colors".</p>
+
+<h1>Keywords that mean two things</h1>
+
+<p>Keywords are <span class="highlight">flat</span>. A keyword hierarchy such as
+Location &gt; Canada &gt; BC &gt; Vancouver contributes each of its levels as its own
+keyword, so filtering on <span class="highlight">Canada</span> finds everything that
+was beneath it &mdash; there is no tree to open.</p>
+
+<p>The cost is that one name can mean two things. If you keyword both
+Location &gt; Canada &gt; BC &gt; Vancouver and
+Location &gt; USA &gt; Washington &gt; Vancouver, there is a single
+<span class="highlight">Vancouver</span> keyword covering both cities. Winnow shows
+such a keyword in <span class="highlight">amber</span> and lists its parents in the
+tooltip.</p>
+
+<p>To tell them apart, include the keyword and exclude the parent you do not want:
+include <span class="highlight">Vancouver</span>, Opt+click
+<span class="highlight">USA</span>. The amber marking needs the catalog; without it
+Winnow cannot tell which keywords are ambiguous and marks none.</p>
+
 </body>
 </html>

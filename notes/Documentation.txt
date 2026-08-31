@@ -177,6 +177,8 @@ Follow the format conventions above for anything new. In particular, do not hard
      Reading Keywords (dc:subject and lr:hierarchicalSubject)
      The Catalog (Cross-folder Search)
      The Catalog Dock and Loading Results
+     Filter Exclusion (Include This, Not That)
+     Searching Here and Everywhere (One Grammar)
      Cataloguing Designated Roots (the Background Scanner)
 
 
@@ -3312,7 +3314,13 @@ PNG DELIBERATELY KEEPS ITS OWN COPY. It guards several fields on isEmpty() and m
 
 THE SIDECAR READ IS NOT GUARDED ON isEmpty(), unlike the scalars beside it. An empty keyword list in a sidecar that is otherwise newer means the keywords were REMOVED, and honouring that is the whole point of the newer-wins rule parseSidecar already applies a few lines above. Guarding it would make keyword deletion impossible to sync.
 
-HIERARCHY IS STORED, NOT FLATTENED. G::KeywordPathsColumn holds the paths beside G::KeywordsColumn's leaf names, and both are folded into G::SearchTextColumn. The ancestor names exist ONLY in the hierarchical form -- the flat list has just the leaf -- so keeping it is what lets a search for "Wildlife" find an image whose only keyword is "Heron". The column is appended before TotalColumns and marked GeekRole, like DevelopColumn and DevPreviewKeyColumn, because saved table column widths are keyed by index.
+HIERARCHY IS READ, THEN FLATTENED. G::KeywordPathsColumn holds the paths beside G::KeywordsColumn's leaf names, and both are folded into G::SearchTextColumn. A THIRD column, G::KeywordsAllColumn, holds what Winnow actually filters and searches on: the de-duplicated union of the leaves and every NODE of every path, so "Location|Canada|BC" contributes three keywords. Metadata/keywordflatten.h is the one definition of that, shared by the datamodel and the index -- if the two split a path differently the facet and the search would disagree about the same picture. All three columns are appended before TotalColumns and marked GeekRole, like DevelopColumn and DevPreviewKeyColumn, because saved table column widths are keyed by index.
+
+WHY FLAT RATHER THAN A TREE. Three reasons, and the first forced it. A hierarchical file carries the SAME tag twice -- Lightroom writes the leaf into dc:subject and the path into lr:hierarchicalSubject -- so storing both forms separately put "Heron" in the facet list twice with its image count split between the entries, which reads as a bug because it is one. The hierarchy is also not universal: phone images, non-Adobe DAMs and IPTC-only files carry dc:subject and nothing else, so a tree is right for part of a library and overhead for the rest. And ancestor search, the only thing the tree bought, survives flattening: "Fauna" reaches an image tagged only "Fauna|Bird|Heron" because Fauna is now genuinely one of that image's keywords.
+
+WHAT IT COSTS is ambiguity, and that is paid for elsewhere rather than avoided. A name under two parents -- "Location|Canada|BC|Vancouver" and "Location|USA|Washington|Vancouver" -- becomes ONE keyword meaning two places. The catalog records which parents a name has been seen under (keyword_context), both docks colour an ambiguous keyword and name its parents in the tooltip, and filter EXCLUSION resolves it: include Vancouver, exclude USA.
+
+G::KeywordsColumn DELIBERATELY KEEPS THE LITERAL dc:subject LIST rather than being replaced by the flattened one, and DataModel::imMetadata still reads that one. The two are different facts and only one of them may ever be written back: emitting the flattened column as dc:subject would put every ancestor into a property that never held them. When keyword writing is implemented, dc:subject comes from KeywordsColumn and lr:hierarchicalSubject from KeywordPathsColumn -- never from KeywordsAllColumn.
 
 WRITING KEYWORDS IS NOT IMPLEMENTED and is deliberately separate work. Xmp::setItem can only write an ATTRIBUTE on rdf:Description; no code path emits an rdf:Bag of rdf:li, so there is currently no way to write either property. ImageMetadata also has no _keywords shadow, which is what Metadata::writeXMP's change detection depends on. Until that exists, keywords are read-only and the files remain whatever Lightroom made them.
 
@@ -3321,7 +3329,7 @@ tests/unit/tst_xmpkeywords.cpp pins all of it: both properties off a Lightroom-s
 
 ⏺ Keywords and Cataloguing > The Catalog (Cross-folder Search)
 
-WHAT IT IS. A local index of what Winnow has learned about images it has seen, so a keyword or title search answers ACROSS FOLDERS instead of only inside the one currently loaded. Tables image / keyword / image_keyword plus the image_fts full-text index, added at schema 3 of the shared local index database (Cache/cachedb.h). Cache/catalog.h is the class.
+WHAT IT IS. A local index of what Winnow has learned about images it has seen, so a keyword or title search answers ACROSS FOLDERS instead of only inside the one currently loaded. Tables image / keyword / image_keyword / keyword_context plus the image_fts full-text index, added at schema 3 of the shared local index database and re-keyed at schema 4 (Cache/cachedb.h). Cache/catalog.h is the class.
 
 IT IS AN INDEX, NOT A LIBRARY, and that distinction is the whole design. Winnow still keeps no catalogue in the Lightroom sense: the XMP sidecar remains the per-image database and the only source of truth, nothing here is ever written back to anyone's photographs, and every column is re-readable from the image and its sidecar. That is what lets the catalog share the preview cache's move-it-aside-and-rebuild failure policy -- losing this file costs a rescan, never data.
 
@@ -3333,9 +3341,17 @@ ROWS THAT ARE NOT MetaLoaded ARE SKIPPED. Cataloguing a half-read row is worse t
 
 FRESHNESS IS (srcsize, srcmtime, sidecarmtime). The sidecar stamp is the load-bearing one for a raw library: Lightroom edits keywords by rewriting the .xmp and never touches the NEF, so a check that looked only at the image would never notice. Unchanged rows are skipped before any write, which matters because the opportunistic capture runs on EVERY folder change -- without the skip, a user pacing between two folders would rewrite both indefinitely.
 
-KEYWORDS ARE NORMALISED into keyword + image_keyword rather than kept as text on the image row, so the facet list the UI wants ("every keyword, with counts") is an index scan rather than a quarter of a million string splits. A hierarchical keyword inserts one row per ANCESTOR as well, wired by parent, and links the image to all of them -- which is what lets a search for "Fauna" reach an image whose only flat keyword is "Heron". The free-text index agrees by replacing '|' with spaces so every ancestor becomes its own token; the facet and the search box must not disagree about the same picture. Links are REPLACED on re-index, not added to, so a keyword deleted in Lightroom disappears here too.
+KEYWORDS ARE NORMALISED into keyword + image_keyword rather than kept as text on the image row, so the facet list the UI wants ("every keyword, with counts") is an index scan rather than a quarter of a million string splits. Links are REPLACED on re-index, not added to, so a keyword deleted in Lightroom disappears here too.
 
-THE FULL-TEXT TABLE IS A PLAIN fts5, not contentless and not external-content. Contentless needs the original text handed back on every delete, so a second copy is kept anyway; external-content cannot span the image_keyword join. The duplicated text costs ~200 bytes an image and buys prefix search, AND/OR/NOT, phrase queries and BM25 ranking with no query code of Winnow's own. Bare words typed in the search box are quoted, prefixed and AND-ed; anything containing FTS syntax the user clearly meant is passed through. Quoting the terms is not cosmetic -- an unquoted term containing punctuation is a MATCH syntax error, and a syntax error fails the whole query, so a user typing an apostrophe or a hyphen mid-word would see the search break rather than narrow.
+KEYWORDS ARE FLAT, KEYED ON THE NAME ALONE (schema 4). The hierarchy is flattened before it reaches the catalog -- DataModel::catalogRows and CatalogScanner both hand over flattenKeywords()'s output -- so an ancestor is an ordinary keyword and a tag Lightroom wrote both ways is ONE row. Schema 3 keyed on (pathfold, namefold) and kept both forms, which listed the same keyword twice with its count split; that was the defect, not a feature to preserve. Searching for a keyword is now plain equality on namefold, with no pathfold subtree walk, because an ancestor is linked to everything beneath it directly.
+
+WHAT THE HIERARCHY LEAVES BEHIND is keyword_context (keyword_id, parent_id): which parents a name has been seen under, written from the raw paths that still travel beside the flat list. A name with more than one distinct parent is AMBIGUOUS, which Catalog::ambiguousKeywords() reports and both docks colour. Contexts are NOT deleted when an image is re-indexed: they describe the vocabulary, not the image, and clearing them per image would make ambiguity flicker as folders are browsed.
+
+SCHEMA 4 MIGRATES IN PLACE AND RE-READS NOTHING. Everything needed is already in the file, and schema 3's writer linked the image to every ANCESTOR as well as the leaf, so the flat link set is already correct -- only the rows need merging. The migration picks a canonical id per namefold, re-points image_keyword at it (INSERT OR IGNORE, so the Lightroom double collapses onto the primary key), derives keyword_context from the old parent pointers, deletes the surplus rows, then swaps keyword_key for a unique index on namefold. path/pathfold/parent stay as columns -- this file's rule is additive-only -- but are blanked so nothing can read them and believe the hierarchy is still maintained. Rebuilding instead would have meant re-parsing an entire library to recover facts the database already held. tst_catalog::migrationFromVersionThreeMergesKeywords builds a version 3 file by hand and pins it.
+
+THE FULL-TEXT TABLE IS A PLAIN fts5, not contentless and not external-content. Contentless needs the original text handed back on every delete, so a second copy is kept anyway; external-content cannot span the image_keyword join. The duplicated text costs ~200 bytes an image and buys prefix search, AND/OR/NOT, phrase queries and BM25 ranking with no query code of Winnow's own. What the user typed is turned into a MATCH expression by the SHARED grammar (Utilities/searchterms.h -- see "Searching Here and Everywhere"), not by anything the catalog owns. Quoting every term is not cosmetic -- an unquoted term containing punctuation is a MATCH syntax error, and a syntax error fails the whole query, so a user typing an apostrophe or a hyphen mid-word would see the search break rather than narrow.
+
+NEGATED TEXT IS A SEPARATE NOT EXISTS, not FTS5's NOT operator, which is binary: "-heron" has no left-hand side to subtract from and MATCH offers no "everything" token to supply one. As a subquery against image_fts it works whether or not there is anything positive to go with it. Excluded KEYWORDS are a NOT EXISTS too, over image_keyword -- joining would multiply the rows and then need a DISTINCT to undo it, and "this image has no such keyword" is a question about the image, not about a row to return.
 
 EVERY VALUE IS BOUND, NEVER INTERPOLATED, including the FTS expression. The search box is user text and the catalog shares its file with the preview index, so a query that pasted text into SQL would put the previews one apostrophe away from damage. tst_catalog::searchTextIsNotInjectable pins it.
 
@@ -3349,7 +3365,7 @@ SWEEP DEMOTES, NEVER DELETES, and skips unmounted volumes -- the same rule as th
 
 MountSnapshot AND SrcStamp MOVED to Cache/mountsnapshot.h when the catalog became the second thing that had to answer "which volumes are mounted" and "is this still the same file". Both tenants index paths across removable media and both have the same dangerous verdict to avoid, so they must decide it identically or the two indexes will disagree about the same file.
 
-STILL TO COME: the search dock and results-as-a-virtual-folder, then the background scanner over designated roots. Writing keywords back to files remains deliberately out of scope -- see the previous subsection.
+STILL TO COME: the unified Find dock, where the Filters and Catalog panels become one panel with a Here/Everywhere scope switch over a shared facet vocabulary. Going flat is what makes that cheap -- with a tree on one side and a list on the other there is no shared facet renderer to write. Writing keywords back to files remains deliberately out of scope -- see the previous subsection.
 
 
 ⏺ Keywords and Cataloguing > The Catalog Dock and Loading Results
@@ -3362,7 +3378,13 @@ SEARCHING IS DEBOUNCED (250 ms), not run per keystroke: the query hits SQLite an
 
 AN EMPTY QUERY DELIBERATELY DOES NOTHING. Matching the whole catalog and offering to load a quarter of a million images is not a useful answer to having typed nothing, so with no text, no keyword and no rating the panel just reports how many images are catalogued and leaves Load disabled.
 
-THE KEYWORD FACET IS A TREE built from the stored hierarchy: the catalog holds one row per hierarchy NODE with its full path, so the tree walks each path creating any missing ancestor as it goes (rows arrive ordered by path, so a parent is always seen before its children). Counts come from the catalog rather than by summing children, because an ancestor row is already linked to every image beneath it. Clicking the selected keyword AGAIN clears it -- otherwise the only way out of a keyword search is to know that ctrl-click deselects.
+THE KEYWORD FACET IS A FLAT LIST, because the vocabulary is: a path like "Location|Canada|BC" is flattened into three ordinary keywords before it is ever indexed, so "Canada" is a keyword in its own right rather than a node to expand, and its count needs no summing. Clicking a keyword INCLUDES it, Opt+click EXCLUDES it, right-click offers Include / Exclude / Clear by name, and clicking an item that is already in that state clears it -- otherwise the only way out of a keyword filter would be to know some other gesture. An AMBIGUOUS keyword (one the catalog has seen under more than one parent) is drawn in amber with its parents listed in its tooltip, which is what tells the user that "Vancouver" is two places before they decide what to exclude. Excluded rows are struck through in red: exclusion is a FONT and ambiguity a COLOUR precisely so the two compose, since both facts matter at once while an ambiguity is being resolved.
+
+THE SELECTION LIVES IN THE VIEW, NOT THE WIDGET. includedKeywords / excludedKeywords survive a rebuild of the list, so a refresh after a folder load cannot silently drop the filter the user is looking at; names that have left the catalog are dropped from both sets, because a restriction whose row is gone is invisible.
+
+LOAD REPLACES, ADD APPENDS. Load is the same reset a folder change is; Add keeps what is loaded, which is what makes two searches comparable -- without it every search throws the previous one away and "the herons AND the eagles" cannot be assembled however the query is written. DataModel::addPaths was already additive (it starts at rowCount() and skips paths already in the model), so Add is a matter of NOT tearing down first rather than a second load path, and a path in both searches is not loaded twice. Both end by emitting folderChange, so MetaRead, folderChangeCompleted and the filter rebuild run either way.
+
+WHICH FOLDERS ARE INDEXED IS NOT IN THIS PANEL any more -- see "Cataloguing Designated Roots". What remains is a one-line status ("84,102 images catalogued in 312 folders") and a Manage button. The status is always shown, whether or not a search has run, because a search that found nothing means something quite different when the catalog is empty and the user should not have to open a dialog to find out which case they are in.
 
 WHEN THERE IS NO CATALOG THE PANEL SAYS SO, INLINE, and the controls are disabled. Two cases: the index will not open, or it is open and empty (nothing has been browsed yet). Letting the user type a search and only then explaining that nothing is indexed is exactly the post-hoc popup this avoids.
 
@@ -3379,6 +3401,44 @@ THE PANEL REFRESHES when the dock becomes visible and after a catalog commit com
 DOCK REGISTRATION followed the checklist in "Responsive Dock Tab Titles": images/icon16/catalog_white.png (a magnifier, matching the existing glyph weight), registered in winnow.qrc, added to graphicFor / dockFor / dockForTabText, appended to dockTextNames, given a dockTabToolTip case, winnowStateVersion bumped to 4, and a row added to MW::placeDocksAddedSince so a layout saved before the panel existed tabs it beside Filters instead of stranding it in the left area. It is also wired into the solo-mode and dock-tab-update loops, the collapsed-state restore, workspaces, the full-screen dock set and its preference. Missing any one of those is what makes a tab bar flicker or a workspace restore inconsistent.
 
 OFF BY DEFAULT in the shipped layout: it is a new panel, an empty catalog has nothing to say, and the left group is already several tabs deep.
+
+
+⏺ Keywords and Cataloguing > Filter Exclusion (Include This, Not That)
+
+WHAT IT IS FOR. Flattening the keyword hierarchy made ancestors searchable but made a name used under two parents mean two things: "Location|Canada|BC|Vancouver" and "Location|USA|Washington|Vancouver" collapse to one keyword. Exclusion is how that is taken apart -- include Vancouver, exclude USA -- and it is why flattening is affordable at all. It applies to EVERY filter category, not just keywords: the predicate change is the same size, and excluding a folder or a camera model is immediately useful.
+
+THREE STATES ON ONE CHECKBOX. Qt::Checked includes, Qt::PartiallyChecked excludes, Qt::Unchecked is "don't care". PartiallyChecked was chosen over a parallel data role because the ~29 existing checkState call sites overwhelmingly test == Qt::Checked and are therefore already correct; only four treated the state as a bool or as != Qt::Unchecked and needed fixing (Filters::isOnlyMostRecentDayChecked, both halves of invertFilters, and the predicate itself).
+
+THE PREDICATE (SortFilter::filterAcceptsRow). Includes are OR-ed within a category and AND-ed between categories, as they always were. An exclusion is an outright rejection evaluated ACROSS categories: if the row carries an excluded value it is out, whatever else matches. An exclusion must NOT clear isCategoryUnchecked -- a category holding only exclusions is subtracting, not narrowing, and were it to count as "this category is filtering", every row lacking any of its items would be rejected, which is the whole set.
+
+OPT+CLICK EXCLUDES, and a plain click on something already excluded clears it. Both are handled in mousePressEvent BEFORE the base class runs, because the base class would toggle the checkbox as well and the two would fight over the same state -- and because Qt's own two-state toggle turns PartiallyChecked into Checked, silently inverting what the user asked for. Opt is the modifier the mask combine tools already use for "subtract", so the gesture is one the user has met. A right-click menu (Include / Exclude / Clear) is the discoverable path: a modifier nobody is told about is not a feature.
+
+invertFilters LEAVES EXCLUSIONS ALONE. "Show me everything except this" has no meaningful inverse, and turning it into an inclusion would silently reverse what the user asked for -- the one filter state where guessing is worse than doing nothing.
+
+updateZeroCountCheckedItems UNCHECKS ONLY INCLUSIONS. An exclusion of something with a zero count excludes nothing, so it cannot produce the null result that guard exists for, and clearing it would discard the user's intent the moment the value came back into the folder.
+
+STATE TRAVELS THROUGH save/restore AND THROUGH A RENAME. Filters::ItemState carries the Qt::CheckState, not just "was it checked", and updateCategoryItems carries the state of a disappearing item onto its replacement -- an exclusion restored as an inclusion would reverse the filter on every rebuild.
+
+CLEARING MUST RESTYLE. Exclusion is drawn on the FONT (strikethrough) as well as the checkbox, so uncheckAllFilters and clearAll call styleFilterItem rather than only setting Qt::Unchecked; otherwise a cleared filter still reads as excluded.
+
+THE PICK/RATING/LABEL MENU ACTIONS ARE BINARY and have no exclude representation. An excluded item leaves its action unchecked and the panel stays the source of truth.
+
+AMBIGUITY MARKING COMES FROM THE CATALOG, not from the loaded folder. Ambiguity is a property of the VOCABULARY -- "Vancouver" is two places whether or not both are in front of you -- so computing it from the datamodel would make the same keyword change colour as the user browses, and would make the Filters panel disagree with the Catalog panel about the same word. Filters::refreshAmbiguousKeywords runs on the GUI thread when a filter build completes, not on the BuildFilters worker. WITH NO CATALOG NOTHING IS MARKED, and the category tooltip says so: that is not the same as "nothing is ambiguous", and colouring nothing while implying we had checked would be a quiet lie.
+
+
+⏺ Keywords and Cataloguing > Searching Here and Everywhere (One Grammar)
+
+TWO SEARCH BOXES THAT USED TO DISAGREE. F2 searches the DATAMODEL (Filters > Search) with QString::contains; Shift+F2 searches the INDEX (the Catalog panel) with FTS5. The shortcuts are deliberately paired to read as "search here" and "search everywhere", which promises the same words mean the same thing -- and they did not. "heron OR eagle" found images in one and nothing in the other, because to contains() it was a single literal string containing the word OR.
+
+Utilities/searchterms.h parses the text ONCE and each engine compiles the result its own way. Neither box owns the grammar, so a term type added there reaches both at the same time. The grammar is what a search box is expected to do: bare words AND-ed, OR between alternatives, quoted phrases, and -term or NOT term to exclude. AND is accepted and ignored. OR and NOT are recognised in UPPER CASE only, so a caption reading "black or white" is searched for as written rather than parsed.
+
+ONE DIFFERENCE REMAINS AND IS DOCUMENTED RATHER THAN PAPERED OVER: the datamodel matches a SUBSTRING and the index matches a PREFIX, because that is what each engine is good at -- contains() over a few thousand loaded rows is free, while an infix search over a quarter of a million FTS rows cannot use the index at all. So "eron" finds Heron here and not everywhere. The narrowing direction is the same in both, which is what the pairing actually promises.
+
+PARSED ABOVE THE LOOP. DataModel::searchStringChange runs over every row on the GUI thread while the user types, so the parse happens once before the loop, not per row. Whitespace-only text parses to no terms, which would match every row and light the Search filter up for a query that asked for nothing -- so it is treated as no search, like the empty string beside it.
+
+NEGATION NEEDS A SUBQUERY ON THE INDEX SIDE. FTS5's NOT is binary and MATCH has no "everything" token, so "-heron" has no left-hand side to subtract from. Catalog::search applies negatives as a separate NOT EXISTS against image_fts, which works whether or not there is anything positive to go with it; SearchTerms::hasPositive is how it knows. Several negatives are OR-ed into that one subquery, because an image carrying any of them must be excluded.
+
+A QUOTE NEVER SURVIVES INTO A TERM -- the tokenizer treats every one as a phrase delimiter, opening or closing, and flushes whatever was accumulating. Both halves of that matter: without the closing flush '""' would merge the words either side of it, and without the opening one 'say"what more"' would glue 'say' onto the phrase and search for something nobody typed. The quote-doubling in the FTS compilation is therefore defensive rather than load-bearing, and tst_searchterms pins that so it starts earning its place if the tokenizer ever changes.
 
 
 ⏺ Keywords and Cataloguing > Cataloguing Designated Roots (the Background Scanner)
@@ -3403,6 +3463,12 @@ PROGRESS IS A STATUS-BAR ROW (progressCatalogRow), beside Metadata, Dev Previews
 
 REMOVING A ROOT DOES NOT UN-CATALOGUE WHAT IT CONTRIBUTED. Those images are still real and still findable, and silently dropping thousands of rows because a folder was taken off the scan list would be a surprising amount of deletion for an action that reads as "stop scanning this". Sweep still demotes them if they actually disappear.
 
-THE ROOTS CONTROLS STAY ENABLED WHEN THE CATALOG IS EMPTY, even though the search half is disabled with its inline explanation. They are how the user FILLS it -- disabling them would leave no way out of "nothing is catalogued yet", which is the exact trap the disable-with-a-reason rule exists to avoid. They are disabled only when the database will not open at all, where scanning genuinely cannot achieve anything.
+THE ROOTS EDITOR IS ITS OWN DIALOG (Dialogs/catalogrootsdlg.h), not part of the Catalog panel. It was part of it, and it took the lower third of a panel whose whole job is asking questions: editing the root list is CONFIGURATION, done once and revisited rarely, while the panel above it is used constantly, so the two do not belong in one column competing for the same vertical space. It opens from the panel's Manage button and from Preferences > Catalog -- the latter because Preferences is where a user looks for "what does Winnow index".
 
-WHILE A SCAN RUNS the button becomes Stop and the root list is frozen: editing the roots underneath a running scan would leave the user unsure whether the folder they just added is being scanned or not.
+IT IS A Qt::Tool WINDOW AND NOT MODAL. A scan runs for minutes to hours and this is where its state is shown; a modal dialog would either block the app for the duration or have to be closed to watch it. It is created on first use and kept, so it survives a scan and can be raised again.
+
+A VARIABLE-LENGTH FOLDER LIST IS NOT A PROPERTY, which is why Preferences holds only the ENTRY POINT rather than the editor. PropertyEditor is a tree of scalar values; the Embellish borders panel shows what dynamic children cost, and a folder list with add/remove does not earn that machinery.
+
+THE MANAGE BUTTON STAYS ENABLED WHEN THE CATALOG IS EMPTY, even though the search half is disabled with its inline explanation. It is how the user FILLS it -- disabling it would leave no way out of "nothing is catalogued yet", which is the exact trap the disable-with-a-reason rule exists to avoid. It is disabled only when the database will not open at all, where scanning genuinely cannot achieve anything.
+
+WHILE A SCAN RUNS the dialog's button becomes Stop and its root list is frozen, and the panel's Manage button is disabled: editing the roots underneath a running scan would leave the user unsure whether the folder they just added is being scanned or not.

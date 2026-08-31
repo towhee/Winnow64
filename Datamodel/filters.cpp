@@ -1,4 +1,6 @@
 #include "Datamodel/filters.h"
+#include "Cache/catalog.h"
+#include "Metadata/keywordflatten.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
 #include <QStyleFactory>
@@ -105,6 +107,10 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     hdrIsFilteringColor = QColor(Qt::yellow);
     hdrIsEmptyColor = G::disabledColor;
+    /* Red reads as "taken out" and amber as "look at this", and neither collides with the
+       yellow a filtering category header uses, which sits on a different row. */
+    itemIsExcludedColor = QColor(0xd0, 0x60, 0x60);
+    itemIsAmbiguousColor = QColor(0xd0, 0xa0, 0x40);
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -136,7 +142,10 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catLens] = G::LensColumn;
     filterCategoryToDmColumn[catFocalLength] = G::FocalLengthColumn;
     filterCategoryToDmColumn[catTitle] = G::TitleColumn;
-    filterCategoryToDmColumn[catKeyword] = G::KeywordsColumn;
+    /* The FLAT vocabulary (leaves + every hierarchy node), not the literal dc:subject, so
+       a Lightroom tag written both ways is one filter item and an ancestor is filterable
+       in its own right. See Metadata/keywordflatten.h. */
+    filterCategoryToDmColumn[catKeyword] = G::KeywordsAllColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
     // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
@@ -385,6 +394,7 @@ void Filters::setRatingState(QString rating, bool isChecked)
     for (int i = 0; i < ratings->childCount(); i++) {
         if (ratings->child(i)->text(0) == rating) {
             ratings->child(i)->setCheckState(0, state);
+            styleFilterItem(ratings->child(i));
         }
     }
 }
@@ -405,6 +415,7 @@ void Filters::setLabelState(QString label, bool isChecked)
     for (int i = 0; i < labels->childCount(); i++) {
         if (labels->child(i)->text(0) == label) {
             labels->child(i)->setCheckState(0, state);
+            styleFilterItem(labels->child(i));
         }
     }
 }
@@ -508,7 +519,10 @@ bool Filters::isAnyFilter()
         return true;
     while (*it) {
         if ((*it)->parent() && (*it) != searchTrue) {
-            if ((*it)->checkState(0) == Qt::Checked) return true;
+            /* Either state filters. An exclusion narrows the set just as an inclusion
+               does, so a panel holding only exclusions must still report "filtered" --
+               or the status bar says nothing is filtered while rows are missing. */
+            if ((*it)->checkState(0) != Qt::Unchecked) return true;
         }
         ++it;
     }
@@ -526,7 +540,9 @@ bool Filters::isOnlyMostRecentDayChecked()
                     ;
     int n = days->childCount();
     for (int i = 0; i < n; i++) {
-        bool isChecked = days->child(i)->checkState(0);
+        /* Qt::Checked only: an EXCLUDED day (PartiallyChecked) is not a day the user
+           asked to see, and would otherwise read as one because it is non-zero. */
+        bool isChecked = days->child(i)->checkState(0) == Qt::Checked;
         if ((i < n - 1) && isChecked) return false;
          if (i == n - 1) return isChecked;
     }
@@ -700,7 +716,9 @@ void Filters::setEachCatTextColor()
             else {
                 bool isChecked = false;
                 for (int i = 0; i < (*it)->childCount(); i++) {
-                    if ((*it)->child(i)->checkState(0) == Qt::Checked) {
+                    /* Includes and excludes alike: the header says whether the category
+                       is doing anything, and an exclusion is doing something. */
+                    if ((*it)->child(i)->checkState(0) != Qt::Unchecked) {
                         isChecked = true;
                         break;
                     }
@@ -747,7 +765,7 @@ bool Filters::isCatFiltering(QTreeWidgetItem *item)
     }
     if (item->childCount() > 1) {
         for (int i = 0; i < item->childCount(); i++) {
-            if (item->child(i)->checkState(0) == Qt::Checked) return true;
+            if (item->child(i)->checkState(0) != Qt::Unchecked) return true;
         }
     }
     return false;
@@ -816,7 +834,7 @@ void Filters::invertFilters()
         }
         // traverse the children of the category
         if ((*it)->parent()) {
-            bool isChecked = (*it)->checkState(0);
+            bool isChecked = (*it)->checkState(0) == Qt::Checked;
             if (isChecked && cat != "") {
                 catWithCheckedItems.append((*it)->parent()->text(0));
                 // prevent adding same category twice
@@ -836,9 +854,15 @@ void Filters::invertFilters()
             if (catWithCheckedItems.contains(s)) {
                 // ignore items that do not exist in datamodel (column 3 has unfiltered count)
                 if ((*it2)->text(3) != "0") {
-                    // invert check state
-                    if ((*it2)->checkState(0)) (*it2)->setCheckState(0, Qt::Unchecked);
-                    else (*it2)->setCheckState(0, Qt::Checked);
+                    /* Invert the INCLUSIONS only. An exclusion is left exactly as it is:
+                       "show me everything except this" has no meaningful inverse, and
+                       turning it into an inclusion would silently reverse what the user
+                       asked for -- the one filter state where guessing is worse than
+                       doing nothing. */
+                    Qt::CheckState st = (*it2)->checkState(0);
+                    if (st == Qt::PartiallyChecked) { ++it2; continue; }
+                    (*it2)->setCheckState(0, st == Qt::Checked ? Qt::Unchecked
+                                                               : Qt::Checked);
                 }
             }
         }
@@ -926,6 +950,9 @@ void Filters::finishedBuildFilters()
     msgFrame->setVisible(false);
     // disableColorZeroCountItems();
     setEnabled(true);
+    /* The keyword items have just been (re)built, so this is where they learn which of
+       them are ambiguous. On the GUI thread, unlike the build itself. */
+    refreshAmbiguousKeywords();
     //if (isSolo) collapseAll();
     //else expandAll();
 }
@@ -944,8 +971,9 @@ void Filters::clearAll()
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent()) {            
+        if ((*it)->parent()) {
             (*it)->setCheckState(0, Qt::Unchecked);
+            styleFilterItem(*it);       // drop an exclusion's strikethrough too
             (*it)->setData(2, Qt::EditRole, "");
             (*it)->setData(3, Qt::EditRole, "");
             (*it)->setData(4, Qt::EditRole, "");
@@ -1005,11 +1033,143 @@ void Filters::reset()
 
 }
 
+bool Filters::isFilterableItem(QTreeWidgetItem *item) const
+{
+    if (!item || !item->parent() || item->isDisabled()) return false;
+    /* The Search category's two rows are a text box and its negation, not values to be
+       included or excluded -- "not matching the search text" is what searchFalse already
+       is, so an exclusion there would be a second way to say the same thing. */
+    if (item == searchTrue || item == searchFalse) return false;
+    return true;
+}
+
+void Filters::styleFilterItem(QTreeWidgetItem *item)
+{
+/*
+    One item's appearance, from its state.
+
+    TWO SIGNALS THAT MUST COMPOSE rather than compete: exclusion is a FONT (struck
+    through) and ambiguity is a COLOUR, so an excluded ambiguous keyword still reads as
+    both. Had both been colours, one would have had to win and the user would lose the
+    other fact exactly when they need it -- while resolving the ambiguity.
+*/
+    if (!item || !item->parent()) return;
+
+    const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
+    /* Read off the ITEM, not off ambiguousKeywords. This runs on the BuildFilters worker
+       thread as well as the GUI thread (addCategoryItems and updateCategoryItems are
+       called from run()), and reading a QSet the GUI thread may be rebuilding underneath
+       it is a data race with teeth -- a rehash mid-read is undefined, not merely stale.
+       The set is touched only in refreshAmbiguousKeywords, which stamps this role. */
+    const bool ambiguous = item->data(0, G::AmbiguousKeywordRole).toBool();
+
+    QFont f = font();
+    f.setStrikeOut(excluded);
+    item->setFont(0, f);
+
+    if (excluded) item->setForeground(0, QBrush(itemIsExcludedColor));
+    else if (ambiguous) item->setForeground(0, QBrush(itemIsAmbiguousColor));
+    else item->setForeground(0, QBrush(G::textColor));
+}
+
+void Filters::setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state)
+{
+/*
+    The one way an item's filter state changes, whatever gesture asked for it -- clicking
+    the box, clicking the text, Opt+clicking, or the context menu.
+*/
+    if (!isFilterableItem(item)) return;
+    if (G::isLogger) G::log("Filters::setItemFilterState", item->text(0));
+
+    itemCheckStateHasChanged = false;
+    item->setCheckState(0, state);
+    styleFilterItem(item);
+    activeCategory = item->parent();
+    emit filterChange("Filters::setItemFilterState");
+}
+
+void Filters::refreshAmbiguousKeywords()
+{
+/*
+    Which keywords mean more than one thing, and mark them.
+
+    WHY THE CATALOG RATHER THAN THE LOADED FOLDER. Ambiguity is a property of the
+    VOCABULARY, not of what happens to be open: "Vancouver" is two places whether or not
+    both are in front of you. Computing it from the datamodel would make the same keyword
+    change colour as the user browses, and would make this panel disagree with the Catalog
+    dock about the same word.
+
+    NOTHING IS MARKED WHEN THERE IS NO CATALOG, and that is not the same as "nothing is
+    ambiguous" -- we do not know. Colouring nothing while implying we had checked would be
+    a quiet lie, so the category tooltip says the marking needs a catalog.
+*/
+    if (G::isLogger) G::log("Filters::refreshAmbiguousKeywords");
+
+    const bool haveCatalog = Catalog::instance().isAvailable();
+    ambiguousKeywords = haveCatalog ? Catalog::instance().ambiguousKeywords()
+                                    : QSet<QString>();
+
+    keywords->setToolTip(0, haveCatalog
+        ? "Keywords are flat: a hierarchy contributes each of its levels as its own\n"
+          "keyword, so including a parent finds everything that was beneath it.\n\n"
+          "A keyword shown in amber is used under more than one parent -- exclude\n"
+          "the parent you do not want (Opt+click) to tell them apart."
+        : "Keywords are flat: a hierarchy contributes each of its levels as its own\n"
+          "keyword, so including a parent finds everything that was beneath it.\n\n"
+          "Keywords used under more than one parent cannot be marked here: that\n"
+          "needs the catalog, which is not available.");
+
+    for (int i = 0; i < keywords->childCount(); i++) {
+        QTreeWidgetItem *item = keywords->child(i);
+        item->setData(0, G::AmbiguousKeywordRole,
+                      ambiguousKeywords.contains(keywordFold(item->text(0))));
+        item->setToolTip(0, item->data(0, G::AmbiguousKeywordRole).toBool()
+            ? QString("\"%1\" is used under more than one parent, so it means more than\n"
+                      "one thing. Exclude a parent (Opt+click) to tell them apart.")
+                  .arg(item->text(0))
+            : QString("Click to include. Opt+click to exclude. Right-click for both."));
+        styleFilterItem(item);
+    }
+}
+
+void Filters::contextMenuEvent(QContextMenuEvent *event)
+{
+/*
+    The discoverable route to the three filter states. Opt+click is the fast one and
+    matches the modifier idiom used elsewhere, but a modifier nobody is told about is not
+    a feature, so the same three choices are here by name.
+*/
+    QTreeWidgetItem *item = itemAt(event->pos());
+    if (!isFilterableItem(item) || !G::allMetadataAttempted || buildingFilters) {
+        QTreeWidget::contextMenuEvent(event);
+        return;
+    }
+
+    const Qt::CheckState now = item->checkState(0);
+    QMenu menu(this);
+    QAction *inc = menu.addAction("Include");
+    QAction *exc = menu.addAction("Exclude");
+    QAction *clr = menu.addAction("Clear");
+    inc->setCheckable(true);
+    exc->setCheckable(true);
+    inc->setChecked(now == Qt::Checked);
+    exc->setChecked(now == Qt::PartiallyChecked);
+    clr->setEnabled(now != Qt::Unchecked);
+
+    QAction *chosen = menu.exec(event->globalPos());
+    if (chosen == inc)      setItemFilterState(item, Qt::Checked);
+    else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
+    else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
+}
+
 void Filters::save()
 /*
-    The filters tree (this) is iterated, and every item that is checked is added to the list
-    as an ItemState, which includes the parent name and the item name.  Also, the search
-    text is saved in searchTextState.
+    The filters tree (this) is iterated, and every item that is not Unchecked is added to
+    the list as an ItemState, which includes the parent name, the item name and its STATE.
+    Also, the search text is saved in searchTextState.
+
+    The state travels with the item because there are three of them: an exclusion restored
+    as an inclusion would invert what the user asked for, silently, on every rebuild.
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::save");
@@ -1027,10 +1187,11 @@ void Filters::save()
                      << (*it)->parent()->text(0).leftJustified(15)
                      << (*it)->text(0).leftJustified(50, '.') + " "
                      << (*it)->checkState(0);//*/
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) != Qt::Unchecked) {
                 ItemState state;
                 state.parent = (*it)->parent()->text(0);
                 state.item = (*it)->text(0);
+                state.state = (*it)->checkState(0);
                 itemStates << state;
             }
         }
@@ -1065,7 +1226,8 @@ void Filters::restore()
         const auto& children = parentToChildrenMap.value(state.parent);
         for (QTreeWidgetItem* child : children) {
             if (child->text(0) == state.item) {
-                child->setCheckState(0, Qt::Checked);
+                child->setCheckState(0, state.state);
+                styleFilterItem(child);
                 /*
                 qDebug().noquote() << state.parent.leftJustified(15)
                                    << child->text(0); //*/
@@ -1102,6 +1264,7 @@ void Filters::checkItem(QTreeWidgetItem *par, QString itemName, Qt::CheckState s
         QTreeWidgetItem *item = par->child(i);
         if (item->data(0, Qt::DisplayRole).toString() == itemName) {
             item->setCheckState(0, state);
+            styleFilterItem(item);
             emit filterChange("Filters::checkItem");
         }
     }
@@ -1122,6 +1285,9 @@ void Filters::uncheckAllFilters()
     while (*it) {
         if ((*it)->parent()) {
             (*it)->setCheckState(0, Qt::Unchecked);
+            /* Clears the strikethrough an exclusion left behind: unchecking the box is
+               not enough, because exclusion is drawn on the FONT as well. */
+            styleFilterItem(*it);
             (*it)->setData(2, Qt::EditRole, "");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
@@ -1315,8 +1481,11 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
                  << "category =" << category->text(0)
                     ;
 
-    // if true then filtering will be cancelled
-    bool oldItemChecked = false;
+    /* The state of an item that is disappearing (a title or creator that was edited), so
+       a rename carries its filter across rather than silently cancelling it. The STATE,
+       not just "was it checked": restoring an exclusion as an inclusion would reverse
+       what the user asked for. */
+    Qt::CheckState oldItemState = Qt::Unchecked;
 
     // remove existing category items in filters if no longer in itemMap
     if (category->childCount()) {
@@ -1331,8 +1500,8 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
             }
             // remove from filter tree unless checked item
             else {
-                if (category->child(i)->checkState(0) == Qt::Checked)
-                    oldItemChecked = true;
+                if (category->child(i)->checkState(0) != Qt::Unchecked)
+                    oldItemState = category->child(i)->checkState(0);
                 category->removeChild(category->child(i));
 //                break;
             }
@@ -1347,8 +1516,8 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         i.next();
         item = new QTreeWidgetItem(category);
         item->setText(0, i.key());
-        if (oldItemChecked) item->setCheckState(0, Qt::Checked);
-        else item->setCheckState(0, Qt::Unchecked);
+        item->setCheckState(0, oldItemState);
+        styleFilterItem(item);
         item->setData(1, Qt::EditRole, i.key());
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -1357,11 +1526,6 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
 
     // sort the result
     category->sortChildren(0, Qt::AscendingOrder);
-
-    // clear selection if anyRemovedItemsChecked = true
-    if (oldItemChecked) {
-
-    }
 }
 
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
@@ -1511,6 +1675,10 @@ void Filters::updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidge
         qDebug() << "Filters::updateZeroCountCheckedItems prior"
                  << "item =" << category->child(i)->text(0)
                  << "checkState =" << category->child(i)->checkState(0);
+        /* Qt::Checked only. An EXCLUSION of something with a zero count excludes
+           nothing, so it cannot produce the null result this guards against -- and
+           clearing it would silently discard the user's intent the moment the value
+           came back into the folder. */
         if (category->child(i)->checkState(0) == Qt::Checked) {
             QString key = category->child(i)->text(0);
             //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
@@ -1657,9 +1825,13 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
         }
         // clicked on checkbox text (not the indicator) so toggle the check state
         else {
+            /* Two states here, not three: an excluded item is intercepted in
+               mousePressEvent and never reaches this. Off becomes included, anything
+               else becomes off. */
             itemCheckStateHasChanged = false;
             if (item->checkState(0) == Qt::Unchecked) item->setCheckState(0, Qt::Checked);
             else item->setCheckState(0, Qt::Unchecked);
+            styleFilterItem(item);
         }
     }
 
@@ -1739,6 +1911,30 @@ void Filters::mousePressEvent(QMouseEvent *event)
              << "isValid =" << isValid
                 ; //*/
     bool isCtrlModifier = event->modifiers() & Qt::ControlModifier;
+
+    /* Opt+click EXCLUDES, and a plain click on something already excluded clears it.
+       Both are handled here, BEFORE the base class runs, because the base class would
+       toggle the checkbox as well and we would be fighting it for the same state.
+       Opt is the modifier the mask combine tools already use for "subtract", so the
+       gesture is one the user has met. */
+    if (isLeftBtn && !isHdr && isValid && isFilterableItem(item)
+        && G::allMetadataAttempted && !buildingFilters) {
+        const bool isAltModifier = event->modifiers() & Qt::AltModifier;
+        const Qt::CheckState now = item->checkState(0);
+        if (isAltModifier) {
+            setItemFilterState(item, now == Qt::PartiallyChecked ? Qt::Unchecked
+                                                                 : Qt::PartiallyChecked);
+            return;
+        }
+        if (now == Qt::PartiallyChecked) {
+            /* Without this, Qt's own two-state toggle turns an exclusion into an
+               inclusion -- the opposite of what the user asked for -- and there would be
+               no way to simply clear one. */
+            setItemFilterState(item, Qt::Unchecked);
+            return;
+        }
+    }
+
     if (isLeftBtn && isHdr && isValid /*&& notIndentation*/) {
         hdrJustClicked = true;
         if (isSolo && !isCtrlModifier) {

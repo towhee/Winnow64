@@ -2652,3 +2652,46 @@ failure, and I should have instrumented before shipping a fix off static reading
 separately: at ISO 250 this file's KSigma cvt_k is 14.6, so even a fully working denoise
 changes it by ~0.15% — once the cast is fixed you'll likely find the feature does almost
 nothing here, which is its own conversation.
+
+--------------------
+
+1. Flatten in the datamodel — new Metadata/keywordflatten.h shared with the catalog (killing the duplicate ancestry/leafOf in catalog.cpp), new G::KeywordsAllColumn for faceting, literal dc:subject
+   preserved in KeywordsColumn so future write-back doesn't leak ancestors into files.
+2. Catalog schema 4 — keyword keyed on name, new keyword_context table, and an in-place SQL migration that re-reads no files (the old writer already linked every ancestor, so the flat link set is
+   already correct — only the rows need merging).
+3. Exclusion in SortFilter::filterAcceptsRow as a global AND-NOT, using Qt::PartiallyChecked. Four checkState sites need fixing; the rest already test == Qt::Checked and are safe.
+4. Opt+click and a right-click menu in the Filters dock; red strikethrough for excluded, amber for ambiguous, tooltips listing the parents.
+5. Catalog dock adopts the same flat list and same gestures.
+6. Documentation rewrite plus ToC sync.
+
+
+Integrate Catalog / Filters
+
+1. Shared term parser + hierarchical keywords in Filters — kills the two worst
+inconsistencies without touching either dock's structure.
+
+2. Add alongside Load; seed Filters from the catalog query after a load.
+
+3. Roots/scan → Preferences.
+
+4. FacetSource + SearchQuery, merge into the Find dock with the scope switch. This is the expensive step and the only one that touches BuildFilters' threading.
+
+yes, start with steps 1-3
+
+1. One flat keyword vocabulary — flatten helper + new column; catalog schema 4 with an in-place migration that re-reads no files.
+2. Exclusion — the predicate (global AND-NOT), Opt+click and context menu, amber for ambiguous, red strikethrough for excluded; Catalog dock adopts the same gesture.
+3. Make the docks agree — shared term parser, Add alongside Load, roots/scan out to Preferences.
+4. Merge — FacetSource + SearchQuery, then the Find dock with the Here | Everywhere switch.
+
+Two things I'd flag as the real risks. Phase 4 step 9 is the only place that touches BuildFilters' threading, and the trap is routing the synchronous GUI-thread catalog path through the worker's wait
+condition — the plan says to push catalog facets through the same updateCategoryItems entry points instead. And Phase 4 retires two docks and bumps winnowStateVersion, which is hard to walk back, so it
+ships behind G::useFindDock the way G::useReplaceFillModes did.
+
+
+===============================
+
+Two test failures remain, and neither is mine — I verified both against a pristine HEAD worktree build rather than assuming:
+- tst_localcontrast — 12 pass / 10 fail identically at HEAD; Develop golden drift in sharpen/clarity/dehaze.
+- smoke_launch — same assert at HEAD: datamodel.cpp:1675 does 1 / m.exposureTimeNum with a zero shutter speed, handing +Inf to qRound. That's a real latent divide-by-zero in imMetadata, worth a separate
+  fix.
+

@@ -1,6 +1,8 @@
 #include "Datamodel/datamodel.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
+#include "Metadata/keywordflatten.h"
+#include "Utilities/searchterms.h"
 
 /*
 The datamodel (dm thoughout app) contains information about each eligible image
@@ -255,6 +257,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::KeywordPathsColumn, new QStandardItem("KeywordPaths")); horizontalHeaderItem(G::KeywordPathsColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::KeywordsAllColumn, new QStandardItem("All Keywords")); horizontalHeaderItem(G::KeywordsAllColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataReadingColumn, new QStandardItem("Meta Reading")); horizontalHeaderItem(G::MetadataReadingColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::MetadataStatusColumn, new QStandardItem("Meta Status")); horizontalHeaderItem(G::MetadataStatusColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
@@ -1567,7 +1570,12 @@ QVector<CatalogRow> DataModel::catalogRows() const
         r.width = index(row, G::WidthColumn).data().toInt();
         r.height = index(row, G::HeightColumn).data().toInt();
         r.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
-        r.keywords = index(row, G::KeywordsColumn).data().toStringList();
+        /* The FLAT vocabulary, not the literal dc:subject: the catalog indexes what is
+           searched on, and flattening once here means the index and the Filters facet
+           cannot disagree about the same image. The raw paths travel beside it because
+           the catalog derives its ambiguity contexts (which parents a name has been seen
+           under) from them. */
+        r.keywords = index(row, G::KeywordsAllColumn).data().toStringList();
         r.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
 
         rows.append(r);
@@ -2116,6 +2124,14 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     /* Ancestor names are only in the hierarchical form, so folding it into the search
        text is what lets a search for "Wildlife" find an image keyworded only "Heron". */
     search += Utilities::stringListToString(m.keywordPaths);
+    /* The flat vocabulary the Keywords filter category and the catalog facet read: both
+       properties reduced to one de-duplicated list of names, so a tag Lightroom wrote
+       twice (leaf in dc:subject, path in lr:hierarchicalSubject) is ONE keyword and an
+       ancestor is a keyword in its own right. The two source columns above are left as
+       the file spelled them -- see G::KeywordsAllColumn on why they must be. */
+    QStringList keywordsAll = flattenKeywords(m.keywords, m.keywordPaths);
+    setData(index(row, G::KeywordsAllColumn), QVariant(keywordsAll));
+    setData(index(row, G::KeywordsAllColumn), Utilities::stringListToString(keywordsAll), Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
@@ -3673,18 +3689,34 @@ void DataModel::searchStringChange(QString searchString)
     if (isDebug)
          qDebug() << "DataModel::searchStringChange" << "instance =" << instance
                   << "searchString =" << searchString;
+
+    /* Whitespace-only text parses to no terms, which would match every row and light the
+       Search filter up for a query that asked for nothing. Treated as no search, like the
+       empty string beside it. */
+    bool noSearch = filters->ignoreSearchStrings.contains(searchString);
+    if (!noSearch && SearchTerms::parse(searchString).isEmpty()) noSearch = true;
+
+    /* PARSED ONCE, ABOVE THE LOOP. This runs over every row in the model on the GUI
+       thread while the user is typing, so re-parsing per row would put the tokenizer on
+       the critical path of a keystroke at a hundred thousand images.
+
+       Utilities/searchterms.h is the SAME grammar the catalog search uses, which is what
+       makes F2 ("here") and Shift+F2 ("everywhere") narrow the same way -- "heron OR
+       eagle" used to find images in one and nothing in the other. */
+    const SearchTerms terms = noSearch ? SearchTerms() : SearchTerms::parse(searchString);
+
     // update datamodel search string match
     QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row)  {
         // no search string
-        if (filters->ignoreSearchStrings.contains(searchString)) {
+        if (noSearch) {
             setData(index(row, G::SearchColumn), false);
             filters->searchTrue->setText(0, filters->enterSearchString);
         }
         // there is a search string
         else {
             QString searchableText = index(row, G::SearchTextColumn).data().toString();
-            setData(index(row, G::SearchColumn), searchableText.contains(searchString));
+            setData(index(row, G::SearchColumn), terms.matches(searchableText));
         }
     }
 }
@@ -4446,6 +4478,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("gpsCoord", dots) << G::s(index(row, G::GPSCoordColumn).data());
     rpt << "\n  " << G::sj("keywords", dots) << G::s(index(row, G::KeywordsColumn).data());
     rpt << "\n  " << G::sj("keywordPaths", dots) << G::s(index(row, G::KeywordPathsColumn).data());
+    rpt << "\n  " << G::sj("keywordsAll", dots) << G::s(index(row, G::KeywordsAllColumn).data());
     rpt << "\n  " << G::sj("title", dots) << G::s(index(row, G::TitleColumn).data());
     rpt << "\n  " << G::sj("_title", dots) << G::s(index(row, G::_TitleColumn).data());
     rpt << "\n  " << G::sj("creator", dots) << G::s(index(row, G::CreatorColumn).data());
@@ -4519,6 +4552,22 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     column in data model.  The top level items in the QTreeWidget are referred to
     as categories, and each category has one or more filter items.  Categories
     map to columns in the data model ie Picked, Rating, Label ...
+
+    THREE STATES, NOT TWO. Qt::Checked INCLUDES, Qt::PartiallyChecked EXCLUDES, and
+    Qt::Unchecked is "don't care".
+
+      o Includes are OR-ed within a category and AND-ed between categories, which is what
+        this always did: check two ratings to see both, then check a camera model to see
+        only those two ratings from that camera.
+      o An exclude is an outright rejection, evaluated ACROSS categories rather than
+        within one: if the row carries an excluded value it is out, whatever else matches.
+        That is what makes "include Vancouver, exclude USA" mean what it reads like -- the
+        keyword vocabulary is flat, so an ambiguous name is separated by ruling one of its
+        parents out rather than by descending a tree.
+      o An exclude therefore must NOT clear isCategoryUnchecked. A category holding only
+        exclusions is not narrowing the set to those items; it is subtracting them. Were
+        it to count as "this category is filtering", every row lacking any of its items
+        would be rejected -- which is the whole set.
 */
 
     // Suspend?
@@ -4573,11 +4622,27 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
             For search string matching see DataModel::searchStringChange, which sets the
             datamodel G::SearchColumn true/false.
             */
-            if ((*filter)->checkState(0) != Qt::Unchecked) {  // crash
+            const Qt::CheckState state = (*filter)->checkState(0);   // crash
+            if (state != Qt::Unchecked) {
                 if ((*filter) == filters->searchTrue &&
                     (*filter)->text(0) == filters->enterSearchString)
                 {
                     isMatch = true;
+                }
+                else if (state == Qt::PartiallyChecked) {
+                    /* An exclusion. Tested first and answered immediately: no other
+                       category can readmit a row the user has said to leave out. Note
+                       isCategoryUnchecked is deliberately left alone -- see above. */
+                    QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
+                    QVariant dataValue = idx.data(Qt::EditRole);
+                    QVariant filterValue = (*filter)->data(1, Qt::EditRole);
+                    bool hit = dataValue.typeId() == QMetaType::QStringList
+                                   ? dataValue.toStringList().contains(filterValue.toString())
+                                   : dataValue == filterValue;
+                    if (hit) {
+                        finished = true;
+                        return false;
+                    }
                 }
                 else {
                     isCategoryUnchecked = false;

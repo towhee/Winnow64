@@ -160,6 +160,7 @@ set(WINNOW_SOURCES
     Dialogs/aboutdlg.cpp
     Dialogs/addthumbnailsdlg.cpp
     Dialogs/appdlg.cpp
+    Dialogs/catalogrootsdlg.cpp
     Dialogs/copystyledlg.cpp
     Dialogs/editlistdlg.cpp
     Dialogs/savedeveloppresetdlg.cpp
@@ -447,6 +448,7 @@ set(WINNOW_HEADERS
     Dialogs/aboutdlg.h
     Dialogs/addthumbnailsdlg.h
     Dialogs/appdlg.h
+    Dialogs/catalogrootsdlg.h
     Dialogs/copystyledlg.h
     Dialogs/editlistdlg.h
     Dialogs/savedeveloppresetdlg.h
@@ -569,6 +571,7 @@ set(WINNOW_HEADERS
     Metadata/gps.h
     Metadata/ifd.h
     Metadata/imagemetadata.h
+    Metadata/keywordflatten.h
     Metadata/rawsensorinfo.h
     Metadata/iptc.h
     Metadata/irb.h
@@ -615,6 +618,7 @@ set(WINNOW_HEADERS
     Utilities/tokenfilename.h
     Utilities/usbutil.h
     Utilities/fileops.h
+    Utilities/searchterms.h
     Utilities/utilities.h
     Utilities/winnets.h
 

@@ -3,6 +3,8 @@
 #include "Cache/mountsnapshot.h"
 #include "Cache/pathkey.h"
 #include "Main/global.h"
+#include "Metadata/keywordflatten.h"
+#include "Utilities/searchterms.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -21,9 +23,6 @@ const char *kDbName = "index.db";
    more than a few hundred stats. Matches DevPreviewCache. */
 constexpr int kPageRows = 512;
 
-/* Separator for the memo key. \x1f (unit separator) cannot occur in a keyword. */
-const QChar kKeySep(QChar(0x1f));
-
 QString defaultCacheDir()
 {
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
@@ -31,10 +30,12 @@ QString defaultCacheDir()
 }
 
 /* Case folding, matching Cache/pathkey.h's reasoning: toCaseFolded is the Unicode-correct
-   locale-independent operation, where toLower is neither. */
+   locale-independent operation, where toLower is neither. Delegates to the shared
+   keyword helper so the index folds a name exactly as the datamodel does -- if the two
+   disagreed, the facet and the search would disagree about the same picture. */
 QString fold(const QString &s)
 {
-    return s.trimmed().toCaseFolded();
+    return keywordFold(s);
 }
 
 /*
@@ -53,64 +54,9 @@ QVariant text(const QString &s)
     return QVariant(s.isNull() ? QString("") : s);
 }
 
-/*
-    Turn what the user typed into an FTS5 MATCH expression.
-
-    Bare words become prefix terms AND-ed together, which is what a search box is expected
-    to do ("heron nan" finds Heron in Nanaimo). Anything containing FTS syntax the user
-    clearly meant -- a quote, a column filter, an explicit operator -- is passed through
-    untouched so the syntax remains available to those who want it.
-
-    Every bare term is QUOTED before the '*' is appended. Unquoted, a term containing any
-    of FTS5's punctuation is a syntax error, and a syntax error in MATCH makes the whole
-    query fail rather than return nothing -- so a user typing an apostrophe or a hyphen
-    mid-word would see the search break instead of narrow.
-*/
-QString ftsExpression(const QString &raw)
-{
-    const QString t = raw.trimmed();
-    if (t.isEmpty()) return QString();
-
-    if (t.contains('"') || t.contains(':') || t.contains('(')
-        || t.contains(" OR ") || t.contains(" NOT ") || t.contains(" AND ")) {
-        return t;
-    }
-
-    QStringList terms;
-    const auto parts = t.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
-    for (const QString &p : parts) {
-        QString q = p;
-        q.replace('"', "\"\"");             // FTS5 escapes a quote by doubling it
-        terms << ('"' + q + "\"*");
-    }
-    return terms.join(" AND ");
-}
-
 qint64 nowSecs()
 {
     return QDateTime::currentSecsSinceEpoch();
-}
-
-/* Every ancestor prefix of a hierarchical keyword path, longest last.
-   "A|B|C" -> ["A", "A|B", "A|B|C"]. */
-QStringList ancestry(const QString &path)
-{
-    QStringList out;
-    const auto parts = path.split('|', Qt::SkipEmptyParts);
-    QString acc;
-    for (const QString &p : parts) {
-        const QString trimmed = p.trimmed();
-        if (trimmed.isEmpty()) continue;
-        acc = acc.isEmpty() ? trimmed : acc + '|' + trimmed;
-        out << acc;
-    }
-    return out;
-}
-
-QString leafOf(const QString &path)
-{
-    const int i = path.lastIndexOf('|');
-    return (i < 0 ? path : path.mid(i + 1)).trimmed();
 }
 
 }  // namespace
@@ -165,45 +111,35 @@ bool Catalog::isAvailable()
    Keywords
    --------------------------------------------------------------------------------- */
 
-qint64 Catalog::keywordIdLocked(QSqlDatabase &db, const QString &name,
-                                const QString &path)
+qint64 Catalog::keywordIdLocked(QSqlDatabase &db, const QString &name)
 {
 /*
-    The id for one keyword, inserting it if it is new.
+    The id for one keyword name, inserting it if it is new.
+
+    KEYED ON THE NAME ALONE. Schema 3 keyed on (path, name), which meant a tag Lightroom
+    wrote both ways -- "Heron" in dc:subject and "Fauna|Bird|Heron" in
+    lr:hierarchicalSubject -- became two keyword rows for one tag, and so appeared twice
+    in the facet list with its image count split between the entries. The hierarchy is
+    flattened before it reaches here (Metadata/keywordflatten.h), so both forms arrive as
+    the same name and collapse onto one row.
 
     MEMOISED, because a folder of 2,000 images typically carries a few dozen DISTINCT
     keywords: without the memo this is two round trips per keyword per image, with it, two
-    per keyword per session. The key is the same pair the unique index is on, so the memo
-    and the table can never disagree about what identifies a keyword.
+    per keyword per session. The key is what the unique index is on, so the memo and the
+    table can never disagree about what identifies a keyword.
 */
     const QString nameFold = fold(name);
-    const QString pathFold = fold(path);
     if (nameFold.isEmpty()) return 0;
 
-    const QString memo = pathFold + kKeySep + nameFold;
-    const auto it = keywordIds.constFind(memo);
+    const auto it = keywordIds.constFind(nameFold);
     if (it != keywordIds.constEnd()) return it.value();
 
     QSqlQuery q(db);
-    q.prepare("INSERT INTO keyword (name, namefold, path, pathfold, parent)"
-              " VALUES (?, ?, ?, ?, ?)"
-              " ON CONFLICT(pathfold, namefold) DO NOTHING");
+    q.prepare("INSERT INTO keyword (name, namefold)"
+              " VALUES (?, ?)"
+              " ON CONFLICT(namefold) DO NOTHING");
     q.addBindValue(text(name.trimmed()));
     q.addBindValue(text(nameFold));
-    q.addBindValue(text(path));
-    q.addBindValue(text(pathFold));
-
-    /* The parent is the keyword one level up the hierarchy, which has already been
-       inserted by writeKeywordsLocked walking the ancestry shortest-first. A flat
-       keyword, or the root of a hierarchy, has none. */
-    QVariant parent;
-    const int cut = path.lastIndexOf('|');
-    if (cut > 0) {
-        const QString parentPath = path.left(cut);
-        const qint64 pid = keywordIdLocked(db, leafOf(parentPath), parentPath);
-        if (pid) parent = pid;
-    }
-    q.addBindValue(parent);
 
     if (!q.exec()) {
         G::issueDedup("Warning", "Catalog keyword insert failed: " + q.lastError().text(),
@@ -216,24 +152,35 @@ qint64 Catalog::keywordIdLocked(QSqlDatabase &db, const QString &name,
         /* DO NOTHING fired: the row already existed (another folder, or a previous
            session), so look it up rather than treating a conflict as a failure. */
         QSqlQuery sel(db);
-        sel.prepare("SELECT id FROM keyword WHERE pathfold = ? AND namefold = ?");
-        sel.addBindValue(pathFold);
+        sel.prepare("SELECT id FROM keyword WHERE namefold = ?");
         sel.addBindValue(nameFold);
         if (sel.exec() && sel.next()) id = sel.value(0).toLongLong();
     }
-    if (id) keywordIds.insert(memo, id);
+    if (id) keywordIds.insert(nameFold, id);
     return id;
 }
 
 void Catalog::writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r)
 {
 /*
-    Replace this image's keyword links.
+    Replace this image's keyword links, and record which parents its hierarchical tags
+    were seen under.
 
     DELETE-THEN-INSERT rather than a diff: an image's keyword list is a handful of rows,
     the delete is one indexed statement, and a diff would have to be right about removals
     to be worth anything. Removing a keyword in Lightroom must remove it here too, and
     this is what makes that fall out for free.
+
+    r.keywords IS ALREADY FLAT. DataModel::catalogRows and CatalogScanner both hand over
+    flattenKeywords()'s output -- dc:subject's leaves and every node of every hierarchical
+    path, de-duplicated -- so there is nothing to walk here and no second form of the same
+    tag to reconcile. An ancestor is an ordinary keyword in that list, which is what keeps
+    a search for "Fauna" reaching an image tagged only "Fauna|Bird|Heron".
+
+    CONTEXTS ARE NOT DELETED WITH THE LINKS. They describe the VOCABULARY -- that
+    "Vancouver" has been seen under both Canada and USA -- not this image, and the fact
+    stays true after this image is re-indexed or removed. Deleting them per image would
+    make ambiguity flicker as folders are browsed.
 */
     QSqlQuery del(db);
     del.prepare("DELETE FROM image_keyword WHERE image_id = ?");
@@ -241,39 +188,39 @@ void Catalog::writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
     del.exec();
 
     QSet<qint64> ids;
-
-    /* Hierarchical first, shortest path first, so a parent is always inserted before the
-       child that needs to point at it. Every ancestor is linked to the image as well as
-       the leaf, which is what makes a search for "Location" find this picture. */
-    QStringList paths = r.keywordPaths;
-    std::sort(paths.begin(), paths.end(),
-              [](const QString &a, const QString &b) { return a.length() < b.length(); });
-    for (const QString &p : paths) {
-        for (const QString &node : ancestry(p)) {
-            const qint64 id = keywordIdLocked(db, leafOf(node), node);
-            if (id) ids.insert(id);
-        }
-    }
-
-    /* Flat keywords carry no hierarchy, so they are stored with path = ''. A keyword that
-       appears both ways -- which is the normal Lightroom case, since it writes the leaf
-       into dc:subject AND the path into lr:hierarchicalSubject -- therefore gets two
-       keyword rows. That is deliberate: they are genuinely different facts ("tagged
-       Heron" vs "tagged Fauna|Bird|Heron"), and collapsing them would lose the ability to
-       tell a flat library from a hierarchical one. */
     for (const QString &k : r.keywords) {
-        const qint64 id = keywordIdLocked(db, k, QString());
+        const qint64 id = keywordIdLocked(db, k);
         if (id) ids.insert(id);
     }
 
-    if (ids.isEmpty()) return;
-    QSqlQuery ins(db);
-    ins.prepare("INSERT OR IGNORE INTO image_keyword (image_id, keyword_id)"
+    if (!ids.isEmpty()) {
+        QSqlQuery ins(db);
+        ins.prepare("INSERT OR IGNORE INTO image_keyword (image_id, keyword_id)"
+                    " VALUES (?, ?)");
+        for (qint64 id : ids) {
+            ins.addBindValue(imageId);
+            ins.addBindValue(id);
+            ins.exec();
+        }
+    }
+
+    /* What the hierarchy leaves behind. Each adjacent pair in a path is one (child,
+       parent) fact; a name with more than one distinct parent is ambiguous. */
+    QSqlQuery ctx(db);
+    ctx.prepare("INSERT OR IGNORE INTO keyword_context (keyword_id, parent_id)"
                 " VALUES (?, ?)");
-    for (qint64 id : ids) {
-        ins.addBindValue(imageId);
-        ins.addBindValue(id);
-        ins.exec();
+    for (const QString &path : r.keywordPaths) {
+        const QStringList nodes = keywordNodes(path);
+        for (int i = 1; i < nodes.size(); ++i) {
+            const qint64 childId  = keywordIdLocked(db, nodes.at(i));
+            const qint64 parentId = keywordIdLocked(db, nodes.at(i - 1));
+            /* childId == parentId is a path like "A|A": a name is not its own parent,
+               and recording it would read as an ambiguity that does not exist. */
+            if (!childId || !parentId || childId == parentId) continue;
+            ctx.addBindValue(childId);
+            ctx.addBindValue(parentId);
+            ctx.exec();
+        }
     }
 }
 
@@ -498,23 +445,64 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
 
     QString from = " FROM image i";
 
-    const QString fts = ftsExpression(cq.text);
+    /* The SAME grammar the Filters search box uses (Utilities/searchterms.h), so "heron
+       OR eagle" narrows here exactly as it narrows there. Parsing is what the two search
+       boxes now share; only the compilation differs. */
+    const SearchTerms terms = SearchTerms::parse(cq.text);
+
+    const QString fts = terms.positiveFts();
     if (!fts.isEmpty()) {
         from += " JOIN image_fts f ON f.rowid = i.id";
         where << "image_fts MATCH ?";
         binds << fts;
     }
 
-    if (!cq.keyword.isEmpty()) {
-        /* Matches the keyword itself and everything beneath it in the hierarchy. The
-           ancestor rows written by writeKeywordsLocked mean the plain equality below
-           already reaches descendants, but a user picking a node by PATH gets the
-           prefix match too, so both spellings of the same intent behave alike. */
+    const QString notFts = terms.negativeFts();
+    if (!notFts.isEmpty()) {
+        /* A NOT EXISTS over a SEPARATE fts5 lookup rather than FTS5's own NOT operator,
+           which is binary: "-heron" on its own has no left-hand side to subtract from,
+           and MATCH offers no "everything" token to supply one. As a subquery it works
+           whether or not there is anything positive to go with it. */
+        where << "NOT EXISTS (SELECT 1 FROM image_fts nf"
+                 " WHERE nf.rowid = i.id AND nf.image_fts MATCH ?)";
+        binds << notFts;
+    }
+
+    if (!cq.keywords.isEmpty()) {
+        /* OR-ed, matching what checking several items in one Filters category does. No
+           subtree walk: the vocabulary is flat, so an ancestor name is linked to every
+           image beneath it directly and plain equality already reaches them all. */
         from += " JOIN image_keyword ik ON ik.image_id = i.id"
                 " JOIN keyword k ON k.id = ik.keyword_id";
-        where << "(k.namefold = ? OR k.pathfold = ? OR k.pathfold LIKE ?)";
-        const QString f = fold(cq.keyword);
-        binds << f << f << (f + "|%");
+        QStringList marks;
+        for (const QString &k : cq.keywords) {
+            if (k.trimmed().isEmpty()) continue;
+            marks << "?";
+            binds << fold(k);
+        }
+        if (!marks.isEmpty())
+            where << "k.namefold IN (" + marks.join(",") + ")";
+    }
+
+    if (!cq.excludeKeywords.isEmpty()) {
+        /* AND-NOT, as a NOT EXISTS rather than a join: joining would multiply the rows
+           and then need DISTINCT to undo it, and "this image has no such keyword" is a
+           question about the image, not about a row to return. This is how an ambiguous
+           name is resolved -- keywords = {Vancouver}, excludeKeywords = {USA}. */
+        QStringList marks;
+        QVariantList xbinds;
+        for (const QString &k : cq.excludeKeywords) {
+            if (k.trimmed().isEmpty()) continue;
+            marks << "?";
+            xbinds << fold(k);
+        }
+        if (!marks.isEmpty()) {
+            where << "NOT EXISTS (SELECT 1 FROM image_keyword xik"
+                     " JOIN keyword xk ON xk.id = xik.keyword_id"
+                     " WHERE xik.image_id = i.id"
+                     " AND xk.namefold IN (" + marks.join(",") + "))";
+            binds += xbinds;
+        }
     }
 
     if (cq.minRating > 0)      { where << "i.rating >= ?";  binds << cq.minRating; }
@@ -568,28 +556,89 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
 
 QList<CatalogKeyword> Catalog::keywords()
 {
+/*
+    The whole keyword vocabulary with image counts and parent names -- what the facet
+    lists render.
+
+    ONE ROW PER NAME, because the vocabulary is flat. Counts come from image_keyword
+    directly; there is no summing of children to do, since an ancestor is linked to every
+    image beneath it in its own right.
+
+    CONTEXTS ARE FETCHED IN A SECOND PASS rather than joined in. Joining keyword_context
+    into the counting query would multiply each keyword row by its number of parents and
+    inflate COUNT(), and getting that right needs a DISTINCT that costs more than the
+    second query -- which reads a table the size of the vocabulary, not of the library.
+*/
     QList<CatalogKeyword> out;
 
     QMutexLocker lk(&mutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return out;
 
+    /* keyword id -> its position in out, so the second pass can attach contexts without
+       searching the list once per row. */
+    QHash<qint64, int> byId;
+
     QSqlQuery q(db);
-    if (!q.exec("SELECT k.name, k.path, COUNT(ik.image_id)"
+    if (!q.exec("SELECT k.id, k.name, COUNT(ik.image_id)"
                 " FROM keyword k"
                 " LEFT JOIN image_keyword ik ON ik.keyword_id = k.id"
                 " LEFT JOIN image i ON i.id = ik.image_id AND i.live = 1"
                 " GROUP BY k.id"
-                " ORDER BY k.pathfold, k.namefold")) {
+                " ORDER BY k.namefold")) {
         return out;
     }
     while (q.next()) {
         CatalogKeyword k;
-        k.name = q.value(0).toString();
-        k.path = q.value(1).toString();
+        k.name = q.value(1).toString();
         k.count = q.value(2).toInt();
+        byId.insert(q.value(0).toLongLong(), out.size());
         out << k;
     }
+
+    QSqlQuery c(db);
+    if (c.exec("SELECT c.keyword_id, p.name"
+               " FROM keyword_context c"
+               " JOIN keyword p ON p.id = c.parent_id"
+               " ORDER BY p.namefold")) {
+        while (c.next()) {
+            const auto it = byId.constFind(c.value(0).toLongLong());
+            if (it != byId.constEnd()) out[it.value()].contexts << c.value(1).toString();
+        }
+    }
+
+    return out;
+}
+
+QSet<QString> Catalog::ambiguousKeywords()
+{
+/*
+    The names recorded under more than one parent -- what flattening the hierarchy
+    genuinely lost, and the only thing the docks colour differently.
+
+    Returned FOLDED, because every caller is comparing against a keyword it got from
+    somewhere else (a datamodel column, a facet item) and folding at the point of
+    comparison is the only way the two can agree about "Heron" and "heron".
+
+    An empty result means EITHER nothing is ambiguous OR there is no catalog. Callers must
+    not present the second as the first: with no index we do not know, and colouring
+    nothing while implying we checked would be a quiet lie.
+*/
+    QSet<QString> out;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QSqlQuery q(db);
+    if (!q.exec("SELECT k.namefold"
+                " FROM keyword_context c"
+                " JOIN keyword k ON k.id = c.keyword_id"
+                " GROUP BY c.keyword_id"
+                " HAVING COUNT(DISTINCT c.parent_id) > 1")) {
+        return out;
+    }
+    while (q.next()) out.insert(q.value(0).toString());
     return out;
 }
 
@@ -745,8 +794,9 @@ void Catalog::clear()
     if (!db.isOpen()) return;
 
     QSqlQuery q(db);
-    /* image_keyword goes by cascade, but the FTS table and the keyword vocabulary have no
-       foreign key onto image, so they are cleared explicitly. */
+    /* image_keyword goes by cascade off image, and keyword_context by cascade off
+       keyword. The FTS table and the keyword vocabulary have no foreign key onto image,
+       so they are cleared explicitly. */
     q.exec("DELETE FROM image_fts");
     q.exec("DELETE FROM image");
     q.exec("DELETE FROM keyword");

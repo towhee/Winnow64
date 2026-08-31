@@ -3,10 +3,13 @@
 #include <QFile>
 #include <QStandardPaths>
 #include <QTemporaryDir>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 
 #include "Cache/cachedb.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
+#include "Metadata/keywordflatten.h"
 
 /*
     The catalog -- the local index behind cross-folder keyword and metadata search.
@@ -28,7 +31,7 @@ private slots:
     void cleanupTestCase();
     void init();
 
-    void schemaIsVersionThree();
+    void schemaIsVersionFour();
     void commitThenSearchByKeyword();
     void hierarchyReachesAncestors();
     void freeTextFindsTitleAndGear();
@@ -44,6 +47,11 @@ private slots:
     void clearingPreviewsLeavesTheCatalog();
     void staleOfSkipsUnchangedOnRescan();
     void removedKeywordDisappearsFromFacets();
+    void lightroomDoubleCollapsesToOneKeyword();
+    void ambiguousKeywordIsReported();
+    void excludeKeywordSeparatesTwoPlaces();
+    void textSearchHonoursOrAndNot();
+    void migrationFromVersionThreeMergesKeywords();
 
 private:
     QString imagePath(const QString &name) const;
@@ -81,7 +89,11 @@ CatalogRow tst_catalog::rowFor(const QString &name, const QStringList &keywords,
     r.srcSize = fi.size();
     r.srcMtime = fi.lastModified().toSecsSinceEpoch();
     r.captured = QDateTime::fromSecsSinceEpoch(1600000000);
-    r.keywords = keywords;
+    /* Flattened HERE because that is where the real callers do it -- both
+       DataModel::catalogRows and CatalogScanner hand Catalog the output of
+       flattenKeywords, never the two raw lists. A test that skipped this would be
+       exercising a shape the app never produces. */
+    r.keywords = flattenKeywords(keywords, paths);
     r.keywordPaths = paths;
     return r;
 }
@@ -108,9 +120,9 @@ void tst_catalog::init()
     Catalog::instance().clear();
 }
 
-void tst_catalog::schemaIsVersionThree()
+void tst_catalog::schemaIsVersionFour()
 {
-    QCOMPARE(CacheDb::schemaVersion(), 3);
+    QCOMPARE(CacheDb::schemaVersion(), 4);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -118,7 +130,8 @@ void tst_catalog::schemaIsVersionThree()
     QSqlDatabase db = CacheDb::instance().db();
     QVERIFY(db.isOpen());
     const auto tables = db.tables();
-    for (const char *t : {"devpreview", "image", "keyword", "image_keyword", "image_fts"})
+    for (const char *t : {"devpreview", "image", "keyword", "image_keyword",
+                          "keyword_context", "image_fts"})
         QVERIFY2(tables.contains(t), t);
 }
 
@@ -129,31 +142,35 @@ void tst_catalog::commitThenSearchByKeyword()
     QCOMPARE(cat.count(), 1);
 
     CatalogQuery q;
-    q.keyword = "Heron";
+    q.keywords = {"Heron"};
     QCOMPARE(cat.search(q), QStringList{imagePath("a.nef")});
 
     /* Case must not matter: the user picks "heron" out of a facet list that may have been
        written by an application that capitalised it differently. */
-    q.keyword = "hErOn";
+    q.keywords = {"hErOn"};
     QCOMPARE(cat.search(q).size(), 1);
 
-    q.keyword = "Eagle";
+    q.keywords = {"Eagle"};
     QVERIFY(cat.search(q).isEmpty());
 }
 
 void tst_catalog::hierarchyReachesAncestors()
 {
 /*
-    The reason hierarchical keywords are stored at all. The image is tagged only with the
-    leaf "Heron" in dc:subject; the ANCESTORS ("Fauna", "Fauna|Bird") exist nowhere but
-    lr:hierarchicalSubject. A search for a parent keyword must still find the picture.
+    Why the hierarchy is read at all, now that it is FLATTENED. The image is tagged only
+    with the leaf "Heron" in dc:subject; the ancestors "Fauna" and "Bird" exist nowhere
+    but lr:hierarchicalSubject. Flattening makes each of them a keyword in its own right,
+    so a search for a parent still finds the picture -- with no tree to walk.
+
+    Note there is no "Fauna|Bird" keyword to search for any more. A PATH is not a name,
+    and the flat vocabulary has only names.
 */
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("b.nef", {"Heron"}, {"Fauna|Bird|Heron"})});
 
     CatalogQuery q;
-    for (const QString &k : {"Fauna", "Bird", "Heron", "Fauna|Bird"}) {
-        q.keyword = k;
+    for (const QString &k : {"Fauna", "Bird", "Heron"}) {
+        q.keywords = {k};
         QVERIFY2(cat.search(q).size() == 1,
                  qPrintable("ancestor search failed for " + k));
     }
@@ -218,12 +235,12 @@ void tst_catalog::sidecarEditForcesReindex()
     QCOMPARE(cat.commit({r}), 1);
 
     CatalogQuery q;
-    q.keyword = "Eagle";
+    q.keywords = {"Eagle"};
     QCOMPARE(cat.search(q).size(), 1);
     /* The OLD keyword must be gone, not merely outranked -- writeKeywords replaces the
        links rather than adding to them, which is how a keyword deleted in Lightroom
        disappears here too. */
-    q.keyword = "Heron";
+    q.keywords = {"Heron"};
     QVERIFY(cat.search(q).isEmpty());
 }
 
@@ -256,8 +273,8 @@ void tst_catalog::keywordFacetCountsImages()
 
     int heron = -1, eagle = -1;
     for (const CatalogKeyword &k : cat.keywords()) {
-        if (k.path.isEmpty() && k.name == "Heron") heron = k.count;
-        if (k.path.isEmpty() && k.name == "Eagle") eagle = k.count;
+        if (k.name == "Heron") heron = k.count;
+        if (k.name == "Eagle") eagle = k.count;
     }
     QCOMPARE(heron, 2);
     QCOMPARE(eagle, 1);
@@ -289,7 +306,7 @@ void tst_catalog::sweepDemotesMissingSource()
     cat.commit({r});
 
     CatalogQuery q;
-    q.keyword = "Heron";
+    q.keywords = {"Heron"};
     QCOMPARE(cat.search(q).size(), 1);
 
     QVERIFY(QFile::remove(r.path));
@@ -314,7 +331,7 @@ void tst_catalog::onMovedFollowsTheImage()
     cat.onMoved(r.path, dst);
 
     CatalogQuery q;
-    q.keyword = "Heron";
+    q.keywords = {"Heron"};
     QCOMPARE(cat.search(q), QStringList{dst});
     QCOMPARE(cat.count(), 1);
 }
@@ -365,7 +382,7 @@ void tst_catalog::searchTextIsNotInjectable()
 
     QCOMPARE(cat.count(), 1);          // the table is still there
     CatalogQuery ok;
-    ok.keyword = "Heron";
+    ok.keywords = {"Heron"};
     QCOMPARE(cat.search(ok).size(), 1);
 }
 
@@ -432,7 +449,7 @@ void tst_catalog::removedKeywordDisappearsFromFacets()
 
     auto countOf = [&cat](const QString &name) {
         for (const CatalogKeyword &k : cat.keywords())
-            if (k.path.isEmpty() && k.name == name) return k.count;
+            if (k.name == name) return k.count;
         return -1;
     };
     QCOMPARE(countOf("Heron"), 2);
@@ -447,8 +464,227 @@ void tst_catalog::removedKeywordDisappearsFromFacets()
     QCOMPARE(countOf("BC"), 0);
 
     CatalogQuery q;
-    q.keyword = "BC";
+    q.keywords = {"BC"};
     QVERIFY(cat.search(q).isEmpty());
+}
+
+
+void tst_catalog::lightroomDoubleCollapsesToOneKeyword()
+{
+/*
+    THE DEFECT THIS WHOLE CHANGE EXISTS FOR. Lightroom writes the same tag twice: the leaf
+    into dc:subject and the full path into lr:hierarchicalSubject. Schema 3 keyed a
+    keyword on (path, name) and so stored both forms, which put "Heron" in the facet list
+    TWICE with its image count split between the two entries.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("lr1.nef", {"Heron"}, {"Fauna|Bird|Heron"}),
+                rowFor("lr2.nef", {"Heron"}, {"Fauna|Bird|Heron"})});
+
+    int seen = 0, count = -1;
+    for (const CatalogKeyword &k : cat.keywords()) {
+        if (keywordFold(k.name) == "heron") { ++seen; count = k.count; }
+    }
+    QCOMPARE(seen, 1);          // one entry, not two
+    QCOMPARE(count, 2);         // holding BOTH images, not one each
+
+    /* And the ancestors are ordinary keywords beside it. */
+    CatalogQuery q;
+    q.keywords = {"Fauna"};
+    QCOMPARE(cat.search(q).size(), 2);
+}
+
+void tst_catalog::ambiguousKeywordIsReported()
+{
+/*
+    What flattening genuinely loses, and the one thing the docks mark: a name used under
+    more than one parent means more than one thing.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("bc.nef", {}, {"Location|Canada|BC|Vancouver"}),
+                rowFor("wa.nef", {}, {"Location|USA|Washington|Vancouver"}),
+                rowFor("hn.nef", {}, {"Fauna|Bird|Heron"})});
+
+    const QSet<QString> ambiguous = cat.ambiguousKeywords();
+    QVERIFY(ambiguous.contains("vancouver"));       // two parents: BC and Washington
+    QVERIFY(!ambiguous.contains("heron"));          // only ever under Bird
+    QVERIFY(!ambiguous.contains("location"));       // a root, no parent at all
+
+    /* The facet carries the parents so the panel can name them in a tooltip -- knowing a
+       word is ambiguous is not much use without knowing what the choices are. */
+    for (const CatalogKeyword &k : cat.keywords()) {
+        if (keywordFold(k.name) != "vancouver") continue;
+        QCOMPARE(k.contexts.size(), 2);
+        QVERIFY(k.contexts.contains("BC"));
+        QVERIFY(k.contexts.contains("Washington"));
+    }
+}
+
+void tst_catalog::excludeKeywordSeparatesTwoPlaces()
+{
+/*
+    How an ambiguous keyword is resolved without a hierarchy: include the name, exclude
+    the parent you do not want. This is the headline case for filter exclusion.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("x-bc.nef", {}, {"Location|Canada|BC|Vancouver"}),
+                rowFor("x-wa.nef", {}, {"Location|USA|Washington|Vancouver"})});
+
+    CatalogQuery q;
+    q.keywords = {"Vancouver"};
+    QCOMPARE(cat.search(q).size(), 2);              // both, as the name is ambiguous
+
+    q.excludeKeywords = {"USA"};
+    QCOMPARE(cat.search(q), QStringList{imagePath("x-bc.nef")});
+
+    q.excludeKeywords = {"Canada"};
+    QCOMPARE(cat.search(q), QStringList{imagePath("x-wa.nef")});
+
+    /* Excluding something no image carries changes nothing -- an exclusion subtracts,
+       so an empty subtraction is not an empty result. */
+    q.excludeKeywords = {"Mexico"};
+    QCOMPARE(cat.search(q).size(), 2);
+}
+
+void tst_catalog::textSearchHonoursOrAndNot()
+{
+/*
+    The shared grammar (Utilities/searchterms.h). These are the queries that used to mean
+    different things in the two search boxes -- to the datamodel's contains(), "heron OR
+    eagle" was one literal string.
+*/
+    Catalog &cat = Catalog::instance();
+    CatalogRow a = rowFor("t-heron.nef", {"Heron"});
+    a.title = "Low tide";
+    CatalogRow b = rowFor("t-eagle.nef", {"Eagle"});
+    b.title = "High tide";
+    cat.commit({a, b});
+
+    CatalogQuery q;
+    q.text = "heron OR eagle";
+    QCOMPARE(cat.search(q).size(), 2);
+
+    q.text = "tide -heron";
+    QCOMPARE(cat.search(q), QStringList{imagePath("t-eagle.nef")});
+
+    q.text = "tide NOT eagle";
+    QCOMPARE(cat.search(q), QStringList{imagePath("t-heron.nef")});
+
+    /* An all-negative query has no positive to subtract from, which FTS5's own NOT
+       operator cannot express -- Catalog::search applies it as a separate NOT EXISTS. */
+    q.text = "-heron";
+    QCOMPARE(cat.search(q), QStringList{imagePath("t-eagle.nef")});
+
+    q.text = "\"low tide\"";
+    QCOMPARE(cat.search(q), QStringList{imagePath("t-heron.nef")});
+}
+
+void tst_catalog::migrationFromVersionThreeMergesKeywords()
+{
+/*
+    An EXISTING catalog must migrate in place rather than being rebuilt: rebuilding means
+    re-parsing a whole library to recover facts the database already holds.
+
+    A version 3 file is built here by hand, in the shape schema 3 actually wrote -- one
+    keyword row per hierarchy NODE with its path, PLUS a path-less row for the flat
+    dc:subject leaf, with the image linked to all of them. After migration that image must
+    have exactly the same keyword VOCABULARY, with the duplicate leaf merged away and the
+    parent relationships preserved as contexts.
+*/
+    /* A separate database, so the migration is exercised from 3 and not from scratch. */
+    QTemporaryDir v3Dir;
+    QVERIFY(v3Dir.isValid());
+    const QString dbPath = QDir(v3Dir.path()).absoluteFilePath("index.db");
+
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "v3fixture");
+        db.setDatabaseName(dbPath);
+        QVERIFY(db.open());
+        QSqlQuery q(db);
+        QVERIFY(q.exec("CREATE TABLE image (id INTEGER PRIMARY KEY, pathkey TEXT NOT NULL,"
+                       " path TEXT NOT NULL, folder TEXT NOT NULL, vol TEXT NOT NULL"
+                       " DEFAULT '', filename TEXT NOT NULL DEFAULT '', ext TEXT NOT NULL"
+                       " DEFAULT '', srcsize INTEGER NOT NULL DEFAULT 0, srcmtime INTEGER"
+                       " NOT NULL DEFAULT 0, sidecarmtime INTEGER NOT NULL DEFAULT 0,"
+                       " indexed INTEGER NOT NULL DEFAULT 0, live INTEGER NOT NULL"
+                       " DEFAULT 1, captured INTEGER, rating INTEGER NOT NULL DEFAULT 0,"
+                       " label TEXT NOT NULL DEFAULT '', pick INTEGER NOT NULL DEFAULT 0,"
+                       " title TEXT NOT NULL DEFAULT '', creator TEXT NOT NULL DEFAULT '',"
+                       " copyright TEXT NOT NULL DEFAULT '', make TEXT NOT NULL DEFAULT '',"
+                       " model TEXT NOT NULL DEFAULT '', lens TEXT NOT NULL DEFAULT '',"
+                       " iso INTEGER NOT NULL DEFAULT 0, aperture REAL NOT NULL DEFAULT 0,"
+                       " shutter REAL NOT NULL DEFAULT 0, focallength REAL NOT NULL"
+                       " DEFAULT 0, width INTEGER NOT NULL DEFAULT 0, height INTEGER NOT"
+                       " NULL DEFAULT 0, gpscoord TEXT NOT NULL DEFAULT '')"));
+        QVERIFY(q.exec("CREATE UNIQUE INDEX image_pathkey ON image(pathkey)"));
+        QVERIFY(q.exec("CREATE TABLE keyword (id INTEGER PRIMARY KEY, name TEXT NOT NULL,"
+                       " namefold TEXT NOT NULL, path TEXT NOT NULL DEFAULT '',"
+                       " pathfold TEXT NOT NULL DEFAULT '',"
+                       " parent INTEGER REFERENCES keyword(id) ON DELETE SET NULL)"));
+        QVERIFY(q.exec("CREATE UNIQUE INDEX keyword_key ON keyword(pathfold, namefold)"));
+        QVERIFY(q.exec("CREATE INDEX keyword_name ON keyword(namefold)"));
+        QVERIFY(q.exec("CREATE TABLE image_keyword (image_id INTEGER NOT NULL REFERENCES"
+                       " image(id) ON DELETE CASCADE, keyword_id INTEGER NOT NULL"
+                       " REFERENCES keyword(id) ON DELETE CASCADE,"
+                       " PRIMARY KEY (image_id, keyword_id)) WITHOUT ROWID"));
+        QVERIFY(q.exec("CREATE VIRTUAL TABLE image_fts USING fts5(keywords, title,"
+                       " creator, copyright, gear, filename,"
+                       " tokenize = 'unicode61 remove_diacritics 2')"));
+        QVERIFY(q.exec("INSERT INTO image (id, pathkey, path, folder) VALUES"
+                       " (1, '/lib/a.nef', '/lib/a.nef', '/lib')"));
+
+        /* Exactly what schema 3 wrote for dc:subject = {Heron},
+           lr:hierarchicalSubject = {Fauna|Bird|Heron}: three hierarchy rows wired by
+           parent, and a FOURTH path-less row for the same leaf. */
+        QVERIFY(q.exec("INSERT INTO keyword (id,name,namefold,path,pathfold,parent) VALUES"
+                       " (1,'Fauna','fauna','Fauna','fauna',NULL),"
+                       " (2,'Bird','bird','Fauna|Bird','fauna|bird',1),"
+                       " (3,'Heron','heron','Fauna|Bird|Heron','fauna|bird|heron',2),"
+                       " (4,'Heron','heron','','',NULL)"));
+        QVERIFY(q.exec("INSERT INTO image_keyword (image_id, keyword_id) VALUES"
+                       " (1,1),(1,2),(1,3),(1,4)"));
+        QVERIFY(q.exec("PRAGMA user_version = 3"));
+        db.close();
+    }
+    QSqlDatabase::removeDatabase("v3fixture");
+
+    /* Open it as the app would. Migration runs on first use. */
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY2(cat.isAvailable(), "a version 3 file must migrate, not be moved aside");
+
+    /* Scoped, so no QSqlDatabase or QSqlQuery is still alive when the connection is
+       closed below -- Qt warns that the connection "is still in use" otherwise, and a
+       warning nobody can act on is worse than no output at all. */
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("PRAGMA user_version") && q.next());
+        QCOMPARE(q.value(0).toInt(), 4);
+
+        /* The duplicate leaf is gone: three keywords, not four. */
+        QVERIFY(q.exec("SELECT COUNT(*) FROM keyword") && q.next());
+        QCOMPARE(q.value(0).toInt(), 3);
+
+        /* The image still carries all three, and no link was lost or doubled. */
+        QVERIFY(q.exec("SELECT COUNT(*) FROM image_keyword WHERE image_id = 1")
+                && q.next());
+        QCOMPARE(q.value(0).toInt(), 3);
+
+        QStringList names;
+        for (const CatalogKeyword &k : cat.keywords()) names << keywordFold(k.name);
+        names.sort();
+        QCOMPARE(names, (QStringList{"bird", "fauna", "heron"}));
+
+        /* The hierarchy survives as contexts, which is what ambiguity detection needs. */
+        QVERIFY(q.exec("SELECT COUNT(*) FROM keyword_context") && q.next());
+        QCOMPARE(q.value(0).toInt(), 2);    // Bird under Fauna, Heron under Bird
+    }
+
+    /* Point the shared database back at the sandbox so the next test's init() is not
+       working against this fixture. */
+    CacheDb::instance().closeThisThread();
+    DevPreviewCache::instance().setCacheDir(cacheTmp.path());
 }
 
 QTEST_MAIN(tst_catalog)
