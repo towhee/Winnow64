@@ -391,8 +391,8 @@ void DataModel::rebuildRowStoreFromItems()
     rowStore.resize(rows);
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < G::TotalColumns; ++c) {
-            if (!RowStore::covers(c)) continue;
-            rowStore.setValue(r, c, index(r, c).data(Qt::EditRole));
+            if (!RowStore::covers(c, Qt::EditRole)) continue;
+            rowStore.setValue(r, c, QStandardItemModel::data(index(r, c), Qt::EditRole));
         }
     }
 }
@@ -410,21 +410,53 @@ DataModel::RowStoreCheck DataModel::verifyRowStore(int maxDetail) const
     for (int r = 0; r < rows; ++r) {
         ++out.rowsChecked;
         for (int c = 0; c < G::TotalColumns; ++c) {
-            if (!RowStore::covers(c)) continue;
-            const QVariant a = index(r, c).data(Qt::EditRole);
+            if (!RowStore::covers(c, Qt::EditRole)) continue;
+            /*  QStandardItemModel::data explicitly, NOT index().data(). Once
+                DataModel::data serves covered columns from the store, going
+                through the override would compare the store against itself and
+                report clean no matter what. The check must always read the
+                ITEMS on one side. */
+            const QVariant a = QStandardItemModel::data(index(r, c), Qt::EditRole);
             const QVariant b = rowStore.value(r, c);
             ++out.valuesChecked;
             const QString sa = a.typeId() == QMetaType::QStringList
                                    ? a.toStringList().join('\x1f') : a.toString();
             const QString sb = b.typeId() == QMetaType::QStringList
                                    ? b.toStringList().join('\x1f') : b.toString();
-            if (sa != sb) {
+
+            /*  TYPE AS WELL AS TEXT, and this was learned the hard way. The
+                first version compared text only, reported clean, and the app
+                then aborted in ExposureTimeItemDelegate: the model holds
+                ImageMetadata::exposureTimeNum as a DOUBLE and the delegate
+                guards with "value == 0" before computing 1/value, so a QString
+                holding the same digits slipped past the guard and reached
+                qRound(+Inf). Same text, different type, different behaviour --
+                which a text comparison cannot see. Numeric types are grouped
+                rather than compared exactly, because the model itself is loose
+                there (a quint32 in one column, an int in the next) and the
+                views read the value, not the type; what must not change is
+                text-vs-number, which is what a delegate branches on. */
+            auto kind = [](const QVariant &v) -> int {
+                switch (v.typeId()) {
+                case QMetaType::UnknownType:  return 0;   // not set
+                case QMetaType::QString:      return 1;
+                case QMetaType::QStringList:  return 2;
+                case QMetaType::Bool:         return 3;
+                case QMetaType::Int: case QMetaType::UInt:
+                case QMetaType::LongLong: case QMetaType::ULongLong:
+                case QMetaType::Double: case QMetaType::Float:  return 4;
+                default: return 5;
+                }
+            };
+            const int ka = kind(a), kb = kind(b);
+            if (sa != sb || ka != kb) {
                 ++out.mismatches;
                 if (out.detail.size() < maxDetail) {
-                    out.detail << QString("row %1 col %2 (%3): item '%4' vs store '%5'")
+                    out.detail << QString("row %1 col %2 (%3): item '%4'[%5] vs store '%6'[%7]")
                                       .arg(r).arg(c)
                                       .arg(headerData(c, Qt::Horizontal).toString(),
-                                           sa.left(40), sb.left(40));
+                                           sa.left(30)).arg(a.typeName() ? a.typeName() : "unset")
+                                      .arg(sb.left(30)).arg(b.typeName() ? b.typeName() : "unset");
                 }
             }
         }
@@ -623,6 +655,37 @@ void DataModel::clearDataModel()
     videoRowCount.store(0, std::memory_order_relaxed);
 }
 
+QVariant DataModel::data(const QModelIndex &idx, int role) const
+{
+/*
+    Serve the covered columns from the packed row store.
+
+    THIS IS THE SEAM the whole storage change turns on. Every view, delegate,
+    proxy and saved column-width setting addresses the model by
+    G::dataModelColumns and reads it through data(); none of them care what is
+    behind it. So the storage can be replaced here, one column set at a time,
+    without any of them changing -- which is what makes a rewrite that cannot be
+    landed incrementally land incrementally after all.
+
+    ONLY EditRole AND DisplayRole. QStandardItem keeps those two in the SAME
+    slot, so the store returning one value for both matches what the items did;
+    every other role (ToolTip, TextAlignment, Decoration, and the G:: custom
+    roles) is presentation or per-row bookkeeping that the store does not hold,
+    and falls through untouched.
+
+    The items are still written and verifyRowStore still compares the two, so
+    G::useRowStore = false falls straight back to them.
+*/
+    if (G::useRowStore &&
+        idx.isValid() &&
+        RowStore::covers(idx.column(), role) &&
+        rowStore.contains(idx.row()))
+    {
+        return rowStore.value(idx.row(), idx.column());
+    }
+    return QStandardItemModel::data(idx, role);
+}
+
 bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
 {
 /*
@@ -688,7 +751,7 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         copy that verifyRowStore() checks against the items; afterwards it is
         the only copy. */
     if (ok && idx.isValid() && (role == Qt::EditRole || role == Qt::DisplayRole)) {
-        if (RowStore::covers(col)) {
+        if (RowStore::covers(col, role)) {
             if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
             rowStore.setValue(idx.row(), col, value);
         }

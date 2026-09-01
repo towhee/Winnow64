@@ -403,6 +403,9 @@ public slots:
     bool isAllIconChunkLoaded(int first, int last);
     // Intercepts MetadataStatus/IconLoaded/Video column writes to keep the
     // running counts above accurate; delegates everything to the base class.
+    /*  Serves the covered columns from the packed row store -- the seam the
+        whole storage change turns on. See the implementation. */
+    QVariant data(const QModelIndex &idx, int role = Qt::DisplayRole) const override;
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;
     void recountLoadFlags();        // full rescan to resync counts after removals
