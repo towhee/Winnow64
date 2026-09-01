@@ -747,7 +747,23 @@ WITH THE TYPE CHECK IN PLACE IT FOUND THREE MORE, and one of them is a defect in
 
 A store with one type per column cannot reproduce that and must not pretend to, so those three stay on the items and RowStore::covers names them and says why. An unstable column type is worth fixing on its own account: anything that branches on the type behaves differently depending on load ORDER, which is not a property anything should depend on.
 
-COVERAGE IS PER (COLUMN, ROLE), not per column, which the same check forced. The path lives on PathColumn under G::PathRole and EditRole there is never set -- so the item returns an INVALID QVariant and the store was returning an empty QString, which is a different answer to anything testing isValid(). 37 columns became 35 plus one role-specific entry.
+COVERAGE IS PER (COLUMN, ROLE), not per column, which the same check forced. The path lives on PathColumn under G::PathRole and EditRole there is never set -- so the item returns an INVALID QVariant and the store was returning an empty QString, which is a different answer to anything testing isValid().
+
+THE VERIFICATION HAD A BLIND SPOT, AND IT WAS EXACTLY WHERE THE BUG WAS. With reads enabled the app came up with NO THUMBNAILS AND NO LOUPE IMAGE. The cause: coverage became role-aware (PathColumn is covered at G::PathRole, not EditRole) but the WRITE side kept an older "EditRole or DisplayRole" guard in front of the covers() call, so PathRole writes were dropped while data() served PathRole from the store. Every path read came back empty, and everything downstream needs the path to find the file.
+
+TWO GUARDS THAT MUST AGREE IS ONE GUARD TOO MANY. RowStore::covers(column, role) is now the single authority, asked on both sides with nothing in front of it.
+
+THE REASON NEITHER CHECK CAUGHT IT is worth more than the bug. verifyRowStore looped over columns at Qt::EditRole ONLY, and so did the A/B fingerprint -- so PathColumn, the one column covered at a different role, was the one column neither ever looked at, and it was the one that broke. Both now iterate every role the store claims. A check that does not cover the same ground as the code it is checking proves nothing about the part it skips, and "0 mismatches" over 1,750 values was true and useless. The re-broken build reports it plainly now:
+
+    ROWSTORE: rows=4 values=144 mismatches=4
+      row 0 col 0 (Icon): item '/Users/roryhill/Projects/Winno'[QString] vs store ''[QString]
+    PATHS: empty=4 of 4  icons=0  loupeImage=NO
+
+and that was confirmed by deliberately re-injecting the guard, watching it fail, and removing it again -- the same discipline tst_rowfields was held to.
+
+WIDTH AND HEIGHT WERE SETTLED ON int, which is a real fix rather than an accommodation. Both columns had two writers disagreeing about the type -- QString::number(m.width) from addMetadataForItem, an int from Thumb::setImageDimensions via setValDm -- so the column's type depended on which path filled the row last. The table sorts on EditRole and QVariant compares ints numerically and strings LEXICALLY, so "1000" sorted before "999" for rows the metadata path filled and after it for rows the thumb path filled. Every programmatic consumer (Image/pixmap.cpp, Image/stack.cpp) already called toInt() and the displayed text is identical either way, so settling on int changes nothing except that the sort is now consistently numeric. Coverage is 35 columns plus the path role.
+
+SEARCH IS THE ONE LEFT, and deliberately: it cannot be settled by choosing a type here, because the FILTERS TREE is inconsistent in the same way and in the same direction -- searchTrue holds the QString "true" while searchFalse holds the bool false, and SortFilter::filterAcceptsRow compares the two against this column. (Note also that QVariant(QString("false")).toBool() is TRUE, a non-empty string, so the row-creation value means the opposite of what it reads as to anything calling toBool().) Deciding the type means deciding what the search filter matches, which is a question about filtering rather than storage, and it belongs with the compiled predicate.
 
 STILL TO DO, and deliberately not started in the same pass:
 

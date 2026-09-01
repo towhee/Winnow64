@@ -391,8 +391,10 @@ void DataModel::rebuildRowStoreFromItems()
     rowStore.resize(rows);
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < G::TotalColumns; ++c) {
-            if (!RowStore::covers(c, Qt::EditRole)) continue;
-            rowStore.setValue(r, c, QStandardItemModel::data(index(r, c), Qt::EditRole));
+            for (int role : { int(Qt::EditRole), int(G::PathRole) }) {
+                if (!RowStore::covers(c, role)) continue;
+                rowStore.setValue(r, c, QStandardItemModel::data(index(r, c), role));
+            }
         }
     }
 }
@@ -409,14 +411,22 @@ DataModel::RowStoreCheck DataModel::verifyRowStore(int maxDetail) const
     }
     for (int r = 0; r < rows; ++r) {
         ++out.rowsChecked;
-        for (int c = 0; c < G::TotalColumns; ++c) {
-            if (!RowStore::covers(c, Qt::EditRole)) continue;
+        /*  EVERY ROLE THE STORE CLAIMS, not just EditRole. Checking EditRole
+            alone is exactly what let the PathRole bug through: PathColumn is
+            covered at G::PathRole only, so it was the one column the
+            verification never looked at, and it was the one that broke. A check
+            that does not cover the same ground as the code it checks proves
+            nothing about the part it skips. */
+        static const QVector<int> rolesToCheck { Qt::EditRole, G::PathRole };
+        for (int c = 0; c < G::TotalColumns; ++c)
+        for (int role : rolesToCheck) {
+            if (!RowStore::covers(c, role)) continue;
             /*  QStandardItemModel::data explicitly, NOT index().data(). Once
                 DataModel::data serves covered columns from the store, going
                 through the override would compare the store against itself and
                 report clean no matter what. The check must always read the
                 ITEMS on one side. */
-            const QVariant a = QStandardItemModel::data(index(r, c), Qt::EditRole);
+            const QVariant a = QStandardItemModel::data(index(r, c), role);
             const QVariant b = rowStore.value(r, c);
             ++out.valuesChecked;
             const QString sa = a.typeId() == QMetaType::QStringList
@@ -745,16 +755,17 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
     }
 
     /*  Maintain the packed row store (Datamodel/imagerow.h) beside the items.
-        Only EditRole/DisplayRole: the store holds values, not presentation, and
-        the alignment/tooltip roles written to the same columns are not part of
-        what a row IS. While the storage change is being proven this is a shadow
-        copy that verifyRowStore() checks against the items; afterwards it is
-        the only copy. */
-    if (ok && idx.isValid() && (role == Qt::EditRole || role == Qt::DisplayRole)) {
-        if (RowStore::covers(col, role)) {
-            if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
-            rowStore.setValue(idx.row(), col, value);
-        }
+        RowStore::covers(column, role) is the SINGLE authority on what the
+        store holds, and it is asked here and in data() with nothing else in
+        front of it. There used to be an extra "EditRole or DisplayRole" guard
+        on THIS side only, left over from before coverage became role-aware --
+        so G::PathRole writes were dropped while data() happily served PathRole
+        FROM the store, and every path read came back empty. No thumbnails, no
+        loupe image: everything downstream needs the path to find the file. Two
+        guards that must agree is one guard too many. */
+    if (ok && idx.isValid() && RowStore::covers(col, role)) {
+        if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
+        rowStore.setValue(idx.row(), col, value);
     }
 
     /*  Mirror the same facts into the lock-free per-row array the worker
@@ -2484,9 +2495,18 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
     }
 
-    setData(index(row, G::WidthColumn), QString::number(m.width));
+    /*  INT, not QString::number. The other writer of these two columns --
+        Thumb::setImageDimensions via setValDm -- has always sent an int, so the
+        column's type depended on which path wrote the row last. That is not a
+        harmless inconsistency: the table sorts on EditRole, and QVariant
+        compares ints numerically and strings LEXICALLY, so "1000" sorted before
+        "999" for rows the metadata path filled and after it for rows the thumb
+        path filled. Every programmatic consumer (Image/pixmap.cpp,
+        Image/stack.cpp) already calls toInt(), and the displayed text is
+        identical either way. */
+    setData(index(row, G::WidthColumn), m.width);
     setData(index(row, G::WidthColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-    setData(index(row, G::HeightColumn), QString::number(m.height));
+    setData(index(row, G::HeightColumn), m.height);
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);

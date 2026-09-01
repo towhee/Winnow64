@@ -88,11 +88,7 @@ struct ImageRow
     qint32 yearId = -1, dayId = -1, creatorId = -1, copyrightId = -1;
     qint32 labelId = -1, pickId = -1, gpsId = -1;
     qint32 searchId = -1, dimensionsId = -1;
-    /*  Width and Height are QString::number(...) in the model, not integers --
-        so they intern like any other text. Holding them as ints changed the
-        variant's TYPE, which is a different bug from holding the wrong value
-        and is the one that is invisible to a text comparison. */
-    qint32 widthId = -1, heightId = -1;
+
     qint32 createdId = -1, modifiedId = -1;
     /*  Rating and MPix look like numbers and are NOT. The model holds
         ImageMetadata::rating, a QString that is EMPTY when unrated -- and an
@@ -111,6 +107,7 @@ struct ImageRow
     // scalars
     qint64 byteSize = 0;
     qint32 rowNumber = 0;
+    qint32 width = 0, height = 0;      // int in the model; see addMetadataForItem
     /*  These four ARE numeric in the model (ImageMetadata::apertureNum,
         exposureTimeNum, focalLengthNum, ISONum), and their delegates depend on
         it: ExposureTimeItemDelegate guards with "value == 0" before computing
