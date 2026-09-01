@@ -91,6 +91,8 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {folderDockTabText,   ":/images/icon16/foldertree_white.png"},
         {favDockTabText,      ":/images/icon16/bookmarks_white.png"},
         {filterDockTabText,   ":/images/icon16/filters_white.png"},
+        /* filterDockTabText is "Find" with G::useFindDock; the Catalog entry simply
+           never matches, because there is no Catalog tab to draw. */
         {catalogDockTabText,  ":/images/icon16/catalog_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
@@ -263,7 +265,9 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     if (tabText == folderDockTabText)   return folderDock;
     if (tabText == favDockTabText)      return favDock;
     if (tabText == filterDockTabText)   return filterDock;
-    if (tabText == catalogDockTabText)  return catalogDock;
+    /* catalogDockTabText is empty with G::useFindDock (the dock is never created), so
+       guard against an empty tabText matching it. */
+    if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText) return catalogDock;
     if (tabText == metadataDockTabText) return metadataDock;
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
@@ -3081,6 +3085,7 @@ void MW::startCatalogScan()
         progress->showRow(progressCatalogRow, true);
     }
     if (catalogView) catalogView->setScanning(true);
+    if (findPanel) findPanel->setScanning(true);
     if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
                               Q_ARG(QStringList, catalogRoots),
@@ -4559,6 +4564,7 @@ void MW::folderChangeCompleted()
                    must not be touched from the pool. */
                 QMetaObject::invokeMethod(this, [this]{
                     if (catalogDock && catalogDock->isVisible()) catalogView->refresh();
+                    if (findPanel && filterDock->isVisible()) findPanel->refresh();
                 }, Qt::QueuedConnection);
             });
         }
@@ -5407,6 +5413,9 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(G::css);
     filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
+    /* The Find panel's scope buttons carry their own theme-derived stylesheet -- the
+       app-wide QToolButton rule has no :checked state to show which scope is current. */
+    if (findPanel) findPanel->updateStyle();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(G::css);
@@ -5807,7 +5816,7 @@ void MW::toggleFullScreen()
         filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
         filterDock->setVisible(fullScreenDocks.isFilters);
         catalogDockVisibleAction->setChecked(fullScreenDocks.isCatalog);
-        catalogDock->setVisible(fullScreenDocks.isCatalog);
+        if (catalogDock) catalogDock->setVisible(fullScreenDocks.isCatalog);
         if (G::useInfoView) {
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);

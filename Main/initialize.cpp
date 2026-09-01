@@ -418,6 +418,7 @@ void MW::createCatalogScanner()
                 Q_UNUSED(scanned)
                 if (progress) progress->clearProgress(progressCatalogRow);
                 if (catalogView) catalogView->setScanning(false);
+                if (findPanel) findPanel->setScanning(false);
                 if (catalogRootsDlg) catalogRootsDlg->setScanning(false);
                 /* The row already said it was happening and the panel shows the result,
                    so a background scan finishes silently -- the same rule the devPreview
@@ -425,6 +426,7 @@ void MW::createCatalogScanner()
                    those are in the Catalog panel. */
                 if (catalogView && catalogDock && catalogDock->isVisible())
                     catalogView->refresh();
+                if (findPanel && filterDock->isVisible()) findPanel->refresh();
                 if (G::isLogger)
                     G::log("MW::createCatalogScanner",
                            "catalog scan finished, indexed = " +
@@ -1548,8 +1550,20 @@ void MW::createFavDock()
 
 void MW::createFilterDock()
 {
+/*
+    The Filters dock, or -- with G::useFindDock -- the FIND dock: the same DockWidget and
+    the same "FilterDock" objectName, re-titled and with the Catalog panel's function
+    folded in behind a scope switch. See Views/findpanel.h.
+
+    IT IS THE SAME DOCK OBJECT DELIBERATELY. Everything that reaches for filterDock -- the
+    full-screen dock set, workspaces, solo mode, the view-mode enables, the
+    collapsed-state restore, MW::showFilterDock -- keeps working untouched, and a
+    WindowState saved before this change still restores, because the objectName Qt keys
+    that state on has not changed. Only the visible tab TEXT differs, which is a label
+    rather than an identity.
+*/
     if (G::isLogger) G::log("MW::createFilterDock");
-    filterDockTabText = "Filters";
+    filterDockTabText = G::useFindDock ? "Find" : "Filters";
     // filterDockTabText = "  🤏  ";
     dockTextNames << filterDockTabText;
     filterDock = new DockWidget(filterDockTabText, "FilterDock", this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
@@ -1643,7 +1657,35 @@ void MW::createFilterDock()
     QVBoxLayout *filterLayout = new QVBoxLayout();
     filterLayout->setContentsMargins(0, 0, 0, 0);
     filterLayout->addWidget(filters->msgFrame);
-    filterLayout->addWidget(filters);
+
+    if (G::useFindDock) {
+        /* FindPanel re-parents the filters tree into its own layout, so the tree is the
+           SAME widget in both scopes rather than a copy that could drift. */
+        findPanel = new FindPanel(filters);
+        filterLayout->addWidget(findPanel);
+        connect(findPanel, &FindPanel::loadResults, this, &MW::loadCatalogResults);
+        connect(findPanel, &FindPanel::manageRootsRequested, this,
+                &MW::manageCatalogRoots);
+        /* Returning to Here: the tree is holding catalog values, so rebuild it from the
+           datamodel. buildFilters->reset() clears the catalog items (and the checks that
+           went with them) before build() repopulates from the model. */
+        connect(findPanel, &FindPanel::rebuildHereFacetsRequested, this, [this]{
+            if (G::isInitializing) return;
+            buildFilters->reset(false /*collapse*/);
+            buildFiltersWhenModelReady(dm->instance);
+            filterChange("FindPanel::rebuildHereFacetsRequested");
+        });
+        /* Refresh when the dock is actually shown rather than on every folder load:
+           re-reading the catalog facets is a query per category, and it is only worth
+           doing for a panel someone is looking at. */
+        connect(filterDock, &QDockWidget::visibilityChanged, this, [this](bool visible){
+            if (visible && findPanel) findPanel->refresh();
+        });
+    }
+    else {
+        filterLayout->addWidget(filters);
+    }
+
     QFrame *frame = new QFrame;
     frame->setLayout(filterLayout);
     filterDock->setWidget(frame);
@@ -1660,6 +1702,13 @@ void MW::createCatalogDock()
     narrows what is already there). It is tabbed with them on the left for that reason.
 */
     if (G::isLogger) G::log("MW::createCatalogDock");
+
+    /* With the Find dock there is no separate Catalog panel: its search box, keyword
+       facet and Load button are the Everywhere scope of the one panel. catalogDock and
+       catalogView stay NULL, and every entry point that used to show this dock
+       (Shift+F2, Window > Catalog Panel, the full-screen dock set) switches the Find
+       dock's scope instead. */
+    if (G::useFindDock) return;
 
     catalogDockTabText = "Catalog";
     dockTextNames << catalogDockTabText;
@@ -3338,7 +3387,7 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-    addDockWidget(Qt::LeftDockWidgetArea, catalogDock);
+    if (catalogDock) addDockWidget(Qt::LeftDockWidgetArea, catalogDock);
     if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
@@ -3352,8 +3401,11 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     /* Catalog sits beside Filters: both answer "which images?", one over what is
        loaded and one over everything indexed. */
-    MW::tabifyDockWidget(filterDock, catalogDock);
-    if (G::useInfoView) MW::tabifyDockWidget(catalogDock, metadataDock);
+    /* The Catalog tab exists only when it is a separate dock; with the Find dock its
+       place in the group is taken by the Find panel's Everywhere scope. */
+    if (catalogDock) MW::tabifyDockWidget(filterDock, catalogDock);
+    if (G::useInfoView)
+        MW::tabifyDockWidget(catalogDock ? catalogDock : filterDock, metadataDock);
     /* Do NOT tabify the LEFT-area metadataDock with the RIGHT-area embelDock: that cross-area
        tabify drags embel (and the develop dock tabbed onto it below) into the LEFT group, so
        every dock ends up crammed in one left tab group. There the raised develop tab can't get
@@ -3372,6 +3424,7 @@ void MW::createDocks()
     // without a reliable resize/show on the surviving docks.
     for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, metadataDock,
                           embelDock, developDock, historyDock, presetsDock}) {
+        if (!d) continue;       // catalogDock is null with G::useFindDock
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
         /* WORK IN PROGRESS - DISABLED.

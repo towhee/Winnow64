@@ -363,6 +363,11 @@ Q_NAMESPACE
     extern bool useMultimedia;
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
     extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
+    /* The unified Find dock: one panel with a Here/Everywhere scope switch over one facet
+       vocabulary, replacing the separate Filters and Catalog panels. False restores both
+       panels exactly as they were -- an escape hatch while this proves out, not a shelved
+       feature. It is read at dock-creation time, so it takes a restart to change. */
+    extern bool useFindDock;
     extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
     /* Develop Edits layout A/B/C -- where the scope is picked and where the editor (the
        Mask panel + adjustment tree) sits. See global.cpp and Documentation.txt

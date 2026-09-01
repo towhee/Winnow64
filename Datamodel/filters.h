@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "Utilities/utilities.h"
+#include "Cache/catalog.h"
 
 class Filters : public QTreeWidget
 {
@@ -79,6 +80,40 @@ public:
     /* Set one item to include (Qt::Checked), exclude (Qt::PartiallyChecked) or off, then
        restyle it and emit filterChange. The one way an item's filter state changes. */
     void setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state);
+
+    /* --- The Find dock's shared-facet interface (G::useFindDock) -------------------
+       The same tree renders both scopes: Here from the datamodel via BuildFilters, and
+       Everywhere from the catalog via these. See Views/findpanel.h. */
+
+    /* Drive the Search category from the panel's search box instead of the editable tree
+       item, so one box serves both scopes. Empty text restores the placeholder, which is
+       what "no search" means to the predicate. */
+    void setSearchText(const QString &text);
+    /* What the box should show. Named to avoid the private searchText member, which is
+       the save/restore snapshot rather than the live value. */
+    QString currentSearchText() const;
+
+    /* Where the items in the tree came from. The datamodel-readiness guards
+       (G::allMetadataAttempted, buildingFilters) apply only to FromDatamodel: a catalog
+       query does not care whether the loaded folder has finished reading its metadata,
+       and letting those guards swallow a click was what left the Find dock's Load button
+       disabled after checking a facet in Everywhere scope. */
+    enum FacetSource { FromDatamodel, FromCatalog };
+    FacetSource facetSource() const { return facetsFrom; }
+
+    /* Replace every dynamic category's items with what the catalog holds, and hide the
+       categories the index cannot answer. Returns false when there is no catalog. */
+    bool loadCatalogFacets();
+    /* Undo loadCatalogFacets' hiding, so the datamodel's own categories all come back
+       when the scope returns to Here. */
+    void showAllCategories();
+
+    /* The checked/excluded items as a catalog query. The caller supplies the text; this
+       fills keywords, excludeKeywords and the generic include/exclude maps. */
+    void fillQuery(CatalogQuery &q) const;
+    /* Whether any item is checked or excluded in a category the CATALOG can answer --
+       what the Everywhere footer needs to know before offering to load anything. */
+    bool isAnyCatalogFilter() const;
     /* Re-read which keywords the catalog has seen under more than one parent and repaint
        the Keywords category. GUI thread only -- it queries the catalog. */
     void refreshAmbiguousKeywords();
@@ -173,6 +208,7 @@ private:
     /* Keyword names the catalog has seen under more than one parent, case-folded. Empty
        also means "no catalog", in which case nothing is marked -- we do not know. */
     QSet<QString> ambiguousKeywords;
+    FacetSource facetsFrom = FromDatamodel;
     QColor itemIsExcludedColor;
     QColor itemIsAmbiguousColor;
     struct ItemState {

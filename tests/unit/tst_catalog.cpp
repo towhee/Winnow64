@@ -10,6 +10,7 @@
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Metadata/keywordflatten.h"
+#include "Main/global.h"
 
 /*
     The catalog -- the local index behind cross-folder keyword and metadata search.
@@ -52,6 +53,10 @@ private slots:
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     void migrationFromVersionThreeMergesKeywords();
+    void facetsMatchWhatTheDatamodelWrites();
+    void facetsAreEmptyForColumnsTheIndexCannotAnswer();
+    void genericIncludeAndExcludeNarrowTheSearch();
+    void blankFacetAccountsForEveryImage();
 
 private:
     QString imagePath(const QString &name) const;
@@ -681,10 +686,184 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
         QCOMPARE(q.value(0).toInt(), 2);    // Bird under Fauna, Heron under Bird
     }
 
-    /* Point the shared database back at the sandbox so the next test's init() is not
-       working against this fixture. */
+    /* Point the shared database back at the sandbox EXPLICITLY.
+
+       DevPreviewCache::setCacheDir cannot do it: it early-returns when the directory it
+       is given is the one it already holds, which after this test it is -- so the
+       database would silently stay pointed at the v3 fixture, and every test after this
+       one would run against a file QTemporaryDir is about to delete. That failure looks
+       like "commit did nothing", which is a long way from its cause. */
     CacheDb::instance().closeThisThread();
-    DevPreviewCache::instance().setCacheDir(cacheTmp.path());
+    CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
+
+void tst_catalog::facetsMatchWhatTheDatamodelWrites()
+{
+/*
+    The Find dock shows ONE facet list and the user cannot tell which scope produced it,
+    so a value the catalog offers must be spelled exactly as DataModel spells the same
+    value -- otherwise checking "NEF" in Everywhere would mean nothing in Here, and the
+    scope switch would quietly change the question.
+*/
+    Catalog &cat = Catalog::instance();
+    CatalogRow a = rowFor("fa1.nef");
+    a.model = "NIKON Z 9";
+    a.lens = "NIKKOR Z 100-400mm";
+    a.rating = 3;
+    a.pick = true;
+    a.focalLength = 400;
+    a.captured = QDateTime(QDate(2024, 6, 15), QTime(9, 30), QTimeZone::utc());
+    CatalogRow b = rowFor("fb1.jpg");
+    b.model = "NIKON Z 9";
+    b.rating = 0;
+    b.pick = false;
+    b.captured = QDateTime(QDate(2024, 6, 15), QTime(10, 0), QTimeZone::utc());
+    cat.commit({a, b});
+
+    /* Type is the suffix UPPER-cased, as DataModel::addFileDataForRow writes it. */
+    const QMap<QString, int> types = cat.facets(G::TypeColumn);
+    QCOMPARE(types.value("NEF"), 1);
+    QCOMPARE(types.value("JPG"), 1);
+
+    /* Year "yyyy" and Day "yyyy-MM-dd", as addMetadataForItem writes them. */
+    QCOMPARE(cat.facets(G::YearColumn).value("2024"), 2);
+    QCOMPARE(cat.facets(G::DayColumn).value("2024-06-15"), 2);
+
+    /* Pick is the WORDS, not a boolean. */
+    const QMap<QString, int> picks = cat.facets(G::PickColumn);
+    QCOMPARE(picks.value("Picked"), 1);
+    QCOMPARE(picks.value("Unpicked"), 1);
+
+    /* Rating is the digit as text, and unrated is the EMPTY key rather than "0" -- the
+       blank is a facet in its own right so the category adds up. */
+    const QMap<QString, int> ratings = cat.facets(G::RatingColumn);
+    QCOMPARE(ratings.value("3"), 1);
+    QCOMPARE(ratings.value(""), 1);
+    QVERIFY(!ratings.contains("0"));
+
+    /* Focal length carries no trailing ".0", or "400" and "400.0" would look like two
+       different lenses' worth of facet. */
+    QCOMPARE(cat.facets(G::FocalLengthColumn).value("400"), 1);
+
+    /* The folder NAME, not its path. */
+    const QString folderName = QFileInfo(tmp.path()).fileName();
+    QCOMPARE(cat.facets(G::FolderNameColumn).value(folderName), 2);
+
+    QCOMPARE(cat.facets(G::CameraModelColumn).value("NIKON Z 9"), 2);
+    QCOMPARE(cat.facets(G::LensColumn).value("NIKKOR Z 100-400mm"), 1);
+}
+
+void tst_catalog::facetsAreEmptyForColumnsTheIndexCannotAnswer()
+{
+/*
+    Duplicates is a comparison of what is LOADED and the search flag is the panel's own
+    box; neither means anything across a library. An empty answer is what tells the Find
+    dock to HIDE those categories rather than show them empty, which would read as "you
+    have no duplicates" -- a claim the catalog is in no position to make.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("fc1.nef", {"Heron"})});
+
+    QVERIFY(cat.facets(G::CompareColumn).isEmpty());
+    QVERIFY(cat.facets(G::SearchColumn).isEmpty());
+    /* And a real one is not empty, so the assertions above are about the column and not
+       about an empty catalog. */
+    QVERIFY(!cat.facets(G::KeywordsAllColumn).isEmpty());
+}
+
+void tst_catalog::genericIncludeAndExcludeNarrowTheSearch()
+{
+/*
+    The Find dock hands the SAME checked-item structure to either scope, so the query
+    carries facets as a map keyed by datamodel column rather than a named field per
+    category. Within a column the values are OR-ed, columns are AND-ed, and exclude is
+    AND-NOT -- exactly what checking and Opt+clicking items in the tree means.
+*/
+    Catalog &cat = Catalog::instance();
+    CatalogRow z9 = rowFor("g-z9.nef");
+    z9.model = "NIKON Z 9";
+    z9.lens = "NIKKOR Z 100-400mm";
+    CatalogRow z8 = rowFor("g-z8.nef");
+    z8.model = "NIKON Z 8";
+    z8.lens = "NIKKOR Z 24-70mm";
+    CatalogRow d850 = rowFor("g-d850.nef");
+    d850.model = "NIKON D850";
+    d850.lens = "NIKKOR Z 100-400mm";
+    cat.commit({z9, z8, d850});
+
+    CatalogQuery q;
+    q.include.insert(G::CameraModelColumn, {"NIKON Z 9", "NIKON Z 8"});
+    QCOMPARE(cat.search(q).size(), 2);                  // OR within the column
+
+    q.include.insert(G::LensColumn, {"NIKKOR Z 100-400mm"});
+    QCOMPARE(cat.search(q), QStringList{imagePath("g-z9.nef")});   // AND between columns
+
+    CatalogQuery x;
+    x.exclude.insert(G::CameraModelColumn, {"NIKON D850"});
+    QCOMPARE(cat.search(x).size(), 2);                  // AND-NOT
+
+    /* An exclusion of something nothing carries subtracts nothing -- it must not be
+       mistaken for an empty inclusion. */
+    CatalogQuery none;
+    none.exclude.insert(G::CameraModelColumn, {"CANON R5"});
+    QCOMPARE(cat.search(none).size(), 3);
+}
+
+void tst_catalog::blankFacetAccountsForEveryImage()
+{
+/*
+    A single-valued category has to add up to the catalog. If 3 images are indexed and one
+    has a lens, the Lens facet says one lens and two blank -- not one lens and a silent
+    shortfall the user has no way to read. This is how the Here scope has always behaved:
+    BuildFilters counts the empty string like any other key, so the panel already shows a
+    blank first row there.
+
+    AND THE BLANK MUST BE SELECTABLE, because a count nobody can click on is trivia.
+    Checking it means "the ones with nothing here", which is why facetSql folds NULL into
+    '' -- a plain column compare would drop the NULL rows out of both the list and the
+    query.
+*/
+    Catalog &cat = Catalog::instance();
+    CatalogRow withLens = rowFor("h-lens.nef");
+    withLens.lens = "NIKKOR Z 100-400mm";
+    withLens.captured = QDateTime(QDate(2024, 6, 15), QTime(9, 30), QTimeZone::utc());
+    /* No lens, and no capture date at all -- captured lands in the database as NULL. */
+    CatalogRow bare1 = rowFor("h-bare1.nef");
+    bare1.captured = QDateTime();
+    CatalogRow bare2 = rowFor("h-bare2.jpg");
+    bare2.captured = QDateTime();
+    cat.commit({withLens, bare1, bare2});
+
+    int total = 0;
+    cat.search(CatalogQuery(), -1, &total);
+    QCOMPARE(total, 3);
+
+    const QMap<QString, int> lenses = cat.facets(G::LensColumn);
+    QCOMPARE(lenses.value("NIKKOR Z 100-400mm"), 1);
+    QCOMPARE(lenses.value(""), 2);
+    int sum = 0;
+    for (int n : lenses) sum += n;
+    QCOMPARE(sum, total);
+
+    /* A NULL date is blank, not 1970: IFNULL has to sit outside strftime. */
+    const QMap<QString, int> years = cat.facets(G::YearColumn);
+    QCOMPARE(years.value("2024"), 1);
+    QCOMPARE(years.value(""), 2);
+    QVERIFY(!years.contains("1970"));
+
+    /* Checking the blank row returns exactly the images with no lens. */
+    CatalogQuery blank;
+    blank.include.insert(G::LensColumn, {QString()});
+    QStringList hits = cat.search(blank);
+    hits.sort();
+    QCOMPARE(hits, QStringList({imagePath("h-bare1.nef"), imagePath("h-bare2.jpg")}));
+
+    /* And excluding it leaves the ones that have a value. */
+    CatalogQuery notBlank;
+    notBlank.exclude.insert(G::LensColumn, {QString()});
+    QCOMPARE(notBlank.exclude.size(), 1);
+    QCOMPARE(cat.search(notBlank), QStringList{imagePath("h-lens.nef")});
 }
 
 QTEST_MAIN(tst_catalog)

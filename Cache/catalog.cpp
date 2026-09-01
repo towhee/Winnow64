@@ -54,6 +54,59 @@ QVariant text(const QString &s)
     return QVariant(s.isNull() ? QString("") : s);
 }
 
+/*
+    The SQL that produces one facet's value, keyed by the datamodel column the Filters
+    panel maps that category to.
+
+    ONE MAP, USED BOTH WAYS -- facets() lists the distinct values and search() compares
+    against them -- so a facet item the user checks cannot mean something different from
+    the item that was offered. Two expressions would drift the first time one was edited.
+
+    THE STRINGS MUST MATCH WHAT DataModel WRITES into the same column, because the Find
+    dock shows one list and the user does not know which scope produced it: TypeColumn is
+    the suffix UPPER-cased, YearColumn is "yyyy", DayColumn is "yyyy-MM-dd", FolderName is
+    the folder's NAME and not its path, Pick is the words "Picked"/"Unpicked", and Rating
+    is the digit as text with "" for unrated.
+
+    A COLUMN NOT LISTED HERE CANNOT BE ANSWERED by the index -- duplicates (CompareColumn)
+    is a comparison of what is loaded, and SearchColumn is the search box's own flag -- so
+    facets() returns nothing and the panel hides that category rather than showing an
+    empty one that looks broken.
+*/
+QString facetSql(int dmColumn)
+{
+    /* IFNULL, applied once below, is what makes "no value" a value. A NULL title or an
+       image with no capture date has to come back as the empty string so it groups into
+       the blank facet and so a checked blank item matches it with IN (''), rather than
+       vanishing from both the list and the query. */
+    QString expr;
+    switch (dmColumn) {
+    case G::RatingColumn:     expr = "CASE WHEN i.rating > 0 THEN CAST(i.rating AS TEXT)"
+                                     " ELSE '' END"; break;
+    case G::LabelColumn:      expr = "i.label"; break;
+    case G::PickColumn:       expr = "CASE WHEN i.pick THEN 'Picked' ELSE 'Unpicked' END";
+                              break;
+    case G::TypeColumn:       expr = "UPPER(i.ext)"; break;
+    case G::CameraModelColumn: expr = "i.model"; break;
+    case G::LensColumn:       expr = "i.lens"; break;
+    case G::TitleColumn:      expr = "i.title"; break;
+    case G::CreatorColumn:    expr = "i.creator"; break;
+    /* Stored as a REAL; the datamodel shows the number, so drop a trailing ".0" that
+       would otherwise make "400" and "400.0" look like two focal lengths. */
+    case G::FocalLengthColumn: expr = "CAST(CAST(i.focallength AS INTEGER) AS TEXT)";
+                              break;
+    /* captured is seconds since epoch; 'unixepoch' is what makes these local-agnostic and
+       stable, which a facet list has to be. */
+    case G::YearColumn:       expr = "strftime('%Y', i.captured, 'unixepoch')"; break;
+    case G::DayColumn:        expr = "strftime('%Y-%m-%d', i.captured, 'unixepoch')"; break;
+    /* The folder NAME, not the path: rtrim everything up to the last separator. */
+    case G::FolderNameColumn: expr = "replace(i.folder, rtrim(i.folder,"
+                                     " replace(i.folder, '/', '')), '')"; break;
+    default:                  return QString();
+    }
+    return "IFNULL(" + expr + ", '')";
+}
+
 qint64 nowSecs()
 {
     return QDateTime::currentSecsSinceEpoch();
@@ -505,6 +558,31 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
         }
     }
 
+    /* The generic facet restriction. Values within a column are OR-ed and columns AND-ed,
+       which is exactly what checking several items in one Filters category and then
+       checking a second category means -- the two scopes must narrow the same way from
+       the same checkboxes. */
+    /* text() on every bound value, because the BLANK facet is a value the user can check
+       and a null QString binds as SQL NULL -- "NULL IN (NULL)" is NULL, so the blank row
+       would select nothing at all. facetSql's IFNULL puts the column side at '', and this
+       puts the bound side there too. */
+    for (auto it = cq.include.constBegin(); it != cq.include.constEnd(); ++it) {
+        const QString expr = facetSql(it.key());
+        if (expr.isEmpty() || it.value().isEmpty()) continue;
+        QStringList marks;
+        for (const QString &v : it.value()) { marks << "?"; binds << text(v); }
+        where << "(" + expr + ") IN (" + marks.join(",") + ")";
+    }
+    for (auto it = cq.exclude.constBegin(); it != cq.exclude.constEnd(); ++it) {
+        const QString expr = facetSql(it.key());
+        if (expr.isEmpty() || it.value().isEmpty()) continue;
+        QStringList marks;
+        for (const QString &v : it.value()) { marks << "?"; binds << text(v); }
+        /* NOT IN, not "<> each": an exclusion subtracts the listed values and must leave
+           everything else -- including rows whose value is empty. */
+        where << "(" + expr + ") NOT IN (" + marks.join(",") + ")";
+    }
+
     if (cq.minRating > 0)      { where << "i.rating >= ?";  binds << cq.minRating; }
     if (!cq.label.isEmpty())   { where << "i.label = ?";    binds << cq.label; }
     if (!cq.model.isEmpty())   { where << "i.model = ?";    binds << cq.model; }
@@ -607,6 +685,68 @@ QList<CatalogKeyword> Catalog::keywords()
         }
     }
 
+    return out;
+}
+
+QMap<QString, int> Catalog::facets(int dmColumn)
+{
+/*
+    Every distinct value of one facet, with how many live images carry it.
+
+    THE KEYWORD FACET IS A JOIN, everything else is a GROUP BY on the image row. That is
+    the only structural difference between them, and it is why the switch below has two
+    arms rather than one generic query.
+
+    THE BLANK VALUE IS A FACET. A single-valued category has to add up to the catalog: if
+    43,064 images are indexed and 3,000 carry a rating, the ratings list says 3,000 rated
+    and 40,064 blank, not 3,000 and an unexplained shortfall. facetSql's IFNULL folds NULL
+    into '' so the GROUP BY produces that row for free, and checking it means "the ones
+    with nothing here" -- which is exactly what the datamodel side of the Filters panel
+    has always offered, since its per-row QMap counts the empty string like any other key.
+    Keywords are the exception and get no blank row: an image carries many, so the counts
+    overlap and cannot sum to anything, and the datamodel side does not offer one either.
+
+    COUNTS ARE UNFILTERED -- the whole catalog, not the current query. Per-item counts
+    under the live query would be one GROUP BY per category on every keystroke over a
+    quarter of a million rows, which is exactly the shape the debounce exists to avoid.
+    The Find dock therefore leaves the filtered column blank in Everywhere scope and says
+    so, rather than showing a number that is quietly the wrong one.
+*/
+    QMap<QString, int> out;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QSqlQuery q(db);
+    if (dmColumn == G::KeywordsAllColumn) {
+        if (!q.exec("SELECT k.name, COUNT(ik.image_id)"
+                    " FROM keyword k"
+                    " LEFT JOIN image_keyword ik ON ik.keyword_id = k.id"
+                    " LEFT JOIN image i ON i.id = ik.image_id AND i.live = 1"
+                    " GROUP BY k.id"
+                    " HAVING COUNT(ik.image_id) > 0"
+                    " ORDER BY k.namefold")) {
+            return out;
+        }
+    }
+    else {
+        const QString expr = facetSql(dmColumn);
+        if (expr.isEmpty()) return out;         // the index cannot answer this one
+        if (!q.exec("SELECT " + expr + " AS v, COUNT(*)"
+                    " FROM image i WHERE i.live = 1"
+                    " GROUP BY v ORDER BY v")) {
+            return out;
+        }
+    }
+
+    const bool isKeywords = dmColumn == G::KeywordsAllColumn;
+    while (q.next()) {
+        const QString v = q.value(0).toString();
+        /* A blank keyword name is not a value, it is a bad row. */
+        if (isKeywords && v.isEmpty()) continue;
+        out.insert(v, q.value(1).toInt());
+    }
     return out;
 }
 

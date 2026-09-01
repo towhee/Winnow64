@@ -119,6 +119,12 @@ private:
        there is no catalog, not "none are ambiguous". */
     QSet<QString> ambiguousKeywords;
 
+    /* Set by itemChanged when QTreeWidget has ALREADY toggled the box for us (a click on
+       the indicator), so itemClicked knows not to toggle it a second time. Without it the
+       two cancel out and the checkbox looks dead -- the same reason Filters keeps
+       itemCheckStateHasChanged. */
+    bool keywordCheckJustChanged = false;
+
     /* How many paths a single search will return. The grid copes with far more than a
        user can review, but an unbounded result set on a large catalog would spend
        seconds building a list nobody scrolls to the end of. The count reported is the

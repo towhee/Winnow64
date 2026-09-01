@@ -380,6 +380,7 @@ set(WINNOW_SOURCES
     Views/imageview.cpp
     Views/infostring.cpp
     Views/catalogview.cpp
+    Views/findpanel.cpp
     Views/infoview.cpp
     Views/tableview.cpp
     Views/videoview.cpp
@@ -629,6 +630,7 @@ set(WINNOW_HEADERS
     Views/imageview.h
     Views/infostring.h
     Views/catalogview.h
+    Views/findpanel.h
     Views/infoview.h
     Views/tableview.h
     Views/videoview.h

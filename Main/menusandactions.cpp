@@ -1603,7 +1603,10 @@ void MW::createWindowActions()
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
-    catalogDockVisibleAction = new QAction(tr("Catalog Panel"), this);
+    /* With the Find dock this is not a second panel but its Everywhere SCOPE, so the menu
+       item says what it now does. It still carries Shift+F2 either way. */
+    catalogDockVisibleAction = new QAction(
+        G::useFindDock ? tr("Search Everywhere") : tr("Catalog Panel"), this);
     catalogDockVisibleAction->setObjectName("toggleCatalog");
     catalogDockVisibleAction->setShortcutVisibleInContextMenu(true);
     catalogDockVisibleAction->setCheckable(true);
