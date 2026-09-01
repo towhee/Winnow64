@@ -190,6 +190,60 @@ private:
     bool willUseSensorDecode(int sfRow) const;
     int  rawDecodeLimit(int sfRow) const;
     QString reportMemoryFootprint();        // WorkingImageCache + in-flight raw decode stats
+    /*  PER-IMAGE CACHE BOOKKEEPING, OWNED HERE.
+
+        isCaching / isCached / attempts / decoderId / decoder status and error
+        message used to live in the DATAMODEL, written through queued setValSf
+        signals to the GUI thread and then read straight back off this thread --
+        so every read raced the GUI thread's write, and the value read was
+        whatever had been applied so far rather than what this thread had just
+        decided. A snapshot cannot fix that: these change continuously while the
+        cache runs, so any point-in-time copy is stale by construction. They are
+        state, and state belongs to whoever owns the decision.
+
+        KEYED BY FILE PATH, not by row. Proxy rows shift under filtering and
+        sorting, and icd->imCache is already keyed by path, so a path key means
+        the two can never disagree about the same image.
+
+        The model still carries these columns and is still updated through the
+        queued signals -- the icon delegate draws the cached badge from
+        G::IsCachedColumn and the table shows the rest -- but that is now a
+        one-way MIRROR for display, never a source of truth.
+
+        Touched only on the ImageCache thread, except the diagnostic reports,
+        which MW calls directly on the GUI thread; hence the mutex. */
+    struct RowCache {
+        bool isCaching = false;
+        bool isCached  = false;
+        int  attempts  = 0;
+        int  decoderId = -1;
+        int  status    = 0;             // ImageDecoder::Status
+        QString errMsg;
+    };
+    mutable QMutex cacheStateMutex;
+    QHash<QString, RowCache> cacheState;
+
+    /*  THE MODEL IS READ ONLY THROUGH THESE on the ImageCache thread. Each
+        takes its own reference to the published view (Datamodel/modelsync.h)
+        and answers from that, so nothing here touches dm or dm->sf. Structural
+        facts (path, row count, proxy row for a path) come from the snapshot;
+        live facts (metadata loaded, cache size estimate, video) from the
+        lock-free per-row array. */
+    QString pathAt(int sfRow) const;
+    int     sfRowOf(const QString &fPath) const;
+    int     rowCountSf() const;
+    bool    isVideoAt(int sfRow) const;
+    bool    metaLoadedAt(int sfRow) const;
+    float   cacheMBAt(int sfRow) const;
+
+    RowCache stateOf(const QString &fPath) const;
+    void setStateCaching(const QString &fPath, bool on, int decoderId);
+    void setStateCached(const QString &fPath, bool on);
+    int  bumpStateAttempts(const QString &fPath);
+    void setStateStatus(const QString &fPath, int status, const QString &errMsg = QString());
+    void clearStateFor(const QString &fPath);
+    void clearAllState();
+
     struct CacheItem {
         bool isCaching;
         QString msg;

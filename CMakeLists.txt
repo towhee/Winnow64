@@ -405,6 +405,7 @@ set(WINNOW_HEADERS
     Datamodel/datamodel.h
     Datamodel/filters.h
     Datamodel/filtersnapshot.h
+    Datamodel/modelsync.h
     Datamodel/selection.h
 
     Develop/develop.h
