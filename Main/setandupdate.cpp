@@ -345,6 +345,80 @@ void MW::showFavDock() {
     }
 }
 
+/*  Push the catalogued image count onto both Catalog rows.
+
+    The rows say how much is behind them, so "Catalog 84,102" answers "is there
+    anything in there?" without opening the panel -- the discoverability point of
+    putting the row in the tree at all. A count of -1 (index not open) shows the
+    bare name: an unopened index and an empty one are different facts.
+*/
+void MW::updateCatalogScopeRows()
+{
+    if (G::isLogger) G::log("MW::updateCatalogScopeRows");
+    const qint64 n = Catalog::instance().isAvailable()
+                         ? static_cast<qint64>(Catalog::instance().count())
+                         : -1;
+    if (folderCatalogScopeRow) folderCatalogScopeRow->setImageCount(n);
+    if (favCatalogScopeRow)    favCatalogScopeRow->setImageCount(n);
+}
+
+void MW::setScope(G::Scope s, QString src)
+{
+/*
+    THE ONE PLACE G::scope CHANGES.
+
+    Scope used to be private to the Find dock, and the Folders/Bookmarks trees knew
+    nothing about it -- so selecting a folder and searching the catalog behaved like two
+    different applications, and the catalog was reachable only by someone who already knew
+    the panel existed. It is now one fact with three views (the Catalog row above each of
+    the two trees, and the panel's Folders|Catalog buttons); every entry point routes here
+    and this pushes the result back to all of them, so they cannot disagree.
+
+    IT IS IDEMPOTENT AND RE-ENTRANT-SAFE. Pushing the state back sets widgets that emit on
+    change, and those emissions come back here; the early return on "already in this
+    scope" is what stops the loop, so it must stay ahead of everything else.
+*/
+    if (G::isLogger) G::log("MW::setScope", src);
+    if (G::isInitializing) return;
+
+    const bool changed = (G::scope != s);
+    G::scope = s;
+
+    /*  RE-ASSERT THE ROWS EVEN WHEN THE SCOPE DID NOT CHANGE. They are checkable
+        QToolButtons, so clicking the Catalog row while Catalog is already current
+        toggles it OFF before this runs -- and an early return would leave the row
+        unchecked while the catalog is still the scope. setChecked emits toggled,
+        not clicked, and the rows are connected on clicked, so putting them back
+        cannot loop. */
+    if (folderCatalogScopeRow) folderCatalogScopeRow->setChecked(s == G::Scope::Catalog);
+    if (favCatalogScopeRow)    favCatalogScopeRow->setChecked(s == G::Scope::Catalog);
+
+    if (!changed) return;
+
+    /*  A folder stays SELECTED in the tree while the catalog is the scope. It is still
+        the folder that is loaded, and clearing the selection would leave the user with no
+        way back to it except by finding it again. The Catalog row being lit is what says
+        which of the two is current. */
+
+    if (s == G::Scope::Catalog) {
+        // the panel is where a catalog scope is actually used, so bring it up
+        if (G::useFindDock && findPanel) {
+            filterDock->setVisible(true);
+            filterDock->raise();
+            filterDockVisibleAction->setChecked(true);
+            findPanel->setScope(FindPanel::CatalogScope);
+        }
+    }
+    else {
+        if (G::useFindDock && findPanel)
+            findPanel->setScope(FindPanel::FolderScope);
+    }
+
+    // the menu item reads as the scope, not as a panel
+    if (catalogDockVisibleAction)
+        catalogDockVisibleAction->setChecked(s == G::Scope::Catalog);
+}
+
 void MW::showCatalogDock()
 /*
     "Search Catalog" (Shift+F2, Window > Catalog Panel).
@@ -366,8 +440,7 @@ void MW::showCatalogDock()
         filterDock->setVisible(true);
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
-        catalogDockVisibleAction->setChecked(true);   // the menu item reads as the scope
-        findPanel->setScope(FindPanel::CatalogScope);
+        setScope(G::Scope::Catalog, "MW::showCatalogDock");
         findPanel->focusSearch();
         return;
     }

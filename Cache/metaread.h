@@ -76,7 +76,10 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, bool /*success*/, QString/*calledBy*/);
     void centralMsg(QString message);
     void okToSelect(bool ok);
-    void select(QModelIndex sfIdx, bool clearSelection);
+    /*  The proxy ROW to select, not a QModelIndex: this is delivered queued, and
+        an index is only valid in the thread and the moment that built it. The
+        connect site builds a fresh one on the GUI thread. */
+    void selectRow(int sfRow, bool clearSelection);
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total, QColor);
     // void updateProgressInStatusbar(int progress, int total, QColor darkRed);
@@ -133,8 +136,20 @@ private:
     inline bool needToRead(int row);
     bool nextA();
     bool nextB();
+
+    /*  THE ONLY READS OF THE MODEL FROM metaReadThread. Each takes its own
+        reference to a published view (Datamodel/modelsync.h) and answers from
+        that, so nothing on this thread touches dm or dm->sf -- the same
+        arrangement ImageCache uses. See "Worker Threads and the Model" in
+        Documentation.txt. */
+    int  rowCountSf() const;        // proxy rows
+    int  rowCountDm() const;        // datamodel rows (progress, completion)
+    int  dmRowOf(int sfRow) const;
+    QString pathAt(int sfRow) const;
+    bool iconLoadedAt(int sfRow) const;
+    bool metaAttemptedAt(int sfRow) const;
+    bool isVideoAt(int sfRow) const;
     bool nextRowToRead();
-    void emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay);
 
     QMutex mutex;
     QWaitCondition condition;

@@ -283,7 +283,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     abort = false;
     startRow = sfRow;
     this->src = src;
-    sfRowCount = dm->sf->rowCount();
+    sfRowCount = rowCountSf();
     lastRow = sfRowCount - 1;
     imageCacheTriggered = false;
     aIsDone = false;
@@ -315,8 +315,8 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         const int first = qMax(0, firstIconRow);
         const int last  = qMin(sfRowCount - 1, lastIconRow);
         for (int row = first; row <= last; ++row) {
-            if (dm->sf->index(row, G::VideoColumn).data().toBool()) continue;
-            if (!dm->sf->index(row, G::IconLoadedColumn).data().toBool())
+            if (isVideoAt(row)) continue;
+            if (!iconLoadedAt(row))
                 readSuccessThisCycle.remove(row);
         }
     }
@@ -543,7 +543,9 @@ void MetaRead::initialize(QString src)
 {
     if (G::isLogger || G::isFlowLogger)
     {
-        G::log("MetaRead::initialize", dm->primaryFolderPath());
+        /* not dm->primaryFolderPath(): it walks folderList, which the GUI
+           thread owns, and this runs on metaReadThread. */
+        G::log("MetaRead::initialize", QString::number(rowCountDm()) + " rows");
     }
     if (isDebug)
     {
@@ -558,7 +560,7 @@ void MetaRead::initialize(QString src)
     // abort = true;
     // for (Reader *r : readers) r->abortProcessing();
     // abortReaders();
-    dmRowCount = dm->rowCount();
+    dmRowCount = rowCountDm();
     metaReadCount = 0;
     metaReadItems = dmRowCount;
     isAhead = true;
@@ -948,6 +950,59 @@ QString MetaRead::reportLifetimeCounters()
     return reportString;
 }
 
+/*  ---- The only reads of the model from metaReadThread ---- */
+
+int MetaRead::rowCountSf() const
+{
+    auto snap = dm->proxySnapshot();
+    return snap ? snap->rowCount() : 0;
+}
+
+/*  The DATAMODEL row count, not the proxy's: progress reporting and the
+    load-completion checks count model rows, and a filtered row still exists in
+    the model. */
+int MetaRead::rowCountDm() const
+{
+    auto snap = dm->proxySnapshot();
+    return snap ? snap->sourceRows : 0;
+}
+
+int MetaRead::dmRowOf(int sfRow) const
+{
+    auto snap = dm->proxySnapshot();
+    return snap ? snap->dmRow(sfRow) : -1;
+}
+
+QString MetaRead::pathAt(int sfRow) const
+{
+    auto snap = dm->proxySnapshot();
+    return snap ? snap->path(sfRow) : QString();
+}
+
+bool MetaRead::iconLoadedAt(int sfRow) const
+{
+    auto snap = dm->proxySnapshot();
+    auto sync = dm->rowSync();
+    if (!snap || !sync) return false;
+    return sync->has(snap->dmRow(sfRow), RowSync::IconLoaded);
+}
+
+bool MetaRead::metaAttemptedAt(int sfRow) const
+{
+    auto snap = dm->proxySnapshot();
+    auto sync = dm->rowSync();
+    if (!snap || !sync) return false;
+    return sync->has(snap->dmRow(sfRow), RowSync::MetaAttempted);
+}
+
+bool MetaRead::isVideoAt(int sfRow) const
+{
+    auto snap = dm->proxySnapshot();
+    auto sync = dm->rowSync();
+    if (!snap || !sync) return false;
+    return sync->has(snap->dmRow(sfRow), RowSync::IsVideo);
+}
+
 void MetaRead::onVideoReadingCleared(int sfRow, int fromInstance)
 {
 /*
@@ -975,9 +1030,9 @@ inline bool MetaRead::needToRead(int sfRow)
     needIcon = false;
     needMeta = false;
 
-    bool isIcon = dm->sf->index(sfRow, G::IconLoadedColumn).data().toBool();
-    bool isMeta = dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted;
-    bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
+    bool isIcon  = iconLoadedAt(sfRow);
+    bool isMeta  = metaAttemptedAt(sfRow);
+    bool isVideo = isVideoAt(sfRow);
 
     /* In-flight check, entirely worker-local. Video rows have their own set
        because their decode outlives the Reader -- see videoRowsReading in the
@@ -1030,7 +1085,7 @@ bool MetaRead::nextA()
     // find next a
     if (aIsDone) return false;
     // use dm->sf->rowCount() in case more folders have been added
-    for (int i = a; i < dm->sf->rowCount(); i++) {
+    for (int i = a; i < rowCountSf(); i++) {
         if (needToRead(i)) {
             nextRow = i;
             a = i + 1;
@@ -1164,25 +1219,6 @@ void MetaRead::redo()
     dispatchReaders();
 }
 
-void MetaRead::emitFileSelectionChangeWithDelay(const QModelIndex &sfIdx, int msDelay)
-{
-    // Emit the signal after a delay using QTimer::singleShot and a lambda
-    QModelIndex idx2 = QModelIndex();
-    bool clearSelection = false;
-    QString src = "MetaRead::dispatch";
-    QTimer::singleShot(msDelay, this, [this, sfIdx, idx2, clearSelection, src]() {
-        /*
-        qDebug() << "MetaRead::emitFileSelectionChangeWithDelay            "
-                 << "row =" << sfIdx.row()
-                 << "   instance =" << instance
-                 << "dm->instance =" << dm->instance
-            ; //*/
-        if (instance == dm->instance) {
-            emit fileSelectionChange(sfIdx, idx2, clearSelection, src);
-        }
-    });
-}
-
 void MetaRead::processReturningReader(int id, Reader *r)
 {
 /*
@@ -1217,12 +1253,14 @@ void MetaRead::processReturningReader(int id, Reader *r)
        spawning concurrent QMediaPlayers on the same file (AVFoundation
        corruption). */
     {
-        QModelIndex dmIdx = dm->index(dmRow, 0);
-        QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
-        if (sfIdx.isValid()) {
-            readSuccessThisCycle.insert(sfIdx.row());
-            if (!dm->index(dmRow, G::VideoColumn).data().toBool())
-                rowsReading.remove(sfIdx.row());
+        /* metaRead works in proxy rows and the reader reports a datamodel row.
+           The snapshot carries the reverse map, so this is O(1) -- it runs once
+           per returning reader, which is once per image. */
+        auto snap = dm->proxySnapshot();
+        const int sfRow = snap ? snap->sfRowFromDmRow(dmRow) : -1;
+        if (sfRow >= 0) {
+            readSuccessThisCycle.insert(sfRow);
+            if (!isVideoAt(sfRow)) rowsReading.remove(sfRow);
         }
     }
 
@@ -1270,13 +1308,19 @@ void MetaRead::processReturningReader(int id, Reader *r)
         )
     {
         imageCacheTriggered = true;
-        // model and proxy rows the same in metaRead
-        QModelIndex sfIdx = dm->sf->index(r->dmRow,0);
+        /*  Emit the ROW, not a QModelIndex. This is a queued connection, so an
+            index built here would be constructed on this thread (a read of the
+            proxy) and then carried across to the GUI thread, where the model
+            may have changed before it is delivered -- an index is only ever
+            valid in the thread and the moment that made it. Selection::
+            setCurrentIndex is given a fresh one built on the GUI thread. */
+        auto selSnap = dm->proxySnapshot();
+        const int sfRowToSelect = selSnap ? selSnap->sfRowFromDmRow(r->dmRow) : -1;
         bool clearSelection = true;
         // Selection::setCurrentIndex routes through MW::updateChange which
         // in turn invokes MW::fileSelectionChange, so do not emit
         // fileSelectionChange here as well.
-        emit select(sfIdx, clearSelection);
+        if (sfRowToSelect >= 0) emit selectRow(sfRowToSelect, clearSelection);
     }
 
     if (isDebug)  // returning reader, row has been processed by reader
@@ -1303,8 +1347,9 @@ void MetaRead::processReturningReader(int id, Reader *r)
 
     // report progress in statusbar and top of filter dock
     if (!isDone && G::showCacheProgress && !G::allMetadataAttempted) {
-        emit updateProgressInStatusbar(dmRow, dm->rowCount(), darkRed);
-        int progress = 1.0 * metaReadCount / dm->rowCount() * 100;
+        emit updateProgressInStatusbar(dmRow, rowCountDm(), darkRed);
+        const int dmRows = rowCountDm();
+        int progress = dmRows > 0 ? int(1.0 * metaReadCount / dmRows * 100) : 0;
         emit updateProgressInFilter(progress);
     }
 
@@ -1524,10 +1569,8 @@ void MetaRead::dispatch(int id, bool isReturning)
 
     // assign either a or b as the next row to read in the datamodel
     if (nextRowToRead()) {
-        QModelIndex sfIdx = dm->sf->index(nextRow, 0);
-        QModelIndex dmIdx = dm->modelIndexFromProxyIndex(sfIdx);
-        int dmRow = dmIdx.row();
-        QString fPath = sfIdx.data(G::PathRole).toString();
+        int dmRow = dmRowOf(nextRow);
+        QString fPath = pathAt(nextRow);
 
         if (fPath.isEmpty())
             qWarning() << fun << "Warning:" << "row"
@@ -1543,7 +1586,7 @@ void MetaRead::dispatch(int id, bool isReturning)
                 << fun1.leftJustified(col0Width)
                 << "id =" << QString::number(id).leftJustified(2, ' ')
                 // << "redo =" << QString::number(redoCount).leftJustified(2, ' ')
-                << "dmRow =" << QString::number(dmIdx.row()).leftJustified(4, ' ')
+                << "dmRow =" << QString::number(dmRow).leftJustified(4, ' ')
                 // << "nextRow =" << QString::number(nextRow).leftJustified(4, ' ')
                 // << "okReadMeta =" << QVariant(needMeta).toString().leftJustified(5, ' ')
                 // << "okReadIcon =" << QVariant(needIcon).toString().leftJustified(5, ' ')
@@ -1751,7 +1794,7 @@ void MetaRead::allFinished(QString src)
     emit done();                            // signal MW::folderChangeCompleted
 
     qint64 ms = t.elapsed();
-    int n = dm->rowCount();
+    int n = rowCountDm();
     int msPerImage = ms / n;
 
     if (G::isPerfProbe) {

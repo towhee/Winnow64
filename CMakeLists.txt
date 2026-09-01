@@ -380,6 +380,7 @@ set(WINNOW_SOURCES
     Views/imageview.cpp
     Views/infostring.cpp
     Views/catalogview.cpp
+    Views/catalogscoperow.cpp
     Views/findpanel.cpp
     Views/infoview.cpp
     Views/tableview.cpp
@@ -406,6 +407,7 @@ set(WINNOW_HEADERS
     Datamodel/filters.h
     Datamodel/filtersnapshot.h
     Datamodel/modelsync.h
+    Views/catalogscoperow.h
     Datamodel/selection.h
 
     Develop/develop.h
