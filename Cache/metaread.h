@@ -102,6 +102,10 @@ signals:
     void memoryOverrun(quint64 footprintMB, quint64 capMB);
 
 public slots:
+    /*  DataModel::videoReadingCleared -> drop the worker-local marker for a
+        video row whose frame decode has been resolved. */
+    void onVideoReadingCleared(int sfRow, int fromInstance);
+
     void initialize(QString src = "");
     void dispatchReaders();
     void dispatch(int id, bool isReturning);
@@ -168,6 +172,23 @@ private:
        when FrameDecoder reports the frame. Cleared alongside
        readSuccessThisCycle. */
     QSet<int> rowsReading;
+
+    /*  sf rows of VIDEO files dispatched to the FrameDecoder but not yet
+        resolved. Video needs its own set because the decode outlives the
+        Reader: processReturningReader must NOT clear the marker, or dispatch
+        would re-pick the file and spawn a second QMediaPlayer on it
+        (AVFoundation corruption). It is dropped when the GUI thread reports
+        the outcome via DataModel::videoReadingCleared.
+
+        This replaces reading and WRITING G::MetadataReadingColumn through
+        dm->sf from this thread. The write was the worse half -- mutating a
+        QSortFilterProxyModel off the GUI thread -- and it could not simply
+        become a queued setValSf, because the guard has to be true IMMEDIATELY
+        or the same video gets dispatched twice before the queued write lands.
+        The column is still maintained (queued, for the table and diagnostics);
+        it is just no longer what the guard reads. Cleared alongside
+        readSuccessThisCycle. */
+    QSet<int> videoRowsReading;
 
     DataModel *dm;
     Metadata *metadata;

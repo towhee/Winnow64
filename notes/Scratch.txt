@@ -3022,6 +3022,6 @@ Plan written. My thoughts on your proposal, briefly:
     payloads? Decide by what DevPreviewCache already does, so sweep and move-aside
     stay one policy.
 
-
+Stage 0 - portrait videos not rotated
 
 

@@ -147,6 +147,11 @@ void BuildFilters::abortProcessing()
     }
     // abort = false;
 
+    /*  Apply anything the worker stashed before it exited, so a batch cannot
+        land on a tree that the caller is about to reset. Callers are on the GUI
+        thread; flushOps is a no-op anywhere else. */
+    flushOps();
+
     if (G::isLogger || G::isFlowLogger)
         G::log(srcFun, "emit stopped");
 
@@ -253,6 +258,7 @@ void BuildFilters::build(AfterAction newAction)
     filters->startBuildFilters(isReset);
     progress = 0;
     dmRows = dm->rowCount();
+    publishSnapshot();             // GUI thread: the worker reads nothing else
     start(NormalPriority);
 }
 
@@ -273,7 +279,10 @@ void BuildFilters::update()
     abortProcessing();
     if (filters->filtersBuilt) {
         action = Action::UpdateCounts;
-        if (G::allMetadataAttempted) start(NormalPriority);
+        if (G::allMetadataAttempted) {
+            publishSnapshot();     // GUI thread
+            start(NormalPriority);
+        }
     }
     else build();
 }
@@ -299,7 +308,10 @@ void BuildFilters::updateAllCounts()
     abortProcessing();
     if (filters->filtersBuilt) {
         action = Action::UpdateAllCounts;
-        if (G::allMetadataAttempted) start(NormalPriority);
+        if (G::allMetadataAttempted) {
+            publishSnapshot();     // GUI thread
+            start(NormalPriority);
+        }
     }
     else build();
 }
@@ -311,8 +323,18 @@ void BuildFilters::recount()
     when images are deleted or added to the current folder (ie remote embellish).  This
     happens in whatever thread calls this function.
 */
-    updateUnfilteredCounts();
-    updateFilteredCounts();
+    /*  recount() runs INLINE in its caller (all four are on the GUI thread), so
+        it takes its own snapshot rather than relying on one a start() left
+        behind -- rows have usually just been added or deleted. */
+    /*  recount() does NOT publish: MW::buildFiltersWhenModelReady calls
+        build() and then recount() on the next line, so publishing here would
+        swap the snapshot the freshly started worker is about to take. It uses
+        its own object and leaves pendingSnap alone. */
+    auto snapshot = makeSnapshot();
+    FilterOps ops;
+    updateUnfilteredCounts(*snapshot, ops);
+    updateFilteredCounts(*snapshot, ops);
+    dispatchOps(ops);       // inline: recount()'s callers are the GUI thread
 }
 
 void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction newAction,
@@ -351,6 +373,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     if (filters->filtersBuilt) {
         action = Action::UpdateCategory;
         if (G::allMetadataAttempted) {
+            publishSnapshot();     // GUI thread, before either route
             if (runSync) run();     // inline on GUI thread (no race with filterChange)
             else start(NormalPriority);
         }
@@ -404,7 +427,136 @@ void BuildFilters::reset(bool collapse)
     isReset = true;
 }
 
-void BuildFilters::updateUnfilteredSearchCount()
+/*  THE ONE PLACE a filter category is declared.
+
+    Each category is a snapshot slot plus the Filters tree item its counts go
+    to. appendUniqueItems, updateUnfilteredCounts and updateFilteredCounts all
+    walk this list, so a category added here reaches all three at once. It used
+    to be three hand-maintained copies of the same fifteen blocks.
+
+    Keywords are NOT here -- a row carries a list of them, so they are counted
+    by countKeywords and appended by each caller after this loop. */
+QVector<BuildFilters::Sink> BuildFilters::sinks() const
+{
+    return {
+        {FilterCat::Search,      filters->search,       "search"},
+        {FilterCat::Pick,        filters->picks,        "picks"},
+        {FilterCat::Rating,      filters->ratings,      "ratings"},
+        {FilterCat::Label,       filters->labels,       "labels"},
+        {FilterCat::Type,        filters->types,        "types"},
+        {FilterCat::FolderName,  filters->folders,      "folders"},
+        {FilterCat::Year,        filters->years,        "years"},
+        {FilterCat::Day,         filters->days,         "days"},
+        {FilterCat::CameraModel, filters->models,       "models"},
+        {FilterCat::Lens,        filters->lenses,       "lenses"},
+        {FilterCat::FocalLength, filters->focalLengths, "focal lengths"},
+        {FilterCat::Title,       filters->titles,       "titles"},
+        {FilterCat::Creator,     filters->creators,     "creators"},
+        {FilterCat::Compare,     filters->compare,      "compare"},
+    };
+}
+
+std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
+{
+/*
+    Copy every column the counting passes need into plain data, ON THE GUI
+    THREAD, so the worker never touches dm or dm->sf. See
+    Datamodel/filtersnapshot.h for why.
+
+    The proxy is walked ONCE to mark inProxy rather than asking
+    sf->mapFromSource per row, which is both cheaper and the only way the
+    filtered and unfiltered counts can describe the same instant.
+*/
+    static const int col[FilterCat::SlotCount] = {
+        G::SearchColumn,      G::PickColumn,        G::RatingColumn,
+        G::LabelColumn,       G::TypeColumn,        G::FolderNameColumn,
+        G::YearColumn,        G::DayColumn,         G::CameraModelColumn,
+        G::LensColumn,        G::FocalLengthColumn, G::TitleColumn,
+        G::CreatorColumn,     G::CompareColumn
+    };
+
+    auto out = std::make_shared<FilterSnapshot>();
+    FilterSnapshot &snap = *out;
+    if (dm == nullptr) return out;
+    snap.instance = dm->instance;
+    const int rows = dm->rowCount();
+    snap.rows.resize(rows);
+
+    const bool combine = G::combineRawJpg;
+    for (int row = 0; row < rows; ++row) {
+        FilterSnapshotRow &r = snap.rows[row];
+        for (int slot = 0; slot < FilterCat::SlotCount; ++slot) {
+            r.v[slot] = dm->index(row, col[slot]).data().toString().trimmed();
+        }
+        /* Focal length is right-justified so "50" and "400" sort as numbers
+           rather than as text. All three passes did this, so bake it in once. */
+        r.v[FilterCat::FocalLength] =
+            r.v[FilterCat::FocalLength].rightJustified(4, ' ');
+
+        const QStringList kw =
+            dm->index(row, G::KeywordsAllColumn).data().toStringList();
+        r.keywords.reserve(kw.size());
+        for (const QString &k : kw) r.keywords << k.trimmed();
+
+        /* When combineRawJpg is on the raw half of a pair is hidden in the
+           proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
+           skip it or they will not match the proxy baseline. */
+        r.hiddenRaw = combine &&
+                      dm->index(row, 0).data(G::DupHideRawRole).toBool();
+    }
+
+    // mark the rows the current filter admits
+    if (dm->sf != nullptr) {
+        const int sfRows = dm->sf->rowCount();
+        for (int sfRow = 0; sfRow < sfRows; ++sfRow) {
+            const int dmRow = dm->sf->mapToSource(dm->sf->index(sfRow, 0)).row();
+            if (dmRow >= 0 && dmRow < rows) {
+                snap.rows[dmRow].inProxy = true;
+                ++snap.proxyRows;
+            }
+        }
+    }
+    return out;
+}
+
+/*  Build a snapshot and hand it to the next run(). GUI thread only. */
+void BuildFilters::publishSnapshot()
+{
+    auto out = makeSnapshot();
+    QMutexLocker lock(&mutex);
+    pendingSnap = out;
+}
+
+QMap<QString,int> BuildFilters::countSlot(const FilterSnapshot &snap, int slot,
+                                         bool filtered) const
+{
+/*
+    Count one category over the snapshot. "filtered" counts the rows the proxy
+    admits; unfiltered counts every row except the hidden raw half of a
+    raw+jpg pair.
+*/
+    QMap<QString,int> map;
+    for (const FilterSnapshotRow &r : snap.rows) {
+        if (abort) return map;
+        if (filtered ? !r.inProxy : r.hiddenRaw) continue;
+        map[r.v[slot]]++;
+    }
+    return map;
+}
+
+QMap<QString,int> BuildFilters::countKeywords(const FilterSnapshot &snap,
+                                             bool filtered) const
+{
+    QMap<QString,int> map;
+    for (const FilterSnapshotRow &r : snap.rows) {
+        if (abort) return map;
+        if (filtered ? !r.inProxy : r.hiddenRaw) continue;
+        for (const QString &k : r.keywords) map[k]++;
+    }
+    return map;
+}
+
+void BuildFilters::updateUnfilteredSearchCount(const FilterSnapshot &snap, FilterOps &ops)
 /*
     When the search text changes then the total unfiltered that both match and do not
     match may change. BuildFilters::update is called, which in turn, calls this function
@@ -412,319 +564,66 @@ void BuildFilters::updateUnfilteredSearchCount()
     where the filtered totals are updated.
 */
 {
-    QMap<QString,int> map;
-    int rows = dm->rowCount();
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
-    }
-    filters->updateSearchCategoryCount(map, false /*isFiltered*/);
+    ops.append({FilterOp::SearchCount, countSlot(snap, FilterCat::Search, false),
+                nullptr, false, QString()});
 }
 
-bool BuildFilters::isHiddenRaw(int row)
+void BuildFilters::updateUnfilteredCounts(const FilterSnapshot &snap, FilterOps &ops)
 {
 /*
-    When combineRawJpg is true the raw member of a raw+jpg pair is hidden in the proxy
-    (see SortFilter::filterAcceptsRow).  The unfiltered counts must skip these rows so
-    the "unfiltered" totals reflect the combined proxy baseline rather than every row
-    in the DataModel.
+    Update the DataModel item counts in Filters from the snapshot. Used when
+    images are deleted from a filtered dataset, or when the proxy baseline
+    changes without a filter change (combineRawJpg toggled, rows added).
+
+    The hidden raw member of each raw+jpg pair is skipped so the unfiltered
+    totals match the proxy baseline.
 */
-    return G::combineRawJpg &&
-           dm->index(row, 0).data(G::DupHideRawRole).toBool();
+    if (debugBuildFilters) qDebug() << "BuildFilters::updateUnfilteredCounts";
+
+    for (const Sink &s : sinks()) {
+        if (abort) return;
+        /* Search is NOT counted here. It goes through updateSearchCategoryCount
+           in updateUnfilteredSearchCount(), which run() calls alongside this --
+           the search category has predefined items and its own sink. The
+           original code built the search map here and then threw it away. */
+        if (s.slot == FilterCat::Search) continue;
+        ops.append({FilterOp::UnfilteredCount, countSlot(snap, s.slot, false),
+                    s.item, false, QString()});
+    }
+    if (abort) return;
+    ops.append({FilterOp::UnfilteredCount, countKeywords(snap, false),
+                filters->keywords, false, QString()});
+
+    ops.append({FilterOp::Update, {}, nullptr, false, QString()});
 }
 
-void BuildFilters::updateUnfilteredCounts()
+void BuildFilters::updateFilteredCounts(const FilterSnapshot &snap, FilterOps &ops)
 {
 /*
-    Update the DataModel item counts in Filters. A QMap is used to count all the
-    unique items for each DataModel column that can be filtered and updates the
-    unique item counts by calling filters->addFilteredCountPerItem.
-
-    This is used when images are deleted from a filtered dataset.
-
-    When combineRawJpg is true the hidden raw member of each raw+jpg pair is skipped
-    (isHiddenRaw) so the unfiltered totals match the proxy baseline.
+    Update the filtered item counts in Filters from the snapshot -- the rows the
+    proxy currently admits.
 */
-    if (debugBuildFilters)
-    {
-        qDebug()
-            << "BuildFilters::updateUnfilteredCounts"
-            ;
-    }
+    if (debugBuildFilters) qDebug() << "BuildFilters::updateFilteredCounts";
 
-    QMap<QString,int> map;
-    QString method = "Map";
-    int rows = dm->rowCount();
+    ops.append({FilterOp::SearchCount, countSlot(snap, FilterCat::Search, true),
+                nullptr, true, QString()});
 
-    // count unfiltered
-    for (int row = 0; row < rows; row++) {
+    for (const Sink &s : sinks()) {
         if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
+        if (s.slot == FilterCat::Search) continue;   // handled above
+        ops.append({FilterOp::FilteredCount, countSlot(snap, s.slot, true),
+                    s.item, false, QString()});
     }
-    //filters->updateSearchCategoryCount(map, true /*isFiltered*/);
-    map.clear();
+    if (abort) return;
+    ops.append({FilterOp::FilteredCount, countKeywords(snap, true),
+                filters->keywords, false, QString()});
 
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->picks);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->ratings);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->labels);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->types);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->folders);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->years);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->days);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->models);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->lenses);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->focalLengths);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->titles);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->creators);
-    map.clear();
-
-    // for (int row = 0; row < rows; row++) {
-    //     if (abort) return;
-    //     map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    // }
-    // filters->updateUnfilteredCountPerItem(map, filters->missingThumbs);
-    // map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->compare);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        QStringList x = dm->index(row, G::KeywordsAllColumn).data().toStringList();
-        for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
-    }
-    filters->updateUnfilteredCountPerItem(map, filters->keywords);
-    map.clear();
-
-    filters->update();
+    ops.append({FilterOp::Update, {}, nullptr, false, QString()});
+    ops.append({FilterOp::MenuUpdate, {}, nullptr, false,
+                "BuildFilters::updateFilterCounts"});
 }
 
-void BuildFilters::updateFilteredCounts()
-{
-/*
-    Update the filtered DataModel item counts in Filters. A QMap is used to count
-    all the unique items for each DataModel column that can be filtered and updates
-    the unique item counts by calling filters->addFilteredCountPerItem.
-*/
-    if (debugBuildFilters)
-    {
-        qDebug() << "BuildFilters::updateFilteredCounts";
-    }
-
-    QMap<QString,int> map;
-    QString method = "Map";
-    int rows = dm->sf->rowCount();
-
-    // count unfiltered
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::SearchColumn).data().toString().trimmed()]++;
-    }
-    filters->updateSearchCategoryCount(map, true /*isFiltered*/);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::PickColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->picks);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::RatingColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->ratings);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::LabelColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->labels);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::TypeColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->types);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->folders);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::YearColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->years);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::DayColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->days);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->models);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::LensColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->lenses);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->focalLengths);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::TitleColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->titles);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::CreatorColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->creators);
-    map.clear();
-
-    // for (int row = 0; row < rows; row++) {
-    //     if (abort) return;
-    //     map[dm->sf->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    // }
-    // filters->updateFilteredCountPerItem(map, filters->missingThumbs);
-    // map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        map[dm->sf->index(row, G::CompareColumn).data().toString().trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->compare);
-    map.clear();
-
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        QStringList x = dm->sf->index(row, G::KeywordsAllColumn).data().toStringList();
-        for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
-    }
-    filters->updateFilteredCountPerItem(map, filters->keywords);
-    map.clear();
-
-    filters->update();
-
-    emit updateFilterMenu("BuildFilters::updateFilterCounts");
-}
-
-void BuildFilters::updateCategoryItems()
+void BuildFilters::updateCategoryItems(const FilterSnapshot &snap, FilterOps &ops)
 {
 /*
     Called when a category item has been edited.  The old name is removed from the
@@ -748,59 +647,37 @@ void BuildFilters::updateCategoryItems()
                ;
     }
 
-    QMap<QString,int> map;
+    /*  Map the edited category onto its snapshot slot and its tree item. The
+        counts come from the snapshot like every other pass, so an edited value
+        is keyed the same way the category list keyed it -- this used to read
+        the model directly and WITHOUT trimming, so a value with stray
+        whitespace could appear as a second, near-identical item. */
+    int slot = -1;
     QTreeWidgetItem *cat = nullptr;
-    int col = 0;
     switch (category) {
-    case Category::PickEdit:
-        col = G::PickColumn;
-        cat = filters->picks;
-        break;
-    case Category::RatingEdit:
-        col = G::RatingColumn;
-        cat = filters->ratings;
-        break;
-    case Category::LabelEdit:
-        col = G::LabelColumn;
-        cat = filters->labels;
-        break;
-    case Category::TitleEdit:
-        col = G::TitleColumn;
-        cat = filters->titles;
-        break;
-    case Category::CreatorEdit:
-        col = G::CreatorColumn;
-        cat = filters->creators;
-        break;
-    // case Category::MissingThumbEdit:
-    //     col = G::MissingThumbColumn;
-    //     cat = filters->missingThumbs;
-    //     break;
-    case Category::CompareEdit:
-        col = G::CompareColumn;
-        cat = filters->compare;
-        break;
+    case Category::PickEdit:    slot = FilterCat::Pick;    cat = filters->picks;    break;
+    case Category::RatingEdit:  slot = FilterCat::Rating;  cat = filters->ratings;  break;
+    case Category::LabelEdit:   slot = FilterCat::Label;   cat = filters->labels;   break;
+    case Category::TitleEdit:   slot = FilterCat::Title;   cat = filters->titles;   break;
+    case Category::CreatorEdit: slot = FilterCat::Creator; cat = filters->creators; break;
+    case Category::CompareEdit: slot = FilterCat::Compare; cat = filters->compare;  break;
+    case Category::MissingThumbEdit:
+        // no snapshot slot: the MissingThumb category is not built (see sinks())
+        return;
     }
-
-    for (int row = 0; row < dm->rowCount(); row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, col).data().toString()]++;
-    }
+    if (slot < 0 || cat == nullptr) return;
 
     // update filter list and unfiltered counts
-    filters->updateCategoryItems(map, cat);
-    map.clear();
+    ops.append({FilterOp::CategoryItems, countSlot(snap, slot, false),
+                cat, false, QString()});
+    if (abort) return;
 
     // update filtered counts for category
-    for (int row = 0; row < dm->sf->rowCount(); row++) {
-        if (abort) return;
-        map[dm->sf->index(row, col).data().toString()]++;
-    }
-    filters->updateFilteredCountPerItem(map, cat);
+    ops.append({FilterOp::FilteredCount, countSlot(snap, slot, true),
+                cat, false, QString()});
 
-    qDebug() << "BuildFilters::updateCategory emit updateFilterMenu";
-    emit updateFilterMenu("BuildFilters::updateCategory");
+    ops.append({FilterOp::MenuUpdate, {}, nullptr, false,
+                "BuildFilters::updateCategory"});
 }
 
 void BuildFilters::updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColumn)
@@ -859,203 +736,38 @@ void BuildFilters::updateZeroCountCheckedItems(QTreeWidgetItem *cat, int dmColum
 //    filters->addCategoryItems(map, category);
 //}
 
-void BuildFilters::appendUniqueItems()
+void BuildFilters::appendUniqueItems(const FilterSnapshot &snap, FilterOps &ops)
 {
 /*
     After a new folder, when the filter panel becomes visible, the DataModel unique
-    items and counts are generated here.
+    items and counts are generated here from the snapshot.
 */
-    if (debugBuildFilters)
-    {
-        qDebug()
-            << "BuildFilters::initializeUniqueItems"
-               ;
-    }
+    if (debugBuildFilters) qDebug() << "BuildFilters::appendUniqueItems";
 
-    // general map to count unique instances (reused for each category)
-    QMap<QString,int> map;
-    int rows = dm->rowCount();
-    double progressInc = 7.7;   // 100% / 13 categories (incl search)
+    const QVector<Sink> sink = sinks();
+    // 100% spread over the categories plus keywords
+    const double progressInc = 100.0 / (sink.size() + 1);
 
-    // Use QMap to count untiltered
-
-    // search (special predefined items to always be shown)
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::SearchColumn).data().toString().trimmed()]++;
-    }
-    filters->updateSearchCategoryCount(map, false /*isFiltered*/);
+    // search carries predefined items that are always shown, so it has its own sink
+    ops.append({FilterOp::SearchCount, countSlot(snap, FilterCat::Search, false),
+                nullptr, false, QString()});
     time("Initialize search count");
     emit updateProgress(progress += progressInc);
-    map.clear();
 
-    // picks
-    for (int row = 0; row < rows; row++) {
+    for (const Sink &s : sink) {
         if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::PickColumn).data().toString().trimmed()]++;
+        if (s.slot == FilterCat::Search) continue;      // handled above
+        ops.append({FilterOp::AddItems, countSlot(snap, s.slot, false),
+                    s.item, false, QString()});
+        time(QString("Initialize %1").arg(s.name));
+        emit updateProgress(progress += progressInc);
     }
-    filters->addCategoryItems(map, filters->picks);
-    time("Initialize picks");
-    emit updateProgress(progress += progressInc);
-    map.clear();
 
-    // ratings
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::RatingColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->ratings);
-    time("Initialize ratings");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // labels
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::LabelColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->labels);
-    time("Initialize labels");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // file types
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::TypeColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->types);
-    time("Initialize types");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // folders
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::FolderNameColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->folders);
-    time("Initialize folders");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // years
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        QString yr = dm->index(row, G::YearColumn).data().toString().trimmed();
-        // if (yr == "") qDebug() << "row" << row << "is blank";
-        map[dm->index(row, G::YearColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->years);
-    time("Initialize years");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // days
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::DayColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->days);
-    time("Initialize days");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // camera models
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::CameraModelColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->models);
-    time("Initialize models");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // lenses
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::LensColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->lenses);
-    time("Initialize lenses");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // focal lengths
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::FocalLengthColumn).data().toString().trimmed().rightJustified(4, ' ')]++;
-    }
-    filters->addCategoryItems(map, filters->focalLengths);
-    time("Initialize focallengths");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // titles
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::TitleColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->titles);
-    time("Initialize titles");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // creators
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::CreatorColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->creators);
-    time("Initialize creators");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // // missing thumbnails
-    // for (int row = 0; row < rows; row++) {
-    //     if (abort) return;
-    //     map[dm->index(row, G::MissingThumbColumn).data().toString().trimmed()]++;
-    // }
-    // filters->addCategoryItems(map, filters->missingThumbs);
-    // time("Initialize missing thumbs");
-    // emit updateProgress(progress += progressInc);
-    // map.clear();
-
-    // duplicate found (compare)
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        map[dm->index(row, G::CompareColumn).data().toString().trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->compare);
-    time("Initialize compare");
-    emit updateProgress(progress += progressInc);
-    map.clear();
-
-    // keywords
-    for (int row = 0; row < rows; row++) {
-        if (abort) return;
-        if (isHiddenRaw(row)) continue;
-        QStringList x = dm->index(row, G::KeywordsAllColumn).data().toStringList();
-        for (int i = 0; i < x.size(); i++) map[x.at(i).trimmed()]++;
-    }
-    filters->addCategoryItems(map, filters->keywords);
+    if (abort) return;
+    ops.append({FilterOp::AddItems, countKeywords(snap, false),
+                filters->keywords, false, QString()});
     time("Initialize keywords");
     emit updateProgress(progress += progressInc);
-    map.clear();
 }
 
 void BuildFilters::time(QString msg)
@@ -1072,6 +784,93 @@ void BuildFilters::time(QString msg)
     buildFiltersTimer.restart();
 }
 
+/*  HAND THE RECORDED OPS TO THE GUI THREAD.
+
+    Inline when the caller already IS the GUI thread -- updateCategory(runSync)
+    calls run() directly precisely so the tree is updated BEFORE the caller goes
+    on to MW::filterChange, and deferring it there would reintroduce the
+    use-after-free that runSync exists to prevent.
+
+    Otherwise the batch is stashed and a queued call posted. It is NOT a
+    BlockingQueuedConnection: abortProcessing() calls wait() from the GUI
+    thread, so a worker blocking on the GUI thread would deadlock against it.
+*/
+void BuildFilters::dispatchOps(FilterOps &ops)
+{
+    if (ops.isEmpty()) return;
+
+    if (G::isGuiThread()) {
+        applyOps(ops);
+        return;
+    }
+    {
+        QMutexLocker lock(&mutex);
+        pendingOps += ops;
+    }
+    QMetaObject::invokeMethod(this, [this]() { flushOps(); }, Qt::QueuedConnection);
+}
+
+/*  Drain whatever the worker stashed. Runs on the GUI thread, either from the
+    posted call above or synchronously from abortProcessing(), which drains
+    before letting a new build start so a batch cannot be applied to a tree that
+    has since been reset. Swapping under the mutex makes a double call harmless.
+*/
+void BuildFilters::flushOps()
+{
+    if (!G::isGuiThread()) return;
+    FilterOps ops;
+    {
+        QMutexLocker lock(&mutex);
+        ops.swap(pendingOps);
+    }
+    applyOps(ops);
+}
+
+void BuildFilters::applyOps(const FilterOps &ops)
+{
+    /*  Every branch below mutates the Filters QTreeWidget or its items. Both
+        callers already check, but the guard is what keeps the invariant true
+        if a third one is ever added -- this whole class exists because those
+        calls used to run on the worker thread. */
+    if (!G::isGuiThread()) {
+        G::issue("Warning", "applyOps called off the GUI thread",
+                 "BuildFilters::applyOps");
+        return;
+    }
+
+    for (const FilterOp &op : ops) {
+        switch (op.kind) {
+        case FilterOp::SearchCount:
+            filters->updateSearchCategoryCount(op.map, op.flag);
+            break;
+        case FilterOp::AddItems:
+            filters->addCategoryItems(op.map, op.item);
+            break;
+        case FilterOp::UnfilteredCount:
+            filters->updateUnfilteredCountPerItem(op.map, op.item);
+            break;
+        case FilterOp::FilteredCount:
+            filters->updateFilteredCountPerItem(op.map, op.item);
+            break;
+        case FilterOp::CategoryItems:
+            filters->updateCategoryItems(op.map, op.item);
+            break;
+        case FilterOp::Update:
+            filters->update();
+            break;
+        case FilterOp::TextColor:
+            filters->setEachCatTextColor();
+            break;
+        case FilterOp::MenuUpdate:
+            emit updateFilterMenu(op.src);
+            break;
+        case FilterOp::Done:
+            done();
+            break;
+        }
+    }
+}
+
 void BuildFilters::run()
 {
     idle = false;
@@ -1080,10 +879,12 @@ void BuildFilters::run()
         G::log("BuildFilters::run", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
     {
+        /* Deliberately does NOT print filters->filtersBuilt: run() touches
+           nothing on the Filters widget, and a debug line is not a reason to
+           make that untrue. */
         qDebug()
             << "BuildFilters::run"
             << "action =" << action
-            << "filters->filtersBuilt =" << filters->filtersBuilt
                ;
     }
 
@@ -1092,35 +893,58 @@ void BuildFilters::run()
         buildFiltersTimer.restart();
     }
 
+    /*  The counting is the only part that belongs on this thread. It reads the
+        snapshot and RECORDS what the Filters tree should be told; the tree
+        itself is touched on the GUI thread by applyOps. */
+    /*  Take our own reference to the snapshot the entry point published. Held
+        for the whole run, so a snapshot taken on the GUI thread meanwhile
+        builds a separate object and cannot pull this one out from under us. */
+    std::shared_ptr<const FilterSnapshot> snapshot;
+    {
+        QMutexLocker lock(&mutex);
+        snapshot = pendingSnap;
+    }
+    if (!snapshot) snapshot = std::make_shared<FilterSnapshot>();
+    const FilterSnapshot &snap = *snapshot;
+
+    FilterOps ops;
+
     switch (action) {
     case Action::Reset:
-        if (!abort) appendUniqueItems();
+        if (!abort) appendUniqueItems(snap, ops);
         [[fallthrough]]; // deliberate fall-through
     case Action::UpdateCounts:
         if (!abort) {
-            updateFilteredCounts();
-            updateUnfilteredSearchCount();
+            updateFilteredCounts(snap, ops);
+            updateUnfilteredSearchCount(snap, ops);
         }
         break;
     // proxy baseline changed (combineRawJpg toggle, rows added/removed)
     case Action::UpdateAllCounts:
         if (!abort) {
-            updateUnfilteredCounts();
-            updateUnfilteredSearchCount();
-            updateFilteredCounts();
+            updateUnfilteredCounts(snap, ops);
+            updateUnfilteredSearchCount(snap, ops);
+            updateFilteredCounts(snap, ops);
         }
         break;
     // category item edited
     case Action::UpdateCategory:
         // no change to SortFilter
         //afterAction = AfterAction::NoFilterChange;
-        if (!abort) updateCategoryItems();
+        if (!abort) updateCategoryItems(snap, ops);
         break;
     }
 
-    if (!abort) filters->setEachCatTextColor();
+    if (!abort) ops.append({FilterOp::TextColor, {}, nullptr, false, QString()});
 
-    done();
+    /*  done() closes the build (re-enables the panel, sets filtersBuilt, fires
+        the afterAction). It runs LAST, on the GUI thread, after the tree has
+        actually been updated -- it used to run here, before the GUI had seen
+        anything, which is why finishedBuildFilters could reach MW while the
+        panel still held the previous folder's items. */
+    ops.append({FilterOp::Done, {}, nullptr, false, QString()});
+
+    dispatchOps(ops);
 
     setIdle();
     emit stopped("BuildFilters");

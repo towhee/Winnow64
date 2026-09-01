@@ -109,6 +109,11 @@ MetaRead::MetaRead(QObject *parent,
             dm, &DataModel::setIconFromVideoFrame);
     connect(frameDecoder, &FrameDecoder::videoFrameFailed,
             dm, &DataModel::clearVideoReadingFlag);
+    /* The GUI thread tells us when a video decode has resolved, so the
+       worker-local in-flight marker can be dropped without reading the model
+       from this thread. Queued: dm lives on the GUI thread, this does not. */
+    connect(dm, &DataModel::videoReadingCleared,
+            this, &MetaRead::onVideoReadingCleared);
     connect(frameDecoder, &FrameDecoder::setValDm,
             dm, &DataModel::setValDm);
 
@@ -361,6 +366,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         their setIcon is still in flight on the main thread. */
         readSuccessThisCycle.clear();
         rowsReading.clear();
+        videoRowsReading.clear();
         if (isDebug)
         {
             qDebug().noquote()
@@ -569,6 +575,7 @@ void MetaRead::initialize(QString src)
     cycling.fill(false);
     readSuccessThisCycle.clear();
     rowsReading.clear();
+    videoRowsReading.clear();
 
     // reset diagnostic lifetime counters
     readsSuccessCount.store(0, std::memory_order_relaxed);
@@ -941,6 +948,21 @@ QString MetaRead::reportLifetimeCounters()
     return reportString;
 }
 
+void MetaRead::onVideoReadingCleared(int sfRow, int fromInstance)
+{
+/*
+    A video row's frame decode has been resolved on the GUI thread (a frame
+    arrived, or FrameDecoder reported a failure). Drop the worker-local marker
+    so dispatch may revisit the row.
+
+    A stale instance is ignored: the set is cleared wholesale on setStartRow
+    and initialize, so a late signal from the previous folder must not remove
+    an sf row the CURRENT folder has just dispatched.
+*/
+    if (fromInstance != instance) return;
+    videoRowsReading.remove(sfRow);
+}
+
 inline bool MetaRead::needToRead(int sfRow)
 /*
     Returns true if either the metadata or icon (thumbnail) has not been loaded and
@@ -957,13 +979,11 @@ inline bool MetaRead::needToRead(int sfRow)
     bool isMeta = dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted;
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
-    /* In-flight check. Non-video rows use the worker-local rowsReading set;
-       video rows still use the DataModel column because the GUI thread (via
-       FrameDecoder→setIconFromVideoFrame) is what clears it after the frame
-       is decoded. This avoids the prior per-row cross-thread proxy write. */
-    bool isReading = isVideo
-        ? dm->sf->index(sfRow, G::MetadataReadingColumn).data().toBool()
-        : rowsReading.contains(sfRow);
+    /* In-flight check, entirely worker-local. Video rows have their own set
+       because their decode outlives the Reader -- see videoRowsReading in the
+       header for why neither a direct nor a queued model write works here. */
+    bool isReading = isVideo ? videoRowsReading.contains(sfRow)
+                             : rowsReading.contains(sfRow);
 
     // already reading this item?
     if (isReading || isIcon) {
@@ -980,10 +1000,17 @@ inline bool MetaRead::needToRead(int sfRow)
     }
 
     // mark in-flight
-    if (isVideo)
-        dm->sf->setData(dm->sf->index(sfRow, G::MetadataReadingColumn), true);
-    else
+    if (isVideo) {
+        videoRowsReading.insert(sfRow);
+        /* Keep the column in step for the table and the diagnostics report,
+           but through the queued setter -- the guard above is what actually
+           prevents a double dispatch. */
+        emit setValSf(sfRow, G::MetadataReadingColumn, true, instance,
+                      "MetaRead::needToRead");
+    }
+    else {
         rowsReading.insert(sfRow);
+    }
 
     if (!isMeta) {
         needMeta = true;
@@ -1183,11 +1210,12 @@ void MetaRead::processReturningReader(int id, Reader *r)
        set when a new cycle begins.
 
        Non-video: clear the worker-local reading flag now that the reader
-       has returned. Video rows keep their flag (held in the DataModel
-       MetadataReadingColumn) until FrameDecoder→setIconFromVideoFrame
-       clears it on the GUI thread; clearing here would let dispatch
-       re-pick the same video before its frame is decoded, spawning
-       concurrent QMediaPlayers on the same file (AVFoundation corruption). */
+       has returned. Video rows keep their flag (videoRowsReading) until the
+       GUI thread reports the decode resolved via
+       DataModel::videoReadingCleared -> onVideoReadingCleared; clearing here
+       would let dispatch re-pick the same video before its frame is decoded,
+       spawning concurrent QMediaPlayers on the same file (AVFoundation
+       corruption). */
     {
         QModelIndex dmIdx = dm->index(dmRow, 0);
         QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
