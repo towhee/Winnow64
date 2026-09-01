@@ -109,15 +109,22 @@ typedef std::shared_ptr<RowSyncArray> RowSyncPtr;
 /*  The proxy's order and identity, copied on the GUI thread. */
 struct ProxySnapshot {
     int instance = -1;
+    /*  The DATAMODEL row count. Not the same as rowCount() below, which is the
+        proxy's: a filtered row still exists in the model, and progress
+        reporting and the load-completion checks count model rows. */
+    int sourceRows = 0;
     QVector<int> dmRowOf;               // by proxy row -> datamodel row
     QVector<QString> pathOf;            // by proxy row -> absolute file path
     QHash<QString, int> sfRowOfPath;    // reverse lookup, replaces proxyRowFromPath
+    QHash<int, int> sfRowOfDmRow;       // reverse of dmRowOf, for readers that
+                                        // report a datamodel row
 
     int rowCount() const { return dmRowOf.size(); }
     bool contains(int sfRow) const { return sfRow >= 0 && sfRow < dmRowOf.size(); }
     int dmRow(int sfRow) const { return contains(sfRow) ? dmRowOf.at(sfRow) : -1; }
     QString path(int sfRow) const { return contains(sfRow) ? pathOf.at(sfRow) : QString(); }
     int sfRow(const QString &fPath) const { return sfRowOfPath.value(fPath, -1); }
+    int sfRowFromDmRow(int dmRow) const { return sfRowOfDmRow.value(dmRow, -1); }
 };
 
 typedef std::shared_ptr<const ProxySnapshot> ProxySnapshotPtr;

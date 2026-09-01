@@ -100,6 +100,10 @@ signals:
        from the datamodel. Only MW knows whether the model is ready for that, so it owns
        the rebuild (buildFiltersWhenModelReady) and this only asks. */
     void rebuildFolderCategoriesRequested();
+    /*  The user flipped the scope from THIS panel. MW::setScope is the one place
+        G::scope changes and the two Catalog tree rows are mirrored, so the panel
+        reports rather than decides. */
+    void scopeChanged(int scope);
 
 private slots:
     /* Run the Catalog query. Debounced; a no-op in Folders scope, where the tree drives
@@ -132,6 +136,10 @@ private:
        -- and so what gets loaded is exactly what the count described. */
     QStringList results;
     int totalMatches = 0;
+    /*  True when the catalog scope is showing the most recent images because
+        nothing has been asked -- the footer says something different then, and
+        it is not a "no matches" case. */
+    bool noQuery = true;
 
     Scope currentScope = FolderScope;
     bool scanning = false;
@@ -141,6 +149,12 @@ private:
        building a list nobody scrolls to the end of. The count reported is the TRUE total,
        so the user is told when they are seeing a subset. */
     static constexpr int kResultLimit = 5000;
+    /*  The most a catalog search will load WITHOUT being asked. Equal to
+        kResultLimit today, so every result the panel can produce auto-loads;
+        it is a separate constant because the two answer different questions --
+        how much may be shown, and how much may be replaced unasked -- and the
+        second is the one to lower if a load ever feels heavy. */
+    static constexpr int kAutoLoadMax = kResultLimit;
     /* Keystrokes are coalesced into one query: it hits SQLite and FTS5 on the GUI thread,
        and at a quarter of a million rows a query per character would be felt. */
     static constexpr int kDebounceMs = 250;

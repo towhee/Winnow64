@@ -965,6 +965,10 @@ void MW::showEvent(QShowEvent *event)
 
     G::isInitializing = false;
 
+    /*  Seed the Catalog rows once the index can be asked. Not earlier: the
+        catalog opens lazily and a count taken before that reads as "no index". */
+    updateCatalogScopeRows();
+
     G::issueBeginSession();
 
     if (G::issueLog->failedToOpen) {
@@ -2975,6 +2979,13 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 */
     G::t.start();
 
+    /*  Choosing a folder IS choosing the Folders scope -- that is what makes the
+        Catalog row an alternative to the tree rather than a separate feature.
+        Ahead of everything else so the panel and both Catalog rows are already
+        consistent by the time the load starts. setScope early-returns when the
+        scope has not changed, so the ordinary folder click costs nothing. */
+    setScope(G::Scope::Folders, "MW::folderSelectionChange");
+
     QString fun = "MW::folderSelectionChange";
     if (G::isLogger || G::isFlowLogger)
     {
@@ -4307,7 +4318,8 @@ void MW::folderChanged(bool aborted)
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
        metadata ~20K per image */
     int rows = dm->rowCount();
-    int maxIconsToLoad = rows < dm->iconChunkSize ? rows : dm->iconChunkSize;
+    const int chunk = dm->iconChunkSize.load();
+    int maxIconsToLoad = rows < chunk ? rows : chunk;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
     // If no new images added to datamodel (only removals or blank folders)
@@ -4565,6 +4577,7 @@ void MW::folderChangeCompleted()
                 QMetaObject::invokeMethod(this, [this]{
                     if (catalogDock && catalogDock->isVisible()) catalogView->refresh();
                     if (findPanel && filterDock->isVisible()) findPanel->refresh();
+                    updateCatalogScopeRows();
                 }, Qt::QueuedConnection);
             });
         }
@@ -5416,6 +5429,8 @@ void MW::setBackgroundShade(int shade)
     /* The Find panel's scope buttons carry their own theme-derived stylesheet -- the
        app-wide QToolButton rule has no :checked state to show which scope is current. */
     if (findPanel) findPanel->updateStyle();
+    if (folderCatalogScopeRow) folderCatalogScopeRow->updateStyle();
+    if (favCatalogScopeRow)    favCatalogScopeRow->updateStyle();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(G::css);

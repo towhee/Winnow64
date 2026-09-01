@@ -395,11 +395,13 @@ void DataModel::rebuildProxySnapshot()
 
     auto snap = std::make_shared<ProxySnapshot>();
     snap->instance = instance;
+    snap->sourceRows = rowCount();
     if (sf != nullptr) {
         const int n = sf->rowCount();
         snap->dmRowOf.resize(n);
         snap->pathOf.resize(n);
         snap->sfRowOfPath.reserve(n);
+        snap->sfRowOfDmRow.reserve(n);
         for (int sfRow = 0; sfRow < n; ++sfRow) {
             const QModelIndex sfIdx = sf->index(sfRow, 0);
             const int dmRow = sf->mapToSource(sfIdx).row();
@@ -407,6 +409,7 @@ void DataModel::rebuildProxySnapshot()
             snap->dmRowOf[sfRow] = dmRow;
             snap->pathOf[sfRow] = fPath;
             if (!fPath.isEmpty()) snap->sfRowOfPath.insert(fPath, sfRow);
+            if (dmRow >= 0) snap->sfRowOfDmRow.insert(dmRow, sfRow);
         }
     }
     {
@@ -3435,7 +3438,7 @@ void DataModel::resolveIconChunkSize()
     if (isDebug || G::isLogger)
         G::log("DataModel::resolveIconChunkSize",
                QString("rows=%1 budgetIcons=%2 iconChunkSize=%3 mode=%4")
-                   .arg(rows).arg(budgetIcons).arg(iconChunkSize)
+                   .arg(rows).arg(budgetIcons).arg(iconChunkSize.load())
                    .arg(iconChunkSize < rows ? "JIT window" : "full"));
 
     setIconRange(currentSfRow);
@@ -3522,7 +3525,7 @@ void DataModel::refineIconChunkSize()
         G::log("DataModel::refineIconChunkSize",
                QString("rows=%1 avgKB=%2 budgetIcons=%3 iconChunkSize=%4 mode=%5")
                    .arg(rows).arg(avgIconMB() * 1024, 0, 'f', 1)
-                   .arg(budgetIcons).arg(iconChunkSize)
+                   .arg(budgetIcons).arg(iconChunkSize.load())
                    .arg(iconChunkSize < rows ? "JIT window" : "full"));
 
     setIconRange(currentSfRow);
@@ -3586,7 +3589,7 @@ void DataModel::applyIconCachePressure()
             if (isDebug || G::isLogger)
                 G::log("DataModel::applyIconCachePressure",
                        QString("level=%1 shrank iconChunkSize=%2 availMB=%3")
-                           .arg(level).arg(iconChunkSize)
+                           .arg(level).arg(iconChunkSize.load())
                            .arg(static_cast<qint64>(G::availableMemoryMB)));
         }
         iconCachePressureLatched = true;
@@ -4615,11 +4618,11 @@ QString DataModel::reportHealthChecks()
     if (visibleIcons > iconChunkSize) {
         line("WARN", "icon chunk vs visible",
              QString("visibleIcons=%1 > iconChunkSize=%2 — cache will thrash")
-                 .arg(visibleIcons).arg(iconChunkSize));
+                 .arg(visibleIcons).arg(iconChunkSize.load()));
     } else {
         line("OK", "icon chunk vs visible",
              QString("visibleIcons=%1, iconChunkSize=%2")
-                 .arg(visibleIcons).arg(iconChunkSize));
+                 .arg(visibleIcons).arg(iconChunkSize.load()));
     }
 
     // 7. bytesUsed sanity.

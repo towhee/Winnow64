@@ -3023,5 +3023,6 @@ Plan written. My thoughts on your proposal, briefly:
     stay one policy.
 
 Stage 0 - portrait videos not rotated
+        - ImageCache has pauses while still cached items
 
 

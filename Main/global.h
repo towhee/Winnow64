@@ -259,6 +259,19 @@ Q_NAMESPACE
     enum class OperationMode : quint8 { Preview, Develop };
     Q_ENUM_NS(OperationMode)
 
+    /*  WHICH SET OF IMAGES THE USER IS LOOKING AT.
+
+        Folders = whatever the Folders/Bookmarks selection loaded. Catalog = the
+        whole local index, searched across folders. It is ONE fact with three
+        views -- the Catalog row above the Folders tree, the same row above
+        Bookmarks, and the Find dock's Folders|Catalog buttons -- so it lives
+        here and MW::setScope is the only thing that changes it. Before this the
+        Find dock owned the scope privately and the trees knew nothing about it,
+        which is why selecting a folder and searching the catalog felt like two
+        different applications. */
+    enum class Scope : quint8 { Folders, Catalog };
+    Q_ENUM_NS(Scope)
+
     /* Which of an image's two pictures the grid and the loupe show when NOT in Develop
        mode (in Develop the developed picture is the only sensible answer):
 
@@ -517,6 +530,7 @@ Q_NAMESPACE
        winnowDecodeRawEngine. A/B knob for the Core Image vs in-house decode paths. */
     extern DecodeRawEngine decodeRawEngine;
     extern OperationMode operationMode;     // Preview (fast review) vs Develop (best-quality single image)
+    extern Scope scope;                     // Folders (loaded set) vs Catalog (whole index)
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)
     /* Long-edge cap for a written devPreview; one of the kDevPreviewSize* values. */
     extern int devPreviewMaxEdge;

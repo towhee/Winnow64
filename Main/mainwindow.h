@@ -39,6 +39,7 @@
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
 #include "Views/findpanel.h"
+#include "Views/catalogscoperow.h"
 #include "Main/catalogscanner.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
@@ -991,6 +992,12 @@ private slots:
     void showFavDock();
     void showFilterDock();
     void showCatalogDock();
+    /*  THE ONE PLACE G::scope CHANGES. Every entry point -- either Catalog row,
+        the Find dock's Folders|Catalog buttons, F2/Shift+F2, and selecting a
+        folder -- routes here, and this pushes the result back to all of them so
+        they cannot disagree. src is for the log only. */
+    void setScope(G::Scope s, QString src = "");
+    void updateCatalogScopeRows();   // push the catalogued count onto both rows
     void showMetadataDock();
 
     void setMenuBarVisibility();
@@ -1597,6 +1604,11 @@ private:
        a second dock. Null when the flag is off, in which case the two original panels are
        built exactly as before. */
     FindPanel *findPanel = nullptr;
+    /*  The Catalog scope row above each of the two scope trees. See
+        Views/catalogscoperow.h -- two views of one fact, both mirrored by
+        MW::setScope. */
+    CatalogScopeRow *folderCatalogScopeRow = nullptr;
+    CatalogScopeRow *favCatalogScopeRow = nullptr;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;

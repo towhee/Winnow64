@@ -961,8 +961,7 @@ void MW::searchTextEdit()
         it is just no longer the thing the user types into. */
     if (G::useFindDock) {
         if (!findPanel) return;
-        catalogDockVisibleAction->setChecked(false);  // the menu item is the scope
-        findPanel->setScope(FindPanel::FolderScope);
+        setScope(G::Scope::Folders, "MW::searchTextEdit");
         findPanel->focusSearch();
         return;
     }

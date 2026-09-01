@@ -264,7 +264,10 @@ public:
        briefly seeing a half-updated range is benign and self-corrects next update. */
     std::atomic<int> startIconRange{0};
     std::atomic<int> endIconRange{0};
-    int iconChunkSize;                  // max suggested number of icons to cache
+    /*  Read from metaReadThread (setStartRow) and written by the GUI thread's
+        chunk-sizing logic, so it is atomic like startIconRange/endIconRange
+        beside it. */
+    std::atomic<int> iconChunkSize{0};   // max suggested number of icons to cache
     int scrollToIcon = 0;
 
     /* Layer 2 (measured refinement): running footprint of icons actually loaded this

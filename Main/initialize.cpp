@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Views/catalogscoperow.h"
 #include "Develop/workingimagecache.h"
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
@@ -353,7 +354,14 @@ void MW::createMetaRead()
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
 
     // selectCurrentIndex from MetaRead
-    connect(metaRead, &MetaRead::select, sel, &Selection::setCurrentIndex, Qt::QueuedConnection);
+    /*  MetaRead sends the proxy ROW; the index is built HERE, on the GUI thread,
+        at the moment it is used. A QModelIndex carried across a queued
+        connection was built on metaReadThread and could name a different row by
+        the time it arrived. */
+    connect(metaRead, &MetaRead::selectRow, sel, [this](int sfRow, bool clearSelection) {
+        if (sfRow >= 0 && sfRow < dm->sf->rowCount())
+            sel->setCurrentIndex(dm->sf->index(sfRow, 0), clearSelection);
+    }, Qt::QueuedConnection);
 
     // MetaRead thread abort (when MW::stop)
     connect(this, &MW::abortMetaRead, metaRead, &MetaRead::abortProcessing);
@@ -427,6 +435,7 @@ void MW::createCatalogScanner()
                 if (catalogView && catalogDock && catalogDock->isVisible())
                     catalogView->refresh();
                 if (findPanel && filterDock->isVisible()) findPanel->refresh();
+                updateCatalogScopeRows();
                 if (G::isLogger)
                     G::log("MW::createCatalogScanner",
                            "catalog scan finished, indexed = " +
@@ -1387,6 +1396,24 @@ void MW::createStatusBar()
     statusBar()->setMinimumHeight(qMax(statusBarBaseHeight, progress->preferredHeight()));
 }
 
+/*  Wrap a scope tree (Folders or Bookmarks) with a Catalog row above it.
+
+    The dock's widget becomes a plain container so the row sits at the top and the
+    tree fills the rest. The DOCK keeps its objectName, so a WindowState saved
+    before the row existed still restores -- Qt keys dock state on the dock, not
+    on what it contains.
+*/
+static QWidget *wrapWithCatalogScopeRow(CatalogScopeRow *row, QWidget *tree)
+{
+    QWidget *box = new QWidget;
+    QVBoxLayout *v = new QVBoxLayout(box);
+    v->setContentsMargins(0, 0, 0, 0);
+    v->setSpacing(0);
+    v->addWidget(row);
+    v->addWidget(tree, 1);
+    return box;
+}
+
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log("MW::createFolderDock");
@@ -1398,7 +1425,11 @@ void MW::createFolderDock()
     dockTextNames << folderDockTabText;
     folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
     // folderDock->setObjectName("FoldersDock");
-    folderDock->setWidget(fsTree);
+    folderCatalogScopeRow = new CatalogScopeRow;
+    connect(folderCatalogScopeRow, &CatalogScopeRow::clicked, this, [this]{
+        setScope(G::Scope::Catalog, "folderCatalogScopeRow");
+    });
+    folderDock->setWidget(wrapWithCatalogScopeRow(folderCatalogScopeRow, fsTree));
     connect(folderDock, &DockWidget::focus, this, &MW::focusOnDock);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
@@ -1479,7 +1510,11 @@ void MW::createFavDock()
     dockTextNames << favDockTabText;
     favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
     // favDock->setObjectName("Bookmarks");
-    favDock->setWidget(bookmarks);
+    favCatalogScopeRow = new CatalogScopeRow;
+    connect(favCatalogScopeRow, &CatalogScopeRow::clicked, this, [this]{
+        setScope(G::Scope::Catalog, "favCatalogScopeRow");
+    });
+    favDock->setWidget(wrapWithCatalogScopeRow(favCatalogScopeRow, bookmarks));
     connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // customize the favDock titlebar
@@ -1669,6 +1704,14 @@ void MW::createFilterDock()
         /* Returning to Folders: the tree is holding catalog values, so rebuild it from
            the datamodel. buildFilters->reset() clears the catalog items (and the checks
            that went with them) before build() repopulates from the model. */
+    /*  The panel reports its own scope flips; MW mirrors them to the Catalog
+        rows above the Folders and Bookmarks trees. */
+    connect(findPanel, &FindPanel::scopeChanged, this, [this](int sc){
+        setScope(sc == FindPanel::CatalogScope ? G::Scope::Catalog
+                                               : G::Scope::Folders,
+                 "FindPanel::scopeChanged");
+    });
+
         connect(findPanel, &FindPanel::rebuildFolderCategoriesRequested, this, [this]{
             if (G::isInitializing) return;
             buildFilters->reset(false /*collapse*/);

@@ -188,6 +188,10 @@ void FindPanel::setScope(Scope s)
     foldersBtn->setChecked(s == FolderScope);
     catalogBtn->setChecked(s == CatalogScope);
     applyScope();
+    /*  Tell MW, which owns G::scope and the Catalog rows above the two trees.
+        MW::setScope early-returns when the scope already matches, so calling
+        back into this panel from there cannot loop. */
+    emit scopeChanged(static_cast<int>(s));
 }
 
 void FindPanel::applyScope()
@@ -287,18 +291,41 @@ void FindPanel::runSearch()
 
     const CatalogQuery q = currentQuery();
 
-    /* An empty query would match the whole catalog. Reporting "247,000 images" and
-       offering to load them is not a useful answer to having asked for nothing, so the
-       panel stays quiet until the user has actually said something. */
-    if (q.text.trimmed().isEmpty() && !filters->isAnyCatalogFilter()) {
-        results.clear();
-        totalMatches = 0;
-        updateFooter();
-        return;
-    }
+    /*  AN EMPTY QUERY NOW SHOWS THE MOST RECENT IMAGES rather than nothing.
 
+        It used to report nothing and disable Load, on the reasoning that offering to
+        load a quarter of a million images is not a useful answer to having typed
+        nothing. That reasoning holds for LOADING and is why kResultLimit still caps the
+        result. But it made Catalog an empty room: the user picked a scope and was shown
+        a blank panel, while picking a folder shows pictures immediately. That difference
+        IS the paradigm split this stage exists to remove -- so an empty query is
+        answered the way a folder is, with the newest images first (Catalog::search
+        already orders by captured DESC), and the footer says it is a window onto a
+        larger set. */
+    noQuery = q.text.trimmed().isEmpty() && !filters->isAnyCatalogFilter();
+
+    const QStringList previous = results;
     results = Catalog::instance().search(q, kResultLimit, &totalMatches);
     updateFooter();
+
+    /*  LOAD WITHOUT BEING ASKED. This is what removes the paradigm split: picking a
+        folder shows pictures, so picking Catalog -- or narrowing it -- must too. The
+        Load button stays for an explicit reload, and ADD stays because it is the one
+        thing this cannot do for the user: combining two searches is a decision, not a
+        default.
+
+        Guarded three ways, because a load is a full model reset plus a metadata read
+        and must not run on every keystroke:
+          - only when the result set actually CHANGED (typing that narrows nothing, or
+            a re-run of the same query, loads nothing);
+          - only up to kAutoLoadMax, above which the user is asked to narrow first --
+            replacing what they have with thousands of images they did not ask for is
+            not a good guess;
+          - never while the search box is mid-word, which the debounce already
+            enforces: runSearch only reaches here 250 ms after the last keystroke.
+    */
+    if (results != previous && !results.isEmpty() && results.size() <= kAutoLoadMax)
+        emit loadResults(results, false);
 }
 
 void FindPanel::updateFooter()
@@ -318,11 +345,17 @@ void FindPanel::updateFooter()
     }
 
     if (totalMatches == 0) {
-        resultLabel->setText(searchEdit->text().trimmed().isEmpty()
-                                     && !filters->isAnyCatalogFilter()
-            ? "Type or check something to search the catalog.\n"
-              "Counts shown are library totals, not filtered counts."
+        resultLabel->setText(noQuery
+            ? "Nothing is catalogued yet."
             : "No matches.");
+    }
+    else if (noQuery) {
+        /* No question asked: this is the catalog itself, newest first. Say which
+           window of it is on offer rather than implying it is a result set. */
+        resultLabel->setText(
+            QString("%1 images catalogued. Showing the %2 most recent --\n"
+                    "search or check a filter to narrow it.")
+                .arg(totalMatches).arg(results.size()));
     }
     else if (results.size() < totalMatches) {
         /* Say plainly that this is a subset, and what would be loaded. */
