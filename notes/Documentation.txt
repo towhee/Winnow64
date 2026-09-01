@@ -61,6 +61,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Image Change (Legacy — Needs Rewrite)
      Filter Change
      Worker Threads and the Model (Snapshots, and What Still Reads It)
+     The Row Store (What a Row Costs, and the Field Table)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -689,6 +690,44 @@ THREE READS WERE LEFT ALONE BECAUSE THEY WERE ALREADY SAFE -- SortFilter::isSusp
 VERIFIED THE SAME WAY, AND THE CHECK MATTERS MORE HERE. MetaRead IS the metadata and icon loader, so a silently-failing accessor does not corrupt anything -- it just quietly loads nothing, and --selftest would still exit 0 because rows exist. A temporary probe at the selftest exit reported metaAttempted, metaLoaded, iconLoaded and the cache figures: on a 50-row folder, 50/50/50 with 13 images cached at 752.2 MB, identical to the pre-change cache baseline. 50 of 50 is complete by definition, which is what establishes that iconLoadedAt, metaAttemptedAt and pathAt all resolve.
 
 NO WORKER THREAD READS THE MODEL ANY MORE. The audit that matters is mechanical and worth re-running after any change here: for BuildFilters, ImageCache and MetaRead, every dm-> reference on a worker thread is now either one of the published-view accessors, an atomic, or inside a report function that MW calls directly on the GUI thread.
+
+
+⏺ DataModel Changes > The Row Store (What a Row Costs, and the Field Table)
+
+WHAT A ROW COSTS, MEASURED. The plan to make the catalog browsable rests on one number -- whether a quarter of a million rows can be held in memory at all -- so it was measured on a prototype BEFORE any of DataModel was rewritten, at 5,000 and 20,000 rows (the two agreed to within 0.5%):
+
+    QStandardItemModel, 92 columns      19,900 bytes/row      4.6 GB at 250k
+    packed struct + interned repeats       573 bytes/row      137 MB at 250k
+                                                              (34x)
+
+THE 19,900 IS WHY THE CATALOG HAS A LOAD BUTTON. Each populated cell is a QStandardItem plus its QStandardItemData role list plus a pointer slot; addFileDataForRow sets ~30 and addMetadataForItem ~80, and 92 columns of that is roughly 20 KB before a single thumbnail. It is worse than the 15-18 KB the plan estimated from the type sizes, which is the ordinary reason for measuring rather than deriving.
+
+573 IS THE PESSIMISTIC END -- every row given a title and five keywords. A sparse row (neither) measured 413 bytes, so a real library lands between 98 MB and 137 MB. Two design questions were settled by the same harness rather than by argument: storing the full path costs ~190 bytes of the 573, and it is KEPT anyway, because the path is the identity key that icd, fPathRow and the proxy snapshot all use and composing it per access would trade 45 MB for an allocation on every hot path; and interning the repeated strings (folder, type, make, model, lens, year, day, creator, copyright, keywords) is what makes the rest affordable, since those are the same handful of values across a whole shoot.
+
+Datamodel/rowfields.h IS THE FIELD TABLE, and it is the answer to "should the index and the datamodel be one entity": YES, one SCHEMA and one loader, not one storage engine. The same facts about an image are currently written out four times by hand -- G::dataModelColumns, the datamodel cells, the catalog's image table, and Catalog::categorySql -- and that they agree is a matter of vigilance that has already been paid for, since tst_catalog::categoryItemsMatchWhatTheDatamodelWrites exists only to pin two of them against the other two. The table is an X-macro so a field declared once can generate all four.
+
+IT ALSO DRAWS THE RESIDENT/SCRATCH LINE, which is what makes the 137 MB possible. Resident fields are what every row needs to be listed, sorted, filtered and drawn. Scratch fields -- segment offsets, ICC buffers, decoder id/status/error -- are needed only while a decoder or cache is working on that particular image, and they are roughly a third of the current column set; they belong in a side table populated for the handful of rows in flight. ImageCache's bookkeeping already moved out of the model on exactly this reasoning; this is the same argument applied to the rest.
+
+tst_rowfields MAKES THE TABLE BINDING RATHER THAN DOCUMENTARY. It asks the real schema (PRAGMA table_info) rather than a pasted copy, which would be a fifth hand-maintained list, and it checks that every field naming a SQL column has one, that no scratch field is ever persisted, and that the resident/scratch/derived partition covers every field. It was verified to FAIL: a field pointing at a non-existent column was added deliberately, the test caught it by name, and it was removed. A drift test that has never been seen to fail is not evidence of anything.
+
+THE STORE IS BEING INTRODUCED AS A SHADOW, NOT AS A SWAP. A model cannot be half-swapped: change DataModel's base class and nothing works until everything works, so there is no point along the way where a test or a probe can say whether it is still correct. Datamodel/imagerow.h is therefore written BESIDE the QStandardItems -- the same DataModel::setData maintains both -- and DataModel::verifyRowStore() walks every row and every covered column and asks the two to agree. When that is clean over real folders the reads move across and the items go. Until then nothing reads the store; it is the thing under test.
+
+IT COVERS 37 COLUMNS, listed explicitly in RowStore::covers rather than inferred as "everything not scratch". A column silently assumed to be covered is a column the verification quietly stopped checking, which is the failure mode this whole arrangement exists to avoid.
+
+THE VERIFICATION COMPARES WHAT data() RETURNS, not what was passed to setData, and on the variant's TEXT rather than with QVariant::operator==. The model holds a quint32 where the store holds a qint64 and an int where it holds a quint8; those compare unequal as variants and identical as values, and it is the value the views and the filters read.
+
+IT FOUND TWO REAL BUGS ON ITS FIRST RUN, both in the store, both from assuming a column holds the type its name suggests:
+
+- RATING IS A QString, NOT A NUMBER. ImageMetadata::rating is empty when the image is unrated, and an empty rating is a DIFFERENT THING from a rating of 0 -- the Filters category list shows it as a blank row, not a "0" row. Stored as an int it read back as "0", which would have put every unrated image into a rating category it does not belong to.
+- MPix IS A FORMATTED STRING. The model writes QString::number(mp, 'f', 2), so a float in the store returned 24.15999984741211 where the model says 24.16 -- one category item per image instead of one per sensor size.
+
+Neither would have crashed anything. Both would have quietly changed what the Filters panel offered, which is exactly the kind of drift that is unreadable from the code and obvious from a diff. THE RULE the store follows, and that both bugs broke: return exactly what the model returned, not a tidier version of it. A column that looks numeric and is stored as text is stored as text here too.
+
+CLEAN OVER FIVE FOLDERS after the fix -- 4, 12, 13, 50 and 51 rows, including videos, a raw+jpg pair folder and a recursive load with navigation and a mid-load sort reversal: 0 mismatches out of 2,442 values checked. The interning is doing its job: 50 rows x 37 columns is 1,850 values held as 499 distinct strings.
+
+GROWTH IS LAZY, REMOVAL IS NOT. Rows are only ever APPENDED, so setData resizes the store when it notices the row count has moved. Removal takes rows from the MIDDLE (removeFolder, remove) and a QVector resize truncates from the END, so every store row past the deletion point would describe a different image; rowsRemoved therefore rebuilds the store from the items. That is scaffolding -- when the store is the only copy, removal splices the vector and there are no items to rebuild from.
+
+STILL TO DO, and deliberately not started in the same pass:
 
 
 ⏺ DataModel Changes > Sort Change

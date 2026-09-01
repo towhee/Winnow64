@@ -223,6 +223,12 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
+# tst_rowfields pins Datamodel/rowfields.h -- the single declaration of an image's
+# fields -- against the catalog's image table. The table exists so the model's
+# columns, the SQL schema and categorySql cannot drift apart; a table nothing
+# checks would drift exactly as the four hand-written lists it replaces did.
+winnow_add_unit_test(tst_rowfields unit/tst_rowfields.cpp)
+
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest
 # flag (main.cpp). Exits 0 only if the folder loaded images without crashing.
