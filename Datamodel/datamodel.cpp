@@ -645,6 +645,7 @@ void DataModel::clearDataModel()
         mProxySnapshot = std::make_shared<ProxySnapshot>();
     }
     rowStore.clear();
+    iconStore.clear();
 
     // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
     prevRawSuffix = "";
@@ -692,6 +693,21 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         rowStore.contains(idx.row()))
     {
         return rowStore.value(idx.row(), idx.column());
+    }
+
+    /*  Thumbnails come from the path-keyed icon store (Datamodel/iconstore.h).
+        Column 0 only, which is where they have always lived. An absent icon
+        returns an INVALID QVariant, not an empty QIcon: every caller tests
+        isNull() on the variant to decide whether a thumbnail exists yet. */
+    if (idx.isValid() && role == Qt::DecorationRole && idx.column() == 0) {
+        const QString fPath = rowStore.contains(idx.row())
+                                  ? rowStore.value(idx.row(), G::PathColumn).toString()
+                                  : QString();
+        if (!fPath.isEmpty()) {
+            const QIcon ic = iconStore.icon(fPath);
+            if (!ic.isNull()) return QVariant(ic);
+            return QVariant();
+        }
     }
     return QStandardItemModel::data(idx, role);
 }
@@ -763,6 +779,25 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         FROM the store, and every path read came back empty. No thumbnails, no
         loupe image: everything downstream needs the path to find the file. Two
         guards that must agree is one guard too many. */
+    /*  Thumbnails go to the icon store rather than onto the row. An empty or
+        null value is a REMOVE -- that is how clearIconsOutsideChunkRange and
+        the fileops icon reset already say "drop this thumbnail", so the icon
+        policy keeps working unchanged. */
+    /*  NOT gated on ok. ok is what QStandardItemModel made of the write, and the
+        item no longer holds the thumbnail -- so a removal (setData with an empty
+        QVariant, which is how clearIconsOutsideChunkRange drops an icon) must
+        reach the store whatever the base class decides to do with the cell. */
+    if (idx.isValid() && role == Qt::DecorationRole && col == 0) {
+        const QString fPath = rowStore.contains(idx.row())
+                                  ? rowStore.value(idx.row(), G::PathColumn).toString()
+                                  : QString();
+        if (!fPath.isEmpty()) {
+            const QIcon ic = qvariant_cast<QIcon>(value);
+            if (!value.isValid() || ic.isNull()) iconStore.remove(fPath);
+            else                                 iconStore.insert(fPath, ic);
+        }
+    }
+
     if (ok && idx.isValid() && RowStore::covers(col, role)) {
         if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
         rowStore.setValue(idx.row(), col, value);
@@ -3119,9 +3154,9 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     }
 
     QStandardItem *item = itemFromIndex(dmIdx);
-    if (itemFromIndex(dmIdx)->icon().isNull()) {
+    if (data(dmIdx, Qt::DecorationRole).isNull()) {
         if (item != nullptr) {
-            item->setIcon(QPixmap::fromImage(im));
+            setData(dmIdx, QVariant(QIcon(QPixmap::fromImage(im))), Qt::DecorationRole);
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataStatusColumn), G::MetaLoaded);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
@@ -3265,8 +3300,10 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     /* Idempotent: see setIcon1 for rationale.  Replacing a live decoration
        runs ~QPixmapIconEngine on the old QIcon, which under memory pressure
        can crash. */
-    if (QStandardItem *existing = itemFromIndex(dmIdx)) {
-        if (!existing->icon().isNull()) {
+    /*  Through data(), not itemFromIndex()->icon(): the thumbnail lives in the
+        path-keyed icon store now, and the item's own icon is always null. */
+    {
+        if (!data(dmIdx, Qt::DecorationRole).isNull()) {
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
             updateIconChunkLoaded();
@@ -3415,8 +3452,10 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
        live decoration runs ~QPixmapIconEngine on the old QIcon — which under
        memory pressure can hit a freed/poisoned pointer and abort.  Mirrors
        the guard in setIconFromVideoFrame:2214. */
-    if (QStandardItem *existing = itemFromIndex(dmIdx)) {
-        if (!existing->icon().isNull()) {
+    /*  Through data(), not itemFromIndex()->icon(): the thumbnail lives in the
+        path-keyed icon store now, and the item's own icon is always null. */
+    {
+        if (!data(dmIdx, Qt::DecorationRole).isNull()) {
             // ensure flags are correct even though the pixmap is unchanged (batched)
             {
                 const QSignalBlocker blocker(this);

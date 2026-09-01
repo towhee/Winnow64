@@ -1986,7 +1986,12 @@ void IconView::startDrag(Qt::DropActions)
         if (pw) painter.setPen(QPen(QColor(255,255,255,128), pw));
         int x = 0, y = 0, xMax = 0, yMax = 0;
         for (int i = 0; i < qMin(5, selection.count()); ++i) {
-            QPixmap pix = dm->item(selection.at(i).row())->icon().pixmap(w2);
+            /*  Through data(), not dm->item(...)->icon(): thumbnails live in
+                the path-keyed icon store now (Datamodel/iconstore.h) and the
+                QStandardItem's own icon is always null. */
+            QPixmap pix = qvariant_cast<QIcon>(
+                dm->index(selection.at(i).row(), 0)
+                    .data(Qt::DecorationRole)).pixmap(w2);
             pix.scaled(w2, h2);
             if (i == 4) {
                 x = (xMax - pix.width()) / 2;
@@ -2003,7 +2008,9 @@ void IconView::startDrag(Qt::DropActions)
         pix = pix.copy(0, 0, xMax, yMax);
         drag->setPixmap(pix);
     } else {
-        pix = dm->item(selection.at(0).row())->icon().pixmap(w);
+        pix = qvariant_cast<QIcon>(
+            dm->index(selection.at(0).row(), 0)
+                .data(Qt::DecorationRole)).pixmap(w);
         drag->setPixmap(pix);
     }
 
