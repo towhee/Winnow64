@@ -617,11 +617,9 @@ void MW::setRating()
                       Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
-            QModelIndex idx = dm->index(dmRow, 0);
             // is this part of a raw+jpg pair
-            if(idx.data(G::DupIsJpgRole).toBool()) {
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                int rowDup = rawIdx.row();
+            int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
+            if (rowDup >= 0) {
                 // update rating crash log
                 QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
@@ -813,13 +811,14 @@ void MW::setColorClass()
                       Qt::EditRole, Qt::AlignCenter);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
-            QModelIndex idx = dm->index(dmRow, 0);
             // is this part of a raw+jpg pair
-            if (idx.data(G::DupIsJpgRole).toBool()) {
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                int rowDup = rawIdx.row();
+            int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
+            if (rowDup >= 0) {
                 // update color class crash log
-                QString jpgPath = dm->sf->index(rowDup, G::PathColumn).data(G::PathRole).toString();
+                /* rowDup is a DATAMODEL row -- and when combineRawJpg is on the
+                   hidden raw row is filtered out of the proxy, so reading it
+                   through dm->sf named a different image (or none). */
+                QString jpgPath = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
                 // set color class (label) for raw file row as well
                 QString src = "MW::setColorClass";
@@ -948,6 +947,25 @@ void MW::searchTextEdit()
     }
     // set menu status for filterDock in window menu
     filterDockVisibleAction->setChecked(true);
+
+    /*  WITH THE FIND DOCK, F2 is the Folders half of the F2 / Shift+F2 pair: the
+        same shared search box as Shift+F2, switched to the Folders scope (see
+        MW::showCatalogDock for the other half).
+
+        It used to open an editor on filters->searchTrue instead. But
+        Filters::showAllCategories HIDES the Search category whenever
+        G::useFindDock -- the box is the same fact shown twice -- so F2 was
+        opening an editor on an item the user could not see, and the box it
+        should have focused was never touched. The searchTrue item still exists
+        as the STORAGE the proxy predicate reads via Filters::setSearchText;
+        it is just no longer the thing the user types into. */
+    if (G::useFindDock) {
+        if (!findPanel) return;
+        catalogDockVisibleAction->setChecked(false);  // the menu item is the scope
+        findPanel->setScope(FindPanel::FolderScope);
+        findPanel->focusSearch();
+        return;
+    }
 
     // edit search text after this function returns
     QTimer::singleShot(100, this, SLOT(searchTextEdit2()));
