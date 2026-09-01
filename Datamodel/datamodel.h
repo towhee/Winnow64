@@ -9,6 +9,7 @@
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
 #include "Datamodel/modelsync.h"
+#include "Datamodel/imagerow.h"
 #include "Cache/framedecoder.h"
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
@@ -74,6 +75,21 @@ public:
         maintained in the setData override. proxySnapshot() is the proxy's order
         and identity, rebuilt on the GUI thread whenever rows are inserted or
         removed or the proxy is re-sorted or re-filtered. */
+    /*  THE PACKED ROW STORE (Datamodel/imagerow.h), maintained ALONGSIDE the
+        QStandardItems while the storage change is being proven. setData writes
+        both; verifyRowStore() compares them over every row and covered column.
+        When that is clean over real folders the reads move across and the
+        items go -- see "The Row Store" in Documentation.txt. */
+    RowStore rowStore;
+    struct RowStoreCheck {
+        int rowsChecked = 0;
+        int valuesChecked = 0;
+        int mismatches = 0;
+        QStringList detail;         // first few, "row/column: item vs store"
+    };
+    RowStoreCheck verifyRowStore(int maxDetail = 12) const;
+    void rebuildRowStoreFromItems();
+
     RowSyncPtr rowSync() const;
     ProxySnapshotPtr proxySnapshot() const;
     void rebuildProxySnapshot();            // GUI thread

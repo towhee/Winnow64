@@ -198,6 +198,10 @@ DataModel::DataModel(QObject *parent,
         indexed by datamodel row, and a filtered-out row still needs its slot. */
     connect(this, &QAbstractItemModel::rowsInserted, this,
             [this]{ resizeRowSync(rowCount()); });
+    /*  A removal takes rows from the middle, so the packed store cannot simply
+        be resized -- see rebuildRowStoreFromItems. */
+    connect(this, &QAbstractItemModel::rowsRemoved, this,
+            [this]{ resizeRowSync(rowCount()); rebuildRowStoreFromItems(); });
     connect(this, &QAbstractItemModel::modelReset, this,
             [this]{ resizeRowSync(rowCount()); });
 
@@ -348,6 +352,85 @@ void DataModel::setModelProperties()
     bytesUsed in datamodel.h.
 */
 /*  ---- Worker-thread views of the model (Datamodel/modelsync.h) ---- */
+
+/*  Compare the packed row store against the QStandardItems it shadows.
+
+    This is what makes the storage change safe to complete. The rewrite has no
+    working intermediate state -- a model cannot be half-swapped -- so instead of
+    changing the storage and hoping, the store is written beside the items and
+    then asked to produce the same answers for every row and every column it
+    claims to cover. A clean report over real folders is the evidence; until
+    then the store is under test and nothing reads from it.
+
+    COMPARISON IS ON THE VARIANT'S TEXT, not on QVariant::operator==. The model
+    holds a quint32 where the store holds a qint64, an int where it holds a
+    quint8; those compare unequal as variants and identical as values, and it is
+    the VALUE the views and the filters read. Where a type genuinely matters --
+    CompareColumn is a bool that BuildFilters counts as text -- the store keeps
+    the model's own type, which is why this check is on what data() returns
+    rather than on what was passed to setData.
+*/
+/*  Rebuild the packed store from the items.
+
+    Needed because rows are removed from the MIDDLE (removeFolder, remove), and
+    a QVector resize truncates from the END -- so after a removal every store
+    row past the deletion point would describe a different image. Growth is
+    handled lazily in setData because rows are only ever APPENDED, where the
+    indices of existing rows do not move.
+
+    O(rows x covered columns), and it runs on a removal, which is rare and
+    already does several full passes (rebuildRowFromPathHash, recountLoadFlags).
+    When the store becomes the only copy this inverts -- removal will splice the
+    vector and the items will be gone -- so this is scaffolding, not the design.
+*/
+void DataModel::rebuildRowStoreFromItems()
+{
+    if (G::isLogger) G::log("DataModel::rebuildRowStoreFromItems");
+    rowStore.clear();
+    const int rows = rowCount();
+    rowStore.resize(rows);
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < G::TotalColumns; ++c) {
+            if (!RowStore::covers(c)) continue;
+            rowStore.setValue(r, c, index(r, c).data(Qt::EditRole));
+        }
+    }
+}
+
+DataModel::RowStoreCheck DataModel::verifyRowStore(int maxDetail) const
+{
+    RowStoreCheck out;
+    const int rows = rowCount();
+    if (rowStore.size() != rows) {
+        out.detail << QString("size mismatch: model %1 rows, store %2")
+                          .arg(rows).arg(rowStore.size());
+        out.mismatches++;
+        return out;
+    }
+    for (int r = 0; r < rows; ++r) {
+        ++out.rowsChecked;
+        for (int c = 0; c < G::TotalColumns; ++c) {
+            if (!RowStore::covers(c)) continue;
+            const QVariant a = index(r, c).data(Qt::EditRole);
+            const QVariant b = rowStore.value(r, c);
+            ++out.valuesChecked;
+            const QString sa = a.typeId() == QMetaType::QStringList
+                                   ? a.toStringList().join('\x1f') : a.toString();
+            const QString sb = b.typeId() == QMetaType::QStringList
+                                   ? b.toStringList().join('\x1f') : b.toString();
+            if (sa != sb) {
+                ++out.mismatches;
+                if (out.detail.size() < maxDetail) {
+                    out.detail << QString("row %1 col %2 (%3): item '%4' vs store '%5'")
+                                      .arg(r).arg(c)
+                                      .arg(headerData(c, Qt::Horizontal).toString(),
+                                           sa.left(40), sb.left(40));
+                }
+            }
+        }
+    }
+    return out;
+}
 
 RowSyncPtr DataModel::rowSync() const
 {
@@ -519,6 +602,7 @@ void DataModel::clearDataModel()
         mRowSync = std::make_shared<RowSyncArray>(0);
         mProxySnapshot = std::make_shared<ProxySnapshot>();
     }
+    rowStore.clear();
 
     // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
     prevRawSuffix = "";
@@ -594,6 +678,19 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
                     col == G::IconLoadedColumn ? &iconLoadedCount : &videoRowCount;
                 counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
             }
+        }
+    }
+
+    /*  Maintain the packed row store (Datamodel/imagerow.h) beside the items.
+        Only EditRole/DisplayRole: the store holds values, not presentation, and
+        the alignment/tooltip roles written to the same columns are not part of
+        what a row IS. While the storage change is being proven this is a shadow
+        copy that verifyRowStore() checks against the items; afterwards it is
+        the only copy. */
+    if (ok && idx.isValid() && (role == Qt::EditRole || role == Qt::DisplayRole)) {
+        if (RowStore::covers(col)) {
+            if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
+            rowStore.setValue(idx.row(), col, value);
         }
     }
 
