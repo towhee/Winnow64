@@ -3022,7 +3022,278 @@ Plan written. My thoughts on your proposal, briefly:
     payloads? Decide by what DevPreviewCache already does, so sweep and move-aside
     stay one policy.
 
+- The memory win is still negative. Dual storage means a row costs more today than before
+Stage 2 started. That's the deliberate price of being able to A/B, and it's why the
+deletion pass matters.
+
+- Three open decisions carried forward: G::useFindDock/catalogview.* (kept as an escape
+hatch, never resolved), kAutoLoadMax at 5,000, and the Stage 3 thumbnail payload (BLOB vs
+files beside the devPreview payloads — settle it by matching DevPreviewCache so they
+share one sweep policy).
+I am confused.
+
+
+Unify Scope and Filter: one row store, one load path
+
+Context
+
+Winnow had two paradigms for "what images am I looking at": pick a folder and
+every image appears, or search the catalog, read a count, and press Load.
+The catalog was also unreachable from the Folders/Bookmarks trees, so it was
+invisible to anyone who did not already know the Find dock existed — even though
+it is a scope, and scope is chosen in the tree.
+
+The end state: scope is chosen in one place, filtering always means "narrow the
+current scope", and the whole catalog is browsable like a folder. Under it, the
+SQLite index and the DataModel become one thing — the index is the persistent
+form of a row, the model the in-memory form.
+
+This plan is now a RESUME POINT. Stages 0 and 1 are complete and committed;
+Stage 2 is roughly half done. Read "Where things stand" before doing anything.
+
+---
+
+Where things stand (as of commit 6f338c82)
+
+Committed: 0425706f, d7072b4c, 207954ca (stage 0), 126fa367 (stage 1),
+55c1d70c, 3dde6981, 6f338c82 (stage 2 so far). One uncommitted change set
+adds Datamodel/iconstore.h (registered in CMakeLists.txt).
+
+The durable record is notes/Documentation.txt, not this file. Read these
+sections first — they carry the reasoning, the measurements and the bugs found:
+
+- DataModel Changes > Worker Threads and the Model (snapshots; what each
+  worker may touch)
+- DataModel Changes > The Row Store (the measurement, the field table, the
+  shadow-verification technique, every bug it caught)
+- Keywords and Cataloguing > Scope: Catalog Beside the Folders
+- DataModel Changes > Filter Counts Off the Model
+
+Done
+
+┌──────────┬──────────────────────────────────────────────────────────────────────────────────┐
+│  Stage   │                                     Outcome                                      │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ 0.1      │ rowBytesUsed sampled 1-in-64 instead of per row                                  │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ 0.2      │ G::DupOtherIdxRole holds an int row; 3 latent bugs fixed                         │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ 0.3      │ No worker thread reads the model — see below                                     │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ 0.4      │ F2 focuses the Find box instead of editing a hidden tree item                    │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ —        │ BuildFilters mutates the Filters tree only on the GUI thread (FilterOp)          │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ 1        │ G::scope, Catalog row above both trees, empty query shows most recent, auto-load │
+├──────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ 2 (part) │ field table, row store serving data(), icon store — see below                    │
+└──────────┴──────────────────────────────────────────────────────────────────────────────────┘
+
+Stage 0.3 in full: BuildFilters, ImageCache and MetaRead all read the model
+through Datamodel/modelsync.h (ProxySnapshot + RowSyncArray) or own their
+state — ImageCache's cache bookkeeping is RowCache, keyed by path.
+
+Stage 2 so far: Datamodel/rowfields.h + tst_rowfields;
+Datamodel/imagerow.h/.cpp serving data() for 35 columns plus G::PathRole;
+Datamodel/iconstore.h holding thumbnails by path.
+
+The measurement that the whole plan rests on (already taken)
+
+┌────────────────────────────────┬───────────┬─────────┐
+│                                │ bytes/row │ at 250k │
+├────────────────────────────────┼───────────┼─────────┤
+│ QStandardItemModel, 92 columns │ 19,900    │ 4.6 GB  │
+├────────────────────────────────┼───────────┼─────────┤
+│ packed struct + interning      │ 573       │ 137 MB  │
+└────────────────────────────────┴───────────┴─────────┘
+
+Sparse rows measured 413 B. Storing the full path costs ~190 B of the 573 and is
+kept deliberately (identity key for icd, fPathRow, the proxy snapshot).
+
+Not yet done — and the memory win is NOT yet realised
+
+Item writes still happen alongside the store, so a row currently costs more
+than before Stage 2 started. The 34x only arrives when the item writes go.
+
+---
+
+Remaining work, in this order
+
+1. Scratch columns → side hash  (do this BEFORE step 2)
+
+~35 decode/cache columns (segment offsets, ICC buffers, decoder id/status/err,
+ifdOffsets, samplesPerPixel, endianness) are needed only while a decoder or
+the ImageCache is working on that row. Move them to a QHash<int, RowScratch>
+populated for the rows in flight. They are already classified in
+Datamodel/rowfields.h as WF_SCRATCH, and tst_rowfields pins that no scratch
+field is ever persisted to the catalog.
+
+2. A SINGLE deletion pass — delete the item writes for covered columns
+
+Why the order matters: DataModel::verifyRowStore() compares the store
+against the QStandardItems, so deleting the item writes retires the ability to
+A/B. Do it once, after step 1, so ~70 of 92 columns come off together under one
+final verification rather than two. Retire verifyRowStore and G::useRowStore
+in the same pass.
+
+3. Compiled filter predicate — and settle G::SearchColumn with it
+
+SortFilter::filterAcceptsRow walks the whole Filters QTreeWidget per row with
+QVariant compares — O(rows × items), untenable at 250k. Compile the tree's
+check state once per filter change into per-category QSet<int> of interned
+ids (include + exclude), then evaluate against struct fields. Semantics must not
+move: OR within a category, AND across, exclusion an outright cross-category
+reject that must not set isCategoryUnchecked.
+
+SearchColumn is the last column the row store cannot cover, because its type
+depends on which path wrote it last — "false" (QString) at row creation,
+m.isSearch / SearchTerms::matches() (bool) after metadata, "true" (QString)
+from DataModel::find. The Filters tree is inconsistent the same way:
+searchTrue holds the QString "true" while searchFalse holds the bool
+false. Note QVariant(QString("false")).toBool() is true. Deciding the
+type is a filtering decision, so it belongs here, not in the store.
+
+4. Base-class swap — DataModel : QAbstractTableModel
+
+Last, when nothing reads items. G::dataModelColumns stays the public address
+space throughout; only 6 call sites outside datamodel.cpp use
+QStandardItemModel-specific API (mainwindow.cpp, iconview.cpp ×2,
+tableview.cpp ×2, datamodel.cpp:146) — the icon ones are already converted.
+
+Stage 3 — Thumbnails in the index
+
+Scrolling an unvisited region of a 250k catalog must not open a file per row.
+Unblocked now that IconStore is path-keyed, which is what makes the read
+chain memory store → index thumb → decode one chain.
+
+- Additive schema bump in CacheDb::migrate: a thumb table keyed on
+  pathkey. Payload as BLOB or as files beside the devPreview payloads — match
+  whatever DevPreviewCache does so the two share one sweep/move-aside policy.
+- Written opportunistically from folder loads (the icon has just been decoded,
+  so it is free) and by CatalogScanner, which reads metadata only today.
+  Respect its pause-on-G::stop and pause-on-G::isModifyingDatamodel rules.
+- Sweep demotes, never deletes, and skips unmounted volumes.
+- Long-lead: indexing a real library is hours of background scanning, so the
+  WRITE half is the one worth pulling forward if anything runs in parallel.
+
+Stage 4 — Scope is a query; one load path
+
+- DataModel::setScope(CatalogQuery) replaces addFolder / addPaths. Folder
+  scope = the query with a folder/subtree predicate plus an async filesystem
+  reconcile; Catalog scope = the same query without it, and kResultLimit and
+  kAutoLoadMax retire.
+- MetaRead stops being the primary loader and becomes the gap-filler: only
+  rows the index could not answer, plus the icon window. This changes what
+  "done" means — isMetaReadFinished() and G::allMetadataAttempted become
+  "the resident set is answered", and everything gated on them must be re-read
+  against that meaning.
+- catalogRows() + the folderChangeCompleted commit become the reconcile
+  write-back rather than a separate opportunistic capture.
+- Everything downstream of emit folderChange is already shared and unchanged.
+
+Stage 5 — Offline rows and write-back
+
+- The index's live / vol columns already know a row is on an unmounted
+  volume. Draw an offline badge rather than filtering those rows out — with
+  the whole catalog visible, "that disk isn't plugged in" is information. Per the
+  greyed-with-a-reason rule the loupe explains inline, never by popup.
+- Rating / label / pick edits in catalog scope write the sidecar (source of
+  truth) and update the index row in the same commit.
+
+---
+
+How to verify (the method that has caught every bug so far)
+
+Static review has been wrong repeatedly here; every real defect came from
+running something. Use all four:
+
+1. Shadow verification. DataModel::verifyRowStore() compares the store
+   against the items for every row and every role the store claims — not
+   just EditRole. It compares the variant's TYPE as well as its text.
+   Both refinements were added only after the weaker version missed a bug.
+2. A temporary probe at the --selftest exit in MW::runSelfTest
+   (mainwindow.cpp), printing what you are about to change; run it over real
+   folders; remove it afterwards. Folders used: tests/fixtures/images,
+   ~/Pictures/_ThumbTest (50 mixed), ~/Pictures/_test4_rowwjpg (raw+jpg
+   pairs), ~/Pictures/_videos. Add WINNOW_SELFTEST_RECURSE=1 WINNOW_SELFTEST_NAV_MS=15 WINNOW_SELFTEST_STRESS=1 for load-time races.
+3. Prove the check can fail. Deliberately re-inject the bug, watch the check
+   catch it by name, then remove it. A drift test never seen to fail is not
+   evidence. Do this every time the check itself changes.
+4. An A/B fingerprint where behaviour must not change: SHA-1 over what
+   data() returns for every covered column of every row, with and without the
+   change. Beware including anything nondeterministic — the Filters item count
+   varies run to run (74 vs 75) within one configuration, which is a
+   pre-existing load-timing dependency, not the thing under test.
+
+Commands (ctest is not on PATH):
+
+CMAKE=/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake
+CTEST=/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/ctest
+$CMAKE --build build/mac-tests
+$CTEST --test-dir build/mac-tests --output-on-failure
+PRESET=mac-tsan-local tests/tsan/run_tsan.sh
+PRESET=mac-tsan-local tests/tsan/run_tsan_proxy.sh
+tst_localcontrast fails pre-existing — golden-image float drift (~1e-4
+against a 1e-5 tolerance) in the Develop local-contrast renderer, consistent with
+the OpenCV 4.13 bump. It links none of the files this work touches. Everything
+else must stay green: 26/27.
+
+Fast syntax check without touching the build dir (mine
+build/mac-debug/compile_commands.json, strip -o/-c, append
+-fsyntax-only <abs path>) — but it does NOT catch AUTOMOC or link errors, so a
+new Q_OBJECT class needs a real build.
+
+---
+
+Ground rules learned the hard way
+
+- The store returns exactly what the model returned, not a tidier version. A
+  column that looks numeric and is stored as text is stored as text here too.
+  Rating is an empty QString when unrated (not 0); MPix is 'f', 2 formatted.
+- One authority per fact. The PathRole regression (no thumbnails, no loupe)
+  was two guards that had to agree and didn't. RowStore::covers(column, role)
+  is asked on both sides with nothing in front of it.
+- A check that does not cover the same ground as the code proves nothing about
+  the part it skips. PathColumn is covered at G::PathRole only, so an
+  EditRole-only check never looked at the one column that broke.
+- Unstable column types are real bugs. Width/Height were QString from one
+  writer and int from another, so the table sorted lexically or numerically
+  depending on load order. Settled on int.
+- Storage moves, policy stays. The icon store did not change what gets
+  loaded or evicted — the icon chunk range still decides. If thumbnails
+  misbehave it is the store's fault, not a policy change hiding inside it.
+- Scripted multi-edit passes abort without writing if one anchor misses;
+  re-audit with a grep rather than assuming a batch applied.
+
+---
+
+Handover — do these before clearing the session
+
+1. Commit the icon-store work. Datamodel/iconstore.h is untracked and
+   CMakeLists.txt, datamodel.cpp/.h, mainwindow.cpp, iconview.cpp and
+   notes/Documentation.txt are modified. Verified: 26/27 ctest, TSan clean,
+   icons via data() matching the store 4/4, 13/13, 50/50, 51/51.
+2. Add a project memory entry pointing at this file. Nothing in
+   ~/.claude/ currently references this work and MEMORY.md is the only thing
+   loaded automatically, so without it a cleared session will not find this plan.
+
+Then the instruction for the new session is simply: continue the Winnow
+catalog/datamodel unification — read this plan plus the four named
+notes/Documentation.txt sections, and start at "Remaining work" step 1 (the
+scratch side-hash).
+
+Note the sequencing: the next work is the REST OF STAGE 2 (steps 1-4 above),
+not Stage 3. Stage 3 is unblocked by the icon store and its write half can run in
+parallel if wanted, but Stages 3-5 assume the row store is finished — a 250k
+catalog needs both the thumbnails AND the ~570-byte row.
+
+continue the row store unification
+
+unify-scope-filter-paths
+
 Stage 0 - portrait videos not rotated
         - ImageCache has pauses while still cached items
+          ie /Users/roryhill/Pictures/2018-01-14_Lillian
+
 
 

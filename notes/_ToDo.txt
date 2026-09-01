@@ -9,6 +9,7 @@ WHAT'S NEW
 BUGS / TO DO
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
+- Copy folder path does not always work
 - Scan xmp for lightroom keywords (subjectflat, subjectheirarchy)
 - Does detail need Denoise / color?
 - Object mask post feather not working
