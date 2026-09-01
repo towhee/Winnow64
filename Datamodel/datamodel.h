@@ -10,6 +10,7 @@
 #include "Datamodel/filters.h"
 #include "Datamodel/modelsync.h"
 #include "Datamodel/imagerow.h"
+#include "Datamodel/iconstore.h"
 #include "Cache/framedecoder.h"
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
@@ -81,6 +82,11 @@ public:
         When that is clean over real folders the reads move across and the
         items go -- see "The Row Store" in Documentation.txt. */
     RowStore rowStore;
+
+    /*  Thumbnails, keyed by path rather than held on the row -- see
+        Datamodel/iconstore.h. Reached through data()/setData() on
+        Qt::DecorationRole exactly as before, so no view or delegate changed. */
+    IconStore iconStore;
     struct RowStoreCheck {
         int rowsChecked = 0;
         int valuesChecked = 0;

@@ -6076,12 +6076,18 @@ void MW::setRotation(int degrees)
         // rotate thumbnail(s)
         QTransform trans;
         trans.rotate(degrees);
+        /*  Through data()/setData(), not itemFromIndex()->icon(): the thumbnail
+            lives in the path-keyed icon store now and the item's own icon is
+            always null. (The old code also leaked a QStandardItem it allocated
+            and then immediately overwrote.) */
         QModelIndex thumbIdx = dm->sf->index(sfRow, G::PathColumn);
-        QStandardItem *item = new QStandardItem;
-        item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
-        QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
-        pm = pm.transformed(QTransform().rotate(degrees));
-        item->setIcon(pm);
+        QModelIndex dmIdx = dm->sf->mapToSource(thumbIdx);
+        QPixmap pm = qvariant_cast<QIcon>(dmIdx.data(Qt::DecorationRole))
+                         .pixmap(G::maxIconSize, G::maxIconSize);
+        if (!pm.isNull()) {
+            pm = pm.transformed(QTransform().rotate(degrees));
+            dm->setData(dmIdx, QVariant(QIcon(pm)), Qt::DecorationRole);
+        }
 
         // rotate selected cached full size images
         QString fPath = thumbIdx.data(G::PathRole).toString();

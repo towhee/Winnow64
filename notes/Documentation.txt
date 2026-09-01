@@ -765,6 +765,16 @@ WIDTH AND HEIGHT WERE SETTLED ON int, which is a real fix rather than an accommo
 
 SEARCH IS THE ONE LEFT, and deliberately: it cannot be settled by choosing a type here, because the FILTERS TREE is inconsistent in the same way and in the same direction -- searchTrue holds the QString "true" while searchFalse holds the bool false, and SortFilter::filterAcceptsRow compares the two against this column. (Note also that QVariant(QString("false")).toBool() is TRUE, a non-empty string, so the row-creation value means the opposite of what it reads as to anything calling toBool().) Deciding the type means deciding what the search filter matches, which is a question about filtering rather than storage, and it belongs with the compiled predicate.
 
+THUMBNAILS MOVED TO A PATH-KEYED STORE (Datamodel/iconstore.h). They used to be QIcon on Qt::DecorationRole of column 0. Three reasons, and only the first is about memory. A thumbnail belongs to an IMAGE, not to a row: rows shift under sorting and filtering and are rebuilt on every folder change, so an icon held by row must be found again whenever the proxy moves, while an icon held by path is simply still there -- and icd->imCache has always been keyed by path, so the two now agree. It is also what the catalog needs: scrolling a 250,000-image catalog cannot open a file per row, so the next layer down is a thumbnail cached in the index keyed by pathkey, and "memory store, then index, then decode" only reads as one lookup chain if the memory layer is keyed the same way. And an icon on the row is an icon the row store cannot replace.
+
+THE POLICY DID NOT MOVE, deliberately. What gets loaded and what gets dropped is still decided exactly where it was -- the icon chunk range (resolveIconChunkSize, refineIconChunkSize, applyIconCachePressure, clearIconsOutsideChunkRange). Those say "drop this thumbnail" by calling setData with an empty QVariant on DecorationRole, which now removes from the store. Only the storage changed, so if thumbnails start behaving differently it is the store's fault and not a policy change hiding inside a storage change.
+
+THE SEAM IS THE SAME ONE THE ROW STORE USES: data() and setData() on DecorationRole, so no view or delegate changed. FIVE SITES BYPASSED IT and had to be converted -- two idempotency guards in setIcon/setIcon1 (itemFromIndex(dmIdx)->icon().isNull()), setIconFromVideoFrame's item->setIcon, two clipboard/drag paths in IconView (dm->item(row)->icon()), and the thumbnail ROTATION in MW, which additionally leaked a QStandardItem it allocated and immediately overwrote. A bypass that reads the item directly now always sees a null icon, which is silent, so these are worth grepping for after any change here: ->icon() and item->setIcon.
+
+THE REMOVAL PATH IS NOT GATED ON ok. setData's other store writes happen only if QStandardItemModel accepted the write, but the item no longer holds the thumbnail, so a removal must reach the store whatever the base class does with the cell.
+
+VERIFIED over four folders including videos and a recursive load with navigation: icons reached through data() exactly match the store's count in every case (4/4, 13/13, 50/50, 51/51), with the row-store check still clean and paths and the loupe image intact.
+
 STILL TO DO, and deliberately not started in the same pass:
 
 

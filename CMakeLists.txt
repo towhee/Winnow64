@@ -409,6 +409,7 @@ set(WINNOW_HEADERS
     Datamodel/filtersnapshot.h
     Datamodel/modelsync.h
     Datamodel/rowfields.h
+    Datamodel/iconstore.h
     Datamodel/imagerow.h
     Views/catalogscoperow.h
     Datamodel/selection.h
