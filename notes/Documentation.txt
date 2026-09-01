@@ -727,6 +727,28 @@ CLEAN OVER FIVE FOLDERS after the fix -- 4, 12, 13, 50 and 51 rows, including vi
 
 GROWTH IS LAZY, REMOVAL IS NOT. Rows are only ever APPENDED, so setData resizes the store when it notices the row count has moved. Removal takes rows from the MIDDLE (removeFolder, remove) and a QVector resize truncates from the END, so every store row past the deletion point would describe a different image; rowsRemoved therefore rebuilds the store from the items. That is scaffolding -- when the store is the only copy, removal splices the vector and there are no items to rebuild from.
 
+DataModel::data() NOW SERVES THE COVERED COLUMNS FROM THE STORE. This is the seam the whole storage change turns on: every view, delegate, proxy and saved column-width setting addresses the model by G::dataModelColumns and reads it through data(), and none of them care what is behind it -- so the storage can be replaced there, one column set at a time, and a rewrite that "cannot be landed incrementally" lands incrementally after all. The items are still written and verifyRowStore still compares them, so G::useRowStore = false falls straight back.
+
+THE PROOF IS AN A/B FINGERPRINT, not an assertion that it looks right: a SHA-1 over what data() returns for every covered column of every row, with the store ON and OFF. Identical over four folders -- fixtures, a raw+jpg pair folder, videos and a 50-row mixed folder. Note what that exercise ALSO found: the Filters item count varies run to run (74 vs 75) WITHIN the same configuration, so the filter build has a load-timing dependency of its own that has nothing to do with the store. A comparison that had included it would have blamed the store for it.
+
+THE TYPE CHECK IS THE POINT, AND IT WAS ADDED AFTER IT WAS NEEDED. The first verification compared only the variant's TEXT, reported clean over five folders, and the app then aborted on the first run with reads enabled:
+
+    ExposureTimeItemDelegate::displayText(value=+Inf)   tableview.cpp:624
+    qRound(+Inf)  ->  ASSERT
+
+ImageMetadata::exposureTimeNum is a DOUBLE and the delegate guards with "value == 0" before computing 1/value. The store had interned it as text; same digits, so the text comparison passed, but the guard does not fire for a QString and the reciprocal of nothing is infinity. Aperture, focal length and ISO were numeric too and had the same fault. verifyRowStore now compares the variant's KIND as well as its text -- grouping the numeric types together, because the model itself is loose there (a quint32 in one column, an int in the next) and what must not change is text-vs-number, which is what a delegate branches on.
+
+WITH THE TYPE CHECK IN PLACE IT FOUND THREE MORE, and one of them is a defect in the MODEL rather than in the store: three columns hold a different type depending on which code path wrote them last.
+
+    Search   "false" (QString) at row creation, then m.isSearch and
+             SearchTerms::matches() (bool) once metadata arrives
+    Width    QString::number(m.width) from addMetadataForItem, but an
+    Height   int from Image/thumb.cpp via setValDm
+
+A store with one type per column cannot reproduce that and must not pretend to, so those three stay on the items and RowStore::covers names them and says why. An unstable column type is worth fixing on its own account: anything that branches on the type behaves differently depending on load ORDER, which is not a property anything should depend on.
+
+COVERAGE IS PER (COLUMN, ROLE), not per column, which the same check forced. The path lives on PathColumn under G::PathRole and EditRole there is never set -- so the item returns an INVALID QVariant and the store was returning an empty QString, which is a different answer to anything testing isValid(). 37 columns became 35 plus one role-specific entry.
+
 STILL TO DO, and deliberately not started in the same pass:
 
 

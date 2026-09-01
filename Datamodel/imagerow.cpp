@@ -7,8 +7,17 @@
     one place that knows how a column is actually held.
 */
 
-bool RowStore::covers(int column)
+bool RowStore::covers(int column, int role)
 {
+    /*  The path lives on PathColumn under G::PathRole, NOT under EditRole --
+        addFileDataForRow never sets EditRole there, so the item is UNSET and
+        data() must keep returning an invalid QVariant for it. Claiming the
+        column at EditRole made the store answer "" where the model answered
+        nothing, which is a different value to anything that tests isValid(). */
+    if (column == G::PathColumn) return role == G::PathRole;
+
+    if (role != Qt::EditRole && role != Qt::DisplayRole) return false;
+
     switch (column) {
     case G::PathColumn:
     case G::NameColumn:
@@ -32,8 +41,6 @@ bool RowStore::covers(int column)
     case G::ApertureColumn:
     case G::ShutterspeedColumn:
     case G::FocalLengthColumn:
-    case G::WidthColumn:
-    case G::HeightColumn:
     case G::DimensionsColumn:
     case G::MegaPixelsColumn:
     case G::GPSCoordColumn:
@@ -43,11 +50,28 @@ bool RowStore::covers(int column)
     case G::VideoColumn:
     case G::MetadataStatusColumn:
     case G::IconLoadedColumn:
-    case G::SearchColumn:
     case G::SearchTextColumn:
     case G::CompareColumn:
     case G::RowNumberColumn:
         return true;
+    /*  NOT COVERED, and the reason is a defect in the model rather than a gap
+        here: these three columns hold a DIFFERENT TYPE depending on which code
+        path wrote them last, so a store with one type per column cannot
+        reproduce them and must not pretend to.
+
+          Search   "false" (QString) at row creation, then m.isSearch and
+                   SearchTerms::matches() (bool) once metadata arrives
+          Width    QString::number(m.width) from addMetadataForItem, but an
+          Height   int from Image/thumb.cpp via setValDm
+
+        An unstable column type is worth fixing on its own account -- a delegate
+        or a comparison that branches on the type behaves differently depending
+        on load ORDER, which is not a property anything should depend on. They
+        stay on the items until that is settled; see "The Row Store" in
+        Documentation.txt. */
+    case G::SearchColumn:
+    case G::WidthColumn:
+    case G::HeightColumn:
     default:
         return false;
     }
@@ -76,12 +100,12 @@ QVariant RowStore::value(int row, int column) const
     case G::CameraMakeColumn:      return mStrings.value(r.makeId);
     case G::CameraModelColumn:     return mStrings.value(r.modelId);
     case G::LensColumn:            return mStrings.value(r.lensId);
-    case G::ISOColumn:             return mStrings.value(r.isoId);
-    case G::ApertureColumn:        return mStrings.value(r.apertureId);
-    case G::ShutterspeedColumn:    return mStrings.value(r.shutterId);
-    case G::FocalLengthColumn:     return mStrings.value(r.focalLengthId);
-    case G::WidthColumn:           return r.width;
-    case G::HeightColumn:          return r.height;
+    case G::ISOColumn:             return r.iso;
+    case G::ApertureColumn:        return r.aperture;
+    case G::ShutterspeedColumn:    return r.exposureTime;
+    case G::FocalLengthColumn:     return r.focalLength;
+    case G::WidthColumn:           return mStrings.value(r.widthId);
+    case G::HeightColumn:          return mStrings.value(r.heightId);
     case G::DimensionsColumn:      return mStrings.value(r.dimensionsId);
     case G::MegaPixelsColumn:      return mStrings.value(r.megaPixelsId);
     case G::GPSCoordColumn:        return mStrings.value(r.gpsId);
@@ -131,12 +155,12 @@ void RowStore::setValue(int row, int column, const QVariant &v)
     case G::CameraMakeColumn:      r.makeId = mStrings.id(v.toString()); break;
     case G::CameraModelColumn:     r.modelId = mStrings.id(v.toString()); break;
     case G::LensColumn:            r.lensId = mStrings.id(v.toString()); break;
-    case G::ISOColumn:             r.isoId = mStrings.id(v.toString()); break;
-    case G::ApertureColumn:        r.apertureId = mStrings.id(v.toString()); break;
-    case G::ShutterspeedColumn:    r.shutterId = mStrings.id(v.toString()); break;
-    case G::FocalLengthColumn:     r.focalLengthId = mStrings.id(v.toString()); break;
-    case G::WidthColumn:           r.width = v.toInt(); break;
-    case G::HeightColumn:          r.height = v.toInt(); break;
+    case G::ISOColumn:             r.iso = v.toInt(); break;
+    case G::ApertureColumn:        r.aperture = v.toDouble(); break;
+    case G::ShutterspeedColumn:    r.exposureTime = v.toDouble(); break;
+    case G::FocalLengthColumn:     r.focalLength = v.toInt(); break;
+    case G::WidthColumn:           r.widthId = mStrings.id(v.toString()); break;
+    case G::HeightColumn:          r.heightId = mStrings.id(v.toString()); break;
     case G::DimensionsColumn:      r.dimensionsId = mStrings.id(v.toString()); break;
     case G::MegaPixelsColumn:      r.megaPixelsId = mStrings.id(v.toString()); break;
     case G::GPSCoordColumn:        r.gpsId = mStrings.id(v.toString()); break;
