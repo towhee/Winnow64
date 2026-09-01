@@ -41,6 +41,8 @@ bool RowStore::covers(int column, int role)
     case G::ApertureColumn:
     case G::ShutterspeedColumn:
     case G::FocalLengthColumn:
+    case G::WidthColumn:
+    case G::HeightColumn:
     case G::DimensionsColumn:
     case G::MegaPixelsColumn:
     case G::GPSCoordColumn:
@@ -55,23 +57,21 @@ bool RowStore::covers(int column, int role)
     case G::RowNumberColumn:
         return true;
     /*  NOT COVERED, and the reason is a defect in the model rather than a gap
-        here: these three columns hold a DIFFERENT TYPE depending on which code
-        path wrote them last, so a store with one type per column cannot
-        reproduce them and must not pretend to.
+        here: Search holds a DIFFERENT TYPE depending on which code path wrote
+        it last -- "false" (QString) at row creation, m.isSearch and
+        SearchTerms::matches() (bool) once metadata arrives, and "true" (QString
+        again) from DataModel::find -- so a store with one type per column
+        cannot reproduce it and must not pretend to.
 
-          Search   "false" (QString) at row creation, then m.isSearch and
-                   SearchTerms::matches() (bool) once metadata arrives
-          Width    QString::number(m.width) from addMetadataForItem, but an
-          Height   int from Image/thumb.cpp via setValDm
-
-        An unstable column type is worth fixing on its own account -- a delegate
-        or a comparison that branches on the type behaves differently depending
-        on load ORDER, which is not a property anything should depend on. They
-        stay on the items until that is settled; see "The Row Store" in
-        Documentation.txt. */
+        Width and Height had exactly the same fault and WERE settled, on int
+        (see addMetadataForItem). Search cannot be settled here, because the
+        Filters tree is inconsistent in the same way and in the same direction:
+        searchTrue holds the QString "true" while searchFalse holds the bool
+        false, and SortFilter::filterAcceptsRow compares the two against this
+        column. Choosing a type for it means deciding what the search filter
+        matches, which is a question about FILTERING rather than about storage,
+        and it belongs with the compiled predicate rather than here. */
     case G::SearchColumn:
-    case G::WidthColumn:
-    case G::HeightColumn:
     default:
         return false;
     }
@@ -104,8 +104,8 @@ QVariant RowStore::value(int row, int column) const
     case G::ApertureColumn:        return r.aperture;
     case G::ShutterspeedColumn:    return r.exposureTime;
     case G::FocalLengthColumn:     return r.focalLength;
-    case G::WidthColumn:           return mStrings.value(r.widthId);
-    case G::HeightColumn:          return mStrings.value(r.heightId);
+    case G::WidthColumn:           return r.width;
+    case G::HeightColumn:          return r.height;
     case G::DimensionsColumn:      return mStrings.value(r.dimensionsId);
     case G::MegaPixelsColumn:      return mStrings.value(r.megaPixelsId);
     case G::GPSCoordColumn:        return mStrings.value(r.gpsId);
@@ -159,8 +159,8 @@ void RowStore::setValue(int row, int column, const QVariant &v)
     case G::ApertureColumn:        r.aperture = v.toDouble(); break;
     case G::ShutterspeedColumn:    r.exposureTime = v.toDouble(); break;
     case G::FocalLengthColumn:     r.focalLength = v.toInt(); break;
-    case G::WidthColumn:           r.widthId = mStrings.id(v.toString()); break;
-    case G::HeightColumn:          r.heightId = mStrings.id(v.toString()); break;
+    case G::WidthColumn:           r.width = v.toInt(); break;
+    case G::HeightColumn:          r.height = v.toInt(); break;
     case G::DimensionsColumn:      r.dimensionsId = mStrings.id(v.toString()); break;
     case G::MegaPixelsColumn:      r.megaPixelsId = mStrings.id(v.toString()); break;
     case G::GPSCoordColumn:        r.gpsId = mStrings.id(v.toString()); break;
