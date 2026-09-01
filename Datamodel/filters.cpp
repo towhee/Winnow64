@@ -1140,7 +1140,9 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     a feature, so the same three choices are here by name.
 */
     QTreeWidgetItem *item = itemAt(event->pos());
-    if (!isFilterableItem(item) || !G::allMetadataAttempted || buildingFilters) {
+    const bool ready = facetsFrom == FromCatalog
+                       || (G::allMetadataAttempted && !buildingFilters);
+    if (!isFilterableItem(item) || !ready) {
         QTreeWidget::contextMenuEvent(event);
         return;
     }
@@ -1160,6 +1162,192 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
     else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
+}
+
+/* ---------------------------------------------------------------------------------
+   The Find dock's shared-facet interface (G::useFindDock)
+   --------------------------------------------------------------------------------- */
+
+QString Filters::currentSearchText() const
+{
+    const QString t = searchTrue->text(0);
+    return t == enterSearchString ? QString() : t;
+}
+
+void Filters::setSearchText(const QString &text)
+{
+/*
+    Drive the Search category from the panel's search box.
+
+    ONE BOX FOR BOTH SCOPES is the point: F2 ("here") and Shift+F2 ("everywhere") are
+    meant to be the same question asked of different sets, and two separate text fields
+    would be two places to type it. The editable searchTrue tree item stays as the
+    STORAGE -- the predicate reads its text, and the placeholder is still what "no search"
+    means -- but the panel's box is what the user touches.
+
+    The trimmed empty string restores the placeholder rather than storing "", because
+    ignoreSearchStrings is what DataModel::searchStringChange tests to decide there is no
+    search at all.
+*/
+    if (G::isLogger) G::log("Filters::setSearchText", text);
+
+    const QString t = text.trimmed();
+    searchTrue->setText(0, t.isEmpty() ? enterSearchString : t);
+    searchString = t;
+    emit searchStringChange(searchString);
+    setEachCatTextColor();
+    emit filterChange("Filters::setSearchText");
+}
+
+bool Filters::loadCatalogFacets()
+{
+/*
+    Fill every dynamic category from the CATALOG rather than the datamodel -- the
+    Everywhere half of the scope switch.
+
+    THE SAME TREE, THE SAME ITEMS, THE SAME GESTURES. Nothing about how a facet is
+    checked, excluded, coloured or counted changes with the scope; only where the values
+    came from. That is the whole reason the two docks were merged, and it is why this
+    fills the existing categories through addCategoryItems rather than building a parallel
+    widget that would drift.
+
+    CATEGORIES THE INDEX CANNOT ANSWER ARE HIDDEN, not shown empty. Duplicates is a
+    comparison of what is loaded and has no meaning across a library; the Search category
+    is the panel's own box. An empty category reads as "you have no camera models", which
+    would be a lie.
+
+    A CATEGORY OF NOTHING BUT BLANK IS ALSO HIDDEN. Catalog::facets now returns the blank
+    value as a row -- that is what makes a category add up to the catalog -- so "no
+    titles at all" arrives as one item counting every image rather than as an empty map.
+    Offering "" as the sole thing to check would filter to everything, so the emptiness
+    test asks whether any REAL value came back, not whether the map has entries.
+
+    COUNTS ARE THE CATALOG'S TOTALS and go in BOTH count columns. Per-item counts under
+    the live query would be a GROUP BY per category per keystroke over a quarter of a
+    million rows; the panel says the counts are library totals rather than showing a
+    filtered number that is quietly wrong.
+*/
+    if (G::isLogger) G::log("Filters::loadCatalogFacets");
+
+    if (!Catalog::instance().isAvailable()) return false;
+
+    facetsFrom = FromCatalog;
+
+    /* Building the list sets a check state on every row, and each one would otherwise
+       emit itemChanged. */
+    const QSignalBlocker block(this);
+
+    QMutexLocker locker(&mutex);
+    removeChildrenDynamicFilters();
+    locker.unlock();
+
+    Catalog &cat = Catalog::instance();
+    struct Cat { QTreeWidgetItem *item; int dmColumn; };
+    const QVector<Cat> cats {
+        {picks,        G::PickColumn},
+        {ratings,      G::RatingColumn},
+        {labels,       G::LabelColumn},
+        {types,        G::TypeColumn},
+        {folders,      G::FolderNameColumn},
+        {years,        G::YearColumn},
+        {days,         G::DayColumn},
+        {models,       G::CameraModelColumn},
+        {lenses,       G::LensColumn},
+        {focalLengths, G::FocalLengthColumn},
+        {titles,       G::TitleColumn},
+        {keywords,     G::KeywordsAllColumn},
+        {creators,     G::CreatorColumn},
+    };
+
+    for (const Cat &c : cats) {
+        const QMap<QString, int> map = cat.facets(c.dmColumn);
+        addCategoryItems(map, c.item);
+        /* Both columns get the library total: column 2 is normally the filtered count,
+           and leaving it blank would make every row look half-loaded. */
+        for (int i = 0; i < c.item->childCount(); i++) {
+            QTreeWidgetItem *child = c.item->child(i);
+            const int n = map.value(child->text(0), 0);
+            child->setData(2, Qt::EditRole, n);
+            child->setData(3, Qt::EditRole, n);
+        }
+        bool anyRealValue = false;
+        for (auto it = map.constBegin(); it != map.constEnd(); ++it)
+            if (!it.key().isEmpty()) { anyRealValue = true; break; }
+        setRowHidden(indexOfTopLevelItem(c.item), QModelIndex(), !anyRealValue);
+    }
+
+    /* Duplicates compares what is loaded; Search is the panel's own box. */
+    setRowHidden(indexOfTopLevelItem(compare), QModelIndex(), true);
+    setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+
+    filtersBuilt = true;
+    refreshAmbiguousKeywords();
+    setEachCatTextColor();
+    return true;
+}
+
+void Filters::showAllCategories()
+{
+    if (G::isLogger) G::log("Filters::showAllCategories");
+    facetsFrom = FromDatamodel;
+    for (int i = 0; i < topLevelItemCount(); i++)
+        setRowHidden(i, QModelIndex(), false);
+    /* The Search category stays hidden while the panel owns a search box -- it is the
+       same fact shown twice, and the box is the one the user is looking at. */
+    if (G::useFindDock) setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+}
+
+void Filters::fillQuery(CatalogQuery &q) const
+{
+/*
+    The checked and excluded items as a catalog query.
+
+    KEYWORDS TAKE THEIR OWN FIELDS because they need a join rather than a column compare;
+    everything else goes into the generic maps keyed by datamodel column, so a category
+    added to the panel reaches the query without this function growing a case for it.
+*/
+    struct Cat { QTreeWidgetItem *item; int dmColumn; };
+    const QVector<Cat> cats {
+        {picks,        G::PickColumn},
+        {ratings,      G::RatingColumn},
+        {labels,       G::LabelColumn},
+        {types,        G::TypeColumn},
+        {folders,      G::FolderNameColumn},
+        {years,        G::YearColumn},
+        {days,         G::DayColumn},
+        {models,       G::CameraModelColumn},
+        {lenses,       G::LensColumn},
+        {focalLengths, G::FocalLengthColumn},
+        {titles,       G::TitleColumn},
+        {keywords,     G::KeywordsAllColumn},
+        {creators,     G::CreatorColumn},
+    };
+
+    for (const Cat &c : cats) {
+        QStringList inc, exc;
+        for (int i = 0; i < c.item->childCount(); i++) {
+            QTreeWidgetItem *child = c.item->child(i);
+            const Qt::CheckState st = child->checkState(0);
+            if (st == Qt::Checked) inc << child->text(0);
+            else if (st == Qt::PartiallyChecked) exc << child->text(0);
+        }
+        if (c.dmColumn == G::KeywordsAllColumn) {
+            q.keywords = inc;
+            q.excludeKeywords = exc;
+        }
+        else {
+            if (!inc.isEmpty()) q.include.insert(c.dmColumn, inc);
+            if (!exc.isEmpty()) q.exclude.insert(c.dmColumn, exc);
+        }
+    }
+}
+
+bool Filters::isAnyCatalogFilter() const
+{
+    CatalogQuery q;
+    fillQuery(q);
+    return !q.keywords.isEmpty() || !q.excludeKeywords.isEmpty()
+           || !q.include.isEmpty() || !q.exclude.isEmpty();
 }
 
 void Filters::save()
@@ -1795,12 +1983,20 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
                  << "G::allMetadataAttempted =" << G::allMetadataAttempted
                     ;
+    /* The datamodel-readiness guards apply only when the items DESCRIBE the datamodel.
+       A catalog facet is answerable whether or not the loaded folder has finished reading
+       its metadata -- indeed whether or not a folder is loaded at all -- and applying
+       them there swallowed the click silently: the checkbox toggled (QTreeWidget does
+       that itself, before this runs) but filterChange was never emitted, so the Find
+       dock never re-ran its query and Load stayed disabled. */
+    const bool needsModel = facetsFrom == FromDatamodel;
+
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        !G::allMetadataAttempted ||
-        buildingFilters)
+        (needsModel && !G::allMetadataAttempted) ||
+        (needsModel && buildingFilters))
     {
         /*
         qDebug() << "Filters::itemClickedSignal failed"
@@ -1918,7 +2114,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
        Opt is the modifier the mask combine tools already use for "subtract", so the
        gesture is one the user has met. */
     if (isLeftBtn && !isHdr && isValid && isFilterableItem(item)
-        && G::allMetadataAttempted && !buildingFilters) {
+        && (facetsFrom == FromCatalog || (G::allMetadataAttempted && !buildingFilters))) {
         const bool isAltModifier = event->modifiers() & Qt::AltModifier;
         const Qt::CheckState now = item->checkState(0);
         if (isAltModifier) {

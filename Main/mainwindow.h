@@ -38,6 +38,7 @@
 #include "Views/videoview.h"
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
+#include "Views/findpanel.h"
 #include "Main/catalogscanner.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
@@ -1481,7 +1482,10 @@ private:
     DockWidget *folderDock;
     DockWidget *favDock;
     DockWidget *filterDock;
-    DockWidget *catalogDock;
+    /* NULL with G::useFindDock -- the Catalog is a scope of the Find dock, not a dock of
+       its own, so createCatalogDock returns before building it. Initialised here because
+       createDocks and placeDocksAddedSince both reach for it before that is decided. */
+    DockWidget *catalogDock = nullptr;
     DockWidget *metadataDock;
     DockWidget *thumbDock;
     DockWidget *propertiesDock;
@@ -1587,6 +1591,12 @@ private:
     /* The roots editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */
     CatalogRootsDlg *catalogRootsDlg = nullptr;
+    /* The unified Find panel (G::useFindDock). When it exists it OWNS the layout the
+       filters tree sits in, catalogDock/catalogView are never created, and the Catalog
+       entry points (Shift+F2, Window > Catalog Panel) switch its scope instead of showing
+       a second dock. Null when the flag is off, in which case the two original panels are
+       built exactly as before. */
+    FindPanel *findPanel = nullptr;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;

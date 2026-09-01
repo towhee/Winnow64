@@ -42,6 +42,11 @@ CatalogView::CatalogView(QWidget *parent)
     keywordTree->setHeaderHidden(true);
     keywordTree->setColumnCount(1);
     keywordTree->setUniformRowHeights(true);
+    /* Match the Filters panel: a facet list has no notion of a "current" row, and the
+       selection highlight only competed with the include/exclude colouring that carries
+       the actual meaning. */
+    keywordTree->setSelectionMode(QAbstractItemView::NoSelection);
+    keywordTree->setFocusPolicy(Qt::NoFocus);
     keywordTree->setToolTip("Click a keyword to include it, Opt+click to exclude it, or "
                             "right-click for both.\nClick again to clear.\n\n"
                             "Keywords are flat: a hierarchy contributes each of its "
@@ -128,12 +133,44 @@ CatalogView::CatalogView(QWidget *parent)
        tools use, so the gesture is one the user has already met. Clicking an item that is
        already in that state clears it, which is the way back out; without that the only
        exit from a keyword filter would be to know some other gesture. */
+    /* Clicking the INDICATOR makes Qt toggle the box itself and emit itemChanged before
+       itemClicked. Acting again in itemClicked would undo it -- the two cancel out and
+       the checkbox appears not to respond at all -- so itemChanged records what Qt did
+       and itemClicked only handles the cases Qt does not: a click on the text, and
+       Opt+click for exclude. */
+    connect(keywordTree, &QTreeWidget::itemChanged, this,
+            [this](QTreeWidgetItem *item, int) {
+                keywordCheckJustChanged = true;
+                const QString name = item->data(0, kNameRole).toString();
+                if (name.isEmpty()) return;
+                includedKeywords.remove(name);
+                excludedKeywords.remove(name);
+                if (item->checkState(0) == Qt::Checked) includedKeywords.insert(name);
+                else if (item->checkState(0) == Qt::PartiallyChecked)
+                    excludedKeywords.insert(name);
+                styleKeywordItem(item);
+                runSearch();
+            });
+
     connect(keywordTree, &QTreeWidget::itemClicked, this,
             [this](QTreeWidgetItem *item, int) {
                 const bool opt = QApplication::keyboardModifiers() & Qt::AltModifier;
-                const Qt::CheckState want = opt ? Qt::PartiallyChecked : Qt::Checked;
-                setKeywordState(item,
-                                item->checkState(0) == want ? Qt::Unchecked : want);
+                const bool boxHandledIt = keywordCheckJustChanged;
+                keywordCheckJustChanged = false;
+
+                if (opt) {
+                    /* Opt always means exclude, wherever in the row it was clicked. When
+                       the indicator took the click first, Qt has just made it Checked;
+                       overriding that is what the modifier asked for. */
+                    setKeywordState(item, item->checkState(0) == Qt::PartiallyChecked
+                                              ? Qt::Unchecked : Qt::PartiallyChecked);
+                    return;
+                }
+                if (boxHandledIt) return;       // Qt already toggled it; nothing to do
+
+                // clicked the text rather than the box
+                setKeywordState(item, item->checkState(0) == Qt::Unchecked
+                                          ? Qt::Checked : Qt::Unchecked);
             });
 
     /* The discoverable path to the same three states: a modifier nobody is told about is
@@ -296,6 +333,9 @@ void CatalogView::rebuildKeywordList()
     excludedKeywords rather than in the widget. A refresh after a folder load must not
     silently drop the filter the user is looking at.
 */
+    /* Building the list sets a check state on every row, and each one would fire
+       itemChanged and re-run the search. */
+    const QSignalBlocker block(keywordTree);
     keywordTree->clear();
     if (!Catalog::instance().isAvailable()) {
         ambiguousKeywords.clear();

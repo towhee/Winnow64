@@ -1670,15 +1670,25 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.make = index(row, G::CameraMakeColumn).data().toString();
     m.model = index(row, G::CameraModelColumn).data().toString();
     m.exposureTimeNum = index(row, G::ShutterspeedColumn).data().toDouble();
-    if (m.exposureTimeNum < 1.0) {
+    /* A zero shutter speed is the ORDINARY case for a row whose metadata has not been
+       read yet, and for a format that carries none. Reciprocating it gave +Inf, and
+       qRound(+Inf) is a Q_ASSERT in a debug build -- so the app aborted the moment the
+       shooting-info string was built for such a row (the --selftest smoke run hit it
+       every time). Guarded rather than reciprocated: with no exposure time there is
+       nothing to display. */
+    if (m.exposureTimeNum <= 0.0) {
+        m.exposureTime.clear();
+    }
+    else if (m.exposureTimeNum < 1.0) {
         double recip = 1 / m.exposureTimeNum;
         if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));
         else m.exposureTime = QString::number(m.exposureTimeNum, 'g', 2);
+        m.exposureTime += " sec";
     }
     else {
         m.exposureTime = QString::number(m.exposureTimeNum);
+        m.exposureTime += " sec";
     }
-    m.exposureTime += " sec";
     m.apertureNum = index(row, G::ApertureColumn).data().toDouble();
     m.aperture = "f/" + QString::number(m.apertureNum, 'f', 1);
     m.ISONum = index(row, G::ISOColumn).data().toInt();

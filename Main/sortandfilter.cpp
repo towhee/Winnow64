@@ -117,6 +117,17 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
+    /* In the Find dock's EVERYWHERE scope the facet tree is holding the CATALOG's values,
+       not the datamodel's, and its checkboxes describe a search rather than a filter.
+       Running the proxy over them would narrow the loaded set by values it has never
+       heard of -- almost always to nothing -- while the user is looking at a result count
+       for a different question entirely. The Everywhere query is FindPanel's job; this is
+       only for Here. */
+    if (findPanel && findPanel->scope() == FindPanel::Everywhere) {
+        if (G::isLogger) G::log(srcFun, "Everywhere scope -- proxy filter not applied");
+        return;
+    }
+
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead for the prior datamodel filter.
     dm->newInstance();

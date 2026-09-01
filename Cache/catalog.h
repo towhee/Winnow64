@@ -3,6 +3,7 @@
 
 #include <QDateTime>
 #include <QHash>
+#include <QMap>
 #include <QList>
 #include <QMutex>
 #include <QSet>
@@ -148,6 +149,14 @@ struct CatalogQuery
     QDateTime to;
     /* Restrict to one folder subtree. Empty means the whole catalog. */
     QString folder;
+    /* The generic facet restriction, keyed by G::dataModelColumns: values within one
+       column are OR-ed, columns are AND-ed, and exclude is AND-NOT over everything. This
+       is what lets the Find dock hand the same checked-item structure to either scope
+       instead of the query growing a named field per category. Keywords are NOT in here
+       -- they need a join rather than a column compare, so they keep the two lists
+       above. */
+    QMap<int, QStringList> include;
+    QMap<int, QStringList> exclude;
     /* Rows whose source file was missing at the last sweep are excluded by default: they
        are usually an ejected card, and offering to load them would fail. */
     bool includeMissing = false;
@@ -191,6 +200,15 @@ public:
     /* Every keyword in the catalog with its image count and its parent names, for the
        facet list. */
     QList<CatalogKeyword> keywords();
+
+    /* Every distinct value of one FACET, with how many live images carry it -- the
+       catalog's half of the shared facet vocabulary the Find dock renders in Everywhere
+       scope. dmColumn is a G::dataModelColumns value, so the panel asks the index and the
+       datamodel the same question in the same terms; a column the catalog cannot answer
+       (duplicates, the search flag) returns empty and the panel hides that category.
+       Strings are formatted to match EXACTLY what DataModel writes into the same column,
+       because the user checks one facet item and both scopes must agree what it means. */
+    QMap<QString, int> facets(int dmColumn);
 
     /* The names recorded under more than one parent -- the keywords whose meaning
        flattening made ambiguous. Case-folded, so callers compare with keywordFold().

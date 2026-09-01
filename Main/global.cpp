@@ -85,6 +85,7 @@ bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -
    Documentation.txt "WHAT WAS TRIED"). The ReplacePanel + engines are kept; this flag
    re-enables the panel and the Fill/Object modes if the feature is revisited. */
 bool useReplaceFillModes = false;
+bool useFindDock = true;
 /* Develop dock Scope header: true swaps the experimental ScopeHeaderLab in for the
    shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
    Scope section; retire it once the lab design is copied back over scopeheader.*. */
