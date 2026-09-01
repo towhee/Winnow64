@@ -4558,7 +4558,7 @@ void MW::folderChangeCompleted()
             QThreadPool::globalInstance()->start([this, rows]{
                 Catalog::instance().commit(rows);
                 /* Tell the panel what just changed, but only if someone is looking at
-                   it: the keyword facets are a query plus a tree rebuild, and the whole
+                   it: the Keywords category is a query plus a tree rebuild, and the whole
                    point of doing the commit out here is to not spend GUI time on the
                    catalog during a folder load. Back on the GUI thread -- the widget
                    must not be touched from the pool. */

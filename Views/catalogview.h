@@ -50,7 +50,7 @@ class CatalogView : public QWidget
 public:
     explicit CatalogView(QWidget *parent = nullptr);
 
-    /* Re-read the keyword facets and the catalog size. Called when the dock becomes
+    /* Re-read the keyword categories and the catalog size. Called when the dock becomes
        visible and after a folder load has added to the catalog, so the panel does not
        show a stale picture of what is indexed. */
     void refresh();

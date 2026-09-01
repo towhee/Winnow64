@@ -1603,10 +1603,10 @@ void MW::createWindowActions()
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
-    /* With the Find dock this is not a second panel but its Everywhere SCOPE, so the menu
+    /* With the Find dock this is not a second panel but its Catalog SCOPE, so the menu
        item says what it now does. It still carries Shift+F2 either way. */
     catalogDockVisibleAction = new QAction(
-        G::useFindDock ? tr("Search Everywhere") : tr("Catalog Panel"), this);
+        G::useFindDock ? tr("Search Catalog") : tr("Catalog Panel"), this);
     catalogDockVisibleAction->setObjectName("toggleCatalog");
     catalogDockVisibleAction->setShortcutVisibleInContextMenu(true);
     catalogDockVisibleAction->setCheckable(true);
@@ -3297,9 +3297,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 
         filterSearchAction->setShortcut(QKeySequence("F2"));
-        /* Shift+F2 = "search everywhere" beside F2 = "search here". The dock
-           F-keys F3-F9 are taken, and pairing it with the in-folder search
-           says what it does better than the next free F-key would. */
+        /* Shift+F2 = "search the catalog" beside F2 = "search the folders".
+           The dock F-keys F3-F9 are taken, and pairing it with the in-folder
+           search says what it does better than the next free F-key would. */
         catalogDockVisibleAction->setShortcut(QKeySequence("Shift+F2"));
 
         filterRating1Action->setShortcut(QKeySequence("Shift+1"));

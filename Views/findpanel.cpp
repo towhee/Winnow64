@@ -14,23 +14,24 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     /* The scope control. Two checkable buttons in an exclusive group rather than a combo:
        it is a two-way switch the user flips constantly, and a combo would hide the choice
        that is not current behind a click. */
-    hereBtn = new QToolButton;
-    hereBtn->setText("Here");
-    hereBtn->setCheckable(true);
-    hereBtn->setChecked(true);
-    hereBtn->setToolTip("Narrow the images that are loaded now.\nF2 searches here.");
+    foldersBtn = new QToolButton;
+    foldersBtn->setText("Folders");
+    foldersBtn->setCheckable(true);
+    foldersBtn->setChecked(true);
+    foldersBtn->setToolTip("Narrow the images loaded from the open folder.\n"
+                           "F2 searches the open folder.");
 
-    everywhereBtn = new QToolButton;
-    everywhereBtn->setText("Everywhere");
-    everywhereBtn->setCheckable(true);
-    everywhereBtn->setToolTip("Search every image Winnow has catalogued, including "
-                              "folders that are not open.\n"
-                              "Shift+F2 searches everywhere.");
+    catalogBtn = new QToolButton;
+    catalogBtn->setText("Catalog");
+    catalogBtn->setCheckable(true);
+    catalogBtn->setToolTip("Search every image Winnow has catalogued, including "
+                           "folders that are not open.\n"
+                           "Shift+F2 searches the catalog.");
 
     QButtonGroup *scopeGroup = new QButtonGroup(this);
     scopeGroup->setExclusive(true);
-    scopeGroup->addButton(hereBtn);
-    scopeGroup->addButton(everywhereBtn);
+    scopeGroup->addButton(foldersBtn);
+    scopeGroup->addButton(catalogBtn);
 
     updateStyle();
 
@@ -43,8 +44,8 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     QHBoxLayout *scopeRow = new QHBoxLayout;
     scopeRow->setContentsMargins(0, 0, 0, 0);
     scopeRow->setSpacing(0);
-    scopeRow->addWidget(hereBtn);
-    scopeRow->addWidget(everywhereBtn);
+    scopeRow->addWidget(foldersBtn);
+    scopeRow->addWidget(catalogBtn);
     scopeRow->addStretch(1);
 
     resultLabel = new QLabel;
@@ -98,12 +99,12 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     debounce->setInterval(kDebounceMs);
     connect(debounce, &QTimer::timeout, this, &FindPanel::runSearch);
 
-    connect(hereBtn, &QToolButton::clicked, this, [this]{ setScope(Here); });
-    connect(everywhereBtn, &QToolButton::clicked, this, [this]{ setScope(Everywhere); });
+    connect(foldersBtn, &QToolButton::clicked, this, [this]{ setScope(FolderScope); });
+    connect(catalogBtn, &QToolButton::clicked, this, [this]{ setScope(CatalogScope); });
 
     connect(searchEdit, &QLineEdit::textChanged, this, [this](const QString &t){
-        if (currentScope == Here) {
-            /* Here is not debounced: the proxy filter is already the thing the panel is
+        if (currentScope == FolderScope) {
+            /* Folders is not debounced: the proxy filter is already what the panel is
                for, it runs over the loaded rows only, and a delay on it would feel like
                the panel had stopped responding. */
             filters->setSearchText(t);
@@ -111,13 +112,13 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
         else debounce->start();
     });
     connect(searchEdit, &QLineEdit::returnPressed, this, [this]{
-        if (currentScope == Everywhere) runSearch();
+        if (currentScope == CatalogScope) runSearch();
     });
 
-    /* A facet was checked or excluded. In Here scope Filters has already re-run the proxy
-       filter itself; in Everywhere it means the query changed. */
+    /* A category item was checked or excluded. In Folders scope Filters has already
+       re-run the proxy filter itself; in Catalog it means the query changed. */
     connect(filters, &Filters::filterChange, this, [this](QString){
-        if (currentScope == Everywhere) debounce->start();
+        if (currentScope == CatalogScope) debounce->start();
         else updateFooter();
     });
 
@@ -165,8 +166,8 @@ void FindPanel::updateStyle()
         "QToolButton:hover { background:%2; }"
         "QToolButton:disabled { color:%4; }"
     ).arg(off, on, edge, G::disabledColor.name(), G::textColor.name());
-    hereBtn->setStyleSheet(css);
-    everywhereBtn->setStyleSheet(css);
+    foldersBtn->setStyleSheet(css);
+    catalogBtn->setStyleSheet(css);
 }
 
 void FindPanel::setScope(Scope s)
@@ -178,38 +179,38 @@ void FindPanel::setScope(Scope s)
     of the library. Losing the text on the switch would make the two scopes feel like two
     panels again, which is what this replaced.
 
-    The checked facets do NOT carry -- see the header. The tree is rebuilt for whichever
+    The checked items do NOT carry -- see the header. The tree is rebuilt for whichever
     vocabulary it is now showing.
 */
     if (G::isLogger) G::log("FindPanel::setScope");
     if (s == currentScope) return;
     currentScope = s;
-    hereBtn->setChecked(s == Here);
-    everywhereBtn->setChecked(s == Everywhere);
+    foldersBtn->setChecked(s == FolderScope);
+    catalogBtn->setChecked(s == CatalogScope);
     applyScope();
 }
 
 void FindPanel::applyScope()
 {
 /*
-    Point the facet tree at the right source and set the footer's verb.
+    Point the category tree at the right source and set the footer's verb.
 
-    THE SEARCH TEXT MOVES BOTH WAYS. Leaving Here means the proxy filter must stop
-    applying the text -- the whole datamodel comes back -- and returning to Here means it
-    must start again, or the loaded set would stay narrowed by a query the panel is no
+    THE SEARCH TEXT MOVES BOTH WAYS. Leaving Folders means the proxy filter must stop
+    applying the text -- the whole datamodel comes back -- and returning to Folders means
+    it must start again, or the loaded set would stay narrowed by a query the panel is no
     longer showing as active.
 */
-    if (currentScope == Everywhere) {
-        /* Release the proxy filter. An Everywhere query must not ALSO be narrowing what
+    if (currentScope == CatalogScope) {
+        /* Release the proxy filter. A Catalog query must not ALSO be narrowing what
            is loaded, or the user is looking at two answers at once -- and the tree is
            about to hold catalog values, which mean nothing to the datamodel.
            setSearchText clears the text half; MW::filterChange declines to run the tree
            half while this scope is current. */
         filters->setSearchText(QString());
-        if (!filters->loadCatalogFacets()) {
+        if (!filters->loadCatalogCategories()) {
             resultLabel->setText(
                 "The catalog is unavailable -- the local index database could not be "
-                "opened. Browsing and Here are unaffected.");
+                "opened. Browsing and the Folders scope are unaffected.");
         }
         loadRow->setVisible(true);
         searchEdit->setPlaceholderText("Search every catalogued image...");
@@ -224,7 +225,7 @@ void FindPanel::applyScope()
         /* The tree is holding the catalog's values; only MW knows whether the model is
            ready to rebuild them from. It re-applies the search text afterwards, so the
            text survives the switch even though the checks do not. */
-        emit rebuildHereFacetsRequested();
+        emit rebuildFolderCategoriesRequested();
     }
     refresh();
 }
@@ -249,7 +250,7 @@ void FindPanel::refresh()
     const bool open = Catalog::instance().isAvailable();
     const int n = open ? Catalog::instance().count() : 0;
 
-    everywhereBtn->setEnabled(open);
+    catalogBtn->setEnabled(open);
     manageRootsBtn->setEnabled(open && !scanning);
 
     /* Always says what is indexed, whether or not a search has run: a search that found
@@ -265,7 +266,7 @@ void FindPanel::refresh()
             .arg(Catalog::instance().folderCount())
             .arg(Catalog::instance().folderCount() == 1 ? "folder" : "folders"));
 
-    if (currentScope == Everywhere) runSearch();
+    if (currentScope == CatalogScope) runSearch();
     else updateFooter();
 }
 
@@ -281,7 +282,7 @@ void FindPanel::runSearch()
 {
     if (G::isLogger) G::log("FindPanel::runSearch");
     debounce->stop();
-    if (currentScope != Everywhere) return;
+    if (currentScope != CatalogScope) return;
     if (!Catalog::instance().isAvailable()) return;
 
     const CatalogQuery q = currentQuery();
@@ -304,10 +305,10 @@ void FindPanel::updateFooter()
 {
 /*
     The footer says what the panel is currently doing, and the verb changes with the
-    scope: Here is showing a subset of what is loaded, Everywhere has found images that
+    scope: Folders is showing a subset of what is loaded, Catalog has found images that
     are not loaded at all and is offering to load them.
 */
-    if (currentScope == Here) {
+    if (currentScope == FolderScope) {
         loadBtn->setEnabled(false);
         addBtn->setEnabled(false);
         resultLabel->setText(filters->isAnyFilter()

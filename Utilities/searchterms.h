@@ -5,8 +5,8 @@
 #include <QStringList>
 
 /*
-    One grammar for both search boxes. See notes/Documentation.txt "Searching Here and
-    Everywhere".
+    One grammar for both search boxes. See notes/Documentation.txt "Searching Folders and
+    Catalog".
 
     WHY THIS EXISTS. Winnow has two searches that look identical and behaved differently.
     F2 searches the DATAMODEL (Filters > Search) and did a plain QString::contains;

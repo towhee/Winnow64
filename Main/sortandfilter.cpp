@@ -117,14 +117,14 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
-    /* In the Find dock's EVERYWHERE scope the facet tree is holding the CATALOG's values,
-       not the datamodel's, and its checkboxes describe a search rather than a filter.
-       Running the proxy over them would narrow the loaded set by values it has never
-       heard of -- almost always to nothing -- while the user is looking at a result count
-       for a different question entirely. The Everywhere query is FindPanel's job; this is
-       only for Here. */
-    if (findPanel && findPanel->scope() == FindPanel::Everywhere) {
-        if (G::isLogger) G::log(srcFun, "Everywhere scope -- proxy filter not applied");
+    /* In the Find dock's CATALOG scope the category tree is holding the CATALOG's
+       values, not the datamodel's, and its checkboxes describe a search rather than a
+       filter. Running the proxy over them would narrow the loaded set by values it has
+       never heard of -- almost always to nothing -- while the user is looking at a result
+       count for a different question entirely. The Catalog query is FindPanel's job;
+       this is only for Folders. */
+    if (findPanel && findPanel->scope() == FindPanel::CatalogScope) {
+        if (G::isLogger) G::log(srcFun, "Catalog scope -- proxy filter not applied");
         return;
     }
 

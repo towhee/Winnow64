@@ -341,7 +341,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
            -- deliberately lives in QSettings instead, because moveAside() discards this
            file without asking and user intent is not derived data.
 
-           image.folder is denormalised, like devpreview.folder, so a folder facet or a
+           image.folder is denormalised, like devpreview.folder, so a folder category or a
            prune-by-folder is an index seek rather than a quarter of a million paths
            taken apart in memory. */
         const char *ddl[] = {
@@ -360,7 +360,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
             "  sidecarmtime INTEGER NOT NULL DEFAULT 0,"
             "  indexed      INTEGER NOT NULL DEFAULT 0,"
             "  live         INTEGER NOT NULL DEFAULT 1,"
-            /* Facets and range filters. */
+            /* Category values and range filters. */
             "  captured     INTEGER,"
             "  rating       INTEGER NOT NULL DEFAULT 0,"
             "  label        TEXT    NOT NULL DEFAULT '',"
@@ -436,7 +436,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         /* FLAT KEYWORDS. A keyword's identity becomes its NAME, where schema 3 keyed it
            on (path, name) and so stored a hierarchical tag TWICE -- once as the flat
            dc:subject leaf and once as the hierarchy node -- which put the same keyword in
-           the facet list twice with the image counts split between the entries. See
+           the category list twice with the image counts split between the entries. See
            Metadata/keywordflatten.h for why flat, and notes/Documentation.txt.
 
            THIS MIGRATES IN PLACE AND RE-READS NOTHING. Everything needed is already here:

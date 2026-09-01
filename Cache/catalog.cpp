@@ -32,7 +32,7 @@ QString defaultCacheDir()
 /* Case folding, matching Cache/pathkey.h's reasoning: toCaseFolded is the Unicode-correct
    locale-independent operation, where toLower is neither. Delegates to the shared
    keyword helper so the index folds a name exactly as the datamodel does -- if the two
-   disagreed, the facet and the search would disagree about the same picture. */
+   disagreed, the category and the search would disagree about the same picture. */
 QString fold(const QString &s)
 {
     return keywordFold(s);
@@ -55,12 +55,13 @@ QVariant text(const QString &s)
 }
 
 /*
-    The SQL that produces one facet's value, keyed by the datamodel column the Filters
-    panel maps that category to.
+    The SQL that produces one category item's value, keyed by the datamodel column the
+    Filters panel maps that category to.
 
-    ONE MAP, USED BOTH WAYS -- facets() lists the distinct values and search() compares
-    against them -- so a facet item the user checks cannot mean something different from
-    the item that was offered. Two expressions would drift the first time one was edited.
+    ONE MAP, USED BOTH WAYS -- categoryItems() lists the distinct values and search()
+    compares against them -- so a category item the user checks cannot mean something
+    different from the item that was offered. Two expressions would drift the first time
+    one was edited.
 
     THE STRINGS MUST MATCH WHAT DataModel WRITES into the same column, because the Find
     dock shows one list and the user does not know which scope produced it: TypeColumn is
@@ -70,15 +71,15 @@ QVariant text(const QString &s)
 
     A COLUMN NOT LISTED HERE CANNOT BE ANSWERED by the index -- duplicates (CompareColumn)
     is a comparison of what is loaded, and SearchColumn is the search box's own flag -- so
-    facets() returns nothing and the panel hides that category rather than showing an
-    empty one that looks broken.
+    categoryItems() returns nothing and the panel hides that category rather than showing
+    an empty one that looks broken.
 */
-QString facetSql(int dmColumn)
+QString categorySql(int dmColumn)
 {
     /* IFNULL, applied once below, is what makes "no value" a value. A NULL title or an
        image with no capture date has to come back as the empty string so it groups into
-       the blank facet and so a checked blank item matches it with IN (''), rather than
-       vanishing from both the list and the query. */
+       the blank category item and so a checked blank item matches it with IN (''), rather
+       than vanishing from both the list and the query. */
     QString expr;
     switch (dmColumn) {
     case G::RatingColumn:     expr = "CASE WHEN i.rating > 0 THEN CAST(i.rating AS TEXT)"
@@ -96,7 +97,7 @@ QString facetSql(int dmColumn)
     case G::FocalLengthColumn: expr = "CAST(CAST(i.focallength AS INTEGER) AS TEXT)";
                               break;
     /* captured is seconds since epoch; 'unixepoch' is what makes these local-agnostic and
-       stable, which a facet list has to be. */
+       stable, which a category list has to be. */
     case G::YearColumn:       expr = "strftime('%Y', i.captured, 'unixepoch')"; break;
     case G::DayColumn:        expr = "strftime('%Y-%m-%d', i.captured, 'unixepoch')"; break;
     /* The folder NAME, not the path: rtrim everything up to the last separator. */
@@ -172,7 +173,7 @@ qint64 Catalog::keywordIdLocked(QSqlDatabase &db, const QString &name)
     KEYED ON THE NAME ALONE. Schema 3 keyed on (path, name), which meant a tag Lightroom
     wrote both ways -- "Heron" in dc:subject and "Fauna|Bird|Heron" in
     lr:hierarchicalSubject -- became two keyword rows for one tag, and so appeared twice
-    in the facet list with its image count split between the entries. The hierarchy is
+    in the category list with its image count split between the entries. The hierarchy is
     flattened before it reaches here (Metadata/keywordflatten.h), so both forms arrive as
     the same name and collapse onto one row.
 
@@ -287,7 +288,7 @@ void Catalog::writeFtsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow 
     Both keyword forms go into the one column, and the hierarchical paths have their '|'
     replaced by spaces so every ancestor becomes its own token: that is what lets a free
     text search for "wildlife" hit an image tagged "Wildlife|Birds|Heron", matching what
-    the keyword facet does through the ancestor rows.
+    the Keywords category does through the ancestor rows.
 */
     QSqlQuery del(db);
     del.prepare("DELETE FROM image_fts WHERE rowid = ?");
@@ -558,23 +559,23 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
         }
     }
 
-    /* The generic facet restriction. Values within a column are OR-ed and columns AND-ed,
-       which is exactly what checking several items in one Filters category and then
-       checking a second category means -- the two scopes must narrow the same way from
-       the same checkboxes. */
-    /* text() on every bound value, because the BLANK facet is a value the user can check
-       and a null QString binds as SQL NULL -- "NULL IN (NULL)" is NULL, so the blank row
-       would select nothing at all. facetSql's IFNULL puts the column side at '', and this
-       puts the bound side there too. */
+    /* The generic CATEGORY restriction. Values within a column are OR-ed and columns
+       AND-ed, which is exactly what checking several items in one Filters category and
+       then checking a second category means -- the two scopes must narrow the same way
+       from the same checkboxes. */
+    /* text() on every bound value, because the BLANK category item is a value the user
+       can check and a null QString binds as SQL NULL -- "NULL IN (NULL)" is NULL, so the
+       blank row would select nothing at all. categorySql's IFNULL puts the column side at
+       '', and this puts the bound side there too. */
     for (auto it = cq.include.constBegin(); it != cq.include.constEnd(); ++it) {
-        const QString expr = facetSql(it.key());
+        const QString expr = categorySql(it.key());
         if (expr.isEmpty() || it.value().isEmpty()) continue;
         QStringList marks;
         for (const QString &v : it.value()) { marks << "?"; binds << text(v); }
         where << "(" + expr + ") IN (" + marks.join(",") + ")";
     }
     for (auto it = cq.exclude.constBegin(); it != cq.exclude.constEnd(); ++it) {
-        const QString expr = facetSql(it.key());
+        const QString expr = categorySql(it.key());
         if (expr.isEmpty() || it.value().isEmpty()) continue;
         QStringList marks;
         for (const QString &v : it.value()) { marks << "?"; binds << text(v); }
@@ -635,7 +636,7 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
 QList<CatalogKeyword> Catalog::keywords()
 {
 /*
-    The whole keyword vocabulary with image counts and parent names -- what the facet
+    The whole keyword vocabulary with image counts and parent names -- what the category
     lists render.
 
     ONE ROW PER NAME, because the vocabulary is flat. Counts come from image_keyword
@@ -688,28 +689,29 @@ QList<CatalogKeyword> Catalog::keywords()
     return out;
 }
 
-QMap<QString, int> Catalog::facets(int dmColumn)
+QMap<QString, int> Catalog::categoryItems(int dmColumn)
 {
 /*
-    Every distinct value of one facet, with how many live images carry it.
+    Every distinct value of one category, with how many live images carry it.
 
-    THE KEYWORD FACET IS A JOIN, everything else is a GROUP BY on the image row. That is
-    the only structural difference between them, and it is why the switch below has two
+    THE KEYWORDS CATEGORY IS A JOIN, everything else is a GROUP BY on the image row. That
+    is the only structural difference between them, and it is why the switch below has two
     arms rather than one generic query.
 
-    THE BLANK VALUE IS A FACET. A single-valued category has to add up to the catalog: if
-    43,064 images are indexed and 3,000 carry a rating, the ratings list says 3,000 rated
-    and 40,064 blank, not 3,000 and an unexplained shortfall. facetSql's IFNULL folds NULL
-    into '' so the GROUP BY produces that row for free, and checking it means "the ones
-    with nothing here" -- which is exactly what the datamodel side of the Filters panel
-    has always offered, since its per-row QMap counts the empty string like any other key.
-    Keywords are the exception and get no blank row: an image carries many, so the counts
-    overlap and cannot sum to anything, and the datamodel side does not offer one either.
+    THE BLANK VALUE IS A CATEGORY ITEM. A single-valued category has to add up to the
+    catalog: if 43,064 images are indexed and 3,000 carry a rating, the ratings list says
+    3,000 rated and 40,064 blank, not 3,000 and an unexplained shortfall. categorySql's
+    IFNULL folds NULL into '' so the GROUP BY produces that row for free, and checking it
+    means "the ones with nothing here" -- which is exactly what the datamodel side of the
+    Filters panel has always offered, since its per-row QMap counts the empty string like
+    any other key. Keywords are the exception and get no blank row: an image carries many,
+    so the counts overlap and cannot sum to anything, and the datamodel side does not
+    offer one either.
 
     COUNTS ARE UNFILTERED -- the whole catalog, not the current query. Per-item counts
     under the live query would be one GROUP BY per category on every keystroke over a
     quarter of a million rows, which is exactly the shape the debounce exists to avoid.
-    The Find dock therefore leaves the filtered column blank in Everywhere scope and says
+    The Find dock therefore leaves the filtered column blank in Catalog scope and says
     so, rather than showing a number that is quietly the wrong one.
 */
     QMap<QString, int> out;
@@ -731,7 +733,7 @@ QMap<QString, int> Catalog::facets(int dmColumn)
         }
     }
     else {
-        const QString expr = facetSql(dmColumn);
+        const QString expr = categorySql(dmColumn);
         if (expr.isEmpty()) return out;         // the index cannot answer this one
         if (!q.exec("SELECT " + expr + " AS v, COUNT(*)"
                     " FROM image i WHERE i.live = 1"
@@ -757,7 +759,7 @@ QSet<QString> Catalog::ambiguousKeywords()
     genuinely lost, and the only thing the docks colour differently.
 
     Returned FOLDED, because every caller is comparing against a keyword it got from
-    somewhere else (a datamodel column, a facet item) and folding at the point of
+    somewhere else (a datamodel column, a category item) and folding at the point of
     comparison is the only way the two can agree about "Heron" and "heron".
 
     An empty result means EITHER nothing is ambiguous OR there is no catalog. Callers must

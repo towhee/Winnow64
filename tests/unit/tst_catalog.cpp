@@ -39,7 +39,7 @@ private slots:
     void unchangedRowsAreSkipped();
     void sidecarEditForcesReindex();
     void pathSpellingDoesNotSplitTheRow();
-    void keywordFacetCountsImages();
+    void keywordCategoryCountsImages();
     void staleOfReportsOnlyWhatChanged();
     void sweepDemotesMissingSource();
     void onMovedFollowsTheImage();
@@ -47,16 +47,16 @@ private slots:
     void searchTextIsNotInjectable();
     void clearingPreviewsLeavesTheCatalog();
     void staleOfSkipsUnchangedOnRescan();
-    void removedKeywordDisappearsFromFacets();
+    void removedKeywordDisappearsFromCategory();
     void lightroomDoubleCollapsesToOneKeyword();
     void ambiguousKeywordIsReported();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     void migrationFromVersionThreeMergesKeywords();
-    void facetsMatchWhatTheDatamodelWrites();
-    void facetsAreEmptyForColumnsTheIndexCannotAnswer();
+    void categoryItemsMatchWhatTheDatamodelWrites();
+    void categoryItemsAreEmptyForColumnsTheIndexCannotAnswer();
     void genericIncludeAndExcludeNarrowTheSearch();
-    void blankFacetAccountsForEveryImage();
+    void blankCategoryItemAccountsForEveryImage();
 
 private:
     QString imagePath(const QString &name) const;
@@ -150,8 +150,8 @@ void tst_catalog::commitThenSearchByKeyword()
     q.keywords = {"Heron"};
     QCOMPARE(cat.search(q), QStringList{imagePath("a.nef")});
 
-    /* Case must not matter: the user picks "heron" out of a facet list that may have been
-       written by an application that capitalised it differently. */
+    /* Case must not matter: the user picks "heron" out of a category list that may have
+       been written by an application that capitalised it differently. */
     q.keywords = {"hErOn"};
     QCOMPARE(cat.search(q).size(), 1);
 
@@ -180,8 +180,8 @@ void tst_catalog::hierarchyReachesAncestors()
                  qPrintable("ancestor search failed for " + k));
     }
 
-    /* Free text must agree with the facet, or the two halves of the UI would disagree
-       about the same picture. */
+    /* Free text must agree with the category item, or the two halves of the UI would
+       disagree about the same picture. */
     CatalogQuery t;
     t.text = "fauna";
     QCOMPARE(cat.search(t).size(), 1);
@@ -269,7 +269,7 @@ void tst_catalog::pathSpellingDoesNotSplitTheRow()
     QCOMPARE(cat.count(), 1);
 }
 
-void tst_catalog::keywordFacetCountsImages()
+void tst_catalog::keywordCategoryCountsImages()
 {
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("g1.nef", {"Heron"}),
@@ -440,12 +440,12 @@ void tst_catalog::staleOfSkipsUnchangedOnRescan()
     QVERIFY(stale.contains(folder[7].path));
 }
 
-void tst_catalog::removedKeywordDisappearsFromFacets()
+void tst_catalog::removedKeywordDisappearsFromCategory()
 {
 /*
     A keyword deleted in Lightroom must stop being offered here. The keyword VOCABULARY
     row survives (another image may still use it), but this image's link is replaced, so
-    the facet count drops and a search stops returning it.
+    the category item count drops and a search stops returning it.
 */
     Catalog &cat = Catalog::instance();
     CatalogRow a = rowFor("fa.nef", {"Heron", "BC"});
@@ -477,10 +477,11 @@ void tst_catalog::removedKeywordDisappearsFromFacets()
 void tst_catalog::lightroomDoubleCollapsesToOneKeyword()
 {
 /*
-    THE DEFECT THIS WHOLE CHANGE EXISTS FOR. Lightroom writes the same tag twice: the leaf
+    THE DEFECT THIS WHOLE CHANGE EXISTS FOR. Lightroom writes the same tag twice: the
+    leaf
     into dc:subject and the full path into lr:hierarchicalSubject. Schema 3 keyed a
-    keyword on (path, name) and so stored both forms, which put "Heron" in the facet list
-    TWICE with its image count split between the two entries.
+    keyword on (path, name) and so stored both forms, which put "Heron" in the category
+    list TWICE with its image count split between the two entries.
 */
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("lr1.nef", {"Heron"}, {"Fauna|Bird|Heron"}),
@@ -515,8 +516,9 @@ void tst_catalog::ambiguousKeywordIsReported()
     QVERIFY(!ambiguous.contains("heron"));          // only ever under Bird
     QVERIFY(!ambiguous.contains("location"));       // a root, no parent at all
 
-    /* The facet carries the parents so the panel can name them in a tooltip -- knowing a
-       word is ambiguous is not much use without knowing what the choices are. */
+    /* The category item carries the parents so the panel can name them in a tooltip --
+       knowing a word is ambiguous is not much use without knowing what the choices
+       are. */
     for (const CatalogKeyword &k : cat.keywords()) {
         if (keywordFold(k.name) != "vancouver") continue;
         QCOMPARE(k.contexts.size(), 2);
@@ -698,12 +700,13 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
 }
 
 
-void tst_catalog::facetsMatchWhatTheDatamodelWrites()
+void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
 {
 /*
-    The Find dock shows ONE facet list and the user cannot tell which scope produced it,
+    The Find dock shows ONE category list and the user cannot tell which scope produced
+    it,
     so a value the catalog offers must be spelled exactly as DataModel spells the same
-    value -- otherwise checking "NEF" in Everywhere would mean nothing in Here, and the
+    value -- otherwise checking "NEF" in Catalog would mean nothing in Folders, and the
     scope switch would quietly change the question.
 */
     Catalog &cat = Catalog::instance();
@@ -722,39 +725,39 @@ void tst_catalog::facetsMatchWhatTheDatamodelWrites()
     cat.commit({a, b});
 
     /* Type is the suffix UPPER-cased, as DataModel::addFileDataForRow writes it. */
-    const QMap<QString, int> types = cat.facets(G::TypeColumn);
+    const QMap<QString, int> types = cat.categoryItems(G::TypeColumn);
     QCOMPARE(types.value("NEF"), 1);
     QCOMPARE(types.value("JPG"), 1);
 
     /* Year "yyyy" and Day "yyyy-MM-dd", as addMetadataForItem writes them. */
-    QCOMPARE(cat.facets(G::YearColumn).value("2024"), 2);
-    QCOMPARE(cat.facets(G::DayColumn).value("2024-06-15"), 2);
+    QCOMPARE(cat.categoryItems(G::YearColumn).value("2024"), 2);
+    QCOMPARE(cat.categoryItems(G::DayColumn).value("2024-06-15"), 2);
 
     /* Pick is the WORDS, not a boolean. */
-    const QMap<QString, int> picks = cat.facets(G::PickColumn);
+    const QMap<QString, int> picks = cat.categoryItems(G::PickColumn);
     QCOMPARE(picks.value("Picked"), 1);
     QCOMPARE(picks.value("Unpicked"), 1);
 
     /* Rating is the digit as text, and unrated is the EMPTY key rather than "0" -- the
-       blank is a facet in its own right so the category adds up. */
-    const QMap<QString, int> ratings = cat.facets(G::RatingColumn);
+       blank is a category item in its own right so the category adds up. */
+    const QMap<QString, int> ratings = cat.categoryItems(G::RatingColumn);
     QCOMPARE(ratings.value("3"), 1);
     QCOMPARE(ratings.value(""), 1);
     QVERIFY(!ratings.contains("0"));
 
     /* Focal length carries no trailing ".0", or "400" and "400.0" would look like two
-       different lenses' worth of facet. */
-    QCOMPARE(cat.facets(G::FocalLengthColumn).value("400"), 1);
+       different lenses' worth of category. */
+    QCOMPARE(cat.categoryItems(G::FocalLengthColumn).value("400"), 1);
 
     /* The folder NAME, not its path. */
     const QString folderName = QFileInfo(tmp.path()).fileName();
-    QCOMPARE(cat.facets(G::FolderNameColumn).value(folderName), 2);
+    QCOMPARE(cat.categoryItems(G::FolderNameColumn).value(folderName), 2);
 
-    QCOMPARE(cat.facets(G::CameraModelColumn).value("NIKON Z 9"), 2);
-    QCOMPARE(cat.facets(G::LensColumn).value("NIKKOR Z 100-400mm"), 1);
+    QCOMPARE(cat.categoryItems(G::CameraModelColumn).value("NIKON Z 9"), 2);
+    QCOMPARE(cat.categoryItems(G::LensColumn).value("NIKKOR Z 100-400mm"), 1);
 }
 
-void tst_catalog::facetsAreEmptyForColumnsTheIndexCannotAnswer()
+void tst_catalog::categoryItemsAreEmptyForColumnsTheIndexCannotAnswer()
 {
 /*
     Duplicates is a comparison of what is LOADED and the search flag is the panel's own
@@ -765,21 +768,19 @@ void tst_catalog::facetsAreEmptyForColumnsTheIndexCannotAnswer()
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("fc1.nef", {"Heron"})});
 
-    QVERIFY(cat.facets(G::CompareColumn).isEmpty());
-    QVERIFY(cat.facets(G::SearchColumn).isEmpty());
+    QVERIFY(cat.categoryItems(G::CompareColumn).isEmpty());
+    QVERIFY(cat.categoryItems(G::SearchColumn).isEmpty());
     /* And a real one is not empty, so the assertions above are about the column and not
        about an empty catalog. */
-    QVERIFY(!cat.facets(G::KeywordsAllColumn).isEmpty());
+    QVERIFY(!cat.categoryItems(G::KeywordsAllColumn).isEmpty());
 }
 
 void tst_catalog::genericIncludeAndExcludeNarrowTheSearch()
 {
-/*
-    The Find dock hands the SAME checked-item structure to either scope, so the query
-    carries facets as a map keyed by datamodel column rather than a named field per
-    category. Within a column the values are OR-ed, columns are AND-ed, and exclude is
-    AND-NOT -- exactly what checking and Opt+clicking items in the tree means.
-*/
+/* The Find dock hands the SAME checked-item structure to either scope, so the query
+    carries category items as a map keyed by datamodel column rather than a named field
+    per category. Within a column the values are OR-ed, columns are AND-ed, and exclude is
+    AND-NOT -- exactly what checking and Opt+clicking items in the tree means. */
     Catalog &cat = Catalog::instance();
     CatalogRow z9 = rowFor("g-z9.nef");
     z9.model = "NIKON Z 9";
@@ -810,20 +811,19 @@ void tst_catalog::genericIncludeAndExcludeNarrowTheSearch()
     QCOMPARE(cat.search(none).size(), 3);
 }
 
-void tst_catalog::blankFacetAccountsForEveryImage()
+void tst_catalog::blankCategoryItemAccountsForEveryImage()
 {
 /*
     A single-valued category has to add up to the catalog. If 3 images are indexed and one
-    has a lens, the Lens facet says one lens and two blank -- not one lens and a silent
-    shortfall the user has no way to read. This is how the Here scope has always behaved:
-    BuildFilters counts the empty string like any other key, so the panel already shows a
-    blank first row there.
+    has a lens, the Lens category says one lens and two blank -- not one lens and a silent
+    shortfall the user has no way to read. This is how the Folders scope has always
+    behaved: BuildFilters counts the empty string like any other key, so the panel already
+    shows a blank first row there.
 
     AND THE BLANK MUST BE SELECTABLE, because a count nobody can click on is trivia.
-    Checking it means "the ones with nothing here", which is why facetSql folds NULL into
-    '' -- a plain column compare would drop the NULL rows out of both the list and the
-    query.
-*/
+    Checking it means "the ones with nothing here", which is why categorySql folds NULL
+    into '' -- a plain column compare would drop the NULL rows out of both the list and
+    the query. */
     Catalog &cat = Catalog::instance();
     CatalogRow withLens = rowFor("h-lens.nef");
     withLens.lens = "NIKKOR Z 100-400mm";
@@ -839,7 +839,7 @@ void tst_catalog::blankFacetAccountsForEveryImage()
     cat.search(CatalogQuery(), -1, &total);
     QCOMPARE(total, 3);
 
-    const QMap<QString, int> lenses = cat.facets(G::LensColumn);
+    const QMap<QString, int> lenses = cat.categoryItems(G::LensColumn);
     QCOMPARE(lenses.value("NIKKOR Z 100-400mm"), 1);
     QCOMPARE(lenses.value(""), 2);
     int sum = 0;
@@ -847,7 +847,7 @@ void tst_catalog::blankFacetAccountsForEveryImage()
     QCOMPARE(sum, total);
 
     /* A NULL date is blank, not 1970: IFNULL has to sit outside strftime. */
-    const QMap<QString, int> years = cat.facets(G::YearColumn);
+    const QMap<QString, int> years = cat.categoryItems(G::YearColumn);
     QCOMPARE(years.value("2024"), 1);
     QCOMPARE(years.value(""), 2);
     QVERIFY(!years.contains("1970"));
