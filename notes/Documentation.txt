@@ -666,6 +666,10 @@ Three load states:
 
 Key files: Main/setandupdate.cpp (setCombineRawJpg), Main/status.cpp (updateStatusBar — button icon/tooltip/enabled state), Main/initialize.cpp (rawJpgStatusBtn wiring), Main/menusandactions.cpp (combineRawJpgAction), Main/mainwindow.cpp (folderChanged / folderChangeCompleted enable-disable).
 
+THE PAIRING ITSELF is recorded by DataModel::rawJpgPairing on COLUMN 0 of both halves: the raw row gets G::DupHideRawRole, the jpg row gets G::DupIsJpgRole plus G::DupRawTypeRole ("NEF", "ORF"), and BOTH get G::DupOtherIdxRole pointing at the other. Read them through DataModel::isDupJpg / isDupHiddenRaw / dupOtherRow / dupRawType, never through data(G::Dup...Role) directly. The roles live on column 0 alone, so reading one off any other column — or off the proxy — returns an INVALID QVariant, which reads as "not a pair" rather than as an error. That failure is silent by construction, and it had already happened twice: MW::setTagValue tested the role on the tag's own column, so tag edits never propagated to the hidden raw file, and MW::setColorClass looked the paired row up through dm->sf when the row it holds is a DATAMODEL row — and a hidden raw is filtered OUT of the proxy, so the colour-class log named a different image. The accessors range-check as well, which is why they return -1 or false rather than an index.
+
+G::DupOtherIdxRole HOLDS A PLAIN INT ROW, not a QModelIndex. A QModelIndex is a persistent reference into a model that is cleared and rebuilt on every folder change, it cannot be range-checked once stale, and it would not survive the row store becoming anything other than a QStandardItemModel. The bulk-load tracker beside it (prevRawRow) is an int for the same reason and is reset by clearDataModel.
+
 
 ⏺ DataModel Changes > Folder Tree Auto-Refresh
 

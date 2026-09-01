@@ -62,6 +62,19 @@ public:
     bool readMetadataForItem(int row, int instance);
     bool refreshMetadataForItem(int sfRow, int instance);
     qint64 rowBytesUsed(int dmRow);
+    void sampleRowBytesUsed(int dmRow);
+
+    /*  Raw+JPG pair accessors.
+
+        Every pairing role lives on column 0 (G::PathColumn) of the DATAMODEL.
+        Reading one off any other column, or off the proxy, silently yields an
+        invalid QVariant -- which reads as "not a pair" rather than as an
+        error, so the bug is quiet. Go through these rather than calling
+        data(G::Dup...Role) directly. */
+    int  dupOtherRow(int dmRow) const;      // the paired row, or -1 if none
+    bool isDupJpg(int dmRow) const;         // the jpg half of a pair
+    bool isDupHiddenRaw(int dmRow) const;   // the raw half, hidden if combined
+    QString dupRawType(int dmRow) const;    // "NEF", "ORF" ... else empty
     void clearDataModel();
     void newInstance();
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
@@ -205,7 +218,15 @@ public:
     int currentDmRow;                   // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
+    /* An ESTIMATE of the bytes the model is holding, for diagnostics only --
+       nothing gates on it. Maintained by sampleRowBytesUsed from a 1-in-64
+       exact sample, because the exact walk is ~550 data() calls per row.
+       Diagnostics::datamodel measures the whole model when an exact figure is
+       wanted. */
     qint64 bytesUsed = 0;
+    qint64 bytesUsedSampleTotal = 0;    // exact bytes of the sampled rows
+    int    bytesUsedSampleCount = 0;    // how many rows were sampled
+    int    bytesUsedSampleTick = 0;     // sample every 64th call
 
     const QStringList raw = {"arw", "cr2", "cr3", "dng","nef", "orf", "raf", "sr2", "rw2"};
     const QStringList jpg = {"jpg", "jpeg"};
@@ -378,7 +399,7 @@ private:
 
     QString prevRawSuffix = "";
     QString prevRawBaseName = "";
-    QModelIndex prevRawIdx;
+    int prevRawRow = -1;
 
     enum ErrorType {
         General,

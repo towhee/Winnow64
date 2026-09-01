@@ -2695,3 +2695,333 @@ Two test failures remain, and neither is mine — I verified both against a pris
 - smoke_launch — same assert at HEAD: datamodel.cpp:1675 does 1 / m.exposureTimeNum with a zero shutter speed, handing +Inf to qRound. That's a real latent divide-by-zero in imMetadata, worth a separate
   fix.
 
+
+888888888888888888888888888  Catalog changes 88888888888888888888888888888888
+
+I want a more unified workflow experience for the user.  There is a paradigm difference
+between immediately seeing all the images in the selected folders and having to load
+part of the catalog.  How do we clarify/simplify this for the user?
+
+Here is what I am proposing:
+
+Step 1.  User selects scope of images to add to the datamodel from Folders or Bookmarks.
+A Catalog item is inserted as the first row in Folders and Bookmarks.
+
+Step 2.  User filters the scope of images.  If Catalog was selected, then this would be all
+images in the catalog.  If the user scrolls to the end of the kResultLimit, then keep
+showing a window of kResultLimit images.  This eliminates the need to load from the index
+to the datamodel and most searches are just filters.
+
+This leads me to wonder if the SQL index and the datamodel should be integrated into one
+entity.
+
+What are your thoughts?  Do you have alternate suggestions?
+
+Plan written. My thoughts on your proposal, briefly:
+
+  Step 1 is right and cheap. Catalog as the first row in Folders and Bookmarks is the correct fix — it says "this is a scope," and scope is chosen in the tree. Right now grep -i catalog File/ returns
+  nothing: the catalog is only reachable from inside the search panel, which is backwards.
+
+  Step 2 is right in intent, but the windowing axis is wrong. The reason you need a Load button and a kResultLimit today isn't the index — it's that DataModel is a QStandardItemModel with 92 columns, so
+  each row is ~92 QStandardItems ≈ 15–18 KB. 250k rows would be ~4 GB. Sliding a row window over SQL works around that, but it costs you the one invariant everything downstream leans on — that proxy row
+  index is a stable, contiguous 0..N-1 over the whole set. Sort, scrollbar, "row 84,110 of 243,102", selection, ImageCache trim and scroll-sync all break together. And it puts SQLite inside data(), which
+  the GUI thread calls thousands of times per repaint.
+
+  Replace those 92 items with a packed struct plus a string-intern pool and a row is ~250–400 bytes. 250k rows ≈ 60–100 MB — the whole catalog just fits, resident. Then you window the payload (icons,
+  decode scratch, full images), which Winnow already does via startIconRange/endIconRange and targetFirst/targetLast. You get the end-to-end scroll you asked for without a sliding window at all.
+
+  The surgery is also smaller than it sounds: only 6 call sites outside datamodel.cpp use QStandardItemModel-specific API on dm. Everything else already goes through index()/data()/setData().
+
+  On merging index and datamodel: yes, but as one schema and loader, not one storage engine. Define the row's fields once and generate the G::dataModelColumns enum, the struct layout, the image table
+  columns and categorySql from it. tst_catalog::categoryItemsMatchWhatTheDatamodelWrites exists today purely to police four hand-maintained lists agreeing — one list makes that structural.
+
+  Two things I'd flag before you commit:
+
+  - The real new subsystem is thumbnails in the index. Scrolling into an unvisited region of a 250k catalog means opening files unless the index stores thumbs, and it stores none today. That's stage 3,
+    and it's the largest genuinely new work.
+  - This is a big project, and stage 2 destabilises MetaRead, ImageCache and BuildFilters at once. I've staged it so each boundary is shippable — stage 1 alone removes most of the visible split — and put
+    the memory measurement before the rewrite, since the whole plan rests on that number.
+
+  The plan also folds in the deferred proxy-off-thread snapshot work as a stage-0 prerequisite: BuildFilters, ImageCache::setTargetRange and MetaRead::needToRead all read the model off-thread today, and
+  that has to be fixed before the row store changes underneath them.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Ready to code?
+
+ Here is Claude's plan:
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Unify Scope and Filter: one row store, one load path
+
+ Context
+
+ Winnow currently has two paradigms for "what images am I looking at", and the
+ seam between them is visible to the user:
+
+ - Folders scope — select a folder, every image in it appears, filters narrow what
+   is loaded. DataModel::addFolder (Datamodel/datamodel.cpp:853).
+ - Catalog scope — type a search, read a count, press Load, and the first
+   5,000 results are pushed into the model. FindPanel::runSearch
+   (Views/findpanel.cpp:281) → MW::loadCatalogResults (Main/mainwindow.cpp:3143)
+   → DataModel::addPaths (datamodel.cpp:1003).
+
+ The Find dock already merged the two panels (one category tree, one grammar, a
+ Folders|Catalog switch). What it could not merge is the mental model: one scope
+ shows you pictures, the other shows you a number and a button. There is also no
+ Catalog entry in the Folders or Bookmarks docks at all — grep -i catalog File/
+ returns nothing — so the catalog is reachable only from inside the search panel,
+ which is backwards: it is a scope, and scope is chosen in the tree.
+
+ Intended outcome. Scope is chosen in one place (Folders / Bookmarks, with
+ Catalog as the first row). Filter always means the same thing: narrow the current
+ scope. The catalog is scrollable end to end like a folder, with no Load button and no
+ truncation cliff. Under it, the SQLite index and the DataModel become one thing
+ conceptually — the index is the persistent form of a row, the model the in-memory form.
+
+ ---
+
+ The key finding, and where it changes the approach
+
+ The stated plan was a row-windowed model over SQL (dm holds rows 82k–86k, refilled
+ as you scroll). Investigation says that is the wrong axis to window on, and that the
+ real blocker is something else.
+
+ DataModel is a QStandardItemModel with 92 columns (datamodel.h:52,
+ Main/global.h:89-214). Each populated cell is a QStandardItem + its
+ QStandardItemData role list + a pointer slot ≈ 170–200 bytes; addFileDataForRow
+ sets ~30 cells and addMetadataForItem ~80 more. That is ~15–18 KB per row, so
+ 250k rows would be roughly 4 GB — and that is why the catalog needs a Load button
+ and a kResultLimit today. (It is also why rowBytesUsed, datamodel.cpp:314,
+ exists — and that diagnostic is itself called per row at :2256: ~550 data()
+ calls plus a fresh roleNames() QHash each time, on the GUI thread.)
+
+ Replace the 92 QStandardItems with one packed struct plus a string-intern pool
+ and a row costs ~250–400 bytes. 250k rows ≈ 60–100 MB — the whole catalog fits
+ in memory.
+
+ So: window the payload, not the rows.
+
+ ┌─────────────────────────────────────┬─────────────────────────────────────────────────────────┐
+ │                Data                 │                     Where it lives                      │
+ ├─────────────────────────────────────┼─────────────────────────────────────────────────────────┤
+ │ Identity, display and filter fields │ Fully resident — QVector<ImageRow>                      │
+ ├─────────────────────────────────────┼─────────────────────────────────────────────────────────┤
+ │ Decode/cache scratch (~35 cols)     │ Side hash, only for rows a cache is touching            │
+ ├─────────────────────────────────────┼─────────────────────────────────────────────────────────┤
+ │ Icons                               │ Path-keyed LRU — already windowed by startIconRange     │
+ ├─────────────────────────────────────┼─────────────────────────────────────────────────────────┤
+ │ Full images                         │ ImageCache — already windowed by targetFirst/targetLast │
+ └─────────────────────────────────────┴─────────────────────────────────────────────────────────┘
+
+ Resident fields are path, name, type, captured, rating, label, pick, dimensions,
+ gear, title and keywords. Scratch is segment offsets, ICC buffers and decoder state.
+
+ This preserves the invariant every downstream subsystem depends on: proxy row index
+ is a stable, contiguous 0..N-1 address space over the complete set. Sorting, the
+ scrollbar, "row 84,110 of 243,102", selection, ImageCache trim and scroll-sync all
+ keep working unchanged. A sliding row window breaks all of them at once, and would
+ additionally put SQLite inside data() — which the GUI thread calls thousands of
+ times per repaint.
+
+ The surgery is more contained than it looks. Only 6 call sites outside
+ datamodel.cpp use QStandardItemModel-specific API on dm
+ (mainwindow.cpp:6066, iconview.cpp:1989,2006, tableview.cpp:492,496,
+ datamodel.cpp:146). Everything else already goes through
+ index()/data()/setData()/valueSf()/rowCount().
+
+ Answering "should the index and the datamodel be one entity?"
+
+ Yes — one schema and one loader, not one storage engine. Define the row's fields
+ once (a field table / X-macro in a new Datamodel/rowfields.h) and generate from
+ it: the G::dataModelColumns enum, the ImageRow struct layout, the image table
+ column list (Cache/cachedb.cpp:348), and categorySql (Cache/catalog.cpp:77).
+ Those four lists are maintained by hand today and must agree —
+ tst_catalog::categoryItemsMatchWhatTheDatamodelWrites exists purely to pin that they
+ do. One list makes that structural instead of vigilant.
+
+ ---
+
+ Plan
+
+ Five stages, each independently shippable. Stage 1 alone removes most of the visible
+ paradigm split, so the decision to continue can be renewed at each boundary.
+
+ Stage 0 — Prerequisites (pay off regardless of what follows)
+
+ 1. Delete the per-row rowBytesUsed call (datamodel.cpp:2256). Replace
+    bytesUsed with an O(1) running estimate, or gate the exact walk behind isDebug.
+    Only read by Main/diagnostics.cpp:836.
+ 2. G::DupOtherIdxRole must stop storing a QModelIndex (rawJpgPairing,
+    datamodel.cpp:1293-1364). Store the path or an int row.
+ 3. Stop worker threads reading dm / dm->sf. ImageCache::setTargetRange
+    (imagecache.cpp:772,789), trimOutsideTargetRange (:485),
+    resetStaleIsCaching (:1016), all of BuildFilters, and MetaRead::needToRead
+    (metaread.cpp:957-959) read a non-thread-safe model off-thread today. Snapshot
+    into plain structs — CatalogRow (datamodel.cpp:1508) is the house template.
+    This is the "next caching glitch" trigger for the deferred snapshot work
+    (approach B).
+ 4. Fix F2. MW::searchTextEdit (sortandfilter.cpp:930) edits
+    filters->searchTrue, which Filters::showAllCategories hides under
+    G::useFindDock (filters.cpp:1297). Route it to FindPanel::focusSearch(), as
+    findpanel.h:54 already claims it does.
+
+ Stage 1 — Scope becomes one concept (UI only, no engine change)
+
+ - Insert a Catalog row as the first item of FSTree and of Bookmarks
+   (File/fstree.cpp, File/bookmarks.cpp). Selecting it emits scope-change rather
+   than folderSelectionChange.
+ - Add one source of truth, G::Scope { Folders, Catalog }, owned by MW. FindPanel's
+   toggle buttons and the tree selection become two views of it, synced both ways
+   (FindPanel::setScope, findpanel.cpp:173; applyScope, :193).
+ - Catalog scope with no filter is never empty: show the most recent
+   kResultLimit by captured DESC (the query already orders that way,
+   catalog.cpp:609), footer reading "showing 5,000 of 243,102".
+ - Retire the Load button for the common case. Below a threshold the debounced
+   search auto-loads through the existing MW::loadCatalogResults. Keep Add — it
+   is what makes two searches composable. Above the threshold, report the count and ask
+   for narrowing; that cliff disappears in stage 4.
+ - New tree rows follow the existing dock/graphic registration checklist; no new dock,
+   so no winnowStateVersion bump.
+
+ Stage 2 — The row store (the actual merge)
+
+ - New Datamodel/rowfields.h: the single field table described above.
+ - DataModel : QAbstractTableModel over QVector<ImageRow> plus a QVector<QString>
+   intern pool for folder / type / make / model / lens / keyword — these repeat across
+   a library and are most of the string cost.
+ - Keep G::dataModelColumns as the public address space. data()/setData()
+   become a generated column→field switch, so callers outside compile unchanged.
+ - Move the ~35 decode/cache scratch columns to QHash<int, RowScratch>, populated
+   only for rows a decoder or the ImageCache is working on.
+ - Icons move out of Qt::DecorationRole into a path-keyed LRU; setIcon1
+   (datamodel.cpp:2906) and clearIconsOutsideChunkRange (:3363) target it.
+ - Fix the 6 external call sites listed above.
+ - Rewrite the filter predicate. SortFilter::filterAcceptsRow
+   (datamodel.cpp:4558) walks the whole Filters QTreeWidget per row with QVariant
+   compares — O(rows × items), untenable at 250k. Compile the tree's check state once
+   per filter change into per-category QSet<int> of interned ids (include + exclude),
+   then evaluate against struct fields. Semantics stay exactly as documented: OR within
+   a category, AND across, exclusion an outright cross-category reject that must not
+   set isCategoryUnchecked.
+ - BuildFilters gets faster and safe at once. Its ~40 full-model passes
+   (buildfilters.cpp:437-726, 862-1060) become one pass over a contiguous vector of
+   plain data — legitimately thread-safe (stage 0.3) rather than merely lucky.
+ - DataModel::instance (datamodel.h:174) keeps its present role as the staleness
+   token for every cross-thread write.
+
+ Stage 3 — Thumbnails in the index
+
+ Scrolling into an un-visited region of a 250k catalog must not mean opening files.
+ The index holds no thumbnail today; this is the largest genuinely new subsystem.
+
+ - Additive schema bump in CacheDb::migrate (Cache/cachedb.cpp:216): a thumb
+   table keyed on pathkey, payload either a BLOB or a file beside the devPreview
+   payloads — match whatever DevPreviewCache does so the two share one sweep and
+   move-aside policy.
+ - Written opportunistically from folder loads (the icon has just been decoded, so it
+   is free) and by CatalogScanner (Main/catalogscanner.cpp), which reads metadata
+   only today. Respect its pause-on-G::stop and pause-on-G::isModifyingDatamodel
+   rules — a thumbnail pass must not turn a background index into GPU hours.
+ - IconView read order: memory LRU → index thumb → file decode.
+ - Sweep demotes, never deletes, and skips unmounted volumes — same rule as the
+   devPreview and catalog sweeps.
+
+ Stage 4 — Scope is a query; one load path
+
+ - DataModel::setScope(CatalogQuery) replaces addFolder / addPaths as the entry
+   point.
+   - Folder scope → the query with a folder (or subtree) predicate, plus an async
+     filesystem reconcile adding files the index has not seen and demoting ones gone.
+   - Catalog scope → the same query without that predicate: the full result set, and
+     kResultLimit is retired.
+ - MetaRead (Cache/metaread.cpp) stops being the primary loader and becomes the
+   gap-filler: it reads only rows the index could not answer, plus the icon window.
+   This changes what "done" means — isMetaReadFinished() (datamodel.cpp:3449) and
+   G::allMetadataAttempted become "the resident set is answered", and everything
+   gated on them (filterAcceptsRow:4590, sorting at sortandfilter.cpp:428,
+   MW::buildFiltersWhenModelReady) must be re-read against that meaning.
+ - catalogRows() and the folderChangeCompleted commit
+   (mainwindow.cpp:4555-4571) become the reconcile write-back rather than a
+   separate opportunistic capture.
+ - Everything downstream of emit folderChange is already shared by both paths
+   (mainwindow.cpp:4237) and does not change.
+
+ Stage 5 — Offline rows and write-back
+
+ - The index's live / vol columns already know a row is on an unmounted volume.
+   Draw an offline badge rather than filtering those rows out — with the whole
+   catalog visible, "that disk isn't plugged in" is information, not an error. Per the
+   greyed-with-a-reason rule the loupe explains inline, never by popup.
+ - Rating / label / pick edits in catalog scope write the sidecar (source of truth) and
+   update the index row in the same commit, so the filter tree cannot disagree with
+   what was just set.
+
+ ---
+
+ Files touched (principal)
+
+ ┌───────────────────┬──────────────────────────────────────────────────────────────────────┐
+ │       Area        │                                Files                                 │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Row store         │ Datamodel/datamodel.h/.cpp, new Datamodel/rowfields.h, Main/global.h │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Filters           │ Datamodel/filters.cpp/h, Datamodel/buildfilters.cpp/h                │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Scope UI          │ File/fstree.*, File/bookmarks.*, Views/findpanel.*                   │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Scope UI (cont.)  │ Main/mainwindow.cpp, initialize.cpp, sortandfilter.cpp               │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Index             │ Cache/cachedb.*, Cache/catalog.*, Main/catalogscanner.cpp            │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Consumers         │ Cache/metaread.*, Cache/imagecache.cpp                               │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Consumers (cont.) │ Views/iconview.cpp, Views/tableview.cpp                              │
+ ├───────────────────┼──────────────────────────────────────────────────────────────────────┤
+ │ Docs              │ notes/Documentation.txt §20 + Table of Contents                      │
+ └───────────────────┴──────────────────────────────────────────────────────────────────────┘
+
+ Views/catalogview.cpp/h (440/135 lines) is not built under G::useFindDock and
+ carries a second copy of the search logic, including its own kResultLimit. Delete it
+ in stage 1 rather than porting it — that ends G::useFindDock as an escape hatch, so
+ it should be a conscious call (see open decisions).
+
+ ---
+
+ Verification
+
+ - Unit — ctest --test-dir build/mac-debug --output-on-failure. Extend
+   tests/unit/tst_catalog.cpp (schema migration; the category/datamodel agreement
+   test becomes a consequence of the shared field table) and add tst_datamodel:
+   the column→field switch round-trips every column; the compiled filter predicate
+   matches the old filterAcceptsRow on a fixture, including PartiallyChecked
+   exclusion and the isCategoryUnchecked rule; intern-pool identity.
+ - Memory, measured not assumed — instrument resident bytes for a 5k-row folder
+   before and after stage 2 (expect ~15 KB/row → ~350 B/row), then load a synthetic
+   250k-row catalog and confirm it stays under ~150 MB. The whole plan rests on this
+   number, so measure it on a prototype struct at the start of stage 2, before
+   committing to the rewrite.
+ - Latency, with a probe — per the instrument-don't-guess rule, time scope change
+   and filter change: folder open (indexed vs cold), catalog scope open at 250k, a
+   filter check at 250k, scroll-to-row-200,000. Nothing in the folder cases may
+   regress against the current build.
+ - Soak — --soaktest headless over real folders, gate on threadsGrowth, with a
+   catalog-scope pass added. A TSan run after stage 0.3 to confirm the off-thread model
+   reads are gone.
+ - By hand — select Catalog in the Folders dock with no filter and scroll end to
+   end; check a keyword and confirm the set narrows with no Load button; eject a volume
+   and confirm offline badges rather than vanishing rows; invoke a pre-change workspace
+   and confirm it restores; set a rating in catalog scope and confirm sidecar and index
+   agree.
+
+ Open decisions
+
+ 1. G::useFindDock and catalogview.* — delete in stage 1, or keep the escape
+    hatch through stage 2?
+ 2. Auto-load threshold for stage 1, before stage 4 removes it — 5,000 (today's
+    kResultLimit) or higher?
+ 3. Thumbnail payload — BLOB in index.db, or files beside the devPreview
+    payloads? Decide by what DevPreviewCache already does, so sweep and move-aside
+    stay one policy.
+
+
+
+

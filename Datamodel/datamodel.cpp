@@ -97,9 +97,12 @@ RAW+JPG
 When Raw+Jpg are combined the following datamodel roles are used:
 
 G::DupIsJpgRole     True if jpg type and there is a matching raw file
-G::DupRawIdxRole    Raw file index if jpg has matching raw
-G::DupHideRawRole   True is there is a matching jpg file
+G::DupOtherIdxRole  The paired row, as an int datamodel row, on BOTH halves
+G::DupHideRawRole   True if this raw file has a matching jpg
 G::DupRawTypeRole   Raw file type if jpg type with matching raw
+
+All four live on column 0. Read them through isDupJpg / isDupHiddenRaw /
+dupOtherRow / dupRawType rather than data(G::Dup...Role).
 
 INSTANCE CONFLICT
 
@@ -311,31 +314,65 @@ void DataModel::setModelProperties()
     // "🔎" was title for search column
 }
 
+/*  The EXACT byte cost of one datamodel row, summed over every column and every
+    role.
+
+    This is the slow, accurate path: ~92 columns x ~6 roles is over 500 data()
+    calls for a single row. It must NOT be called per row on a load path. It is
+    called by the diagnostics report, and on a 1-in-64 sample by
+    addMetadataForItem to calibrate the running bytesUsed estimate -- see
+    bytesUsed in datamodel.h.
+*/
 qint64 DataModel::rowBytesUsed(int dmRow)
 {
+    /* roleNames() builds and returns a fresh QHash on every call, and .keys()
+       allocates a QList from it. The role set is fixed for the life of the
+       model, so build the key list once. */
+    static const QList<int> roleKeys = roleNames().keys();
+
     qint64 bytes = 0;
-    QHash<int, QByteArray> roles = roleNames(); // Get all available roles
-    // qDebug() << "DataModel::rowBytesUsed" << "roles:" << roles;
     for (int col = 0; col < columnCount(); ++col) {
         QModelIndex dmIdx = index(dmRow, col);
-        for (int role : roles.keys()) {
+        for (int role : roleKeys) {
             QVariant data = this->data(dmIdx, role);
-            if (!data.isNull()) {
-                bytes += Utilities::qvariantBytes(data);
-                if (isDebug)
-                {
+            if (data.isNull()) continue;
+            const quint64 cellBytes = Utilities::qvariantBytes(data);
+            bytes += cellBytes;
+            if (isDebug) {
                 qDebug().noquote()
                     << "DataModel::rowBytesUsed"
                     << horizontalHeaderItem(col)->text().leftJustified(25)
                     << "col =" << QString::number(col).rightJustified(2)
                     << "role =" << QString::number(role).rightJustified(1)
-                    << "bytes =" << QString::number(Utilities::qvariantBytes(data)).rightJustified(12)
+                    << "bytes =" << QString::number(cellBytes).rightJustified(12)
                     << "sumbytes =" << bytes;
-                }
             }
         }
     }
     return bytes;
+}
+
+/*  Fold row dmRow into the running bytesUsed ESTIMATE.
+
+    Called once per metadata load. Only every 64th row is measured exactly;
+    bytesUsed is then the sampled mean times the number of loaded rows. The
+    previous code called rowBytesUsed() for EVERY row, putting ~550 data()
+    calls plus a QHash build on the GUI thread per image, purely to feed a
+    diagnostic. Nothing gates on bytesUsed -- the memory governor probes the
+    process footprint directly (see the probeTick block in addMetadataForItem)
+    -- and Diagnostics::datamodel walks the whole model itself when an exact
+    figure is wanted, so an estimate is all this counter has ever needed to be.
+*/
+void DataModel::sampleRowBytesUsed(int dmRow)
+{
+    if ((bytesUsedSampleTick++ & 0x3F) == 0) {       // every 64th row
+        bytesUsedSampleTotal += rowBytesUsed(dmRow);
+        ++bytesUsedSampleCount;
+    }
+    if (bytesUsedSampleCount > 0) {
+        const qint64 mean = bytesUsedSampleTotal / bytesUsedSampleCount;
+        bytesUsed = mean * metadataLoadedCount.load(std::memory_order_relaxed);
+    }
 }
 
 void DataModel::clearDataModel()
@@ -379,8 +416,15 @@ void DataModel::clearDataModel()
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
     isProcessingFolders = false;
-    // reset memory used by model
+    // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
+    prevRawSuffix = "";
+    prevRawBaseName = "";
+    prevRawRow = -1;
+    // reset the memory-used estimate and its sampling accumulators
     bytesUsed = 0;
+    bytesUsedSampleTotal = 0;
+    bytesUsedSampleCount = 0;
+    bytesUsedSampleTick = 0;
     // clear memory-overrun latch and Reader→DataModel backpressure counter
     G::memoryOverrunFlag.store(false, std::memory_order_relaxed);
     queuedReaderEvents.store(0, std::memory_order_relaxed);
@@ -1290,6 +1334,44 @@ bool DataModel::okManyImagesWarning()
     return false;
 }
 
+/*  Raw+JPG pair accessors. See the note in datamodel.h: every pairing role
+    lives on column 0 of the datamodel, and G::DupOtherIdxRole holds the paired
+    row as a plain int.
+
+    It used to hold a QModelIndex. That is a persistent reference into a model
+    that is cleared and rebuilt on every folder change, and it would not survive
+    the row store becoming anything other than a QStandardItemModel. An int row
+    can also be range-checked, which a stale QModelIndex cannot.
+*/
+int DataModel::dupOtherRow(int dmRow) const
+{
+    if (dmRow < 0 || dmRow >= rowCount()) return -1;
+    const QVariant v = index(dmRow, G::PathColumn).data(G::DupOtherIdxRole);
+    if (!v.isValid()) return -1;
+    bool ok = false;
+    const int other = v.toInt(&ok);
+    if (!ok || other < 0 || other >= rowCount() || other == dmRow) return -1;
+    return other;
+}
+
+bool DataModel::isDupJpg(int dmRow) const
+{
+    if (dmRow < 0 || dmRow >= rowCount()) return false;
+    return index(dmRow, G::PathColumn).data(G::DupIsJpgRole).toBool();
+}
+
+bool DataModel::isDupHiddenRaw(int dmRow) const
+{
+    if (dmRow < 0 || dmRow >= rowCount()) return false;
+    return index(dmRow, G::PathColumn).data(G::DupHideRawRole).toBool();
+}
+
+QString DataModel::dupRawType(int dmRow) const
+{
+    if (dmRow < 0 || dmRow >= rowCount()) return QString();
+    return index(dmRow, G::PathColumn).data(G::DupRawTypeRole).toString();
+}
+
 void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseName)
 {
     bool isRaw = metadata->hasJpg.contains(ext);
@@ -1299,7 +1381,7 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
     if (isRaw && loadingModel) {
         prevRawSuffix = ext;
         prevRawBaseName = baseName;
-        prevRawIdx = index(row, 0);
+        prevRawRow = row;
     }
 
     QMutexLocker locker(&dmMutex);
@@ -1308,10 +1390,11 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
 
         // --- PATH A: BULK LOAD (Fast Sequential Check) ---
         if (loadingModel) {
-            if (isJpg && baseName == prevRawBaseName) {
+            if (isJpg && prevRawRow >= 0 && baseName == prevRawBaseName) {
+                QModelIndex prevRawIdx = index(prevRawRow, 0);
                 setData(prevRawIdx, true, G::DupHideRawRole);
-                setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
-                setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
+                setData(prevRawIdx, row, G::DupOtherIdxRole);
+                setData(index(row, 0), prevRawRow, G::DupOtherIdxRole);
                 setData(index(row, 0), true, G::DupIsJpgRole);
 
                 setData(index(row, 0), prevRawSuffix.toUpper(), G::DupRawTypeRole);
@@ -1334,8 +1417,8 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
 
                 if (isJpg && metadata->hasJpg.contains(otherSuffix)) {
                     setData(otherIdx, true, G::DupHideRawRole);
-                    setData(otherIdx, index(row, 0), G::DupOtherIdxRole);
-                    setData(index(row, 0), otherIdx, G::DupOtherIdxRole);
+                    setData(otherIdx, row, G::DupOtherIdxRole);
+                    setData(index(row, 0), idx.row(), G::DupOtherIdxRole);
                     setData(index(row, 0), true, G::DupIsJpgRole);
 
                     setData(index(row, 0), otherSuffix.toUpper(), G::DupRawTypeRole);
@@ -1347,15 +1430,22 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
                 }
                 else if (isRaw && (otherSuffix == "jpg" || otherSuffix == "jpeg")) {
                     setData(index(row, 0), true, G::DupHideRawRole);
-                    setData(index(row, 0), otherIdx, G::DupOtherIdxRole);
-                    setData(otherIdx, index(row, 0), G::DupOtherIdxRole);
+                    setData(index(row, 0), idx.row(), G::DupOtherIdxRole);
+                    setData(otherIdx, row, G::DupOtherIdxRole);
                     setData(otherIdx, true, G::DupIsJpgRole);
 
                     setData(otherIdx, ext.toUpper(), G::DupRawTypeRole);
+                    /* The jpg half carries the combined type label, which must
+                       go to that row's TypeColumn. This previously passed
+                       G::TypeColumn as the ROLE argument of setData(idx, value,
+                       role), so the label landed on column 0 under an arbitrary
+                       role and the Type column never changed -- the isJpg
+                       branch above always got this right. */
                     if (combineRawJpg)
-                        setData(otherIdx, "JPG+" + ext.toUpper(), G::TypeColumn);
+                        setData(index(idx.row(), G::TypeColumn),
+                                "JPG+" + ext.toUpper());
                     else
-                        setData(otherIdx, "JPG", G::TypeColumn);
+                        setData(index(idx.row(), G::TypeColumn), "JPG");
                     break;
                 }
             }
@@ -2253,7 +2343,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         imageCacheWaitingForRow = -1;
     }
 
-    bytesUsed += rowBytesUsed(row);
+    sampleRowBytesUsed(row);
 
     return true;
 }
@@ -4448,7 +4538,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isIconLoaded", dots) << G::s(index(row, G::IconLoadedColumn).data());
     rpt << "\n  " << G::sj("isReadWrite", dots) << G::s(index(row, G::ReadWriteColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", dots) << G::s(index(row, 0).data(G::DupHideRawRole));
-    rpt << "\n  " << G::sj("dupRawRow", dots) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
+    rpt << "\n  " << G::sj("dupRawRow", dots) << G::s(dupOtherRow(row));
     rpt << "\n  " << G::sj("dupIsJpg", dots) << G::s(index(row, 0).data(G::DupIsJpgRole));
     rpt << "\n  " << G::sj("dupRawType", dots) << G::s(index(row, 0).data(G::DupRawTypeRole));
     rpt << "\n  " << G::sj("Column", dots) << G::s(index(row, 0).data(G::ColumnRole));

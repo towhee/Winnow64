@@ -4,6 +4,7 @@ WHAT'S NEW
 - Develop Presets panel
 - Go to folder
 - Original/Developed previews
+- Catalog
 
 BUGS / TO DO
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom

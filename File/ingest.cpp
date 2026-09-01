@@ -228,15 +228,17 @@ void Ingest::getPicks()
     need the original datamodel dm order to efficiently deal with the combined raw/jpg
     scenario.
 
-    The datamodel is sorted by file path. Raw files with the same path precede jpg files with
-    duplicate names. Two roles track duplicates: G::DupHideRawRole flags jpg files with
-    duplicate raws and G::DupRawIdxRole points to the duplicate raw file from the jpg data
-    row. For example:
+    The datamodel is sorted by file path, so a raw file precedes the jpg that
+    shares its base name. Both halves of a pair are marked, on column 0:
 
-    Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
-    Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
-    Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
-    Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
+    Row 0  P4020001.ORF   DupHideRawRole = true   DupOtherIdxRole = 1
+    Row 1  P4020001.JPG   DupIsJpgRole   = true   DupOtherIdxRole = 0
+    Row 2  P4020002.ORF   DupHideRawRole = true   DupOtherIdxRole = 3
+    Row 3  P4020002.JPG   DupIsJpgRole   = true   DupOtherIdxRole = 2
+
+    Read them through DataModel::isDupJpg / isDupHiddenRaw / dupOtherRow rather
+    than data(G::Dup...Role): the roles are on column 0 only, so reading any
+    other column returns an invalid QVariant that looks like "not a pair".
 */
     if (G::isLogger) G::log("Ingest::getPicks");
     QString fPath;
@@ -258,8 +260,9 @@ void Ingest::getPicks()
 //                        qDebug() << "Ingest::getPicks" << "appending" << fPath;
                     }
                     // append combined raw file
-                    if (idx.data(G::DupIsJpgRole).toBool()) {
-                        idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupOtherIdxRole));
+                    if (dm->isDupJpg(row)) {
+                        int rawRow = dm->dupOtherRow(row);
+                        if (rawRow >= 0) idx = dm->index(rawRow, 0);
                     }
                 }
                 fPath = idx.data(G::PathRole).toString();
@@ -379,10 +382,11 @@ void Ingest::run()
             QModelIndex idx = dm->index(dmRow, 0);
             if (idx.isValid()) {
                 // check if raw/jpg pair
-                if (idx.data(G::DupHideRawRole).toBool()) {
-                    QModelIndex jpgIdx = idx.data(G::DupOtherIdxRole).toModelIndex();
-                    if (jpgIdx.isValid()) {
-                        metadataChangedSourcePath = jpgIdx.data(G::PathRole).toString();
+                if (dm->isDupHiddenRaw(dmRow)) {
+                    int jpgRow = dm->dupOtherRow(dmRow);
+                    if (jpgRow >= 0) {
+                        metadataChangedSourcePath =
+                            dm->index(jpgRow, 0).data(G::PathRole).toString();
                     }
                 }
             }

@@ -11167,13 +11167,16 @@ void MW::infoViewChanged(QStandardItem* item)
         // emit setValueDm(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
-            // is this part of a raw+jpg pair
-            if (dmIdx.data(G::DupIsJpgRole).toBool()) {
+            /* Is this part of a raw+jpg pair? The pairing roles live on column 0,
+               so these were previously read off dmIdx -- which is column
+               col[tagName] -- and came back invalid every time, silently
+               disabling tag propagation to the hidden raw file. */
+            int dmRow = dmIdx.row();
+            int rawRow = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
+            if (rawRow >= 0) {
                 // set tag item for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
-                QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
-                emit setValDm(rawIdx.row(), col[tagName], tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-                // emit setValueDm(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                emit setValDm(rawRow, col[tagName], tagValue, dm->instance, src,
+                              Qt::EditRole, Qt::AlignCenter);
             }
         }
     }
