@@ -180,6 +180,30 @@ DataModel::DataModel(QObject *parent,
     sf->setSourceModel(this);
     selectionModel = new QItemSelectionModel(sf);
 
+    /*  Republish the worker view of the proxy whenever its structure or order
+        changes. Driven by the proxy's OWN signals rather than by a list of call
+        sites, so a path that inserts, removes, re-sorts or re-filters cannot
+        forget to do it -- and there is no correct list to maintain, since
+        SortFilter::invalidate() is reached from MW, the Filters tree and
+        combineRawJpg alike. All five are emitted on the GUI thread. */
+    for (auto sig : { &QAbstractItemModel::rowsInserted,
+                      &QAbstractItemModel::rowsRemoved }) {
+        connect(sf, sig, this, [this]{ rebuildProxySnapshot(); });
+    }
+    connect(sf, &QAbstractItemModel::modelReset,   this, [this]{ rebuildProxySnapshot(); });
+    connect(sf, &QAbstractItemModel::layoutChanged, this, [this]{ rebuildProxySnapshot(); });
+
+    /*  The row-count changes the proxy reports also size the live per-row array.
+        It is grown from the SOURCE row count, not the proxy's -- the array is
+        indexed by datamodel row, and a filtered-out row still needs its slot. */
+    connect(this, &QAbstractItemModel::rowsInserted, this,
+            [this]{ resizeRowSync(rowCount()); });
+    connect(this, &QAbstractItemModel::modelReset, this,
+            [this]{ resizeRowSync(rowCount()); });
+
+    resizeRowSync(rowCount());
+    rebuildProxySnapshot();
+
      // eligible image file types
     fileFilters = new QStringList;
     foreach (const QString &str, metadata->supportedFormats) {
@@ -323,6 +347,74 @@ void DataModel::setModelProperties()
     addMetadataForItem to calibrate the running bytesUsed estimate -- see
     bytesUsed in datamodel.h.
 */
+/*  ---- Worker-thread views of the model (Datamodel/modelsync.h) ---- */
+
+RowSyncPtr DataModel::rowSync() const
+{
+    QMutexLocker lock(&mSyncMutex);
+    return mRowSync;
+}
+
+ProxySnapshotPtr DataModel::proxySnapshot() const
+{
+    QMutexLocker lock(&mSyncMutex);
+    return mProxySnapshot;
+}
+
+/*  Grow (or create) the live per-row array, carrying existing values across.
+
+    Called wherever the row count changes. It never SHRINKS on a plain grow --
+    a smaller model comes from clearDataModel, which builds a fresh array. Rows
+    are only ever appended within an instance, so index meanings are stable, and
+    a worker holding the previous array keeps it alive through its shared_ptr
+    while reading values that are still correct for the rows it had.
+*/
+void DataModel::resizeRowSync(int rows)
+{
+    if (rows < 0) rows = 0;
+    auto fresh = std::make_shared<RowSyncArray>(rows);
+    {
+        QMutexLocker lock(&mSyncMutex);
+        if (mRowSync && mRowSync->size() == rows) return;
+        if (mRowSync) fresh->copyFrom(*mRowSync);
+        mRowSync = fresh;
+    }
+}
+
+/*  Republish the proxy's order and identity. GUI THREAD ONLY -- it reads both
+    the model and the proxy.
+
+    Driven by the proxy's own structural signals rather than by a list of call
+    sites, so a path that inserts, removes, re-sorts or re-filters cannot forget
+    to do it. Paths do not change once a row exists, so nothing else can make
+    this stale.
+*/
+void DataModel::rebuildProxySnapshot()
+{
+    if (!G::isGuiThread()) return;
+
+    auto snap = std::make_shared<ProxySnapshot>();
+    snap->instance = instance;
+    if (sf != nullptr) {
+        const int n = sf->rowCount();
+        snap->dmRowOf.resize(n);
+        snap->pathOf.resize(n);
+        snap->sfRowOfPath.reserve(n);
+        for (int sfRow = 0; sfRow < n; ++sfRow) {
+            const QModelIndex sfIdx = sf->index(sfRow, 0);
+            const int dmRow = sf->mapToSource(sfIdx).row();
+            const QString fPath = sfIdx.data(G::PathRole).toString();
+            snap->dmRowOf[sfRow] = dmRow;
+            snap->pathOf[sfRow] = fPath;
+            if (!fPath.isEmpty()) snap->sfRowOfPath.insert(fPath, sfRow);
+        }
+    }
+    {
+        QMutexLocker lock(&mSyncMutex);
+        mProxySnapshot = snap;
+    }
+}
+
 qint64 DataModel::rowBytesUsed(int dmRow)
 {
     /* roleNames() builds and returns a fresh QHash on every call, and .keys()
@@ -416,6 +508,15 @@ void DataModel::clearDataModel()
     folderHasMissingEmbeddedThumb = false;
     // folderQueue is empty
     isProcessingFolders = false;
+    /*  Fresh worker views. The old ones stay alive in any worker still holding
+        a shared_ptr; their instance no longer matches, which is the existing
+        staleness protocol every cross-thread write already checks. */
+    {
+        QMutexLocker lock(&mSyncMutex);
+        mRowSync = std::make_shared<RowSyncArray>(0);
+        mProxySnapshot = std::make_shared<ProxySnapshot>();
+    }
+
     // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
     prevRawSuffix = "";
     prevRawBaseName = "";
@@ -452,6 +553,7 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
     const int col = idx.column();
     const bool isStatusCol = (col == G::MetadataStatusColumn);
     const bool isBoolCol   = (col == G::IconLoadedColumn || col == G::VideoColumn);
+    const bool isCacheMBCol = (col == G::CacheSizeColumn);
     const bool track =
         idx.isValid() &&
         (role == Qt::EditRole || role == Qt::DisplayRole) &&
@@ -488,6 +590,36 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
                 std::atomic<int> *counter =
                     col == G::IconLoadedColumn ? &iconLoadedCount : &videoRowCount;
                 counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
+            }
+        }
+    }
+
+    /*  Mirror the same facts into the lock-free per-row array the worker
+        threads read (Datamodel/modelsync.h). This is the ONE place they are
+        maintained, for the same reason the counters above live here: every
+        write to these columns goes through setData, so nothing can set one and
+        forget to publish it. CacheSize rides along because ImageCache budgets
+        its target range on it and it is refined when the metadata arrives. */
+    if (ok && idx.isValid() && (role == Qt::EditRole || role == Qt::DisplayRole)) {
+        if (track || isCacheMBCol) {
+            RowSyncPtr rs;
+            { QMutexLocker lock(&mSyncMutex); rs = mRowSync; }
+            if (rs) {
+                const int row = idx.row();
+                if (isStatusCol) {
+                    const int st = value.toInt();
+                    rs->setFlag(row, RowSync::MetaAttempted, st != G::MetaNotAttempted);
+                    rs->setFlag(row, RowSync::MetaLoaded,    st == G::MetaLoaded);
+                }
+                else if (col == G::IconLoadedColumn) {
+                    rs->setFlag(row, RowSync::IconLoaded, value.toBool());
+                }
+                else if (col == G::VideoColumn) {
+                    rs->setFlag(row, RowSync::IsVideo, value.toBool());
+                }
+                else if (isCacheMBCol) {
+                    rs->setCacheMB(row, value.toFloat());
+                }
             }
         }
     }
@@ -991,6 +1123,9 @@ void DataModel::addFolder(const QString &folderPath)
                 }
             }
             emit dataChanged(index(first, 0), index(row - 1, columnCount() - 1));
+            // the batch's paths exist now; see endLoad for why this is here
+            resizeRowSync(rowCount());
+            rebuildProxySnapshot();
         }
     }
     else
@@ -1290,6 +1425,18 @@ bool DataModel::endLoad(bool success)
     // abort = false;
     loadingModel = false;
     sf->suspend(false);
+
+    /*  Republish the worker view now the rows are FILLED.
+
+        The proxy's rowsInserted fires from setRowCount, which the batched
+        insert calls BEFORE it writes any cell -- so the snapshot built from
+        that signal has the right number of rows and no paths in them. This is
+        the point at which both are true. It is cheap and idempotent, so doing
+        it here as well as on the signal costs a pass and removes the ordering
+        trap. */
+    resizeRowSync(rowCount());
+    rebuildProxySnapshot();
+
     if (success) {
         resolveIconChunkSize();
         return true;

@@ -8,6 +8,7 @@
 #include <atomic>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
+#include "Datamodel/modelsync.h"
 #include "Cache/framedecoder.h"
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
@@ -63,6 +64,20 @@ public:
     bool refreshMetadataForItem(int sfRow, int instance);
     qint64 rowBytesUsed(int dmRow);
     void sampleRowBytesUsed(int dmRow);
+
+    /*  THREAD-SAFE VIEWS OF THE MODEL for ImageCache and MetaRead -- see
+        Datamodel/modelsync.h. Both are safe to call from any thread; each hands
+        back a shared_ptr the caller should hold for the duration of its work
+        rather than re-fetching per row.
+
+        rowSync() is LIVE per-row state (metadata status, cache size estimate),
+        maintained in the setData override. proxySnapshot() is the proxy's order
+        and identity, rebuilt on the GUI thread whenever rows are inserted or
+        removed or the proxy is re-sorted or re-filtered. */
+    RowSyncPtr rowSync() const;
+    ProxySnapshotPtr proxySnapshot() const;
+    void rebuildProxySnapshot();            // GUI thread
+    void resizeRowSync(int rows);           // GUI thread
 
     /*  Raw+JPG pair accessors.
 
@@ -224,6 +239,15 @@ public:
        Diagnostics::datamodel measures the whole model when an exact figure is
        wanted. */
     qint64 bytesUsed = 0;
+    /*  Worker-thread views (Datamodel/modelsync.h). mSyncMutex guards only the
+        two shared_ptr slots -- publishing a replacement, or taking a reference.
+        The DATA behind them is either lock-free atomics (RowSyncArray) or
+        immutable once published (ProxySnapshot), so no worker ever holds this
+        lock while it reads. */
+    mutable QMutex mSyncMutex;
+    RowSyncPtr mRowSync;
+    ProxySnapshotPtr mProxySnapshot;
+
     qint64 bytesUsedSampleTotal = 0;    // exact bytes of the sampled rows
     int    bytesUsedSampleCount = 0;    // how many rows were sampled
     int    bytesUsedSampleTick = 0;     // sample every 64th call
