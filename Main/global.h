@@ -202,7 +202,7 @@ Q_NAMESPACE
         /* The FLAT keyword vocabulary this image is filtered and searched on: the
            de-duplicated union of KeywordsColumn's dc:subject leaves and every NODE of
            KeywordPathsColumn's hierarchical paths (Metadata/keywordflatten.h). This is
-           what the Filters Keywords category and the catalog facet both read.
+           what the Filters Keywords category and the catalog category both read.
 
            KeywordsColumn deliberately keeps the LITERAL dc:subject list rather than being
            replaced by this one. The two are different facts and only one of them may ever
@@ -363,10 +363,11 @@ Q_NAMESPACE
     extern bool useMultimedia;
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
     extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
-    /* The unified Find dock: one panel with a Here/Everywhere scope switch over one facet
-       vocabulary, replacing the separate Filters and Catalog panels. False restores both
-       panels exactly as they were -- an escape hatch while this proves out, not a shelved
-       feature. It is read at dock-creation time, so it takes a restart to change. */
+    /* The unified Find dock: one panel with a Folders/Catalog scope switch over one
+       category vocabulary, replacing the separate Filters and Catalog panels. False
+       restores both panels exactly as they were -- an escape hatch while this proves out,
+       not a shelved feature. It is read at dock-creation time, so it takes a restart to
+       change. */
     extern bool useFindDock;
     extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
     /* Develop Edits layout A/B/C -- where the scope is picked and where the editor (the

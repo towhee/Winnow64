@@ -1571,7 +1571,7 @@ QVector<CatalogRow> DataModel::catalogRows() const
         r.height = index(row, G::HeightColumn).data().toInt();
         r.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
         /* The FLAT vocabulary, not the literal dc:subject: the catalog indexes what is
-           searched on, and flattening once here means the index and the Filters facet
+           searched on, and flattening once here means the index and the Filters category
            cannot disagree about the same image. The raw paths travel beside it because
            the catalog derives its ambiguity contexts (which parents a name has been seen
            under) from them. */
@@ -2134,10 +2134,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     /* Ancestor names are only in the hierarchical form, so folding it into the search
        text is what lets a search for "Wildlife" find an image keyworded only "Heron". */
     search += Utilities::stringListToString(m.keywordPaths);
-    /* The flat vocabulary the Keywords filter category and the catalog facet read: both
-       properties reduced to one de-duplicated list of names, so a tag Lightroom wrote
-       twice (leaf in dc:subject, path in lr:hierarchicalSubject) is ONE keyword and an
-       ancestor is a keyword in its own right. The two source columns above are left as
+    /* The flat vocabulary the Keywords filter category and the catalog category read:
+       both properties reduced to one de-duplicated list of names, so a tag Lightroom
+       wrote twice (leaf in dc:subject, path in lr:hierarchicalSubject) is ONE keyword and
+       an ancestor is a keyword in its own right. The two source columns above are left as
        the file spelled them -- see G::KeywordsAllColumn on why they must be. */
     QStringList keywordsAll = flattenKeywords(m.keywords, m.keywordPaths);
     setData(index(row, G::KeywordsAllColumn), QVariant(keywordsAll));

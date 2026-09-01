@@ -2688,7 +2688,7 @@ condition — the plan says to push catalog facets through the same updateCatego
 ships behind G::useFindDock the way G::useReplaceFillModes did.
 
 
-===============================
+=============================== TO BE RESOLVED =========================
 
 Two test failures remain, and neither is mine — I verified both against a pristine HEAD worktree build rather than assuming:
 - tst_localcontrast — 12 pass / 10 fail identically at HEAD; Develop golden drift in sharpen/clarity/dehaze.

@@ -19,7 +19,7 @@
 
       o A hierarchical file carries the SAME tag twice. Lightroom writes the leaf into
         dc:subject and the path into lr:hierarchicalSubject, so storing both forms
-        separately put "Heron" in the facet list twice, with the image counts split
+        separately put "Heron" in the category list twice, with the image counts split
         between the two entries. Flattening collapses them by construction, because both
         forms reduce to the same name.
       o The hierarchy is NOT UNIVERSAL. Phone images, non-Adobe DAMs and IPTC-only files
@@ -45,7 +45,7 @@
 
     A FREE FUNCTION IN ITS OWN HEADER, not a Metadata member and not a Catalog private,
     for the reason Metadata/xmpapply.h and Cache/pathkey.h give: the datamodel and the
-    index must split a path IDENTICALLY or the facet and the search will disagree about
+    index must split a path IDENTICALLY or the category and the search will disagree about
     the same picture, and Metadata/metadata.h includes every parser header, so a member
     would compile only as long as the include order happened to cooperate. This depends
     on nothing but QString.
@@ -101,8 +101,8 @@ inline QString keywordLeafOf(const QString &path)
     through more than one application.
 
     ORDER IS PRESERVED (flat keywords first, then hierarchy in path order) rather than
-    sorted. The facet lists sort for display anyway, and keeping insertion order makes the
-    stored column read the way the file does, which matters when diagnosing an image.
+    sorted. The category lists sort for display anyway, and keeping insertion order makes
+    the stored column read the way the file does, which matters when diagnosing an image.
 */
 inline QStringList flattenKeywords(const QStringList &keywords, const QStringList &paths)
 {

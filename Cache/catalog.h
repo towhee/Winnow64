@@ -57,8 +57,8 @@
     unchanged folder costs one stat per file and no parsing at all.
 
     KEYWORDS ARE NORMALISED into keyword + image_keyword rather than stored as text on the
-    image row, because the facet list the UI wants ("show me every keyword, with counts")
-    is then an index scan instead of a quarter of a million string splits.
+    image row, because the category list the UI wants ("show me every keyword, with
+    counts") is then an index scan instead of a quarter of a million string splits.
 
     KEYWORDS ARE FLAT, keyed on the NAME alone. The hierarchy is flattened before it gets
     here -- Metadata/keywordflatten.h turns "Location|Canada|BC" into three keywords -- so
@@ -133,7 +133,7 @@ struct CatalogQuery
     /* Free text, passed to FTS5. Bare words are AND-ed and prefix-matched; the user can
        also write FTS syntax directly (quoted phrases, OR, NOT, keywords:heron). */
     QString text;
-    /* Exact keyword names, from the facet list. Multiple keywords are OR-ed, matching
+    /* Exact keyword names, from the category list. Multiple keywords are OR-ed, matching
        what checking several items in one Filters category does. Because the vocabulary is
        flat, picking an ancestor name already reaches everything that was beneath it --
        there is no subtree walk to ask for. */
@@ -149,7 +149,7 @@ struct CatalogQuery
     QDateTime to;
     /* Restrict to one folder subtree. Empty means the whole catalog. */
     QString folder;
-    /* The generic facet restriction, keyed by G::dataModelColumns: values within one
+    /* The generic CATEGORY restriction, keyed by G::dataModelColumns: values within one
        column are OR-ed, columns are AND-ed, and exclude is AND-NOT over everything. This
        is what lets the Find dock hand the same checked-item structure to either scope
        instead of the query growing a named field per category. Keywords are NOT in here
@@ -162,7 +162,7 @@ struct CatalogQuery
     bool includeMissing = false;
 };
 
-/* A keyword and how many catalogued images carry it -- what the facet list renders. */
+/* A keyword and how many catalogued images carry it -- what the category list renders. */
 struct CatalogKeyword
 {
     QString name;
@@ -198,17 +198,18 @@ public:
     QStringList search(const CatalogQuery &q, int limit = 5000, int *total = nullptr);
 
     /* Every keyword in the catalog with its image count and its parent names, for the
-       facet list. */
+       category list. */
     QList<CatalogKeyword> keywords();
 
-    /* Every distinct value of one FACET, with how many live images carry it -- the
-       catalog's half of the shared facet vocabulary the Find dock renders in Everywhere
-       scope. dmColumn is a G::dataModelColumns value, so the panel asks the index and the
-       datamodel the same question in the same terms; a column the catalog cannot answer
-       (duplicates, the search flag) returns empty and the panel hides that category.
-       Strings are formatted to match EXACTLY what DataModel writes into the same column,
-       because the user checks one facet item and both scopes must agree what it means. */
-    QMap<QString, int> facets(int dmColumn);
+    /* Every distinct value of one CATEGORY, with how many live images carry it -- the
+       catalog's half of the shared category vocabulary the Find dock renders in
+       Catalog scope. dmColumn is a G::dataModelColumns value, so the panel asks the
+       index and the datamodel the same question in the same terms; a column the catalog
+       cannot answer (duplicates, the search flag) returns empty and the panel hides that
+       category. Strings are formatted to match EXACTLY what DataModel writes into the
+       same column, because the user checks one category item and both scopes must agree
+       what it means. */
+    QMap<QString, int> categoryItems(int dmColumn);
 
     /* The names recorded under more than one parent -- the keywords whose meaning
        flattening made ambiguous. Case-folded, so callers compare with keywordFold().

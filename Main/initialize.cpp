@@ -1666,17 +1666,17 @@ void MW::createFilterDock()
         connect(findPanel, &FindPanel::loadResults, this, &MW::loadCatalogResults);
         connect(findPanel, &FindPanel::manageRootsRequested, this,
                 &MW::manageCatalogRoots);
-        /* Returning to Here: the tree is holding catalog values, so rebuild it from the
-           datamodel. buildFilters->reset() clears the catalog items (and the checks that
-           went with them) before build() repopulates from the model. */
-        connect(findPanel, &FindPanel::rebuildHereFacetsRequested, this, [this]{
+        /* Returning to Folders: the tree is holding catalog values, so rebuild it from
+           the datamodel. buildFilters->reset() clears the catalog items (and the checks
+           that went with them) before build() repopulates from the model. */
+        connect(findPanel, &FindPanel::rebuildFolderCategoriesRequested, this, [this]{
             if (G::isInitializing) return;
             buildFilters->reset(false /*collapse*/);
             buildFiltersWhenModelReady(dm->instance);
-            filterChange("FindPanel::rebuildHereFacetsRequested");
+            filterChange("FindPanel::rebuildFolderCategoriesRequested");
         });
         /* Refresh when the dock is actually shown rather than on every folder load:
-           re-reading the catalog facets is a query per category, and it is only worth
+           re-reading the catalog categories is a query per category, and it is only worth
            doing for a panel someone is looking at. */
         connect(filterDock, &QDockWidget::visibilityChanged, this, [this](bool visible){
             if (visible && findPanel) findPanel->refresh();
@@ -1704,7 +1704,7 @@ void MW::createCatalogDock()
     if (G::isLogger) G::log("MW::createCatalogDock");
 
     /* With the Find dock there is no separate Catalog panel: its search box, keyword
-       facet and Load button are the Everywhere scope of the one panel. catalogDock and
+       category and Load button are the Catalog scope of the one panel. catalogDock and
        catalogView stay NULL, and every entry point that used to show this dock
        (Shift+F2, Window > Catalog Panel, the full-screen dock set) switches the Find
        dock's scope instead. */
@@ -1722,7 +1722,7 @@ void MW::createCatalogDock()
     catalogTitleBar->setToolTip(dockTabToolTip(catalogDockTabText));
     connect(catalogDock, &DockWidget::focus, this, &MW::focusOnDock);
 
-    // refresh button -- re-read the keyword facets and the catalog size
+    // refresh button -- re-read the keyword categories and the catalog size
     BarBtn *catalogRefreshBtn = new BarBtn();
     catalogRefreshBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
     catalogRefreshBtn->setToolTip("Update the catalog keyword list");
@@ -1780,7 +1780,7 @@ void MW::createCatalogDock()
     connect(catalogView, &CatalogView::manageRootsRequested, this,
             &MW::manageCatalogRoots);
 
-    /* Refresh the facets when the dock is actually shown, rather than on every folder
+    /* Refresh the categories when the dock is actually shown, rather than on every folder
        load: rebuilding the keyword tree is a query plus a tree build, and it is only
        worth doing for a panel someone is looking at. */
     connect(catalogDock, &QDockWidget::visibilityChanged, this, [this](bool visible){
@@ -3402,7 +3402,7 @@ void MW::createDocks()
     /* Catalog sits beside Filters: both answer "which images?", one over what is
        loaded and one over everything indexed. */
     /* The Catalog tab exists only when it is a separate dock; with the Find dock its
-       place in the group is taken by the Find panel's Everywhere scope. */
+       place in the group is taken by the Find panel's Catalog scope. */
     if (catalogDock) MW::tabifyDockWidget(filterDock, catalogDock);
     if (G::useInfoView)
         MW::tabifyDockWidget(catalogDock ? catalogDock : filterDock, metadataDock);

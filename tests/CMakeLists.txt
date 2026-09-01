@@ -212,7 +212,7 @@ winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
 # tst_searchterms is header-only (Utilities/searchterms.h, Qt Core). It pins the ONE
 # grammar behind both search boxes: F2 over the datamodel and Shift+F2 over the index are
-# paired as "here"/"everywhere", and used to disagree -- "heron OR eagle" was a literal
+# paired as "Folders"/"Catalog", and used to disagree -- "heron OR eagle" was a literal
 # string to QString::contains.
 winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # tst_catalog covers the catalog tables in the shared index database (schema 4).

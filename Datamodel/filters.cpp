@@ -1140,7 +1140,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     a feature, so the same three choices are here by name.
 */
     QTreeWidgetItem *item = itemAt(event->pos());
-    const bool ready = facetsFrom == FromCatalog
+    const bool ready = categoriesFrom == FromCatalog
                        || (G::allMetadataAttempted && !buildingFilters);
     if (!isFilterableItem(item) || !ready) {
         QTreeWidget::contextMenuEvent(event);
@@ -1165,7 +1165,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
 }
 
 /* ---------------------------------------------------------------------------------
-   The Find dock's shared-facet interface (G::useFindDock)
+   The Find dock's shared-category interface (G::useFindDock)
    --------------------------------------------------------------------------------- */
 
 QString Filters::currentSearchText() const
@@ -1199,13 +1199,13 @@ void Filters::setSearchText(const QString &text)
     emit filterChange("Filters::setSearchText");
 }
 
-bool Filters::loadCatalogFacets()
+bool Filters::loadCatalogCategories()
 {
 /*
     Fill every dynamic category from the CATALOG rather than the datamodel -- the
-    Everywhere half of the scope switch.
+    Catalog half of the scope switch.
 
-    THE SAME TREE, THE SAME ITEMS, THE SAME GESTURES. Nothing about how a facet is
+    THE SAME TREE, THE SAME ITEMS, THE SAME GESTURES. Nothing about how a category item is
     checked, excluded, coloured or counted changes with the scope; only where the values
     came from. That is the whole reason the two docks were merged, and it is why this
     fills the existing categories through addCategoryItems rather than building a parallel
@@ -1216,8 +1216,8 @@ bool Filters::loadCatalogFacets()
     is the panel's own box. An empty category reads as "you have no camera models", which
     would be a lie.
 
-    A CATEGORY OF NOTHING BUT BLANK IS ALSO HIDDEN. Catalog::facets now returns the blank
-    value as a row -- that is what makes a category add up to the catalog -- so "no
+    A CATEGORY OF NOTHING BUT BLANK IS ALSO HIDDEN. Catalog::categoryItems now returns the
+    blank value as a row -- that is what makes a category add up to the catalog -- so "no
     titles at all" arrives as one item counting every image rather than as an empty map.
     Offering "" as the sole thing to check would filter to everything, so the emptiness
     test asks whether any REAL value came back, not whether the map has entries.
@@ -1227,11 +1227,11 @@ bool Filters::loadCatalogFacets()
     million rows; the panel says the counts are library totals rather than showing a
     filtered number that is quietly wrong.
 */
-    if (G::isLogger) G::log("Filters::loadCatalogFacets");
+    if (G::isLogger) G::log("Filters::loadCatalogCategories");
 
     if (!Catalog::instance().isAvailable()) return false;
 
-    facetsFrom = FromCatalog;
+    categoriesFrom = FromCatalog;
 
     /* Building the list sets a check state on every row, and each one would otherwise
        emit itemChanged. */
@@ -1260,7 +1260,7 @@ bool Filters::loadCatalogFacets()
     };
 
     for (const Cat &c : cats) {
-        const QMap<QString, int> map = cat.facets(c.dmColumn);
+        const QMap<QString, int> map = cat.categoryItems(c.dmColumn);
         addCategoryItems(map, c.item);
         /* Both columns get the library total: column 2 is normally the filtered count,
            and leaving it blank would make every row look half-loaded. */
@@ -1289,7 +1289,7 @@ bool Filters::loadCatalogFacets()
 void Filters::showAllCategories()
 {
     if (G::isLogger) G::log("Filters::showAllCategories");
-    facetsFrom = FromDatamodel;
+    categoriesFrom = FromDatamodel;
     for (int i = 0; i < topLevelItemCount(); i++)
         setRowHidden(i, QModelIndex(), false);
     /* The Search category stays hidden while the panel owns a search box -- it is the
@@ -1983,13 +1983,13 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "itemCheckStateHasChanged" << itemCheckStateHasChanged
                  << "G::allMetadataAttempted =" << G::allMetadataAttempted
                     ;
-    /* The datamodel-readiness guards apply only when the items DESCRIBE the datamodel.
-       A catalog facet is answerable whether or not the loaded folder has finished reading
-       its metadata -- indeed whether or not a folder is loaded at all -- and applying
-       them there swallowed the click silently: the checkbox toggled (QTreeWidget does
-       that itself, before this runs) but filterChange was never emitted, so the Find
+    /* The datamodel-readiness guards apply only when the items DESCRIBE the datamodel. A
+       catalog category item is answerable whether or not the loaded folder has finished
+       reading its metadata -- indeed whether or not a folder is loaded at all -- and
+       applying them there swallowed the click silently: the checkbox toggled (QTreeWidget
+       does that itself, before this runs) but filterChange was never emitted, so the Find
        dock never re-ran its query and Load stayed disabled. */
-    const bool needsModel = facetsFrom == FromDatamodel;
+    const bool needsModel = categoriesFrom == FromDatamodel;
 
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
@@ -2114,7 +2114,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
        Opt is the modifier the mask combine tools already use for "subtract", so the
        gesture is one the user has met. */
     if (isLeftBtn && !isHdr && isValid && isFilterableItem(item)
-        && (facetsFrom == FromCatalog || (G::allMetadataAttempted && !buildingFilters))) {
+        && (categoriesFrom == FromCatalog || (G::allMetadataAttempted && !buildingFilters))) {
         const bool isAltModifier = event->modifiers() & Qt::AltModifier;
         const Qt::CheckState now = item->checkState(0);
         if (isAltModifier) {

@@ -347,11 +347,11 @@ void MW::showFavDock() {
 
 void MW::showCatalogDock()
 /*
-    "Search everywhere" (Shift+F2, Window > Catalog Panel).
+    "Search Catalog" (Shift+F2, Window > Catalog Panel).
 
     WITH THE FIND DOCK this is not a second panel but a SCOPE: show the Find dock, switch
-    it to Everywhere and focus its box. That is what makes the F2 / Shift+F2 pairing
-    literally true -- the same box, the same words, a different set to ask.
+    it to the Catalog scope and focus its box. That is what makes the F2 / Shift+F2
+    pairing literally true -- the same box, the same words, a different set to ask.
 
     Focusing the box is the point of the shortcut either way: the user pressed it to
     search, and a panel that appears with the cursor somewhere else just asks them to
@@ -367,7 +367,7 @@ void MW::showCatalogDock()
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         catalogDockVisibleAction->setChecked(true);   // the menu item reads as the scope
-        findPanel->setScope(FindPanel::Everywhere);
+        findPanel->setScope(FindPanel::CatalogScope);
         findPanel->focusSearch();
         return;
     }

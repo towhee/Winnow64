@@ -42,7 +42,7 @@ CatalogView::CatalogView(QWidget *parent)
     keywordTree->setHeaderHidden(true);
     keywordTree->setColumnCount(1);
     keywordTree->setUniformRowHeights(true);
-    /* Match the Filters panel: a facet list has no notion of a "current" row, and the
+    /* Match the Filters panel: a category list has no notion of a "current" row, and the
        selection highlight only competed with the include/exclude colouring that carries
        the actual meaning. */
     keywordTree->setSelectionMode(QAbstractItemView::NoSelection);
