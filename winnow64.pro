@@ -112,6 +112,7 @@ HEADERS += Cache/imagedecoder.h
 HEADERS += Cache/metaread.h
 HEADERS += Cache/reader.h
 HEADERS += Datamodel/buildfilters.h
+HEADERS += Datamodel/filtersnapshot.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
 HEADERS += Datamodel/selection.h

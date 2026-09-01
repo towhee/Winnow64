@@ -2802,6 +2802,13 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
             }
         }
     }
+
+    /*  Tell MetaRead the decode is resolved so it can drop its worker-local
+        in-flight marker. Emitted unconditionally -- if the icon was already
+        set the row is done just the same, and leaving the marker in place
+        would keep the dispatcher from ever revisiting the row. */
+    const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
+    if (sfRow >= 0) emit videoReadingCleared(sfRow, fromInstance);
 }
 
 void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
@@ -2831,11 +2838,17 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
     QModelIndex dmIdx = index(dmRow, 0);
     if (!dmIdx.isValid()) return;
 
-    QMutexLocker locker(&dmMutex);
-    setData(index(dmRow, G::MetadataReadingColumn), false);
-    // attempted but no frame decoded -> failed, and done (no retry)
-    setData(index(dmRow, G::MetadataStatusColumn), G::MetaFailed);
-    setData(index(dmRow, G::IconLoadedColumn), true);
+    {
+        QMutexLocker locker(&dmMutex);
+        setData(index(dmRow, G::MetadataReadingColumn), false);
+        // attempted but no frame decoded -> failed, and done (no retry)
+        setData(index(dmRow, G::MetadataStatusColumn), G::MetaFailed);
+        setData(index(dmRow, G::IconLoadedColumn), true);
+    }
+
+    // failure counterpart of the emit in setIconFromVideoFrame
+    const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
+    if (sfRow >= 0) emit videoReadingCleared(sfRow, fromInstance);
 }
 
 void DataModel::updateIconChunkLoaded()

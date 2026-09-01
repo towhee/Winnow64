@@ -290,6 +290,15 @@ public:
     QHash<QString, QRect>iconSymbolRects;
 
 signals:
+    /*  Emitted (queued) when a video row's in-flight frame decode has been
+        resolved -- success (setIconFromVideoFrame) or failure
+        (clearVideoReadingFlag). MetaRead keeps its own worker-local set of
+        dispatched video rows and needs to be told when to drop one; it cannot
+        read MetadataReadingColumn off its own thread. The PROXY row is sent
+        because that is how MetaRead keys its set, and only the GUI thread may
+        map a datamodel row to a proxy row. */
+    void videoReadingCleared(int sfRow, int fromInstance);
+
     void stop(QString src);
     void folderChange(bool aborted);
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
