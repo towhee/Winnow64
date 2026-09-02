@@ -227,6 +227,11 @@ void Preferences::itemChange(QModelIndex idx)
         mw->settings->setValue("cacheThumbnails", G::cacheThumbnails);
     }
 
+    if (source == "useIndexMetadata") {
+        G::useIndexMetadata = v.toBool();
+        mw->settings->setValue("useIndexMetadata", G::useIndexMetadata);
+    }
+
     if (source == "thumbCacheSize") {
         G::thumbCacheMaxBytes = devPreviewCacheValue(v.toString());
         mw->settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
@@ -1280,6 +1285,26 @@ void Preferences::addDevPreviews()
     i.captionIsEditable = false;
     i.value = G::cacheThumbnails;
     i.key = "cacheThumbnails";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "useIndexMetadata";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Read metadata from the catalog";
+    i.tooltip = "When a folder has already been catalogued and its files have not\n"
+                "changed, take each image's metadata from the catalog instead of\n"
+                "reading it from the file again.\n\n"
+                "Reading a raw file's metadata costs about 20ms; the catalog\n"
+                "answers in a fraction of that. The saving shows when you return\n"
+                "to a folder whose thumbnails are also cached -- on a first visit\n"
+                "the files have to be read anyway.\n\n"
+                "A file that has changed since it was catalogued is always re-read."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useIndexMetadata;
+    i.key = "useIndexMetadata";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

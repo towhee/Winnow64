@@ -84,6 +84,7 @@ void MW::writeSettings()
     settings->setValue("devPreviewQuality", G::devPreviewQuality);
     settings->setValue("devPreviewCacheMaxBytes", G::devPreviewCacheMaxBytes);
     settings->setValue("cacheThumbnails", G::cacheThumbnails);
+    settings->setValue("useIndexMetadata", G::useIndexMetadata);
     settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
 
@@ -359,6 +360,7 @@ bool MW::loadSettings()
         G::devPreviewQuality = G::kDevPreviewQualityDefault;
         G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
         G::cacheThumbnails = true;
+        G::useIndexMetadata = false;
         G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
@@ -574,6 +576,8 @@ bool MW::loadSettings()
     }
     if (settings->contains("cacheThumbnails"))
         G::cacheThumbnails = settings->value("cacheThumbnails").toBool();
+    if (settings->contains("useIndexMetadata"))
+        G::useIndexMetadata = settings->value("useIndexMetadata").toBool();
     if (settings->contains("thumbCacheMaxBytes")) {
         const qint64 cap = settings->value("thumbCacheMaxBytes").toLongLong();
         if (cap >= 256LL * 1024 * 1024) G::thumbCacheMaxBytes = cap;
