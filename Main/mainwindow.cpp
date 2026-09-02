@@ -648,7 +648,6 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         const int rows = dm ? dm->rowCount() : 0;
         fprintf(stderr, "SELFTEST: folder=%s rows=%d\n",
                 folderPath.toLocal8Bit().constData(), rows);
-
         /*  WINNOW_SELFTEST_CATALOG=1 asserts that the folder just loaded actually
             reached the catalog. That path had NO automated coverage and was
             silently broken: MW::folderChangeCompleted read catalogRows() inline,
