@@ -255,14 +255,31 @@ void Reader::readIcon()
 
     if (abort) {status = Status::Aborted; return;}
 
-    // pass embedded thumb offset and length in case datamodel not updated yet
-    if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
+    /*  THE INDEX FIRST. This is what the whole thumbnail cache is for: a hit
+        replaces opening the file, walking to its embedded preview's segment and
+        decoding that, with one indexed read and a small JPEG decode. A miss
+        costs one stat and one indexed lookup and falls through unchanged.
+
+        ThumbCache::getImage stands aside in Develop mode and when the preview
+        source is Developed, because loadThumb returns a different picture in
+        those modes -- see wantsOriginalThumb in Cache/thumbcache.h. */
+    if (!abort) {
+        image = ThumbCache::instance().getImage(fPath, m && m->developEdited);
+        if (!image.isNull()) loadedIcon = true;
+    }
 
     if (abort) {status = Status::Aborted; return;}
 
-    // get thumbnail or err.png or generic video
-    loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, *m,
-                                  "MetaRead::readIcon");
+    if (!loadedIcon) {
+        // pass embedded thumb offset and length in case datamodel not updated yet
+        if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
+
+        if (abort) {status = Status::Aborted; return;}
+
+        // get thumbnail or err.png or generic video
+        loadedIcon = thumb->loadThumb(fPath, dmRow, image, instance, *m,
+                                      "MetaRead::readIcon");
+    }
 
     if (isDebug)
     {
@@ -287,7 +304,8 @@ void Reader::readIcon()
             it returns immediately, handing the image to one batching writer
             thread -- doing the work inline here was measured at +47% on the
             icon path, see putImage in Cache/thumbcache.h. */
-        if (!image.isNull()) ThumbCache::instance().putImage(fPath, image);
+        if (!image.isNull())
+            ThumbCache::instance().putImage(fPath, image, m && m->developEdited);
 
         /* Thumb::loadThumb already scaled to G::maxIconSize (thumbMax), aspect-kept and
            RGB32, so the prior second scale here was a redundant resample + allocation per

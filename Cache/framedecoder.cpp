@@ -145,7 +145,8 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
                 one cost an AVFoundation frame grab -- decoding video to get one
                 picture. See Reader::readIcon for why the write happens at the
                 producer rather than at DataModel::setIconFromVideoFrame. */
-            ThumbCache::instance().putImage(path, im);
+            /* A video has no develop recipe. */
+            ThumbCache::instance().putImage(path, im, false);
 
             emit setFrameIcon(dmRow, im, dmInstance, durationMs, this);
             qint64 usToDecode = t.nsecsElapsed() / 1000;
@@ -334,7 +335,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
     if (item.source == "dmThumb" && item.dmRow >= 0) {
         /*  The Qt Multimedia path to the same picture -- see the AVFoundation
             branch above for why this is cached here. */
-        if (!scaledIm.isNull()) ThumbCache::instance().putImage(item.fPath, scaledIm);
+        if (!scaledIm.isNull())
+            ThumbCache::instance().putImage(item.fPath, scaledIm, false);
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;
         /*
         qDebug() << "FrameDecoder::handleFrameChanged emit setFrameIcon"

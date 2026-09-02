@@ -48,6 +48,8 @@ private slots:
     void sweepDemotesMissingFilesAndRevivesReturningOnes();
     void moveAndDeleteFollowTheFile();
     void putImageQueuesAndSkipsWhatIsAlreadyThere();
+    void theDevelopGateIsPerImageNotPerMode();
+    void getImageReturnsAPaintableIcon();
 
 private:
     QTemporaryDir *tmp = nullptr;
@@ -351,7 +353,7 @@ void tst_thumbcache::putImageQueuesAndSkipsWhatIsAlreadyThere()
     QImage im(120, 80, QImage::Format_RGB32);
     im.fill(Qt::darkCyan);
 
-    t.putImage(p, im);
+    t.putImage(p, im, false);
     t.flush();
     QVERIFY2(t.contains(p, st.first, st.second), "putImage did not reach the index");
     const qint64 afterFirst = t.totalBytes();
@@ -363,7 +365,7 @@ void tst_thumbcache::putImageQueuesAndSkipsWhatIsAlreadyThere()
         can tell a skip from a rewrite. The weaker version was written first and
         deleting the skip did not fail it. */
     const qint64 wroteOnce = t.written();
-    t.putImage(p, im);
+    t.putImage(p, im, false);
     t.flush();
     QCOMPARE(t.count(), 1);
     QCOMPARE(t.totalBytes(), afterFirst);
@@ -373,10 +375,80 @@ void tst_thumbcache::putImageQueuesAndSkipsWhatIsAlreadyThere()
         something, not just persist. */
     G::cacheThumbnails = false;
     const QString p2 = makeFile("q2.jpg");
-    t.putImage(p2, im);
+    t.putImage(p2, im, false);
     t.flush();
     QCOMPARE(t.count(), 1);
     G::cacheThumbnails = true;
+}
+
+void tst_thumbcache::theDevelopGateIsPerImageNotPerMode()
+{
+    /*  THE BUG THIS ALMOST SHIPPED WITH. Thumb::loadThumb returns the DEVELOPED
+        thumbnail rather than the camera's for an edited image in a
+        developed-showing mode, so caching or serving the camera's picture there
+        would show the user the wrong one. The first version gated on the MODE
+        alone -- and G::previewSource DEFAULTS to Developed, so the cache was
+        switched off entirely and silently. It measured as "no change", which is
+        exactly what a feature that never runs looks like.
+
+        The test is per IMAGE: an unedited image has no developed thumbnail at
+        any setting, so it is always cacheable; only an EDITED image in a
+        developed-showing mode is excluded. */
+    const auto mode = G::operationMode;
+    const auto src = G::previewSource;
+
+    G::operationMode = G::OperationMode::Preview;
+    G::previewSource = G::PreviewSource::Developed;      // the DEFAULT
+    QVERIFY2(ThumbCache::wantsOriginalThumb(false),
+             "an unedited image must be cacheable at the default setting");
+    QVERIFY2(!ThumbCache::wantsOriginalThumb(true),
+             "an edited image must not be cached while developed is shown");
+
+    G::previewSource = G::PreviewSource::Original;
+    QVERIFY(ThumbCache::wantsOriginalThumb(false));
+    QVERIFY2(ThumbCache::wantsOriginalThumb(true),
+             "showing originals, the camera thumbnail is right even for an edit");
+
+    /*  Develop mode always shows developed -- you cannot edit what you cannot
+        see -- whatever the preview source says. */
+    G::operationMode = G::OperationMode::Develop;
+    QVERIFY(ThumbCache::wantsOriginalThumb(false));
+    QVERIFY(!ThumbCache::wantsOriginalThumb(true));
+
+    G::operationMode = mode;
+    G::previewSource = src;
+}
+
+void tst_thumbcache::getImageReturnsAPaintableIcon()
+{
+    /*  The read half end to end: what comes back has to be usable as an icon
+        without the caller knowing where it came from -- RGB32, no larger than
+        G::maxIconSize, and the same picture that went in. */
+    ThumbCache &t = ThumbCache::instance();
+    G::cacheThumbnails = true;
+    const QString p = makeFile("read1.jpg");
+
+    QImage in(200, 133, QImage::Format_RGB32);
+    in.fill(Qt::darkRed);
+    t.putImage(p, in, false);
+    t.flush();
+
+    const QImage out = t.getImage(p, false);
+    QVERIFY2(!out.isNull(), "a stored thumbnail did not come back");
+    QCOMPARE(out.size(), QSize(200, 133));
+    QCOMPARE(out.format(), QImage::Format_RGB32);
+
+    /*  A miss is a null image, not an empty one -- the caller tests isNull() to
+        decide whether to fall through and decode. */
+    QVERIFY(t.getImage(tmp->filePath("never-stored.jpg"), false).isNull());
+
+    /*  And an edited image in a developed-showing mode does not get served the
+        camera's thumbnail. */
+    const auto src = G::previewSource;
+    G::previewSource = G::PreviewSource::Developed;
+    QVERIFY(t.getImage(p, /*hasDevelopRecipe*/true).isNull());
+    QVERIFY(!t.getImage(p, /*hasDevelopRecipe*/false).isNull());
+    G::previewSource = src;
 }
 
 QTEST_MAIN(tst_thumbcache)

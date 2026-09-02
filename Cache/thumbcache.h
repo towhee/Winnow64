@@ -129,7 +129,7 @@ public:
         disk is a memory leak with a good excuse. Dropping is free of
         consequence -- this is a cache, and the next visit to the folder offers
         the thumbnail again. */
-    void putImage(const QString &fPath, const QImage &im);
+    void putImage(const QString &fPath, const QImage &im, bool hasDevelopRecipe);
 
     /*  Finish what is queued and stop the writer. Called at shutdown; also what
         a test calls to make an asynchronous write observable. */
@@ -138,6 +138,41 @@ public:
     /*  The cached JPEG for fPath, or an empty QByteArray on a miss or a source
         that has changed since. A hit is marked most-recently-used. */
     QByteArray get(const QString &fPath, qint64 srcSize, qint64 srcMtime);
+
+    /*  The cached thumbnail as an image ready to hand to the model, or a null
+        QImage on a miss. THE POINT OF THE WHOLE EXERCISE: this replaces opening
+        the file, walking to its embedded preview's segment and decoding that,
+        with one indexed read and a small JPEG decode.
+
+        It stats fPath for the staleness comparison, so a file edited by another
+        program misses and is re-decoded. Returns RGB32 at no more than
+        G::maxIconSize, matching what Thumb::loadThumb produces, so nothing
+        downstream can tell where the picture came from. */
+    QImage getImage(const QString &fPath, bool hasDevelopRecipe);
+
+    /*  IS THE CAMERA'S OWN THUMBNAIL THE RIGHT PICTURE FOR THIS IMAGE RIGHT
+        NOW? Both the read and the write are gated on this, and the write
+        matters as much as the read.
+
+        Thumb::loadThumb does not always return the camera's thumbnail: for an
+        image with a develop recipe, in Develop mode or with the preview source
+        set to Developed, it returns the DEVELOPED thumbnail from the sidecar
+        instead. Caching that would poison the index -- the developed picture
+        would then be served for the same file in Original mode, showing the
+        user an edit they asked not to see. Reading from the index in that case
+        is the same mistake in the other direction.
+
+        SO THE TEST IS PER IMAGE, NOT PER MODE, and getting that wrong is how
+        this was first written: gating on the mode alone disabled the cache
+        completely, because G::previewSource DEFAULTS to Developed. An unedited
+        image -- the overwhelming majority -- has no developed thumbnail at any
+        setting, so Thumb::devThumb falls through to the camera's and the cache
+        is exactly right. Only an EDITED image in a developed-showing mode is
+        excluded.
+
+        hasDevelopRecipe comes from ImageMetadata::developEdited, which the
+        metadata read has already established, so this costs nothing. */
+    static bool wantsOriginalThumb(bool hasDevelopRecipe);
 
     bool contains(const QString &fPath, qint64 srcSize, qint64 srcMtime) const;
 
