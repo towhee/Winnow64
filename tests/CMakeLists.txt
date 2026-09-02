@@ -241,6 +241,12 @@ winnow_add_unit_test(tst_rowscratch unit/tst_rowscratch.cpp ../Datamodel/rowscra
 # splicing that replaced the rebuild-from-items.
 winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cpp)
 
+# tst_filterpredicate pins the filter SEMANTICS that compiling the Filters tree
+# was not allowed to move. The temporary shadow that proved it (both
+# implementations over 1,600 randomised check-state combinations on real
+# folders) went with the old implementation; this is what is left.
+winnow_add_unit_test(tst_filterpredicate unit/tst_filterpredicate.cpp)
+
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest
 # flag (main.cpp). Exits 0 only if the folder loaded images without crashing.
