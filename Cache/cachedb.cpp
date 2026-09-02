@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 4;
+constexpr int kSchemaVersion = 5;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -507,6 +507,53 @@ bool CacheDb::migrate(QSqlDatabase &db)
             "UPDATE keyword SET path = '', pathfold = '', parent = NULL",
 
             "DROP TABLE kw_canon",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+    }
+
+    if (version < 5) {
+        /* thumb: the browsing thumbnail, so scrolling an unvisited region of a
+           250,000-image catalog does not have to open a file per row. Keyed on
+           pathkey (Cache/pathkey.h), the same key the image table uses.
+
+           THE PAYLOAD IS A BLOB, WHICH IS THE OPPOSITE OF WHAT devpreview DOES,
+           and the difference is the payload size rather than a change of mind. A
+           devPreview is a full-resolution JPEG at one to three megabytes, where a
+           file is the right container and the database would be doing nothing but
+           adding a copy. A thumbnail is ten to thirty kilobytes; at a quarter of a
+           million of them that is 250,000 files and inodes to hold a few
+           gigabytes, and the per-file open dominates the read. SQLite is faster
+           than the filesystem for blobs of roughly this size and its page cache
+           serves a scroll from memory, which is exactly the access pattern here.
+
+           The columns otherwise mirror devpreview on purpose, so the two share one
+           eviction and sweep POLICY even though they do not share a container:
+           (live, used) is the eviction order -- demoted entries first, then least
+           recently used -- srcsize/srcmtime are the staleness stamp that catches an
+           image edited outside Winnow, and vol lets the sweep tell "deleted" from
+           "that disk is not plugged in". folder is stored rather than derived so a
+           diagnostics report can GROUP BY it. */
+        const char *ddl[] = {
+            "CREATE TABLE IF NOT EXISTS thumb ("
+            "  pathkey  TEXT    PRIMARY KEY,"
+            "  path     TEXT    NOT NULL,"
+            "  folder   TEXT    NOT NULL,"
+            "  jpg      BLOB    NOT NULL,"
+            "  w        INTEGER NOT NULL DEFAULT 0,"
+            "  h        INTEGER NOT NULL DEFAULT 0,"
+            "  bytes    INTEGER NOT NULL DEFAULT 0,"
+            "  used     INTEGER NOT NULL DEFAULT 0,"
+            "  live     INTEGER NOT NULL DEFAULT 1,"
+            "  vol      TEXT    NOT NULL DEFAULT '',"
+            "  srcsize  INTEGER NOT NULL DEFAULT 0,"
+            "  srcmtime INTEGER NOT NULL DEFAULT 0)",
+            "CREATE INDEX IF NOT EXISTS thumb_evict ON thumb(live, used)",
+            "CREATE INDEX IF NOT EXISTS thumb_folder ON thumb(folder)",
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
