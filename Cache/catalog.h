@@ -318,6 +318,26 @@ public:
        card never reads as a mass deletion. Returns the number demoted. */
     int sweep();
 
+    /*  RECONCILE ONE FOLDER AGAINST WHAT WAS ACTUALLY THERE. Given the paths a folder
+        enumeration just found, demote every live row this folder holds that is not among
+        them: those files are gone.
+
+        WHY THIS IS NOT sweep(). sweep stats one file per row over the WHOLE catalog, so
+        it can only run as a rare one-shot; this answers the same question for one folder
+        with NO stat at all, because the caller has just listed the directory and that
+        listing IS the truth. It is the write-back half of a folder scope -- the load
+        reconciles the index against the filesystem, and this is where the index learns
+        what the reconcile found.
+
+        THE CALLER MUST HAVE ENUMERATED THE WHOLE FOLDER. A partial listing -- a load the
+        user aborted, or one the memory cap cut short -- would demote everything it did
+        not reach, so present must be complete or this must not be called. Demoting is
+        recoverable (the next commit that sees the file promotes it again), but a search
+        that silently stops finding half a folder is not a good way to find that out.
+
+        Returns the number demoted. */
+    int reconcileFolder(const QString &folder, const QSet<QString> &present);
+
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);

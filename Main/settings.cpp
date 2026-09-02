@@ -591,6 +591,31 @@ bool MW::loadSettings()
     }
     if (settings->contains("useIndexMetadata"))
         G::useIndexMetadata = settings->value("useIndexMetadata").toBool();
+
+    /*  A/B KNOBS FOR THE HEADLESS RUNS, and only for those. The load-pipeline work is
+        verified by running the same folder twice with one thing changed, so the two
+        things most often changed have to be reachable without editing a default and
+        rebuilding:
+
+          WINNOW_PERF_PROBE=1      emit the [PERF] Phase 1/2 timing lines
+          WINNOW_INDEX_METADATA=1  fill a row from the local index when it can answer
+                                   (0 forces it off, overriding the saved preference)
+          WINNOW_MAX_ICON_CHUNK=<n> ceiling on how many icons a load may hold, which is
+                                   what decides how much of a load is icon work
+
+        Applied AFTER the preference is read, so the environment wins, and only in test
+        mode (QStandardPaths::setTestModeEnabled, which main sets for --selftest and
+        friends): in an ordinary session these are preferences, and an environment
+        variable that silently changed how metadata is read would be a trap. */
+    if (QStandardPaths::isTestModeEnabled()) {
+        if (qEnvironmentVariableIntValue("WINNOW_PERF_PROBE") == 1) G::isPerfProbe = true;
+        if (!qEnvironmentVariable("WINNOW_INDEX_METADATA").isNull())
+            G::useIndexMetadata = qEnvironmentVariableIntValue("WINNOW_INDEX_METADATA") == 1;
+        if (!qEnvironmentVariable("WINNOW_MAX_ICON_CHUNK").isNull()) {
+            const int n = qEnvironmentVariableIntValue("WINNOW_MAX_ICON_CHUNK");
+            if (n >= 0) G::maxIconChunk = n;
+        }
+    }
     if (settings->contains("thumbCacheMaxBytes")) {
         const qint64 cap = settings->value("thumbCacheMaxBytes").toLongLong();
         if (cap >= 256LL * 1024 * 1024) G::thumbCacheMaxBytes = cap;

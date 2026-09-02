@@ -226,6 +226,13 @@ public:
        half-read row would be catalogued with empty keywords and then look FRESH to the
        next commit, so the image would stay wrong until its file changed. */
     QVector<CatalogRow> catalogRows() const;
+
+    /*  THE PATHS THIS MODEL HOLDS, GROUPED BY THE FOLDER THEY CAME FROM -- the other
+        half of the catalog write-back. catalogRows() says what is here; this says what
+        is NOT, by handing Catalog::reconcileFolder a complete listing of each folder to
+        compare its live rows against. GUI thread only (it walks the model); the result
+        is plain values and travels to the pool. */
+    QHash<QString, QSet<QString>> folderPathSets() const;
     /* One row for the catalog; false when it must not be catalogued. Shared by
        the bulk capture and the edit write-back so the two cannot drift. */
     bool catalogRowFor(int row, CatalogRow &r) const;

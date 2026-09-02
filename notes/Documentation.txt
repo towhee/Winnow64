@@ -75,6 +75,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Reading Them Back (and the Gate That Was Almost Wrong)
      The Index as a Metadata Source (fetchFresh)
      Metadata From the Index (Default Off, and Why)
+     One Way In (setScope, and the Reconcile Write-Back)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -87,6 +88,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Icon Caching
      Load Responsiveness (Keeping the GUI Usable During a Large/Recursive Load)
      How to Test Icon Caching
+     What Phase 2 Actually Costs (Icons, Not the Metadata Read)
      Memory Governor (Process Footprint, Decode Concurrency)
 
 5. SCROLLING
@@ -1268,6 +1270,30 @@ catalog_load IS THE CTEST. It fails if the search matches nothing (exit 4) or if
 
 THE WAIT LIVES IN THIS MODE ALONE, not on the default selftest path, for the reason recorded under the catalog capture: waiting lets pool tasks complete and queue GUI callbacks that then run around the model-contract test's own row removal. The modes stay separate.
 
+⏺ DataModel Changes > One Way In (setScope, and the Reconcile Write-Back)
+
+TWO FUNCTIONS THAT WERE NEVER TWO THINGS. The model was filled by enqueueFolderSelection (a folder, or a folder tree, picked in the Folders/Bookmarks panel) or by addPaths (a catalog search result), with two call sites in MW and nothing that named what they have in common. They ARE the same thing: a predicate over the catalogue of images. A FOLDER SCOPE IS THE QUERY WITH A FOLDER/SUBTREE PREDICATE PLUS A FILESYSTEM RECONCILE; A CATALOG SCOPE IS THE SAME QUERY WITHOUT IT. Datamodel/datamodel.h's ScopeRequest is that description and DataModel::setScope is the one entry point; addFolder and addPaths are private implementation details of it now.
+
+reconcile IS THE ONLY DIFFERENCE, and it is a real one rather than a flag. A folder scope walks the filesystem because the directory listing IS the set -- what is on disk right now is the answer, and the index is at best a cache of it. A catalog scope cannot: its results come from a hundred folders, so there is no directory to enumerate, and each path is stat'd as it is added instead.
+
+THE REQUEST IS REMEMBERED, which is the point of holding it at all. Nothing could previously ask the model what set it was showing: folderList cannot distinguish "these folders" from "a search that happened to match images in these folders", and a reload, a refresh and the write-back below all need to know which. An APPEND leaves the previous request in place -- what is loaded is then the union of two searches and neither alone describes it.
+
+THE QUERY TRAVELS WITH THE RESULT. FindPanel and CatalogView emit loadResults(paths, append, query) rather than just the paths, so the ScopeRequest records what the user ASKED for and not only what it resolved to.
+
+NOT QUEUED INSIDE setScope, deliberately. Both callers already defer the load onto the event loop -- it must not run inside the signal that asked for it, because MW::stop has just torn down the reader threads -- and the catalog caller has work to do immediately after the fill (the availability pass). Queueing here as well would put that work before the fill instead of after it.
+
+THE WRITE-BACK GAINED ITS OTHER HALF. MW::folderChangeCompleted already commits the loaded rows to the catalog, which says what IS there. Nothing said what is NOT: a file deleted outside Winnow stayed live in the index and kept turning up in searches until the once-a-session global sweep happened to stat it. Catalog::reconcileFolder(folder, present) closes that, and costs NO STAT AT ALL -- the load has just listed the directory, so asking the filesystem again would be asking a question we were handed the answer to. Whatever the index still calls live and the listing did not find is gone. That is what makes it cheap enough to run on every folder load, where sweep() (one stat per row over the whole catalog) can only ever be a rare one-shot.
+
+IT DEMOTES, NEVER DELETES, exactly as sweep does: a row that comes back is promoted again by the next commit that sees the file, so a folder that was briefly unreadable costs a rescan rather than its catalogued keywords.
+
+THREE PRECONDITIONS, AND EACH OF THEM IS A WAY TO DELETE A LIBRARY BY ACCIDENT.
+
+  o ONLY A SCOPE THAT ENUMERATED. A catalog scope's paths are a search result, not a listing of any one folder; treating them as one would demote most of the library. dm->scopeRequest().reconcile is the check, which is the ScopeRequest above earning its place.
+  o ONLY A LOAD THAT FINISHED. An aborted (Esc) or memory-capped load is a partial listing, and a partial listing demotes everything it did not reach.
+  o AN EMPTY FOLDER MUST BE TOLD APART FROM AN UNREADABLE ONE. Delete every image in a catalogued folder and no row survives to name it, so the folder would never be compared and its rows would stay live forever -- DataModel::folderPathSets therefore seeds an empty entry from folderList. But folderList is appended BEFORE the listing is attempted, so a folder that is gone, unmounted or unreadable arrives here looking exactly like an empty one. One stat per EMPTY folder settles it; folders that produced rows need none, because a row is itself the evidence that the listing worked.
+
+folderPathSets USES EVERY ROW, not only the read ones -- unlike catalogRows(), which skips anything not yet G::MetaLoaded. The question here is "was this file there", and a row exists because the enumeration found it; whether its metadata has been read since is a different fact, and filtering on it would demote catalogued rows for files sitting right there. Raw+JPG pairing is safe for the same reason: combineRawJpg hides one of a pair in the PROXY, and both members always have a datamodel row.
+
 ⏺ DataModel Changes > Sort Change
 
   MW::sortThumbnails
@@ -1546,6 +1572,35 @@ Suggested sequence (G::useJitIconCache = true, a windowed folder loaded):
 
 4. = -1  restore the real signal. Confirm each transition in the DataModel diagnostics and the applyIconCachePressure log lines.
 
+
+⏺ Caching > What Phase 2 Actually Costs (Icons, Not the Metadata Read)
+
+THE PLAN FOR MAKING A LARGE SCOPE LOAD FAST RESTED ON A NUMBER THAT IS WRONG. "A metadata read is ~20 ms for a raw, and almost all of it is walking the file's own header" is the sentence the index-metadata path was built on, and it is the sentence that made "MetaRead should stop reading rows the index can answer" look like the next thing worth doing. Measured, it is not.
+
+MEASURED ON 1,048 SONY ARW FILES (~/Pictures/2021-09-25, each with an .xmp sidecar), phase 2 wall time from folderChanged to MetaRead::done, warm page cache, WINNOW_PERF_PROBE=1:
+
+    icon chunk 10,000 (every row), index metadata OFF      22,360 ms
+    icon chunk 10,000 (every row), index metadata ON       20,888 ms   (idxHit 1,045, idxMiss 0)
+    icon chunk 50,     index metadata OFF   679, 1,019, 950 ms
+    icon chunk 50,     index metadata ON  1,105, 852, 1,076 ms   (idxHit ~1,042, idxMiss 0)
+
+Two things fall out of that table and neither was expected.
+
+ICONS ARE ~95% OF PHASE 2. Capping the icon chunk at 50 takes the same folder from 20.9 s to about 1 s with everything else identical -- the metadata for all 1,048 rows is still read in both. A thumbnail costs about 20 ms; the metadata read costs about 1 ms. The whole phase is the icon window, which is exactly the conclusion the 43,000-image measurement reached about MEMORY, arrived at independently for TIME.
+
+THE INDEX MAKES NO MEASURABLE DIFFERENCE TO THE METADATA READ. The first chunk-50 pair looked like a 60% LOSS for the index (1,105 against 679 ms) and repeating it did not reproduce: three runs each give 679-1,019 ms without the index and 852-1,105 ms with it, so the spread WITHIN each setting is as large as the gap between them. So the honest reading is ~1 ms a row either way, not a win and not a loss -- and it is with the catalog answering every row (idxMiss 0, so this is not a miss rate in disguise; those counters exist because "the index made no difference" and "the index was never consulted" are opposite conclusions the earlier A/B could not tell apart). Catalog::fetchFresh does one SQLite seek plus a sidecar stat per row, and for these files that is about what the header walk it replaces costs. The lesson is the older one restated: a single A/B pair at this scale is a coin toss, and the first pair here would have been written up as a finding.
+
+WHAT THIS DOES NOT SAY. It is a warm page cache, one folder, one camera and one machine. A cold cache would slow BOTH paths, and the icon read -- which reads far more bytes -- would slow more, so the ratio is if anything conservative. The revisit saving the index-metadata section reports (32.2 ms/icon down to 25.1 ms on the 50-file mixed folder) is a different measurement of a different thing and still stands: there the index saves the icon path work, not the metadata path.
+
+THE CONSEQUENCE FOR THE PLAN. "MetaRead becomes the gap-filler, not the primary loader" was aimed at ~5% of the load, and the mechanism it would be built on does not make even that part faster. Anything that makes a large scope load faster has to make the ICON cheaper or load fewer of them; and G::maxIconChunk, which is already a preference and already binds, is the control that does the second. This is the third time on this work that a load-pipeline assumption has failed measurement (see also the centralMsg repaint and the "keywords are most of the saving" note), which is the argument for the probe knobs below rather than for the next redesign.
+
+THE A/B KNOBS, so this table can be reproduced without editing a default and rebuilding. Test mode only (--selftest and friends, which set QStandardPaths::setTestModeEnabled): in an ordinary session these are preferences, and an environment variable that silently changed how metadata is read would be a trap. Applied in Main/settings.cpp AFTER the preference is read, so the environment wins.
+
+    WINNOW_PERF_PROBE=1        emit the [PERF] Phase 1/2 lines (G::isPerfProbe had no
+                               way to be turned on at all before this)
+    WINNOW_INDEX_METADATA=0|1  force G::useIndexMetadata either way
+    WINNOW_MAX_ICON_CHUNK=<n>  the icon ceiling, which is what decides how much of a
+                               load is icon work
 
 ⏺ Caching > Memory Governor (Process Footprint, Decode Concurrency)
 

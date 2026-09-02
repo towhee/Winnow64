@@ -3,6 +3,7 @@
 #include "Main/global.h"
 #include "Metadata/keywordflatten.h"
 #include "Utilities/searchterms.h"
+#include "Metadata/indexmetadata.h"
 
 /*
 The datamodel (dm thoughout app) contains information about each eligible image
@@ -2283,6 +2284,47 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
     return true;
 }
 
+QHash<QString, QSet<QString>> DataModel::folderPathSets() const
+{
+/*
+    Every row's path, grouped by its parent folder.
+
+    EVERY ROW, not only the read ones -- unlike catalogRows(), which skips anything not
+    yet G::MetaLoaded. The question here is "was this file there", and a row exists
+    because the enumeration found the file; whether its metadata was read since is a
+    different fact. Filtering by read status would make the caller demote catalogued rows
+    for files that are sitting right there.
+*/
+    QHash<QString, QSet<QString>> out;
+    const int n = rowCount();
+    for (int row = 0; row < n; ++row) {
+        const QString fPath = index(row, 0).data(G::PathRole).toString();
+        if (fPath.isEmpty()) continue;
+        out[QFileInfo(fPath).absoluteDir().path()].insert(fPath);
+    }
+
+    /*  A FOLDER THAT ENUMERATED TO NOTHING IS STILL AN ANSWER -- and without this it
+        would be the one case the reconcile misses: delete every image in a catalogued
+        folder and no row of it survives to name it, so it would never be compared and
+        its rows would stay live forever.
+
+        THE DIRECTORY IS STAT'D FIRST, and only for these. "No rows" has a second cause
+        that looks identical from here: the enumeration could not READ the folder -- gone,
+        unmounted, permissions -- and folderList is appended before the listing is
+        attempted, so an unreadable folder reaches here looking exactly like an empty one.
+        Demoting on that would throw away a whole folder's keywords because a drive was
+        briefly absent. One stat per empty folder settles it; folders that produced rows
+        need none, since a row IS the evidence the listing worked. */
+    for (const QString &folder : folderList) {
+        if (out.contains(folder)) continue;
+        const QFileInfo di(folder);
+        if (!di.exists() || !di.isDir() || !di.isReadable()) continue;
+        out.insert(folder, QSet<QString>());
+    }
+
+    return out;
+}
+
 QVector<CatalogRow> DataModel::catalogRows() const
 {
 /*
@@ -2481,9 +2523,46 @@ void DataModel::addAllMetadata()
     }
 //    G::t.restart();
 
+    /*  THE INDEX FIRST, IN ONE PASS, when it can answer (G::useIndexMetadata).
+
+        This function is the BLOCKING path -- a filter or sort cannot start until every
+        row has been read, so the GUI waits here -- and until now it opened every
+        unread file regardless of what the catalog already knew, while Reader (the
+        non-blocking path) had been asking the index per row since schema 6. The one
+        place where the user actually waits was the one place that did not use it.
+
+        BULK, NOT PER ROW. Catalog::fetchFresh takes a list, so a folder of thousands is
+        a page of indexed seeks rather than a query per file, and every file it answers
+        for is never opened at all. Paged so the progress message still moves and the
+        catalog mutex is released between pages -- a search box frozen for the duration
+        would be the obvious cost of doing it in one gulp.
+
+        The mapping lives in Metadata/indexmetadata.h, shared with Reader, so the two
+        paths cannot drift apart in what a row ends up holding. */
+    QHash<QString, CatalogRow> fresh;
+    if (G::useIndexMetadata) {
+        constexpr int kFreshPage = 1000;
+        QList<CatalogRow> cands;
+        cands.reserve(qMin(rowCount(), kFreshPage));
+        for (int row = 0; row < rowCount(); ++row) {
+            if (abort || G::stop) break;
+            if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted)
+                continue;
+            const QString fPath = index(row, 0).data(G::PathRole).toString();
+            if (fPath.isEmpty()) continue;
+            cands.append(IndexMetadata::candidate(QFileInfo(fPath), metadata));
+            if (cands.size() >= kFreshPage) {
+                fresh.insert(Catalog::instance().fetchFresh(cands));
+                cands.clear();
+            }
+        }
+        if (!cands.isEmpty()) fresh.insert(Catalog::instance().fetchFresh(cands));
+    }
+
     int mod = 10;
     if (rowCount() > 1000) mod = 100;
     int count = 0;
+    int fromIndexCount = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // Load folder progress
         if (/*G::isLinearLoading && */row % mod == 0) {
@@ -2504,6 +2583,17 @@ void DataModel::addAllMetadata()
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
         QString ext = fileInfo.suffix().toLower();
+
+        /*  Answered by the index above -- no file is opened for this row. */
+        const auto fit = fresh.constFind(fPath);
+        if (fit != fresh.cend()) {
+            IndexMetadata::fill(metadata->m, *fit, fileInfo, row, instance);
+            addMetadataForItem(metadata->m, "DataModel::addAllMetadata");
+            count++;
+            fromIndexCount++;
+            continue;
+        }
+
         if (metadata->loadImageMetadata(fileInfo, row, instance, true, true, false, true, "DataModel::addAllMetadata")) {
             metadata->m.row = row;
             metadata->m.instance = instance;
@@ -2517,6 +2607,14 @@ void DataModel::addAllMetadata()
             }
         }
     }
+    if (G::isPerfProbe) {
+        qDebug().noquote()
+            << "[PERF] addAllMetadata"
+            << " rows="      << rowCount()
+            << " read="      << count
+            << " fromIndex=" << fromIndexCount;
+    }
+
     setAllMetadataAttempted(true);
     emit centralMsg("Metadata loaded");
     if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);

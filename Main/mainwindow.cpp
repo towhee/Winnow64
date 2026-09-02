@@ -4753,11 +4753,35 @@ void MW::folderChangeCompleted()
 
         A queued invocation runs after every event already posted, which is
         exactly the set of status writes being waited for. */
-    QMetaObject::invokeMethod(this, [this]{
+    /*  AND THE OTHER HALF OF IT: WHAT IS NO LONGER THERE.
+
+        A folder scope reconciles the index against the filesystem -- that is what
+        distinguishes it from a catalog scope, which has no directory to enumerate (see
+        ScopeRequest) -- and the commit above is only the half that says what IS here.
+        Without the other half a file deleted outside Winnow stays live in the index and
+        keeps turning up in searches until the once-a-session global sweep happens to
+        stat it. The enumeration just listed the folder, so answering it costs no stat at
+        all: whatever the index still calls live and the listing did not find is gone.
+
+        ONLY FOR A SCOPE THAT ACTUALLY ENUMERATED, and only for a load that FINISHED. A
+        catalog scope's paths are a search result from a hundred folders, not a listing of
+        any one of them, and treating them as one would demote most of the library. An
+        aborted or memory-capped load is a partial listing for the same reason. Both are
+        the same precondition Catalog::reconcileFolder states, checked here because this
+        is where it is knowable. */
+    const bool reconcile = dm->scopeRequest().reconcile && !dm->abort && !G::stop;
+
+    QMetaObject::invokeMethod(this, [this, reconcile]{
         const QVector<CatalogRow> rows = dm->catalogRows();
-        if (!rows.isEmpty()) {
-            QThreadPool::globalInstance()->start([this, rows]{
+        const QHash<QString, QSet<QString>> present = reconcile ? dm->folderPathSets()
+                                                               : QHash<QString, QSet<QString>>();
+        if (!rows.isEmpty() || !present.isEmpty()) {
+            QThreadPool::globalInstance()->start([this, rows, present]{
                 Catalog::instance().commit(rows);
+                /* After the commit, so a file seen for the first time is inserted (and
+                   live) before anything is compared against the listing. */
+                for (auto it = present.cbegin(); it != present.cend(); ++it)
+                    Catalog::instance().reconcileFolder(it.key(), it.value());
                 /* Tell the panel what just changed, but only if someone is looking at
                    it: the Keywords category is a query plus a tree rebuild, and the whole
                    point of doing the commit out here is to not spend GUI time on the

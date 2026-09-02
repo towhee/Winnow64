@@ -598,6 +598,11 @@ Q_NAMESPACE
        ImageCache) across all reader threads. Reset in MetaRead::initialize, reported in
        MetaRead::allFinished. High count => the retry loop is a real staller. */
     extern std::atomic<int> probeThumbRetryCount;
+    /* Phase-2 probe: how many rows the local index answered, and how many it could not.
+       Without these an A/B of G::useIndexMetadata cannot tell "the index made no
+       difference" from "the index was never consulted", which are opposite conclusions. */
+    extern std::atomic<int> probeIndexMetaHits;
+    extern std::atomic<int> probeIndexMetaMisses;
 
     extern QColor textColor;
     extern QColor backgroundColor;
