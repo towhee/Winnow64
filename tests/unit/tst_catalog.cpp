@@ -135,8 +135,9 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         and confirm that every tenant of the shared file still coexists at the
         new version, and add the new tenant's tables below. Version 5 added
         thumb (Cache/thumbcache.h); version 6 widened the image table with the
-        fields a datamodel ROW displays. */
-    QCOMPARE(CacheDb::schemaVersion(), 6);
+        fields a datamodel ROW displays; version 7 added the hierarchical
+        keyword paths, which the flattening had made unrecoverable. */
+    QCOMPARE(CacheDb::schemaVersion(), 7);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -488,6 +489,24 @@ void tst_catalog::displayFieldsSurviveTheRoundTrip()
     const CatalogRow r2 = cat.fetchFresh({b}).value(b.path);
     QCOMPARE(r2.orientation, 8);
     QCOMPARE(r2._title, QString("Changed"));
+
+    /*  THE HIERARCHICAL PATHS COME BACK VERBATIM (schema 7). Schema 4 flattened
+        the hierarchy to node names on purpose -- the flat vocabulary is what is
+        searched and filtered -- but the original "A|B|C" spelling is a separate
+        fact that cannot be rebuilt from the flat form, and a row's SEARCHABLE
+        TEXT is built from it. Without this a row served from the catalog
+        searched differently from the same row read from its file. */
+    CatalogRow k = rowFor("paths1.jpg", {"Heron"},
+                          {"Wildlife|Birds|Heron", "Places|Canada|BC"});
+    QCOMPARE(cat.commit({k}), 1);
+    const CatalogRow kb = cat.fetchFresh({k}).value(k.path);
+    QCOMPARE(kb.keywordPaths.size(), 2);
+    QVERIFY(kb.keywordPaths.contains("Wildlife|Birds|Heron"));
+    QVERIFY(kb.keywordPaths.contains("Places|Canada|BC"));
+    /*  And the flat vocabulary is still the flat one -- the two representations
+        coexist without either becoming the other. */
+    QVERIFY(kb.keywords.contains("Heron"));
+    QVERIFY(kb.keywords.contains("Wildlife"));
 }
 
 void tst_catalog::sweepDemotesMissingSource()

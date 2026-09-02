@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 6;
+constexpr int kSchemaVersion = 7;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -600,6 +600,63 @@ bool CacheDb::migrate(QSqlDatabase &db)
                been catalogued so far; leaving it would mean serving zeros for
                orientation forever, which is a wrong picture rather than a slow
                one. */
+            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+    }
+
+    if (version < 7) {
+        /* THE HIERARCHICAL KEYWORD PATHS, AS THE FILE SPELLED THEM. Schema 3
+           stored the hierarchy as structure and schema 4 flattened it to node
+           names, deliberately -- the flat vocabulary is what is searched and
+           filtered, and keeping two representations of the same fact is what
+           made them disagree. But the ORIGINAL "A|B|C" strings are a fact of
+           their own: they are what lr:hierarchicalSubject said, they are what a
+           row's searchable text is built from, and once discarded they cannot be
+           rebuilt from the flattened form.
+
+           So they are stored verbatim, as one newline-separated blob, and NOT
+           indexed. The searchable text a datamodel row carries includes them, so
+           a row served from the catalog without them searched differently from
+           the same row read from its file -- which is the whole reason this
+           column exists.
+
+           Stamps cleared for the same reason as schema 6: an existing row is now
+           incomplete while claiming to be current. */
+        const char *ddl[] = {
+            "ALTER TABLE image ADD COLUMN keywordpaths TEXT NOT NULL DEFAULT ''",
+            /* shootingInfo is a DERIVED string -- model, focal length, shutter,
+               aperture, ISO composed into one line -- so storing it looks
+               redundant. It is not. Metadata::loadImageMetadata composes it only
+               when the read SUCCEEDED, and Thumb::setImageDimensions marks a row
+               MetaLoaded from the thumbnail path whether the read succeeded or
+               not. So a row can be MetaLoaded, and therefore catalogued, with the
+               string legitimately empty -- and nothing in the row records which
+               happened, so it cannot be recomposed. Recomposing it unconditionally
+               was tried and simply moved the mismatch to a different file.
+
+               The real defect is upstream (MetaLoaded meaning two things), and it
+               is not this schema's to fix; storing the string is the honest way to
+               reproduce a row without pretending to know how it was made. */
+            "ALTER TABLE image ADD COLUMN shootinginfo TEXT NOT NULL DEFAULT ''",
+            /* THE LITERAL dc:subject LIST, which is a THIRD keyword fact and not
+               a duplicate of the other two. keyword/image_keyword hold the FLAT
+               vocabulary (leaves plus every ancestor) because that is what is
+               searched and filtered; keywordpaths holds the hierarchical strings;
+               this holds what dc:subject actually said.
+
+               The datamodel keeps all three apart deliberately -- only the
+               literal list may ever be written back to a file, because emitting
+               the flattened one as dc:subject would put every ancestor into the
+               user's own metadata. A row served from the catalog with the flat
+               list in the literal column would do exactly that on the next
+               sidecar write. */
+            "ALTER TABLE image ADD COLUMN keywords_literal TEXT NOT NULL DEFAULT ''",
             "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1",
         };
         for (const char *sql : ddl) {

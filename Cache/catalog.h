@@ -146,8 +146,15 @@ struct CatalogRow
         second. */
     bool developed = false;
     QString devPreviewKey;
+    /*  Composed by the metadata read, and only when it succeeded -- see the
+        schema 7 note in cachedb.cpp for why it is stored rather than rebuilt. */
+    QString shootingInfo;
 
     QStringList keywords;
+    /*  dc:subject AS THE FILE SPELLED IT -- not the flattened vocabulary
+        above. Only this one may be written back to a file; see the schema 7
+        note in cachedb.cpp. */
+    QStringList keywordsLiteral;
     /* lr:hierarchicalSubject as the file spelled it, "A|B|C". NOT indexed as structure --
        it is read only to record which parent each name was seen under (keyword_context),
        which is what makes ambiguity detectable. */
