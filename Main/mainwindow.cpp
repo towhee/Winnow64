@@ -628,7 +628,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
                 std::_Exit(4);
             }
             setScope(G::Scope::Catalog, "selftest");
-            loadCatalogResults(hits, false);
+            loadCatalogResults(hits, false, q);
         });
     }
 
@@ -3176,8 +3176,15 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     /* put folder in datamodel queue to add or remove if main thread
        is not blocking */
     dm->abort = false;
-    QTimer::singleShot(0, this, [this, folderPath, op, recurse, subDirs]{
-        dm->enqueueFolderSelection(folderPath, op, recurse, subDirs);
+    ScopeRequest req;
+    req.scope = G::Scope::Folders;
+    req.query.folder = folderPath;
+    req.recurse = recurse;
+    req.op = op;
+    req.subDirs = subDirs;
+    req.reconcile = true;                  // the directory listing IS the set
+    QTimer::singleShot(0, this, [this, req]{
+        dm->setScope(req);
     });
 
     // dm->enqueueFolderSelection(folderPath, op, recurse);
@@ -3256,7 +3263,7 @@ void MW::stopCatalogScan()
     if (catalogScanner) catalogScanner->stop();
 }
 
-void MW::loadCatalogResults(const QStringList &paths, bool append)
+void MW::loadCatalogResults(const QStringList &paths, bool append, const CatalogQuery &query)
 {
 /*
     Load a catalog search result -- images from any number of folders, as one browsable
@@ -3311,8 +3318,14 @@ void MW::loadCatalogResults(const QStringList &paths, bool append)
        the append path nothing was torn down, but the queueing is kept so both paths reach
        addPaths the same way -- one of them running inline would be a difference waiting
        to matter. */
-    QTimer::singleShot(0, this, [this, paths]{
-        dm->addPaths(paths);
+    QTimer::singleShot(0, this, [this, paths, append, query]{
+        ScopeRequest req;
+        req.scope = G::Scope::Catalog;
+        req.query = query;
+        req.paths = paths;
+        req.append = append;
+        req.reconcile = false;             // no directory to enumerate
+        dm->setScope(req);
 
         /*  ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog
             row can outlive its file, and the two ways that happens are different

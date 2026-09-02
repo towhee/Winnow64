@@ -1244,6 +1244,45 @@ void DataModel::enqueueOp(const QString& folderPath, G::FolderOp op)
     }
 }
 
+void DataModel::setScope(const ScopeRequest &req)
+{
+/*
+    FILL THE MODEL WITH THE SET THE REQUEST DESCRIBES -- the one entry point, replacing
+    the two the model used to expose (enqueueFolderSelection for a folder, addPaths for a
+    search result). See ScopeRequest in the header for why they are one thing.
+
+    THE DIFFERENCE IS reconcile, AND NOTHING ELSE. A folder scope walks the filesystem,
+    because the directory listing IS the set: what is on disk right now is the answer,
+    and the index is at best a cache of it. A catalog scope does not, because there is no
+    directory to walk -- the results come from a hundred folders -- so the resolved path
+    list is the set, and each path is stat'd as it is added (addPaths) rather than
+    enumerated.
+
+    THE REQUEST IS REMEMBERED whether or not it changed anything. Everything that wants
+    to reload, refresh or write back what is loaded has had to infer it from folderList
+    until now, which cannot distinguish "these folders" from "a search that happened to
+    match images in these folders".
+
+    NOT QUEUED HERE, deliberately. Both callers already defer this onto the event loop --
+    a load must not run inside the signal that asked for it, since MW::stop has just torn
+    down the reader threads -- and the catalog caller has work to do immediately after the
+    fill. Queueing here as well would put that work before the fill instead of after it.
+*/
+    QString fun = "DataModel::setScope";
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, req.reconcile ? req.query.folder
+                                  : QString::number(req.paths.size()) + " paths");
+
+    /* An append leaves the previous request in place: what is loaded is now the union of
+       two searches, and neither of them alone describes it. */
+    if (!req.append) currentScope = req;
+
+    if (req.reconcile)
+        enqueueFolderSelection(req.query.folder, req.op, req.recurse, req.subDirs);
+    else
+        addPaths(req.paths);
+}
+
 void DataModel::enqueueFolderSelection(const QString& folderPath,
                                        G::FolderOp op, bool recurse,
                                        const QStringList &subDirs)
