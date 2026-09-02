@@ -1108,16 +1108,20 @@ WITH THAT IN, THE DIVERGENCE WENT FROM 26 COLUMNS TO TEN, and every one of the f
 
 ONE MORE WAS MINE: shootingInfo read "1/80 at f/5.6" where a file-read row says "1/80 sec at f/5.6". " sec" is part of the spelling, not decoration, because shootingInfo is composed from these strings and shown verbatim. That is exactly the divergence a second place that spells a shutter speed was always going to produce, and the A/B fingerprint is what makes having one tolerable.
 
-WHAT STILL DIFFERS IS NOT THE INDEX'S FAULT, AND IT IS A REAL BUG THIS EXERCISE FOUND. Width, Height and everything derived from them (Dimensions, MPix, Aspect Ratio) diverge because the catalog holds 160 where the file says 6016 -- the width of the image's EMBEDDED PREVIEW, not of the image. Thumb::setImageDimensions writes the same decoded size to BOTH G::WidthColumn and G::WidthOrigPreviewColumn:
+A REAL BUG THIS EXERCISE FOUND, NOW FIXED. Width, Height and everything derived from them diverged because the catalog held 160 where the file said 6016 -- the width of the image's EMBEDDED PREVIEW, not of the image. Thumb::setImageDimensions wrote the same decoded size to BOTH columns:
 
     emit setValDm(row, G::WidthColumn, w, instance, src);
     emit setValDm(row, G::WidthOrigPreviewColumn, w, instance, src);
 
-The second is right -- that IS the preview's width. The first overwrites the image's real width with it, and whichever of the metadata read and the thumbnail decode lands last decides what the row says. DataModel::catalogRows then captures whatever was there. So the catalog can hold the preview's dimensions for an image TODAY, in the shipped build, and any search result or column shown from it is wrong -- this work only made it visible by reading the value back. Created, Year and Day diverge for the same shape of reason: some rows were catalogued with no capture date and fall back to the file's timestamp.
+They are not the same fact. WidthColumn is how big the IMAGE is -- what the table shows, what MPix, Dimensions and Aspect Ratio derive from, and what gets catalogued. WidthOrigPreviewColumn is how big the EMBEDDED PREVIEW is, which the image cache budgets memory from. Writing one number to both is right for the paths that decode the whole file and wrong for the ones that decode the preview -- and HEIC takes the second kind on BOTH platforms (Heic::decodeThumbnail on Windows, macImageIOThumbnail on macOS). Whichever of the metadata read and the thumbnail decode landed last decided what the row said, and DataModel::catalogRows catalogued whatever was there.
 
-Fixing that is a separate change to the loader, not to the index, and it should be made before G::useIndexMetadata is turned on -- serving those rows from the catalog would make a transient wrong value permanent.
+setImageDimensions now takes the two sizes SEPARATELY, and an invalid fullSize means "I only decoded the preview" -- in which case the image dimensions are left alone rather than guessed at. The metadata read has already set them; if it failed they stay 0, which is honest and which the cache and the delegates already handle. A plausible number that is wrong is worse than a missing one, precisely because nothing downstream can tell.
 
-WHAT IS LANDED IS THE MECHANISM AND THE SCHEMA, still off by default. What remains between here and turning it on is the Width/Height bug above, the capture-date gap, and Icon Aspect Ratio (which follows from which icon was decoded) -- all of them in the LOADER rather than in the index.
+VERIFIED on the 50-file folder: no width at or below G::maxIconSize on any row, and the two columns now hold DIFFERENT values where they should -- an A7R2 reads 8000 wide with a 1616-wide preview, where before both would have read the same. It was only ever visible because a row served from the catalog was fingerprinted against the same row read from its file.
+
+Created, Year and Day still diverge, for a different reason: some rows were catalogued with no capture date and fall back to the file's timestamp. Icon Aspect Ratio follows from which icon was decoded. Both are in the LOADER rather than the index, and both remain between here and turning G::useIndexMetadata on.
+
+WHAT IS LANDED IS THE MECHANISM AND THE SCHEMA, still off by default. The Width/Height bug above is fixed; what remains between here and turning it on is the capture-date gap and Icon Aspect Ratio, both in the LOADER rather than in the index.
 
 ⏺ DataModel Changes > Sort Change
 
