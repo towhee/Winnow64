@@ -1010,6 +1010,60 @@ int Catalog::folderCount()
    Maintenance
    --------------------------------------------------------------------------------- */
 
+int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present)
+{
+/*
+    Demote every live row in this folder that the enumeration did not find. See the
+    declaration for the precondition -- present must be a COMPLETE listing of the folder.
+
+    NO STAT, deliberately, which is the whole difference from sweep(): the caller has just
+    read the directory, so asking the filesystem again would be asking a question we were
+    handed the answer to. That is what makes this cheap enough to run on every folder load
+    rather than once a session.
+
+    DEMOTE, NEVER DELETE, exactly as sweep does, and for the same reason: a row that comes
+    back is promoted again by the next commit that sees the file, so a folder that was
+    briefly unreadable costs a rescan rather than its catalogued keywords.
+
+    A folder Winnow has never catalogued selects nothing and this is one indexed query.
+*/
+    if (folder.isEmpty()) return 0;
+
+    struct Row { qint64 id; QString path; };
+    QList<Row> live;
+    {
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return 0;
+        QSqlQuery q(db);
+        q.prepare("SELECT id, path FROM image WHERE folder = ? AND live = 1");
+        q.addBindValue(folder);
+        if (!q.exec()) return 0;
+        while (q.next()) live.append({q.value(0).toLongLong(), q.value(1).toString()});
+    }
+    if (live.isEmpty()) return 0;
+
+    QList<qint64> gone;
+    for (const Row &r : live) {
+        if (!present.contains(r.path)) gone.append(r.id);
+    }
+    if (gone.isEmpty()) return 0;
+
+    int demoted = 0;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+    if (!db.transaction()) return 0;
+    QSqlQuery u(db);
+    u.prepare("UPDATE image SET live = 0 WHERE id = ?");
+    for (qint64 id : gone) {
+        u.addBindValue(id);
+        if (u.exec()) ++demoted;
+    }
+    db.commit();
+    return demoted;
+}
+
 int Catalog::sweep()
 {
 /*

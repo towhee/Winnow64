@@ -1811,6 +1811,8 @@ void MetaRead::allFinished(QString src)
             << " ntrCalls="      << perfNeedToReadCalls
             << " ntrAvg(us)="    << QString::number(ntrAvgUs, 'f', 2)
             << " thumbRetries="  << G::probeThumbRetryCount.load(std::memory_order_relaxed)
+            << " idxHit="        << G::probeIndexMetaHits.load(std::memory_order_relaxed)
+            << " idxMiss="       << G::probeIndexMetaMisses.load(std::memory_order_relaxed)
             << " wall(ms)="      << ms;                                   // folderChanged -> done
     }
     /*

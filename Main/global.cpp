@@ -261,6 +261,8 @@ DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // por
 bool isReportDevelopTime = false;      // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
 bool isDevelopDebounceWrite = true;     // also flush per-image develop settings to sidecar a short time after edits settle
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
+std::atomic<int> probeIndexMetaHits{0};   // rows filled from the local index (Phase-2 probe)
+std::atomic<int> probeIndexMetaMisses{0}; // rows the index could not answer (Phase-2 probe)
 
 // status
 // bool isModifyingDatamodel;

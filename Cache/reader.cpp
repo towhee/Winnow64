@@ -1,6 +1,7 @@
 #include "reader.h"
 #include "Cache/thumbcache.h"
 #include "Cache/catalog.h"
+#include "Metadata/indexmetadata.h"
 #include "Main/global.h"
 
 Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
@@ -141,136 +142,16 @@ bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
 /*
     Fill metadata->m from the local index, or return false and leave it alone.
 
-    ONE PATH IN, ONE PATH OUT. Everything downstream -- addToDatamodel, the
-    datamodel row, the filters, the views -- receives the same ImageMetadata
-    struct it always did; only where its values came from has changed. The one
-    visible difference is m.fromIndex, which tells DataModel::addMetadataForItem
-    to leave the decode geometry unset rather than writing zeros over it.
-
-    THE SIDECAR IS STILL STATTED, because the freshness stamp includes it: a
-    keyword edited in Lightroom rewrites the .xmp and never touches the raw, and
-    without that stamp the index would keep serving the old keywords. One stat
-    per image, against the ~20 ms header walk it avoids.
+    THE MAPPING ITSELF LIVES IN Metadata/indexmetadata.h, because DataModel::addAllMetadata
+    needs the same thing in bulk and a second copy would be a second place that knows how
+    a shutter speed is spelled.
 */
-    const QString fPath = fileInfo.filePath();
-
-    CatalogRow cand;
-    cand.path = fPath;
-    cand.srcSize = fileInfo.size();
-    cand.srcMtime = fileInfo.lastModified().toSecsSinceEpoch();
-    const QString sc = metadata->sidecarPath(fPath);
-    const QFileInfo si(sc);
-    if (si.exists()) cand.sidecarMtime = si.lastModified().toSecsSinceEpoch();
-
-    const QHash<QString, CatalogRow> got = Catalog::instance().fetchFresh({cand});
-    const auto it = got.constFind(fPath);
-    if (it == got.cend()) return false;
-    const CatalogRow &r = *it;
-
-    ImageMetadata &m = metadata->m;
-    m = ImageMetadata();                 // a clean struct, as a file read produces
-    m.fPath = fPath;
-    m.row = dmRow;
-    m.instance = instance;
-    m.fromIndex = true;
-
-    m.type = r.ext;
-    m.size = int(r.srcSize);
-    m.createdDate = r.captured;
-    m.modifiedDate = fileInfo.lastModified();
-    m.rating = r.rating ? QString::number(r.rating) : QString();
-    m.label = r.label;
-    m.pick = r.pick;
-    m.title = r.title;
-    m.creator = r.creator;
-    m.copyright = r.copyright;
-    m.make = r.make;
-    m.model = r.model;
-    m.lens = r.lens;
-    m.ISONum = r.iso;
-    m.apertureNum = r.aperture;
-    m.exposureTimeNum = r.shutter;
-    m.focalLengthNum = int(r.focalLength);
-    m.width = r.width;
-    m.height = r.height;
-    m.gpsCoord = r.gpsCoord;
-    m.orientation = r.orientation;
-    m.exposureCompensation = r.exposureComp;
-    m.focusX = float(r.focusX);
-    m.focusY = float(r.focusY);
-    m.email = r.email;
-    m.url = r.url;
-    m._rating = r._rating;
-    m._label = r._label;
-    m._creator = r._creator;
-    m._title = r._title;
-    m._copyright = r._copyright;
-    m._email = r._email;
-    m._url = r._url;
-    m.developEdited = r.developed;
-    m.devPreviewKey = r.devPreviewKey;
-    /*  The FLAT vocabulary, which is what the Filters category and the search
-        read, and the hierarchical paths as the file spelled them. Both are
-        needed: the flat list is what is filtered on, and the paths are part of
-        the row's searchable text, so a row without them searched differently
-        from the same row read from its file (schema 7 exists for this). */
-    /*  m.keywords is the LITERAL dc:subject list -- what may be written back
-        to a file. The flat vocabulary is derived downstream by
-        addMetadataForItem (flattenKeywords), so handing it the flat list here
-        would put every ancestor into the user's own dc:subject on the next
-        sidecar write. */
-    m.keywords = r.keywordsLiteral;
-    m.keywordPaths = r.keywordPaths;
-    m.isSearch = false;
-
-    /*  THE DISPLAY STRINGS, spelled exactly as the format parsers spell them.
-        The model stores the NUMERIC aperture, shutter and focal length (the
-        delegates format those), but ISO, aperture, exposureTime and focalLength
-        as TEXT are what compose shootingInfo, which the info panel and the
-        ShootingInfo column show. Left empty they would blank a column that has
-        never been blank, so they are built here.
-
-        This is a second place that knows how a shutter speed is spelled, which
-        is a duplication worth being uneasy about -- the format parsers are the
-        first. It is verified rather than asserted: the A/B fingerprint over
-        every column of every row is identical with the index path on and off,
-        which is what would catch a divergence. */
-    m.ISO = r.iso ? QString::number(r.iso) : QString();
-    if (r.aperture > 0) m.aperture = "f/" + QString::number(r.aperture, 'f', 1);
-    if (r.focalLength > 0) m.focalLength = QString::number(r.focalLength, 'f', 0) + "mm";
-    if (r.shutter > 0) {
-        /*  Under a second is spelled as a reciprocal ("1/1250"), at or over a
-            second as the number itself -- the convention every parser follows. */
-        if (r.shutter < 1.0) m.exposureTime = "1/" + QString::number(qRound(1.0 / r.shutter));
-        else                 m.exposureTime = QString::number(r.shutter);
-        /*  " sec" is part of the spelling, not decoration: shootingInfo is
-            composed from these strings and the info panel shows it verbatim.
-            Leaving it off produced "1/80 at f/5.6" where every file-read row
-            says "1/80 sec at f/5.6" -- caught by the A/B fingerprint, which is
-            the whole reason a second place that spells a shutter speed is
-            tolerable at all. */
-        m.exposureTime += " sec";
+    const bool got = IndexMetadata::read(metadata, fileInfo, dmRow, instance);
+    if (G::isPerfProbe) {
+        (got ? G::probeIndexMetaHits : G::probeIndexMetaMisses)
+            .fetch_add(1, std::memory_order_relaxed);
     }
-
-    /*  Composed exactly as Metadata::loadImageMetadata composes it, from the
-        same fields, so the two paths cannot drift apart in spelling. */
-    QString info = m.model;
-    info += "  " + m.focalLength;
-    info += "  " + m.exposureTime;
-    info += (m.aperture == "") ? "" : " at " + m.aperture;
-    info += (m.ISO == "") ? "" : ", ISO " + m.ISO;
-    /*  TAKEN FROM THE CATALOG, NOT RECOMPOSED. The composition above builds the
-        display strings the delegates and the info panel need, but shootingInfo
-        itself is stored: Metadata::loadImageMetadata composes it only when the
-        read SUCCEEDED, and Thumb::setImageDimensions marks a row MetaLoaded from
-        the thumbnail path either way -- so a catalogued row may legitimately have
-        an empty one, and nothing in the row says which case it was. Recomposing
-        unconditionally was tried and moved the mismatch from a HEIC to an iPhone
-        JPG. See the schema 7 note in cachedb.cpp. */
-    m.shootingInfo = r.shootingInfo;
-
-    m.metaStatus = G::MetaLoaded;
-    return true;
+    return got;
 }
 
 bool Reader::readMetadata()

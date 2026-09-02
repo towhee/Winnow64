@@ -585,6 +585,7 @@ set(WINNOW_HEADERS
     Metadata/gps.h
     Metadata/ifd.h
     Metadata/imagemetadata.h
+    Metadata/indexmetadata.h
     Metadata/keywordflatten.h
     Metadata/rawsensorinfo.h
     Metadata/iptc.h
