@@ -256,6 +256,39 @@ public:
        3,214". */
     QStringList search(const CatalogQuery &q, int limit = 5000, int *total = nullptr);
 
+    /*  WHY IS THIS IMAGE NOT OPENABLE RIGHT NOW? The catalog can outlive the
+        files it indexes, and the two ways that happens are not the same thing:
+
+          Present  the file is where the catalog says it is.
+          Offline  its VOLUME is not mounted -- an ejected card, an unplugged
+                   drive, a share that is not up. The image is fine; the disk is
+                   absent, and plugging it back in restores it.
+          Missing  the volume IS mounted and the file is not there. It was
+                   deleted or moved by something other than Winnow.
+
+        The sweep already relies on this distinction -- it demotes a row only
+        when the volume is mounted and the file is still gone, precisely so that
+        ejecting a card is not read as a mass deletion -- but nothing could ASK
+        for it, so the catalog's only answer to "can I open this" was to leave
+        the row out of the results entirely. That is the wrong answer for
+        browsing: with the whole catalog visible, "that disk isn't plugged in" is
+        information the user wants, not a row to hide.
+
+        Offline is computed against the mount table AT CALL TIME, not stored: a
+        volume's presence changes without anything telling the catalog, so a
+        stored answer would be wrong the moment a drive is plugged in. Missing is
+        the stored `live` flag, which is what the sweep maintains. */
+    enum class Availability { Present, Offline, Missing };
+
+    /*  The availability of each of these paths, in one pass. Paths the catalog
+        does not know are absent from the result rather than reported Missing --
+        "not indexed" is a different statement from "indexed and gone".
+
+        ONE MOUNT-TABLE WALK for the whole call (see Cache/mountsnapshot.h): it
+        is a syscall per volume, and a caller asking about a folder's worth of
+        rows should not pay it per row. */
+    QHash<QString, Availability> availabilityOf(const QStringList &paths);
+
     /* Every keyword in the catalog with its image count and its parent names, for the
        category list. */
     QList<CatalogKeyword> keywords();

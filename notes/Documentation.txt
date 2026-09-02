@@ -69,6 +69,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Settling Search and Ingested (and a Fact That Was Wrong)
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
      Thumbnails in the Index (Schema 5)
+     Offline is Not Missing (Catalog Availability)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
      The Index as a Metadata Source (fetchFresh)
@@ -1164,6 +1165,30 @@ The wait it needs lives in that mode alone and NOT on the default selftest path,
 The A/Bs above were re-run against freshly captured rows once the capture worked; the three-column result is that re-run, not the earlier one.
 
 WHAT IS LANDED IS THE MECHANISM AND THE SCHEMA, still off by default. The Width/Height bug above is fixed; what remains between here and turning it on is the capture-date gap and Icon Aspect Ratio, both in the LOADER rather than in the index.
+
+⏺ DataModel Changes > Offline is Not Missing (Catalog Availability)
+
+THE CATALOG OUTLIVES THE FILES IT INDEXES, and the two ways that happens are not the same thing:
+
+    Present   the file is where the catalog says it is
+    Offline   its VOLUME is not mounted -- an ejected card, an unplugged drive,
+              a share that is not up. The image is fine; the disk is absent.
+    Missing   the volume IS mounted and the file is not there. Deleted or moved
+              by something other than Winnow.
+
+THE SWEEP HAS ALWAYS DEPENDED ON THAT DISTINCTION -- it demotes a row only when the volume is mounted and the file is still gone, precisely so that ejecting a card is not read as a mass deletion. But nothing could ASK for it. The catalog's only answer to "can I open this" was CatalogQuery::includeMissing, which drops the row from the results altogether, and no code in the app ever sets it. For searching that is defensible; for BROWSING it is the wrong answer, because with the whole catalog visible "that disk isn't plugged in" is information the user wants rather than a row to hide.
+
+Catalog::availabilityOf answers it for a list of paths in one pass.
+
+OFFLINE IS COMPUTED, NOT STORED. A volume's presence changes without anything telling the catalog, so a stored answer would be wrong the moment a drive is plugged in. Missing is the stored `live` flag, which is what the sweep maintains -- and that split is exactly right: one is a fact about the past that had to be observed, the other is a fact about now that can be asked.
+
+THE VOLUME IS ASKED FIRST, AND IT HAS TO BE. A row can be marked not live by a sweep taken while the drive WAS mounted, and then the drive is unplugged -- so the file is missing AND the volume is absent. The useful thing to say then is "that disk isn't plugged in", because it is the one the user can act on, and because until the disk is back there is no way to know whether the file is still gone. Reversing those two tests makes an ejected drive report every row on it as deleted; the unit case catches it.
+
+A PATH THE CATALOG DOES NOT KNOW IS ABSENT FROM THE RESULT, not reported Missing. "Not indexed" is a different statement from "indexed and gone", and a caller that could not tell them apart would badge every uncatalogued image as deleted.
+
+ONE MOUNT-TABLE WALK per call (Cache/mountsnapshot.h), taken before the lock: it is a syscall per volume, and a caller asking about a folder's worth of rows should not pay it per row.
+
+WHAT IS NOT DONE YET: the badge. This is the fact the UI needs, and drawing it -- greyed with the reason inline in the loupe, per the standing rule, never a popup -- is the next step. Nothing renders availability today.
 
 ⏺ DataModel Changes > Sort Change
 

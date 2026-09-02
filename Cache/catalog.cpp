@@ -634,6 +634,46 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
     return out;
 }
 
+QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList &paths)
+{
+/*
+    See the declaration for what the three states mean and why Offline is
+    computed rather than stored.
+*/
+    QHash<QString, Availability> out;
+    if (paths.isEmpty()) return out;
+
+    /*  ONE mount-table walk, taken before the lock so the syscalls are not made
+        with the catalog held. */
+    const MountSnapshot mounts = MountSnapshot::take();
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QSqlQuery q(db);
+    q.prepare("SELECT live, vol FROM image WHERE pathkey = ?");
+    for (const QString &p : paths) {
+        if (p.isEmpty()) continue;
+        q.addBindValue(cachePathKey(p));
+        if (!q.exec() || !q.next()) { q.finish(); continue; }   // not indexed
+        const bool live = q.value(0).toBool();
+        const QString vol = q.value(1).toString();
+        q.finish();
+
+        /*  THE VOLUME IS ASKED FIRST, and it has to be. A row can be marked not
+            live from a sweep taken while the drive WAS mounted, and then the
+            drive is unplugged: the file is missing AND the volume is absent. The
+            useful thing to say then is "that disk isn't plugged in", because
+            that is the one the user can act on -- and because until it is back
+            there is no way to know whether the file is still gone. */
+        if (!mounts.isMounted(vol)) out.insert(p, Availability::Offline);
+        else if (!live)             out.insert(p, Availability::Missing);
+        else                        out.insert(p, Availability::Present);
+    }
+    return out;
+}
+
 /* ---------------------------------------------------------------------------------
    Search
    --------------------------------------------------------------------------------- */
