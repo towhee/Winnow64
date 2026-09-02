@@ -569,7 +569,16 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
         r.folder = q.value(5).toString();
         r.filename = q.value(6).toString();
         r.ext = q.value(7).toString();
-        r.captured = q.value(8).toDateTime();
+        /*  captured is stored as SECONDS SINCE EPOCH -- commit() binds
+            r.captured.toSecsSinceEpoch(), and the category SQL reads it with
+            strftime(..., 'unixepoch'). Reading it back with QVariant::toDateTime
+            gave a QDateTime parsed from the digits of the integer, which is a
+            plausible-looking date that is simply wrong: an A7R2 shot in
+            September 2016 came back as April 2017. Found by fingerprinting a row
+            served from the catalog against the same row read from its file. */
+        r.captured = q.value(8).isNull()
+                         ? QDateTime()
+                         : QDateTime::fromSecsSinceEpoch(q.value(8).toLongLong());
         r.rating = q.value(9).toInt();
         r.label = q.value(10).toString();
         r.pick = q.value(11).toBool();
