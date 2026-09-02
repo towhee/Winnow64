@@ -136,7 +136,7 @@ protected:
 
 signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+                    int role = Qt::EditRole);
     void thumbClick(float xPct, float yPct);          // used in ThumbView::mouseReleaseEvent
     void focusClick(QImage image, float x, float y);  // used in ThumbView::mouseReleaseEvent
     // void displayLoupe(const QString src);

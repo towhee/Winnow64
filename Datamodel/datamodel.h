@@ -77,11 +77,10 @@ public:
         maintained in the setData override. proxySnapshot() is the proxy's order
         and identity, rebuilt on the GUI thread whenever rows are inserted or
         removed or the proxy is re-sorted or re-filtered. */
-    /*  THE PACKED ROW STORE (Datamodel/imagerow.h), maintained ALONGSIDE the
-        QStandardItems while the storage change is being proven. setData writes
-        both; verifyRowStore() compares them over every row and covered column.
-        When that is clean over real folders the reads move across and the
-        items go -- see "The Row Store" in Documentation.txt. */
+    /*  THE PACKED ROW STORE (Datamodel/imagerow.h). Reached only through
+        data()/setData(): it is now the ONLY copy of the covered columns -- the
+        item writes and the verifyRowStore() shadow comparison that proved them
+        are both retired. See "The Row Store" in Documentation.txt. */
     RowStore rowStore;
 
     /*  Thumbnails, keyed by path rather than held on the row -- see
@@ -94,15 +93,6 @@ public:
         shadow verification, but keyed by row in a HASH rather than held on
         every row: a row nothing has touched has no entry at all. */
     ScratchStore scratchStore;
-
-    struct RowStoreCheck {
-        int rowsChecked = 0;
-        int valuesChecked = 0;
-        int mismatches = 0;
-        QStringList detail;         // first few, "row/column: item vs store"
-    };
-    RowStoreCheck verifyRowStore(int maxDetail = 12) const;
-    void rebuildRowStoreFromItems();
 
     RowSyncPtr rowSync() const;
     ProxySnapshotPtr proxySnapshot() const;
@@ -400,9 +390,9 @@ public slots:
                                FrameDecoder *frameDecoder);
     void clearVideoReadingFlag(int dmRow, int fromInstance);
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src,
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+                  int role = Qt::EditRole);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+                  int role = Qt::EditRole);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex dmIdx, int instance);
     void setCurrent(QString fPath, int instance);

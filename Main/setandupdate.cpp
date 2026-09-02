@@ -693,7 +693,7 @@ void MW::setIngested()
             emit setValSf(sfRow, G::IngestedColumn, "true", dm->instance,
                           "MW::setIngested", Qt::EditRole);
             emit setValSf(sfRow, G::PickColumn, "Ingested", dm->instance,
-                          "MW::setIngested", Qt::EditRole, Qt::AlignCenter);
+                          "MW::setIngested", Qt::EditRole);
             // update pickLog
             sKey.replace("/", "🔸");
                               settings->setValue(sKey, "ingested");
@@ -769,11 +769,11 @@ void MW::setCombineRawJpg()
            QModelIndex typeIdx = dm->index(dmRow, G::TypeColumn);
            if (combineRawJpg) {
                emit setValDm(dmRow, G::TypeColumn, "JPG+" + rawType,
-                             dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                             dm->instance, src, Qt::EditRole);
            }
            else {
                emit setValDm(dmRow, G::TypeColumn, "JPG",
-                             dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+                             dm->instance, src, Qt::EditRole);
            }
        }
    }
@@ -911,7 +911,7 @@ void MW::updateSidecarStatus(QString fPath)
 
     QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
     emit  setValSf(sfIdx.row(), G::SidecarColumn, true, G::dmInstance,
-                  srcFun, Qt::EditRole, Qt::AlignVCenter | Qt::AlignCenter);
+                  srcFun, Qt::EditRole);
     thumbView->refreshIcon(sfIdx, srcFun);
 }
 

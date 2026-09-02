@@ -130,7 +130,7 @@ public slots:
 
 signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+                  int role = Qt::EditRole);
     // doneStatus / doneSfRow / doneImage / doneFPath snapshot the decoder state at emit time.
     // Qt copies these into the queued event, so the consumer on imageCacheThread sees a
     // stable view even if the decoder has already started the next decode() on its thread.

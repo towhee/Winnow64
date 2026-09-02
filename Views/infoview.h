@@ -103,7 +103,7 @@ public:
 
 signals:
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+                    int role = Qt::EditRole);
     void dataEdited();
     void updateFilter(BuildFilters::Category category, BuildFilters::AfterAction afterAction);
     void filterChange(QString source);

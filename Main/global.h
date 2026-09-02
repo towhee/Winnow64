@@ -531,12 +531,6 @@ Q_NAMESPACE
     extern DecodeRawEngine decodeRawEngine;
     extern OperationMode operationMode;     // Preview (fast review) vs Develop (best-quality single image)
     extern Scope scope;                     // Folders (loaded set) vs Catalog (whole index)
-    /*  Serve the datamodel's covered columns from the packed row store rather
-        than from the QStandardItems (Datamodel/imagerow.h). The items are still
-        written and DataModel::verifyRowStore still compares the two, so this
-        can be turned off to fall back to the items -- which is the point of it
-        being a flag while the storage change is in progress. */
-    extern bool useRowStore;
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)
     /* Long-edge cap for a written devPreview; one of the kDevPreviewSize* values. */
     extern int devPreviewMaxEdge;

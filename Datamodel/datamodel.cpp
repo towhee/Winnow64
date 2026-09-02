@@ -198,10 +198,27 @@ DataModel::DataModel(QObject *parent,
         indexed by datamodel row, and a filtered-out row still needs its slot. */
     connect(this, &QAbstractItemModel::rowsInserted, this,
             [this]{ resizeRowSync(rowCount()); });
-    /*  A removal takes rows from the middle, so the packed store cannot simply
-        be resized -- see rebuildRowStoreFromItems. */
+    /*  Inserts and removals both take rows from the MIDDLE (insertFiles, remove,
+        removeFolder), which re-addresses every row after them. Both stores are
+        indexed by row, so both are spliced here rather than resized -- a resize
+        appends or truncates at the END, which would silently re-point every row
+        past the splice point at a different image. This used to be a rebuild
+        from the QStandardItems; with the items gone there is nothing to rebuild
+        from, and splicing is what the store's own bookkeeping has to do anyway
+        once it is the only copy. */
+    connect(this, &QAbstractItemModel::rowsInserted, this,
+            [this](const QModelIndex &, int first, int last) {
+                const int n = last - first + 1;
+                rowStore.insertRows(first, n);
+                scratchStore.insertRows(first, n);
+            });
     connect(this, &QAbstractItemModel::rowsRemoved, this,
-            [this]{ resizeRowSync(rowCount()); rebuildRowStoreFromItems(); });
+            [this](const QModelIndex &, int first, int last) {
+                const int n = last - first + 1;
+                rowStore.removeRows(first, n);
+                scratchStore.removeRows(first, n);
+                resizeRowSync(rowCount());
+            });
     connect(this, &QAbstractItemModel::modelReset, this,
             [this]{ resizeRowSync(rowCount()); });
 
@@ -370,148 +387,6 @@ void DataModel::setModelProperties()
     the model's own type, which is why this check is on what data() returns
     rather than on what was passed to setData.
 */
-/*  Rebuild the packed store from the items.
-
-    Needed because rows are removed from the MIDDLE (removeFolder, remove), and
-    a QVector resize truncates from the END -- so after a removal every store
-    row past the deletion point would describe a different image. Growth is
-    handled lazily in setData because rows are only ever APPENDED, where the
-    indices of existing rows do not move.
-
-    O(rows x covered columns), and it runs on a removal, which is rare and
-    already does several full passes (rebuildRowFromPathHash, recountLoadFlags).
-    When the store becomes the only copy this inverts -- removal will splice the
-    vector and the items will be gone -- so this is scaffolding, not the design.
-*/
-void DataModel::rebuildRowStoreFromItems()
-{
-    if (G::isLogger) G::log("DataModel::rebuildRowStoreFromItems");
-    rowStore.clear();
-    scratchStore.clear();
-    const int rows = rowCount();
-    rowStore.resize(rows);
-    for (int r = 0; r < rows; ++r) {
-        for (int c = 0; c < G::TotalColumns; ++c) {
-            for (int role : { int(Qt::EditRole), int(G::PathRole) }) {
-                if (!RowStore::covers(c, role)) continue;
-                rowStore.setValue(r, c, QStandardItemModel::data(index(r, c), role));
-            }
-            /*  The scratch table is rebuilt on the same pass and from the same
-                items, but only where the item is actually SET -- copying an
-                unset cell across would create an entry for a row nothing has
-                touched, which is the one thing this table is shaped to avoid,
-                and would turn "unset" into "written as 0" besides. */
-            if (ScratchStore::covers(c, Qt::EditRole)) {
-                const QVariant v = QStandardItemModel::data(index(r, c), Qt::EditRole);
-                if (v.isValid()) scratchStore.setValue(r, c, v);
-            }
-        }
-    }
-}
-
-DataModel::RowStoreCheck DataModel::verifyRowStore(int maxDetail) const
-{
-    RowStoreCheck out;
-    const int rows = rowCount();
-    if (rowStore.size() != rows) {
-        out.detail << QString("size mismatch: model %1 rows, store %2")
-                          .arg(rows).arg(rowStore.size());
-        out.mismatches++;
-        return out;
-    }
-    for (int r = 0; r < rows; ++r) {
-        ++out.rowsChecked;
-        /*  EVERY ROLE THE STORE CLAIMS, not just EditRole. Checking EditRole
-            alone is exactly what let the PathRole bug through: PathColumn is
-            covered at G::PathRole only, so it was the one column the
-            verification never looked at, and it was the one that broke. A check
-            that does not cover the same ground as the code it checks proves
-            nothing about the part it skips. */
-        static const QVector<int> rolesToCheck { Qt::EditRole, G::PathRole };
-        for (int c = 0; c < G::TotalColumns; ++c)
-        for (int role : rolesToCheck) {
-            /*  Two stores, one check. RowStore holds the resident columns and
-                ScratchStore the in-flight ones; they never claim the same
-                column, and each is asked here through the same covers() the
-                model reads it through, so a column can never be checked on
-                terms other than the ones it is served on. */
-            const bool inRowStore = RowStore::covers(c, role);
-            const bool inScratch  = ScratchStore::covers(c, role);
-            if (!inRowStore && !inScratch) continue;
-            /*  QStandardItemModel::data explicitly, NOT index().data(). Once
-                DataModel::data serves covered columns from the store, going
-                through the override would compare the store against itself and
-                report clean no matter what. The check must always read the
-                ITEMS on one side. */
-            const QVariant a = QStandardItemModel::data(index(r, c), role);
-            const QVariant b = inRowStore ? rowStore.value(r, c)
-                                          : scratchStore.value(r, c);
-            ++out.valuesChecked;
-            /*  QVariant::toString() is EMPTY for a byte array and for a variant
-                list, so rendering those through it compares "" against "" and
-                proves nothing -- which is how a scratch column carrying an ICC
-                profile or the IFD offsets would have been checked, i.e. not at
-                all. Both are given a real rendering here. */
-            auto asText = [](const QVariant &v) -> QString {
-                switch (v.typeId()) {
-                case QMetaType::QStringList:
-                    return v.toStringList().join('\x1f');
-                case QMetaType::QByteArray:
-                    return QString::fromLatin1(v.toByteArray().toHex());
-                case QMetaType::QVariantList: {
-                    QStringList parts;
-                    const QVariantList l = v.toList();
-                    parts.reserve(l.size());
-                    for (const QVariant &e : l) parts << e.toString();
-                    return parts.join('\x1f');
-                }
-                default:
-                    return v.toString();
-                }
-            };
-            const QString sa = asText(a);
-            const QString sb = asText(b);
-
-            /*  TYPE AS WELL AS TEXT, and this was learned the hard way. The
-                first version compared text only, reported clean, and the app
-                then aborted in ExposureTimeItemDelegate: the model holds
-                ImageMetadata::exposureTimeNum as a DOUBLE and the delegate
-                guards with "value == 0" before computing 1/value, so a QString
-                holding the same digits slipped past the guard and reached
-                qRound(+Inf). Same text, different type, different behaviour --
-                which a text comparison cannot see. Numeric types are grouped
-                rather than compared exactly, because the model itself is loose
-                there (a quint32 in one column, an int in the next) and the
-                views read the value, not the type; what must not change is
-                text-vs-number, which is what a delegate branches on. */
-            auto kind = [](const QVariant &v) -> int {
-                switch (v.typeId()) {
-                case QMetaType::UnknownType:  return 0;   // not set
-                case QMetaType::QString:      return 1;
-                case QMetaType::QStringList:  return 2;
-                case QMetaType::Bool:         return 3;
-                case QMetaType::Int: case QMetaType::UInt:
-                case QMetaType::LongLong: case QMetaType::ULongLong:
-                case QMetaType::Double: case QMetaType::Float:  return 4;
-                default: return 5;
-                }
-            };
-            const int ka = kind(a), kb = kind(b);
-            if (sa != sb || ka != kb) {
-                ++out.mismatches;
-                if (out.detail.size() < maxDetail) {
-                    out.detail << QString("row %1 col %2 (%3): item '%4'[%5] vs store '%6'[%7]")
-                                      .arg(r).arg(c)
-                                      .arg(headerData(c, Qt::Horizontal).toString(),
-                                           sa.left(30)).arg(a.typeName() ? a.typeName() : "unset")
-                                      .arg(sb.left(30)).arg(b.typeName() ? b.typeName() : "unset");
-                }
-            }
-        }
-    }
-    return out;
-}
-
 RowSyncPtr DataModel::rowSync() const
 {
     QMutexLocker lock(&mSyncMutex);
@@ -705,6 +580,99 @@ void DataModel::clearDataModel()
     videoRowCount.store(0, std::memory_order_relaxed);
 }
 
+/*  The columns whose tooltip is simply their own text. Chosen explicitly rather
+    than "every text column", because which columns offer a tooltip is a
+    deliberate UI decision and the list must stay exactly the one the per-row
+    writes produced -- a column gaining a tooltip it never had is a visible
+    change hiding inside a storage change. */
+static bool columnTooltipIsItsOwnText(int column)
+{
+    switch (column) {
+    case G::NameColumn:
+    case G::SearchTextColumn:
+    case G::CameraMakeColumn:
+    case G::CameraModelColumn:
+    case G::LensColumn:
+    case G::GPSCoordColumn:
+    case G::KeywordsColumn:
+    case G::KeywordPathsColumn:
+    case G::KeywordsAllColumn:
+    case G::ShootingInfoColumn:
+    case G::TitleColumn:
+    case G::CreatorColumn:
+    case G::CopyrightColumn:
+    case G::EmailColumn:
+        return true;
+    default:
+        return false;
+    }
+}
+
+/*  ALIGNMENT IS A PROPERTY OF THE COLUMN, NOT OF THE ROW.
+
+    It used to be written per CELL -- 28 writes in addFileDataForRow and
+    addMetadataForItem, plus one on every cross-thread setValueDm/setValueSF
+    call, which carried an `align` argument defaulting to Qt::AlignLeft. Two
+    consequences, and the second is a bug:
+
+    o  A cell needs a QStandardItem to hold a role. Alignment alone therefore
+       kept an item alive on 28 columns of every row, holding a number that is
+       the same for all 250,000 of them.
+    o  The default stamped Qt::AlignLeft onto whatever column a worker happened
+       to write, so IsCaching, Attempts, DecoderId, DecoderReturnStatus, Meta
+       Status, WidthPreview and NS Image were left-aligned on the rows the cache
+       had reached and UNSET on the rest -- measured mid-load as "1 x15, unset
+       x35". A column that renders differently depending on how far a background
+       load got is a defect, not a layout.
+
+    So the table below is authoritative and the `align` argument is gone. Every
+    value here was taken from the writes it replaces; a column absent from it
+    had no alignment and still has none.
+
+    RawRenderColumn is deliberately absent even though ImageDecoder wrote it
+    with AlignRight: addMetadataForItem sets that column with no alignment at
+    all, so it was right-aligned only on rows where a raw had been rendered.
+    Consistently unset is the smaller change and matches the column's other
+    writer.
+*/
+static QVariant columnAlignment(int column)
+{
+    switch (column) {
+    case G::TypeColumn:
+    case G::RowNumberColumn:
+    case G::VideoColumn:
+    case G::DevelopColumn:
+    case G::SidecarColumn:
+    case G::PermissionsColumn:
+    case G::ReadWriteColumn:
+    case G::PickColumn:
+    case G::IngestedColumn:
+    case G::SearchColumn:
+    case G::LabelColumn:
+    case G::RatingColumn:
+    case G::WidthColumn:
+    case G::HeightColumn:
+    case G::DimensionsColumn:
+    case G::LoadMsecPerMpColumn:
+    case G::OrientationColumn:
+    case G::RotationColumn:
+    case G::ApertureColumn:
+    case G::ISOColumn:
+    case G::ExposureCompensationColumn:
+        return int(Qt::AlignCenter | Qt::AlignVCenter);
+    case G::ByteSizeColumn:
+    case G::AspectRatioColumn:
+    case G::MegaPixelsColumn:
+    case G::ShutterspeedColumn:
+    case G::FocalLengthColumn:
+    case G::NSThumbColumn:
+    case G::NSImageColumn:
+        return int(Qt::AlignRight | Qt::AlignVCenter);
+    default:
+        return QVariant();
+    }
+}
+
 QVariant DataModel::data(const QModelIndex &idx, int role) const
 {
 /*
@@ -723,11 +691,12 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
     roles) is presentation or per-row bookkeeping that the store does not hold,
     and falls through untouched.
 
-    The items are still written and verifyRowStore still compares the two, so
-    G::useRowStore = false falls straight back to them.
+    THE STORES ARE NOW THE ONLY COPY. During the shadow phase the items were
+    written too and verifyRowStore() compared the two; that is retired, so a
+    covered column reaching QStandardItemModel::data() below would read an unset
+    cell rather than fall back to anything.
 */
-    if (G::useRowStore &&
-        idx.isValid() &&
+    if (idx.isValid() &&
         RowStore::covers(idx.column(), role) &&
         rowStore.contains(idx.row()))
     {
@@ -740,11 +709,33 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         row nothing has decoded or cached, and it is the same answer the unset
         item gives: an invalid QVariant. Guarding on contains() would fall
         through to the items and hide exactly the case the store exists for. */
-    if (G::useRowStore &&
-        idx.isValid() &&
+    if (idx.isValid() &&
         ScratchStore::covers(idx.column(), role))
     {
         return scratchStore.value(idx.row(), idx.column());
+    }
+
+    if (idx.isValid() && role == Qt::TextAlignmentRole) {
+        const QVariant a = columnAlignment(idx.column());
+        if (a.isValid()) return a;
+    }
+
+    /*  TOOLTIPS ARE DERIVED, NOT STORED. Every per-row Qt::ToolTipRole write
+        addFileDataForRow and addMetadataForItem used to make wrote the CELL'S
+        OWN TEXT back into a second role of the same cell -- 15 of them, on
+        every row. That is not a fact about the image, it is a restatement of
+        one, and it kept a QStandardItem alive on 15 columns per row purely to
+        hold a copy of a string the store already has. Derived here instead.
+
+        The three keyword columns hold a QStringList and their tooltip was the
+        joined form, so they are joined with the same Utilities function rather
+        than with QVariant::toString (which returns nothing for a list). */
+    if (idx.isValid() && role == Qt::ToolTipRole && columnTooltipIsItsOwnText(idx.column())) {
+        const QVariant v = data(idx, Qt::EditRole);
+        if (!v.isValid()) return QVariant();
+        if (v.typeId() == QMetaType::QStringList)
+            return Utilities::stringListToString(v.toStringList());
+        return v.toString();
     }
 
     /*  Thumbnails come from the path-keyed icon store (Datamodel/iconstore.h).
@@ -787,14 +778,46 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         (role == Qt::EditRole || role == Qt::DisplayRole) &&
         (isStatusCol || isBoolCol);
 
+    /*  THE OLD VALUE COMES FROM data(), NOT FROM THE ITEM. All three tracked
+        columns are covered by the row store and the items no longer hold them,
+        so QStandardItemModel::data() here would read an unset cell every time,
+        every transition would look like a change from false, and the counts
+        that isMetaReadFinished() and the icon-chunk check depend on would drift
+        upward until they exceeded rowCount(). */
     int  oldStatus = G::MetaNotAttempted;
     bool oldVal = false;
     if (track) {
-        if (isStatusCol) oldStatus = QStandardItemModel::data(idx, Qt::DisplayRole).toInt();
-        else             oldVal    = QStandardItemModel::data(idx, Qt::DisplayRole).toBool();
+        if (isStatusCol) oldStatus = data(idx, Qt::DisplayRole).toInt();
+        else             oldVal    = data(idx, Qt::DisplayRole).toBool();
     }
 
-    const bool ok = QStandardItemModel::setData(idx, value, role);
+    /*  THE ITEM WRITE IS GONE FOR EVERY COVERED (COLUMN, ROLE).
+
+        This is the end of the shadow phase. Until now the stores were written
+        BESIDE the QStandardItems so verifyRowStore() could compare the two;
+        that comparison is what proved every column, and it is retired here
+        because there is no longer a second copy to compare against. It was
+        spent once, on all ~60 covered columns together, deliberately.
+
+        What replaces the base class: the store write below, and the
+        dataChanged() the base class used to emit. Everything the views, the
+        proxy and the delegates do still goes through data(), which has served
+        these columns from the stores since the shadow phase, so none of them
+        can tell the difference -- which was the point of introducing the seam
+        there rather than swapping the base class.
+
+        Roles the stores do NOT claim (Decoration, and the G:: custom roles that
+        carry the raw+jpg pairing and the icon rect) still go to the items, so
+        QStandardItemModel is still the row structure and still owns those. */
+    const bool covered = idx.isValid() &&
+                         (RowStore::covers(col, role) || ScratchStore::covers(col, role));
+    bool ok;
+    if (covered) {
+        ok = true;
+    }
+    else {
+        ok = QStandardItemModel::setData(idx, value, role);
+    }
 
     if (track && ok) {
         if (isStatusCol) {
@@ -850,15 +873,17 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         }
     }
 
-    if (ok && idx.isValid() && RowStore::covers(col, role)) {
+    if (idx.isValid() && RowStore::covers(col, role)) {
         if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
         rowStore.setValue(idx.row(), col, value);
+        emit dataChanged(idx, idx, { role });
     }
 
-    /*  Maintain the scratch side table beside the items, on the same terms.
-        ScratchStore::covers is the single authority on both sides here too. */
-    if (ok && idx.isValid() && ScratchStore::covers(col, role)) {
+    /*  The scratch side table, on the same terms. ScratchStore::covers is the
+        single authority on both sides here too. */
+    if (idx.isValid() && ScratchStore::covers(col, role)) {
         scratchStore.setValue(idx.row(), col, value);
+        emit dataChanged(idx, idx, { role });
     }
 
     /*  Mirror the same facts into the lock-free per-row array the worker
@@ -1921,38 +1946,29 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     const QSignalBlocker b(this);
 
     setData(index(row, G::RowNumberColumn), row + 1);
-    setData(index(row, G::RowNumberColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::PathColumn), fPath, G::PathRole);
     // Show tooltips for each item in datamodel views - this has been moved to
     // IconView::mouseMoveEvent so can show tooltips for icon symbols as well
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
-    setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
     setData(index(row, G::FolderNameColumn), folderName);
     QString s = fileInfo.suffix().toUpper();
     setData(index(row, G::TypeColumn), s);
-    setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
-    setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SidecarColumn), QFile(sidecarPath).exists());
     /* G::DevelopColumn is NOT set here. Deciding whether an image has a develop recipe
        means parsing the sidecar, and this runs on the folder-load path -- the one place
        where per-image work has repeatedly cost visible lag. Metadata::parseSidecar is
        already parsing that same file on a worker thread, so the flag rides in on
        ImageMetadata::developEdited via addMetadataForItem instead. */
-    setData(index(row, G::DevelopColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::SidecarColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     uint p = static_cast<uint>(fileInfo.permissions());
     setData(index(row, G::PermissionsColumn), p);
-    setData(index(row, G::PermissionsColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     bool isReadWrite = (p & QFileDevice::ReadUser) && (p & QFileDevice::WriteUser);
     setData(index(row, G::ReadWriteColumn), isReadWrite);
-    setData(index(row, G::ReadWriteColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     // size
     quint32 bytes = fileInfo.size();
     setData(index(row, G::ByteSizeColumn), bytes);
-    setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
 
     // estimate cacheSize until read metadata and calc size for QImage
     float mb = static_cast<double>(bytes) / (1 << 20);
@@ -1967,16 +1983,12 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     search += s;
     setData(index(row, G::ModifiedColumn), s);
     setData(index(row, G::PickColumn), "Unpicked");
-    setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IngestedColumn), "false");
-    setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::MetadataReadingColumn), false);
     setData(index(row, G::MetadataStatusColumn), G::MetaNotAttempted);
     setData(index(row, G::IconLoadedColumn), false);
     setData(index(row, G::SearchColumn), "false");
-    setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
     setData(index(row, G::SearchTextColumn), search);
-    setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
 
     rawJpgPairing(row, ext, baseName);
 
@@ -1997,7 +2009,6 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
 
     QMutexLocker locker(&dmMutex);
     setData(index(row, G::ByteSizeColumn), fileInfo.size());
-    setData(index(row, G::ByteSizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     setData(index(row, G::ModifiedColumn), s);
 
@@ -2235,7 +2246,10 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.iccSegmentOffset = index(row, G::ICCSegmentOffsetColumn).data().toUInt();
     m.iccSegmentLength = index(row, G::ICCSegmentLengthColumn).data().toUInt();
     m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
-    m.iccSpace = index(row, G::ICCSegmentOffsetColumn).data().toString();
+    /* ICCSpaceColumn, not ICCSegmentOffsetColumn -- reading the offset here returned the
+       segment's file position as the colour space NAME. Silent: iccSpace is only ever
+       displayed or logged, so it read as a stray number rather than as a failure. */
+    m.iccSpace = index(row, G::ICCSpaceColumn).data().toString();
 
     m.searchStr = index(row, G::SearchTextColumn).data().toString();
     m.compare = index(row, G::CompareColumn).data().toBool();
@@ -2552,16 +2566,13 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     const QSignalBlocker b(this);
 
     setData(index(row, G::SearchColumn), m.isSearch);
-    setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LabelColumn), m.label);
-    setData(index(row, G::LabelColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     search += m.label;
     setData(index(row, G::_LabelColumn), m._label);
     // if (m.rating == "") m.rating = "No Rating";
     // if (m.rating == "0") m.rating = "No Rating";
     if (m.rating == "0") m.rating = "";
     setData(index(row, G::RatingColumn), m.rating);
-    setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     /* Develop badge. Comes from Metadata::parseSidecar, which already had the sidecar
        open, so no extra I/O lands on the folder-load path. */
     setData(index(row, G::DevelopColumn), m.developEdited);
@@ -2598,52 +2609,33 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         Image/stack.cpp) already calls toInt(), and the displayed text is
         identical either way. */
     setData(index(row, G::WidthColumn), m.width);
-    setData(index(row, G::WidthColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::HeightColumn), m.height);
-    setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
-    setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     QString dim = QString::number(m.width) + "x" + QString::number(m.height);
     setData(index(row, G::DimensionsColumn), dim);
-    setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     search += dim;
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
-    setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);
-    setData(index(row, G::LoadMsecPerMpColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::OrientationColumn), QString::number(m.orientation));
-    setData(index(row, G::OrientationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::RotationColumn), QString::number(m.rotationDegrees));
-    setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CameraMakeColumn), m.make);
-    setData(index(row, G::CameraMakeColumn), m.make, Qt::ToolTipRole);
     search += m.make;
     setData(index(row, G::CameraModelColumn), m.model);
-    setData(index(row, G::CameraModelColumn), m.model, Qt::ToolTipRole);
     search += m.model;
     setData(index(row, G::ShutterspeedColumn), m.exposureTimeNum);
-    setData(index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::ApertureColumn), m.apertureNum);
-    setData(index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::ISOColumn), m.ISONum);
-    setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::ExposureCompensationColumn), m.exposureCompensation);
 //    setData(index(row, G::ExposureCompensationColumn), m.exposureCompensationNum);
-    setData(index(row, G::ExposureCompensationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LensColumn), m.lens);
-    setData(index(row, G::LensColumn), m.lens, Qt::ToolTipRole);
     search += m.lens;
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
-    setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::FocusXColumn), m.focusX);
     setData(index(row, G::FocusYColumn), m.focusY);
     setData(index(row, G::GPSCoordColumn), m.gpsCoord);
-    setData(index(row, G::GPSCoordColumn), m.gpsCoord, Qt::ToolTipRole);
     setData(index(row, G::KeywordsColumn), QVariant(m.keywords));
-    setData(index(row, G::KeywordsColumn), Utilities::stringListToString(m.keywords), Qt::ToolTipRole);
     search += Utilities::stringListToString(m.keywords);
     setData(index(row, G::KeywordPathsColumn), QVariant(m.keywordPaths));
-    setData(index(row, G::KeywordPathsColumn), Utilities::stringListToString(m.keywordPaths), Qt::ToolTipRole);
     /* Ancestor names are only in the hierarchical form, so folding it into the search
        text is what lets a search for "Wildlife" find an image keyworded only "Heron". */
     search += Utilities::stringListToString(m.keywordPaths);
@@ -2654,27 +2646,21 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
        the file spelled them -- see G::KeywordsAllColumn on why they must be. */
     QStringList keywordsAll = flattenKeywords(m.keywords, m.keywordPaths);
     setData(index(row, G::KeywordsAllColumn), QVariant(keywordsAll));
-    setData(index(row, G::KeywordsAllColumn), Utilities::stringListToString(keywordsAll), Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
-    setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
     setData(index(row, G::TitleColumn), m.title);
-    setData(index(row, G::TitleColumn), m.title, Qt::ToolTipRole);
     search += m.title;
     setData(index(row, G::_TitleColumn), m._title);
 //    if (index(row, G::CreatorColumn).data().toString() != "") m.creator = index(row, G::CreatorColumn).data().toString();
     setData(index(row, G::CreatorColumn), m.creator);
-    setData(index(row, G::CreatorColumn), m.creator, Qt::ToolTipRole);
     search += m.creator;
     setData(index(row, G::_CreatorColumn), m._creator);
 //    if (index(row, G::CopyrightColumn).data().toString() != "") m.copyright = index(row, G::CopyrightColumn).data().toString();
     setData(index(row, G::CopyrightColumn), m.copyright);
-    setData(index(row, G::CopyrightColumn), m.copyright, Qt::ToolTipRole);
     search += m.copyright;
     setData(index(row, G::_CopyrightColumn), m._copyright);
 //    if (index(row, G::EmailColumn).data().toString() != "") m.email = index(row, G::EmailColumn).data().toString();
     setData(index(row, G::EmailColumn), m.email);
-    setData(index(row, G::EmailColumn), m.email, Qt::ToolTipRole);
     search += m.email;
     setData(index(row, G::_EmailColumn), m._email);
 //    if (index(row, G::UrlColumn).data().toString() != "") m.url = index(row, G::UrlColumn).data().toString();
@@ -2708,7 +2694,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     // setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
     setData(index(row, G::CompareColumn), m.compare);
     setData(index(row, G::SearchTextColumn), search.toLower());
-    setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
     // image cache helpers
     // do not set these.  Out of order when multi-folder selection
@@ -2951,7 +2936,7 @@ bool DataModel::iconRowVisible(const QModelIndex &dmIdx)
 }
 
 void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
-                         QString src, int role, int align)
+                         QString src, int role)
 {
 /*
     Only call via connection.   Example: emit setValDm(args)
@@ -2983,20 +2968,22 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
         return;
     }
 
-    /* Batch the value + alignment writes under a QSignalBlocker and emit ONE dataChanged.
-       Called per icon for the NSThumb column during loads; two separate dataChanged here
-       were ~half of the load-time GUI stall (measured). One coalesced signal collapses it. */
+    /* The write is made under a QSignalBlocker and dataChanged emitted here, for
+       VISIBLE ROWS ONLY. Called per icon for the NSThumb column during loads, where
+       letting every row's write reach the views was ~half of the load-time GUI stall
+       (measured). The blocker used to coalesce a value write and an alignment write
+       into one signal; the alignment write is gone (alignment is per column now), but
+       the throttle is the point and it stays. */
     {
         const QSignalBlocker blocker(this);
         setData(dmIdx, value, role);
-        setData(dmIdx, align, Qt::TextAlignmentRole);
     }
     if (iconRowVisible(dmIdx))
         emit dataChanged(dmIdx, dmIdx);
 }
 
 void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
-                         QString src, int role, int align)
+                         QString src, int role)
 {
     /*
     Only call via connection.   Example: emit setValSf(args)
@@ -3040,7 +3027,6 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     }
 
     sf->setData(sfIdx, value, role);
-    sf->setData(sfIdx, align, Qt::TextAlignmentRole);
 }
 
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
@@ -3211,9 +3197,13 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
         setData(index(dmRow, G::DurationColumn), durationTime.toString(format));
     }
 
-    QStandardItem *item = itemFromIndex(dmIdx);
-    if (data(dmIdx, Qt::DecorationRole).isNull()) {
-        if (item != nullptr) {
+    /*  No itemFromIndex() guard. It used to test that the cell had an item
+        before writing the icon, which was a proxy for "the row exists"; the
+        icon is not on the item any more and a covered column may not create one
+        at all, so a null item here would have silently dropped the thumbnail.
+        dmIdx.isValid() is the question that was actually being asked. */
+    if (dmIdx.isValid() && data(dmIdx, Qt::DecorationRole).isNull()) {
+        {
             setData(dmIdx, QVariant(QIcon(QPixmap::fromImage(im))), Qt::DecorationRole);
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataStatusColumn), G::MetaLoaded);
@@ -3588,7 +3578,10 @@ int DataModel::iconCount()
     QMutexLocker locker(&dmMutex);
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::iconCount  itemFromIndex  row =" << row;
-        if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
+        /*  Through data(), not itemFromIndex()->icon(): the thumbnail lives in
+            the path-keyed icon store now, so the item's icon is always null and
+            this counted zero on every call. */
+        if (!index(row, 0).data(Qt::DecorationRole).isNull()) count++;
     }
     return count;
 }
@@ -4739,8 +4732,8 @@ QString DataModel::diagnostics()
         int runStart = -1;
         const int nRows = rowCount();
         for (int row = 0; row <= nRows; ++row) {
-            const bool loaded = row < nRows
-                && !itemFromIndex(index(row, 0))->icon().isNull();
+            const bool loaded = row < nRows                 // through data(): see iconCount
+                && !index(row, 0).data(Qt::DecorationRole).isNull();
             if (loaded && runStart < 0) {
                 runStart = row;                 // start of a new run
             }
@@ -4971,7 +4964,8 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     dots = 28;
     rpt << "\n  " << G::sj("FileName", dots) << G::s(index(row, G::NameColumn).data());
     rpt << "\n  " << G::sj("FilePath", dots) << G::s(index(row, 0).data(G::PathRole));
-    rpt << "\n  " << G::sj("isIcon", dots) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
+    rpt << "\n  " << G::sj("isIcon", dots)
+        << G::s(!index(row, G::PathColumn).data(Qt::DecorationRole).isNull());
     rpt << "\n  " << G::sj("isCached", dots) << G::s(index(row, G::IsCachedColumn).data());
     rpt << "\n  " << G::sj("MetadataReadingColumn", dots) << G::s(index(row, G::MetadataReadingColumn).data());
     rpt << "\n  " << G::sj("metaStatus", dots) << G::s(index(row, G::MetadataStatusColumn).data());

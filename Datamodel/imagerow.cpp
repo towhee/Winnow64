@@ -79,7 +79,11 @@ bool RowStore::covers(int column, int role)
 
 QVariant RowStore::value(int row, int column) const
 {
-    if (!contains(row)) return QVariant();
+    /*  Read lock: see "THREADING" in imagerow.h. Taken here rather than through
+        contains(), which takes its own -- two acquisitions would leave a window
+        between the bounds check and the read. */
+    QReadLocker locker(&mLock);
+    if (row < 0 || row >= mRows.size()) return QVariant();
     const ImageRow &r = mRows.at(row);
     switch (column) {
     case G::PathColumn:            return r.path;
@@ -134,7 +138,8 @@ QVariant RowStore::value(int row, int column) const
 
 void RowStore::setValue(int row, int column, const QVariant &v)
 {
-    if (!contains(row)) return;
+    QWriteLocker locker(&mLock);
+    if (row < 0 || row >= mRows.size()) return;
     ImageRow &r = mRows[row];
     switch (column) {
     case G::PathColumn:            r.path = v.toString(); break;

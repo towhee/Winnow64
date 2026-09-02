@@ -94,7 +94,7 @@ signals:
     void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
     void decode(int sfRow, int instance);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
+                    int role = Qt::EditRole); // not used
     void showCacheStatus(int instruction, bool isAutoSize,
                          quint64 currMB, quint64 maxMB, int targetFirst, int targetLast,
                          QString source = "");

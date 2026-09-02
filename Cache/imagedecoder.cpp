@@ -228,8 +228,7 @@ void ImageDecoder::decode(int row, int instance)
         ;//*/
 
     emit setValSf(sfRow, G::NSImageColumn, nsToDecode, instance,
-                  "ImageDecoder::decode", Qt::EditRole,
-                  int(Qt::AlignRight | Qt::AlignVCenter));
+                  "ImageDecoder::decode");
 
     emit done(threadId, int(status), sfRow, image, fPath, nsToDecode);
 }
@@ -412,8 +411,7 @@ bool ImageDecoder::load()
                     imFile.close();
                     status = Status::Success;
                     emit setValSf(sfRow, G::RawRenderColumn, true, instance,
-                                  "ImageDecoder::load", Qt::EditRole,
-                                  int(Qt::AlignRight | Qt::AlignVCenter));
+                                  "ImageDecoder::load");
                     return true;
                 }
             }
@@ -445,8 +443,7 @@ bool ImageDecoder::load()
                 imFile.close();
                 status = Status::Success;
                 emit setValSf(sfRow, G::RawRenderColumn, true, instance,
-                              "ImageDecoder::load", Qt::EditRole,
-                              int(Qt::AlignRight | Qt::AlignVCenter));
+                              "ImageDecoder::load");
                 return true;
             }
             /* Aborted mid-decode (shutdown / navigation): bail now rather than wasting

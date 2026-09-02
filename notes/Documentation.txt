@@ -63,6 +63,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Worker Threads and the Model (Snapshots, and What Still Reads It)
      The Row Store (What a Row Costs, and the Field Table)
      The Scratch Store (The Columns Only a Decoder Needs)
+     Retiring the Items (Alignment, Tooltips, and the Deletion Pass)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -805,6 +806,50 @@ tst_rowscratch PINS THE BEHAVIOUR that the shadow check will stop being able to 
 
 A BUG FOUND IN PASSING, NOT FIXED HERE: DataModel::imMetadata reads m.iccSpace from G::ICCSegmentOffsetColumn rather than from G::ICCSpaceColumn (datamodel.cpp), so the colour-space NAME comes back as an offset. It is a one-word fix but it changes behaviour rather than storage, so it does not belong inside a storage change.
 
+
+⏺ DataModel Changes > Retiring the Items (Alignment, Tooltips, and the Deletion Pass)
+
+THE ITEM WRITES ARE GONE FOR EVERY COVERED COLUMN. This is the pass the shadow phase existed to make safe, and it was spent ONCE, on both stores together, because DataModel::verifyRowStore() compares the store against the QStandardItems and deleting the writes retires the ability to compare at all. It is retired here, along with G::useRowStore -- a fallback to the items is not a fallback to anything once the items are empty.
+
+WHAT REPLACES IT AS PROOF: an A/B FINGERPRINT. A SHA-1 over what data() returns for every column of every row at four roles (Edit, Display, ToolTip, TextAlignment), taken from a temporary probe at the --selftest exit over the same four folders, before and after. It is a stronger check than verifyRowStore was, because it reads through data() -- the answer the views actually get -- rather than comparing two private copies.
+
+THE FINGERPRINT HAD TO BE MADE DETERMINISTIC FIRST, and this is the same trap the Filters item count set last time. Three runs of the UNCHANGED binary produced three different hashes. Six columns vary run to run within one build:
+
+    NS Thumb, NS Image, DecoderId    legitimately nondeterministic -- nanosecond
+                                     timings, and which decoder thread took the row
+    XmpSegmentLength, IsXMP,         NOT legitimate. A pre-existing metadata-read
+    ICCSpace                         defect: it reproduces on the unmodified binary
+                                     and does not converge at a 25-second settle
+
+Excluding the first three is correct; excluding the second three is an admission. They are noted, not fixed -- but note what including them would have done: reported a difference on every comparison and made the whole exercise unreadable. A comparison is only evidence if it has been shown to be stable when nothing changed.
+
+TOOLTIPS WERE A COPY OF THE CELL. Fifteen per-row Qt::ToolTipRole writes wrote the cell's own text back into a second role of the same cell -- Name, SearchText, Make, Model, Lens, GPSCoord, the three keyword columns, ShootingInfo, Title, Creator, Copyright, Email. That is not a fact about the image, it is a restatement of one, and holding a role keeps a QStandardItem alive, so it cost an item on 15 columns of every row to store a string the row store already had. They are derived in data() now (the keyword columns joined with the same Utilities::stringListToString their tooltip used). Fingerprint identical on all four folders.
+
+ALIGNMENT IS A PROPERTY OF THE COLUMN, and treating it as a property of the CELL was hiding a bug. There were 28 per-row writes, plus one on every cross-thread setValueDm/setValueSF call -- those carried an `align` argument defaulting to Qt::AlignLeft, so whatever column a worker happened to write got stamped left-aligned. Measured mid-load, seven columns read "1 x15, unset x35": IsCaching, Attempts, DecoderId, DecoderReturnStatus, Meta Status, WidthPreview, NS Image. A column that renders differently depending on how far a background load got is a defect, not a layout.
+
+So a static table in datamodel.cpp is authoritative and the `align` parameter is GONE -- from both slots, from all eleven signal declarations, and from the seventeen call sites that passed one. Leaving it would have left the same gun loaded for the next caller. Every value in the table came from the writes it replaces, and the census after the change shows why the ragged ones were the bug: each of the 28 uniform columns keeps its exact value and type on every row, NS Image goes from "130 x15, unset x35" to "130 x50", and the seven AlignLeft-noise columns have no alignment at all rather than one on an arbitrary subset of rows. No column changed its value; only its raggedness.
+
+RawRenderColumn is deliberately left out of the table even though ImageDecoder wrote it with AlignRight, because addMetadataForItem sets the same column with no alignment -- so it was right-aligned only on rows where a raw had been rendered. Consistently unset is the smaller change.
+
+THEN THE VALUE ROLES. setData no longer calls QStandardItemModel::setData when RowStore::covers or ScratchStore::covers claims the (column, role); it writes the store and emits the dataChanged the base class would have emitted. Edit, Display and ToolTip fingerprints IDENTICAL on all four folders, and align identical to the post-alignment-change baseline.
+
+ONE THING BROKE THAT NO FINGERPRINT COULD SEE. setData maintains running counts (metadataAttempted, metadataLoaded, iconLoaded, videoRow) so isMetaReadFinished() and the icon-chunk check need not rescan, and it counted transitions by reading the OLD value first -- with QStandardItemModel::data. All three tracked columns are store-covered, so once the items went that read returned an unset cell every time, every write looked like a change, and the counts drifted upward past rowCount(). Reading the old value through data() fixes it. Verified against a full scan on five runs (50/50, 12/12, 13/13, 4/4, and 51/51 under the stress load), and PROVEN TO FAIL by re-injecting the item read: 56/50 attempted, 55/50 loaded, caught by name.
+
+ROW SPLICING REPLACED THE REBUILD. Both stores are indexed by row, and inserts and removals both take rows from the MIDDLE (insertFiles, remove, removeFolder). That used to be handled by rebuilding the store from the items on rowsRemoved; with the items gone there is nothing to rebuild from, so rowsInserted and rowsRemoved splice both stores directly. A plain resize() could never have been right -- it appends or truncates at the END, so every row past the splice point would have silently pointed at a different image. Note that only removal was handled before; a mid-model INSERT was already unhandled.
+
+THREE STALE ICON READS WERE FOUND AND FIXED IN PASSING, and they were worse than stale. iconCount(), the loaded-icon range report and the row report all asked itemFromIndex(...)->icon(), which has always returned null since thumbnails moved to the path-keyed icon store. In Qt 6 itemFromIndex LAZILY CREATES the item it cannot find, so each of those calls was allocating a QStandardItem per row to read a value that was guaranteed null. The same trap invalidated the first attempt to MEASURE this work: a probe walking itemFromIndex reported 93 items per row, having created every one of them. Use QStandardItemModel::item(row, column), which does not create.
+
+WHAT IT ACTUALLY BOUGHT, measured with the non-creating accessor over the 50-file mixed folder: 93 items per row before, 31.4 after -- two thirds of them gone, and a covered column (Year, File Name, Type) now has no item at all. The remaining 31 are the columns NEITHER store covers yet: Duration, FocusX/Y, AspectRatio, IconAspectRatio, Msec/Mp, Orientation, Rotation, Email, Url, MetaReading, RawRender, Sidecar, Ingested, EC, the seven _original columns, Permissions, R/W, OrientationOffset, RotationDegrees, ShootingInfo, Developed, DevPreviewKey, NS Thumb, NS Image, Search, plus column 0's three raw+jpg pairing roles. Extending coverage to them is the obvious next increment and is a separate piece of work. THE 34x IS NOT HERE YET and claiming it would be wrong.
+
+AND THEN THREADSANITIZER FOUND WHAT THE FINGERPRINTS COULD NOT. Both stores now take a QReadWriteLock, which reverses what imagerow.h previously asserted -- that nothing here would ever need one -- so the reason matters.
+
+Stage 0.3 moved BuildFilters, MetaRead and the image cache's own bookkeeping onto the published views in modelsync.h, but it did not convert every off-thread read of dm->sf. ImageDecoder still reads OffsetFull, LengthFull, samplesPerPixel and ICCBuf that way; Reader reads OffsetThumb and LengthThumb; ImageCache reads the cache flags. Those are the known QSortFilterProxyModel exposure that tests/tsan/run_tsan_proxy.sh exists to reproduce and whose fix is deferred.
+
+While the QStandardItems held the values, those reads were survivable BY ACCIDENT: a worker read an item pointer out of a list that only changes when a ROW is inserted. Now the value lives in the stores, and both of them move memory continuously during a load -- the scratch table takes a new hash entry on every scratch write and REHASHES, and the row store's interner appends a QString on every string written and REALLOCATES. A reader mid-lookup then walks freed memory, which is a different class of bug from a stale value. TSan reported the scratch one on the first run after the item writes went (ScratchStore::setValue racing ImageDecoder::decode) and the interner one on the proxy run.
+
+Both were confirmed to be NEW by stashing the work and re-running: the unmodified tree passes. So the locks are the price of those deferred callers, not a design preference, and they come out with them. Reads here are decoder and cache bookkeeping rather than the paint path. With the locks, run_tsan.sh passes and run_tsan_proxy.sh reported no race on three consecutive runs against the 50-file folder.
+
+STILL ON THE ITEMS, and next: the 31 uncovered columns; the compiled filter predicate (SortFilter::filterAcceptsRow still walks the whole Filters tree per row); and only then the base-class swap to QAbstractTableModel.
 
 ⏺ DataModel Changes > Sort Change
 

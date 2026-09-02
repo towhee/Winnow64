@@ -614,7 +614,7 @@ void MW::setRating()
         // update datamodel
         QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
         emit setValDm(dmRow, G::RatingColumn, rating, dm->instance, src,
-                      Qt::EditRole, Qt::AlignCenter);
+                      Qt::EditRole);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             // is this part of a raw+jpg pair
@@ -729,7 +729,7 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
     qDebug() << srcFun << sfRow << colorClass;
     emit setValSf(sfRow, G::LabelColumn, colorClass,
                   dm->instance, "MW::setColorClassForRow",
-                  Qt::EditRole, Qt::AlignCenter);
+                  Qt::EditRole);
     QString color = dm->sf->index(sfRow, G::LabelColumn).data().toString();
     qDebug() << srcFun << "color =" << color;
     thumbView->refreshIcons("MW::setColorClassForRow");
@@ -808,7 +808,7 @@ void MW::setColorClass()
         // update datamodel
         QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
         emit setValDm(dmRow, G::LabelColumn, colorClass, dm->instance, src,
-                      Qt::EditRole, Qt::AlignCenter);
+                      Qt::EditRole);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             // is this part of a raw+jpg pair
@@ -823,7 +823,7 @@ void MW::setColorClass()
                 // set color class (label) for raw file row as well
                 QString src = "MW::setColorClass";
                 emit setValDm(rowDup, G::LabelColumn, colorClass, dm->instance, src,
-                              Qt::EditRole, Qt::AlignCenter);
+                              Qt::EditRole);
             }
         }
         // write to sidecar

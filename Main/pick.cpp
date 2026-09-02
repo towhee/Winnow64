@@ -174,7 +174,7 @@ void MW::togglePick()
         pushPick(fPath, priorPickStatus);
         // set pick status
         emit setValDm(dmRow, G::PickColumn, pickStatus, dm->instance, "MW::togglePick",
-                      Qt::EditRole, Qt::AlignCenter);
+                      Qt::EditRole);
         updatePickLog(fPath, pickStatus);
     }
     if (n > 1) pushPick("End multiple select");

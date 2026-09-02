@@ -33,9 +33,9 @@ signals:
     void videoFrameDecode(QString fPath, int longSide, QString source,
                           int dmRow, int dmInstance);
     void setValDm(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
+                    int role = Qt::EditRole); // not used
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                  int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
+                  int role = Qt::EditRole); // not used
     void getFrame(QString fPath);
 
 private:
