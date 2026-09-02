@@ -192,6 +192,28 @@ public:
        indexed. The scanner asks this before parsing anything. */
     QSet<QString> staleOf(const QList<CatalogRow> &candidates);
 
+    /* THE INDEX AS A METADATA SOURCE, not just a search index.
+
+       Hands back the catalogued row for each candidate whose freshness stamp still
+       matches -- so the loader can populate those rows from the database instead of
+       opening the file and parsing its metadata. Candidates whose stamp does not match,
+       or that were never catalogued, are simply absent from the result: they are the gap
+       the file reader still has to fill.
+
+       This is staleOf() read the other way round, and it is deliberately ONE query per
+       call rather than one per path. staleOf answers "what must I read?" for the
+       scanner, which then reads it; this answers "what need I not read?" for the loader,
+       which then skips it. Same stamp, same comparison, opposite consumer -- and the two
+       must agree, or a row would be both skipped and unindexed.
+
+       The caller supplies srcSize, srcMtime and sidecarMtime on each candidate (the file
+       scan already stats for them) and gets back everything else. Keyed by the
+       candidate's path AS SUPPLIED, so the caller can look results up with the spelling
+       it passed in rather than a folded key.
+
+       Safe to call off the GUI thread. */
+    QHash<QString, CatalogRow> fetchFresh(const QList<CatalogRow> &candidates);
+
     /* Matching image paths, most recently captured first, at most limit of them. total
        (optional) receives the full match count, so the UI can say "showing 500 of
        3,214". */

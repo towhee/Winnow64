@@ -3291,6 +3291,11 @@ continue the row store unification
 
 unify-scope-filter-paths
 
+Suggested commit phrase: Unified catalog/datamodel stage 5 part 2: write thumbnails as they load
+
+Next is the read half — serving a missing icon from the index instead of decoding, which is what actually makes catalog scrolling fast. That's the payoff for everything above it.
+
+
 Stage 0 - portrait videos not rotated
         - ImageCache has pauses while still cached items
           ie /Users/roryhill/Pictures/2018-01-14_Lillian

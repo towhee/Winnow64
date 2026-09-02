@@ -71,6 +71,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Thumbnails in the Index (Schema 5)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
+     The Index as a Metadata Source (fetchFresh)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -1038,6 +1039,24 @@ hasDevelopRecipe comes from ImageMetadata::developEdited, which the metadata rea
 THREE UNIT CASES PIN IT, and the injected mode-only gate fails all three by name -- including one that says in as many words that an unedited image must be cacheable at the DEFAULT setting, which is the assertion the original version violated.
 
 WHAT COMES BACK IS INDISTINGUISHABLE from what the decoder produces: RGB32, scaled to no more than G::maxIconSize. A row written by an older build or under a larger icon setting is scaled down on the way out, the same guard Thumb::devThumb applies to a sidecar preview, so a changed icon-size preference cannot paint over a cell.
+
+⏺ DataModel Changes > The Index as a Metadata Source (fetchFresh)
+
+THE SAME MOVE AS THE THUMBNAIL, APPLIED TO THE METADATA. The catalog already holds nearly everything a datamodel row needs -- capture time, rating, label, title, creator, camera, lens, exposure, dimensions, GPS and the flat keyword vocabulary -- because that is what it indexes in order to search. It was only ever read back as a LIST OF PATHS. Catalog::fetchFresh hands back the rows themselves, so a loader can populate a row from the database instead of opening the file and parsing its header.
+
+THE KEYWORDS ARE MOST OF THE SAVING, and they are why this is worth doing rather than merely tidy. Everything else in a metadata read comes out of the file's own header, which is one open and one seek. Keywords live in the SIDECAR -- a separate XML document that has to be found, opened and parsed per image. Reconstructing them here is two indexed joins.
+
+IT IS staleOf() READ THE OTHER WAY ROUND. staleOf answers "what must I INDEX?" for the scanner, which then reads those files; fetchFresh answers "what need I not READ?" for the loader, which then skips them. Same stamp -- source size, source mtime, sidecar mtime -- same comparison, opposite consumer.
+
+THE TWO MUST PARTITION THE CANDIDATES EXACTLY, and that is the invariant worth stating: a row fetchFresh calls fresh is a row the loader will not read, and a row staleOf calls fresh is a row the scanner will not index. If they ever disagree in the same direction, an image is both skipped and unindexed -- invisible, and PERMANENTLY so, because nothing would revisit it until its file changed on disk.
+
+THE TEST FOR THAT INVARIANT DID NOT COVER IT AT FIRST. It built three candidates -- one unchanged, one whose srcSize had moved, one never catalogued -- and asserted stale and fresh were exact complements. An injected fetchFresh that ignored the SIDECAR stamp entirely passed it: the two sides can only be caught disagreeing about a field the test actually varies. A fourth candidate now differs only in its sidecar mtime, which is the ordinary case of a keyword edited in Lightroom (it rewrites the .xmp and never touches the raw), and the injection now fails naming the file and both verdicts.
+
+ONE PREPARED STATEMENT REUSED, not a "WHERE pathkey IN (...)": a folder of 5,000 images would put 5,000 bound values into one statement and SQLite's parameter limit is lower than that on some builds. The lookup is on the primary key, so the loop is 5,000 index seeks -- which is what an IN would have compiled to anyway.
+
+keywordPaths IS DELIBERATELY NOT RECONSTRUCTED. Schema 4 flattened the hierarchy to node names and keyword_context keeps only (child, parent) pairs, so the original "A|B|C" spelling is gone. Nothing that reads a row back needs it -- it exists to be written INTO the context table, not read out of it -- but a caller assuming a fetched row round-trips to commit() unchanged would quietly drop the contexts. It is left empty rather than half-reconstructed so that assumption fails loudly.
+
+NOT WIRED INTO THE LOADER YET. This is the capability; making MetaRead consult it -- so it stops being the primary loader and becomes the gap-filler for rows the index could not answer -- changes what "load finished" MEANS, and everything gated on isMetaReadFinished() and G::allMetadataAttempted has to be re-read against the new meaning. That is its own pass.
 
 ⏺ DataModel Changes > Sort Change
 
