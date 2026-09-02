@@ -65,7 +65,10 @@ private:
     Status loadFromTiff(QString &fPath, QImage &image, int row, const ImageMetadata &m);
     Status loadFromHeic(QString &fPath, QImage &image);
     Status loadFromImageIO(QString &fPath, QImage &image);
-    Status loadFromEntireFile(QString &fPath, QImage &image, int row);
+    /* knownFull: the metadata read's dimensions, which win over anything
+       QImageReader reports. See the .cpp. */
+    Status loadFromEntireFile(QString &fPath, QImage &image, int row,
+                              QSize knownFull = QSize());
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QImage &image, int orientation, int rotationDegrees);
 

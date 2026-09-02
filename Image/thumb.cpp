@@ -200,7 +200,8 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     emit setValDm(dmRow, G::IconLoadedColumn, true, dm->instance, "Thumb::loadFromVideo");
 }
 
-Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
+Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row,
+                                        QSize knownFull)
 {
     QString fun = "Thumb::loadFromEntireFile";
     if (isDebug)
@@ -237,8 +238,20 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     /*  srcSize is QImageReader::size() -- the FULL image. When it is invalid no
         scaled size was set either, so the image just read IS the full image and
         serves as both. */
-    if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(),
-                                   image.size(), row);
+    /*  knownFull is the metadata read's answer, and it WINS. QImageReader::size()
+        looks like the full image and is not reliably so: on macOS a raw goes
+        through the ImageIO plugin, which reports the dimensions of whatever
+        representation it decoded -- for a NEF that was the 160px embedded
+        preview. Trusting it overwrote a correct 6016 with 160, and since only
+        the thumbnail path writes these columns there was nothing to put it
+        back.
+
+        So the file's own header, already parsed, is preferred; srcSize is the
+        fallback for the formats that have no metadata read of their own. */
+    const QSize fullSize = knownFull.isValid() && knownFull.height() > 0
+                               ? knownFull
+                               : (srcSize.isValid() ? srcSize : image.size());
+    if (!abort) setImageDimensions(fPath, fullSize, image.size(), row);
 
     if (image.isNull()) {
         QString msg = "Null image returned from thumbReader.";
@@ -667,7 +680,8 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
         // all other image files
         // read the image file (supported by Qt), scaling to thumbnail size
-        if (!abort) status = loadFromEntireFile(fPath, image, dmRow);
+        if (!abort) status = loadFromEntireFile(fPath, image, dmRow,
+                                                QSize(m.width, m.height));
         if (status == Status::Success) break;
 
     }
