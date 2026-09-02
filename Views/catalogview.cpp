@@ -408,7 +408,7 @@ void CatalogView::runSearch()
         return;
     }
 
-    results = Catalog::instance().search(q, kResultLimit, &totalMatches);
+    results = Catalog::instance().search(q, resultLimit(), &totalMatches);
 
     if (totalMatches == 0) {
         resultLabel->setText("No matches.");

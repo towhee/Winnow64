@@ -295,7 +295,7 @@ void FindPanel::runSearch()
 
         It used to report nothing and disable Load, on the reasoning that offering to
         load a quarter of a million images is not a useful answer to having typed
-        nothing. That reasoning holds for LOADING and is why kResultLimit still caps the
+        nothing. That reasoning holds for LOADING and is why the result limit still caps the
         result. But it made Catalog an empty room: the user picked a scope and was shown
         a blank panel, while picking a folder shows pictures immediately. That difference
         IS the paradigm split this stage exists to remove -- so an empty query is
@@ -305,7 +305,7 @@ void FindPanel::runSearch()
     noQuery = q.text.trimmed().isEmpty() && !filters->isAnyCatalogFilter();
 
     const QStringList previous = results;
-    results = Catalog::instance().search(q, kResultLimit, &totalMatches);
+    results = Catalog::instance().search(q, resultLimit(), &totalMatches);
     updateFooter();
 
     /*  LOAD WITHOUT BEING ASKED. This is what removes the paradigm split: picking a
@@ -318,13 +318,13 @@ void FindPanel::runSearch()
         and must not run on every keystroke:
           - only when the result set actually CHANGED (typing that narrows nothing, or
             a re-run of the same query, loads nothing);
-          - only up to kAutoLoadMax, above which the user is asked to narrow first --
+          - only up to autoLoadMax(), above which the user is asked to narrow first --
             replacing what they have with thousands of images they did not ask for is
             not a good guess;
           - never while the search box is mid-word, which the debounce already
             enforces: runSearch only reaches here 250 ms after the last keystroke.
     */
-    if (results != previous && !results.isEmpty() && results.size() <= kAutoLoadMax)
+    if (results != previous && !results.isEmpty() && results.size() <= autoLoadMax())
         emit loadResults(results, false);
 }
 
