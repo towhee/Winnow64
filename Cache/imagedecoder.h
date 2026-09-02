@@ -150,6 +150,8 @@ private:
     void setIdle(bool v);
 
     bool load();
+    /* Read the header for a row whose metadata came from the index. */
+    bool ensureDecodeGeometry(int sfRow, ImageMetadata &geo);
     bool quit();
     void decodeUsingQt();
     void rotate();
@@ -169,6 +171,15 @@ private:
     */
     bool isIndependent = false;
     ImageMetadata indMeta;
+
+    /*  Decode geometry read on demand for a row whose metadata came from the
+        local index (see ensureDecodeGeometry). A MEMBER rather than a local
+        because the decode reads it from two functions -- load() for the segment
+        offsets, colorManage() for the ICC profile -- and because the queued
+        model writes that publish it for next time have NOT landed by the time
+        either of them runs. Reset at the top of every decode. */
+    ImageMetadata geoMeta;
+    bool haveGeoMeta = false;
 
     /*
     Per-image develop adjustments. Identity (no edits) by default, so applyDevelop() is a

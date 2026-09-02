@@ -49,6 +49,18 @@ public:
 
     QStringList err;
 
+    /*  This row's metadata came from the local index rather than from the file,
+        so the DECODE GEOMETRY -- segment offsets, lengths, samplesPerPixel, the
+        ICC buffer -- is NOT in it. The catalog stores what is displayed and
+        searched, not what is needed to decode.
+
+        DataModel::addMetadataForItem leaves the scratch columns unwritten for
+        such a row, so they read back as INVALID rather than as zero, and
+        ImageDecoder reads the file for them at the point it actually decodes.
+        That is the whole trade: the header walk moves from every row at load
+        time to only the rows the user opens. */
+    bool fromIndex = false;
+
     bool isSearch = false;
     QString type = "";
     QString ext = "";

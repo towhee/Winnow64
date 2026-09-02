@@ -84,6 +84,8 @@ private:
     void setPending(bool v);
     bool abort = false;
     bool readMetadata();
+    /* Fill metadata->m from the local index; false when it cannot. */
+    bool readMetadataFromIndex(const QFileInfo &fileInfo);
     void readIcon();
     inline bool instanceOk();
     DataModel *dm;

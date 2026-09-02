@@ -1,5 +1,6 @@
 #include "reader.h"
 #include "Cache/thumbcache.h"
+#include "Cache/catalog.h"
 #include "Main/global.h"
 
 Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
@@ -135,6 +136,106 @@ inline bool Reader::instanceOk()
     return instance == dm->instance;
 }
 
+bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
+{
+/*
+    Fill metadata->m from the local index, or return false and leave it alone.
+
+    ONE PATH IN, ONE PATH OUT. Everything downstream -- addToDatamodel, the
+    datamodel row, the filters, the views -- receives the same ImageMetadata
+    struct it always did; only where its values came from has changed. The one
+    visible difference is m.fromIndex, which tells DataModel::addMetadataForItem
+    to leave the decode geometry unset rather than writing zeros over it.
+
+    THE SIDECAR IS STILL STATTED, because the freshness stamp includes it: a
+    keyword edited in Lightroom rewrites the .xmp and never touches the raw, and
+    without that stamp the index would keep serving the old keywords. One stat
+    per image, against the ~20 ms header walk it avoids.
+*/
+    const QString fPath = fileInfo.filePath();
+
+    CatalogRow cand;
+    cand.path = fPath;
+    cand.srcSize = fileInfo.size();
+    cand.srcMtime = fileInfo.lastModified().toSecsSinceEpoch();
+    const QString sc = metadata->sidecarPath(fPath);
+    const QFileInfo si(sc);
+    if (si.exists()) cand.sidecarMtime = si.lastModified().toSecsSinceEpoch();
+
+    const QHash<QString, CatalogRow> got = Catalog::instance().fetchFresh({cand});
+    const auto it = got.constFind(fPath);
+    if (it == got.cend()) return false;
+    const CatalogRow &r = *it;
+
+    ImageMetadata &m = metadata->m;
+    m = ImageMetadata();                 // a clean struct, as a file read produces
+    m.fPath = fPath;
+    m.row = dmRow;
+    m.instance = instance;
+    m.fromIndex = true;
+
+    m.type = r.ext;
+    m.size = int(r.srcSize);
+    m.createdDate = r.captured;
+    m.modifiedDate = fileInfo.lastModified();
+    m.rating = r.rating ? QString::number(r.rating) : QString();
+    m.label = r.label;
+    m.pick = r.pick;
+    m.title = r.title;
+    m.creator = r.creator;
+    m.copyright = r.copyright;
+    m.make = r.make;
+    m.model = r.model;
+    m.lens = r.lens;
+    m.ISONum = r.iso;
+    m.apertureNum = r.aperture;
+    m.exposureTimeNum = r.shutter;
+    m.focalLengthNum = int(r.focalLength);
+    m.width = r.width;
+    m.height = r.height;
+    m.gpsCoord = r.gpsCoord;
+    /*  The FLAT vocabulary, which is what the catalog stores and what the
+        Filters category and the search read. keywordPaths is NOT recoverable
+        from the index -- schema 4 flattened the hierarchy -- so it stays empty,
+        and the flat list is put where the flat list belongs. */
+    m.keywords = r.keywords;
+    m.isSearch = false;
+
+    /*  THE DISPLAY STRINGS, spelled exactly as the format parsers spell them.
+        The model stores the NUMERIC aperture, shutter and focal length (the
+        delegates format those), but ISO, aperture, exposureTime and focalLength
+        as TEXT are what compose shootingInfo, which the info panel and the
+        ShootingInfo column show. Left empty they would blank a column that has
+        never been blank, so they are built here.
+
+        This is a second place that knows how a shutter speed is spelled, which
+        is a duplication worth being uneasy about -- the format parsers are the
+        first. It is verified rather than asserted: the A/B fingerprint over
+        every column of every row is identical with the index path on and off,
+        which is what would catch a divergence. */
+    m.ISO = r.iso ? QString::number(r.iso) : QString();
+    if (r.aperture > 0) m.aperture = "f/" + QString::number(r.aperture, 'f', 1);
+    if (r.focalLength > 0) m.focalLength = QString::number(r.focalLength, 'f', 0) + "mm";
+    if (r.shutter > 0) {
+        /*  Under a second is spelled as a reciprocal ("1/1250"), at or over a
+            second as the number itself -- the convention every parser follows. */
+        if (r.shutter < 1.0) m.exposureTime = "1/" + QString::number(qRound(1.0 / r.shutter));
+        else                 m.exposureTime = QString::number(r.shutter);
+    }
+
+    /*  Composed exactly as Metadata::loadImageMetadata composes it, from the
+        same fields, so the two paths cannot drift apart in spelling. */
+    QString info = m.model;
+    info += "  " + m.focalLength;
+    info += "  " + m.exposureTime;
+    info += (m.aperture == "") ? "" : " at " + m.aperture;
+    info += (m.ISO == "") ? "" : ", ISO " + m.ISO;
+    m.shootingInfo = info;
+
+    m.metaStatus = G::MetaLoaded;
+    return true;
+}
+
 bool Reader::readMetadata()
 {
     QString fun = "Reader::readMetadata";
@@ -153,7 +254,24 @@ bool Reader::readMetadata()
     // read metadata from file into metadata->m
     QFileInfo fileInfo(fPath);
     bool isMetaLoaded = false;
-    if (!abort) isMetaLoaded = metadata->loadImageMetadata(fileInfo, dmRow, instance, true, true, false, true, "Reader::readMetadata");
+
+    /*  THE INDEX FIRST, when it can answer. A metadata read is ~20 ms for a raw
+        and almost all of it is walking the file's own header; the catalog
+        already holds everything that is displayed, sorted, filtered and
+        searched. What it does NOT hold is the decode geometry, so a row filled
+        this way is marked m.fromIndex and its scratch columns are left unset --
+        ImageDecoder reads the header itself at the point it actually decodes.
+        The header walk moves from every row at load time to only the rows the
+        user opens.
+
+        Default off (G::useIndexMetadata): this changes the contract between the
+        loader and the decoder. */
+    if (G::useIndexMetadata && !abort) {
+        isMetaLoaded = readMetadataFromIndex(fileInfo);
+    }
+
+    if (!isMetaLoaded && !abort)
+        isMetaLoaded = metadata->loadImageMetadata(fileInfo, dmRow, instance, true, true, false, true, "Reader::readMetadata");
     if (abort) return false;
 
     #ifdef TIMER

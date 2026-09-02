@@ -72,6 +72,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
      The Index as a Metadata Source (fetchFresh)
+     Metadata From the Index (Default Off, and Why)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -1071,6 +1072,37 @@ ONE PREPARED STATEMENT REUSED, not a "WHERE pathkey IN (...)": a folder of 5,000
 keywordPaths IS DELIBERATELY NOT RECONSTRUCTED. Schema 4 flattened the hierarchy to node names and keyword_context keeps only (child, parent) pairs, so the original "A|B|C" spelling is gone. Nothing that reads a row back needs it -- it exists to be written INTO the context table, not read out of it -- but a caller assuming a fetched row round-trips to commit() unchanged would quietly drop the contexts. It is left empty rather than half-reconstructed so that assumption fails loudly.
 
 NOT WIRED INTO THE LOADER YET. This is the capability; making MetaRead consult it -- so it stops being the primary loader and becomes the gap-filler for rows the index could not answer -- changes what "load finished" MEANS, and everything gated on isMetaReadFinished() and G::allMetadataAttempted has to be re-read against the new meaning. That is its own pass.
+
+⏺ DataModel Changes > Metadata From the Index (Default Off, and Why)
+
+G::useIndexMetadata IS OFF, AND MUST STAY OFF UNTIL THE SCHEMA CATCHES UP. The machinery works and is measured; the CATALOG does not yet hold enough to fill a row. Read the gap list below before considering turning it on.
+
+WHAT IT DOES. Reader::readMetadata asks Catalog::fetchFresh first. A hit fills ImageMetadata from the index and skips the file read -- ~20 ms for a raw, almost all of it walking the file's own header. A miss falls through to exactly the code that ran before.
+
+THE CONTRACT IT CHANGES, and this is the part that needed care. ImageCache::okToDecode gates the decoder on MetaLoaded precisely BECAUSE MetaLoaded promises the segment offsets are populated -- its comment says so. A row filled from the index has none. So:
+
+  o ImageMetadata::fromIndex marks such a row, and DataModel::addMetadataForItem leaves the scratch columns UNWRITTEN for it. Writing zeros would be worse than writing nothing: the scratch store's set mask would report them as written, an offset of 0 is a legal offset, and the decoder would decode from the front of the file rather than noticing it must read the header itself. Leaving them unset is what makes the gap detectable, and it is the reason the set mask exists.
+  o ImageDecoder::ensureDecodeGeometry reads the header at the point of decode, on the thread that is about to open the file anyway. The header walk moves from every row at load time to only the rows the user opens.
+  o The geometry is held on the DECODER for the duration of one decode, not read back from the model, because the writes that publish it for next time are QUEUED to the GUI thread and have not landed while the decode is running. It is used from two places -- load() for the offsets, colorManage() for the ICC profile -- which is what makes it a member rather than a local, and it is reset at the top of every decode so one row's geometry can never be read for another's.
+
+VERIFIED IDENTICAL ON A FOLDER THE CATALOG FULLY COVERS: a raw+jpg folder of 12, fingerprinted over every resident column of every row with the path off and on -- byte-identical, 12 of 12 MetaLoaded.
+
+AND NOT IDENTICAL ON A MIXED FOLDER, WHICH IS THE FINDING. Over 50 mixed raw files the same fingerprint diverges, and attributing it per column says exactly why: the catalog stores what SEARCH needs, not what DISPLAY needs. The fields a datamodel row shows and CatalogRow has no column for:
+
+    Orientation           the serious one -- an index-served row reads 0 where the
+                          file said 1, and orientation drives rotation
+    Exposure compensation
+    FocusX, FocusY
+    Email, Url
+    _Rating, _Label, _Creator, _Title, _Copyright   the "original value" columns,
+                          which is how an edit is reverted and how a sidecar write
+                          decides whether anything actually changed
+
+Capture date is stored but not always POPULATED -- a row catalogued without one falls back to the file's timestamp, so Created, Year and Day drift too. Dimensions, MPix and Aspect Ratio are derived from width and height and follow whatever those do.
+
+SO THE NEXT STEP IS A SCHEMA 6 THAT COVERS THEM, not turning this on. That is a migration, a wider CatalogRow, matching commit() and fetchFresh() changes, and a re-index -- and it grows the index for every user. It is a decision about what the catalog is FOR (a search index, or the persistent form of a row) as much as a piece of work, which is the question this whole exercise started from.
+
+WHAT IS LANDED IS THE MECHANISM, off by default, with the gap measured rather than guessed. The alternative was to leave it unbuilt and re-derive all of this later.
 
 ⏺ DataModel Changes > Sort Change
 

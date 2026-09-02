@@ -3299,6 +3299,7 @@ Next is the read half — serving a missing icon from the index instead of decod
 Stage 0 - portrait videos not rotated
         - ImageCache has pauses while still cached items
           ie /Users/roryhill/Pictures/2018-01-14_Lillian
+        - No imageView for /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
 
 
 

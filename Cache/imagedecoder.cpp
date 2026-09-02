@@ -125,6 +125,10 @@ bool ImageDecoder::isRunning() const
 
 void ImageDecoder::decode(int row, int instance)
 {
+    /*  Fresh per decode: geometry fetched for one row must never be read for
+        the next one. */
+    haveGeoMeta = false;
+
     abort.storeRelease(0);
     sfRow = row;                   // set early so fillCache has valid row
     this->instance = instance;
@@ -295,8 +299,69 @@ bool ImageDecoder::loadDevPreview()
     return true;
 }
 
+bool ImageDecoder::ensureDecodeGeometry(int sfRow, ImageMetadata &geo)
+{
+/*
+    Read this image's header for the decode geometry a row served from the local
+    index does not have. Returns it in geo for the caller's own decode, and
+    publishes it to the scratch columns so the NEXT decode of the same row finds
+    it and skips this entirely -- scrolling back and forth re-enters the same
+    rows, so that second half is not incidental.
+
+    DECODER THREAD, and it stays that way: the read uses a LOCAL Metadata rather
+    than the shared one the loader threads are using, and the model writes go
+    through the same queued setValSf every other cross-thread write uses.
+*/
+    if (!dm || sfRow < 0) return false;
+    const QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::PathRole).toString();
+    if (fPath.isEmpty()) return false;
+    const QFileInfo fi(fPath);
+    if (!fi.exists()) return false;
+
+    /*  isRemote = true: this is not the live folder-load read, so the instance
+        check that rejects a stale one must not reject it. */
+    if (!metadata->loadImageMetadata(fi, -1, dm->instance, true, true, false, true,
+                                     "ImageDecoder::ensureDecodeGeometry", true))
+        return false;
+    geo = metadata->m;
+
+    const int inst = dm->instance;
+    emit setValSf(sfRow, G::OffsetFullColumn, geo.offsetFull, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::LengthFullColumn, geo.lengthFull, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::OffsetThumbColumn, geo.offsetThumb, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::LengthThumbColumn, geo.lengthThumb, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::samplesPerPixelColumn, geo.samplesPerPixel, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::isBigEndianColumn, geo.isBigEnd, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::ifd0OffsetColumn, geo.ifd0Offset, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::ICCBufColumn, geo.iccBuf, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::WidthOrigPreviewColumn, geo.widthOrigPreview, inst, "ensureDecodeGeometry");
+    emit setValSf(sfRow, G::HeightOrigPreviewColumn, geo.heightOrigPreview, inst, "ensureDecodeGeometry");
+    return true;
+}
+
 bool ImageDecoder::load()
 {
+    /*  THE ROW MAY HAVE NO DECODE GEOMETRY. When its metadata came from the local
+        index (G::useIndexMetadata) the segment offsets were never read -- the
+        catalog stores what is displayed and searched, not what is needed to
+        decode -- and the scratch columns read back INVALID rather than zero,
+        which is what makes the gap detectable at all.
+
+        Reading the header HERE rather than at load time is the whole trade:
+        this thread is about to open the file and decode it anyway, so the walk
+        is one extra pass over a header already being paged in, and it is paid
+        only for the rows the user actually opens rather than for every row in
+        the folder.
+
+        The values are used from geo for THIS decode and also published to the
+        scratch columns for the next one -- those writes are queued to the GUI
+        thread and have NOT landed by the time this function reads anything, so
+        the two are not interchangeable and geo is the one that must be read. */
+    if (!isIndependent && dm && sfRow >= 0
+        && !dm->sf->index(sfRow, G::OffsetFullColumn).data().isValid()) {
+        haveGeoMeta = ensureDecodeGeometry(sfRow, geoMeta);
+    }
+
 /*
     Loads a full size preview into a QImage.  It is invoked from ImageCache::fillCache.
     NOTE: calls to metadata and dm to not appear to impact performance.
@@ -456,12 +521,12 @@ bool ImageDecoder::load()
 
     // Embedded jpg?
     bool isEmbeddedJpg = false;
-    int offsetFull = isIndependent
-                         ? int(indMeta.offsetFull)
-                         : dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt();
-    int lengthFull = isIndependent
-                         ? int(indMeta.lengthFull)
-                         : dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
+    int offsetFull = isIndependent ? int(indMeta.offsetFull)
+                   : haveGeoMeta   ? int(geoMeta.offsetFull)
+                                   : dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt();
+    int lengthFull = isIndependent ? int(indMeta.lengthFull)
+                   : haveGeoMeta   ? int(geoMeta.lengthFull)
+                                   : dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
     // embedded image type but no offset
     if (metadata->hasJpg.contains(ext) && offsetFull == 0) {
 
@@ -611,7 +676,8 @@ bool ImageDecoder::load()
             // check for sampling format we cannot read
             int samplesPerPixel = isIndependent
                 ? indMeta.samplesPerPixel
-                : dm->sf->index(sfRow, G::samplesPerPixelColumn).data().toInt();
+                : haveGeoMeta ? geoMeta.samplesPerPixel
+                          : dm->sf->index(sfRow, G::samplesPerPixelColumn).data().toInt();
             if (samplesPerPixel > 3) {
                  errMsg = "TIFF samplesPerPixel more than 3.";
                  G::issue("Warning", errMsg, "ImageDecoder::run", sfRow, fPath);
@@ -883,7 +949,8 @@ void ImageDecoder::colorManage()
     if (!developApplied) {
         iccBuf = isIndependent
             ? indMeta.iccBuf
-            : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+            : haveGeoMeta ? geoMeta.iccBuf
+                      : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
     }
     ICC::transform(iccBuf, image);
 }
