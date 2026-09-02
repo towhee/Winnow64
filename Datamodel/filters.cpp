@@ -210,7 +210,12 @@ void Filters::createPredefinedFilters()
     searchTrue = new QTreeWidgetItem(search);
     searchTrue->setText(0, enterSearchString);
     searchTrue->setCheckState(0, Qt::Checked);
-    searchTrue->setData(1, Qt::EditRole, "true");
+    /*  bool, matching what the SearchColumn now holds -- searchFalse below was
+        already a bool, so the two halves of one category disagreed. QVariant
+        comparison converts between the two, so this was never a live matching
+        bug (measured, see "Settling Search and Ingested" in Documentation.txt);
+        it is settled so that nothing has to keep relying on that. */
+    searchTrue->setData(1, Qt::EditRole, true);
     searchTrue->setFlags(searchTrue->flags() | Qt::ItemIsEditable);
     searchTrue->setFont(0, searchDefaultTextFont);
     searchTrue->setForeground(0, searchDefaultTextColor);

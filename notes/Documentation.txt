@@ -66,6 +66,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Retiring the Items (Alignment, Tooltips, and the Deletion Pass)
      The Second Batch (Covering the Rest, and the Set Mask)
      Compiling the Filters (Off the Tree, Once per Change)
+     Settling Search and Ingested (and a Fact That Was Wrong)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -767,7 +768,7 @@ and that was confirmed by deliberately re-injecting the guard, watching it fail,
 
 WIDTH AND HEIGHT WERE SETTLED ON int, which is a real fix rather than an accommodation. Both columns had two writers disagreeing about the type -- QString::number(m.width) from addMetadataForItem, an int from Thumb::setImageDimensions via setValDm -- so the column's type depended on which path filled the row last. The table sorts on EditRole and QVariant compares ints numerically and strings LEXICALLY, so "1000" sorted before "999" for rows the metadata path filled and after it for rows the thumb path filled. Every programmatic consumer (Image/pixmap.cpp, Image/stack.cpp) already called toInt() and the displayed text is identical either way, so settling on int changes nothing except that the sort is now consistently numeric. Coverage is 35 columns plus the path role.
 
-SEARCH IS THE ONE LEFT, and deliberately: it cannot be settled by choosing a type here, because the FILTERS TREE is inconsistent in the same way and in the same direction -- searchTrue holds the QString "true" while searchFalse holds the bool false, and SortFilter::filterAcceptsRow compares the two against this column. (Note also that QVariant(QString("false")).toBool() is TRUE, a non-empty string, so the row-creation value means the opposite of what it reads as to anything calling toBool().) Deciding the type means deciding what the search filter matches, which is a question about filtering rather than storage, and it belongs with the compiled predicate.
+SEARCH IS THE ONE LEFT, and deliberately: it cannot be settled by choosing a type here, because the FILTERS TREE is inconsistent in the same way and in the same direction -- searchTrue holds the QString "true" while searchFalse holds the bool false, and SortFilter::filterAcceptsRow compares the two against this column. Deciding the type means deciding what the search filter matches, which is a question about filtering rather than storage, and it belongs with the compiled predicate. (This paragraph originally added that QVariant(QString("false")).toBool() is TRUE, "a non-empty string". It is NOT -- see "Settling Search and Ingested" below, where it was finally measured. The claim was wrong and it made this deferral sound more load-bearing than it was.)
 
 THUMBNAILS MOVED TO A PATH-KEYED STORE (Datamodel/iconstore.h). They used to be QIcon on Qt::DecorationRole of column 0. Three reasons, and only the first is about memory. A thumbnail belongs to an IMAGE, not to a row: rows shift under sorting and filtering and are rebuilt on every folder change, so an icon held by row must be found again whenever the proxy moves, while an icon held by path is simply still there -- and icd->imCache has always been keyed by path, so the two now agree. It is also what the catalog needs: scrolling a 250,000-image catalog cannot open a file per row, so the next layer down is a thumbnail cached in the index keyed by pathkey, and "memory store, then index, then decode" only reads as one lookup chain if the memory layer is keyed the same way. And an icon on the row is an icon the row store cannot replace.
 
@@ -899,7 +900,33 @@ MEASURED: a full pass over the 50-row folder with a 200-item tree and three item
 
 tst_filterpredicate REPLACES THE SHADOW, which went with the old implementation. The evaluation is a template taking a callable rather than a model, so the whole decision is testable without one -- including that a category is read once per row and not once per item.
 
-STILL DEFERRED, and now the last thing on the items: SearchColumn and IngestedColumn. Both hold a different type depending on which path wrote them last, and both the model and the Filters tree are inconsistent in the same direction, so settling them decides what the filter matches.
+SearchColumn and IngestedColumn were the last things left on the items; they are settled below.
+
+⏺ DataModel Changes > Settling Search and Ingested (and a Fact That Was Wrong)
+
+THE LAST TWO VALUE COLUMNS ON THE ITEMS, held back through three passes because each carried a different TYPE depending on which path wrote it last:
+
+    Search    "false" (QString) at row creation; m.isSearch and
+              SearchTerms::matches() (bool) once metadata arrives
+    Ingested  "false" (QString) at row creation; true (bool) from the ingest
+              pass; "true" (QString) from MW::setIngested
+
+and because the Filters tree was inconsistent in the same direction -- Filters::searchTrue held the QString "true" while searchFalse, its sibling in the same category, held the bool false.
+
+THE REASON FOR DEFERRING THEM RESTED ON A FACT THAT IS NOT TRUE. It was written down twice -- in the plan and in this file -- that QVariant(QString("false")).toBool() is TRUE, "a non-empty string", and therefore that the row-creation value meant the opposite of what it read as, making this a live matching bug only the filter could settle. Measured:
+
+    QVariant(QString("false")).toBool()        false      (Qt 6 special-cases it)
+    QVariant(QString("true")).toBool()         true
+    QVariant(QString("false")) == QVariant(false)   true  (both directions)
+    QVariant(QString("true"))  == QVariant(true)    true
+
+So the mixed types cost nothing at runtime: every toBool() reader was right, and the filter's QVariant comparison converted between the two forms. Settling them was TIDYING, not a fix. The lesson is not about QVariant -- it is that a plausible claim about a library was carried through three passes and steered a decision because nobody spent the two minutes it took to run it. tst_imagerow::variantComparisonIsTypeTolerant pins the measured behaviour, both because the wrong version was persuasive and because anything reading an older catalog row still relies on the conversion.
+
+BOTH ARE bool THROUGHOUT NOW, in the model and in searchTrue's filter value, and both are held in the row store. Ingested was the easier half: it has no Filters category at all, so nothing but the icon delegate and imMetadata read it.
+
+VERIFIED ACROSS THE TYPE CHANGE by fingerprinting WHICH ROWS each of 400 randomised filter trials accepts, per folder, before and after: byte-identical on all four. Note the comparison has to be made per TREE SIZE -- the Filters build has a pre-existing load-timing dependency and the same folder yields 17 or 50 leaf items on different runs, which changes the random trials and therefore the signature. Every run that landed on the baseline's leaf count reproduced its signature exactly; that variability is the same one that produced the 74-vs-75 item counts noted under "The Row Store", and it is still unexplained.
+
+93 ITEMS PER ROW TO 1.08. Every value column is now off the QStandardItems. What is left is not a value: column 0's custom roles (the icon rect and the three raw+jpg pairing roles), and ErrColumn on the rows that had an issue, where Qt::UserRole holds a QList<QSharedPointer<Issue>>.
 
 ⏺ DataModel Changes > Sort Change
 

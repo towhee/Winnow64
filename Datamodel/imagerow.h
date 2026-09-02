@@ -103,7 +103,7 @@ struct ImageRow
     qint32 folderId = -1, typeId = -1, makeId = -1, modelId = -1, lensId = -1;
     qint32 yearId = -1, dayId = -1, creatorId = -1, copyrightId = -1;
     qint32 labelId = -1, pickId = -1, gpsId = -1;
-    qint32 searchId = -1, dimensionsId = -1;
+    qint32 dimensionsId = -1;
 
     qint32 createdId = -1, modifiedId = -1;
     /*  Rating and MPix look like numbers and are NOT. The model holds
@@ -162,6 +162,8 @@ struct ImageRow
     float   focusX = -1.0f, focusY = -1.0f;
     double  iconAspectRatio = 0.0;     // qreal in the model; set only when an icon lands
 
+    bool isSearch = false;             // G::SearchColumn, settled on bool
+    bool isIngested = false;           // G::IngestedColumn, settled on bool
     bool metadataReading = false;
     bool isReadWrite = false;
     bool hasSidecar = false;

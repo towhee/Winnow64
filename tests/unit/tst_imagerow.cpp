@@ -31,7 +31,8 @@ class tst_imagerow : public QObject
 private slots:
     void pathIsCoveredOnlyAtPathRole();
     void coversOnlyValueRoles();
-    void searchAndIngestedAreDeliberatelyNotCovered();
+    void searchAndIngestedAreBoolsNow();
+    void variantComparisonIsTypeTolerant();
     void unwrittenFieldsReadBackAsInvalid();
     void conditionalColumnsStayUnsetUntilWritten();
     void numericColumnsComeBackNumeric();
@@ -93,17 +94,48 @@ void tst_imagerow::coversOnlyValueRoles()
                  qPrintable(QString("column %1 claimed by both stores").arg(c)));
 }
 
-void tst_imagerow::searchAndIngestedAreDeliberatelyNotCovered()
+void tst_imagerow::searchAndIngestedAreBoolsNow()
 {
-    /*  Both hold a different TYPE depending on which path wrote them last --
-        "false" (QString) at row creation, a bool once the work runs, "true"
-        (QString) from a third path. A store with one type per column cannot
-        reproduce that and must not pretend to. Settling them decides what the
-        FILTER matches, so it belongs with the compiled predicate, not here.
-        This case exists so that "not covered" stays a decision rather than an
-        oversight someone quietly fixes. */
-    QVERIFY(!RowStore::covers(G::SearchColumn, Qt::EditRole));
-    QVERIFY(!RowStore::covers(G::IngestedColumn, Qt::EditRole));
+    /*  These two were the last columns left on the QStandardItems, held back
+        because each carried a different TYPE depending on which path wrote it
+        last: "false" (QString) at row creation, a bool once the work ran,
+        "true" (QString) from a third path. Both are bools throughout now --
+        including Filters::searchTrue, whose filter value was a QString while
+        searchFalse beside it was already a bool. */
+    QVERIFY(RowStore::covers(G::SearchColumn, Qt::EditRole));
+    QVERIFY(RowStore::covers(G::IngestedColumn, Qt::EditRole));
+
+    RowStore s;
+    s.resize(1);
+    s.setValue(0, G::SearchColumn, false);
+    s.setValue(0, G::IngestedColumn, true);
+    QCOMPARE(s.value(0, G::SearchColumn).typeId(), int(QMetaType::Bool));
+    QCOMPARE(s.value(0, G::IngestedColumn).typeId(), int(QMetaType::Bool));
+    QCOMPARE(s.value(0, G::SearchColumn).toBool(), false);
+    QCOMPARE(s.value(0, G::IngestedColumn).toBool(), true);
+}
+
+void tst_imagerow::variantComparisonIsTypeTolerant()
+{
+    /*  THE FACT THE DEFERRAL RESTED ON, AND IT WAS WRONG. The plan for this work
+        asserted that QVariant(QString("false")).toBool() is TRUE -- "a non-empty
+        string" -- and concluded that the mixed types were a live matching bug
+        that only the filter could settle. Measured, Qt 6 special-cases the word,
+        and QVariant comparison converts between bool and the strings "true" and
+        "false" in both directions. So the mixed types cost nothing at runtime;
+        settling them was tidying, not a fix, and the filtering signature over
+        1,600 randomised trials was byte-identical across the change.
+
+        Pinned here because the wrong version of it was written down twice and
+        steered a decision, and because anything reading a legacy sidecar or an
+        older catalog row still depends on the conversion behaving this way. */
+    QCOMPARE(QVariant(QString("false")).toBool(), false);
+    QCOMPARE(QVariant(QString("true")).toBool(), true);
+    QCOMPARE(QVariant(QString("")).toBool(), false);
+    QVERIFY(QVariant(QString("false")) == QVariant(false));
+    QVERIFY(QVariant(false) == QVariant(QString("false")));
+    QVERIFY(QVariant(QString("true")) == QVariant(true));
+    QVERIFY(QVariant(true) == QVariant(QString("true")));
 }
 
 void tst_imagerow::unwrittenFieldsReadBackAsInvalid()

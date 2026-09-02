@@ -690,7 +690,7 @@ void MW::setIngested()
     for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
         QString sKey = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
         if (dm->sf->index(sfRow, G::PickColumn).data().toString() == "Picked") {
-            emit setValSf(sfRow, G::IngestedColumn, "true", dm->instance,
+            emit setValSf(sfRow, G::IngestedColumn, true, dm->instance,
                           "MW::setIngested", Qt::EditRole);
             emit setValSf(sfRow, G::PickColumn, "Ingested", dm->instance,
                           "MW::setIngested", Qt::EditRole);
