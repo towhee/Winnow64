@@ -1100,9 +1100,24 @@ AND NOT IDENTICAL ON A MIXED FOLDER, WHICH IS THE FINDING. Over 50 mixed raw fil
 
 Capture date is stored but not always POPULATED -- a row catalogued without one falls back to the file's timestamp, so Created, Year and Day drift too. Dimensions, MPix and Aspect Ratio are derived from width and height and follow whatever those do.
 
-SO THE NEXT STEP IS A SCHEMA 6 THAT COVERS THEM, not turning this on. That is a migration, a wider CatalogRow, matching commit() and fetchFresh() changes, and a re-index -- and it grows the index for every user. It is a decision about what the catalog is FOR (a search index, or the persistent form of a row) as much as a piece of work, which is the question this whole exercise started from.
+SCHEMA 6 COVERS THEM. The image table gained orientation, exposurecomp, focusx, focusy, email, url, the seven orig_* columns, developed and devpreviewkey -- one ALTER TABLE ADD COLUMN each, so SQLite rewrites no rows and every existing row takes the declared default.
 
-WHAT IS LANDED IS THE MECHANISM, off by default, with the gap measured rather than guessed. The alternative was to leave it unbuilt and re-derive all of this later.
+THE MIGRATION ALSO CLEARS EVERY FRESHNESS STAMP, and that is the part worth understanding. After the ALTERs, every previously indexed row is INCOMPLETE while its stamp still says it is current -- so nothing would ever re-read it, and orientation would stay 0 forever, which is a wrong picture rather than a slow one. Setting srcsize, srcmtime and sidecarmtime to -1 makes the next visit to each folder re-read and re-index. It costs a re-index of whatever has been catalogued so far, once.
+
+WITH THAT IN, THE DIVERGENCE WENT FROM 26 COLUMNS TO TEN, and every one of the fields schema 6 added now matches. tst_catalog::displayFieldsSurviveTheRoundTrip pins them, including through the UPDATE path as well as the INSERT -- the two statements bind the same sequence and it would be easy to extend one and not the other. It was verified to fail by not carrying orientation through the bind.
+
+ONE MORE WAS MINE: shootingInfo read "1/80 at f/5.6" where a file-read row says "1/80 sec at f/5.6". " sec" is part of the spelling, not decoration, because shootingInfo is composed from these strings and shown verbatim. That is exactly the divergence a second place that spells a shutter speed was always going to produce, and the A/B fingerprint is what makes having one tolerable.
+
+WHAT STILL DIFFERS IS NOT THE INDEX'S FAULT, AND IT IS A REAL BUG THIS EXERCISE FOUND. Width, Height and everything derived from them (Dimensions, MPix, Aspect Ratio) diverge because the catalog holds 160 where the file says 6016 -- the width of the image's EMBEDDED PREVIEW, not of the image. Thumb::setImageDimensions writes the same decoded size to BOTH G::WidthColumn and G::WidthOrigPreviewColumn:
+
+    emit setValDm(row, G::WidthColumn, w, instance, src);
+    emit setValDm(row, G::WidthOrigPreviewColumn, w, instance, src);
+
+The second is right -- that IS the preview's width. The first overwrites the image's real width with it, and whichever of the metadata read and the thumbnail decode lands last decides what the row says. DataModel::catalogRows then captures whatever was there. So the catalog can hold the preview's dimensions for an image TODAY, in the shipped build, and any search result or column shown from it is wrong -- this work only made it visible by reading the value back. Created, Year and Day diverge for the same shape of reason: some rows were catalogued with no capture date and fall back to the file's timestamp.
+
+Fixing that is a separate change to the loader, not to the index, and it should be made before G::useIndexMetadata is turned on -- serving those rows from the catalog would make a transient wrong value permanent.
+
+WHAT IS LANDED IS THE MECHANISM AND THE SCHEMA, still off by default. What remains between here and turning it on is the Width/Height bug above, the capture-date gap, and Icon Aspect Ratio (which follows from which icon was decoded) -- all of them in the LOADER rather than in the index.
 
 ⏺ DataModel Changes > Sort Change
 

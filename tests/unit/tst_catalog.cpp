@@ -43,6 +43,7 @@ private slots:
     void staleOfReportsOnlyWhatChanged();
     void fetchFreshReturnsWhatNeedNotBeRead();
     void fetchFreshAndStaleOfAgreeExactly();
+    void displayFieldsSurviveTheRoundTrip();
     void sweepDemotesMissingSource();
     void onMovedFollowsTheImage();
     void onDeletedRemovesTheRow();
@@ -133,8 +134,9 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         fails this case, which is the point: whoever bumps it has to come here
         and confirm that every tenant of the shared file still coexists at the
         new version, and add the new tenant's tables below. Version 5 added
-        thumb (Cache/thumbcache.h). */
-    QCOMPARE(CacheDb::schemaVersion(), 5);
+        thumb (Cache/thumbcache.h); version 6 widened the image table with the
+        fields a datamodel ROW displays. */
+    QCOMPARE(CacheDb::schemaVersion(), 6);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -420,6 +422,72 @@ void tst_catalog::fetchFreshAndStaleOfAgreeExactly()
              "a re-saved sidecar must make the row stale on both sides");
     QVERIFY2(!fresh.contains(dResaved.path),
              "a re-saved sidecar must not be answered from the index");
+}
+
+void tst_catalog::displayFieldsSurviveTheRoundTrip()
+{
+    /*  SCHEMA 6: the catalog became the persistent form of a ROW, not just a
+        search index. These are the fields a row DISPLAYS that a search never
+        needed, and they exist because serving a row's metadata from the catalog
+        was fingerprinted against reading it from the file and these are exactly
+        what diverged.
+
+        orientation is the one that mattered: it drives rotation, so a row
+        served without it shows the picture on its side. The _original values
+        matter differently -- they are how an edit is reverted and how a sidecar
+        write decides whether anything actually changed, so a row that came back
+        without them would make Winnow think every image had been edited. */
+    Catalog &cat = Catalog::instance();
+
+    CatalogRow a = rowFor("display1.jpg", {"X"});
+    a.orientation = 6;
+    a.exposureComp = "-0.7";
+    a.focusX = 0.25;
+    a.focusY = 0.75;
+    a.email = "someone@example.com";
+    a.url = "https://example.com";
+    a._rating = "3";
+    a._label = "Blue";
+    a._creator = "Original Creator";
+    a._title = "Original Title";
+    a._copyright = "(c) 2026";
+    a._email = "orig@example.com";
+    a._url = "https://orig.example.com";
+    a.developed = true;
+    a.devPreviewKey = "abc123";
+    QCOMPARE(cat.commit({a}), 1);
+
+    const QHash<QString, CatalogRow> got = cat.fetchFresh({a});
+    QCOMPARE(got.size(), 1);
+    const CatalogRow &r = got.value(a.path);
+
+    QCOMPARE(r.orientation, 6);
+    QCOMPARE(r.exposureComp, QString("-0.7"));
+    QCOMPARE(r.focusX, 0.25);
+    QCOMPARE(r.focusY, 0.75);
+    QCOMPARE(r.email, QString("someone@example.com"));
+    QCOMPARE(r.url, QString("https://example.com"));
+    QCOMPARE(r._rating, QString("3"));
+    QCOMPARE(r._label, QString("Blue"));
+    QCOMPARE(r._creator, QString("Original Creator"));
+    QCOMPARE(r._title, QString("Original Title"));
+    QCOMPARE(r._copyright, QString("(c) 2026"));
+    QCOMPARE(r._email, QString("orig@example.com"));
+    QCOMPARE(r._url, QString("https://orig.example.com"));
+    QCOMPARE(r.developed, true);
+    QCOMPARE(r.devPreviewKey, QString("abc123"));
+
+    /*  An UPDATE has to carry them too, not just an insert -- the two statements
+        bind the same sequence and it would be easy to extend one and not the
+        other. */
+    CatalogRow b = a;
+    b.srcMtime += 1;                    // force the update path
+    b.orientation = 8;
+    b._title = "Changed";
+    QCOMPARE(cat.commit({b}), 1);
+    const CatalogRow r2 = cat.fetchFresh({b}).value(b.path);
+    QCOMPARE(r2.orientation, 8);
+    QCOMPARE(r2._title, QString("Changed"));
 }
 
 void tst_catalog::sweepDemotesMissingSource()

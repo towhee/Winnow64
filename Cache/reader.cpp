@@ -194,6 +194,21 @@ bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
     m.width = r.width;
     m.height = r.height;
     m.gpsCoord = r.gpsCoord;
+    m.orientation = r.orientation;
+    m.exposureCompensation = r.exposureComp;
+    m.focusX = float(r.focusX);
+    m.focusY = float(r.focusY);
+    m.email = r.email;
+    m.url = r.url;
+    m._rating = r._rating;
+    m._label = r._label;
+    m._creator = r._creator;
+    m._title = r._title;
+    m._copyright = r._copyright;
+    m._email = r._email;
+    m._url = r._url;
+    m.developEdited = r.developed;
+    m.devPreviewKey = r.devPreviewKey;
     /*  The FLAT vocabulary, which is what the catalog stores and what the
         Filters category and the search read. keywordPaths is NOT recoverable
         from the index -- schema 4 flattened the hierarchy -- so it stays empty,
@@ -221,6 +236,13 @@ bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
             second as the number itself -- the convention every parser follows. */
         if (r.shutter < 1.0) m.exposureTime = "1/" + QString::number(qRound(1.0 / r.shutter));
         else                 m.exposureTime = QString::number(r.shutter);
+        /*  " sec" is part of the spelling, not decoration: shootingInfo is
+            composed from these strings and the info panel shows it verbatim.
+            Leaving it off produced "1/80 at f/5.6" where every file-read row
+            says "1/80 sec at f/5.6" -- caught by the A/B fingerprint, which is
+            the whole reason a second place that spells a shutter speed is
+            tolerable at all. */
+        m.exposureTime += " sec";
     }
 
     /*  Composed exactly as Metadata::loadImageMetadata composes it, from the
