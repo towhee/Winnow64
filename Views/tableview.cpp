@@ -489,11 +489,11 @@ void TableView::createOkToShow()
 
     // do not include column 0 as it is used to index tableView
     for (int i = 1; i < dm->columnCount(); i++) {
-        QString columnName = dm->horizontalHeaderItem(i)->text();
+        QString columnName = dm->headerData(i, Qt::Horizontal).toString();
         // qDebug() << "TableView::createOkToShow" << i << columnName;
         ok->insertRow(i - 1);
         ok->setData(ok->index(i - 1, 0), columnName);
-        bool isGeek = dm->horizontalHeaderItem(i)->data(G::GeekRole).toBool();
+        bool isGeek = dm->headerData(i, Qt::Horizontal, G::GeekRole).toBool();
         ok->setData(ok->index(i - 1, 2), isGeek);
         if (G::showAllTableColumns) ok->setData(ok->index(i - 1, 1), true);
         else ok->setData(ok->index(i - 1, 1), !isGeek);

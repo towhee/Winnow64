@@ -67,6 +67,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Second Batch (Covering the Rest, and the Set Mask)
      Compiling the Filters (Off the Tree, Once per Change)
      Settling Search and Ingested (and a Fact That Was Wrong)
+     The Base-Class Swap (QAbstractTableModel, and the Contract Test)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -926,7 +927,33 @@ BOTH ARE bool THROUGHOUT NOW, in the model and in searchTrue's filter value, and
 
 VERIFIED ACROSS THE TYPE CHANGE by fingerprinting WHICH ROWS each of 400 randomised filter trials accepts, per folder, before and after: byte-identical on all four. Note the comparison has to be made per TREE SIZE -- the Filters build has a pre-existing load-timing dependency and the same folder yields 17 or 50 leaf items on different runs, which changes the random trials and therefore the signature. Every run that landed on the baseline's leaf count reproduced its signature exactly; that variability is the same one that produced the 74-vs-75 item counts noted under "The Row Store", and it is still unexplained.
 
-93 ITEMS PER ROW TO 1.08. Every value column is now off the QStandardItems. What is left is not a value: column 0's custom roles (the icon rect and the three raw+jpg pairing roles), and ErrColumn on the rows that had an issue, where Qt::UserRole holds a QList<QSharedPointer<Issue>>.
+93 ITEMS PER ROW TO 1.08. Every value column is now off the QStandardItems. What is left is not a value: column 0's custom roles (the icon rect and the four raw+jpg pairing roles), and ErrColumn on the rows that had an issue, where Qt::UserRole holds a QList<QSharedPointer<Issue>>. Both are dealt with below, and then there are no items at all.
+
+⏺ DataModel Changes > The Base-Class Swap (QAbstractTableModel, and the Contract Test)
+
+WHAT WAS LEFT TO SAVE, AND IT IS LARGER THAN THE STORE. With every value column served from the stores, the items themselves were down to 1.08 per row -- but QStandardItemModel still held a QList<QStandardItem*> of rowCount x 93. That is 744 bytes of mostly NULL POINTERS per row, 186 MB at 250,000 rows, which is more than the entire packed row store it sits beside. Nothing reads it. It is the last thing the swap removes.
+
+THE REMAINING ROLES HAD TO GO FIRST, and they were not values, which is why they outlived three passes of value-column work:
+
+    column 0   G::IconRectRole, and the four raw+jpg pairing roles
+               (DupHideRaw, DupIsJpg, DupRawType, DupOtherIdx)
+    ErrColumn  Qt::UserRole -- a QList<QSharedPointer<Issue>>
+
+The first five moved onto ImageRow, which made RowStore's coverage per (COLUMN, ROLE) rather than per column -- column 0 alone is six fields, none of them the cell's value. dupOtherIdx is an int ROW whose callers test isValid() to mean "not paired", so it needs the set mask exactly as the conditional columns do.
+
+THE ICON WAS STILL BEING WRITTEN TO THE ITEM as well as to the path-keyed IconStore, and nothing ever read it back from there. That single wasted write was the reason column 0 still had a QStandardItem on EVERY row after the value columns had gone.
+
+THE ISSUE LIST GOT A NAMED HOME rather than a general "any role" hash. A general escape hatch would have silently absorbed the next role somebody adds and worked by accident, which is exactly how a column ends up outside every store without anyone noticing. Every setData in the codebase that targets this model was enumerated before the swap: the issue list is the only uncovered one. A role that is neither in a store nor handled explicitly is now DROPPED, deliberately.
+
+THE SWAP ITSELF is small once that is done. rowCount() is the row store's size -- one source of truth, so the count cannot disagree with what is held. columnCount is a constant. headerData replaces 93 header items with a table of name-plus-geek-flag. insertRows/removeRows do the store splicing they used to do afterwards off rowsInserted/rowsRemoved, so the splice and the count cannot disagree either; they are also now the ONLY way the row count can move. clear() keeps the contract QStandardItemModel::clear() had, discarding the headers too, so its callers still pair it with setModelProperties(). setSortRole went with the base class: it only ever affected QStandardItemModel::sort(), which nothing called.
+
+flags() IS REPRODUCED, NOT REASONED ABOUT. It was fingerprinted before the swap -- 47, meaning Selectable | Editable | DragEnabled | DropEnabled | Enabled -- and returned verbatim. Editable is in that set and looks wrong; it is harmless because both views are NoEditTriggers, and dropping it would be a behaviour change hiding inside a storage change. The vertical header still numbers rows from 1 for the same reason, even though TableView hides it.
+
+VERIFIED BY AN A/B FINGERPRINT over every column at ELEVEN roles (Edit, Display, ToolTip, TextAlignment, Path, IconRect, the four pairing roles, and UserRole), plus separate fingerprints of flags(), headerData() at four roles including the vertical header, and the row and column counts: byte-identical on all four folders across both halves of this work.
+
+AND BY QAbstractItemModelTester, WHICH IS NOW A CTEST GATE. DataModel is hand-written, so index and parent consistency, the begin/end pairing around every insertion and removal, headerData, flags and the counts are this code's responsibility and no longer the base class's. The tester is what checks that, it was already included in datamodel.h and never used, and it is now attached to both the datamodel and the proxy for a whole fixture load under WINNOW_SELFTEST_MODELTEST=1, in Fatal mode, as the model_contract test.
+
+IT WAS PROVEN TO CATCH BOTH HALVES, and the second attempt is the interesting one. A beginInsertRows off by one failed the run immediately. The SAME injection into beginRemoveRows passed -- because loading a folder only ever APPENDS, so with nothing else done the removal pairing went unchecked and the gate was half a gate. The run now removes a row from the MIDDLE before exiting, which is the case that re-addresses every row after it, and the injected removal bug fails it. A test that has only been seen to pass proves nothing about the path it never takes.
 
 ⏺ DataModel Changes > Sort Change
 

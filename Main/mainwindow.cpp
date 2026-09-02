@@ -572,6 +572,23 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     const bool recurse = qEnvironmentVariableIntValue("WINNOW_SELFTEST_RECURSE") == 1;
     const int navMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV_MS");
 
+    /*  WINNOW_SELFTEST_MODELTEST=1 attaches QAbstractItemModelTester to the
+        datamodel and the proxy for the whole load.
+
+        It is here permanently, rather than as a one-off, because DataModel is a
+        hand-written QAbstractTableModel now: the model contract -- index and
+        parent consistency, the begin/end pairing around every insertion and
+        removal, headerData, flags, the row and column counts -- is this code's
+        responsibility and no longer the base class's. Fatal mode so a violation
+        fails the run rather than scrolling past in a log; ctest's
+        model_contract target is what runs it. Verified to catch a real
+        violation (beginInsertRows off by one) before being trusted. */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_MODELTEST") == 1) {
+        new QAbstractItemModelTester(dm, QAbstractItemModelTester::FailureReportingMode::Fatal, this);
+        new QAbstractItemModelTester(dm->sf, QAbstractItemModelTester::FailureReportingMode::Fatal, this);
+        fprintf(stderr, "SELFTEST: model contract tester attached\n");
+    }
+
     if (fsTree->select(folderPath))
         folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
@@ -630,6 +647,17 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         const int rows = dm ? dm->rowCount() : 0;
         fprintf(stderr, "SELFTEST: folder=%s rows=%d\n",
                 folderPath.toLocal8Bit().constData(), rows);
+        /*  A REMOVAL, so the model-contract run covers more than insertion.
+            Loading a folder only ever APPENDS, so with the tester attached and
+            nothing else done the begin/endRemoveRows pairing went unchecked --
+            found by deliberately breaking it and watching the test still pass.
+            Taken from the MIDDLE, which is the case that re-addresses every row
+            after it and the one a resize() would get wrong. */
+        if (dm && rows > 2 &&
+            qEnvironmentVariableIntValue("WINNOW_SELFTEST_MODELTEST") == 1) {
+            dm->removeRows(1, 1);
+            fprintf(stderr, "SELFTEST: removed row 1, rows now %d\n", dm->rowCount());
+        }
         fflush(stderr);
         // Exit immediately, skipping Qt/C++ teardown. We've measured health at the
         // loaded steady state; forcing the event loop to unwind here delivers
