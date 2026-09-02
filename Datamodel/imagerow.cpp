@@ -33,14 +33,32 @@ enum Field {
     F_Email_, F_Url_, F_Permissions, F_ReadWrite, F_Sidecar, F_OrientationOffset,
     F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
     F_Search, F_Ingested,
+    /* column 0's custom roles -- not values */
+    F_IconRect, F_DupHideRaw, F_DupIsJpg, F_DupRawType, F_DupOtherIdx,
     F_Count
 };
 static_assert(F_Count <= 128, "ImageRow::setLo/setHi hold 128 bits");
 
-int fieldBit(int column)
+int fieldBit(int column, int role)
 {
+    /*  Column 0 is six fields, not one. The path is on G::PathRole because
+        addFileDataForRow never set EditRole there -- an unset item returns an
+        invalid QVariant and callers test for it -- and the icon rect and the
+        four pairing roles sit beside it on their own roles. */
+    if (column == G::PathColumn) {
+        switch (role) {
+        case G::PathRole:        return F_Path;
+        case G::IconRectRole:    return F_IconRect;
+        case G::DupHideRawRole:  return F_DupHideRaw;
+        case G::DupIsJpgRole:    return F_DupIsJpg;
+        case G::DupRawTypeRole:  return F_DupRawType;
+        case G::DupOtherIdxRole: return F_DupOtherIdx;
+        default:                 return -1;
+        }
+    }
+    if (role != Qt::EditRole && role != Qt::DisplayRole) return -1;
+
     switch (column) {
-    case G::PathColumn:                 return F_Path;
     case G::NameColumn:                 return F_Name;
     case G::FolderNameColumn:           return F_FolderName;
     case G::TypeColumn:                 return F_Type;
@@ -131,19 +149,10 @@ inline void setBit(ImageRow &r, int bit)
 
 bool RowStore::covers(int column, int role)
 {
-    /*  The path lives on PathColumn under G::PathRole, NOT under EditRole --
-        addFileDataForRow never sets EditRole there, so the item is UNSET and
-        data() must keep returning an invalid QVariant for it. Claiming the
-        column at EditRole made the store answer "" where the model answered
-        nothing, which is a different value to anything that tests isValid(). */
-    if (column == G::PathColumn) return role == G::PathRole;
-
-    if (role != Qt::EditRole && role != Qt::DisplayRole) return false;
-
-    return fieldBit(column) >= 0;
+    return fieldBit(column, role) >= 0;
 }
 
-QVariant RowStore::value(int row, int column) const
+QVariant RowStore::value(int row, int column, int role) const
 {
     /*  Read lock: see "THREADING" in imagerow.h. Taken here rather than through
         contains(), which takes its own -- two acquisitions would leave a window
@@ -156,11 +165,22 @@ QVariant RowStore::value(int row, int column) const
         invalid QVariant is the right answer -- not the field's zero, and not an
         interned empty string. See "WHICH FIELDS HAVE ACTUALLY BEEN WRITTEN" in
         imagerow.h for why that distinction is load-bearing. */
-    const int bit = fieldBit(column);
+    const int bit = fieldBit(column, role);
     if (bit < 0 || !bitIsSet(r, bit)) return QVariant();
 
+    if (column == G::PathColumn) {
+        switch (role) {
+        case G::PathRole:        return r.path;
+        case G::IconRectRole:    return r.iconRect;
+        case G::DupHideRawRole:  return r.dupHideRaw;
+        case G::DupIsJpgRole:    return r.dupIsJpg;
+        case G::DupRawTypeRole:  return mStrings.value(r.dupRawTypeId);
+        case G::DupOtherIdxRole: return r.dupOtherIdx;
+        default:                 return QVariant();
+        }
+    }
+
     switch (column) {
-    case G::PathColumn:            return r.path;
     case G::NameColumn:            return r.name;
     case G::FolderNameColumn:      return mStrings.value(r.folderId);
     case G::TypeColumn:            return mStrings.value(r.typeId);
@@ -238,16 +258,29 @@ QVariant RowStore::value(int row, int column) const
     }
 }
 
-void RowStore::setValue(int row, int column, const QVariant &v)
+void RowStore::setValue(int row, int column, int role, const QVariant &v)
 {
     QWriteLocker locker(&mLock);
     if (row < 0 || row >= mRows.size()) return;
-    const int bit = fieldBit(column);
+    const int bit = fieldBit(column, role);
     if (bit < 0) return;
     ImageRow &r = mRows[row];
     setBit(r, bit);
+
+    if (column == G::PathColumn) {
+        switch (role) {
+        case G::PathRole:        r.path = v.toString(); break;
+        case G::IconRectRole:    r.iconRect = v.toRect(); break;
+        case G::DupHideRawRole:  r.dupHideRaw = v.toBool(); break;
+        case G::DupIsJpgRole:    r.dupIsJpg = v.toBool(); break;
+        case G::DupRawTypeRole:  r.dupRawTypeId = mStrings.id(v.toString()); break;
+        case G::DupOtherIdxRole: r.dupOtherIdx = v.toInt(); break;
+        default: break;
+        }
+        return;
+    }
+
     switch (column) {
-    case G::PathColumn:            r.path = v.toString(); break;
     case G::NameColumn:            r.name = v.toString(); break;
     case G::FolderNameColumn:      r.folderId = mStrings.id(v.toString()); break;
     case G::TypeColumn:            r.typeId = mStrings.id(v.toString()); break;

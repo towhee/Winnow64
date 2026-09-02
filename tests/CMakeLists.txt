@@ -255,6 +255,23 @@ winnow_add_unit_test(tst_filterpredicate unit/tst_filterpredicate.cpp)
 #   ctest --test-dir build/<preset> --output-on-failure
 # -----------------------------------------------------------------------------
 if(TARGET Winnow)
+    # -------------------------------------------------------------------------
+    # model_contract — the same fixture load with QAbstractItemModelTester
+    # attached to the datamodel and the proxy. DataModel is a hand-written
+    # QAbstractTableModel, so index/parent consistency and the begin/end pairing
+    # around every insert and remove are its own responsibility now. Fatal mode:
+    # a violation aborts and the test fails.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME model_contract
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(model_contract PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MODELTEST=1"
+        LABELS "smoke"
+        TIMEOUT 120
+    )
+
     add_test(
         NAME smoke_launch
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images

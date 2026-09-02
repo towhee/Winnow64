@@ -43,9 +43,9 @@ private slots:
 private:
     static void fill(RowStore &s, int row, const QString &path)
     {
-        s.setValue(row, G::PathColumn, path);
-        s.setValue(row, G::NameColumn, path.section('/', -1));
-        s.setValue(row, G::TypeColumn, "JPG");
+        s.setValue(row, G::PathColumn, G::PathRole, path);
+        s.setValue(row, G::NameColumn, Qt::EditRole, path.section('/', -1));
+        s.setValue(row, G::TypeColumn, Qt::EditRole, "JPG");
     }
 };
 
@@ -107,8 +107,8 @@ void tst_imagerow::searchAndIngestedAreBoolsNow()
 
     RowStore s;
     s.resize(1);
-    s.setValue(0, G::SearchColumn, false);
-    s.setValue(0, G::IngestedColumn, true);
+    s.setValue(0, G::SearchColumn, Qt::EditRole, false);
+    s.setValue(0, G::IngestedColumn, Qt::EditRole, true);
     QCOMPARE(s.value(0, G::SearchColumn).typeId(), int(QMetaType::Bool));
     QCOMPARE(s.value(0, G::IngestedColumn).typeId(), int(QMetaType::Bool));
     QCOMPARE(s.value(0, G::SearchColumn).toBool(), false);
@@ -144,7 +144,7 @@ void tst_imagerow::unwrittenFieldsReadBackAsInvalid()
     s.resize(3);
     fill(s, 1, "/a/b/c.jpg");
 
-    QCOMPARE(s.value(1, G::PathColumn).toString(), QString("/a/b/c.jpg"));
+    QCOMPARE(s.value(1, G::PathColumn, G::PathRole).toString(), QString("/a/b/c.jpg"));
     QCOMPARE(s.value(1, G::TypeColumn).toString(), QString("JPG"));
 
     // everything else on that row is still nothing, not empty
@@ -159,7 +159,7 @@ void tst_imagerow::unwrittenFieldsReadBackAsInvalid()
     /*  An EMPTY STRING written deliberately is a value. It interns to the same
         -1 as "never written", so without the set mask these two would be
         indistinguishable -- which is exactly the bug the mask exists for. */
-    s.setValue(1, G::TitleColumn, QString());
+    s.setValue(1, G::TitleColumn, Qt::EditRole, QString());
     QVERIFY(s.value(1, G::TitleColumn).isValid());
     QCOMPARE(s.value(1, G::TitleColumn).toString(), QString());
 }
@@ -178,9 +178,9 @@ void tst_imagerow::conditionalColumnsStayUnsetUntilWritten()
     QVERIFY(!s.value(0, G::IconAspectRatioColumn).isValid());
     QVERIFY(!s.value(0, G::ErrColumn).isValid());
 
-    s.setValue(1, G::DurationColumn, QString("00:14"));
-    s.setValue(1, G::IconAspectRatioColumn, qreal(1.7777));
-    s.setValue(1, G::ErrColumn, QStringList{ "no embedded thumb" });
+    s.setValue(1, G::DurationColumn, Qt::EditRole, QString("00:14"));
+    s.setValue(1, G::IconAspectRatioColumn, Qt::EditRole, qreal(1.7777));
+    s.setValue(1, G::ErrColumn, Qt::EditRole, QStringList{ "no embedded thumb" });
 
     QCOMPARE(s.value(1, G::DurationColumn).toString(), QString("00:14"));
     QCOMPARE(s.value(1, G::IconAspectRatioColumn).toDouble(), 1.7777);
@@ -193,13 +193,13 @@ void tst_imagerow::numericColumnsComeBackNumeric()
 {
     RowStore s;
     s.resize(1);
-    s.setValue(0, G::ShutterspeedColumn, double(0.004));
-    s.setValue(0, G::ApertureColumn, double(5.6));
-    s.setValue(0, G::ISOColumn, int(400));
-    s.setValue(0, G::FocalLengthColumn, int(400));
-    s.setValue(0, G::OrientationColumn, int(6));
-    s.setValue(0, G::PermissionsColumn, uint(0x6666));
-    s.setValue(0, G::FocusXColumn, float(0.5f));
+    s.setValue(0, G::ShutterspeedColumn, Qt::EditRole, double(0.004));
+    s.setValue(0, G::ApertureColumn, Qt::EditRole, double(5.6));
+    s.setValue(0, G::ISOColumn, Qt::EditRole, int(400));
+    s.setValue(0, G::FocalLengthColumn, Qt::EditRole, int(400));
+    s.setValue(0, G::OrientationColumn, Qt::EditRole, int(6));
+    s.setValue(0, G::PermissionsColumn, Qt::EditRole, uint(0x6666));
+    s.setValue(0, G::FocusXColumn, Qt::EditRole, float(0.5f));
 
     /*  ExposureTimeItemDelegate guards "value == 0" before computing 1/value.
         A QString holding "0.004" is not equal to 0, so it walks past the guard
@@ -219,8 +219,8 @@ void tst_imagerow::numericColumnsComeBackNumeric()
         category list shows it as a blank row, not a "0" row -- and MPix is
         QString::number(mp, 'f', 2), so holding a float and formatting on the
         way out returns 24.15999984741211 where the model says 24.16. */
-    s.setValue(0, G::RatingColumn, QString());
-    s.setValue(0, G::MegaPixelsColumn, QString("24.16"));
+    s.setValue(0, G::RatingColumn, Qt::EditRole, QString());
+    s.setValue(0, G::MegaPixelsColumn, Qt::EditRole, QString("24.16"));
     QCOMPARE(s.value(0, G::RatingColumn).typeId(), int(QMetaType::QString));
     QCOMPARE(s.value(0, G::RatingColumn).toString(), QString());
     QCOMPARE(s.value(0, G::MegaPixelsColumn).toString(), QString("24.16"));
@@ -232,12 +232,12 @@ void tst_imagerow::internedRepeatsCollapse()
     const int n = 500;
     s.resize(n);
     for (int r = 0; r < n; ++r) {
-        s.setValue(r, G::FolderNameColumn, "2026-08-28 Heron");
-        s.setValue(r, G::CameraModelColumn, "NIKON Z 9");
-        s.setValue(r, G::LensColumn, "NIKKOR Z 400mm f/4.5");
-        s.setValue(r, G::ShootingInfoColumn, "1/1250 sec at f/5.6, ISO 800");
+        s.setValue(r, G::FolderNameColumn, Qt::EditRole, "2026-08-28 Heron");
+        s.setValue(r, G::CameraModelColumn, Qt::EditRole, "NIKON Z 9");
+        s.setValue(r, G::LensColumn, Qt::EditRole, "NIKKOR Z 400mm f/4.5");
+        s.setValue(r, G::ShootingInfoColumn, Qt::EditRole, "1/1250 sec at f/5.6, ISO 800");
     }
-    s.setValue(0, G::CameraModelColumn, "NIKON Z 8");
+    s.setValue(0, G::CameraModelColumn, Qt::EditRole, "NIKON Z 8");
 
     /*  A shoot shares these; that is the whole reason they are interned rather
         than held per row, and it is what turns 4.6 GB into 137 MB. */
@@ -261,12 +261,12 @@ void tst_imagerow::insertRowsShiftsTheRowsAfterIt()
         done by the time rowsInserted fires -- so no resize() beforehand. */
     s.insertRows(1, 2);
     QCOMPARE(s.size(), 5);
-    QCOMPARE(s.value(0, G::PathColumn).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
     // the two new rows are blank, not copies
-    QVERIFY(!s.value(1, G::PathColumn).isValid());
-    QVERIFY(!s.value(2, G::PathColumn).isValid());
-    QCOMPARE(s.value(3, G::PathColumn).toString(), QString("/b.jpg"));
-    QCOMPARE(s.value(4, G::PathColumn).toString(), QString("/c.jpg"));
+    QVERIFY(!s.value(1, G::PathColumn, G::PathRole).isValid());
+    QVERIFY(!s.value(2, G::PathColumn, G::PathRole).isValid());
+    QCOMPARE(s.value(3, G::PathColumn, G::PathRole).toString(), QString("/b.jpg"));
+    QCOMPARE(s.value(4, G::PathColumn, G::PathRole).toString(), QString("/c.jpg"));
 }
 
 void tst_imagerow::removeRowsSplicesRatherThanTruncates()
@@ -278,16 +278,16 @@ void tst_imagerow::removeRowsSplicesRatherThanTruncates()
 
     s.removeRows(1, 2);
     QCOMPARE(s.size(), 2);
-    QCOMPARE(s.value(0, G::PathColumn).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
     /*  If this said "/b.jpg" the store would have truncated from the end and
         every surviving row past the deletion point would describe a different
         image -- silently. */
-    QCOMPARE(s.value(1, G::PathColumn).toString(), QString("/d.jpg"));
+    QCOMPARE(s.value(1, G::PathColumn, G::PathRole).toString(), QString("/d.jpg"));
 
     // a removal running off the end clamps rather than corrupting
     s.removeRows(1, 99);
     QCOMPARE(s.size(), 1);
-    QCOMPARE(s.value(0, G::PathColumn).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
 }
 
 QTEST_MAIN(tst_imagerow)

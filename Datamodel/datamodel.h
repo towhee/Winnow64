@@ -71,7 +71,7 @@ private:
     FilterPredicatePtr mPredicate;
 };
 
-class DataModel : public QStandardItemModel
+class DataModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
@@ -79,6 +79,27 @@ public:
               Metadata *metadata,
               Filters *filters,
               bool &combineRawJpg);
+
+    /*  QAbstractTableModel, not QStandardItemModel. The stores hold every value
+        and every role now, so the only thing the base class still provided was
+        a QList<QStandardItem*> of rowCount x 93 -- 744 bytes of mostly null
+        pointers per row, 186 MB at 250,000 rows, which is MORE than the whole
+        packed row store. G::dataModelColumns is unchanged and so is every
+        caller: they address the model through index()/data()/setData(), which
+        is why this could be left until last. */
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+
+    /*  Empty the model. QStandardItemModel::clear() also DISCARDED the header
+        items, which is why every caller followed it with setModelProperties();
+        this keeps that contract -- the headers are rebuilt by the same call --
+        so the call sites do not change. */
+    void clear();
 
     void setModelProperties();
     bool readMetadataForItem(int row, int instance);
@@ -100,6 +121,22 @@ public:
         item writes and the verifyRowStore() shadow comparison that proved them
         are both retired. See "The Row Store" in Documentation.txt. */
     RowStore rowStore;
+
+    /*  Column headers: the name and the geek flag, one entry per column. See
+        setModelProperties. */
+    std::vector<QString> mHeaderName;
+    std::vector<bool> mHeaderGeek;
+
+    /*  THE ONE ROLE NEITHER STORE HOLDS. DataModel::addIssue keeps a
+        QList<QSharedPointer<Issue>> on G::ErrColumn at Qt::UserRole, read back
+        by rptIssues. It is not a value and not per-column state, it is a
+        diagnostic attached to the few rows whose metadata failed, so it gets a
+        sparse hash of its own rather than a general "any role" escape hatch --
+        a general one would silently absorb the next role somebody adds instead
+        of making them decide where it lives. It is the ONLY uncovered-role
+        write to this model; every other setData in the codebase targets a
+        different model. */
+    QHash<int, QVariant> mIssueLists;      // dm row -> the issue list
 
     /*  Thumbnails, keyed by path rather than held on the row -- see
         Datamodel/iconstore.h. Reached through data()/setData() on

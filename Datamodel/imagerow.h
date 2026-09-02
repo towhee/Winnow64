@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QHash>
 #include <QVariant>
+#include <QRect>
 #include <QReadWriteLock>
 
 #include "Main/global.h"
@@ -162,6 +163,22 @@ struct ImageRow
     float   focusX = -1.0f, focusY = -1.0f;
     double  iconAspectRatio = 0.0;     // qreal in the model; set only when an icon lands
 
+    /*  --- the last things on the items: column 0's CUSTOM ROLES. Not values,
+        which is why they outlived three passes of value-column work, but they
+        are per-row facts all the same and holding them was the only reason a
+        QStandardItem still existed on most rows.
+
+        The four raw+jpg pairing roles are described in datamodel.cpp; note
+        dupOtherIdx is an int ROW and its callers test isValid() to mean "not
+        paired", so it needs the set mask as much as any conditional column
+        does. iconRect is written per visible icon by IconView and read by the
+        delegate, so it is a field rather than a hash entry. */
+    QRect  iconRect;                   // G::IconRectRole
+    qint32 dupRawTypeId = -1;          // G::DupRawTypeRole, interned ("ORF", "NEF")
+    qint32 dupOtherIdx = -1;           // G::DupOtherIdxRole, a datamodel row
+    bool   dupHideRaw = false;         // G::DupHideRawRole
+    bool   dupIsJpg = false;           // G::DupIsJpgRole
+
     bool isSearch = false;             // G::SearchColumn, settled on bool
     bool isIngested = false;           // G::IngestedColumn, settled on bool
     bool metadataReading = false;
@@ -230,10 +247,13 @@ public:
         rather than "everything not listed as scratch": a column silently
         assumed to be covered would be a column verifyRowStore quietly stopped
         checking. */
+    /*  Coverage is per (COLUMN, ROLE), not per column. Column 0 alone carries
+        six roles -- the path, the icon rect and the four raw+jpg pairing facts
+        -- and none of them is the cell's value. */
     static bool covers(int column, int role);
 
-    QVariant value(int row, int column) const;
-    void setValue(int row, int column, const QVariant &v);
+    QVariant value(int row, int column, int role = Qt::EditRole) const;
+    void setValue(int row, int column, int role, const QVariant &v);
 
 private:
     mutable QReadWriteLock mLock;

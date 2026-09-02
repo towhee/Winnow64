@@ -157,7 +157,7 @@ DataModel::DataModel(QObject *parent,
                      Filters *filters,
                      bool &combineRawJpg) :
 
-                     QStandardItemModel(parent),
+                     QAbstractTableModel(parent),
                      combineRawJpg(combineRawJpg)
 {
     if (G::isLogger) G::log("DataModel::DataModel");
@@ -198,27 +198,13 @@ DataModel::DataModel(QObject *parent,
         indexed by datamodel row, and a filtered-out row still needs its slot. */
     connect(this, &QAbstractItemModel::rowsInserted, this,
             [this]{ resizeRowSync(rowCount()); });
-    /*  Inserts and removals both take rows from the MIDDLE (insertFiles, remove,
-        removeFolder), which re-addresses every row after them. Both stores are
-        indexed by row, so both are spliced here rather than resized -- a resize
-        appends or truncates at the END, which would silently re-point every row
-        past the splice point at a different image. This used to be a rebuild
-        from the QStandardItems; with the items gone there is nothing to rebuild
-        from, and splicing is what the store's own bookkeeping has to do anyway
-        once it is the only copy. */
-    connect(this, &QAbstractItemModel::rowsInserted, this,
-            [this](const QModelIndex &, int first, int last) {
-                const int n = last - first + 1;
-                rowStore.insertRows(first, n);
-                scratchStore.insertRows(first, n);
-            });
+    /*  Splicing the stores used to happen HERE, off rowsInserted/rowsRemoved.
+        It now happens inside DataModel::insertRows/removeRows, which are the
+        only way the row count can move at all once the model owns its own
+        storage -- so the splice and the count cannot disagree. Only the
+        worker-thread mirror is still driven by the signal. */
     connect(this, &QAbstractItemModel::rowsRemoved, this,
-            [this](const QModelIndex &, int first, int last) {
-                const int n = last - first + 1;
-                rowStore.removeRows(first, n);
-                scratchStore.removeRows(first, n);
-                resizeRowSync(rowCount());
-            });
+            [this]{ resizeRowSync(rowCount()); });
     connect(this, &QAbstractItemModel::modelReset, this,
             [this]{ resizeRowSync(rowCount()); });
 
@@ -255,107 +241,123 @@ void DataModel::setModelProperties()
 {
     if (isDebug) qDebug() << "DataModel::setModelProperties" << "instance =" << instance;
 
-    setSortRole(Qt::EditRole);
+    /*  setSortRole is gone with QStandardItemModel. It only ever affected
+        QStandardItemModel::sort(), which nothing called -- sorting is the
+        proxy's (SortFilter::sort), and the proxy has its own sort role. */
 
     // must include all prior Global dataModelColumns (any order okay)
-    setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::RowNumberColumn, new QStandardItem("#")); horizontalHeaderItem(G::RowNumberColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::FolderNameColumn, new QStandardItem("Folder Name")); horizontalHeaderItem(G::FolderNameColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::NSThumbColumn, new QStandardItem("NS Thumb")); horizontalHeaderItem(G::NSThumbColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::NSImageColumn, new QStandardItem("NS Image")); horizontalHeaderItem(G::NSImageColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating")); horizontalHeaderItem(G::RatingColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type")); horizontalHeaderItem(G::TypeColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::VideoColumn, new QStandardItem("Video")); horizontalHeaderItem(G::VideoColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::SidecarColumn, new QStandardItem("Sidecar")); horizontalHeaderItem(G::SidecarColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO")); horizontalHeaderItem(G::ISOColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ExposureCompensationColumn, new QStandardItem("  EC  ")); horizontalHeaderItem(G::ExposureCompensationColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DurationColumn, new QStandardItem("Duration")); horizontalHeaderItem(G::DurationColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CameraMakeColumn, new QStandardItem("Make")); horizontalHeaderItem(G::CameraMakeColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model")); horizontalHeaderItem(G::CameraModelColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::LensColumn, new QStandardItem("Lens")); horizontalHeaderItem(G::LensColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length")); horizontalHeaderItem(G::FocalLengthColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::FocusXColumn, new QStandardItem("FocusX")); horizontalHeaderItem(G::FocusXColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::FocusYColumn, new QStandardItem("FocusY")); horizontalHeaderItem(G::FocusYColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::GPSCoordColumn, new QStandardItem("GPS Coord")); horizontalHeaderItem(G::GPSCoordColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ByteSizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::ByteSizeColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created")); horizontalHeaderItem(G::CreatedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year")); horizontalHeaderItem(G::YearColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DayColumn, new QStandardItem("Day")); horizontalHeaderItem(G::DayColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator")); horizontalHeaderItem(G::CreatorColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix")); horizontalHeaderItem(G::MegaPixelsColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::LoadMsecPerMpColumn, new QStandardItem("Msec/Mp")); horizontalHeaderItem(G::LoadMsecPerMpColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::AspectRatioColumn, new QStandardItem("Aspect Ratio")); horizontalHeaderItem(G::AspectRatioColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::IconAspectRatioColumn, new QStandardItem("Icon Aspect Ratio")); horizontalHeaderItem(G::IconAspectRatioColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright")); horizontalHeaderItem(G::CopyrightColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title")); horizontalHeaderItem(G::TitleColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email")); horizontalHeaderItem(G::EmailColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::UrlColumn, new QStandardItem("Url")); horizontalHeaderItem(G::UrlColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::KeywordsColumn, new QStandardItem("Keywords")); horizontalHeaderItem(G::KeywordsColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::KeywordPathsColumn, new QStandardItem("KeywordPaths")); horizontalHeaderItem(G::KeywordPathsColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::KeywordsAllColumn, new QStandardItem("All Keywords")); horizontalHeaderItem(G::KeywordsAllColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::MetadataReadingColumn, new QStandardItem("Meta Reading")); horizontalHeaderItem(G::MetadataReadingColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::MetadataStatusColumn, new QStandardItem("Meta Status")); horizontalHeaderItem(G::MetadataStatusColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::RawRenderColumn, new QStandardItem("Raw Render")); horizontalHeaderItem(G::RawRenderColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::CompareColumn, new QStandardItem("Compare")); horizontalHeaderItem(G::CompareColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_RatingColumn, new QStandardItem("_Rating")); horizontalHeaderItem(G::_RatingColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_LabelColumn, new QStandardItem("_Label")); horizontalHeaderItem(G::_LabelColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_CreatorColumn, new QStandardItem("_Creator")); horizontalHeaderItem(G::_CreatorColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_TitleColumn, new QStandardItem("_Title")); horizontalHeaderItem(G::_TitleColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_CopyrightColumn, new QStandardItem("_Copyright")); horizontalHeaderItem(G::_CopyrightColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_EmailColumn, new QStandardItem("_Email")); horizontalHeaderItem(G::_EmailColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::_UrlColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_UrlColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::PermissionsColumn, new QStandardItem("Permissions")); horizontalHeaderItem(G::PermissionsColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ReadWriteColumn, new QStandardItem("R/W")); horizontalHeaderItem(G::ReadWriteColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
+    /*  THE COLUMN HEADERS, as a table rather than 93 QStandardItems.
+        Two facts per column: the name the table view shows, and whether the
+        column is a GEEK column (hidden unless the user asks for the diagnostic
+        set -- TableView reads it through headerData). They used to be a header
+        item each, which is the one piece of QStandardItemModel the swap could
+        not simply drop. */
+    static const struct { int column; const char *name; bool geek; } kHeaders[] = {
+        { G::PathColumn,                 "Icon",                     false },
+        { G::RowNumberColumn,            "#",                        false },
+        { G::NameColumn,                 "File Name",                false },
+        { G::FolderNameColumn,           "Folder Name",              false },
+        { G::NSThumbColumn,              "NS Thumb",                 false },
+        { G::NSImageColumn,              "NS Image",                 false },
+        { G::PickColumn,                 "Pick",                     false },
+        { G::IngestedColumn,             "Ingested",                 false },
+        { G::LabelColumn,                "Colour",                   false },
+        { G::RatingColumn,               "Rating",                   false },
+        { G::SearchColumn,               "Search",                   false },
+        { G::TypeColumn,                 "Type",                     false },
+        { G::VideoColumn,                "Video",                    false },
+        { G::SidecarColumn,              "Sidecar",                  false },
+        { G::ApertureColumn,             "Aperture",                 false },
+        { G::ShutterspeedColumn,         "Shutter",                  false },
+        { G::ISOColumn,                  "ISO",                      false },
+        { G::ExposureCompensationColumn, "  EC  ",                   false },
+        { G::DurationColumn,             "Duration",                 false },
+        { G::CameraMakeColumn,           "Make",                     false },
+        { G::CameraModelColumn,          "Model",                    false },
+        { G::LensColumn,                 "Lens",                     false },
+        { G::FocalLengthColumn,          "Focal length",             false },
+        { G::FocusXColumn,               "FocusX",                   false },
+        { G::FocusYColumn,               "FocusY",                   false },
+        { G::GPSCoordColumn,             "GPS Coord",                false },
+        { G::ByteSizeColumn,             "Size",                     false },
+        { G::WidthColumn,                "Width",                    false },
+        { G::HeightColumn,               "Height",                   false },
+        { G::ModifiedColumn,             "Last Modified",            false },
+        { G::CreatedColumn,              "Created",                  false },
+        { G::YearColumn,                 "Year",                     false },
+        { G::DayColumn,                  "Day",                      false },
+        { G::CreatorColumn,              "Creator",                  false },
+        { G::MegaPixelsColumn,           "MPix",                     false },
+        { G::LoadMsecPerMpColumn,        "Msec/Mp",                  false },
+        { G::DimensionsColumn,           "Dimensions",               false },
+        { G::AspectRatioColumn,          "Aspect Ratio",             false },
+        { G::IconAspectRatioColumn,      "Icon Aspect Ratio",        false },
+        { G::OrientationColumn,          "Orientation",              false },
+        { G::RotationColumn,             "Rot",                      false },
+        { G::CopyrightColumn,            "Copyright",                false },
+        { G::TitleColumn,                "Title",                    false },
+        { G::EmailColumn,                "Email",                    false },
+        { G::UrlColumn,                  "Url",                      false },
+        { G::KeywordsColumn,             "Keywords",                 false },
+        { G::KeywordPathsColumn,         "KeywordPaths",             true },
+        { G::KeywordsAllColumn,          "All Keywords",             true },
+        { G::MetadataReadingColumn,      "Meta Reading",             true },
+        { G::MetadataStatusColumn,       "Meta Status",              true },
+        { G::IconLoadedColumn,           "Icon Loaded",              true },
+        { G::RawRenderColumn,            "Raw Render",               true },
+        { G::CompareColumn,              "Compare",                  true },
+        { G::_RatingColumn,              "_Rating",                  true },
+        { G::_LabelColumn,               "_Label",                   true },
+        { G::_CreatorColumn,             "_Creator",                 true },
+        { G::_TitleColumn,               "_Title",                   true },
+        { G::_CopyrightColumn,           "_Copyright",               true },
+        { G::_EmailColumn,               "_Email",                   true },
+        { G::_UrlColumn,                 "_Url",                     true },
+        { G::PermissionsColumn,          "Permissions",              true },
+        { G::ReadWriteColumn,            "R/W",                      true },
+        { G::OffsetFullColumn,           "OffsetFull",               true },
+        { G::LengthFullColumn,           "LengthFull",               true },
+        { G::WidthOrigPreviewColumn,     "WidthPreview",             true },
+        { G::HeightOrigPreviewColumn,    "HeightPreview",            true },
+        { G::OffsetThumbColumn,          "OffsetThumb",              true },
+        { G::LengthThumbColumn,          "LengthThumb",              true },
+        { G::samplesPerPixelColumn,      "samplesPerPixelFull",      true },
+        { G::isBigEndianColumn,          "isBigEndian",              true },
+        { G::ifd0OffsetColumn,           "ifd0Offset",               true },
+        { G::ifdOffsetsColumn,           "ifd0Offsets",              true },
+        { G::XmpSegmentOffsetColumn,     "XmpSegmentOffset",         true },
+        { G::XmpSegmentLengthColumn,     "XmpSegmentLengthColumn",   true },
+        { G::IsXMPColumn,                "IsXMP",                    true },
+        { G::ICCSegmentOffsetColumn,     "ICCSegmentOffsetColumn",   true },
+        { G::ICCSegmentLengthColumn,     "ICCSegmentLengthColumn",   true },
+        { G::ICCBufColumn,               "ICCBuf",                   true },
+        { G::ICCSpaceColumn,             "ICCSpace",                 true },
+        { G::CacheSizeColumn,            "CacheSize",                true },
+        { G::IsCachingColumn,            "IsCaching",                true },
+        { G::IsCachedColumn,             "IsCached",                 true },
+        { G::AttemptsColumn,             "Attempts",                 true },
+        { G::DecoderIdColumn,            "DecoderId",                true },
+        { G::DecoderReturnStatusColumn,  "DecoderReturnStatus",      true },
+        { G::DecoderErrMsgColumn,        "Decoder Err Msg",          true },
+        { G::OrientationOffsetColumn,    "OrientationOffset",        true },
+        { G::RotationDegreesColumn,      "RotationDegrees",          true },
+        { G::ShootingInfoColumn,         "ShootingInfo",             true },
+        { G::SearchTextColumn,           "Search",                   true },
+        { G::ErrColumn,                  "Load Metadata Errors",     true },
+        { G::DevelopColumn,              "Developed",                false },
+        { G::DevPreviewKeyColumn,        "DevPreviewKey",            true },
+    };
+    mHeaderName.assign(G::TotalColumns, QString());
+    mHeaderGeek.assign(G::TotalColumns, false);
+    for (const auto &h : kHeaders) {
+        mHeaderName[h.column] = QString::fromLatin1(h.name);
+        mHeaderGeek[h.column] = h.geek;
+    }
     /* The two OrigPreview header STRINGS deliberately keep their original text.
        TableView column visibility is persisted in QSettings under the header string
        (see MW::settings "TableFields"), so renaming them to match the origPreview /
        devPreview terminology would silently reset the user's show/hide choice. */
-    setHorizontalHeaderItem(G::WidthOrigPreviewColumn, new QStandardItem("WidthPreview")); horizontalHeaderItem(G::WidthOrigPreviewColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::HeightOrigPreviewColumn, new QStandardItem("HeightPreview")); horizontalHeaderItem(G::HeightOrigPreviewColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::samplesPerPixelColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ifdOffsetsColumn, new QStandardItem("ifd0Offsets")); horizontalHeaderItem(G::ifdOffsetsColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::XmpSegmentLengthColumn, new QStandardItem("XmpSegmentLengthColumn")); horizontalHeaderItem(G::XmpSegmentLengthColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ICCSegmentOffsetColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCSegmentOffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ICCSegmentLengthColumn, new QStandardItem("ICCSegmentLengthColumn")); horizontalHeaderItem(G::ICCSegmentLengthColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ICCBufColumn, new QStandardItem("ICCBuf")); horizontalHeaderItem(G::ICCBufColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ICCSpaceColumn, new QStandardItem("ICCSpace")); horizontalHeaderItem(G::ICCSpaceColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::CacheSizeColumn, new QStandardItem("CacheSize")); horizontalHeaderItem(G::CacheSizeColumn)->setData(true, G::GeekRole);
     // setHorizontalHeaderItem(G::IsVideoColumn, new QStandardItem("IsVideo")); horizontalHeaderItem(G::IsVideoColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IsCachingColumn, new QStandardItem("IsCaching")); horizontalHeaderItem(G::IsCachingColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::IsCachedColumn, new QStandardItem("IsCached")); horizontalHeaderItem(G::IsCachedColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::AttemptsColumn, new QStandardItem("Attempts")); horizontalHeaderItem(G::AttemptsColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::DecoderIdColumn, new QStandardItem("DecoderId")); horizontalHeaderItem(G::DecoderIdColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::DecoderReturnStatusColumn, new QStandardItem("DecoderReturnStatus")); horizontalHeaderItem(G::DecoderReturnStatusColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::DecoderErrMsgColumn, new QStandardItem("Decoder Err Msg")); horizontalHeaderItem(G::DecoderErrMsgColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Load Metadata Errors")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::DevelopColumn, new QStandardItem("Developed")); horizontalHeaderItem(G::DevelopColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DevPreviewKeyColumn, new QStandardItem("DevPreviewKey")); horizontalHeaderItem(G::DevPreviewKeyColumn)->setData(true, G::GeekRole);
     // "🔎" was title for search column
 }
 
@@ -474,7 +476,7 @@ qint64 DataModel::rowBytesUsed(int dmRow)
             if (isDebug) {
                 qDebug().noquote()
                     << "DataModel::rowBytesUsed"
-                    << horizontalHeaderItem(col)->text().leftJustified(25)
+                    << headerData(col, Qt::Horizontal).toString().leftJustified(25)
                     << "col =" << QString::number(col).rightJustified(2)
                     << "role =" << QString::number(role).rightJustified(1)
                     << "bytes =" << QString::number(cellBytes).rightJustified(12)
@@ -673,6 +675,111 @@ static QVariant columnAlignment(int column)
     }
 }
 
+/*  ROW COUNT IS THE STORE'S SIZE. One source of truth: the packed row store is
+    the storage, so asking it how many rows there are cannot disagree with what
+    is actually held. QAbstractTableModel keeps no count of its own.
+*/
+/*  Empty the model, headers included -- the contract QStandardItemModel::clear()
+    had, which is why every caller pairs it with setModelProperties().
+*/
+void DataModel::clear()
+{
+    beginResetModel();
+    rowStore.clear();
+    scratchStore.clear();
+    iconStore.clear();
+    mIssueLists.clear();
+    mHeaderName.clear();
+    mHeaderGeek.clear();
+    endResetModel();
+}
+
+int DataModel::rowCount(const QModelIndex &parent) const
+{
+    if (parent.isValid()) return 0;         // a table has no children
+    return rowStore.size();
+}
+
+int DataModel::columnCount(const QModelIndex &parent) const
+{
+    if (parent.isValid()) return 0;
+    return G::TotalColumns;
+}
+
+QVariant DataModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Vertical) {
+        /*  QStandardItemModel numbered the rows from 1 when no vertical header
+            item was set, and TableView hides the vertical header anyway -- but
+            reproducing it costs a line and a changed row number would be a
+            visible difference nobody asked for. */
+        if (role == Qt::DisplayRole && section >= 0 && section < rowCount())
+            return section + 1;
+        return QVariant();
+    }
+    if (section < 0 || section >= int(mHeaderName.size())) return QVariant();
+    switch (role) {
+    /*  Edit and Display are the same slot, exactly as they were in the header
+        item this replaces. */
+    case Qt::DisplayRole:
+    case Qt::EditRole:   return mHeaderName[section];
+    case G::GeekRole:    return bool(mHeaderGeek[section]);
+    default:             return QVariant();
+    }
+}
+
+Qt::ItemFlags DataModel::flags(const QModelIndex &index) const
+{
+    if (!index.isValid()) return Qt::NoItemFlags;
+    /*  The default QStandardItem flag set, measured before the swap (47 =
+        Selectable | Editable | DragEnabled | DropEnabled | Enabled) and
+        reproduced rather than reasoned about. Editable is in it and looks
+        wrong; it is harmless because both views are NoEditTriggers, and
+        dropping it here would be a behaviour change hiding inside a storage
+        change. */
+    return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled
+         | Qt::ItemIsDropEnabled | Qt::ItemIsEnabled;
+}
+
+/*  INSERTION AND REMOVAL ARE NOW THE ONLY WAY THE ROW COUNT MOVES, which is an
+    improvement on what they replace: setRowCount, insertRow and removeRows all
+    went through QStandardItemModel and the stores were spliced afterwards, off
+    the rowsInserted/rowsRemoved signals, so the splice and the count could in
+    principle disagree. Here the splice IS the insertion.
+*/
+bool DataModel::insertRows(int row, int count, const QModelIndex &parent)
+{
+    if (parent.isValid() || count <= 0) return false;
+    if (row < 0 || row > rowCount()) return false;
+    beginInsertRows(QModelIndex(), row, row + count - 1);
+    rowStore.insertRows(row, count);
+    scratchStore.insertRows(row, count);
+    endInsertRows();
+    return true;
+}
+
+bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+    if (parent.isValid() || count <= 0) return false;
+    if (row < 0 || row + count > rowCount()) return false;
+    beginRemoveRows(QModelIndex(), row, row + count - 1);
+    rowStore.removeRows(row, count);
+    scratchStore.removeRows(row, count);
+    /*  The issue lists are keyed by row, so they shift with everything else. */
+    if (!mIssueLists.isEmpty()) {
+        QHash<int, QVariant> next;
+        next.reserve(mIssueLists.size());
+        for (auto it = mIssueLists.cbegin(); it != mIssueLists.cend(); ++it) {
+            const int r = it.key();
+            if (r >= row && r < row + count) continue;
+            next.insert(r >= row + count ? r - count : r, it.value());
+        }
+        mIssueLists.swap(next);
+    }
+    endRemoveRows();
+    return true;
+}
+
 QVariant DataModel::data(const QModelIndex &idx, int role) const
 {
 /*
@@ -700,7 +807,7 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         RowStore::covers(idx.column(), role) &&
         rowStore.contains(idx.row()))
     {
-        return rowStore.value(idx.row(), idx.column());
+        return rowStore.value(idx.row(), idx.column(), role);
     }
 
     /*  The scratch columns come from the row-keyed side table
@@ -744,7 +851,7 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         isNull() on the variant to decide whether a thumbnail exists yet. */
     if (idx.isValid() && role == Qt::DecorationRole && idx.column() == 0) {
         const QString fPath = rowStore.contains(idx.row())
-                                  ? rowStore.value(idx.row(), G::PathColumn).toString()
+                                  ? rowStore.value(idx.row(), G::PathColumn, G::PathRole).toString()
                                   : QString();
         if (!fPath.isEmpty()) {
             const QIcon ic = iconStore.icon(fPath);
@@ -752,7 +859,13 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
             return QVariant();
         }
     }
-    return QStandardItemModel::data(idx, role);
+    /*  THE LAST ROLE THAT IS NOT IN A STORE -- see mIssueLists in datamodel.h. */
+    if (idx.isValid() && idx.column() == G::ErrColumn && role == Qt::UserRole)
+        return mIssueLists.value(idx.row());
+
+    /*  Everything else is genuinely unset, which is what the QStandardItem it
+        replaced returned for a cell nobody wrote. */
+    return QVariant();
 }
 
 bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
@@ -806,18 +919,32 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         can tell the difference -- which was the point of introducing the seam
         there rather than swapping the base class.
 
-        Roles the stores do NOT claim (Decoration, and the G:: custom roles that
-        carry the raw+jpg pairing and the icon rect) still go to the items, so
-        QStandardItemModel is still the row structure and still owns those. */
-    const bool covered = idx.isValid() &&
-                         (RowStore::covers(col, role) || ScratchStore::covers(col, role));
-    bool ok;
-    if (covered) {
-        ok = true;
+        THE ICON COUNTS AS COVERED even though neither store holds it: it lives
+        in the path-keyed IconStore, handled a few lines below. Writing it to
+        the item as well was pure waste -- nothing read it back from there --
+        and it was the reason column 0 still had a QStandardItem on EVERY row
+        after the value columns had gone. */
+    if (!idx.isValid()) return false;
+
+    /*  THE ONE ROLE THAT IS NOT IN A STORE, handled explicitly rather than by
+        an "anything else" hash -- see mIssueLists in datamodel.h. */
+    if (col == G::ErrColumn && role == Qt::UserRole) {
+        mIssueLists.insert(idx.row(), value);
+        emit dataChanged(idx, idx, { role });
+        return true;
     }
-    else {
-        ok = QStandardItemModel::setData(idx, value, role);
-    }
+
+    /*  There is no base class to fall through to any more: a role neither store
+        claims, and that is not one of the two handled here, is DROPPED. That is
+        deliberate. A general escape hatch would silently absorb the next role
+        somebody adds and it would work by accident, which is precisely how a
+        column ends up outside every store without anyone noticing. Every
+        setData in the codebase that targets THIS model was enumerated before
+        the swap; the only uncovered one is the issue list above. */
+    const bool isIcon = (role == Qt::DecorationRole && col == 0);
+    const bool covered = isIcon || RowStore::covers(col, role) ||
+                         ScratchStore::covers(col, role);
+    const bool ok = covered;
 
     if (track && ok) {
         if (isStatusCol) {
@@ -862,9 +989,9 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         item no longer holds the thumbnail -- so a removal (setData with an empty
         QVariant, which is how clearIconsOutsideChunkRange drops an icon) must
         reach the store whatever the base class decides to do with the cell. */
-    if (idx.isValid() && role == Qt::DecorationRole && col == 0) {
+    if (role == Qt::DecorationRole && col == 0) {
         const QString fPath = rowStore.contains(idx.row())
-                                  ? rowStore.value(idx.row(), G::PathColumn).toString()
+                                  ? rowStore.value(idx.row(), G::PathColumn, G::PathRole).toString()
                                   : QString();
         if (!fPath.isEmpty()) {
             const QIcon ic = qvariant_cast<QIcon>(value);
@@ -873,15 +1000,14 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         }
     }
 
-    if (idx.isValid() && RowStore::covers(col, role)) {
-        if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
-        rowStore.setValue(idx.row(), col, value);
+    if (RowStore::covers(col, role)) {
+        rowStore.setValue(idx.row(), col, role, value);
         emit dataChanged(idx, idx, { role });
     }
 
     /*  The scratch side table, on the same terms. ScratchStore::covers is the
         single authority on both sides here too. */
-    if (idx.isValid() && ScratchStore::covers(col, role)) {
+    if (ScratchStore::covers(col, role)) {
         scratchStore.setValue(idx.row(), col, value);
         emit dataChanged(idx, idx, { role });
     }
@@ -1018,7 +1144,7 @@ int DataModel::insert(QString fPath)
     }
 
     // insert new row
-    insertRow(dmRow);
+    insertRows(dmRow, 1);
 
     // update fPathRow hash
     rebuildRowFromPathHash();
@@ -1405,8 +1531,7 @@ void DataModel::addFolder(const QString &folderPath)
         if (abort) { endLoad(false); return; }
         if (!valid.isEmpty()) {
             const int first = row;
-            setRowCount(row + valid.size());            // ONE rowsInserted for the batch
-            if (!columnCount()) setColumnCount(G::TotalColumns);
+            insertRows(row, valid.size());              // ONE rowsInserted for the batch
             {
                 const QSignalBlocker blocker(this);     // suppress per-cell dataChanged
                 for (const QFileInfo &fileInfo : valid) {
@@ -1437,8 +1562,7 @@ void DataModel::addFolder(const QString &folderPath)
             continue;
         }
 
-        setRowCount(row + 1);
-        if (!columnCount()) setColumnCount(G::TotalColumns);
+        insertRows(row, 1);
 
         // ALL RAW+JPG pairing logic is now encapsulated inside here
         addFileDataForRow(row, fileInfo);
@@ -1560,8 +1684,7 @@ void DataModel::addPaths(const QStringList &fPaths)
     }
 
     if (!valid.isEmpty()) {
-        setRowCount(row + valid.size());
-        if (!columnCount()) setColumnCount(G::TotalColumns);
+        insertRows(row, valid.size());
         {
             const QSignalBlocker blocker(this);
             for (const QFileInfo &fi : valid) {
