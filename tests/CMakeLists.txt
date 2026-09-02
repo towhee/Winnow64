@@ -282,6 +282,23 @@ if(TARGET Winnow)
         TIMEOUT 120
     )
 
+    # -------------------------------------------------------------------------
+    # catalog_capture — a folder load must actually reach the catalog. This had
+    # no coverage and was silently broken: folderChangeCompleted read
+    # catalogRows() inline, that skips rows not yet MetaLoaded, and the status
+    # writes arrive as queued events -- so the list was often empty and the
+    # folder was never indexed, on timing alone.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME catalog_capture
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(catalog_capture PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_CATALOG=1"
+        LABELS "smoke"
+        TIMEOUT 180
+    )
+
     add_test(
         NAME smoke_launch
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images

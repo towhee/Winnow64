@@ -1127,7 +1127,19 @@ QImageReader::size() IS NOT RELIABLY THE FULL IMAGE. On macOS a raw goes through
 
 WHAT STILL DIFFERS, honestly: Width and Height on SOME rows (and MPix, Dimensions and Aspect Ratio, which derive from them), Icon Aspect Ratio, ShootingInfo and Search. The first four rows of the mixed folder now match exactly on width and capture date where they did not before, so the remaining rows are formats whose metadata read supplies no dimensions at all. Icon Aspect Ratio follows from which icon was decoded. These remain between here and turning G::useIndexMetadata on.
 
-THE HEADLESS TEST DOES NOT REACH THE CATALOG CAPTURE, which is worth writing down because it shaped how all of this had to be verified. MW::folderChangeCompleted hands the commit to the thread pool and --selftest ends with std::_Exit, which drains no queues -- but the capture never runs in a headless run at all, even given a 20-second settle and a wait on the pool, so the catalog after a headless run holds only what an interactive session left. Every A/B above was therefore run against rows written interactively. Making the capture reachable headlessly would be worth doing before anything else depends on it; an attempt to force it by waiting on the pool at the selftest exit was reverted, because it made the model_contract gate fail intermittently (pool tasks complete and queue GUI callbacks that then run around the test's own row removal) and it did not populate the catalog anyway.
+THE CATALOG CAPTURE WAS SILENTLY NOT RUNNING, AND THAT IS A REAL BUG, NOT A TEST ARTEFACT. It looked at first like the headless test simply could not reach it -- a folder loaded, MW::folderChangeCompleted ran, and the catalog stayed empty. It was not the test.
+
+MW::folderChangeCompleted read DataModel::catalogRows() INLINE. catalogRows() skips any row that is not yet G::MetaLoaded, and the writes that set that status arrive from the Reader and Thumb threads as QUEUED setValDm events. MetaRead::done -- which is what calls folderChangeCompleted -- can therefore fire while those events are still sitting in the GUI thread's event queue. catalogRows() then returns an EMPTY list, the `if (!rows.isEmpty())` guard skips the commit, and the folder is never indexed at all. Nothing reports it; the capture is opportunistic and silently doing nothing looks exactly like silently succeeding.
+
+It depends on nothing but timing, which is why the catalog had entries for some folders and not others, and why a headless run indexed nothing: the app exits before the queue drains. Probes confirmed each link -- folderChangeCompleted reached (twice), the catalog available, catalogRows() returning 12 at the selftest exit and 0 at the moment it was actually called.
+
+THE FIX IS TO POST THE CAPTURE rather than run it inline. A queued invocation runs after every event already posted, which is exactly the set of status writes being waited for. A headless run now catalogues 12 of 12 in a raw+jpg folder and 47 of 50 in the mixed one (the other three are videos, which catalogRows skips by design).
+
+catalog_capture IS THE CTEST THAT WAS MISSING. It loads the fixture folder and fails if nothing reached the catalog -- coverage this path never had, which is how it stayed broken. Verified to fail by restoring the inline capture: "catalogued=0 rows=4".
+
+The wait it needs lives in that mode alone and NOT on the default selftest path, because waiting lets pool tasks complete and queue GUI callbacks that then run around the model_contract test's own row removal, which made that gate flaky. The two modes are deliberately separate.
+
+Note that every A/B in this section was run against rows written interactively, since the headless capture did not work while they were being taken. They should be re-run now that it does.
 
 WHAT IS LANDED IS THE MECHANISM AND THE SCHEMA, still off by default. The Width/Height bug above is fixed; what remains between here and turning it on is the capture-date gap and Icon Aspect Ratio, both in the LOADER rather than in the index.
 

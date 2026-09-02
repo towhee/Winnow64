@@ -648,6 +648,29 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         const int rows = dm ? dm->rowCount() : 0;
         fprintf(stderr, "SELFTEST: folder=%s rows=%d\n",
                 folderPath.toLocal8Bit().constData(), rows);
+
+        /*  WINNOW_SELFTEST_CATALOG=1 asserts that the folder just loaded actually
+            reached the catalog. That path had NO automated coverage and was
+            silently broken: MW::folderChangeCompleted read catalogRows() inline,
+            catalogRows() skips any row not yet G::MetaLoaded, and the writes that
+            set that status arrive as queued events -- so the list was often empty
+            and the folder was never indexed. It depended on nothing but timing.
+
+            The wait is here and not on the default path because waiting lets pool
+            tasks queue GUI callbacks that then run around the model-contract
+            test's own row removal, which made that gate flaky. The two modes are
+            deliberately separate. */
+        if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_CATALOG") == 1) {
+            QThreadPool::globalInstance()->waitForDone(30000);
+            const int catalogued = Catalog::instance().count();
+            fprintf(stderr, "SELFTEST: catalogued=%d rows=%d\n", catalogued, rows);
+            fflush(stderr);
+            if (catalogued <= 0) {
+                fprintf(stderr, "SELFTEST: FAIL the folder did not reach the catalog\n");
+                fflush(stderr);
+                std::_Exit(3);
+            }
+        }
         /*  A REMOVAL, so the model-contract run covers more than insertion.
             Loading a folder only ever APPENDS, so with the tester attached and
             nothing else done the begin/endRemoveRows pairing went unchecked --
@@ -4599,7 +4622,20 @@ void MW::folderChangeCompleted()
        thread-safe -- and only the resulting values cross to the pool. Unchanged rows are
        skipped inside commit(), so pacing back and forth between two folders is a read of
        one row per image and no writes at all. */
-    {
+    /*  POSTED, NOT RUN INLINE, and that is a fix rather than a tidy-up.
+
+        catalogRows() skips any row that is not yet G::MetaLoaded, and the writes
+        that set that status arrive from the Reader and Thumb threads as QUEUED
+        setValDm events. MetaRead::done -- which is what brings us here -- can
+        therefore fire while those events are still sitting in the GUI thread's
+        queue, so catalogRows() returns an EMPTY list and the folder is silently
+        not catalogued at all. It depends on nothing but timing, which is why the
+        catalog had entries for some folders and not others, and why a headless
+        run never catalogued anything: the app exits before the queue drains.
+
+        A queued invocation runs after every event already posted, which is
+        exactly the set of status writes being waited for. */
+    QMetaObject::invokeMethod(this, [this]{
         const QVector<CatalogRow> rows = dm->catalogRows();
         if (!rows.isEmpty()) {
             QThreadPool::globalInstance()->start([this, rows]{
@@ -4616,7 +4652,7 @@ void MW::folderChangeCompleted()
                 }, Qt::QueuedConnection);
             });
         }
-    }
+    }, Qt::QueuedConnection);
 
     /* One-shot catalog sweep, paired with the devPreview one above and for the same
        reason: rows whose image is gone should stop appearing in searches. It demotes
