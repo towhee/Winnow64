@@ -19,6 +19,9 @@ set(WINNOW_CORE_TEST_SOURCES
     # no MainWindow), so the closure stays bounded as the comment above requires.
     ${CMAKE_SOURCE_DIR}/Utilities/fileops.cpp
     ${CMAKE_SOURCE_DIR}/Cache/devpreviewcache.cpp
+    # FileOps also keeps the THUMBNAIL index in step on a move or a delete, so the
+    # closure reaches it for the same reason it reaches the develop preview cache.
+    ${CMAKE_SOURCE_DIR}/Cache/thumbcache.cpp
     # The develop preview index lives in the shared local index database.
     ${CMAKE_SOURCE_DIR}/Cache/cachedb.cpp
     # The catalog is the database's second tenant, and tst_devpreview's fixtures share a
@@ -252,7 +255,7 @@ winnow_add_unit_test(tst_filterpredicate unit/tst_filterpredicate.cpp)
 # row. The cases are the ones where a cache can be WRONG rather than empty: a
 # source edited outside Winnow, a sweep that deletes instead of demoting, and
 # eviction that ignores the demoted flag.
-winnow_add_unit_test(tst_thumbcache unit/tst_thumbcache.cpp ../Cache/thumbcache.cpp)
+winnow_add_unit_test(tst_thumbcache unit/tst_thumbcache.cpp)
 
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest

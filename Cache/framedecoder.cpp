@@ -1,5 +1,6 @@
 
 #include "framedecoder.h"
+#include "Cache/thumbcache.h"
 #include "Main/global.h"
 #include <QTimer>
 
@@ -139,6 +140,13 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
         if (macAVFoundationVideoThumbnail(path, longSide, im, durationMs)
             && !im.isNull())
         {
+            /*  Cache the video thumbnail, where the saving is larger than for a
+                still: a still's icon comes from an embedded preview, but this
+                one cost an AVFoundation frame grab -- decoding video to get one
+                picture. See Reader::readIcon for why the write happens at the
+                producer rather than at DataModel::setIconFromVideoFrame. */
+            ThumbCache::instance().putImage(path, im);
+
             emit setFrameIcon(dmRow, im, dmInstance, durationMs, this);
             qint64 usToDecode = t.nsecsElapsed() / 1000;
             emit setValDm(dmRow, G::NSThumbColumn, usToDecode, dmInstance,
@@ -324,6 +332,9 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
                           : im;
 
     if (item.source == "dmThumb" && item.dmRow >= 0) {
+        /*  The Qt Multimedia path to the same picture -- see the AVFoundation
+            branch above for why this is cached here. */
+        if (!scaledIm.isNull()) ThumbCache::instance().putImage(item.fPath, scaledIm);
         qint64 duration = mediaPlayer ? mediaPlayer->duration() : 0;
         /*
         qDebug() << "FrameDecoder::handleFrameChanged emit setFrameIcon"

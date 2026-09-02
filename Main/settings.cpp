@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
+#include "Cache/thumbcache.h"
 
 void MW::writeSetting(QString key, QVariant value)
 {
@@ -82,6 +83,8 @@ void MW::writeSettings()
     settings->setValue("devPreviewMaxEdge", G::devPreviewMaxEdge);
     settings->setValue("devPreviewQuality", G::devPreviewQuality);
     settings->setValue("devPreviewCacheMaxBytes", G::devPreviewCacheMaxBytes);
+    settings->setValue("cacheThumbnails", G::cacheThumbnails);
+    settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
 
     /* ingest (moved to MW::ingest)
@@ -355,6 +358,8 @@ bool MW::loadSettings()
         G::devPreviewMaxEdge = G::kDevPreviewSizeFull;
         G::devPreviewQuality = G::kDevPreviewQualityDefault;
         G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
+        G::cacheThumbnails = true;
+        G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
         checkIfUpdate = true;
@@ -567,12 +572,19 @@ bool MW::loadSettings()
         const qint64 cap = settings->value("devPreviewCacheMaxBytes").toLongLong();
         if (cap >= 256LL * 1024 * 1024) G::devPreviewCacheMaxBytes = cap;
     }
+    if (settings->contains("cacheThumbnails"))
+        G::cacheThumbnails = settings->value("cacheThumbnails").toBool();
+    if (settings->contains("thumbCacheMaxBytes")) {
+        const qint64 cap = settings->value("thumbCacheMaxBytes").toLongLong();
+        if (cap >= 256LL * 1024 * 1024) G::thumbCacheMaxBytes = cap;
+    }
     if (settings->contains("buildDevPreviewsInBackground"))
         G::buildDevPreviewsInBackground =
             settings->value("buildDevPreviewsInBackground").toBool();
     /* The cache reads its index lazily, on first use, so applying the cap here (before any
        folder loads) is early enough and does not force a load. */
     DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);
+    ThumbCache::instance().setMaxBytes(G::thumbCacheMaxBytes);
 
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21

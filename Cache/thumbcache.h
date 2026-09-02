@@ -1,10 +1,16 @@
 #ifndef THUMBCACHE_H
 #define THUMBCACHE_H
 
+#include <QAtomicInteger>
 #include <QByteArray>
+#include <QImage>
+#include <QList>
 #include <QMutex>
+#include <QObject>
 #include <QSqlDatabase>
 #include <QString>
+#include <QThread>
+#include <QWaitCondition>
 
 /*
     THE BROWSING THUMBNAIL, CACHED IN THE INDEX.
@@ -50,8 +56,40 @@
     stall that made DevPreviewCache drop its lock around multi-megabyte file
     I/O; if that ever stops being true, the pattern to copy is next door.
 */
+class ThumbCache;
+
+/*  ONE WRITER, and the handoff is Qt's event queue rather than a queue of
+        our own. The first version was a QThread with a QList, a QMutex and two
+        QWaitConditions; ThreadSanitizer complained about the shared list under
+        real load and the fix was not obvious from the report. A hand-rolled
+        producer/consumer queue is a thing to be argued about at 2am, and this
+        is a CACHE -- it is not worth one. A queued signal is a handoff Qt has
+        already got right.
+
+            Batching survives the change: the worker accumulates into mPending,
+        which only ever exists on the worker's own thread, and a zero-timer
+        flushes the accumulation in one transaction. Nothing is shared, so
+        nothing needs a lock. */
+class ThumbWriter : public QObject
+{
+Q_OBJECT
+public:
+explicit ThumbWriter(ThumbCache *owner) : mOwner(owner) {}
+public slots:
+void take(const QString &fPath, const QImage &im);
+void flushPending();
+private:
+ThumbCache *mOwner;
+        /*  Worker thread only -- never touched from anywhere else, which is the
+            whole point of accumulating here rather than in a shared queue. */
+QList<QPair<QString, QImage>> mPending;
+bool mScheduled = false;
+};
+
+
 class ThumbCache
 {
+    friend class ThumbWriter;
 public:
     static ThumbCache &instance();
 
@@ -66,6 +104,36 @@ public:
         any existing row. A failed write is silently ignored: this is a cache. */
     void put(const QString &fPath, const QByteArray &jpg, int w, int h,
              qint64 srcSize, qint64 srcMtime);
+
+    /*  HAND THE ICON THAT WAS JUST DECODED TO THE WRITER. Returns immediately:
+        the stat, the skip-if-present check, the JPEG encode and the insert all
+        happen on one background thread, batched into transactions.
+
+        IT IS QUEUED BECAUSE DOING IT INLINE WAS MEASURED AND WAS NOT FREE. The
+        first version ran on whichever loader thread produced the image, which
+        seemed reasonable -- already off the GUI thread, image already in hand.
+        Over 50 mixed raw files it cost:
+
+            caching off                29.6 ms per icon
+            inline, index empty        43.7 ms per icon   (+47%)
+            inline, index already full 34.1 ms per icon   (+15%)
+
+        The encode is a small part of that. The rest is SQLite: every statement
+        was its own transaction, and several reader threads were serialising on
+        one writer -- so even the WARM case, which does nothing but one indexed
+        SELECT and then skips, cost 4.5 ms an icon. One writer thread committing
+        in batches removes both, and the loaders go back to paying nothing.
+
+        THE QUEUE IS BOUNDED and drops when full rather than growing. A queued
+        QImage is a quarter of a megabyte, so an unbounded backlog behind a slow
+        disk is a memory leak with a good excuse. Dropping is free of
+        consequence -- this is a cache, and the next visit to the folder offers
+        the thumbnail again. */
+    void putImage(const QString &fPath, const QImage &im);
+
+    /*  Finish what is queued and stop the writer. Called at shutdown; also what
+        a test calls to make an asynchronous write observable. */
+    void flush();
 
     /*  The cached JPEG for fPath, or an empty QByteArray on a miss or a source
         that has changed since. A hit is marked most-recently-used. */
@@ -86,9 +154,30 @@ public:
     int count() const;
     qint64 totalBytes() const;
 
+    /*  How many thumbnails the writer has actually ENCODED AND STORED this
+        session -- not how many were offered. The difference is the skip: a
+        revisited folder offers every thumbnail again and stores none of them.
+
+        It exists because that distinction is otherwise invisible. Re-encoding
+        an unchanged image produces byte-identical output, so a test that
+        watched the row count or the total bytes could not tell a skip from a
+        rewrite -- and did not, until deleting the skip failed to fail it. */
+    qint64 written() const { return mWritten.loadRelaxed(); }
+
 private:
     ThumbCache() = default;
+    ~ThumbCache();
     Q_DISABLE_COPY(ThumbCache)
+
+    void startWriterLocked();
+    /*  The bodies of put() and contains() without the lock, so writeBatch can
+        call them inside the one transaction it already holds the lock for. */
+    void putLocked(QSqlDatabase &db, const QString &fPath, const QByteArray &jpg,
+                   int w, int h, qint64 srcSize, qint64 srcMtime);
+    bool containsLocked(QSqlDatabase &db, const QString &fPath,
+                        qint64 srcSize, qint64 srcMtime) const;
+    /*  Write one batch inside a single transaction. Writer thread only. */
+    void writeBatch(const QList<QPair<QString, QImage>> &batch);
 
     QSqlDatabase dbLocked() const;
     /*  Drop rows until the total is within the cap: demoted first, then least
@@ -97,6 +186,15 @@ private:
 
     mutable QMutex mMutex;
     qint64 mMaxBytes = 5LL * 1024 * 1024 * 1024;   // 5 GB; see setMaxBytes
+    QThread *mThread = nullptr;
+    ThumbWriter *mWriter = nullptr;
+    QAtomicInteger<qint64> mWritten = 0;
+    /*  How many jobs have been posted and not yet written. Checked before
+        posting so the backlog stays bounded -- a queued QImage is a quarter of
+        a megabyte, and an unbounded one behind a slow disk is a memory leak
+        with a good excuse. Dropping costs nothing: the next visit offers the
+        thumbnail again. */
+    QAtomicInteger<int> mInFlight = 0;
 };
 
 #endif // THUMBCACHE_H

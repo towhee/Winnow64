@@ -1,4 +1,5 @@
 #include "reader.h"
+#include "Cache/thumbcache.h"
 #include "Main/global.h"
 
 Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
@@ -277,6 +278,17 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     if (loadedIcon) {
+        /*  Cache the thumbnail in the local index BEFORE handing it to the GUI.
+            Here rather than at DataModel::setIcon1 because this is already off
+            the GUI thread and the image is already in hand -- setIcon1 runs on
+            the GUI thread, where a JPEG encode and a database write per icon
+            would land squarely on the load path that folder-load latency work
+            has repeatedly had to defend. ThumbCache::putImage skips the encode
+            it returns immediately, handing the image to one batching writer
+            thread -- doing the work inline here was measured at +47% on the
+            icon path, see putImage in Cache/thumbcache.h. */
+        if (!image.isNull()) ThumbCache::instance().putImage(fPath, image);
+
         /* Thumb::loadThumb already scaled to G::maxIconSize (thumbMax), aspect-kept and
            RGB32, so the prior second scale here was a redundant resample + allocation per
            icon. Emit the loaded image directly. */

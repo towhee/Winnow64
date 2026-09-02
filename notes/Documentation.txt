@@ -69,6 +69,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Settling Search and Ingested (and a Fact That Was Wrong)
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
      Thumbnails in the Index (Schema 5)
+     Writing Thumbnails as They Load (and What It Costs)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -977,7 +978,37 @@ THE MIGRATION IS THE PATH THAT ACTUALLY RUNS IN THE FIELD. Every existing user h
 
 tst_catalog's VERSION LITERAL IS A TRIPWIRE and was left as one. Bumping kSchemaVersion fails it on purpose, so whoever bumps it has to confirm that every tenant of the shared file still coexists at the new version and add the new tenant's tables to the list. The migration case beside it now compares against CacheDb::schemaVersion() instead, because what it is about is that a version 3 file migrates all the way UP, not which number it stops at.
 
-NOT WIRED IN YET. This is the store and its policy only: nothing writes to it from a folder load and nothing reads from it when an icon is missing. Those are the next two steps, and the WRITE half is the one worth having first -- indexing a real library is hours of background scanning, so the sooner it starts the sooner the read half has anything to find.
+The WRITE half is below. The READ half -- serving a missing icon from the index instead of decoding -- is still to come; the write half comes first because indexing a real library is hours of background scanning, so the sooner it starts the sooner the read half has anything to find.
+
+⏺ DataModel Changes > Writing Thumbnails as They Load (and What It Costs)
+
+WRITTEN AT THE PRODUCER, NOT AT THE MODEL. Reader::readIcon and FrameDecoder both have the decoded image in hand and are already off the GUI thread; DataModel::setIcon1 has it too but runs ON the GUI thread, where a JPEG encode and a database write per icon would land squarely on the load path that folder-load latency work has repeatedly had to defend. ThumbCache::putImage is the single entry point both call, so the encode, the staleness stamp and the skip-if-present check exist once rather than at each producer.
+
+THE VIDEO CASE IS WORTH MORE THAN THE STILL. A still's icon comes from an embedded preview; a video's costs an AVFoundation frame grab -- decoding video to get one picture -- so both video paths write too.
+
+IT WAS NOT FREE, AND THE FIRST VERSION MEASURED BADLY. Doing the work inline on the loader thread seemed obviously right: already off the GUI thread, image already in hand. Over 50 mixed raw files, median of five runs, microseconds per icon:
+
+    caching off                  30.1 ms
+    inline, index empty          43.7 ms     +47%
+    inline, index already full   34.1 ms     +15%
+
+The encode is a small part of that. The rest is SQLite: every statement was its own transaction, and several reader threads were serialising on one writer -- so even the WARM case, which does nothing but one indexed SELECT and then skips, cost 4.5 ms an icon. That is the whole reason the writer exists.
+
+ONE WRITER THREAD, BATCHED TRANSACTIONS, and the loaders now hand over and return:
+
+    caching off                  30.1 ms
+    queued, index empty          39.0 ms     +30%   (the encode, once per image ever)
+    queued, index already full   32.2 ms     within the run-to-run spread of "off"
+
+The remaining cold cost is the encoding itself competing for CPU with the readers, which is work that has to happen somewhere; it is paid once per image for the life of the index, and G::cacheThumbnails turns it off. The warm figure is the one that matters for daily use, and it is inside the noise band that "off" alone produced (27.7-32.1 ms).
+
+THE HANDOFF IS A QUEUED SIGNAL, NOT A QUEUE OF OUR OWN, and that was the second attempt. The first was a QThread with a QList, a QMutex and two QWaitConditions, and ThreadSanitizer complained about the shared list under real load -- both accesses appeared to hold the same mutex, which is not a report that leads anywhere quickly. A hand-rolled producer/consumer queue is a thing to be argued about at 2am, and this is a cache: it is not worth one. The worker is a QObject on its own thread now, jobs arrive by queued signal, and batching happens in a list that only ever exists on the worker's thread -- so nothing is shared and nothing needs a lock. flush() is a BLOCKING queued invoke, which cannot run until everything ahead of it has: no condition variable, no busy-wait.
+
+THE BACKLOG IS BOUNDED AND DROPS. A queued QImage is a quarter of a megabyte, so an unbounded backlog behind a slow disk is a memory leak with a good excuse. Dropping costs nothing -- the next visit to the folder offers the thumbnail again.
+
+A TEST THAT COULD NOT SEE THE THING IT TESTED. The skip-if-present check was verified by asserting that a second putImage of an unchanged file left the row count and the total bytes alone -- and deleting the skip did not fail it, because re-encoding an unchanged image produces byte-identical output. ThumbCache::written() now counts what the writer actually encoded and stored, which is the only way that distinction is visible, and re-injecting the missing skip fails by name.
+
+DISCOVERABLE, per the standing rule. "Cache thumbnails" and "Thumbnail cache size" sit beside the developed-preview settings in Preferences, because both answer "what does Winnow keep on disk so it does not have to decode again" and someone looking for one will look for the other in the same place. Both persist. Moves and deletes go through Utilities/fileops.h with the rest, so a renamed file keeps its thumbnail.
 
 ⏺ DataModel Changes > Sort Change
 

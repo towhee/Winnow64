@@ -7,6 +7,7 @@
 
 #include "Cache/cachedb.h"
 #include "Cache/thumbcache.h"
+#include "Main/global.h"
 
 /*
     THE THUMBNAIL INDEX.
@@ -46,6 +47,7 @@ private slots:
     void evictionDropsDemotedFirstThenLeastRecentlyUsed();
     void sweepDemotesMissingFilesAndRevivesReturningOnes();
     void moveAndDeleteFollowTheFile();
+    void putImageQueuesAndSkipsWhatIsAlreadyThere();
 
 private:
     QTemporaryDir *tmp = nullptr;
@@ -327,6 +329,54 @@ void tst_thumbcache::moveAndDeleteFollowTheFile()
 
     t.onDeleted(dst);
     QCOMPARE(t.count(), 0);
+}
+
+void tst_thumbcache::putImageQueuesAndSkipsWhatIsAlreadyThere()
+{
+    /*  putImage() is ASYNCHRONOUS -- it hands the image to one batching writer
+        thread and returns, because doing the encode and the insert inline on
+        the loader thread was measured at +47% on the icon path (the numbers are
+        in Cache/thumbcache.h). flush() is what makes the write observable, here
+        and at shutdown.
+
+        The second half is the one that matters for cost: a folder revisited
+        must not re-encode everything in it. The writer checks the index before
+        encoding, so the second putImage of the same unchanged file writes
+        nothing. */
+    ThumbCache &t = ThumbCache::instance();
+    G::cacheThumbnails = true;
+
+    const QString p = makeFile("q1.jpg");
+    const auto st = stampOf(p);
+    QImage im(120, 80, QImage::Format_RGB32);
+    im.fill(Qt::darkCyan);
+
+    t.putImage(p, im);
+    t.flush();
+    QVERIFY2(t.contains(p, st.first, st.second), "putImage did not reach the index");
+    const qint64 afterFirst = t.totalBytes();
+    QVERIFY(afterFirst > 0);
+
+    /*  Same file, unchanged: the writer must SKIP it rather than re-encode.
+        Checked with written(), not with count() or totalBytes() -- re-encoding
+        an unchanged image produces byte-identical output, so neither of those
+        can tell a skip from a rewrite. The weaker version was written first and
+        deleting the skip did not fail it. */
+    const qint64 wroteOnce = t.written();
+    t.putImage(p, im);
+    t.flush();
+    QCOMPARE(t.count(), 1);
+    QCOMPARE(t.totalBytes(), afterFirst);
+    QVERIFY2(t.written() == wroteOnce, "an unchanged image was re-encoded");
+
+    /*  And the switch really switches it off -- the preference has to mean
+        something, not just persist. */
+    G::cacheThumbnails = false;
+    const QString p2 = makeFile("q2.jpg");
+    t.putImage(p2, im);
+    t.flush();
+    QCOMPARE(t.count(), 1);
+    G::cacheThumbnails = true;
 }
 
 QTEST_MAIN(tst_thumbcache)
