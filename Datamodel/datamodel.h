@@ -20,6 +20,52 @@
 
 #include <QAbstractItemModelTester>
 
+/*
+    WHAT SET OF IMAGES THE MODEL IS SHOWING, as ONE description.
+
+    Winnow fills the model two ways -- a folder (or a folder tree) picked in the
+    Folders/Bookmarks panel, and a catalog search picked in the Find dock -- and until
+    now those were two functions with two call sites and nothing that named the thing
+    they have in common. They ARE the same thing: a predicate over the catalogue of
+    images, differing only in whether the filesystem is also walked to reconcile what
+    the index believes against what is actually on disk.
+
+    A folder scope is the query with a folder/subtree predicate PLUS that reconcile; a
+    catalog scope is the same query without it. Holding it as one struct is what lets
+    the model answer "what am I showing" -- which is what a reload, a refresh and the
+    reconcile write-back all need, and none of them could ask before.
+
+    paths IS CARRIED RATHER THAN RE-RESOLVED for catalog scope. The Find dock has
+    already run the search (it shows the count), so resolving the query a second time
+    here would be a second pass over the index for an answer we were handed.
+*/
+struct ScopeRequest
+{
+    G::Scope scope = G::Scope::Folders;
+
+    /* What defines the set. For folder scope, query.folder is the folder and recurse
+       says whether its subtree is included; for catalog scope it is what the user
+       asked the Find dock for. */
+    CatalogQuery query;
+
+    /* Catalog scope only: the result set the dock resolved. */
+    QStringList paths;
+
+    /* Folder scope only. subDirs is the pre-walked subtree (Utilities::subFolderTree),
+       consumed rather than re-walked. */
+    bool recurse = false;
+    G::FolderOp op = G::FolderOp::Add;
+    QStringList subDirs;
+
+    /* Add to what is loaded rather than replacing it. */
+    bool append = false;
+
+    /* Walk the filesystem to reconcile the set. True for folder scope, where the
+       directory listing IS the truth; false for a search result, which is a list of
+       files from many folders with no directory to enumerate. */
+    bool reconcile = true;
+};
+
 class SortFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
@@ -241,11 +287,6 @@ public:
 
     void removeFolder(const QString &folderPath);
 
-    /* Load an arbitrary set of image paths as one virtual folder -- the catalog search
-       result. Unlike every other load path this does not start from a directory, because
-       the results routinely span many. See the .cpp. */
-    void addPaths(const QStringList &fPaths);
-
     QMutex dmMutex;
     QReadWriteLock fPathRowLock;
     QReadWriteLock fPathRawInfoLock;
@@ -427,6 +468,12 @@ signals:
     void memoryOverrun(quint64 footprintMB, quint64 capMB);
 
 public slots:
+    /*  THE ONE WAY THE MODEL IS FILLED. Both load paths -- a folder picked in the tree
+        and a search resolved by the Find dock -- come through here, so the model always
+        knows what set it is showing. See ScopeRequest above and the .cpp. */
+    void setScope(const ScopeRequest &req);
+    const ScopeRequest &scopeRequest() const { return currentScope; }
+
     void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false,
                                 const QStringList &subDirs = QStringList());
     void addAllMetadata();
@@ -542,7 +589,16 @@ private:
 
     QItemSelection savedSelection;
 
+    /*  What setScope was last asked for. The model's own answer to "what am I
+        showing", which a reload, a refresh and the reconcile write-back all need. */
+    ScopeRequest currentScope;
+
     void addFolder(const QString &folderPath);
+
+    /* Load an arbitrary set of image paths as one virtual folder -- the catalog search
+       result. Unlike every other load path this does not start from a directory, because
+       the results routinely span many. Reached through setScope, like addFolder. */
+    void addPaths(const QStringList &fPaths);
     // void removeFolder(const QString &folderPath);
     bool endLoad(bool success);
     // bool addFileData();

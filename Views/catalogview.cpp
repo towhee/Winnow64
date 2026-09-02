@@ -195,11 +195,11 @@ CatalogView::CatalogView(QWidget *parent)
             });
 
     connect(loadBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results, false);
+        if (!results.isEmpty()) emit loadResults(results, false, currentQuery());
     });
 
     connect(addBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results, true);
+        if (!results.isEmpty()) emit loadResults(results, true, currentQuery());
     });
 
     connect(manageRootsBtn, &QPushButton::clicked, this,

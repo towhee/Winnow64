@@ -499,7 +499,8 @@ public slots:
     /* Load a catalog search result -- images from any number of folders as one set.
        append = false REPLACES what is loaded (the same reset as a folder change);
        append = true adds to it, the way ctrl-clicking a second folder does. */
-    void loadCatalogResults(const QStringList &paths, bool append = false);
+    void loadCatalogResults(const QStringList &paths, bool append = false,
+                            const CatalogQuery &query = CatalogQuery());
     /* Start / stop the background scan over catalogRoots. */
     void startCatalogScan();
     void stopCatalogScan();

@@ -123,10 +123,10 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     });
 
     connect(loadBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results, false);
+        if (!results.isEmpty()) emit loadResults(results, false, currentQuery());
     });
     connect(addBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results, true);
+        if (!results.isEmpty()) emit loadResults(results, true, currentQuery());
     });
     connect(manageRootsBtn, &QPushButton::clicked, this,
             &FindPanel::manageRootsRequested);
@@ -325,7 +325,7 @@ void FindPanel::runSearch()
             enforces: runSearch only reaches here 250 ms after the last keystroke.
     */
     if (results != previous && !results.isEmpty() && results.size() <= autoLoadMax())
-        emit loadResults(results, false);
+        emit loadResults(results, false, currentQuery());
 }
 
 void FindPanel::updateFooter()

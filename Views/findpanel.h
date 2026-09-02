@@ -95,7 +95,10 @@ public:
 signals:
     /* The user asked for these paths. append = true adds them to what is already loaded
        instead of replacing it. MW owns what either means. */
-    void loadResults(const QStringList &paths, bool append);
+    /*  THE QUERY TRAVELS WITH THE RESULT. The paths are what to load; the query is
+        what the user asked for, and the model keeps it as its ScopeRequest so a
+        reload or a refresh has something to re-run. */
+    void loadResults(const QStringList &paths, bool append, const CatalogQuery &query);
     /* Open the Catalogued Folders editor. */
     void manageRootsRequested();
     /* Back in Folders scope: the tree is holding the CATALOG's values and must be rebuilt

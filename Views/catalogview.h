@@ -69,7 +69,10 @@ signals:
     /* The user asked for these paths to be loaded into the datamodel. append = true adds
        them to what is already loaded instead of replacing it. MW owns what either means;
        this widget never touches the model. */
-    void loadResults(const QStringList &paths, bool append);
+    /*  THE QUERY TRAVELS WITH THE RESULT. The paths are what to load; the query is
+        what the user asked for, and the model keeps it as its ScopeRequest so a
+        reload or a refresh has something to re-run. */
+    void loadResults(const QStringList &paths, bool append, const CatalogQuery &query);
     /* Open the Catalogued Folders dialog -- which folders are indexed, and Scan Now. */
     void manageRootsRequested();
 
