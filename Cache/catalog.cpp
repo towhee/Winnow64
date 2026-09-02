@@ -473,6 +473,107 @@ QSet<QString> Catalog::staleOf(const QList<CatalogRow> &candidates)
     return stale;
 }
 
+QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidates)
+{
+/*
+    staleOf() read the other way round -- see the declaration for why both exist.
+
+    ONE PREPARED STATEMENT REUSED, not one query per path built from scratch, and no
+    "WHERE pathkey IN (...)": a folder of 5,000 images would put 5,000 bound values in
+    one statement, and SQLite's parameter limit is smaller than that on some builds. The
+    lookup is on the primary key, so the loop is 5,000 index seeks, which is what an IN
+    would have compiled to anyway.
+
+    THE KEYWORDS COME BACK TOO, and they are the reason this is worth doing at all: they
+    are the expensive part of a metadata read, because they live in the sidecar rather
+    than in the file's own header, and reconstructing them here is two more indexed
+    joins rather than opening and parsing an XML document per image.
+*/
+    QHash<QString, CatalogRow> out;
+    if (candidates.isEmpty()) return out;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    /*  No catalog means nothing is fresh: the caller reads every file, which is exactly
+        what it did before this existed. */
+    if (!db.isOpen()) return out;
+
+    QSqlQuery q(db);
+    q.prepare("SELECT id, srcsize, srcmtime, sidecarmtime,"
+              " path, folder, filename, ext,"
+              " captured, rating, label, pick, title, creator, copyright,"
+              " make, model, lens, iso, aperture, shutter, focallength,"
+              " width, height, gpscoord"
+              " FROM image WHERE pathkey = ? AND live = 1");
+
+    QSqlQuery kw(db);
+    kw.prepare("SELECT k.name FROM keyword k"
+               " JOIN image_keyword ik ON ik.keyword_id = k.id"
+               " WHERE ik.image_id = ?");
+
+    for (const CatalogRow &cand : candidates) {
+        if (cand.path.isEmpty()) continue;
+        q.addBindValue(cachePathKey(cand.path));
+        if (!q.exec() || !q.next()) { q.finish(); continue; }
+
+        /*  THE SAME COMPARISON staleOf MAKES, and it has to stay the same: a row this
+            says is fresh is a row the loader will not read, and a row staleOf says is
+            fresh is a row the scanner will not index. If they ever disagree, an image
+            can be both skipped and unindexed -- invisible, and permanently so, because
+            nothing would revisit it until its file changed. */
+        const bool fresh = q.value(1).toLongLong() == cand.srcSize
+                           && q.value(2).toLongLong() == cand.srcMtime
+                           && q.value(3).toLongLong() == cand.sidecarMtime;
+        if (!fresh) { q.finish(); continue; }
+
+        const qint64 id = q.value(0).toLongLong();
+        CatalogRow r;
+        /*  The path AS THE CALLER SPELLED IT, not as the catalog stored it. The two are
+            the same file but not always the same string, and the caller looks the result
+            up by what it passed in. */
+        r.path = cand.path;
+        r.srcSize = cand.srcSize;
+        r.srcMtime = cand.srcMtime;
+        r.sidecarMtime = cand.sidecarMtime;
+        r.folder = q.value(5).toString();
+        r.filename = q.value(6).toString();
+        r.ext = q.value(7).toString();
+        r.captured = q.value(8).toDateTime();
+        r.rating = q.value(9).toInt();
+        r.label = q.value(10).toString();
+        r.pick = q.value(11).toBool();
+        r.title = q.value(12).toString();
+        r.creator = q.value(13).toString();
+        r.copyright = q.value(14).toString();
+        r.make = q.value(15).toString();
+        r.model = q.value(16).toString();
+        r.lens = q.value(17).toString();
+        r.iso = q.value(18).toInt();
+        r.aperture = q.value(19).toDouble();
+        r.shutter = q.value(20).toDouble();
+        r.focalLength = q.value(21).toDouble();
+        r.width = q.value(22).toInt();
+        r.height = q.value(23).toInt();
+        r.gpsCoord = q.value(24).toString();
+        q.finish();
+
+        kw.addBindValue(id);
+        if (kw.exec()) while (kw.next()) r.keywords << kw.value(0).toString();
+        kw.finish();
+
+        /*  keywordPaths is NOT reconstructed, and cannot be: schema 4 flattened the
+            hierarchy to node names and keyword_context keeps only (child, parent) pairs,
+            so the original "A|B|C" spelling is gone. Nothing that reads a row back needs
+            it -- it exists to be written INTO the context table, not read out of it --
+            but a caller that assumed a fetched row round-trips to commit() unchanged
+            would quietly drop the contexts. Left empty rather than half-reconstructed so
+            that assumption fails loudly if anyone makes it. */
+
+        out.insert(cand.path, r);
+    }
+    return out;
+}
+
 /* ---------------------------------------------------------------------------------
    Search
    --------------------------------------------------------------------------------- */

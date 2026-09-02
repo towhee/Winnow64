@@ -41,6 +41,8 @@ private slots:
     void pathSpellingDoesNotSplitTheRow();
     void keywordCategoryCountsImages();
     void staleOfReportsOnlyWhatChanged();
+    void fetchFreshReturnsWhatNeedNotBeRead();
+    void fetchFreshAndStaleOfAgreeExactly();
     void sweepDemotesMissingSource();
     void onMovedFollowsTheImage();
     void onDeletedRemovesTheRow();
@@ -307,6 +309,117 @@ void tst_catalog::staleOfReportsOnlyWhatChanged()
     // never seen before
     const CatalogRow fresh = rowFor("h3.nef");
     QVERIFY(cat.staleOf({fresh}).contains(fresh.path));
+}
+
+void tst_catalog::fetchFreshReturnsWhatNeedNotBeRead()
+{
+    /*  THE INDEX AS A METADATA SOURCE. A row the catalog already holds, whose
+        file has not changed, can be handed to the loader instead of being read
+        off disk -- which is the whole point: a metadata read opens the file,
+        walks its header and, for keywords, parses a sidecar XML document. */
+    Catalog &cat = Catalog::instance();
+
+    CatalogRow a = rowFor("fetch1.jpg", {"Heron"}, {"Wildlife|Birds|Heron"});
+    a.title = "Great Blue";
+    a.creator = "R Hill";
+    a.make = "NIKON CORPORATION";
+    a.model = "NIKON Z 9";
+    a.lens = "NIKKOR Z 400mm f/4.5";
+    a.iso = 800;
+    a.aperture = 5.6;
+    a.shutter = 0.0008;
+    a.focalLength = 400;
+    a.width = 8256;
+    a.height = 5504;
+    a.rating = 4;
+    a.label = "Red";
+    a.gpsCoord = "49.28,-123.12";
+    QCOMPARE(cat.commit({a}), 1);
+
+    const QHash<QString, CatalogRow> got = cat.fetchFresh({a});
+    QCOMPARE(got.size(), 1);
+    QVERIFY2(got.contains(a.path), "keyed by the path AS SUPPLIED");
+
+    const CatalogRow &r = got.value(a.path);
+    QCOMPARE(r.title, QString("Great Blue"));
+    QCOMPARE(r.creator, QString("R Hill"));
+    QCOMPARE(r.model, QString("NIKON Z 9"));
+    QCOMPARE(r.lens, QString("NIKKOR Z 400mm f/4.5"));
+    QCOMPARE(r.iso, 800);
+    QCOMPARE(r.aperture, 5.6);
+    QCOMPARE(r.focalLength, 400.0);
+    QCOMPARE(r.width, 8256);
+    QCOMPARE(r.height, 5504);
+    QCOMPARE(r.rating, 4);
+    QCOMPARE(r.label, QString("Red"));
+    QCOMPARE(r.gpsCoord, QString("49.28,-123.12"));
+
+    /*  The keywords are the expensive half of a metadata read -- they live in
+        the sidecar, not the file header -- so getting them back is most of the
+        saving. Flat, as everything downstream of schema 4 expects. */
+    QSet<QString> kws(r.keywords.begin(), r.keywords.end());
+    QVERIFY2(kws.contains("Heron"), "the leaf keyword did not come back");
+    QVERIFY2(kws.contains("Wildlife"), "an ancestor did not come back");
+    QVERIFY2(kws.contains("Birds"), "an ancestor did not come back");
+
+    /*  A file that changed is ABSENT rather than stale: it is the gap the
+        reader still has to fill. */
+    CatalogRow changed = a;
+    changed.srcMtime += 1;
+    QVERIFY2(cat.fetchFresh({changed}).isEmpty(),
+             "a changed file must not be answered from the index");
+
+    // and one that was never catalogued at all
+    QVERIFY(cat.fetchFresh({rowFor("never-catalogued.jpg")}).isEmpty());
+}
+
+void tst_catalog::fetchFreshAndStaleOfAgreeExactly()
+{
+    /*  THE INVARIANT THAT MATTERS MOST HERE. staleOf tells the scanner what to
+        INDEX; fetchFresh tells the loader what it need not READ. They apply the
+        same freshness stamp from opposite sides, and if they ever disagree an
+        image could be both skipped by the loader and ignored by the scanner --
+        invisible, and permanently so, because nothing would revisit it until
+        its file changed on disk. */
+    Catalog &cat = Catalog::instance();
+
+    const CatalogRow a = rowFor("agree1.jpg", {"A"});
+    const CatalogRow b = rowFor("agree2.jpg", {"B"});
+    const CatalogRow c = rowFor("agree3.jpg", {"C"});
+    /*  d differs ONLY in its sidecar stamp -- a keyword edited in Lightroom,
+        which rewrites the .xmp and never touches the raw. It is here because
+        the first version of this case varied only srcSize, and an injected
+        fetchFresh that ignored sidecarMtime entirely still passed: the two
+        sides can disagree on a field the test never varies. */
+    CatalogRow d = rowFor("agree4.jpg", {"D"});
+    d.sidecarMtime = 1600000000;
+    const CatalogRow c2 = c;
+
+    QCOMPARE(cat.commit({a, b, d}), 3);    // c is never catalogued
+
+    CatalogRow bChanged = b;
+    bChanged.srcSize += 10;                // b has been edited since
+    CatalogRow dResaved = d;
+    dResaved.sidecarMtime += 1;            // only the sidecar moved
+
+    const QList<CatalogRow> candidates { a, bChanged, c2, dResaved };
+    const QSet<QString> stale = cat.staleOf(candidates);
+    const QHash<QString, CatalogRow> fresh = cat.fetchFresh(candidates);
+
+    for (const CatalogRow &r : candidates) {
+        const bool isStale = stale.contains(r.path);
+        const bool isFresh = fresh.contains(r.path);
+        QVERIFY2(isStale != isFresh,
+                 qPrintable(QString("%1: stale=%2 fresh=%3 -- the two must partition")
+                                .arg(r.filename).arg(isStale).arg(isFresh)));
+    }
+    QVERIFY(fresh.contains(a.path));
+    QVERIFY(stale.contains(bChanged.path));
+    QVERIFY(stale.contains(c.path));
+    QVERIFY2(stale.contains(dResaved.path),
+             "a re-saved sidecar must make the row stale on both sides");
+    QVERIFY2(!fresh.contains(dResaved.path),
+             "a re-saved sidecar must not be answered from the index");
 }
 
 void tst_catalog::sweepDemotesMissingSource()
