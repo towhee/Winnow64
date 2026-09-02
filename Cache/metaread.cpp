@@ -1814,6 +1814,25 @@ void MetaRead::allFinished(QString src)
             << " idxHit="        << G::probeIndexMetaHits.load(std::memory_order_relaxed)
             << " idxMiss="       << G::probeIndexMetaMisses.load(std::memory_order_relaxed)
             << " wall(ms)="      << ms;                                   // folderChanged -> done
+
+        /*  WHERE THE ICON TIME GOES. Icons are ~95% of this phase, and the ~20 ms had
+            never been broken down. Summed across the Reader threads, so these add up to
+            more than wall(ms); they are comparable to EACH OTHER, not to the clock. */
+        const int icons = G::probeIconCount.load(std::memory_order_relaxed);
+        auto ms_ = [](std::atomic<qint64> &a) {
+            return QString::number(a.load(std::memory_order_relaxed) / 1.0e6, 'f', 1);
+        };
+        qDebug().noquote()
+            << "[PERF] Phase2 icons"
+            << " icons="        << icons
+            << " cacheHit="     << G::probeIconCacheHits.load(std::memory_order_relaxed)
+            << " cacheMiss="    << G::probeIconCacheMisses.load(std::memory_order_relaxed)
+            << " cacheGet(ms)=" << ms_(G::probeIconCacheGetNs)
+            << " devThumb(ms)=" << ms_(G::probeIconDevThumbNs)
+            << " load(ms)="     << ms_(G::probeIconLoadNs)
+            << " scale(ms)="    << ms_(G::probeIconScaleNs)
+            << " orient(ms)="   << ms_(G::probeIconOrientNs)
+            << " thumbCache(ms)=" << ms_(G::probeIconCacheNs);
     }
     /*
     qDebug() << fun << "Elapsed ms =" << ms

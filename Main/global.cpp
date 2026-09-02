@@ -263,6 +263,15 @@ bool isDevelopDebounceWrite = true;     // also flush per-image develop settings
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 std::atomic<int> probeIndexMetaHits{0};   // rows filled from the local index (Phase-2 probe)
 std::atomic<int> probeIndexMetaMisses{0}; // rows the index could not answer (Phase-2 probe)
+std::atomic<qint64> probeIconDevThumbNs{0};  // icon decomposition (Phase-2 probe)
+std::atomic<qint64> probeIconLoadNs{0};
+std::atomic<qint64> probeIconScaleNs{0};
+std::atomic<qint64> probeIconOrientNs{0};
+std::atomic<qint64> probeIconCacheNs{0};
+std::atomic<qint64> probeIconCacheGetNs{0};
+std::atomic<int>    probeIconCacheHits{0};
+std::atomic<int>    probeIconCacheMisses{0};
+std::atomic<int>    probeIconCount{0};
 
 // status
 // bool isModifyingDatamodel;

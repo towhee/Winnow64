@@ -516,6 +516,19 @@ bool Thumb::loadDevThumb(QString &fPath, QImage &image)
     return true;
 }
 
+/*  Accumulate an interval into one of the icon-decomposition probes (G::isPerfProbe).
+    Atomic because the Reader threads all run this concurrently; the totals therefore sum
+    to more than the wall clock, which is what makes them comparable to each other. */
+struct ScopedIconNs {
+    std::atomic<qint64> &acc;
+    QElapsedTimer t;
+    bool on;
+    ScopedIconNs(std::atomic<qint64> &a, bool on_) : acc(a), on(on_) { if (on) t.start(); }
+    ~ScopedIconNs() {
+        if (on) acc.fetch_add(t.nsecsElapsed(), std::memory_order_relaxed);
+    }
+};
+
 bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
                       const ImageMetadata &m, QString src)
 {
@@ -581,9 +594,13 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
        before the tail below, which scales and applies checkOrientation. The preview comes
        out of developCompositeStack already rotated and cropped, so running it through
        that tail would rotate it a second time. */
-    if (!abort && loadDevThumb(fPath, image)) {
-        setIdle();
-        return true;
+    {
+        ScopedIconNs _t(G::probeIconDevThumbNs, G::isPerfProbe);
+        if (!abort && loadDevThumb(fPath, image)) {
+            setIdle();
+            if (G::isPerfProbe) G::probeIconCount.fetch_add(1, std::memory_order_relaxed);
+            return true;
+        }
     }
 
     // check permissions
@@ -615,6 +632,13 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
     Status status = Status::None;
     int attempts = 0;
     int maxAttempts = 10;
+
+    /*  THE LOADER LOOP IS THE FIRST OF THE FIVE PROBED STAGES -- the file read and the
+        JPEG (or HEIC/TIFF) decode. The 100 ms retry waits are inside it and are counted
+        separately by G::probeThumbRetryCount, so a large load(ms) with a nonzero
+        thumbRetries is contention, not decode. */
+    QElapsedTimer tLoad;
+    if (G::isPerfProbe) tLoad.start();
 
     // try up to 10 times if file is open (probably ImageCaching)
     while ((status == Status::None || status == Status::Open) && attempts < maxAttempts) {
@@ -686,18 +710,30 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     }
 
+    /*  Closes the load(ms) interval. A read that aborted early returns above without
+        recording, which is what we want: an aborted read is not a decode. */
+    if (G::isPerfProbe)
+        G::probeIconLoadNs.fetch_add(tLoad.nsecsElapsed(), std::memory_order_relaxed);
+
     if (abort) {idle = true; return false;}
 
     QFile(fPath).setPermissions(oldPermissions);
 
     if (status == Status::Success) {
-        // scale to max icon size
-        image = image.scaled(thumbMax, Qt::KeepAspectRatio);
-        image.convertTo(QImage::Format_RGB32);
+        {
+            ScopedIconNs _t(G::probeIconScaleNs, G::isPerfProbe);
+            // scale to max icon size
+            image = image.scaled(thumbMax, Qt::KeepAspectRatio);
+            image.convertTo(QImage::Format_RGB32);
+        }
 
         // rotate if there is orientation metadata
         if (!abort)
-            if (metadata->rotateFormats.contains(ext)) checkOrientation(image, m.orientation, m.rotationDegrees);
+            if (metadata->rotateFormats.contains(ext)) {
+                ScopedIconNs _t(G::probeIconOrientNs, G::isPerfProbe);
+                checkOrientation(image, m.orientation, m.rotationDegrees);
+            }
+        if (G::isPerfProbe) G::probeIconCount.fetch_add(1, std::memory_order_relaxed);
     }
 
     setIdle();

@@ -19,6 +19,11 @@ namespace {
     frozen scroll. DevPreviewCache's sweep is paged for the same reason. */
 constexpr int kPageRows = 2000;
 
+/*  How stale the LRU `used` stamp may get before a read refreshes it. See get():
+    refreshing it on EVERY read makes a cache hit cost a WAL commit, and used only
+    orders eviction -- a day's granularity is all that ordering needs. */
+constexpr qint64 kUsedStampMaxAgeSecs = 24 * 60 * 60;
+
 qint64 nowSecs() { return QDateTime::currentSecsSinceEpoch(); }
 }
 
@@ -235,7 +240,7 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
     if (!db.isOpen()) return QByteArray();
 
     QSqlQuery q(db);
-    q.prepare("SELECT jpg, srcsize, srcmtime FROM thumb WHERE pathkey = ?");
+    q.prepare("SELECT jpg, srcsize, srcmtime, used FROM thumb WHERE pathkey = ?");
     q.addBindValue(key);
     if (!q.exec() || !q.next()) return QByteArray();
 
@@ -253,11 +258,34 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
     const QByteArray jpg = q.value(0).toByteArray();
     if (jpg.isEmpty()) return QByteArray();
 
-    QSqlQuery u(db);
-    u.prepare("UPDATE thumb SET used = ?, live = 1 WHERE pathkey = ?");
-    u.addBindValue(nowSecs());
-    u.addBindValue(key);
-    u.exec();
+    /*  THE LRU STAMP IS NOT REFRESHED ON EVERY READ, and that is the difference
+        between a cache hit costing a SELECT and costing a COMMIT.
+
+        This UPDATE is a WRITE on the READ path, and in WAL every statement outside
+        an explicit transaction is its own commit -- the exact cost writeBatch()
+        exists to avoid, reintroduced where nobody was looking for it. It is also
+        under mMutex, so every Reader thread serialises behind it. MEASURED on 1,048
+        raws with the cache warm: 1,034 hits accumulating 283 s of thread time across
+        the reader pool, ~274 ms of lock wait per hit, and phase 2 at 25 s wall for a
+        folder whose thumbnails were all already stored. It was ~95% of the load.
+
+        used ORDERS EVICTION; IT IS NOT CORRECTNESS. A day's granularity keeps the
+        ordering it is actually used for (evictLocked drops the least recently used
+        when the cache exceeds its byte budget, and nothing distinguishes two
+        thumbnails read minutes apart) while making the overwhelmingly common case --
+        a thumbnail read again in the same session, or the same day -- a pure read.
+        live = 1 rides along with it: a row that is being served is by definition
+        present, and if it were marked dead the sweep that did so would have found
+        the file gone. */
+    const qint64 rowUsed = q.value(3).toLongLong();
+    const qint64 now = nowSecs();
+    if (now - rowUsed >= kUsedStampMaxAgeSecs) {
+        QSqlQuery u(db);
+        u.prepare("UPDATE thumb SET used = ?, live = 1 WHERE pathkey = ?");
+        u.addBindValue(now);
+        u.addBindValue(key);
+        u.exec();
+    }
     return jpg;
 }
 

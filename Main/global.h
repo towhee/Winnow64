@@ -603,6 +603,20 @@ Q_NAMESPACE
        difference" from "the index was never consulted", which are opposite conclusions. */
     extern std::atomic<int> probeIndexMetaHits;
     extern std::atomic<int> probeIndexMetaMisses;
+    /* Phase-2 probe: WHERE the ~20 ms of an icon goes. Icons are ~95% of phase 2 (see
+       Documentation.txt > Caching > "What Phase 2 Actually Costs"), and the 20 ms had
+       never been decomposed -- file read, JPEG decode, scale, rotate and the thumbnail
+       cache write were all one number. Accumulated in nanoseconds across the Reader
+       threads, so they sum to more than the wall clock. */
+    extern std::atomic<qint64> probeIconDevThumbNs;   // loadDevThumb (sidecar preview)
+    extern std::atomic<qint64> probeIconLoadNs;       // the loader loop: read + decode
+    extern std::atomic<qint64> probeIconScaleNs;      // scaled() + convertTo()
+    extern std::atomic<qint64> probeIconOrientNs;     // checkOrientation
+    extern std::atomic<qint64> probeIconCacheNs;      // ThumbCache::putImage
+    extern std::atomic<qint64> probeIconCacheGetNs;   // ThumbCache::getImage (before any decode)
+    extern std::atomic<int>    probeIconCacheHits;    // getImage returned an image
+    extern std::atomic<int>    probeIconCacheMisses;
+    extern std::atomic<int>    probeIconCount;
 
     extern QColor textColor;
     extern QColor backgroundColor;

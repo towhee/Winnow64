@@ -299,9 +299,20 @@ void Reader::readIcon()
         ThumbCache::getImage stands aside in Develop mode and when the preview
         source is Developed, because loadThumb returns a different picture in
         those modes -- see wantsOriginalThumb in Cache/thumbcache.h. */
+    /*  Did the picture come out of the thumbnail cache? If it did there is nothing to
+        write back -- see the putImage call below. */
+    bool fromThumbCache = false;
+
     if (!abort) {
+        QElapsedTimer tGet;
+        if (G::isPerfProbe) tGet.start();
         image = ThumbCache::instance().getImage(fPath, m && m->developEdited);
-        if (!image.isNull()) loadedIcon = true;
+        if (!image.isNull()) { loadedIcon = true; fromThumbCache = true; }
+        if (G::isPerfProbe) {
+            G::probeIconCacheGetNs.fetch_add(tGet.nsecsElapsed(), std::memory_order_relaxed);
+            (loadedIcon ? G::probeIconCacheHits : G::probeIconCacheMisses)
+                .fetch_add(1, std::memory_order_relaxed);
+        }
     }
 
     if (abort) {status = Status::Aborted; return;}
@@ -373,8 +384,21 @@ void Reader::readIcon()
             it returns immediately, handing the image to one batching writer
             thread -- doing the work inline here was measured at +47% on the
             icon path, see putImage in Cache/thumbcache.h. */
-        if (!image.isNull())
+        /*  NOT WHEN IT CAME FROM THE CACHE, which is what this whole path exists to
+            make the common case. A hit was re-queued straight back into the writer:
+            ThumbCache::writeBatch skips it (containsLocked) so nothing was written and
+            nothing was corrupt, but getting as far as that skip costs the mMutex the
+            writer holds for a whole batch transaction -- so every Reader thread queued
+            behind the writer to have its work thrown away. Measured on 1,048 raws with
+            the cache warm, that was essentially the entire load. */
+        if (!image.isNull() && !fromThumbCache) {
+            QElapsedTimer tCache;
+            if (G::isPerfProbe) tCache.start();
             ThumbCache::instance().putImage(fPath, image, m && m->developEdited);
+            if (G::isPerfProbe)
+                G::probeIconCacheNs.fetch_add(tCache.nsecsElapsed(),
+                                              std::memory_order_relaxed);
+        }
 
         /* Thumb::loadThumb already scaled to G::maxIconSize (thumbMax), aspect-kept and
            RGB32, so the prior second scale here was a redundant resample + allocation per
