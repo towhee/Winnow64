@@ -47,6 +47,7 @@ private slots:
     void displayFieldsSurviveTheRoundTrip();
     void sweepDemotesMissingSource();
     void availabilityDistinguishesOfflineFromMissing();
+    void anEditedRowIsRewrittenNotJustMarkedStale();
     void onMovedFollowsTheImage();
     void onDeletedRemovesTheRow();
     void searchTextIsNotInjectable();
@@ -581,6 +582,54 @@ void tst_catalog::availabilityDistinguishesOfflineFromMissing()
 
     const auto avail2 = cat.availabilityOf({gone.path});
     QCOMPARE(avail2.value(gone.path), Catalog::Availability::Offline);
+}
+
+void tst_catalog::anEditedRowIsRewrittenNotJustMarkedStale()
+{
+    /*  A rating or colour edit writes the sidecar, which moves its mtime and so
+        makes the catalog row STALE -- and in folder scope that is enough, because
+        the next visit re-indexes it. In CATALOG scope the user may never open the
+        containing folder again, so "stale" would mean "wrong, indefinitely": rate
+        an image, search for that rating, and not find it.
+
+        MW::updateCatalogForRow pushes the whole row back through the same builder
+        the bulk capture uses. This pins the catalog half -- that a re-commit of an
+        edited row REPLACES the stored values and restores freshness, rather than
+        being skipped as unchanged. */
+    Catalog &cat = Catalog::instance();
+
+    CatalogRow r = rowFor("edited.jpg", {"Heron"});
+    r.rating = 0;
+    r.label = "";
+    QCOMPARE(cat.commit({r}), 1);
+
+    const auto before = cat.fetchFresh({r}).value(r.path);
+    QCOMPARE(before.rating, 0);
+
+    /*  The edit: the sidecar has been rewritten, so its stamp moves, and the row
+        carries the new values. */
+    CatalogRow edited = r;
+    edited.rating = 4;
+    edited.label = "Red";
+    edited.sidecarMtime = r.sidecarMtime + 10;
+
+    QCOMPARE(cat.commit({edited}), 1);
+
+    /*  Fresh against the NEW stamp, and holding the new values -- so a search on
+        rating finds it and nothing will re-read the file to discover that. */
+    const auto after = cat.fetchFresh({edited});
+    QVERIFY2(after.contains(edited.path), "the re-committed row is not fresh");
+    QCOMPARE(after.value(edited.path).rating, 4);
+    QCOMPARE(after.value(edited.path).label, QString("Red"));
+
+    /*  And the OLD stamp no longer matches, which is what stops a stale reader
+        from serving the pre-edit values. */
+    QVERIFY2(!cat.fetchFresh({r}).contains(r.path),
+             "the pre-edit stamp must no longer read as fresh");
+
+    /*  Committing the same row again is skipped, so the write-back costs nothing
+        when the catalog is already right -- it is called on every edit. */
+    QCOMPARE(cat.commit({edited}), 0);
 }
 
 void tst_catalog::onMovedFollowsTheImage()

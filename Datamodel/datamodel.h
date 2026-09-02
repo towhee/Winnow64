@@ -180,6 +180,9 @@ public:
        half-read row would be catalogued with empty keywords and then look FRESH to the
        next commit, so the image would stay wrong until its file changed. */
     QVector<CatalogRow> catalogRows() const;
+    /* One row for the catalog; false when it must not be catalogued. Shared by
+       the bulk capture and the edit write-back so the two cannot drift. */
+    bool catalogRowFor(int row, CatalogRow &r) const;
     bool isAnyPick();
     void clearPicks();
     void remove(QString fPath);

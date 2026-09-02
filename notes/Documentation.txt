@@ -1198,7 +1198,17 @@ THE COLUMN IS APPENDED, not inserted, for the same reason DevelopColumn was: sav
 
 ONLY THE CATALOG LOAD ASKS. A folder load never calls availabilityOf and its rows stay Present, which is correct -- the filesystem has just listed them, so a second opinion would be both slower and less current. The catalog path asks once for the whole result set, off the GUI thread, and the answers come back queued to be written, because the model is not thread-safe.
 
-STILL TO DO: the second half of stage 5 -- rating, label and pick edits in Catalog scope writing the sidecar and updating the index row in the same commit.
+RATING AND COLOUR EDITS NOW WRITE BACK TO THE CATALOG. The sidecar is still the source of truth and is written exactly as before; what is added is that the index row is brought into step at the same time.
+
+WHY IT WAS NOT ALREADY NEEDED. An edit moves the sidecar's mtime, the freshness stamp stops matching, and the folder is re-indexed on the NEXT VISIT. That is sufficient while folders are how images are reached -- the correction always arrives before the stale value can be seen, because seeing it means opening the folder.
+
+WHY IT IS NEEDED NOW, and it is the whole point of Catalog scope: the user is working from search results and may never open the containing folder again. Rate an image in Catalog scope, search for that rating, and the catalog would not find it -- holding the old value indefinitely, with nothing to trigger a correction.
+
+THE WHOLE ROW GOES, not the field that changed, and through DataModel::catalogRowFor -- the same builder the bulk capture uses, extracted from catalogRows for exactly this reason. Two builders would drift, and an edited image would then be indexed differently from an unedited one in only the fields that differed, which is close to undebuggable. Pushing only the changed field has a subtler fault: it would leave the freshness stamp saying "current" over whatever ELSE had drifted, so the row would look authoritative while being partly wrong. Sending the row the model actually holds makes the entry true rather than less wrong.
+
+PICK IS DELIBERATELY NOT INCLUDED. It is a Winnow concept kept in the pick log, not written to XMP, so there is no sidecar edit to be in step with; the catalog's pick column is filled at capture time and stays a snapshot. Making picks durable across sessions is a different question from keeping the index in step with the file.
+
+IT COSTS NOTHING WHEN THE CATALOG IS ALREADY RIGHT: commit() skips a row whose stamp already matches, and the write is off the GUI thread because it is SQL. The unit case pins that a re-commit REPLACES the values and restores freshness rather than being skipped as unchanged, that the pre-edit stamp stops reading as fresh, and that committing the same row twice is a no-op.
 
 ⏺ DataModel Changes > Sort Change
 

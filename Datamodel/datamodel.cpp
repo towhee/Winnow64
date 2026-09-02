@@ -2152,103 +2152,117 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     return true;
 }
 
+bool DataModel::catalogRowFor(int row, CatalogRow &r) const
+{
+/*
+    One row, as plain values for the catalog. Returns false for a row that must
+    not be catalogued.
+
+    EXTRACTED FROM catalogRows SO THERE IS ONE BUILDER, not two. The bulk capture
+    after a folder load and the write-back after an edit have to produce the same
+    row for the same image -- if they drifted, an edited image would be indexed
+    differently from an unedited one and only in the fields that differed, which
+    is close to undebuggable.
+*/
+    /*  ROWS THAT ARE NOT MetaLoaded ARE SKIPPED. A row still being read has empty
+        keywords and no title, and cataloguing that is worse than cataloguing
+        nothing: the freshness stamp would match on the next visit, so the blank
+        entry would be treated as current and the image would stay wrong in
+        search results until its file changed on disk. */
+    if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) return false;
+
+    const QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
+    if (fPath.isEmpty()) return false;
+    /* Videos have no keywords or camera metadata worth searching, and the catalog is
+       a photo index. */
+    if (index(row, G::VideoColumn).data().toBool()) return false;
+
+    r = CatalogRow();
+    r.path = fPath;
+    const QFileInfo fi(fPath);
+    r.folder = fi.absoluteDir().path();
+    r.filename = fi.fileName();
+    r.ext = fi.suffix().toLower();
+    r.srcSize = index(row, G::ByteSizeColumn).data().toLongLong();
+    r.srcMtime = index(row, G::ModifiedColumn).data().toDateTime().toSecsSinceEpoch();
+
+    /* The sidecar's timestamp is what makes a keyword edited in Lightroom -- which
+       rewrites the .xmp and never touches the raw -- reindex the next time this
+       folder is opened. SidecarColumn was set during the file scan, so the stat below
+       is paid only by images that actually have one. */
+    if (index(row, G::SidecarColumn).data().toBool()) {
+        const QFileInfo si(metadata->sidecarPath(fPath));
+        if (si.exists()) r.sidecarMtime = si.lastModified().toSecsSinceEpoch();
+    }
+
+    r.captured = index(row, G::CreatedColumn).data().toDateTime();
+    r.rating = index(row, G::RatingColumn).data().toString().toInt();
+    r.label = index(row, G::LabelColumn).data().toString();
+    r.pick = index(row, G::PickColumn).data().toString() == "Picked";
+    r.title = index(row, G::TitleColumn).data().toString();
+    r.creator = index(row, G::CreatorColumn).data().toString();
+    r.copyright = index(row, G::CopyrightColumn).data().toString();
+    r.make = index(row, G::CameraMakeColumn).data().toString();
+    r.model = index(row, G::CameraModelColumn).data().toString();
+    r.lens = index(row, G::LensColumn).data().toString();
+    r.iso = index(row, G::ISOColumn).data().toInt();
+    r.aperture = index(row, G::ApertureColumn).data().toDouble();
+    r.shutter = index(row, G::ShutterspeedColumn).data().toDouble();
+    r.focalLength = index(row, G::FocalLengthColumn).data().toDouble();
+    r.width = index(row, G::WidthColumn).data().toInt();
+    r.height = index(row, G::HeightColumn).data().toInt();
+    r.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
+
+    /*  schema 6/7: what the ROW displays, beyond what a search needs. */
+    r.orientation = index(row, G::OrientationColumn).data().toInt();
+    r.exposureComp = index(row, G::ExposureCompensationColumn).data().toString();
+    r.focusX = index(row, G::FocusXColumn).data().toDouble();
+    r.focusY = index(row, G::FocusYColumn).data().toDouble();
+    r.email = index(row, G::EmailColumn).data().toString();
+    r.url = index(row, G::UrlColumn).data().toString();
+    r._rating = index(row, G::_RatingColumn).data().toString();
+    r._label = index(row, G::_LabelColumn).data().toString();
+    r._creator = index(row, G::_CreatorColumn).data().toString();
+    r._title = index(row, G::_TitleColumn).data().toString();
+    r._copyright = index(row, G::_CopyrightColumn).data().toString();
+    r._email = index(row, G::_EmailColumn).data().toString();
+    r._url = index(row, G::_UrlColumn).data().toString();
+    r.developed = index(row, G::DevelopColumn).data().toBool();
+    r.devPreviewKey = index(row, G::DevPreviewKeyColumn).data().toString();
+    r.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
+    /*  The LITERAL dc:subject list, kept apart from the flat vocabulary below --
+        only this one may ever be written back to a file. */
+    r.keywordsLiteral = index(row, G::KeywordsColumn).data().toStringList();
+
+    /* The FLAT vocabulary, not the literal dc:subject: the catalog indexes what is
+       searched on, and flattening once here means the index and the Filters category
+       cannot disagree about the same image. The raw paths travel beside it because
+       the catalog derives its ambiguity contexts (which parents a name has been seen
+       under) from them. */
+    r.keywords = index(row, G::KeywordsAllColumn).data().toStringList();
+    r.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
+    return true;
+}
+
 QVector<CatalogRow> DataModel::catalogRows() const
 {
 /*
     Every fully-read row of this model, as plain values for the catalog.
 
-    ONE PASS ON THE GUI THREAD, then the result travels to a pool thread to be inserted.
-    QStandardItemModel is not thread-safe and the folder the user is looking at is live,
-    so the copy is the price of not doing SQL on the GUI thread. At a few hundred bytes a
-    row it is cheap next to the metadata read that just finished.
-
-    ROWS THAT ARE NOT MetaLoaded ARE SKIPPED. A row still being read has empty keywords
-    and no title, and cataloguing that is worse than cataloguing nothing: the freshness
-    stamp would match on the next visit, so the blank entry would be treated as current
-    and the image would stay wrong in search results until its file changed on disk.
+    ONE PASS ON THE GUI THREAD, then the result travels to a pool thread to be
+    inserted. The model is not thread-safe and the folder the user is looking at
+    is live, so the copy is the price of not doing SQL on the GUI thread. At a
+    few hundred bytes a row it is cheap next to the metadata read that just
+    finished. The per-row work is catalogRowFor, shared with the edit write-back.
 */
     if (G::isLogger) G::log("DataModel::catalogRows");
 
     QVector<CatalogRow> rows;
     const int n = rowCount();
     rows.reserve(n);
-
     for (int row = 0; row < n; ++row) {
-        if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) continue;
-
-        const QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
-        if (fPath.isEmpty()) continue;
-        /* Videos have no keywords or camera metadata worth searching, and the catalog is
-           a photo index. */
-        if (index(row, G::VideoColumn).data().toBool()) continue;
-
         CatalogRow r;
-        r.path = fPath;
-        const QFileInfo fi(fPath);
-        r.folder = fi.absoluteDir().path();
-        r.filename = fi.fileName();
-        r.ext = fi.suffix().toLower();
-        r.srcSize = index(row, G::ByteSizeColumn).data().toLongLong();
-        r.srcMtime = index(row, G::ModifiedColumn).data().toDateTime().toSecsSinceEpoch();
-
-        /* The sidecar's timestamp is what makes a keyword edited in Lightroom -- which
-           rewrites the .xmp and never touches the raw -- reindex the next time this
-           folder is opened. SidecarColumn was set during the file scan, so the stat below
-           is paid only by images that actually have one. */
-        if (index(row, G::SidecarColumn).data().toBool()) {
-            const QFileInfo si(metadata->sidecarPath(fPath));
-            if (si.exists()) r.sidecarMtime = si.lastModified().toSecsSinceEpoch();
-        }
-
-        r.captured = index(row, G::CreatedColumn).data().toDateTime();
-        r.rating = index(row, G::RatingColumn).data().toString().toInt();
-        r.label = index(row, G::LabelColumn).data().toString();
-        r.pick = index(row, G::PickColumn).data().toString() == "Picked";
-        r.title = index(row, G::TitleColumn).data().toString();
-        r.creator = index(row, G::CreatorColumn).data().toString();
-        r.copyright = index(row, G::CopyrightColumn).data().toString();
-        r.make = index(row, G::CameraMakeColumn).data().toString();
-        r.model = index(row, G::CameraModelColumn).data().toString();
-        r.lens = index(row, G::LensColumn).data().toString();
-        r.iso = index(row, G::ISOColumn).data().toInt();
-        r.aperture = index(row, G::ApertureColumn).data().toDouble();
-        r.shutter = index(row, G::ShutterspeedColumn).data().toDouble();
-        r.focalLength = index(row, G::FocalLengthColumn).data().toDouble();
-        r.width = index(row, G::WidthColumn).data().toInt();
-        r.height = index(row, G::HeightColumn).data().toInt();
-        r.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
-        /* The FLAT vocabulary, not the literal dc:subject: the catalog indexes what is
-           searched on, and flattening once here means the index and the Filters category
-           cannot disagree about the same image. The raw paths travel beside it because
-           the catalog derives its ambiguity contexts (which parents a name has been seen
-           under) from them. */
-        /*  schema 6: what the ROW displays, beyond what a search needs. Supplied
-            here as well as by CatalogScanner, because the two must agree -- a
-            row indexed by one and served to the other would differ. */
-        r.orientation = index(row, G::OrientationColumn).data().toInt();
-        r.exposureComp = index(row, G::ExposureCompensationColumn).data().toString();
-        r.focusX = index(row, G::FocusXColumn).data().toDouble();
-        r.focusY = index(row, G::FocusYColumn).data().toDouble();
-        r.email = index(row, G::EmailColumn).data().toString();
-        r.url = index(row, G::UrlColumn).data().toString();
-        r._rating = index(row, G::_RatingColumn).data().toString();
-        r._label = index(row, G::_LabelColumn).data().toString();
-        r._creator = index(row, G::_CreatorColumn).data().toString();
-        r._title = index(row, G::_TitleColumn).data().toString();
-        r._copyright = index(row, G::_CopyrightColumn).data().toString();
-        r._email = index(row, G::_EmailColumn).data().toString();
-        r._url = index(row, G::_UrlColumn).data().toString();
-        r.developed = index(row, G::DevelopColumn).data().toBool();
-        r.devPreviewKey = index(row, G::DevPreviewKeyColumn).data().toString();
-        r.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
-        /*  The LITERAL dc:subject list, kept apart from the flat vocabulary
-            below -- only this one may ever be written back to a file. */
-        r.keywordsLiteral = index(row, G::KeywordsColumn).data().toStringList();
-
-        r.keywords = index(row, G::KeywordsAllColumn).data().toStringList();
-        r.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
-
-        rows.append(r);
+        if (catalogRowFor(row, r)) rows.append(r);
     }
     return rows;
 }

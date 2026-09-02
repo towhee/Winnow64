@@ -879,6 +879,10 @@ private slots:
                                 QString source);
     // caching
     void folderChanged(bool aborted);
+    /*  Push one row's edited values back to the catalog, after its sidecar has
+        been written. See MW::updateCatalogForRow. */
+    void updateCatalogForRow(int dmRow);
+
     void folderChangeCompleted();
     void buildFiltersWhenModelReady(int forInstance, int attempt = 0);
     void onMemoryOverrun(quint64 footprintMB, quint64 capMB);

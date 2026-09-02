@@ -633,6 +633,9 @@ void MW::setRating()
         // update _Rating (used to check what metadata has changed in metadata->writeXMP)
         QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
         emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
+        /*  And the catalog, so a rating set in Catalog scope is searchable
+            without having to re-open the folder -- see MW::updateCatalogForRow. */
+        updateCatalogForRow(dmRow);
         G::popup->setProgress(i+1);
     }
 
@@ -746,6 +749,7 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
     // update _Label (used to check what metadata has changed in metadata->writeXMP)
     emit setValSf(sfRow, G::_LabelColumn, colorClass, dm->instance, srcFun,
                   Qt::EditRole);
+    updateCatalogForRow(dm->modelRowFromProxyRow(sfRow));
 }
 
 void MW::setColorClass()
@@ -832,6 +836,7 @@ void MW::setColorClass()
         // update _Label (used to check what metadata has changed in metadata->writeXMP)
         emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
                       Qt::EditRole);
+        updateCatalogForRow(dmRow);
         G::popup->setProgress(i+1);
     }
 
