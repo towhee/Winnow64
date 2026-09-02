@@ -65,6 +65,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Scratch Store (The Columns Only a Decoder Needs)
      Retiring the Items (Alignment, Tooltips, and the Deletion Pass)
      The Second Batch (Covering the Rest, and the Set Mask)
+     Compiling the Filters (Off the Tree, Once per Change)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -873,6 +874,32 @@ VERIFIED BY THE SAME A/B FINGERPRINT: byte-identical on all four folders, with o
 WHAT THE 3.1 IS, and all of it is deliberate: column 0's custom roles (the icon rect and the three raw+jpg pairing roles -- custom roles, not values); Search and Ingested; and ErrColumn on the rows that had an issue, where Qt::UserRole holds a QList<QSharedPointer<Issue>> that is not a value column either.
 
 tst_imagerow REPLACES WHAT verifyRowStore USED TO PROVE. The shadow comparison is gone with the items, so the two things it caught are pinned as unit cases instead: unset is not zero (including that an EXPLICITLY empty string is a value, which interns to the same -1 as never-written and would otherwise be indistinguishable), and text is not number (the ExposureTimeItemDelegate case that aborted the app, plus its reverse -- Rating and MPix look numeric and are held as text). It also pins the row splicing, which nothing had covered since it replaced the rebuild-from-items. Both new checks were PROVEN TO FAIL first: ignoring the mask fails three cases by name, and making removeRows truncate from the end instead of splicing fails the fourth.
+
+⏺ DataModel Changes > Compiling the Filters (Off the Tree, Once per Change)
+
+SortFilter::filterAcceptsRow USED TO WALK A WIDGET, ONCE PER ROW. It answered "is this row visible" with a QTreeWidgetItemIterator over the whole Filters tree, comparing QVariants as it went. Two things were wrong with that and only one of them was about speed.
+
+IT WAS O(rows x items). The tree holds one item per DISTINCT VALUE the folder contains -- every keyword, every camera model, every lens -- so a few hundred items is ordinary: the 50-file _ThumbTest folder builds 201. The whole tree was walked for every row on every filter change, sort and insert. At 250,000 rows that is tens of millions of pointer-chasing compares to answer a question whose inputs changed once. Worse, it fetched the row's cell once per ITEM, so a category holding 200 keywords read the same cell 200 times.
+
+IT READ A WIDGET ANOTHER PASS WAS WRITING. BuildFilters adds and removes items as metadata arrives, and filterAcceptsRow read (*filter)->checkState(0) while it did -- there was a `// crash` comment on exactly that line. Suspending filtering during a rebuild papers over it; it does not make the read safe.
+
+BOTH GO AWAY TOGETHER. The tree is compiled once per change, on the GUI thread, into the plain data in Datamodel/filterpredicate.h, and the compiled form is published as a shared_ptr<const> -- the same shape ProxySnapshot uses in modelsync.h, so a row test holds its own reference alive while the GUI thread swaps in a rebuilt one.
+
+RECOMPILATION IS DRIVEN BY THE TREE'S OWN SIGNALS, not by a list of call sites: itemChanged for a check state, and the model's structural signals for BuildFilters adding items. A path that mutates the tree cannot forget to say so, which is the reasoning rebuildProxySnapshot already follows.
+
+THE SEMANTICS WERE COPIED, NOT REDESIGNED, and the structure now says so instead of a flag: `includes` being empty IS the category not narrowing anything, which is what isCategoryUnchecked meant, and excludes live in their own list so an exclusion cannot accidentally make its category count as filtering. That last rule is the one that is easy to get wrong -- a category holding only exclusions subtracts rather than narrows, and were it to count as filtering every row lacking any of its items would be rejected, which is the whole set.
+
+ORDER OF REJECTION DOES NOT MATTER, which is what makes evaluating a category completely before moving to the next equivalent to the old interleaved walk. The old code checked category N's include verdict when it reached category N+1's header, so an exclude in N+1 could be reached before N's verdict; but every path either returns false or continues and the function is pure, so whichever rejection wins the answer is the same.
+
+TWO COMPARISONS WERE KEPT DELIBERATELY DIFFERENT, because the old code made them differently. An INCLUDE on a QStringList column did .contains(filterValue) with filterValue still a QVariant, so QString == QVariant promoted the left side and compared as VARIANTS; an EXCLUDE did .contains(filterValue.toString()), a plain string compare. Every filter value on a keyword category is a QString so the two agree today. They are kept apart so that if one ever stops being a QString, the behaviour changes where it always would have.
+
+VERIFIED BY RUNNING BOTH. The old implementation was kept temporarily as filterAcceptsRowLegacy and a probe randomised the REAL Filters tree's check states -- 400 trials per folder, 1 to 5 items each, a third of them exclusions -- comparing the two row by row: 1,600 trials over four folders, 0 mismatches. Random rather than hand-picked because the combinations that matter are the ones nobody thinks to write down. PROVEN TO FAIL twice, as always: making an exclude-only category count as filtering, and inverting the exclude test, each produced mismatches by name (the second, 1,900 of them).
+
+MEASURED: a full pass over the 50-row folder with a 200-item tree and three items checked cost 228-467 microseconds walking the tree and 36-40 compiled -- 6x to 12x depending on what is checked. The number that matters is not the ratio but its SHAPE: the compiled cost is proportional to the CHECKED items and the compiled-away cost was proportional to the whole tree, so the gap widens with every distinct value a folder contains.
+
+tst_filterpredicate REPLACES THE SHADOW, which went with the old implementation. The evaluation is a template taking a callable rather than a model, so the whole decision is testable without one -- including that a category is read once per row and not once per item.
+
+STILL DEFERRED, and now the last thing on the items: SearchColumn and IngestedColumn. Both hold a different type depending on which path wrote them last, and both the model and the Filters tree are inconsistent in the same direction, so settling them decides what the filter matches.
 
 ⏺ DataModel Changes > Sort Change
 

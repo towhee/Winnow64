@@ -413,6 +413,7 @@ set(WINNOW_HEADERS
     Datamodel/iconstore.h
     Datamodel/imagerow.h
     Datamodel/rowscratch.h
+    Datamodel/filterpredicate.h
     Views/catalogscoperow.h
     Datamodel/selection.h
 

@@ -5082,178 +5082,128 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
 {
     if (G::isLogger) G::log("SortFilter::SortFilter");
     this->filters = filters;
+
+    /*  Recompile on the tree's OWN signals rather than from a list of call
+        sites. itemChanged covers a check state changing; the model's structural
+        signals cover BuildFilters adding and removing items as metadata
+        arrives. A path that mutates the tree therefore cannot forget to say so,
+        which is the same reasoning rebuildProxySnapshot follows.
+
+        Compiling is O(items) and these fire in bursts during a rebuild, but
+        filtering is suspended for the duration of one, so the cost lands once
+        rather than once per item. */
+    if (filters) {
+        connect(filters, &QTreeWidget::itemChanged, this,
+                [this](QTreeWidgetItem *, int){ compileFilters(); });
+        if (QAbstractItemModel *m = filters->model()) {
+            for (auto sig : { &QAbstractItemModel::rowsInserted,
+                              &QAbstractItemModel::rowsRemoved }) {
+                connect(m, sig, this, [this]{ compileFilters(); });
+            }
+            connect(m, &QAbstractItemModel::modelReset, this, [this]{ compileFilters(); });
+        }
+        compileFilters();
+    }
+}
+
+void SortFilter::compileFilters()
+{
+/*
+    Walk the Filters tree ONCE and turn it into the plain FilterPredicate that
+    filterAcceptsRow evaluates -- see Datamodel/filterpredicate.h for why, and
+    for the semantics being preserved.
+
+    The walk is the SAME QTreeWidgetItemIterator the per-row version used, in
+    the same order, so a category and its items group here exactly as they
+    grouped there. GUI thread only: it reads the widget.
+*/
+    if (G::isLogger) G::log("SortFilter::compileFilters");
+    if (!filters) return;
+
+    auto fresh = std::make_shared<FilterPredicate>();
+
+    QTreeWidgetItemIterator it(filters);
+    while (*it) {
+        QTreeWidgetItem *item = *it;
+        if (item->parent()) {
+            /*  A filter item. Items appearing before any category cannot happen
+                -- every non-category item has a parent -- but if the tree were
+                ever malformed they would land on column 0, which is what the
+                per-row version did with its dataModelColumn initialised to 0. */
+            if (fresh->categories.isEmpty()) fresh->categories.append(FilterCategory());
+            FilterCategory &cat = fresh->categories.last();
+            const Qt::CheckState state = item->checkState(0);
+            if (state != Qt::Unchecked) {
+                if (item == filters->searchTrue && item->text(0) == filters->enterSearchString) {
+                    /*  A search is armed but nothing has been typed, so it
+                        matched every row. It is a flag rather than an include
+                        because it matches without comparing anything -- and,
+                        as before, it does not make the category count as
+                        filtering for the rows it does not name. */
+                    cat.includeAll = true;
+                }
+                else if (state == Qt::PartiallyChecked) cat.excludes.append(item->data(1, Qt::EditRole));
+                else                                    cat.includes.append(item->data(1, Qt::EditRole));
+            }
+        }
+        else {
+            FilterCategory cat;
+            cat.column = item->data(0, G::ColumnRole).toInt();
+            fresh->categories.append(cat);
+        }
+        ++it;
+    }
+
+    QMutexLocker lock(&mPredicateMutex);
+    mPredicate = fresh;
+}
+
+FilterPredicatePtr SortFilter::filterPredicate() const
+{
+    QMutexLocker lock(&mPredicateMutex);
+    return mPredicate;
 }
 
 bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
 /*
-    The QTreeWidget filters is used to match checked filter items with the proper
-    column in data model.  The top level items in the QTreeWidget are referred to
-    as categories, and each category has one or more filter items.  Categories
-    map to columns in the data model ie Picked, Rating, Label ...
+    Is this row visible? Answered against the COMPILED filters
+    (Datamodel/filterpredicate.h), not by walking the Filters QTreeWidget.
 
-    THREE STATES, NOT TWO. Qt::Checked INCLUDES, Qt::PartiallyChecked EXCLUDES, and
-    Qt::Unchecked is "don't care".
-
-      o Includes are OR-ed within a category and AND-ed between categories, which is what
-        this always did: check two ratings to see both, then check a camera model to see
-        only those two ratings from that camera.
-      o An exclude is an outright rejection, evaluated ACROSS categories rather than
-        within one: if the row carries an excluded value it is out, whatever else matches.
-        That is what makes "include Vancouver, exclude USA" mean what it reads like -- the
-        keyword vocabulary is flat, so an ambiguous name is separated by ruling one of its
-        parents out rather than by descending a tree.
-      o An exclude therefore must NOT clear isCategoryUnchecked. A category holding only
-        exclusions is not narrowing the set to those items; it is subtracting them. Were
-        it to count as "this category is filtering", every row lacking any of its items
-        would be rejected -- which is the whole set.
+    The tree walk this replaces ran once per ROW and compared every item in it,
+    which is O(rows x distinct values) -- tens of millions of compares at 250k
+    rows to answer a question whose inputs changed once. It also read
+    (*filter)->checkState(0) while BuildFilters was adding items, which is what
+    the `// crash` comment on that line was about. Both go away together: the
+    inputs are compiled on the GUI thread when they change, and a row test takes
+    its own reference to the result.
 */
 
     // Suspend?
-    if (suspendFiltering) {
-        // qDebug() << "SortFilter::filterAcceptsRow suspendFiltering = true" << sourceRow;
-        return true;
-    }
+    if (suspendFiltering) return true;
 
     // still loading metadata
-    if (!G::allMetadataAttempted) {
-        // qDebug() << "SortFilter::filterAcceptsRow G::allMetadataAttempted = false" << sourceRow;
-        return true;
-    }
+    if (!G::allMetadataAttempted) return true;
 
     // Check Raw + Jpg
     if (combineRawJpg) {
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
-        // qDebug() << "SortFilter::filterAcceptsRow combineRawJpg = true" << sourceRow;
-        if (rawIdx.data(G::DupHideRawRole).toBool()) {
-            // qDebug() << "SortFilter::filterAcceptsRow DupHideRaw = true" << sourceRow;
-            return false;
-        }
-        else {
-            // qDebug() << "SortFilter::filterAcceptsRow DupHideRaw = false" << sourceRow;
-        }
+        if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
     }
 
     finished = false;
-    static int counter = 0;
-    int dataModelColumn = 0;
-    bool isMatch = true;                   // overall match
-    bool isCategoryUnchecked = true;
-    QString itemCategory;                  // for debugging
-
-    // cycle through the filters and identify matches
-    QTreeWidgetItemIterator filter(filters);
-    while (*filter) {
-        // guard against filters changing
-        if (!filters) {
-            finished = true;
-            return true;
-        }
-        if ((*filter)->parent()) {
-            /*
-            There is a parent therefore not a top level item so this is one of the items
-            to match ie rating = one. If the item has been checked then compare the
-            checked filter item to the data in the dataModelColumn for the row. If it
-            matches then set isMatch = true. If it does not match then isMatch is still
-            false but the row could still be accepted if another item in the same
-            category does match.
-
-            For search string matching see DataModel::searchStringChange, which sets the
-            datamodel G::SearchColumn true/false.
-            */
-            const Qt::CheckState state = (*filter)->checkState(0);   // crash
-            if (state != Qt::Unchecked) {
-                if ((*filter) == filters->searchTrue &&
-                    (*filter)->text(0) == filters->enterSearchString)
-                {
-                    isMatch = true;
-                }
-                else if (state == Qt::PartiallyChecked) {
-                    /* An exclusion. Tested first and answered immediately: no other
-                       category can readmit a row the user has said to leave out. Note
-                       isCategoryUnchecked is deliberately left alone -- see above. */
-                    QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
-                    QVariant dataValue = idx.data(Qt::EditRole);
-                    QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-                    bool hit = dataValue.typeId() == QMetaType::QStringList
-                                   ? dataValue.toStringList().contains(filterValue.toString())
-                                   : dataValue == filterValue;
-                    if (hit) {
-                        finished = true;
-                        return false;
-                    }
-                }
-                else {
-                    isCategoryUnchecked = false;
-                    QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
-                    QVariant dataValue = idx.data(Qt::EditRole);
-                    QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-                    QString itemName = (*filter)->text(0);      // for debugging
-                    /*
-                    qDebug() << "DataModel::filterAcceptsRow"
-                             << counter++
-                             << "\tCat =" << itemCategory
-                             << "dataModelColumn =" << dataModelColumn
-                             << "itemName =" << itemName
-                             << "sfRow" << sourceRow
-                             << "Comparing" << dataValue << filterValue
-                             << (dataValue == filterValue)
-                                ;
-                                //*/
-                    /*
-                    qDebug() << "DataModel::filterAcceptsRow" << dataValue << dataValue.typeId()
-                             << dataModelColumn << G::KeywordsColumn
-                             << dataValue.typeId()
-                             << QMetaType::QStringList
-                                ;
-                                //*/
-                    if (dataValue.typeId() == QMetaType::QStringList) {  // keywords
-                        if (dataValue.toStringList().contains(filterValue)) isMatch = true;
-                    }
-                    else {
-                        if (dataValue == filterValue) isMatch = true;
-                    }
-                }
-            }
-        }
-        else {
-            // top level item = category
-            // check results of category items filter match
-            if (isCategoryUnchecked) isMatch = true;
-            /*
-            qDebug() << "Category" << itemCategory
-                     << "isCategoryUnchecked =" << isCategoryUnchecked
-                     << "dataModelColumn =" << (*filter)->data(0, G::ColumnRole).toInt()
-                         ;
-            //*/
-
-            if (!isMatch) {
-                finished = true;
-                return false;   // no match in category
-            }
-
-            /*
-            Prepare for category items filter match.  If no item is checked
-            or one checked item matches the data, then the row is okay to show
-            the top level items contain reference to the data model column.
-            */
-            dataModelColumn = (*filter)->data(0, G::ColumnRole).toInt();
-            isCategoryUnchecked = true;
-            isMatch = false;
-            itemCategory = (*filter)->text(0);      // for debugging
-        }
-        if (suspendFiltering) {
-            finished = true;
-            return false;
-        }
-        ++filter;
+    const FilterPredicatePtr p = filterPredicate();
+    if (!p || p->acceptsEverything()) {
+        finished = true;
+        return true;
     }
-    // check results of category items filter match for the last group
-    if (isCategoryUnchecked) isMatch = true;
-    finished = true;
 
-    //qDebug() << "SortFilter::filterAcceptsRow  sf->rowCount =" << rowCount();
-    return isMatch;
+    const bool ok = p->accepts([&](int column) {
+        return sourceModel()->index(sourceRow, column, sourceParent).data(Qt::EditRole);
+    });
+
+    finished = true;
+    return ok;
 }
 
 void SortFilter::filterChange(QString src)
@@ -5274,6 +5224,9 @@ void SortFilter::filterChange(QString src)
 
     if (suspendFiltering) return;
 
+    /*  Recompile BEFORE invalidating, or the invalidation would re-test every
+        row against the previous check states. */
+    compileFilters();
     invalidateRowsFilter();
     return;
 

@@ -12,6 +12,7 @@
 #include "Datamodel/imagerow.h"
 #include "Datamodel/iconstore.h"
 #include "Datamodel/rowscratch.h"
+#include "Datamodel/filterpredicate.h"
 #include "Cache/framedecoder.h"
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
@@ -40,10 +41,18 @@ public slots:
     void filterChange(QString src = "");
     void suspend(bool suspendFiltering, QString src = "");
 
+    /*  Recompile the Filters tree into the plain form filterAcceptsRow reads
+        (Datamodel/filterpredicate.h). GUI THREAD ONLY -- it walks the widget.
+        Driven by the tree's own change signals rather than by a list of call
+        sites, so a path that checks an item, or that adds one as metadata
+        arrives, cannot forget to do it. */
+    void compileFilters();
+
 private slots:
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+
 
 signals:
 
@@ -51,6 +60,14 @@ private:
     Filters *filters;
     mutable bool finished;
     std::atomic<bool> suspendFiltering;
+
+    /*  The compiled filters, published as a shared_ptr<const> exactly as
+        ProxySnapshot is in modelsync.h: filterAcceptsRow takes its own
+        reference and evaluates that, so the GUI thread can swap in a rebuilt
+        predicate without pulling items out from under a row being tested. */
+    FilterPredicatePtr filterPredicate() const;
+    mutable QMutex mPredicateMutex;
+    FilterPredicatePtr mPredicate;
 };
 
 class DataModel : public QStandardItemModel
