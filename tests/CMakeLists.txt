@@ -235,6 +235,12 @@ winnow_add_unit_test(tst_rowfields unit/tst_rowfields.cpp)
 # the field's zero is a legal offset and the failure would be silent.
 winnow_add_unit_test(tst_rowscratch unit/tst_rowscratch.cpp ../Datamodel/rowscratch.cpp)
 
+# tst_imagerow pins what DataModel::verifyRowStore() used to prove and no longer
+# can: the store is the only copy of its columns now, so "unset is not zero" and
+# "text is not number" have to be checked here instead. It also pins the row
+# splicing that replaced the rebuild-from-items.
+winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cpp)
+
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest
 # flag (main.cpp). Exits 0 only if the folder loaded images without crashing.

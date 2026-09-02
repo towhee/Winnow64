@@ -2616,7 +2616,12 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     search += dim;
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);
-    setData(index(row, G::OrientationColumn), QString::number(m.orientation));
+    /*  Orientation is NOT written here. It was -- as QString::number(m.orientation)
+        -- and then overwritten as an int by the write further down this same
+        function, so the string never reached anything and the column read as an
+        int. Removing it is what settles the column's type, the way Width and
+        Height were settled; the A/B fingerprint is unchanged by the removal,
+        which is the proof it was dead. */
     setData(index(row, G::RotationColumn), QString::number(m.rotationDegrees));
     setData(index(row, G::CameraMakeColumn), m.make);
     search += m.make;

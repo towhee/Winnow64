@@ -47,7 +47,11 @@ void tst_rowscratch::coversTheScratchColumnsAndOnlyOnValueRoles()
         G::ICCBufColumn, G::ICCSpaceColumn,
         G::CacheSizeColumn, G::IsCachingColumn, G::IsCachedColumn,
         G::AttemptsColumn, G::DecoderIdColumn,
-        G::DecoderReturnStatusColumn, G::DecoderErrMsgColumn
+        G::DecoderReturnStatusColumn, G::DecoderErrMsgColumn,
+        /*  Decode timings and the raw-render flag: facts about a DECODE rather
+            than about the image, so they moved here off the row. */
+        G::NSThumbColumn, G::NSImageColumn,
+        G::LoadMsecPerMpColumn, G::RawRenderColumn
     };
     for (int c : scratch) {
         QVERIFY2(ScratchStore::covers(c, Qt::EditRole),

@@ -64,6 +64,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Row Store (What a Row Costs, and the Field Table)
      The Scratch Store (The Columns Only a Decoder Needs)
      Retiring the Items (Alignment, Tooltips, and the Deletion Pass)
+     The Second Batch (Covering the Rest, and the Set Mask)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -849,7 +850,29 @@ While the QStandardItems held the values, those reads were survivable BY ACCIDEN
 
 Both were confirmed to be NEW by stashing the work and re-running: the unmodified tree passes. So the locks are the price of those deferred callers, not a design preference, and they come out with them. Reads here are decoder and cache bookkeeping rather than the paint path. With the locks, run_tsan.sh passes and run_tsan_proxy.sh reported no race on three consecutive runs against the 50-file folder.
 
-STILL ON THE ITEMS, and next: the 31 uncovered columns; the compiled filter predicate (SortFilter::filterAcceptsRow still walks the whole Filters tree per row); and only then the base-class swap to QAbstractTableModel.
+STILL ON THE ITEMS, and next: the 31 uncovered columns (below); the compiled filter predicate (SortFilter::filterAcceptsRow still walks the whole Filters tree per row); and only then the base-class swap to QAbstractTableModel.
+
+⏺ DataModel Changes > The Second Batch (Covering the Rest, and the Set Mask)
+
+31 OF 93 ITEMS PER ROW SURVIVED THE FIRST DELETION PASS, on the columns neither store claimed. This pass covers 31 more of them and takes the count to 3.1.
+
+WHERE EACH ONE WENT. Four are facts about a DECODE rather than about the image -- NS Thumb, NS Image, Msec/Mp and Raw Render -- so they joined the SCRATCH store, where a row nothing has decoded has no entry at all. The other 27 are properties of the image and joined ImageRow: EC, Duration, FocusX/Y, AspectRatio, IconAspectRatio, Orientation, Rotation, Email, Url, MetaReading, the seven _original columns, Permissions, R/W, Sidecar, OrientationOffset, RotationDegrees, ShootingInfo, Err, Developed and DevPreviewKey.
+
+TWO ARE DELIBERATELY LEFT, and SearchColumn has now been joined by IngestedColumn for exactly the same reason: the column holds a different TYPE depending on which path wrote it last. Search is "false" (QString) at row creation, a bool once metadata arrives, "true" (QString) from DataModel::find. Ingested is "false" (QString) at row creation, true (bool) from the ingest pass, "true" (QString) from MW::setIngested. Width and Height had the same fault and were settled on int; these two cannot be settled in the store, because the Filters tree is inconsistent in the same direction -- searchTrue holds the QString "true" while searchFalse holds the bool false -- so choosing a type decides what the FILTER matches. They belong with the compiled predicate. tst_imagerow pins that they are NOT covered, so it stays a decision rather than an oversight someone quietly fixes.
+
+Permissions looked like a third case and is not: both writers agree on uint.
+
+THE SET MASK, and why this batch is what forced it. Every previously-covered column is written for every row by addFileDataForRow or addMetadataForItem, so "never written" never arose in practice and the store could get away with returning an interned empty string. This batch brought the first genuinely CONDITIONAL resident columns: Duration is set only for video, IconAspectRatio only once an icon has been decoded, Err only on a row whose metadata failed. An unset QStandardItem returns an INVALID QVariant and callers branch on it, so returning the field's zero would turn "no duration" into "a duration of nothing", which reads as a value to anything testing isValid(). ImageRow now carries a two-word mask (63 columns is already too close to 64 to leave the next one to chance) and value() returns invalid until the bit is set. The scratch store learned this first; see rowscratch.h.
+
+ONE MAPPING, NOT TWO. covers() used to be a second list of columns beside the one in value()/setValue(). It is now derived from fieldBit(), which is also the mask position -- so "is this column held here" and "has this row's copy been written" are answered from the same table. Two lists that must agree is one list too many, which is the lesson the write-side guard already taught when it and covers() disagreed about PathRole.
+
+A DEAD WRITE FOUND AND REMOVED. addMetadataForItem wrote Orientation twice: QString::number(m.orientation) and then, further down the same function, m.orientation as an int. The string never reached anything. Removing it is what settles the column's type, the way Width and Height were settled -- and the A/B fingerprint being unchanged by the removal is the proof it was dead.
+
+VERIFIED BY THE SAME A/B FINGERPRINT: byte-identical on all four folders, with only the six known-nondeterministic columns differing in the per-column listing. Items went from 31.4 to 3.1 per row on the 50-file folder.
+
+WHAT THE 3.1 IS, and all of it is deliberate: column 0's custom roles (the icon rect and the three raw+jpg pairing roles -- custom roles, not values); Search and Ingested; and ErrColumn on the rows that had an issue, where Qt::UserRole holds a QList<QSharedPointer<Issue>> that is not a value column either.
+
+tst_imagerow REPLACES WHAT verifyRowStore USED TO PROVE. The shadow comparison is gone with the items, so the two things it caught are pinned as unit cases instead: unset is not zero (including that an EXPLICITLY empty string is a value, which interns to the same -1 as never-written and would otherwise be indistinguishable), and text is not number (the ExposureTimeItemDelegate case that aborted the app, plus its reverse -- Rating and MPix look numeric and are held as text). It also pins the row splicing, which nothing had covered since it replaced the rebuild-from-items. Both new checks were PROVEN TO FAIL first: ignoring the mask fails three cases by name, and making removeRows truncate from the end instead of splicing fails the fourth.
 
 ⏺ DataModel Changes > Sort Change
 
