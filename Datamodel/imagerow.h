@@ -137,6 +137,48 @@ struct ImageRow
     bool   isVideo = false;
     bool   iconLoaded = false;
     bool   isCompare = false;      // a BOOL in the model, read back as text
+
+    /*  --- the second batch of columns, moved off the items after the first
+        deletion pass measured 31 of the 93 still there. Same rules as above:
+        store the model's own TYPE, and intern anything a shoot repeats.
+
+        devPreviewKey is a recipe hash and err is a list of load errors on the
+        few rows that had one -- neither repeats, so neither is interned; an
+        absent key or error list costs one -1 and one empty QStringList. */
+    QStringList err;                   // G::ErrColumn, a QStringList in the model
+    qint32 emailId = -1, urlId = -1, shootingInfoId = -1;
+    qint32 exposureCompId = -1, durationId = -1, aspectRatioId = -1, rotationId = -1;
+    qint32 devPreviewKeyId = -1;
+    /*  The "original value" columns -- what the file said before the user edited
+        it, so an edit can be reverted and a sidecar written only when it really
+        differs. They intern as well as their live counterparts do. */
+    qint32 _ratingId = -1, _labelId = -1, _creatorId = -1, _titleId = -1;
+    qint32 _copyrightId = -1, _emailId = -1, _urlId = -1;
+
+    quint32 permissions = 0;           // a uint in the model (fileInfo.permissions())
+    quint32 orientationOffset = 0;
+    qint32  orientation = 0;           // int; see addMetadataForItem
+    qint32  rotationDegrees = 0;
+    float   focusX = -1.0f, focusY = -1.0f;
+    double  iconAspectRatio = 0.0;     // qreal in the model; set only when an icon lands
+
+    bool metadataReading = false;
+    bool isReadWrite = false;
+    bool hasSidecar = false;
+    bool developEdited = false;
+
+    /*  WHICH FIELDS HAVE ACTUALLY BEEN WRITTEN. The scratch store learned this
+        first (see rowscratch.h) and it matters more here, because this batch
+        brought in the first genuinely CONDITIONAL resident columns: Duration is
+        set only for video, IconAspectRatio only once an icon has been decoded,
+        Err only on a row that failed. An unset QStandardItem returns an INVALID
+        QVariant and callers branch on it, so returning the field's zero -- or an
+        interned empty string -- would turn "no duration" into "a duration of
+        nothing", which reads as a value to anything testing isValid().
+
+        Two words rather than one because 63 columns is already too close to 64
+        to leave the next one added to chance. */
+    quint64 setLo = 0, setHi = 0;
 };
 
 class RowStore

@@ -130,6 +130,13 @@ struct RowScratch
 
     float  cacheSizeMB = 0.0f;
 
+    /*  Decode timings, in the units their writers use: Reader and FrameDecoder
+        send MICROseconds for the thumb, ImageDecoder NANOseconds for the image.
+        qint64 because both are elapsed-timer values, and the model held them as
+        such. */
+    qint64 nsThumb = 0, nsImage = 0;
+    qint32 loadMsecPerMp = 0;
+
     /*  Which of the fields above have actually been written. See "UNSET IS A
         VALUE" above -- without this, an unwritten offset reads back as 0 rather
         than as nothing, and 0 is a legal offset. */
@@ -139,6 +146,7 @@ struct RowScratch
     bool isXmp = false;
     bool isCaching = false;
     bool isCached = false;
+    bool rawRender = false;
 };
 
 class ScratchStore

@@ -7,6 +7,144 @@
     one place that knows how a column is actually held.
 */
 
+/*  THE ONE COLUMN <-> FIELD MAPPING. Every column this store holds has a BIT
+    here, and covers() is derived from it rather than kept as a second list --
+    two lists that must agree is one list too many, which is the lesson the
+    write-side guard already taught (see the PathRole note below).
+
+    The bit index doubles as the setMask position, so "is this column held here"
+    and "has this row's copy of it been written" are answered from the same
+    table. Indices are dense and their ORDER is private to this file: nothing is
+    persisted by bit number.
+*/
+namespace {
+
+enum Field {
+    F_Path = 0, F_Name, F_FolderName, F_Type, F_ByteSize, F_Created, F_Modified,
+    F_Year, F_Day, F_Rating, F_Label, F_Pick, F_Title, F_Creator, F_Copyright,
+    F_CameraMake, F_CameraModel, F_Lens, F_Iso, F_Aperture, F_Shutterspeed,
+    F_FocalLength, F_Width, F_Height, F_Dimensions, F_MegaPixels, F_GPSCoord,
+    F_Keywords, F_KeywordPaths, F_KeywordsAll, F_Video, F_MetadataStatus,
+    F_IconLoaded, F_SearchText, F_Compare, F_RowNumber,
+    /* second batch */
+    F_ExposureComp, F_Duration, F_FocusX, F_FocusY, F_AspectRatio,
+    F_IconAspectRatio, F_Orientation, F_Rotation, F_Email, F_Url,
+    F_MetadataReading, F_Rating_, F_Label_, F_Creator_, F_Title_, F_Copyright_,
+    F_Email_, F_Url_, F_Permissions, F_ReadWrite, F_Sidecar, F_OrientationOffset,
+    F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
+    F_Count
+};
+static_assert(F_Count <= 128, "ImageRow::setLo/setHi hold 128 bits");
+
+int fieldBit(int column)
+{
+    switch (column) {
+    case G::PathColumn:                 return F_Path;
+    case G::NameColumn:                 return F_Name;
+    case G::FolderNameColumn:           return F_FolderName;
+    case G::TypeColumn:                 return F_Type;
+    case G::ByteSizeColumn:             return F_ByteSize;
+    case G::CreatedColumn:              return F_Created;
+    case G::ModifiedColumn:             return F_Modified;
+    case G::YearColumn:                 return F_Year;
+    case G::DayColumn:                  return F_Day;
+    case G::RatingColumn:               return F_Rating;
+    case G::LabelColumn:                return F_Label;
+    case G::PickColumn:                 return F_Pick;
+    case G::TitleColumn:                return F_Title;
+    case G::CreatorColumn:              return F_Creator;
+    case G::CopyrightColumn:            return F_Copyright;
+    case G::CameraMakeColumn:           return F_CameraMake;
+    case G::CameraModelColumn:          return F_CameraModel;
+    case G::LensColumn:                 return F_Lens;
+    case G::ISOColumn:                  return F_Iso;
+    case G::ApertureColumn:             return F_Aperture;
+    case G::ShutterspeedColumn:         return F_Shutterspeed;
+    case G::FocalLengthColumn:          return F_FocalLength;
+    case G::WidthColumn:                return F_Width;
+    case G::HeightColumn:               return F_Height;
+    case G::DimensionsColumn:           return F_Dimensions;
+    case G::MegaPixelsColumn:           return F_MegaPixels;
+    case G::GPSCoordColumn:             return F_GPSCoord;
+    case G::KeywordsColumn:             return F_Keywords;
+    case G::KeywordPathsColumn:         return F_KeywordPaths;
+    case G::KeywordsAllColumn:          return F_KeywordsAll;
+    case G::VideoColumn:                return F_Video;
+    case G::MetadataStatusColumn:       return F_MetadataStatus;
+    case G::IconLoadedColumn:           return F_IconLoaded;
+    case G::SearchTextColumn:           return F_SearchText;
+    case G::CompareColumn:              return F_Compare;
+    case G::RowNumberColumn:            return F_RowNumber;
+    case G::ExposureCompensationColumn: return F_ExposureComp;
+    case G::DurationColumn:             return F_Duration;
+    case G::FocusXColumn:               return F_FocusX;
+    case G::FocusYColumn:               return F_FocusY;
+    case G::AspectRatioColumn:          return F_AspectRatio;
+    case G::IconAspectRatioColumn:      return F_IconAspectRatio;
+    case G::OrientationColumn:          return F_Orientation;
+    case G::RotationColumn:             return F_Rotation;
+    case G::EmailColumn:                return F_Email;
+    case G::UrlColumn:                  return F_Url;
+    case G::MetadataReadingColumn:      return F_MetadataReading;
+    case G::_RatingColumn:              return F_Rating_;
+    case G::_LabelColumn:               return F_Label_;
+    case G::_CreatorColumn:             return F_Creator_;
+    case G::_TitleColumn:               return F_Title_;
+    case G::_CopyrightColumn:           return F_Copyright_;
+    case G::_EmailColumn:               return F_Email_;
+    case G::_UrlColumn:                 return F_Url_;
+    case G::PermissionsColumn:          return F_Permissions;
+    case G::ReadWriteColumn:            return F_ReadWrite;
+    case G::SidecarColumn:              return F_Sidecar;
+    case G::OrientationOffsetColumn:    return F_OrientationOffset;
+    case G::RotationDegreesColumn:      return F_RotationDegrees;
+    case G::ShootingInfoColumn:         return F_ShootingInfo;
+    case G::ErrColumn:                  return F_Err;
+    case G::DevelopColumn:              return F_Develop;
+    case G::DevPreviewKeyColumn:        return F_DevPreviewKey;
+
+    /*  NOT HELD HERE, and both for the same reason: the column holds a
+        DIFFERENT TYPE depending on which code path wrote it last, so a store
+        with one type per column cannot reproduce it and must not pretend to.
+
+        Search   "false" (QString) at row creation, m.isSearch and
+                 SearchTerms::matches() (bool) once metadata arrives, "true"
+                 (QString again) from DataModel::find
+        Ingested "false" (QString) at row creation, true (bool) from the ingest
+                 pass, "true" (QString) from MW::setIngested
+
+        Width and Height had exactly the same fault and WERE settled, on int.
+        These two cannot be settled here, because the Filters tree is
+        inconsistent in the same way and in the same direction -- searchTrue
+        holds the QString "true" while searchFalse holds the bool false, and
+        SortFilter::filterAcceptsRow compares the two against these columns.
+        (Note that QVariant(QString("false")).toBool() is TRUE, a non-empty
+        string, so the row-creation value already means the opposite of what it
+        reads as to anything calling toBool().) Choosing a type for them decides
+        what the FILTER matches, which belongs with the compiled predicate.
+
+        Permissions is held; it looked like a third case but is not -- both
+        writers agree on uint. */
+    case G::SearchColumn:
+    case G::IngestedColumn:
+    default:                            return -1;
+    }
+}
+
+inline bool bitIsSet(const ImageRow &r, int bit)
+{
+    return bit < 64 ? (r.setLo & (quint64(1) << bit))
+                    : (r.setHi & (quint64(1) << (bit - 64)));
+}
+
+inline void setBit(ImageRow &r, int bit)
+{
+    if (bit < 64) r.setLo |= (quint64(1) << bit);
+    else          r.setHi |= (quint64(1) << (bit - 64));
+}
+
+} // namespace
+
 bool RowStore::covers(int column, int role)
 {
     /*  The path lives on PathColumn under G::PathRole, NOT under EditRole --
@@ -18,63 +156,7 @@ bool RowStore::covers(int column, int role)
 
     if (role != Qt::EditRole && role != Qt::DisplayRole) return false;
 
-    switch (column) {
-    case G::PathColumn:
-    case G::NameColumn:
-    case G::FolderNameColumn:
-    case G::TypeColumn:
-    case G::ByteSizeColumn:
-    case G::CreatedColumn:
-    case G::ModifiedColumn:
-    case G::YearColumn:
-    case G::DayColumn:
-    case G::RatingColumn:
-    case G::LabelColumn:
-    case G::PickColumn:
-    case G::TitleColumn:
-    case G::CreatorColumn:
-    case G::CopyrightColumn:
-    case G::CameraMakeColumn:
-    case G::CameraModelColumn:
-    case G::LensColumn:
-    case G::ISOColumn:
-    case G::ApertureColumn:
-    case G::ShutterspeedColumn:
-    case G::FocalLengthColumn:
-    case G::WidthColumn:
-    case G::HeightColumn:
-    case G::DimensionsColumn:
-    case G::MegaPixelsColumn:
-    case G::GPSCoordColumn:
-    case G::KeywordsColumn:
-    case G::KeywordPathsColumn:
-    case G::KeywordsAllColumn:
-    case G::VideoColumn:
-    case G::MetadataStatusColumn:
-    case G::IconLoadedColumn:
-    case G::SearchTextColumn:
-    case G::CompareColumn:
-    case G::RowNumberColumn:
-        return true;
-    /*  NOT COVERED, and the reason is a defect in the model rather than a gap
-        here: Search holds a DIFFERENT TYPE depending on which code path wrote
-        it last -- "false" (QString) at row creation, m.isSearch and
-        SearchTerms::matches() (bool) once metadata arrives, and "true" (QString
-        again) from DataModel::find -- so a store with one type per column
-        cannot reproduce it and must not pretend to.
-
-        Width and Height had exactly the same fault and WERE settled, on int
-        (see addMetadataForItem). Search cannot be settled here, because the
-        Filters tree is inconsistent in the same way and in the same direction:
-        searchTrue holds the QString "true" while searchFalse holds the bool
-        false, and SortFilter::filterAcceptsRow compares the two against this
-        column. Choosing a type for it means deciding what the search filter
-        matches, which is a question about FILTERING rather than about storage,
-        and it belongs with the compiled predicate rather than here. */
-    case G::SearchColumn:
-    default:
-        return false;
-    }
+    return fieldBit(column) >= 0;
 }
 
 QVariant RowStore::value(int row, int column) const
@@ -85,6 +167,14 @@ QVariant RowStore::value(int row, int column) const
     QReadLocker locker(&mLock);
     if (row < 0 || row >= mRows.size()) return QVariant();
     const ImageRow &r = mRows.at(row);
+
+    /*  Nothing has written this field, so the item it replaces is UNSET and an
+        invalid QVariant is the right answer -- not the field's zero, and not an
+        interned empty string. See "WHICH FIELDS HAVE ACTUALLY BEEN WRITTEN" in
+        imagerow.h for why that distinction is load-bearing. */
+    const int bit = fieldBit(column);
+    if (bit < 0 || !bitIsSet(r, bit)) return QVariant();
+
     switch (column) {
     case G::PathColumn:            return r.path;
     case G::NameColumn:            return r.name;
@@ -120,6 +210,33 @@ QVariant RowStore::value(int row, int column) const
     case G::VideoColumn:           return r.isVideo;
     case G::IconLoadedColumn:      return r.iconLoaded;
     case G::MetadataStatusColumn:  return int(r.metaStatus);
+    case G::ExposureCompensationColumn: return mStrings.value(r.exposureCompId);
+    case G::DurationColumn:        return mStrings.value(r.durationId);
+    case G::FocusXColumn:          return r.focusX;
+    case G::FocusYColumn:          return r.focusY;
+    case G::AspectRatioColumn:     return mStrings.value(r.aspectRatioId);
+    case G::IconAspectRatioColumn: return r.iconAspectRatio;
+    case G::OrientationColumn:     return r.orientation;
+    case G::RotationColumn:        return mStrings.value(r.rotationId);
+    case G::EmailColumn:           return mStrings.value(r.emailId);
+    case G::UrlColumn:             return mStrings.value(r.urlId);
+    case G::MetadataReadingColumn: return r.metadataReading;
+    case G::_RatingColumn:         return mStrings.value(r._ratingId);
+    case G::_LabelColumn:          return mStrings.value(r._labelId);
+    case G::_CreatorColumn:        return mStrings.value(r._creatorId);
+    case G::_TitleColumn:          return mStrings.value(r._titleId);
+    case G::_CopyrightColumn:      return mStrings.value(r._copyrightId);
+    case G::_EmailColumn:          return mStrings.value(r._emailId);
+    case G::_UrlColumn:            return mStrings.value(r._urlId);
+    case G::PermissionsColumn:     return r.permissions;
+    case G::ReadWriteColumn:       return r.isReadWrite;
+    case G::SidecarColumn:         return r.hasSidecar;
+    case G::OrientationOffsetColumn: return r.orientationOffset;
+    case G::RotationDegreesColumn: return r.rotationDegrees;
+    case G::ShootingInfoColumn:    return mStrings.value(r.shootingInfoId);
+    case G::ErrColumn:             return r.err;
+    case G::DevelopColumn:         return r.developEdited;
+    case G::DevPreviewKeyColumn:   return mStrings.value(r.devPreviewKeyId);
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {
@@ -140,7 +257,10 @@ void RowStore::setValue(int row, int column, const QVariant &v)
 {
     QWriteLocker locker(&mLock);
     if (row < 0 || row >= mRows.size()) return;
+    const int bit = fieldBit(column);
+    if (bit < 0) return;
     ImageRow &r = mRows[row];
+    setBit(r, bit);
     switch (column) {
     case G::PathColumn:            r.path = v.toString(); break;
     case G::NameColumn:            r.name = v.toString(); break;
@@ -176,6 +296,33 @@ void RowStore::setValue(int row, int column, const QVariant &v)
     case G::VideoColumn:           r.isVideo = v.toBool(); break;
     case G::IconLoadedColumn:      r.iconLoaded = v.toBool(); break;
     case G::MetadataStatusColumn:  r.metaStatus = quint8(v.toInt()); break;
+    case G::ExposureCompensationColumn: r.exposureCompId = mStrings.id(v.toString()); break;
+    case G::DurationColumn:        r.durationId = mStrings.id(v.toString()); break;
+    case G::FocusXColumn:          r.focusX = v.toFloat(); break;
+    case G::FocusYColumn:          r.focusY = v.toFloat(); break;
+    case G::AspectRatioColumn:     r.aspectRatioId = mStrings.id(v.toString()); break;
+    case G::IconAspectRatioColumn: r.iconAspectRatio = v.toDouble(); break;
+    case G::OrientationColumn:     r.orientation = v.toInt(); break;
+    case G::RotationColumn:        r.rotationId = mStrings.id(v.toString()); break;
+    case G::EmailColumn:           r.emailId = mStrings.id(v.toString()); break;
+    case G::UrlColumn:             r.urlId = mStrings.id(v.toString()); break;
+    case G::MetadataReadingColumn: r.metadataReading = v.toBool(); break;
+    case G::_RatingColumn:         r._ratingId = mStrings.id(v.toString()); break;
+    case G::_LabelColumn:          r._labelId = mStrings.id(v.toString()); break;
+    case G::_CreatorColumn:        r._creatorId = mStrings.id(v.toString()); break;
+    case G::_TitleColumn:          r._titleId = mStrings.id(v.toString()); break;
+    case G::_CopyrightColumn:      r._copyrightId = mStrings.id(v.toString()); break;
+    case G::_EmailColumn:          r._emailId = mStrings.id(v.toString()); break;
+    case G::_UrlColumn:            r._urlId = mStrings.id(v.toString()); break;
+    case G::PermissionsColumn:     r.permissions = v.toUInt(); break;
+    case G::ReadWriteColumn:       r.isReadWrite = v.toBool(); break;
+    case G::SidecarColumn:         r.hasSidecar = v.toBool(); break;
+    case G::OrientationOffsetColumn: r.orientationOffset = v.toUInt(); break;
+    case G::RotationDegreesColumn: r.rotationDegrees = v.toInt(); break;
+    case G::ShootingInfoColumn:    r.shootingInfoId = mStrings.id(v.toString()); break;
+    case G::ErrColumn:             r.err = v.toStringList(); break;
+    case G::DevelopColumn:         r.developEdited = v.toBool(); break;
+    case G::DevPreviewKeyColumn:   r.devPreviewKeyId = mStrings.id(v.toString()); break;
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {

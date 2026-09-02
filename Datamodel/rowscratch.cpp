@@ -36,6 +36,13 @@ enum ScratchBit : quint32 {
     B_DecoderId           = 1u << 21,
     B_DecoderStatus       = 1u << 22,
     B_DecoderErrMsg       = 1u << 23,
+    /*  Decode timings and the raw-render flag. They belong here rather than on
+        the row for the same reason the offsets do: they are facts about a
+        DECODE, not about the image, and a row nothing has decoded has none. */
+    B_NSThumb             = 1u << 24,
+    B_NSImage             = 1u << 25,
+    B_LoadMsecPerMp       = 1u << 26,
+    B_RawRender           = 1u << 27,
 };
 
 quint32 bitFor(int column)
@@ -65,6 +72,10 @@ quint32 bitFor(int column)
     case G::DecoderIdColumn:             return B_DecoderId;
     case G::DecoderReturnStatusColumn:   return B_DecoderStatus;
     case G::DecoderErrMsgColumn:         return B_DecoderErrMsg;
+    case G::NSThumbColumn:               return B_NSThumb;
+    case G::NSImageColumn:               return B_NSImage;
+    case G::LoadMsecPerMpColumn:         return B_LoadMsecPerMp;
+    case G::RawRenderColumn:             return B_RawRender;
     default:                             return 0;
     }
 }
@@ -127,6 +138,10 @@ QVariant ScratchStore::value(int row, int column) const
     case G::DecoderIdColumn:             return s.decoderId;
     case G::DecoderReturnStatusColumn:   return s.decoderStatus;
     case G::DecoderErrMsgColumn:         return s.decoderErrMsg;
+    case G::NSThumbColumn:               return s.nsThumb;
+    case G::NSImageColumn:               return s.nsImage;
+    case G::LoadMsecPerMpColumn:         return s.loadMsecPerMp;
+    case G::RawRenderColumn:             return s.rawRender;
     default:                             return QVariant();
     }
 }
@@ -173,6 +188,10 @@ void ScratchStore::setValue(int row, int column, const QVariant &v)
     case G::DecoderIdColumn:             s.decoderId = v.toInt(); break;
     case G::DecoderReturnStatusColumn:   s.decoderStatus = v.toInt(); break;
     case G::DecoderErrMsgColumn:         s.decoderErrMsg = v.toString(); break;
+    case G::NSThumbColumn:               s.nsThumb = v.toLongLong(); break;
+    case G::NSImageColumn:               s.nsImage = v.toLongLong(); break;
+    case G::LoadMsecPerMpColumn:         s.loadMsecPerMp = v.toInt(); break;
+    case G::RawRenderColumn:             s.rawRender = v.toBool(); break;
     default:                             break;
     }
 }
