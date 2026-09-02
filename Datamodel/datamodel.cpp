@@ -1983,11 +1983,19 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     search += s;
     setData(index(row, G::ModifiedColumn), s);
     setData(index(row, G::PickColumn), "Unpicked");
-    setData(index(row, G::IngestedColumn), "false");
+    /*  bool, not the QString "false" this used to be. Ingested had three writers
+        disagreeing about the type -- "false" here, true (bool) from the ingest
+        pass, "true" (QString) from MW::setIngested -- so the column's type
+        depended on which path filled the row last. Settled the way Width and
+        Height were. */
+    setData(index(row, G::IngestedColumn), false);
     setData(index(row, G::MetadataReadingColumn), false);
     setData(index(row, G::MetadataStatusColumn), G::MetaNotAttempted);
     setData(index(row, G::IconLoadedColumn), false);
-    setData(index(row, G::SearchColumn), "false");
+    /*  bool, for the same reason: "false" here, m.isSearch and
+        SearchTerms::matches() (bool) once metadata arrives. See
+        Filters::searchTrue, whose filter value was settled with it. */
+    setData(index(row, G::SearchColumn), false);
     setData(index(row, G::SearchTextColumn), search);
 
     rawJpgPairing(row, ext, baseName);

@@ -32,6 +32,7 @@ enum Field {
     F_MetadataReading, F_Rating_, F_Label_, F_Creator_, F_Title_, F_Copyright_,
     F_Email_, F_Url_, F_Permissions, F_ReadWrite, F_Sidecar, F_OrientationOffset,
     F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
+    F_Search, F_Ingested,
     F_Count
 };
 static_assert(F_Count <= 128, "ImageRow::setLo/setHi hold 128 bits");
@@ -103,30 +104,13 @@ int fieldBit(int column)
     case G::DevelopColumn:              return F_Develop;
     case G::DevPreviewKeyColumn:        return F_DevPreviewKey;
 
-    /*  NOT HELD HERE, and both for the same reason: the column holds a
-        DIFFERENT TYPE depending on which code path wrote it last, so a store
-        with one type per column cannot reproduce it and must not pretend to.
-
-        Search   "false" (QString) at row creation, m.isSearch and
-                 SearchTerms::matches() (bool) once metadata arrives, "true"
-                 (QString again) from DataModel::find
-        Ingested "false" (QString) at row creation, true (bool) from the ingest
-                 pass, "true" (QString) from MW::setIngested
-
-        Width and Height had exactly the same fault and WERE settled, on int.
-        These two cannot be settled here, because the Filters tree is
-        inconsistent in the same way and in the same direction -- searchTrue
-        holds the QString "true" while searchFalse holds the bool false, and
-        SortFilter::filterAcceptsRow compares the two against these columns.
-        (Note that QVariant(QString("false")).toBool() is TRUE, a non-empty
-        string, so the row-creation value already means the opposite of what it
-        reads as to anything calling toBool().) Choosing a type for them decides
-        what the FILTER matches, which belongs with the compiled predicate.
-
-        Permissions is held; it looked like a third case but is not -- both
-        writers agree on uint. */
-    case G::SearchColumn:
-    case G::IngestedColumn:
+    /*  SETTLED, AND NOW HELD. Both columns used to carry a different TYPE
+        depending on which path wrote them last -- "false" (QString) at row
+        creation, a bool once the work ran, "true" (QString) from a third path
+        -- and both are bools throughout now (see "Settling Search and Ingested"
+        in Documentation.txt for what that was and was not costing). */
+    case G::SearchColumn:               return F_Search;
+    case G::IngestedColumn:             return F_Ingested;
     default:                            return -1;
     }
 }
@@ -204,7 +188,8 @@ QVariant RowStore::value(int row, int column) const
     case G::MegaPixelsColumn:      return mStrings.value(r.megaPixelsId);
     case G::GPSCoordColumn:        return mStrings.value(r.gpsId);
     case G::CompareColumn:         return r.isCompare;
-    case G::SearchColumn:          return mStrings.value(r.searchId);
+    case G::SearchColumn:          return r.isSearch;
+    case G::IngestedColumn:        return r.isIngested;
     case G::SearchTextColumn:      return r.searchText;
     case G::RowNumberColumn:       return r.rowNumber;
     case G::VideoColumn:           return r.isVideo;
@@ -290,7 +275,8 @@ void RowStore::setValue(int row, int column, const QVariant &v)
     case G::MegaPixelsColumn:      r.megaPixelsId = mStrings.id(v.toString()); break;
     case G::GPSCoordColumn:        r.gpsId = mStrings.id(v.toString()); break;
     case G::CompareColumn:         r.isCompare = v.toBool(); break;
-    case G::SearchColumn:          r.searchId = mStrings.id(v.toString()); break;
+    case G::SearchColumn:          r.isSearch = v.toBool(); break;
+    case G::IngestedColumn:        r.isIngested = v.toBool(); break;
     case G::SearchTextColumn:      r.searchText = v.toString(); break;
     case G::RowNumberColumn:       r.rowNumber = v.toInt(); break;
     case G::VideoColumn:           r.isVideo = v.toBool(); break;
