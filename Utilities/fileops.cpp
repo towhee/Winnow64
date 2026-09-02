@@ -1,6 +1,7 @@
 #include "Utilities/fileops.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
+#include "Cache/thumbcache.h"
 #include "Main/global.h"
 
 #include <QDir>
@@ -185,6 +186,7 @@ void FileOps::onCopied(const QString &srcPath, const QString &dstPath)
 void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
 {
     DevPreviewCache::instance().onMoved(srcPath, dstPath);
+    ThumbCache::instance().onMoved(srcPath, dstPath);
     /* The catalog keys on the path too, so a move Winnow performs itself must follow
        the image -- otherwise a search keeps offering the old location, and loading the
        result fails. */
@@ -194,5 +196,6 @@ void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
 void FileOps::onDeleted(const QString &fPath)
 {
     DevPreviewCache::instance().onDeleted(fPath);
+    ThumbCache::instance().onDeleted(fPath);
     Catalog::instance().onDeleted(fPath);
 }

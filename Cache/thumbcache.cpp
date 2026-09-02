@@ -1,11 +1,14 @@
 #include "Cache/thumbcache.h"
 
+#include <QBuffer>
+#include <QTimer>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QSqlQuery>
 #include <QVariant>
 
 #include "Cache/cachedb.h"
+#include "Main/global.h"
 #include "Cache/mountsnapshot.h"
 #include "Cache/pathkey.h"
 
@@ -45,13 +48,19 @@ QSqlDatabase ThumbCache::dbLocked() const
 void ThumbCache::put(const QString &fPath, const QByteArray &jpg, int w, int h,
                      qint64 srcSize, qint64 srcMtime)
 {
-    if (fPath.isEmpty() || jpg.isEmpty()) return;
-    const QString key = cachePathKey(fPath);
-    if (key.isEmpty()) return;
-
     QMutexLocker lk(&mMutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return;              // no index: degrade to "no cache"
+    putLocked(db, fPath, jpg, w, h, srcSize, srcMtime);
+    evictLocked(db);
+}
+
+void ThumbCache::putLocked(QSqlDatabase &db, const QString &fPath, const QByteArray &jpg,
+                           int w, int h, qint64 srcSize, qint64 srcMtime)
+{
+    if (fPath.isEmpty() || jpg.isEmpty()) return;
+    const QString key = cachePathKey(fPath);
+    if (key.isEmpty()) return;
 
     const QFileInfo fi(fPath);
     QSqlQuery q(db);
@@ -77,9 +86,140 @@ void ThumbCache::put(const QString &fPath, const QByteArray &jpg, int w, int h,
     q.addBindValue(MountSnapshot::take().rootOf(fPath));
     q.addBindValue(srcSize);
     q.addBindValue(srcMtime);
-    if (!q.exec()) return;
+    q.exec();
+}
+
+/*  THE WRITER. One thread, batched transactions -- see putImage in the header
+    for the measurement that made this necessary rather than optional, and for
+    why the handoff is a queued signal rather than a queue of our own.
+*/
+namespace { constexpr int kInFlightMax = 256; constexpr int kBatch = 64; }
+
+void ThumbWriter::take(const QString &fPath, const QImage &im)
+{
+    /*  Worker thread. mPending exists only here, so there is nothing to lock. */
+    mPending.append({fPath, im});
+    if (mPending.size() >= kBatch) { flushPending(); return; }
+    if (!mScheduled) {
+        mScheduled = true;
+        /*  A zero-timer, so a burst of arrivals collects into one transaction
+            and a trickle still lands as soon as the thread is idle. */
+        QTimer::singleShot(0, this, &ThumbWriter::flushPending);
+    }
+}
+
+void ThumbWriter::flushPending()
+{
+    mScheduled = false;
+    if (mPending.isEmpty()) return;
+    const QList<QPair<QString, QImage>> batch = mPending;
+    mPending.clear();
+    mOwner->writeBatch(batch);
+    mOwner->mInFlight.fetchAndAddRelaxed(-batch.size());
+}
+
+void ThumbCache::writeBatch(const QList<QPair<QString, QImage>> &batch)
+{
+/*
+    ONE TRANSACTION FOR THE WHOLE BATCH. Committing per row is what made the
+    inline version cost 14 ms an icon: in WAL every statement outside an explicit
+    transaction is its own commit, and several reader threads were queueing for
+    one writer. Sixty-four rows in one commit is the same work in one commit.
+*/
+    QMutexLocker lk(&mMutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+
+    const bool inTxn = db.transaction();
+    for (const auto &job : batch) {
+        const QFileInfo fi(job.first);
+        if (!fi.exists()) continue;
+        const qint64 srcSize = fi.size();
+        const qint64 srcMtime = fi.lastModified().toSecsSinceEpoch();
+
+        /*  SKIP IF THE INDEX ALREADY HAS THIS ONE, checked here rather than at
+            the producer so a revisit costs the loader nothing at all. Without
+            it every revisit re-encodes and rewrites the whole folder, which is
+            the opposite of what the cache is for. */
+        if (containsLocked(db, job.first, srcSize, srcMtime)) continue;
+
+        /*  Quality 85 at thumbnail size is visually indistinguishable from 100
+            and roughly half the bytes; the icon is a browsing aid, never a
+            source for anything. */
+        QByteArray jpg;
+        QBuffer buf(&jpg);
+        if (!buf.open(QIODevice::WriteOnly)) continue;
+        if (!job.second.save(&buf, "JPG", 85)) continue;
+        buf.close();
+        if (jpg.isEmpty()) continue;
+
+        putLocked(db, job.first, jpg, job.second.width(), job.second.height(),
+                  srcSize, srcMtime);
+        mWritten.fetchAndAddRelaxed(1);
+    }
+    if (inTxn) db.commit();
 
     evictLocked(db);
+}
+
+void ThumbCache::startWriterLocked()
+{
+    if (mWriter) return;
+    mThread = new QThread;
+    mThread->setObjectName("ThumbWriter");
+    mWriter = new ThumbWriter(this);
+    mWriter->moveToThread(mThread);
+    /*  The connection belongs to the thread that opened it, so it is closed on
+        the way out rather than left for whoever tears the thread down. */
+    QObject::connect(mThread, &QThread::finished, mWriter, [] {
+        CacheDb::instance().closeThisThread();
+    });
+    QObject::connect(mThread, &QThread::finished, mWriter, &QObject::deleteLater);
+    mThread->start(QThread::LowPriority);
+}
+
+void ThumbCache::putImage(const QString &fPath, const QImage &im)
+{
+    if (!G::cacheThumbnails) return;
+    if (fPath.isEmpty() || im.isNull()) return;
+
+    ThumbWriter *w;
+    {
+        QMutexLocker lk(&mMutex);
+        startWriterLocked();
+        w = mWriter;
+    }
+    /*  Bounded: drop rather than grow. See mInFlight in the header. */
+    if (mInFlight.loadRelaxed() >= kInFlightMax) return;
+    mInFlight.fetchAndAddRelaxed(1);
+    QMetaObject::invokeMethod(w, "take", Qt::QueuedConnection,
+                              Q_ARG(QString, fPath), Q_ARG(QImage, im));
+}
+
+void ThumbCache::flush()
+{
+    ThumbWriter *w;
+    {
+        QMutexLocker lk(&mMutex);
+        w = mWriter;
+    }
+    if (!w) return;
+    /*  A BLOCKING invoke, which is the whole trick: it cannot run until every
+        queued take() ahead of it has, so when it returns the backlog is
+        written. No condition variable, no busy-wait, and nothing shared. */
+    QMetaObject::invokeMethod(w, "flushPending", Qt::BlockingQueuedConnection);
+}
+
+ThumbCache::~ThumbCache()
+{
+    QThread *t = nullptr;
+    {
+        QMutexLocker lk(&mMutex);
+        t = mThread;
+        mThread = nullptr;
+        mWriter = nullptr;
+    }
+    if (t) { t->quit(); t->wait(); delete t; }
 }
 
 QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime)
@@ -120,12 +260,17 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
 
 bool ThumbCache::contains(const QString &fPath, qint64 srcSize, qint64 srcMtime) const
 {
-    const QString key = cachePathKey(fPath);
-    if (key.isEmpty()) return false;
-
     QMutexLocker lk(&mMutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return false;
+    return containsLocked(db, fPath, srcSize, srcMtime);
+}
+
+bool ThumbCache::containsLocked(QSqlDatabase &db, const QString &fPath,
+                                qint64 srcSize, qint64 srcMtime) const
+{
+    const QString key = cachePathKey(fPath);
+    if (key.isEmpty()) return false;
     QSqlQuery q(db);
     q.prepare("SELECT srcsize, srcmtime FROM thumb WHERE pathkey = ?");
     q.addBindValue(key);

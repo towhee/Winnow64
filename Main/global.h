@@ -531,6 +531,13 @@ Q_NAMESPACE
     extern DecodeRawEngine decodeRawEngine;
     extern OperationMode operationMode;     // Preview (fast review) vs Develop (best-quality single image)
     extern Scope scope;                     // Folders (loaded set) vs Catalog (whole index)
+    /*  Cache the browsing thumbnail in the local index (Cache/thumbcache.h) as
+        each icon is decoded, so scrolling a large catalog later is a database
+        read rather than a file open per row. The write costs a JPEG encode on
+        the loader thread, once per image ever, and is skipped when the index
+        already holds a current thumbnail. */
+    extern bool cacheThumbnails;
+    extern qint64 thumbCacheMaxBytes;
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)
     /* Long-edge cap for a written devPreview; one of the kDevPreviewSize* values. */
     extern int devPreviewMaxEdge;

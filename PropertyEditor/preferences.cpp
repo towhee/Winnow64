@@ -3,6 +3,7 @@
 #include "Main/global.h"
 #include <QDebug>
 #include "Cache/devpreviewcache.h"
+#include "Cache/thumbcache.h"
 
 // this works because propertyeditor and preferences are friend classes of MW
 extern MW *mw;
@@ -219,6 +220,20 @@ void Preferences::itemChange(QModelIndex idx)
         /* Applied now, not next launch: lowering the limit should reclaim the disk while
            the user is looking at the setting they just changed. */
         DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);
+    }
+
+    if (source == "cacheThumbnails") {
+        G::cacheThumbnails = v.toBool();
+        mw->settings->setValue("cacheThumbnails", G::cacheThumbnails);
+    }
+
+    if (source == "thumbCacheSize") {
+        G::thumbCacheMaxBytes = devPreviewCacheValue(v.toString());
+        mw->settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
+        /* Applied now, not next launch, for the same reason the develop preview
+           cap is: lowering the limit should reclaim the disk while the user is
+           looking at the setting they just changed. */
+        ThumbCache::instance().setMaxBytes(G::thumbCacheMaxBytes);
     }
 
     if (source == "buildDevPreviewsInBackground") {
@@ -1247,6 +1262,43 @@ void Preferences::addDevPreviews()
                << "100 GB"
                << "200 GB"
         ;
+    addItem(i);
+
+    /*  Thumbnail cache. Beside the develop-preview settings because both answer
+        "what does Winnow keep on disk so it does not have to decode again", and
+        a user looking for one will look for the other in the same place. */
+    i.name = "cacheThumbnails";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Cache thumbnails";
+    i.tooltip = "Keep each thumbnail in the local index as it is first decoded, so\n"
+                "returning to a folder -- or scrolling a large catalog -- reads the\n"
+                "thumbnail instead of opening the image again.\n\n"
+                "Costs a little extra work the FIRST time an image is seen, and\n"
+                "nothing after that."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::cacheThumbnails;
+    i.key = "cacheThumbnails";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "thumbCacheSize";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Thumbnail cache size";
+    i.tooltip = "Disk space the thumbnail cache may use.\n\n"
+                "When it is exceeded the least recently used thumbnails are\n"
+                "dropped. Losing one costs a re-decode, never an image."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewCacheLabel(G::thumbCacheMaxBytes);
+    i.key = "thumbCacheSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "5 GB" << "10 GB" << "20 GB" << "50 GB" << "100 GB" << "200 GB";
     addItem(i);
 
     // Build devPreviews in the background

@@ -2,6 +2,7 @@
 #include "Utilities/fileops.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
+#include "Cache/thumbcache.h"
 #include "Main/global.h"
 #include "Develop/workingimage.h"
 #include "Develop/workingimagecache.h"
@@ -1045,6 +1046,12 @@ void MW::closeEvent(QCloseEvent *event)
     /* Persist the develop-preview index. Cheap (one small JSON write) and skipped when
        nothing changed. Losing it costs only re-renders, so it is not worth guarding. */
     DevPreviewCache::instance().save();
+
+    /*  Let the queued thumbnails finish. Bounded by the queue cap, so this is a
+        short wait, not a save -- losing them would only cost re-decoding on the
+        next visit, but finishing is nearly free and the alternative is throwing
+        away work already paid for. */
+    ThumbCache::instance().flush();
 
     stop("MW::closeEvent");
 
