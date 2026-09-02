@@ -3846,6 +3846,32 @@ void DataModel::setChunkSize(int chunkSize)
     setIconRange(currentSfRow);
 }
 
+int DataModel::maxIconChunkOrAll() const
+{
+/*
+    The user's ceiling on how many thumbnails are held in memory at once, or
+    "all of them" when they have chosen no limit.
+
+    IT USED TO BE A WARNING RATHER THAN A LIMIT. G::maxIconChunk existed and was
+    used for one thing: okManyImagesWarning, which asks "there are more than
+    10,000 images... you may experience sluggish responses or system hangs. Do
+    you wish to continue?". Nothing enforced it, so answering yes meant caching
+    an icon for every row -- 7.7 GB of thumbnails for a 43,000-image scope,
+    measured. The number named a risk the user was asked to accept instead of a
+    bound the code would keep.
+
+    It is now the bound. Above it the existing sliding window applies
+    (setIconRange, needToRead, clearIconsOutsideChunkRange all key off
+    iconChunkSize < rowCount()), so a large scope scrolls instead of failing to
+    fit -- which is what makes browsing a whole catalog a size question rather
+    than a hazard.
+
+    Zero means no limit, for the user who would rather spend the memory.
+*/
+    const int m = G::maxIconChunk;
+    return m > 0 ? m : rowCount();
+}
+
 void DataModel::resolveIconChunkSize()
 /*
     Decide the icon-cache strategy for the just-loaded folder.
@@ -3896,7 +3922,7 @@ void DataModel::resolveIconChunkSize()
             the window applies regardless. A folder small enough to fit behaves
             exactly as before, which is every folder that was working. */
         const int budget = qMax(iconBudgetCount(), iconChunkFloor());
-        iconChunkSize = qMin(rows, budget);
+        iconChunkSize = qMin(rows, qMin(budget, maxIconChunkOrAll()));
         setIconRange(currentSfRow);
         return;
     }
@@ -3905,7 +3931,8 @@ void DataModel::resolveIconChunkSize()
        worst-case per-icon estimate. Small folder -> full populate; large -> bounded
        window. refineIconChunkSize() revisits this once real icons have loaded. */
     const int budgetIcons = iconBudgetCount();
-    iconChunkSize = qMin(rows, qMax(budgetIcons, iconChunkFloor()));
+    iconChunkSize = qMin(rows, qMin(qMax(budgetIcons, iconChunkFloor()),
+                                    maxIconChunkOrAll()));
 
     if (isDebug || G::isLogger)
         G::log("DataModel::resolveIconChunkSize",

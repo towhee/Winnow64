@@ -30,6 +30,9 @@ private:
        drift apart. Quality is not among them -- it is typed in as the number itself. */
     static QString devPreviewSizeLabel(int maxEdge);
     static int devPreviewSizeValue(const QString &label);
+    /* How many thumbnails to hold in memory; 0 is no limit. */
+    static QString maxIconChunkLabel(int n);
+    static int maxIconChunkValue(const QString &label);
     static QString devPreviewCacheLabel(qint64 bytes);
     static qint64 devPreviewCacheValue(const QString &label);
     void addSlideShow();

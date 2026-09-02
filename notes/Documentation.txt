@@ -1232,7 +1232,19 @@ IT DID NOT BIND AT 43,000 ON THIS MACHINE, which is worth saying plainly rather 
 
 THERE IS ALREADY A CAP, AND IT IS A DIALOG. G::maxIconChunk is 10,000 and DataModel::okManyImagesWarning uses it to ask "There are more than 10,000 images... you may experience sluggish responses or system hangs. Do you wish to continue?" -- which is the current answer to exactly the problem measured above, and it is a popup asking the user to accept a risk rather than a mechanism that removes it.
 
-MAKING iconChunkSize HONOUR maxIconChunk WOULD CLOSE THIS, and it is deliberately NOT done here. It is a user-visible trade -- folders between 10,000 and the memory budget would stop caching every icon, so scrolling past the window would re-decode -- and that is a judgement about how Winnow should feel, not a correctness fix to be made silently while nobody is looking at the screen. The measurement is here so the decision can be made on evidence.
+iconChunkSize NOW HONOURS maxIconChunk, AND maxIconChunk IS A PREFERENCE -- "Thumbnails held in memory", beside the other memory settings, offering 2,000 / 5,000 / 10,000 / 20,000 / 50,000 / No limit and defaulting to the 10,000 the constant already named. It is the user's call because it is a trade rather than a bug: memory against how far you can scroll before a thumbnail is re-read, and only the person watching the screen can weigh those.
+
+THE NUMBER USED TO NAME A RISK RATHER THAN KEEP A BOUND. G::maxIconChunk existed only for okManyImagesWarning -- "there are more than 10,000 images... you may experience sluggish responses or system hangs. Do you wish to continue?" -- and nothing enforced it, so answering yes meant caching an icon for every row. (That function turns out to be DEAD: nothing calls it, so the warning never even appeared. The number was doing nothing at all.) It is now the bound, and above it the sliding window that already existed applies.
+
+MEASURED WITH THE CAP IN PLACE:
+
+    50 images          chunk 50        8 MB      unchanged
+    1,048 images       chunk 1,048   196 MB      unchanged
+    43,070 images      chunk 10,000  ~1.8 GB cap (was 43,070 and 6.5 GB resident)
+
+Folders that were working are untouched -- the cap only engages where the old behaviour was asking for gigabytes. Note the middle row: an ordinary thousand-image folder holds nearly 200 MB of thumbnails, which is worth knowing before raising the setting.
+
+A CORRECTION TO THE MEASUREMENT ABOVE. The "it did not bind at 43,000" note was taken on a 128 GB Mac Studio, not on the 24 GB laptop CLAUDE.md describes -- iconBudgetCount() derives its allowance from FREE memory, so the same code takes a different branch on each machine, and on the laptop the budget WOULD have bound. A memory measurement is only meaningful with the machine attached to it.
 
 WHAT ELSE THE RUN SHOWED: after seven minutes only 26,420 of 43,070 rows had metadata read. At large scope the binding cost is TIME, not memory, and that is what G::useIndexMetadata addresses -- a catalogued folder skips the file read entirely. The two findings belong together: bounding the icons makes a large scope fit, and serving metadata from the index makes it arrive.
 
