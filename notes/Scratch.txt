@@ -3354,4 +3354,34 @@ How do I check the offline badge?
   If the placement is wrong, availabilityRect in IconViewDelegate::setThumbDimensions is the one line to move.
 
 
+What remains is the actual restructure — DataModel::setScope(CatalogQuery) replacing
+addFolder/addPaths, with folder scope becoming the same query plus a filesystem
+reconcile, and MetaRead demoted to gap-filler.
+
+Everything's set up. Go ahead and /clear.
+
+  State at handoff
+
+  - Working tree clean, on master, 26 commits this session (78ac8ec4 → bdc23552).
+  - ctest 34/35 — only the pre-existing tst_localcontrast OpenCV float drift.
+  - TSan clean on both suites.
+
+  What I've left for the next session
+
+  ~/.claude/plans/i-want-a-more-adaptive-starfish.md now opens by saying stages 0–3, 5 and 6 are done and stage 4 is the only work left, then carries a section "STAGE 4: THE ONLY THING LEFT" with:
+
+  - What's already done — the memory question (settled, and not what the plan assumed: icons are the constraint at ~178 KB against a row's ~600 B), and both load paths now having headless coverage.
+  - The four pieces of work, with the flag that piece 3 — allMetadataAttempted changing meaning across ~50 call sites — is the risky part, not the refactor.
+  - Five traps found the hard way, so they're not rediscovered: the .qttest database, editing an already-applied schema block, itemFromIndex() creating lazily, addMetadataForItem appending to search text,
+    and the pool-wait that makes model_contract flaky.
+  - The verification method — per-column fingerprinting — with the three non-negotiables: make the baseline deterministic first, prove every check can fail, and measure rather than reason.
+  - Build/test commands and the six test folders with their sizes.
+
+  The project memory points at that section as the first thing to read, and records the headline: no QStandardItems left, Filters compiled, thumbnails and metadata both servable from the index, and the
+  43,070-image measurement.
+
+  Two things worth your eyes before or during the next session
+
+  - The offline/missing badges — nothing headless can see a dot, so placement, legibility at small thumbnail sizes, and collision with the develop badge are unverified.
+  - The two new preferences ("Thumbnails held in memory", "Maximum search results") and "Read metadata from the catalog", which is off by default and verified only headlessly.
 

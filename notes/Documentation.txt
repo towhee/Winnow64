@@ -89,6 +89,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Load Responsiveness (Keeping the GUI Usable During a Large/Recursive Load)
      How to Test Icon Caching
      What Phase 2 Actually Costs (Icons, Not the Metadata Read)
+     A Cache Hit Was Costing a Commit (the LRU Stamp on the Read Path)
      Memory Governor (Process Footprint, Decode Concurrency)
 
 5. SCROLLING
@@ -1592,7 +1593,9 @@ THE INDEX MAKES NO MEASURABLE DIFFERENCE TO THE METADATA READ. The first chunk-5
 
 WHAT THIS DOES NOT SAY. It is a warm page cache, one folder, one camera and one machine. A cold cache would slow BOTH paths, and the icon read -- which reads far more bytes -- would slow more, so the ratio is if anything conservative. The revisit saving the index-metadata section reports (32.2 ms/icon down to 25.1 ms on the 50-file mixed folder) is a different measurement of a different thing and still stands: there the index saves the icon path work, not the metadata path.
 
-THE CONSEQUENCE FOR THE PLAN. "MetaRead becomes the gap-filler, not the primary loader" was aimed at ~5% of the load, and the mechanism it would be built on does not make even that part faster. Anything that makes a large scope load faster has to make the ICON cheaper or load fewer of them; and G::maxIconChunk, which is already a preference and already binds, is the control that does the second. This is the third time on this work that a load-pipeline assumption has failed measurement (see also the centralMsg repaint and the "keywords are most of the saving" note), which is the argument for the probe knobs below rather than for the next redesign.
+THE CONSEQUENCE, AND IT IS A DECISION RATHER THAN A NOTE. "MetaRead becomes the gap-filler, not the primary loader" was aimed at ~5% of the load, and the mechanism it would be built on does not make even that part faster; the ~50-call-site change to what G::allMetadataAttempted MEANS existed only to serve it. Both were CLOSED on this measurement rather than deferred -- they are not waiting for a better moment. This is the third time on this work that a load-pipeline assumption has failed measurement (see also the centralMsg repaint and the "keywords are most of the saving" note), which is the argument for the probe knobs below rather than for the next redesign.
+
+WHAT REPLACES THEM, AND IT PAID IMMEDIATELY. Anything that makes a large scope load faster has to make the ICON cheaper or load fewer of them. Decomposing the first of those found a 36x defect in the first run -- see "A Cache Hit Was Costing a Commit" below, which also revises the ~20 ms figure quoted here: on a folder whose thumbnails are cached, that 20 ms was lock wait, not decode. The second already has its control -- G::maxIconChunk binds and is a preference -- and what is unsettled there is whether the brute-force chunk should still be the DEFAULT, given that the JIT path exists and the chunk size turns out to be the single biggest lever on load time. The first is unexplored: the ~20 ms has never been decomposed, and the file open, the embedded-JPEG read, the JPEG decode, the scale to 256 px, the QImage-to-QPixmap conversion and the queued model write are all inside it. That decomposition has to be a probe rather than a reading of the code, for the reason the paragraph above gives. Note that the thumbnail cache (schema 5) already serves a revisit, so the number worth decomposing is the cold-folder one.
 
 THE A/B KNOBS, so this table can be reproduced without editing a default and rebuilding. Test mode only (--selftest and friends, which set QStandardPaths::setTestModeEnabled): in an ordinary session these are preferences, and an environment variable that silently changed how metadata is read would be a trap. Applied in Main/settings.cpp AFTER the preference is read, so the environment wins.
 
@@ -1601,6 +1604,32 @@ THE A/B KNOBS, so this table can be reproduced without editing a default and reb
     WINNOW_INDEX_METADATA=0|1  force G::useIndexMetadata either way
     WINNOW_MAX_ICON_CHUNK=<n>  the icon ceiling, which is what decides how much of a
                                load is icon work
+
+⏺ Caching > A Cache Hit Was Costing a Commit (the LRU Stamp on the Read Path)
+
+FOUND BY DECOMPOSING THE ICON, which the section above says is ~95% of phase 2 and had never been broken down. Five probes inside the icon path -- the thumbnail-cache read, the sidecar develop preview, the loader loop, the scale, the rotate, and the cache write -- and the first run answered it outright:
+
+    [PERF] Phase2 icons  icons=3  cacheHit=1034  cacheMiss=3  cacheGet(ms)=283114.0
+                         devThumb(ms)=0.5  load(ms)=0.5  scale(ms)=0.1  orient(ms)=0.0
+
+Three icons were DECODED. Everything else came out of the thumbnail cache -- and reading 1,034 of them cost 283 SECONDS of accumulated thread time across the reader pool, about 274 ms of it per hit, against 0.5 ms for the three that were actually decoded from the file. The load was not decoding thumbnails. It was queueing to read them.
+
+THE CAUSE IS ONE UPDATE ON THE READ PATH. ThumbCache::get() refreshed the row's LRU `used` stamp on every hit -- a WRITE inside the read, under the mutex every reader thread shares. In WAL every statement outside an explicit transaction is its own commit, which is EXACTLY the cost writeBatch() was written to avoid ("committing per row is what made the inline version cost 14 ms an icon"); the same mistake had simply been made again on the other side, where nobody was looking for it. A thousand hits meant a thousand commits, serialised.
+
+USED ORDERS EVICTION; IT IS NOT CORRECTNESS. evictLocked drops the least recently used when the cache passes its byte budget, and nothing about that distinguishes two thumbnails read minutes apart. The stamp is now refreshed only when it is more than a day old, so the overwhelmingly common case -- a thumbnail read again in the same session -- is a pure SELECT. `live = 1` rides along with it: a row being served is by definition present.
+
+AND THE SECOND HALF: A HIT WAS WRITTEN STRAIGHT BACK. Reader::readIcon called ThumbCache::putImage for every icon it produced, INCLUDING the ones getImage had just handed it. writeBatch skipped them (containsLocked), so nothing was written and nothing was corrupt -- but getting as far as that skip meant taking the mutex the writer holds for a whole batch transaction, to have the work thrown away. Reader now tracks whether the picture came from the cache and does not offer it back.
+
+MEASURED, 1,048 Sony ARW with the cache warm, phase-2 wall:
+
+    before   25,136 ms      cacheGet 283,114 ms   thumbCache(put) 161,144 ms
+    after       704 ms      cacheGet   1,063 ms   thumbCache(put)       0 ms
+
+**36x.** The folder that took 21-25 seconds to show its thumbnails now takes under a second, and the number that section above called "~20 ms per thumbnail" was never decode cost at all -- it was lock wait.
+
+WHAT IS STILL OVER-LOCKED, and deliberately left alone for now. CacheDb hands out a connection PER THREAD, so mMutex is not protecting the connection -- it is a global serialiser over per-thread handles, and with the write gone from the read path a WAL SELECT does not need it. Removing it is a concurrency change to code TSan has been run over, and the measurement above says it is now worth about 1 ms an icon, so it is not the next thing to do on the strength of this. Recorded so the next person does not have to rediscover it.
+
+THE LESSON, AND IT IS THE SAME ONE. The icon cost had been carried in this documentation as "~20 ms, mostly the header walk" and reasoned from repeatedly. One probe, first run, said otherwise. That is now four load-pipeline assumptions overturned by measurement on this work: the centralMsg repaint, "keywords are most of the saving", the ~20 ms metadata read, and this.
 
 ⏺ Caching > Memory Governor (Process Footprint, Decode Concurrency)
 
