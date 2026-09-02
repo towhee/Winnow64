@@ -83,6 +83,10 @@ bool ScratchStore::covers(int column, int role)
 
 QVariant ScratchStore::value(int row, int column) const
 {
+    /*  Read lock: see "THREADING" in rowscratch.h. Decoder and cache threads
+        read these columns off the model while the GUI thread is still inserting
+        entries, and an insert can rehash the whole table. */
+    QReadLocker locker(&mLock);
     auto it = mRows.constFind(row);
     if (it == mRows.cend()) return QVariant();
     const RowScratch &s = *it;
@@ -129,6 +133,7 @@ QVariant ScratchStore::value(int row, int column) const
 
 void ScratchStore::setValue(int row, int column, const QVariant &v)
 {
+    QWriteLocker locker(&mLock);
     const quint32 bit = bitFor(column);
     if (!bit || row < 0) return;
 

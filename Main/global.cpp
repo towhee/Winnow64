@@ -240,7 +240,6 @@ bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only f
 // Mode (Preview / Develop)
 OperationMode operationMode = OperationMode::Preview;   // start in fast-review Preview mode
 Scope scope = Scope::Folders;           // a folder is what opens at startup
-bool useRowStore = true;                // read covered columns from the packed store
 /* Show the developed picture by default: an image the user has edited should look
    edited everywhere. Falls back to the camera render wherever no devPreview exists. */
 PreviewSource previewSource = PreviewSource::Developed;

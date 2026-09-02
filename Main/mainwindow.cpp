@@ -11184,7 +11184,7 @@ void MW::infoViewChanged(QStandardItem* item)
         paths << dm->sf->index(sfRow, G::PathColumn).data().toString();
         // update data model
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, col[tagName]));
-        emit setValSf(sfRow, col[tagName], tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
+        emit setValSf(sfRow, col[tagName], tagValue, dm->instance, src);
         // emit setValueDm(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
@@ -11197,7 +11197,7 @@ void MW::infoViewChanged(QStandardItem* item)
             if (rawRow >= 0) {
                 // set tag item for raw file row as well
                 emit setValDm(rawRow, col[tagName], tagValue, dm->instance, src,
-                              Qt::EditRole, Qt::AlignCenter);
+                              Qt::EditRole);
             }
         }
     }

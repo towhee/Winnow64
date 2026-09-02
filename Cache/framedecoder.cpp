@@ -142,9 +142,7 @@ void FrameDecoder::addToQueue(QString path, int longSide, QString source,
             emit setFrameIcon(dmRow, im, dmInstance, durationMs, this);
             qint64 usToDecode = t.nsecsElapsed() / 1000;
             emit setValDm(dmRow, G::NSThumbColumn, usToDecode, dmInstance,
-                          "FrameDecoder::addToQueue (AVFoundation)",
-                          Qt::EditRole,
-                          int(Qt::AlignRight | Qt::AlignVCenter));
+                          "FrameDecoder::addToQueue (AVFoundation)");
             return;
         }
         /* AVFoundation failed. Do NOT fall back to QMediaPlayer for dmThumb:
@@ -340,8 +338,7 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 
         qint64 msToDecode = tFrame.isValid() ? tFrame.nsecsElapsed() / 1000 : 0;
         emit setValDm(item.dmRow, G::NSThumbColumn, msToDecode, item.dmInstance,
-                      "FrameDecoder::handleFrameChanged", Qt::EditRole,
-                      int(Qt::AlignRight | Qt::AlignVCenter));
+                      "FrameDecoder::handleFrameChanged");
     } else {
         // used in FindDuplicates
         /*

@@ -460,9 +460,9 @@ protected:
 signals:
     void updateCurrent(QModelIndex sfIdx, int instance);
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "MW",
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+                    int role = Qt::EditRole);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
+                    int role = Qt::EditRole);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void startImageCache();
     void initializeImageCache();

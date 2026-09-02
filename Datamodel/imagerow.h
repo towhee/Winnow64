@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QHash>
 #include <QVariant>
+#include <QReadWriteLock>
 
 #include "Main/global.h"
 
@@ -35,11 +36,26 @@
     that icd, fPathRow and the proxy snapshot all use -- composing it per access
     would trade 45 MB for an allocation on every hot path.
 
-    THREADING. GUI thread only, exactly like the QStandardItems it shadows.
-    Every worker-thread write already arrives through a queued setValDm/setValSf
-    signal, and every worker-thread READ now goes through the published views in
-    Datamodel/modelsync.h. Nothing here needs a lock, and adding one would
-    disguise a caller that should not be here.
+    THREADING. Writes are GUI thread only; every worker-thread write arrives
+    through a queued setValDm/setValSf signal. READS are the reason there is a
+    lock, and the reason is worth stating because an earlier version of this
+    comment said confidently that there would never be one.
+
+    Stage 0.3 moved BuildFilters, MetaRead and the image cache's own bookkeeping
+    onto the published views in Datamodel/modelsync.h, but it did NOT convert
+    every off-thread read of dm->sf -- the remaining ones are the known
+    QSortFilterProxyModel exposure that tests/tsan/run_tsan_proxy.sh exists to
+    reproduce, and whose fix is deliberately deferred.
+
+    While the QStandardItems held the values that was survivable by accident: a
+    worker read an item pointer out of a list that only changes when a ROW is
+    inserted. Now the value lives here, and the INTERNER appends on every string
+    written -- so its QVector reallocates all through the metadata load while a
+    decoder thread is reading from it. That is a use-after-free, not a stale
+    read, and ThreadSanitizer caught it on the first run after the items went.
+
+    So the lock is the price of the deferred proxy readers, not a design
+    preference, and it comes out with them.
 */
 
 class Interner
@@ -126,10 +142,44 @@ struct ImageRow
 class RowStore
 {
 public:
-    void clear() { mRows.clear(); mStrings.clear(); }
-    void resize(int n) { if (n != mRows.size()) mRows.resize(n); }
-    int  size() const { return mRows.size(); }
-    bool contains(int row) const { return row >= 0 && row < mRows.size(); }
+    void clear()
+    {
+        QWriteLocker l(&mLock);
+        mRows.clear(); mStrings.clear();
+    }
+    void resize(int n)
+    {
+        QWriteLocker l(&mLock);
+        if (n != mRows.size()) mRows.resize(n);
+    }
+
+    /*  ROW SPLICING. The store is indexed by row, so an insert or a removal in
+        the MIDDLE shifts the meaning of every row after it. While the items
+        were still there this was handled by rebuilding the store from them;
+        with the items gone there is nothing to rebuild from, so the vector is
+        spliced directly -- which is also what a plain resize() could never do
+        correctly, since it truncates from the END. */
+    void insertRows(int at, int count)
+    {
+        QWriteLocker l(&mLock);
+        if (count <= 0 || at < 0 || at > mRows.size()) return;
+        mRows.insert(at, count, ImageRow());
+    }
+    void removeRows(int at, int count)
+    {
+        QWriteLocker l(&mLock);
+        if (count <= 0 || at < 0 || at >= mRows.size()) return;
+        count = qMin(count, mRows.size() - at);
+        mRows.remove(at, count);
+    }
+    int  size() const { QReadLocker l(&mLock); return mRows.size(); }
+    bool contains(int row) const
+    {
+        QReadLocker l(&mLock);
+        return row >= 0 && row < mRows.size();
+    }
+    /*  Reporting only, and NOT locked -- the caller holds a reference into the
+        interner, which no lock taken here could keep valid. GUI thread. */
     const Interner &strings() const { return mStrings; }
 
     /*  Which datamodel columns this store can answer. Deliberately explicit
@@ -142,6 +192,7 @@ public:
     void setValue(int row, int column, const QVariant &v);
 
 private:
+    mutable QReadWriteLock mLock;
     QVector<ImageRow> mRows;
     Interner mStrings;
 };

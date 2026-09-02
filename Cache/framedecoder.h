@@ -34,7 +34,7 @@ signals:
     /* Mirrors Reader::setValDm so video thumb decode time can be recorded
        in G::NSThumb the same way image thumb decode time is. */
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "FrameDecoder",
-                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+                  int role = Qt::EditRole);
 
 public slots:
     void stop();

@@ -131,16 +131,15 @@ void Thumb::setImageDimensions(QString &fPath, QSize size, int row)
     }
     double ar = w * 1.0 / h;
     QString a = QString::number(ar, 'f', 2);
-    int alignRight = Qt::AlignRight | Qt::AlignVCenter;
     QString d = QString::number(w) + "x" + QString::number(h);
     QString src = "Thumb::setImageDimensions";
 
-    emit setValDm(row, G::WidthColumn, w, instance, src, Qt::EditRole, Qt::AlignCenter);
+    emit setValDm(row, G::WidthColumn, w, instance, src);
     emit setValDm(row, G::WidthOrigPreviewColumn, w, instance, src);
-    emit setValDm(row, G::HeightColumn, h, instance, src, Qt::EditRole, Qt::AlignCenter);
+    emit setValDm(row, G::HeightColumn, h, instance, src);
     emit setValDm(row, G::HeightOrigPreviewColumn, h, instance, src);
-    emit setValDm(row, G::AspectRatioColumn, a, instance, src, Qt::EditRole, alignRight);
-    emit setValDm(row, G::DimensionsColumn, d, instance, src, Qt::EditRole, Qt::AlignCenter);
+    emit setValDm(row, G::AspectRatioColumn, a, instance, src);
+    emit setValDm(row, G::DimensionsColumn, d, instance, src);
 
     emit setValDm(row, G::MetadataStatusColumn, G::MetaLoaded, instance, src);
 

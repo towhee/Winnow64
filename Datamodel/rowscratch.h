@@ -3,6 +3,7 @@
 
 #include <QByteArray>
 #include <QHash>
+#include <QReadWriteLock>
 #include <QString>
 #include <QVariant>
 #include <QVector>
@@ -50,8 +51,29 @@
     interning it would grow a table that is never trimmed in exchange for
     nothing.
 
-    THREADING. GUI thread only, exactly like the QStandardItems it shadows.
-    Every worker-thread write arrives through a queued setValDm/setValSf signal.
+    THREADING: THIS ONE TAKES A LOCK, AND THE ROW STORE DOES NOT.
+
+    That looks inconsistent and is not. Writes to both arrive on the GUI thread.
+    READS are the difference. ImageDecoder, Reader and ImageCache still read
+    scratch columns straight off the model from their own threads
+    (imagedecoder.cpp OffsetFull/LengthFull/samplesPerPixel/ICCBuf, reader.cpp
+    OffsetThumb/LengthThumb, imagecache.cpp the cache flags) -- Stage 0.3 moved
+    BuildFilters, MetaRead and the cache's own bookkeeping off the model, but
+    not these.
+
+    With the QStandardItems that was survivable by accident: the item pointer
+    list is touched only when a ROW is inserted, so a decoder read raced with
+    load only. This table takes a new ENTRY on every scratch write -- during the
+    whole load and the whole caching run -- and a QHash REHASHES, moving every
+    node. A reader mid-lookup then walks freed memory, which is a different
+    class of bug from a stale value. ThreadSanitizer found it on the first run
+    after the items went, which is exactly what it is for.
+
+    The lock is therefore the price of those four callers, not a design
+    preference, and it comes OUT when they are converted to take what they need
+    from the decode request instead of reading the model (Stage 4). Reads here
+    are decoder and cache bookkeeping, not the paint path, so the contention is
+    not on any hot loop.
 */
 
 /*  Blobs, interned. Same shape as Interner (Datamodel/imagerow.h) but keyed on
@@ -127,19 +149,56 @@ public:
         column verifyRowStore quietly stopped checking. */
     static bool covers(int column, int role);
 
-    bool contains(int row) const { return mRows.contains(row); }
-    int  count() const { return mRows.size(); }
+    bool contains(int row) const { QReadLocker l(&mLock); return mRows.contains(row); }
+    int  count() const { QReadLocker l(&mLock); return mRows.size(); }
 
     QVariant value(int row, int column) const;
     void setValue(int row, int column, const QVariant &v);
 
-    void remove(int row) { mRows.remove(row); }
-    void clear() { mRows.clear(); mStrings.clear(); mBlobs.clear(); }
+    void remove(int row) { QWriteLocker l(&mLock); mRows.remove(row); }
+    void clear()
+    {
+        QWriteLocker l(&mLock);
+        mRows.clear(); mStrings.clear(); mBlobs.clear();
+    }
 
+    /*  ROW SPLICING, the hash equivalent of RowStore's. Keys ARE row numbers,
+        so an insert or removal in the middle re-addresses every entry above it.
+        Rebuilt into a fresh hash rather than mutated in place: shifting keys
+        one at a time inside a QHash risks colliding with a key not yet moved,
+        and the whole table is only the rows in flight. */
+    void insertRows(int at, int count)
+    {
+        QWriteLocker l(&mLock);
+        if (count <= 0 || mRows.isEmpty()) return;
+        QHash<int, RowScratch> next;
+        next.reserve(mRows.size());
+        for (auto it = mRows.cbegin(); it != mRows.cend(); ++it)
+            next.insert(it.key() >= at ? it.key() + count : it.key(), it.value());
+        mRows.swap(next);
+    }
+    void removeRows(int at, int count)
+    {
+        QWriteLocker l(&mLock);
+        if (count <= 0 || mRows.isEmpty()) return;
+        QHash<int, RowScratch> next;
+        next.reserve(mRows.size());
+        for (auto it = mRows.cbegin(); it != mRows.cend(); ++it) {
+            const int r = it.key();
+            if (r >= at && r < at + count) continue;      // the removed rows
+            next.insert(r >= at + count ? r - count : r, it.value());
+        }
+        mRows.swap(next);
+    }
+
+    /*  Test/report accessors. Not locked and not for the workers -- they exist
+        so tst_rowscratch can assert that a shared ICC profile interned to one
+        copy. */
     const Interner &strings() const { return mStrings; }
     const BlobInterner &blobs() const { return mBlobs; }
 
 private:
+    mutable QReadWriteLock mLock;
     QHash<int, RowScratch> mRows;
     Interner mStrings;
     BlobInterner mBlobs;
