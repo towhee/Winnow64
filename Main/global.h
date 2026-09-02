@@ -536,6 +536,13 @@ Q_NAMESPACE
         read rather than a file open per row. The write costs a JPEG encode on
         the loader thread, once per image ever, and is skipped when the index
         already holds a current thumbnail. */
+    /*  Populate a row's metadata from the local index when the catalog already
+        holds it and the file has not changed, instead of opening the file and
+        walking its header (~20 ms for a raw). DEFAULT OFF: it changes the
+        contract between the loader and the decoder -- see "Metadata From the
+        Index" in Documentation.txt -- and wants real-app use before it becomes
+        the default. */
+    extern bool useIndexMetadata;
     extern bool cacheThumbnails;
     extern qint64 thumbCacheMaxBytes;
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)

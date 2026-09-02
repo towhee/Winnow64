@@ -2804,23 +2804,33 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
     setData(index(row, G::CompareColumn), m.compare);
-    setData(index(row, G::OffsetFullColumn), m.offsetFull);
-    setData(index(row, G::LengthFullColumn), m.lengthFull);
-    setData(index(row, G::WidthOrigPreviewColumn), m.widthOrigPreview);
-    setData(index(row, G::HeightOrigPreviewColumn), m.heightOrigPreview);
-    setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
-    setData(index(row, G::LengthThumbColumn), m.lengthThumb);
-    setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
-    setData(index(row, G::isBigEndianColumn), m.isBigEnd);
-    setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
-    setData(index(row, G::ifdOffsetsColumn), m.ifdOffsets);
-    setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
-    setData(index(row, G::XmpSegmentLengthColumn), m.xmpSegmentLength);
-    setData(index(row, G::IsXMPColumn), m.isXmp);
-    setData(index(row, G::ICCSegmentOffsetColumn), m.iccSegmentOffset);
-    setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
-    setData(index(row, G::ICCBufColumn), m.iccBuf);
-    setData(index(row, G::ICCSpaceColumn), m.iccSpace);
+    /*  THE DECODE GEOMETRY, and it is written only when it was actually READ.
+        A row whose metadata came from the local index (m.fromIndex) has none of
+        this -- the catalog stores what is displayed and searched, not what is
+        needed to decode -- and writing zeros here would be worse than writing
+        nothing: the scratch store's set mask would then report the fields as
+        WRITTEN, an offset of 0 is a legal offset, and ImageDecoder would decode
+        from the front of the file instead of noticing it has to read the header
+        itself. Leaving them unset is what makes the gap detectable. */
+    if (!m.fromIndex) {
+        setData(index(row, G::OffsetFullColumn), m.offsetFull);
+        setData(index(row, G::LengthFullColumn), m.lengthFull);
+        setData(index(row, G::WidthOrigPreviewColumn), m.widthOrigPreview);
+        setData(index(row, G::HeightOrigPreviewColumn), m.heightOrigPreview);
+        setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
+        setData(index(row, G::LengthThumbColumn), m.lengthThumb);
+        setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
+        setData(index(row, G::isBigEndianColumn), m.isBigEnd);
+        setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
+        setData(index(row, G::ifdOffsetsColumn), m.ifdOffsets);
+        setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
+        setData(index(row, G::XmpSegmentLengthColumn), m.xmpSegmentLength);
+        setData(index(row, G::IsXMPColumn), m.isXmp);
+        setData(index(row, G::ICCSegmentOffsetColumn), m.iccSegmentOffset);
+        setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
+        setData(index(row, G::ICCBufColumn), m.iccBuf);
+        setData(index(row, G::ICCSpaceColumn), m.iccSpace);
+    }
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
