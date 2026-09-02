@@ -8,6 +8,7 @@
 
 #include "Cache/cachedb.h"
 #include "Cache/catalog.h"
+#include "Cache/pathkey.h"
 #include "Cache/devpreviewcache.h"
 #include "Metadata/keywordflatten.h"
 #include "Main/global.h"
@@ -45,6 +46,7 @@ private slots:
     void fetchFreshAndStaleOfAgreeExactly();
     void displayFieldsSurviveTheRoundTrip();
     void sweepDemotesMissingSource();
+    void availabilityDistinguishesOfflineFromMissing();
     void onMovedFollowsTheImage();
     void onDeletedRemovesTheRow();
     void searchTextIsNotInjectable();
@@ -528,6 +530,57 @@ void tst_catalog::sweepDemotesMissingSource()
     QCOMPARE(cat.count(), 1);
     q.includeMissing = true;
     QCOMPARE(cat.search(q).size(), 1);
+}
+
+void tst_catalog::availabilityDistinguishesOfflineFromMissing()
+{
+    /*  OFFLINE IS NOT MISSING, and conflating them is what made the catalog hide
+        rows instead of explaining them. An ejected card and a deleted file look
+        identical from inside -- the file is not there either way -- and the only
+        thing that tells them apart is whether the VOLUME is mounted.
+
+        The sweep already depends on that distinction: it demotes a row only when
+        the volume is mounted and the file is still gone, so that unplugging a
+        drive is not read as a mass deletion. Nothing could ASK for it, though,
+        so the catalog's only answer to "can I open this" was to drop the row
+        from the results -- which for browsing is the wrong answer. */
+    Catalog &cat = Catalog::instance();
+
+    const CatalogRow here = rowFor("avail-present.jpg");
+    const CatalogRow gone = rowFor("avail-gone.jpg");
+    QCOMPARE(cat.commit({here, gone}), 2);
+
+    /*  Delete one and sweep: the temp dir is on the boot volume, which is always
+        mounted, so this is the MISSING case by construction. */
+    QVERIFY(QFile::remove(gone.path));
+    QCOMPARE(cat.sweep(), 1);
+
+    const auto avail = cat.availabilityOf({here.path, gone.path,
+                                           imagePath("never-indexed.jpg")});
+    QCOMPARE(avail.value(here.path), Catalog::Availability::Present);
+    QCOMPARE(avail.value(gone.path), Catalog::Availability::Missing);
+
+    /*  A path the catalog does not know is ABSENT from the result, not reported
+        Missing: "not indexed" is a different statement from "indexed and gone",
+        and a caller that cannot tell them apart would badge every uncatalogued
+        image as deleted. */
+    QVERIFY2(!avail.contains(imagePath("never-indexed.jpg")),
+             "an unindexed path must not be reported as Missing");
+
+    /*  The OFFLINE case is asserted through the vol column directly, because a
+        test cannot unmount a volume. A row whose recorded volume is not in the
+        mount table must read Offline EVEN THOUGH it is also marked not live --
+        the volume question is asked first, deliberately: while the disk is away
+        there is no way to know whether the file is still gone, and "that disk
+        isn't plugged in" is the thing the user can act on. */
+    QSqlQuery u(CacheDb::instance().db());
+    u.prepare("UPDATE image SET vol = ? WHERE pathkey = ?");
+    u.addBindValue("/Volumes/NotMountedAnywhere");
+    u.addBindValue(cachePathKey(gone.path));
+    QVERIFY(u.exec());
+
+    const auto avail2 = cat.availabilityOf({gone.path});
+    QCOMPARE(avail2.value(gone.path), Catalog::Availability::Offline);
 }
 
 void tst_catalog::onMovedFollowsTheImage()
