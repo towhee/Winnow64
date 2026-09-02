@@ -209,11 +209,18 @@ bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
     m._url = r._url;
     m.developEdited = r.developed;
     m.devPreviewKey = r.devPreviewKey;
-    /*  The FLAT vocabulary, which is what the catalog stores and what the
-        Filters category and the search read. keywordPaths is NOT recoverable
-        from the index -- schema 4 flattened the hierarchy -- so it stays empty,
-        and the flat list is put where the flat list belongs. */
-    m.keywords = r.keywords;
+    /*  The FLAT vocabulary, which is what the Filters category and the search
+        read, and the hierarchical paths as the file spelled them. Both are
+        needed: the flat list is what is filtered on, and the paths are part of
+        the row's searchable text, so a row without them searched differently
+        from the same row read from its file (schema 7 exists for this). */
+    /*  m.keywords is the LITERAL dc:subject list -- what may be written back
+        to a file. The flat vocabulary is derived downstream by
+        addMetadataForItem (flattenKeywords), so handing it the flat list here
+        would put every ancestor into the user's own dc:subject on the next
+        sidecar write. */
+    m.keywords = r.keywordsLiteral;
+    m.keywordPaths = r.keywordPaths;
     m.isSearch = false;
 
     /*  THE DISPLAY STRINGS, spelled exactly as the format parsers spell them.
@@ -252,14 +259,15 @@ bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
     info += "  " + m.exposureTime;
     info += (m.aperture == "") ? "" : " at " + m.aperture;
     info += (m.ISO == "") ? "" : ", ISO " + m.ISO;
-    /*  COMPOSED UNCONDITIONALLY, INCLUDING WHEN EVERY PART IS EMPTY. The
-        separators are unconditional in Metadata::loadImageMetadata too, so an
-        image with no model, focal length or shutter speed gets four spaces
-        there -- and a row that is in the catalog at all was MetaLoaded when it
-        was captured, which means that path DID reach its composition. Trimming
-        to an empty string here was tried and was wrong in exactly one file:
-        an iPhone JPG whose file-read row says '    '. */
-    m.shootingInfo = info;
+    /*  TAKEN FROM THE CATALOG, NOT RECOMPOSED. The composition above builds the
+        display strings the delegates and the info panel need, but shootingInfo
+        itself is stored: Metadata::loadImageMetadata composes it only when the
+        read SUCCEEDED, and Thumb::setImageDimensions marks a row MetaLoaded from
+        the thumbnail path either way -- so a catalogued row may legitimately have
+        an empty one, and nothing in the row says which case it was. Recomposing
+        unconditionally was tried and moved the mismatch from a HEIC to an iPhone
+        JPG. See the schema 7 note in cachedb.cpp. */
+    m.shootingInfo = r.shootingInfo;
 
     m.metaStatus = G::MetaLoaded;
     return true;
@@ -436,9 +444,18 @@ void Reader::readIcon()
                 m = &metadata->m;
                 offsetThumb = m->offsetThumb;
                 lengthThumb = m->lengthThumb;
-                /*  Publish it, so the decoder does not repeat the walk and the
-                    row stops being a partial one. */
-                emit addToDatamodel(metadata->m, "Reader::readIcon geometry");
+                /*  USED LOCALLY, NOT PUBLISHED. Emitting addToDatamodel here
+                    seemed the tidy thing -- the row would stop being a partial
+                    one and the decoder would not repeat the walk -- and it was
+                    wrong: DataModel::addMetadataForItem APPENDS to the row's
+                    searchable text rather than rebuilding it, so a second call
+                    for the same row doubled every field in it. Twenty-three rows
+                    in fifty ended with their dimensions and camera twice over,
+                    which nothing would have noticed until a search matched the
+                    wrong thing.
+
+                    The decoder has its own ensureDecodeGeometry for the same
+                    gap, so nothing is lost by keeping this local. */
             }
         }
 

@@ -2239,6 +2239,10 @@ QVector<CatalogRow> DataModel::catalogRows() const
         r._url = index(row, G::_UrlColumn).data().toString();
         r.developed = index(row, G::DevelopColumn).data().toBool();
         r.devPreviewKey = index(row, G::DevPreviewKeyColumn).data().toString();
+        r.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
+        /*  The LITERAL dc:subject list, kept apart from the flat vocabulary
+            below -- only this one may ever be written back to a file. */
+        r.keywordsLiteral = index(row, G::KeywordsColumn).data().toStringList();
 
         r.keywords = index(row, G::KeywordsAllColumn).data().toStringList();
         r.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();

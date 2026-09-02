@@ -362,7 +362,9 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " orientation = ?, exposurecomp = ?, focusx = ?, focusy = ?,"
                 " email = ?, url = ?, orig_rating = ?, orig_label = ?,"
                 " orig_creator = ?, orig_title = ?, orig_copyright = ?,"
-                " orig_email = ?, orig_url = ?, developed = ?, devpreviewkey = ?"
+                " orig_email = ?, orig_url = ?, developed = ?, devpreviewkey = ?,"
+                /* schema 7 */
+                " keywordpaths = ?, shootinginfo = ?, keywords_literal = ?"
                 " WHERE id = ?");
 
     QSqlQuery ins(db);
@@ -374,10 +376,11 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 /* schema 6: what a row DISPLAYS, beyond what a search needs */
                 " orientation, exposurecomp, focusx, focusy, email, url,"
                 " orig_rating, orig_label, orig_creator, orig_title,"
-                " orig_copyright, orig_email, orig_url, developed, devpreviewkey)"
+                " orig_copyright, orig_email, orig_url, developed, devpreviewkey,"
+                " keywordpaths, shootinginfo, keywords_literal)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1,"
                 " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
-                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     int written = 0;
     for (const CatalogRow &r : rows) {
@@ -447,6 +450,10 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(text(r._url));
         w.addBindValue(r.developed ? 1 : 0);
         w.addBindValue(text(r.devPreviewKey));
+        /*  Verbatim, newline separated -- see the schema 7 note. */
+        w.addBindValue(text(r.keywordPaths.join('\n')));
+        w.addBindValue(text(r.shootingInfo));
+        w.addBindValue(text(r.keywordsLiteral.join('\n')));
         if (id) w.addBindValue(id);
 
         if (!w.exec()) {
@@ -534,7 +541,8 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
               " width, height, gpscoord,"
               " orientation, exposurecomp, focusx, focusy, email, url,"
               " orig_rating, orig_label, orig_creator, orig_title,"
-              " orig_copyright, orig_email, orig_url, developed, devpreviewkey"
+              " orig_copyright, orig_email, orig_url, developed, devpreviewkey,"
+              " keywordpaths, shootinginfo, keywords_literal"
               " FROM image WHERE pathkey = ? AND live = 1");
 
     QSqlQuery kw(db);
@@ -610,19 +618,16 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
         r._url = q.value(37).toString();
         r.developed = q.value(38).toBool();
         r.devPreviewKey = q.value(39).toString();
+        const QString kp = q.value(40).toString();
+        if (!kp.isEmpty()) r.keywordPaths = kp.split('\n', Qt::SkipEmptyParts);
+        r.shootingInfo = q.value(41).toString();
+        const QString kl = q.value(42).toString();
+        if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
         q.finish();
 
         kw.addBindValue(id);
         if (kw.exec()) while (kw.next()) r.keywords << kw.value(0).toString();
         kw.finish();
-
-        /*  keywordPaths is NOT reconstructed, and cannot be: schema 4 flattened the
-            hierarchy to node names and keyword_context keeps only (child, parent) pairs,
-            so the original "A|B|C" spelling is gone. Nothing that reads a row back needs
-            it -- it exists to be written INTO the context table, not read out of it --
-            but a caller that assumed a fetched row round-trips to commit() unchanged
-            would quietly drop the contexts. Left empty rather than half-reconstructed so
-            that assumption fails loudly if anyone makes it. */
 
         out.insert(cand.path, r);
     }
