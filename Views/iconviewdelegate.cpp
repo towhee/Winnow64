@@ -125,6 +125,11 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     cacheBorderColor = QColor(l20,l20,l20);
     sidecarColor = QColor(5,82,56);                 // dark teal
     developColor = QColor(150,110,20);              // amber: image has develop edits
+    /*  Availability. Offline is the calmer of the two on purpose: an ejected
+        drive is a normal state a user creates dozens of times a day, while a
+        file that is genuinely gone is the one worth alarming about. */
+    offlineColor = QColor(90,130,170);              // slate blue: volume not mounted
+    missingColor = QColor(170,70,60);               // dull red: file gone
     ratingBackgoundColor = QColor(Qt::yellow);
     // ratingBackgoundColor = QColor(b,b,b,50);
     labelTextColor = G::textColor;
@@ -256,6 +261,12 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     developRect.setRect(sidecarRect.right() + 2 + 12 + 2,
                         itemSize.height() - dotDiam - dotOffset,
                         dotDiam, dotDiam);
+
+    /*  Availability badge, to the right of the develop badge and on the same
+        baseline as the other bottom-left dots. */
+    availabilityRect.setRect(developRect.right() + 2 + 12 + 2,
+                             itemSize.height() - dotDiam - dotOffset,
+                             dotDiam, dotDiam);
 
     // Lock Icon (To the right of Missing Thumb)
     int lockSize = 12; // Adjusted for SVG
@@ -410,6 +421,7 @@ QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &option
     // 1. Static Symbols (Pre-calculated in setThumbDimensions)
     if (symbol == "Thumb") return thumbRect;
     if (symbol == "Develop") return developRect.translated(origin);
+    if (symbol == "Availability") return availabilityRect.translated(origin);
     if (symbol == "Sidecar") return sidecarRect.translated(origin);
     if (symbol == "Lock") return lockRect.translated(origin);
     if (symbol == "CombineRawJpg") return combineRawJpgRect.translated(origin);
@@ -494,6 +506,16 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
 
     if (developVisible && getSymbolRect("Develop", option.rect, index).contains(viewPos))
         tooltip = "Image has develop edits";
+
+    /*  The reason, inline, where the user is already looking -- never a popup. */
+    const int avail = sf->index(row, G::AvailabilityColumn).data().toInt();
+    if (avail != 0 && getSymbolRect("Availability", option.rect, index).contains(viewPos))
+        tooltip = avail == 1
+                      ? "Offline: this image is on a volume that is not mounted.\n"
+                        "Reconnect the drive to open it."
+                      : "Missing: this file was not found where the catalog "
+                        "expects it.\nIt may have been moved or deleted "
+                        "outside Winnow.";
     else if (sidecarVisible && getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
         tooltip = "Image has a sidecar file";
     else if (lockVisible && getSymbolRect("Lock", option.rect, index).contains(viewPos))
@@ -604,6 +626,9 @@ textRect         = a rectangle below itemRect
     bool isVideo = index.model()->index(sfRow, G::VideoColumn).data().toBool();
     bool isReadWrite = index.model()->index(sfRow, G::ReadWriteColumn).data().toBool();
     bool isCombineRawJpg = index.model()->index(sfRow, 0).data(G::DupIsJpgRole).toBool() && G::combineRawJpg;
+    /*  0 is Present, which is every folder-scope row and most catalog rows, so
+        the common case reads one int and draws nothing. */
+    const int availability = index.model()->index(sfRow, G::AvailabilityColumn).data().toInt();
 
     // --- THUMBNAIL ---
 
@@ -761,6 +786,18 @@ textRect         = a rectangle below itemRect
         painter->setPen(cacheBorderColor);
         painter->setBrush(developColor);
         painter->drawEllipse(developRect.translated(origin));
+    }
+
+    /*  Availability: this image cannot be opened right now. Offline means its
+        volume is not mounted -- an ejected card or an unplugged drive, which the
+        user fixes by plugging it in; Missing means the volume IS there and the
+        file is not. Drawn rather than the row being hidden, because with the
+        whole catalog browsable "that disk isn't plugged in" is information. The
+        tooltip below says which; nothing pops up. */
+    if (availability != 0 && !G::isSlideShow) {
+        painter->setPen(cacheBorderColor);
+        painter->setBrush(availability == 1 ? offlineColor : missingColor);
+        painter->drawEllipse(availabilityRect.translated(origin));
     }
 
     // Render icon number overlay

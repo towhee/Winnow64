@@ -294,6 +294,7 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::RotationDegreesColumn] = fm.boundingRect("=RotationDegreesColumn=").width();
     defaultColumnWidth[G::ShootingInfoColumn] = fm.boundingRect("=ShootingInfoColumn======================").width();
     defaultColumnWidth[G::SearchTextColumn] = fm.boundingRect("=SearchText=====================================================================================").width();
+    defaultColumnWidth[G::AvailabilityColumn] = fm.boundingRect("=Availability=").width();
     defaultColumnWidth[G::ErrColumn] = fm.boundingRect("==ErrText=========================================================").width();
 }
 

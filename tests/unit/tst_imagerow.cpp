@@ -35,6 +35,7 @@ private slots:
     void variantComparisonIsTypeTolerant();
     void unwrittenFieldsReadBackAsInvalid();
     void conditionalColumnsStayUnsetUntilWritten();
+    void availabilityRoundTripsAndDefaultsToPresent();
     void numericColumnsComeBackNumeric();
     void internedRepeatsCollapse();
     void insertRowsShiftsTheRowsAfterIt();
@@ -187,6 +188,34 @@ void tst_imagerow::conditionalColumnsStayUnsetUntilWritten()
     QCOMPARE(s.value(1, G::ErrColumn).toStringList(), QStringList{ "no embedded thumb" });
     // the still is untouched by any of it
     QVERIFY(!s.value(0, G::DurationColumn).isValid());
+}
+
+void tst_imagerow::availabilityRoundTripsAndDefaultsToPresent()
+{
+    /*  Catalog::Availability, held as an int: 0 Present, 1 Offline, 2 Missing.
+        The icon delegate reads it once per paint and draws nothing for 0, which
+        is every folder-scope row and most catalog rows -- so the default has to
+        BE Present, not merely usually be. */
+    RowStore s;
+    s.resize(2);
+    fill(s, 0, "/a/present.jpg");
+    fill(s, 1, "/b/offline.jpg");
+
+    /*  Unwritten reads back invalid, and toInt() on an invalid QVariant is 0 --
+        which is Present. That is the delegate's fast path and it must stay
+        true: a row nobody has asked about is not "unknown", it is openable
+        until something says otherwise. */
+    QVERIFY(!s.value(0, G::AvailabilityColumn).isValid());
+    QCOMPARE(s.value(0, G::AvailabilityColumn).toInt(), 0);
+
+    s.setValue(1, G::AvailabilityColumn, Qt::EditRole, int(1));   // Offline
+    QCOMPARE(s.value(1, G::AvailabilityColumn).toInt(), 1);
+    QVERIFY(s.value(1, G::AvailabilityColumn).typeId() != QMetaType::QString);
+    // and the other row is untouched
+    QCOMPARE(s.value(0, G::AvailabilityColumn).toInt(), 0);
+
+    s.setValue(1, G::AvailabilityColumn, Qt::EditRole, int(2));   // Missing
+    QCOMPARE(s.value(1, G::AvailabilityColumn).toInt(), 2);
 }
 
 void tst_imagerow::numericColumnsComeBackNumeric()

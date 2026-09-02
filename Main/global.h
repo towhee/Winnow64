@@ -195,6 +195,15 @@ Q_NAMESPACE
         /* Hash of that recipe, so a decoder thread can look this image's devPreview up in
            the devPreview cache. Appended for the same reason as DevelopColumn. */
         DevPreviewKeyColumn,
+        /* Whether this image can be opened right now, as Catalog::Availability:
+           Present, Offline (its volume is not mounted) or Missing (the volume is
+           there and the file is not). Only meaningful in Catalog scope, where a
+           row can outlive its file; a folder load leaves it Present because the
+           filesystem just listed the file.
+
+           Appended, not inserted, for the same reason as DevelopColumn: saved
+           table column order and widths are keyed by index. */
+        AvailabilityColumn,
         /* Hierarchical keyword paths from lr:hierarchicalSubject ie "Wildlife|Birds|
            Heron", parallel to KeywordsColumn's flat leaf names. Appended for the same
            reason as DevelopColumn. */

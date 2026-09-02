@@ -112,6 +112,8 @@ private:
     QColor cacheColor;
     QColor sidecarColor;
     QColor developColor;
+    QColor offlineColor;
+    QColor missingColor;
     QColor cacheBorderColor;
     QColor ratingBackgoundColor;
     QColor labelTextColor;
@@ -167,6 +169,7 @@ private:
     QRect cacheRect;
     QRect sidecarRect;
     QRect developRect;
+    QRect availabilityRect;
 
     QPointF vpCntrN;
     QSizeF vpSizeN;
