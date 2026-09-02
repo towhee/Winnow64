@@ -62,6 +62,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Filter Change
      Worker Threads and the Model (Snapshots, and What Still Reads It)
      The Row Store (What a Row Costs, and the Field Table)
+     The Scratch Store (The Columns Only a Decoder Needs)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -775,7 +776,34 @@ THE REMOVAL PATH IS NOT GATED ON ok. setData's other store writes happen only if
 
 VERIFIED over four folders including videos and a recursive load with navigation: icons reached through data() exactly match the store's count in every case (4/4, 13/13, 50/50, 51/51), with the row-store check still clean and paths and the loupe image intact.
 
-STILL TO DO, and deliberately not started in the same pass:
+STILL TO DO, and deliberately not started in the same pass: the scratch columns (below), then a single pass deleting the item writes for every covered column, then the compiled filter predicate, then the base-class swap to QAbstractTableModel.
+
+
+⏺ DataModel Changes > The Scratch Store (The Columns Only a Decoder Needs)
+
+THE OTHER HALF OF THE RESIDENT/SCRATCH LINE. Datamodel/rowfields.h draws the distinction; Datamodel/rowscratch.h is where the scratch half actually goes. A resident field is needed to list, sort, filter and draw a row, so every row carries it. A scratch field -- a segment offset, an ICC buffer, a decoder id, a cache flag -- is needed only while a decoder or the ImageCache is on that row, and there are 24 of them out of the 92 columns. Held as QStandardItems they are paid for on every row of the scope regardless, which is the single largest slice of the ~19,900 bytes a row measured at.
+
+SO THEY MOVED TO A HASH KEYED BY ROW, not into ImageRow. A row nothing has touched has NO ENTRY AT ALL; an entry that exists is a few dozen packed bytes instead of two dozen QStandardItems. That shape is what the eventual "populated only for the rows in flight" policy needs, and it is why the side table is a QHash rather than another parallel vector.
+
+THIS STEP DOES NOT EVICT, and the reason is worth stating rather than leaving as an omission. Evicting a segment offset means being able to get it BACK -- a re-read of that file's metadata -- and that path belongs with Stage 4's gap-filling loader, not with a storage change. What this step buys is the storage shape and the per-column arithmetic; eviction then becomes a policy added in one place on top of it, instead of a rewrite.
+
+UNSET IS A VALUE, and this is the case that would have failed silently. QStandardItemModel::data returns an INVALID QVariant for a cell nobody wrote, and callers branch on that. So every field carries a bit in RowScratch::setMask and value() returns an invalid QVariant until the bit is set: "never written" and "written as 0" stay different facts, exactly as they are in the items. Without it an unwritten offset reads back as 0 -- which is a legal offset, so nothing would have crashed; a decoder would simply have read from the front of the file, on some formats only.
+
+INTERNING, FOR THE TWO FIELDS THAT WOULD OTHERWISE DOMINATE. iccBuf is a real ICC profile, commonly 500 bytes to 4 KB, and a shoot shares ONE of them; iccSpace is a handful of distinct strings across a whole library. Both are held once and referenced by a qint32. Measured on the mixed 50-file _ThumbTest folder: 50 rows, 4 distinct ICC profiles and 3 distinct space names. On the 12-file raw+jpg folder: one profile. Uninterned that column alone would be ~500 MB across a 250,000-row catalog. decoderErrMsg is deliberately NOT interned -- it is written only on a failure and can embed a row number, so interning it would grow a table nothing trims in exchange for nothing.
+
+ifdOffsets IS HELD AS quint32s. The model holds QList<QVariant> because that is what a QStandardItem cell wanted; they are plain file offsets, so they are stored as such and the variant list is rebuilt on the way out.
+
+SAME SEAM, SAME SHADOW VERIFICATION. ScratchStore is written beside the items by the same DataModel::setData, and DataModel::verifyRowStore() now asks BOTH stores -- RowStore::covers and ScratchStore::covers, which never claim the same column, so each column is checked on exactly the terms it is served on. data() answers a covered scratch column UNCONDITIONALLY, with no contains() guard: "no entry" is the store's real answer for a row nothing has decoded, and it is the same answer the unset item gives. A contains() guard would fall through to the items and hide precisely the case the table exists for.
+
+THE CHECK ITSELF HAD TO BE STRENGTHENED FIRST, and this is the third time that has been true here. QVariant::toString() is EMPTY for a QByteArray and for a QVariantList, so the existing text comparison would have compared "" against "" for the ICC buffer and the IFD offsets -- reporting clean on the two columns least likely to be right. Both are now given a real rendering (hex for the blob, joined elements for the list).
+
+PROVEN TO FAIL BEFORE BEING TRUSTED, twice, as the standing rule requires. Ignoring setMask was re-injected: 120 mismatches, named, all on the fields addMetadataForItem deliberately does not write (DecoderErrMsg, IsCaching, IsCached) -- which is exactly the population where unset-vs-zero is the difference. Truncating the interned ICC buffer and offsetting the IFD list by one was injected separately, and both were caught by name -- the same two columns the OLD rendering reported clean on.
+
+CLEAN OVER FIVE FOLDERS: 4, 12, 13, 50 and 51 rows, including videos, a raw+jpg pair folder and a recursive load with navigation and a mid-load sort reversal. 0 mismatches out of 7,800 values checked, 60 per row (36 resident plus 24 scratch), with an entry per row -- because addMetadataForItem currently writes the segment offsets for every row it reads, which is the write pattern eviction will later change.
+
+tst_rowscratch PINS THE BEHAVIOUR that the shadow check will stop being able to pin once the items go: that unwritten fields read back invalid while an explicit zero does not, that reading a row nobody wrote does not conjure an entry for it, that the two stores never claim the same column, that each column comes back as the TYPE the delegates branch on, and that 500 rows sharing one ICC profile intern to one copy.
+
+A BUG FOUND IN PASSING, NOT FIXED HERE: DataModel::imMetadata reads m.iccSpace from G::ICCSegmentOffsetColumn rather than from G::ICCSpaceColumn (datamodel.cpp), so the colour-space NAME comes back as an offset. It is a one-word fix but it changes behaviour rather than storage, so it does not belong inside a storage change.
 
 
 ⏺ DataModel Changes > Sort Change

@@ -11,6 +11,7 @@
 #include "Datamodel/modelsync.h"
 #include "Datamodel/imagerow.h"
 #include "Datamodel/iconstore.h"
+#include "Datamodel/rowscratch.h"
 #include "Cache/framedecoder.h"
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
@@ -87,6 +88,13 @@ public:
         Datamodel/iconstore.h. Reached through data()/setData() on
         Qt::DecorationRole exactly as before, so no view or delegate changed. */
     IconStore iconStore;
+
+    /*  THE SCRATCH STORE (Datamodel/rowscratch.h) -- the ~24 columns that only
+        matter while a decoder or the ImageCache is on that row. Same seam, same
+        shadow verification, but keyed by row in a HASH rather than held on
+        every row: a row nothing has touched has no entry at all. */
+    ScratchStore scratchStore;
+
     struct RowStoreCheck {
         int rowsChecked = 0;
         int valuesChecked = 0;

@@ -229,6 +229,12 @@ winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 # checks would drift exactly as the four hand-written lists it replaces did.
 winnow_add_unit_test(tst_rowfields unit/tst_rowfields.cpp)
 
+# tst_rowscratch pins Datamodel/rowscratch.h -- the row-keyed side table the ~24
+# in-flight columns moved to. The case that matters is UNSET: an unwritten field
+# must read back invalid, exactly as the QStandardItem it replaces did, because
+# the field's zero is a legal offset and the failure would be silent.
+winnow_add_unit_test(tst_rowscratch unit/tst_rowscratch.cpp ../Datamodel/rowscratch.cpp)
+
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest
 # flag (main.cpp). Exits 0 only if the folder loaded images without crashing.
