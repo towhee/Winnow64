@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 5;
+constexpr int kSchemaVersion = 6;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -554,6 +554,53 @@ bool CacheDb::migrate(QSqlDatabase &db)
             "  srcmtime INTEGER NOT NULL DEFAULT 0)",
             "CREATE INDEX IF NOT EXISTS thumb_evict ON thumb(live, used)",
             "CREATE INDEX IF NOT EXISTS thumb_folder ON thumb(folder)",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+    }
+
+    if (version < 6) {
+        /* THE CATALOG BECOMES THE PERSISTENT FORM OF A ROW, not just a search
+           index. Serving a datamodel row's metadata from the catalog was
+           fingerprinted against reading it from the file, and these columns are
+           exactly what diverged: fields a row DISPLAYS that a search never
+           needed. orientation is the one that mattered -- it drives rotation.
+
+           ALTER TABLE ADD COLUMN, one statement each, which is what makes this
+           migration cheap: SQLite rewrites no rows, and every existing row gets
+           the declared default. The rows are then STALE rather than wrong -- the
+           freshness stamp still matches, so nothing re-reads them and the new
+           columns stay at their defaults until the image is next indexed. That
+           is why the version bump alone is not enough and the note below
+           matters. */
+        const char *ddl[] = {
+            "ALTER TABLE image ADD COLUMN orientation INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE image ADD COLUMN exposurecomp TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN focusx REAL NOT NULL DEFAULT -1",
+            "ALTER TABLE image ADD COLUMN focusy REAL NOT NULL DEFAULT -1",
+            "ALTER TABLE image ADD COLUMN email TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN url TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_rating TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_label TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_creator TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_title TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_copyright TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_email TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN orig_url TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE image ADD COLUMN developed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE image ADD COLUMN devpreviewkey TEXT NOT NULL DEFAULT ''",
+            /* EVERY EXISTING ROW IS NOW INCOMPLETE, and its freshness stamp says
+               otherwise. Clearing the stamp is what makes the next visit to a
+               folder re-read and re-index those images instead of trusting
+               columns that were never filled. It costs a re-index of what has
+               been catalogued so far; leaving it would mean serving zeros for
+               orientation forever, which is a wrong picture rather than a slow
+               one. */
+            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1",
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {

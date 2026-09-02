@@ -357,7 +357,12 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " srcsize = ?, srcmtime = ?, sidecarmtime = ?, indexed = ?, live = 1,"
                 " captured = ?, rating = ?, label = ?, pick = ?, title = ?, creator = ?,"
                 " copyright = ?, make = ?, model = ?, lens = ?, iso = ?, aperture = ?,"
-                " shutter = ?, focallength = ?, width = ?, height = ?, gpscoord = ?"
+                " shutter = ?, focallength = ?, width = ?, height = ?, gpscoord = ?,"
+                /* schema 6: what a row DISPLAYS, beyond what a search needs */
+                " orientation = ?, exposurecomp = ?, focusx = ?, focusy = ?,"
+                " email = ?, url = ?, orig_rating = ?, orig_label = ?,"
+                " orig_creator = ?, orig_title = ?, orig_copyright = ?,"
+                " orig_email = ?, orig_url = ?, developed = ?, devpreviewkey = ?"
                 " WHERE id = ?");
 
     QSqlQuery ins(db);
@@ -365,9 +370,14 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " srcsize, srcmtime, sidecarmtime, indexed, live,"
                 " captured, rating, label, pick, title, creator, copyright,"
                 " make, model, lens, iso, aperture, shutter, focallength,"
-                " width, height, gpscoord)"
+                " width, height, gpscoord,"
+                /* schema 6: what a row DISPLAYS, beyond what a search needs */
+                " orientation, exposurecomp, focusx, focusy, email, url,"
+                " orig_rating, orig_label, orig_creator, orig_title,"
+                " orig_copyright, orig_email, orig_url, developed, devpreviewkey)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1,"
-                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
+                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     int written = 0;
     for (const CatalogRow &r : rows) {
@@ -419,6 +429,24 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(r.width);
         w.addBindValue(r.height);
         w.addBindValue(text(r.gpsCoord));
+        /*  schema 6. Bound in the SAME ORDER for both statements, which is why
+            the UPDATE puts them before its WHERE and the INSERT after gpscoord:
+            one bind sequence serves both. */
+        w.addBindValue(r.orientation);
+        w.addBindValue(text(r.exposureComp));
+        w.addBindValue(r.focusX);
+        w.addBindValue(r.focusY);
+        w.addBindValue(text(r.email));
+        w.addBindValue(text(r.url));
+        w.addBindValue(text(r._rating));
+        w.addBindValue(text(r._label));
+        w.addBindValue(text(r._creator));
+        w.addBindValue(text(r._title));
+        w.addBindValue(text(r._copyright));
+        w.addBindValue(text(r._email));
+        w.addBindValue(text(r._url));
+        w.addBindValue(r.developed ? 1 : 0);
+        w.addBindValue(text(r.devPreviewKey));
         if (id) w.addBindValue(id);
 
         if (!w.exec()) {
@@ -503,7 +531,10 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
               " path, folder, filename, ext,"
               " captured, rating, label, pick, title, creator, copyright,"
               " make, model, lens, iso, aperture, shutter, focallength,"
-              " width, height, gpscoord"
+              " width, height, gpscoord,"
+              " orientation, exposurecomp, focusx, focusy, email, url,"
+              " orig_rating, orig_label, orig_creator, orig_title,"
+              " orig_copyright, orig_email, orig_url, developed, devpreviewkey"
               " FROM image WHERE pathkey = ? AND live = 1");
 
     QSqlQuery kw(db);
@@ -555,6 +586,21 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
         r.width = q.value(22).toInt();
         r.height = q.value(23).toInt();
         r.gpsCoord = q.value(24).toString();
+        r.orientation = q.value(25).toInt();
+        r.exposureComp = q.value(26).toString();
+        r.focusX = q.value(27).toDouble();
+        r.focusY = q.value(28).toDouble();
+        r.email = q.value(29).toString();
+        r.url = q.value(30).toString();
+        r._rating = q.value(31).toString();
+        r._label = q.value(32).toString();
+        r._creator = q.value(33).toString();
+        r._title = q.value(34).toString();
+        r._copyright = q.value(35).toString();
+        r._email = q.value(36).toString();
+        r._url = q.value(37).toString();
+        r.developed = q.value(38).toBool();
+        r.devPreviewKey = q.value(39).toString();
         q.finish();
 
         kw.addBindValue(id);

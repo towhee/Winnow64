@@ -117,6 +117,36 @@ struct CatalogRow
     /* The FLAT vocabulary, already de-duplicated by flattenKeywords: dc:subject's leaves
        and every node of every hierarchical path, as one list of names. This is what gets
        indexed and searched. */
+    /*  --- schema 6: the fields a datamodel ROW displays that a search index
+        never needed. Added when serving a row's metadata from the catalog was
+        fingerprinted against reading it from the file and these were exactly
+        what diverged -- see "Metadata From the Index" in Documentation.txt.
+
+        orientation is the one that mattered: it drives rotation, so a row
+        served without it shows the picture on its side. */
+    int orientation = 0;
+    QString exposureComp;
+    double focusX = -1;
+    double focusY = -1;
+    QString email;
+    QString url;
+    /*  The ORIGINAL values, as the file had them before the user edited
+        anything. They are how an edit is reverted and how a sidecar write
+        decides whether anything actually changed, so a row that came back
+        without them would make Winnow think every image had been edited. */
+    QString _rating;
+    QString _label;
+    QString _creator;
+    QString _title;
+    QString _copyright;
+    QString _email;
+    QString _url;
+    /*  Whether the sidecar holds a develop recipe, and its hash. The badge in
+        the icon delegate reads the first; the devPreview cache is keyed on the
+        second. */
+    bool developed = false;
+    QString devPreviewKey;
+
     QStringList keywords;
     /* lr:hierarchicalSubject as the file spelled it, "A|B|C". NOT indexed as structure --
        it is read only to record which parent each name was seen under (keyword_context),

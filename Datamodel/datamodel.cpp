@@ -2221,6 +2221,25 @@ QVector<CatalogRow> DataModel::catalogRows() const
            cannot disagree about the same image. The raw paths travel beside it because
            the catalog derives its ambiguity contexts (which parents a name has been seen
            under) from them. */
+        /*  schema 6: what the ROW displays, beyond what a search needs. Supplied
+            here as well as by CatalogScanner, because the two must agree -- a
+            row indexed by one and served to the other would differ. */
+        r.orientation = index(row, G::OrientationColumn).data().toInt();
+        r.exposureComp = index(row, G::ExposureCompensationColumn).data().toString();
+        r.focusX = index(row, G::FocusXColumn).data().toDouble();
+        r.focusY = index(row, G::FocusYColumn).data().toDouble();
+        r.email = index(row, G::EmailColumn).data().toString();
+        r.url = index(row, G::UrlColumn).data().toString();
+        r._rating = index(row, G::_RatingColumn).data().toString();
+        r._label = index(row, G::_LabelColumn).data().toString();
+        r._creator = index(row, G::_CreatorColumn).data().toString();
+        r._title = index(row, G::_TitleColumn).data().toString();
+        r._copyright = index(row, G::_CopyrightColumn).data().toString();
+        r._email = index(row, G::_EmailColumn).data().toString();
+        r._url = index(row, G::_UrlColumn).data().toString();
+        r.developed = index(row, G::DevelopColumn).data().toBool();
+        r.devPreviewKey = index(row, G::DevPreviewKeyColumn).data().toString();
+
         r.keywords = index(row, G::KeywordsAllColumn).data().toStringList();
         r.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
 
