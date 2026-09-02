@@ -84,6 +84,7 @@ void MW::writeSettings()
     settings->setValue("devPreviewQuality", G::devPreviewQuality);
     settings->setValue("devPreviewCacheMaxBytes", G::devPreviewCacheMaxBytes);
     settings->setValue("cacheThumbnails", G::cacheThumbnails);
+    settings->setValue("maxIconChunk", G::maxIconChunk);
     settings->setValue("useIndexMetadata", G::useIndexMetadata);
     settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
@@ -360,6 +361,7 @@ bool MW::loadSettings()
         G::devPreviewQuality = G::kDevPreviewQualityDefault;
         G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
         G::cacheThumbnails = true;
+        G::maxIconChunk = 10000;
         G::useIndexMetadata = false;
         G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
@@ -576,6 +578,11 @@ bool MW::loadSettings()
     }
     if (settings->contains("cacheThumbnails"))
         G::cacheThumbnails = settings->value("cacheThumbnails").toBool();
+    if (settings->contains("maxIconChunk")) {
+        const int n = settings->value("maxIconChunk").toInt();
+        /* 0 is "no limit" and is legal; a negative is a damaged setting. */
+        if (n >= 0) G::maxIconChunk = n;
+    }
     if (settings->contains("useIndexMetadata"))
         G::useIndexMetadata = settings->value("useIndexMetadata").toBool();
     if (settings->contains("thumbCacheMaxBytes")) {

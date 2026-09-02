@@ -215,6 +215,8 @@ public:
     bool isIconRangeLoaded();
     void setIconRange(int sfRow);
     void setChunkSize(int chunkSize);
+    /* The user's ceiling on icons held at once; rowCount() when unlimited. */
+    int maxIconChunkOrAll() const;
     void resolveIconChunkSize();        // Layer 1: brute-force small folders, JIT window for large
     void refineIconChunkSize();         // Layer 2: re-decide using measured per-icon footprint
     double avgIconMB();                 // measured per-icon footprint, else worst-case estimate

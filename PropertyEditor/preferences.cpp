@@ -222,6 +222,15 @@ void Preferences::itemChange(QModelIndex idx)
         DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);
     }
 
+    if (source == "maxIconChunk") {
+        G::maxIconChunk = maxIconChunkValue(v.toString());
+        mw->settings->setValue("maxIconChunk", G::maxIconChunk);
+        /*  Applied on the NEXT folder load, not now: the icon window is resolved
+            once per load (DataModel::resolveIconChunkSize) and re-resolving it
+            underneath a folder the user is looking at would drop thumbnails they
+            can currently see. */
+    }
+
     if (source == "cacheThumbnails") {
         G::cacheThumbnails = v.toBool();
         mw->settings->setValue("cacheThumbnails", G::cacheThumbnails);
@@ -1162,6 +1171,24 @@ int Preferences::devPreviewSizeValue(const QString &label)
     return G::kDevPreviewSizeFull;
 }
 
+QString Preferences::maxIconChunkLabel(int n)
+{
+    if (n <= 0) return "No limit";
+    /*  Snap to an offered value rather than inventing a label the combo has no
+        item for -- an unmatched value leaves the control blank. */
+    const QList<int> sizes {2000, 5000, 10000, 20000, 50000};
+    int best = sizes.first();
+    for (int s : sizes) if (qAbs(s - n) < qAbs(best - n)) best = s;
+    return QLocale().toString(best);
+}
+
+int Preferences::maxIconChunkValue(const QString &label)
+{
+    if (label.startsWith("No")) return 0;          // no limit
+    const int n = QLocale().toInt(label);
+    return n > 0 ? n : 10000;
+}
+
 QString Preferences::devPreviewCacheLabel(qint64 bytes)
 {
     const qint64 gb = bytes / (1024LL * 1024 * 1024);
@@ -1272,6 +1299,30 @@ void Preferences::addDevPreviews()
     /*  Thumbnail cache. Beside the develop-preview settings because both answer
         "what does Winnow keep on disk so it does not have to decode again", and
         a user looking for one will look for the other in the same place. */
+    i.name = "maxIconChunk";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Thumbnails held in memory";
+    i.tooltip = "How many thumbnails Winnow keeps in memory at once.\n\n"
+                "A thumbnail costs about 180 KB, so 10,000 of them is roughly\n"
+                "1.8 GB. Beyond this number Winnow keeps a moving window around\n"
+                "where you are looking and re-reads thumbnails as you scroll past\n"
+                "it -- so a very large folder browses instead of running out of\n"
+                "memory.\n\n"
+                "Raise it to spend memory for smoother scrolling in big folders;\n"
+                "\"No limit\" keeps every thumbnail, which is what Winnow did\n"
+                "before this setting existed.\n\n"
+                "Takes effect on the next folder load."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = maxIconChunkLabel(G::maxIconChunk);
+    i.key = "maxIconChunk";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "2,000" << "5,000" << "10,000" << "20,000" << "50,000" << "No limit";
+    addItem(i);
+
     i.name = "cacheThumbnails";
     i.parentName = "DevPreviewHeader";
     i.captionText = "Cache thumbnails";
