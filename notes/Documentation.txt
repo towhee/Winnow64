@@ -1075,7 +1075,13 @@ NOT WIRED INTO THE LOADER YET. This is the capability; making MetaRead consult i
 
 ⏺ DataModel Changes > Metadata From the Index (Default Off, and Why)
 
-G::useIndexMetadata IS OFF, AND MUST STAY OFF UNTIL THE SCHEMA CATCHES UP. The machinery works and is measured; the CATALOG does not yet hold enough to fill a row. Read the gap list below before considering turning it on.
+G::useIndexMetadata IS OFF BY DEFAULT AND IS NOW A PREFERENCE -- "Read metadata from the catalog", beside the thumbnail and developed-preview settings, because all three answer "what does Winnow keep so it does not have to read the file again". It was off at first because the catalog did not hold enough to fill a row; schemas 6 and 7 closed that, and a row served from the catalog is now byte-identical to the same row read from its file across all four test folders, over every resident column of every row.
+
+IT STAYS OFF BY DEFAULT ANYWAY, because everything above was verified HEADLESSLY. Nothing here has been exercised by a person navigating, editing and ingesting, and the failure mode of a wrong row is quiet. The preference is how that gets tried.
+
+WHAT IT IS WORTH, measured on the 50-file mixed folder with the thumbnail cache warm: 32.2 ms per icon down to 25.1 ms, about 22%. On a folder whose thumbnails are NOT cached the icon path reads the header anyway, so the saving is a revisit saving -- which is the case that matters, but narrower than the raw 20 ms metadata read suggests.
+
+VERIFIED WITH THE PATH ON: ThreadSanitizer clean on both the plain and the proxy-stress runs (Catalog::fetchFresh is called from the Reader threads, which is a new caller for it), the QAbstractItemModelTester gate clean, and the recursive navigation-plus-sort-reversal stress run clean.
 
 WHAT IT DOES. Reader::readMetadata asks Catalog::fetchFresh first. A hit fills ImageMetadata from the index and skips the file read -- ~20 ms for a raw, almost all of it walking the file's own header. A miss falls through to exactly the code that ran before.
 
