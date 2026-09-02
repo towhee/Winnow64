@@ -387,6 +387,7 @@ void DataModel::rebuildRowStoreFromItems()
 {
     if (G::isLogger) G::log("DataModel::rebuildRowStoreFromItems");
     rowStore.clear();
+    scratchStore.clear();
     const int rows = rowCount();
     rowStore.resize(rows);
     for (int r = 0; r < rows; ++r) {
@@ -394,6 +395,15 @@ void DataModel::rebuildRowStoreFromItems()
             for (int role : { int(Qt::EditRole), int(G::PathRole) }) {
                 if (!RowStore::covers(c, role)) continue;
                 rowStore.setValue(r, c, QStandardItemModel::data(index(r, c), role));
+            }
+            /*  The scratch table is rebuilt on the same pass and from the same
+                items, but only where the item is actually SET -- copying an
+                unset cell across would create an entry for a row nothing has
+                touched, which is the one thing this table is shaped to avoid,
+                and would turn "unset" into "written as 0" besides. */
+            if (ScratchStore::covers(c, Qt::EditRole)) {
+                const QVariant v = QStandardItemModel::data(index(r, c), Qt::EditRole);
+                if (v.isValid()) scratchStore.setValue(r, c, v);
             }
         }
     }
@@ -420,19 +430,47 @@ DataModel::RowStoreCheck DataModel::verifyRowStore(int maxDetail) const
         static const QVector<int> rolesToCheck { Qt::EditRole, G::PathRole };
         for (int c = 0; c < G::TotalColumns; ++c)
         for (int role : rolesToCheck) {
-            if (!RowStore::covers(c, role)) continue;
+            /*  Two stores, one check. RowStore holds the resident columns and
+                ScratchStore the in-flight ones; they never claim the same
+                column, and each is asked here through the same covers() the
+                model reads it through, so a column can never be checked on
+                terms other than the ones it is served on. */
+            const bool inRowStore = RowStore::covers(c, role);
+            const bool inScratch  = ScratchStore::covers(c, role);
+            if (!inRowStore && !inScratch) continue;
             /*  QStandardItemModel::data explicitly, NOT index().data(). Once
                 DataModel::data serves covered columns from the store, going
                 through the override would compare the store against itself and
                 report clean no matter what. The check must always read the
                 ITEMS on one side. */
             const QVariant a = QStandardItemModel::data(index(r, c), role);
-            const QVariant b = rowStore.value(r, c);
+            const QVariant b = inRowStore ? rowStore.value(r, c)
+                                          : scratchStore.value(r, c);
             ++out.valuesChecked;
-            const QString sa = a.typeId() == QMetaType::QStringList
-                                   ? a.toStringList().join('\x1f') : a.toString();
-            const QString sb = b.typeId() == QMetaType::QStringList
-                                   ? b.toStringList().join('\x1f') : b.toString();
+            /*  QVariant::toString() is EMPTY for a byte array and for a variant
+                list, so rendering those through it compares "" against "" and
+                proves nothing -- which is how a scratch column carrying an ICC
+                profile or the IFD offsets would have been checked, i.e. not at
+                all. Both are given a real rendering here. */
+            auto asText = [](const QVariant &v) -> QString {
+                switch (v.typeId()) {
+                case QMetaType::QStringList:
+                    return v.toStringList().join('\x1f');
+                case QMetaType::QByteArray:
+                    return QString::fromLatin1(v.toByteArray().toHex());
+                case QMetaType::QVariantList: {
+                    QStringList parts;
+                    const QVariantList l = v.toList();
+                    parts.reserve(l.size());
+                    for (const QVariant &e : l) parts << e.toString();
+                    return parts.join('\x1f');
+                }
+                default:
+                    return v.toString();
+                }
+            };
+            const QString sa = asText(a);
+            const QString sb = asText(b);
 
             /*  TYPE AS WELL AS TEXT, and this was learned the hard way. The
                 first version compared text only, reported clean, and the app
@@ -646,6 +684,7 @@ void DataModel::clearDataModel()
     }
     rowStore.clear();
     iconStore.clear();
+    scratchStore.clear();
 
     // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
     prevRawSuffix = "";
@@ -693,6 +732,19 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         rowStore.contains(idx.row()))
     {
         return rowStore.value(idx.row(), idx.column());
+    }
+
+    /*  The scratch columns come from the row-keyed side table
+        (Datamodel/rowscratch.h). Answered UNCONDITIONALLY once covered -- no
+        contains() guard -- because "no entry" is the store's real answer for a
+        row nothing has decoded or cached, and it is the same answer the unset
+        item gives: an invalid QVariant. Guarding on contains() would fall
+        through to the items and hide exactly the case the store exists for. */
+    if (G::useRowStore &&
+        idx.isValid() &&
+        ScratchStore::covers(idx.column(), role))
+    {
+        return scratchStore.value(idx.row(), idx.column());
     }
 
     /*  Thumbnails come from the path-keyed icon store (Datamodel/iconstore.h).
@@ -801,6 +853,12 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
     if (ok && idx.isValid() && RowStore::covers(col, role)) {
         if (rowStore.size() != rowCount()) rowStore.resize(rowCount());
         rowStore.setValue(idx.row(), col, value);
+    }
+
+    /*  Maintain the scratch side table beside the items, on the same terms.
+        ScratchStore::covers is the single authority on both sides here too. */
+    if (ok && idx.isValid() && ScratchStore::covers(col, role)) {
+        scratchStore.setValue(idx.row(), col, value);
     }
 
     /*  Mirror the same facts into the lock-free per-row array the worker
