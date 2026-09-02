@@ -1254,6 +1254,20 @@ THE TWO QUESTIONS THEY ANSWERED ARE STILL SEPARATE, even though one setting driv
 
 WHAT DID NOT CHANGE: the reported match count is still the TRUE total, so a user seeing a subset is told so. The cap governs what is brought in, never what is found.
 
+⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
+
+THERE ARE TWO WAYS ROWS GET INTO THE MODEL and only one of them was ever tested. --selftest loads a FOLDER; MW::loadCatalogResults -- images from any number of folders assembled into one browsable set, which is the entire point of Catalog scope -- was reachable only by a person typing in the Find dock. Every measurement of catalog behaviour in the sections above was therefore indirect: through the unit tests, or by reading the database afterwards.
+
+That matters now rather than in principle. The remaining structural work replaces both callers with one query path, and restructuring a load path while one of its two entry points has no automated coverage is how something breaks quietly.
+
+WINNOW_SELFTEST_CATALOG_QUERY RUNS IT. The folder load happens first and deliberately -- it is what puts rows in the catalog for the query to find -- and then a catalog search replaces the model exactly as the Find dock would. An empty query is legal and means "the most recent images", which is what Catalog scope shows when nothing has been typed.
+
+IT HAD TO BE MADE DISCRIMINATING. The first run loaded the four-image fixture folder and then catalog-loaded four images: the numbers matched, and proved nothing, because the same four images were on both sides. Cataloguing a fifty-image folder first and then loading the four-image one showed what was wanted -- the model went from 4 rows to 43, from a folder the run had never opened. A test whose passing number is the same as its starting number is not testing the step in between.
+
+catalog_load IS THE CTEST. It fails if the search matches nothing (exit 4) or if the model is empty after the load (exit 5), and it is self-contained: the fixture folder is catalogued by the same run, with a wait on the thread pool so the capture has landed before the query. Verified to fail by making loadCatalogResults return early in Catalog scope -- "catalogLoaded rows=0".
+
+THE WAIT LIVES IN THIS MODE ALONE, not on the default selftest path, for the reason recorded under the catalog capture: waiting lets pool tasks complete and queue GUI callbacks that then run around the model-contract test's own row removal. The modes stay separate.
+
 ⏺ DataModel Changes > Sort Change
 
   MW::sortThumbnails

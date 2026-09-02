@@ -299,6 +299,24 @@ if(TARGET Winnow)
         TIMEOUT 180
     )
 
+    # -------------------------------------------------------------------------
+    # catalog_load — the OTHER load path. --selftest loads a FOLDER;
+    # MW::loadCatalogResults (images from any number of folders as one browsable
+    # set) was reachable only by a person typing in the Find dock, so it had no
+    # coverage at all. This loads the fixture folder, lets it reach the catalog,
+    # then runs a catalog search and loads the result -- failing if the search
+    # matches nothing or the model ends up empty.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME catalog_load
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(catalog_load PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_CATALOG_QUERY=;WINNOW_SELFTEST_MS=40000"
+        LABELS "smoke"
+        TIMEOUT 240
+    )
+
     add_test(
         NAME smoke_launch
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images

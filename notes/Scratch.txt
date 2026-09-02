@@ -3301,5 +3301,57 @@ Stage 0 - portrait videos not rotated
           ie /Users/roryhill/Pictures/2018-01-14_Lillian
         - No imageView for /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
 
+How do I check the offline badge?
+
+  Thought for 25s (ctrl+o to expand)
+
+⏺ Good question — a couple of things about it are non-obvious. Let me verify them rather than guess.
+
+  Searched for 1 pattern, listed 1 directory (ctrl+o to expand)
+
+⏺ Two things about it are non-obvious, and one is a limitation worth knowing before you look.
+
+  The badge only appears in Catalog scope
+
+  Shift+F2 (or the Catalog row above the Folders/Bookmarks trees). A folder load never asks for availability — its rows stay Present, deliberately, since the filesystem has just listed them. So you won't
+  see the badge browsing folders, however broken the files are.
+
+  Offline is easy; Missing needs a restart
+
+  Offline (slate blue) is computed live against the mount table, so:
+  1. Catalogue some images on an external drive or SD card — open the folder and let it load.
+  2. Eject the drive.
+  3. Shift+F2, search for something matching those images.
+
+  The dot appears immediately, no restart.
+
+  Missing (dull red) needs the live flag, which only the sweep sets — and the sweep is one-shot per session (catalogSweepDone). So:
+  1. Catalogue a folder.
+  2. Delete or move a file outside Winnow.
+  3. Restart Winnow, open any folder (that triggers the sweep), then Shift+F2 and search.
+
+  Without the restart a deleted file still reads Present. That's a real limitation of what I built — the badge tells you the truth as of the last sweep, not as of now.
+
+  Fastest check without hardware
+
+  Force the state directly, with Winnow closed:
+
+  sqlite3 ~/Library/Application\ Support/Winnow/PreviewCache/index.db \
+    "UPDATE image SET vol='/Volumes/NotMounted' WHERE filename LIKE '%.NEF' LIMIT 20;"
+
+  Then start Winnow, Shift+F2, and search for something that matches those images — they should all carry the blue dot. For the red one, SET live=0 on a few rows instead. Undo with SET vol='' / SET
+  live=1.
+
+  What to look at
+
+  The dot sits bottom-left of the thumbnail, to the right of the develop badge. Worth checking:
+
+  - Does it collide with the develop badge when an image has both? They're 12px apart by the same spacing rule the others use, but I've never seen them together.
+  - Is it legible at small thumbnail sizes? The dot scales with dotDiam like the other badges, but slate blue on a dark thumbnail may not read.
+  - Does the tooltip fire? Hover the dot — it should say "Offline: this image is on a volume that is not mounted. Reconnect the drive to open it."
+  - Are the colours right? I chose slate blue for offline as the calmer of the two and dull red for missing. That's a judgement call about your palette that you're better placed to make than I am.
+
+  If the placement is wrong, availabilityRect in IconViewDelegate::setThumbDimensions is the one line to move.
+
 
 

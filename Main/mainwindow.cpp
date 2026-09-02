@@ -593,6 +593,45 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     if (fsTree->select(folderPath))
         folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
+    /*  WINNOW_SELFTEST_CATALOG_QUERY loads a CATALOG SEARCH instead of stopping at
+        the folder, so the other of the two load paths gets exercised headlessly.
+
+        It had none. --selftest loads a FOLDER, and MW::loadCatalogResults --
+        images from any number of folders as one browsable set, which is the whole
+        point of Catalog scope -- was reachable only by a person typing in the Find
+        dock. Every measurement of catalog behaviour so far has been indirect:
+        through the unit tests, or by reading the database afterwards. Restructuring
+        the load path with one of its two callers uncovered is how something breaks
+        quietly.
+
+        The folder load above still runs first, and deliberately: it is what puts
+        rows in the catalog for the query to find. An empty query is legal and
+        means "the most recent images", which is what Catalog scope shows when
+        nothing has been typed.
+
+        Timed from the folder load's settle so the catalog commit has happened;
+        the query then replaces the model exactly as the Find dock would. */
+    const QString catalogQuery = qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_QUERY");
+    if (!catalogQuery.isNull()) {
+        QTimer::singleShot(settleMs / 2, this, [this, catalogQuery]() {
+            QThreadPool::globalInstance()->waitForDone(30000);   // let the capture land
+            CatalogQuery q;
+            q.text = catalogQuery;
+            int total = 0;
+            const QStringList hits = Catalog::instance().search(q, 100000, &total);
+            fprintf(stderr, "SELFTEST: catalogQuery='%s' hits=%lld total=%d\n",
+                    catalogQuery.toLocal8Bit().constData(), (long long)hits.size(), total);
+            fflush(stderr);
+            if (hits.isEmpty()) {
+                fprintf(stderr, "SELFTEST: FAIL the catalog query matched nothing\n");
+                fflush(stderr);
+                std::_Exit(4);
+            }
+            setScope(G::Scope::Catalog, "selftest");
+            loadCatalogResults(hits, false);
+        });
+    }
+
     /* Drive navigation during the settle window. Sweeps forward to the last row
        (reporting when it gets there), then ping-pongs, keeping the cache target
        range moving through rows the GUI thread is still inserting/sorting.
@@ -646,6 +685,15 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
 
     QTimer::singleShot(settleMs, this, [this, folderPath]() {
         const int rows = dm ? dm->rowCount() : 0;
+        if (!qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_QUERY").isNull()) {
+            /*  The catalog load replaced the model; a run that ends with the
+                folder's rows still in it loaded nothing, which is the failure
+                this mode exists to catch. */
+            fprintf(stderr, "SELFTEST: catalogLoaded rows=%d scope=%d\n",
+                    rows, int(G::scope));
+            fflush(stderr);
+            if (rows == 0) std::_Exit(5);
+        }
         fprintf(stderr, "SELFTEST: folder=%s rows=%d\n",
                 folderPath.toLocal8Bit().constData(), rows);
         /*  WINNOW_SELFTEST_CATALOG=1 asserts that the folder just loaded actually
