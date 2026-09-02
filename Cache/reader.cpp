@@ -252,6 +252,13 @@ bool Reader::readMetadataFromIndex(const QFileInfo &fileInfo)
     info += "  " + m.exposureTime;
     info += (m.aperture == "") ? "" : " at " + m.aperture;
     info += (m.ISO == "") ? "" : ", ISO " + m.ISO;
+    /*  COMPOSED UNCONDITIONALLY, INCLUDING WHEN EVERY PART IS EMPTY. The
+        separators are unconditional in Metadata::loadImageMetadata too, so an
+        image with no model, focal length or shutter speed gets four spaces
+        there -- and a row that is in the catalog at all was MetaLoaded when it
+        was captured, which means that path DID reach its composition. Trimming
+        to an empty string here was tried and was wrong in exactly one file:
+        an iPhone JPG whose file-read row says '    '. */
     m.shootingInfo = info;
 
     m.metaStatus = G::MetaLoaded;
@@ -411,6 +418,30 @@ void Reader::readIcon()
     if (abort) {status = Status::Aborted; return;}
 
     if (!loadedIcon) {
+        /*  THE ICON NEEDS THE SEGMENT OFFSETS TOO. A row whose metadata came
+            from the index has none -- the catalog stores what is displayed and
+            searched, not where the embedded preview lives -- so loadThumb had to
+            find the thumbnail without them and, for the formats that depend on
+            them, fell back to the error icon. It showed up as an Icon Aspect
+            Ratio of exactly 1: error_image256.png is square.
+
+            ImageDecoder::ensureDecodeGeometry covers the DECODE path; this is
+            the same gap in the ICON path, and the answer is the same. It costs
+            nothing extra here: the cache has already missed, so this thread is
+            about to open the file regardless. */
+        if (m && m->fromIndex && !abort) {
+            QFileInfo fi(fPath);
+            if (metadata->loadImageMetadata(fi, dmRow, instance, true, true, false, true,
+                                            "Reader::readIcon geometry")) {
+                m = &metadata->m;
+                offsetThumb = m->offsetThumb;
+                lengthThumb = m->lengthThumb;
+                /*  Publish it, so the decoder does not repeat the walk and the
+                    row stops being a partial one. */
+                emit addToDatamodel(metadata->m, "Reader::readIcon geometry");
+            }
+        }
+
         // pass embedded thumb offset and length in case datamodel not updated yet
         if (offsetThumb && lengthThumb) thumb->presetOffset(offsetThumb, lengthThumb);
 

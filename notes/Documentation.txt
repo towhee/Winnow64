@@ -1125,7 +1125,17 @@ captured IS SECONDS SINCE EPOCH, and fetchFresh read it with QVariant::toDateTim
 
 QImageReader::size() IS NOT RELIABLY THE FULL IMAGE. On macOS a raw goes through the ImageIO plugin, which reports the dimensions of whatever representation it decoded -- for a NEF that was the 160px embedded preview, and Thumb::loadFromEntireFile passed it as the image's own size. Since the thumbnail path is the ONLY writer of these columns, nothing put it back. loadFromEntireFile now takes the metadata read's dimensions and prefers them; QImageReader is the fallback for formats with no metadata read of their own.
 
-WHAT STILL DIFFERS, honestly: Width and Height on SOME rows (and MPix, Dimensions and Aspect Ratio, which derive from them), Icon Aspect Ratio, ShootingInfo and Search. The first four rows of the mixed folder now match exactly on width and capture date where they did not before, so the remaining rows are formats whose metadata read supplies no dimensions at all. Icon Aspect Ratio follows from which icon was decoded. These remain between here and turning G::useIndexMetadata on.
+RE-RUN AGAINST FRESHLY CAPTURED ROWS, the divergence collapsed from eight columns to three. Most of what the earlier runs showed was stale catalog data written before the fixes above -- which is why the note about the headless capture mattered: with it broken, every A/B was being taken against whatever an interactive session had left behind.
+
+THE ICON PATH NEEDED THE OFFSETS TOO, which the remaining Icon Aspect Ratio difference turned out to be. Reader::readIcon passes the embedded thumbnail's segment offset and length to Thumb::presetOffset, and a row filled from the index has neither -- so loadThumb had to find the thumbnail unaided and, for the formats that depend on those offsets, fell back to the ERROR ICON. It showed as an Icon Aspect Ratio of exactly 1, because error_image256.png is square. ImageDecoder::ensureDecodeGeometry covers the DECODE path; this was the same gap in the ICON path and gets the same answer -- read the header when the thumbnail cache has already missed, which costs nothing extra because that thread is about to open the file regardless.
+
+NOTE WHAT THAT DOES TO THE SAVING, and it is worth being plain about: on a folder whose thumbnails are NOT already cached, the icon path now reads the header anyway, so serving metadata from the index saves nothing. The saving is real only when the thumbnail cache already has the folder -- which is the revisit case, and the case that matters, but it is narrower than "20 ms a row" made it sound.
+
+TWO COLUMNS STILL DIFFER, EACH ON ONE ROW IN FIFTY.
+
+ShootingInfo, on a HEIC. The file path composes that string only when Metadata::loadImageMetadata returned true; for this HEIC it did not, so the string stayed empty -- yet the row is still MetaLoaded, because Thumb::setImageDimensions sets that status from the THUMBNAIL path regardless of whether the metadata read succeeded. So the catalog has a row whose presence implies a successful read that never happened, and nothing in the row records the difference. Composing unconditionally was tried and moved the mismatch to a different file (an iPhone JPG whose file-read row IS four spaces); the two cases are indistinguishable from the catalog. The real defect is upstream -- MetaLoaded meaning two different things depending on which path set it -- and it is not the index's to fix.
+
+SearchText, which is column 87 and whose header is ALSO "Search" -- so a per-row probe of G::SearchColumn showed no difference while the column hash did, and the two were not the same column. It is the concatenated searchable text, and it differs because it includes the hierarchical keyword paths, which schema 4 flattened and the catalog therefore cannot return. That is the keywordPaths gap already noted under fetchFresh, showing up where it actually costs something.
 
 THE CATALOG CAPTURE WAS SILENTLY NOT RUNNING, AND THAT IS A REAL BUG, NOT A TEST ARTEFACT. It looked at first like the headless test simply could not reach it -- a folder loaded, MW::folderChangeCompleted ran, and the catalog stayed empty. It was not the test.
 
@@ -1139,7 +1149,7 @@ catalog_capture IS THE CTEST THAT WAS MISSING. It loads the fixture folder and f
 
 The wait it needs lives in that mode alone and NOT on the default selftest path, because waiting lets pool tasks complete and queue GUI callbacks that then run around the model_contract test's own row removal, which made that gate flaky. The two modes are deliberately separate.
 
-Note that every A/B in this section was run against rows written interactively, since the headless capture did not work while they were being taken. They should be re-run now that it does.
+The A/Bs above were re-run against freshly captured rows once the capture worked; the three-column result is that re-run, not the earlier one.
 
 WHAT IS LANDED IS THE MECHANISM AND THE SCHEMA, still off by default. The Width/Height bug above is fixed; what remains between here and turning it on is the capture-date gap and Icon Aspect Ratio, both in the LOADER rather than in the index.
 
