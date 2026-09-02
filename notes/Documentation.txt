@@ -1188,7 +1188,17 @@ A PATH THE CATALOG DOES NOT KNOW IS ABSENT FROM THE RESULT, not reported Missing
 
 ONE MOUNT-TABLE WALK per call (Cache/mountsnapshot.h), taken before the lock: it is a syscall per volume, and a caller asking about a folder's worth of rows should not pay it per row.
 
-WHAT IS NOT DONE YET: the badge. This is the fact the UI needs, and drawing it -- greyed with the reason inline in the loupe, per the standing rule, never a popup -- is the next step. Nothing renders availability today.
+THE BADGE DRAWS IT. G::AvailabilityColumn carries the state per row and the icon delegate paints a dot beside the develop badge: slate blue for Offline, dull red for Missing. Offline is the calmer of the two deliberately -- an ejected drive is a normal state a user creates dozens of times a day, while a file that is genuinely gone is the one worth alarming about.
+
+THE REASON IS INLINE, NEVER A POPUP, per the standing rule: hovering the dot says "Offline: this image is on a volume that is not mounted. Reconnect the drive to open it." or "Missing: this file was not found where the catalog expects it. It may have been moved or deleted outside Winnow." The user is told what happened and what to do about it, where they are already looking.
+
+PRESENT IS 0 AND UNSET READS AS 0, which is not an accident. The delegate reads the column once per paint and draws nothing for Present -- every folder-scope row and most catalog rows -- so the common case costs one int and no branch taken. A row nobody has asked about is not "unknown", it is openable until something says otherwise, and tst_imagerow pins that.
+
+THE COLUMN IS APPENDED, not inserted, for the same reason DevelopColumn was: saved table column order and widths are keyed by index, so an insertion would silently shift every user's layout.
+
+ONLY THE CATALOG LOAD ASKS. A folder load never calls availabilityOf and its rows stay Present, which is correct -- the filesystem has just listed them, so a second opinion would be both slower and less current. The catalog path asks once for the whole result set, off the GUI thread, and the answers come back queued to be written, because the model is not thread-safe.
+
+STILL TO DO: the second half of stage 5 -- rating, label and pick edits in Catalog scope writing the sidecar and updating the index row in the same commit.
 
 ⏺ DataModel Changes > Sort Change
 

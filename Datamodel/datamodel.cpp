@@ -345,6 +345,7 @@ void DataModel::setModelProperties()
         { G::SearchTextColumn,           "Search",                   true },
         { G::ErrColumn,                  "Load Metadata Errors",     true },
         { G::DevelopColumn,              "Developed",                false },
+        { G::AvailabilityColumn,        "Availability",           true },
         { G::DevPreviewKeyColumn,        "DevPreviewKey",            true },
     };
     mHeaderName.assign(G::TotalColumns, QString());

@@ -32,7 +32,7 @@ enum Field {
     F_MetadataReading, F_Rating_, F_Label_, F_Creator_, F_Title_, F_Copyright_,
     F_Email_, F_Url_, F_Permissions, F_ReadWrite, F_Sidecar, F_OrientationOffset,
     F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
-    F_Search, F_Ingested,
+    F_Search, F_Ingested, F_Availability,
     /* column 0's custom roles -- not values */
     F_IconRect, F_DupHideRaw, F_DupIsJpg, F_DupRawType, F_DupOtherIdx,
     F_Count
@@ -121,6 +121,7 @@ int fieldBit(int column, int role)
     case G::ErrColumn:                  return F_Err;
     case G::DevelopColumn:              return F_Develop;
     case G::DevPreviewKeyColumn:        return F_DevPreviewKey;
+    case G::AvailabilityColumn:         return F_Availability;
 
     /*  SETTLED, AND NOW HELD. Both columns used to carry a different TYPE
         depending on which path wrote them last -- "false" (QString) at row
@@ -242,6 +243,7 @@ QVariant RowStore::value(int row, int column, int role) const
     case G::ErrColumn:             return r.err;
     case G::DevelopColumn:         return r.developEdited;
     case G::DevPreviewKeyColumn:   return mStrings.value(r.devPreviewKeyId);
+    case G::AvailabilityColumn:    return int(r.availability);
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {
@@ -342,6 +344,7 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::ErrColumn:             r.err = v.toStringList(); break;
     case G::DevelopColumn:         r.developEdited = v.toBool(); break;
     case G::DevPreviewKeyColumn:   r.devPreviewKeyId = mStrings.id(v.toString()); break;
+    case G::AvailabilityColumn:    r.availability = quint8(v.toInt()); break;
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {

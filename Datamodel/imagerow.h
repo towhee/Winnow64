@@ -179,6 +179,10 @@ struct ImageRow
     bool   dupHideRaw = false;         // G::DupHideRawRole
     bool   dupIsJpg = false;           // G::DupIsJpgRole
 
+    /*  Catalog::Availability as an int: Present / Offline / Missing. Only a
+        Catalog-scope row is ever anything but Present. */
+    quint8 availability = 0;
+
     bool isSearch = false;             // G::SearchColumn, settled on bool
     bool isIngested = false;           // G::IngestedColumn, settled on bool
     bool metadataReading = false;

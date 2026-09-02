@@ -3264,7 +3264,31 @@ void MW::loadCatalogResults(const QStringList &paths, bool append)
        the append path nothing was torn down, but the queueing is kept so both paths reach
        addPaths the same way -- one of them running inline would be a difference waiting
        to matter. */
-    QTimer::singleShot(0, this, [this, paths]{ dm->addPaths(paths); });
+    QTimer::singleShot(0, this, [this, paths]{
+        dm->addPaths(paths);
+
+        /*  ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog
+            row can outlive its file, and the two ways that happens are different
+            things the user can act on differently -- see Catalog::Availability.
+            A FOLDER load never comes here, and its rows stay Present, which is
+            correct: the filesystem just listed them.
+
+            One database pass and one mount-table walk for the whole result set,
+            not per row, and the answers come back to the GUI thread to be
+            written -- the model is not thread-safe. */
+        QThreadPool::globalInstance()->start([this, paths]{
+            const auto avail = Catalog::instance().availabilityOf(paths);
+            if (avail.isEmpty()) return;
+            QMetaObject::invokeMethod(this, [this, avail]{
+                for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
+                    if (it.value() == Catalog::Availability::Present) continue;
+                    const int row = dm->rowFromPath(it.key());
+                    if (row < 0) continue;
+                    dm->setData(dm->index(row, G::AvailabilityColumn), int(it.value()));
+                }
+            }, Qt::QueuedConnection);
+        });
+    });
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
