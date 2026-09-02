@@ -32,7 +32,7 @@ private slots:
     void cleanupTestCase();
     void init();
 
-    void schemaIsVersionFour();
+    void schemaIsCurrentAndBothTenantsCoexist();
     void commitThenSearchByKeyword();
     void hierarchyReachesAncestors();
     void freeTextFindsTitleAndGear();
@@ -125,9 +125,14 @@ void tst_catalog::init()
     Catalog::instance().clear();
 }
 
-void tst_catalog::schemaIsVersionFour()
+void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
 {
-    QCOMPARE(CacheDb::schemaVersion(), 4);
+    /*  A TRIPWIRE, deliberately spelled as a literal. Bumping kSchemaVersion
+        fails this case, which is the point: whoever bumps it has to come here
+        and confirm that every tenant of the shared file still coexists at the
+        new version, and add the new tenant's tables below. Version 5 added
+        thumb (Cache/thumbcache.h). */
+    QCOMPARE(CacheDb::schemaVersion(), 5);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -136,7 +141,7 @@ void tst_catalog::schemaIsVersionFour()
     QVERIFY(db.isOpen());
     const auto tables = db.tables();
     for (const char *t : {"devpreview", "image", "keyword", "image_keyword",
-                          "keyword_context", "image_fts"})
+                          "keyword_context", "image_fts", "thumb"})
         QVERIFY2(tables.contains(t), t);
 }
 
@@ -667,7 +672,11 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
         QSqlDatabase db = CacheDb::instance().db();
         QSqlQuery q(db);
         QVERIFY(q.exec("PRAGMA user_version") && q.next());
-        QCOMPARE(q.value(0).toInt(), 4);
+        /*  Against the CURRENT version, not a literal: what this case is about
+            is that a version 3 file migrates all the way UP and keeps its
+            keywords, not which number it stops at. The literal belongs in the
+            tripwire above, where changing it is the deliberate act. */
+        QCOMPARE(q.value(0).toInt(), CacheDb::schemaVersion());
 
         /* The duplicate leaf is gone: three keywords, not four. */
         QVERIFY(q.exec("SELECT COUNT(*) FROM keyword") && q.next());

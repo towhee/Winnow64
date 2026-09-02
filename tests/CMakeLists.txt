@@ -247,6 +247,13 @@ winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cp
 # folders) went with the old implementation; this is what is left.
 winnow_add_unit_test(tst_filterpredicate unit/tst_filterpredicate.cpp)
 
+# tst_thumbcache covers the thumbnail index -- the layer that makes scrolling an
+# unvisited region of a 250k catalog a database read rather than a file open per
+# row. The cases are the ones where a cache can be WRONG rather than empty: a
+# source edited outside Winnow, a sweep that deletes instead of demoting, and
+# eviction that ignores the demoted flag.
+winnow_add_unit_test(tst_thumbcache unit/tst_thumbcache.cpp ../Cache/thumbcache.cpp)
+
 # -----------------------------------------------------------------------------
 # Smoke test — launch the real app against the fixture folder via the --selftest
 # flag (main.cpp). Exits 0 only if the folder loaded images without crashing.

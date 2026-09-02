@@ -68,6 +68,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Compiling the Filters (Off the Tree, Once per Change)
      Settling Search and Ingested (and a Fact That Was Wrong)
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
+     Thumbnails in the Index (Schema 5)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -954,6 +955,29 @@ VERIFIED BY AN A/B FINGERPRINT over every column at ELEVEN roles (Edit, Display,
 AND BY QAbstractItemModelTester, WHICH IS NOW A CTEST GATE. DataModel is hand-written, so index and parent consistency, the begin/end pairing around every insertion and removal, headerData, flags and the counts are this code's responsibility and no longer the base class's. The tester is what checks that, it was already included in datamodel.h and never used, and it is now attached to both the datamodel and the proxy for a whole fixture load under WINNOW_SELFTEST_MODELTEST=1, in Fatal mode, as the model_contract test.
 
 IT WAS PROVEN TO CATCH BOTH HALVES, and the second attempt is the interesting one. A beginInsertRows off by one failed the run immediately. The SAME injection into beginRemoveRows passed -- because loading a folder only ever APPENDS, so with nothing else done the removal pairing went unchecked and the gate was half a gate. The run now removes a row from the MIDDLE before exiting, which is the case that re-addresses every row after it, and the injected removal bug fails it. A test that has only been seen to pass proves nothing about the path it never takes.
+
+⏺ DataModel Changes > Thumbnails in the Index (Schema 5)
+
+SCROLLING A CATALOG CANNOT OPEN A FILE PER ROW. Winnow's thumbnails come from an embedded preview inside the image, so producing one means opening the file, walking to the preview's segment and decoding it. That is perfectly affordable for a folder of 500 and not affordable at all as the scroll position of a 250,000-image library. Schema 5 adds a `thumb` table so the icon is decoded ONCE, ever, and a scroll afterwards is a database read.
+
+THE READ CHAIN IS memory store -> index -> decode, and it only reads as one chain because all three are keyed the same way. Datamodel/iconstore.h went path-keyed for exactly this; the table keys on cachePathKey(), the same key the image and keyword tables use, so the same file spelled with a doubled slash or a different drive-letter case is one row rather than two.
+
+THE PAYLOAD IS A BLOB, WHICH IS THE OPPOSITE OF WHAT devpreview DOES, and the difference is payload SIZE rather than a change of mind. A devPreview is a full-resolution JPEG at one to three megabytes: a file is the right container and the database would only be adding a copy. A thumbnail is ten to thirty kilobytes, and a quarter of a million of those is 250,000 files and inodes to hold a few gigabytes, with a per-file open dominating every read. SQLite beats the filesystem for blobs of roughly this size and its page cache serves a scroll from memory, which is the access pattern here exactly. The COLUMNS still mirror devpreview, so the two share one eviction and sweep policy even though they do not share a container.
+
+STALENESS IS THE ONE FAILURE A CACHE MUST NOT HAVE. An image edited by another program keeps its path, so a thumbnail returned on identity alone would be yesterday's picture for today's file. Every row stamps the source's size and mtime and a mismatch is a MISS. A row stamped with zeros predates the stamp and is grandfathered, the same call DevPreviewCache makes for its imported rows.
+
+THE SWEEP DEMOTES, NEVER DELETES, and skips entries whose volume is not mounted. An ejected card, an unplugged drive or a share that is not up looks identical to a deletion from the inside, and throwing away the thumbnails for a whole volume because it was not plugged in is exactly what makes a cache feel unreliable. A missing file is marked live = 0, which puts it first in the eviction order without destroying it, so a file restored from the trash finds its thumbnail again.
+
+TWO BUGS THE TESTS CAUGHT, and both were the kind that report success:
+
+- THE SWEEP SWEPT NOTHING. It paged with the pathkey as its cursor, and a default-constructed QString is NULL to SQLite: `pathkey > NULL` is NULL rather than true, so the first page came back empty and the pass reported a clean sweep of a table full of dead rows. It pages on rowid now -- an integer that starts usefully at 0, is the physical order, and is what DevPreviewCache's sweep already used.
+- AN ASSERTION THAT PASSED WITHOUT TESTING ANYTHING. The eviction case asked contains() whether an evicted row was gone, passing a stamp of 0,0 -- but contains() applies the staleness check, so it returns false for a row written with a real stamp whether that row exists or not. It asks the table directly now.
+
+THE MIGRATION IS THE PATH THAT ACTUALLY RUNS IN THE FIELD. Every existing user has a version 4 index, so a test against a fresh database proves nothing about them. Rather than hand-write the v1-v4 DDL into the test -- one more copy of the schema, the thing rowfields.h exists to avoid -- it takes the real migrated file, puts it BACK to the older shape (drop thumb, set user_version = 4) and reopens. It then checks that image, keyword, image_keyword and devpreview are all still there: an additive migration that quietly dropped the catalog is a catastrophe a "does thumb exist" check would not notice.
+
+tst_catalog's VERSION LITERAL IS A TRIPWIRE and was left as one. Bumping kSchemaVersion fails it on purpose, so whoever bumps it has to confirm that every tenant of the shared file still coexists at the new version and add the new tenant's tables to the list. The migration case beside it now compares against CacheDb::schemaVersion() instead, because what it is about is that a version 3 file migrates all the way UP, not which number it stops at.
+
+NOT WIRED IN YET. This is the store and its policy only: nothing writes to it from a folder load and nothing reads from it when an icon is missing. Those are the next two steps, and the WRITE half is the one worth having first -- indexing a real library is hours of background scanning, so the sooner it starts the sooner the read half has anything to find.
 
 ⏺ DataModel Changes > Sort Change
 
