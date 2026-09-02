@@ -551,6 +551,14 @@ Q_NAMESPACE
         contract between the loader and the decoder -- see "Metadata From the
         Index" in Documentation.txt -- and wants real-app use before it becomes
         the default. */
+    /*  How many images a single catalog search will return and load. It used to
+        be a constant in two panels; it is a setting because it is the same trade
+        the thumbnail ceiling is -- how much of a large library to bring in at
+        once -- and only the person looking at the screen can weigh it.
+
+        The count REPORTED is always the true total, so a user seeing a subset is
+        told so. Zero means no limit. */
+    extern int maxSearchResults;
     extern bool useIndexMetadata;
     extern bool cacheThumbnails;
     extern qint64 thumbCacheMaxBytes;

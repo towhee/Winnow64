@@ -1248,6 +1248,12 @@ A CORRECTION TO THE MEASUREMENT ABOVE. The "it did not bind at 43,000" note was 
 
 WHAT ELSE THE RUN SHOWED: after seven minutes only 26,420 of 43,070 rows had metadata read. At large scope the binding cost is TIME, not memory, and that is what G::useIndexMetadata addresses -- a catalogued folder skips the file read entirely. The two findings belong together: bounding the icons makes a large scope fit, and serving metadata from the index makes it arrive.
 
+kResultLimit AND kAutoLoadMax ARE GONE, replaced by G::maxSearchResults -- one setting, "Maximum search results", offering the same steps as the thumbnail ceiling and defaulting to the 5,000 the constants named. They were two static constexpr values in two different panels, which is two places to disagree about the same number, and they were fixed because a row used to cost 20 KB. That reason is gone; what remains is a trade the user makes, so it is a preference beside the other one.
+
+THE TWO QUESTIONS THEY ANSWERED ARE STILL SEPARATE, even though one setting drives both: how much may be SHOWN, and how much may be REPLACED UNASKED. FindPanel::resultLimit and autoLoadMax are named apart for that reason -- if an automatic load ever feels heavy it is the second to lower, and having them distinct is what makes that possible without touching the first.
+
+WHAT DID NOT CHANGE: the reported match count is still the TRUE total, so a user seeing a subset is told so. The cap governs what is brought in, never what is found.
+
 ⏺ DataModel Changes > Sort Change
 
   MW::sortThumbnails

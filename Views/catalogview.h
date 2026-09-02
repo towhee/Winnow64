@@ -12,6 +12,8 @@
 #include <QWidget>
 
 #include "Cache/catalog.h"
+#include <climits>
+#include "Main/global.h"
 
 /*
     The body of the Catalog dock: search across every image Winnow has catalogued, rather
@@ -125,11 +127,9 @@ private:
        itemCheckStateHasChanged. */
     bool keywordCheckJustChanged = false;
 
-    /* How many paths a single search will return. The grid copes with far more than a
-       user can review, but an unbounded result set on a large catalog would spend
-       seconds building a list nobody scrolls to the end of. The count reported is the
-       TRUE total, so the user is told when they are seeing a subset. */
-    static constexpr int kResultLimit = 5000;
+    /*  See FindPanel::resultLimit -- one setting (G::maxSearchResults) drives
+        both panels, so the two cannot disagree about how much a search returns. */
+    static int resultLimit() { return G::maxSearchResults > 0 ? G::maxSearchResults : INT_MAX; }
 };
 
 #endif // CATALOGVIEW_H

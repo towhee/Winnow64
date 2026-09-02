@@ -9,6 +9,8 @@
 #include <QToolButton>
 #include <QWidget>
 
+#include <climits>
+#include "Main/global.h"
 #include "Cache/catalog.h"
 
 class Filters;
@@ -144,17 +146,19 @@ private:
     Scope currentScope = FolderScope;
     bool scanning = false;
 
-    /* How many paths a single search will return. The grid copes with far more than a
-       user can review, but an unbounded result set on a large catalog would spend seconds
-       building a list nobody scrolls to the end of. The count reported is the TRUE total,
-       so the user is told when they are seeing a subset. */
-    static constexpr int kResultLimit = 5000;
-    /*  The most a catalog search will load WITHOUT being asked. Equal to
-        kResultLimit today, so every result the panel can produce auto-loads;
-        it is a separate constant because the two answer different questions --
-        how much may be shown, and how much may be replaced unasked -- and the
-        second is the one to lower if a load ever feels heavy. */
-    static constexpr int kAutoLoadMax = kResultLimit;
+    /*  How many paths a single search returns, and the most it will load WITHOUT
+        being asked. Both were constants (5,000); they are now G::maxSearchResults,
+        a preference, because the ceiling on how much of a large library to bring
+        in at once is the user's trade to make -- the same one the thumbnail
+        ceiling is. The count reported is still the TRUE total, so a user seeing a
+        subset is told so.
+
+        The two remain SEPARATE QUESTIONS even though one setting drives both:
+        how much may be shown, and how much may be replaced unasked. If a load
+        ever feels heavy it is the second to lower, and having them named
+        apart is what makes that possible without touching the first. */
+    static int resultLimit()  { return G::maxSearchResults > 0 ? G::maxSearchResults : INT_MAX; }
+    static int autoLoadMax()  { return resultLimit(); }
     /* Keystrokes are coalesced into one query: it hits SQLite and FTS5 on the GUI thread,
        and at a quarter of a million rows a query per character would be felt. */
     static constexpr int kDebounceMs = 250;

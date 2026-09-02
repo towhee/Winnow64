@@ -222,6 +222,14 @@ void Preferences::itemChange(QModelIndex idx)
         DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);
     }
 
+    if (source == "maxSearchResults") {
+        G::maxSearchResults = maxIconChunkValue(v.toString());
+        mw->settings->setValue("maxSearchResults", G::maxSearchResults);
+        /*  Applied to the NEXT search, which is what the user will do next
+            anyway -- re-running the current one would replace what they are
+            looking at without being asked. */
+    }
+
     if (source == "maxIconChunk") {
         G::maxIconChunk = maxIconChunkValue(v.toString());
         mw->settings->setValue("maxIconChunk", G::maxIconChunk);
@@ -1171,6 +1179,8 @@ int Preferences::devPreviewSizeValue(const QString &label)
     return G::kDevPreviewSizeFull;
 }
 
+/*  Shared by the thumbnail ceiling and the search-result cap: both are "how many
+    images at once", both offer the same steps, and both treat 0 as no limit. */
 QString Preferences::maxIconChunkLabel(int n)
 {
     if (n <= 0) return "No limit";
@@ -1299,6 +1309,27 @@ void Preferences::addDevPreviews()
     /*  Thumbnail cache. Beside the develop-preview settings because both answer
         "what does Winnow keep on disk so it does not have to decode again", and
         a user looking for one will look for the other in the same place. */
+    i.name = "maxSearchResults";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Maximum search results";
+    i.tooltip = "How many images a catalog search returns and loads at once.\n\n"
+                "The number of matches reported is always the true total, so you\n"
+                "are told when you are seeing a subset -- this caps what is\n"
+                "brought in, not what is found.\n\n"
+                "Raising it loads more of a large library in one go; each image\n"
+                "costs a row plus, up to the thumbnail ceiling below, a thumbnail.\n\n"
+                "Takes effect on the next search."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = maxIconChunkLabel(G::maxSearchResults);
+    i.key = "maxSearchResults";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "2,000" << "5,000" << "10,000" << "20,000" << "50,000" << "No limit";
+    addItem(i);
+
     i.name = "maxIconChunk";
     i.parentName = "DevPreviewHeader";
     i.captionText = "Thumbnails held in memory";
