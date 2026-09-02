@@ -55,7 +55,9 @@ private:
     int instance;
     QFileDevice::Permissions oldPermissions;
 
-    void setImageDimensions(QString &fPath, QSize size, int row);
+    /* fullSize = the IMAGE's dimensions (invalid when only the embedded
+       preview was decoded); previewSize = the preview's own. See the .cpp. */
+    void setImageDimensions(QString &fPath, QSize fullSize, QSize previewSize, int row);
     /* Cached developed thumbnail from the XMP sidecar. Tried before every other source
        in loadThumb; see Cache/devpreviewcache.h for the system it belongs to. */
     bool loadDevThumb(QString &fPath, QImage &image);

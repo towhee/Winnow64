@@ -114,32 +114,65 @@ void Thumb::checkOrientation(QImage &image, int orientation, int rotationDegrees
     }
 }
 
-void Thumb::setImageDimensions(QString &fPath, QSize size, int row)
+void Thumb::setImageDimensions(QString &fPath, QSize fullSize, QSize previewSize, int row)
 {
+/*
+    Publish an image's dimensions from the thumbnail path.
+
+    TWO SIZES, AND THEY ARE NOT THE SAME FACT. G::WidthColumn is how big the
+    IMAGE is -- what the table shows, what MPix and Dimensions and Aspect Ratio
+    are derived from, and what gets catalogued. G::WidthOrigPreviewColumn is how
+    big the EMBEDDED PREVIEW is, which the image cache uses to budget memory.
+
+    THIS FUNCTION USED TO WRITE THE SAME NUMBER TO BOTH, which was right for the
+    paths that decode the whole file and wrong for the ones that decode the
+    embedded thumbnail. A HEIC took the second kind on both platforms
+    (Heic::decodeThumbnail on Windows, macImageIOThumbnail on macOS, both of
+    which return the PREVIEW), so its width was overwritten with 160 -- and
+    whichever of the metadata read and the thumbnail decode landed last decided
+    what the row said. DataModel::catalogRows then catalogued whatever was
+    there, so the index could hold a preview's dimensions for an image. It was
+    found by fingerprinting a row served from the catalog against the same row
+    read from its file, which is the only reason it was visible at all.
+
+    AN INVALID fullSize MEANS "I ONLY DECODED THE PREVIEW", and the image
+    dimensions are then left alone rather than guessed at. The metadata read has
+    already set them; if it failed they stay 0, which is honest and which the
+    cache and the delegates already handle. Writing the preview's size there
+    would be a plausible number that is wrong, and a wrong number is worse than
+    a missing one precisely because nothing downstream can tell.
+*/
     QString fun = "Thumb::setImageDimensions";
     if (isDebug)
         qDebug().noquote()
             << fun.leftJustified(col0Width)
             << "row =" << row;
     if (G::isLogger) G::log(fun, "row = " + QString::number(row));
-    int w = size.width();
-    int h = size.height();
-    if (h == 0) {
+
+    QString src = "Thumb::setImageDimensions";
+
+    if (previewSize.isValid() && previewSize.height() > 0) {
+        emit setValDm(row, G::WidthOrigPreviewColumn, previewSize.width(), instance, src);
+        emit setValDm(row, G::HeightOrigPreviewColumn, previewSize.height(), instance, src);
+    }
+
+    if (fullSize.isValid() && fullSize.height() > 0) {
+        const int w = fullSize.width();
+        const int h = fullSize.height();
+        emit setValDm(row, G::WidthColumn, w, instance, src);
+        emit setValDm(row, G::HeightColumn, h, instance, src);
+        emit setValDm(row, G::AspectRatioColumn,
+                      QString::number(w * 1.0 / h, 'f', 2), instance, src);
+        emit setValDm(row, G::DimensionsColumn,
+                      QString::number(w) + "x" + QString::number(h), instance, src);
+    }
+    else if (!previewSize.isValid() || previewSize.height() == 0) {
+        /*  Neither size is usable, which is what the old height==0 guard caught.
+            Nothing to publish, and MetaLoaded below would be a lie. */
         QString msg = "Image width and/or height = 0.";
         G::issue("Warning", msg, "Thumb::setImageDimensions", dmRow, fPath);
         return;
     }
-    double ar = w * 1.0 / h;
-    QString a = QString::number(ar, 'f', 2);
-    QString d = QString::number(w) + "x" + QString::number(h);
-    QString src = "Thumb::setImageDimensions";
-
-    emit setValDm(row, G::WidthColumn, w, instance, src);
-    emit setValDm(row, G::WidthOrigPreviewColumn, w, instance, src);
-    emit setValDm(row, G::HeightColumn, h, instance, src);
-    emit setValDm(row, G::HeightOrigPreviewColumn, h, instance, src);
-    emit setValDm(row, G::AspectRatioColumn, a, instance, src);
-    emit setValDm(row, G::DimensionsColumn, d, instance, src);
 
     emit setValDm(row, G::MetadataStatusColumn, G::MetaLoaded, instance, src);
 
@@ -201,7 +234,11 @@ Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         return Status::Fail;
     }
 
-    if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(), row);
+    /*  srcSize is QImageReader::size() -- the FULL image. When it is invalid no
+        scaled size was set either, so the image just read IS the full image and
+        serves as both. */
+    if (!abort) setImageDimensions(fPath, srcSize.isValid() ? srcSize : image.size(),
+                                   image.size(), row);
 
     if (image.isNull()) {
         QString msg = "Null image returned from thumbReader.";
@@ -603,7 +640,11 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         if (ext == "heic") {
             status = loadFromHeic(fPath, image);
             if (status == Status::Success) {
-                if (!abort) setImageDimensions(fPath, image.size(), dmRow);
+                /*  The HEIC paths return the EMBEDDED PREVIEW on both platforms
+                    (Heic::decodeThumbnail, macImageIOThumbnail), so there is no
+                    full size to publish -- an invalid QSize says so rather than
+                    passing the preview off as the image. */
+                if (!abort) setImageDimensions(fPath, QSize(), image.size(), dmRow);
                 break;
             }
         }
