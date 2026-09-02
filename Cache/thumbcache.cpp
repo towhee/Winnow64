@@ -178,9 +178,12 @@ void ThumbCache::startWriterLocked()
     mThread->start(QThread::LowPriority);
 }
 
-void ThumbCache::putImage(const QString &fPath, const QImage &im)
+void ThumbCache::putImage(const QString &fPath, const QImage &im, bool hasDevelopRecipe)
 {
-    if (!G::cacheThumbnails) return;
+    /*  wantsOriginalThumb: for an edited image in a developed-showing mode the
+        picture in hand is the DEVELOPED thumbnail, and storing that would serve
+        an edit in Original mode later. See the declaration. */
+    if (!G::cacheThumbnails || !wantsOriginalThumb(hasDevelopRecipe)) return;
     if (fPath.isEmpty() || im.isNull()) return;
 
     ThumbWriter *w;
@@ -256,6 +259,45 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
     u.addBindValue(key);
     u.exec();
     return jpg;
+}
+
+bool ThumbCache::wantsOriginalThumb(bool hasDevelopRecipe)
+{
+    /*  No recipe, no developed thumbnail to prefer -- Thumb::devThumb finds
+        nothing in the sidecar and falls through to the camera's picture, which
+        is what this cache holds. This is the common case at every setting. */
+    if (!hasDevelopRecipe) return true;
+
+    /*  It has one, so the mode decides. The same condition Thumb::devThumb uses
+        to claim the answer, read the other way round: Develop mode always shows
+        developed -- you cannot edit what you cannot see -- regardless of the
+        setting. */
+    return G::operationMode != G::OperationMode::Develop
+           && G::previewSource != G::PreviewSource::Developed;
+}
+
+QImage ThumbCache::getImage(const QString &fPath, bool hasDevelopRecipe)
+{
+    if (!G::cacheThumbnails || !wantsOriginalThumb(hasDevelopRecipe)) return QImage();
+    if (fPath.isEmpty()) return QImage();
+
+    const QFileInfo fi(fPath);
+    if (!fi.exists()) return QImage();
+
+    const QByteArray jpg = get(fPath, fi.size(), fi.lastModified().toSecsSinceEpoch());
+    if (jpg.isEmpty()) return QImage();
+
+    QImage im;
+    if (!im.loadFromData(jpg, "JPG") || im.isNull()) return QImage();
+
+    /*  Stored at G::maxIconSize, but a row written by an older build or under a
+        larger icon setting must not paint over its cell -- the same guard
+        Thumb::devThumb applies to a sidecar preview, for the same reason. */
+    if (im.width() > G::maxIconSize || im.height() > G::maxIconSize)
+        im = im.scaled(G::maxIconSize, G::maxIconSize,
+                       Qt::KeepAspectRatio, Qt::FastTransformation);
+    im.convertTo(QImage::Format_RGB32);
+    return im;
 }
 
 bool ThumbCache::contains(const QString &fPath, qint64 srcSize, qint64 srcMtime) const

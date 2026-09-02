@@ -70,6 +70,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
      Thumbnails in the Index (Schema 5)
      Writing Thumbnails as They Load (and What It Costs)
+     Reading Them Back (and the Gate That Was Almost Wrong)
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
@@ -978,7 +979,7 @@ THE MIGRATION IS THE PATH THAT ACTUALLY RUNS IN THE FIELD. Every existing user h
 
 tst_catalog's VERSION LITERAL IS A TRIPWIRE and was left as one. Bumping kSchemaVersion fails it on purpose, so whoever bumps it has to confirm that every tenant of the shared file still coexists at the new version and add the new tenant's tables to the list. The migration case beside it now compares against CacheDb::schemaVersion() instead, because what it is about is that a version 3 file migrates all the way UP, not which number it stops at.
 
-The WRITE half is below. The READ half -- serving a missing icon from the index instead of decoding -- is still to come; the write half comes first because indexing a real library is hours of background scanning, so the sooner it starts the sooner the read half has anything to find.
+Both halves are below: the write, then the read that is the point of it.
 
 ⏺ DataModel Changes > Writing Thumbnails as They Load (and What It Costs)
 
@@ -1009,6 +1010,34 @@ THE BACKLOG IS BOUNDED AND DROPS. A queued QImage is a quarter of a megabyte, so
 A TEST THAT COULD NOT SEE THE THING IT TESTED. The skip-if-present check was verified by asserting that a second putImage of an unchanged file left the row count and the total bytes alone -- and deleting the skip did not fail it, because re-encoding an unchanged image produces byte-identical output. ThumbCache::written() now counts what the writer actually encoded and stored, which is the only way that distinction is visible, and re-injecting the missing skip fails by name.
 
 DISCOVERABLE, per the standing rule. "Cache thumbnails" and "Thumbnail cache size" sit beside the developed-preview settings in Preferences, because both answer "what does Winnow keep on disk so it does not have to decode again" and someone looking for one will look for the other in the same place. Both persist. Moves and deletes go through Utilities/fileops.h with the rest, so a renamed file keeps its thumbnail.
+
+⏺ DataModel Changes > Reading Them Back (and the Gate That Was Almost Wrong)
+
+THE PAYOFF. Reader::readIcon asks the index before it opens anything. A hit replaces opening the file, walking to its embedded preview's segment and decoding that with one indexed read and a small JPEG decode; a miss costs one stat and one indexed lookup and falls through to exactly the code that ran before. Measured per icon, median of five runs:
+
+    a folder with no develop edits (all 12 images cacheable)
+        no cache        31.4 ms
+        cold (writing)  43.2 ms
+        WARM             8.3 ms      3.8x
+
+    the 50-file mixed folder (26 of 50 cacheable -- see the gate below)
+        no cache        32.6 ms
+        cold (writing)  41.2 ms
+        WARM            28.5 ms
+
+The first folder is the honest measure of the mechanism; the second shows what a real mix does to it. Cold is dearer than no cache at all, once per image for the life of the index, and that is the trade the whole thing rests on.
+
+THE GATE IS PER IMAGE, AND GETTING THAT WRONG SHIPPED NOTHING AT ALL. Thumb::loadThumb does not always return the camera's thumbnail: for an image with a develop recipe, in Develop mode or with the preview source set to Developed, it returns the DEVELOPED thumbnail from the sidecar instead. Caching that would poison the index -- the developed picture served later for the same file in Original mode, showing the user an edit they had asked not to see -- and reading from the index in that case is the same mistake in the other direction.
+
+The first version gated on the MODE alone, which is wrong twice over. G::previewSource DEFAULTS to Developed, so the cache was switched off entirely: every measurement came back "no change", which is exactly what a feature that never runs looks like. And it is too coarse in principle -- an UNEDITED image has no developed thumbnail at any setting, so Thumb::devThumb falls through to the camera's picture and the cache is exactly right. Only an EDITED image in a developed-showing mode is excluded.
+
+WHAT THAT COSTS IN PRACTICE is visible in the mixed folder: 50 images, 24 of them develop-edited, and 26 cached. Not a defect -- the other 24 are showing a different picture and the cache holds one meaning of "thumbnail for this file". It does mean a heavily edited library gets less from this than an unedited one, which is worth knowing and is the sort of thing the numbers above would hide if only the mixed folder had been measured.
+
+hasDevelopRecipe comes from ImageMetadata::developEdited, which the metadata read has already established, so the per-image test costs nothing.
+
+THREE UNIT CASES PIN IT, and the injected mode-only gate fails all three by name -- including one that says in as many words that an unedited image must be cacheable at the DEFAULT setting, which is the assertion the original version violated.
+
+WHAT COMES BACK IS INDISTINGUISHABLE from what the decoder produces: RGB32, scaled to no more than G::maxIconSize. A row written by an older build or under a larger icon setting is scaled down on the way out, the same guard Thumb::devThumb applies to a sidecar preview, so a changed icon-size preference cannot paint over a cell.
 
 ⏺ DataModel Changes > Sort Change
 
