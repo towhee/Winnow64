@@ -1044,7 +1044,21 @@ WHAT COMES BACK IS INDISTINGUISHABLE from what the decoder produces: RGB32, scal
 
 THE SAME MOVE AS THE THUMBNAIL, APPLIED TO THE METADATA. The catalog already holds nearly everything a datamodel row needs -- capture time, rating, label, title, creator, camera, lens, exposure, dimensions, GPS and the flat keyword vocabulary -- because that is what it indexes in order to search. It was only ever read back as a LIST OF PATHS. Catalog::fetchFresh hands back the rows themselves, so a loader can populate a row from the database instead of opening the file and parsing its header.
 
-THE KEYWORDS ARE MOST OF THE SAVING, and they are why this is worth doing rather than merely tidy. Everything else in a metadata read comes out of the file's own header, which is one open and one seek. Keywords live in the SIDECAR -- a separate XML document that has to be found, opened and parsed per image. Reconstructing them here is two indexed joins.
+THE KEYWORDS ARE THE AWKWARD PART OF A METADATA READ -- they live in a SIDECAR, a separate XML document found, opened and parsed per image, where everything else comes out of the file's own header. Reconstructing them here is two indexed joins.
+
+BUT THEY ARE NOT WHERE THE TIME GOES, AND THIS PARAGRAPH ORIGINALLY SAID THEY WERE. "The keywords are most of the saving" was written from reasoning about what a sidecar costs, not from measuring it, and it was wrong. Measured per image, with the sidecar's file I/O timed separately from the rest of the read:
+
+    50 mixed raw files      metadata read 20.5 ms      sidecar I/O 165 us    0.8%
+    12 raw+jpg pairs        metadata read  2.6 ms      sidecar I/O   4 us    0.15%
+
+The read is dominated by walking the FILE'S OWN HEADER -- for a raw, parsing its IFD chain -- and the sidecar is noise beside it. See "Measure library claims" -- the same mistake as the QVariant::toBool() one, made about this codebase's own behaviour rather than Qt's, and caught the same way: by spending two minutes running it.
+
+WHAT THAT MEANS FOR THE LOADER, and it is the reason fetchFresh is not wired in yet. There are two ways to use it:
+
+  o Read the file for its segment offsets and take everything ELSE from the index. Safe -- every invariant holds -- and now known to be worth almost nothing, because the file read IS the cost.
+  o Skip the file entirely for a fresh row. Worth the whole 20 ms, and it breaks a load-bearing invariant: ImageCache::okToDecode gates the decoder on MetaLoaded specifically BECAUSE MetaLoaded promises the segment offsets are populated (its comment says so), and a row served from the index has no offsets. The decoder would fail with "length = 0" and burn its attempt cap.
+
+The second is the one worth having, and it is the shape the scratch store was built for: offsets are SCRATCH, needed only while something is decoding that row, so the decode path should ensure them on demand rather than the loader reading them for every row up front. That is a change to the contract between the loader and the decoder, in the path where a mistake means images do not open, and it deserves its own pass rather than being appended to this one.
 
 IT IS staleOf() READ THE OTHER WAY ROUND. staleOf answers "what must I INDEX?" for the scanner, which then reads those files; fetchFresh answers "what need I not READ?" for the loader, which then skips them. Same stamp -- source size, source mtime, sidecar mtime -- same comparison, opposite consumer.
 

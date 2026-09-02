@@ -11,6 +11,8 @@ BUGS / TO DO
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
 - Copy folder path does not always work
 - Scan xmp for lightroom keywords (subjectflat, subjectheirarchy)
+- Auto keyword generator
+- Review RapidRaw masks / inpainting / model usage
 - Does detail need Denoise / color?
 - Object mask post feather not working
 - Test DnD to Folders
