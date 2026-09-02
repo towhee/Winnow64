@@ -4606,6 +4606,40 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     }
 }
 
+void MW::updateCatalogForRow(int dmRow)
+{
+/*
+    Keep the catalog in step with a rating or colour label the user has just set.
+
+    WHY IT IS NEEDED AT ALL. An edit writes the sidecar, which is the source of
+    truth, and the catalog notices on the NEXT visit to that folder: writeXMP
+    moves the sidecar's mtime, the freshness stamp stops matching, and the folder
+    is re-indexed. That is enough while folders are how images are reached.
+
+    IT IS NOT ENOUGH IN CATALOG SCOPE, which is the point of that scope: the user
+    is working from search results and may never open the containing folder
+    again. Without this, rating an image in Catalog scope and then searching for
+    that rating would not find it -- the catalog would still hold the old value,
+    indefinitely.
+
+    THE WHOLE ROW GOES, not just the field that changed, and through the same
+    DataModel::catalogRowFor the bulk capture uses. Pushing only the changed
+    field would leave the freshness stamp saying "current" over whatever else had
+    drifted; sending the row the model actually holds makes the entry true rather
+    than less wrong.
+
+    Off the GUI thread, because it is SQL. commit() skips a row whose stamp
+    already matches, so this costs nothing when the catalog is already right.
+*/
+    if (dmRow < 0 || !dm) return;
+    if (!Catalog::instance().isAvailable()) return;
+
+    CatalogRow r;
+    if (!dm->catalogRowFor(dmRow, r)) return;
+
+    QThreadPool::globalInstance()->start([r]{ Catalog::instance().commit({r}); });
+}
+
 void MW::folderChangeCompleted()
 {
 /*
