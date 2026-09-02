@@ -70,6 +70,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
      Thumbnails in the Index (Schema 5)
      Offline is Not Missing (Catalog Availability)
+     What Actually Limits a Large Scope (Measured at 43,000)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
      The Index as a Metadata Source (fetchFresh)
@@ -1209,6 +1210,31 @@ THE WHOLE ROW GOES, not the field that changed, and through DataModel::catalogRo
 PICK IS DELIBERATELY NOT INCLUDED. It is a Winnow concept kept in the pick log, not written to XMP, so there is no sidecar edit to be in step with; the catalog's pick column is filled at capture time and stays a snapshot. Making picks durable across sessions is a different question from keeping the index in step with the file.
 
 IT COSTS NOTHING WHEN THE CATALOG IS ALREADY RIGHT: commit() skips a row whose stamp already matches, and the write is off the GUI thread because it is SQL. The unit case pins that a re-commit REPLACES the values and restores freshness rather than being skipped as unchanged, that the pre-edit stamp stops reading as fresh, and that committing the same row twice is a no-op.
+
+⏺ DataModel Changes > What Actually Limits a Large Scope (Measured at 43,000)
+
+THE PREMISE OF ALL OF THIS WAS THAT A 20 KB ROW IS WHAT STOPS A WHOLE CATALOG BEING BROWSABLE. That premise is now discharged -- a row holds 1.08 QStandardItems, its values live in a packed struct, and 43,070 rows go into the model without trouble. So the question becomes what limits it NOW, and the honest answer is: not the rows.
+
+MEASURED, on ~/Pictures recursively, 43,070 images:
+
+    rows in the model              43,070      loads fine
+    icon, in memory               ~178 KB      256px ARGB QPixmap
+    icons if all were cached         7.7 GB
+    resident, 26,000 icons in       6.5 GB     and the load had not finished
+
+THE ICONS ARE THE CONSTRAINT, and they always were -- the row work simply removed the larger number in front of them. An icon is two orders of magnitude bigger than the row it belongs to (~178 KB against ~600 bytes), so at any scale where "browse the whole catalog" is the point, thumbnails are the entire memory story.
+
+THE WINDOWING MACHINERY ALREADY EXISTS AND WAS NOT BEING REACHED. setIconRange, MetaRead::needToRead and clearIconsOutsideChunkRange all key off iconChunkSize < rowCount(), and resolveIconChunkSize computes a budget from free memory -- but only under G::useJitIconCache, which is OFF by default. The default branch was `iconChunkSize = rows`: cache an icon for every row, unconditionally, however many rows there are.
+
+THAT BRANCH IS NOW BOUNDED BY THE SAME BUDGET. The flag chooses a PREFERENCE rather than safety: with it off the whole set is still cached whenever the whole set fits, and when it does not the window applies anyway. Verified unchanged for the folders that were working -- a 50-image and a 1,048-image folder both still report iconChunkSize == rowCount().
+
+IT DID NOT BIND AT 43,000 ON THIS MACHINE, which is worth saying plainly rather than claiming a fix. iconBudgetCount() derives its allowance from free memory, and on a 24 GB machine with most of it free that allowance exceeded 43,070 icons. The bound is a floor against genuinely short memory, not a cap on ambition.
+
+THERE IS ALREADY A CAP, AND IT IS A DIALOG. G::maxIconChunk is 10,000 and DataModel::okManyImagesWarning uses it to ask "There are more than 10,000 images... you may experience sluggish responses or system hangs. Do you wish to continue?" -- which is the current answer to exactly the problem measured above, and it is a popup asking the user to accept a risk rather than a mechanism that removes it.
+
+MAKING iconChunkSize HONOUR maxIconChunk WOULD CLOSE THIS, and it is deliberately NOT done here. It is a user-visible trade -- folders between 10,000 and the memory budget would stop caching every icon, so scrolling past the window would re-decode -- and that is a judgement about how Winnow should feel, not a correctness fix to be made silently while nobody is looking at the screen. The measurement is here so the decision can be made on evidence.
+
+WHAT ELSE THE RUN SHOWED: after seven minutes only 26,420 of 43,070 rows had metadata read. At large scope the binding cost is TIME, not memory, and that is what G::useIndexMetadata addresses -- a catalogued folder skips the file read entirely. The two findings belong together: bounding the icons makes a large scope fit, and serving metadata from the index makes it arrive.
 
 ⏺ DataModel Changes > Sort Change
 

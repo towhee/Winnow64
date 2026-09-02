@@ -3877,8 +3877,26 @@ void DataModel::resolveIconChunkSize()
     if (rows == 0) return;
 
     if (!G::useJitIconCache) {
-        // brute force: cache an icon for every row in the datamodel
-        iconChunkSize = rows;
+        /*  Brute force: cache an icon for every row -- BUT ONLY IF THEY FIT.
+
+            Caching every icon is the right answer for a folder of five hundred
+            and stops being one somewhere before forty thousand. An icon is a
+            256px ARGB QPixmap, ~178 KB measured, so a 43,000-image recursive
+            scope asks for 7.7 GB of thumbnails alone: the run that found this
+            reached 6.5 GB resident with only 26,000 icons loaded and never
+            finished reading metadata.
+
+            The bounded window that handles this already exists -- setIconRange,
+            MetaRead::needToRead and clearIconsOutsideChunkRange all key off
+            iconChunkSize < rowCount() -- it was simply never reached, because
+            G::useJitIconCache is off by default and this branch returned first.
+
+            So the flag now chooses a PREFERENCE, not safety: with it off the
+            whole set is cached whenever the whole set fits, and when it does not
+            the window applies regardless. A folder small enough to fit behaves
+            exactly as before, which is every folder that was working. */
+        const int budget = qMax(iconBudgetCount(), iconChunkFloor());
+        iconChunkSize = qMin(rows, budget);
         setIconRange(currentSfRow);
         return;
     }
