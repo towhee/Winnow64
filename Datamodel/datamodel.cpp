@@ -1709,13 +1709,33 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
     });
 
     int row = rowCount();
-    const int first = row;
 
-    if (!ordered.isEmpty()) {
-        insertRows(row, ordered.size());
+    /*  THE TRUE COUNT FROM THE FIRST BATCH. Set before any row is inserted so the status
+        bar can say "1 of 43,050" while the rest are still arriving, rather than counting
+        up as they land. Cleared in endLoad. */
+    expectedRows = row + ordered.size();
+
+    /*  ONE BATCH AT A TIME, YIELDING BETWEEN THEM. A whole-catalog scope is tens of
+        thousands of rows, and doing them in a single blocking pass is the shape that made
+        the folder load feel hung -- see "Load Responsiveness". Each batch is one
+        structural insert and one wide dataChanged, which is what keeps the proxy and the
+        three views off the per-row signal path; between batches the event loop runs, so
+        the first thumbnails appear and Esc is heard while the rest stream in.
+
+        USER INPUT IS EXCLUDED from that pump, as it is in addAllMetadata: the model is
+        mid-fill, and letting a click select a row that is about to move would be a
+        re-entrancy bug rather than responsiveness. */
+    constexpr int kInsertBatch = 2000;
+    for (int from = 0; from < ordered.size(); from += kInsertBatch) {
+        if (abort || G::stop) break;
+        const int to = qMin(ordered.size(), from + kInsertBatch);
+        const int firstOfBatch = row;
+
+        insertRows(row, to - from);
         {
             const QSignalBlocker blocker(this);
-            for (const CatalogRow &r : ordered) {
+            for (int i = from; i < to; ++i) {
+                const CatalogRow &r = ordered.at(i);
                 const QFileInfo fi(r.path);
                 addFileDataForRow(row, fi, &r);
                 /*  THE METADATA, from the same mapping the per-row path uses
@@ -1728,7 +1748,16 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
                 row++;
             }
         }
-        emit dataChanged(index(first, 0), index(row - 1, columnCount() - 1));
+        emit dataChanged(index(firstOfBatch, 0), index(row - 1, columnCount() - 1));
+
+        if (ordered.size() > kInsertBatch) {
+            emit centralMsg(QString::number(row) + " of "
+                            + QString::number(expectedRows) + " images loading...");
+            emit updateProgress(1.0 * row / qMax(1, expectedRows) * 100);
+        }
+        if (G::useProcessEvents)
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents
+                                | QEventLoop::ExcludeSocketNotifiers);
     }
 
     /* Register the folders the results came from -- what the Folders filter category,
@@ -1747,7 +1776,7 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         }
     }
 
-    if (first == 0 && rowCount() > 0) {
+    if (rowCount() > 0 && rowCount() == ordered.size()) {
         firstFolderPathWithImages = ordered.isEmpty()
                                         ? QString()
                                         : QFileInfo(ordered.first().path).absoluteDir().path();
@@ -2008,6 +2037,9 @@ bool DataModel::endLoad(bool success)
 
     // abort = false;
     loadingModel = false;
+    /*  The streamed fill is over, so rowCount() is the count again -- whether it finished
+        or was aborted part-way, since an aborted load's rows are what is actually there. */
+    expectedRows = 0;
     sf->suspend(false);
 
     /*  Republish the worker view now the rows are FILLED.

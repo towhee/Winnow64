@@ -295,6 +295,15 @@ QString MW::getPosition()
     // QModelIndex idx = thumbView->currentIndex();
     // if (!idx.isValid()) return "";
     long rowCount = dm->sf->rowCount();
+    /*  WHILE A STREAMED FILL IS RUNNING, report what the set WILL hold rather than what
+        has arrived. A catalog scope of 43,000 images says "1 of 43,000" from the first
+        thumbnail instead of counting up as batches land -- the chunking is the loader's
+        business. Only while loading, and only when the proxy is showing everything the
+        model holds: once a filter is applied the proxy's own count is the honest answer
+        to "of how many", and the set's eventual size is not. */
+    if (dm->loadingModel && dm->expectedRows > rowCount
+        && dm->rowCount() == dm->sf->rowCount())
+        rowCount = dm->expectedRows;
     if (rowCount <= 0) return "";
     int row = dm->currentSfRow + 1;
     fileCount = QString::number(row) + " of "

@@ -73,6 +73,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      What Actually Limits a Large Scope (Measured at 43,000)
      The Rows Come Back in the Query That Found Them (searchRows)
      Filling the Model From the Index (addCatalogRows)
+     No Cap, and a Streamed Fill (Pos: 1 of 43,050)
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1312,6 +1313,20 @@ NOTHING PROVES THE FILE EXISTS, deliberately. A catalog row can name a file on a
 THE THREE CATALOG ENTRY POINTS ARE ONE AGAIN. MW::loadCatalogResults (paths) and MW::loadCatalogRows (rows) differ only in the ScopeRequest they build; both hand it to MW::loadCatalogScope, which owns the teardown a replace needs, the queued fill and the availability pass. Splitting those would have been three copies of the reasoning about what append must not reset.
 
 catalog_load NOW DRIVES THE LIVE PATH. It ran search + loadCatalogResults, which is now the older shape -- so the path the app actually uses would have been uncovered, which is the hole that test exists to close. It runs searchRows + loadCatalogRows and still asserts the query matched something and the model is not empty.
+
+⏺ DataModel Changes > No Cap, and a Streamed Fill (Pos: 1 of 43,050)
+
+G::maxSearchResults NOW DEFAULTS TO 0 -- NO LIMIT. Picking the catalog shows the whole catalog, the way picking a folder shows the whole folder. The 5,000 cap existed for two reasons and neither survives: a row cost ~19,900 bytes as 92 QStandardItems (it is 573 packed) and every row had to be read from its own file (Catalog::searchRows fills it from the index). The preference remains as a deliberate cap for anyone who wants one; "No limit" was always one of its offered values.
+
+THE OLD SAVED 5,000 IS RETIRED ONCE RATHER THAN HONOURED. It had been written to settings for every existing user, so leaving it would keep their Catalog scope capped at a number that only ever existed for reasons that are gone -- and a default nobody chose is not a preference. Settings::loadSettings removes the key when it reads exactly 5,000; every other value is kept. A user who deliberately picked 5,000 loses that choice, which is the price of not being able to tell it apart from the default.
+
+resultLimit AND autoLoadMax STILL DIFFER, and now they differ in kind. resultLimit is the SQL limit and returns 0 for "no LIMIT clause"; autoLoadMax is how much may be loaded without being asked and returns INT_MAX. Returning INT_MAX from both would have put "LIMIT 2147483647" on every query -- the same answer, said misleadingly.
+
+THE FILL IS BATCHED, 2,000 ROWS AT A TIME, with the event loop pumped between batches (user input excluded, as in addAllMetadata -- the model is mid-fill and a click that selected a row about to move would be re-entrancy, not responsiveness). Each batch is one structural insert and one wide dataChanged, which keeps the proxy and the three views off the per-row signal path; that shape is why the folder load stopped feeling hung, and a whole-catalog scope is the case it was built for.
+
+THE COUNT IS TRUE FROM THE FIRST BATCH. DataModel::expectedRows is set before any row is inserted and cleared in endLoad, and MW::getPosition reports it while a fill is running, so a 43,050-image catalog reads "1 of 43,050" from the first thumbnail instead of counting up as batches land. The batching is the loader's business; the user asked to see the whole amount. It applies only while loading AND only while the proxy is showing everything the model holds -- once a filter is applied, the proxy's own count is the honest answer to "of how many" and the set's eventual size is not.
+
+THE FOOTER NO LONGER INVENTS A SUBSET. It said "N images catalogued. Showing the M most recent" whether or not M was everything; with no cap those are the same number, and claiming a window onto a larger set when there is none describes a limit the user does not have.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

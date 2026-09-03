@@ -295,13 +295,14 @@ void FindPanel::runSearch()
 
         It used to report nothing and disable Load, on the reasoning that offering to
         load a quarter of a million images is not a useful answer to having typed
-        nothing. That reasoning holds for LOADING and is why the result limit still caps the
-        result. But it made Catalog an empty room: the user picked a scope and was shown
+        nothing. But it made Catalog an empty room: the user picked a scope and was shown
         a blank panel, while picking a folder shows pictures immediately. That difference
-        IS the paradigm split this stage exists to remove -- so an empty query is
-        answered the way a folder is, with the newest images first (Catalog::search
-        already orders by captured DESC), and the footer says it is a window onto a
-        larger set. */
+        IS the paradigm split this removes -- so an empty query is answered the way a
+        folder is, with the newest images first (searchRows orders by captured DESC).
+
+        AND IT IS NO LONGER A WINDOW ONTO THE SET. The cap that made it one existed
+        because a row cost ~20 KB and had to be read from its own file; neither is true
+        now, so G::maxSearchResults defaults to no limit and the whole catalog loads. */
     noQuery = q.text.trimmed().isEmpty() && !filters->isAnyCatalogFilter();
 
     /*  THE ROWS, NOT THE PATHS. searchRows returns everything a datamodel row displays
@@ -364,12 +365,16 @@ void FindPanel::updateFooter()
             : "No matches.");
     }
     else if (noQuery) {
-        /* No question asked: this is the catalog itself, newest first. Say which
-           window of it is on offer rather than implying it is a result set. */
-        resultLabel->setText(
-            QString("%1 images catalogued. Showing the %2 most recent --\n"
-                    "search or check a filter to narrow it.")
-                .arg(totalMatches).arg(results.size()));
+        /*  No question asked: this is the catalog itself, newest first. With no cap
+            (the default) that IS the whole catalog and there is no subset to explain --
+            saying "showing the N most recent" when N is everything would invent a limit
+            the user does not have. */
+        resultLabel->setText(results.size() >= totalMatches
+            ? QString("%1 images catalogued --\n"
+                      "search or check a filter to narrow it.").arg(totalMatches)
+            : QString("%1 images catalogued. Showing the %2 most recent --\n"
+                      "search or check a filter to narrow it.")
+                  .arg(totalMatches).arg(results.size()));
     }
     else if (results.size() < totalMatches) {
         /* Say plainly that this is a subset, and what would be loaded. */
