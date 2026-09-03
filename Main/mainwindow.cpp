@@ -632,6 +632,52 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         });
     }
 
+    /*  WINNOW_SELFTEST_CATALOG_SCAN=<folder> DRIVES THE BACKGROUND SCANNER, the one
+        way to say "index my library" and the last part of the catalog with no coverage
+        at all. It was reachable only by opening Preferences > Catalog > Catalogued
+        Folders and clicking Scan Now, which nothing headless does -- and it crashed on
+        the first line of MW::startCatalogScan for every user, because catalogView was
+        the one member of its group declared without an initialiser and an
+        uninitialised pointer passes `if (p)`. The scan was never queued, so the only
+        images that ever reached the catalog were the ones the opportunistic capture
+        picked up from folders the user had browsed.
+
+        THE ASSERTION IS `scanned`, NOT `indexed`. The scanner skips work already done
+        (Catalog::staleOf), and the fixture folder this runs against has just been
+        loaded and catalogued by the folder load above -- so a correct scan indexes
+        nothing and `indexed` is legitimately 0. `scanned` is the number of files it
+        actually looked at, which is what "the scanner ran" means here.
+
+        The result is held in a shared_ptr rather than a member because both this
+        lambda and the settle-exit one below need it and nothing else does. */
+    struct ScanResult { bool finished = false; int scanned = 0; int indexed = 0;
+                        bool aborted = false; };
+    auto scanResult = std::make_shared<ScanResult>();
+
+    const QString catalogScanRoot = qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_SCAN");
+    if (!catalogScanRoot.isNull()) {
+        if (catalogScanner) {
+            connect(catalogScanner, &CatalogScanner::finished, this,
+                    [scanResult](int scanned, int indexed, bool aborted) {
+                        scanResult->finished = true;
+                        scanResult->scanned = scanned;
+                        scanResult->indexed = indexed;
+                        scanResult->aborted = aborted;
+                    });
+        }
+        /*  Started after the folder load has settled, deliberately: the scanner pauses
+            whenever the datamodel is being modified, so kicking it off during the load
+            would measure the pause rather than the scan. */
+        QTimer::singleShot(settleMs / 2, this, [this, catalogScanRoot]() {
+            catalogRoots = QStringList{catalogScanRoot};
+            catalogRootsRecurse = true;
+            fprintf(stderr, "SELFTEST: catalogScan root=%s\n",
+                    catalogScanRoot.toLocal8Bit().constData());
+            fflush(stderr);
+            startCatalogScan();
+        });
+    }
+
     /* Drive navigation during the settle window. Sweeps forward to the last row
        (reporting when it gets there), then ping-pongs, keeping the cache target
        range moving through rows the GUI thread is still inserting/sorting.
@@ -683,7 +729,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         navTimer->start();
     }
 
-    QTimer::singleShot(settleMs, this, [this, folderPath]() {
+    QTimer::singleShot(settleMs, this, [this, folderPath, scanResult]() {
         const int rows = dm ? dm->rowCount() : 0;
         if (!qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_QUERY").isNull()) {
             /*  The catalog load replaced the model; a run that ends with the
@@ -718,6 +764,26 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
                 std::_Exit(3);
             }
         }
+        /*  WINNOW_SELFTEST_CATALOG_SCAN asserts the background scanner actually ran.
+            Reaching here at all is most of the point -- startCatalogScan used to
+            dereference an uninitialised catalogView and take the process with it, so a
+            crash IS the failure this guards against -- but "did not crash" is not
+            enough on its own: a scan that silently walked nothing would look identical.
+            scanned > 0 is what says it examined files. See the kickoff above for why
+            the assertion is not on `indexed`. */
+        if (!qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_SCAN").isNull()) {
+            fprintf(stderr,
+                    "SELFTEST: catalogScan finished=%d scanned=%d indexed=%d aborted=%d\n",
+                    int(scanResult->finished), scanResult->scanned,
+                    scanResult->indexed, int(scanResult->aborted));
+            fflush(stderr);
+            if (!scanResult->finished || scanResult->aborted || scanResult->scanned <= 0) {
+                fprintf(stderr, "SELFTEST: FAIL the catalog scan did not run\n");
+                fflush(stderr);
+                std::_Exit(6);
+            }
+        }
+
         /*  A REMOVAL, so the model-contract run covers more than insertion.
             Loading a folder only ever APPENDS, so with the tester attached and
             nothing else done the begin/endRemoveRows pairing went unchecked --
