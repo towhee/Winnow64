@@ -77,6 +77,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Filter Tree Recompiled Once Per Item (56 Seconds of Dead GUI)
      Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
      A Filter Is a Filter in Either Scope
+     The Redo Loop That Could Never Finish
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1395,6 +1396,32 @@ WHAT CHANGED UNDER IT is that the whole catalog is now loaded. The datamodel's c
 THE QUERY STILL DEFINES THE SET; THE TREE NARROWS IT. That is the whole distinction, and it is the same one a folder has: the folder (or the search text) decides which images are loaded, the filters decide which of them you are looking at. A category check now behaves identically in both scopes -- proxy re-filtered, every item still there, category head yellow.
 
 WHAT IS STILL SCOPE-SPECIFIC, deliberately: typing in the search box re-queries the index and reloads, because that is what changes the set. The categories then rebuild from the new set, which is correct for a search and would be wrong for a filter. Filters::loadCatalogCategories and isAnyCatalogFilter are left in place unused by this path; the separate Catalog panel (not built under G::useFindDock) is their other caller.
+
+⏺ DataModel Changes > The Redo Loop That Could Never Finish
+
+THE CATALOG BEACHBALL WAS NOT THE FILTERS, and the numbers said so plainly once a person clicked with the stall watchdog armed:
+
+    [PERF] FindPanel::applyScope       602 ms
+    REDO MAXED OUT  (x12)
+    [PERF] GUI STALL 31029 ms  ending at t = 32577 ms  dmRows = 42979
+    [PERF] BuildFilters::applyOps      0 ms  ops = 0
+    [PERF] BuildFilters::applyOps      0 ms  ops = 32
+    [PERF] GUI STALL 10946 ms  ending at t = 43523 ms
+    [PERF] BuildFilters::applyOps     78 ms  ops = 35
+
+applyScope is 0.6 s and the filter build is milliseconds. The stall sits immediately after twelve REDO MAXED OUT warnings from MetaRead.
+
+MetaRead::allMetaIconLoaded IS G::allMetadataAttempted && G::iconChunkLoaded, and a hydrated catalog scope makes the first true on arrival -- so the whole question becomes whether the icon chunk is COMPLETE. When the readers have all been dispatched and none is pending but that is still false, MetaRead concludes a read FAILED and calls redo(), which resets a and b to startRow and re-dispatches across the whole model, up to redoMax (5) times per arm. That retry was written for a folder of a few hundred.
+
+G::iconChunkLoaded COULD NEVER BECOME TRUE. DataModel::updateIconChunkLoaded requires every row in the 10,000-row chunk to carry an icon, discounting only videos (videoRowCount). A catalog scope holds rows whose file is on an unplugged drive or has been deleted -- that is what Catalog::Availability and the Availability column are FOR -- and such a row can never produce an icon. One of them in the chunk keeps the chunk incomplete forever, so every arm ran its five full re-dispatches and gave up, twelve times, and the queued icon writes from those passes are what blocked the GUI for 31 seconds.
+
+UNLOADABLE ROWS NOW COME OFF THE REQUIREMENT, alongside the videos. DataModel::iconUnloadableCount is maintained on AvailabilityColumn writes in setData and resynced by recountLoadFlags, exactly as the other four counters are, and isAllIconChunkLoaded skips a row whose availability is not Present. Present is 0, which is also what an unset cell reads, so a folder load -- which never writes that column -- is unaffected.
+
+MEASURED after the change, headless, 43,050 rows: the 31 s stall became 2.6 s and the small one during the fill is 772 ms.
+
+IT IS NOT FINISHED. REDO MAXED OUT still fires twelve times, so rows in the chunk are still failing to produce an icon for some reason OTHER than availability. The warning now reports the breakdown -- how many rows in the icon range have no icon, and how many of those were never attempted versus attempted and still iconless -- counted through the published proxySnapshot/rowSync views rather than off dm->sf, because it runs on the metaReadThread. That is the next thing to read rather than reason about.
+
+WHAT THIS COST: four rounds of "fixed it" that were not, three of them because a headless run reported healthy numbers for code that stalled in the GUI, and twice because a number in the probe's own output (icons=0, treeItems=17) was explained away instead of checked. The stall watchdog exists because it measures the SYMPTOM -- how late a 250 ms timer fired -- rather than a function somebody suspected.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

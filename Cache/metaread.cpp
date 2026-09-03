@@ -1367,10 +1367,38 @@ void MetaRead::processReturningReader(int id, Reader *r)
                 }
             }
             else {
-                qWarning() << "REDO MAXED OUT";
+                /*  SAY WHICH ROWS, not just that it gave up. This message maxed out
+                    twelve times on a 43,000-row catalog scope while the redo loop
+                    re-dispatched readers across the whole model each time -- and it named
+                    nothing, so there was no way to tell which rows could not be read or
+                    why. Unavailable rows (unplugged drive, file gone) are already
+                    excluded from the requirement; whatever is left here is the reason it
+                    still cannot finish. */
+                /*  Counted through the published views (proxySnapshot / rowSync), never
+                    off dm->sf: this runs on the metaReadThread, and reading the proxy
+                    from here is the race those views exist to remove. Availability is
+                    not one of the published flags, so it is not broken out -- the
+                    datamodel already excludes unavailable rows from the requirement. */
+                int noIcon = 0, notAttempted = 0, failed = 0, video = 0;
+                const int first = qMax(0, firstIconRow);
+                const int last  = qMin(rowCountSf() - 1, lastIconRow);
+                for (int row = first; row <= last; ++row) {
+                    if (isVideoAt(row)) { ++video; continue; }
+                    if (iconLoadedAt(row)) continue;
+                    ++noIcon;
+                    if (!metaAttemptedAt(row)) ++notAttempted;
+                    else                       ++failed;
+                }
+                qWarning().noquote()
+                    << "REDO MAXED OUT  iconRange" << first << "-" << last
+                    << " noIcon =" << noIcon
+                    << " (notAttempted =" << notAttempted
+                    << " attemptedButNoIcon =" << failed << ")"
+                    << " video =" << video
+                    << " G::iconChunkLoaded =" << (bool)G::iconChunkLoaded;
                 G::issue("Error",
-                         QString("Redo limit (%1) reached — some metadata/icons never loaded")
-                             .arg(redoMax),
+                         QString("Redo limit (%1) reached — %2 rows in the icon range "
+                                 "never loaded an icon").arg(redoMax).arg(noIcon),
                          "MetaRead::dispatch");
             }
         }
