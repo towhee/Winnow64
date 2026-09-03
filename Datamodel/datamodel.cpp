@@ -4060,19 +4060,36 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
        can crash. */
     /*  Through data(), not itemFromIndex()->icon(): the thumbnail lives in the
         path-keyed icon store now, and the item's own icon is always null. */
+    /*  BLOCKED AND EMITTED ONCE, the same shape setIcon1 uses two functions down and for
+        the same measured reason. These were three bare setData calls, so three separate
+        dataChanged notifications per icon -- and on macOS each one makes
+        QAbstractItemView tell the Cocoa accessibility bridge, which rebuilds its element
+        array for EVERY ROW IN THE MODEL. Throttling setValSf took a catalog scope's
+        freeze from 42 s to 15 s; this is the other path the icons arrive by. */
     {
         if (!data(dmIdx, Qt::DecorationRole).isNull()) {
-            setData(index(dmIdx.row(), G::IconLoadedColumn), true);
-            setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+            {
+                const QSignalBlocker blocker(this);
+                setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+                setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+            }
+            if (iconRowVisible(dmIdx))
+                emit dataChanged(index(dmIdx.row(), 0),
+                                 index(dmIdx.row(), columnCount() - 1));
             updateIconChunkLoaded();
             return;
         }
     }
 
     const QVariant vIcon = QVariant(QIcon(pm));
-    setData(dmIdx, vIcon, Qt::DecorationRole);
-    setData(index(dmIdx.row(), G::IconLoadedColumn), true);
-    setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, vIcon, Qt::DecorationRole);
+        setData(index(dmIdx.row(), G::IconLoadedColumn), true);
+        setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
+    }
+    if (iconRowVisible(dmIdx))
+        emit dataChanged(index(dmIdx.row(), 0), index(dmIdx.row(), columnCount() - 1));
     updateIconChunkLoaded();
 }
 
