@@ -3552,7 +3552,13 @@ void MW::armGuiStallWatchdog()
         if (late > 750) {
             qDebug().noquote() << "[PERF] GUI STALL" << late << "ms  ending at t ="
                                << now << "ms  dmRows =" << (dm ? dm->rowCount() : 0)
-                               << " sfRows =" << (dm && dm->sf ? dm->sf->rowCount() : 0);
+                               << " sfRows =" << (dm && dm->sf ? dm->sf->rowCount() : 0)
+                               << " emits(visible)="
+                               << G::probeEmitVisible.load(std::memory_order_relaxed)
+                               << " emits(suppressed)="
+                               << G::probeEmitSuppressed.load(std::memory_order_relaxed)
+                               << " visRange=" << (dm ? dm->firstVisibleIcon : -1)
+                               << "-" << (dm ? dm->lastVisibleIcon : -1);
         }
     });
     guiStallTimer->start(250);

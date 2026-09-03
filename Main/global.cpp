@@ -276,6 +276,8 @@ std::atomic<qint64> probeIconCacheGetNs{0};
 std::atomic<int>    probeIconCacheHits{0};
 std::atomic<int>    probeIconCacheMisses{0};
 std::atomic<int>    probeIconCount{0};
+std::atomic<int>    probeEmitVisible{0};
+std::atomic<int>    probeEmitSuppressed{0};
 
 // status
 // bool isModifyingDatamodel;
