@@ -619,7 +619,12 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             CatalogQuery q;
             q.text = catalogQuery;
             int total = 0;
-            const QStringList hits = Catalog::instance().search(q, 100000, &total);
+            /*  searchRows AND loadCatalogRows, because that is what the Find dock does.
+                This used to run search() + loadCatalogResults(), which is now the older
+                paths shape kept for the separate Catalog panel -- leaving the live path
+                uncovered is exactly the hole this test was written to close. */
+            const QVector<CatalogRow> hits = Catalog::instance().searchRows(q, 100000,
+                                                                           &total);
             fprintf(stderr, "SELFTEST: catalogQuery='%s' hits=%lld total=%d\n",
                     catalogQuery.toLocal8Bit().constData(), (long long)hits.size(), total);
             fflush(stderr);
@@ -629,7 +634,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
                 std::_Exit(4);
             }
             setScope(G::Scope::Catalog, "selftest");
-            loadCatalogResults(hits, false, q);
+            loadCatalogRows(hits, false, q);
         });
     }
 
@@ -3333,6 +3338,55 @@ void MW::stopCatalogScan()
 void MW::loadCatalogResults(const QStringList &paths, bool append, const CatalogQuery &query)
 {
 /*
+    Load a catalog search result given as PATHS -- the shape the separate Catalog panel
+    still uses. Each path is stat'd as it is added and each row is then read from its
+    file. loadCatalogRows is the same load from index rows, which does neither.
+*/
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::loadCatalogResults",
+               QString::number(paths.size()) + (append ? " results (add)" : " results"));
+
+    if (paths.isEmpty()) return;
+
+    ScopeRequest req;
+    req.scope = G::Scope::Catalog;
+    req.query = query;
+    req.paths = paths;
+    req.append = append;
+    req.reconcile = false;             // no directory to enumerate
+    loadCatalogScope(req, paths);
+}
+
+void MW::loadCatalogRows(const QVector<CatalogRow> &rows, bool append,
+                         const CatalogQuery &query)
+{
+/*
+    The same load, from whole index rows. Nothing here opens or stats a file: the rows
+    came out of the query that found them (Catalog::searchRows) already holding
+    everything a datamodel row displays.
+*/
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::loadCatalogRows",
+               QString::number(rows.size()) + (append ? " rows (add)" : " rows"));
+
+    if (rows.isEmpty()) return;
+
+    QStringList paths;
+    paths.reserve(rows.size());
+    for (const CatalogRow &r : rows) paths << r.path;
+
+    ScopeRequest req;
+    req.scope = G::Scope::Catalog;
+    req.query = query;
+    req.rows = rows;
+    req.append = append;
+    req.reconcile = false;
+    loadCatalogScope(req, paths);
+}
+
+void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
+{
+/*
     Load a catalog search result -- images from any number of folders, as one browsable
     set. See notes/Documentation.txt "The Catalog".
 
@@ -3350,26 +3404,21 @@ void MW::loadCatalogResults(const QStringList &paths, bool append, const Catalog
     (G::FolderOp::Add), and it is what makes comparing two searches possible at all:
     without it, every search throws the previous one away.
 
-    DataModel::addPaths IS ALREADY ADDITIVE -- it starts at rowCount() and skips paths
-    already in the model -- so append is a matter of NOT tearing down first, rather than a
-    second load path. That is also why a path in both searches is not loaded twice.
+    THE MODEL FILLS ADDITIVELY -- both addPaths and addCatalogRows start at rowCount() and
+    skip what is already loaded -- so append is a matter of NOT tearing down first, rather
+    than a second load path. That is also why a path in both searches is not loaded twice.
 
     THE FOLDER PANEL DELIBERATELY DOES NOT FOLLOW. The results span many folders, so there
     is no one folder to select; highlighting an arbitrary one of them would misrepresent
     what is loaded. The dock's own result header is what says where these came from.
 */
-    QString fun = "MW::loadCatalogResults";
-    if (G::isLogger || G::isFlowLogger)
-        G::log(fun, QString::number(paths.size()) + (append ? " results (add)"
-                                                            : " results"));
-
-    if (paths.isEmpty()) return;
+    QString fun = "MW::loadCatalogScope";
 
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
 
-    if (!append) {
+    if (!req.append) {
         resetDevelopCachesForNewFolder();
 
         bookmarks->setEnabled(false);
@@ -3383,15 +3432,9 @@ void MW::loadCatalogResults(const QStringList &paths, bool append, const Catalog
     /* Queued for the same reason enqueueFolderSelection is: stop() has just torn down the
        reader threads, and the fill must not run inside the signal that asked for it. On
        the append path nothing was torn down, but the queueing is kept so both paths reach
-       addPaths the same way -- one of them running inline would be a difference waiting
+       the model the same way -- one of them running inline would be a difference waiting
        to matter. */
-    QTimer::singleShot(0, this, [this, paths, append, query]{
-        ScopeRequest req;
-        req.scope = G::Scope::Catalog;
-        req.query = query;
-        req.paths = paths;
-        req.append = append;
-        req.reconcile = false;             // no directory to enumerate
+    QTimer::singleShot(0, this, [this, req, paths]{
         dm->setScope(req);
 
         /*  ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog
@@ -3400,9 +3443,10 @@ void MW::loadCatalogResults(const QStringList &paths, bool append, const Catalog
             A FOLDER load never comes here, and its rows stay Present, which is
             correct: the filesystem just listed them.
 
-            One database pass and one mount-table walk for the whole result set,
-            not per row, and the answers come back to the GUI thread to be
-            written -- the model is not thread-safe. */
+            This is also the ONLY thing that looks at the filesystem on the rows path,
+            and it is the right shape for it: one database pass and one mount-table walk
+            for the whole set rather than a stat per row, with the answers written back
+            on the GUI thread because the model is not thread-safe. */
         QThreadPool::globalInstance()->start([this, paths]{
             const auto avail = Catalog::instance().availabilityOf(paths);
             if (avail.isEmpty()) return;

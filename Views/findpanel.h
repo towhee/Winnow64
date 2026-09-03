@@ -11,6 +11,8 @@
 
 #include <climits>
 #include "Main/global.h"
+#include <QVector>
+
 #include "Cache/catalog.h"
 
 class Filters;
@@ -98,7 +100,8 @@ signals:
     /*  THE QUERY TRAVELS WITH THE RESULT. The paths are what to load; the query is
         what the user asked for, and the model keeps it as its ScopeRequest so a
         reload or a refresh has something to re-run. */
-    void loadResults(const QStringList &paths, bool append, const CatalogQuery &query);
+    void loadResults(const QVector<CatalogRow> &rows, bool append,
+                     const CatalogQuery &query);
     /* Open the Catalogued Folders editor. */
     void manageRootsRequested();
     /* Back in Folders scope: the tree is holding the CATALOG's values and must be rebuilt
@@ -139,7 +142,14 @@ private:
 
     /* The most recent Catalog result, held so Load does not have to re-run the query
        -- and so what gets loaded is exactly what the count described. */
-    QStringList results;
+    /*  WHOLE ROWS, not paths. The search that produced them already selected everything a
+        datamodel row displays (Catalog::searchRows), so loading them opens no files. The
+        paths are still what the panel compares run-to-run -- see resultPaths. */
+    QVector<CatalogRow> results;
+    /*  The result as paths, which is what the run-to-run comparison and the load both
+        need. Built on demand rather than stored beside results, so the two cannot
+        disagree about what the current result is. */
+    QStringList resultPaths() const;
     int totalMatches = 0;
     /*  True when the catalog scope is showing the most recent images because
         nothing has been asked -- the footer says something different then, and

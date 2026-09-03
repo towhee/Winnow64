@@ -1697,7 +1697,7 @@ void MW::createFilterDock()
            SAME widget in both scopes rather than a copy that could drift. */
         findPanel = new FindPanel(filters);
         filterLayout->addWidget(findPanel);
-        connect(findPanel, &FindPanel::loadResults, this, &MW::loadCatalogResults);
+        connect(findPanel, &FindPanel::loadResults, this, &MW::loadCatalogRows);
         connect(findPanel, &FindPanel::manageRootsRequested, this,
                 &MW::manageCatalogRoots);
         /* Returning to Folders: the tree is holding catalog values, so rebuild it from
