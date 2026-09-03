@@ -368,6 +368,15 @@ public:
     std::atomic<int> metadataLoadedCount{0};
     std::atomic<int> iconLoadedCount{0};
     std::atomic<int> videoRowCount{0};
+    /*  ROWS THAT CAN NEVER CARRY AN ICON, for the same reason videoRowCount exists: the
+        icon chunk is "complete" when every row in it is loaded OR cannot be. A catalog
+        scope can hold rows whose file is on an unplugged drive or gone (see
+        Catalog::Availability), and counting those as outstanding made G::iconChunkLoaded
+        permanently false -- which put MetaRead into a redo loop that re-dispatched
+        readers across 43,000 rows five times per arm and blocked the GUI for a measured
+        31 seconds. Maintained on AvailabilityColumn writes in setData and resynced by
+        recountLoadFlags, exactly as the other four are. */
+    std::atomic<int> iconUnloadableCount{0};
 
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;

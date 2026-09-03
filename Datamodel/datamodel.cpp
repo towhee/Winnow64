@@ -582,6 +582,7 @@ void DataModel::clearDataModel()
     metadataLoadedCount.store(0, std::memory_order_relaxed);
     iconLoadedCount.store(0, std::memory_order_relaxed);
     videoRowCount.store(0, std::memory_order_relaxed);
+    iconUnloadableCount.store(0, std::memory_order_relaxed);
 }
 
 /*  The columns whose tooltip is simply their own text. Chosen explicitly rather
@@ -888,10 +889,14 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
     const bool isStatusCol = (col == G::MetadataStatusColumn);
     const bool isBoolCol   = (col == G::IconLoadedColumn || col == G::VideoColumn);
     const bool isCacheMBCol = (col == G::CacheSizeColumn);
+    /*  Availability is tracked for the same reason Video is: a row whose file is on an
+        unplugged drive or gone can never carry an icon, so it must not hold the icon
+        chunk open. Written once per set, off the availability pass. */
+    const bool isAvailCol  = (col == G::AvailabilityColumn);
     const bool track =
         idx.isValid() &&
         (role == Qt::EditRole || role == Qt::DisplayRole) &&
-        (isStatusCol || isBoolCol);
+        (isStatusCol || isBoolCol || isAvailCol);
 
     /*  THE OLD VALUE COMES FROM data(), NOT FROM THE ITEM. All three tracked
         columns are covered by the row store and the items no longer hold them,
@@ -900,10 +905,12 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         that isMetaReadFinished() and the icon-chunk check depend on would drift
         upward until they exceeded rowCount(). */
     int  oldStatus = G::MetaNotAttempted;
+    int  oldAvail = int(Catalog::Availability::Present);
     bool oldVal = false;
     if (track) {
-        if (isStatusCol) oldStatus = data(idx, Qt::DisplayRole).toInt();
-        else             oldVal    = data(idx, Qt::DisplayRole).toBool();
+        if (isStatusCol)     oldStatus = data(idx, Qt::DisplayRole).toInt();
+        else if (isAvailCol) oldAvail  = data(idx, Qt::DisplayRole).toInt();
+        else                 oldVal    = data(idx, Qt::DisplayRole).toBool();
     }
 
     /*  THE ITEM WRITE IS GONE FOR EVERY COVERED (COLUMN, ROLE).
@@ -963,6 +970,16 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
                 if (isLoaded != wasLoaded)
                     metadataLoadedCount.fetch_add(isLoaded ? 1 : -1, std::memory_order_relaxed);
             }
+        }
+        else if (isAvailCol) {
+            /*  Present -> not Present makes a row unloadable, and back again makes it
+                loadable: a drive being plugged in is exactly that transition. Counting
+                only the crossings keeps each row's contribution at 0 or 1. */
+            const bool wasUnloadable = oldAvail != int(Catalog::Availability::Present);
+            const bool isUnloadable  = value.toInt() != int(Catalog::Availability::Present);
+            if (isUnloadable != wasUnloadable)
+                iconUnloadableCount.fetch_add(isUnloadable ? 1 : -1,
+                                              std::memory_order_relaxed);
         }
         else {
             const bool newVal = value.toBool();
@@ -1053,7 +1070,7 @@ void DataModel::recountLoadFlags()
     row removals (remove/removeFolder use removeRows, which bypasses setData).
 */
     if (G::isLogger) G::log("DataModel::recountLoadFlags");
-    int meta = 0, loaded = 0, icon = 0, video = 0;
+    int meta = 0, loaded = 0, icon = 0, video = 0, unloadable = 0;
     const int n = rowCount();
     for (int row = 0; row < n; ++row) {
         const int status = index(row, G::MetadataStatusColumn).data().toInt();
@@ -1061,11 +1078,14 @@ void DataModel::recountLoadFlags()
         if (status == G::MetaLoaded)                                ++loaded;
         if (index(row, G::IconLoadedColumn).data().toBool())        ++icon;
         if (index(row, G::VideoColumn).data().toBool())             ++video;
+        if (index(row, G::AvailabilityColumn).data().toInt()
+                != int(Catalog::Availability::Present))             ++unloadable;
     }
     metadataAttemptedCount.store(meta,  std::memory_order_relaxed);
     metadataLoadedCount.store(loaded,   std::memory_order_relaxed);
     iconLoadedCount.store(icon,         std::memory_order_relaxed);
     videoRowCount.store(video,          std::memory_order_relaxed);
+    iconUnloadableCount.store(unloadable, std::memory_order_relaxed);
 }
 
 void DataModel::newInstance()
@@ -2158,6 +2178,7 @@ bool DataModel::endLoad(bool success)
         metadataLoadedCount.store(0, std::memory_order_relaxed);
         iconLoadedCount.store(0, std::memory_order_relaxed);
         videoRowCount.store(0, std::memory_order_relaxed);
+    iconUnloadableCount.store(0, std::memory_order_relaxed);
         filters->loadingDataModelFailed();
         return false;
     }
@@ -3870,7 +3891,12 @@ void DataModel::updateIconChunkLoaded()
     once per icon — removing the prior O(N·chunk) GUI-thread cost.
 */
     const int span = endIconRange - startIconRange + 1;
-    const int needed = span - videoRowCount.load(std::memory_order_relaxed);
+    /*  Unloadable rows come off the requirement with the videos. A catalog scope can hold
+        rows whose file is on an unplugged drive or gone, and requiring an icon of those
+        left this permanently false -- which is what put MetaRead into a redo loop that
+        blocked the GUI for 31 seconds (see "The Redo Loop That Could Never Finish"). */
+    const int needed = span - videoRowCount.load(std::memory_order_relaxed)
+                            - iconUnloadableCount.load(std::memory_order_relaxed);
     if (span > 0 &&
         iconLoadedCount.load(std::memory_order_relaxed) < needed) {
         G::iconChunkLoaded = false;
@@ -4187,6 +4213,11 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
     for (int row = first; row <= last; ++row) {
         // ignore video
         if (sf->index(row, G::VideoColumn).data().toBool()) continue;
+        /*  Ignore a row that cannot produce an icon at all: its file is on an unmounted
+            volume or is gone. Present is 0 and is also the value an unset cell reads, so
+            a folder load -- which never writes this column -- is unaffected. */
+        if (sf->index(row, G::AvailabilityColumn).data().toInt()
+                != int(Catalog::Availability::Present)) continue;
 
         QModelIndex sfIdx = sf->index(row, 0);
         if (!sfIdx.isValid()) {
