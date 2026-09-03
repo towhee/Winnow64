@@ -253,7 +253,8 @@ void FindPanel::applyScope()
     }
     refresh();
 
-    qDebug().noquote() << "[PERF] FindPanel::applyScope" << asTimer.elapsed()
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] FindPanel::applyScope" << asTimer.elapsed()
                            << "ms  scope ="
                            << (currentScope == CatalogScope ? "Catalog" : "Folders");
 }

@@ -3414,8 +3414,11 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
 */
     QString fun = "MW::loadCatalogScope";
 
-    /*  A catalog scope is the large case, so this is where the stall watchdog goes on. */
-    armGuiStallWatchdog();
+    /*  The stall watchdog goes on for a catalog scope, under G::isPerfProbe
+        (WINNOW_PERF_PROBE=1). It is cheap -- one callback four times a second, printing
+        only when it fires more than 750 ms late -- but a shipping app should not be
+        writing diagnostics to the console unasked. */
+    if (G::isPerfProbe) armGuiStallWatchdog();
 
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
@@ -3476,7 +3479,7 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                 and until it was paged it held the catalog mutex for all of them -- which
                 is what every GUI-thread call into the catalog then waited on. */
             QElapsedTimer at;
-            const bool probeBig = paths.size() > 20000;
+            const bool probeBig = G::isPerfProbe;
             if (probeBig) at.start();
             const auto avail = Catalog::instance().availabilityOf(paths);
             if (probeBig) {
@@ -3504,7 +3507,7 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                     project has already identified as the folder-load bottleneck (see
                     "Load Responsiveness"), and at catalog scale it is tens of thousands
                     of them in a single pass. */
-                const bool probeBig = dm && dm->rowCount() > 20000;
+                const bool probeBig = G::isPerfProbe;
                 QElapsedTimer wt;
                 if (probeBig) wt.start();
                 int written = 0;
@@ -3533,9 +3536,10 @@ void MW::armGuiStallWatchdog()
     its output, with a length, is what a person sees as a spinning cursor -- and the
     [PERF] lines printed either side of that gap say what was running during it.
 
-    Armed when the model gets large rather than behind G::isPerfProbe, because the point
-    is that a person can reproduce a stall by clicking, without being asked to set an
-    environment variable first. Idle cost is one timer callback four times a second.
+    Armed under G::isPerfProbe (WINNOW_PERF_PROBE=1). It was briefly armed for any large
+    model so that a stall could be reproduced by clicking alone, which is what found this
+    bug; that served its purpose and diagnostics belong behind the flag. Idle cost is one
+    timer callback four times a second.
 */
     if (guiStallTimer) return;
     if (G::isLogger) G::log("MW::armGuiStallWatchdog");
@@ -4781,7 +4785,7 @@ void MW::folderChanged(bool aborted)
         it happens afterwards, as posted events -- which is precisely the window the
         stall watchdog reports and precisely where every measured stage of the load tail
         has already been ruled out. */
-    const bool probeBig = dm && dm->rowCount() > 20000;
+    const bool probeBig = G::isPerfProbe;
     QElapsedTimer fcT;
     if (probeBig) {
         fcT.start();
