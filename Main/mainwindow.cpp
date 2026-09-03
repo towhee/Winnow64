@@ -3511,19 +3511,150 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                 QElapsedTimer wt;
                 if (probeBig) wt.start();
                 int written = 0;
+                int offline = 0, missing = 0;
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
                     if (it.value() == Catalog::Availability::Present) continue;
                     const int row = dm->rowFromPath(it.key());
                     if (row < 0) continue;
                     dm->setData(dm->index(row, G::AvailabilityColumn), int(it.value()));
+                    if (it.value() == Catalog::Availability::Offline) ++offline;
+                    else ++missing;
                     ++written;
                 }
                 if (probeBig)
                     qDebug().noquote() << "[PERF] availability write-back" << written
                                        << "rows in" << wt.elapsed() << "ms (GUI thread)";
+
+                /*  THE FILTERS CATEGORY IS NOW WRONG, and only now. The categories were
+                    built from a model in which every row still read Present -- the
+                    column had not been written yet -- so the Availability category held
+                    nothing but Present and was correctly hidden. This is where Offline
+                    and Missing come into existence, so this is where the category has to
+                    learn about them: no user edit, no folder change and no metadata
+                    arriving would ever tell it.
+
+                    THE ITEMS ARE ADDED DIRECTLY RATHER THAN THROUGH
+                    BuildFilters::updateCategory, which is the path an edited category
+                    normally takes. That path SUSPENDS proxy filtering and leaves it to
+                    MW::filterChange to lift -- and filterChange bumps dm->instance,
+                    saves and restores the selection and re-sorts, none of which may
+                    happen to a scope that has only just finished loading. The counts do
+                    not need a snapshot pass either: nothing is filtered yet, so the two
+                    count columns are the same number, and the pass has just counted the
+                    rows it wrote.
+
+                    A new item is Unchecked and so contributes nothing to the compiled
+                    predicate, which is why the tree can be added to here without
+                    recompiling it. */
+                if (written && filters) {
+                    QMap<QString, int> map;
+                    const int present = dm->rowCount() - offline - missing;
+                    if (present > 0)
+                        map[Catalog::availabilityLabel(int(Catalog::Availability::Present))] = present;
+                    if (offline)
+                        map[Catalog::availabilityLabel(int(Catalog::Availability::Offline))] = offline;
+                    if (missing)
+                        map[Catalog::availabilityLabel(int(Catalog::Availability::Missing))] = missing;
+                    filters->addCategoryItems(map, filters->availability);
+                }
             }, Qt::QueuedConnection);
         });
     }
+}
+
+void MW::refreshStaleRows(const QStringList &paths)
+{
+/*
+    A ROW THAT IS NO LONGER TRUE IS NOT PATCHED, IT IS RE-READ.
+
+    ScrollVerify has stat'd the visible rows and found these ones out of date with their
+    files -- almost always a sidecar rewritten by something else, which is where a
+    keyword edit lands. What changed is not knowable from the stamps: a rating, a title,
+    the whole keyword set, the capture time. So the row is cleared back to
+    MetaNotAttempted and the loader reads it exactly as it reads a row it has never seen.
+    That path already prefers the index and already falls through to the file when the
+    index is out of date, so nothing here needs to know which of the two will answer.
+
+    THE ICON GOES TOO. The embedded thumbnail can change with the file, and a row that
+    keeps its old icon while its metadata is re-read is half-corrected in the way that is
+    hardest to see. Clearing a loaded icon is not enough on its own -- MetaRead
+    short-circuits rows it believes are loaded -- so it is told the icon was discarded,
+    the same announcement MW::setPreviewSource and MW::devPreviewUpdated make.
+
+    AND THE CATALOG IS WRONG, WHICH IS WHY THE PATH IS REMEMBERED. The index still holds
+    the values that just failed verification; leaving it would have the next Catalog
+    scope serve the same stale row and the same pass find it stale again. The corrected
+    row is committed when the re-read completes -- see folderChangeCompleted, which
+    skips committing a hydrated catalog scope precisely because these are the only rows
+    in it worth writing.
+*/
+    if (G::isLogger) G::log("MW::refreshStaleRows", QString::number(paths.size()));
+    if (paths.isEmpty() || !dm) return;
+
+    int cleared = 0;
+    for (const QString &fPath : paths) {
+        const int dmRow = dm->rowFromPath(fPath);
+        if (dmRow < 0) continue;
+
+        dm->setData(dm->index(dmRow, G::MetadataStatusColumn), G::MetaNotAttempted);
+        dm->setData(dm->index(dmRow, G::IconLoadedColumn), false);
+        dm->setIcon(dm->index(dmRow, 0), QPixmap(), dm->instance, "MW::refreshStaleRows");
+        /*  The full-size decode was made from a file that has since changed. */
+        if (icd) icd->remove(fPath);
+
+        const int sfRow = dm->proxyRowFromPath(fPath);
+        if (sfRow >= 0) {
+            if (thumbView && thumbView->iconViewDelegate)
+                thumbView->iconViewDelegate->clearCacheItem(sfRow);
+            if (gridView && gridView->iconViewDelegate)
+                gridView->iconViewDelegate->clearCacheItem(sfRow);
+        }
+
+        staleRecommit.insert(fPath);
+        ++cleared;
+    }
+    if (!cleared) return;
+
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] scroll-in verify: re-reading" << cleared
+                           << "stale rows";
+
+    G::allMetadataAttempted = false;
+    G::iconChunkLoaded = false;
+    QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
+    reloadIconChunk();
+}
+
+QVector<CatalogRow> MW::catalogRowsForStale()
+{
+/*
+    The catalog payload for the rows refreshStaleRows cleared, taken once the re-read has
+    landed. Built with DataModel::catalogRowFor -- the SAME builder the bulk capture uses
+    -- because two builders would index an edited image differently from an unedited one
+    in only the fields that differed, which is close to undebuggable.
+
+    A row that has not come back MetaLoaded is left in the set: the read did not finish
+    this time round, and committing what is still on it would write the stale values back
+    as though they were current.
+
+    GUI thread: it reads the model.
+*/
+    QVector<CatalogRow> rows;
+    if (staleRecommit.isEmpty() || !dm) return rows;
+
+    QSet<QString> stillPending;
+    for (const QString &fPath : staleRecommit) {
+        const int dmRow = dm->rowFromPath(fPath);
+        if (dmRow < 0) continue;                    // the row is gone; so is the question
+        if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
+            stillPending.insert(fPath);
+            continue;
+        }
+        CatalogRow r;
+        if (dm->catalogRowFor(dmRow, r)) rows.append(r);
+    }
+    staleRecommit = stillPending;
+    return rows;
 }
 
 void MW::armGuiStallWatchdog()
@@ -4718,6 +4849,11 @@ void MW::updateIconRange(QString src)
     // Set icon range and G::iconChunkLoaded
     dm->setIconRange(dm->currentSfRow);
 
+    /*  The visible window moved, so the rows in it may be worth verifying against their
+        files. This only restarts a settle timer -- the pass itself runs when scrolling
+        stops, off the GUI thread. See Cache/scrollverify.h. */
+    if (scrollVerify) scrollVerify->viewChanged();
+
     // update icons cached only when the icon or viewport size changes
     if (chunkSizeChanged) {
         bool fileSelectionChange = false;
@@ -5202,10 +5338,25 @@ void MW::folderChangeCompleted()
 
     QMetaObject::invokeMethod(this, [this, reconcile, nothingToCommit]{
         if (nothingToCommit) {
+            /*  EXCEPT THE ROWS THE VERIFICATION PASS RE-READ. Everything else in a
+                hydrated scope came from the index and would be written back unchanged;
+                these are the rows whose stamps did not match, so the index is holding
+                values that have since been corrected from the file. This is the commit
+                the paragraph above defers to the pass. */
+            const QVector<CatalogRow> fixed = catalogRowsForStale();
+            if (!fixed.isEmpty()) {
+                QThreadPool::globalInstance()->start([fixed]{
+                    Catalog::instance().commit(fixed);
+                });
+            }
             if (G::isPerfProbe)
-                qDebug().noquote() << "[PERF] catalog commit SKIPPED (rows came from the index)";
+                qDebug().noquote() << "[PERF] catalog commit SKIPPED (rows came from the "
+                                      "index); re-verified rows committed =" << fixed.size();
             return;
         }
+        /*  A scope that commits everything commits these too, so the pending set is
+            simply discharged. */
+        staleRecommit.clear();
         QElapsedTimer ct;
         if (G::isPerfProbe) ct.start();
         const QVector<CatalogRow> rows = dm->catalogRows();

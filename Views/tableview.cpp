@@ -45,6 +45,9 @@ TableView::TableView(QWidget *parent, DataModel *dm)
     VideoItemDelegate *videoItemDelegate = new VideoItemDelegate;
     setItemDelegateForColumn(G::VideoColumn, videoItemDelegate);
 
+    AvailabilityItemDelegate *availabilityItemDelegate = new AvailabilityItemDelegate;
+    setItemDelegateForColumn(G::AvailabilityColumn, availabilityItemDelegate);
+
     DimensionItemDelegate *dimensionItemDelegate = new DimensionItemDelegate;
     setItemDelegateForColumn(G::DimensionsColumn, dimensionItemDelegate);
 
@@ -579,6 +582,17 @@ IngestedItemDelegate::IngestedItemDelegate(QObject* parent): QStyledItemDelegate
 QString IngestedItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return (value == "true") ? "✓" : "";
+}
+
+AvailabilityItemDelegate::AvailabilityItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString AvailabilityItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    const int code = value.toInt();
+    if (code == int(Catalog::Availability::Present)) return "";
+    return Catalog::availabilityLabel(code);
 }
 
 VideoItemDelegate::VideoItemDelegate(QObject* parent): QStyledItemDelegate(parent)

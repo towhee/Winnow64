@@ -244,6 +244,11 @@ void Preferences::itemChange(QModelIndex idx)
         mw->settings->setValue("cacheThumbnails", G::cacheThumbnails);
     }
 
+    if (source == "useScrollInVerify") {
+        G::useScrollInVerify = v.toBool();
+        mw->settings->setValue("useScrollInVerify", G::useScrollInVerify);
+    }
+
     if (source == "useIndexMetadata") {
         G::useIndexMetadata = v.toBool();
         mw->settings->setValue("useIndexMetadata", G::useIndexMetadata);
@@ -1389,6 +1394,27 @@ void Preferences::addDevPreviews()
     i.captionIsEditable = false;
     i.value = G::useIndexMetadata;
     i.key = "useIndexMetadata";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "useScrollInVerify";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Verify images as they scroll into view";
+    i.tooltip = "Check each image that scrolls into view against the file on disk,\n"
+                "and re-read it if the file or its sidecar has changed since it was\n"
+                "catalogued.\n\n"
+                "Without this, a row taken from the catalog is trusted until\n"
+                "something else happens to revisit it -- so keywords edited in\n"
+                "Lightroom, which rewrites the .xmp and never touches the raw file,\n"
+                "keep showing their old value in Catalog scope.\n\n"
+                "Only the images you can actually see are checked, and checking one\n"
+                "costs about a hundredth of what re-reading it would."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useScrollInVerify;
+    i.key = "useScrollInVerify";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

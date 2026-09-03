@@ -34,6 +34,7 @@
          *titles;
          *keywords;
          *creators;
+         *availability;
          *missingThumbs;
          *compare;
 
@@ -452,6 +453,7 @@ QVector<BuildFilters::Sink> BuildFilters::sinks() const
         {FilterCat::FocalLength, filters->focalLengths, "focal lengths"},
         {FilterCat::Title,       filters->titles,       "titles"},
         {FilterCat::Creator,     filters->creators,     "creators"},
+        {FilterCat::Availability, filters->availability, "availability"},
         {FilterCat::Compare,     filters->compare,      "compare"},
     };
 }
@@ -472,7 +474,7 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
         G::LabelColumn,       G::TypeColumn,        G::FolderNameColumn,
         G::YearColumn,        G::DayColumn,         G::CameraModelColumn,
         G::LensColumn,        G::FocalLengthColumn, G::TitleColumn,
-        G::CreatorColumn,     G::CompareColumn
+        G::CreatorColumn,     G::AvailabilityColumn, G::CompareColumn
     };
 
     auto out = std::make_shared<FilterSnapshot>();
@@ -492,6 +494,13 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
            rather than as text. All three passes did this, so bake it in once. */
         r.v[FilterCat::FocalLength] =
             r.v[FilterCat::FocalLength].rightJustified(4, ' ');
+
+        /*  Availability is the one column whose value is a CODE, not a word -- see
+            Catalog::Availability, and "Present is 0 and unset reads as 0", which is
+            what makes a folder-scope row (nothing ever wrote this column) come out
+            Present rather than blank. The category shows the word. */
+        r.v[FilterCat::Availability] =
+            Catalog::availabilityLabel(r.v[FilterCat::Availability].toInt());
 
         const QStringList kw =
             dm->index(row, G::KeywordsAllColumn).data().toStringList();
@@ -661,6 +670,8 @@ void BuildFilters::updateCategoryItems(const FilterSnapshot &snap, FilterOps &op
     case Category::TitleEdit:   slot = FilterCat::Title;   cat = filters->titles;   break;
     case Category::CreatorEdit: slot = FilterCat::Creator; cat = filters->creators; break;
     case Category::CompareEdit: slot = FilterCat::Compare; cat = filters->compare;  break;
+    case Category::AvailabilityEdit:
+        slot = FilterCat::Availability; cat = filters->availability; break;
     case Category::MissingThumbEdit:
         // no snapshot slot: the MissingThumb category is not built (see sinks())
         return;

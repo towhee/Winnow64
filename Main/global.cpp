@@ -252,6 +252,7 @@ qint64 devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;   // 20 GB
     removed both reasons. It survives as a safety valve the user can set. */
 int maxSearchResults = 0;
 bool useIndexMetadata = false;   // default off; see global.h
+bool useScrollInVerify = true;   // default on; see global.h
 bool cacheThumbnails = true;                 // write thumbnails to the index as icons load
 qint64 thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;    // 5 GB ~ 250k thumbnails
 bool buildDevPreviewsInBackground = false;

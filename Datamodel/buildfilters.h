@@ -67,6 +67,13 @@ public:
         LabelEdit,
         TitleEdit,
         CreatorEdit,
+        /*  For completeness with FilterCat::Availability, so this enum and the
+            snapshot's slots name the same set of categories. The availability pass
+            itself does NOT come through here -- it adds its items directly (see
+            MW::queueAvailabilityPass) because updateCategory suspends proxy filtering
+            and leaves MW::filterChange to lift it, and filterChange must not run
+            against a scope that has only just finished loading. */
+        AvailabilityEdit,
         MissingThumbEdit,
         CompareEdit
     } category;

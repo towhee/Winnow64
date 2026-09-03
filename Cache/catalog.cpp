@@ -566,29 +566,90 @@ QSet<QString> Catalog::staleOf(const QList<CatalogRow> &candidates)
     QSet<QString> stale;
     if (candidates.isEmpty()) return stale;
 
-    QMutexLocker lk(&mutex);
-    QSqlDatabase db = dbLocked();
-    /* No catalog means everything is stale: the caller should read it all rather than
-       silently index nothing. */
-    if (!db.isOpen()) {
-        for (const CatalogRow &r : candidates) stale.insert(r.path);
-        return stale;
-    }
+    /*  PAGED, TAKING THE LOCK PER PAGE, for the reason spelled out in availabilityOf --
+        which cited this function as following the convention while it did not. A scan
+        can ask about a whole library, and one query per row under a single lock is
+        exactly the shape that froze the GUI for 30 seconds there. */
+    for (int from = 0; from < candidates.size(); from += kPageRows) {
+        const int to = qMin(candidates.size(), from + kPageRows);
 
-    QSqlQuery q(db);
-    q.prepare("SELECT srcsize, srcmtime, sidecarmtime FROM image WHERE pathkey = ?");
-    for (const CatalogRow &r : candidates) {
-        q.addBindValue(cachePathKey(r.path));
-        bool fresh = false;
-        if (q.exec() && q.next()) {
-            fresh = q.value(0).toLongLong() == r.srcSize
-                    && q.value(1).toLongLong() == r.srcMtime
-                    && q.value(2).toLongLong() == r.sidecarMtime;
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        /* No catalog means everything is stale: the caller should read it all rather than
+           silently index nothing. */
+        if (!db.isOpen()) {
+            for (const CatalogRow &r : candidates) stale.insert(r.path);
+            return stale;
         }
-        q.finish();
-        if (!fresh) stale.insert(r.path);
+
+        QSqlQuery q(db);
+        q.prepare("SELECT srcsize, srcmtime, sidecarmtime FROM image WHERE pathkey = ?");
+        for (int i = from; i < to; ++i) {
+            const CatalogRow &r = candidates.at(i);
+            q.addBindValue(cachePathKey(r.path));
+            bool fresh = false;
+            if (q.exec() && q.next()) {
+                fresh = q.value(0).toLongLong() == r.srcSize
+                        && q.value(1).toLongLong() == r.srcMtime
+                        && q.value(2).toLongLong() == r.sidecarMtime;
+            }
+            q.finish();
+            if (!fresh) stale.insert(r.path);
+        }
     }
     return stale;
+}
+
+QSet<QString> Catalog::outOfDate(const QList<CatalogRow> &candidates)
+{
+/*
+    See the declaration for why this is not staleOf(): an unindexed path is NOT
+    reported here.
+*/
+    QSet<QString> stale;
+    if (candidates.isEmpty()) return stale;
+
+    for (int from = 0; from < candidates.size(); from += kPageRows) {
+        const int to = qMin(candidates.size(), from + kPageRows);
+
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        /*  No catalog means nothing was served from it, so nothing can be out of date.
+            This is the other half of the difference from staleOf, which calls
+            everything stale in the same situation. */
+        if (!db.isOpen()) return stale;
+
+        QSqlQuery q(db);
+        q.prepare("SELECT srcsize, srcmtime, sidecarmtime FROM image WHERE pathkey = ?");
+        for (int i = from; i < to; ++i) {
+            const CatalogRow &r = candidates.at(i);
+            if (r.path.isEmpty()) continue;
+            q.addBindValue(cachePathKey(r.path));
+            if (!q.exec() || !q.next()) { q.finish(); continue; }   // not indexed
+            const bool fresh = q.value(0).toLongLong() == r.srcSize
+                               && q.value(1).toLongLong() == r.srcMtime
+                               && q.value(2).toLongLong() == r.sidecarMtime;
+            q.finish();
+            if (!fresh) stale.insert(r.path);
+        }
+    }
+    return stale;
+}
+
+QString Catalog::availabilityLabel(int code)
+{
+    switch (code) {
+    case int(Availability::Offline): return "Offline";
+    case int(Availability::Missing): return "Missing";
+    default:                         return "Present";
+    }
+}
+
+int Catalog::availabilityCode(const QString &label)
+{
+    if (label == "Offline") return int(Availability::Offline);
+    if (label == "Missing") return int(Availability::Missing);
+    return int(Availability::Present);
 }
 
 QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidates)

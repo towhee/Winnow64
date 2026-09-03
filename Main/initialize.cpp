@@ -372,6 +372,14 @@ void MW::createMetaRead()
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
 
+    /*  SCROLL-IN VERIFICATION. Rows filled from the local index are never opened, so
+        nothing checks them against their files; this stats the ones the user can
+        actually see and says which the catalog can no longer vouch for. See
+        Cache/scrollverify.h. */
+    scrollVerify = new ScrollVerify(dm, metadata, this);
+    connect(scrollVerify, &ScrollVerify::rowsAreStale, this, &MW::refreshStaleRows);
+    connect(dm, &DataModel::folderChange, scrollVerify, [this](bool){ scrollVerify->reset(); });
+
     // Signal to change selection, fileSelectionChange, update ImageCache
     connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange, Qt::QueuedConnection);
 
