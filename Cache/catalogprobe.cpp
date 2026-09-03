@@ -267,6 +267,49 @@ int run(const QString &pathFilter)
         "fetchFresh, " + QString::number(mismatched) + " mismatched"
         + (firstMismatch.isEmpty() ? QString() : "   first: " + firstMismatch));
 
+    /*  STAGE F -- the ORDERING the model fill does before it inserts anything.
+
+        DataModel::addCatalogRows sorts the result into path order (with Combine Raw+Jpg,
+        the raw of a pair must precede its JPG), and it did so with a comparator that
+        builds two QFileInfo objects and calls absoluteFilePath/completeBaseName/suffix on
+        each. A sort is O(n log n) COMPARISONS, so at 43,000 rows that is well over a
+        million QFileInfo constructions and several million string allocations -- all of
+        it on the GUI thread and all of it BEFORE the first row is inserted, which is what
+        a user sees as a beachball with no thumbnails.
+
+        Timed here as the comparator wrote it, next to the decorated form that replaced
+        it, because "the sort is the problem" was a guess until it was a number. */
+    {
+        QVector<CatalogRow> a = rows;
+        t.restart();
+        std::sort(a.begin(), a.end(), [](const CatalogRow &x, const CatalogRow &y) {
+            const QFileInfo fx(x.path);
+            const QFileInfo fy(y.path);
+            return fx.absoluteFilePath().toLower() < fy.absoluteFilePath().toLower();
+        });
+        const qint64 naiveNs = t.nsecsElapsed();
+
+        QVector<CatalogRow> b = rows;
+        t.restart();
+        QVector<QPair<QString, int>> keys;
+        keys.reserve(b.size());
+        for (int i = 0; i < b.size(); ++i) keys.append({b.at(i).path.toLower(), i});
+        std::sort(keys.begin(), keys.end(),
+                  [](const QPair<QString, int> &x, const QPair<QString, int> &y) {
+                      return x.first < y.first;
+                  });
+        const qint64 keyedNs = t.nsecsElapsed();
+
+        say("F  ordering the result for the model fill");
+        say("     " + ms(naiveNs) + "   QFileInfo in the comparator   "
+            + perRow(naiveNs, a.size()));
+        say("     " + ms(keyedNs) + "   precomputed keys              "
+            + perRow(keyedNs, b.size())
+            + (keyedNs > 0 ? "   " + QString::number(double(naiveNs) / keyedNs, 'f', 1)
+                                 + "x faster"
+                           : QString()));
+    }
+
     /*  STAGE D -- the file read that all of the above exists to avoid.
 
         Sampled, and deliberately over rows spread ACROSS the result rather than the first

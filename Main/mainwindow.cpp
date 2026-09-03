@@ -3435,18 +3435,39 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
        the model the same way -- one of them running inline would be a difference waiting
        to matter. */
     QTimer::singleShot(0, this, [this, req, paths]{
+        /*  AFTER THE FILL, NOT AFTER setScope. The rows path fills in batches posted to
+            the event loop, so setScope returns with the first batch in and the rest still
+            coming -- a pass launched here would look up paths that are not rows yet and
+            silently mark none of them. folderChange is emitted when the fill is done,
+            whichever shape it took, so both paths wait exactly as long as they need to.
+
+            The connection is single-shot: a later folder load must not drag this set's
+            availability answers along behind it. */
+        auto conn = std::make_shared<QMetaObject::Connection>();
+        *conn = connect(dm, &DataModel::folderChange, this,
+                        [this, paths, conn](bool){
+            disconnect(*conn);
+            queueAvailabilityPass(paths);
+        });
         dm->setScope(req);
+    });
+}
 
-        /*  ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog
-            row can outlive its file, and the two ways that happens are different
-            things the user can act on differently -- see Catalog::Availability.
-            A FOLDER load never comes here, and its rows stay Present, which is
-            correct: the filesystem just listed them.
+void MW::queueAvailabilityPass(const QStringList &paths)
+{
+/*
+    ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog row can outlive
+    its file, and the two ways that happens are different things the user can act on
+    differently -- see Catalog::Availability. A FOLDER load never comes here, and its rows
+    stay Present, which is correct: the filesystem just listed them.
 
-            This is also the ONLY thing that looks at the filesystem on the rows path,
-            and it is the right shape for it: one database pass and one mount-table walk
-            for the whole set rather than a stat per row, with the answers written back
-            on the GUI thread because the model is not thread-safe. */
+    This is the ONLY thing that looks at the filesystem on the rows path, and it is the
+    right shape for it: one database pass and one mount-table walk for the whole set
+    rather than a stat per row, with the answers written back on the GUI thread because
+    the model is not thread-safe.
+*/
+    if (paths.isEmpty()) return;
+    {
         QThreadPool::globalInstance()->start([this, paths]{
             const auto avail = Catalog::instance().availabilityOf(paths);
             if (avail.isEmpty()) return;
@@ -3459,7 +3480,7 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
                 }
             }, Qt::QueuedConnection);
         });
-    });
+    }
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
