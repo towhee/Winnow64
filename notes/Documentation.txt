@@ -1465,6 +1465,12 @@ A CATALOG HOLDS VIDEOS -- 201 in the icon range on this library, ~209 in the ind
 
 FOUR WRITE PATHS, ONE RULE. setValDm, setIcon1, setIcon, setValSf and setIconFromVideoFrame now all write under a QSignalBlocker and emit one dataChanged for visible rows only. The blocker in the video path ends before videoReadingCleared, because QSignalBlocker blocks every signal the object emits and MetaRead needs that one to drop its in-flight marker.
 
+AND ONE NOTIFICATION PER ROW PER TURN, WHICH IS THE REST OF IT. A third sample, taken during the 5.6 s that survived all of the above, landed in DataModel::setValSf's OWN emit -- the one the visible-row guard allows. The guard was right: visRange was 0-10, eleven rows on screen. But 209 notifications went to those eleven rows, because a row being filled takes a burst of writes (decoration, icon-loaded, status, reading-flag, aspect ratio) and each was its own dataChanged. At ~27 ms per accessibility rebuild that is the 5.6 s exactly.
+
+DataModel::scheduleVisibleEmit collects the dirty rows and flushes on the next turn of the event loop, emitting one dataChanged per CONTIGUOUS RUN -- runs rather than one span, so a scattered set does not make the view repaint everything between two distant rows. Nothing can be lost: the values are already in the model and the view reads them when it paints.
+
+THE TWO QUESTIONS ARE SEPARATE, and keeping them separate is what makes this work: iconRowVisible answers "does this row need repainting at all", scheduleVisibleEmit answers "how often". Suppressing invisible rows without coalescing the visible ones left a tenth of the notifications doing half the damage.
+
 THE SAME SHAPE, THREE TIMES IN ONE INVESTIGATION: SortFilter recompiling the whole predicate per tree item, MetaRead re-dispatching every row per redo, and the accessibility bridge rebuilding every row per write. Each was invisible at folder scale and quadratic at catalog scale.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)

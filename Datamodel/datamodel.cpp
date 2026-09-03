@@ -3595,6 +3595,48 @@ QVariant DataModel::valueSf(int row, int column, int role)
     return sf->index(row, column).data(role);
 }
 
+void DataModel::scheduleVisibleEmit(int dmRow)
+{
+/*
+    Remember that this row needs a repaint, and make sure exactly one flush is queued.
+    See the declaration for why per-write notification was the last of the accessibility
+    cost.
+*/
+    if (dmRow < 0) return;
+    pendingEmitRows.insert(dmRow);
+    if (pendingEmitScheduled) return;
+    pendingEmitScheduled = true;
+    QTimer::singleShot(0, this, [this]{ flushVisibleEmits(); });
+}
+
+void DataModel::flushVisibleEmits()
+{
+/*
+    One dataChanged per CONTIGUOUS RUN of dirty rows.
+
+    Runs rather than one span from the lowest to the highest: the visible rows are
+    contiguous in the ordinary case, so this is usually a single notification, but a
+    filtered or scattered set must not make the view repaint everything between two
+    distant rows.
+*/
+    pendingEmitScheduled = false;
+    if (pendingEmitRows.isEmpty()) return;
+
+    QList<int> rows(pendingEmitRows.cbegin(), pendingEmitRows.cend());
+    pendingEmitRows.clear();
+    std::sort(rows.begin(), rows.end());
+
+    const int lastCol = columnCount() - 1;
+    int runStart = rows.first();
+    int prev = runStart;
+    for (int i = 1; i < rows.size(); ++i) {
+        if (rows.at(i) == prev + 1) { prev = rows.at(i); continue; }
+        emit dataChanged(index(runStart, 0), index(prev, lastCol));
+        runStart = prev = rows.at(i);
+    }
+    emit dataChanged(index(runStart, 0), index(prev, lastCol));
+}
+
 bool DataModel::iconRowVisible(const QModelIndex &dmIdx)
 {
 /*
@@ -3671,7 +3713,7 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
         setData(dmIdx, value, role);
     }
     if (iconRowVisible(dmIdx))
-        emit dataChanged(dmIdx, dmIdx);
+        scheduleVisibleEmit(dmIdx.row());
 }
 
 void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
@@ -3748,7 +3790,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
         setData(dmIdx, value, role);
     }
     if (iconRowVisible(dmIdx))
-        emit dataChanged(dmIdx, dmIdx);
+        scheduleVisibleEmit(dmIdx.row());
 }
 
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
@@ -3958,8 +4000,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
             }
         }
         if (iconRowVisible(dmIdx))
-            emit dataChanged(index(dmIdx.row(), 0),
-                             index(dmIdx.row(), columnCount() - 1));
+            scheduleVisibleEmit(dmIdx.row());
     }
 
     /*  Tell MetaRead the decode is resolved so it can drop its worker-local
@@ -4115,8 +4156,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
                 setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
             }
             if (iconRowVisible(dmIdx))
-                emit dataChanged(index(dmIdx.row(), 0),
-                                 index(dmIdx.row(), columnCount() - 1));
+                scheduleVisibleEmit(dmIdx.row());
             updateIconChunkLoaded();
             return;
         }
@@ -4130,7 +4170,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         setData(index(dmIdx.row(), G::MetadataReadingColumn), false);
     }
     if (iconRowVisible(dmIdx))
-        emit dataChanged(index(dmIdx.row(), 0), index(dmIdx.row(), columnCount() - 1));
+        scheduleVisibleEmit(dmIdx.row());
     updateIconChunkLoaded();
 }
 
@@ -4279,7 +4319,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
                 setData(index(dmRow, G::MetadataReadingColumn), false);
             }
             if (iconRowVisible(dmIdx))
-                emit dataChanged(index(dmRow, 0), index(dmRow, columnCount() - 1));
+                scheduleVisibleEmit(dmRow);
             updateIconChunkLoaded();
             return;
         }
@@ -4301,7 +4341,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     }
     // Notify views only for visible rows; off-screen icons paint when scrolled to.
     if (iconRowVisible(dmIdx))
-        emit dataChanged(dmIdx, index(dmRow, columnCount() - 1));
+        scheduleVisibleEmit(dmRow);
     updateIconChunkLoaded();
 
     /* Layer 2 (measured refinement): accumulate the real per-icon footprint. Once enough
