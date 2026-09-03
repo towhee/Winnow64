@@ -378,6 +378,26 @@ public:
         recountLoadFlags, exactly as the other four are. */
     std::atomic<int> iconUnloadableCount{0};
 
+public:
+    /*  ONE dataChanged PER VISIBLE ROW PER EVENT-LOOP TURN, instead of one per write.
+
+        The visible-row throttle answers "does this row need repainting"; this answers
+        "how often". A row being filled gets a burst of writes -- decoration, icon-loaded,
+        status, reading-flag, aspect ratio -- and each one used to be its own notification.
+        With 11 rows visible that was 209 notifications, and on macOS each one makes
+        QAbstractItemView rebuild the whole accessibility element array: ~27 ms apiece over
+        43,000 rows, which is the 5.6 s that survived every other fix.
+
+        Collecting the rows and emitting once on the next turn of the event loop cannot
+        lose an update -- the values are already in the model, and the view reads them when
+        it paints. */
+    void scheduleVisibleEmit(int dmRow);
+private:
+    void flushVisibleEmits();
+    QSet<int> pendingEmitRows;
+    bool pendingEmitScheduled = false;
+public:
+
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
     QString currentFilePath;            // used in caching to update image cache
