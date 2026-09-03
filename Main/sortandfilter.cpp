@@ -131,6 +131,13 @@ void MW::filterChange(QString source)
         filtering on a day rebuilt the tree from that day alone -- every other value
         vanished instead of the category head turning yellow. */
 
+    /*  TIMED, because this now runs in catalog scope too and a catalog scope is 43,000
+        rows: an invalidate walks every one of them through filterAcceptsRow, and anything
+        that calls this repeatedly during a rebuild would be a stall the early return used
+        to hide. */
+    QElapsedTimer fcTimer;
+    if (G::isPerfProbe) fcTimer.start();
+
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead for the prior datamodel filter.
     dm->newInstance();
@@ -214,6 +221,11 @@ void MW::filterChange(QString source)
     scrollToCurrentRowIfNotVisible();
 
     QApplication::restoreOverrideCursor();
+
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] MW::filterChange" << fcTimer.elapsed() << "ms  src ="
+                           << source << " dmRows =" << dm->rowCount()
+                           << " sfRows =" << dm->sf->rowCount();
 }
 
 void MW::quickFilter()
