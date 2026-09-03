@@ -3479,18 +3479,45 @@ void MW::queueAvailabilityPass(const QStringList &paths)
             const bool probeBig = paths.size() > 20000;
             if (probeBig) at.start();
             const auto avail = Catalog::instance().availabilityOf(paths);
-            if (probeBig)
+            if (probeBig) {
+                /*  COUNT THE ANSWERS, not the hash. This line said "not Present =
+                    avail.size()", which is every path the catalog could answer for --
+                    always the whole set -- so it hid the number that matters: how many
+                    rows the GUI thread is then asked to WRITE, one setData and one
+                    dataChanged each. */
+                int offline = 0, missing = 0;
+                for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
+                    if (it.value() == Catalog::Availability::Offline) ++offline;
+                    else if (it.value() == Catalog::Availability::Missing) ++missing;
+                }
                 qDebug().noquote() << "[PERF] availabilityOf" << paths.size() << "paths in"
-                                   << at.elapsed() << "ms (pool thread)  not Present ="
-                                   << avail.size();
+                                   << at.elapsed() << "ms (pool thread)  answered ="
+                                   << avail.size() << " offline =" << offline
+                                   << " missing =" << missing
+                                   << " -> GUI writes =" << (offline + missing);
+            }
             if (avail.isEmpty()) return;
             QMetaObject::invokeMethod(this, [this, avail]{
+                /*  TIMED ON THE GUI THREAD, because this is where the cost lands: one
+                    setData per non-Present row, each emitting dataChanged that the proxy
+                    and three views answer. That is the per-row signal fan-out this
+                    project has already identified as the folder-load bottleneck (see
+                    "Load Responsiveness"), and at catalog scale it is tens of thousands
+                    of them in a single pass. */
+                const bool probeBig = dm && dm->rowCount() > 20000;
+                QElapsedTimer wt;
+                if (probeBig) wt.start();
+                int written = 0;
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
                     if (it.value() == Catalog::Availability::Present) continue;
                     const int row = dm->rowFromPath(it.key());
                     if (row < 0) continue;
                     dm->setData(dm->index(row, G::AvailabilityColumn), int(it.value()));
+                    ++written;
                 }
+                if (probeBig)
+                    qDebug().noquote() << "[PERF] availability write-back" << written
+                                       << "rows in" << wt.elapsed() << "ms (GUI thread)";
             }, Qt::QueuedConnection);
         });
     }
