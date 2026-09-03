@@ -1501,11 +1501,26 @@ void DataModel::restoreProxySortAfterLoad()
        sort(-1) before re-enabling dynamic; sortColumn is then -1 so nothing is replayed. */
     if (!sfSortDisabledForLoad) return;
     sfSortDisabledForLoad = false;
-    if (G::isPerfProbe)
+    /*  TIMED SEPARATELY, and printed for a large set rather than only under
+        G::isPerfProbe. Both calls make the proxy re-examine every row -- sort(-1) to
+        return to source order, then re-enabling dynamic sort -- and each emits
+        layoutChanged, which the three views answer over the whole model. At 43,000 rows
+        that is a candidate for the stall that begins the moment the fill ends. */
+    const bool probeBig = G::isPerfProbe || rowCount() > 20000;
+    QElapsedTimer rt;
+    if (probeBig) {
+        rt.start();
         qDebug().noquote() << "[PERF] restore sort: sortColumn=" << sf->sortColumn()
                            << "sortOrder=" << (sf->sortOrder() == Qt::DescendingOrder ? "Desc" : "Asc");
+    }
     sf->sort(-1);
+    const qint64 sortNs = probeBig ? rt.nsecsElapsed() : 0;
+    if (probeBig) rt.restart();
     sf->setDynamicSortFilter(true);
+    if (probeBig)
+        qDebug().noquote() << "[PERF] restoreProxySortAfterLoad  sort(-1)"
+                           << (sortNs / 1000000.0) << "ms  setDynamicSortFilter"
+                           << (rt.nsecsElapsed() / 1000000.0) << "ms";
 }
 
 void DataModel::addFolder(const QString &folderPath)
@@ -1877,6 +1892,13 @@ void DataModel::finishCatalogFill()
 */
     const bool aborted = abort;
 
+    /*  EVERY STAGE OF THE TAIL IS TIMED, printed for a large set. The stall begins the
+        instant the last batch lands, so it is in here or in what folderChange triggers --
+        and there are five candidates, each O(rows). */
+    const bool probeBig = G::isPerfProbe || pendingCatalogAt > 20000;
+    QElapsedTimer ft;
+    if (probeBig) ft.start();
+
     /* Register the folders the results came from -- what the Folders filter category,
        removeFolder and isFolderLoaded all read. */
     {
@@ -1923,11 +1945,29 @@ void DataModel::finishCatalogFill()
     /*  EVERY ROW IS ATTEMPTED ALREADY, so say so: this is the flag the filters and the
         sort wait on, and nothing is going to set it later for rows no reader will visit.
         A folder load reaches the same point only after MetaRead has been round them all. */
+    if (probeBig) {
+        qDebug().noquote() << "[PERF] finishCatalogFill  folders+setCurrent"
+                           << ft.elapsed() << "ms";
+        ft.restart();
+    }
+
     setAllMetadataAttempted(true);
+    if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  allMetaAttempted"
+                                       << ft.elapsed() << "ms"; ft.restart(); }
 
     endLoad(!aborted);
+    if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  endLoad"
+                                       << ft.elapsed() << "ms"; ft.restart(); }
+
     restoreProxySortAfterLoad();
+    if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  restoreSort"
+                                       << ft.elapsed() << "ms"; ft.restart(); }
+
     emit folderChange(aborted);
+    if (probeBig)
+        qDebug().noquote() << "[PERF] finishCatalogFill  emit folderChange"
+                           << ft.elapsed() << "ms  <-- everything MW does on the load"
+                              " completing is inside this number";
 }
 
 void DataModel::addPaths(const QStringList &fPaths)

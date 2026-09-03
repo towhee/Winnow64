@@ -3385,3 +3385,4 @@ Everything's set up. Go ahead and /clear.
   - The offline/missing badges — nothing headless can see a dot, so placement, legibility at small thumbnail sizes, and collision with the develop badge are unverified.
   - The two new preferences ("Thumbnails held in memory", "Maximum search results") and "Read metadata from the catalog", which is off by default and verified only headlessly.
 
+build included 0736e8f0
