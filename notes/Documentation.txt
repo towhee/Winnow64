@@ -76,6 +76,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      No Cap, and a Streamed Fill (Pos: 1 of 43,050)
      The Filter Tree Recompiled Once Per Item (56 Seconds of Dead GUI)
      Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
+     A Filter Is a Filter in Either Scope
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1375,6 +1376,25 @@ MEASURED after the fix, 43,050 rows, debug build, headless:
     icons climbing           5,171 by t = 13,370 ms
 
 WHAT THIS COST, AND WHY. Three fixes in a row each looked complete on the headless numbers and each left a person waiting: a pump that never pumped (G::useProcessEvents is false by default), a filter tree that recompiled per item (O(items^2)), and this. Every one was invisible on the ~1,000-row fixture the automated tests use and obvious at 43,000. --catalogload exists so the 43,000-row case can be run without a person clicking, and icons=0 was sitting in its output for two of those rounds before it was read as the signal it was -- it was explained away as an artifact of running offscreen. The icon range is chunk-based, not visibility-based, so it never was one.
+
+⏺ DataModel Changes > A Filter Is a Filter in Either Scope
+
+FILTERING CATALOG SCOPE ON ONE DAY LEFT ONLY THAT DAY IN THE TREE -- every other day, camera and keyword vanished instead of the Days head turning yellow and the counts moving. That is not a filter, it is a new question, and it was the last place the two scopes still disagreed about what they are.
+
+THE OLD ARRANGEMENT, and why it made sense at the time. A catalog scope loaded a 5,000-row slice of the library, so the loaded rows could not answer for the library: FindPanel::applyScope called Filters::loadCatalogCategories() to fill the tree from SQL aggregates over the whole index and hid the datamodel's own categories, MW::filterChange declined to run the proxy in that scope, and a checked item went into the CatalogQuery instead -- so checking it re-ran the search, reloaded the model, and BuildFilters rebuilt the tree from the survivors.
+
+WHAT CHANGED UNDER IT is that the whole catalog is now loaded. The datamodel's categories ARE the library's, with live counts BuildFilters already maintains, so all three pieces of the old arrangement became wrong at once:
+
+  o applyScope keeps the datamodel categories (showAllCategories) instead of querying
+    the index for them.
+  o MW::filterChange's catalog-scope early return is GONE. Both scopes filter the proxy.
+  o FindPanel::currentQuery carries the TEXT only. fillQuery's checked items are a filter
+    over what is loaded, and putting them in the query as well would narrow the SET by
+    the same values -- filtering twice, and rebuilding the tree from the remainder.
+
+THE QUERY STILL DEFINES THE SET; THE TREE NARROWS IT. That is the whole distinction, and it is the same one a folder has: the folder (or the search text) decides which images are loaded, the filters decide which of them you are looking at. A category check now behaves identically in both scopes -- proxy re-filtered, every item still there, category head yellow.
+
+WHAT IS STILL SCOPE-SPECIFIC, deliberately: typing in the search box re-queries the index and reloads, because that is what changes the set. The categories then rebuild from the new set, which is correct for a search and would be wrong for a filter. Filters::loadCatalogCategories and isAnyCatalogFilter are left in place unused by this path; the separate Catalog panel (not built under G::useFindDock) is their other caller.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 
