@@ -317,6 +317,37 @@ if(TARGET Winnow)
         TIMEOUT 240
     )
 
+    # -------------------------------------------------------------------------
+    # catalog_scan — the background scanner, the "index my library" path. It had
+    # NO coverage (CatalogScanner appeared in tests/ only inside a comment) and
+    # MW::startCatalogScan has a single call site behind a preferences
+    # sub-dialog button, so nothing headless ever reached it. It crashed on its
+    # first line for every user: catalogView was declared without an
+    # initialiser, createCatalogDock returns early under G::useFindDock, and an
+    # uninitialised pointer passes `if (p)`. The scan was never queued, so only
+    # folders the user had browsed ever reached the catalog.
+    #
+    # Asserts scanned > 0, not indexed > 0: the scanner skips work already done,
+    # and the folder load above has just catalogued this same fixture, so a
+    # correct scan legitimately indexes nothing.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME catalog_scan
+        COMMAND $<TARGET_FILE:Winnow> --selftest
+                ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    # Built as a list so the root path does not force a very long line; ENVIRONMENT
+    # takes a ;-separated list, which is exactly what "${catalogScanEnv}" expands to.
+    set(catalogScanEnv
+        "QT_QPA_PLATFORM=offscreen"
+        "WINNOW_SELFTEST_CATALOG_SCAN=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images"
+        "WINNOW_SELFTEST_MS=30000")
+    set_tests_properties(catalog_scan PROPERTIES
+        ENVIRONMENT "${catalogScanEnv}"
+        LABELS "smoke"
+        TIMEOUT 180
+    )
+
     add_test(
         NAME smoke_launch
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images

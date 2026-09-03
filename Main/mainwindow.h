@@ -1591,8 +1591,12 @@ private:
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
-    /* The Catalog dock's body: cross-folder search over the local index. */
-    CatalogView *catalogView;
+    /* The Catalog dock's body: cross-folder search over the local index. NULL with
+       G::useFindDock, which is the default -- createCatalogDock returns before building
+       it, and the guards that check it (startCatalogScan, the scanner's finished signal)
+       need it to be genuinely null rather than indeterminate. It was the one member of
+       this group without an initialiser, and an uninitialised pointer passes `if (p)`. */
+    CatalogView *catalogView = nullptr;
     /* Walks the designated roots on its own low-priority thread. */
     CatalogScanner *catalogScanner = nullptr;
     /* Folders the user nominated for cataloguing. In QSettings, NOT in the index
