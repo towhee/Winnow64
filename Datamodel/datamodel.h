@@ -48,8 +48,12 @@ struct ScopeRequest
        asked the Find dock for. */
     CatalogQuery query;
 
-    /* Catalog scope only: the result set the dock resolved. */
+    /* Catalog scope only: the result set the dock resolved. paths is the older shape,
+       still used by the separate Catalog panel; rows is what the Find dock supplies --
+       the same images with everything a datamodel row displays already attached, so the
+       fill opens no files. When rows is non-empty it is the set and paths is ignored. */
     QStringList paths;
+    QVector<CatalogRow> rows;
 
     /* Folder scope only. subDirs is the pre-walked subtree (Utilities::subFolderTree),
        consumed rather than re-walked. */
@@ -606,10 +610,22 @@ private:
        result. Unlike every other load path this does not start from a directory, because
        the results routinely span many. Reached through setScope, like addFolder. */
     void addPaths(const QStringList &fPaths);
+    /*  The same as addPaths for a set the CATALOG resolved, filled from the index rather
+        than from the files. Every column a row displays is already in the CatalogRow, so
+        no image is opened and no file need be stat'd -- which is what lets a whole-
+        catalog scope arrive in the time the query took rather than the time a metadata
+        read per image takes. See "The Rows Come Back in the Query That Found Them" in
+        notes/Documentation.txt. */
+    void addCatalogRows(const QVector<CatalogRow> &rows);
     // void removeFolder(const QString &folderPath);
     bool endLoad(bool success);
     // bool addFileData();
-    void addFileDataForRow(int row, QFileInfo fileInfo);
+    /*  cat, when given, supplies the file facts INSTEAD OF THE FILESYSTEM: size, modified
+        time, capture date and whether there is a sidecar all come from the index, and the
+        QFileInfo is used only for the parts of a path that need no stat (name, folder,
+        suffix). It is one function rather than two so that a row means the same thing
+        whichever set it arrived in. */
+    void addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat = nullptr);
     // void rawPlusJpg();
     void rawJpgPairing(int row, const QString &ext, const QString &baseName);
     double aspectRatio(int w, int h, int orientation);

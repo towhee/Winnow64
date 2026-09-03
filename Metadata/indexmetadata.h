@@ -58,7 +58,7 @@ inline CatalogRow candidate(const QFileInfo &fileInfo, Metadata *metadata)
     datamodel row, the filters, the views) cannot tell which path produced it, which is
     the contract this whole mechanism rests on.
 */
-inline void fill(ImageMetadata &m, const CatalogRow &r, const QFileInfo &fi,
+inline void fill(ImageMetadata &m, const CatalogRow &r, const QDateTime &modified,
                  int dmRow, int instance)
 {
     m = ImageMetadata();                 // a clean struct, as a file read produces
@@ -70,7 +70,7 @@ inline void fill(ImageMetadata &m, const CatalogRow &r, const QFileInfo &fi,
     m.type = r.ext;
     m.size = int(r.srcSize);
     m.createdDate = r.captured;
-    m.modifiedDate = fi.lastModified();
+    m.modifiedDate = modified;
     m.rating = r.rating ? QString::number(r.rating) : QString();
     m.label = r.label;
     m.pick = r.pick;
@@ -163,6 +163,18 @@ inline void fill(ImageMetadata &m, const CatalogRow &r, const QFileInfo &fi,
     m.shootingInfo = r.shootingInfo;
 
     m.metaStatus = G::MetaLoaded;
+}
+
+/*
+    The same, for a caller that already has the QFileInfo. modifiedDate is the ONLY thing
+    the file itself was ever asked for here, so the overload above lets a caller that has
+    no reason to stat -- a whole-catalog browse, filled from searchRows -- take it from
+    the index's own srcMtime instead.
+*/
+inline void fill(ImageMetadata &m, const CatalogRow &r, const QFileInfo &fi,
+                 int dmRow, int instance)
+{
+    fill(m, r, fi.lastModified(), dmRow, instance);
 }
 
 /*

@@ -72,6 +72,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Offline is Not Missing (Catalog Availability)
      What Actually Limits a Large Scope (Measured at 43,000)
      The Rows Come Back in the Query That Found Them (searchRows)
+     Filling the Model From the Index (addCatalogRows)
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1287,6 +1288,30 @@ ONE PREDICATE, SHARED. Catalog::buildQueryLocked now compiles a CatalogQuery for
 THE COLUMN LIST AND THE ROW MAPPING ARE ALSO SHARED (kRowColumns and readRow in catalog.cpp), for the reason IndexMetadata exists one layer up: a second place that spells a row is a second place for a shutter speed to come back different.
 
 CAVEATS ON THE NUMBERS. Debug build, so the file-read figures are pessimistic and the SQL and stat figures much less so. Every volume measured was local; the network case is unmeasured, and --catalogprobe takes a path substring so a mounted share can be timed on its own. The 18-thread read is wall clock against a serial stat sweep, so that comparison is not like-for-like and the probe says so in its own output.
+
+⏺ DataModel Changes > Filling the Model From the Index (addCatalogRows)
+
+THE FIND DOCK NOW LOADS ROWS, NOT PATHS. FindPanel::runSearch calls Catalog::searchRows, the result travels as QVector<CatalogRow> through MW::loadCatalogRows into ScopeRequest::rows, and DataModel::addCatalogRows fills the model from it. No image is opened and no file is stat'd on that path. The old paths shape (search + loadCatalogResults + addPaths) is kept for the separate Catalog panel, which is not built when G::useFindDock is on.
+
+WHAT THE INDEX CANNOT SUPPLY, AND WHAT IS DONE ABOUT IT. Two things a row displays are not in the image table:
+
+    permissions   assumed read-write, the ordinary case, and corrected when the row is
+                  verified or written. Assuming the opposite would grey out ratings and
+                  renames across a whole catalog on the strength of a value nobody had
+                  looked up.
+    birth time    the Created column takes the CAPTURE date instead, which is what that
+                  column ends up holding anyway once metadata arrives; birthTime is only
+                  the placeholder a file read uses until then, and it needs a stat.
+
+Everything else -- size, modified time, whether there is a sidecar -- comes from the freshness stamp the index already keeps. addFileDataForRow takes an optional CatalogRow and reads those from it instead of from QFileInfo; it is one function rather than two so that a row means the same thing whichever set it arrived in.
+
+THE ROWS ARE MARKED MetaLoaded AND allMetadataAttempted IS SET. MetaRead::needToRead keys on metaAttemptedAt() and iconLoadedAt(), so a hydrated row is never read for metadata and still collected for its ICON -- which is the correct split, because the icon is the one thing this table cannot serve. Nothing else would ever set allMetadataAttempted for rows no reader will visit, and the filters and the sort wait on it.
+
+NOTHING PROVES THE FILE EXISTS, deliberately. A catalog row can name a file on an unplugged drive, and the useful thing to do with it is show it marked rather than drop it -- see "Offline is Not Missing". MW asks Catalog::availabilityOf for the whole set, once, off the GUI thread: one database pass and one mount-table walk rather than a stat per row, and it is the only thing that looks at the filesystem on this path.
+
+THE THREE CATALOG ENTRY POINTS ARE ONE AGAIN. MW::loadCatalogResults (paths) and MW::loadCatalogRows (rows) differ only in the ScopeRequest they build; both hand it to MW::loadCatalogScope, which owns the teardown a replace needs, the queued fill and the availability pass. Splitting those would have been three copies of the reasoning about what append must not reset.
+
+catalog_load NOW DRIVES THE LIVE PATH. It ran search + loadCatalogResults, which is now the older shape -- so the path the app actually uses would have been uncovered, which is the hole that test exists to close. It runs searchRows + loadCatalogRows and still asserts the query matched something and the model is not empty.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

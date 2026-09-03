@@ -1255,9 +1255,10 @@ void DataModel::setScope(const ScopeRequest &req)
     THE DIFFERENCE IS reconcile, AND NOTHING ELSE. A folder scope walks the filesystem,
     because the directory listing IS the set: what is on disk right now is the answer,
     and the index is at best a cache of it. A catalog scope does not, because there is no
-    directory to walk -- the results come from a hundred folders -- so the resolved path
-    list is the set, and each path is stat'd as it is added (addPaths) rather than
-    enumerated.
+    directory to walk -- the results come from a hundred folders -- so the resolved result
+    is the set. That result arrives in one of two shapes: whole ROWS from the index, which
+    fill the model without opening or stat'ing anything (addCatalogRows), or bare paths,
+    each stat'd as it is added (addPaths).
 
     THE REQUEST IS REMEMBERED whether or not it changed anything. Everything that wants
     to reload, refresh or write back what is loaded has had to infer it from folderList
@@ -1280,6 +1281,8 @@ void DataModel::setScope(const ScopeRequest &req)
 
     if (req.reconcile)
         enqueueFolderSelection(req.query.folder, req.op, req.recurse, req.subDirs);
+    else if (!req.rows.isEmpty())
+        addCatalogRows(req.rows);
     else
         addPaths(req.paths);
 }
@@ -1634,6 +1637,131 @@ void DataModel::addFolder(const QString &folderPath)
     if (folderQueue.isEmpty()) {
         endLoad(true);
     }
+}
+
+void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
+{
+/*
+    Fill the model from rows the CATALOG resolved -- Catalog::searchRows -- without
+    opening or stat'ing a single file.
+
+    WHY THIS IS NOT addPaths. addPaths takes a list of file names, stats each one to prove
+    it is there, and leaves every row MetaNotAttempted so the reader opens it and walks
+    its header. Measured on a 43,050-row catalog that is ~1.6 ms per row: over a minute
+    before a filter or a sort can run, for facts the index was already holding. Here the
+    row arrives complete -- it IS the metadata -- so the model is usable as soon as the
+    insert finishes.
+
+    THE ROWS ARE MARKED MetaLoaded, which is what makes MetaRead skip them:
+    MetaRead::needToRead keys on metaAttemptedAt() and iconLoadedAt(), so a hydrated row
+    is never read for metadata and still collected for its ICON. That is the correct
+    split -- the icon is the one thing the index cannot supply from this table, and the
+    thumbnail cache serves it without the file when it can.
+
+    NOTHING HERE PROVES THE FILE EXISTS. That is deliberate and is the difference the
+    Availability column carries: a catalog row can name a file on an unplugged drive, and
+    the useful thing to do with it is show it marked rather than drop it. MW asks
+    Catalog::availabilityOf for the whole set, once, off the GUI thread.
+
+    THE CALLER HAS ALREADY STOPPED the previous load and reset the caches (see
+    MW::loadCatalogResults) -- this is the model half only.
+*/
+    QString fun = "DataModel::addCatalogRows";
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, QString::number(rows.size()) + " rows");
+
+    QMutexLocker locker(&dmMutex);
+    abort = false;
+    loadingModel = true;
+    locker.unlock();
+
+    /* Same proxy bracket, and needed for the same reason, as addPaths and
+       scheduleProcessing: one wide dataChanged over an inserted block would otherwise
+       make the sorted proxy re-sort it. */
+    if (G::useBatchedFolderInsert && !sfSortDisabledForLoad) {
+        sfSortDisabledForLoad = true;
+        sf->setDynamicSortFilter(false);
+    }
+
+    /*  Ordered the same way addPaths orders its QFileInfos, and for the same reason: with
+        Combine Raw+Jpg on, the raw of a pair must precede its JPG or addFileDataForRow
+        cannot pair them. The catalog's own order is captured DESC, which is not that. */
+    QVector<CatalogRow> ordered;
+    ordered.reserve(rows.size());
+    for (const CatalogRow &r : rows) {
+        if (abort) break;
+        if (r.path.isEmpty()) continue;
+        if (fPathRowContains(r.path)) continue;         // already loaded
+        ordered.append(r);
+    }
+    if (abort) {
+        endLoad(false);
+        restoreProxySortAfterLoad();
+        emit folderChange(abort);
+        return;
+    }
+
+    std::sort(ordered.begin(), ordered.end(),
+              [this](const CatalogRow &a, const CatalogRow &b) {
+        const QFileInfo fa(a.path);
+        const QFileInfo fb(b.path);
+        return combineRawJpg ? lessThanCombineRawJpg(fa, fb) : lessThan(fa, fb);
+    });
+
+    int row = rowCount();
+    const int first = row;
+
+    if (!ordered.isEmpty()) {
+        insertRows(row, ordered.size());
+        {
+            const QSignalBlocker blocker(this);
+            for (const CatalogRow &r : ordered) {
+                const QFileInfo fi(r.path);
+                addFileDataForRow(row, fi, &r);
+                /*  THE METADATA, from the same mapping the per-row path uses
+                    (Metadata/indexmetadata.h) so a row filled here and a row filled by
+                    Reader cannot come to hold different things. */
+                IndexMetadata::fill(metadata->m, r,
+                                    QDateTime::fromSecsSinceEpoch(r.srcMtime),
+                                    row, instance);
+                addMetadataForItem(metadata->m, fun);
+                row++;
+            }
+        }
+        emit dataChanged(index(first, 0), index(row - 1, columnCount() - 1));
+    }
+
+    /* Register the folders the results came from -- what the Folders filter category,
+       removeFolder and isFolderLoaded all read. */
+    {
+        QMutexLocker lk(&dmMutex);
+        for (const CatalogRow &r : ordered) {
+            const QString folder = r.folder.isEmpty()
+                                       ? QFileInfo(r.path).absoluteDir().path()
+                                       : r.folder;
+            if (!folderSet.contains(folder)) {
+                folderList.append(folder);
+                folderSet.insert(folder);
+            }
+            folderImageCount[folder] = folderImageCount.value(folder) + 1;
+        }
+    }
+
+    if (first == 0 && rowCount() > 0) {
+        firstFolderPathWithImages = ordered.isEmpty()
+                                        ? QString()
+                                        : QFileInfo(ordered.first().path).absoluteDir().path();
+        setCurrent(index(0, 0), instance);
+    }
+
+    /*  EVERY ROW IS ATTEMPTED ALREADY, so say so: this is the flag the filters and the
+        sort wait on, and nothing is going to set it later for rows no reader will visit.
+        A folder load reaches the same point only after MetaRead has been round them all. */
+    setAllMetadataAttempted(true);
+
+    endLoad(true);
+    restoreProxySortAfterLoad();
+    emit folderChange(abort);
 }
 
 void DataModel::addPaths(const QStringList &fPaths)
@@ -2056,7 +2184,7 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
     }
 }
 
-void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
+void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat)
 {
 /*
     Load the information from the operating system contained in QFileInfo
@@ -2120,18 +2248,27 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString s = fileInfo.suffix().toUpper();
     setData(index(row, G::TypeColumn), s);
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
-    setData(index(row, G::SidecarColumn), QFile(sidecarPath).exists());
+    /*  The index knows whether there is a sidecar -- it stamps one -- so an indexed row
+        does not stat for it. sidecarMtime is 0 exactly when there was none. */
+    setData(index(row, G::SidecarColumn),
+            cat ? cat->sidecarMtime != 0 : QFile(sidecarPath).exists());
     /* G::DevelopColumn is NOT set here. Deciding whether an image has a develop recipe
        means parsing the sidecar, and this runs on the folder-load path -- the one place
        where per-image work has repeatedly cost visible lag. Metadata::parseSidecar is
        already parsing that same file on a worker thread, so the flag rides in on
        ImageMetadata::developEdited via addMetadataForItem instead. */
-    uint p = static_cast<uint>(fileInfo.permissions());
+    /*  PERMISSIONS ARE THE ONE THING THE INDEX DOES NOT HOLD, and asking the filesystem
+        for them is the stat this path exists to avoid. An indexed row is therefore
+        assumed writable -- the ordinary case -- and corrected when the row is actually
+        verified or written. Assuming the opposite would grey out ratings and renames
+        across a whole catalog on the strength of a value nobody had looked up. */
+    uint p = cat ? uint(QFileDevice::ReadUser | QFileDevice::WriteUser)
+                 : static_cast<uint>(fileInfo.permissions());
     setData(index(row, G::PermissionsColumn), p);
     bool isReadWrite = (p & QFileDevice::ReadUser) && (p & QFileDevice::WriteUser);
     setData(index(row, G::ReadWriteColumn), isReadWrite);
     // size
-    quint32 bytes = fileInfo.size();
+    quint32 bytes = cat ? quint32(cat->srcSize) : quint32(fileInfo.size());
     setData(index(row, G::ByteSizeColumn), bytes);
 
     // estimate cacheSize until read metadata and calc size for QImage
@@ -2141,9 +2278,16 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::CacheSizeColumn), mb);
 
     setData(index(row, G::CompareColumn), false);
-    s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
+    /*  Created is the CAPTURE date for an indexed row, which is what the column ends up
+        holding anyway once metadata arrives -- birthTime is the placeholder the file read
+        uses until then, and it needs a stat. Modified comes from the same srcMtime the
+        freshness stamp is made of. */
+    s = cat ? cat->captured.toString("yyyy-MM-dd hh:mm:ss.zzz")
+            : fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
     setData(index(row, G::CreatedColumn), s);
-    s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+    s = cat ? QDateTime::fromSecsSinceEpoch(cat->srcMtime)
+                  .toString("yyyy-MM-dd hh:mm:ss")
+            : fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
     setData(index(row, G::PickColumn), "Unpicked");

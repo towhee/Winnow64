@@ -501,6 +501,14 @@ public slots:
        append = true adds to it, the way ctrl-clicking a second folder does. */
     void loadCatalogResults(const QStringList &paths, bool append = false,
                             const CatalogQuery &query = CatalogQuery());
+    /*  The same load from whole index ROWS rather than paths -- what the Find dock now
+        hands over. Nothing is read from disk to fill the model; see
+        DataModel::addCatalogRows. */
+    void loadCatalogRows(const QVector<CatalogRow> &rows, bool append = false,
+                         const CatalogQuery &query = CatalogQuery());
+    /*  What the two above share: the teardown a replace needs, the queued fill, and the
+        one availability pass over the set. Only the ScopeRequest differs between them. */
+    void loadCatalogScope(const ScopeRequest &req, const QStringList &paths);
     /* Start / stop the background scan over catalogRoots. */
     void startCatalogScan();
     void stopCatalogScan();
