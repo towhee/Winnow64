@@ -115,15 +115,11 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
         if (currentScope == CatalogScope) runSearch();
     });
 
-    /*  A category item was checked or excluded. Filters has ALREADY re-run the proxy
-        filter, in either scope -- so there is nothing to do here but re-word the footer.
-
-        Catalog scope used to start the debounce and re-run the search instead, which
-        reloaded the model with only the matching rows and left BuildFilters to rebuild
-        the tree from those: filter on one day and every other day disappeared from the
-        tree. A filter narrows what you are looking at; it does not redefine the set. */
+    /* A category item was checked or excluded. In Folders scope Filters has already
+       re-run the proxy filter itself; in Catalog it means the query changed. */
     connect(filters, &Filters::filterChange, this, [this](QString){
-        updateFooter();
+        if (currentScope == CatalogScope) debounce->start();
+        else updateFooter();
     });
 
     connect(loadBtn, &QPushButton::clicked, this, [this]{
@@ -209,29 +205,19 @@ void FindPanel::applyScope()
     longer showing as active.
 */
     if (currentScope == CatalogScope) {
-        /*  THE TREE KEEPS THE DATAMODEL'S CATEGORIES, which is the whole change.
-
-            This used to call loadCatalogCategories() and hide the datamodel's own, on the
-            reasoning that the catalog holds values the loaded folder does not. That was
-            true when a catalog scope loaded a 5,000-row slice; it is not true now that it
-            loads the whole catalog -- the datamodel's categories ARE the library's, with
-            live counts, and BuildFilters already maintains them.
-
-            It is also what makes filtering behave: a checked item narrows the proxy and
-            the category head turns yellow, exactly as in Folders, instead of re-running a
-            query that reloaded the model and rebuilt the tree from the survivors. */
-        if (!Catalog::instance().isAvailable()) {
+        /* Release the proxy filter. A Catalog query must not ALSO be narrowing what
+           is loaded, or the user is looking at two answers at once -- and the tree is
+           about to hold catalog values, which mean nothing to the datamodel.
+           setSearchText clears the text half; MW::filterChange declines to run the tree
+           half while this scope is current. */
+        filters->setSearchText(QString());
+        if (!filters->loadCatalogCategories()) {
             resultLabel->setText(
                 "The catalog is unavailable -- the local index database could not be "
                 "opened. Browsing and the Folders scope are unaffected.");
         }
-        filters->showAllCategories();
         loadRow->setVisible(true);
         searchEdit->setPlaceholderText("Search every catalogued image...");
-        /*  Load the set; the categories follow from it. NOT requested explicitly here --
-            the load is asynchronous, so a rebuild asked for now would run against the
-            model being replaced. MW::folderChangeCompleted builds the filters when the
-            fill finishes, which is the same path a folder load takes. */
         runSearch();
     }
     else {
@@ -290,15 +276,9 @@ void FindPanel::refresh()
 
 CatalogQuery FindPanel::currentQuery() const
 {
-/*
-    THE TEXT ONLY. The checked category items used to go into the query as well
-    (filters->fillQuery), which was right when a check WAS the search; now a check
-    narrows the proxy over what is loaded, so putting it in the query too would narrow
-    the loaded SET by the same values -- filtering twice, and rebuilding the tree from
-    the remainder. What the query decides is which images are loaded at all.
-*/
     CatalogQuery q;
     q.text = searchEdit->text();
+    filters->fillQuery(q);
     return q;
 }
 
@@ -323,9 +303,7 @@ void FindPanel::runSearch()
         AND IT IS NO LONGER A WINDOW ONTO THE SET. The cap that made it one existed
         because a row cost ~20 KB and had to be read from its own file; neither is true
         now, so G::maxSearchResults defaults to no limit and the whole catalog loads. */
-    /*  Nothing ASKED, which is now purely about the text: a checked category is a filter
-        over the loaded set, not part of the question that defines it. */
-    noQuery = q.text.trimmed().isEmpty();
+    noQuery = q.text.trimmed().isEmpty() && !filters->isAnyCatalogFilter();
 
     /*  THE ROWS, NOT THE PATHS. searchRows returns everything a datamodel row displays
         from the query that found it, so loading the result opens no files -- measured at
@@ -378,17 +356,6 @@ void FindPanel::updateFooter()
         resultLabel->setText(filters->isAnyFilter()
             ? "Filtering the loaded images."
             : "No filter -- all loaded images are shown.");
-        return;
-    }
-
-    /*  A FILTER IS A FILTER IN EITHER SCOPE, so say the same thing about it. The counts
-        below describe what is LOADED; once a category is checked the proxy decides what
-        is shown, and repeating the catalogued total would answer a question the user has
-        moved on from. */
-    if (filters->isAnyFilter()) {
-        loadBtn->setEnabled(!results.isEmpty());
-        addBtn->setEnabled(!results.isEmpty());
-        resultLabel->setText("Filtering the catalogued images.");
         return;
     }
 
