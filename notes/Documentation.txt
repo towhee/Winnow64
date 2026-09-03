@@ -74,6 +74,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Rows Come Back in the Query That Found Them (searchRows)
      Filling the Model From the Index (addCatalogRows)
      No Cap, and a Streamed Fill (Pos: 1 of 43,050)
+     The Filter Tree Recompiled Once Per Item (56 Seconds of Dead GUI)
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1333,6 +1334,26 @@ THE SORT WAS 20x MORE EXPENSIVE THAN IT NEEDED TO BE. Ordering the result used t
 THE COUNT IS TRUE FROM THE FIRST BATCH. DataModel::expectedRows is set before any row is inserted and cleared in endLoad, and MW::getPosition reports it while a fill is running, so a 43,050-image catalog reads "1 of 43,050" from the first thumbnail instead of counting up as batches land. The batching is the loader's business; the user asked to see the whole amount. It applies only while loading AND only while the proxy is showing everything the model holds -- once a filter is applied, the proxy's own count is the honest answer to "of how many" and the set's eventual size is not.
 
 THE FOOTER NO LONGER INVENTS A SUBSET. It said "N images catalogued. Showing the M most recent" whether or not M was everything; with no cap those are the same number, and claiming a window onto a larger set when there is none describes a limit the user does not have.
+
+⏺ DataModel Changes > The Filter Tree Recompiled Once Per Item (56 Seconds of Dead GUI)
+
+A PERSON CLICKED CATALOG AND WAITED SEVERAL MINUTES FOR THUMBNAILS, twice, after two earlier fixes had each made the headless numbers look fine. What the numbers were missing is that every automated check runs on a ~1,000-row fixture and the whole class of bug here only appears at 43,000. Winnow --catalogload (MW::runCatalogLoadTest) exists for that: the real index, the real load path, headless, printing the time to the first batch, to the last, and then sampling the event loop every second until icons stop arriving.
+
+WHAT IT SHOWED. The fill finished at 11.2 s and the first one-second tick did not fire until 67 s -- the GUI thread was blocked solid for 56 seconds AFTER every row was already in the model. A sample said where: BuildFilters::applyOps -> Filters::updateFilteredCountPerItem -> SortFilter::compileFilters -> QTreeWidgetItem::checkState -> qvariant_cast.
+
+SortFilter RECOMPILED THE WHOLE PREDICATE ON EVERY TREE MUTATION. It connects to itemChanged plus the tree model's rowsInserted/rowsRemoved so that no path mutating the tree can forget to say so -- which is right -- and the comment beside it claimed the cost "lands once rather than once per item" because filtering is suspended during a rebuild. That was wrong: suspension stops FILTERING, not COMPILING. BuildFilters adds items and updates counts thousands of times per rebuild, each compile walks every item, so a rebuild is O(items^2). At 500 rows it is invisible. At 43,050 it is 56 seconds.
+
+THE FIX IS COALESCING, not disconnecting. scheduleCompileFilters sets a pending flag and posts one compile to the next turn of the event loop; compileFilters clears the flag, so the synchronous compile SortFilter::filterChange already does before it invalidates cannot leave the predicate a turn behind the tree the user just clicked. The predicate is derived wholly from the tree, so compiling once gives the same answer as compiling n times -- the intermediate compiles were pure waste.
+
+MEASURED, 43,050 rows, debug build:
+
+    first batch inserted        5,900 ms  ->  1,403 ms
+    fill complete              11,219 ms  ->  7,033 ms
+    event loop responsive      67,026 ms  ->  8,004 ms
+
+THE COMPILE STORM ALSO DELAYED THE START, which is why the first batch moved: the tree mutations during teardown and setup were recompiling too. This is not a catalog fix -- it is a Filters fix that a catalog scope was the first thing big enough to expose, and every folder load pays a smaller version of the same bill.
+
+A HYDRATED CATALOG SCOPE ALSO STOPPED COMMITTING ITSELF BACK. MW::folderChangeCompleted builds the commit payload with dm->catalogRows(), which reads ~40 columns of every row on the GUI thread, and then writes them to the index -- for rows that had just come OUT of the index, unchanged. It is skipped when ScopeRequest::rows is non-empty. A folder scope still commits, because its rows were read from files and the index may never have seen them.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

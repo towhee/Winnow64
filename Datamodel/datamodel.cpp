@@ -1685,6 +1685,11 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
 
     /*  What is actually new: a path already in the model is not loaded twice, which is
         what makes Add (a second search onto the first) work. */
+    perfFillInsertNs = perfFillFileDataNs = perfFillIndexFillNs = 0;
+    perfFillAddMetaNs = perfFillEmitNs = perfFillPrepNs = 0;
+    QElapsedTimer prepTimer;
+    if (G::isPerfProbe) prepTimer.start();
+
     QVector<CatalogRow> ordered;
     ordered.reserve(rows.size());
     for (const CatalogRow &r : rows) {
@@ -1738,6 +1743,7 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         bar can say "1 of 43,050" while the rest are still arriving, rather than counting
         up as they land. Cleared in endLoad. */
     expectedRows = rowCount() + pendingCatalogRows.size();
+    if (G::isPerfProbe) perfFillPrepNs = prepTimer.nsecsElapsed();
 
     insertCatalogBatch();
 }
@@ -1761,7 +1767,14 @@ void DataModel::insertCatalogBatch()
 */
     QString fun = "DataModel::insertCatalogBatch";
 
-    if (abort || G::stop) { finishCatalogFill(); return; }
+    /*  abort, NOT G::stop. G::stop is owned by MW::stop, which BRACKETS this fill --
+        it sets the flag, tears the readers down, queues the load and clears it -- and
+        MW::stop early-returns without clearing when it is called while already stopping.
+        A fill that consulted it was therefore cancelling itself on the strength of its
+        own caller's flag: the headless --catalogload run aborted before its first batch
+        and reported 0 rows. Esc still cancels, because MW::stop sets dm->abort too, and
+        that is the flag addPaths has always used. */
+    if (abort) { finishCatalogFill(); return; }
 
     constexpr int kInsertBatch = 2000;
     const int from = pendingCatalogAt;
@@ -1770,25 +1783,34 @@ void DataModel::insertCatalogBatch()
 
     int row = rowCount();
     const int firstOfBatch = row;
+    const bool probe = G::isPerfProbe;
+    QElapsedTimer pt;
+    if (probe) pt.start();
 
     insertRows(row, to - from);
+    if (probe) { perfFillInsertNs += pt.nsecsElapsed(); pt.restart(); }
     {
         const QSignalBlocker blocker(this);
         for (int i = from; i < to; ++i) {
             const CatalogRow &r = pendingCatalogRows.at(i);
             const QFileInfo fi(r.path);
             addFileDataForRow(row, fi, &r);
+            if (probe) { perfFillFileDataNs += pt.nsecsElapsed(); pt.restart(); }
             /*  THE METADATA, from the same mapping the per-row path uses
                 (Metadata/indexmetadata.h) so a row filled here and a row filled by
                 Reader cannot come to hold different things. */
             IndexMetadata::fill(metadata->m, r,
                                 QDateTime::fromSecsSinceEpoch(r.srcMtime),
                                 row, instance);
+            if (probe) { perfFillIndexFillNs += pt.nsecsElapsed(); pt.restart(); }
             addMetadataForItem(metadata->m, fun);
+            if (probe) { perfFillAddMetaNs += pt.nsecsElapsed(); pt.restart(); }
             row++;
         }
     }
+    if (probe) pt.restart();
     emit dataChanged(index(firstOfBatch, 0), index(row - 1, columnCount() - 1));
+    if (probe) perfFillEmitNs += pt.nsecsElapsed();
 
     pendingCatalogAt = to;
 
@@ -1810,7 +1832,7 @@ void DataModel::finishCatalogFill()
 /*
     The tail of the streamed fill: what addPaths does inline at the end of its one pass.
 */
-    const bool aborted = abort || G::stop;
+    const bool aborted = abort;
 
     /* Register the folders the results came from -- what the Folders filter category,
        removeFolder and isFolderLoaded all read. */
@@ -1833,6 +1855,23 @@ void DataModel::finishCatalogFill()
         firstFolderPathWithImages =
             QFileInfo(pendingCatalogRows.first().path).absoluteDir().path();
         setCurrent(index(0, 0), instance);
+    }
+
+    if (G::isPerfProbe) {
+        const int n = qMax(1, pendingCatalogAt);
+        const auto us = [n](qint64 ns){ return QString::number(ns / 1000.0 / n, 'f', 1); };
+        qDebug().noquote()
+            << "[PERF] catalog fill"
+            << " rows="        << pendingCatalogAt
+            << " prep(ms)="    << perfFillPrepNs / 1000000.0
+            << " insertRows="  << us(perfFillInsertNs)
+            << " fileData="    << us(perfFillFileDataNs)
+            << " indexFill="   << us(perfFillIndexFillNs)
+            << " addMeta="     << us(perfFillAddMetaNs)
+            << " emit(ms)="    << perfFillEmitNs / 1000000.0
+            << " us/row total="
+            << us(perfFillInsertNs + perfFillFileDataNs + perfFillIndexFillNs
+                  + perfFillAddMetaNs + perfFillEmitNs);
     }
 
     pendingCatalogRows.clear();
@@ -5681,21 +5720,51 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
         arrives. A path that mutates the tree therefore cannot forget to say so,
         which is the same reasoning rebuildProxySnapshot follows.
 
-        Compiling is O(items) and these fire in bursts during a rebuild, but
-        filtering is suspended for the duration of one, so the cost lands once
-        rather than once per item. */
+        COALESCED, because compiling is O(items) and these fire in BURSTS. The comment
+        here used to claim the cost "lands once rather than once per item" because
+        filtering is suspended during a rebuild -- but suspension stops FILTERING, not
+        COMPILING, so a rebuild that added n items paid O(n) compiles over O(n) items.
+        With a folder of 500 that is invisible; with 43,000 catalogued images it blocked
+        the GUI for a measured 56 seconds after the rows were already in. */
     if (filters) {
         connect(filters, &QTreeWidget::itemChanged, this,
-                [this](QTreeWidgetItem *, int){ compileFilters(); });
+                [this](QTreeWidgetItem *, int){ scheduleCompileFilters(); });
         if (QAbstractItemModel *m = filters->model()) {
             for (auto sig : { &QAbstractItemModel::rowsInserted,
                               &QAbstractItemModel::rowsRemoved }) {
-                connect(m, sig, this, [this]{ compileFilters(); });
+                connect(m, sig, this, [this]{ scheduleCompileFilters(); });
             }
-            connect(m, &QAbstractItemModel::modelReset, this, [this]{ compileFilters(); });
+            connect(m, &QAbstractItemModel::modelReset, this,
+                    [this]{ scheduleCompileFilters(); });
         }
         compileFilters();
     }
+}
+
+void SortFilter::scheduleCompileFilters()
+{
+/*
+    One compile for a burst of tree mutations, on the next turn of the event loop.
+
+    The predicate is derived wholly from the tree, so compiling later gives the same
+    answer as compiling n times -- it is the intermediate compiles that were waste. What
+    must not happen is FILTERING against a predicate that is a turn behind, which is what
+    flushPendingCompile exists for.
+*/
+    if (compilePending) return;
+    compilePending = true;
+    QTimer::singleShot(0, this, [this]{
+        if (!compilePending) return;      // a flush got there first
+        compilePending = false;
+        compileFilters();
+    });
+}
+
+void SortFilter::flushPendingCompile()
+{
+    if (!compilePending) return;
+    compilePending = false;
+    compileFilters();
 }
 
 void SortFilter::compileFilters()
@@ -5710,6 +5779,10 @@ void SortFilter::compileFilters()
     grouped there. GUI thread only: it reads the widget.
 */
     if (G::isLogger) G::log("SortFilter::compileFilters");
+    /*  Any direct compile satisfies a coalesced one -- SortFilter::filterChange calls
+        this before it invalidates, so filtering never runs against a predicate a turn
+        behind the tree. */
+    compilePending = false;
     if (!filters) return;
 
     auto fresh = std::make_shared<FilterPredicate>();

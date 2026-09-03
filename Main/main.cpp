@@ -117,6 +117,11 @@ int main(int argc, char *argv[])
        and writes nothing else, and exits before any window is created. */
     bool isCatalogProbe = false;
     QString catalogProbeFilter;
+    /*  Winnow --catalogload [folder] -- the real index, the real load path, headless.
+        Like --catalogprobe it must NOT enter QStandardPaths test mode, because the whole
+        point is the catalog the user actually has. */
+    bool isCatalogLoad = false;
+    QString catalogLoadFilter;
     QString selfTestFolder;
     QString metaTestFile;
     QString devTestFolder;
@@ -132,7 +137,9 @@ int main(int argc, char *argv[])
         else if (arg == "--soaktest") isSoakTest = true;
         else if (arg == "--devtest") isDevTest = true;
         else if (arg == "--catalogprobe") isCatalogProbe = true;
+        else if (arg == "--catalogload") isCatalogLoad = true;
         else if (isCatalogProbe && catalogProbeFilter.isEmpty()) catalogProbeFilter = arg;
+        else if (isCatalogLoad && catalogLoadFilter.isEmpty()) catalogLoadFilter = arg;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
         else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
         else if (isDevTest && devTestFolder.isEmpty()) devTestFolder = arg;
@@ -142,8 +149,9 @@ int main(int argc, char *argv[])
        fresh rather than handing its arguments to a running Winnow -- and deliberately not
        for the test-mode settings isolation below. */
     const bool isTestMode = isSelfTest || isMetaTest || isSoakTest || isDevTest
-                            || isCatalogProbe;
-    if (isTestMode && !isCatalogProbe) QStandardPaths::setTestModeEnabled(true);
+                            || isCatalogProbe || isCatalogLoad;
+    const bool usesRealIndex = isCatalogProbe || isCatalogLoad;
+    if (isTestMode && !usesRealIndex) QStandardPaths::setTestModeEnabled(true);
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
@@ -211,7 +219,10 @@ int main(int argc, char *argv[])
 
     mw.show();
 
-    if (isSelfTest) {
+    if (isCatalogLoad) {
+        mw.runCatalogLoadTest(catalogLoadFilter);
+    }
+    else if (isSelfTest) {
         mw.runSelfTest(selfTestFolder, selfTestMs);
     }
     else if (isDevTest) {

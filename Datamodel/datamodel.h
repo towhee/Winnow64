@@ -97,6 +97,16 @@ public slots:
         sites, so a path that checks an item, or that adds one as metadata
         arrives, cannot forget to do it. */
     void compileFilters();
+    /*  Compile ONCE for a burst of tree mutations. BuildFilters adds items and updates
+        counts thousands of times during a rebuild, and every one of those signals used to
+        recompile the whole tree -- O(items) work per item, which at 43,000 rows blocked
+        the GUI for a measured 56 seconds. Coalescing is what the old comment here
+        wrongly believed suspension already did. */
+    void scheduleCompileFilters();
+    /*  Compile now if a coalesced compile is pending. Called by anything that is about to
+        FILTER, so a deferred compile can never leave the predicate a turn behind the
+        tree the user just clicked. */
+    void flushPendingCompile();
 
 private slots:
 
@@ -110,6 +120,7 @@ signals:
 private:
     Filters *filters;
     mutable bool finished;
+    bool compilePending = false;
     std::atomic<bool> suspendFiltering;
 
     /*  The compiled filters, published as a shared_ptr<const> exactly as
@@ -631,6 +642,17 @@ private:
     void finishCatalogFill();
     QVector<CatalogRow> pendingCatalogRows;
     int pendingCatalogAt = 0;
+    /*  Where the streamed fill's time actually goes, in nanoseconds, accumulated across
+        batches and reported once in finishCatalogFill under G::isPerfProbe. The fill is
+        the only part of a catalog scope that is per-row, so it is the only part that can
+        turn 43,000 rows into minutes -- and which of its four steps costs that is not
+        something to reason about from the source. */
+    qint64 perfFillInsertNs = 0;
+    qint64 perfFillFileDataNs = 0;
+    qint64 perfFillIndexFillNs = 0;
+    qint64 perfFillAddMetaNs = 0;
+    qint64 perfFillEmitNs = 0;
+    qint64 perfFillPrepNs = 0;
 
 public:
     // void removeFolder(const QString &folderPath);
