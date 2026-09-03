@@ -3414,6 +3414,9 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
 */
     QString fun = "MW::loadCatalogScope";
 
+    /*  A catalog scope is the large case, so this is where the stall watchdog goes on. */
+    armGuiStallWatchdog();
+
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
@@ -3481,6 +3484,41 @@ void MW::queueAvailabilityPass(const QStringList &paths)
             }, Qt::QueuedConnection);
         });
     }
+}
+
+void MW::armGuiStallWatchdog()
+{
+/*
+    THE ONLY DIRECT MEASUREMENT OF A BEACHBALL.
+
+    Every other probe in this file times a function that was SUSPECTED. This times the
+    event loop itself: a 250 ms timer that reports how late it actually fired. A gap in
+    its output, with a length, is what a person sees as a spinning cursor -- and the
+    [PERF] lines printed either side of that gap say what was running during it.
+
+    Armed when the model gets large rather than behind G::isPerfProbe, because the point
+    is that a person can reproduce a stall by clicking, without being asked to set an
+    environment variable first. Idle cost is one timer callback four times a second.
+*/
+    if (guiStallTimer) return;
+    if (G::isLogger) G::log("MW::armGuiStallWatchdog");
+
+    guiStallClock.start();
+    guiStallLastMs = guiStallClock.elapsed();
+    guiStallTimer = new QTimer(this);
+    connect(guiStallTimer, &QTimer::timeout, this, [this]{
+        const qint64 now = guiStallClock.elapsed();
+        const qint64 late = now - guiStallLastMs;
+        guiStallLastMs = now;
+        /*  750 ms, not 250: scheduling jitter and one slow repaint are not a stall, and a
+            line per tick would bury the thing being looked for. */
+        if (late > 750) {
+            qDebug().noquote() << "[PERF] GUI STALL" << late << "ms  ending at t ="
+                               << now << "ms  dmRows =" << (dm ? dm->rowCount() : 0)
+                               << " sfRows =" << (dm && dm->sf ? dm->sf->rowCount() : 0);
+        }
+    });
+    guiStallTimer->start(250);
 }
 
 void MW::runCatalogLoadTest(const QString &pathFilter)
