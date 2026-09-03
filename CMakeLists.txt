@@ -112,6 +112,7 @@ set(WINNOW_SOURCES
     Cache/cachedata.cpp
     Cache/cachedb.cpp
     Cache/catalog.cpp
+    Cache/catalogprobe.cpp
     Cache/devpreviewcache.cpp
     Cache/thumbcache.cpp
     Cache/framedecoder.cpp
@@ -397,6 +398,7 @@ set(WINNOW_SOURCES
 set(WINNOW_HEADERS
     Cache/cachedata.h
     Cache/catalog.h
+    Cache/catalogprobe.h
     Cache/devpreviewcache.h
     Cache/thumbcache.h
     Cache/mountsnapshot.h
