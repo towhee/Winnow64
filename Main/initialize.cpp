@@ -1586,19 +1586,18 @@ void MW::createFavDock()
 void MW::createFilterDock()
 {
 /*
-    The Filters dock, or -- with G::useFindDock -- the FIND dock: the same DockWidget and
-    the same "FilterDock" objectName, re-titled and with the Catalog panel's function
-    folded in behind a scope switch. See Views/findpanel.h.
+    The Filter dock: with G::useFindDock it also carries the Catalog panel's function,
+    folded in behind a scope switch (Here/Everywhere). See Views/findpanel.h. The tab is
+    labelled "Filters" either way -- only the panel's reach changes, not the dock.
 
     IT IS THE SAME DOCK OBJECT DELIBERATELY. Everything that reaches for filterDock -- the
     full-screen dock set, workspaces, solo mode, the view-mode enables, the
     collapsed-state restore, MW::showFilterDock -- keeps working untouched, and a
     WindowState saved before this change still restores, because the objectName Qt keys
-    that state on has not changed. Only the visible tab TEXT differs, which is a label
-    rather than an identity.
+    that state on has not changed.
 */
     if (G::isLogger) G::log("MW::createFilterDock");
-    filterDockTabText = G::useFindDock ? "Find" : "Filters";
+    filterDockTabText = "Filters";
     // filterDockTabText = "  🤏  ";
     dockTextNames << filterDockTabText;
     filterDock = new DockWidget(filterDockTabText, "FilterDock", this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work

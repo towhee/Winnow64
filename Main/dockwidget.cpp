@@ -683,7 +683,7 @@ QString MW::dockTabToolTip(const QString &tabText)
         /* One panel, two scopes: F2 searches HERE (what is loaded) and Shift+F2 searches
            EVERYWHERE (the catalog). F5 still raises the panel itself. */
         if (G::useFindDock)
-            return QString("<nobr><span style=\"color:#6CC1E8;\">Find</span>: "
+            return QString("<nobr><span style=\"color:#6CC1E8;\">Filters</span>: "
                            "shortcut F5. F2 searches here, Shift+F2 everywhere.</nobr>");
         return tip(filterDockTabText, "F5");
     }
