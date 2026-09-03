@@ -3916,6 +3916,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
             duration % 60, (duration * 1000) % 1000);
         QString format = "mm:ss";
         if (duration > 3600) format = "hh:mm:ss";
+        const QSignalBlocker blocker(this);
         setData(index(dmRow, G::DurationColumn), durationTime.toString(format));
     }
 
@@ -3925,7 +3926,27 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
         at all, so a null item here would have silently dropped the thumbnail.
         dmIdx.isValid() is the question that was actually being asked. */
     if (dmIdx.isValid() && data(dmIdx, Qt::DecorationRole).isNull()) {
+        /*  BLOCKED AND EMITTED ONCE, the pattern setIcon1, setIcon, setValDm and setValSf
+            all use. The braces were already here with nothing in them -- the shape was
+            started and never finished -- so these were five separate dataChanged
+            notifications per video frame, and on macOS each one makes QAbstractItemView
+            tell the Cocoa accessibility bridge, which rebuilds its element array for
+            every row in the model.
+
+            THE LAST WRITE PATH TO GET THIS. Throttling the other four took a catalog
+            scope's freeze from 42 s to 17 s and then stopped helping, because this one
+            does not consult iconRowVisible at all -- so it was not even counted, and
+            emits(visible) sat frozen at 225 through every stall while a sample of the
+            stalled process showed setIconFromVideoFrame at the top of it. A catalog holds
+            videos (201 in the icon range here); each frame decodes slowly and arrives
+            separately, so this is a rebuild of 42,979 elements per video, spread over the
+            whole load.
+
+            The blocker ENDS before videoReadingCleared below: QSignalBlocker blocks every
+            signal this object emits, and MetaRead needs that one to drop its in-flight
+            marker. */
         {
+            const QSignalBlocker blocker(this);
             setData(dmIdx, QVariant(QIcon(QPixmap::fromImage(im))), Qt::DecorationRole);
             setData(index(dmIdx.row(), G::IconLoadedColumn), true);
             setData(index(dmIdx.row(), G::MetadataStatusColumn), G::MetaLoaded);
@@ -3936,6 +3957,9 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
                 setData(index(dmRow, G::AspectRatioColumn), aspectRatio);
             }
         }
+        if (iconRowVisible(dmIdx))
+            emit dataChanged(index(dmIdx.row(), 0),
+                             index(dmIdx.row(), columnCount() - 1));
     }
 
     /*  Tell MetaRead the decode is resolved so it can drop its worker-local
