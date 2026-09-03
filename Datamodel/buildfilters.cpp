@@ -828,12 +828,11 @@ void BuildFilters::flushOps()
 
 void BuildFilters::applyOps(const FilterOps &ops)
 {
-    /*  TIMED WHEN THE MODEL IS LARGE. Applying ops creates QTreeWidgetItems and updates
+    /*  TIMED UNDER G::isPerfProbe. Applying ops creates QTreeWidgetItems and updates
         counts on the GUI thread, once per category and once per item; at 43,000 rows that
-        is the shape that has already produced one 56-second stall (see "The Filter Tree
-        Recompiled Once Per Item"). Gated on row count rather than G::isPerfProbe so a
-        person reproducing a stall does not have to set anything first. */
-    const bool probeBig = dm && dm->rowCount() > 20000;
+        is the shape that already produced one 56-second stall (see "The Filter Tree
+        Recompiled Once Per Item"). */
+    const bool probeBig = G::isPerfProbe;
     QElapsedTimer aoTimer;
     if (probeBig) aoTimer.start();
 

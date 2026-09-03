@@ -1506,7 +1506,7 @@ void DataModel::restoreProxySortAfterLoad()
         return to source order, then re-enabling dynamic sort -- and each emits
         layoutChanged, which the three views answer over the whole model. At 43,000 rows
         that is a candidate for the stall that begins the moment the fill ends. */
-    const bool probeBig = G::isPerfProbe || rowCount() > 20000;
+    const bool probeBig = G::isPerfProbe;
     QElapsedTimer rt;
     if (probeBig) {
         rt.start();
@@ -1824,10 +1824,10 @@ void DataModel::insertCatalogBatch()
 
     int row = rowCount();
     const int firstOfBatch = row;
-    /*  PRINTED WHEN THE SET IS LARGE, not only under G::isPerfProbe: a person clicking
-        Catalog is the only way the GUI-side cost of a batch has ever been seen, and
-        asking them to set an environment variable first is a round trip wasted. */
-    const bool probe = G::isPerfProbe || expectedRows > 20000;
+    /*  Under G::isPerfProbe (WINNOW_PERF_PROBE=1). It printed for any large set while this
+        was being chased, because a person clicking Catalog was the only way the GUI-side
+        cost of a batch could be seen at all. */
+    const bool probe = G::isPerfProbe;
     QElapsedTimer pt;
     if (probe) pt.start();
 
@@ -1895,7 +1895,7 @@ void DataModel::finishCatalogFill()
     /*  EVERY STAGE OF THE TAIL IS TIMED, printed for a large set. The stall begins the
         instant the last batch lands, so it is in here or in what folderChange triggers --
         and there are five candidates, each O(rows). */
-    const bool probeBig = G::isPerfProbe || pendingCatalogAt > 20000;
+    const bool probeBig = G::isPerfProbe;
     QElapsedTimer ft;
     if (probeBig) ft.start();
 
