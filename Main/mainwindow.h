@@ -509,6 +509,9 @@ public slots:
     /*  What the two above share: the teardown a replace needs, the queued fill, and the
         one availability pass over the set. Only the ScopeRequest differs between them. */
     void loadCatalogScope(const ScopeRequest &req, const QStringList &paths);
+    /*  Mark the rows the catalog can no longer open: one database pass and one mount-table
+        walk for the whole set, off the GUI thread. Run when the fill is COMPLETE. */
+    void queueAvailabilityPass(const QStringList &paths);
     /* Start / stop the background scan over catalogRoots. */
     void startCatalogScan();
     void stopCatalogScan();

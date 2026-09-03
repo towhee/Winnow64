@@ -1683,15 +1683,14 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         sf->setDynamicSortFilter(false);
     }
 
-    /*  Ordered the same way addPaths orders its QFileInfos, and for the same reason: with
-        Combine Raw+Jpg on, the raw of a pair must precede its JPG or addFileDataForRow
-        cannot pair them. The catalog's own order is captured DESC, which is not that. */
+    /*  What is actually new: a path already in the model is not loaded twice, which is
+        what makes Add (a second search onto the first) work. */
     QVector<CatalogRow> ordered;
     ordered.reserve(rows.size());
     for (const CatalogRow &r : rows) {
         if (abort) break;
         if (r.path.isEmpty()) continue;
-        if (fPathRowContains(r.path)) continue;         // already loaded
+        if (fPathRowContains(r.path)) continue;
         ordered.append(r);
     }
     if (abort) {
@@ -1701,70 +1700,124 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         return;
     }
 
-    std::sort(ordered.begin(), ordered.end(),
-              [this](const CatalogRow &a, const CatalogRow &b) {
-        const QFileInfo fa(a.path);
-        const QFileInfo fb(b.path);
-        return combineRawJpg ? lessThanCombineRawJpg(fa, fb) : lessThan(fa, fb);
-    });
+    /*  ORDERED BY A PRECOMPUTED KEY, not by a comparator that builds QFileInfos.
 
-    int row = rowCount();
+        A sort is O(n log n) COMPARISONS, so the obvious comparator -- two QFileInfo
+        constructions and absoluteFilePath/completeBaseName/suffix on each -- did that
+        work over a million times for 43,000 rows: measured at 1,517 ms against 75 ms for
+        the same order from keys built once per row (Winnow --catalogprobe, stage F).
+        Twenty times faster, and all of it was in front of the first thumbnail.
+
+        The key reproduces lessThan and lessThanCombineRawJpg exactly: the lower-cased
+        path, with a jpg or jpeg of a raw+jpg pair rewritten to sort after its raw. */
+    QVector<QPair<QString, int>> keys;
+    keys.reserve(ordered.size());
+    for (int i = 0; i < ordered.size(); ++i) {
+        const CatalogRow &r = ordered.at(i);
+        QString key = r.path.toLower();
+        if (combineRawJpg) {
+            const QString ext = r.ext.toLower();
+            if (ext == "jpg" || ext == "jpeg") {
+                const int dot = key.lastIndexOf('.');
+                if (dot > 0) key = key.left(dot) + ".zzz";
+            }
+        }
+        keys.append({key, i});
+    }
+    std::sort(keys.begin(), keys.end(),
+              [](const QPair<QString, int> &a, const QPair<QString, int> &b) {
+                  return a.first < b.first;
+              });
+
+    pendingCatalogRows.clear();
+    pendingCatalogRows.reserve(ordered.size());
+    for (const auto &k : keys) pendingCatalogRows.append(ordered.at(k.second));
+    pendingCatalogAt = 0;
 
     /*  THE TRUE COUNT FROM THE FIRST BATCH. Set before any row is inserted so the status
         bar can say "1 of 43,050" while the rest are still arriving, rather than counting
         up as they land. Cleared in endLoad. */
-    expectedRows = row + ordered.size();
+    expectedRows = rowCount() + pendingCatalogRows.size();
 
-    /*  ONE BATCH AT A TIME, YIELDING BETWEEN THEM. A whole-catalog scope is tens of
-        thousands of rows, and doing them in a single blocking pass is the shape that made
-        the folder load feel hung -- see "Load Responsiveness". Each batch is one
-        structural insert and one wide dataChanged, which is what keeps the proxy and the
-        three views off the per-row signal path; between batches the event loop runs, so
-        the first thumbnails appear and Esc is heard while the rest stream in.
+    insertCatalogBatch();
+}
 
-        USER INPUT IS EXCLUDED from that pump, as it is in addAllMetadata: the model is
-        mid-fill, and letting a click select a row that is about to move would be a
-        re-entrancy bug rather than responsiveness. */
+void DataModel::insertCatalogBatch()
+{
+/*
+    ONE BATCH, THEN BACK TO THE EVENT LOOP.
+
+    The first version of this looped over every batch and called qApp->processEvents
+    between them, which did nothing at all: G::useProcessEvents is FALSE by default, so
+    the pump was skipped and 43,000 rows were filled in one blocking pass -- a beachball
+    with no thumbnails, which is exactly what it looked like. Posting the next batch
+    instead of pumping inside a loop is not a tuning of that; it is the difference between
+    a GUI that is running and one that is not, so it does not hang off a flag.
+
+    A batch is one structural insert and one wide dataChanged, which keeps the proxy and
+    the three views off the per-row signal path -- the shape that fixed the folder load.
+    Between batches the event loop runs normally: thumbnails paint, the scrollbar works,
+    Esc is heard.
+*/
+    QString fun = "DataModel::insertCatalogBatch";
+
+    if (abort || G::stop) { finishCatalogFill(); return; }
+
     constexpr int kInsertBatch = 2000;
-    for (int from = 0; from < ordered.size(); from += kInsertBatch) {
-        if (abort || G::stop) break;
-        const int to = qMin(ordered.size(), from + kInsertBatch);
-        const int firstOfBatch = row;
+    const int from = pendingCatalogAt;
+    const int to = qMin(pendingCatalogRows.size(), from + kInsertBatch);
+    if (from >= to) { finishCatalogFill(); return; }
 
-        insertRows(row, to - from);
-        {
-            const QSignalBlocker blocker(this);
-            for (int i = from; i < to; ++i) {
-                const CatalogRow &r = ordered.at(i);
-                const QFileInfo fi(r.path);
-                addFileDataForRow(row, fi, &r);
-                /*  THE METADATA, from the same mapping the per-row path uses
-                    (Metadata/indexmetadata.h) so a row filled here and a row filled by
-                    Reader cannot come to hold different things. */
-                IndexMetadata::fill(metadata->m, r,
-                                    QDateTime::fromSecsSinceEpoch(r.srcMtime),
-                                    row, instance);
-                addMetadataForItem(metadata->m, fun);
-                row++;
-            }
+    int row = rowCount();
+    const int firstOfBatch = row;
+
+    insertRows(row, to - from);
+    {
+        const QSignalBlocker blocker(this);
+        for (int i = from; i < to; ++i) {
+            const CatalogRow &r = pendingCatalogRows.at(i);
+            const QFileInfo fi(r.path);
+            addFileDataForRow(row, fi, &r);
+            /*  THE METADATA, from the same mapping the per-row path uses
+                (Metadata/indexmetadata.h) so a row filled here and a row filled by
+                Reader cannot come to hold different things. */
+            IndexMetadata::fill(metadata->m, r,
+                                QDateTime::fromSecsSinceEpoch(r.srcMtime),
+                                row, instance);
+            addMetadataForItem(metadata->m, fun);
+            row++;
         }
-        emit dataChanged(index(firstOfBatch, 0), index(row - 1, columnCount() - 1));
+    }
+    emit dataChanged(index(firstOfBatch, 0), index(row - 1, columnCount() - 1));
 
-        if (ordered.size() > kInsertBatch) {
+    pendingCatalogAt = to;
+
+    if (pendingCatalogAt < pendingCatalogRows.size()) {
+        if (expectedRows > kInsertBatch) {
             emit centralMsg(QString::number(row) + " of "
                             + QString::number(expectedRows) + " images loading...");
             emit updateProgress(1.0 * row / qMax(1, expectedRows) * 100);
         }
-        if (G::useProcessEvents)
-            qApp->processEvents(QEventLoop::ExcludeUserInputEvents
-                                | QEventLoop::ExcludeSocketNotifiers);
+        QTimer::singleShot(0, this, [this]{ insertCatalogBatch(); });
+        return;
     }
+
+    finishCatalogFill();
+}
+
+void DataModel::finishCatalogFill()
+{
+/*
+    The tail of the streamed fill: what addPaths does inline at the end of its one pass.
+*/
+    const bool aborted = abort || G::stop;
 
     /* Register the folders the results came from -- what the Folders filter category,
        removeFolder and isFolderLoaded all read. */
     {
         QMutexLocker lk(&dmMutex);
-        for (const CatalogRow &r : ordered) {
+        for (int i = 0; i < pendingCatalogAt; ++i) {
+            const CatalogRow &r = pendingCatalogRows.at(i);
             const QString folder = r.folder.isEmpty()
                                        ? QFileInfo(r.path).absoluteDir().path()
                                        : r.folder;
@@ -1776,21 +1829,23 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         }
     }
 
-    if (rowCount() > 0 && rowCount() == ordered.size()) {
-        firstFolderPathWithImages = ordered.isEmpty()
-                                        ? QString()
-                                        : QFileInfo(ordered.first().path).absoluteDir().path();
+    if (rowCount() > 0 && rowCount() == pendingCatalogAt) {
+        firstFolderPathWithImages =
+            QFileInfo(pendingCatalogRows.first().path).absoluteDir().path();
         setCurrent(index(0, 0), instance);
     }
+
+    pendingCatalogRows.clear();
+    pendingCatalogAt = 0;
 
     /*  EVERY ROW IS ATTEMPTED ALREADY, so say so: this is the flag the filters and the
         sort wait on, and nothing is going to set it later for rows no reader will visit.
         A folder load reaches the same point only after MetaRead has been round them all. */
     setAllMetadataAttempted(true);
 
-    endLoad(true);
+    endLoad(!aborted);
     restoreProxySortAfterLoad();
-    emit folderChange(abort);
+    emit folderChange(aborted);
 }
 
 void DataModel::addPaths(const QStringList &fPaths)

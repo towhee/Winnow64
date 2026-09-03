@@ -623,6 +623,16 @@ private:
         read per image takes. See "The Rows Come Back in the Query That Found Them" in
         notes/Documentation.txt. */
     void addCatalogRows(const QVector<CatalogRow> &rows);
+
+private:
+    /*  ONE BATCH of the streamed catalog fill, re-posted to the event loop until the set
+        is in. See addCatalogRows for why it is posted rather than looped. */
+    void insertCatalogBatch();
+    void finishCatalogFill();
+    QVector<CatalogRow> pendingCatalogRows;
+    int pendingCatalogAt = 0;
+
+public:
     // void removeFolder(const QString &folderPath);
     bool endLoad(bool success);
     // bool addFileData();
