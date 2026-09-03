@@ -5,6 +5,7 @@
 #include <QMediaPlayer>
 #include <QStandardPaths>
 #include <QFontDatabase>
+#include <QAccessible>
 #include <tiffio.h>
 #include <cstdarg>
 #include <cstdlib>
@@ -201,6 +202,29 @@ int main(int argc, char *argv[])
     // Only the family is set here; text size is driven by the per-widget
     // font-size in G::css (G::fontSize).
     instance.setFont(QFontDatabase::systemFont(QFontDatabase::GeneralFont));
+
+    /*  WINNOW_NO_A11Y=1 TURNS THE ACCESSIBILITY BRIDGE OFF, to confirm what a sample of a
+        stalled process pointed at: 94% of the main thread's time during a 42-second
+        Catalog freeze was
+
+            DataModel::setValSf -> QSortFilterProxyModel::setData -> dataChanged
+              -> QAbstractItemView::dataChanged
+                -> -[QMacAccessibilityElement updateTableModel]
+                  -> populateTableArray -> objc alloc
+
+        Every per-row write reaches the view, the view notifies Cocoa accessibility, and
+        the bridge rebuilds its element array for ALL 42,979 rows -- one Obj-C object per
+        cell, per write. QAccessible::setActive(false) is what QAccessible::update-
+        Accessibility checks before dispatching, so this stops it at the source.
+
+        A SWITCH RATHER THAN A DEFAULT: turning accessibility off for everyone would fix
+        the stall by removing VoiceOver support, which is not a trade to make silently.
+        The real fix is to stop emitting one dataChanged per row. */
+    if (qEnvironmentVariableIntValue("WINNOW_NO_A11Y") == 1) {
+        QAccessible::setActive(false);
+        fprintf(stderr, "WINNOW: accessibility bridge DISABLED (WINNOW_NO_A11Y=1)\n");
+        fflush(stderr);
+    }
 
     /*  Before MW: the probe needs qApp (Metadata resolves the ExifTool path from the
         application directory) and nothing else. Constructing the main window would load a
