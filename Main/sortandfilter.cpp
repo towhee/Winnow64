@@ -117,16 +117,19 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
-    /* In the Find dock's CATALOG scope the category tree is holding the CATALOG's
-       values, not the datamodel's, and its checkboxes describe a search rather than a
-       filter. Running the proxy over them would narrow the loaded set by values it has
-       never heard of -- almost always to nothing -- while the user is looking at a result
-       count for a different question entirely. The Catalog query is FindPanel's job;
-       this is only for Folders. */
-    if (findPanel && findPanel->scope() == FindPanel::CatalogScope) {
-        if (G::isLogger) G::log(srcFun, "Catalog scope -- proxy filter not applied");
-        return;
-    }
+    /*  BOTH SCOPES FILTER THE PROXY NOW, and this gate is gone.
+
+        It existed because the Catalog tree used to hold the CATALOG's values, queried
+        from the index rather than read from the loaded rows, and its checkboxes described
+        a search that RELOADED the model rather than a filter over it. Running the proxy
+        over values the datamodel had never heard of would have narrowed the loaded set to
+        nothing.
+
+        That is no longer what a catalog scope is: the whole catalog is loaded, so the
+        datamodel's own categories ARE the library's, and checking one means exactly what
+        it means in a folder. The visible failure of the old arrangement was that
+        filtering on a day rebuilt the tree from that day alone -- every other value
+        vanished instead of the category head turning yellow. */
 
     /*  TIMED, because this now runs in catalog scope too and a catalog scope is 43,000
         rows: an invalidate walks every one of them through filterAcceptsRow, and anything
