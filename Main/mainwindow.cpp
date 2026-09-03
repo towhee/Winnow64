@@ -4699,10 +4699,26 @@ void MW::folderChanged(bool aborted)
     int maxIconsToLoad = rows < chunk ? rows : chunk;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
 
-    // If no new images added to datamodel (only removals or blank folders)
-    if (dm->isMetaReadFinished()) {
+    /*  METADATA DONE IS NOT WORK DONE, and conflating the two is why a catalog scope
+        showed filters instantly and never showed a thumbnail.
+
+        This early return means "nothing was added, so there is nothing to read" -- true
+        when a load only removed rows or found an empty folder, which is all it ever saw.
+        isMetaReadFinished() asks ONLY about metadata (every row attempted), and a
+        hydrated catalog scope arrives with every row already MetaLoaded from the index
+        and NOT ONE ICON loaded. So the condition was satisfied, metaRead->initialize and
+        setStartRow were both skipped, and nothing ever asked for a thumbnail.
+
+        The icon range has to be set before it can be asked about, which is why that call
+        moved up from the block below -- it only computes first/last around startRow.
+
+        THE ICONS ARE THE PART THE INDEX CANNOT SERVE. Every other column of a hydrated
+        row comes out of the image table; the thumbnail comes from ThumbCache or from
+        opening the file, and either way it is MetaRead's job. */
+    dm->setIconRange(startRow);
+    if (dm->isMetaReadFinished() && dm->isIconRangeLoaded()) {
         G::allMetadataAttempted = true;
-        G::iconChunkLoaded = dm->isIconRangeLoaded();
+        G::iconChunkLoaded = true;
         folderChangeCompleted();
         emit initializeImageCache();    // may not be req'd
         return;
@@ -4733,7 +4749,6 @@ void MW::folderChanged(bool aborted)
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true);
-        dm->setIconRange(startRow);
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
                                   Q_ARG(bool, true),
