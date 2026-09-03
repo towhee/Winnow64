@@ -573,6 +573,7 @@ void MetaRead::initialize(QString src)
     if (quitTimer->isActive()) quitTimer->stop();
     redoCount = 0;
     redoMax = 5;
+    lastRedoIconCount = -1;
     err.clear();
     cycling.fill(false);
     readSuccessThisCycle.clear();
@@ -1358,13 +1359,49 @@ void MetaRead::processReturningReader(int id, Reader *r)
         if (pending()) return;
 
         if (!allMetaIconLoaded()) {
+            /*  REDO ONLY IF THE LAST ONE ACHIEVED SOMETHING.
+
+                Redo exists to retry a read that FAILED. It decided that from "not
+                everything is loaded", which is a different thing and on a large scope is
+                usually just "not yet": the icon writes come back from the Reader and Thumb
+                threads as QUEUED events, so while the GUI thread is busy applying them
+                iconLoadedAt still reads false for rows whose icon has in fact arrived.
+                Redoing then re-dispatches readers for those same rows, which queues more
+                events onto the thread that is already behind -- the retry makes the
+                condition it is retrying worse.
+
+                Measured on a 43,050-row catalog scope: twelve REDO MAXED OUT warnings
+                reporting an IDENTICAL 8,918 iconless rows every time -- five full
+                re-dispatches per arm that moved nothing -- alongside a 41-second stall.
+
+                Counting the icons actually present in the range makes the difference
+                visible: a redo that gained none is retrying a queue, not a failure, and
+                stops. One that gained some is making progress and continues, still
+                bounded by redoMax. */
+            int iconsNow = 0;
+            {
+                const int first = qMax(0, firstIconRow);
+                const int last  = qMin(rowCountSf() - 1, lastIconRow);
+                for (int row = first; row <= last; ++row)
+                    if (iconLoadedAt(row)) ++iconsNow;
+            }
+            const bool gained = iconsNow > lastRedoIconCount;
+            lastRedoIconCount = iconsNow;
+
             // if all readers finished but not all loaded, then redo
-            if (redoCount < redoMax) {
+            if (redoCount < redoMax && (redoCount == 0 || gained)) {
                 // try to read again
                 QThread::msleep(50);
                 if (!abort) {
                     redo();
                 }
+            }
+            else if (redoCount < redoMax) {
+                if (isDebug || G::isPerfProbe)
+                    qDebug().noquote()
+                        << "MetaRead::dispatch  redo STOPPED after" << redoCount
+                        << "passes -- no icon gained; the range is waiting on the GUI"
+                           " thread, not on a failed read.  icons =" << iconsNow;
             }
             else {
                 /*  SAY WHICH ROWS, not just that it gave up. This message maxed out
