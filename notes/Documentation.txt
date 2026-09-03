@@ -1455,7 +1455,11 @@ WHY SIX EARLIER HYPOTHESES ALL MISSED IT. It is per WRITE, not per icon, so lowe
 
 THE FIX IS AN ASYMMETRY THAT WAS ALREADY HALF-CLOSED. DataModel::setValDm has written under a QSignalBlocker and emitted dataChanged for VISIBLE ROWS ONLY since the earlier load-responsiveness work, where per-row signals measured about half the load stall. setValSf -- the one the Reader and Thumb threads actually use -- still called sf->setData and let every write through. It now does what setValDm does. A row nobody can see needs no repaint: the value lands in the model either way and the view reads it when it scrolls in.
 
-THE SAME SHAPE, THREE TIMES IN ONE INVESTIGATION: SortFilter recompiling the whole predicate per tree item, MetaRead re-dispatching every row per redo, and now the accessibility bridge rebuilding every row per write. Each was invisible at folder scale and quadratic at catalog scale.
+MEASURED IN THE GUI AFTER THROTTLING setValSf: 41.8 s -> 14.6 s, and one stall instead of two. Two thirds of it, from one function. What remained was the OTHER path an icon arrives by: DataModel::setIcon made three bare setData calls -- decoration, IconLoadedColumn, MetadataReadingColumn -- so three notifications per icon, where setIcon1 next to it had been batching them under a blocker and emitting once, for visible rows only, since the earlier work. It now does the same.
+
+A THIRD PATH IS STILL OPEN, and is worth knowing before the next measurement: iconRowVisible returns TRUE when the visible range is not yet established (lastVisibleIcon <= firstVisibleIcon), which is the safe answer -- nothing is missed -- but during the first moments of a load it means every write emits anyway.
+
+THE SAME SHAPE, THREE TIMES IN ONE INVESTIGATION: SortFilter recompiling the whole predicate per tree item, MetaRead re-dispatching every row per redo, and the accessibility bridge rebuilding every row per write. Each was invisible at folder scale and quadratic at catalog scale.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

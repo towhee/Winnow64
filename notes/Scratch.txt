@@ -3386,3 +3386,46 @@ Everything's set up. Go ahead and /clear.
   - The two new preferences ("Thumbnails held in memory", "Maximum search results") and "Read metadata from the catalog", which is off by default and verified only headlessly.
 
 build included 0736e8f0
+
+[PERF] FindPanel::applyScope 4 ms  scope = Folders
+[PERF] FindPanel::applyScope 594 ms  scope = Catalog
+[PERF] fill batch 1  rows 0 - 1999  insert+cells 23.277 ms  dataChanged 0.304708 ms
+[PERF] fill batch 2  rows 2000 - 3999  insert+cells 27.0325 ms  dataChanged 0.540583 ms
+[PERF] fill batch 3  rows 4000 - 5999  insert+cells 28.4734 ms  dataChanged 0.741333 ms
+[PERF] fill batch 4  rows 6000 - 7999  insert+cells 27.0497 ms  dataChanged 0.976167 ms
+[PERF] fill batch 5  rows 8000 - 9999  insert+cells 29.9596 ms  dataChanged 1.2035 ms
+[PERF] fill batch 6  rows 10000 - 11999  insert+cells 31.3433 ms  dataChanged 1.40054 ms
+[PERF] fill batch 7  rows 12000 - 13999  insert+cells 33.0516 ms  dataChanged 1.60683 ms
+[PERF] fill batch 8  rows 14000 - 15999  insert+cells 31.7111 ms  dataChanged 1.82546 ms
+[PERF] fill batch 9  rows 16000 - 17999  insert+cells 33.3344 ms  dataChanged 2.05529 ms
+[PERF] fill batch 10  rows 18000 - 19999  insert+cells 33.946 ms  dataChanged 2.27083 ms
+[PERF] fill batch 11  rows 20000 - 21999  insert+cells 34.6698 ms  dataChanged 2.45038 ms
+[PERF] fill batch 12  rows 22000 - 23999  insert+cells 33.9623 ms  dataChanged 2.61971 ms
+[PERF] fill batch 13  rows 24000 - 25999  insert+cells 35.3296 ms  dataChanged 2.83908 ms
+[PERF] fill batch 14  rows 26000 - 27999  insert+cells 37.9213 ms  dataChanged 3.04279 ms
+[PERF] fill batch 15  rows 28000 - 29999  insert+cells 37.6126 ms  dataChanged 3.28442 ms
+[PERF] fill batch 16  rows 30000 - 31999  insert+cells 36.6802 ms  dataChanged 3.50879 ms
+[PERF] fill batch 17  rows 32000 - 33999  insert+cells 40.384 ms  dataChanged 3.68146 ms
+[PERF] fill batch 18  rows 34000 - 35999  insert+cells 42.2653 ms  dataChanged 3.88696 ms
+[PERF] fill batch 19  rows 36000 - 37999  insert+cells 41.911 ms  dataChanged 4.11517 ms
+[PERF] fill batch 20  rows 38000 - 39999  insert+cells 40.7593 ms  dataChanged 4.31433 ms
+[PERF] fill batch 21  rows 40000 - 41999  insert+cells 40.7311 ms  dataChanged 4.52796 ms
+[PERF] fill batch 22  rows 42000 - 42978  insert+cells 30.5295 ms  dataChanged 4.57771 ms
+[PERF] finishCatalogFill  folders+setCurrent 12 ms
+[PERF] finishCatalogFill  allMetaAttempted 0 ms
+[PERF] finishCatalogFill  endLoad 7 ms
+[PERF] restore sort: sortColumn= 0 sortOrder= Desc
+[PERF] restoreProxySortAfterLoad  sort(-1) 12.4779 ms  setDynamicSortFilter 12.7334 ms
+[PERF] finishCatalogFill  restoreSort 25 ms
+[PERF] MW::folderChanged ENTER  rows = 42979
+[PERF] MW::folderChanged TOTAL 0 ms
+[PERF] finishCatalogFill  emit folderChange 0 ms  <-- everything MW does on the load completing is inside this number
+[PERF] availabilityOf 42979 paths in 284 ms (pool thread)  answered = 42979  offline = 0  missing = 0  -> GUI writes = 0
+[PERF] availability write-back 0 rows in 0 ms (GUI thread)
+[PERF] BuildFilters::applyOps 0 ms  ops = 0
+[PERF] BuildFilters::applyOps 0 ms  ops = 32
+[PERF] BuildFilters::applyOps 78 ms  ops = 35
+2026-09-03 10:23:08.697 Winnow[68590:6356605] 2026-09-03 10:23:08.697383 [W:onnxruntime:, coreml_execution_provider.cc:137 GetCapability] CoreMLExecutionProvider::GetCapability, number of partitions supported by CoreML: 5 number of nodes in the graph: 149 number of nodes supported by CoreML: 145
+2026-09-03 10:23:09.001 Winnow[68590:6356605] 2026-09-03 10:23:09.001999 [W:onnxruntime:, session_state.cc:1398 VerifyEachNodeIsAssignedToAnEp] Some nodes were not assigned to the preferred execution providers which may or may not have an negative impact on performance. e.g. ORT explicitly assigns shape related ops to CPU to improve perf.
+2026-09-03 10:23:09.001 Winnow[68590:6356605] 2026-09-03 10:23:09.002035 [W:onnxruntime:, session_state.cc:1400 VerifyEachNodeIsAssignedToAnEp] Rerunning with verbose output on a non-minimal build will show node assignments.
+[PERF] GUI STALL 14479 ms  ending at t = 16294 ms  dmRows = 42979  sfRows = 42979
