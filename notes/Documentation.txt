@@ -78,6 +78,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
      A Filter Is a Filter in Either Scope
      The Redo Loop That Could Never Finish
+     The Accessibility Bridge Rebuilds the Whole Table, Per Write
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1434,6 +1435,27 @@ MEASURED after both changes, headless, 43,050 rows:
 REDO MAXED OUT still appears, and now legitimately: each pass gains icons, so the progress guard lets it run to the cap. It reports a real shortfall rather than a spin.
 
 WHAT THIS COST: four rounds of "fixed it" that were not, three of them because a headless run reported healthy numbers for code that stalled in the GUI, and twice because a number in the probe's own output (icons=0, treeItems=17) was explained away instead of checked. The stall watchdog exists because it measures the SYMPTOM -- how late a 250 ms timer fired -- rather than a function somebody suspected.
+
+⏺ DataModel Changes > The Accessibility Bridge Rebuilds the Whole Table, Per Write
+
+WHAT ACTUALLY FROZE A CATALOG SCOPE FOR 42 SECONDS, found by sampling the stalled process rather than by reasoning about it -- 2,666 of 2,838 main-thread samples, 94%:
+
+    DataModel::setValSf -> QSortFilterProxyModel::setData -> DataModel::setData
+      -> dataChanged -> _q_sourceDataChanged -> dataChanged
+        -> QAbstractItemView::dataChanged
+          -> -[QMacAccessibilityElement updateTableModel]
+            -> -[QMacAccessibilityElement populateTableArray:count:]
+              -> _objc_rootAllocWithZone -> malloc
+
+Every per-row write reaches the view; the view notifies the Cocoa accessibility bridge; the bridge rebuilds its element array for EVERY ROW IN THE MODEL, allocating an Obj-C object per cell. Once per write, over 42,979 rows.
+
+CONFIRMED BY TURNING IT OFF. WINNOW_NO_A11Y=1 calls QAccessible::setActive(false), which is the flag QAccessible::updateAccessibility checks before dispatching. With it set the stall vanished completely and every other number in the run was unchanged. The switch stays as a diagnostic; it is not the fix, because the fix must not be "remove VoiceOver support".
+
+WHY SIX EARLIER HYPOTHESES ALL MISSED IT. It is per WRITE, not per icon, so lowering the thumbnail ceiling from 10,000 to 2,000 cut the icons by 12x and left the stall at 41 s. It happens inside queued setValSf events, so every timed stage of the load -- applyScope 585 ms, the 22-batch fill 757 ms, folders+setCurrent 12 ms, endLoad 8 ms, restoreSort 26 ms, folderChanged 0 ms, availabilityOf 297 ms off-thread, applyOps 78 ms -- was small and none of them contained it. And the offscreen platform plugin has no Cocoa accessibility bridge at all, so --catalogload reported healthy numbers through the whole investigation.
+
+THE FIX IS AN ASYMMETRY THAT WAS ALREADY HALF-CLOSED. DataModel::setValDm has written under a QSignalBlocker and emitted dataChanged for VISIBLE ROWS ONLY since the earlier load-responsiveness work, where per-row signals measured about half the load stall. setValSf -- the one the Reader and Thumb threads actually use -- still called sf->setData and let every write through. It now does what setValDm does. A row nobody can see needs no repaint: the value lands in the model either way and the view reads it when it scrolls in.
+
+THE SAME SHAPE, THREE TIMES IN ONE INVESTIGATION: SortFilter recompiling the whole predicate per tree item, MetaRead re-dispatching every row per redo, and now the accessibility bridge rebuilding every row per write. Each was invisible at folder scale and quadratic at catalog scale.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

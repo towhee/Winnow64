@@ -235,7 +235,7 @@ double jitIconCacheMemFraction = 0.5;   // share of free-remainder memory budget
 bool   showCacheProgress = true;        // single gate for ImageCache + MetaRead progress display
 std::atomic<qint64> imageCacheHeadroomMB{0};  // image cache's remaining intended claim (MB)
 int iconPressureTestLevel = -1;         // -1 real; 0 normal+recovered; 1 warn; 2 critical; 3 normal-not-recovered
-bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm notify views only for visible rows (set false for prior behavior)
+bool useVisibleOnlyIconEmit = true;     // setIcon1/setValDm/setValSf notify views only for visible rows (set false for prior behavior)
 
 // Mode (Preview / Develop)
 OperationMode operationMode = OperationMode::Preview;   // start in fast-review Preview mode

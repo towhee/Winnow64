@@ -3599,8 +3599,8 @@ bool DataModel::iconRowVisible(const QModelIndex &dmIdx)
 {
 /*
     True when the row is currently visible in a view (or the optimization is off). Used by
-    setIcon1 / setValDm to skip the dataChanged notification for off-screen rows during a
-    bulk load — they are stored without notifying and paint correctly when scrolled to.
+    setIcon1 / setValDm / setValSf to skip the dataChanged notification for off-screen rows
+    during a bulk load — they are stored without notifying and paint correctly when scrolled to.
     firstVisibleIcon / lastVisibleIcon are sf (proxy) rows maintained by MW::updateIconRange;
     a degenerate range (not yet established) falls back to "visible" so nothing is missed.
 */
@@ -3701,7 +3701,37 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
         return;
     }
 
-    sf->setData(sfIdx, value, role);
+    /*  THE SAME THROTTLE setValDm ALREADY HAS, and for the same measured reason.
+
+        This called sf->setData, which forwards to the source and lets the resulting
+        dataChanged reach the proxy, the three views AND -- on macOS -- the Cocoa
+        accessibility bridge, which rebuilds its element array for EVERY ROW IN THE MODEL
+        on each notification. A sample of a stalled process put 94% of the main thread in
+        exactly that: setValSf -> setData -> dataChanged -> QAbstractItemView::dataChanged
+        -> QMacAccessibilityElement::updateTableModel -> populateTableArray -> malloc.
+        At 42,979 rows a catalog scope froze for 42 seconds; disabling the bridge with
+        WINNOW_NO_A11Y=1 removed the stall entirely and changed nothing else, which is
+        what identified it.
+
+        setValDm has written under a blocker and emitted for VISIBLE ROWS ONLY since the
+        earlier load-responsiveness work, where per-row signals were measured at about
+        half the load stall. Only the sf variant was left un-throttled, and it is the one
+        the Reader and Thumb threads use. The asymmetry was the bug.
+
+        A row nobody can see needs no repaint: the write lands in the model either way,
+        and the view reads it when it scrolls into view. */
+    const QModelIndex dmIdx = sf->mapToSource(sfIdx);
+    if (!dmIdx.isValid()) {
+        errMsg = "Invalid dmIdx from sfIdx.  Src: " + src;
+        G::issue("Warning", errMsg, "DataModel::setValueSF", sfRow);
+        return;
+    }
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, value, role);
+    }
+    if (iconRowVisible(dmIdx))
+        emit dataChanged(dmIdx, dmIdx);
 }
 
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
