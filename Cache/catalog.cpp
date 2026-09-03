@@ -673,29 +673,49 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
         with the catalog held. */
     const MountSnapshot mounts = MountSnapshot::take();
 
-    QMutexLocker lk(&mutex);
-    QSqlDatabase db = dbLocked();
-    if (!db.isOpen()) return out;
+    /*  PAGED, TAKING THE LOCK PER PAGE -- kPageRows, the same convention staleOf and the
+        commit passes follow, and for the reason stated where it is defined: "small enough
+        that a Search on the GUI thread never waits on more than a few hundred".
 
-    QSqlQuery q(db);
-    q.prepare("SELECT live, vol FROM image WHERE pathkey = ?");
-    for (const QString &p : paths) {
-        if (p.isEmpty()) continue;
-        q.addBindValue(cachePathKey(p));
-        if (!q.exec() || !q.next()) { q.finish(); continue; }   // not indexed
-        const bool live = q.value(0).toBool();
-        const QString vol = q.value(1).toString();
-        q.finish();
+        THIS FUNCTION HELD THE LOCK FOR THE WHOLE LIST, which was harmless while a caller
+        asked about a folder's worth of paths and became a 30-second freeze the moment a
+        catalog scope asked about 42,979 of them. The queries run off the GUI thread, so
+        the pass itself was never the problem -- what blocked was every GUI-thread call
+        INTO the catalog (FindPanel::refresh, updateCatalogScopeRows, the dock becoming
+        visible) waiting on a mutex held for one query per row. Measured from a person's
+        click: GUI STALL 30,689 ms, beginning the instant the load completed, with every
+        stage of the load itself under 30 ms.
 
-        /*  THE VOLUME IS ASKED FIRST, and it has to be. A row can be marked not
-            live from a sweep taken while the drive WAS mounted, and then the
-            drive is unplugged: the file is missing AND the volume is absent. The
-            useful thing to say then is "that disk isn't plugged in", because
-            that is the one the user can act on -- and because until it is back
-            there is no way to know whether the file is still gone. */
-        if (!mounts.isMounted(vol)) out.insert(p, Availability::Offline);
-        else if (!live)             out.insert(p, Availability::Missing);
-        else                        out.insert(p, Availability::Present);
+        A page boundary is a fine place to be interrupted: each path's answer is
+        independent, and the caller applies them as a set afterwards. */
+    for (int from = 0; from < paths.size(); from += kPageRows) {
+        const int to = qMin(paths.size(), from + kPageRows);
+
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return out;
+
+        QSqlQuery q(db);
+        q.prepare("SELECT live, vol FROM image WHERE pathkey = ?");
+        for (int i = from; i < to; ++i) {
+            const QString &p = paths.at(i);
+            if (p.isEmpty()) continue;
+            q.addBindValue(cachePathKey(p));
+            if (!q.exec() || !q.next()) { q.finish(); continue; }   // not indexed
+            const bool live = q.value(0).toBool();
+            const QString vol = q.value(1).toString();
+            q.finish();
+
+            /*  THE VOLUME IS ASKED FIRST, and it has to be. A row can be marked not
+                live from a sweep taken while the drive WAS mounted, and then the
+                drive is unplugged: the file is missing AND the volume is absent. The
+                useful thing to say then is "that disk isn't plugged in", because
+                that is the one the user can act on -- and because until it is back
+                there is no way to know whether the file is still gone. */
+            if (!mounts.isMounted(vol)) out.insert(p, Availability::Offline);
+            else if (!live)             out.insert(p, Availability::Missing);
+            else                        out.insert(p, Availability::Present);
+        }
     }
     return out;
 }

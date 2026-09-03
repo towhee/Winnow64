@@ -3472,7 +3472,17 @@ void MW::queueAvailabilityPass(const QStringList &paths)
     if (paths.isEmpty()) return;
     {
         QThreadPool::globalInstance()->start([this, paths]{
+            /*  TIMED, and printed for a large set: this is one database query per path,
+                and until it was paged it held the catalog mutex for all of them -- which
+                is what every GUI-thread call into the catalog then waited on. */
+            QElapsedTimer at;
+            const bool probeBig = paths.size() > 20000;
+            if (probeBig) at.start();
             const auto avail = Catalog::instance().availabilityOf(paths);
+            if (probeBig)
+                qDebug().noquote() << "[PERF] availabilityOf" << paths.size() << "paths in"
+                                   << at.elapsed() << "ms (pool thread)  not Present ="
+                                   << avail.size();
             if (avail.isEmpty()) return;
             QMetaObject::invokeMethod(this, [this, avail]{
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
@@ -4730,6 +4740,27 @@ void MW::folderChanged(bool aborted)
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, msg);
+
+    /*  TIMED IN FULL, for a large set.
+
+        "emit folderChange 0 ms" in finishCatalogFill looked like an acquittal and was
+        not: the connection is QUEUED, so nothing in here runs inside that emit. All of
+        it happens afterwards, as posted events -- which is precisely the window the
+        stall watchdog reports and precisely where every measured stage of the load tail
+        has already been ruled out. */
+    const bool probeBig = dm && dm->rowCount() > 20000;
+    QElapsedTimer fcT;
+    if (probeBig) {
+        fcT.start();
+        qDebug().noquote() << "[PERF] MW::folderChanged ENTER  rows =" << dm->rowCount();
+    }
+    struct FcReport {
+        QElapsedTimer *t; bool on;
+        ~FcReport() {
+            if (on) qDebug().noquote() << "[PERF] MW::folderChanged TOTAL"
+                                       << t->elapsed() << "ms";
+        }
+    } fcReport{&fcT, probeBig};
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
