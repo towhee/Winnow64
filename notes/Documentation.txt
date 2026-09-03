@@ -1419,7 +1419,19 @@ UNLOADABLE ROWS NOW COME OFF THE REQUIREMENT, alongside the videos. DataModel::i
 
 MEASURED after the change, headless, 43,050 rows: the 31 s stall became 2.6 s and the small one during the fill is 772 ms.
 
-IT IS NOT FINISHED. REDO MAXED OUT still fires twelve times, so rows in the chunk are still failing to produce an icon for some reason OTHER than availability. The warning now reports the breakdown -- how many rows in the icon range have no icon, and how many of those were never attempted versus attempted and still iconless -- counted through the published proxySnapshot/rowSync views rather than off dm->sf, because it runs on the metaReadThread. That is the next thing to read rather than reason about.
+THE BREAKDOWN NAMED THE SECOND HALF OF IT: "iconRange 0 - 10000  noIcon = 8918 (notAttempted = 0  attemptedButNoIcon = 8918)  video = 210", identical across all twelve warnings. Nothing loaded BETWEEN redos, and notAttempted = 0 was guaranteed rather than informative -- a hydrated row is marked MetaLoaded at fill time, so "attempted" says nothing at all about its icon.
+
+REDO WAS RETRYING A QUEUE, NOT A FAILURE. The icon writes come back from the Reader and Thumb threads as QUEUED events, so while the GUI thread is busy applying them iconLoadedAt still reads false for rows whose icon has already arrived. Redo took that for a failed read, re-dispatched readers for those same rows, and queued more events onto the thread that was already behind: the retry made the condition it was retrying worse. Five full re-dispatches per arm, twelve arms, alongside a 41-second stall.
+
+REDO IS NOW BOUNDED BY PROGRESS. It counts the icons actually present in the range and only repeats if the last pass gained some; a pass that gained nothing is waiting on the GUI thread and stops. redoMax still caps the rest.
+
+MEASURED after both changes, headless, 43,050 rows:
+
+    worst GUI stall     41,596 ms  ->  2,817 ms
+    icons in chunk      stuck      ->  10,000 (complete)
+    settled             never      ->  21.6 s
+
+REDO MAXED OUT still appears, and now legitimately: each pass gains icons, so the progress guard lets it run to the cap. It reports a real shortfall rather than a spin.
 
 WHAT THIS COST: four rounds of "fixed it" that were not, three of them because a headless run reported healthy numbers for code that stalled in the GUI, and twice because a number in the probe's own output (icons=0, treeItems=17) was explained away instead of checked. The stall watchdog exists because it measures the SYMPTOM -- how late a 250 ms timer fired -- rather than a function somebody suspected.
 

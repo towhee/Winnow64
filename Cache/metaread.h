@@ -48,6 +48,10 @@ public:
 
     int instance;                   // new instance for each folder to detect conflict
 
+    /*  Icons present in the icon range at the previous redo. Redo retries FAILED reads;
+        this is how a pass that gained nothing -- and is therefore waiting on the GUI
+        thread rather than on a failure -- is told apart from one making progress. */
+    int lastRedoIconCount = -1;
     int firstIconRow;
     int lastIconRow;
 
