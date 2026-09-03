@@ -55,6 +55,89 @@ QVariant text(const QString &s)
 }
 
 /*
+    THE COLUMNS THAT MAKE A ROW, in one place because two queries return them.
+
+    fetchFresh asks for one image by primary key; searchRows asks for every image the
+    query matched. They must produce the IDENTICAL CatalogRow or a row would mean
+    something different depending on which path fetched it -- which is the drift the
+    shared IndexMetadata mapping exists to prevent one layer up. Qualified with the i.
+    alias so both statements can use the same string.
+*/
+const char *kRowColumns =
+    " i.id, i.srcsize, i.srcmtime, i.sidecarmtime,"
+    " i.path, i.folder, i.filename, i.ext,"
+    " i.captured, i.rating, i.label, i.pick, i.title, i.creator, i.copyright,"
+    " i.make, i.model, i.lens, i.iso, i.aperture, i.shutter, i.focallength,"
+    " i.width, i.height, i.gpscoord,"
+    " i.orientation, i.exposurecomp, i.focusx, i.focusy, i.email, i.url,"
+    " i.orig_rating, i.orig_label, i.orig_creator, i.orig_title,"
+    " i.orig_copyright, i.orig_email, i.orig_url, i.developed, i.devpreviewkey,"
+    " i.keywordpaths, i.shootinginfo, i.keywords_literal";
+
+/*
+    One row of kRowColumns into a CatalogRow, keywords excluded -- they are a join and
+    each caller fetches them the way that suits its shape. Returns the image id, which
+    is what a keyword lookup needs and CatalogRow does not carry.
+*/
+qint64 readRow(const QSqlQuery &q, CatalogRow &r)
+{
+    r.path = q.value(4).toString();
+    r.srcSize = q.value(1).toLongLong();
+    r.srcMtime = q.value(2).toLongLong();
+    r.sidecarMtime = q.value(3).toLongLong();
+    r.folder = q.value(5).toString();
+    r.filename = q.value(6).toString();
+    r.ext = q.value(7).toString();
+    /*  captured is stored as SECONDS SINCE EPOCH -- commit() binds
+        r.captured.toSecsSinceEpoch(), and the category SQL reads it with
+        strftime(..., 'unixepoch'). Reading it back with QVariant::toDateTime gave a
+        QDateTime parsed from the DIGITS of the integer, which is a plausible-looking date
+        that is simply wrong: an A7R2 shot in September 2016 came back as April 2017.
+        Found by fingerprinting a row served from the catalog against the same row read
+        from its file. */
+    r.captured = q.value(8).isNull()
+                     ? QDateTime()
+                     : QDateTime::fromSecsSinceEpoch(q.value(8).toLongLong());
+    r.rating = q.value(9).toInt();
+    r.label = q.value(10).toString();
+    r.pick = q.value(11).toBool();
+    r.title = q.value(12).toString();
+    r.creator = q.value(13).toString();
+    r.copyright = q.value(14).toString();
+    r.make = q.value(15).toString();
+    r.model = q.value(16).toString();
+    r.lens = q.value(17).toString();
+    r.iso = q.value(18).toInt();
+    r.aperture = q.value(19).toDouble();
+    r.shutter = q.value(20).toDouble();
+    r.focalLength = q.value(21).toDouble();
+    r.width = q.value(22).toInt();
+    r.height = q.value(23).toInt();
+    r.gpsCoord = q.value(24).toString();
+    r.orientation = q.value(25).toInt();
+    r.exposureComp = q.value(26).toString();
+    r.focusX = q.value(27).toDouble();
+    r.focusY = q.value(28).toDouble();
+    r.email = q.value(29).toString();
+    r.url = q.value(30).toString();
+    r._rating = q.value(31).toString();
+    r._label = q.value(32).toString();
+    r._creator = q.value(33).toString();
+    r._title = q.value(34).toString();
+    r._copyright = q.value(35).toString();
+    r._email = q.value(36).toString();
+    r._url = q.value(37).toString();
+    r.developed = q.value(38).toBool();
+    r.devPreviewKey = q.value(39).toString();
+    const QString kp = q.value(40).toString();
+    if (!kp.isEmpty()) r.keywordPaths = kp.split('\n', Qt::SkipEmptyParts);
+    r.shootingInfo = q.value(41).toString();
+    const QString kl = q.value(42).toString();
+    if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
+    return q.value(0).toLongLong();
+}
+
+/*
     The SQL that produces one category item's value, keyed by the datamodel column the
     Filters panel maps that category to.
 
@@ -534,16 +617,8 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
     if (!db.isOpen()) return out;
 
     QSqlQuery q(db);
-    q.prepare("SELECT id, srcsize, srcmtime, sidecarmtime,"
-              " path, folder, filename, ext,"
-              " captured, rating, label, pick, title, creator, copyright,"
-              " make, model, lens, iso, aperture, shutter, focallength,"
-              " width, height, gpscoord,"
-              " orientation, exposurecomp, focusx, focusy, email, url,"
-              " orig_rating, orig_label, orig_creator, orig_title,"
-              " orig_copyright, orig_email, orig_url, developed, devpreviewkey,"
-              " keywordpaths, shootinginfo, keywords_literal"
-              " FROM image WHERE pathkey = ? AND live = 1");
+    q.prepare(QString("SELECT") + kRowColumns
+              + " FROM image i WHERE i.pathkey = ? AND i.live = 1");
 
     QSqlQuery kw(db);
     kw.prepare("SELECT k.name FROM keyword k"
@@ -565,64 +640,15 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
                            && q.value(3).toLongLong() == cand.sidecarMtime;
         if (!fresh) { q.finish(); continue; }
 
-        const qint64 id = q.value(0).toLongLong();
         CatalogRow r;
-        /*  The path AS THE CALLER SPELLED IT, not as the catalog stored it. The two are
-            the same file but not always the same string, and the caller looks the result
-            up by what it passed in. */
+        const qint64 id = readRow(q, r);
+        /*  The path AND ITS STAMPS AS THE CALLER SPELLED THEM, overwriting what readRow
+            took from the database. The two are the same file but not always the same
+            string, and the caller looks the result up by what it passed in. */
         r.path = cand.path;
         r.srcSize = cand.srcSize;
         r.srcMtime = cand.srcMtime;
         r.sidecarMtime = cand.sidecarMtime;
-        r.folder = q.value(5).toString();
-        r.filename = q.value(6).toString();
-        r.ext = q.value(7).toString();
-        /*  captured is stored as SECONDS SINCE EPOCH -- commit() binds
-            r.captured.toSecsSinceEpoch(), and the category SQL reads it with
-            strftime(..., 'unixepoch'). Reading it back with QVariant::toDateTime
-            gave a QDateTime parsed from the digits of the integer, which is a
-            plausible-looking date that is simply wrong: an A7R2 shot in
-            September 2016 came back as April 2017. Found by fingerprinting a row
-            served from the catalog against the same row read from its file. */
-        r.captured = q.value(8).isNull()
-                         ? QDateTime()
-                         : QDateTime::fromSecsSinceEpoch(q.value(8).toLongLong());
-        r.rating = q.value(9).toInt();
-        r.label = q.value(10).toString();
-        r.pick = q.value(11).toBool();
-        r.title = q.value(12).toString();
-        r.creator = q.value(13).toString();
-        r.copyright = q.value(14).toString();
-        r.make = q.value(15).toString();
-        r.model = q.value(16).toString();
-        r.lens = q.value(17).toString();
-        r.iso = q.value(18).toInt();
-        r.aperture = q.value(19).toDouble();
-        r.shutter = q.value(20).toDouble();
-        r.focalLength = q.value(21).toDouble();
-        r.width = q.value(22).toInt();
-        r.height = q.value(23).toInt();
-        r.gpsCoord = q.value(24).toString();
-        r.orientation = q.value(25).toInt();
-        r.exposureComp = q.value(26).toString();
-        r.focusX = q.value(27).toDouble();
-        r.focusY = q.value(28).toDouble();
-        r.email = q.value(29).toString();
-        r.url = q.value(30).toString();
-        r._rating = q.value(31).toString();
-        r._label = q.value(32).toString();
-        r._creator = q.value(33).toString();
-        r._title = q.value(34).toString();
-        r._copyright = q.value(35).toString();
-        r._email = q.value(36).toString();
-        r._url = q.value(37).toString();
-        r.developed = q.value(38).toBool();
-        r.devPreviewKey = q.value(39).toString();
-        const QString kp = q.value(40).toString();
-        if (!kp.isEmpty()) r.keywordPaths = kp.split('\n', Qt::SkipEmptyParts);
-        r.shootingInfo = q.value(41).toString();
-        const QString kl = q.value(42).toString();
-        if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
         q.finish();
 
         kw.addBindValue(id);
@@ -678,27 +704,25 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
    Search
    --------------------------------------------------------------------------------- */
 
-QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
+void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
+                               QStringList &where, QVariantList &binds)
 {
 /*
-    Build one SELECT from whichever parts of the query were filled in.
+    THE PREDICATE, shared by every query that answers a CatalogQuery.
+
+    search() returns paths and searchRows() returns whole rows, but "which images does
+    this query match" must mean exactly one thing or the two would answer differently
+    from the same search box -- and the count beside the result would then describe a
+    different set from the rows on screen.
 
     EVERY VALUE IS BOUND, never interpolated -- including the FTS expression. The search
     box is user text and the catalog shares its database with the preview index, so a
     query that pasted text into SQL would put the previews one apostrophe away from a
     syntax error and worse.
+
+    Caller holds the mutex; this touches no connection of its own.
 */
-    QStringList out;
-    if (total) *total = 0;
-
-    QMutexLocker lk(&mutex);
-    QSqlDatabase db = dbLocked();
-    if (!db.isOpen()) return out;
-
-    QStringList where;
-    QVariantList binds;
-
-    QString from = " FROM image i";
+    from = " FROM image i";
 
     /* The SAME grammar the Filters search box uses (Utilities/searchterms.h), so "heron
        OR eagle" narrows here exactly as it narrows there. Parsing is what the two search
@@ -803,6 +827,25 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
     }
     if (!cq.includeMissing) where << "i.live = 1";
 
+}
+
+QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
+{
+/*
+    The matching paths, newest first. See buildQueryLocked for the predicate.
+*/
+    QStringList out;
+    if (total) *total = 0;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QString from;
+    QStringList where;
+    QVariantList binds;
+    buildQueryLocked(cq, from, where, binds);
+
     QString sql = "SELECT DISTINCT i.path, i.captured" + from;
     if (!where.isEmpty()) sql += " WHERE " + where.join(" AND ");
     /* Newest first, and id as the tie-break so the order is stable between runs -- an
@@ -826,6 +869,103 @@ QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)
     if (total) {
         QString csql = "SELECT COUNT(DISTINCT i.id)" + from;
         if (!where.isEmpty()) csql += " WHERE " + where.join(" AND ");
+        QSqlQuery c(db);
+        c.prepare(csql);
+        for (const QVariant &b : binds) c.addBindValue(b);
+        if (c.exec() && c.next()) *total = c.value(0).toInt();
+    }
+    return out;
+}
+
+QVector<CatalogRow> Catalog::searchRows(const CatalogQuery &cq, int limit, int *total)
+{
+/*
+    The matching images as WHOLE ROWS rather than paths -- everything a datamodel row
+    displays, from the same predicate and in the same order as search().
+
+    WHY IT EXISTS. Loading a catalog result used to mean search() for the paths and then
+    a metadata read per file to fill each row; with the index able to answer for a row
+    outright (see IndexMetadata), the read became fetchFresh path-by-path instead. That is
+    still one indexed seek per image -- measured at 42.6 us/row against 1.6 us/row for the
+    search itself, so on a 43,000-image catalog the lookups cost 1.8 s and the query that
+    found them cost 68 ms. This asks for the rows in the query that already knows which
+    rows they are.
+
+    IT DOES NOT CHECK FRESHNESS, and that is the difference from fetchFresh rather than an
+    oversight. Freshness needs the file's size and mtime, so every candidate must be
+    stat'd before the question can even be asked; browsing does not need it, because a
+    row's stamps are checked when it is actually looked at. Callers that must know a row
+    is current still go through fetchFresh -- this one trusts the index and says so.
+
+    THE KEYWORDS COME BACK IN ONE QUERY, not one per image. The same predicate is reused
+    as a subquery, so the join runs over exactly the images being returned. Per-image
+    keyword lookups were the other half of fetchFresh's cost, and at 43,000 rows they are
+    43,000 round trips to save a single join.
+*/
+    QVector<CatalogRow> out;
+    if (total) *total = 0;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QString from;
+    QStringList where;
+    QVariantList binds;
+    buildQueryLocked(cq, from, where, binds);
+
+    const QString whereSql = where.isEmpty() ? QString()
+                                             : " WHERE " + where.join(" AND ");
+    /* The SAME order as search(): newest first, id as the tie-break so repeating a
+       search does not reshuffle the grid. */
+    const QString orderSql = " ORDER BY i.captured DESC, i.id DESC";
+    const QString limitSql = limit > 0 ? QString(" LIMIT ?") : QString();
+
+    QSqlQuery q(db);
+    q.prepare("SELECT DISTINCT" + QString(kRowColumns) + from + whereSql + orderSql
+              + limitSql);
+    for (const QVariant &b : binds) q.addBindValue(b);
+    if (limit > 0) q.addBindValue(limit);
+
+    if (!q.exec()) {
+        /* A malformed MATCH is the expected failure -- the user is mid-way through typing
+           FTS syntax -- so this is a quiet miss, as in search(). */
+        return out;
+    }
+
+    /* image id -> its position in out, so the keyword pass can attach names without
+       searching the vector once per row. */
+    QHash<qint64, int> byId;
+    while (q.next()) {
+        CatalogRow r;
+        const qint64 id = readRow(q, r);
+        byId.insert(id, out.size());
+        out.append(r);
+    }
+    q.finish();
+
+    if (out.isEmpty()) return out;
+
+    QSqlQuery kw(db);
+    kw.prepare("SELECT ik.image_id, k.name"
+               " FROM image_keyword ik"
+               " JOIN keyword k ON k.id = ik.keyword_id"
+               " WHERE ik.image_id IN (SELECT DISTINCT i.id" + from + whereSql
+               + orderSql + limitSql + ")");
+    /* The predicate is bound a SECOND time, for the subquery. Rebuilding it would risk
+       the two drifting; re-binding the same list cannot. */
+    for (const QVariant &b : binds) kw.addBindValue(b);
+    if (limit > 0) kw.addBindValue(limit);
+    if (kw.exec()) {
+        while (kw.next()) {
+            const auto it = byId.constFind(kw.value(0).toLongLong());
+            if (it != byId.constEnd()) out[it.value()].keywords << kw.value(1).toString();
+        }
+    }
+    kw.finish();
+
+    if (total) {
+        QString csql = "SELECT COUNT(DISTINCT i.id)" + from + whereSql;
         QSqlQuery c(db);
         c.prepare(csql);
         for (const QVariant &b : binds) c.addBindValue(b);
