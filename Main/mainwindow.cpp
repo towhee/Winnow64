@@ -3558,12 +3558,22 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
         connect(watch, &QTimer::timeout, this, [this, watch, started, ticks, lastIcons,
                                                 stable, watchMs]{
             const int icons = dm->iconCount();
+            /*  HOW BIG THE FILTER TREE IS, because a catalog scope now fills it from the
+                datamodel and the datamodel is the whole library: one item per distinct
+                title, day, camera and keyword across 43,000 images. A QTreeWidget being
+                laid out for the first time is O(items), and the dock is SHOWN by the same
+                click that changes the scope. */
+            int treeItems = 0;
+            if (filters) {
+                QTreeWidgetItemIterator tit(filters);
+                while (*tit) { ++treeItems; ++tit; }
+            }
             fprintf(stderr, "CATALOGLOAD: t=%lld ms  icons=%d  metaAttempted=%d  "
-                            "iconChunk=%d  filtersBuilt=%d\n",
+                            "iconChunk=%d  treeItems=%d  dockVisible=%d\n",
                     (long long)started->elapsed(), icons,
                     (bool)G::allMetadataAttempted ? 1 : 0,
-                    dm->iconChunkSize.load(),
-                    filters && filters->topLevelItemCount() > 0 ? 1 : 0);
+                    dm->iconChunkSize.load(), treeItems,
+                    filterDock && filterDock->isVisible() ? 1 : 0);
             fflush(stderr);
 
             /*  Stop when the icon count has not moved for five ticks: the work this is
@@ -3576,14 +3586,63 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
                 fprintf(stderr, "CATALOGLOAD: settled at %lld ms with %d icons\n",
                         (long long)started->elapsed(), icons);
                 fflush(stderr);
+
+                /*  AND NOW CLICK IT AGAIN, which is what a person did to find the second
+                    beachball. The second click is not the first: the model already holds
+                    every row, so the fill has nothing to add, and everything the panel
+                    and the proxy do around it happens over 43,000 loaded rows rather
+                    than over an empty model. */
+                if (findPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_TWICE") == 1) {
+                    auto again = std::make_shared<QElapsedTimer>();
+                    again->start();
+                    fprintf(stderr, "CATALOGLOAD: --- second click ---\n");
+                    fflush(stderr);
+                    /*  THROUGH MW::setScope, which is what the Catalog row in the Folders
+                        panel calls -- and which also shows and raises the filter dock.
+                        Showing a dock whose tree holds tens of thousands of items is
+                        itself work, and it was outside everything measured so far. */
+                    setScope(G::Scope::Folders, "catalogload second click");
+                    const qint64 beforeShow = again->elapsed();
+                    setScope(G::Scope::Catalog, "catalogload second click");
+                    fprintf(stderr, "CATALOGLOAD: setScope(Catalog) took %lld ms\n",
+                            (long long)(again->elapsed() - beforeShow));
+                    fflush(stderr);
+                    fprintf(stderr, "CATALOGLOAD: second click returned at %lld ms\n",
+                            (long long)again->elapsed());
+                    fflush(stderr);
+                    QTimer::singleShot(20000, this, [again]{
+                        fprintf(stderr, "CATALOGLOAD: 20 s after second click (%lld ms)\n",
+                                (long long)again->elapsed());
+                        fflush(stderr);
+                        std::_Exit(0);
+                    });
+                    return;
+                }
                 std::_Exit(0);
             }
         });
         watch->start(1000);
     });
 
+    /*  THROUGH THE PANEL, not straight into the model, when the panel exists.
+
+        The first version called loadCatalogRows directly, which is a real path but not
+        the one a PERSON takes: clicking Catalog goes through FindPanel::applyScope, which
+        also re-points the category tree and runs its own search. A beachball that lives
+        in applyScope was therefore invisible to this driver while it reported healthy
+        load numbers -- so it now drives the click.
+
+        WINNOW_CATALOGLOAD_DIRECT=1 forces the old model-only path, for isolating the fill
+        from everything the panel does around it. */
     setScope(G::Scope::Catalog, "runCatalogLoadTest");
-    loadCatalogRows(rows, false, q);
+    if (findPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_DIRECT") != 1) {
+        fprintf(stderr, "CATALOGLOAD: driving FindPanel::setScope(CatalogScope)\n");
+        fflush(stderr);
+        findPanel->setScope(FindPanel::CatalogScope);
+    }
+    else {
+        loadCatalogRows(rows, false, q);
+    }
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
