@@ -3483,6 +3483,109 @@ void MW::queueAvailabilityPass(const QStringList &paths)
     }
 }
 
+void MW::runCatalogLoadTest(const QString &pathFilter)
+{
+/*
+    WHAT CLICKING CATALOG COSTS, headlessly and against the REAL index.
+
+    Every automated check of this path runs on a fixture folder of about a thousand rows,
+    and a thousand rows is not the case that hurts: two bugs in a row -- a pump that never
+    pumped and a sort that built a million QFileInfos -- were invisible at that size and
+    obvious at 43,000. This drives the same entry point the Find dock does, on whatever
+    the user actually has catalogued, and prints where the time went.
+
+    It is not a test in tests/: it needs the user's own index, which no fixture can carry
+    and which QStandardPaths test mode deliberately hides. Same reasoning as
+    Cache/catalogprobe.h, and it shares that flag's convention of a path substring to
+    restrict the set.
+*/
+    if (G::isLogger) G::log("MW::runCatalogLoadTest", pathFilter);
+
+    G::isPerfProbe = true;
+
+    CatalogQuery q;
+    q.includeMissing = true;
+    if (!pathFilter.isEmpty()) q.folder = pathFilter;
+
+    QElapsedTimer t;
+    t.start();
+    int total = 0;
+    const QVector<CatalogRow> rows = Catalog::instance().searchRows(q, 0, &total);
+    const qint64 queryMs = t.elapsed();
+
+    fprintf(stderr, "CATALOGLOAD: query %lld ms, %lld rows of %d matching\n",
+            (long long)queryMs, (long long)rows.size(), total);
+    fflush(stderr);
+
+    if (rows.isEmpty()) { std::_Exit(2); }
+
+    /*  Timed from the load request to the FIRST batch and to the LAST, because those are
+        two different user-visible facts: when the first thumbnail could appear, and when
+        the set stops growing. A single total would hide a fill that delivers nothing for
+        a minute and then everything at once -- which is exactly the failure being chased. */
+    auto started = std::make_shared<QElapsedTimer>();
+    auto firstSeen = std::make_shared<bool>(false);
+    started->start();
+
+    connect(dm, &DataModel::rowsInserted, this,
+            [this, started, firstSeen](const QModelIndex &, int, int){
+        if (*firstSeen) return;
+        *firstSeen = true;
+        fprintf(stderr, "CATALOGLOAD: first batch inserted at %lld ms\n",
+                (long long)started->elapsed());
+        fflush(stderr);
+    });
+
+    connect(dm, &DataModel::folderChange, this, [this, started](bool aborted){
+        fprintf(stderr, "CATALOGLOAD: fill complete at %lld ms, rows=%d, aborted=%d\n",
+                (long long)started->elapsed(), dm->rowCount(), aborted ? 1 : 0);
+        fflush(stderr);
+
+        /*  THE FILL IS NOT THE END OF THE WAIT, which is the whole reason this keeps
+            running. Measured, the fill of 43,050 rows costs ~12 s and a person reported
+            SEVERAL MINUTES before thumbnails appeared -- so most of the wait is what
+            happens after: the icon chunk, the filter tree over every row, and the first
+            image decode. Sampling those every second is what says which.
+
+            Ends at WINNOW_CATALOGLOAD_MS (default 180 s) or when icons stop arriving. */
+        int watchMs = qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_MS");
+        if (watchMs <= 0) watchMs = 180000;
+
+        auto watch = new QTimer(this);
+        auto ticks = std::make_shared<int>(0);
+        auto lastIcons = std::make_shared<int>(-1);
+        auto stable = std::make_shared<int>(0);
+        connect(watch, &QTimer::timeout, this, [this, watch, started, ticks, lastIcons,
+                                                stable, watchMs]{
+            const int icons = dm->iconCount();
+            fprintf(stderr, "CATALOGLOAD: t=%lld ms  icons=%d  metaAttempted=%d  "
+                            "iconChunk=%d  filtersBuilt=%d\n",
+                    (long long)started->elapsed(), icons,
+                    (bool)G::allMetadataAttempted ? 1 : 0,
+                    dm->iconChunkSize.load(),
+                    filters && filters->topLevelItemCount() > 0 ? 1 : 0);
+            fflush(stderr);
+
+            /*  Stop when the icon count has not moved for five ticks: the work this is
+                waiting for has finished, and sitting out the rest of the budget would
+                only make the run longer than the thing it measures. */
+            if (icons == *lastIcons) ++(*stable); else *stable = 0;
+            *lastIcons = icons;
+            if (*stable >= 5 || ++(*ticks) * 1000 >= watchMs) {
+                watch->stop();
+                fprintf(stderr, "CATALOGLOAD: settled at %lld ms with %d icons\n",
+                        (long long)started->elapsed(), icons);
+                fflush(stderr);
+                std::_Exit(0);
+            }
+        });
+        watch->start(1000);
+    });
+
+    setScope(G::Scope::Catalog, "runCatalogLoadTest");
+    loadCatalogRows(rows, false, q);
+}
+
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
 {
 /*
@@ -4903,8 +5006,32 @@ void MW::folderChangeCompleted()
         is where it is knowable. */
     const bool reconcile = dm->scopeRequest().reconcile && !dm->abort && !G::stop;
 
-    QMetaObject::invokeMethod(this, [this, reconcile]{
+    /*  A HYDRATED CATALOG SCOPE HAS NOTHING TO COMMIT, and finding that out cost a
+        minute of blocked GUI. dm->catalogRows() reads ~40 columns of every row on the
+        GUI thread to build the commit payload -- measured at 56 s of dead event loop for
+        43,050 rows, which is what "several minutes before any thumbnails" actually was.
+        For rows that CAME from the index, unchanged, the whole exercise re-writes the
+        catalog with what it already holds.
+
+        A folder scope still commits: its rows were read from files and the index may
+        never have seen them. So may a catalog scope whose rows fell through to a file
+        read -- but those are the stale ones, which the verification pass will commit when
+        it re-reads them, not this. */
+    const bool nothingToCommit = dm->scopeRequest().scope == G::Scope::Catalog
+                                 && !dm->scopeRequest().rows.isEmpty();
+
+    QMetaObject::invokeMethod(this, [this, reconcile, nothingToCommit]{
+        if (nothingToCommit) {
+            if (G::isPerfProbe)
+                qDebug().noquote() << "[PERF] catalog commit SKIPPED (rows came from the index)";
+            return;
+        }
+        QElapsedTimer ct;
+        if (G::isPerfProbe) ct.start();
         const QVector<CatalogRow> rows = dm->catalogRows();
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] catalogRows()" << rows.size() << "rows in"
+                               << ct.elapsed() << "ms (GUI thread)";
         const QHash<QString, QSet<QString>> present = reconcile ? dm->folderPathSets()
                                                                : QHash<QString, QSet<QString>>();
         if (!rows.isEmpty() || !present.isEmpty()) {

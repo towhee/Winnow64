@@ -512,6 +512,11 @@ public slots:
     /*  Mark the rows the catalog can no longer open: one database pass and one mount-table
         walk for the whole set, off the GUI thread. Run when the fill is COMPLETE. */
     void queueAvailabilityPass(const QStringList &paths);
+    /*  HEADLESS CATALOG LOAD, against the user's real index: what clicking Catalog
+        actually costs. --catalogload <optional path filter>. Prints the time to the
+        first batch and to the last, then exits. See Cache/catalogprobe.h for why this
+        cannot be a unit test. Called from main, like the other test modes. */
+    void runCatalogLoadTest(const QString &pathFilter);
     /* Start / stop the background scan over catalogRoots. */
     void startCatalogScan();
     void stopCatalogScan();
