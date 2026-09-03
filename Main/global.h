@@ -560,6 +560,14 @@ Q_NAMESPACE
         told so. Zero means no limit. */
     extern int maxSearchResults;
     extern bool useIndexMetadata;
+    /*  Stat the rows that scroll into view and re-read any the catalog can no longer
+        vouch for -- see Cache/scrollverify.h. A row filled from the index is otherwise
+        trusted until something else happens to revisit it, so keywords edited in
+        Lightroom (which rewrites the sidecar and never touches the raw) go on showing
+        their old value in Catalog scope. DEFAULT ON: it corrects wrong data, and the
+        cost was measured before it was written -- a stat is ~137x cheaper than a read,
+        and only the visible window is asked. */
+    extern bool useScrollInVerify;
     extern bool cacheThumbnails;
     extern qint64 thumbCacheMaxBytes;
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)

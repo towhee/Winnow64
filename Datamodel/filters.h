@@ -26,6 +26,7 @@ public:
     QTreeWidgetItem *years;
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
+    QTreeWidgetItem *availability;
     // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare;
 
@@ -45,6 +46,7 @@ public:
     QString catTitle = "Titles";
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
+    QString catAvailability = "Availability";
     // QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
 
@@ -55,6 +57,17 @@ public:
     QFrame *msgFrame;
 
     void createFilter(QTreeWidgetItem *cat, QString name);
+    /*  THE VALUE A CHECKED ITEM IS COMPARED AGAINST, which is the item's own text for
+        every category but one. SortFilter::compileFilters reads data(1, EditRole) and
+        FilterPredicate compares it with what the model holds at Qt::EditRole -- so for
+        Availability, whose column holds a CODE and whose item shows a WORD, the item
+        must carry the code or nothing would ever match. See Catalog::availabilityCode. */
+    QVariant filterValueFor(const QTreeWidgetItem *category, const QString &label) const;
+    /*  Hide the Availability category while every loaded row is Present, which is every
+        folder scope and most catalog scopes. Offering "Present" as the sole thing to
+        check would filter to everything -- the same emptiness test loadCatalogCategories
+        makes, and the same reason Duplicates is hidden. */
+    void updateAvailabilityVisibility();
     void createPredefinedFilters();
     void createDynamicFilters();
     void removeChildrenDynamicFilters();

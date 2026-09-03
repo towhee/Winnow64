@@ -65,6 +65,7 @@
 
 #include "Cache/cachedata.h"
 #include "Cache/metaread.h"
+#include "Cache/scrollverify.h"
 #include "Cache/imagecache.h"
 #include "Cache/framedecoder.h"
 
@@ -512,6 +513,13 @@ public slots:
     /*  Mark the rows the catalog can no longer open: one database pass and one mount-table
         walk for the whole set, off the GUI thread. Run when the fill is COMPLETE. */
     void queueAvailabilityPass(const QStringList &paths);
+    /*  A scroll-in verification pass found these rows out of date with their files:
+        clear the row so MetaRead reads it again, and remember it so the corrected row
+        is committed back to the catalog when the read lands. See Cache/scrollverify.h. */
+    void refreshStaleRows(const QStringList &paths);
+    /*  The catalog payload for the rows refreshStaleRows cleared, built once their
+        re-read has landed. Rows still unread stay pending for the next completion. */
+    QVector<CatalogRow> catalogRowsForStale();
     /*  HEADLESS CATALOG LOAD, against the user's real index: what clicking Catalog
         actually costs. --catalogload <optional path filter>. Prints the time to the
         first batch and to the last, then exits. See Cache/catalogprobe.h for why this
@@ -1954,6 +1962,12 @@ private:
     QHeaderView *headerView;
     CompareImages *compareImages;
     MetaRead *metaRead;
+    ScrollVerify *scrollVerify = nullptr;
+    /*  Paths whose row was cleared by MW::refreshStaleRows and not yet re-committed. The
+        commit happens in folderChangeCompleted, which otherwise skips a hydrated catalog
+        scope entirely -- these are the only rows in it the index has anything to learn
+        from. */
+    QSet<QString> staleRecommit;
     Thumb *refreshThumb = nullptr;    // lazily created; refreshes a single icon after in-place replace
     ImageCache *imageCache;
     QThread imageCacheThread;

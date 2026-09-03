@@ -87,6 +87,7 @@ void MW::writeSettings()
     settings->setValue("maxIconChunk", G::maxIconChunk);
     settings->setValue("maxSearchResults", G::maxSearchResults);
     settings->setValue("useIndexMetadata", G::useIndexMetadata);
+    settings->setValue("useScrollInVerify", G::useScrollInVerify);
     settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
 
@@ -365,6 +366,7 @@ bool MW::loadSettings()
         G::maxIconChunk = 10000;
         G::maxSearchResults = 0;      // no limit; see global.cpp
         G::useIndexMetadata = false;
+        G::useScrollInVerify = true;
         G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
@@ -599,6 +601,8 @@ bool MW::loadSettings()
     }
     if (settings->contains("useIndexMetadata"))
         G::useIndexMetadata = settings->value("useIndexMetadata").toBool();
+    if (settings->contains("useScrollInVerify"))
+        G::useScrollInVerify = settings->value("useScrollInVerify").toBool();
 
     /*  A/B KNOBS FOR THE HEADLESS RUNS, and only for those. The load-pipeline work is
         verified by running the same folder twice with one thing changed, so the two

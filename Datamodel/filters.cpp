@@ -147,6 +147,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
        in its own right. See Metadata/keywordflatten.h. */
     filterCategoryToDmColumn[catKeyword] = G::KeywordsAllColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
+    filterCategoryToDmColumn[catAvailability] = G::AvailabilityColumn;
     // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
 
@@ -267,6 +268,7 @@ void Filters::createDynamicFilters()
     titles = new QTreeWidgetItem(this);
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
+    availability = new QTreeWidgetItem(this);
     // missingThumbs = new QTreeWidgetItem(this);
     compare = new QTreeWidgetItem(this);
 
@@ -283,6 +285,7 @@ void Filters::createDynamicFilters()
     createFilter(titles, catTitle);
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
+    createFilter(availability, catAvailability);
     // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
 }
@@ -327,6 +330,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(titles);
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
+    setCategoryBackground(availability);
     // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
 }
@@ -355,6 +359,7 @@ void Filters::removeChildrenDynamicFilters()
     titles->takeChildren();
     keywords->takeChildren();
     creators->takeChildren();
+    availability->takeChildren();
     // missingThumbs->takeChildren();
     compare->takeChildren();
 }
@@ -1281,9 +1286,13 @@ bool Filters::loadCatalogCategories()
         setRowHidden(indexOfTopLevelItem(c.item), QModelIndex(), !anyRealValue);
     }
 
-    /* Duplicates compares what is loaded; Search is the panel's own box. */
+    /* Duplicates compares what is loaded; Search is the panel's own box. Availability
+       is a fact about the rows in the model and about the mount table right now, not
+       something the index holds -- BuildFilters counts it from the datamodel like any
+       other category, and it shows itself when a row is not Present. */
     setRowHidden(indexOfTopLevelItem(compare), QModelIndex(), true);
     setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+    updateAvailabilityVisibility();
 
     filtersBuilt = true;
     refreshAmbiguousKeywords();
@@ -1300,6 +1309,8 @@ void Filters::showAllCategories()
     /* The Search category stays hidden while the panel owns a search box -- it is the
        same fact shown twice, and the box is the one the user is looking at. */
     if (G::useFindDock) setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+    /* Availability is conditional on what is loaded, so "show all" does not mean it. */
+    updateAvailabilityVisibility();
 }
 
 void Filters::fillQuery(CatalogQuery &q) const
@@ -1548,6 +1559,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(titles));
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
+    collapse(indexFromItem(availability));
     // collapse(indexFromItem(missingThumbs));
     collapse(indexFromItem(compare));
 }
@@ -1711,7 +1723,7 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         item->setText(0, i.key());
         item->setCheckState(0, oldItemState);
         styleFilterItem(item);
-        item->setData(1, Qt::EditRole, i.key());
+        item->setData(1, Qt::EditRole, filterValueFor(category, i.key()));
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
@@ -1719,6 +1731,10 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
 
     // sort the result
     category->sortChildren(0, Qt::AscendingOrder);
+
+    /*  This pass REMOVES items as well as adding them, so a scope that has just lost its
+        last offline row hides the category again. */
+    if (category == availability) updateAvailabilityVisibility();
 }
 
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
@@ -1762,7 +1778,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item = new QTreeWidgetItem(category);
         item->setText(0, i.key());
         item->setCheckState(0, Qt::Unchecked);
-        item->setData(1, Qt::EditRole, i.key());
+        item->setData(1, Qt::EditRole, filterValueFor(category, i.key()));
         item->setData(2, Qt::EditRole, i.value());
         item->setData(3, Qt::EditRole, i.value());
         item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -1775,6 +1791,36 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
 
     // sort the result
 //    category->sortChildren(0, Qt::AscendingOrder);
+
+    /*  Unlocked first: this touches the tree's row visibility, not the item lists the
+        mutex guards, and updateAvailabilityVisibility does not take it. */
+    locker.unlock();
+    if (category == availability) updateAvailabilityVisibility();
+}
+
+QVariant Filters::filterValueFor(const QTreeWidgetItem *category, const QString &label) const
+{
+/*
+    See the declaration. One category, one exception, stated here rather than at the
+    two sites that build items.
+*/
+    if (category == availability) return Catalog::availabilityCode(label);
+    return label;
+}
+
+void Filters::updateAvailabilityVisibility()
+{
+/*
+    See the declaration. "Any value that is not Present" rather than "more than one
+    item", because a catalog scope in which EVERY row is offline is exactly the case
+    worth showing the category for.
+*/
+    bool anyNotPresent = false;
+    const QString present = Catalog::availabilityLabel(int(Catalog::Availability::Present));
+    for (int i = 0; i < availability->childCount(); ++i) {
+        if (availability->child(i)->text(0) != present) { anyNotPresent = true; break; }
+    }
+    setRowHidden(indexOfTopLevelItem(availability), QModelIndex(), !anyNotPresent);
 }
 
 void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)

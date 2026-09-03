@@ -120,6 +120,7 @@ set(WINNOW_SOURCES
     Cache/imagedecoder.cpp
     Cache/metaread.cpp
     Cache/reader.cpp
+    Cache/scrollverify.cpp
 
     # Datamodel
     Datamodel/buildfilters.cpp
@@ -406,6 +407,7 @@ set(WINNOW_HEADERS
     Cache/imagecache.h
     Cache/imagedecoder.h
     Cache/metaread.h
+    Cache/scrollverify.h
     Cache/reader.h
 
     Datamodel/buildfilters.h

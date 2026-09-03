@@ -40,9 +40,13 @@ namespace FilterCat {
     /*  The countable categories, in the order the Filters panel shows them.
         Keywords are not here: a row carries a LIST of them, so they are counted
         from FilterSnapshotRow::keywords rather than from v[]. */
+    /*  Availability holds the LABEL ("Present"/"Offline"/"Missing"), not the int the
+        model holds. Every other slot is the column's own string; this one is
+        translated when the snapshot is taken, because a category item shows a word
+        and the compare value is put back to the code by Filters::filterValueFor. */
     enum Slot {
         Search, Pick, Rating, Label, Type, FolderName, Year, Day,
-        CameraModel, Lens, FocalLength, Title, Creator, Compare,
+        CameraModel, Lens, FocalLength, Title, Creator, Availability, Compare,
         SlotCount
     };
 }

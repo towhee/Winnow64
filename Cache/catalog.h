@@ -230,6 +230,28 @@ public:
        indexed. The scanner asks this before parsing anything. */
     QSet<QString> staleOf(const QList<CatalogRow> &candidates);
 
+    /*  THE SAME QUESTION ASKED BY A BROWSER RATHER THAN BY AN INDEXER, and the
+        difference is what happens to a path the catalog has never seen.
+
+        staleOf() calls it STALE, because its caller is about to read every file it
+        names and an unindexed image is exactly one of the files that must be read.
+        This caller is the opposite: it holds rows that were FILLED FROM the index and
+        is asking which of them the index can no longer vouch for. A path the catalog
+        does not know was never filled from it, so there is nothing to be stale
+        against -- reporting it would make the verification pass re-read every
+        uncatalogued row in the window, on every scroll, forever.
+
+        So: INDEXED AND NO LONGER CURRENT. Same three stamps, same comparison, and
+        the two must agree about what "current" means or a row would be served from
+        the index by one and re-read by the other.
+
+        PAGED, taking the lock per page, for the reason availabilityOf states: the
+        queries run off the GUI thread, but a lock held for one query per row is what
+        every GUI-thread call into the catalog then waits on.
+
+        Safe to call off the GUI thread. */
+    QSet<QString> outOfDate(const QList<CatalogRow> &candidates);
+
     /* THE INDEX AS A METADATA SOURCE, not just a search index.
 
        Hands back the catalogued row for each candidate whose freshness stamp still
@@ -292,6 +314,19 @@ public:
         stored answer would be wrong the moment a drive is plugged in. Missing is
         the stored `live` flag, which is what the sweep maintains. */
     enum class Availability { Present, Offline, Missing };
+
+    /*  THE THREE STATES SPELLED ONCE. Three places name them -- the badge tooltip on
+        the thumbnail, the Availability column in the table, and the Filters category
+        the user checks -- and the filter is the one that makes a shared spelling
+        load-bearing rather than tidy: a checked filter item is compared against what
+        the MODEL holds, which is the int, so the item has to carry the code and show
+        the label. Converting in one place is what keeps "Offline" in the category and
+        "Offline" on the badge the same word.
+
+        availabilityCode returns Present for anything it does not recognise, which is
+        the same answer an unset cell gives. */
+    static QString availabilityLabel(int code);
+    static int availabilityCode(const QString &label);
 
     /*  The availability of each of these paths, in one pass. Paths the catalog
         does not know are absent from the result rather than reported Missing --

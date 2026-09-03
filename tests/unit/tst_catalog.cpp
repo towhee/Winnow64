@@ -42,6 +42,8 @@ private slots:
     void pathSpellingDoesNotSplitTheRow();
     void keywordCategoryCountsImages();
     void staleOfReportsOnlyWhatChanged();
+    void outOfDateIgnoresWhatWasNeverIndexed();
+    void availabilityLabelAndCodeAreOneSpelling();
     void fetchFreshReturnsWhatNeedNotBeRead();
     void searchRowsReturnsWhatFetchFreshWouldHave();
     void searchRowsMatchesSearchExactly();
@@ -317,6 +319,65 @@ void tst_catalog::staleOfReportsOnlyWhatChanged()
     // never seen before
     const CatalogRow fresh = rowFor("h3.nef");
     QVERIFY(cat.staleOf({fresh}).contains(fresh.path));
+}
+
+void tst_catalog::outOfDateIgnoresWhatWasNeverIndexed()
+{
+    /*  THE ONE DIFFERENCE FROM staleOf, AND IT IS THE WHOLE REASON THE SECOND
+        FUNCTION EXISTS.
+
+        staleOf's caller is an INDEXER: it is about to read every file it is told
+        about, and an image the catalog has never seen is exactly one of the files
+        that must be read, so "unknown" is correctly reported as stale.
+
+        outOfDate's caller is the scroll-in verification pass, which holds rows that
+        were FILLED FROM the index and is asking which of them the index can no
+        longer vouch for. A path the catalog does not know was never filled from it,
+        so there is nothing to be stale against -- and reporting it would make the
+        pass clear and re-read every uncatalogued row in the visible window, on every
+        scroll, forever. */
+    Catalog &cat = Catalog::instance();
+    const CatalogRow a = rowFor("ood1.nef");
+    CatalogRow b = rowFor("ood2.nef");
+    cat.commit({a, b});
+
+    QVERIFY(cat.outOfDate({a, b}).isEmpty());
+
+    /*  A SIDECAR REWRITTEN BY SOMETHING ELSE is the case this exists for -- editing
+        keywords in Lightroom moves the .xmp and never touches the raw -- so the
+        stamp that must catch it is the sidecar's, not the image's. */
+    b.sidecarMtime += 60;
+    const auto stale = cat.outOfDate({a, b});
+    QCOMPARE(stale.size(), 1);
+    QVERIFY(stale.contains(b.path));
+
+    /*  NEVER INDEXED: staleOf says stale, outOfDate says nothing. Both are right for
+        their own caller, and the pair is asserted together so neither can quietly
+        adopt the other's answer. */
+    const CatalogRow unknown = rowFor("ood3.nef");
+    QVERIFY(cat.staleOf({unknown}).contains(unknown.path));
+    QVERIFY2(cat.outOfDate({unknown}).isEmpty(),
+             "an unindexed path was never served from the index and cannot be out of date");
+}
+
+void tst_catalog::availabilityLabelAndCodeAreOneSpelling()
+{
+    /*  THE FILTER MAKES THIS LOAD-BEARING. A checked Filters item is compared
+        against what the MODEL holds at Qt::EditRole, which for the Availability
+        column is the int; the item shows the word. So the category item carries
+        availabilityCode(label) and nothing matches unless the two are exact
+        inverses. */
+    for (int code : {int(Catalog::Availability::Present),
+                     int(Catalog::Availability::Offline),
+                     int(Catalog::Availability::Missing)}) {
+        QCOMPARE(Catalog::availabilityCode(Catalog::availabilityLabel(code)), code);
+    }
+
+    /*  ANYTHING UNRECOGNISED IS PRESENT, which is the same answer an unset cell
+        gives -- "a row nobody has asked about is openable until something says
+        otherwise". */
+    QCOMPARE(Catalog::availabilityCode("Whatever"), int(Catalog::Availability::Present));
+    QCOMPARE(Catalog::availabilityCode(QString()), int(Catalog::Availability::Present));
 }
 
 void tst_catalog::fetchFreshReturnsWhatNeedNotBeRead()

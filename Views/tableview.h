@@ -98,6 +98,18 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
+/*  The Availability column holds a Catalog::Availability CODE (Present is 0, and an
+    unset cell reads as 0 -- see "Offline is Not Missing"). The table shows the word, and
+    shows NOTHING for Present: every folder-scope row is Present, and a column of the
+    same word repeated is not information. The badge on the thumbnail makes the same
+    choice for the same reason. */
+class AvailabilityItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit AvailabilityItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+};
+
 class VideoItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
