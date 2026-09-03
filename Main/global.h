@@ -617,6 +617,14 @@ Q_NAMESPACE
     extern std::atomic<int>    probeIconCacheHits;    // getImage returned an image
     extern std::atomic<int>    probeIconCacheMisses;
     extern std::atomic<int>    probeIconCount;
+    /*  HOW MANY PER-ROW dataChanged NOTIFICATIONS ACTUALLY REACH THE VIEWS, and how many
+        the visible-row throttle suppressed. On macOS each one that gets through makes the
+        Cocoa accessibility bridge rebuild its element array for every row in the model,
+        so this is the count that decides whether a large load stalls. Printed on the GUI
+        stall line, because the question it answers -- "is the throttle actually
+        throttling?" -- is exactly the question a stall raises. */
+    extern std::atomic<int>    probeEmitVisible;
+    extern std::atomic<int>    probeEmitSuppressed;
 
     extern QColor textColor;
     extern QColor backgroundColor;

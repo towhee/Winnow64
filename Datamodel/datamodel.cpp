@@ -3604,10 +3604,27 @@ bool DataModel::iconRowVisible(const QModelIndex &dmIdx)
     firstVisibleIcon / lastVisibleIcon are sf (proxy) rows maintained by MW::updateIconRange;
     a degenerate range (not yet established) falls back to "visible" so nothing is missed.
 */
-    if (!G::useVisibleOnlyIconEmit) return true;
-    if (lastVisibleIcon <= firstVisibleIcon) return true;   // range not established → emit
+    /*  COUNTED, because "the throttle is on" and "the throttle is throttling" are
+        different claims and only the second one matters. Every true here is a
+        dataChanged that reaches the views -- and on macOS an accessibility rebuild over
+        the whole model. The counts are reported on the GUI stall line. */
+    if (!G::useVisibleOnlyIconEmit) {
+        G::probeEmitVisible.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+    if (lastVisibleIcon <= firstVisibleIcon) {
+        /*  RANGE NOT ESTABLISHED, so everything is treated as visible -- the safe answer,
+            since a suppressed notification for a row that IS on screen leaves a blank
+            cell. Counted separately: if a large load spends its time here, the throttle
+            is a no-op and the fix is to establish the range before icons arrive. */
+        G::probeEmitVisible.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
     const int sfRow = sf->mapFromSource(dmIdx).row();
-    return sfRow >= firstVisibleIcon && sfRow <= lastVisibleIcon;
+    const bool visible = sfRow >= firstVisibleIcon && sfRow <= lastVisibleIcon;
+    if (visible) G::probeEmitVisible.fetch_add(1, std::memory_order_relaxed);
+    else         G::probeEmitSuppressed.fetch_add(1, std::memory_order_relaxed);
+    return visible;
 }
 
 void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
