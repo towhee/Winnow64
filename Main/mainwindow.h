@@ -517,6 +517,12 @@ public slots:
         first batch and to the last, then exits. See Cache/catalogprobe.h for why this
         cannot be a unit test. Called from main, like the other test modes. */
     void runCatalogLoadTest(const QString &pathFilter);
+    /*  GUI STALL WATCHDOG. A timer that should fire every 250 ms and reports when it was
+        LATE, which is the only direct measurement of a beachball: it says when the event
+        loop froze and for how long, so the [PERF] lines either side of the gap say what
+        did it. Armed automatically once the model is large (a catalog scope), so a person
+        can reproduce a stall without setting an environment variable first. */
+    void armGuiStallWatchdog();
     /* Start / stop the background scan over catalogRoots. */
     void startCatalogScan();
     void stopCatalogScan();
@@ -2060,6 +2066,12 @@ private:
     QString folderDockTabText;
     QString folderDockTabRichText;
     QString favDockTabText;
+    /*  GUI stall watchdog state -- see MW::armGuiStallWatchdog. Data members, so NOT in a
+        slots section: moc rejects those with "Not a signal or slot declaration". */
+    QTimer *guiStallTimer = nullptr;
+    qint64 guiStallLastMs = 0;
+    QElapsedTimer guiStallClock;
+
     QString filterDockTabText;
     QString catalogDockTabText;
     QString metadataDockTabText;

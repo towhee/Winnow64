@@ -200,6 +200,12 @@ void FindPanel::setScope(Scope s)
 
 void FindPanel::applyScope()
 {
+    /*  TIMED UNCONDITIONALLY -- once per scope switch is one line, and this is inside
+        the click a person reported as a beachball: it re-points the category tree and is
+        what the Catalog row in the Folders panel calls into. */
+    QElapsedTimer asTimer;
+    asTimer.start();
+
 /*
     Point the category tree at the right source and set the footer's verb.
 
@@ -246,6 +252,10 @@ void FindPanel::applyScope()
         emit rebuildFolderCategoriesRequested();
     }
     refresh();
+
+    qDebug().noquote() << "[PERF] FindPanel::applyScope" << asTimer.elapsed()
+                           << "ms  scope ="
+                           << (currentScope == CatalogScope ? "Catalog" : "Folders");
 }
 
 void FindPanel::focusSearch()
