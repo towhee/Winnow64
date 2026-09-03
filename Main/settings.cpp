@@ -363,7 +363,7 @@ bool MW::loadSettings()
         G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
         G::cacheThumbnails = true;
         G::maxIconChunk = 10000;
-        G::maxSearchResults = 5000;
+        G::maxSearchResults = 0;      // no limit; see global.cpp
         G::useIndexMetadata = false;
         G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
@@ -587,7 +587,15 @@ bool MW::loadSettings()
     }
     if (settings->contains("maxSearchResults")) {
         const int n = settings->value("maxSearchResults").toInt();
-        if (n >= 0) G::maxSearchResults = n;
+        /*  THE OLD 5,000 DEFAULT IS RETIRED ONCE, not honoured. It was saved for every
+            existing user, so leaving it in place would keep their Catalog scope capped
+            at a number that only ever existed because a row cost 20 KB and had to be
+            read from its file -- and the point of the change is that picking the catalog
+            now shows the catalog. A user who deliberately chose 5,000 loses that choice
+            here, which is the cost of not being able to tell the two apart; every other
+            value is kept. */
+        if (n == 5000) settings->remove("maxSearchResults");
+        else if (n >= 0) G::maxSearchResults = n;
     }
     if (settings->contains("useIndexMetadata"))
         G::useIndexMetadata = settings->value("useIndexMetadata").toBool();

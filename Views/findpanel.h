@@ -170,8 +170,16 @@ private:
         how much may be shown, and how much may be replaced unasked. If a load
         ever feels heavy it is the second to lower, and having them named
         apart is what makes that possible without touching the first. */
-    static int resultLimit()  { return G::maxSearchResults > 0 ? G::maxSearchResults : INT_MAX; }
-    static int autoLoadMax()  { return resultLimit(); }
+    /*  The SQL limit, passed straight through: 0 means no LIMIT clause at all, which is
+        the default. Returning INT_MAX instead would put "LIMIT 2147483647" on every
+        query -- the same answer, said misleadingly. */
+    static int resultLimit()  { return G::maxSearchResults > 0 ? G::maxSearchResults : 0; }
+    /*  How much may be loaded WITHOUT being asked. Uncapped by default, because that is
+        the whole point: picking the catalog shows the catalog. It stays a separate name
+        from resultLimit so that "how much is found" and "how much is loaded unasked"
+        can be told apart again if an automatic load ever feels heavy. */
+    static int autoLoadMax()  { return G::maxSearchResults > 0 ? G::maxSearchResults
+                                                              : INT_MAX; }
     /* Keystrokes are coalesced into one query: it hits SQLite and FTS5 on the GUI thread,
        and at a quarter of a million rows a query per character would be felt. */
     static constexpr int kDebounceMs = 250;

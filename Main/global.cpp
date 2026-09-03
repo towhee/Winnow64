@@ -246,7 +246,11 @@ PreviewSource previewSource = PreviewSource::Developed;
 int devPreviewMaxEdge = kDevPreviewSizeFull;
 int devPreviewQuality = kDevPreviewQualityDefault;
 qint64 devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;   // 20 GB
-int maxSearchResults = 5000;
+/*  0 = NO LIMIT, and that is the default: Catalog scope shows the whole catalog, the way
+    picking a folder shows the whole folder. The cap existed because a row cost ~20 KB and
+    every row had to be read from its file; the packed row store and Catalog::searchRows
+    removed both reasons. It survives as a safety valve the user can set. */
+int maxSearchResults = 0;
 bool useIndexMetadata = false;   // default off; see global.h
 bool cacheThumbnails = true;                 // write thumbnails to the index as icons load
 qint64 thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;    // 5 GB ~ 250k thumbnails

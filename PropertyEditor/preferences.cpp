@@ -1313,11 +1313,13 @@ void Preferences::addDevPreviews()
     i.parentName = "DevPreviewHeader";
     i.captionText = "Maximum search results";
     i.tooltip = "How many images a catalog search returns and loads at once.\n\n"
-                "The number of matches reported is always the true total, so you\n"
-                "are told when you are seeing a subset -- this caps what is\n"
-                "brought in, not what is found.\n\n"
-                "Raising it loads more of a large library in one go; each image\n"
-                "costs a row plus, up to the thumbnail ceiling below, a thumbnail.\n\n"
+                "No limit by default: picking the catalog shows the whole catalog,\n"
+                "the way picking a folder shows the whole folder. Rows are cheap --\n"
+                "the cost that scales is thumbnails, which the ceiling below bounds\n"
+                "on their own.\n\n"
+                "Set a number only if you want a large library deliberately capped.\n"
+                "The count reported is always the true total, so you are told when\n"
+                "you are seeing a subset.\n\n"
                 "Takes effect on the next search."
         ;
     i.hasValue = true;

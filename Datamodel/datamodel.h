@@ -426,6 +426,12 @@ public:
 
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
+    /*  HOW MANY ROWS THE SET WILL HOLD, while a streamed fill is still delivering them.
+        0 when nothing is streaming. The status bar reports this rather than rowCount()
+        during a load, so a catalog of 43,000 says "1 of 43,000" from the first thumbnail
+        instead of counting up -- the batching is the loader's business, not something the
+        user should have to watch. */
+    int expectedRows = 0;
     bool basicFileInfoLoaded = false;   // not used. do not navigate until basic info loaded in datamodel
     bool folderHasMissingEmbeddedThumb;        // jpg/tiff only
 
