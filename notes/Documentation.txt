@@ -1457,7 +1457,13 @@ THE FIX IS AN ASYMMETRY THAT WAS ALREADY HALF-CLOSED. DataModel::setValDm has wr
 
 MEASURED IN THE GUI AFTER THROTTLING setValSf: 41.8 s -> 14.6 s, and one stall instead of two. Two thirds of it, from one function. What remained was the OTHER path an icon arrives by: DataModel::setIcon made three bare setData calls -- decoration, IconLoadedColumn, MetadataReadingColumn -- so three notifications per icon, where setIcon1 next to it had been batching them under a blocker and emitting once, for visible rows only, since the earlier work. It now does the same.
 
-A THIRD PATH IS STILL OPEN, and is worth knowing before the next measurement: iconRowVisible returns TRUE when the visible range is not yet established (lastVisibleIcon <= firstVisibleIcon), which is the safe answer -- nothing is missed -- but during the first moments of a load it means every write emits anyway.
+THE COUNTERS SAID THE THROTTLE WAS WORKING AND THE STALL WAS SOMETHING ELSE: emits(visible) = 225 against emits(suppressed) = 7,999, visRange 0-10 -- and emits(visible) did not move during any of the three stalls. Whatever was blocking was not notifying.
+
+A SECOND SAMPLE NAMED THE FOURTH WRITE PATH: DataModel::setIconFromVideoFrame -> setData -> dataChanged -> updateTableModel. Video thumbnails have their own setter, it never consulted iconRowVisible, and it made FIVE bare setData calls -- decoration, IconLoadedColumn, MetadataStatusColumn, MetadataReadingColumn, AspectRatioColumn -- with an empty brace block where the QSignalBlocker belonged. The shape had been started and never finished. It was not even counted, which is why emits(visible) sat frozen while the stalls continued.
+
+A CATALOG HOLDS VIDEOS -- 201 in the icon range on this library, ~209 in the index -- and a video frame decodes slowly, so they arrive spread across the whole load. One accessibility rebuild of 42,979 elements each.
+
+FOUR WRITE PATHS, ONE RULE. setValDm, setIcon1, setIcon, setValSf and setIconFromVideoFrame now all write under a QSignalBlocker and emit one dataChanged for visible rows only. The blocker in the video path ends before videoReadingCleared, because QSignalBlocker blocks every signal the object emits and MetaRead needs that one to drop its in-flight marker.
 
 THE SAME SHAPE, THREE TIMES IN ONE INVESTIGATION: SortFilter recompiling the whole predicate per tree item, MetaRead re-dispatching every row per redo, and the accessibility bridge rebuilding every row per write. Each was invisible at folder scale and quadratic at catalog scale.
 
