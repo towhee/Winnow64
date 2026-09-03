@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Cache/catalogprobe.h"
 #include <QApplication>
 #include "qtsingleapplication.h"
 #include <QMediaPlayer>
@@ -6,6 +7,7 @@
 #include <QFontDatabase>
 #include <tiffio.h>
 #include <cstdarg>
+#include <cstdlib>
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #endif
@@ -107,6 +109,14 @@ int main(int argc, char *argv[])
        multi-submask scope and drives a brush drag, which is the only way anything in the
        suite reaches the worker-thread proxy render. See MW::runDevelopStressTest. */
     bool isDevTest = false;
+    /* Catalog cost probe (see Cache/catalogprobe.h):
+         Winnow --catalogprobe [path substring]
+       Unlike every mode above it must NOT run in QStandardPaths test mode, because the
+       whole point is to measure the user's REAL index -- an isolated settings location
+       would open an empty database and report that browsing a catalog is free. It reads
+       and writes nothing else, and exits before any window is created. */
+    bool isCatalogProbe = false;
+    QString catalogProbeFilter;
     QString selfTestFolder;
     QString metaTestFile;
     QString devTestFolder;
@@ -121,13 +131,19 @@ int main(int argc, char *argv[])
         else if (arg == "--metatest") isMetaTest = true;
         else if (arg == "--soaktest") isSoakTest = true;
         else if (arg == "--devtest") isDevTest = true;
+        else if (arg == "--catalogprobe") isCatalogProbe = true;
+        else if (isCatalogProbe && catalogProbeFilter.isEmpty()) catalogProbeFilter = arg;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
         else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
         else if (isDevTest && devTestFolder.isEmpty()) devTestFolder = arg;
         else if (isSoakTest) soakFolders << arg;
     }
-    const bool isTestMode = isSelfTest || isMetaTest || isSoakTest || isDevTest;
-    if (isTestMode) QStandardPaths::setTestModeEnabled(true);
+    /* The probe joins these for the SINGLE-INSTANCE bypass only -- it must always start
+       fresh rather than handing its arguments to a running Winnow -- and deliberately not
+       for the test-mode settings isolation below. */
+    const bool isTestMode = isSelfTest || isMetaTest || isSoakTest || isDevTest
+                            || isCatalogProbe;
+    if (isTestMode && !isCatalogProbe) QStandardPaths::setTestModeEnabled(true);
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
@@ -177,6 +193,15 @@ int main(int argc, char *argv[])
     // Only the family is set here; text size is driven by the per-widget
     // font-size in G::css (G::fontSize).
     instance.setFont(QFontDatabase::systemFont(QFontDatabase::GeneralFont));
+
+    /*  Before MW: the probe needs qApp (Metadata resolves the ExifTool path from the
+        application directory) and nothing else. Constructing the main window would load a
+        folder and start the caches, which is exactly the activity whose cost is being
+        measured. */
+    if (isCatalogProbe) {
+        const int rc = CatalogProbe::run(catalogProbeFilter);
+        std::_Exit(rc);
+    }
 
     MW mw(args);
 
