@@ -92,8 +92,9 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {folderDockTabText,   ":/images/icon16/foldertree_white.png"},
         {favDockTabText,      ":/images/icon16/bookmarks_white.png"},
         {filterDockTabText,   ":/images/icon16/filters_white.png"},
-        /* filterDockTabText is "Find" with G::useFindDock; the Catalog entry simply
-           never matches, because there is no Catalog tab to draw. */
+        /* The filter dock keeps the "Filters" tab text even when G::useFindDock folds
+           the Catalog panel into it; the Catalog entry simply never matches then,
+           because there is no separate Catalog tab to draw. */
         {catalogDockTabText,  ":/images/icon16/catalog_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
