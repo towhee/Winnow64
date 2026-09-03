@@ -10,6 +10,7 @@
 #include <QSqlDatabase>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 #include <QVector>
 
 /*
@@ -256,6 +257,18 @@ public:
        3,214". */
     QStringList search(const CatalogQuery &q, int limit = 5000, int *total = nullptr);
 
+    /* The same matches as search(), in the same order, as WHOLE ROWS -- everything a
+       datamodel row displays, without opening a single file. This is what lets a catalog
+       result be loaded like a folder rather than read like one: the rows come back in the
+       query that found them, instead of one indexed lookup per path afterwards.
+
+       It TRUSTS THE INDEX. No file is stat'd, so nothing here can tell whether a row is
+       still current; that question needs the file's stamps and belongs to fetchFresh,
+       which the caller uses for the rows it is about to show. limit <= 0 means every
+       match. total (optional) receives the full count as in search(). */
+    QVector<CatalogRow> searchRows(const CatalogQuery &q, int limit = 0,
+                                   int *total = nullptr);
+
     /*  WHY IS THIS IMAGE NOT OPENABLE RIGHT NOW? The catalog can outlive the
         files it indexes, and the two ways that happens are not the same thing:
 
@@ -353,6 +366,11 @@ private:
     /* The calling thread's connection, with the catalog's own lazy init done. May be
        closed -- every caller checks isOpen() and degrades to "no catalog". */
     QSqlDatabase dbLocked();
+    /* The WHERE/FROM/binds a CatalogQuery compiles to, shared by search() and
+       searchRows() so the two cannot disagree about what a query matches. Caller holds
+       the mutex. */
+    void buildQueryLocked(const CatalogQuery &cq, QString &from,
+                          QStringList &where, QVariantList &binds);
     void ensureLoadedLocked();
 
     /* Id for a keyword name, inserting it if new. Memoised, so a folder commit costs one

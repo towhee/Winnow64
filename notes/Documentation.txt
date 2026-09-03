@@ -71,6 +71,8 @@ Follow the format conventions above for anything new. In particular, do not hard
      Thumbnails in the Index (Schema 5)
      Offline is Not Missing (Catalog Availability)
      What Actually Limits a Large Scope (Measured at 43,000)
+     The Rows Come Back in the Query That Found Them (searchRows)
+     A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
      The Index as a Metadata Source (fetchFresh)
@@ -1256,6 +1258,35 @@ kResultLimit AND kAutoLoadMax ARE GONE, replaced by G::maxSearchResults -- one s
 THE TWO QUESTIONS THEY ANSWERED ARE STILL SEPARATE, even though one setting drives both: how much may be SHOWN, and how much may be REPLACED UNASKED. FindPanel::resultLimit and autoLoadMax are named apart for that reason -- if an automatic load ever feels heavy it is the second to lower, and having them distinct is what makes that possible without touching the first.
 
 WHAT DID NOT CHANGE: the reported match count is still the TRUE total, so a user seeing a subset is told so. The cap governs what is brought in, never what is found.
+
+⏺ DataModel Changes > The Rows Come Back in the Query That Found Them (searchRows)
+
+THE COST OF HYDRATING A CATALOG SCOPE WAS MEASURED, NOT ESTIMATED, and the estimate it replaced was wrong twice over. Winnow --catalogprobe (Cache/catalogprobe.h) runs its stages against the REAL index -- an isolated test-mode settings dir would open an empty database and report that browsing a catalog is free -- and prints what each one costs per row. On 43,050 images in 176 folders, all local, debug build:
+
+    A  SQL pass (Catalog::search)                 67 ms      1.6 us/row
+    B  stat sweep (IndexMetadata::candidate)     509 ms     11.8 us/row
+    C  bulk Catalog::fetchFresh                1,710 ms     39.7 us/row
+    E  Catalog::searchRows                       308 ms      7.1 us/row
+    D  full file read, serial                     67 s    1,616 us/row
+    D  full file read, 18 threads                8.7 s      147 us/row
+
+A STAT IS ~137x CHEAPER THAN A READ like-for-like, which is what makes verification affordable as a background activity rather than a load-time one: stat-ing the whole 43,000-row catalog costs half a second where re-reading it costs a minute, and the scroll-in stat of a 10,000-row icon window is 118 ms against 16 s to re-read the same window.
+
+THE INDEX ANSWERS FOR ESSENTIALLY EVERYTHING: 42,996 of 43,050 rows fresh, 54 stale or unindexed -- 0.1%. Serving a browse from the index is not carrying a hidden population of rows that must be read anyway.
+
+RAW IS NOT THE EXPENSIVE CASE, which contradicts the ~20 ms figure quoted in "Metadata From the Index" above. A raw-only folder (1,046 ARW) read at 690 us/row, well UNDER the whole-catalog average of 1,616 us. This library is 89% JPEG (38,226 jpg, 2,733 tif, 1,825 raw) and the slow rows are the big JPEG and TIFF ones. Both remembered figures -- "1 ms" and "20 ms" -- were true measurements of different file mixes, which is why the probe reports the mix it measured.
+
+FETCHFRESH WAS THE COST, AND IT IS THE WRONG QUESTION FOR A BROWSE. Finding the rows took 67 ms; looking each one up afterwards took 1,710 ms -- 25x the search that already knew which rows they were. fetchFresh is one indexed seek per path plus one keyword query per image, which is the right shape when the caller has a list of files and needs to know which of them are current, and the wrong shape when the caller has just run a query.
+
+Catalog::searchRows IS THAT QUERY ASKED ONCE. Same predicate, same order, whole rows: 308 ms for all 43,050, 5.8x faster than search + fetchFresh. The keywords come back in ONE join whose subquery reuses the predicate, rather than 43,050 round trips.
+
+IT DELIBERATELY DOES NOT CHECK FRESHNESS, and that is the difference from fetchFresh rather than an omission. Freshness needs the file's size and mtime, so every candidate must be stat'd before the question can be asked; a browse does not need it, because a row's stamps are checked when the row is actually looked at. Callers that must know a row is current still go through fetchFresh.
+
+ONE PREDICATE, SHARED. Catalog::buildQueryLocked now compiles a CatalogQuery for both, because "which images does this query match" must mean exactly one thing -- otherwise the count beside the results could describe a different set from the rows on screen. tst_catalog::searchRowsMatchesSearchExactly holds them to the same paths in the same order with the same total across five query shapes, and searchRowsReturnsWhatFetchFreshWouldHave compares the two row-fillers field by field. The probe repeats that comparison over the real library: 42,996 rows, 0 mismatched.
+
+THE COLUMN LIST AND THE ROW MAPPING ARE ALSO SHARED (kRowColumns and readRow in catalog.cpp), for the reason IndexMetadata exists one layer up: a second place that spells a row is a second place for a shutter speed to come back different.
+
+CAVEATS ON THE NUMBERS. Debug build, so the file-read figures are pessimistic and the SQL and stat figures much less so. Every volume measured was local; the network case is unmeasured, and --catalogprobe takes a path substring so a mounted share can be timed on its own. The 18-thread read is wall clock against a serial stat sweep, so that comparison is not like-for-like and the probe says so in its own output.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 

@@ -43,6 +43,8 @@ private slots:
     void keywordCategoryCountsImages();
     void staleOfReportsOnlyWhatChanged();
     void fetchFreshReturnsWhatNeedNotBeRead();
+    void searchRowsReturnsWhatFetchFreshWouldHave();
+    void searchRowsMatchesSearchExactly();
     void fetchFreshAndStaleOfAgreeExactly();
     void displayFieldsSurviveTheRoundTrip();
     void sweepDemotesMissingSource();
@@ -377,6 +379,158 @@ void tst_catalog::fetchFreshReturnsWhatNeedNotBeRead()
 
     // and one that was never catalogued at all
     QVERIFY(cat.fetchFresh({rowFor("never-catalogued.jpg")}).isEmpty());
+}
+
+void tst_catalog::searchRowsReturnsWhatFetchFreshWouldHave()
+{
+    /*  THE SAME ROW, FOUND THE OTHER WAY. searchRows exists so a catalog result can be
+        loaded without a lookup per path -- but only if the row it returns is the row
+        fetchFresh would have returned. A faster path that quietly drops a field would
+        show the user a picture with no title, no rating or the wrong orientation, and
+        nothing downstream could tell which query had filled it. */
+    Catalog &cat = Catalog::instance();
+
+    CatalogRow a = rowFor("rows1.jpg", {"Heron"}, {"Wildlife|Birds|Heron"});
+    a.title = "Great Blue";
+    a.creator = "R Hill";
+    a.copyright = "(c) 2026";
+    a.make = "NIKON CORPORATION";
+    a.model = "NIKON Z 9";
+    a.lens = "NIKKOR Z 400mm f/4.5";
+    a.iso = 800;
+    a.aperture = 5.6;
+    a.shutter = 0.0008;
+    a.focalLength = 400;
+    a.width = 8256;
+    a.height = 5504;
+    a.rating = 4;
+    a.label = "Red";
+    a.pick = true;
+    a.gpsCoord = "49.28,-123.12";
+    a.orientation = 6;
+    a.exposureComp = "-0.3";
+    a.developed = true;
+    a.devPreviewKey = "abc123";
+    a.shootingInfo = "1/1250 sec at f/5.6, ISO 800";
+    a.captured = QDateTime::fromSecsSinceEpoch(1600000000);
+    QCOMPARE(cat.commit({a}), 1);
+
+    const QHash<QString, CatalogRow> viaFetch = cat.fetchFresh({a});
+    QCOMPARE(viaFetch.size(), 1);
+
+    CatalogQuery q;
+    const QVector<CatalogRow> viaRows = cat.searchRows(q);
+    QCOMPARE(viaRows.size(), 1);
+
+    const CatalogRow &f = viaFetch.value(a.path);
+    const CatalogRow &r = viaRows.first();
+
+    QCOMPARE(r.path, f.path);
+    QCOMPARE(r.folder, f.folder);
+    QCOMPARE(r.filename, f.filename);
+    QCOMPARE(r.ext, f.ext);
+    QCOMPARE(r.captured, f.captured);
+    QCOMPARE(r.rating, f.rating);
+    QCOMPARE(r.label, f.label);
+    QCOMPARE(r.pick, f.pick);
+    QCOMPARE(r.title, f.title);
+    QCOMPARE(r.creator, f.creator);
+    QCOMPARE(r.copyright, f.copyright);
+    QCOMPARE(r.make, f.make);
+    QCOMPARE(r.model, f.model);
+    QCOMPARE(r.lens, f.lens);
+    QCOMPARE(r.iso, f.iso);
+    QCOMPARE(r.aperture, f.aperture);
+    QCOMPARE(r.shutter, f.shutter);
+    QCOMPARE(r.focalLength, f.focalLength);
+    QCOMPARE(r.width, f.width);
+    QCOMPARE(r.height, f.height);
+    QCOMPARE(r.gpsCoord, f.gpsCoord);
+    QCOMPARE(r.orientation, f.orientation);
+    QCOMPARE(r.exposureComp, f.exposureComp);
+    QCOMPARE(r.developed, f.developed);
+    QCOMPARE(r.devPreviewKey, f.devPreviewKey);
+    QCOMPARE(r.shootingInfo, f.shootingInfo);
+    QCOMPARE(r.keywordPaths, f.keywordPaths);
+
+    /*  Keyword ORDER is not the contract -- fetchFresh reads one image's keywords at a
+        time and searchRows reads them all in one join -- but the SET is. */
+    QList<QString> rk = r.keywords, fk = f.keywords;
+    rk.sort(); fk.sort();
+    QCOMPARE(rk, fk);
+    QVERIFY2(rk.contains("Wildlife"), "an ancestor did not come back");
+
+    /*  IT DOES NOT ASK WHETHER THE FILE IS FRESH, which is the deliberate difference.
+        A row whose file has changed is absent from fetchFresh and still present here:
+        browsing shows it, and the stamp is checked when it is actually looked at. */
+    CatalogRow changed = a;
+    changed.srcMtime += 1;
+    QVERIFY(cat.fetchFresh({changed}).isEmpty());
+    QCOMPARE(cat.searchRows(q).size(), 1);
+}
+
+void tst_catalog::searchRowsMatchesSearchExactly()
+{
+    /*  ONE PREDICATE, TWO SHAPES. search() answers the count beside the results and
+        searchRows() produces the rows themselves, so if they compiled the query
+        differently the panel would say one number and show another set. They share
+        buildQueryLocked precisely so that cannot drift, and this is what holds it. */
+    Catalog &cat = Catalog::instance();
+
+    CatalogRow heron = rowFor("sr-heron.jpg", {"Heron"});
+    heron.model = "NIKON Z 9";
+    heron.rating = 5;
+    heron.captured = QDateTime::fromSecsSinceEpoch(1600000000);
+
+    CatalogRow eagle = rowFor("sr-eagle.jpg", {"Eagle"});
+    eagle.model = "SONY ILCE-9M2";
+    eagle.rating = 2;
+    eagle.captured = QDateTime::fromSecsSinceEpoch(1700000000);
+
+    CatalogRow gull = rowFor("sr-gull.jpg", {"Gull"});
+    gull.model = "NIKON Z 9";
+    gull.rating = 1;
+    gull.captured = QDateTime::fromSecsSinceEpoch(1500000000);
+
+    QCOMPARE(cat.commit({heron, eagle, gull}), 3);
+
+    const auto pathsOf = [](const QVector<CatalogRow> &rows) {
+        QStringList out;
+        for (const CatalogRow &r : rows) out << r.path;
+        return out;
+    };
+
+    /*  Every query shape the two must agree on: everything, a keyword, a column
+        restriction, free text, and a rating floor. */
+    QVector<CatalogQuery> queries;
+    CatalogQuery all;                       queries << all;
+    CatalogQuery byKeyword;                 byKeyword.keywords << "Heron";
+    queries << byKeyword;
+    CatalogQuery byModel;                   byModel.model = "NIKON Z 9";
+    queries << byModel;
+    CatalogQuery byText;                    byText.text = "Eagle";
+    queries << byText;
+    CatalogQuery byRating;                  byRating.minRating = 3;
+    queries << byRating;
+
+    for (const CatalogQuery &q : queries) {
+        int searchTotal = 0;
+        int rowsTotal = 0;
+        const QStringList paths = cat.search(q, 0, &searchTotal);
+        const QVector<CatalogRow> rows = cat.searchRows(q, 0, &rowsTotal);
+        QCOMPARE(rowsTotal, searchTotal);
+        /*  ORDER INCLUDED, not just membership: both order by captured DESC with id as
+            the tie-break, and a grid that reshuffled when the rows arrived by the other
+            path would be the visible symptom. */
+        QCOMPARE(pathsOf(rows), paths);
+    }
+
+    /*  The limit applies the same way, and cuts the same end of the ordering. */
+    int total = 0;
+    const QVector<CatalogRow> capped = cat.searchRows(CatalogQuery(), 2, &total);
+    QCOMPARE(capped.size(), 2);
+    QCOMPARE(total, 3);
+    QCOMPARE(pathsOf(capped), cat.search(CatalogQuery(), 2));
 }
 
 void tst_catalog::fetchFreshAndStaleOfAgreeExactly()

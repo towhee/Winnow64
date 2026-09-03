@@ -203,6 +203,70 @@ int run(const QString &pathFilter)
         + QString::number(misses) + " stale or unindexed   "
         + perRow(freshNs, cands.size()));
 
+    /*  STAGE E -- the same rows, in the query that found them.
+
+        A+C is the two-step hydration: find the paths, then look each one up. This is the
+        one-step form, and the comparison is the whole reason searchRows exists. It is
+        also checked rather than merely timed: same count, same order, and a field-level
+        comparison against what fetchFresh returned for the rows the two have in common.
+        A faster path that returns a different row is not a faster path. */
+    t.restart();
+    int rowsTotal = 0;
+    const QVector<CatalogRow> rows =
+        Catalog::instance().searchRows(q, wantRows, &rowsTotal);
+    const qint64 rowsNs = t.nsecsElapsed();
+
+    int compared = 0;
+    int mismatched = 0;
+    QString firstMismatch;
+    for (const CatalogRow &r : rows) {
+        const auto it = fresh.constFind(r.path);
+        if (it == fresh.constEnd()) continue;    // stat said stale; nothing to compare
+        const CatalogRow &f = it.value();
+        ++compared;
+        QStringList bad;
+        if (r.filename != f.filename)   bad << "filename";
+        if (r.folder != f.folder)       bad << "folder";
+        if (r.ext != f.ext)             bad << "ext";
+        if (r.captured != f.captured)   bad << "captured";
+        if (r.rating != f.rating)       bad << "rating";
+        if (r.label != f.label)         bad << "label";
+        if (r.pick != f.pick)           bad << "pick";
+        if (r.title != f.title)         bad << "title";
+        if (r.make != f.make)           bad << "make";
+        if (r.model != f.model)         bad << "model";
+        if (r.lens != f.lens)           bad << "lens";
+        if (r.iso != f.iso)             bad << "iso";
+        if (r.width != f.width)         bad << "width";
+        if (r.height != f.height)       bad << "height";
+        if (r.orientation != f.orientation) bad << "orientation";
+        if (r.developed != f.developed) bad << "developed";
+        if (r.devPreviewKey != f.devPreviewKey) bad << "devPreviewKey";
+        if (r.shootingInfo != f.shootingInfo)   bad << "shootingInfo";
+        /*  Keyword ORDER is not part of the contract -- fetchFresh reads them one image
+            at a time and searchRows reads them all in one join, so the two arrive in
+            different orders for the same image. The SET is the fact. */
+        QStringList a = r.keywords, b = f.keywords;
+        a.sort(); b.sort();
+        if (a != b)                     bad << "keywords";
+        if (!bad.isEmpty()) {
+            ++mismatched;
+            if (firstMismatch.isEmpty())
+                firstMismatch = r.filename + ": " + bad.join(", ");
+        }
+    }
+
+    say("E  whole rows in one query (Catalog::searchRows)");
+    say("     " + ms(rowsNs) + "   " + QString::number(rows.size()) + " rows of "
+        + QString::number(rowsTotal) + " matching   " + perRow(rowsNs, rows.size()));
+    say("     vs A+C " + ms(searchNs + freshNs) + " for the same rows -- "
+        + (rowsNs > 0
+               ? QString::number(double(searchNs + freshNs) / rowsNs, 'f', 1) + "x faster"
+               : QString("n/a")));
+    say("     " + QString::number(compared) + " rows compared field-by-field against "
+        "fetchFresh, " + QString::number(mismatched) + " mismatched"
+        + (firstMismatch.isEmpty() ? QString() : "   first: " + firstMismatch));
+
     /*  STAGE D -- the file read that all of the above exists to avoid.
 
         Sampled, and deliberately over rows spread ACROSS the result rather than the first
