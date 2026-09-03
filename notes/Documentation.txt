@@ -75,6 +75,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Filling the Model From the Index (addCatalogRows)
      No Cap, and a Streamed Fill (Pos: 1 of 43,050)
      The Filter Tree Recompiled Once Per Item (56 Seconds of Dead GUI)
+     Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
      A Headless Test for the Other Load Path (catalog_load)
      Writing Thumbnails as They Load (and What It Costs)
      Reading Them Back (and the Gate That Was Almost Wrong)
@@ -1354,6 +1355,26 @@ MEASURED, 43,050 rows, debug build:
 THE COMPILE STORM ALSO DELAYED THE START, which is why the first batch moved: the tree mutations during teardown and setup were recompiling too. This is not a catalog fix -- it is a Filters fix that a catalog scope was the first thing big enough to expose, and every folder load pays a smaller version of the same bill.
 
 A HYDRATED CATALOG SCOPE ALSO STOPPED COMMITTING ITSELF BACK. MW::folderChangeCompleted builds the commit payload with dm->catalogRows(), which reads ~40 columns of every row on the GUI thread, and then writes them to the index -- for rows that had just come OUT of the index, unchanged. It is skipped when ScopeRequest::rows is non-empty. A folder scope still commits, because its rows were read from files and the index may never have seen them.
+
+⏺ DataModel Changes > Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
+
+FILTERS APPEARED INSTANTLY AND THUMBNAILS NEVER APPEARED AT ALL. Not slowly -- never. The fix before this one had taken the GUI from 56 s of dead event loop to 8 s, and the report back was that the filter tree now built at once and the grid stayed empty.
+
+MW::folderChanged HAS AN EARLY RETURN THAT MEANS "nothing was added, so there is nothing to read":
+
+    if (dm->isMetaReadFinished()) { ...; folderChangeCompleted(); return; }
+
+It is correct for the only two cases it had ever seen -- a load that only removed rows, and an empty folder. isMetaReadFinished() asks ONLY about metadata: metadataAttemptedCount >= rowCount(). A hydrated catalog scope satisfies it on arrival, because every row came out of the index already MetaLoaded -- and NOT ONE ICON is loaded. So metaRead->initialize and setStartRow were both skipped and nothing ever asked for a thumbnail. The filters were fast for the same reason they were empty of pictures: metadata was all there, and metadata is all they need.
+
+THE ICONS ARE THE ONE THING THE INDEX CANNOT SERVE from the image table. Every other column of a hydrated row comes out of SQLite; a thumbnail comes from ThumbCache or from opening the file, and either way it is MetaRead's job. The early return now requires isIconRangeLoaded() as well, and dm->setIconRange(startRow) moved above it -- the range has to exist before it can be asked about, and setting it only computes first/last around startRow.
+
+MEASURED after the fix, 43,050 rows, debug build, headless:
+
+    fill complete            5,105 ms
+    icons at first tick      3,917  (t = 6,184 ms)
+    icons climbing           5,171 by t = 13,370 ms
+
+WHAT THIS COST, AND WHY. Three fixes in a row each looked complete on the headless numbers and each left a person waiting: a pump that never pumped (G::useProcessEvents is false by default), a filter tree that recompiled per item (O(items^2)), and this. Every one was invisible on the ~1,000-row fixture the automated tests use and obvious at 43,000. --catalogload exists so the 43,000-row case can be run without a person clicking, and icons=0 was sitting in its output for two of those rounds before it was read as the signal it was -- it was explained away as an artifact of running offscreen. The icon range is chunk-based, not visibility-based, so it never was one.
 
 ⏺ DataModel Changes > A Headless Test for the Other Load Path (catalog_load)
 
