@@ -1800,10 +1800,19 @@ void DataModel::insertCatalogBatch()
     const int from = pendingCatalogAt;
     const int to = qMin(pendingCatalogRows.size(), from + kInsertBatch);
     if (from >= to) { finishCatalogFill(); return; }
+    /*  The accumulators are cumulative over the whole fill, so a per-batch figure is the
+        difference across this batch. Printing the cumulative total per batch would look
+        like a rising cost whether or not one existed -- the exact illusion this is meant
+        to test for. */
+    const qint64 cellsBefore = perfFillInsertNs + perfFillFileDataNs
+                             + perfFillIndexFillNs + perfFillAddMetaNs;
 
     int row = rowCount();
     const int firstOfBatch = row;
-    const bool probe = G::isPerfProbe;
+    /*  PRINTED WHEN THE SET IS LARGE, not only under G::isPerfProbe: a person clicking
+        Catalog is the only way the GUI-side cost of a batch has ever been seen, and
+        asking them to set an environment variable first is a round trip wasted. */
+    const bool probe = G::isPerfProbe || expectedRows > 20000;
     QElapsedTimer pt;
     if (probe) pt.start();
 
@@ -1828,9 +1837,23 @@ void DataModel::insertCatalogBatch()
             row++;
         }
     }
+    const qint64 cellsThisBatch = perfFillInsertNs + perfFillFileDataNs
+                                + perfFillIndexFillNs + perfFillAddMetaNs - cellsBefore;
     if (probe) pt.restart();
     emit dataChanged(index(firstOfBatch, 0), index(row - 1, columnCount() - 1));
-    if (probe) perfFillEmitNs += pt.nsecsElapsed();
+    if (probe) {
+        const qint64 emitNs = pt.nsecsElapsed();
+        perfFillEmitNs += emitNs;
+        /*  PER BATCH, because the suspicion is QUADRATIC: every batch's dataChanged is
+            handled by the proxy and three views over everything inserted SO FAR, so the
+            cost per batch would climb as the model grows. One number for the whole fill
+            cannot show that shape; twenty-two numbers can. If instead they are flat and
+            small, the stall is not here and this rules the insert out. */
+        qDebug().noquote() << "[PERF] fill batch" << (firstOfBatch / 2000 + 1)
+                           << " rows" << firstOfBatch << "-" << (row - 1)
+                           << " insert+cells" << (cellsThisBatch / 1000000.0) << "ms"
+                           << " dataChanged" << (emitNs / 1000000.0) << "ms";
+    }
 
     pendingCatalogAt = to;
 
