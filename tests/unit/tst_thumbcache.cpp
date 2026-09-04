@@ -50,6 +50,7 @@ private slots:
     void putImageQueuesAndSkipsWhatIsAlreadyThere();
     void theDevelopGateIsPerImageNotPerMode();
     void getImageReturnsAPaintableIcon();
+    void getImageUsesACallerSuppliedStat();
 
 private:
     QTemporaryDir *tmp = nullptr;
@@ -449,6 +450,44 @@ void tst_thumbcache::getImageReturnsAPaintableIcon()
     QVERIFY(t.getImage(p, /*hasDevelopRecipe*/true).isNull());
     QVERIFY(!t.getImage(p, /*hasDevelopRecipe*/false).isNull());
     G::previewSource = src;
+}
+
+void tst_thumbcache::getImageUsesACallerSuppliedStat()
+{
+/*
+    THE CALLER'S STAT IS TAKEN AS THE FILE'S, because the caller that passes one has just
+    stat'd the file in the same task (Reader::readMetadata) and a second syscall for the
+    same answer was a measurable part of a cache hit. That makes the values a CONTRACT:
+    they are compared against the stored row exactly as a fresh stat would be, so wrong
+    values are a false miss, not a stale picture -- which is the direction this must fail
+    in. The -1 default keeps the stat here, for the icon-only read that has none.
+*/
+    ThumbCache &t = ThumbCache::instance();
+    G::cacheThumbnails = true;
+    const QString p = makeFile("suppliedstat.jpg");
+
+    QImage in(160, 120, QImage::Format_RGB32);
+    in.fill(Qt::darkGreen);
+    t.putImage(p, in, false);
+    t.flush();
+
+    const QFileInfo fi(p);
+    const qint64 size = fi.size();
+    const qint64 mtime = fi.lastModified().toSecsSinceEpoch();
+
+    /*  The same two values the writer stored: a hit, and the same picture the stat-here
+        path returns. */
+    const QImage out = t.getImage(p, false, size, mtime);
+    QVERIFY2(!out.isNull(), "a caller-supplied stat matching the row must hit");
+    QCOMPARE(out.size(), QSize(160, 120));
+
+    /*  Either value moved is a MISS -- the row is not served for a source it was not
+        made from, however the sizes and times arrived. */
+    QVERIFY(t.getImage(p, false, size + 1, mtime).isNull());
+    QVERIFY(t.getImage(p, false, size, mtime + 1).isNull());
+
+    /*  And the default still stats: an icon-only read passes nothing and hits. */
+    QVERIFY(!t.getImage(p, false).isNull());
 }
 
 QTEST_MAIN(tst_thumbcache)

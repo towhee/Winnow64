@@ -3717,6 +3717,7 @@ void DataModel::flushVisibleEmits()
         probeFlushCount++;
         if (lateNs > probeFlushMaxDelayNs) probeFlushMaxDelayNs = lateNs;
     }
+
     if (pendingEmitRows.isEmpty()) return;
 
     QList<int> rows(pendingEmitRows.cbegin(), pendingEmitRows.cend());
@@ -3736,12 +3737,26 @@ void DataModel::flushVisibleEmits()
     const int lastCol = columnCount() - 1;
     int runStart = rows.first();
     int prev = runStart;
+    /*  WHICH ROWS WERE ACTUALLY TOLD (G::isPerfProbe). The counters say how many passed
+        the gate; this says which, in DM rows, so a blank cell on screen can be matched
+        against the notification it did or did not get. Bounded to the first few runs --
+        the point is the range, not a transcript. */
+    QStringList probeRuns;
     for (int i = 1; i < rows.size(); ++i) {
         if (rows.at(i) == prev + 1) { prev = rows.at(i); continue; }
         emit dataChanged(index(runStart, 0), index(prev, lastCol));
+        if (G::isPerfProbe && probeRuns.size() < 6)
+            probeRuns << QString("%1-%2").arg(runStart).arg(prev);
         runStart = prev = rows.at(i);
     }
     emit dataChanged(index(runStart, 0), index(prev, lastCol));
+    if (G::isPerfProbe) {
+        if (probeRuns.size() < 6) probeRuns << QString("%1-%2").arg(runStart).arg(prev);
+        qDebug().noquote() << "[PERF] emit flush  dmRows =" << rows.size()
+                           << " runs:" << probeRuns.join(" ")
+                           << " visRange(sf) =" << firstVisibleIcon
+                           << "-" << lastVisibleIcon;
+    }
 
     if (G::isPerfProbe) probeFlushEmitNs += emitTimer.nsecsElapsed();
 }
@@ -5097,6 +5112,20 @@ void DataModel::reportScrollProbe(const QString &src)
     if (probeScanCalls == 0 && probeEvictCalls == 0 && rearmCalls == 0
         && probeIconsSet == 0 && probeIconsRedundant == 0) return;
 
+    /*  THE GATE, IN THE WINDOW IT APPLIED TO. An icon stored without a dataChanged is a
+        thumbnail that exists and cannot be seen until something repaints the whole view
+        (a view switch, a click), which is exactly the shape of "the thumbnails did not
+        paint". Read against a baseline, not drained: the GUI STALL line reports the same
+        two counters cumulatively. */
+    auto sinceEmit_ = [](std::atomic<int> &a, qint64 &last) {
+        const qint64 now = a.load(std::memory_order_relaxed);
+        const qint64 d = now - last;
+        last = now;
+        return d;
+    };
+    const qint64 emitVisible = sinceEmit_(G::probeEmitVisible, probeLastEmitVisible);
+    const qint64 emitSuppressed = sinceEmit_(G::probeEmitSuppressed, probeLastEmitSuppressed);
+
     qDebug().noquote()
         << "[PERF] scroll" << QString::number(window, 'f', 1) << "s  src =" << src
         << "\n         chunk=" << iconChunkSize.load()
@@ -5132,7 +5161,11 @@ void DataModel::reportScrollProbe(const QString &src)
         << "\n         repaint flushes=" << probeFlushCount
         << " emit(ms)=" << QString::number(probeFlushEmitNs / 1.0e6, 'f', 1)
         << " worstWait(ms)=" << QString::number(probeFlushMaxDelayNs / 1.0e6, 'f', 1)
-        << " readerQueue=" << queuedReaderEvents.load(std::memory_order_relaxed);
+        << " readerQueue=" << queuedReaderEvents.load(std::memory_order_relaxed)
+        << "\n         emit gate  notified=" << emitVisible
+        << " suppressed=" << emitSuppressed
+        << " (rows outside" << firstVisibleIcon << "-" << lastVisibleIcon
+        << "were stored without telling the views)";
 
     /*  WHAT A THUMBNAIL CACHE HIT COST IN THIS WINDOW, per hit rather than in total.
         It lives here rather than only on the Phase2 line because that one prints from

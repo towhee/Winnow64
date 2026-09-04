@@ -196,6 +196,16 @@ bool Reader::readMetadata()
     t2 = t.restart();
     #endif
 
+    /*  FREE HERE, A SYSCALL LATER. Both metadata paths above have already stat'd this
+        QFileInfo -- loadImageMetadata takes m.size from it, the index path stats for
+        IndexMetadata::candidate -- and QFileInfo caches its stat, so these two reads
+        cost nothing and save ThumbCache::getImage doing the same stat again for the
+        icon. Same terms the cache stores: size in bytes, mtime in whole seconds. */
+    if (fileInfo.exists()) {
+        srcSize = fileInfo.size();
+        srcMtime = fileInfo.lastModified().toSecsSinceEpoch();
+    }
+
     m = &metadata->m;
     m->row = dmRow;
     m->instance = instance;
@@ -306,7 +316,8 @@ void Reader::readIcon()
     if (!abort) {
         QElapsedTimer tGet;
         if (G::isPerfProbe) tGet.start();
-        image = ThumbCache::instance().getImage(fPath, m && m->developEdited);
+        image = ThumbCache::instance().getImage(fPath, m && m->developEdited,
+                                               srcSize, srcMtime);
         if (!image.isNull()) { loadedIcon = true; fromThumbCache = true; }
         if (G::isPerfProbe) {
             G::probeIconCacheGetNs.fetch_add(tGet.nsecsElapsed(), std::memory_order_relaxed);
@@ -479,6 +490,9 @@ void Reader::read(int dmRow, QString filePath, int instance,
     loadedIcon = false;
     offsetThumb = 0;
     lengthThumb = 0;
+    /*  No stat for THIS file yet -- see srcSize in the header. */
+    srcSize = -1;
+    srcMtime = -1;
 
     if (isDebug)
     {

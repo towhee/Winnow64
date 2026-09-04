@@ -159,8 +159,18 @@ public:
         It stats fPath for the staleness comparison, so a file edited by another
         program misses and is re-decoded. Returns RGB32 at no more than
         G::maxIconSize, matching what Thumb::loadThumb produces, so nothing
-        downstream can tell where the picture came from. */
-    QImage getImage(const QString &fPath, bool hasDevelopRecipe);
+        downstream can tell where the picture came from.
+
+        srcSize/srcMtime: PASS THEM IF THE CALLER HAS ALREADY STAT'D THIS FILE in the
+        same task, and the stat here is skipped. They must be the same two values the
+        writer stores -- QFileInfo::size() and lastModified().toSecsSinceEpoch() -- or
+        every row is a false miss. Reader::readIcon supplies them on a metadata+icon
+        read, where Reader::readMetadata's QFileInfo has already been stat'd and the
+        values are microseconds old; an icon-only read has no such stat and leaves them
+        at -1, which is the freshness check for a file that changed after its row was
+        loaded, so do not "default" them from anything remembered. */
+    QImage getImage(const QString &fPath, bool hasDevelopRecipe,
+                    qint64 srcSize = -1, qint64 srcMtime = -1);
 
     /*  IS THE CAMERA'S OWN THUMBNAIL THE RIGHT PICTURE FOR THIS IMAGE RIGHT
         NOW? Both the read and the write are gated on this, and the write
