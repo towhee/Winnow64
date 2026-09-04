@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 7;
+constexpr int kSchemaVersion = 9;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -664,6 +664,91 @@ bool CacheDb::migrate(QSqlDatabase &db)
                 db.rollback();
                 return false;
             }
+        }
+    }
+
+    if (version < 8) {
+/*
+    A DATA REPAIR, not a schema change, and the only one here -- user_version is used as
+    the one-shot marker because there is no other durable "this has been done" in the
+    file.
+
+    WHAT WENT WRONG. The catalog scanner walked roots that were spelled with a trailing
+    separator (the folder tree spells them that way, and the old catalogRoots setting
+    stored what it was given), and Utilities::subFolderTree builds a subfolder path by
+    concatenation -- so every row a scan wrote below such a root carries a DOUBLED
+    SEPARATOR in its path: /Users/x/Pictures//1980/03/img.jpg. The scope table now
+    normalises the path at every door, so no new row can look like this; these are the
+    rows already written.
+
+    IT NEVER SHOWED THE WRONG PICTURE, and that is why it went unnoticed for a whole
+    library. pathkey runs through QDir::cleanPath (Cache/pathkey.h), which collapses the
+    separator, so every LOOKUP matched and no duplicate row was ever inserted. Only the
+    stored `path` -- which is what searches hand back to the datamodel, to availability
+    checks and to the file operations -- carries the doubled form.
+
+    COLLIDING ROWS GO, THE REST ARE REWRITTEN. A doubled row whose cleaned path already
+    exists as another row is a duplicate of it; the FTS row goes first, since image_fts
+    has no foreign key onto image. devpreview is repaired more cautiously: its path index
+    is UNIQUE and each row names a JPEG on disk, so a colliding row is LEFT ALONE rather
+    than deleted -- deleting it would orphan a file that nothing would ever collect. Those
+    few are evicted by the cache in the normal way.
+
+    THE LOOP is for the pathological case only. replace() collapses each pair once, so a
+    tripled separator would need a second pass; the bound is there because a fixed number
+    of passes is easier to be sure of than an argument about how many are enough.
+*/
+        const char *repair[] = {
+            "DELETE FROM image_fts WHERE rowid IN"
+            " (SELECT a.id FROM image a WHERE a.path LIKE '%//%'"
+            "   AND EXISTS (SELECT 1 FROM image b WHERE b.path ="
+            "               replace(a.path, '//', '/') AND b.id <> a.id))",
+            "DELETE FROM image WHERE path LIKE '%//%'"
+            " AND EXISTS (SELECT 1 FROM image b WHERE b.path ="
+            "             replace(image.path, '//', '/') AND b.id <> image.id)",
+            "UPDATE image SET path = replace(path, '//', '/') WHERE path LIKE '%//%'",
+            "UPDATE image SET folder = replace(folder, '//', '/')"
+            " WHERE folder LIKE '%//%'",
+            "UPDATE devpreview SET path = replace(path, '//', '/')"
+            " WHERE path LIKE '%//%'"
+            " AND NOT EXISTS (SELECT 1 FROM devpreview b WHERE b.path ="
+            "                 replace(devpreview.path, '//', '/')"
+            "                 AND b.id <> devpreview.id)",
+            "UPDATE devpreview SET folder = replace(folder, '//', '/')"
+            " WHERE folder LIKE '%//%'",
+        };
+        for (int pass = 0; pass < 4; ++pass) {
+            for (const char *sql : repair) {
+                if (!q.exec(QString::fromLatin1(sql))) {
+                    db.rollback();
+                    return false;
+                }
+            }
+            QSqlQuery left(db);
+            if (!left.exec("SELECT (SELECT COUNT(*) FROM image WHERE path LIKE '%//%')"
+                           " + (SELECT COUNT(*) FROM image WHERE folder LIKE '%//%')")
+                || !left.next() || left.value(0).toInt() == 0) {
+                break;
+            }
+        }
+    }
+
+    if (version < 9) {
+/*
+    A FILE WINNOW CANNOT PARSE STILL HAS TO BE ACCOUNTABLE FOR. The scanner drops what it
+    cannot read, so such a file was on disk, absent from the index, and invisible: the
+    only evidence was a difference between two counts that no amount of scanning closed.
+    The flag lets the scan record a stub row for it, and Catalog::Availability report it,
+    so the user can see the list rather than a number.
+
+    NO STAMP RESET here, unlike schemas 6 and 7. Those widened what a row MEANS, so
+    existing rows became incomplete while claiming to be current; this column describes
+    rows that were never written at all, and defaulting every existing row to 0 -- "reads
+    fine" -- is exactly true of every row that exists.
+*/
+        if (!q.exec("ALTER TABLE image ADD COLUMN unreadable INTEGER NOT NULL DEFAULT 0")) {
+            db.rollback();
+            return false;
         }
     }
 

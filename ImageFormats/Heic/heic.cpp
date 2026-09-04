@@ -41,7 +41,23 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     // get exif in QByteArray
     heif_item_id id = 0;
     int n = heif_image_handle_get_list_of_metadata_block_IDs(handle, "Exif", &id, 1);
-    if (n == 0) return false;
+    if (n == 0) {
+        /*  NO EXIF IS NOT A BROKEN FILE -- see Heic::parseHeic, which reaches the same
+            conclusion from the box structure on macOS. A converted or screenshot HEIC
+            carries no Exif at all and still renders perfectly, so what the container
+            knows is used and the rest is left empty rather than invented. libheif reports
+            the DISPLAY dimensions here (it has already applied irot), so there is no
+            rotation to undo. */
+        m.width = heif_image_handle_get_width(handle);
+        m.height = heif_image_handle_get_height(handle);
+        m.widthOrigPreview = m.width;
+        m.heightOrigPreview = m.height;
+        m.orientation = 1;
+        const bool ok = m.width > 0 && m.height > 0;
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
+        return ok;
+    }
     const int length = static_cast<int>(heif_image_handle_get_metadata_size(handle, id));
     QByteArray exifData(length, 0);
     error = heif_image_handle_get_metadata(handle, id, exifData.data());
@@ -444,6 +460,8 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     // initialize
     exifItemID = 0;
     exifOffset = 0;
+    ispeWidth = ispeHeight = 0;
+    irotQuarterTurns = -1;
 
     QFileInfo info(*file);
     if (isDebug) {
@@ -464,11 +482,54 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
                           << "exifItemID =" << exifItemID
                           << "exifOffset =" << exifOffset;
 
-    // EXIF data found?
-    if (exifItemID == -1) return false;
+    /*  NO EXIF IS NOT A BROKEN FILE. A HEIC written by a converter, a screenshot, or
+        anything that did not come off a camera can carry no Exif item at all -- and
+        Winnow renders those perfectly well, because the pixels are in the container
+        either way. Returning false here declared them unreadable: no row, no thumbnail,
+        and (once the scanner started recording such files) a permanent entry in the
+        catalog's Unreadable list for a photograph that opens fine.
 
-    p.offset = exifOffset;
-    return parseExif(p, m, ifd, exif, gps);
+        So the container's own answer is used instead: dimensions from ispe, orientation
+        from irot, and nothing else, because there is nothing else to say. The date, the
+        camera and the lens stay empty rather than being invented from the file's own
+        timestamps -- "most metadata missing" is the truth about the file, and a made-up
+        capture date would put it in the wrong year in every filter.
+
+        THE SAME PATH SERVES A FAILED EXIF PARSE. A file whose Exif is present but
+        malformed is in exactly the same position as one with none: what is knowable is
+        still knowable. */
+    if (exifItemID != -1) {
+        p.offset = exifOffset;
+        if (parseExif(p, m, ifd, exif, gps)) return true;
+    }
+    return applyContainerOnlyMetadata(m);
+}
+
+bool Heic::applyContainerOnlyMetadata(ImageMetadata &m)
+{
+/*
+    Everything the box structure knows, for a file whose Exif is absent or unusable.
+    Returns false only when even that is empty, which means the boxes did not parse and
+    the file really is not a HEIC we can describe.
+*/
+    if (ispeWidth <= 0 || ispeHeight <= 0) return false;
+
+    m.width = ispeWidth;
+    m.height = ispeHeight;
+    m.widthOrigPreview = ispeWidth;
+    m.heightOrigPreview = ispeHeight;
+
+    /*  irot counts ANTI-clockwise quarter turns; Exif orientation numbers the equivalent
+        clockwise correction, which is the vocabulary the rest of Winnow speaks. */
+    switch (irotQuarterTurns) {
+    case 1:  m.orientation = 8; break;      // 90 CCW
+    case 2:  m.orientation = 3; break;      // 180
+    case 3:  m.orientation = 6; break;      // 90 CW
+    default: m.orientation = 1; break;
+    }
+    if (m.orientation == 6 || m.orientation == 8) std::swap(m.width, m.height);
+
+    return true;
 }
 
 bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps)
@@ -664,16 +725,44 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
 
 bool Heic::nextHeifBox(quint32 &length, QString &type)
 {
+/*
+    One ISO base media box header: size, type, and -- when size == 1 -- a 64-bit
+    LARGESIZE after the type.
+
+    THE LARGESIZE WAS BEING TREATED AS "REST OF FILE", and that one line hid every iPhone
+    HEIC from this parser. Apple writes mdat with size == 1 and the real length in the
+    64-bit field; approximating that as eof-offset swallowed everything AFTER mdat, which
+    is exactly where meta, iinf, iloc and iprp live. The walk then ended at the first
+    mdat, no Exif item was ever found, and the file was reported unreadable -- while the
+    loupe, which uses the platform decoder, showed it perfectly. That is why "no Exif" and
+    "cannot parse" looked like the same bug and were two.
+
+    Only size == 0 now means "to EOF", which is what the spec says it means. Note the
+    16-byte header a largesize box has: the property boxes below all assume 8 and none of
+    them is ever written with a largesize -- it is mdat, and mdat's contents are skipped.
+*/
     qint64 offset = file->pos();
     length = Utilities::get32(file->read(4));
-    // Spec lets size==0 mean "extends to EOF" and size==1 mean "extended 64-bit size
-    // follows". Winnow approximates by clamping tiny values to "rest of file" — but
-    // refuse outright if we're already past EOF, since (eof - offset) would wrap.
-    if (length < 2) {
+    type = file->read(4);
+
+    if (length == 1) {
+        const quint64 large = Utilities::get64(file->read(8));
+        const quint64 remaining = (offset < static_cast<qint64>(eof))
+                                      ? static_cast<quint64>(eof - offset) : 0;
+        if (large == 0 || large > remaining) {
+            /* Malformed, or larger than this parser's 32-bit offsets can walk: take the
+               rest of the file, which ends the walk rather than seeking into nowhere. */
+            if (remaining == 0) return false;
+            length = static_cast<quint32>(qMin<quint64>(remaining, 0xFFFFFFFFull));
+        }
+        else {
+            length = static_cast<quint32>(large);
+        }
+    }
+    else if (length == 0) {
         if (offset >= static_cast<qint64>(eof)) return false;
         length = static_cast<quint32>(eof - offset);
     }
-    type = file->read(4);
     if (isDebug) {
         qDebug() << " ";
         qDebug() << "Heic::nextHeifBox"
@@ -949,12 +1038,17 @@ bool Heic::pixiBox(quint32 &offset, quint32 &length)
 
 bool Heic::irotBox(quint32 &offset, quint32 &length)
 {
+/*
+    Rotation, as a count of ANTI-CLOCKWISE quarter turns. Kept for the no-Exif fallback,
+    where it is the only statement of orientation the file makes. Read unconditionally,
+    for the same reason as ispe.
+*/
+    file->seek(offset + 8);
+    const quint8 x = Utilities::get8(file->read(1));
+    irotQuarterTurns = (x & 0b00000011);
     if (isDebug) {
-        file->seek(offset + 8);
-        quint8 x = Utilities::get8(file->read(1));
-        quint8 angle = (x & 0b00000011);             // first 1 bit
-        quint16 angle_degrees = angle * 90;
-        qDebug() << "Heic::irotBox" << "angle =" << angle << "angle degrees =" << angle_degrees;
+        qDebug() << "Heic::irotBox" << "angle =" << irotQuarterTurns
+                 << "angle degrees =" << irotQuarterTurns * 90;
     }
     offset += length;
     return true;
@@ -1286,14 +1380,28 @@ bool Heic::hvcCBox(quint32 &offset, quint32 &length)
 
 bool Heic::ispeBox(quint32 &offset, quint32 &length)
 {
+/*
+    Image Spatial Extents: the pixel dimensions of ONE item. A HEIC holds several -- the
+    master image, its thumbnail, sometimes a depth or auxiliary map -- so the largest is
+    taken rather than the first. That is a heuristic, and it is the right one here: this
+    is only consulted for a file with no Exif to say otherwise, where the alternative is
+    no dimensions at all.
+
+    READ UNCONDITIONALLY. It used to be read only when reporting, so nothing outside the
+    metadata report ever saw it.
+*/
+    file->seek(offset + 12);
+    const quint32 image_width = Utilities::get32(file->read(4));
+    const quint32 image_height = Utilities::get32(file->read(4));
+    if (qint64(image_width) * image_height > qint64(ispeWidth) * ispeHeight) {
+        ispeWidth = static_cast<int>(image_width);
+        ispeHeight = static_cast<int>(image_height);
+    }
     if (isDebug) {
-        file->seek(offset + 12);
-        quint32 image_width = Utilities::get32(file->read(4));
-        quint32 image_height = Utilities::get32(file->read(4));
         qDebug() << "Heic::ispeBox" << "image_width =" << image_width;
         qDebug() << "Heic::ispeBox" << "image_height =" << image_height << "\n";
     }
-    offset += length;       // temp for testing
+    offset += length;
     return true;
 }
 
@@ -1352,34 +1460,47 @@ bool Heic::ipmaBox(quint32 &offset, quint32 &length)
 
 bool Heic::iprpBox(quint32 &offset, quint32 &length)
 {
-    quint32 iprpEnd = offset + length;
-    if (isDebug) {
-        qDebug() << "Heic::iprpBox" << "offset =" << offset;
-        QString type;
-        file->seek(offset + 8);
+/*
+    Item Properties: a container whose ipco child holds ispe (dimensions), irot
+    (rotation) and hvcC, one set per item.
 
-        // should be an ipco box next
-        quint32 ipcoLength;
-        QString ipcoType;
-        nextHeifBox(ipcoLength, ipcoType);
+    IT USED TO DESCEND ONLY WHEN REPORTING. The entire walk below sat inside
+    `if (isDebug)`, so in normal use the whole property container was stepped over and
+    ispe and irot were never read -- which is why they could be left reading their values
+    only under isDebug too, and why a HEIC with no Exif had nothing at all to fall back
+    on. The debug OUTPUT is still conditional; the parse is not.
+*/
+    const quint32 iprpEnd = offset + length;
+    if (isDebug) qDebug() << "Heic::iprpBox" << "offset =" << offset;
 
-        if (ipcoType != "ipco") {
-            // err
-            QString msg = "Type ipco not found in iprp box.";
-            G::issueDedup("Error", msg, "Heic::iprpBox", m->row, fPath);
-            return false;
-        }
+    file->seek(offset + 8);
 
-        offset += 16;
-
-        while (offset < iprpEnd) {
-            file->seek(offset);
-            nextHeifBox(length, type);
-            getHeifBox(type, offset, length);
-        }
+    // should be an ipco box next
+    quint32 ipcoLength;
+    QString ipcoType;
+    nextHeifBox(ipcoLength, ipcoType);
+    if (ipcoType != "ipco") {
+        QString msg = "Type ipco not found in iprp box.";
+        G::issueDedup("Error", msg, "Heic::iprpBox", m->row, fPath);
+        offset = iprpEnd;
+        return false;
     }
-    offset = iprpEnd;
 
+    /* Past the iprp header and the ipco header, to the first property. */
+    quint32 childOffset = offset + 16;
+    while (childOffset < iprpEnd) {
+        const quint32 prev = childOffset;
+        file->seek(childOffset);
+        quint32 childLength;
+        QString childType;
+        if (!nextHeifBox(childLength, childType)) break;
+        getHeifBox(childType, childOffset, childLength);
+        /* The same no-progress guard the top-level walk uses: a malformed length must
+           not spin here. */
+        if (childOffset <= prev) break;
+    }
+
+    offset = iprpEnd;
     return true;
 }
 

@@ -448,7 +448,8 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " orig_email = ?, orig_url = ?, developed = ?, devpreviewkey = ?,"
                 /* schema 7 */
                 " keywordpaths = ?, shootinginfo = ?, keywords_literal = ?"
-                " WHERE id = ?");
+                " , unreadable = 0"
+              " WHERE id = ?");
 
     QSqlQuery ins(db);
     ins.prepare("INSERT INTO image (pathkey, path, folder, vol, filename, ext,"
@@ -583,7 +584,8 @@ QSet<QString> Catalog::staleOf(const QList<CatalogRow> &candidates)
         }
 
         QSqlQuery q(db);
-        q.prepare("SELECT srcsize, srcmtime, sidecarmtime FROM image WHERE pathkey = ?");
+        q.prepare("SELECT srcsize, srcmtime, sidecarmtime, unreadable FROM image"
+                  " WHERE pathkey = ?");
         for (int i = from; i < to; ++i) {
             const CatalogRow &r = candidates.at(i);
             q.addBindValue(cachePathKey(r.path));
@@ -591,7 +593,20 @@ QSet<QString> Catalog::staleOf(const QList<CatalogRow> &candidates)
             if (q.exec() && q.next()) {
                 fresh = q.value(0).toLongLong() == r.srcSize
                         && q.value(1).toLongLong() == r.srcMtime
-                        && q.value(2).toLongLong() == r.sidecarMtime;
+                        && q.value(2).toLongLong() == r.sidecarMtime
+                        /*  AN UNREADABLE STUB IS NEVER FRESH. The stamp says the FILE has
+                            not changed, which is not the question -- what changes for
+                            these rows is WINNOW: a parser gains a format, a fallback is
+                            added, and the file that could not be read last month can be
+                            read now. Stamped fresh, such a row is skipped by every
+                            future scan, so the fix never reaches it and the user rescans
+                            to no effect. That is exactly what happened when HEIC files
+                            with no Exif were first recorded and then taught to parse.
+
+                            The cost is one re-attempt per unreadable file per scan, and
+                            the population is by definition tiny -- a library where it is
+                            not is a library whose owner needs to know. */
+                        && !q.value(3).toBool();
             }
             q.finish();
             if (!fresh) stale.insert(r.path);
@@ -639,9 +654,10 @@ QSet<QString> Catalog::outOfDate(const QList<CatalogRow> &candidates)
 QString Catalog::availabilityLabel(int code)
 {
     switch (code) {
-    case int(Availability::Offline): return "Offline";
-    case int(Availability::Missing): return "Missing";
-    default:                         return "Present";
+    case int(Availability::Offline):    return "Offline";
+    case int(Availability::Missing):    return "Missing";
+    case int(Availability::Unreadable): return "Unreadable";
+    default:                            return "Present";
     }
 }
 
@@ -649,6 +665,7 @@ int Catalog::availabilityCode(const QString &label)
 {
     if (label == "Offline") return int(Availability::Offline);
     if (label == "Missing") return int(Availability::Missing);
+    if (label == "Unreadable") return int(Availability::Unreadable);
     return int(Availability::Present);
 }
 
@@ -678,8 +695,14 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
     if (!db.isOpen()) return out;
 
     QSqlQuery q(db);
+    /*  AND NOT AN UNREADABLE STUB. Such a row holds a filename and stamps and no
+        metadata at all, so serving it as fresh would hand the loader an empty row and
+        stop it reading the file -- and it is the file read that would discover the
+        format is now supported. staleOf makes the same exclusion, and the comment below
+        says why the two must agree. */
     q.prepare(QString("SELECT") + kRowColumns
-              + " FROM image i WHERE i.pathkey = ? AND i.live = 1");
+              + " FROM image i WHERE i.pathkey = ? AND i.live = 1"
+                " AND i.unreadable = 0");
 
     QSqlQuery kw(db);
     kw.prepare("SELECT k.name FROM keyword k"
@@ -757,7 +780,7 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
         if (!db.isOpen()) return out;
 
         QSqlQuery q(db);
-        q.prepare("SELECT live, vol FROM image WHERE pathkey = ?");
+        q.prepare("SELECT live, vol, unreadable FROM image WHERE pathkey = ?");
         for (int i = from; i < to; ++i) {
             const QString &p = paths.at(i);
             if (p.isEmpty()) continue;
@@ -765,6 +788,7 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
             if (!q.exec() || !q.next()) { q.finish(); continue; }   // not indexed
             const bool live = q.value(0).toBool();
             const QString vol = q.value(1).toString();
+            const bool unreadable = q.value(2).toBool();
             q.finish();
 
             /*  THE VOLUME IS ASKED FIRST, and it has to be. A row can be marked not
@@ -773,8 +797,13 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
                 useful thing to say then is "that disk isn't plugged in", because
                 that is the one the user can act on -- and because until it is back
                 there is no way to know whether the file is still gone. */
+            /*  ORDER IS BY WHAT THE USER CAN ACT ON. The volume first, for the reason
+                above; then missing, which is a fact about the file; then unreadable,
+                which is a fact about the file's FORMAT and only meaningful once the file
+                is known to be there. */
             if (!mounts.isMounted(vol)) out.insert(p, Availability::Offline);
             else if (!live)             out.insert(p, Availability::Missing);
+            else if (unreadable)        out.insert(p, Availability::Unreadable);
             else                        out.insert(p, Availability::Present);
         }
     }
@@ -1283,6 +1312,152 @@ int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present
     }
     db.commit();
     return demoted;
+}
+
+int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
+{
+/*
+    A STUB ROW PER FILE THE PARSERS COULD NOT READ. See the declaration for why they are
+    in the index rather than left out of it.
+
+    ONLY THE FACTS THAT SURVIVED. path, folder, filename, extension and the freshness
+    stamp -- everything else in a catalog row comes from the parse that failed, and
+    writing zeros into those columns would be inventing a photograph's metadata rather
+    than recording that there is none.
+
+    THE STAMP IS THE POINT OF STORING THEM. staleOf compares it like any other row, so the
+    next scan does not re-attempt a file that has not changed; a file that IS changed --
+    replaced, repaired, or a format Winnow later learns -- goes stale and is tried again,
+    and the ordinary commit clears the flag when it succeeds.
+*/
+    if (rows.isEmpty()) return 0;
+
+    /* Taken before the lock, like the ordinary commit does: the mount walk is syscalls
+       and must not be made with the catalog held. */
+    const MountSnapshot mounts = MountSnapshot::take();
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+    if (!db.transaction()) return 0;
+
+    QSqlQuery sel(db);
+    sel.prepare("SELECT id FROM image WHERE pathkey = ?");
+    QSqlQuery upd(db);
+    upd.prepare("UPDATE image SET path = ?, folder = ?, vol = ?, filename = ?, ext = ?,"
+                " srcsize = ?, srcmtime = ?, sidecarmtime = ?, live = 1, unreadable = 1"
+                " WHERE id = ?");
+    QSqlQuery ins(db);
+    ins.prepare("INSERT INTO image (pathkey, path, folder, vol, filename, ext,"
+                " srcsize, srcmtime, sidecarmtime, live, unreadable)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)");
+
+    int written = 0;
+    for (const CatalogRow &r : rows) {
+        if (r.path.isEmpty()) continue;
+        const QString key = cachePathKey(r.path);
+        const QString vol = mounts.rootOf(r.path);
+
+        qint64 id = 0;
+        sel.addBindValue(key);
+        if (sel.exec() && sel.next()) id = sel.value(0).toLongLong();
+        sel.finish();
+
+        QSqlQuery &q = id ? upd : ins;
+        if (!id) q.addBindValue(key);
+        q.addBindValue(r.path);
+        q.addBindValue(r.folder);
+        q.addBindValue(vol);
+        q.addBindValue(r.filename);
+        q.addBindValue(r.ext);
+        q.addBindValue(r.srcSize);
+        q.addBindValue(r.srcMtime);
+        q.addBindValue(r.sidecarMtime);
+        if (id) q.addBindValue(id);
+        if (q.exec()) ++written;
+        q.finish();
+    }
+
+    if (!db.commit()) { db.rollback(); return 0; }
+    return written;
+}
+
+int Catalog::unreadableCount()
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+    QSqlQuery q(db);
+    if (q.exec("SELECT COUNT(*) FROM image WHERE unreadable = 1") && q.next())
+        return q.value(0).toInt();
+    return 0;
+}
+
+namespace {
+
+/* The WHERE clause for "this folder, or this folder and everything under it", and the
+   values to bind to it. LIKE is given an explicit ESCAPE and the prefix is escaped into
+   it, because a folder name may legally contain % or _ and an unescaped one would match
+   folders it has nothing to do with. */
+QString folderScopeClause(bool recurse)
+{
+    return recurse ? "(folder = ? OR folder LIKE ? ESCAPE '\\')" : "folder = ?";
+}
+
+void bindFolderScope(QSqlQuery &q, const QString &folder, bool recurse)
+{
+    q.addBindValue(folder);
+    if (!recurse) return;
+    QString prefix = folder;
+    prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    q.addBindValue(prefix + "/%");
+}
+
+}  // namespace
+
+int Catalog::countUnder(const QString &folder, bool recurse)
+{
+    if (folder.isEmpty()) return 0;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+    QSqlQuery q(db);
+    q.prepare("SELECT COUNT(*) FROM image WHERE " + folderScopeClause(recurse));
+    bindFolderScope(q, folder, recurse);
+    if (q.exec() && q.next()) return q.value(0).toInt();
+    return 0;
+}
+
+int Catalog::forgetUnder(const QString &folder, bool recurse)
+{
+/*
+    Delete every catalogued row under folder. See the declaration for why this deletes
+    where the sweep demotes.
+
+    THE FTS ROWS GO FIRST, and by subselect rather than by a second pass over the ids:
+    image_fts has no foreign key onto image, so once the image rows are gone there is
+    nothing left to say which FTS rows were theirs. image_keyword follows by cascade.
+*/
+    if (folder.isEmpty()) return 0;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+
+    const QString where = folderScopeClause(recurse);
+    db.transaction();
+    QSqlQuery f(db);
+    f.prepare("DELETE FROM image_fts WHERE rowid IN"
+              " (SELECT id FROM image WHERE " + where + ")");
+    bindFolderScope(f, folder, recurse);
+    if (!f.exec()) { db.rollback(); return 0; }
+
+    QSqlQuery d(db);
+    d.prepare("DELETE FROM image WHERE " + where);
+    bindFolderScope(d, folder, recurse);
+    if (!d.exec()) { db.rollback(); return 0; }
+    const int gone = d.numRowsAffected();
+    db.commit();
+    return gone > 0 ? gone : 0;
 }
 
 int Catalog::sweep()

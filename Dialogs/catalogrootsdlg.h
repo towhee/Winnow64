@@ -1,20 +1,37 @@
 #ifndef CATALOGROOTSDLG_H
 #define CATALOGROOTSDLG_H
 
-#include <QCheckBox>
 #include <QDialog>
 #include <QLabel>
-#include <QListWidget>
 #include <QPushButton>
-#include <QStringList>
+#include <QTableWidget>
+
+#include "Main/catalogscope.h"
 
 /*
     Which folders Winnow indexes in the background, and the button that starts a scan.
-    See notes/Documentation.txt "Cataloguing Designated Roots (the Background Scanner)".
+    See notes/Documentation.txt "Cataloguing Designated Folders (the Scope Table and Background Scanner)".
+
+    IT IS ONE TABLE, NOT TWO LISTS. Include and exclude are the same kind of statement --
+    a folder, and how far down it reaches -- so they belong in one place, read top to
+    bottom: a library with one branch carved out is two rows. Two separate lists made the
+    reader hold the relationship between them in their head, and made "include subfolders"
+    look like a property of the catalog when it is a property of each row.
+
+    FOUR COLUMNS. Include/Exclude, the folder path, whether the row reaches into
+    subfolders, and how many images the folder holds ON DISK. Everything a rule says is
+    visible without selecting it, which is the whole reason for a table rather than a list
+    with the state hidden in buttons.
+
+    THE IMAGES COLUMN COUNTS THE DISK, NOT THE INDEX, and that is what makes it worth a
+    column. A count read out of the catalog would agree with the catalog by construction
+    and could never say the one thing the user needs to know -- whether a scan is owed.
+    Counted this way the includes less the excludes is what the catalog SHOULD hold, the
+    status line below shows both numbers, and their difference is the outstanding work.
 
     WHY THIS IS NOT IN THE CATALOG DOCK ANY MORE. It was, and it took up the lower third
-    of a panel whose whole job is asking questions. Editing the root list is CONFIGURATION
-    -- done once, revisited rarely -- while the panel above it is used constantly, so the
+    of a panel whose whole job is asking questions. Editing the scope is CONFIGURATION --
+    done once, revisited rarely -- while the panel above it is used constantly, so the
     two do not belong in the same column competing for the same vertical space. Everything
     else configurable in Winnow lives in Preferences, and this now opens from there
     (Preferences > Catalog) as well as from the dock's own Manage button.
@@ -24,17 +41,10 @@
     to watch it, and neither is a reasonable way to run a background job. Progress itself
     stays on the status-bar row, which is visible whether this is open or not.
 
-    EXCLUSIONS ARE A SECOND LIST, NOT A PER-ROOT SETTING. "Include subfolders" is what
-    makes a root worth nominating -- one entry covers a whole library -- and the cost of
-    that reach is that a single unwanted branch (renders, backups, a scratch folder) has
-    no way to opt out short of abandoning recursion and listing every wanted folder by
-    hand. An excluded folder covers itself and everything under it, so the two lists read
-    as one rule: catalogue these trees, except these branches.
-
-    IT OWNS NOTHING. MW holds the root list and its QSettings persistence (catalogRoots,
-    catalogRootsRecurse, catalogExcludes) exactly as before; this is only the editor, and
-    it emits what changed. That is deliberate: the root list is the ONE piece of catalog state that is
-    user intent rather than derived data, so it must not depend on a widget's lifetime.
+    IT OWNS NOTHING. MW holds the scope table and its QSettings persistence (catalogScope)
+    exactly as before; this is only the editor, and it emits what changed. That is
+    deliberate: the scope is the ONE piece of catalog state that is user intent rather
+    than derived data, so it must not depend on a widget's lifetime.
 */
 class CatalogRootsDlg : public QDialog
 {
@@ -43,44 +53,57 @@ class CatalogRootsDlg : public QDialog
 public:
     explicit CatalogRootsDlg(QWidget *parent = nullptr);
 
-    /* Fill from MW, which owns the lists. Not a user edit, so it does not signal back. */
-    void setRoots(const QStringList &roots, bool recurse, const QStringList &excludes);
-    QStringList roots() const;
-    bool rootsRecurse() const;
-    QStringList excludes() const;
+    /* Fill from MW, which owns the table. Not a user edit, so it does not signal back. */
+    void setScope(const CatalogScope &scope);
+    CatalogScope scope() const;
 
-    /* Reflect whether a scan is running, so the button says Stop and the list cannot be
+    /* Reflect whether a scan is running, so the button says Stop and the table cannot be
        edited underneath it. */
     void setScanning(bool scanning);
+
+    /*  WHAT A SCAN WOULD DELETE, shown before it is pressed. MW works it out (it owns
+        the catalog query) and hands it here, because forgetting tens of thousands of
+        rows is not something a user should discover afterwards from a changed number.
+        images == 0 means nothing would be forgotten and the note says nothing. */
+    void setPendingForget(int images, int folders);
+
+    /*  The image count for each row, in row order. -2 is "counting" (an ellipsis) and
+        -1 is "not counted" (an em dash, for a folder that is not there or whose volume
+        is unmounted) -- neither is a zero, because "none" is a different statement.
+        MW works these out: the walk is off the GUI thread and it owns the scope. */
+    void setRowCounts(const QVector<int> &counts);
 
     /* How many images and folders are indexed, shown so the user can see whether adding a
        folder actually achieved anything. */
     void setCatalogStatus(const QString &text);
 
 signals:
-    void rootsChanged(const QStringList &roots, bool recurse,
-                      const QStringList &excludes);
+    void scopeChanged(const CatalogScope &scope);
     void scanRequested();
     void stopScanRequested();
 
 private:
-    /* Everything the exclusion list needs, kept together so one function can enable or
-       disable it with the reason shown in place. */
-    void syncExcludeState();
+    /* Build one table row. Widgets, not item flags: a combo says what the two states ARE
+       without the user having to click to find out. */
+    void addRow(const CatalogScopeEntry &e);
+    /* Emit scopeChanged and refresh the note, unless we are repopulating. */
+    void noteEdit();
+    /* Say, in place, when a row cannot do anything -- an exclude that lies outside every
+       included tree excludes nothing, and silently accepting it would leave the user
+       believing they had carved out a branch that was never going to be scanned. */
+    void updateNote();
 
-    QListWidget *rootList = nullptr;
-    QCheckBox *recurseBox = nullptr;
-    QPushButton *addRootBtn = nullptr;
-    QPushButton *removeRootBtn = nullptr;
-    QLabel *excludeLabel = nullptr;
-    QListWidget *excludeList = nullptr;
-    QPushButton *addExcludeBtn = nullptr;
-    QPushButton *removeExcludeBtn = nullptr;
-    QLabel *excludeNote = nullptr;
+    QTableWidget *table = nullptr;
+    QPushButton *addBtn = nullptr;
+    QPushButton *removeBtn = nullptr;
     QPushButton *scanBtn = nullptr;
     QPushButton *closeBtn = nullptr;
+    QLabel *noteLabel = nullptr;
     QLabel *statusLabel = nullptr;
     bool scanning = false;
+    bool populating = false;
+    int pendingForgetImages = 0;
+    int pendingForgetFolders = 0;
 };
 
 #endif // CATALOGROOTSDLG_H

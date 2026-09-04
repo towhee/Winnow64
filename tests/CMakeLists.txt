@@ -203,6 +203,18 @@ winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Met
 # integer default: that is how DNG NoiseProfile (DOUBLE) reached PMRID as ~1e9.
 winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+# tst_heicboxes compiles the HEIC container walk plus the closure it reads Exif with
+# (ifd + exif + gps + metareport). It pins the two box-header defects that made every
+# iPhone HEIC look unreadable: a largesize (size == 1) mdat treated as "rest of file",
+# which hid the meta box behind it, and a file with no Exif item being failed outright
+# instead of falling back to the container's own ispe. Fixtures are built byte by byte in
+# the test -- nothing here decodes a pixel.
+winnow_add_unit_test(tst_heicboxes unit/tst_heicboxes.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Heic/Heic.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/gps.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/metareport.cpp)
 # tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).
 winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp

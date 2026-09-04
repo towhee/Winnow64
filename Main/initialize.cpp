@@ -436,12 +436,23 @@ void MW::createCatalogScanner()
             }, Qt::QueuedConnection);
 
     connect(catalogScanner, &CatalogScanner::finished, this,
-            [this](int scanned, int indexed, bool aborted) {
+            [this](int scanned, int indexed, int unreadable, bool aborted) {
                 Q_UNUSED(scanned)
+                /* The figure itself now lives in the catalog (a stub row per file); this
+                   is only for the log, where a scan that indexed nothing and skipped
+                   twenty files is a different event from one that found nothing to do. */
+                Q_UNUSED(unreadable)
                 if (progress) progress->clearProgress(progressCatalogRow);
                 if (catalogView) catalogView->setScanning(false);
                 if (findPanel) findPanel->setScanning(false);
-                if (catalogRootsDlg) catalogRootsDlg->setScanning(false);
+                if (catalogRootsDlg) {
+                    catalogRootsDlg->setScanning(false);
+                    /* The dialog stays open across a scan, so the counts it shows -- what
+                       is indexed, and what is still left to forget -- are stale the
+                       moment the scan ends unless they are refreshed here. */
+                    catalogRootsDlg->setCatalogStatus(catalogStatusText());
+                    updateCatalogCounts();
+                }
                 /* The row already said it was happening and the panel shows the result,
                    so a background scan finishes silently -- the same rule the devPreview
                    build follows. Only the counts the user can act on are surfaced, and
@@ -454,6 +465,7 @@ void MW::createCatalogScanner()
                     G::log("MW::createCatalogScanner",
                            "catalog scan finished, indexed = " +
                            QString::number(indexed) +
+                           ", unreadable = " + QString::number(unreadable) +
                            (aborted ? " (stopped early)" : ""));
             }, Qt::QueuedConnection);
 

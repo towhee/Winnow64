@@ -12,6 +12,26 @@ bool macImageIOThumbnail(const QString &fPath, int maxPixelSize, QImage &out);
    then entire image is read and scaled to thumbMax.
 */
 
+namespace {
+
+/*  Does this file BEGIN like a HEIC, whatever it is called? The ISO base media header is
+    a 4-byte size, "ftyp", then the major brand -- so twelve bytes settle it. Used only
+    when the extension's own decode path has already failed. */
+bool sniffHeic(const QString &fPath)
+{
+    QFile f(fPath);
+    if (!f.open(QIODevice::ReadOnly)) return false;
+    const QByteArray head = f.read(12);
+    f.close();
+    if (head.size() < 12 || head.mid(4, 4) != "ftyp") return false;
+    const QByteArray brand = head.mid(8, 4);
+    return brand == "heic" || brand == "heix" || brand == "heim" || brand == "heis"
+           || brand == "mif1" || brand == "msf1" || brand == "hevc" || brand == "hevx";
+}
+
+}  // namespace
+
+
 Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
 {
     this->dm = dm;
@@ -577,6 +597,9 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
+    const bool isHeicExt = (ext == "heic");
+    bool heicSniffed = false;
+    bool isHeicContent = false;
 
     // videos are loaded using videoFrameDecode
     bool isVideo = metadata->videoFormats.contains(ext);
@@ -674,7 +697,20 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
             if (status == Status::Success) break;
         }
 
-        if (ext == "heic") {
+        /*  A HEIC WITH THE WRONG EXTENSION IS STILL A HEIC. Phones and conversion tools
+            hand out .JPG files whose contents are ftypheic -- Metadata::parseJPG already
+            sniffs for exactly that and reroutes -- and here the mislabelled file simply
+            failed the JPEG path and fell through to the generic reader, which cannot read
+            it either, so it ended up with the error icon. Sniffed only ONCE and only
+            after the extension's own path has failed, so a folder of real JPEGs pays
+            nothing for it. */
+        if (!isHeicExt && !heicSniffed && status != Status::Success
+                       && status != Status::Open) {
+            heicSniffed = true;
+            isHeicContent = sniffHeic(fPath);
+        }
+
+        if (isHeicExt || isHeicContent) {
             status = loadFromHeic(fPath, image);
             if (status == Status::Success) {
                 /*  The HEIC paths return the EMBEDDED PREVIEW on both platforms
