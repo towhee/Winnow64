@@ -189,10 +189,10 @@ DataModel::DataModel(QObject *parent,
         combineRawJpg alike. All five are emitted on the GUI thread. */
     for (auto sig : { &QAbstractItemModel::rowsInserted,
                       &QAbstractItemModel::rowsRemoved }) {
-        connect(sf, sig, this, [this]{ rebuildProxySnapshot(); });
+        connect(sf, sig, this, [this]{ scheduleProxySnapshotRebuild(); });
     }
-    connect(sf, &QAbstractItemModel::modelReset,   this, [this]{ rebuildProxySnapshot(); });
-    connect(sf, &QAbstractItemModel::layoutChanged, this, [this]{ rebuildProxySnapshot(); });
+    connect(sf, &QAbstractItemModel::modelReset,   this, [this]{ scheduleProxySnapshotRebuild(); });
+    connect(sf, &QAbstractItemModel::layoutChanged, this, [this]{ scheduleProxySnapshotRebuild(); });
 
     /*  The row-count changes the proxy reports also size the live per-row array.
         It is grown from the SOURCE row count, not the proxy's -- the array is
@@ -432,9 +432,40 @@ void DataModel::resizeRowSync(int rows)
     to do it. Paths do not change once a row exists, so nothing else can make
     this stale.
 */
+void DataModel::scheduleProxySnapshotRebuild()
+{
+/*
+    One rebuild for a burst of proxy mutations, on the next turn of the event loop.
+
+    The signals it answers -- rowsInserted, rowsRemoved, layoutChanged, modelReset --
+    arrive one per CONTIGUOUS RUN of rows, and an invalidate over a scattered filter
+    produces hundreds of them for a single user action. The rebuild walks every proxy row
+    (mapToSource, a path string, two hash inserts), so per-signal it is O(rows x signals)
+    to answer a question whose answer only changes once. Same reasoning, and the same
+    shape, as SortFilter::scheduleCompileFilters and DataModel::scheduleVisibleEmit.
+*/
+    if (!G::isGuiThread()) return;
+    if (proxySnapshotPending) return;
+    proxySnapshotPending = true;
+    QTimer::singleShot(0, this, [this]{ flushProxySnapshot(); });
+}
+
+void DataModel::flushProxySnapshot()
+{
+    if (!G::isGuiThread()) return;
+    if (!proxySnapshotPending) return;
+    proxySnapshotPending = false;
+    rebuildProxySnapshot();
+}
+
 void DataModel::rebuildProxySnapshot()
 {
     if (!G::isGuiThread()) return;
+    /*  A direct rebuild satisfies a pending coalesced one -- the snapshot is whole
+        either way, and leaving the flag set would cost a second walk for nothing. */
+    proxySnapshotPending = false;
+    QElapsedTimer snapTimer;
+    if (G::isPerfProbe) snapTimer.start();
 
     auto snap = std::make_shared<ProxySnapshot>();
     snap->instance = instance;
@@ -458,6 +489,11 @@ void DataModel::rebuildProxySnapshot()
     {
         QMutexLocker lock(&mSyncMutex);
         mProxySnapshot = snap;
+    }
+
+    if (G::isPerfProbe) {
+        probeSnapRebuilds++;
+        probeSnapNs += snapTimer.nsecsElapsed();
     }
 }
 
@@ -6483,7 +6519,25 @@ void SortFilter::filterChange(QString src)
         already off and does nothing. */
     G::A11ySuspend a11ySuspend;
     compileFilters();
-    invalidateRowsFilter();
+
+    /*  invalidate() RATHER THAN invalidateRowsFilter(), which is the difference between
+        telling the views once and telling them 348 times.
+
+        invalidateRowsFilter() is INCREMENTAL: Qt walks the source, works out which rows
+        change visibility, and emits one begin/endInsertRows (or Remove) per CONTIGUOUS
+        RUN of them. For a filter whose rows are scattered through the model -- which is
+        what any real filter over a photo library is -- that was 348 signal pairs for one
+        user action at 43,070 rows, each one splicing into the proxy's mapping vectors and
+        reaching three views. invalidate() clears the mapping and emits ONE
+        layoutAboutToBeChanged/layoutChanged pair; the mapping is rebuilt lazily, once.
+
+        WHAT IT COSTS: layoutChanged does not carry a persistent-index remapping, so
+        anything holding one -- the selection model, an open editor -- is invalidated
+        rather than moved. That is acceptable HERE and only because of what surrounds it:
+        MW::filterChange saves the selection before this and restores it afterwards
+        (Selection::recover, or a fresh select when rows were eliminated), which is the
+        same thing it has always done for a sort. */
+    invalidate();
     return;
 
     // force wait until finished to prevent sorting/editing datamodel
