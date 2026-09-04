@@ -1,5 +1,5 @@
 #include "Main/mainwindow.h"
-#include "Views/catalogscoperow.h"
+#include "Views/catalogscopetree.h"
 #include "Develop/workingimagecache.h"
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
@@ -295,6 +295,12 @@ void MW::createDataModel()
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::abortProcessing);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
+    /*  A year picked in the Catalog tree is checked HERE and not where the build is
+        asked for: BuildFilters::build starts a THREAD, so the Years category has no
+        items until the build's Done op has run on the GUI thread, which is what emits
+        this. See MW::applyPendingCatalogYear. */
+    connect(buildFilters, &BuildFilters::finishedBuildFilters,
+            this, &MW::applyPendingCatalogYear);
     connect(buildFilters, &BuildFilters::updateFilterMenu, this, &MW::updateFilterMenu);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);
@@ -443,7 +449,7 @@ void MW::createCatalogScanner()
                 if (catalogView && catalogDock && catalogDock->isVisible())
                     catalogView->refresh();
                 if (findPanel && filterDock->isVisible()) findPanel->refresh();
-                updateCatalogScopeRows();
+                updateCatalogScopeTrees();
                 if (G::isLogger)
                     G::log("MW::createCatalogScanner",
                            "catalog scan finished, indexed = " +
@@ -1404,14 +1410,14 @@ void MW::createStatusBar()
     statusBar()->setMinimumHeight(qMax(statusBarBaseHeight, progress->preferredHeight()));
 }
 
-/*  Wrap a scope tree (Folders or Bookmarks) with a Catalog row above it.
+/*  Wrap the Folders tree with the Catalog tree above it.
 
-    The dock's widget becomes a plain container so the row sits at the top and the
-    tree fills the rest. The DOCK keeps its objectName, so a WindowState saved
-    before the row existed still restores -- Qt keys dock state on the dock, not
+    The dock's widget becomes a plain container so the catalog rows sit at the top and
+    the tree fills the rest. The DOCK keeps its objectName, so a WindowState saved
+    before the catalog rows existed still restores -- Qt keys dock state on the dock, not
     on what it contains.
 */
-static QWidget *wrapWithCatalogScopeRow(CatalogScopeRow *row, QWidget *tree)
+static QWidget *wrapWithCatalogScopeTree(CatalogScopeTree *row, QWidget *tree)
 {
     QWidget *box = new QWidget;
     QVBoxLayout *v = new QVBoxLayout(box);
@@ -1433,11 +1439,15 @@ void MW::createFolderDock()
     dockTextNames << folderDockTabText;
     folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
     // folderDock->setObjectName("FoldersDock");
-    folderCatalogScopeRow = new CatalogScopeRow;
-    connect(folderCatalogScopeRow, &CatalogScopeRow::clicked, this, [this]{
-        setScope(G::Scope::Catalog, "folderCatalogScopeRow");
+    /*  The count metric and margin are FSTree::resizeColumns', so the catalog counts
+        line up with the folder counts directly beneath them. */
+    folderCatalogTree = new CatalogScopeTree("(99999", 10);
+    connect(folderCatalogTree, &CatalogScopeTree::catalogChosen, this, [this]{
+        setCatalogScopeWhole("folderCatalogTree");
     });
-    folderDock->setWidget(wrapWithCatalogScopeRow(folderCatalogScopeRow, fsTree));
+    connect(folderCatalogTree, &CatalogScopeTree::catalogYearChosen, this,
+            [this](const QString &year){ setCatalogScopeForYear(year); });
+    folderDock->setWidget(wrapWithCatalogScopeTree(folderCatalogTree, fsTree));
     connect(folderDock, &DockWidget::focus, this, &MW::focusOnDock);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
@@ -1518,11 +1528,12 @@ void MW::createFavDock()
     dockTextNames << favDockTabText;
     favDock = new DockWidget(favDockTabText, "BookmarkDock", this);  // Bookmarks📗 🔖 🏷️ 🗂️
     // favDock->setObjectName("Bookmarks");
-    favCatalogScopeRow = new CatalogScopeRow;
-    connect(favCatalogScopeRow, &CatalogScopeRow::clicked, this, [this]{
-        setScope(G::Scope::Catalog, "favCatalogScopeRow");
-    });
-    favDock->setWidget(wrapWithCatalogScopeRow(favCatalogScopeRow, bookmarks));
+    /*  NO CATALOG TREE HERE. It was offered above both scope trees on the reasoning
+        that scope is chosen in either -- but Bookmarks is a list of folders the user
+        put there, and a row nobody bookmarked reads as clutter in it. One place to
+        choose the catalog is enough, and the Folders panel is where the tree it belongs
+        beside actually lives. */
+    favDock->setWidget(bookmarks);
     connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // customize the favDock titlebar

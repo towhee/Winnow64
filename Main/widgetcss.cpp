@@ -512,6 +512,16 @@ QString WidgetCSS::treeView()
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
     "}"
 
+    /*  THE CATALOG TREE SITS DIRECTLY ON TOP OF THE FOLDERS TREE, so the border the rule
+        above draws would read as a separator line between two halves of what is meant to
+        be one list -- the catalog rows and then the folders. Dropping the top edge (and
+        the catalog tree carrying no border at all) closes the seam. Keyed on objectName
+        here rather than set on the widget, because MW::setFontSize and setBackgroundShade
+        re-apply the whole of G::css to it and would wipe a widget-level rule. */
+    "QTreeView#fsTree {"
+        "border-top: none;"
+    "}"
+
     "QTreeView::branch:has-children:!has-siblings:closed,"
     "QTreeView::branch:closed:has-children:has-siblings {"
         "border-image: none;"

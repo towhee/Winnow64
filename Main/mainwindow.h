@@ -39,7 +39,7 @@
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
 #include "Views/findpanel.h"
-#include "Views/catalogscoperow.h"
+#include "Views/catalogscopetree.h"
 #include "Main/catalogscanner.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
@@ -1032,7 +1032,15 @@ private slots:
         folder -- routes here, and this pushes the result back to all of them so
         they cannot disagree. src is for the log only. */
     void setScope(G::Scope s, QString src = "");
-    void updateCatalogScopeRows();   // push the catalogued count onto both rows
+    void updateCatalogScopeTrees();   // push the catalogued count onto both trees
+    /*  The catalog, prefiltered on one year -- what selecting a year under the Catalog
+        row in the Folders or Bookmarks panel means. See Views/catalogscopetree.h. */
+    void setCatalogScopeForYear(const QString &year);
+    /*  Check the year setCatalogScopeForYear remembered, once the Filters panel has a
+        Years category to check it in. Called from buildFiltersWhenModelReady. */
+    void applyPendingCatalogYear();
+    /*  The Catalog row itself: the whole catalog, undoing a year this put on. */
+    void setCatalogScopeWhole(QString src = "");
     void showMetadataDock();
 
     void setMenuBarVisibility();
@@ -1649,11 +1657,16 @@ private:
        a second dock. Null when the flag is off, in which case the two original panels are
        built exactly as before. */
     FindPanel *findPanel = nullptr;
-    /*  The Catalog scope row above each of the two scope trees. See
-        Views/catalogscoperow.h -- two views of one fact, both mirrored by
-        MW::setScope. */
-    CatalogScopeRow *folderCatalogScopeRow = nullptr;
-    CatalogScopeRow *favCatalogScopeRow = nullptr;
+    /*  The Catalog rows above the Folders tree. See Views/catalogscopetree.h -- a
+        second view of G::scope, mirrored by MW::setScope. */
+    CatalogScopeTree *folderCatalogTree = nullptr;
+    /*  The year a Catalog tree asked for, waiting for the filters to be rebuilt over
+        the catalog that is loading. Empty means nothing is pending. */
+    QString pendingCatalogYear;
+    /*  The year currently checked BECAUSE a Catalog tree asked for it, so widening back
+        to the whole catalog can take it off again without touching a filter the user set
+        by hand. */
+    QString appliedCatalogYear;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
