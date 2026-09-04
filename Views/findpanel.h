@@ -3,7 +3,6 @@
 
 #include <QLabel>
 #include <QLineEdit>
-#include <QPushButton>
 #include <QStringList>
 #include <QTimer>
 #include <QWidget>
@@ -32,10 +31,12 @@ class Filters;
     colours -- only where the values came from changes. Anything else would drift, which
     is the failure the two panels had already demonstrated.
 
-    FOLDERS narrows what is loaded: checking an item re-runs the proxy filter and the
-    counts move. CATALOG searches the index and its result is not a filter but a set of
-    images to LOAD or ADD -- so the footer changes verb with the scope rather than the
-    panel changing shape.
+    IN BOTH SCOPES THE PANEL FILTERS; ONLY THE SET DIFFERS. Checking an item re-runs the
+    proxy filter and the counts move, over the open folder or over the whole catalog.
+    There is no found set to LOAD and nothing to ADD it to: the catalog is browsed whole,
+    so the buttons and the footer that described a search RESULT are gone. Functionality
+    over what is loaded -- collections, if they are built -- belongs in the main menu and
+    the context menus, not in buttons under a filter tree.
 
     THE SCOPE IS NOT SET FROM THIS PANEL. The Folders|Catalog buttons and the "Manage..."
     row are gone: choosing the catalog is File > Open Catalog (or the Catalog row above
@@ -60,9 +61,13 @@ class Filters;
     parsed by one grammar (Utilities/searchterms.h) whichever scope runs it.
 
     IT DOES NOT SHOW THUMBNAILS. A picture list in a narrow dock would be a worse version
-    of the grid Winnow already has, so Catalog reports how many images matched and
-    offers to load them; they then appear in the ordinary views where the loupe, Develop,
-    ratings and filtering all work on them as on a folder.
+    of the grid Winnow already has: what the catalog scope matches is loaded into the
+    ordinary views, where the loupe, Develop, ratings and filtering all work on it as on
+    a folder.
+
+    NOTHING TO REPORT IS NOTHING SHOWN. The only text left under the tree is the reason
+    the panel can show nothing -- no index, or an empty one -- and it hides again as soon
+    as that stops being true.
 */
 class FindPanel : public QWidget
 {
@@ -114,7 +119,7 @@ private slots:
     void runSearch();
 
 private:
-    void updateFooter();
+    void updateStatus();
     void applyScope();
     /* The query the box and the checked items currently describe. */
     CatalogQuery currentQuery() const;
@@ -123,29 +128,23 @@ private:
 
     QLineEdit *searchEdit = nullptr;
 
-    QLabel *resultLabel = nullptr;
-    QPushButton *loadBtn = nullptr;
-    QPushButton *addBtn = nullptr;
-    QWidget *loadRow = nullptr;
+    /*  Shown ONLY when there is a reason the panel can show nothing: no index, or an
+        empty one. Hidden the rest of the time -- see updateStatus. */
+    QLabel *statusLabel = nullptr;
 
     QTimer *debounce = nullptr;
 
-    /* The most recent Catalog result, held so Load does not have to re-run the query
-       -- and so what gets loaded is exactly what the count described. */
+    /* The most recent Catalog result: what was loaded, held so the next run can tell
+       whether the set actually changed before loading it again. */
     /*  WHOLE ROWS, not paths. The search that produced them already selected everything a
         datamodel row displays (Catalog::searchRows), so loading them opens no files. The
         paths are still what the panel compares run-to-run -- see resultPaths. */
     QVector<CatalogRow> results;
-    /*  The result as paths, which is what the run-to-run comparison and the load both
-        need. Built on demand rather than stored beside results, so the two cannot
-        disagree about what the current result is. */
+    /*  The result as paths, which is what the run-to-run comparison needs. Built on
+        demand rather than stored beside results, so the two cannot disagree about what
+        the current result is. */
     QStringList resultPaths() const;
     int totalMatches = 0;
-    /*  True when the catalog scope is showing the most recent images because
-        nothing has been asked -- the footer says something different then, and
-        it is not a "no matches" case. */
-    bool noQuery = true;
-
     Scope currentScope = FolderScope;
     bool scanning = false;
 
