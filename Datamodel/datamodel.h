@@ -633,6 +633,11 @@ public:
     qint64 probeLastThumbSqlNs = 0;
     qint64 probeLastThumbDecodeNs = 0;
     qint64 probeLastThumbStamps = 0;
+    /*  The visible-only ICON EMIT GATE, per report window. G::probeEmitVisible and
+        probeEmitSuppressed are cumulative (the GUI STALL line reads them that way), so
+        the scroll line reads them against these baselines instead of draining them. */
+    qint64 probeLastEmitVisible = 0;
+    qint64 probeLastEmitSuppressed = 0;
     /*  Probe only: proxy-snapshot rebuilds and their cost, reported by the
         MW::filterChange phase timer. Reset there. */
     int probeSnapRebuilds = 0;

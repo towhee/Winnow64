@@ -97,6 +97,14 @@ private:
     uint offsetThumb;
     uint lengthThumb;
 
+    /*  THIS TASK'S STAT, OR -1. readMetadata's QFileInfo has been stat'd by the time the
+        metadata is read, so readIcon can hand the two values ThumbCache::getImage would
+        otherwise have to ask the filesystem for a second time. Reset per task in read():
+        an icon-only read has no stat of its own and must leave them at -1, or a row would
+        be checked for freshness against the PREVIOUS row's file. */
+    qint64 srcSize = -1;
+    qint64 srcMtime = -1;
+
     int metaReadCount;
     bool isVideo;
     bool isDebug;

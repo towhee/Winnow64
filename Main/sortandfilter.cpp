@@ -252,13 +252,32 @@ void MW::filterChange(QString source)
     QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection,
                               Q_ARG(QString, srcFun));
 
-    // is the DataModel current index still in the filter.  If not, reset
+    /*  IS THE CURRENT IMAGE STILL IN THE FILTER? If not, fall back to a row that
+        EXISTS -- and the clamp is the whole point, because every candidate here can be -1.
+
+        THIS WAS THE "FILTER THE CATALOG AND NO THUMBNAILS PAINT" DEFECT. mapFromSource is
+        invalid whenever the filter removed the current image, which is the ordinary case.
+        The fallback then read dm->currentSfIdx, a PERSISTENT index into the proxy -- and
+        SortFilter::filterChange invalidates rather than re-mapping (see the note on
+        invalidate() above), so after the filter it reads back as row -1. Since -1 is less
+        than sfRows, the old test took the first branch and built sf->index(-1, 0): an
+        INVALID index. Selection::select rejects one -- it warns, beeps and returns without
+        selecting -- so nothing emitted fileSelectionChange, nothing dispatched MetaRead
+        for the new visible window, and the thumbnails never loaded. A click in thumbView
+        or a switch to gridView and back made them appear because both dispatch a read.
+        The probe line said it out loud every time: "Selection::select(QModelIndex)
+        sfIdx = QModelIndex(-1,-1) invalid."
+
+        dm->currentSfRow is the maintained plain int and is tried first; row 0 is the last
+        resort. A filtration with no rows at all has already returned via nullFiltration. */
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    int oldSfRow = dm->currentSfIdx.row();
-    int sfRows = dm->sf->rowCount();
-    if (!newSfIdx.isValid()) {
-        if (oldSfRow < sfRows) newSfIdx = dm->sf->index(oldSfRow, 0);
-        else newSfIdx = dm->sf->index(sfRows-1, 0);
+    const int sfRows = dm->sf->rowCount();
+    if (!newSfIdx.isValid() && sfRows > 0) {
+        int row = dm->currentSfRow;
+        if (row < 0) row = dm->currentSfIdx.row();
+        if (row < 0) row = 0;
+        if (row >= sfRows) row = sfRows - 1;
+        newSfIdx = dm->sf->index(row, 0);
     }
 
     // rebuild imageCacheList and update priorities in image cache
@@ -282,6 +301,35 @@ void MW::filterChange(QString source)
     // only scroll if filtration has changed visible cells in thumbView
     scrollToCurrentRowIfNotVisible();
     phase("scroll");
+
+    /*  TELL THE LOADER, UNCONDITIONALLY. After a filter change the rows under the visible
+        window are DIFFERENT IMAGES, and most of them have no icon yet -- only MetaRead can
+        fix that, and until now nothing here asked it to. The dispatch was a side effect of
+        the selection, and BOTH branches above can be silent:
+
+            - Selection::recover uses QItemSelectionModel::NoUpdate deliberately (see its
+              comment, and "Selection recovery and the central view"), so it emits no
+              fileSelectionChange at all. That is the branch taken when the filter removed
+              nothing -- UNCHECKING a filter, where every row on screen changes.
+            - Selection::select is a no-op when the row it is given is already current.
+
+        Symptom when it is silent: uncheck a filter and the thumb strip paints only the
+        images that happened to have icons already -- three of them, around the current
+        row -- while the rest stay empty until a click or a view switch dispatches a read.
+        Placed AFTER scrollToCurrentRowIfNotVisible because that is where the icon range
+        this dispatch reads is established (MW::updateIconRange -> setIconRange), and the
+        snapshot is flushed first because the worker reads it on the other thread and this
+        function does not return to the event loop before the invoke. One queued call per
+        user action; rows that already have what they need are skipped by needToRead. */
+    if (!G::isInitializing && G::useReadMeta) {
+        const int startRow = qBound(0, dm->currentSfRow, dm->sf->rowCount() - 1);
+        dm->flushProxySnapshot();
+        QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
+                                  Q_ARG(int, startRow),
+                                  Q_ARG(bool, false),
+                                  Q_ARG(QString, QString("MW::filterChange")));
+    }
+    phase("dispatch");
 
     QApplication::restoreOverrideCursor();
 

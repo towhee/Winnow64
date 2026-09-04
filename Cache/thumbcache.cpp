@@ -372,23 +372,38 @@ bool ThumbCache::wantsOriginalThumb(bool hasDevelopRecipe)
            && G::previewSource != G::PreviewSource::Developed;
 }
 
-QImage ThumbCache::getImage(const QString &fPath, bool hasDevelopRecipe)
+QImage ThumbCache::getImage(const QString &fPath, bool hasDevelopRecipe,
+                            qint64 srcSize, qint64 srcMtime)
 {
     if (!G::cacheThumbnails || !wantsOriginalThumb(hasDevelopRecipe)) return QImage();
     if (fPath.isEmpty()) return QImage();
 
-    /*  Probe only: one stat per hit, on whatever volume the image lives on. */
+    /*  THE CALLER'S STAT, WHEN IT HAS ONE. A metadata+icon read has just stat'd this
+        file -- Metadata::loadImageMetadata takes m.size from its QFileInfo, and the
+        index path stats for IndexMetadata::candidate -- and a QFileInfo caches, so
+        those two values cost the Reader nothing and are microseconds old. Doing it
+        again here was a second syscall per row of a folder load: 73 us an icon on a
+        quiet local scroll, and a far worse number on a network volume, for an answer
+        already in hand. An icon-only read (scrolling into a chunk whose metadata is
+        already loaded) has no such stat and passes -1, so it stats here as before.
+        Probe only: the timer measures whichever of the two happened. */
     QElapsedTimer tcTimer;
     if (G::isPerfProbe) tcTimer.start();
-    const QFileInfo fi(fPath);
-    const bool exists = fi.exists();
-    const qint64 srcSize = exists ? fi.size() : 0;
-    const qint64 srcMtime = exists ? fi.lastModified().toSecsSinceEpoch() : 0;
+    if (srcSize < 0 || srcMtime < 0) {
+        const QFileInfo fi(fPath);
+        if (!fi.exists()) {
+            if (G::isPerfProbe)
+                G::probeThumbStatNs.fetch_add(tcTimer.nsecsElapsed(),
+                                              std::memory_order_relaxed);
+            return QImage();
+        }
+        srcSize = fi.size();
+        srcMtime = fi.lastModified().toSecsSinceEpoch();
+    }
     if (G::isPerfProbe) {
         G::probeThumbStatNs.fetch_add(tcTimer.nsecsElapsed(), std::memory_order_relaxed);
         tcTimer.restart();
     }
-    if (!exists) return QImage();
 
     const QByteArray jpg = get(fPath, srcSize, srcMtime);
     if (jpg.isEmpty()) return QImage();
