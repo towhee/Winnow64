@@ -3391,3 +3391,6 @@ Still open
 2. The filterable Availability category. Column populated, no Filters category yet.
 
 Worth a separate look sometime: tst_localcontrast failing means a saved Develop recipe renders differently than when it was saved — small (~1e-4) but that's the kind of drift the golden test exists to catch.
+
+sample Winnow 5 -f /Users/roryhill/winnow-scroll.txt
+Winnow --perfprobe
