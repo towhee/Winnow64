@@ -198,6 +198,24 @@ void MW::createFileActions()
     addAction(refreshFoldersAction);
     connect(refreshFoldersAction, &QAction::triggered, this, &MW::refresh);
 
+    /*  THE CATALOG'S TWO FILE COMMANDS. Both used to live in the Find dock: a
+        Folders|Catalog toggle at the top and a "Manage..." button under its footer.
+        Opening the catalog is choosing what to browse, which is what the File menu is
+        for, and which folders are indexed is configuration -- neither is part of the
+        search surface, and putting them in the panel meant they were only findable by
+        someone who had already opened it. Shift+F2 still opens the catalog. */
+    openCatalogAction = new QAction(tr("Open Catalog"), this);
+    openCatalogAction->setObjectName("openCatalog");
+    openCatalogAction->setShortcutVisibleInContextMenu(true);
+    addAction(openCatalogAction);
+    connect(openCatalogAction, &QAction::triggered, this, &MW::showCatalogDock);
+
+    manageCatalogAction = new QAction(tr("Manage Catalog..."), this);
+    manageCatalogAction->setObjectName("manageCatalog");
+    manageCatalogAction->setShortcutVisibleInContextMenu(true);
+    addAction(manageCatalogAction);
+    connect(manageCatalogAction, &QAction::triggered, this, &MW::manageCatalogRoots);
+
     collapseFoldersAction = new QAction(tr("Collapse all folders"), this);
     collapseFoldersAction->setObjectName("collapseFolders");
     collapseFoldersAction->setShortcutVisibleInContextMenu(true);
@@ -2088,6 +2106,10 @@ void MW::createFileMenu()
     fileMenu->addAction(revealFileAction);
 
     fileMenu->addSeparator();
+    fileMenu->addAction(openCatalogAction);
+    fileMenu->addAction(manageCatalogAction);
+
+    fileMenu->addSeparator();
     // fileMenu->addAction(refreshCurrentAction);
     fileMenu->addAction(refreshFoldersAction);
 
@@ -3145,6 +3167,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[favDockVisibleAction->objectName()] = favDockVisibleAction;
     actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
     actionKeys[catalogDockVisibleAction->objectName()] = catalogDockVisibleAction;
+    actionKeys[openCatalogAction->objectName()] = openCatalogAction;
+    actionKeys[manageCatalogAction->objectName()] = manageCatalogAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;
     actionKeys[thumbDockVisibleAction->objectName()] = thumbDockVisibleAction;
     //    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;

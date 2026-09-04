@@ -1155,6 +1155,12 @@ private:
     QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
+    /*  The catalog's two entry points, in the File menu. The Find dock used to carry
+        both -- a Folders|Catalog toggle and a "Manage..." button under its footer -- but
+        picking a set to browse and choosing which folders are indexed are both File
+        commands, not search-panel furniture. */
+    QAction *openCatalogAction = nullptr;
+    QAction *manageCatalogAction = nullptr;
     QAction *renameAction;
     QAction *showImageCountAction;
     QAction *runDropletAction;

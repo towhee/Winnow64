@@ -1706,8 +1706,6 @@ void MW::createFilterDock()
         findPanel = new FindPanel(filters);
         filterLayout->addWidget(findPanel);
         connect(findPanel, &FindPanel::loadResults, this, &MW::loadCatalogRows);
-        connect(findPanel, &FindPanel::manageRootsRequested, this,
-                &MW::manageCatalogRoots);
         /* Returning to Folders: the tree is holding catalog values, so rebuild it from
            the datamodel. buildFilters->reset() clears the catalog items (and the checks
            that went with them) before build() repopulates from the model. */

@@ -360,6 +360,25 @@ void MW::updateCatalogScopeRows()
                          : -1;
     if (folderCatalogScopeRow) folderCatalogScopeRow->setImageCount(n);
     if (favCatalogScopeRow)    favCatalogScopeRow->setImageCount(n);
+
+    /*  File > Open Catalog greys out when the index could not be opened, with the reason
+        in its tooltip -- the same fact the panel's Catalog button used to carry by being
+        disabled. Manage Catalog... stays enabled: choosing which folders are indexed and
+        rescanning them is what the user would do about it. */
+    const bool open = (n >= 0);
+    if (openCatalogAction) {
+        openCatalogAction->setEnabled(open);
+        openCatalogAction->setToolTip(open
+            ? tr("Browse and search every image Winnow has catalogued, including "
+                 "folders that are not open.")
+            : tr("The catalog is unavailable -- the local index database could not "
+                 "be opened."));
+        /*  The same property enableSelectionDependentMenus' gate() writes, so the
+            Disabled Shortcut Feedback path can say why. Set here rather than there
+            because this depends on the catalog, not on the selection. */
+        openCatalogAction->setProperty("disabledReason",
+            QString("the local index database could not be opened"));
+    }
 }
 
 void MW::setScope(G::Scope s, QString src)
