@@ -141,12 +141,14 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
             for (int r = range.topRow(); r <= range.bottomRow(); ++r) rows << r;
         std::sort(rows.begin(), rows.end(), std::greater<int>());
         for (int r : rows) table->removeRow(r);
+        /*  REMOVING A ROW UN-CATALOGUES WHAT IT CONTRIBUTED, and this is the ordinary
+            scopeChanged that says so: the table states what the catalog HOLDS, not
+            merely what a scan visits, so no separate signal or confirmation belongs
+            here. MW counts what the removal disowns, asks, and puts the rows back if the
+            user declines -- which is why this does not need to know whether the deletion
+            was accepted. Removing an exclusion still indexes nothing by itself: the next
+            scan picks that folder up like any other. */
         noteEdit();
-        /* Removing a row does NOT un-catalogue what it contributed. Those images are
-           still real and still findable, and silently dropping thousands of rows because
-           a folder was taken off the scan list would be a surprising amount of deletion
-           for what reads as "stop scanning this". Nor does removing an exclusion index
-           what it was hiding: the next scan picks it up like any other folder. */
     });
 
     connect(scanBtn, &QPushButton::clicked, this, [this]{
@@ -286,25 +288,8 @@ void CatalogRootsDlg::updateNote()
         }
     }
 
-    if (pendingForgetImages > 0) {
-        noteLabel->setText(
-            QString("Scan will forget %L1 catalogued image%2 under %L3 excluded "
-                    "folder%4. The images themselves are not touched.")
-                .arg(pendingForgetImages)
-                .arg(pendingForgetImages == 1 ? "" : "s")
-                .arg(pendingForgetFolders)
-                .arg(pendingForgetFolders == 1 ? "" : "s"));
-        return;
-    }
-
-    noteLabel->setText("Include Subfolders off means the row applies to that one folder.");
-}
-
-void CatalogRootsDlg::setPendingForget(int images, int folders)
-{
-    pendingForgetImages = images;
-    pendingForgetFolders = folders;
-    updateNote();
+    noteLabel->setText("These folders are the catalog: removing a row forgets what it "
+                       "contributed. The image files are not affected.");
 }
 
 void CatalogRootsDlg::setScanning(bool on)

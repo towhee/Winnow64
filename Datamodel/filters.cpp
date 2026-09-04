@@ -137,10 +137,12 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catType] = G::TypeColumn;
     filterCategoryToDmColumn[catFolder] = G::FolderNameColumn;
     filterCategoryToDmColumn[catYear] = G::YearColumn;
+    filterCategoryToDmColumn[catMonth] = G::MonthColumn;
     filterCategoryToDmColumn[catDay] = G::DayColumn;
     filterCategoryToDmColumn[catModel] = G::CameraModelColumn;
     filterCategoryToDmColumn[catLens] = G::LensColumn;
     filterCategoryToDmColumn[catFocalLength] = G::FocalLengthColumn;
+    filterCategoryToDmColumn[catIso] = G::ISOColumn;
     filterCategoryToDmColumn[catTitle] = G::TitleColumn;
     /* The FLAT vocabulary (leaves + every hierarchy node), not the literal dc:subject, so
        a Lightroom tag written both ways is one filter item and an ancestor is filterable
@@ -261,10 +263,12 @@ void Filters::createDynamicFilters()
     types = new QTreeWidgetItem(this);
     folders = new QTreeWidgetItem(this);
     years = new QTreeWidgetItem(this);
+    months = new QTreeWidgetItem(this);
     days = new QTreeWidgetItem(this);
     models = new QTreeWidgetItem(this);
     lenses = new QTreeWidgetItem(this);
     focalLengths = new QTreeWidgetItem(this);
+    isos = new QTreeWidgetItem(this);
     titles = new QTreeWidgetItem(this);
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
@@ -278,10 +282,12 @@ void Filters::createDynamicFilters()
     createFilter(types, catType);
     createFilter(folders, catFolder);
     createFilter(years, catYear);
+    createFilter(months, catMonth);
     createFilter(days, catDay);
     createFilter(models, catModel);
     createFilter(lenses, catLens);
     createFilter(focalLengths, catFocalLength);
+    createFilter(isos, catIso);
     createFilter(titles, catTitle);
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
@@ -323,10 +329,12 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(types);
     setCategoryBackground(folders);
     setCategoryBackground(years);
+    setCategoryBackground(months);
     setCategoryBackground(days);
     setCategoryBackground(models);
     setCategoryBackground(lenses);
     setCategoryBackground(focalLengths);
+    setCategoryBackground(isos);
     setCategoryBackground(titles);
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
@@ -352,10 +360,12 @@ void Filters::removeChildrenDynamicFilters()
     types->takeChildren();
     folders->takeChildren();
     years->takeChildren();
+    months->takeChildren();
     days->takeChildren();
     models->takeChildren();
     lenses->takeChildren();
     focalLengths->takeChildren();
+    isos->takeChildren();
     titles->takeChildren();
     keywords->takeChildren();
     creators->takeChildren();
@@ -979,6 +989,10 @@ void Filters::clearAll()
                     ;
     QMutexLocker locker(&mutex);
 
+    /* Nothing is checked any more, so there is nothing to range from. */
+    rangeAnchorCategory = nullptr;
+    rangeAnchorItem.clear();
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {
@@ -1094,8 +1108,80 @@ void Filters::setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state)
     itemCheckStateHasChanged = false;
     item->setCheckState(0, state);
     styleFilterItem(item);
+    if (state == Qt::Checked) noteRangeAnchor(item);
     activeCategory = item->parent();
     emit filterChange("Filters::setItemFilterState");
+}
+
+void Filters::noteRangeAnchor(QTreeWidgetItem *item)
+{
+/*
+    Remember the item just checked. It is where the next Shift+click ranges FROM.
+*/
+    if (!item || !item->parent()) return;
+    rangeAnchorCategory = item->parent();
+    rangeAnchorItem = item->text(0);
+}
+
+bool Filters::applyRangeCheck(QTreeWidgetItem *item)
+{
+/*
+    SHIFT+CLICK CHECKS A RANGE, the gesture every list in the OS uses for "and everything
+    between". The range runs from the item last checked to the one clicked, and only
+    within the SAME category: a range spanning Ratings into Color classes would cross an
+    AND boundary and mean nothing the user asked for.
+
+    The whole range is INCLUDED unless it is already all included, in which case the same
+    gesture clears it -- so the gesture undoes itself and there is no separate way out. An
+    EXCLUDED item counts as not included, so a range containing one is completed rather
+    than emptied, and the exclusion is replaced by an inclusion like any other item in it.
+
+    One filterChange is emitted for the whole range, not one per item: each emission
+    re-runs the filter over the datamodel, and a fifty-item range would re-run it fifty
+    times to arrive at the same place.
+*/
+    if (!isFilterableItem(item)) return false;
+    QTreeWidgetItem *cat = item->parent();
+    if (cat == nullptr || cat != rangeAnchorCategory) return false;
+
+    int anchorRow = -1;
+    for (int i = 0; i < cat->childCount(); i++) {
+        if (cat->child(i)->text(0) == rangeAnchorItem) {
+            anchorRow = i;
+            break;
+        }
+    }
+    /* The anchor item is gone -- the category was rebuilt since it was checked. Nothing
+       to range from, so the caller treats this as an ordinary click. */
+    if (anchorRow == -1) return false;
+
+    const int clickedRow = cat->indexOfChild(item);
+    const int first = qMin(anchorRow, clickedRow);
+    const int last = qMax(anchorRow, clickedRow);
+
+    bool allChecked = true;
+    for (int i = first; i <= last; i++) {
+        QTreeWidgetItem *child = cat->child(i);
+        if (!isFilterableItem(child)) continue;
+        if (child->checkState(0) != Qt::Checked) {
+            allChecked = false;
+            break;
+        }
+    }
+    const Qt::CheckState state = allChecked ? Qt::Unchecked : Qt::Checked;
+
+    for (int i = first; i <= last; i++) {
+        QTreeWidgetItem *child = cat->child(i);
+        if (!isFilterableItem(child)) continue;
+        if (child->checkState(0) == state) continue;
+        child->setCheckState(0, state);
+        styleFilterItem(child);
+    }
+
+    noteRangeAnchor(item);
+    activeCategory = cat;
+    emit filterChange("Filters::applyRangeCheck");
+    return true;
 }
 
 void Filters::refreshAmbiguousKeywords()
@@ -1260,10 +1346,12 @@ bool Filters::loadCatalogCategories()
         {types,        G::TypeColumn},
         {folders,      G::FolderNameColumn},
         {years,        G::YearColumn},
+        {months,       G::MonthColumn},
         {days,         G::DayColumn},
         {models,       G::CameraModelColumn},
         {lenses,       G::LensColumn},
         {focalLengths, G::FocalLengthColumn},
+        {isos,         G::ISOColumn},
         {titles,       G::TitleColumn},
         {keywords,     G::KeywordsAllColumn},
         {creators,     G::CreatorColumn},
@@ -1330,10 +1418,12 @@ void Filters::fillQuery(CatalogQuery &q) const
         {types,        G::TypeColumn},
         {folders,      G::FolderNameColumn},
         {years,        G::YearColumn},
+        {months,       G::MonthColumn},
         {days,         G::DayColumn},
         {models,       G::CameraModelColumn},
         {lenses,       G::LensColumn},
         {focalLengths, G::FocalLengthColumn},
+        {isos,         G::ISOColumn},
         {titles,       G::TitleColumn},
         {keywords,     G::KeywordsAllColumn},
         {creators,     G::CreatorColumn},
@@ -1485,6 +1575,10 @@ void Filters::uncheckAllFilters()
                     ;
     QMutexLocker locker(&mutex);
 
+    /* Nothing is checked any more, so there is nothing to range from. */
+    rangeAnchorCategory = nullptr;
+    rangeAnchorItem.clear();
+
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {
@@ -1552,10 +1646,12 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(types));
     collapse(indexFromItem(folders));
     collapse(indexFromItem(years));
+    collapse(indexFromItem(months));
     collapse(indexFromItem(days));
     collapse(indexFromItem(models));
     collapse(indexFromItem(lenses));
     collapse(indexFromItem(focalLengths));
+    collapse(indexFromItem(isos));
     collapse(indexFromItem(titles));
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
@@ -1770,23 +1866,35 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         }
     }
 
+    /*  ITEM ORDER IS THE MAP'S KEY ORDER, which is alphabetical -- right for a name and
+        right for the values deliberately padded so that they sort as numbers (see the
+        focal length and ISO justification in BuildFilters::makeSnapshot), but wrong for
+        a closed vocabulary whose meaning is a SEQUENCE. Months sorted as text read Apr,
+        Aug, Dec, Feb ..., which is not a list of months; they are inserted in calendar
+        order instead, and only the months present are offered. */
+    QStringList keys = itemMap.keys();
+    if (category == months) {
+        QStringList inCalendarOrder;
+        for (const QString &name : Catalog::monthLabels())
+            if (itemMap.contains(name)) inCalendarOrder << name;
+        /*  A row with no capture date counts as the blank item, exactly as it does
+            under Years and Days, and it is not a month so it goes last. */
+        if (itemMap.contains("")) inCalendarOrder << "";
+        keys = inCalendarOrder;
+    }
+
     // add all remaining items in unique itemList to filter tree
     QTreeWidgetItem *item;
-    QMapIterator<QString, int> i(itemMap);
-    while (i.hasNext()) {
-        i.next();
+    for (const QString &key : keys) {
+        const int count = itemMap.value(key);
         item = new QTreeWidgetItem(category);
-        item->setText(0, i.key());
+        item->setText(0, key);
         item->setCheckState(0, Qt::Unchecked);
-        item->setData(1, Qt::EditRole, filterValueFor(category, i.key()));
-        item->setData(2, Qt::EditRole, i.value());
-        item->setData(3, Qt::EditRole, i.value());
+        item->setData(1, Qt::EditRole, filterValueFor(category, key));
+        item->setData(2, Qt::EditRole, count);
+        item->setData(3, Qt::EditRole, count);
         item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-        /*
-        qDebug() << "Filters::addCategoryItems  Category =" << category->text(0)
-                 << "item =" << i.value();
-        //*/
     }
 
     // sort the result
@@ -2089,6 +2197,10 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
         }
     }
 
+    /* Whether the click landed on the indicator (Qt toggled it) or on the text (we did),
+       an item that ends up checked is where the next Shift+click ranges from. */
+    if (item->checkState(0) == Qt::Checked) noteRangeAnchor(item);
+
     activeCategory = item->parent();
     emit filterChange("Filters::itemClickedSignal");
 }
@@ -2174,10 +2286,27 @@ void Filters::mousePressEvent(QMouseEvent *event)
     if (isLeftBtn && !isHdr && isValid && isFilterableItem(item)
         && (categoriesFrom == FromCatalog || (G::allMetadataAttempted && !buildingFilters))) {
         const bool isAltModifier = event->modifiers() & Qt::AltModifier;
+        const bool isShiftModifier = event->modifiers() & Qt::ShiftModifier;
         const Qt::CheckState now = item->checkState(0);
+        /* Handled here, before the base class, for the same reason as Opt+click: the base
+           class would toggle the clicked checkbox as well and we would be fighting it for
+           the state we just set. */
+        /*  SWALLOW THE RELEASE TOO on every path that has already settled the state
+            here. QAbstractItemView emits itemClicked from the RELEASE, against the index
+            it still has pressed, and itemClickedSignal then treats it as a click on the
+            item's text and toggles the box a second time. On a Shift+range that put the
+            clicked item back on after the range had just cleared it -- the reported
+            "item1 remained checked" -- and on every one of these paths it ran MW::filterChange
+            a SECOND time over the whole model, which is filtration the user waits for
+            twice to arrive where they already were. */
+        if (isShiftModifier && !isAltModifier && applyRangeCheck(item)) {
+            swallowNextRelease = true;
+            return;
+        }
         if (isAltModifier) {
             setItemFilterState(item, now == Qt::PartiallyChecked ? Qt::Unchecked
                                                                  : Qt::PartiallyChecked);
+            swallowNextRelease = true;
             return;
         }
         if (now == Qt::PartiallyChecked) {
@@ -2185,6 +2314,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
                inclusion -- the opposite of what the user asked for -- and there would be
                no way to simply clear one. */
             setItemFilterState(item, Qt::Unchecked);
+            swallowNextRelease = true;
             return;
         }
     }
@@ -2225,6 +2355,10 @@ void Filters::mouseReleaseEvent(QMouseEvent * event)
     the cursor point between press and release.
 */
     if (G::isLogger) G::log("Filters::mouseReleaseEvent");
+    if (swallowNextRelease) {
+        swallowNextRelease = false;
+        return;
+    }
     if (!hdrJustClicked) QTreeWidget::mouseReleaseEvent(event);
 }
 

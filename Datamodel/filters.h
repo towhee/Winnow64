@@ -23,7 +23,9 @@ public:
     QTreeWidgetItem *lenses;
     QTreeWidgetItem *keywords;
     QTreeWidgetItem *focalLengths;
+    QTreeWidgetItem *isos;
     QTreeWidgetItem *years;
+    QTreeWidgetItem *months;
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
     QTreeWidgetItem *availability;
@@ -39,10 +41,12 @@ public:
     QString catType = "File types";
     QString catFolder = "Folders";
     QString catYear = "Years";
+    QString catMonth = "Months";
     QString catDay = "Days";
     QString catModel = "Camera models";
     QString catLens = "Lenses";
     QString catFocalLength = "Focal lengths";
+    QString catIso = "ISO";
     QString catTitle = "Titles";
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
@@ -219,6 +223,20 @@ private:
     /* True when this item may be included/excluded at all -- a child, enabled, and not
        one of the Search category's two fixed rows. */
     bool isFilterableItem(QTreeWidgetItem *item) const;
+    /* SHIFT+CLICK RANGES, and where a range starts from. The anchor is the item last
+       CHECKED, remembered as its category plus its text rather than as a pointer,
+       because a category's items are destroyed and rebuilt every time the filters are
+       rebuilt and a dangling pointer here would be a crash rather than a stale range. */
+    QTreeWidgetItem *rangeAnchorCategory = nullptr;
+    QString rangeAnchorItem;
+    void noteRangeAnchor(QTreeWidgetItem *item);
+    /* Include every item between the anchor and this one, or clear them all when they
+       are already all included. False when there is no usable anchor in this category,
+       which leaves the click to be handled as an ordinary one. */
+    bool applyRangeCheck(QTreeWidgetItem *item);
+    /* mousePressEvent settled the state itself, so the matching release must not reach
+       the base class: it would emit itemClicked and toggle the item a second time. */
+    bool swallowNextRelease = false;
     /* Keyword names the catalog has seen under more than one parent, case-folded. Empty
        also means "no catalog", in which case nothing is marked -- we do not know. */
     QSet<QString> ambiguousKeywords;

@@ -62,6 +62,13 @@ private slots:
     void ambiguousKeywordIsReported();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
+    /* Declared ahead of the migration cases deliberately: those reopen the
+       database from a fixture and a failure there leaves it shut for everything
+       that follows, so a test placed after them cannot report its own result. */
+    void folderCountsReportEveryFolderAndItsSize();
+    void forgetFoldersDeletesExactlyThoseFolders();
+    void forgettingEveryFolderKeepsTheKeywordVocabulary();
+    void forgetFoldersHandlesMoreFoldersThanOneBind();
     void migrationFromVersionThreeMergesKeywords();
     void migrationCollapsesDoubledPathSeparators();
     void unreadableFileIsCataloguedAsAStubAndClearsWhenItParses();
@@ -72,6 +79,10 @@ private slots:
 
 private:
     QString imagePath(const QString &name) const;
+    /* The same row, in a SUBFOLDER of the sandbox -- what the scope reconcile is about is
+       which folder a row is in, so these tests need more than one. */
+    CatalogRow rowIn(const QString &subFolder, const QString &name,
+                     const QStringList &keywords = {});
     /* A catalog row for a real file in the sandbox, with the freshness stamp filled in
        from disk the way DataModel::catalogRows does. */
     CatalogRow rowFor(const QString &name, const QStringList &keywords = {},
@@ -113,6 +124,13 @@ CatalogRow tst_catalog::rowFor(const QString &name, const QStringList &keywords,
     r.keywords = flattenKeywords(keywords, paths);
     r.keywordPaths = paths;
     return r;
+}
+
+CatalogRow tst_catalog::rowIn(const QString &subFolder, const QString &name,
+                              const QStringList &keywords)
+{
+    QDir(tmp.path()).mkpath(subFolder);
+    return rowFor(subFolder + "/" + name, keywords);
 }
 
 void tst_catalog::initTestCase()
@@ -1153,6 +1171,26 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
                        " DEFAULT 0, width INTEGER NOT NULL DEFAULT 0, height INTEGER NOT"
                        " NULL DEFAULT 0, gpscoord TEXT NOT NULL DEFAULT '')"));
         QVERIFY(q.exec("CREATE UNIQUE INDEX image_pathkey ON image(pathkey)"));
+        /*  THE FIXTURE MUST BE A FAITHFUL VERSION 3 FILE, devpreview included. Every
+            real one has it: schema 1 creates the table and schema 2 adds its pathkey, so
+            a file cannot reach version 3 without going through both. Omitting it here
+            made the fixture a database that has never existed in the field -- and schema
+            8's data repair, which touches devpreview, failed on it. A failed migration
+            is MOVED ASIDE and recreated, so this test then ran against a fresh empty
+            index whose user_version was legitimately current: the version assertion
+            passed, the keywords were simply gone, and the reported failure ("0 keywords,
+            expected 3") pointed at the merge rather than at the fixture. It also left
+            CacheDb pointing at a recreated file, which is why every case after this one
+            failed too. */
+        QVERIFY(q.exec("CREATE TABLE devpreview (id INTEGER PRIMARY KEY, path TEXT NOT"
+                       " NULL, folder TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER"
+                       " NOT NULL, used INTEGER NOT NULL, live INTEGER NOT NULL DEFAULT"
+                       " 1, vol TEXT NOT NULL DEFAULT '', srcsize INTEGER NOT NULL"
+                       " DEFAULT 0, srcmtime INTEGER NOT NULL DEFAULT 0,"
+                       " pathkey TEXT NOT NULL DEFAULT '')"));
+        QVERIFY(q.exec("CREATE UNIQUE INDEX devpreview_pathkey ON devpreview(pathkey)"));
+        QVERIFY(q.exec("CREATE INDEX devpreview_evict ON devpreview(live, used)"));
+        QVERIFY(q.exec("CREATE INDEX devpreview_folder ON devpreview(folder)"));
         QVERIFY(q.exec("CREATE TABLE keyword (id INTEGER PRIMARY KEY, name TEXT NOT NULL,"
                        " namefold TEXT NOT NULL, path TEXT NOT NULL DEFAULT '',"
                        " pathfold TEXT NOT NULL DEFAULT '',"
@@ -1286,21 +1324,41 @@ void tst_catalog::migrationCollapsesDoubledPathSeparators()
     foreign key onto image, so a row left behind there would keep matching searches for an
     image that no longer exists.
 */
-    QSqlDatabase db = CacheDb::instance().db();
-    QVERIFY(db.isOpen());
-    QSqlQuery q(db);
+    /*  SCOPED, so no QSqlDatabase or QSqlQuery of ours is still alive when the
+        connection is closed below. Held open across closeThisThread they keep the
+        connection in use, Qt refuses to retire it ("connection ... is still in use"),
+        and the reopen -- which addDatabase's the SAME name, the generation being
+        unchanged -- comes back CLOSED. The failure then reads "the version 7 index
+        failed to reopen", which sounds like the migration and is not. */
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QVERIFY(db.isOpen());
+        QSqlQuery q(db);
 
-    /* pathkey is spelled RAW here, not cleaned, purely so the two collision rows can
-       coexist under a unique index; the field itself is not what schema 8 repairs. */
-    QVERIFY(q.exec("INSERT INTO image (id, pathkey, path, folder) VALUES"
-                   " (901, '/lib//solo.nef', '/lib//solo.nef', '/lib'),"
-                   " (902, '/lib/twin.nef',  '/lib/twin.nef',  '/lib'),"
-                   " (903, '/lib//twin.nef', '/lib//twin.nef', '/lib')"));
-    QVERIFY(q.exec("INSERT INTO image_fts (rowid, filename) VALUES"
-                   " (901, 'solo.nef'), (902, 'twin.nef'), (903, 'twin.nef')"));
-    QVERIFY(q.exec("INSERT INTO devpreview (id, path, folder, hash, bytes, used) VALUES"
-                   " (901, '/lib//solo.jpg', '/lib', 'h', 1, 1)"));
-    QVERIFY(q.exec("PRAGMA user_version = 7"));
+        /* pathkey is spelled RAW here, not cleaned, purely so the two collision rows can
+           coexist under a unique index; the field itself is not what schema 8 repairs. */
+        QVERIFY(q.exec("INSERT INTO image (id, pathkey, path, folder) VALUES"
+                       " (901, '/lib//solo.nef', '/lib//solo.nef', '/lib'),"
+                       " (902, '/lib/twin.nef',  '/lib/twin.nef',  '/lib'),"
+                       " (903, '/lib//twin.nef', '/lib//twin.nef', '/lib')"));
+        QVERIFY(q.exec("INSERT INTO image_fts (rowid, filename) VALUES"
+                       " (901, 'solo.nef'), (902, 'twin.nef'), (903, 'twin.nef')"));
+        QVERIFY(q.exec("INSERT INTO devpreview (id, path, folder, hash, bytes, used)"
+                       " VALUES (901, '/lib//solo.jpg', '/lib', 'h', 1, 1)"));
+        /*  PUTTING THE FILE BACK TO 7 MEANS UNDOING WHAT CAME AFTER 7, not just
+            rewriting the number. The sandbox file was created at the current schema, so
+            it already carries schema 9's `unreadable` column; stamping user_version to 7
+            and reopening ran v9's ALTER TABLE ... ADD COLUMN against a table that
+            already had it, which fails -- and a failed migration is moved aside and
+            recreated, so this case then asserted against a fresh EMPTY index and the
+            repair it exists to prove was never executed at all. It reported as "the
+            version 7 index failed to reopen", which named the symptom and not the cause.
+
+            THIS IS A MAINTENANCE POINT: every schema added above 7 has to be undone
+            here, or this test silently stops testing anything. */
+        QVERIFY(q.exec("ALTER TABLE image DROP COLUMN unreadable"));
+        QVERIFY(q.exec("PRAGMA user_version = 7"));
+    }
 
     CacheDb::instance().closeThisThread();
     QSqlDatabase back = CacheDb::instance().db();
@@ -1352,11 +1410,13 @@ void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
     a.rating = 3;
     a.pick = true;
     a.focalLength = 400;
+    a.iso = 800;
     a.captured = QDateTime(QDate(2024, 6, 15), QTime(9, 30), QTimeZone::utc());
     CatalogRow b = rowFor("fb1.jpg");
     b.model = "NIKON Z 9";
     b.rating = 0;
     b.pick = false;
+    b.iso = 6400;
     b.captured = QDateTime(QDate(2024, 6, 15), QTime(10, 0), QTimeZone::utc());
     cat.commit({a, b});
 
@@ -1368,6 +1428,20 @@ void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
     /* Year "yyyy" and Day "yyyy-MM-dd", as addMetadataForItem writes them. */
     QCOMPARE(cat.categoryItems(G::YearColumn).value("2024"), 2);
     QCOMPARE(cat.categoryItems(G::DayColumn).value("2024-06-15"), 2);
+
+    /* Month is the English abbreviation Catalog::monthLabel spells, NOT a locale's
+       month name and not "06": the datamodel writes that string into G::MonthColumn,
+       so the SQL CASE has to produce the same one or the same June would be two
+       different filter items in the two scopes. */
+    QCOMPARE(cat.categoryItems(G::MonthColumn).value("Jun"), 2);
+    QCOMPARE(cat.categoryItems(G::MonthColumn).value(Catalog::monthLabel(6)), 2);
+
+    /* ISO is right-justified to six, which is what BuildFilters does to the datamodel's
+       int before counting it -- unpadded, "800" would sort between "100" and "8000". */
+    const QMap<QString, int> isos = cat.categoryItems(G::ISOColumn);
+    QCOMPARE(isos.value("   800"), 1);
+    QCOMPARE(isos.value("  6400"), 1);
+    QVERIFY(!isos.contains("800"));
 
     /* Pick is the WORDS, not a boolean. */
     const QMap<QString, int> picks = cat.categoryItems(G::PickColumn);
@@ -1500,6 +1574,135 @@ void tst_catalog::blankCategoryItemAccountsForEveryImage()
     notBlank.exclude.insert(G::LensColumn, {QString()});
     QCOMPARE(notBlank.exclude.size(), 1);
     QCOMPARE(cat.search(notBlank), QStringList{imagePath("h-lens.nef")});
+}
+
+void tst_catalog::folderCountsReportEveryFolderAndItsSize()
+{
+/*
+    One query has to answer both halves of a scope reconcile: WHICH folders are
+    catalogued, so each can be put to the scope table, and what forgetting one would
+    cost, so the total can be shown before anything is deleted. Asking countUnder per
+    folder would be the same answer for one query per folder.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString a = QDir(tmp.path()).absoluteFilePath("fc-a");
+    const QString b = QDir(tmp.path()).absoluteFilePath("fc-b");
+    cat.commit({rowIn("fc-a", "one.jpg"), rowIn("fc-a", "two.jpg"),
+                rowIn("fc-b", "three.jpg")});
+
+    const QMap<QString, int> counts = cat.folderCounts();
+    QCOMPARE(counts.size(), 2);
+    QCOMPARE(counts.value(a), 2);
+    QCOMPARE(counts.value(b), 1);
+
+    /* The sum is the catalog, which is what makes "this empties it" a safe thing to say
+       in the confirmation. */
+    int sum = 0;
+    for (int n : counts) sum += n;
+    QCOMPARE(sum, cat.count());
+}
+
+void tst_catalog::forgetFoldersDeletesExactlyThoseFolders()
+{
+/*
+    Exact folders, not a prefix. The reconcile has already decided folder by folder --
+    an included branch may sit inside an excluded tree -- so a prefix delete would take
+    rows the scope still admits.
+
+    AND THE FTS ROWS MUST GO WITH THEM. image_fts has no foreign key onto image, so a
+    delete that forgot it would leave the images unfindable by path and still matching a
+    keyword search, which is the worst of both.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString keep = QDir(tmp.path()).absoluteFilePath("ff-keep");
+    const QString drop = QDir(tmp.path()).absoluteFilePath("ff-drop");
+    const QString nested = QDir(tmp.path()).absoluteFilePath("ff-drop/inner");
+    cat.commit({rowIn("ff-keep", "keeper.jpg", {"heron"}),
+                rowIn("ff-drop", "goner.jpg", {"osprey"}),
+                rowIn("ff-drop/inner", "deeper.jpg", {"osprey"})});
+    QCOMPARE(cat.count(), 3);
+
+    /* Only the named folder: the nested one was not asked for and must survive, which is
+       exactly what a prefix delete would get wrong. */
+    QCOMPARE(cat.forgetFolders({drop}), 1);
+    QCOMPARE(cat.count(), 2);
+
+    const QMap<QString, int> after = cat.folderCounts();
+    QCOMPARE(after.value(keep), 1);
+    QCOMPARE(after.value(nested), 1);
+    QVERIFY(!after.contains(drop));
+
+    /* The free-text row went too -- "osprey" now finds only the nested image. */
+    CatalogQuery q;
+    q.text = "osprey";
+    QCOMPARE(cat.search(q), QStringList{imagePath("ff-drop/inner/deeper.jpg")});
+
+    QCOMPARE(cat.forgetFolders({nested}), 1);
+    q.text = "osprey";
+    QVERIFY(cat.search(q).isEmpty());
+    q.text = "heron";
+    QCOMPARE(cat.search(q), QStringList{imagePath("ff-keep/keeper.jpg")});
+}
+
+void tst_catalog::forgettingEveryFolderKeepsTheKeywordVocabulary()
+{
+/*
+    THE VOCABULARY IS USER INTENT, NOT AN INDEX. Emptying the scope table empties the
+    catalog -- every image row, every FTS row, every image_keyword link -- but the
+    keywords the user has accumulated are not something a scan rebuilds from files it may
+    no longer be pointed at, and a keywords module will own them. This is why the whole
+    catalog path goes through forgetFolders and NOT through clear(), which does delete
+    the vocabulary and keeps that meaning for callers who want it.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowIn("kv-a", "one.jpg", {"heron"}),
+                rowIn("kv-b", "two.jpg", {"osprey"})});
+    QCOMPARE(cat.keywords().size(), 2);
+
+    QStringList all;
+    const QMap<QString, int> counts = cat.folderCounts();
+    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) all << it.key();
+    QCOMPARE(cat.forgetFolders(all), 2);
+
+    QCOMPARE(cat.count(), 0);
+    QVERIFY(cat.folderCounts().isEmpty());
+
+    /* Still two keywords, now attached to nothing -- a count of 0, not an absence. */
+    const QList<CatalogKeyword> kws = cat.keywords();
+    QCOMPARE(kws.size(), 2);
+    for (const CatalogKeyword &k : kws) QCOMPARE(k.count, 0);
+
+    /* clear() is the other statement, and it still means what it always did. */
+    cat.clear();
+    QVERIFY(cat.keywords().isEmpty());
+}
+
+void tst_catalog::forgetFoldersHandlesMoreFoldersThanOneBind()
+{
+/*
+    A library holds more folders than SQLite will take bound variables, so the IN list is
+    chunked -- inside ONE transaction, because a reconcile that half succeeded would
+    leave the catalog disagreeing with the scope table it was just made to match.
+*/
+    Catalog &cat = Catalog::instance();
+    QVector<CatalogRow> rows;
+    const int n = 1200;                 // more than two chunks
+    for (int i = 0; i < n; ++i)
+        rows << rowIn(QString("fb-%1").arg(i, 4, 10, QChar('0')), "img.jpg");
+    cat.commit(rows);
+    QCOMPARE(cat.count(), n);
+
+    QStringList folders;
+    const QMap<QString, int> counts = cat.folderCounts();
+    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it)
+        folders << it.key();
+    QCOMPARE(folders.size(), n);
+
+    /* All but the last, so a chunk boundary is not the same thing as the end. */
+    const QString survivor = folders.takeLast();
+    QCOMPARE(cat.forgetFolders(folders), n - 1);
+    QCOMPARE(cat.count(), 1);
+    QCOMPARE(cat.folderCounts().value(survivor), 1);
 }
 
 QTEST_MAIN(tst_catalog)

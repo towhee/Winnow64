@@ -3400,4 +3400,4 @@ search the catalog but we are using a Filter concept instead, so references to '
 confusing.
 
 
-43050
+deal with the redundant re-sort in MW::filterChange.

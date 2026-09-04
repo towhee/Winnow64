@@ -190,6 +190,13 @@ void MW::scrollToCurrentRowIfNotVisible()
     dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     int sfRow = dm->currentSfRow;
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
+
+    /*  NOT A SLEEP -- G::wait runs a NESTED EVENT LOOP, so what this costs is whatever is
+        queued when it is reached, not the 100 ms asked for. Measured at 3,710 ms arriving
+        after a filter invalidate, against 119 ms once the accessibility rebuilds behind
+        that backlog were suspended (see G::A11ySuspend). It is also a re-entrancy hazard
+        in the middle of a filter change. Left as it is for now: the views' deferred
+        layout is what it is waiting for, and removing it wants its own measurement. */
     G::wait(100);
 
     G::ignoreScrollSignal = true;

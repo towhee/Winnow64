@@ -286,6 +286,7 @@ void DataModel::setModelProperties()
         { G::ModifiedColumn,             "Last Modified",            false },
         { G::CreatedColumn,              "Created",                  false },
         { G::YearColumn,                 "Year",                     false },
+        { G::MonthColumn,                "Month",                    false },
         { G::DayColumn,                  "Day",                      false },
         { G::CreatorColumn,              "Creator",                  false },
         { G::MegaPixelsColumn,           "MPix",                     false },
@@ -3285,6 +3286,13 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     }
     if (createdDT.isValid()) {
         setData(index(row, G::YearColumn), createdDT.toString("yyyy"));
+        /*  NOT createdDT.toString("MMM"), which follows the SYSTEM LOCALE: the value
+            would then be the user's language rather than a fact about the image, it
+            would change when they changed their locale, and it could not match the
+            English CASE Catalog::categorySql spells out -- so the same month would be
+            two different filter items in the two scopes. Catalog::monthLabel is the
+            one spelling both sides read. */
+        setData(index(row, G::MonthColumn), Catalog::monthLabel(createdDT.date().month()));
         setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
     }
 
@@ -5090,6 +5098,43 @@ void DataModel::reportScrollProbe(const QString &src)
         << " worstWait(ms)=" << QString::number(probeFlushMaxDelayNs / 1.0e6, 'f', 1)
         << " readerQueue=" << queuedReaderEvents.load(std::memory_order_relaxed);
 
+    /*  WHAT A THUMBNAIL CACHE HIT COST IN THIS WINDOW, per hit rather than in total.
+        It lives here rather than only on the Phase2 line because that one prints from
+        MetaRead::allFinished -- once per load -- so the only way to see the cache under
+        an IDLE gui thread (scrolling, not filtering) was to have no line at all. The
+        counters are drained, so each report is that window's own hits. */
+    /*  Read against a baseline rather than drained: the Phase2 icons line reports the
+        same counters for the whole load, and zeroing them here would silently empty it. */
+    auto since_ = [](std::atomic<qint64> &a, qint64 &last) {
+        const qint64 now = a.load(std::memory_order_relaxed);
+        const qint64 d = now - last;
+        last = now;
+        return d;
+    };
+    auto sinceInt_ = [](std::atomic<int> &a, qint64 &last) {
+        const qint64 now = a.load(std::memory_order_relaxed);
+        const qint64 d = now - last;
+        last = now;
+        return d;
+    };
+    const qint64 hits = sinceInt_(G::probeIconCacheHits, probeLastCacheHits);
+    if (hits > 0) {
+        const qint64 statNs   = since_(G::probeThumbStatNs, probeLastThumbStatNs);
+        const qint64 lockNs   = since_(G::probeThumbLockNs, probeLastThumbLockNs);
+        const qint64 sqlNs    = since_(G::probeThumbSqlNs, probeLastThumbSqlNs);
+        const qint64 decodeNs = since_(G::probeThumbDecodeNs, probeLastThumbDecodeNs);
+        auto us_ = [hits](qint64 ns) {
+            return QString::number(ns / 1000.0 / hits, 'f', 1);
+        };
+        qDebug().noquote()
+            << "         cache hits=" << hits << " per hit(us):"
+            << " stat=" << us_(statNs)
+            << " lockWait=" << us_(lockNs)
+            << " sql=" << us_(sqlNs)
+            << " decode=" << us_(decodeNs)
+            << " lruStamps=" << sinceInt_(G::probeThumbStamps, probeLastThumbStamps);
+    }
+
     probeScanNs = probeScanCalls = probeScanRows = 0;
     probeEvictNs = probeEvictCalls = probeEvictCleared = probeEvictWalked = 0;
     probeSetRangeCalls = 0;
@@ -6431,6 +6476,12 @@ void SortFilter::filterChange(QString src)
 
     /*  Recompile BEFORE invalidating, or the invalidation would re-test every
         row against the previous check states. */
+    /*  Suspended for the invalidate for any caller that is not already inside a wider
+        guard -- MW::filterChange holds one across the whole operation, because the views
+        defer their layout and pay most of the rebuild after this function has returned.
+        See G::A11ySuspend. Nested guards are harmless: the inner one finds the bridge
+        already off and does nothing. */
+    G::A11ySuspend a11ySuspend;
     compileFilters();
     invalidateRowsFilter();
     return;

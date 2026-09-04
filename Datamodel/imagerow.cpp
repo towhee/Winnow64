@@ -21,7 +21,7 @@ namespace {
 
 enum Field {
     F_Path = 0, F_Name, F_FolderName, F_Type, F_ByteSize, F_Created, F_Modified,
-    F_Year, F_Day, F_Rating, F_Label, F_Pick, F_Title, F_Creator, F_Copyright,
+    F_Year, F_Month, F_Day, F_Rating, F_Label, F_Pick, F_Title, F_Creator, F_Copyright,
     F_CameraMake, F_CameraModel, F_Lens, F_Iso, F_Aperture, F_Shutterspeed,
     F_FocalLength, F_Width, F_Height, F_Dimensions, F_MegaPixels, F_GPSCoord,
     F_Keywords, F_KeywordPaths, F_KeywordsAll, F_Video, F_MetadataStatus,
@@ -66,6 +66,7 @@ int fieldBit(int column, int role)
     case G::CreatedColumn:              return F_Created;
     case G::ModifiedColumn:             return F_Modified;
     case G::YearColumn:                 return F_Year;
+    case G::MonthColumn:                return F_Month;
     case G::DayColumn:                  return F_Day;
     case G::RatingColumn:               return F_Rating;
     case G::LabelColumn:                return F_Label;
@@ -189,6 +190,7 @@ QVariant RowStore::value(int row, int column, int role) const
     case G::CreatedColumn:         return mStrings.value(r.createdId);
     case G::ModifiedColumn:        return mStrings.value(r.modifiedId);
     case G::YearColumn:            return mStrings.value(r.yearId);
+    case G::MonthColumn:           return mStrings.value(r.monthId);
     case G::DayColumn:             return mStrings.value(r.dayId);
     case G::RatingColumn:          return mStrings.value(r.ratingId);
     case G::LabelColumn:           return mStrings.value(r.labelId);
@@ -290,6 +292,7 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::CreatedColumn:         r.createdId = mStrings.id(v.toString()); break;
     case G::ModifiedColumn:        r.modifiedId = mStrings.id(v.toString()); break;
     case G::YearColumn:            r.yearId = mStrings.id(v.toString()); break;
+    case G::MonthColumn:           r.monthId = mStrings.id(v.toString()); break;
     case G::DayColumn:             r.dayId = mStrings.id(v.toString()); break;
     case G::RatingColumn:          r.ratingId = mStrings.id(v.toString()); break;
     case G::LabelColumn:           r.labelId = mStrings.id(v.toString()); break;

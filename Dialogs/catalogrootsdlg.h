@@ -61,12 +61,6 @@ public:
        edited underneath it. */
     void setScanning(bool scanning);
 
-    /*  WHAT A SCAN WOULD DELETE, shown before it is pressed. MW works it out (it owns
-        the catalog query) and hands it here, because forgetting tens of thousands of
-        rows is not something a user should discover afterwards from a changed number.
-        images == 0 means nothing would be forgotten and the note says nothing. */
-    void setPendingForget(int images, int folders);
-
     /*  The image count for each row, in row order. -2 is "counting" (an ellipsis) and
         -1 is "not counted" (an em dash, for a folder that is not there or whose volume
         is unmounted) -- neither is a zero, because "none" is a different statement.
@@ -102,8 +96,6 @@ private:
     QLabel *statusLabel = nullptr;
     bool scanning = false;
     bool populating = false;
-    int pendingForgetImages = 0;
-    int pendingForgetFolders = 0;
 };
 
 #endif // CATALOGROOTSDLG_H

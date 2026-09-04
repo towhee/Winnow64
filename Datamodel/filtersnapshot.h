@@ -44,9 +44,13 @@ namespace FilterCat {
         model holds. Every other slot is the column's own string; this one is
         translated when the snapshot is taken, because a category item shows a word
         and the compare value is put back to the code by Filters::filterValueFor. */
+    /*  Month and Iso are the columns' own strings like the rest, with one wrinkle
+        each: Month holds the NAME the model was written with (Catalog::monthLabel),
+        and Iso -- an int in the model -- is right-justified when the snapshot is
+        taken, the way FocalLength is, so it counts and sorts as a number. */
     enum Slot {
-        Search, Pick, Rating, Label, Type, FolderName, Year, Day,
-        CameraModel, Lens, FocalLength, Title, Creator, Availability, Compare,
+        Search, Pick, Rating, Label, Type, FolderName, Year, Month, Day,
+        CameraModel, Lens, FocalLength, Iso, Title, Creator, Availability, Compare,
         SlotCount
     };
 }
