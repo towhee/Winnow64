@@ -145,7 +145,12 @@ void MW::filterChange(QString source)
         if (!G::isPerfProbe) return;
         phases << QString("%1=%2").arg(name).arg(phTimer.restart());
     };
-    if (G::isPerfProbe) { fcTimer.start(); phTimer.start(); }
+    if (G::isPerfProbe) {
+        fcTimer.start();
+        phTimer.start();
+        dm->probeSnapRebuilds = 0;
+        dm->probeSnapNs = 0;
+    }
 
     /*  ONE ACCESSIBILITY REBUILD FOR THE WHOLE FILTER CHANGE, not one per row-insertion
         block and one per deferred view layout. See G::A11ySuspend for the measurement and
@@ -230,6 +235,13 @@ void MW::filterChange(QString source)
         gridView->scrollToRow(dm->currentSfRow, srcFun);
     }
     phase("refreshIcons");
+    /*  THE WORKERS ARE ABOUT TO BE TOLD, so the snapshot they read has to be current
+        before it is queued rather than on the next turn of the event loop. The rebuild is
+        coalesced now (see DataModel::scheduleProxySnapshotRebuild), which is what took
+        this phase from 348 walks of the whole proxy to one. */
+    dm->flushProxySnapshot();
+    phase("snapshot");
+
     /*  Sync the datamodel instance -- QUEUED, like every other caller of initialize.
         It was a DIRECT call, which meant the GUI thread cleared rowsReading,
         videoRowsReading and readSuccessThisCycle while metaReadThread was inside
@@ -278,6 +290,8 @@ void MW::filterChange(QString source)
                            << source << " dmRows =" << dm->rowCount()
                            << " sfRows =" << dm->sf->rowCount()
                            << " a11ySuspended =" << a11ySuspend.suspended()
+                           << " snapshots =" << dm->probeSnapRebuilds
+                           << "(" << QString::number(dm->probeSnapNs / 1.0e6, 'f', 1) << "ms)"
                            << " phases(ms):" << phases.join(" ");
 }
 

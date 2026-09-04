@@ -5359,6 +5359,10 @@ void MW::reloadIconChunk()
 */
     if (G::isLogger) G::log("MW::reloadIconChunk");
     if (G::isInitializing || !G::useReadMeta) return;
+    /*  The snapshot the worker will read must be current BEFORE it is queued: the
+        rebuild is coalesced onto the event loop now, and this thread does not
+        return to it until after the invoke. See DataModel::flushProxySnapshot. */
+    dm->flushProxySnapshot();
     QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                               Q_ARG(int, dm->currentSfRow),
                               Q_ARG(bool, false),
@@ -5514,6 +5518,10 @@ void MW::folderChanged(bool aborted)
     // rev up metaRead
     if (G::useReadMeta) {
         updateMetadataThreadRunStatus(true);
+        /*  The snapshot the worker will read must be current BEFORE it is queued: the
+            rebuild is coalesced onto the event loop now, and this thread does not
+            return to it until after the invoke. See DataModel::flushProxySnapshot. */
+        dm->flushProxySnapshot();
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
                                   Q_ARG(bool, true),
@@ -5569,6 +5577,10 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
     if (!metaLoaded) {
         if (G::useReadMeta) {
             // updateMetadataThreadRunStatus(true, true, false, fun);
+            /*  The snapshot the worker will read must be current BEFORE it is queued: the
+                rebuild is coalesced onto the event loop now, and this thread does not
+                return to it until after the invoke. See DataModel::flushProxySnapshot. */
+            dm->flushProxySnapshot();
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                       Q_ARG(int, sfRow),
                                       Q_ARG(bool, isFileSelectionChange),

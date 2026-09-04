@@ -213,6 +213,17 @@ public:
     RowSyncPtr rowSync() const;
     ProxySnapshotPtr proxySnapshot() const;
     void rebuildProxySnapshot();            // GUI thread
+    /*  COALESCED, because the signals that ask for it arrive in BURSTS and the rebuild
+        is O(rows). One filter change at 43,070 rows emits 348 rowsInserted blocks, and
+        rebuilding per block was 348 walks of the whole proxy -- 12.4 ms each, 4.3 s in
+        total, which was the entire cost of the invalidate. The snapshot is read only by
+        the worker threads (MetaRead, ImageCache), never by GUI code mid-mutation, so it
+        only has to be current by the time the event loop turns -- or sooner if a caller
+        is about to hand the workers something, which is what flushProxySnapshot is for. */
+    void scheduleProxySnapshotRebuild();    // GUI thread
+    /*  Rebuild NOW if one is pending. Call before queueing work to a worker thread that
+        will read the snapshot -- MW::filterChange does, before MetaRead::initialize. */
+    void flushProxySnapshot();              // GUI thread
     void resizeRowSync(int rows);           // GUI thread
 
     /*  Raw+JPG pair accessors.
@@ -622,6 +633,14 @@ public:
     qint64 probeLastThumbSqlNs = 0;
     qint64 probeLastThumbDecodeNs = 0;
     qint64 probeLastThumbStamps = 0;
+    /*  Probe only: proxy-snapshot rebuilds and their cost, reported by the
+        MW::filterChange phase timer. Reset there. */
+    int probeSnapRebuilds = 0;
+    qint64 probeSnapNs = 0;
+
+    /*  Set by scheduleProxySnapshotRebuild, cleared by the rebuild itself. GUI thread
+        only, so a plain bool. */
+    bool proxySnapshotPending = false;
 
     qint64 probeScanNs = 0;             // isAllIconChunkLoaded, cumulative
     qint64 probeScanCalls = 0;
