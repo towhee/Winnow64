@@ -6261,9 +6261,6 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(G::css);
     filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
-    /* The Find panel's scope buttons carry their own theme-derived stylesheet -- the
-       app-wide QToolButton rule has no :checked state to show which scope is current. */
-    if (findPanel) findPanel->updateStyle();
     if (folderCatalogScopeRow) folderCatalogScopeRow->updateStyle();
     if (favCatalogScopeRow)    favCatalogScopeRow->updateStyle();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);

@@ -2,7 +2,6 @@
 #include "Datamodel/filters.h"
 #include "Main/global.h"
 
-#include <QButtonGroup>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
@@ -11,42 +10,11 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
 {
     if (G::isLogger) G::log("FindPanel::FindPanel");
 
-    /* The scope control. Two checkable buttons in an exclusive group rather than a combo:
-       it is a two-way switch the user flips constantly, and a combo would hide the choice
-       that is not current behind a click. */
-    foldersBtn = new QToolButton;
-    foldersBtn->setText("Folders");
-    foldersBtn->setCheckable(true);
-    foldersBtn->setChecked(true);
-    foldersBtn->setToolTip("Narrow the images loaded from the open folder.\n"
-                           "F2 searches the open folder.");
-
-    catalogBtn = new QToolButton;
-    catalogBtn->setText("Catalog");
-    catalogBtn->setCheckable(true);
-    catalogBtn->setToolTip("Search every image Winnow has catalogued, including "
-                           "folders that are not open.\n"
-                           "Shift+F2 searches the catalog.");
-
-    QButtonGroup *scopeGroup = new QButtonGroup(this);
-    scopeGroup->setExclusive(true);
-    scopeGroup->addButton(foldersBtn);
-    scopeGroup->addButton(catalogBtn);
-
-    updateStyle();
-
     searchEdit = new QLineEdit;
     searchEdit->setClearButtonEnabled(true);
     searchEdit->setToolTip(
         "Words are AND-ed. Use OR between alternatives, \"quotes\" for a phrase,\n"
         "and -word or NOT word to leave something out.");
-
-    QHBoxLayout *scopeRow = new QHBoxLayout;
-    scopeRow->setContentsMargins(0, 0, 0, 0);
-    scopeRow->setSpacing(0);
-    scopeRow->addWidget(foldersBtn);
-    scopeRow->addWidget(catalogBtn);
-    scopeRow->addStretch(1);
 
     resultLabel = new QLabel;
     resultLabel->setWordWrap(true);
@@ -71,36 +39,18 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     loadRow = new QWidget;
     loadRow->setLayout(loadLayout);
 
-    catalogStatusLabel = new QLabel;
-    catalogStatusLabel->setWordWrap(true);
-
-    manageRootsBtn = new QPushButton("Manage...");
-    manageRootsBtn->setToolTip("Choose which folders are indexed in the background, and "
-                               "scan them now.");
-    manageRootsBtn->setStyleSheet("QPushButton { min-width: 0; }");
-
-    QHBoxLayout *statusRow = new QHBoxLayout;
-    statusRow->setContentsMargins(0, 0, 0, 0);
-    statusRow->addWidget(catalogStatusLabel, 1);
-    statusRow->addWidget(manageRootsBtn);
-
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
     layout->setSpacing(4);
-    layout->addLayout(scopeRow);
     layout->addWidget(searchEdit);
     layout->addWidget(filters, 1);          // re-parents the tree into this panel
     layout->addWidget(resultLabel);
     layout->addWidget(loadRow);
-    layout->addLayout(statusRow);
 
     debounce = new QTimer(this);
     debounce->setSingleShot(true);
     debounce->setInterval(kDebounceMs);
     connect(debounce, &QTimer::timeout, this, &FindPanel::runSearch);
-
-    connect(foldersBtn, &QToolButton::clicked, this, [this]{ setScope(FolderScope); });
-    connect(catalogBtn, &QToolButton::clicked, this, [this]{ setScope(CatalogScope); });
 
     connect(searchEdit, &QLineEdit::textChanged, this, [this](const QString &t){
         if (currentScope == FolderScope) {
@@ -132,46 +82,7 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     connect(addBtn, &QPushButton::clicked, this, [this]{
         if (!results.isEmpty()) emit loadResults(results, true, currentQuery());
     });
-    connect(manageRootsBtn, &QPushButton::clicked, this,
-            &FindPanel::manageRootsRequested);
-
     applyScope();
-}
-
-void FindPanel::updateStyle()
-{
-/*
-    The scope buttons' colours.
-
-    The app-wide QToolButton rule (Main/widgetcss.cpp) is "background:transparent;
-    border:none" with NO :checked state, because every other tool button in Winnow is a
-    momentary icon button rather than a toggle. Inheriting it left the two scope buttons
-    looking identical whether checked or not -- the control showed no state at all, which
-    for a two-way switch is the whole of its job.
-
-    Styled here rather than in widgetcss because this is the only segmented toggle in the
-    app: a global :checked rule would light up every other tool button that happens to be
-    checkable. Re-applied from MW::setBackgroundShade so it follows the theme rather than
-    freezing at whatever shade was in force when the panel was built.
-*/
-    const QString on   = QColor(G::backgroundShade + 22, G::backgroundShade + 22,
-                                G::backgroundShade + 22).name();
-    const QString off  = QColor(G::backgroundShade - 6, G::backgroundShade - 6,
-                                G::backgroundShade - 6).name();
-    const QString edge = QColor(G::backgroundShade + 40, G::backgroundShade + 40,
-                                G::backgroundShade + 40).name();
-    const QString css = QString(
-        "QToolButton {"
-        "  background:%1; border:1px solid %3; padding:3px 12px; color:%4;"
-        "}"
-        "QToolButton:checked {"
-        "  background:%2; color:%5; font-weight:bold;"
-        "}"
-        "QToolButton:hover { background:%2; }"
-        "QToolButton:disabled { color:%4; }"
-    ).arg(off, on, edge, G::disabledColor.name(), G::textColor.name());
-    foldersBtn->setStyleSheet(css);
-    catalogBtn->setStyleSheet(css);
 }
 
 void FindPanel::setScope(Scope s)
@@ -189,8 +100,6 @@ void FindPanel::setScope(Scope s)
     if (G::isLogger) G::log("FindPanel::setScope");
     if (s == currentScope) return;
     currentScope = s;
-    foldersBtn->setChecked(s == FolderScope);
-    catalogBtn->setChecked(s == CatalogScope);
     applyScope();
     /*  Tell MW, which owns G::scope and the Catalog rows above the two trees.
         MW::setScope early-returns when the scope already matches, so calling
@@ -226,11 +135,6 @@ void FindPanel::applyScope()
             It is also what makes filtering behave: a checked item narrows the proxy and
             the category head turns yellow, exactly as in Folders, instead of re-running a
             query that reloaded the model and rebuilt the tree from the survivors. */
-        if (!Catalog::instance().isAvailable()) {
-            resultLabel->setText(
-                "The catalog is unavailable -- the local index database could not be "
-                "opened. Browsing and the Folders scope are unaffected.");
-        }
         filters->showAllCategories();
         loadRow->setVisible(true);
         searchEdit->setPlaceholderText("Search every catalogued image...");
@@ -268,7 +172,6 @@ void FindPanel::focusSearch()
 void FindPanel::setScanning(bool on)
 {
     scanning = on;
-    manageRootsBtn->setEnabled(Catalog::instance().isAvailable() && !on);
     refresh();
 }
 
@@ -276,26 +179,10 @@ void FindPanel::refresh()
 {
     if (G::isLogger) G::log("FindPanel::refresh");
 
-    const bool open = Catalog::instance().isAvailable();
-    const int n = open ? Catalog::instance().count() : 0;
-
-    catalogBtn->setEnabled(open);
-    manageRootsBtn->setEnabled(open && !scanning);
-
-    /* Always says what is indexed, whether or not a search has run: a search that found
-       nothing means something quite different when the catalog is empty, and the user
-       should not have to open a dialog to find out which case they are in. */
-    if (!open) catalogStatusLabel->setText("Catalog unavailable.");
-    else if (scanning) catalogStatusLabel->setText("Cataloguing...");
-    else if (n == 0) catalogStatusLabel->setText(
-        "Nothing catalogued yet. Folders are catalogued as you open them.");
-    else catalogStatusLabel->setText(
-        QString("%1 %2 catalogued in %3 %4.")
-            .arg(n).arg(n == 1 ? "image" : "images")
-            .arg(Catalog::instance().folderCount())
-            .arg(Catalog::instance().folderCount() == 1 ? "folder" : "folders"));
-
-    if (currentScope == CatalogScope) runSearch();
+    /*  runSearch is a no-op when the index could not be opened, so the footer -- which
+        is now the only place the catalog's state is reported -- has to be written here
+        rather than left to a search that will not run. */
+    if (currentScope == CatalogScope && Catalog::instance().isAvailable()) runSearch();
     else updateFooter();
 }
 
@@ -392,6 +279,20 @@ void FindPanel::updateFooter()
         return;
     }
 
+    /*  THE FOOTER IS THE STATUS LINE NOW. The "N images catalogued ... Manage..." row
+        under the panel is gone (the roots editor is File > Manage Catalog...), so what
+        it said about the index -- unavailable, scanning, empty -- is said here. A search
+        that found nothing means something quite different when nothing is indexed, and
+        the user should not have to open a dialog to find out which case they are in. */
+    if (!Catalog::instance().isAvailable()) {
+        loadBtn->setEnabled(false);
+        addBtn->setEnabled(false);
+        resultLabel->setText(
+            "The catalog is unavailable -- the local index database could not be "
+            "opened. Browsing and the Folders scope are unaffected.");
+        return;
+    }
+
     /*  A FILTER IS A FILTER IN EITHER SCOPE, so say the same thing about it. The counts
         below describe what is LOADED; once a category is checked the proxy decides what
         is shown, and repeating the catalogued total would answer a question the user has
@@ -403,10 +304,12 @@ void FindPanel::updateFooter()
         return;
     }
 
+    const QString scanNote = scanning ? "\nCataloguing..." : QString();
+
     if (totalMatches == 0) {
-        resultLabel->setText(noQuery
-            ? "Nothing is catalogued yet."
-            : "No matches.");
+        resultLabel->setText((noQuery
+            ? QString("Nothing catalogued yet. Folders are catalogued as you open them.")
+            : QString("No matches.")) + scanNote);
     }
     else if (noQuery) {
         /*  No question asked: this is the catalog itself, newest first. With no cap
@@ -414,21 +317,26 @@ void FindPanel::updateFooter()
             saying "showing the N most recent" when N is everything would invent a limit
             the user does not have. */
         resultLabel->setText(results.size() >= totalMatches
-            ? QString("%1 images catalogued --\n"
-                      "search or check a filter to narrow it.").arg(totalMatches)
+            ? QString("%1 images catalogued in %2 %3 --\n"
+                      "search or check a filter to narrow it.%4")
+                  .arg(totalMatches)
+                  .arg(Catalog::instance().folderCount())
+                  .arg(Catalog::instance().folderCount() == 1 ? "folder" : "folders")
+                  .arg(scanNote)
             : QString("%1 images catalogued. Showing the %2 most recent --\n"
-                      "search or check a filter to narrow it.")
-                  .arg(totalMatches).arg(results.size()));
+                      "search or check a filter to narrow it.%3")
+                  .arg(totalMatches).arg(results.size()).arg(scanNote));
     }
     else if (results.size() < totalMatches) {
         /* Say plainly that this is a subset, and what would be loaded. */
-        resultLabel->setText(QString("%1 matches -- the first %2 will be loaded.")
-                                 .arg(totalMatches).arg(results.size()));
+        resultLabel->setText(QString("%1 matches -- the first %2 will be loaded.%3")
+                                 .arg(totalMatches).arg(results.size()).arg(scanNote));
     }
     else {
-        resultLabel->setText(QString("%1 %2 found.")
+        resultLabel->setText(QString("%1 %2 found.%3")
                                  .arg(totalMatches)
-                                 .arg(totalMatches == 1 ? "image" : "images"));
+                                 .arg(totalMatches == 1 ? "image" : "images")
+                                 .arg(scanNote));
     }
     loadBtn->setEnabled(!results.isEmpty());
     addBtn->setEnabled(!results.isEmpty());

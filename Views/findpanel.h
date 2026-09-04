@@ -6,7 +6,6 @@
 #include <QPushButton>
 #include <QStringList>
 #include <QTimer>
-#include <QToolButton>
 #include <QWidget>
 
 #include <climits>
@@ -38,10 +37,11 @@ class Filters;
     images to LOAD or ADD -- so the footer changes verb with the scope rather than the
     panel changing shape.
 
-    THE TWO WORDS NAME THE SETS THEY SEARCH, which is what a scope switch has to do. The
-    earlier pair, Here and Everywhere, named them by distance from the user instead, and
-    "Everywhere" in particular promised more than it delivers: the catalog holds the
-    folders Winnow has indexed, not every image on the machine.
+    THE SCOPE IS NOT SET FROM THIS PANEL. The Folders|Catalog buttons and the "Manage..."
+    row are gone: choosing the catalog is File > Open Catalog (or the Catalog row above
+    the Folders and Bookmarks trees, or Shift+F2), and choosing a folder is selecting one.
+    Which folders are indexed is configuration, and lives in File > Manage Catalog...
+    The panel is the search surface for whichever scope MW has set; it does not own it.
 
     SWITCHING SCOPE CARRIES THE SEARCH TEXT, AND CLEARS THE CHECKED ITEMS. The text is
     the question, and carrying it is the hand-off in both directions: a folder search that
@@ -86,13 +86,8 @@ public:
        dock becomes visible and after a folder load has added to the catalog. */
     void refresh();
 
-    /* Reflect whether a background scan is running, in the status line. */
+    /* Reflect whether a background scan is running, in the footer. */
     void setScanning(bool scanning);
-
-    /* Re-apply the scope buttons' colours. Called from MW::setBackgroundShade, because
-       they are theme-derived and would otherwise stay frozen at the shade in force when
-       the panel was built. */
-    void updateStyle();
 
 signals:
     /* The user asked for these paths. append = true adds them to what is already loaded
@@ -102,15 +97,15 @@ signals:
         reload or a refresh has something to re-run. */
     void loadResults(const QVector<CatalogRow> &rows, bool append,
                      const CatalogQuery &query);
-    /* Open the Catalogued Folders editor. */
-    void manageRootsRequested();
     /* Back in Folders scope: the tree is holding the CATALOG's values and must be rebuilt
        from the datamodel. Only MW knows whether the model is ready for that, so it owns
        the rebuild (buildFiltersWhenModelReady) and this only asks. */
     void rebuildFolderCategoriesRequested();
-    /*  The user flipped the scope from THIS panel. MW::setScope is the one place
-        G::scope changes and the two Catalog tree rows are mirrored, so the panel
-        reports rather than decides. */
+    /*  The panel changed scope. MW::setScope is the one place G::scope changes and the
+        Catalog tree rows are mirrored, so the panel reports rather than decides. The
+        scope is now only ever set FROM MW (File > Open Catalog, the Catalog tree rows,
+        selecting a folder), so this is a mirror rather than an entry point -- kept
+        because MW::setScope early-returns on no change and is the single authority. */
     void scopeChanged(int scope);
 
 private slots:
@@ -126,17 +121,12 @@ private:
 
     Filters *filters = nullptr;
 
-    QToolButton *foldersBtn = nullptr;
-    QToolButton *catalogBtn = nullptr;
     QLineEdit *searchEdit = nullptr;
 
     QLabel *resultLabel = nullptr;
     QPushButton *loadBtn = nullptr;
     QPushButton *addBtn = nullptr;
     QWidget *loadRow = nullptr;
-
-    QLabel *catalogStatusLabel = nullptr;
-    QPushButton *manageRootsBtn = nullptr;
 
     QTimer *debounce = nullptr;
 
