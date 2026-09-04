@@ -1,6 +1,7 @@
 #include "Cache/thumbcache.h"
 
 #include <QBuffer>
+#include <QElapsedTimer>
 #include <QTimer>
 #include <QDateTime>
 #include <QFileInfo>
@@ -26,6 +27,7 @@ constexpr qint64 kUsedStampMaxAgeSecs = 24 * 60 * 60;
 
 qint64 nowSecs() { return QDateTime::currentSecsSinceEpoch(); }
 }
+
 
 ThumbCache &ThumbCache::instance()
 {
@@ -94,6 +96,7 @@ void ThumbCache::putLocked(QSqlDatabase &db, const QString &fPath, const QByteAr
     q.exec();
 }
 
+
 /*  THE WRITER. One thread, batched transactions -- see putImage in the header
     for the measurement that made this necessary rather than optional, and for
     why the handoff is a queued signal rather than a queue of our own.
@@ -113,9 +116,26 @@ void ThumbWriter::take(const QString &fPath, const QImage &im)
     }
 }
 
+void ThumbWriter::takeStamp(const QString &key)
+{
+    /*  Worker thread, like take(). Duplicates within a batch are harmless -- the same
+        UPDATE twice in one transaction is one write -- so they are not filtered here. */
+    mPendingStamps.append(key);
+    if (mPendingStamps.size() >= kBatch) { flushPending(); return; }
+    if (!mScheduled) {
+        mScheduled = true;
+        QTimer::singleShot(0, this, &ThumbWriter::flushPending);
+    }
+}
+
 void ThumbWriter::flushPending()
 {
     mScheduled = false;
+    if (!mPendingStamps.isEmpty()) {
+        const QStringList stamps = mPendingStamps;
+        mPendingStamps.clear();
+        mOwner->writeStampBatch(stamps);
+    }
     if (mPending.isEmpty()) return;
     const QList<QPair<QString, QImage>> batch = mPending;
     mPending.clear();
@@ -235,14 +255,27 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
     const QString key = cachePathKey(fPath);
     if (key.isEmpty()) return QByteArray();
 
+    /*  Probe only: the wait for mMutex is separated from the work done under it,
+        because EVERY Reader thread serialises here and a hit that looks expensive may
+        only be a hit that queued. */
+    QElapsedTimer gTimer;
+    if (G::isPerfProbe) gTimer.start();
     QMutexLocker lk(&mMutex);
+    if (G::isPerfProbe) {
+        G::probeThumbLockNs.fetch_add(gTimer.nsecsElapsed(), std::memory_order_relaxed);
+        gTimer.restart();
+    }
+
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return QByteArray();
 
     QSqlQuery q(db);
     q.prepare("SELECT jpg, srcsize, srcmtime, used FROM thumb WHERE pathkey = ?");
     q.addBindValue(key);
-    if (!q.exec() || !q.next()) return QByteArray();
+    const bool got = q.exec() && q.next();
+    if (G::isPerfProbe)
+        G::probeThumbSqlNs.fetch_add(gTimer.nsecsElapsed(), std::memory_order_relaxed);
+    if (!got) return QByteArray();
 
     /*  STALENESS. The thumbnail is only valid for the bytes it was made from.
         A source whose size or mtime has moved is a MISS, not a stale picture --
@@ -277,16 +310,51 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
         live = 1 rides along with it: a row that is being served is by definition
         present, and if it were marked dead the sweep that did so would have found
         the file gone. */
+    /*  AND IT IS NOT WRITTEN HERE AT ALL ANY MORE. A day's granularity made the
+        refresh rare per ROW, but a folder load reads hundreds of rows whose stamp is a
+        day old, and each of those was an UPDATE under this mutex -- in WAL, its own
+        commit -- while every other Reader thread queued behind it. MEASURED on an idle
+        machine, scrolling a warm cache: 10.2 ms of lock wait per hit against 0.21 ms of
+        SELECT under the lock. Handed to the writer thread instead, which batches them
+        into one transaction the way it already does for the thumbnails themselves. */
     const qint64 rowUsed = q.value(3).toLongLong();
+    if (nowSecs() - rowUsed >= kUsedStampMaxAgeSecs) {
+        startWriterLocked();
+        if (mWriter) {
+            if (G::isPerfProbe)
+                G::probeThumbStamps.fetch_add(1, std::memory_order_relaxed);
+            QMetaObject::invokeMethod(mWriter, "takeStamp", Qt::QueuedConnection,
+                                      Q_ARG(QString, key));
+        }
+    }
+    return jpg;
+}
+
+void ThumbCache::writeStampBatch(const QStringList &keys)
+{
+/*
+    ONE TRANSACTION FOR THE WHOLE BATCH, the same shape as writeBatch and for the same
+    reason: in WAL every statement outside an explicit transaction is its own commit.
+
+    live = 1 rides along as it did on the read path: a row that was served is by
+    definition present, and if it were marked dead the sweep that did so would have found
+    the file gone.
+*/
+    if (keys.isEmpty()) return;
+    QMutexLocker lk(&mMutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+
     const qint64 now = nowSecs();
-    if (now - rowUsed >= kUsedStampMaxAgeSecs) {
+    const bool inTxn = db.transaction();
+    for (const QString &k : keys) {
         QSqlQuery u(db);
         u.prepare("UPDATE thumb SET used = ?, live = 1 WHERE pathkey = ?");
         u.addBindValue(now);
-        u.addBindValue(key);
+        u.addBindValue(k);
         u.exec();
     }
-    return jpg;
+    if (inTxn) db.commit();
 }
 
 bool ThumbCache::wantsOriginalThumb(bool hasDevelopRecipe)
@@ -309,12 +377,23 @@ QImage ThumbCache::getImage(const QString &fPath, bool hasDevelopRecipe)
     if (!G::cacheThumbnails || !wantsOriginalThumb(hasDevelopRecipe)) return QImage();
     if (fPath.isEmpty()) return QImage();
 
+    /*  Probe only: one stat per hit, on whatever volume the image lives on. */
+    QElapsedTimer tcTimer;
+    if (G::isPerfProbe) tcTimer.start();
     const QFileInfo fi(fPath);
-    if (!fi.exists()) return QImage();
+    const bool exists = fi.exists();
+    const qint64 srcSize = exists ? fi.size() : 0;
+    const qint64 srcMtime = exists ? fi.lastModified().toSecsSinceEpoch() : 0;
+    if (G::isPerfProbe) {
+        G::probeThumbStatNs.fetch_add(tcTimer.nsecsElapsed(), std::memory_order_relaxed);
+        tcTimer.restart();
+    }
+    if (!exists) return QImage();
 
-    const QByteArray jpg = get(fPath, fi.size(), fi.lastModified().toSecsSinceEpoch());
+    const QByteArray jpg = get(fPath, srcSize, srcMtime);
     if (jpg.isEmpty()) return QImage();
 
+    if (G::isPerfProbe) tcTimer.restart();
     QImage im;
     if (!im.loadFromData(jpg, "JPG") || im.isNull()) return QImage();
 
@@ -325,6 +404,8 @@ QImage ThumbCache::getImage(const QString &fPath, bool hasDevelopRecipe)
         im = im.scaled(G::maxIconSize, G::maxIconSize,
                        Qt::KeepAspectRatio, Qt::FastTransformation);
     im.convertTo(QImage::Format_RGB32);
+    if (G::isPerfProbe)
+        G::probeThumbDecodeNs.fetch_add(tcTimer.nsecsElapsed(), std::memory_order_relaxed);
     return im;
 }
 

@@ -1999,7 +1999,12 @@ void MetaRead::allFinished(QString src)
             << " load(ms)="     << ms_(G::probeIconLoadNs)
             << " scale(ms)="    << ms_(G::probeIconScaleNs)
             << " orient(ms)="   << ms_(G::probeIconOrientNs)
-            << " thumbCache(ms)=" << ms_(G::probeIconCacheNs);
+            << " thumbCache(ms)=" << ms_(G::probeIconCacheNs)
+            << "\n         cache hit split:"
+            << " stat(ms)="     << ms_(G::probeThumbStatNs)
+            << " lockWait(ms)=" << ms_(G::probeThumbLockNs)
+            << " sql(ms)="      << ms_(G::probeThumbSqlNs)
+            << " decode(ms)="   << ms_(G::probeThumbDecodeNs);
     }
     /*
     qDebug() << fun << "Elapsed ms =" << ms

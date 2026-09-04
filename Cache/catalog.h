@@ -340,6 +340,19 @@ public:
     static QString availabilityLabel(int code);
     static int availabilityCode(const QString &label);
 
+    /*  THE MONTH NAMES SPELLED ONCE, for the same reason the availability labels are:
+        the datamodel writes G::MonthColumn from this and categorySql builds its CASE
+        from it, so a folder and the library cannot disagree about what June is called.
+        DELIBERATELY NOT LOCALISED -- QDate::toString("MMM") follows the system locale,
+        which would make the value a user's language rather than a fact about the image,
+        and would not match the English CASE the SQL side has to spell out. month is
+        1-12; anything else returns an empty string, which is what a row with no capture
+        date holds. */
+    static QString monthLabel(int month);
+    /*  The 12 names in calendar order -- what Filters uses to insert the items in a
+        sequence rather than alphabetically. */
+    static QStringList monthLabels();
+
     /*  The availability of each of these paths, in one pass. Paths the catalog
         does not know are absent from the result rather than reported Missing --
         "not indexed" is a different statement from "indexed and gone".
@@ -390,6 +403,29 @@ public:
         Returns the number of rows counted / deleted. */
     int countUnder(const QString &folder, bool recurse);
     int forgetUnder(const QString &folder, bool recurse);
+
+    /*  EVERY CATALOGUED FOLDER AND HOW MANY IMAGES IT HOLDS, in one GROUP BY over the
+        image_folder index. The caller that reconciles the catalog to the scope table
+        needs both facts about every folder at once -- which folders exist, so it can ask
+        the scope about each, and what forgetting one would cost, so the total can be put
+        in front of the user before anything is deleted. Asking countUnder per folder
+        would be the same answer for one query per folder. The vocabulary is folders, not
+        images, so this stays cheap at the 250,000 rows the database is sized for. */
+    QMap<QString, int> folderCounts();
+
+    /*  FORGET THESE FOLDERS EXACTLY -- no prefix test, because the caller has already
+        decided folder by folder (see MW::reconcileCatalogToScope). forgetUnder answers
+        "this folder and what is under it"; this answers "these folders", which is what
+        a scope reconcile has to say and what a prefix cannot express: an included branch
+        may sit inside an excluded one. Returns rows deleted.
+
+        THE KEYWORD VOCABULARY IS NOT TOUCHED, and that is the whole reason this is not
+        clear(). image_keyword goes by cascade with the images, but keyword and
+        keyword_context have no foreign key onto image and survive: the vocabulary is
+        USER INTENT, like the scope table itself, where the images are a rebuildable
+        index. Emptying the catalog by removing every scope row therefore leaves the
+        keywords the user has accumulated intact. */
+    int forgetFolders(const QStringList &folders);
 
     /*  Record files the scanner could not parse, as stub rows flagged unreadable. They
         carry the freshness stamp like any other row, so a rescan does not re-attempt them

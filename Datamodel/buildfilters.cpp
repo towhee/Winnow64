@@ -27,10 +27,12 @@
          *types;
          *folders
          *years;
+         *months;
          *days;
          *models;
          *lenses;
          *focalLengths;
+         *isos;
          *titles;
          *keywords;
          *creators;
@@ -447,10 +449,12 @@ QVector<BuildFilters::Sink> BuildFilters::sinks() const
         {FilterCat::Type,        filters->types,        "types"},
         {FilterCat::FolderName,  filters->folders,      "folders"},
         {FilterCat::Year,        filters->years,        "years"},
+        {FilterCat::Month,       filters->months,       "months"},
         {FilterCat::Day,         filters->days,         "days"},
         {FilterCat::CameraModel, filters->models,       "models"},
         {FilterCat::Lens,        filters->lenses,       "lenses"},
         {FilterCat::FocalLength, filters->focalLengths, "focal lengths"},
+        {FilterCat::Iso,         filters->isos,         "ISOs"},
         {FilterCat::Title,       filters->titles,       "titles"},
         {FilterCat::Creator,     filters->creators,     "creators"},
         {FilterCat::Availability, filters->availability, "availability"},
@@ -472,9 +476,10 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     static const int col[FilterCat::SlotCount] = {
         G::SearchColumn,      G::PickColumn,        G::RatingColumn,
         G::LabelColumn,       G::TypeColumn,        G::FolderNameColumn,
-        G::YearColumn,        G::DayColumn,         G::CameraModelColumn,
-        G::LensColumn,        G::FocalLengthColumn, G::TitleColumn,
-        G::CreatorColumn,     G::AvailabilityColumn, G::CompareColumn
+        G::YearColumn,        G::MonthColumn,       G::DayColumn,
+        G::CameraModelColumn, G::LensColumn,        G::FocalLengthColumn,
+        G::ISOColumn,         G::TitleColumn,       G::CreatorColumn,
+        G::AvailabilityColumn, G::CompareColumn
     };
 
     auto out = std::make_shared<FilterSnapshot>();
@@ -494,6 +499,12 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
            rather than as text. All three passes did this, so bake it in once. */
         r.v[FilterCat::FocalLength] =
             r.v[FilterCat::FocalLength].rightJustified(4, ' ');
+        /*  ISO for the same reason, to six: unpadded, "800" sorts between "100" and
+            "8000". Six covers the largest ISO a camera reports (409600). The model
+            holds an int, and a QVariant int compares equal to its padded string form,
+            so a checked item still matches the row -- which is what lets the item
+            carry the padded text as its value the way focal length does. */
+        r.v[FilterCat::Iso] = r.v[FilterCat::Iso].rightJustified(6, ' ');
 
         /*  Availability is the one column whose value is a CODE, not a word -- see
             Catalog::Availability, and "Present is 0 and unset reads as 0", which is

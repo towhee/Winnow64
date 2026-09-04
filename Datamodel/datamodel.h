@@ -613,6 +613,16 @@ public slots:
     member declaration there ("Not a signal or slot declaration"). The slots section
     resumes below. */
 public:
+    /*  Baselines for the per-window cache-hit split on the scroll line. The counters in
+        G:: stay cumulative, because the Phase2 icons line reports them for the whole
+        load; draining them here would silently empty it. */
+    qint64 probeLastCacheHits = 0;
+    qint64 probeLastThumbStatNs = 0;
+    qint64 probeLastThumbLockNs = 0;
+    qint64 probeLastThumbSqlNs = 0;
+    qint64 probeLastThumbDecodeNs = 0;
+    qint64 probeLastThumbStamps = 0;
+
     qint64 probeScanNs = 0;             // isAllIconChunkLoaded, cumulative
     qint64 probeScanCalls = 0;
     qint64 probeScanRows = 0;

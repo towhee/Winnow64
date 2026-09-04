@@ -11,6 +11,7 @@
 #include <QModelIndexList>
 #include <QStringList>
 #include <QElapsedTimer>
+#include <QAccessible>
 #include <QMetaEnum>
 #include <QMetaType>
 #include <QMutex>
@@ -122,6 +123,10 @@ Q_NAMESPACE
         CreatedColumn,
         // items read on demand (secondary metadata fields)
         YearColumn,
+        /*  Month is the month NAME ("Jan".."Dec"), derived from Created beside Year
+            and Day so the Filters panel can group on it -- see Datamodel/rowfields.h.
+            Filter items are shown in calendar order, not alphabetically. */
+        MonthColumn,
         DayColumn,
         CreatorColumn,
         MegaPixelsColumn,
@@ -626,6 +631,15 @@ Q_NAMESPACE
     extern std::atomic<qint64> probeIconCacheGetNs;   // ThumbCache::getImage (before any decode)
     extern std::atomic<int>    probeIconCacheHits;    // getImage returned an image
     extern std::atomic<int>    probeIconCacheMisses;
+    /*  INSIDE A CACHE HIT. cacheGet is 4-5 ms per hit with the LRU write already off the
+        read path, which is far too much for one indexed SELECT, and the total cannot say
+        which part it is. All four are summed across the Reader threads, so lock time is
+        real contention between them rather than time anything spent working. */
+    extern std::atomic<qint64> probeThumbStatNs;      // QFileInfo exists/size/lastModified
+    extern std::atomic<qint64> probeThumbLockNs;      // waiting for ThumbCache::mMutex
+    extern std::atomic<qint64> probeThumbSqlNs;       // prepare + exec + next + read blob
+    extern std::atomic<qint64> probeThumbDecodeNs;    // loadFromData + scale + convertTo
+    extern std::atomic<int>    probeThumbStamps;      // LRU stamps queued to the writer
     extern std::atomic<int>    probeIconCount;
     /*  HOW MANY PER-ROW dataChanged NOTIFICATIONS ACTUALLY REACH THE VIEWS, and how many
         the visible-row throttle suppressed. On macOS each one that gets through makes the
@@ -885,6 +899,37 @@ Q_NAMESPACE
     extern QStringList issueDedupReport();
     extern void issueDedupReset();
     extern void issueBeginSession();
+
+    /*  SUSPEND THE macOS ACCESSIBILITY BRIDGE FOR THE LENGTH OF A BULK MODEL CHANGE.
+
+        Every structural or data notification a view receives makes it tell Cocoa
+        accessibility, which rebuilds its element array for EVERY row in the model -- the
+        path a sample caught during the 42-second Catalog freeze (see WINNOW_NO_A11Y in
+        main.cpp). One filter change at 43,000 rows emits 348 row-insertion blocks and
+        then, because QAbstractItemView defers its layout, pays the rest of the rebuilds
+        on the next turn of the event loop. Measured at 4.2 s of an 8.7 s filter change.
+
+        THE WHOLE OPERATION, INCLUDING ITS DEFERRED WORK, must be inside the guard:
+        bracketing only the invalidate recovered 0.8 s of that 4.2 s and left the rest to
+        land in the nested event loop that follows it.
+
+        SUSPENDING IS NOT DISABLING. The bridge is restored to exactly what it was found
+        as -- including left OFF for a session run with WINNOW_NO_A11Y=1, or one where the
+        platform never turned it on -- and VoiceOver reads the finished model normally.
+        What it loses is per-block notification of a change it would have had to re-read
+        wholesale in any case. RAII so that an early return cannot leave it off. */
+    class A11ySuspend
+    {
+    public:
+        A11ySuspend() : wasActive(QAccessible::isActive())
+            { if (wasActive) QAccessible::setActive(false); }
+        ~A11ySuspend() { if (wasActive) QAccessible::setActive(true); }
+        A11ySuspend(const A11ySuspend &) = delete;
+        A11ySuspend &operator=(const A11ySuspend &) = delete;
+        bool suspended() const { return wasActive; }
+    private:
+        const bool wasActive;
+    };
 
     extern void wait(int ms);
     extern QString s(QVariant x);

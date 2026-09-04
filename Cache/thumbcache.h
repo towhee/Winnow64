@@ -77,12 +77,20 @@ public:
 explicit ThumbWriter(ThumbCache *owner) : mOwner(owner) {}
 public slots:
 void take(const QString &fPath, const QImage &im);
+    /*  THE LRU STAMP, OFF THE READ PATH. Refreshing `used` inline made a cache HIT
+        take the write lock and, in WAL, commit -- 10.2 ms of lock wait per hit measured
+        on an idle machine while the SELECT under that lock took 210 us. Day-granularity
+        made it rare per row, but a folder load reads hundreds of rows whose stamp is a
+        day old, so it was still hundreds of serialised commits. Batched here into one
+        transaction, on the thread that already owns the cache's writes. */
+void takeStamp(const QString &key);
 void flushPending();
 private:
 ThumbCache *mOwner;
         /*  Worker thread only -- never touched from anywhere else, which is the
             whole point of accumulating here rather than in a shared queue. */
 QList<QPair<QString, QImage>> mPending;
+QStringList mPendingStamps;
 bool mScheduled = false;
 };
 
@@ -104,6 +112,10 @@ public:
         any existing row. A failed write is silently ignored: this is a cache. */
     void put(const QString &fPath, const QByteArray &jpg, int w, int h,
              qint64 srcSize, qint64 srcMtime);
+
+    /*  Refresh the LRU `used` stamp for these keys in ONE transaction. Writer thread
+        only -- see ThumbWriter::takeStamp for why a read must not do this itself. */
+    void writeStampBatch(const QStringList &keys);
 
     /*  HAND THE ICON THAT WAS JUST DECODED TO THE WRITER. Returns immediately:
         the stat, the skip-if-present check, the JPEG encode and the insert all

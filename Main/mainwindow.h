@@ -545,16 +545,32 @@ public slots:
     /* "84,102 images catalogued in 312 folders", or why there are none. Shown when the
        editor opens and again when a scan ends. */
     QString catalogStatusText() const;
-    /* The exclude rows that still have catalogued images under them, deduplicated so an
-       exclusion nested inside another recursive one is not counted twice. */
-    CatalogScope catalogScopeForgettable() const;
+    /*  MAKE THE CATALOG MATCH THE SCOPE TABLE: forget every catalogued folder the table
+        no longer admits. The table is not merely a scan list -- it is the statement of
+        what the catalog holds -- so a row removed, an exclusion added or a reach turned
+        off has to reach the index, or the two drift apart with nothing to reveal it.
+
+        confirm PUTS THE COUNT IN FRONT OF THE USER FIRST and returns -1 if they decline,
+        which the caller answers by putting the scope back: cancelling must not leave the
+        catalog holding folders the table has disowned. Silent (confirm false) is for the
+        scan, where the scope that authorises the deletion was confirmed when it was
+        edited. Returns rows forgotten, 0 if there was nothing to do. */
+    int reconcileCatalogToScope(bool confirm);
+    /*  ASKING FOR AN EMPTY CATALOG OPENS THE PLACE IT IS FILLED. Every user door into
+        the catalog scope calls this first; true means it handled the invocation and the
+        caller must not switch scope. Returns false when there is something to browse,
+        and when the index will not open at all -- that case greys Open Catalog out with
+        its own reason and a folder table cannot fix it. */
+    bool catalogEmptyOpenManage(const QString &src);
+    /* The destructive confirmation itself. whole says the last row is going, which is a
+       bigger action than dropping a folder and reads as one. */
+    bool confirmCatalogForget(int images, int folders, bool whole);
     /* The include (or exclude) rows that carry the arithmetic: rows nested inside another
        row of the same kind add nothing of their own, and an exclusion outside every
        included tree subtracts folders nothing added. */
     CatalogScope catalogScopeEffective(bool include) const;
-    /* Tell the editor what each scope row holds, and how much a Scan would forget -- so
-       the deletion is visible BEFORE it happens rather than as a number that changed
-       afterwards. */
+    /* Tell the editor what each scope row holds on disk, so the user can see whether
+       adding a folder achieved anything. */
     void updateCatalogCounts();
     void stopCatalogScan();
     /* Open the Catalogued Folders editor -- which folders are indexed in the background.

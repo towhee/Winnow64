@@ -1735,6 +1735,17 @@ void MW::createFilterDock()
     /*  The panel reports its own scope flips; MW mirrors them to the Catalog
         rows above the Folders and Bookmarks trees. */
     connect(findPanel, &FindPanel::scopeChanged, this, [this](int sc){
+        /*  Switching to Everywhere with nothing catalogued would leave the panel
+            searching an empty index, so the window that fills it opens instead and the
+            selector goes back to Here -- a scope the panel shows but cannot answer is
+            the dead end MW::catalogEmptyOpenManage exists to close. Putting the
+            selector back re-enters this lambda once and stops: MW::setScope
+            early-returns when the scope already matches. */
+        if (sc == FindPanel::CatalogScope
+            && catalogEmptyOpenManage("FindPanel::scopeChanged")) {
+            findPanel->setScope(FindPanel::FolderScope);
+            return;
+        }
         setScope(sc == FindPanel::CatalogScope ? G::Scope::Catalog
                                                : G::Scope::Folders,
                  "FindPanel::scopeChanged");

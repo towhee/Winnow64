@@ -136,7 +136,23 @@ void MW::filterChange(QString source)
         that calls this repeatedly during a rebuild would be a stall the early return used
         to hide. */
     QElapsedTimer fcTimer;
-    if (G::isPerfProbe) fcTimer.start();
+    /*  PHASE TIMER, because "MW::filterChange took 4 seconds" does not say which of the
+        six things it does was the four seconds. Each phase reports the time SINCE the
+        previous one, so the numbers add up to the total below. */
+    QElapsedTimer phTimer;
+    QStringList phases;
+    auto phase = [&](const QString &name) {
+        if (!G::isPerfProbe) return;
+        phases << QString("%1=%2").arg(name).arg(phTimer.restart());
+    };
+    if (G::isPerfProbe) { fcTimer.start(); phTimer.start(); }
+
+    /*  ONE ACCESSIBILITY REBUILD FOR THE WHOLE FILTER CHANGE, not one per row-insertion
+        block and one per deferred view layout. See G::A11ySuspend for the measurement and
+        for why the guard has to cover scrollToCurrentRowIfNotVisible as well: that
+        function's G::wait(100) is a nested event loop, and the views' deferred layout --
+        with the accessibility notification it carries -- runs inside it. */
+    G::A11ySuspend a11ySuspend;
 
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead for the prior datamodel filter.
@@ -158,12 +174,35 @@ void MW::filterChange(QString source)
 
     dm->sf->suspend(false, "MW::filterChange");
     dm->sf->filterChange("MW::filterChange"); // crash (removed wait in SortFilter::filterChange)
+    phase("sfFilter");
 
     // update filter panel image count by filter item
     buildFilters->update();
+    phase("buildFilters");
 
-    // recover sort after filtration
-    sortChange("filterChange");
+    /*  RECOVER THE SORT ONLY IF IT NEEDS RECOVERING. This called sortChange
+        unconditionally, and sortChange re-sorts through QSortFilterProxyModel::sort,
+        which does NOT early-out on a column and order it is already sorted by -- it
+        re-sorts all 43,000 rows and emits layoutChanged to three views, then saves and
+        recovers the selection and refreshes the icons on top. Measured at 0.6 to 3.9
+        seconds per filter change, for an order that had not changed.
+
+        NOTHING WAS RECOVERING. Filtering does not disturb the sort: the proxy runs with
+        dynamicSortFilter TRUE in steady state (it is turned off only for the duration of
+        a batched folder load and put back by restoreProxySortAfterLoad), so the rows
+        invalidateRowsFilter brings back are inserted in sorted position as they arrive.
+        The one thing sortChange did that the phases after here rely on is currentSfRow,
+        which is cheap to keep on its own. A sort the proxy is genuinely NOT holding --
+        after a load, a workspace, or a menu sort -- still goes through sortChange as
+        before, because the guard tests what the proxy actually has. */
+    const Qt::SortOrder wantOrder = isReverseSort ? Qt::DescendingOrder : Qt::AscendingOrder;
+    if (dm->sf->sortColumn() == sortColumn && dm->sf->sortOrder() == wantOrder) {
+        dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    }
+    else {
+        sortChange("filterChange");
+    }
+    phase("sort");
 
     // allow fileSelectionChange()
     isFilterChange = false;
@@ -171,6 +210,7 @@ void MW::filterChange(QString source)
     // update the status panel filtration status
     updateStatusBar();
     updateStatus(true, "", "MW::filterChange");
+    phase("status");
 
     // if filter has eliminated all rows so nothing to show
     if (!dm->sf->rowCount()) {
@@ -189,8 +229,16 @@ void MW::filterChange(QString source)
         gridView->refreshIcons(srcFun);
         gridView->scrollToRow(dm->currentSfRow, srcFun);
     }
-    // sync the datamodel instance
-    metaRead->initialize();
+    phase("refreshIcons");
+    /*  Sync the datamodel instance -- QUEUED, like every other caller of initialize.
+        It was a DIRECT call, which meant the GUI thread cleared rowsReading,
+        videoRowsReading and readSuccessThisCycle while metaReadThread was inside
+        MetaRead::needToRead reading those very sets: a QSet cleared under a concurrent
+        contains() is a freed hash pointer, and the crash landed in needToRead with a null
+        dereference. Nothing here depends on it having run before this function returns --
+        the setStartRow that acts on it is itself queued, behind this. */
+    QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection,
+                              Q_ARG(QString, srcFun));
 
     // is the DataModel current index still in the filter.  If not, reset
     QModelIndex newSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
@@ -205,6 +253,7 @@ void MW::filterChange(QString source)
     QString fPath = newSfIdx.data(G::PathRole).toString();
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
+    phase("imageCache");
 
     // // // clear selection and update datamodel current index
     // sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
@@ -216,16 +265,20 @@ void MW::filterChange(QString source)
     } else {
         sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
     }
+    phase("select");
 
     // only scroll if filtration has changed visible cells in thumbView
     scrollToCurrentRowIfNotVisible();
+    phase("scroll");
 
     QApplication::restoreOverrideCursor();
 
     if (G::isPerfProbe)
         qDebug().noquote() << "[PERF] MW::filterChange" << fcTimer.elapsed() << "ms  src ="
                            << source << " dmRows =" << dm->rowCount()
-                           << " sfRows =" << dm->sf->rowCount();
+                           << " sfRows =" << dm->sf->rowCount()
+                           << " a11ySuspended =" << a11ySuspend.suspended()
+                           << " phases(ms):" << phases.join(" ");
 }
 
 void MW::quickFilter()

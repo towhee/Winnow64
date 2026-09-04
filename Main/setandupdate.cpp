@@ -367,11 +367,17 @@ void MW::updateCatalogScopeTrees()
     const bool open = (n >= 0);
     if (openCatalogAction) {
         openCatalogAction->setEnabled(open);
-        openCatalogAction->setToolTip(open
-            ? tr("Browse and search every image Winnow has catalogued, including "
-                 "folders that are not open.")
-            : tr("The catalog is unavailable -- the local index database could not "
-                 "be opened."));
+        /*  ENABLED BUT EMPTY IS ITS OWN STATE, and the tooltip says so rather than
+            promising a search of images that are not there. The command still works --
+            it opens Manage Catalog, which is where an empty catalog is filled -- so
+            disabling it would close the only door to the fix. */
+        openCatalogAction->setToolTip(
+            !open ? tr("The catalog is unavailable -- the local index database could not "
+                       "be opened.")
+            : n == 0 ? tr("Nothing is catalogued yet. Opens Manage Catalog, where you "
+                          "choose which folders Winnow indexes.")
+                     : tr("Browse and search every image Winnow has catalogued, "
+                          "including folders that are not open."));
         /*  The same property enableSelectionDependentMenus' gate() writes, so the
             Disabled Shortcut Feedback path can say why. Set here rather than there
             because this depends on the catalog, not on the selection. */
@@ -517,6 +523,7 @@ void MW::setCatalogScopeWhole(QString src)
     panel is their filter, not ours to remove.
 */
     if (G::isLogger) G::log("MW::setCatalogScopeWhole", src);
+    if (catalogEmptyOpenManage(src)) return;
     pendingCatalogYear.clear();
     if (!appliedCatalogYear.isEmpty() && filters && filters->years) {
         for (int i = 0; i < filters->years->childCount(); i++) {
@@ -546,6 +553,10 @@ void MW::showCatalogDock()
 {
     if (G::isLogger) G::log("MW::showCatalogDock");
     if (G::isInitializing) return;
+
+    /*  Nothing catalogued: open the window that fills it rather than a search box that
+        can only come back empty. See MW::catalogEmptyOpenManage. */
+    if (catalogEmptyOpenManage("MW::showCatalogDock")) return;
 
     if (G::useFindDock) {
         if (!findPanel) return;

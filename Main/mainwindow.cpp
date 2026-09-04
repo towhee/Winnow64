@@ -3431,24 +3431,135 @@ CatalogScope MW::catalogScopeEffective(bool include) const
     return out;
 }
 
-CatalogScope MW::catalogScopeForgettable() const
+bool MW::catalogEmptyOpenManage(const QString &src)
 {
 /*
-    The exclude rows a Scan would delete catalogued rows for. Nested exclusions are
-    dropped: an exclude inside another recursive exclude covers rows the outer one already
-    covers, and counting both would tell the user a bigger number than the delete.
+    A CATALOG WITH NOTHING IN IT IS A QUESTION, NOT A RESULT. Open Catalog, the Catalog
+    row above the folder tree and the Find panel's Everywhere scope all offered an empty
+    search box with no indication that the catalog was empty, why, or that filling it was
+    the user's to do -- a dead end reached by the very command that should explain itself.
+    So the invocation opens the Manage Catalog window instead, which is where the answer
+    is: it says how many images are catalogued (none), what the nominated folders hold,
+    and either "Add a folder to have it indexed" or how many are waiting for a Scan.
+
+    NO POPUP EXPLAINING THE WINDOW. The window already states the case in the place the
+    user is now looking, which is the same reason a disabled control carries its reason
+    inline rather than in a dialog after the fact.
+
+    NOT WHEN THE INDEX WILL NOT OPEN. That is a different failure with its own greyed-out
+    Open Catalog and its own reason, and no amount of editing the folder table fixes it.
+
+    THE FIRST-RUN PROMPT IS UNAFFECTED (promptForCatalogScope): that one is asked when
+    the user has NOT asked for the catalog, so it has to be a question and has to be
+    asked once. This is a direct answer to a direct request.
 */
-    CatalogScope out;
-    for (const CatalogScopeEntry &e : catalogScope) {
-        if (e.include || e.path.isEmpty()) continue;
-        bool nested = false;
-        for (const CatalogScopeEntry &o : catalogScope) {
-            if (o.include || !o.recurse || o.path == e.path || o.path.isEmpty()) continue;
-            if (e.path.startsWith(o.path + "/")) { nested = true; break; }
-        }
-        if (!nested) out << e;
+    if (!Catalog::instance().isAvailable()) return false;
+    if (Catalog::instance().count() > 0) return false;
+    if (G::isLogger) G::log("MW::catalogEmptyOpenManage", src);
+    manageCatalogRoots();
+    return true;
+}
+
+bool MW::confirmCatalogForget(int images, int folders, bool whole)
+{
+/*
+    The one dialog that stands between a scope edit and a deletion. Cancel is the default
+    button: a keypress that lands here must not forget a library.
+
+    TWO TEXTS, BECAUSE EMPTYING THE CATALOG IS NOT THE SAME ACT as dropping a folder from
+    it. Given one wording for both, the bigger action would look exactly like the smaller
+    one at the moment it matters most.
+
+    BOTH SAY WHAT IS NOT AFFECTED. What the user is being asked to destroy is an index
+    that a Scan rebuilds; the pictures, and the keywords they carry, are untouched. That
+    is the fact which decides the answer, so it belongs in the question.
+*/
+    QLocale loc = QLocale::system();
+    QMessageBox box(this);
+    box.setWindowTitle("Catalog");
+    box.setIcon(QMessageBox::Warning);
+    if (whole) {
+        box.setText("This will empty the catalog.");
+        box.setInformativeText(
+            QString("%1 catalogued image%2 in %3 folder%4 will be forgotten, because no "
+                    "row is left to include them.\n\nThe image files are not affected "
+                    "and your keywords are kept. Add folders back and Scan to rebuild "
+                    "the index.")
+                .arg(loc.toString(images))
+                .arg(images == 1 ? "" : "s")
+                .arg(loc.toString(folders))
+                .arg(folders == 1 ? "" : "s"));
     }
-    return out;
+    else {
+        box.setText(QString("Forget %1 catalogued image%2?")
+                        .arg(loc.toString(images))
+                        .arg(images == 1 ? "" : "s"));
+        box.setInformativeText(
+            QString("They are in %1 folder%2 the catalog scope no longer includes."
+                    "\n\nThe image files are not affected and your keywords are kept. "
+                    "A Scan re-indexes them if you put the folders back.")
+                .arg(loc.toString(folders))
+                .arg(folders == 1 ? "" : "s"));
+    }
+    QPushButton *forget = box.addButton("Forget", QMessageBox::DestructiveRole);
+    QPushButton *cancel = box.addButton("Cancel", QMessageBox::RejectRole);
+    box.setDefaultButton(cancel);
+    box.setEscapeButton(cancel);
+    box.setStyleSheet(G::css);
+    box.exec();
+    resetFocus();
+    return box.clickedButton() == forget;
+}
+
+int MW::reconcileCatalogToScope(bool confirm)
+{
+/*
+    THE SCOPE TABLE IS THE CATALOG, not a list of folders to scan. isCatalogScopeFolder
+    already makes it definitive about what goes IN -- for the scanner and for the
+    opportunistic capture both -- and this is the other half: what the table no longer
+    admits does not stay indexed. Without it a removed row left its images findable
+    forever, and rows catalogued under an older scope (everything browsing captured
+    before the table existed) were invisible to every part of the UI except a search that
+    returned them.
+
+    FOLDER BY FOLDER, NOT BY PREFIX. A scope row is a prefix, but the QUESTION is not:
+    an included branch may sit inside an excluded tree, so only isCatalogScopeFolder can
+    answer it, and it must be asked of each catalogued folder in turn. folderCounts is
+    one query for the folders and their costs together.
+
+    CANCEL IS THE CALLER'S PROBLEM, deliberately. -1 says the user declined, and the
+    caller puts the scope back: accepting the edit while refusing the deletion would
+    produce exactly the drift this function exists to end.
+
+    THE VOCABULARY SURVIVES. forgetFolders deletes images and their keyword LINKS; the
+    keywords themselves are user intent, not a rebuildable index, and no scope edit --
+    including one that empties the catalog -- may take them.
+*/
+    if (G::isLogger) G::log("MW::reconcileCatalogToScope");
+    if (!Catalog::instance().isAvailable()) return 0;
+
+    const QMap<QString, int> counts = Catalog::instance().folderCounts();
+    QStringList orphans;
+    int images = 0;
+    int kept = 0;
+    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
+        if (isCatalogScopeFolder(it.key())) { kept += it.value(); continue; }
+        orphans << it.key();
+        images += it.value();
+    }
+    if (orphans.isEmpty()) return 0;
+
+    if (confirm && !confirmCatalogForget(images, orphans.size(), kept == 0)) return -1;
+
+    const int gone = Catalog::instance().forgetFolders(orphans);
+    if (G::isLogger)
+        G::log("MW::reconcileCatalogToScope", "forgot " + QString::number(gone) +
+                                                  " out of scope rows");
+
+    updateCatalogScopeTrees();
+    if (catalogView && catalogDock && catalogDock->isVisible()) catalogView->refresh();
+    if (findPanel && filterDock && filterDock->isVisible()) findPanel->refresh();
+    return gone;
 }
 
 namespace {
@@ -3503,19 +3614,12 @@ void MW::updateCatalogCounts()
     readdir on a cold cache, and this runs every time the user edits a row. A generation
     counter drops results whose table has since changed; the watcher deletes itself.
 
-    THE FORGET COUNT STAYS AN INDEX QUERY, and must: it is how many rows a Scan would
-    DELETE, which is a fact about the catalog, not about the disk.
+    THERE IS NO PENDING DELETION TO REPORT ANY MORE. A scope edit forgets what it
+    disowns at the moment it is made (MW::reconcileCatalogToScope), so the count of rows
+    a Scan would delete is always zero -- and a note that can never fire is worse than
+    no note, because it reads as a promise the feature is watching for something.
 */
     if (!catalogRootsDlg) return;
-    const bool available = Catalog::instance().isAvailable();
-
-    int images = 0;
-    const CatalogScope forgettable = catalogScopeForgettable();
-    if (available) {
-        for (const CatalogScopeEntry &e : forgettable)
-            images += Catalog::instance().countUnder(e.path, e.recurse);
-    }
-    catalogRootsDlg->setPendingForget(images, images ? forgettable.size() : 0);
 
     /* -2 is "counting", -1 is "not counted": the table shows an ellipsis for one and an
        em dash for the other, because a stale number would be read as a fresh one. */
@@ -3578,23 +3682,16 @@ void MW::startCatalogScan()
         progress->setRowText(progressCatalogRow, "Catalog");
         progress->showRow(progressCatalogRow, true);
     }
-    /*  FORGET WHAT IS NOW EXCLUDED, BEFORE WALKING WHAT IS INCLUDED. An exclusion the
-        user adds after a folder was catalogued would otherwise do nothing they can see:
-        the scanner skips the folder, the count stays where it was, and the images stay
-        findable -- which reads as the exclusion having been ignored. The editor shows
-        what this will delete before Scan is pressed, so the number is never a surprise.
+    /*  RECONCILE BEFORE WALKING. Editing the scope forgets what it disowns as the edit
+        is made, so there is usually nothing here to do -- but a catalog can hold folders
+        no edit ever passed over: everything the opportunistic capture indexed before the
+        scope table existed. Scan is the other moment the user has asked for the index to
+        be brought in line, so it is where those leave.
 
-        DELETED RATHER THAN DEMOTED because this is a statement of intent, not an
-        inference about a missing file (see Catalog::forgetUnder). */
-    if (Catalog::instance().isAvailable()) {
-        int forgotten = 0;
-        const CatalogScope forgettable = catalogScopeForgettable();
-        for (const CatalogScopeEntry &e : forgettable)
-            forgotten += Catalog::instance().forgetUnder(e.path, e.recurse);
-        if (forgotten && G::isLogger)
-            G::log("MW::startCatalogScan", "forgot " + QString::number(forgotten) +
-                                               " excluded rows");
-    }
+        SILENTLY, WITHOUT A CONFIRMATION. The scope that authorises the deletion was
+        confirmed when it was edited, and a dialog in front of a button the user pressed
+        to start a long background job is a dialog they will dismiss unread. */
+    reconcileCatalogToScope(false);
 
     if (catalogView) catalogView->setScanning(true);
     if (findPanel) findPanel->setScanning(true);
@@ -3622,7 +3719,22 @@ void MW::manageCatalogRoots()
         catalogRootsDlg = new CatalogRootsDlg(this);
         connect(catalogRootsDlg, &CatalogRootsDlg::scopeChanged, this,
                 [this](const CatalogScope &scope) {
+                    /*  THE EDIT AND THE DELETION ARE ONE ACT. The table states what the
+                        catalog holds, so a row removed, an exclusion added or a reach
+                        turned off is applied to the index here and now -- and if the
+                        user declines the deletion the EDIT GOES BACK TOO. Keeping the
+                        edit while refusing its consequence is the drift the reconcile
+                        exists to end: the table would name folders the catalog still
+                        held, with nothing on screen to say so.
+
+                        setScope repopulates under its own populating flag and does not
+                        signal back, so putting the rows back cannot recurse. */
+                    const CatalogScope previous = catalogScope;
                     catalogScope = scope;
+                    if (reconcileCatalogToScope(true) < 0) {
+                        catalogScope = previous;
+                        catalogRootsDlg->setScope(previous);
+                    }
                     updateCatalogCounts();
                 });
         connect(catalogRootsDlg, &CatalogRootsDlg::scanRequested,

@@ -102,7 +102,7 @@ struct ImageRow
         Created/Modified are formatted timestamp strings for the same reason,
         and intern well because a shoot shares most of them. */
     qint32 folderId = -1, typeId = -1, makeId = -1, modelId = -1, lensId = -1;
-    qint32 yearId = -1, dayId = -1, creatorId = -1, copyrightId = -1;
+    qint32 yearId = -1, monthId = -1, dayId = -1, creatorId = -1, copyrightId = -1;
     qint32 labelId = -1, pickId = -1, gpsId = -1;
     qint32 dimensionsId = -1;
 

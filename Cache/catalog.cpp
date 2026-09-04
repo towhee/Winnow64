@@ -148,7 +148,9 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
 
     THE STRINGS MUST MATCH WHAT DataModel WRITES into the same column, because the Find
     dock shows one list and the user does not know which scope produced it: TypeColumn is
-    the suffix UPPER-cased, YearColumn is "yyyy", DayColumn is "yyyy-MM-dd", FolderName is
+    the suffix UPPER-cased, YearColumn is "yyyy", MonthColumn is the English abbreviation
+    ("Jan".."Dec"), ISOColumn is the number right-justified to six, DayColumn is
+    "yyyy-MM-dd", FolderName is
     the folder's NAME and not its path, Pick is the words "Picked"/"Unpicked", and Rating
     is the digit as text with "" for unrated.
 
@@ -183,6 +185,23 @@ QString categorySql(int dmColumn)
        stable, which a category list has to be. */
     case G::YearColumn:       expr = "strftime('%Y', i.captured, 'unixepoch')"; break;
     case G::DayColumn:        expr = "strftime('%Y-%m-%d', i.captured, 'unixepoch')"; break;
+    /* The month NAME, spelled from Catalog::monthLabels so the CASE cannot drift from
+       what DataModel writes into G::MonthColumn. A row with no capture date gives NULL
+       here and IFNULL folds it into the blank item, exactly as Year and Day do. */
+    case G::MonthColumn: {
+        expr = "CASE strftime('%m', i.captured, 'unixepoch')";
+        const QStringList names = Catalog::monthLabels();
+        for (int m = 1; m <= 12; ++m)
+            expr += QString(" WHEN '%1' THEN '%2'")
+                        .arg(m, 2, 10, QChar('0')).arg(names.at(m - 1));
+        expr += " END";
+        break;
+    }
+    /* ISO right-justified to six, which is what BuildFilters does to the datamodel's
+       int before counting it -- the padding is what makes "800" sort after "1600"
+       rather than between "100" and "8000". printf() is SQLite's own, so the two sides
+       pad identically. Six covers every ISO a camera reports (409600). */
+    case G::ISOColumn:        expr = "printf('%6d', i.iso)"; break;
     /* The folder NAME, not the path: rtrim everything up to the last separator. */
     case G::FolderNameColumn: expr = "replace(i.folder, rtrim(i.folder,"
                                      " replace(i.folder, '/', '')), '')"; break;
@@ -432,7 +451,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
     if (!db.transaction()) return 0;
 
     QSqlQuery sel(db);
-    sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime FROM image"
+    sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime, unreadable FROM image"
                 " WHERE pathkey = ?");
 
     QSqlQuery upd(db);
@@ -478,7 +497,16 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
             id = sel.value(0).toLongLong();
             fresh = sel.value(1).toLongLong() == r.srcSize
                     && sel.value(2).toLongLong() == r.srcMtime
-                    && sel.value(3).toLongLong() == r.sidecarMtime;
+                    && sel.value(3).toLongLong() == r.sidecarMtime
+                    /*  AN UNREADABLE STUB IS NEVER FRESH -- the same rule staleOf and
+                        fetchFresh apply, and THIS is the copy that clears the flag. The
+                        stub carries the file's stamps, so a row that has just been parsed
+                        successfully looked unchanged here and the write was skipped: the
+                        row stayed a stub, `unreadable` stayed 1, and the editor went on
+                        reporting files it could now read perfectly well. Three functions
+                        compare these stamps and all three had to learn that this row is
+                        about Winnow's ability to read the file, not about the file. */
+                    && !sel.value(4).toBool();
         }
         sel.finish();
         if (id && fresh) continue;
@@ -659,6 +687,19 @@ QString Catalog::availabilityLabel(int code)
     case int(Availability::Unreadable): return "Unreadable";
     default:                            return "Present";
     }
+}
+
+QStringList Catalog::monthLabels()
+{
+    static const QStringList names = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    return names;
+}
+
+QString Catalog::monthLabel(int month)
+{
+    if (month < 1 || month > 12) return QString();
+    return monthLabels().at(month - 1);
 }
 
 int Catalog::availabilityCode(const QString &label)
@@ -1458,6 +1499,68 @@ int Catalog::forgetUnder(const QString &folder, bool recurse)
     const int gone = d.numRowsAffected();
     db.commit();
     return gone > 0 ? gone : 0;
+}
+
+QMap<QString, int> Catalog::folderCounts()
+{
+/*
+    Every catalogued folder with its image count -- see the declaration for why both
+    facts come back from one query.
+*/
+    QMap<QString, int> out;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+    QSqlQuery q(db);
+    if (!q.exec("SELECT folder, COUNT(*) FROM image GROUP BY folder")) return out;
+    while (q.next()) out.insert(q.value(0).toString(), q.value(1).toInt());
+    return out;
+}
+
+int Catalog::forgetFolders(const QStringList &folders)
+{
+/*
+    Delete every catalogued row in these folders. See the declaration for why this takes
+    a list rather than a prefix, and for what it deliberately leaves behind.
+
+    ONE TRANSACTION, CHUNKED BINDS. SQLite's variable limit is finite and a library can
+    hold thousands of folders, so the IN list is filled in batches -- but the batches sit
+    inside a single transaction, because a reconcile that half succeeded would leave the
+    catalog disagreeing with the scope table it was just made to match, which is the one
+    state this whole path exists to abolish.
+
+    THE FTS ROWS GO FIRST, and by subselect, for the same reason as forgetUnder:
+    image_fts has no foreign key onto image, so once the image rows are gone there is
+    nothing left to say which FTS rows were theirs.
+*/
+    if (folders.isEmpty()) return 0;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+
+    constexpr int kChunk = 500;
+    int gone = 0;
+    db.transaction();
+    for (int start = 0; start < folders.size(); start += kChunk) {
+        const QStringList chunk = folders.mid(start, kChunk);
+        QString marks;
+        for (int i = 0; i < chunk.size(); ++i) marks += (i ? ",?" : "?");
+        const QString where = " WHERE folder IN (" + marks + ")";
+
+        QSqlQuery f(db);
+        f.prepare("DELETE FROM image_fts WHERE rowid IN"
+                  " (SELECT id FROM image" + where + ")");
+        for (const QString &folder : chunk) f.addBindValue(folder);
+        if (!f.exec()) { db.rollback(); return 0; }
+
+        QSqlQuery d(db);
+        d.prepare("DELETE FROM image" + where);
+        for (const QString &folder : chunk) d.addBindValue(folder);
+        if (!d.exec()) { db.rollback(); return 0; }
+        if (d.numRowsAffected() > 0) gone += d.numRowsAffected();
+    }
+    db.commit();
+    return gone;
 }
 
 int Catalog::sweep()

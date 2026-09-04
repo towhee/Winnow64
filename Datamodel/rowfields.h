@@ -63,7 +63,7 @@
         WF(enumName, cppType, sqlName, sqlType, kind)
 
     where kind is one of Resident / Scratch / Derived. Derived fields are
-    computed from others (Year and Day come from captured) and exist as columns
+    computed from others (Year, Month and Day come from captured) and exist as columns
     because the Filters panel groups on them -- they are not stored twice.
 */
 
@@ -85,6 +85,7 @@
     WF(Modified,           qint64,         "srcmtime",    "INTEGER", WF_RESIDENT)   \
     WF(Created,            qint64,         "captured",    "INTEGER", WF_RESIDENT)   \
     WF(Year,               QString,        "",            "",        WF_DERIVED)    \
+    WF(Month,              QString,        "",            "",        WF_DERIVED)    \
     WF(Day,                QString,        "",            "",        WF_DERIVED)    \
     WF(Rating,             quint8,         "rating",      "INTEGER", WF_RESIDENT)   \
     WF(Label,              QString,        "label",       "TEXT",    WF_RESIDENT)   \
