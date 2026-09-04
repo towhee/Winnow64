@@ -25,7 +25,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
     // the beachball. Both slots already reject stale emissions via the instance
     // guard (DataModel::addMetadataForItem line ~1658, DataModel::setIcon1 line ~2397),
     // so non-blocking delivery is safe.
-    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItem,
+    connect(this, &Reader::addToDatamodel, dm, &DataModel::addMetadataForItemFromReader,
             Qt::QueuedConnection);
     connect(this, &Reader::setIcon, dm, &DataModel::setIcon1,
             Qt::QueuedConnection);

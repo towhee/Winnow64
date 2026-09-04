@@ -286,7 +286,6 @@ public:
     /* The user's ceiling on icons held at once; rowCount() when unlimited. */
     int maxIconChunkOrAll() const;
     void resolveIconChunkSize();        // Layer 1: brute-force small folders, JIT window for large
-    void refineIconChunkSize();         // Layer 2: re-decide using measured per-icon footprint
     double avgIconMB();                 // measured per-icon footprint, else worst-case estimate
     int    iconBudgetCount();           // icons that fit the thumbnail memory budget
     int    iconChunkFloor();            // hard minimum window (3x visible) — overrides budget
@@ -396,6 +395,8 @@ private:
     void flushVisibleEmits();
     QSet<int> pendingEmitRows;
     bool pendingEmitScheduled = false;
+    /*  The deferral for a visible-row repaint. NOT zero -- see scheduleVisibleEmit. */
+    static constexpr int kVisibleEmitDeferMs = 20;
 public:
 
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
@@ -448,7 +449,6 @@ public:
        the true footprint turns out to fit. Reset per folder in resolveIconChunkSize. */
     std::atomic<qint64> iconBytesSum{0};
     std::atomic<int>    iconSamples{0};
-    bool iconChunkRefined = false;
 
     /* Layer 3 (defensive pressure valve): a GUI-thread timer polls memory pressure and,
        under warn/critical, shrinks the icon window and evicts — never grows. A cooldown
@@ -514,7 +514,7 @@ signals:
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
     /* Emitted when the icon chunk is resized outside the normal scroll/selection flow
-       (Layer 2 refineIconChunkSize, Layer 3 applyIconCachePressure). Wired to
+       (applyIconCachePressure, and the JIT window following the visible page). Wired to
        MW::reloadIconChunk so MetaRead re-dispatches and (re)loads the newly in-range
        icons; without it the window grows/shrinks but the new rows wait for a scroll. */
     void iconChunkResized();
@@ -536,6 +536,9 @@ public slots:
     void addAllMetadata();
     void setAllMetadataAttempted(bool isAttempted);
     bool addMetadataForItem(ImageMetadata m, QString src);
+    /*  Reader's entry point: decrements the backpressure counter Reader incremented,
+        then delegates. Every other caller uses addMetadataForItem directly. */
+    bool addMetadataForItemFromReader(ImageMetadata m, QString src);
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
@@ -577,7 +580,76 @@ public slots:
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;
     void recountLoadFlags();        // full rescan to resync counts after removals
-    void updateIconChunkLoaded();   // O(1)-gated refresh of G::iconChunkLoaded
+    /*  Refresh G::iconChunkLoaded. Pass the dm row an icon just landed on for the O(1)
+        incremental path; the no-argument form does the full authoritative recount. */
+    void updateIconChunkLoaded(int dmRow = -1);
+    int  countIconChunkMissing(int first, int last);
+
+    /*  THE SCROLL PATH, MEASURED (G::isPerfProbe / WINNOW_PERF_PROBE=1).
+
+        Scrolling a catalog scope is not the load path, and none of the load probes say
+        anything about it: the load finishes, then the beachball happens while the user
+        drags the scrollbar. Three things the GUI thread does per scroll event are not
+        O(1), and which of them costs what cannot be reasoned out -- static analysis has
+        named the wrong culprit here twice:
+
+          scan   isAllIconChunkLoaded, called from setIconRange, which runs TWICE per
+                 scroll event (MW::updateIconRange and MW::updateChange). It walks the
+                 whole icon chunk -- up to G::maxIconChunk rows, 10,000 by default --
+                 asking the PROXY for three columns each, and unlike updateIconChunkLoaded
+                 it has no O(1) counter gate in front of it.
+          evict  clearIconsOutsideChunkRange, queued from MetaRead::dispatchFinished onto
+                 the GUI thread. It walks EVERY row outside the chunk -- 33,000 of 43,000
+                 -- reading a decoration from each.
+          rearm  MetaRead::setStartRow's JIT re-arm loop, O(chunk) on the metaReadThread.
+                 Not a beachball itself, but it is what decides which icons get read, so
+                 a thumbnail that never appears is diagnosed from its count.
+
+        Reported as one throttled line rather than per call, because a scroll produces
+        hundreds of calls a second and a line each would itself stall the GUI. */
+    void reportScrollProbe(const QString &src);
+
+/*  Plain data, so it cannot live in the public slots: block this sits in -- moc rejects a
+    member declaration there ("Not a signal or slot declaration"). The slots section
+    resumes below. */
+public:
+    qint64 probeScanNs = 0;             // isAllIconChunkLoaded, cumulative
+    qint64 probeScanCalls = 0;
+    qint64 probeScanRows = 0;
+    qint64 probeEvictNs = 0;            // clearIconsOutsideChunkRange, cumulative
+    qint64 probeEvictCalls = 0;
+    qint64 probeEvictCleared = 0;       // icons actually dropped
+    qint64 probeEvictWalked = 0;        // rows the sweep actually looked at
+    qint64 probeSetRangeCalls = 0;
+    /*  Written on the metaReadThread, read here: atomic for the same reason
+        startIconRange is. */
+    std::atomic<qint64> probeRearmNs{0};
+    std::atomic<qint64> probeRearmCalls{0};
+    std::atomic<qint64> probeRearmRows{0};
+    qint64 probeIconsSet = 0;           // icons actually stored
+    qint64 probeIconSetNs = 0;          // GUI thread time inside setIcon1
+    qint64 probeFlushCount = 0;         // visible-repaint flushes
+    qint64 probeFlushMaxDelayNs = 0;    // worst wait from icon stored to repaint emitted
+    qint64 probeFlushEmitNs = 0;        // time inside the dataChanged emissions themselves
+    QElapsedTimer pendingEmitClock;
+    qint64 probeIconsRedundant = 0;     // delivered for a row that already had one
+    std::atomic<qint64> probeDispatched{0};   // rows MetaRead handed to a Reader
+    std::atomic<qint64> probeRedos{0};        // MetaRead::redo passes
+    QElapsedTimer probeScrollClock;
+    qint64 probeLastReportMs = -1;
+    /*  Rows in the CURRENT icon range that still owe an icon. Exact after every
+        setIconRange, decremented as icons land. G::iconChunkLoaded == (this == 0).
+        Not a probe -- it is live state; it sits here because this is the plain-data
+        block (the surrounding section is public slots:, where moc rejects members). */
+    int iconChunkMissing = 0;
+    /*  The range the last eviction sweep covered, so the next one can walk only what the
+        chunk has slid off. -1 means "no sweep yet": do a full one. */
+    int lastEvictStart = -1;
+    int lastEvictEnd = -1;
+    int evictsSinceFullSweep = 0;
+    static constexpr int kEvictFullSweepEvery = 64;
+
+public slots:
     int rowFromPath(QString fPath);
     int proxyRowFromPath(QString fPath, QString src = "");
     QString pathFromProxyRow(int sfRow);

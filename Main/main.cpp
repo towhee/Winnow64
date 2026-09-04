@@ -123,6 +123,16 @@ int main(int argc, char *argv[])
         point is the catalog the user actually has. */
     bool isCatalogLoad = false;
     QString catalogLoadFilter;
+    /*  Winnow --perfprobe -- an ORDINARY interactive session with the [PERF] lines on.
+
+        Every other way of setting G::isPerfProbe measures a load and then exits: the env
+        var only applies in QStandardPaths test mode, and --catalogload is headless. Some
+        of what hurts is not in the load at all -- scrolling a catalog scope is a person
+        dragging a scrollbar, which no headless run reproduces -- so there has to be a way
+        to watch a real session. It changes nothing except that diagnostics are printed
+        (the scroll probe, the GUI stall watchdog, the Phase 1/2 load lines); settings,
+        catalog and cache are the user's own, exactly as in a normal launch. */
+    bool isPerfProbeArg = false;
     QString selfTestFolder;
     QString metaTestFile;
     QString devTestFolder;
@@ -139,6 +149,7 @@ int main(int argc, char *argv[])
         else if (arg == "--devtest") isDevTest = true;
         else if (arg == "--catalogprobe") isCatalogProbe = true;
         else if (arg == "--catalogload") isCatalogLoad = true;
+        else if (arg == "--perfprobe") isPerfProbeArg = true;
         else if (isCatalogProbe && catalogProbeFilter.isEmpty()) catalogProbeFilter = arg;
         else if (isCatalogLoad && catalogLoadFilter.isEmpty()) catalogLoadFilter = arg;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
@@ -146,6 +157,8 @@ int main(int argc, char *argv[])
         else if (isDevTest && devTestFolder.isEmpty()) devTestFolder = arg;
         else if (isSoakTest) soakFolders << arg;
     }
+    if (isPerfProbeArg) G::isPerfProbe = true;
+
     /* The probe joins these for the SINGLE-INSTANCE bypass only -- it must always start
        fresh rather than handing its arguments to a running Winnow -- and deliberately not
        for the test-mode settings isolation below. */
@@ -160,6 +173,9 @@ int main(int argc, char *argv[])
     QString args;
     QString delimiter = "\n";
     for (int i = 1; i < argc; ++i) {
+        /*  Not an argument to pass on: a running instance handed "--perfprobe" would try
+            to open it as a file path. */
+        if (QString::fromLocal8Bit(argv[i]) == "--perfprobe") continue;
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }

@@ -188,6 +188,10 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "cacheThumbsJIT") {
         G::useJitIconCache = v.toBool();
         mw->settings->setValue("useJitIconCache", G::useJitIconCache);
+        /*  Applied on the NEXT folder load, like the thumbnail ceiling beside it and for
+            the same reason: the window is resolved once per load
+            (DataModel::resolveIconChunkSize), and re-resolving it under a folder the user
+            is looking at would drop thumbnails currently on screen. */
     }
 
     if (source == "progressWidthSlider") {
@@ -1507,9 +1511,15 @@ void Preferences::addProductivity()
     i.name = "cacheThumbsJIT";
     i.parentName = "ProductivityHeader";
     i.captionText = "Cache thumbs just in time";
-    i.tooltip = "Always cache thumbnails just in time."
-                "\nLess memory req'd, better for very large"
-                "\nfolders, but slower for scrolling.";
+    i.tooltip = "Hold thumbnails only for the screens around the one you are\n"
+                "looking at -- the previous, current and next page -- instead of\n"
+                "filling the \"Thumbnails held in memory\" window.\n\n"
+                "In a very large folder or a catalog scope that is the difference\n"
+                "between asking for forty thumbnails and asking for thousands\n"
+                "every time you scroll, so pages appear sooner. The cost is that\n"
+                "scrolling back to somewhere you have been re-reads its\n"
+                "thumbnails (fast when \"Cache thumbnails\" is on).\n\n"
+                "Takes effect on the next folder load.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::useJitIconCache;

@@ -4835,24 +4835,56 @@ void MW::updateIconRange(QString src)
     dm->lastVisibleIcon = lastVisible;
     dm->visibleIcons = visibleIcons;
 
-    /* chunk size: in JIT, hold at least the 3x-visible floor (overrides the memory budget,
-       so switching to a denser view e.g. Grid re-applies it); in brute force, just ensure
-       the visible page fits (iconChunkSize == rowCount, so this never fires). */
-    int minChunk = G::useJitIconCache
+    /*  Chunk size. In JIT the window IS the screens around the visible page, so it
+        follows the page in both directions -- a denser view (Grid) grows it, a sparser
+        one shrinks it back. Grow-only was right when the window was a memory budget and
+        wrong now that it is a read-ahead distance: left to grow only, one glance at a
+        dense grid would leave the window oversized for the rest of the session, which is
+        the cost the option exists to avoid.
+
+        In brute force this only ensures the visible page fits (iconChunkSize == rowCount,
+        so it never fires). */
+    const int targetChunk = G::useJitIconCache
         ? qMin(dm->sf->rowCount(), dm->iconChunkFloor())
         : visibleIcons;
-    if (dm->iconChunkSize < minChunk) {
-        dm->setChunkSize(minChunk);
+    const bool needChunkChange = G::useJitIconCache
+        ? (dm->iconChunkSize != targetChunk)
+        : (dm->iconChunkSize < targetChunk);
+    if (needChunkChange) {
+        dm->setChunkSize(targetChunk);
         chunkSizeChanged = true;
     }
 
-    // Set icon range and G::iconChunkLoaded
-    dm->setIconRange(dm->currentSfRow);
+    /*  CENTRE THE CHUNK ON WHAT IS ON SCREEN, NOT ON THE SELECTION.
+
+        This centred the icon chunk on dm->currentSfRow -- the SELECTED row -- and
+        scrolling does not change the selection. In a 42,956-row catalog scope with a
+        2,000-icon chunk, scrolling to row 5,800 without selecting anything left the chunk
+        at 0-2,000: the rows the user was looking at were OUTSIDE it, so their icons were
+        evicted as fast as the loader read them and the cells stayed blank. Measured by the
+        scroll probe (Winnow --perfprobe): "range = 0 - 2000  visible = 5800 - 5847",
+        iconsLoaded falling 1,820 -> 73 -> 0 while the view sat still.
+
+        The scroll path hid it: MW::thumbHasScrolled and friends call updateChange straight
+        after this, which re-centres the range on the mid-visible row. IconView::resizeEvent
+        and IconView::rejustify call this and NOTHING ELSE, so on those paths the wrong
+        range was the final answer -- and eviction is queued from the metaReadThread, so it
+        could also land inside the window between the two calls on the scroll path.
+
+        The selection is still the right centre when there is no visible range to use: this
+        runs before the views are laid out (folder load, view switch), where firstVisible
+        stays at rowCount and lastVisible at 0. */
+    const bool haveVisibleRange = firstVisible <= lastVisible;
+    dm->setIconRange(haveVisibleRange ? midVisible : dm->currentSfRow);
 
     /*  The visible window moved, so the rows in it may be worth verifying against their
         files. This only restarts a settle timer -- the pass itself runs when scrolling
         stops, off the GUI thread. See Cache/scrollverify.h. */
     if (scrollVerify) scrollVerify->viewChanged();
+
+    /*  What this scroll event cost the GUI thread (G::isPerfProbe only, throttled to one
+        line a second). Placed after the two setIconRange calls it is reporting on. */
+    if (G::isPerfProbe) dm->reportScrollProbe(src);
 
     // update icons cached only when the icon or viewport size changes
     if (chunkSizeChanged) {
@@ -4889,9 +4921,9 @@ void MW::reloadIconChunk()
 {
 /*
     Signalled by DataModel::iconChunkResized when the icon chunk is resized outside the
-    normal scroll/selection flow (Layer 2 refineIconChunkSize, Layer 3
-    applyIconCachePressure). The range was already updated by setIconRange; here we just
-    re-dispatch MetaRead at the current row so the newly in-range icons (re)load.
+    normal scroll/selection flow (applyIconCachePressure). The range was already updated
+    by setIconRange; here we just re-dispatch MetaRead at the current row so the newly
+    in-range icons (re)load.
 */
     if (G::isLogger) G::log("MW::reloadIconChunk");
     if (G::isInitializing || !G::useReadMeta) return;

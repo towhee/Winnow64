@@ -314,11 +314,23 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     if (dm->iconChunkSize < sfRowCount || loadedIconsInvalidated.exchange(false)) {
         const int first = qMax(0, firstIconRow);
         const int last  = qMin(sfRowCount - 1, lastIconRow);
+        /*  Probe only (G::isPerfProbe): the third of the three per-scroll costs -- see
+            the counters in datamodel.h and DataModel::reportScrollProbe. */
+        QElapsedTimer probeTimer;
+        if (G::isPerfProbe) {
+            probeTimer.start();
+            dm->probeRearmCalls.fetch_add(1, std::memory_order_relaxed);
+            dm->probeRearmRows.fetch_add(qMax(0, last - first + 1),
+                                         std::memory_order_relaxed);
+        }
         for (int row = first; row <= last; ++row) {
             if (isVideoAt(row)) continue;
             if (!iconLoadedAt(row))
                 readSuccessThisCycle.remove(row);
         }
+        if (G::isPerfProbe)
+            dm->probeRearmNs.fetch_add(probeTimer.nsecsElapsed(),
+                                       std::memory_order_relaxed);
     }
 
 
@@ -1055,6 +1067,39 @@ inline bool MetaRead::needToRead(int sfRow)
         return false;
     }
 
+    if (!isMeta) {
+        needMeta = true;
+    }
+
+    if (!isIcon) {
+        if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
+            needIcon = true;
+        }
+    }
+
+    /*  DECIDE FIRST, MARK SECOND -- and this order is the whole bug.
+
+        The in-flight marking used to happen HERE-minus-twenty-lines, before the two tests
+        above had been made, so a row this function then declined to read was still left
+        sitting in rowsReading. Nothing ever takes it out again: the set is emptied by a
+        Reader RETURNING (processReturningReader) and by an instance change, and a row no
+        reader was dispatched for gets neither. The in-flight guard at the top then
+        answers "already reading" for that row for the rest of the session.
+
+        HARMLESS ON A FOLDER, FATAL ON A CATALOG SCOPE. A folder row arrives
+        MetaNotAttempted, so needMeta is true and the row is read -- every row the walk
+        touches is genuinely dispatched and the marker is always cleared by the reader that
+        returns. A catalog row arrives MetaLoaded from the index, so needMeta is FALSE, and
+        for any row outside the current icon chunk needIcon is false too. nextA/nextB walk
+        the WHOLE model looking for work, so every row they pass outside the chunk was
+        being poisoned on the way past. Scroll far enough that the walk has been over the
+        rows once and their icons can never load again -- which is exactly "I scrolled
+        about 25% and no thumbnails were visible", and why the icon count fell to 1 and 49
+        in a 2,000-row chunk while the loader looked busy.
+
+        So mark only what is actually about to be dispatched. */
+    if (!(needMeta || needIcon)) return false;
+
     // mark in-flight
     if (isVideo) {
         videoRowsReading.insert(sfRow);
@@ -1068,17 +1113,8 @@ inline bool MetaRead::needToRead(int sfRow)
         rowsReading.insert(sfRow);
     }
 
-    if (!isMeta) {
-        needMeta = true;
-    }
-
-    if (!isIcon) {
-        if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
-            needIcon = true;
-        }
-    }
-
-    return needMeta || needIcon;
+    if (G::isPerfProbe) dm->probeDispatched.fetch_add(1, std::memory_order_relaxed);
+    return true;
 }
 
 bool MetaRead::nextA()
@@ -1212,6 +1248,29 @@ void MetaRead::redo()
     }
     redoCount++;
     redosTriggeredCount.fetch_add(1, std::memory_order_relaxed);
+
+    /*  RE-ARM THE ROWS BEING RETRIED, or the retry cannot possibly work.
+
+        needToRead short-circuits on readSuccessThisCycle, the set of rows a Reader has
+        already returned this instance. Every row this redo exists to retry is in that set
+        by definition -- a reader went out for it and came back without an icon landing --
+        so redo re-walked the range, was refused by that guard for exactly those rows, and
+        gained nothing. Five passes of that per arm, then REDO MAXED OUT reporting the same
+        30-40 rows over and over: measured across a whole scroll session.
+
+        setStartRow already does this for the windowed case ("JIT re-arm"); redo needs it
+        for the same reason and did not have it. Only rows in range whose icon is genuinely
+        absent are dropped from the set, so a row whose icon is merely still in flight on
+        the GUI thread is left alone. */
+    {
+        const int first = qMax(0, firstIconRow);
+        const int last  = qMin(rowCountSf() - 1, lastIconRow);
+        for (int row = first; row <= last; ++row) {
+            if (isVideoAt(row)) continue;
+            if (!iconLoadedAt(row)) readSuccessThisCycle.remove(row);
+        }
+    }
+
     aIsDone = false;
     bIsDone = false;
     a = startRow;
@@ -1379,20 +1438,63 @@ void MetaRead::processReturningReader(int id, Reader *r)
                 stops. One that gained some is making progress and continues, still
                 bounded by redoMax. */
             int iconsNow = 0;
+            int missingNow = 0;
             {
                 const int first = qMax(0, firstIconRow);
                 const int last  = qMin(rowCountSf() - 1, lastIconRow);
-                for (int row = first; row <= last; ++row)
-                    if (iconLoadedAt(row)) ++iconsNow;
+                for (int row = first; row <= last; ++row) {
+                    if (iconLoadedAt(row)) { ++iconsNow; continue; }
+                    if (!isVideoAt(row)) ++missingNow;
+                }
             }
             const bool gained = iconsNow > lastRedoIconCount;
             lastRedoIconCount = iconsNow;
+
+            /*  ASK ABOUT THIS CYCLE'S RANGE, NOT THE CURRENT ONE.
+
+                The test above is allMetaIconLoaded(), which is G::iconChunkLoaded -- a
+                flag the GUI thread maintains for whatever the icon range is RIGHT NOW.
+                This cycle is about the range captured when setStartRow ran, and while the
+                user scrolls those are different ranges almost every time. So a cycle that
+                had finished its own work still saw "not loaded", redid up to redoMax, and
+                then reported REDO MAXED OUT with noIcon = 0 -- a warning, an Error issue,
+                and up to five pointless re-dispatches across the chunk, printed dozens of
+                times in a single scroll.
+
+                missingNow answers the question the redo is actually asking. Zero missing
+                in the range this cycle was given means the cycle succeeded, whatever the
+                flag says about the range that replaced it -- a new setStartRow is already
+                on its way for that one. */
+            if (missingNow == 0) {
+                dispatchFinished("WeAreDone");
+                return;
+            }
+
+            /*  THE WINDOW MOVED UNDER THIS CYCLE, so its leftovers are not this cycle's
+                business. The rows it is now missing are the ones that entered the range
+                while it was running -- scrolling drags the window a page at a time, so
+                the count settles at almost exactly one visible page (measured: noIcon = 48
+                over and over on a 48-row page). Retrying them here is pointless: a
+                setStartRow for the new range is already queued and will dispatch them
+                properly, and the five redo passes in between only compete with it. Worse,
+                giving up then logs an Error issue per arm, which is how a normal scroll
+                filled the issue log with REDO MAXED OUT.
+
+                Redo is for a read that FAILED in the range it was asked about. If that
+                range is no longer the range, there is nothing here to retry. */
+            if (firstIconRow != dm->startIconRange.load() ||
+                lastIconRow  != dm->endIconRange.load()) {
+                dispatchFinished("RangeMoved");
+                return;
+            }
 
             // if all readers finished but not all loaded, then redo
             if (redoCount < redoMax && (redoCount == 0 || gained)) {
                 // try to read again
                 QThread::msleep(50);
                 if (!abort) {
+                    if (G::isPerfProbe)
+                        dm->probeRedos.fetch_add(1, std::memory_order_relaxed);
                     redo();
                 }
             }

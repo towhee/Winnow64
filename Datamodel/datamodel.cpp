@@ -577,6 +577,11 @@ void DataModel::clearDataModel()
     // clear memory-overrun latch and Reader→DataModel backpressure counter
     G::memoryOverrunFlag.store(false, std::memory_order_relaxed);
     queuedReaderEvents.store(0, std::memory_order_relaxed);
+    /*  The eviction sweep's memory of what it last covered. A new model means the row
+        numbers it holds mean nothing, so the next sweep must be a full one. */
+    lastEvictStart = lastEvictEnd = -1;
+    evictsSinceFullSweep = 0;
+    iconChunkMissing = 0;
     // model is now empty: reset the running load-flag counts
     metadataAttemptedCount.store(0, std::memory_order_relaxed);
     metadataLoadedCount.store(0, std::memory_order_relaxed);
@@ -3116,6 +3121,37 @@ void DataModel::imageCacheWaiting(int sfRow, int instance)
     }
 }
 
+bool DataModel::addMetadataForItemFromReader(ImageMetadata m, QString src)
+{
+/*
+    THE READER'S ENTRY POINT, and the only one that owes the backpressure counter a
+    decrement.
+
+    The counter lived inside addMetadataForItem as an RAII guard "matching Reader's
+    fetch_add" -- but a dozen callers reach that function without going anywhere near a
+    Reader (the catalog fill, addAllMetadata, readMetadataForItem, InfoView, EmbelExport,
+    the file operations), and every one of them decremented a counter nothing had
+    incremented. A catalog scope calls it once per row on the fill, so the counter ended a
+    42,956-row load at -42,956: the probe line reads "readerQueue = -42956".
+
+    That is not cosmetic. queuedReaderEvents is what MetaRead::dispatch consults before
+    dispatching more readers (kQueueCap), so a permanently negative counter means the
+    backpressure valve is wedged OPEN for the rest of the session -- on precisely the load
+    where the GUI thread is most likely to fall behind. MW::allReaderEventsDrained reads
+    the same counter to decide the model is fully updated.
+
+    So the pairing now lives at the one place it is true: Reader connects here, this
+    decrements, and addMetadataForItem is left as the plain model write every other caller
+    wants.
+*/
+    struct QrEvGuard {
+        std::atomic<int> &c;
+        ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
+    } qrEvGuard{queuedReaderEvents};
+
+    return addMetadataForItem(m, src);
+}
+
 bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 {
 /*
@@ -3135,13 +3171,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     and memory. The cap (4× readers) is loose enough that steady-state throughput is
     unaffected; it only engages when the GUI is genuinely falling behind.
 */
-    /* Backpressure: matches Reader's fetch_add before emit addToDatamodel.
-       RAII so every early-return path also decrements. */
-    struct QrEvGuard {
-        std::atomic<int> &c;
-        ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
-    } qrEvGuard{queuedReaderEvents};
-
     if (G::isLogger) {
         QString msg = "row = " + QString::number(m.row);
         G::log("DataModel::addMetadataForItem", msg);
@@ -3606,7 +3635,26 @@ void DataModel::scheduleVisibleEmit(int dmRow)
     pendingEmitRows.insert(dmRow);
     if (pendingEmitScheduled) return;
     pendingEmitScheduled = true;
-    QTimer::singleShot(0, this, [this]{ flushVisibleEmits(); });
+    if (G::isPerfProbe) pendingEmitClock.start();
+
+    /*  A NON-ZERO INTERVAL, AND THE ZERO IS THE BUG.
+
+        Qt gives a zero timer the LOWEST priority there is: it fires when the event queue
+        has nothing else in it. That is the correct choice for a coalescing flush right up
+        until the thing filling the queue is the very work being coalesced. Scrolling a
+        catalog scope moves the icon chunk, and the loader answers by delivering the whole
+        2,000-row window -- measured at 3,628 icons in one second, each one a queued event
+        onto this thread. The repaint for the forty rows the user is actually looking at
+        was therefore scheduled behind the entire chunk fill: their icons were in the model
+        within milliseconds and on screen a second or two later, which is exactly the
+        symptom ("a page of thumbnails takes 1-2 seconds") and why the icon counters showed
+        nothing wrong -- the icons WERE arriving on time.
+
+        20 ms is about one frame: long enough that a burst still collapses into one
+        notification (which is what keeps the accessibility rebuild off the per-icon path),
+        short enough that the visible page cannot wait on the invisible remainder of the
+        chunk. */
+    QTimer::singleShot(kVisibleEmitDeferMs, this, [this]{ flushVisibleEmits(); });
 }
 
 void DataModel::flushVisibleEmits()
@@ -3620,11 +3668,26 @@ void DataModel::flushVisibleEmits()
     distant rows.
 */
     pendingEmitScheduled = false;
+    if (G::isPerfProbe && pendingEmitClock.isValid()) {
+        const qint64 lateNs = pendingEmitClock.nsecsElapsed();
+        probeFlushCount++;
+        if (lateNs > probeFlushMaxDelayNs) probeFlushMaxDelayNs = lateNs;
+    }
     if (pendingEmitRows.isEmpty()) return;
 
     QList<int> rows(pendingEmitRows.cbegin(), pendingEmitRows.cend());
     pendingEmitRows.clear();
     std::sort(rows.begin(), rows.end());
+
+    /*  THE EMISSION ITSELF IS THE LAST UNMEASURED THING ON THIS THREAD (G::isPerfProbe).
+        Everything else on the scroll line is Winnow's own work; this is what Qt does when
+        told a row changed -- on macOS, rebuilding the entire Cocoa accessibility element
+        array for the model, measured at ~27 ms per notification at 43,000 rows. A scroll
+        produces tens of flushes a second, so if this is where the residual stutter lives
+        it is worth several hundred ms of every second and appears nowhere else.
+        Cross-check with WINNOW_NO_A11Y=1, which turns the bridge off outright. */
+    QElapsedTimer emitTimer;
+    if (G::isPerfProbe) emitTimer.start();
 
     const int lastCol = columnCount() - 1;
     int runStart = rows.first();
@@ -3635,6 +3698,8 @@ void DataModel::flushVisibleEmits()
         runStart = prev = rows.at(i);
     }
     emit dataChanged(index(runStart, 0), index(prev, lastCol));
+
+    if (G::isPerfProbe) probeFlushEmitNs += emitTimer.nsecsElapsed();
 }
 
 bool DataModel::iconRowVisible(const QModelIndex &dmIdx)
@@ -4051,7 +4116,7 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
     if (sfRow >= 0) emit videoReadingCleared(sfRow, fromInstance);
 }
 
-void DataModel::updateIconChunkLoaded()
+void DataModel::updateIconChunkLoaded(int dmRow)
 {
 /*
     Refresh G::iconChunkLoaded without rescanning the whole icon chunk on every
@@ -4070,6 +4135,31 @@ void DataModel::updateIconChunkLoaded()
         rows whose file is on an unplugged drive or gone, and requiring an icon of those
         left this permanently false -- which is what put MetaRead into a redo loop that
         blocked the GUI for 31 seconds (see "The Redo Loop That Could Never Finish"). */
+    /*  THE GATE IS MODEL-WIDE AND THE REQUIREMENT IS CHUNK-LOCAL, which makes it a gate
+        that never closes once the model is bigger than the chunk. iconLoadedCount counts
+        icons ANYWHERE in the model; needed is the span of the WINDOW. On a 42,956-row
+        catalog scope with a 2,000-row chunk the count passes 2,000 almost at once and
+        stays there, so from then on every single icon write ran the full authoritative
+        scan -- 2,000 proxy rows x 3 columns, on the GUI thread, per icon.
+
+        Measured by the scroll probe: "scan calls = 1247  rows = 2495247  ms = 306.8" in
+        one second of scrolling, with setIconRange responsible for 2 of those calls. The
+        other 1,245 were icon writes.
+
+        So the answer is maintained incrementally instead of recomputed. iconChunkMissing
+        is the number of rows in the CURRENT range that still owe an icon; setIconRange
+        recomputes it exactly whenever the range moves (which is every scroll event, so
+        any drift is corrected within one event), and an icon landing inside the range
+        decrements it. O(1) per icon, and the O(span) walk happens once per range change
+        rather than once per thumbnail. */
+    if (dmRow >= 0) {
+        const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
+        if (sfRow >= startIconRange && sfRow <= endIconRange && iconChunkMissing > 0)
+            --iconChunkMissing;
+        G::iconChunkLoaded = (iconChunkMissing == 0);
+        return;
+    }
+
     const int needed = span - videoRowCount.load(std::memory_order_relaxed)
                             - iconUnloadableCount.load(std::memory_order_relaxed);
     if (span > 0 &&
@@ -4078,6 +4168,25 @@ void DataModel::updateIconChunkLoaded()
         return;
     }
     G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+}
+
+int DataModel::countIconChunkMissing(int first, int last)
+{
+/*
+    How many rows in [first, last] still owe an icon -- the counting form of
+    isAllIconChunkLoaded, and it must apply exactly the same exemptions (video rows, and
+    rows whose file cannot be opened at all) or the two would disagree and the icon loader
+    would redo forever chasing a row nobody expects an icon from.
+*/
+    if (first < 0 || last >= sf->rowCount()) return 0;
+    int missing = 0;
+    for (int row = first; row <= last; ++row) {
+        if (sf->index(row, G::VideoColumn).data().toBool()) continue;
+        if (sf->index(row, G::AvailabilityColumn).data().toInt()
+                != int(Catalog::Availability::Present)) continue;
+        if (sf->index(row, 0).data(Qt::DecorationRole).isNull()) ++missing;
+    }
+    return missing;
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
@@ -4157,7 +4266,8 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
             }
             if (iconRowVisible(dmIdx))
                 scheduleVisibleEmit(dmIdx.row());
-            updateIconChunkLoaded();
+            if (G::isPerfProbe) probeIconsRedundant++;
+            updateIconChunkLoaded(dmIdx.row());
             return;
         }
     }
@@ -4171,7 +4281,8 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     }
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmIdx.row());
-    updateIconChunkLoaded();
+    if (G::isPerfProbe) probeIconsSet++;
+    updateIconChunkLoaded(dmIdx.row());
 }
 
 void DataModel::setDevelopIcon(int dmRow, const QImage &im)
@@ -4261,6 +4372,18 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
 
+    /*  WHAT AN ICON COSTS THE GUI THREAD ONCE IT HAS ARRIVED (G::isPerfProbe). Every other
+        field on the scroll line measures work AROUND the icons -- the scan, the sweep, the
+        repaint, the reads. This is the one that scales with "icons set", which during a
+        scroll is thousands a second while only the visible page is ever painted. */
+    QElapsedTimer probeSetTimer;
+    const bool probeSet = G::isPerfProbe;
+    if (probeSet) probeSetTimer.start();
+    struct ProbeSet {
+        DataModel *dm; QElapsedTimer &t; bool on;
+        ~ProbeSet() { if (on) dm->probeIconSetNs += t.nsecsElapsed(); }
+    } probeSetGuard{this, probeSetTimer, probeSet};
+
     if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
 
     if (fromInstance != instance) {
@@ -4320,7 +4443,8 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
             }
             if (iconRowVisible(dmIdx))
                 scheduleVisibleEmit(dmRow);
-            updateIconChunkLoaded();
+            if (G::isPerfProbe) probeIconsRedundant++;
+            updateIconChunkLoaded(dmRow);
             return;
         }
     }
@@ -4342,16 +4466,17 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     // Notify views only for visible rows; off-screen icons paint when scrolled to.
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmRow);
-    updateIconChunkLoaded();
+    if (G::isPerfProbe) probeIconsSet++;
+    updateIconChunkLoaded(dmRow);
 
-    /* Layer 2 (measured refinement): accumulate the real per-icon footprint. Once enough
-       icons have loaded, recompute the budget with the true average and (one-shot) grow /
-       promote a JIT folder when the measured footprint turns out to fit. */
+    /* Layer 2 (measured refinement): accumulate the real per-icon footprint. Still
+       measured -- avgIconMB and the diagnostics report both read it -- but no longer
+       acted on. Layer 2 existed to GROW a JIT window once the true footprint proved it
+       would fit, and under the option's current meaning (the screens around the visible
+       page) a window that fits memory is not the goal: growing it back to thousands of
+       rows is precisely the cost the option exists to avoid. */
     iconBytesSum.fetch_add(im.sizeInBytes(), std::memory_order_relaxed);
-    const int n = iconSamples.fetch_add(1, std::memory_order_relaxed) + 1;
-    if (G::useJitIconCache && !iconChunkRefined && !iconCachePressureLatched
-        && n >= 200 && iconChunkSize < rowCount())
-        refineIconChunkSize();
+    iconSamples.fetch_add(1, std::memory_order_relaxed);
 }
 
 bool DataModel::iconLoaded(int sfRow, int instance)
@@ -4400,6 +4525,19 @@ bool DataModel::isAllIconChunkLoaded(int first, int last)
         qDebug() << "DataModel::isAllIconChunkLoaded" << "instance =" << instance;
 
     if (first < 0 || last > sf->rowCount()) return false;
+
+    /*  Probe only (G::isPerfProbe). This walk is the first of the three per-scroll costs
+        described in the header -- see DataModel::reportScrollProbe. */
+    QElapsedTimer probeTimer;
+    if (G::isPerfProbe) {
+        probeTimer.start();
+        probeScanCalls++;
+        probeScanRows += qMax(0, last - first + 1);
+    }
+    struct ProbeScan {
+        DataModel *dm; QElapsedTimer &t; bool on;
+        ~ProbeScan() { if (on) dm->probeScanNs += t.nsecsElapsed(); }
+    } probeScan{this, probeTimer, G::isPerfProbe};
 
     for (int row = first; row <= last; ++row) {
         // ignore video
@@ -4466,7 +4604,11 @@ void DataModel::setIconRange(int sfRow)
        (Was an unguarded plain-int write — TSan-confirmed race, datamodel.h.) */
     startIconRange = start;
     endIconRange = end;
-    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+    if (G::isPerfProbe) probeSetRangeCalls++;
+    /*  The exact recount, once per range change -- what makes the incremental
+        maintenance in updateIconChunkLoaded self-correcting. */
+    iconChunkMissing = countIconChunkMissing(startIconRange, endIconRange);
+    G::iconChunkLoaded = (iconChunkMissing == 0);
 }
 
 void DataModel::setChunkSize(int chunkSize)
@@ -4516,18 +4658,19 @@ void DataModel::resolveIconChunkSize()
     existing machinery (setIconRange, MetaRead::needToRead, clearIconsOutsideChunkRange) does
     the rest, since they all key off iconChunkSize < rowCount().
 
-    At endLoad no icons are loaded yet, so the budget uses a worst-case per-icon estimate;
-    refineIconChunkSize() (Layer 2) revisits the decision once real icons have loaded.
+    At endLoad no icons are loaded yet, so the brute-force budget uses a worst-case
+    per-icon estimate. There is no later re-decision: the JIT window is the visible page's
+    neighbourhood, which needs no measurement, and growing a window back toward the memory
+    budget is the cost the option exists to avoid.
 
     Called from endLoad on the GUI thread after a folder has loaded.
 */
 {
     const int rows = rowCount();
 
-    // new folder: reset the measured-footprint accumulators (Layer 2)
+    // new folder: reset the measured-footprint accumulators
     iconBytesSum.store(0, std::memory_order_relaxed);
     iconSamples.store(0, std::memory_order_relaxed);
-    iconChunkRefined = false;
 
     if (rows == 0) return;
 
@@ -4556,18 +4699,31 @@ void DataModel::resolveIconChunkSize()
         return;
     }
 
-    /* JIT (Layer 1): no icons are loaded yet at endLoad, so iconBudgetCount() uses the
-       worst-case per-icon estimate. Small folder -> full populate; large -> bounded
-       window. refineIconChunkSize() revisits this once real icons have loaded. */
-    const int budgetIcons = iconBudgetCount();
-    iconChunkSize = qMin(rows, qMin(qMax(budgetIcons, iconChunkFloor()),
-                                    maxIconChunkOrAll()));
+    /*  JIT (Layer 1): HOLD THE SCREENS AROUND THE ONE BEING LOOKED AT, and nothing else.
+
+        This used to size the window from the memory BUDGET, which on a machine with
+        memory to spare is most of the model -- so turning JIT on changed almost nothing,
+        and the window stayed at the user's thumbnail ceiling (2,000 rows for a 40-row
+        page). Every scroll then asked the loader for up to 2,000 thumbnails to show 40,
+        and the GUI thread absorbed them as queued icon events: "icons set = 4792" in one
+        second, inside a 1,832 ms stall. The reads were not the problem and neither was
+        any single line of code -- the WORK ITEM was simply forty times bigger than the
+        question being asked.
+
+        The chunk is a memory bound; it was never meant to be the read-ahead list, and
+        under this option it stops being one. iconChunkFloor() is the previous, current
+        and next screens (3x the visible page, minimum 256), which is what a person
+        scrolling actually needs in hand.
+
+        Memory does not need consulting for a window this size, so it is not: the budget
+        only ever mattered because the window could be enormous. */
+    iconChunkSize = qMin(rows, iconChunkFloor());
 
     if (isDebug || G::isLogger)
         G::log("DataModel::resolveIconChunkSize",
-               QString("rows=%1 budgetIcons=%2 iconChunkSize=%3 mode=%4")
-                   .arg(rows).arg(budgetIcons).arg(iconChunkSize.load())
-                   .arg(iconChunkSize < rows ? "JIT window" : "full"));
+               QString("rows=%1 visibleIcons=%2 iconChunkSize=%3 mode=%4")
+                   .arg(rows).arg(visibleIcons).arg(iconChunkSize.load())
+                   .arg(iconChunkSize < rows ? "JIT screens window" : "full"));
 
     setIconRange(currentSfRow);
 }
@@ -4628,36 +4784,6 @@ int DataModel::iconChunkFloor()
 */
 {
     return qMax(256, 3 * visibleIcons);
-}
-
-void DataModel::refineIconChunkSize()
-/*
-    Layer 2: once enough real icons have loaded, recompute the budget with the measured
-    per-icon average (avgIconMB) and grow the window — or promote a JIT folder back to full
-    brute force — when the true footprint turns out to fit. One-shot per folder, and grow-only:
-    shrinking on measured data would be reacting to memory, which is Layer 3 (not implemented).
-    Called from setIcon1 on the GUI thread.
-*/
-{
-    iconChunkRefined = true;
-    const int rows = rowCount();
-    if (rows == 0) return;
-
-    const int budgetIcons = iconBudgetCount();
-    const int newChunk = qMin(rows, qMax(budgetIcons, iconChunkFloor()));
-    if (newChunk <= iconChunkSize) return;      // grow-only
-
-    iconChunkSize = newChunk;
-
-    if (isDebug || G::isLogger)
-        G::log("DataModel::refineIconChunkSize",
-               QString("rows=%1 avgKB=%2 budgetIcons=%3 iconChunkSize=%4 mode=%5")
-                   .arg(rows).arg(avgIconMB() * 1024, 0, 'f', 1)
-                   .arg(budgetIcons).arg(iconChunkSize.load())
-                   .arg(iconChunkSize < rows ? "JIT window" : "full"));
-
-    setIconRange(currentSfRow);
-    emit iconChunkResized();            // re-dispatch MetaRead to fill the grown window
 }
 
 int DataModel::memoryPressureLevel()
@@ -4765,20 +4891,213 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
 
     QMutexLocker locker(&dmMutex);
 
-    for (int i = 0; i < startIconRange; i++) {
-        if (abort) return;
-        if (!sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
-            sf->setData(sf->index(i, 0), QVariant(), Qt::DecorationRole);
-            sf->setData(sf->index(i, G::IconLoadedColumn), false);
+    /*  Probe only (G::isPerfProbe): this runs on the GUI thread, queued from
+        MetaRead::dispatchFinished, and walks every row OUTSIDE the chunk. See
+        DataModel::reportScrollProbe. */
+    QElapsedTimer probeTimer;
+    const bool probe = G::isPerfProbe;
+    qint64 cleared = 0;
+    qint64 walked = 0;
+    if (probe) { probeTimer.start(); probeEvictCalls++; }
+    struct ProbeEvict {
+        DataModel *dm; QElapsedTimer &t; qint64 &cleared; qint64 &walked; bool on;
+        ~ProbeEvict() {
+            if (!on) return;
+            dm->probeEvictNs += t.nsecsElapsed();
+            dm->probeEvictCleared += cleared;
+            dm->probeEvictWalked += walked;
+        }
+    } probeEvict{this, probeTimer, cleared, walked, probe};
+
+    /*  EVICTING AN ICON IS A HASH ERASE, AND IT WAS COSTING 5.3 ms.
+
+        The two setData calls per row each emitted their own dataChanged, straight out of
+        the base class -- the ONE path in the icon machinery that never adopted the
+        visible-only, coalesced notification everything else uses (setIcon1,
+        addMetadataForItem, setValDm/setValSf). On macOS every dataChanged makes Qt rebuild
+        the entire Cocoa accessibility table for the model, ~27 ms at 43,000 rows, and this
+        loop emitted two per evicted row.
+
+        Measured by the scroll probe (Winnow --perfprobe, catalog scope, 42,956 rows):
+        1,820 icons evicted in 9,650 ms, inside a 17,624 ms GUI STALL. That is the
+        beachball, and it is not the walk -- the same pass over the same 43,000 rows that
+        clears nothing costs under a millisecond.
+
+        A row outside the icon chunk is by definition off-screen (the chunk contains the
+        visible window), so the notification had no one to tell: the view re-reads the cell
+        when it is scrolled to. iconRowVisible keeps the safe answer for the degenerate
+        case where the visible range is not established yet. */
+    auto evict = [&](int sfRow) {
+        const QModelIndex sfIdx = sf->index(sfRow, 0);
+        if (sfIdx.data(Qt::DecorationRole).isNull()) return;
+        const QModelIndex dmIdx = sf->mapToSource(sfIdx);
+        {
+            const QSignalBlocker blocker(this);
+            sf->setData(sfIdx, QVariant(), Qt::DecorationRole);
+            sf->setData(sf->index(sfRow, G::IconLoadedColumn), false);
+        }
+        if (dmIdx.isValid() && iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
+        if (probe) cleared++;
+    };
+
+    /*  WALK WHAT LEFT THE CHUNK, NOT EVERYTHING OUTSIDE IT.
+
+        This swept every row outside the range -- ~41,000 of 42,956 -- and it is emitted
+        once per dispatch cycle, which during a scroll is constant. Once the per-row
+        eviction cost was fixed the sweep itself became the top GUI cost measured:
+        "evict calls = 222  cleared = 384  ms = 949.4" in one second, i.e. 222 walks of
+        the whole model to find a few hundred icons.
+
+        Between two sweeps the chunk has usually MOVED rather than jumped, so the only
+        rows that can newly need evicting are the ones the chunk slid off: the difference
+        between the previous range and this one. When the range has not moved at all there
+        is nothing to do, and when it jumps clear of the old one the full sweep is right.
+
+        A PERIODIC FULL SWEEP still runs (kEvictFullSweepEvery), because a reader can
+        deliver an icon for a row that was in range when it was dispatched and out of range
+        by the time it lands. Delta-only would leak those; one full sweep every 64 keeps
+        the bound without putting the walk back on the hot path. */
+    const int rows = sf->rowCount();
+
+    /*  READ-AHEAD IS NOT RETENTION, and conflating them put the loader on a treadmill.
+
+        The chunk answers "what should be FETCHED around the visible page". Eviction was
+        using it to answer "what may be KEPT", so with the JIT window at 256 rows every
+        icon read was dropped again almost immediately -- the probe showed it exactly:
+        "icons set = 2222 ... cleared = 2222", a 1:1 ratio, second after second. Rows at
+        the window's edge were read, evicted, and read again, and scrolling back a page
+        re-read a page that had been in memory moments earlier.
+
+        The two are different questions with different right answers, and the user has
+        already answered both: "Cache thumbs just in time" sets the read-ahead distance,
+        and "Thumbnails held in memory" (maxIconChunkOrAll) is the retention bound. So the
+        window kept is the chunk grown symmetrically to the retention size -- with the
+        defaults, ~870 rows either side of the fetch window -- and an icon has to fall that
+        far behind before it is dropped. Reading stays cheap; going back stays instant.
+
+        Retention is purely an eviction concern: needToRead still fetches only within the
+        chunk, and iconChunkMissing still asks about the chunk. */
+    const int chunkStart = startIconRange.load();
+    const int chunkEnd   = qMin(endIconRange.load(), rows - 1);
+    const int chunkSpan  = qMax(1, chunkEnd - chunkStart + 1);
+    const int retain     = qMax(chunkSpan, maxIconChunkOrAll());
+    const int margin     = (retain - chunkSpan) / 2;
+    const int start = qMax(0, chunkStart - margin);
+    const int end   = qMin(rows - 1, chunkEnd + margin);
+
+    bool full = (lastEvictStart < 0 || lastEvictEnd < 0);
+    if (!full && start == lastEvictStart && end == lastEvictEnd) {
+        if (++evictsSinceFullSweep < kEvictFullSweepEvery) return;
+        full = true;
+    }
+    /*  Disjoint from the last kept window: everything the last one held has left. That is
+        the OLD window, not the whole model -- rows beyond it were evicted by earlier
+        sweeps, and anything they missed is caught by the periodic full sweep. Walking the
+        model here made a jump-scroll O(rows) again for no gain. */
+    const bool disjoint = !full && (end < lastEvictStart || start > lastEvictEnd);
+
+    QVector<QPair<int, int>> spans;
+    if (full) {
+        spans.append({0, start - 1});
+        spans.append({end + 1, rows - 1});
+        evictsSinceFullSweep = 0;
+    }
+    else if (disjoint) {
+        spans.append({lastEvictStart, lastEvictEnd});
+    }
+    else {
+        if (start > lastEvictStart) spans.append({lastEvictStart, start - 1});
+        if (end < lastEvictEnd)     spans.append({end + 1, lastEvictEnd});
+    }
+
+    lastEvictStart = start;
+    lastEvictEnd = end;
+
+    for (const auto &span : spans) {
+        const int from = qMax(0, span.first);
+        const int to   = qMin(rows - 1, span.second);
+        for (int i = from; i <= to; ++i) {
+            if (abort) return;
+            if (probe) walked++;
+            evict(i);
         }
     }
-    for (int i = endIconRange + 1; i < sf->rowCount(); i++) {
-        if (abort) return;
-        if (!sf->index(i, 0).data(Qt::DecorationRole).isNull()) {
-            sf->setData(sf->index(i, 0), QVariant(), Qt::DecorationRole);
-            sf->setData(sf->index(i, G::IconLoadedColumn), false);
-        }
-    }
+}
+
+void DataModel::reportScrollProbe(const QString &src)
+{
+/*
+    One [PERF] line per second while the user scrolls, and nothing at all when they are
+    not. Everything in it is cumulative since the last line, so the numbers are "what the
+    GUI thread spent in the last second of scrolling" -- which is directly comparable with
+    the [PERF] GUI STALL lines MW::armGuiStallWatchdog prints from the same run.
+
+    See the block comment on the counters in datamodel.h for what each figure is.
+*/
+    if (!G::isPerfProbe) return;
+    if (!probeScrollClock.isValid()) { probeScrollClock.start(); probeLastReportMs = 0; }
+
+    const qint64 now = probeScrollClock.elapsed();
+    if (probeLastReportMs >= 0 && now - probeLastReportMs < 1000) return;
+    const double window = (now - probeLastReportMs) / 1000.0;
+    probeLastReportMs = now;
+
+    const qint64 rearmNs    = probeRearmNs.exchange(0, std::memory_order_relaxed);
+    const qint64 rearmCalls = probeRearmCalls.exchange(0, std::memory_order_relaxed);
+    const qint64 rearmRows  = probeRearmRows.exchange(0, std::memory_order_relaxed);
+    const qint64 dispatched = probeDispatched.exchange(0, std::memory_order_relaxed);
+    const qint64 redos      = probeRedos.exchange(0, std::memory_order_relaxed);
+
+    /*  A window with no work in it is not worth a line: the report is called from every
+        scroll event, and a stationary view would otherwise print zeros forever. */
+    if (probeScanCalls == 0 && probeEvictCalls == 0 && rearmCalls == 0
+        && probeIconsSet == 0 && probeIconsRedundant == 0) return;
+
+    qDebug().noquote()
+        << "[PERF] scroll" << QString::number(window, 'f', 1) << "s  src =" << src
+        << "\n         chunk=" << iconChunkSize.load()
+        << " range=" << startIconRange.load() << "-" << endIconRange.load()
+        << " sfRows=" << sf->rowCount()
+        << " visible=" << firstVisibleIcon << "-" << lastVisibleIcon
+        << " iconsLoaded=" << iconLoadedCount.load(std::memory_order_relaxed)
+        << " unloadable=" << iconUnloadableCount.load(std::memory_order_relaxed)
+        << " iconChunkLoaded=" << (bool)G::iconChunkLoaded
+        << "\n         scan  calls=" << probeScanCalls
+        << " rows=" << probeScanRows
+        << " ms=" << QString::number(probeScanNs / 1.0e6, 'f', 1)
+        << " (setIconRange calls=" << probeSetRangeCalls << ")"
+        << "\n         evict calls=" << probeEvictCalls
+        << " walked=" << probeEvictWalked
+        << " cleared=" << probeEvictCleared
+        << " ms=" << QString::number(probeEvictNs / 1.0e6, 'f', 1)
+        << "\n         rearm calls=" << rearmCalls
+        << " rows=" << rearmRows
+        << " ms=" << QString::number(rearmNs / 1.0e6, 'f', 1) << "(metaReadThread)"
+        /*  THE READ PATH ITSELF. redundant is the number that matters: an icon delivered
+            for a row that already had one is a file or cache read the pool did for
+            nothing, and if the pool is busy doing that then a newly visible row waits
+            behind it. redos says where they come from. */
+        << "\n         icons set=" << probeIconsSet
+        << " ms=" << QString::number(probeIconSetNs / 1.0e6, 'f', 1)
+        << " redundant=" << probeIconsRedundant
+        << " dispatched=" << dispatched
+        << " redos=" << redos
+        /*  HOW LONG A VISIBLE ROW WAITED FOR ITS REPAINT after its icon was already in
+            the model. This is the gap between "the thumbnail exists" and "the user can
+            see it", and nothing else in this line measures it. */
+        << "\n         repaint flushes=" << probeFlushCount
+        << " emit(ms)=" << QString::number(probeFlushEmitNs / 1.0e6, 'f', 1)
+        << " worstWait(ms)=" << QString::number(probeFlushMaxDelayNs / 1.0e6, 'f', 1)
+        << " readerQueue=" << queuedReaderEvents.load(std::memory_order_relaxed);
+
+    probeScanNs = probeScanCalls = probeScanRows = 0;
+    probeEvictNs = probeEvictCalls = probeEvictCleared = probeEvictWalked = 0;
+    probeSetRangeCalls = 0;
+    probeIconsSet = probeIconsRedundant = 0;
+    probeIconSetNs = 0;
+    probeFlushCount = 0;
+    probeFlushMaxDelayNs = 0;
+    probeFlushEmitNs = 0;
 }
 
 void DataModel::setCached(int sfRow, bool isCached, int instance)
@@ -5572,8 +5891,7 @@ QString DataModel::diagnostics()
         << Utilities::fitNumber(static_cast<qint64>(iconChunkFloor()), 14);
     rpt << "\n" << G::sj("imageCacheHeadroomMB", dots)
         << Utilities::fitNumber(G::imageCacheHeadroomMB.load(), 14);
-    rpt << "\n" << G::sj("iconChunkRefined", dots) << G::s(iconChunkRefined);
-    {
+        {
         const int lvl = memoryPressureLevel();
         rpt << "\n" << G::sj("memoryPressureLevel", dots)
             << QString(lvl == 2 ? "2 critical" : lvl == 1 ? "1 warn" : "0 normal")
