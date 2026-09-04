@@ -55,9 +55,10 @@ public:
     QThread scannerThread;
 
 public slots:
-    /* Scan these roots. Runs on whatever thread this object lives on, which MW makes a
-       dedicated one -- never call it directly from the GUI thread. */
-    void scan(const QStringList &roots, bool recurse);
+    /* Scan these roots, skipping the excluded subtrees. Runs on whatever thread this
+       object lives on, which MW makes a dedicated one -- never call it directly from the
+       GUI thread. */
+    void scan(const QStringList &roots, bool recurse, const QStringList &excludes);
     /* Ask the running scan to stop. Safe from any thread; the scan notices between
        files, so it ends promptly but not instantly. */
     void stop();
@@ -77,6 +78,10 @@ private:
     bool shouldPause() const;
     /* Block while shouldPause(), returning false if we were asked to stop instead. */
     bool waitWhilePaused();
+
+    /* True when folder is an excluded folder or lives inside one. Compared with a
+       trailing separator so a sibling with a longer name is not caught. */
+    static bool isExcluded(const QString &folder, const QStringList &excludes);
 
     /* Fill a CatalogRow from what is on disk WITHOUT parsing the image: path, folder,
        size, mtimes. That is everything staleOf needs to decide whether parsing is

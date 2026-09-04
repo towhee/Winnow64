@@ -116,12 +116,17 @@ QString Utilities::assocXmpPath(QString fPath)
     return QFileInfo((fPath)).dir().absolutePath() + "/" + QFileInfo((fPath)).baseName() + ".xmp";
 }
 
-quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs)
+quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs,
+                                 const QStringList &excludeDirs)
 {
 /*
     Multi-threaded recursive directory walk. Returns the count of subfolders
     (not including the root) and fills outSubdirs with their absolute paths.
     Symlinks are not followed.
+
+    excludeDirs PRUNES THE WALK rather than filtering its result: an excluded subtree is
+    never descended into, so excluding a big hierarchy costs nothing instead of costing
+    a full enumeration that is then thrown away.
 */
     const std::string rootPath = rootFolderPath.toStdString();
 
@@ -137,8 +142,27 @@ quint32 Utilities::subFolderTree(const QString &rootFolderPath, QStringList &out
     std::mutex collectedMutex;
     workQueue.push(rootPath);
 
+    /* Excluded subtrees, as "path/" so a prefix test cannot match a sibling whose name
+       merely starts the same way ("/Photos/2024" must not exclude "/Photos/2024 raw"). */
+    std::vector<std::string> excluded;
+    excluded.reserve(static_cast<size_t>(excludeDirs.size()));
+    for (const QString &d : excludeDirs) {
+        if (d.isEmpty()) continue;
+        QString e = d;
+        while (e.endsWith('/')) e.chop(1);
+        excluded.push_back(e.toStdString() + "/");
+    }
+    auto isExcluded = [&excluded](const std::string &path) {
+        if (excluded.empty()) return false;
+        const std::string withSlash = path + "/";
+        for (const std::string &e : excluded)
+            if (withSlash.compare(0, e.size(), e) == 0) return true;
+        return false;
+    };
+
     // Record a discovered subfolder and queue it for further descent.
     auto enqueueDir = [&](std::string sub) {
+        if (isExcluded(sub)) return;
         folderCount.fetch_add(1, std::memory_order_relaxed);
         {
             std::lock_guard<std::mutex> lock(collectedMutex);

@@ -133,7 +133,28 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     return true;
 }
 
-void CatalogScanner::scan(const QStringList &roots, bool recurse)
+bool CatalogScanner::isExcluded(const QString &folder, const QStringList &excludes)
+{
+/*
+    An exclusion covers the folder itself AND everything below it -- that is the whole
+    point of it: the user includes a library and carves one branch out of it.
+
+    THE TRAILING SLASH IS LOAD-BEARING. A plain startsWith would make "/Photos/2024"
+    exclude "/Photos/2024 raw" as well, which is a silent and very hard to spot way to
+    lose half a library from the index.
+*/
+    for (const QString &ex : excludes) {
+        if (ex.isEmpty()) continue;
+        QString e = ex;
+        while (e.endsWith('/')) e.chop(1);
+        if (folder == e) return true;
+        if (folder.startsWith(e + "/")) return true;
+    }
+    return false;
+}
+
+void CatalogScanner::scan(const QStringList &roots, bool recurse,
+                          const QStringList &excludes)
 {
 /*
     Walk every root, catalogue what has changed, and report as it goes.
@@ -163,10 +184,13 @@ void CatalogScanner::scan(const QStringList &roots, bool recurse)
     for (const QString &root : roots) {
         if (!waitWhilePaused()) { aborted = true; break; }
         if (!QFileInfo::exists(root)) continue;      // unmounted volume, or moved
+        if (isExcluded(root, excludes)) continue;    // a root inside an excluded tree
         folders << root;
         if (recurse) {
+            /* The exclusions are handed to the walk rather than applied to its result,
+               so an excluded hierarchy is never enumerated at all. */
             QStringList subDirs;
-            Utilities::subFolderTree(root, subDirs);
+            Utilities::subFolderTree(root, subDirs, excludes);
             for (const QString &d : subDirs) {
                 /* Same exclusion as the folder load: a .photoslibrary holds thousands of
                    derivative masters per photo and would swamp the catalog. */
