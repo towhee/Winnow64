@@ -31,8 +31,8 @@
 
     WHAT THIS IS NOT: a change of eviction POLICY. What gets loaded and what
     gets dropped is still decided exactly where it was -- the icon chunk range
-    (DataModel::resolveIconChunkSize, refineIconChunkSize,
-    applyIconCachePressure, clearIconsOutsideChunkRange). Those call setData
+    (DataModel::resolveIconChunkSize, applyIconCachePressure,
+    clearIconsOutsideChunkRange). Those call setData
     with an empty QVariant on DecorationRole, which now removes from here. Only
     the storage moved; the policy is untouched, deliberately, so that if
     thumbnails start behaving differently it is this file's fault and not a

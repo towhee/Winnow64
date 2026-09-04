@@ -474,12 +474,14 @@ Q_NAMESPACE
     extern int minIconSize;
     extern int maxIconChunk;
 
-    /* Just-in-time thumbnail caching (testing flag). When false, icons are cached
-       brute-force for the whole folder. When true, a folder is cached fully only if its
-       projected thumbnail footprint fits a memory budget; otherwise it degrades to a
-       bounded sliding window. The budget is the free memory remaining after a safety
-       reserve and the image cache's own claim (imageCacheHeadroomMB), times
-       jitIconCacheMemFraction. See DataModel::resolveIconChunkSize / refineIconChunkSize. */
+    /* Just-in-time thumbnail caching -- a user preference ("Cache thumbs just in time"),
+       not a testing flag. When false, icons are cached brute-force for the whole folder if
+       they fit the memory budget, and otherwise in a window the size of the user's
+       thumbnail ceiling. When true, the window is THE SCREENS AROUND THE VISIBLE PAGE
+       (iconChunkFloor: 3x the visible icons, minimum 256) and memory does not enter into
+       it -- the point is a small read-ahead, not a large one that happens to fit.
+       jitIconCacheMemFraction still sizes the brute-force budget.
+       See DataModel::resolveIconChunkSize. */
     extern bool   useJitIconCache;
     extern double jitIconCacheMemFraction;
 
