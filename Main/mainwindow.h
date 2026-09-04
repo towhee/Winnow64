@@ -531,8 +531,31 @@ public slots:
         did it. Armed automatically once the model is large (a catalog scope), so a person
         can reproduce a stall without setting an environment variable first. */
     void armGuiStallWatchdog();
-    /* Start / stop the background scan over catalogRoots. */
+    /* Start / stop the background scan over catalogScope. */
     void startCatalogScan();
+    /*  IS THIS FOLDER INSIDE THE CATALOG SCOPE? The scope table is definitive: browsing
+        a folder catalogues it only when the table says that folder belongs in the index.
+        Empty table = nothing is in scope, which is why the first-run prompt exists. */
+    bool isCatalogScopeFolder(const QString &folder) const;
+    /* The subset of rows the scope table admits, answered once per folder. */
+    QVector<CatalogRow> inCatalogScope(const QVector<CatalogRow> &rows) const;
+    /*  Ask the user to define a scope, ONCE, the first time browsing would have
+        catalogued something and the table is empty. Returns true if it was shown. */
+    void promptForCatalogScope();
+    /* "84,102 images catalogued in 312 folders", or why there are none. Shown when the
+       editor opens and again when a scan ends. */
+    QString catalogStatusText() const;
+    /* The exclude rows that still have catalogued images under them, deduplicated so an
+       exclusion nested inside another recursive one is not counted twice. */
+    CatalogScope catalogScopeForgettable() const;
+    /* The include (or exclude) rows that carry the arithmetic: rows nested inside another
+       row of the same kind add nothing of their own, and an exclusion outside every
+       included tree subtracts folders nothing added. */
+    CatalogScope catalogScopeEffective(bool include) const;
+    /* Tell the editor what each scope row holds, and how much a Scan would forget -- so
+       the deletion is visible BEFORE it happens rather than as a number that changed
+       afterwards. */
+    void updateCatalogCounts();
     void stopCatalogScan();
     /* Open the Catalogued Folders editor -- which folders are indexed in the background.
        Created on first use and kept, so it can stay open while a scan runs. Reachable
@@ -1643,15 +1666,22 @@ private:
     CatalogView *catalogView = nullptr;
     /* Walks the designated roots on its own low-priority thread. */
     CatalogScanner *catalogScanner = nullptr;
-    /* Folders the user nominated for cataloguing. In QSettings, NOT in the index
-       database: CacheDb::moveAside discards that file without asking, and this is
-       user intent rather than derived data. */
-    QStringList catalogRoots;
-    bool catalogRootsRecurse = true;
-    /* Subtrees carved out of catalogRoots: the excluded folder and everything below it
-       is not scanned. See Dialogs/catalogrootsdlg.h for why this is a second list. */
-    QStringList catalogExcludes;
-    /* The roots editor. Null until first opened; MW owns the list itself, so the dialog
+    /* What the background scanner may walk: one ordered table of include/exclude rows,
+       each with its own subfolder reach. In QSettings, NOT in the index database:
+       CacheDb::moveAside discards that file without asking, and this is user intent
+       rather than derived data. */
+    CatalogScope catalogScope;
+    /* Images on disk under the scope table (includes less exclusions), or -1 while the
+       walk that counts them is still running. Compared with the catalog's own count, it
+       is what says whether a Scan is owed. */
+    int catalogScopeOnDisk = -1;
+    /* Bumped on every recount so a walk whose table has since been edited is dropped
+       rather than shown. */
+    int catalogCountGen = 0;
+    /* Set once the first-run "define a catalog scope" prompt has been offered, so it is
+       offered once and not on every folder. Persisted. */
+    bool catalogScopePrompted = false;
+    /* The scope editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */
     CatalogRootsDlg *catalogRootsDlg = nullptr;
     /* The unified Find panel (G::useFindDock). When it exists it OWNS the layout the

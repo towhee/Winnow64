@@ -1,4 +1,7 @@
 ﻿#include "Main/mainwindow.h"
+#include <QtConcurrent>
+#include <QFutureWatcher>
+#include <QLocale>
 #include "Utilities/fileops.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
@@ -664,7 +667,8 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     if (!catalogScanRoot.isNull()) {
         if (catalogScanner) {
             connect(catalogScanner, &CatalogScanner::finished, this,
-                    [scanResult](int scanned, int indexed, bool aborted) {
+                    [scanResult](int scanned, int indexed, int unreadable, bool aborted) {
+                        Q_UNUSED(unreadable)
                         scanResult->finished = true;
                         scanResult->scanned = scanned;
                         scanResult->indexed = indexed;
@@ -675,8 +679,9 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             whenever the datamodel is being modified, so kicking it off during the load
             would measure the pause rather than the scan. */
         QTimer::singleShot(settleMs / 2, this, [this, catalogScanRoot]() {
-            catalogRoots = QStringList{catalogScanRoot};
-            catalogRootsRecurse = true;
+            CatalogScopeEntry e;
+            e.path = catalogScopeNormalize(catalogScanRoot);
+            catalogScope = CatalogScope{e};
             fprintf(stderr, "SELFTEST: catalogScan root=%s\n",
                     catalogScanRoot.toLocal8Bit().constData());
             fflush(stderr);
@@ -3264,6 +3269,300 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 
 }
 
+/* The one colour in the catalog editor, and it marks the one clause that asks for an
+   action. Warm enough to read on the dark theme, dark enough to read on the light one. */
+static const char *kCatalogOwedColor = "#e0685c";
+
+QVector<CatalogRow> MW::inCatalogScope(const QVector<CatalogRow> &rows) const
+{
+/*
+    The rows the scope table admits. A folder's worth of rows share one folder, so the
+    answer is cached per folder rather than re-derived per image.
+*/
+    QVector<CatalogRow> out;
+    if (catalogScope.isEmpty()) return out;
+    out.reserve(rows.size());
+    QHash<QString, bool> seen;
+    for (const CatalogRow &r : rows) {
+        auto it = seen.find(r.folder);
+        if (it == seen.end()) it = seen.insert(r.folder, isCatalogScopeFolder(r.folder));
+        if (it.value()) out << r;
+    }
+    return out;
+}
+
+bool MW::isCatalogScopeFolder(const QString &folder) const
+{
+/*
+    THE SCOPE TABLE IS DEFINITIVE, and this is the function that makes it so. Browsing a
+    folder used to catalogue it unconditionally -- free, since the metadata had just been
+    read -- which meant the index quietly filled with folders the user had never asked to
+    index and could not see listed anywhere. It also made the editor's two numbers
+    incomparable: the catalog counted folders the scope had never heard of, so "up to
+    date" could not be said honestly. An include row is now the only way in.
+*/
+    if (folder.isEmpty()) return false;
+    if (catalogScope.isEmpty()) return false;
+    return catalogScopeIncludes(catalogScope, folder)
+           && !catalogScopeExcludes(catalogScope, folder);
+}
+
+void MW::promptForCatalogScope()
+{
+/*
+    ONCE, AND ONLY WHERE IT MEANS SOMETHING. A new user has an empty scope table, so
+    nothing they browse is catalogued and search finds nothing -- with no indication that
+    a choice was ever theirs to make. This is the one moment the question is worth asking:
+    they have just opened a folder of images, so the answer is concrete.
+
+    IT IS ASKED ONCE PER INSTALL, remembered whichever way it is answered. A prompt that
+    returns on every folder is a prompt the user learns to dismiss without reading, and
+    Manage Catalog stays on the File menu and in Preferences for whoever says Not now.
+*/
+    if (catalogScopePrompted) return;
+    if (!catalogScope.isEmpty()) return;
+    if (!Catalog::instance().isAvailable()) return;
+    catalogScopePrompted = true;
+
+    QMessageBox box(this);
+    box.setWindowTitle("Catalog");
+    box.setIcon(QMessageBox::Question);
+    box.setText("Which folders should Winnow index?");
+    box.setInformativeText(
+        "Nothing is catalogued yet. The catalog is what lets you search across folders "
+        "you have not opened -- by keyword, camera, rating or date.\n\n"
+        "Choose the folders to index in Manage Catalog. Folders outside that list are "
+        "not catalogued, even when you browse them.");
+    QPushButton *manage = box.addButton("Manage Catalog...", QMessageBox::AcceptRole);
+    box.addButton("Not Now", QMessageBox::RejectRole);
+    box.exec();
+    if (box.clickedButton() == manage) manageCatalogRoots();
+}
+
+QString MW::catalogStatusText() const
+{
+/*
+    What the editor says about the index, and what the folders themselves say -- TWO
+    ANSWERS TO THE SAME QUESTION, side by side, because their difference is the only
+    honest statement of whether the catalog is up to date. A count of catalogued images
+    on its own cannot say that: 43,050 looks equally correct whether the library holds
+    43,050 images or 90,000.
+
+    Here rather than in the dialog because the dialog owns nothing: it is shown when the
+    window opens, when the table is edited and when a scan ends, and all three must say
+    it the same way.
+*/
+    if (!Catalog::instance().isAvailable())
+        return QString("The catalog is unavailable -- the local index database could "
+                       "not be opened, so nothing can be indexed.");
+
+    const QLocale loc;
+    QString text = QString("Catalog: %1 images in %2 folders.")
+                       .arg(loc.toString(Catalog::instance().count()))
+                       .arg(loc.toString(Catalog::instance().folderCount()));
+
+    if (catalogScopeOnDisk < 0) {
+        text += "   Scope: counting&hellip;";
+        return text;
+    }
+
+    text += QString("   Scope: %1 images on disk.").arg(loc.toString(catalogScopeOnDisk));
+
+    /*  THE UNREADABLE FILES ARE PART OF THE GAP AND ARE NOT WORK. The last complete scan
+        tried to index them and could not parse them, so they are on disk, absent from the
+        index, and will stay that way however many times Scan is pressed. Counted against
+        the difference they explain, what is left is the real backlog -- and when they
+        explain all of it the window says so instead of asking for a scan that can achieve
+        nothing. */
+    const int diff = catalogScopeOnDisk - Catalog::instance().count();
+
+    /*  THE UNREADABLE FILES ARE COUNTED, NOT MISSING. Each one holds a stub row, so it is
+        part of the catalog's own count and the two numbers still reconcile -- what the
+        clause adds is that some of what is catalogued is a filename and nothing else, and
+        where to go to see which. */
+    const int cannotRead = Catalog::instance().unreadableCount();
+    const QString unreadable =
+        cannotRead > 0
+            ? QString(" %1 could not be read (unsupported or damaged) -- see Filters > "
+                      "Availability > Unreadable.").arg(loc.toString(cannotRead))
+            : QString();
+
+    if (diff > 0) {
+        /* RED, and only this clause. It is the one sentence here that asks for an action
+           -- the rest is reporting -- and a user who opened this window to find out
+           whether their library is indexed should be able to see the answer without
+           reading it. Everything else stays the label's own colour, or the red stops
+           meaning anything. */
+        text += QString(" <span style=\"color:%1;\">%2 images not catalogued yet -- "
+                        "press Scan.</span>")
+                    .arg(kCatalogOwedColor, loc.toString(diff));
+    }
+    else if (diff < 0) {
+        text += QString(" %1 catalogued images are outside the scope.")
+                    .arg(loc.toString(-diff));
+    }
+    else {
+        text += " Up to date.";
+    }
+    return text + unreadable;
+}
+
+CatalogScope MW::catalogScopeEffective(bool include) const
+{
+/*
+    The rows that carry the arithmetic, as opposed to the rows that merely restate it. A
+    row nested inside another row of the SAME KIND contributes nothing of its own -- its
+    folders are already counted by the outer one -- and counting both would make the sum
+    disagree with the table it came from. An exclusion outside every included tree is
+    dropped for the same reason: it subtracts folders nothing added.
+*/
+    CatalogScope out;
+    for (const CatalogScopeEntry &e : catalogScope) {
+        if (e.include != include || e.path.isEmpty()) continue;
+        if (!include && !catalogScopeIncludes(catalogScope, e.path)) continue;
+        bool nested = false;
+        for (const CatalogScopeEntry &o : catalogScope) {
+            if (o.include != include || !o.recurse || o.path.isEmpty()) continue;
+            if (o.path == e.path) continue;
+            if (e.path.startsWith(o.path + "/")) { nested = true; break; }
+        }
+        if (!nested) out << e;
+    }
+    return out;
+}
+
+CatalogScope MW::catalogScopeForgettable() const
+{
+/*
+    The exclude rows a Scan would delete catalogued rows for. Nested exclusions are
+    dropped: an exclude inside another recursive exclude covers rows the outer one already
+    covers, and counting both would tell the user a bigger number than the delete.
+*/
+    CatalogScope out;
+    for (const CatalogScopeEntry &e : catalogScope) {
+        if (e.include || e.path.isEmpty()) continue;
+        bool nested = false;
+        for (const CatalogScopeEntry &o : catalogScope) {
+            if (o.include || !o.recurse || o.path == e.path || o.path.isEmpty()) continue;
+            if (e.path.startsWith(o.path + "/")) { nested = true; break; }
+        }
+        if (!nested) out << e;
+    }
+    return out;
+}
+
+namespace {
+
+/*  How many images the FOLDER holds -- the filesystem's answer, not the index's. The
+    scanner's own rule for what counts, so the two numbers are comparable: a supported
+    extension, and .photoslibrary skipped (it holds thousands of derivative masters per
+    photo and would swamp any count it appeared in).
+
+    NAMES ONLY, NO STAT. QDir::entryList reads the directory and stops there; entryInfoList
+    would stat every file, which over a library is minutes rather than seconds. The one
+    thing that costs -- the scanner also skips zero-byte files -- is worth being slightly
+    wrong about, and zero-byte images are close to hypothetical.
+*/
+int countImagesOnDisk(const QString &folder, bool recurse, const QSet<QString> &exts)
+{
+    QStringList folders;
+    folders << folder;
+    if (recurse) {
+        QStringList subDirs;
+        Utilities::subFolderTree(folder, subDirs);
+        for (const QString &d : subDirs) {
+            if (d.contains(".photoslibrary")) continue;
+            folders << d;
+        }
+    }
+    folders.removeDuplicates();
+
+    int n = 0;
+    for (const QString &f : folders) {
+        const QStringList names = QDir(f).entryList(QDir::Files, QDir::NoSort);
+        for (const QString &name : names) {
+            const int dot = name.lastIndexOf('.');
+            if (dot < 0) continue;
+            if (exts.contains(name.mid(dot + 1).toLower())) ++n;
+        }
+    }
+    return n;
+}
+
+}  // namespace
+
+void MW::updateCatalogCounts()
+{
+/*
+    Fill the editor's Images column and its scope total by COUNTING THE FOLDERS, not by
+    asking the index. That is the whole point of the column: an index can only report what
+    it has already seen, so a column sourced from it would agree with the catalog count by
+    construction and could never show that a scan is overdue.
+
+    OFF THE GUI THREAD, because this walks directory trees -- a library root is minutes of
+    readdir on a cold cache, and this runs every time the user edits a row. A generation
+    counter drops results whose table has since changed; the watcher deletes itself.
+
+    THE FORGET COUNT STAYS AN INDEX QUERY, and must: it is how many rows a Scan would
+    DELETE, which is a fact about the catalog, not about the disk.
+*/
+    if (!catalogRootsDlg) return;
+    const bool available = Catalog::instance().isAvailable();
+
+    int images = 0;
+    const CatalogScope forgettable = catalogScopeForgettable();
+    if (available) {
+        for (const CatalogScopeEntry &e : forgettable)
+            images += Catalog::instance().countUnder(e.path, e.recurse);
+    }
+    catalogRootsDlg->setPendingForget(images, images ? forgettable.size() : 0);
+
+    /* -2 is "counting", -1 is "not counted": the table shows an ellipsis for one and an
+       em dash for the other, because a stale number would be read as a fresh one. */
+    catalogScopeOnDisk = -1;
+    catalogRootsDlg->setRowCounts(QVector<int>(catalogScope.size(), -2));
+    catalogRootsDlg->setCatalogStatus(catalogStatusText());
+
+    QSet<QString> exts;
+    if (metadata) for (const QString &e : metadata->supportedFormats) exts << e;
+    if (exts.isEmpty()) return;
+
+    const int gen = ++catalogCountGen;
+    const CatalogScope scope = catalogScope;
+    const CatalogScope includes = catalogScopeEffective(true);
+    const CatalogScope excludes = catalogScopeEffective(false);
+
+    auto *watcher = new QFutureWatcher<CatalogScopeCounts>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, gen]() {
+        const CatalogScopeCounts c = watcher->result();
+        watcher->deleteLater();
+        if (gen != catalogCountGen || !catalogRootsDlg) return;   // the table moved on
+        catalogScopeOnDisk = c.inScope;
+        catalogRootsDlg->setRowCounts(c.rows);
+        catalogRootsDlg->setCatalogStatus(catalogStatusText());
+    });
+    watcher->setFuture(QtConcurrent::run([scope, includes, excludes, exts]() {
+        CatalogScopeCounts c;
+        c.rows.reserve(scope.size());
+        for (const CatalogScopeEntry &e : scope) {
+            c.rows << (e.path.isEmpty() || !QFileInfo::exists(e.path)
+                           ? -1
+                           : countImagesOnDisk(e.path, e.recurse, exts));
+        }
+        /* The sum the table implies: what the includes reach, less what the exclusions
+           take back out of them. Compared against the catalog's own count, this is what
+           says whether a Scan is owed. */
+        for (const CatalogScopeEntry &e : includes)
+            if (QFileInfo::exists(e.path))
+                c.inScope += countImagesOnDisk(e.path, e.recurse, exts);
+        for (const CatalogScopeEntry &e : excludes)
+            if (QFileInfo::exists(e.path))
+                c.inScope -= countImagesOnDisk(e.path, e.recurse, exts);
+        if (c.inScope < 0) c.inScope = 0;
+        return c;
+    }));
+}
+
 void MW::startCatalogScan()
 {
 /*
@@ -3273,19 +3572,35 @@ void MW::startCatalogScan()
     if (G::isLogger) G::log("MW::startCatalogScan");
     if (!catalogScanner) return;
     if (catalogScanner->isRunning()) return;
-    if (catalogRoots.isEmpty()) return;
+    if (catalogScope.isEmpty()) return;
 
     if (progress) {
         progress->setRowText(progressCatalogRow, "Catalog");
         progress->showRow(progressCatalogRow, true);
     }
+    /*  FORGET WHAT IS NOW EXCLUDED, BEFORE WALKING WHAT IS INCLUDED. An exclusion the
+        user adds after a folder was catalogued would otherwise do nothing they can see:
+        the scanner skips the folder, the count stays where it was, and the images stay
+        findable -- which reads as the exclusion having been ignored. The editor shows
+        what this will delete before Scan is pressed, so the number is never a surprise.
+
+        DELETED RATHER THAN DEMOTED because this is a statement of intent, not an
+        inference about a missing file (see Catalog::forgetUnder). */
+    if (Catalog::instance().isAvailable()) {
+        int forgotten = 0;
+        const CatalogScope forgettable = catalogScopeForgettable();
+        for (const CatalogScopeEntry &e : forgettable)
+            forgotten += Catalog::instance().forgetUnder(e.path, e.recurse);
+        if (forgotten && G::isLogger)
+            G::log("MW::startCatalogScan", "forgot " + QString::number(forgotten) +
+                                               " excluded rows");
+    }
+
     if (catalogView) catalogView->setScanning(true);
     if (findPanel) findPanel->setScanning(true);
     if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
-                              Q_ARG(QStringList, catalogRoots),
-                              Q_ARG(bool, catalogRootsRecurse),
-                              Q_ARG(QStringList, catalogExcludes));
+                              Q_ARG(CatalogScope, catalogScope));
 }
 
 void MW::manageCatalogRoots()
@@ -3297,20 +3612,18 @@ void MW::manageCatalogRoots()
     without losing what the user was looking at. It is a Qt::Tool window and not modal:
     a scan runs for minutes, and this is where its state is shown.
 
-    MW REMAINS THE OWNER of catalogRoots. The dialog is only an editor and hands back
-    what changed -- the root list is the one piece of catalog state that is user intent
+    MW REMAINS THE OWNER of catalogScope. The dialog is only an editor and hands back
+    what changed -- the scope table is the one piece of catalog state that is user intent
     rather than derived data, so it must not depend on a widget's lifetime.
 */
     if (G::isLogger) G::log("MW::manageCatalogRoots");
 
     if (!catalogRootsDlg) {
         catalogRootsDlg = new CatalogRootsDlg(this);
-        connect(catalogRootsDlg, &CatalogRootsDlg::rootsChanged, this,
-                [this](const QStringList &roots, bool recurse,
-                       const QStringList &excludes) {
-                    catalogRoots = roots;
-                    catalogRootsRecurse = recurse;
-                    catalogExcludes = excludes;
+        connect(catalogRootsDlg, &CatalogRootsDlg::scopeChanged, this,
+                [this](const CatalogScope &scope) {
+                    catalogScope = scope;
+                    updateCatalogCounts();
                 });
         connect(catalogRootsDlg, &CatalogRootsDlg::scanRequested,
                 this, &MW::startCatalogScan);
@@ -3318,15 +3631,10 @@ void MW::manageCatalogRoots()
                 this, &MW::stopCatalogScan);
     }
 
-    catalogRootsDlg->setRoots(catalogRoots, catalogRootsRecurse, catalogExcludes);
+    catalogRootsDlg->setScope(catalogScope);
+    updateCatalogCounts();
     catalogRootsDlg->setScanning(catalogScanner && catalogScanner->isRunning());
-    catalogRootsDlg->setCatalogStatus(
-        Catalog::instance().isAvailable()
-            ? QString("%1 images catalogued in %2 folders.")
-                  .arg(Catalog::instance().count())
-                  .arg(Catalog::instance().folderCount())
-            : QString("The catalog is unavailable -- the local index database could "
-                      "not be opened, so nothing can be indexed."));
+    catalogRootsDlg->setCatalogStatus(catalogStatusText());
     catalogRootsDlg->show();
     catalogRootsDlg->raise();
     catalogRootsDlg->activateWindow();
@@ -3491,16 +3799,19 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                     always the whole set -- so it hid the number that matters: how many
                     rows the GUI thread is then asked to WRITE, one setData and one
                     dataChanged each. */
-                int offline = 0, missing = 0;
+                int offline = 0, missing = 0, unreadable = 0;
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
                     if (it.value() == Catalog::Availability::Offline) ++offline;
                     else if (it.value() == Catalog::Availability::Missing) ++missing;
+                    else if (it.value() == Catalog::Availability::Unreadable) ++unreadable;
                 }
                 qDebug().noquote() << "[PERF] availabilityOf" << paths.size() << "paths in"
                                    << at.elapsed() << "ms (pool thread)  answered ="
                                    << avail.size() << " offline =" << offline
                                    << " missing =" << missing
-                                   << " -> GUI writes =" << (offline + missing);
+                                   << " unreadable =" << unreadable
+                                   << " -> GUI writes ="
+                                   << (offline + missing + unreadable);
             }
             if (avail.isEmpty()) return;
             QMetaObject::invokeMethod(this, [this, avail]{
@@ -3514,13 +3825,14 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                 QElapsedTimer wt;
                 if (probeBig) wt.start();
                 int written = 0;
-                int offline = 0, missing = 0;
+                int offline = 0, missing = 0, unreadable = 0;
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
                     if (it.value() == Catalog::Availability::Present) continue;
                     const int row = dm->rowFromPath(it.key());
                     if (row < 0) continue;
                     dm->setData(dm->index(row, G::AvailabilityColumn), int(it.value()));
                     if (it.value() == Catalog::Availability::Offline) ++offline;
+                    else if (it.value() == Catalog::Availability::Unreadable) ++unreadable;
                     else ++missing;
                     ++written;
                 }
@@ -3551,13 +3863,18 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                     recompiling it. */
                 if (written && filters) {
                     QMap<QString, int> map;
-                    const int present = dm->rowCount() - offline - missing;
+                    const int present = dm->rowCount() - offline - missing - unreadable;
                     if (present > 0)
                         map[Catalog::availabilityLabel(int(Catalog::Availability::Present))] = present;
                     if (offline)
                         map[Catalog::availabilityLabel(int(Catalog::Availability::Offline))] = offline;
                     if (missing)
                         map[Catalog::availabilityLabel(int(Catalog::Availability::Missing))] = missing;
+                    /* The files the scanner could not parse. They are catalogued as stubs
+                       precisely so they can be listed here rather than being a number
+                       with nothing behind it. */
+                    if (unreadable)
+                        map[Catalog::availabilityLabel(int(Catalog::Availability::Unreadable))] = unreadable;
                     filters->addCategoryItems(map, filters->availability);
                 }
             }, Qt::QueuedConnection);
@@ -5282,6 +5599,9 @@ void MW::updateCatalogForRow(int dmRow)
 
     CatalogRow r;
     if (!dm->catalogRowFor(dmRow, r)) return;
+    /* The scope table is definitive here too: an edit to an image outside it must not be
+       the thing that puts that image in the index. */
+    if (!isCatalogScopeFolder(r.folder)) return;
 
     QThreadPool::globalInstance()->start([r]{ Catalog::instance().commit({r}); });
 }
@@ -5378,7 +5698,7 @@ void MW::folderChangeCompleted()
                 these are the rows whose stamps did not match, so the index is holding
                 values that have since been corrected from the file. This is the commit
                 the paragraph above defers to the pass. */
-            const QVector<CatalogRow> fixed = catalogRowsForStale();
+            const QVector<CatalogRow> fixed = inCatalogScope(catalogRowsForStale());
             if (!fixed.isEmpty()) {
                 QThreadPool::globalInstance()->start([fixed]{
                     Catalog::instance().commit(fixed);
@@ -5394,12 +5714,33 @@ void MW::folderChangeCompleted()
         staleRecommit.clear();
         QElapsedTimer ct;
         if (G::isPerfProbe) ct.start();
-        const QVector<CatalogRow> rows = dm->catalogRows();
+        /*  THE SCOPE TABLE DECIDES WHAT IS CATALOGUED, so what the model just loaded is
+            filtered against it rather than committed wholesale. Browsing is no longer a
+            second, invisible way into the index: a folder the table does not include is
+            read, displayed and forgotten.
+
+            AND IF THERE IS NO TABLE AT ALL, ASK. An empty scope on a new install means
+            nothing is ever catalogued and search finds nothing, with no sign that the
+            choice was the user's to make -- so the one moment worth asking is the first
+            folder of images they open. */
+        QVector<CatalogRow> rows = inCatalogScope(dm->catalogRows());
         if (G::isPerfProbe)
-            qDebug().noquote() << "[PERF] catalogRows()" << rows.size() << "rows in"
+            qDebug().noquote() << "[PERF] catalogRows()" << rows.size() << "rows in scope in"
                                << ct.elapsed() << "ms (GUI thread)";
-        const QHash<QString, QSet<QString>> present = reconcile ? dm->folderPathSets()
-                                                               : QHash<QString, QSet<QString>>();
+        /* Only where the question is concrete: a folder that actually holds images. An
+           empty folder is not the moment to ask what should be indexed. */
+        if (catalogScope.isEmpty() && dm->rowCount() > 0) promptForCatalogScope();
+
+        /*  Reconciling is scoped too. It only ever demotes rows the index already holds,
+            so letting it run outside the scope would be harmless -- but "the table says
+            what Winnow does with this folder" is easier to rely on than a rule with one
+            exception in it. */
+        QHash<QString, QSet<QString>> present = reconcile ? dm->folderPathSets()
+                                                         : QHash<QString, QSet<QString>>();
+        for (auto it = present.begin(); it != present.end(); ) {
+            if (isCatalogScopeFolder(it.key())) ++it;
+            else it = present.erase(it);
+        }
         if (!rows.isEmpty() || !present.isEmpty()) {
             QThreadPool::globalInstance()->start([this, rows, present]{
                 Catalog::instance().commit(rows);

@@ -1811,16 +1811,23 @@ QVariant Filters::filterValueFor(const QTreeWidgetItem *category, const QString 
 void Filters::updateAvailabilityVisibility()
 {
 /*
-    See the declaration. "Any value that is not Present" rather than "more than one
-    item", because a catalog scope in which EVERY row is offline is exactly the case
-    worth showing the category for.
+    SHOWN ALWAYS, DISABLED WHEN THERE IS NOTHING TO CHOOSE. It used to be hidden while
+    every loaded row was Present, and hiding it answered a question the user never got to
+    ask: "can Winnow tell me which of these files it cannot open?" A category that appears
+    and disappears with the data is also a category nobody learns is there. Greyed out
+    with its items still visible says the same thing -- nothing here is offline, missing
+    or unreadable -- and says it where the user is looking.
+
+    "Any value that is not Present" rather than "more than one item", because a catalog
+    scope in which EVERY row is offline is exactly the case worth enabling it for.
 */
     bool anyNotPresent = false;
     const QString present = Catalog::availabilityLabel(int(Catalog::Availability::Present));
     for (int i = 0; i < availability->childCount(); ++i) {
         if (availability->child(i)->text(0) != present) { anyNotPresent = true; break; }
     }
-    setRowHidden(indexOfTopLevelItem(availability), QModelIndex(), !anyNotPresent);
+    setRowHidden(indexOfTopLevelItem(availability), QModelIndex(), false);
+    availability->setDisabled(!anyNotPresent);
 }
 
 void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)

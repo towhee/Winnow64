@@ -578,6 +578,7 @@ set(WINNOW_HEADERS
     Main/dockwidget.h
     Main/global.h
     Main/catalogscanner.h
+    Main/catalogscope.h
     Main/mainwindow.h
     Main/qtlocalpeer.h
     Main/qtlockedfile.h

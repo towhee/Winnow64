@@ -312,8 +312,20 @@ public:
         Offline is computed against the mount table AT CALL TIME, not stored: a
         volume's presence changes without anything telling the catalog, so a
         stored answer would be wrong the moment a drive is plugged in. Missing is
-        the stored `live` flag, which is what the sweep maintains. */
-    enum class Availability { Present, Offline, Missing };
+        the stored `live` flag, which is what the sweep maintains.
+
+        A FOURTH STATE, added later:
+
+          Unreadable  the file is there and Winnow's parsers cannot read it. It is in
+                      the index as a STUB -- path, folder, filename, stamps -- and
+                      nothing else, because there was nothing else to record. Without
+                      the stub such a file is invisible: absent from the index, present
+                      on disk, and the only evidence is a count that never reaches zero.
+
+        Unreadable is STORED (the `unreadable` column, schema 9) rather than inferred:
+        only the scanner knows a parse was attempted and failed, and re-deriving it would
+        mean re-attempting the parse. */
+    enum class Availability { Present, Offline, Missing, Unreadable };
 
     /*  THE THREE STATES SPELLED ONCE. Three places name them -- the badge tooltip on
         the thumbnail, the Availability column in the table, and the Filters category
@@ -361,6 +373,35 @@ public:
     /* How many images the catalog holds, and how many folders they came from. */
     int count();
     int folderCount();
+
+    /*  HOW MANY CATALOGUED IMAGES LIE UNDER THIS FOLDER, and forget them. recurse tells
+        the two apart: the folder alone, or the folder and everything below it.
+
+        FORGET IS A DELETE, NOT A DEMOTE, and it is the one place that is right. sweep and
+        reconcileFolder demote because they INFER that a file is gone and can be wrong (an
+        ejected card, a folder briefly unreadable), so the row must be able to come back.
+        This is not an inference: the user has said they do not want these folders indexed,
+        the files are still there, and a demoted row would sit in the database forever
+        being neither findable nor reclaimable. Nothing is lost that a scan cannot rebuild
+        -- the images themselves are untouched.
+
+        countUnder EXISTS SO THE DELETE CAN BE SHOWN BEFORE IT HAPPENS. Forgetting tens of
+        thousands of rows is not something to discover afterwards from a changed number.
+        Returns the number of rows counted / deleted. */
+    int countUnder(const QString &folder, bool recurse);
+    int forgetUnder(const QString &folder, bool recurse);
+
+    /*  Record files the scanner could not parse, as stub rows flagged unreadable. They
+        carry the freshness stamp like any other row, so a rescan does not re-attempt them
+        until the file itself changes -- and a file that later parses normally has the
+        flag cleared by the ordinary commit. Returns rows written.
+
+        WHY THEY ARE IN THE INDEX AT ALL. Left out, they are the difference between what
+        the folders hold and what the catalog holds that nothing can explain and no scan
+        can close. In, they are one Availability value the user can filter on and see. */
+    int commitUnreadable(const QVector<CatalogRow> &rows);
+    /* How many rows are flagged unreadable. */
+    int unreadableCount();
 
     /* Demote rows whose source file is gone, skipping unmounted volumes so an ejected
        card never reads as a mass deletion. Returns the number demoted. */

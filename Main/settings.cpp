@@ -148,13 +148,27 @@ void MW::writeSettings()
     settings->setValue("isCatalogDockVisible",
                        catalogDockVisibleAction->isChecked());
 
-    /* The folders the user nominated for background cataloguing. These live HERE and not
-       in the index database: CacheDb::moveAside discards that file without asking when it
-       will not open, and losing the user's choice of what to index is not the same kind
-       of loss as discarding a rebuildable index. */
-    settings->setValue("catalogRoots", catalogRoots);
-    settings->setValue("catalogRootsRecurse", catalogRootsRecurse);
-    settings->setValue("catalogExcludes", catalogExcludes);
+    /* The scope table the user nominated for background cataloguing. It lives HERE and
+       not in the index database: CacheDb::moveAside discards that file without asking
+       when it will not open, and losing the user's choice of what to index is not the
+       same kind of loss as discarding a rebuildable index.
+
+       AN ARRAY, NOT AN ENCODED STRING LIST. A row is three fields, one of them a path,
+       and a path may legally contain whatever separator character looked safe -- so a
+       delimiter here would be a folder name away from corrupting the setting. The group
+       is cleared first, or a table that shrank would keep the tail of the longer one. */
+    /* Survives a restart, or the editor would ask for a scan that can never close the
+       gap every time Winnow is launched. */
+    settings->setValue("catalogScopePrompted", catalogScopePrompted);
+    settings->remove("CatalogScope");
+    settings->beginWriteArray("CatalogScope");
+    for (int i = 0; i < catalogScope.size(); ++i) {
+        settings->setArrayIndex(i);
+        settings->setValue("path", catalogScope.at(i).path);
+        settings->setValue("include", catalogScope.at(i).include);
+        settings->setValue("recurse", catalogScope.at(i).recurse);
+    }
+    settings->endArray();
     settings->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
@@ -716,13 +730,45 @@ bool MW::loadSettings()
     }
     settings->endGroup();
 
-    /* read the catalog roots (see the write side for why they are not in the db) */
-    if (settings->contains("catalogRoots"))
-        catalogRoots = settings->value("catalogRoots").toStringList();
-    if (settings->contains("catalogRootsRecurse"))
-        catalogRootsRecurse = settings->value("catalogRootsRecurse").toBool();
-    if (settings->contains("catalogExcludes"))
-        catalogExcludes = settings->value("catalogExcludes").toStringList();
+    /* read the catalog scope (see the write side for why it is not in the db) */
+    catalogScopePrompted = settings->value("catalogScopePrompted", false).toBool();
+    catalogScope.clear();
+    int scopeRows = settings->beginReadArray("CatalogScope");
+    for (int i = 0; i < scopeRows; ++i) {
+        settings->setArrayIndex(i);
+        CatalogScopeEntry e;
+        e.path = catalogScopeNormalize(settings->value("path").toString());
+        e.include = settings->value("include", true).toBool();
+        e.recurse = settings->value("recurse", true).toBool();
+        if (!e.path.isEmpty()) catalogScope << e;
+    }
+    settings->endArray();
+
+    /* MIGRATION from the two-list settings this replaced (catalogRoots + one global
+       catalogRootsRecurse, plus catalogExcludes). Read only when the table is empty, so
+       an upgraded user keeps what they nominated instead of finding the catalog scope
+       silently emptied. The old keys are left in place: a downgrade should still find
+       them, and they cost nothing. */
+    if (scopeRows == 0 && settings->contains("catalogRoots")) {
+        const bool recurse = settings->value("catalogRootsRecurse", true).toBool();
+        const QStringList roots = settings->value("catalogRoots").toStringList();
+        for (const QString &path : roots) {
+            CatalogScopeEntry e;
+            /* The old keys were written from the folder tree, which spells a folder with
+               a trailing slash; every rule in the scope table is a prefix test, so a
+               migrated path has to be normalised or it matches nothing. */
+            e.path = catalogScopeNormalize(path);
+            e.recurse = recurse;
+            if (!e.path.isEmpty()) catalogScope << e;
+        }
+        const QStringList excludes = settings->value("catalogExcludes").toStringList();
+        for (const QString &path : excludes) {
+            CatalogScopeEntry e;
+            e.path = catalogScopeNormalize(path);
+            e.include = false;
+            if (!e.path.isEmpty()) catalogScope << e;
+        }
+    }
 
     /* read recent folders */
     settings->beginGroup("RecentFolders");

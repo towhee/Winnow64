@@ -63,10 +63,11 @@ public:
         Availability, whose column holds a CODE and whose item shows a WORD, the item
         must carry the code or nothing would ever match. See Catalog::availabilityCode. */
     QVariant filterValueFor(const QTreeWidgetItem *category, const QString &label) const;
-    /*  Hide the Availability category while every loaded row is Present, which is every
-        folder scope and most catalog scopes. Offering "Present" as the sole thing to
-        check would filter to everything -- the same emptiness test loadCatalogCategories
-        makes, and the same reason Duplicates is hidden. */
+    /*  Enable the Availability category only when a loaded row is something other than
+        Present -- offline, missing or unreadable. It stays VISIBLE either way: hiding it
+        answered a question the user never got to ask, and a category that comes and goes
+        with the data is one nobody learns is there. Greyed, with its items showing, says
+        "nothing here is unavailable" in the place the user is already looking. */
     void updateAvailabilityVisibility();
     void createPredefinedFilters();
     void createDynamicFilters();

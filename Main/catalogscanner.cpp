@@ -24,6 +24,9 @@ constexpr int kPauseSliceMs = 100;
 CatalogScanner::CatalogScanner(QObject *parent)
     : QObject(parent)
 {
+    /* scan() is invoked across threads with a queued connection, which cannot marshal a
+       type the metatype system has not been told about. */
+    qRegisterMetaType<CatalogScope>("CatalogScope");
     moveToThread(&scannerThread);
     scannerThread.start(QThread::LowPriority);
 }
@@ -133,28 +136,7 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     return true;
 }
 
-bool CatalogScanner::isExcluded(const QString &folder, const QStringList &excludes)
-{
-/*
-    An exclusion covers the folder itself AND everything below it -- that is the whole
-    point of it: the user includes a library and carves one branch out of it.
-
-    THE TRAILING SLASH IS LOAD-BEARING. A plain startsWith would make "/Photos/2024"
-    exclude "/Photos/2024 raw" as well, which is a silent and very hard to spot way to
-    lose half a library from the index.
-*/
-    for (const QString &ex : excludes) {
-        if (ex.isEmpty()) continue;
-        QString e = ex;
-        while (e.endsWith('/')) e.chop(1);
-        if (folder == e) return true;
-        if (folder.startsWith(e + "/")) return true;
-    }
-    return false;
-}
-
-void CatalogScanner::scan(const QStringList &roots, bool recurse,
-                          const QStringList &excludes)
+void CatalogScanner::scan(const CatalogScope &scope)
 {
 /*
     Walk every root, catalogue what has changed, and report as it goes.
@@ -175,26 +157,37 @@ void CatalogScanner::scan(const QStringList &roots, bool recurse,
 
     int scanned = 0;
     int indexed = 0;
+    int unreadable = 0;
     bool aborted = false;
 
-    /* Expand the roots to the folders actually to be walked. Utilities::subFolderTree is
-       the same multi-threaded walk the recursive folder load uses, so a root the user
-       could open with Opt-click covers exactly the same folders here. */
+    /* Expand the include rows to the folders actually to be walked.
+       Utilities::subFolderTree is the same multi-threaded walk the recursive folder load
+       uses, so a folder the user could open with Opt-click covers exactly the same
+       folders here.
+
+       THE RECURSIVE EXCLUDES ARE HANDED TO THE WALK rather than applied to its result,
+       so an excluded hierarchy is never enumerated at all -- which is the point, since a
+       big branch is exactly what a user excludes. The non-recursive ones cannot prune a
+       descent, so those are filtered out of what comes back. */
+    const QStringList prune = catalogScopePrunePaths(scope);
     QStringList folders;
-    for (const QString &root : roots) {
+    for (const CatalogScopeEntry &e : scope) {
+        if (!e.include || e.path.isEmpty()) continue;
         if (!waitWhilePaused()) { aborted = true; break; }
+        /* Normalised here as well as in the editor: the scope can also arrive from
+           migrated settings or a self-test, and one trailing slash makes every prefix
+           test below quietly false. */
+        const QString root = catalogScopeNormalize(e.path);
         if (!QFileInfo::exists(root)) continue;      // unmounted volume, or moved
-        if (isExcluded(root, excludes)) continue;    // a root inside an excluded tree
-        folders << root;
-        if (recurse) {
-            /* The exclusions are handed to the walk rather than applied to its result,
-               so an excluded hierarchy is never enumerated at all. */
+        if (!catalogScopeExcludes(scope, root)) folders << root;
+        if (e.recurse) {
             QStringList subDirs;
-            Utilities::subFolderTree(root, subDirs, excludes);
+            Utilities::subFolderTree(root, subDirs, prune);
             for (const QString &d : subDirs) {
                 /* Same exclusion as the folder load: a .photoslibrary holds thousands of
                    derivative masters per photo and would swamp the catalog. */
                 if (d.contains(".photoslibrary")) continue;
+                if (catalogScopeExcludes(scope, d)) continue;
                 folders << d;
             }
         }
@@ -208,6 +201,9 @@ void CatalogScanner::scan(const QStringList &roots, bool recurse,
 
     QVector<CatalogRow> batch;
     batch.reserve(kCommitRows);
+    /* Files that would not parse, kept apart from the rows that did: they are written by
+       a different call, and mixing them would mean inventing metadata for them. */
+    QVector<CatalogRow> unreadableBatch;
 
     for (const QString &folder : folders) {
         if (aborted) break;
@@ -242,7 +238,21 @@ void CatalogScanner::scan(const QStringList &roots, bool recurse,
         for (CatalogRow &row : candidates) {
             if (!stale.contains(row.path)) continue;
             if (!waitWhilePaused()) { aborted = true; break; }
-            if (!parseInto(row)) continue;
+            /* Counted, not just skipped: a file the parser cannot read is a permanent
+               gap between the folder and the index, and the editor has to be able to say
+               so rather than ask for another scan. */
+            if (!parseInto(row)) {
+                /* Recorded, not merely counted. A stub row is what makes an unreadable
+                   file something the user can list under Availability instead of an
+                   unexplained gap between the folder and the index. */
+                ++unreadable;
+                unreadableBatch.append(stampOnly(row.path));
+                if (unreadableBatch.size() >= kCommitRows) {
+                    Catalog::instance().commitUnreadable(unreadableBatch);
+                    unreadableBatch.clear();
+                }
+                continue;
+            }
             batch.append(row);
             if (batch.size() >= kCommitRows) {
                 indexed += Catalog::instance().commit(batch);
@@ -255,7 +265,10 @@ void CatalogScanner::scan(const QStringList &roots, bool recurse,
     }
 
     if (!batch.isEmpty()) indexed += Catalog::instance().commit(batch);
+    if (!unreadableBatch.isEmpty())
+        Catalog::instance().commitUnreadable(unreadableBatch);
 
     running.store(false, std::memory_order_relaxed);
-    emit finished(scanned, indexed, aborted || abort.load(std::memory_order_relaxed));
+    emit finished(scanned, indexed, unreadable,
+                  aborted || abort.load(std::memory_order_relaxed));
 }

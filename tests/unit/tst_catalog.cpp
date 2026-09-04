@@ -63,6 +63,8 @@ private slots:
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     void migrationFromVersionThreeMergesKeywords();
+    void migrationCollapsesDoubledPathSeparators();
+    void unreadableFileIsCataloguedAsAStubAndClearsWhenItParses();
     void categoryItemsMatchWhatTheDatamodelWrites();
     void categoryItemsAreEmptyForColumnsTheIndexCannotAnswer();
     void genericIncludeAndExcludeNarrowTheSearch();
@@ -143,8 +145,13 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         new version, and add the new tenant's tables below. Version 5 added
         thumb (Cache/thumbcache.h); version 6 widened the image table with the
         fields a datamodel ROW displays; version 7 added the hierarchical
-        keyword paths, which the flattening had made unrecoverable. */
-    QCOMPARE(CacheDb::schemaVersion(), 7);
+        keyword paths, which the flattening had made unrecoverable; version 8
+        added no table at all -- it is a DATA REPAIR, collapsing the doubled
+        path separator a trailing-slash catalog root wrote into image.path and
+        devpreview.path; version 9 added image.unreadable, the flag that lets a
+        file Winnow cannot parse be catalogued as a stub and reported as an
+        Availability rather than vanishing. */
+    QCOMPARE(CacheDb::schemaVersion(), 9);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1225,6 +1232,109 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
 }
 
+
+void tst_catalog::unreadableFileIsCataloguedAsAStubAndClearsWhenItParses()
+{
+/*
+    A FILE THE PARSERS CANNOT READ MUST STILL BE ACCOUNTABLE FOR. Dropped, it is on disk,
+    absent from the index, and the only evidence is a gap between two counts that no scan
+    can close -- which is exactly how it presented in the field. Recorded as a stub, it is
+    one Availability value the user can filter on.
+
+    AND THE FLAG MUST CLEAR. A file that is replaced, repaired, or whose format Winnow
+    later learns, parses on the next scan; if the ordinary commit did not clear the flag,
+    the row would go on claiming to be unreadable forever.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString path = imagePath("a.nef");
+
+    CatalogRow stub;
+    stub.path = path;
+    stub.folder = QFileInfo(path).absoluteDir().path();
+    stub.filename = QFileInfo(path).fileName();
+    stub.ext = "nef";
+    stub.srcSize = QFileInfo(path).size();
+    stub.srcMtime = QFileInfo(path).lastModified().toSecsSinceEpoch();
+
+    QCOMPARE(cat.commitUnreadable({stub}), 1);
+    QCOMPARE(cat.unreadableCount(), 1);
+    QCOMPARE(cat.count(), 1);           // it IS catalogued, which is the point
+
+    auto avail = cat.availabilityOf({path});
+    QVERIFY(avail.contains(path));
+    QCOMPARE(int(avail.value(path)), int(Catalog::Availability::Unreadable));
+
+    /* The same file, parsed. One ordinary commit and the row is a normal row again. */
+    QCOMPARE(cat.commit({rowFor("a.nef", {"Heron"})}), 1);
+    QCOMPARE(cat.unreadableCount(), 0);
+    QCOMPARE(cat.count(), 1);           // updated in place, not duplicated
+    avail = cat.availabilityOf({path});
+    QCOMPARE(int(avail.value(path)), int(Catalog::Availability::Present));
+}
+
+void tst_catalog::migrationCollapsesDoubledPathSeparators()
+{
+/*
+    SCHEMA 8 IS A DATA REPAIR, and the rows it repairs are the ones a shipped build wrote
+    -- a scanner root spelled with a trailing separator put a doubled slash into every
+    path below it (5,059 rows of 6,200 on the library that found it). A fresh database
+    proves nothing about that, so this puts a current file BACK to version 7 with the
+    damaged rows in it, the way tst_thumbcache exercises its own migration.
+
+    THE COLLIDING ROW IS THE INTERESTING ONE. Rows whose cleaned path already exists must
+    be deleted rather than rewritten, and their FTS row with them -- image_fts has no
+    foreign key onto image, so a row left behind there would keep matching searches for an
+    image that no longer exists.
+*/
+    QSqlDatabase db = CacheDb::instance().db();
+    QVERIFY(db.isOpen());
+    QSqlQuery q(db);
+
+    /* pathkey is spelled RAW here, not cleaned, purely so the two collision rows can
+       coexist under a unique index; the field itself is not what schema 8 repairs. */
+    QVERIFY(q.exec("INSERT INTO image (id, pathkey, path, folder) VALUES"
+                   " (901, '/lib//solo.nef', '/lib//solo.nef', '/lib'),"
+                   " (902, '/lib/twin.nef',  '/lib/twin.nef',  '/lib'),"
+                   " (903, '/lib//twin.nef', '/lib//twin.nef', '/lib')"));
+    QVERIFY(q.exec("INSERT INTO image_fts (rowid, filename) VALUES"
+                   " (901, 'solo.nef'), (902, 'twin.nef'), (903, 'twin.nef')"));
+    QVERIFY(q.exec("INSERT INTO devpreview (id, path, folder, hash, bytes, used) VALUES"
+                   " (901, '/lib//solo.jpg', '/lib', 'h', 1, 1)"));
+    QVERIFY(q.exec("PRAGMA user_version = 7"));
+
+    CacheDb::instance().closeThisThread();
+    QSqlDatabase back = CacheDb::instance().db();
+    QVERIFY2(back.isOpen(), "the version 7 index failed to reopen");
+
+    QSqlQuery v(back);
+    QVERIFY(v.exec("PRAGMA user_version") && v.next());
+    QCOMPARE(v.value(0).toInt(), CacheDb::schemaVersion());
+
+    /* Nothing anywhere still carries the doubled separator. */
+    for (const char *sql : {"SELECT COUNT(*) FROM image WHERE path LIKE '%//%'",
+                            "SELECT COUNT(*) FROM image WHERE folder LIKE '%//%'",
+                            "SELECT COUNT(*) FROM devpreview WHERE path LIKE '%//%'"}) {
+        QVERIFY(v.exec(QString::fromLatin1(sql)) && v.next());
+        QCOMPARE(v.value(0).toInt(), 0);
+    }
+
+    /* The row with no twin was rewritten, keeping its id and its FTS row. */
+    QVERIFY(v.exec("SELECT path FROM image WHERE id = 901") && v.next());
+    QCOMPARE(v.value(0).toString(), QString("/lib/solo.nef"));
+    QVERIFY(v.exec("SELECT COUNT(*) FROM image_fts WHERE rowid = 901") && v.next());
+    QCOMPARE(v.value(0).toInt(), 1);
+
+    /* The duplicate went, the original stayed, and no FTS row was orphaned. */
+    QVERIFY(v.exec("SELECT COUNT(*) FROM image WHERE id = 903") && v.next());
+    QCOMPARE(v.value(0).toInt(), 0);
+    QVERIFY(v.exec("SELECT COUNT(*) FROM image WHERE id = 902") && v.next());
+    QCOMPARE(v.value(0).toInt(), 1);
+    QVERIFY(v.exec("SELECT COUNT(*) FROM image_fts WHERE rowid = 903") && v.next());
+    QCOMPARE(v.value(0).toInt(), 0);
+
+    QVERIFY(v.exec("SELECT path FROM devpreview WHERE id = 901") && v.next());
+    QCOMPARE(v.value(0).toString(), QString("/lib/solo.jpg"));
+}
 
 void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
 {

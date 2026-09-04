@@ -80,6 +80,8 @@ private:
     bool iprpBox(quint32 &offset, quint32 &length);  // Item Properties Box
     bool irefBox(quint32 &offset, quint32 &length);  // Item Reference Box
     bool ispeBox(quint32 &offset, quint32 &length);  // Image Spacial Extent Box
+    /* Dimensions and rotation from the container, for a file with no usable Exif. */
+    bool applyContainerOnlyMetadata(ImageMetadata &m);
     bool mdatBox(quint32 &offset, quint32 &length);  // Media Data Box
     bool idatBox(quint32 &offset, quint32 &length);  // Media Data Box
     bool metaBox(quint32 &offset, quint32 &length);  // Metadata Box (Container)
@@ -97,6 +99,14 @@ private:
     QString fPath;
     qint64 eof;
     int exifItemID;
+    /*  WHAT THE CONTAINER ITSELF SAYS, kept for the files that carry no Exif at all.
+        ispe gives the pixel dimensions of every item, so the LARGEST is the image rather
+        than one of its thumbnails; irot gives the rotation as a quarter-turn count. Both
+        are read unconditionally now -- they used to be read only when reporting, which
+        meant a HEIC without Exif yielded nothing at all. */
+    int ispeWidth = 0;
+    int ispeHeight = 0;
+    int irotQuarterTurns = -1;
     quint32 exifOffset;
     quint32 exifLength;
     bool isDebug;
