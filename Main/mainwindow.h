@@ -1648,6 +1648,9 @@ private:
        user intent rather than derived data. */
     QStringList catalogRoots;
     bool catalogRootsRecurse = true;
+    /* Subtrees carved out of catalogRoots: the excluded folder and everything below it
+       is not scanned. See Dialogs/catalogrootsdlg.h for why this is a second list. */
+    QStringList catalogExcludes;
     /* The roots editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */
     CatalogRootsDlg *catalogRootsDlg = nullptr;

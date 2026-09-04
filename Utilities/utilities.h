@@ -29,7 +29,10 @@ public:
     static QString replaceSuffix(QString srcPath, QString newSuffix);
     static QStringList getSidecarPaths(QString srcPath);
     static quint32 subFolderTreeCount(QString rootFolderPath);
-    static quint32 subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs);
+    /* excludeDirs: folder paths whose subtree is not walked at all -- the excluded
+       folder and everything under it is neither returned nor descended into. */
+    static quint32 subFolderTree(const QString &rootFolderPath, QStringList &outSubdirs,
+                                 const QStringList &excludeDirs = QStringList());
 
     // File status
     static bool isLocked(const QString& fPath);

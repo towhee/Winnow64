@@ -154,6 +154,7 @@ void MW::writeSettings()
        of loss as discarding a rebuildable index. */
     settings->setValue("catalogRoots", catalogRoots);
     settings->setValue("catalogRootsRecurse", catalogRootsRecurse);
+    settings->setValue("catalogExcludes", catalogExcludes);
     settings->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
@@ -720,6 +721,8 @@ bool MW::loadSettings()
         catalogRoots = settings->value("catalogRoots").toStringList();
     if (settings->contains("catalogRootsRecurse"))
         catalogRootsRecurse = settings->value("catalogRootsRecurse").toBool();
+    if (settings->contains("catalogExcludes"))
+        catalogExcludes = settings->value("catalogExcludes").toStringList();
 
     /* read recent folders */
     settings->beginGroup("RecentFolders");

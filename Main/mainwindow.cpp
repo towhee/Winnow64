@@ -3284,7 +3284,8 @@ void MW::startCatalogScan()
     if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
                               Q_ARG(QStringList, catalogRoots),
-                              Q_ARG(bool, catalogRootsRecurse));
+                              Q_ARG(bool, catalogRootsRecurse),
+                              Q_ARG(QStringList, catalogExcludes));
 }
 
 void MW::manageCatalogRoots()
@@ -3305,9 +3306,11 @@ void MW::manageCatalogRoots()
     if (!catalogRootsDlg) {
         catalogRootsDlg = new CatalogRootsDlg(this);
         connect(catalogRootsDlg, &CatalogRootsDlg::rootsChanged, this,
-                [this](const QStringList &roots, bool recurse) {
+                [this](const QStringList &roots, bool recurse,
+                       const QStringList &excludes) {
                     catalogRoots = roots;
                     catalogRootsRecurse = recurse;
+                    catalogExcludes = excludes;
                 });
         connect(catalogRootsDlg, &CatalogRootsDlg::scanRequested,
                 this, &MW::startCatalogScan);
@@ -3315,7 +3318,7 @@ void MW::manageCatalogRoots()
                 this, &MW::stopCatalogScan);
     }
 
-    catalogRootsDlg->setRoots(catalogRoots, catalogRootsRecurse);
+    catalogRootsDlg->setRoots(catalogRoots, catalogRootsRecurse, catalogExcludes);
     catalogRootsDlg->setScanning(catalogScanner && catalogScanner->isRunning());
     catalogRootsDlg->setCatalogStatus(
         Catalog::instance().isAvailable()
