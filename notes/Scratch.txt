@@ -3394,3 +3394,27 @@ Worth a separate look sometime: tst_localcontrast failing means a saved Develop 
 
 sample Winnow 5 -f /Users/roryhill/winnow-scroll.txt
 Winnow --perfprobe
+
+Change Catalog in the Folders panel:
+
+> X Catalog                       43050
+    X 2017
+    X 2018
+    X ...
+
+where X is a catalog icon like the folder icons, only a different color.
+2017, 2018, ... are all the years in the catalog.
+
+The image count goes in the count column.
+If the user selects a child year, then filters is prefiltered on the year by checking its
+checkbox in filters.
+
+Refactor the 'Find' dock or panel references back to 'Filter'. You introduced this to
+search the catalog but we are using a Filter concept instead, so references to 'Find' are
+confusing.
+
+In manage catalog, add exclude folder with include subfolders, to permit a large folder
+heirarchy to be included in the catalog, but a subfolder heirarchy to be excluded.
+
+What happened to the filterable Availability category - I'm not seeing it when I select
+Catalog.

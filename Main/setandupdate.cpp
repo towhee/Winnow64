@@ -352,14 +352,13 @@ void MW::showFavDock() {
     putting the row in the tree at all. A count of -1 (index not open) shows the
     bare name: an unopened index and an empty one are different facts.
 */
-void MW::updateCatalogScopeRows()
+void MW::updateCatalogScopeTrees()
 {
-    if (G::isLogger) G::log("MW::updateCatalogScopeRows");
+    if (G::isLogger) G::log("MW::updateCatalogScopeTrees");
     const qint64 n = Catalog::instance().isAvailable()
                          ? static_cast<qint64>(Catalog::instance().count())
                          : -1;
-    if (folderCatalogScopeRow) folderCatalogScopeRow->setImageCount(n);
-    if (favCatalogScopeRow)    favCatalogScopeRow->setImageCount(n);
+    if (folderCatalogTree) folderCatalogTree->setImageCount(n);
 
     /*  File > Open Catalog greys out when the index could not be opened, with the reason
         in its tooltip -- the same fact the panel's Catalog button used to carry by being
@@ -403,14 +402,12 @@ void MW::setScope(G::Scope s, QString src)
     const bool changed = (G::scope != s);
     G::scope = s;
 
-    /*  RE-ASSERT THE ROWS EVEN WHEN THE SCOPE DID NOT CHANGE. They are checkable
-        QToolButtons, so clicking the Catalog row while Catalog is already current
-        toggles it OFF before this runs -- and an early return would leave the row
-        unchecked while the catalog is still the scope. setChecked emits toggled,
-        not clicked, and the rows are connected on clicked, so putting them back
-        cannot loop. */
-    if (folderCatalogScopeRow) folderCatalogScopeRow->setChecked(s == G::Scope::Catalog);
-    if (favCatalogScopeRow)    favCatalogScopeRow->setChecked(s == G::Scope::Catalog);
+    /*  RE-ASSERT THE ROWS EVEN WHEN THE SCOPE DID NOT CHANGE, so the Catalog row of
+        the dock that was NOT clicked lights up too, and so a click on the row while
+        the catalog is already current leaves it selected rather than toggled off.
+        The trees emit on itemClicked, not on selection, so putting the selection
+        back cannot loop. */
+    if (folderCatalogTree) folderCatalogTree->setScopeIsCatalog(s == G::Scope::Catalog);
 
     if (!changed) return;
 
@@ -436,6 +433,102 @@ void MW::setScope(G::Scope s, QString src)
     // the menu item reads as the scope, not as a panel
     if (catalogDockVisibleAction)
         catalogDockVisibleAction->setChecked(s == G::Scope::Catalog);
+}
+
+void MW::setCatalogScopeForYear(const QString &year)
+{
+/*
+    ONE YEAR OF THE CATALOG, chosen from the Catalog tree above the Folders (or
+    Bookmarks) panel.
+
+    A year is not a second kind of scope: it is the catalog, with one filter already
+    applied. So this switches scope the normal way and then checks that year in the
+    Filters panel -- which leaves the user somewhere they could have got to by hand, and
+    able to uncheck it, add to it or filter further exactly as usual.
+
+    THE CHECK CANNOT HAPPEN HERE when the scope is changing, because switching to the
+    catalog REPLACES the datamodel asynchronously and the Years category is rebuilt from
+    what lands. Checking an item now would check one about to be deleted. The year is
+    therefore remembered and applied by applyPendingCatalogYear(), which runs on
+    BuildFilters::finishedBuildFilters -- NOT where the build is asked for.
+    BuildFilters::build starts a thread, so the Years category is still empty when it
+    returns, and calling the two in sequence checked nothing at all: the first version of
+    this did exactly that, and selecting a year appeared to do nothing.
+
+    When the catalog is already loaded and its filters are built there is no rebuild to
+    wait for -- build() returns early on filtersBuilt and would never emit -- so it
+    applies immediately. Otherwise picking a SECOND year would do nothing.
+*/
+    if (G::isLogger) G::log("MW::setCatalogScopeForYear", year);
+    if (G::isInitializing) return;
+
+    pendingCatalogYear = year;
+    const bool alreadyThere = (G::scope == G::Scope::Catalog);
+    setScope(G::Scope::Catalog, "MW::setCatalogScopeForYear");
+    if (alreadyThere && filters->filtersBuilt) applyPendingCatalogYear();
+}
+
+void MW::applyPendingCatalogYear()
+{
+/*
+    Check the remembered year in the Filters panel, once there is a Years category to
+    check it in. Any other year is cleared first: the tree offers one year at a time, and
+    leaving the previous one checked would make the second click widen the filter instead
+    of changing it. Filters the user set by hand in OTHER categories are left alone.
+*/
+    if (pendingCatalogYear.isEmpty()) return;
+    const QString year = pendingCatalogYear;
+    pendingCatalogYear.clear();
+
+    if (!filters || !filters->years) return;
+
+    QTreeWidgetItem *target = nullptr;
+    for (int i = 0; i < filters->years->childCount(); i++) {
+        QTreeWidgetItem *item = filters->years->child(i);
+        if (item->text(0) == year) target = item;
+        else if (item->checkState(0) != Qt::Unchecked)
+            item->setCheckState(0, Qt::Unchecked);
+    }
+    /*  A year with nothing behind it is possible -- the catalog holds years the loaded
+        set does not -- and silently doing nothing would look like a dead row, so say so
+        rather than leaving the panel unfiltered without explanation. */
+    if (!target) {
+        if (G::popup) G::popup->showPopup("No images from " + year + " in the catalog.");
+        return;
+    }
+
+    /*  Expand only the Years category: the check must be VISIBLE -- a filter applied
+        where the user cannot see it is the same as an unexplained empty panel -- but
+        expanding every category would bury it again. */
+    filters->years->setExpanded(true);
+    filters->setItemFilterState(target, Qt::Checked);
+    filters->scrollToItem(target);
+    appliedCatalogYear = year;
+}
+
+void MW::setCatalogScopeWhole(QString src)
+{
+/*
+    The WHOLE catalog -- the Catalog row itself, as opposed to one of its years.
+
+    Widening back from a year has to undo the year, or clicking Catalog after clicking
+    2018 would leave the panel still showing 2018 while the row says the whole library.
+    Only a year THIS put there is cleared: a year the user checked by hand in the Filters
+    panel is their filter, not ours to remove.
+*/
+    if (G::isLogger) G::log("MW::setCatalogScopeWhole", src);
+    pendingCatalogYear.clear();
+    if (!appliedCatalogYear.isEmpty() && filters && filters->years) {
+        for (int i = 0; i < filters->years->childCount(); i++) {
+            QTreeWidgetItem *item = filters->years->child(i);
+            if (item->text(0) == appliedCatalogYear
+                && item->checkState(0) == Qt::Checked) {
+                filters->setItemFilterState(item, Qt::Unchecked);
+            }
+        }
+        appliedCatalogYear.clear();
+    }
+    setScope(G::Scope::Catalog, src);
 }
 
 void MW::showCatalogDock()

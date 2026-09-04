@@ -742,7 +742,7 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
         asked about a folder's worth of paths and became a 30-second freeze the moment a
         catalog scope asked about 42,979 of them. The queries run off the GUI thread, so
         the pass itself was never the problem -- what blocked was every GUI-thread call
-        INTO the catalog (FindPanel::refresh, updateCatalogScopeRows, the dock becoming
+        INTO the catalog (FindPanel::refresh, updateCatalogScopeTrees, the dock becoming
         visible) waiting on a mutex held for one query per row. Measured from a person's
         click: GUI STALL 30,689 ms, beginning the instant the load completed, with every
         stage of the load itself under 30 ms.

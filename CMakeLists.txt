@@ -385,7 +385,7 @@ set(WINNOW_SOURCES
     Views/catalogview.cpp
     Datamodel/imagerow.cpp
     Datamodel/rowscratch.cpp
-    Views/catalogscoperow.cpp
+    Views/catalogscopetree.cpp
     Views/findpanel.cpp
     Views/infoview.cpp
     Views/tableview.cpp
@@ -420,7 +420,7 @@ set(WINNOW_HEADERS
     Datamodel/imagerow.h
     Datamodel/rowscratch.h
     Datamodel/filterpredicate.h
-    Views/catalogscoperow.h
+    Views/catalogscopetree.h
     Datamodel/selection.h
 
     Develop/develop.h

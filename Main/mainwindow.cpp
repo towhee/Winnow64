@@ -1138,7 +1138,7 @@ void MW::showEvent(QShowEvent *event)
 
     /*  Seed the Catalog rows once the index can be asked. Not earlier: the
         catalog opens lazily and a count taken before that reads as "no index". */
-    updateCatalogScopeRows();
+    updateCatalogScopeTrees();
 
     G::issueBeginSession();
 
@@ -5412,7 +5412,7 @@ void MW::folderChangeCompleted()
                 QMetaObject::invokeMethod(this, [this]{
                     if (catalogDock && catalogDock->isVisible()) catalogView->refresh();
                     if (findPanel && filterDock->isVisible()) findPanel->refresh();
-                    updateCatalogScopeRows();
+                    updateCatalogScopeTrees();
                 }, Qt::QueuedConnection);
             });
         }
@@ -6261,8 +6261,7 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(G::css);
     filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
-    if (folderCatalogScopeRow) folderCatalogScopeRow->updateStyle();
-    if (favCatalogScopeRow)    favCatalogScopeRow->updateStyle();
+    if (folderCatalogTree) folderCatalogTree->updateStyle();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(G::css);
