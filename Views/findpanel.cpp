@@ -2,7 +2,6 @@
 #include "Datamodel/filters.h"
 #include "Main/global.h"
 
-#include <QHBoxLayout>
 #include <QVBoxLayout>
 
 FindPanel::FindPanel(Filters *f, QWidget *parent)
@@ -16,36 +15,19 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
         "Words are AND-ed. Use OR between alternatives, \"quotes\" for a phrase,\n"
         "and -word or NOT word to leave something out.");
 
-    resultLabel = new QLabel;
-    resultLabel->setWordWrap(true);
-
-    loadBtn = new QPushButton("Load");
-    loadBtn->setEnabled(false);
-    loadBtn->setToolTip("Load the matching images into the grid, replacing what is "
-                        "loaded now.");
-    addBtn = new QPushButton("Add");
-    addBtn->setEnabled(false);
-    addBtn->setToolTip("Add the matching images to what is already loaded, instead of "
-                       "replacing it.");
-    /* min-width: 0 defeats the global "QPushButton { min-width: 100px }" (widgetcss),
-       which otherwise becomes a hard floor on how narrow this dock can be made. */
-    for (QPushButton *b : {loadBtn, addBtn})
-        b->setStyleSheet("QPushButton { min-width: 0; }");
-
-    QHBoxLayout *loadLayout = new QHBoxLayout;
-    loadLayout->setContentsMargins(0, 0, 0, 0);
-    loadLayout->addWidget(loadBtn, 1);
-    loadLayout->addWidget(addBtn, 1);
-    loadRow = new QWidget;
-    loadRow->setLayout(loadLayout);
+    /*  NOT A FOOTER. It is hidden unless there is a reason the panel cannot show
+        anything -- no index, or an empty one -- so the panel is the tree and the box in
+        ordinary use. See "Nothing to report is nothing shown" in the header. */
+    statusLabel = new QLabel;
+    statusLabel->setWordWrap(true);
+    statusLabel->setVisible(false);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 4, 4, 4);
     layout->setSpacing(4);
     layout->addWidget(searchEdit);
     layout->addWidget(filters, 1);          // re-parents the tree into this panel
-    layout->addWidget(resultLabel);
-    layout->addWidget(loadRow);
+    layout->addWidget(statusLabel);
 
     debounce = new QTimer(this);
     debounce->setSingleShot(true);
@@ -65,23 +47,6 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
         if (currentScope == CatalogScope) runSearch();
     });
 
-    /*  A category item was checked or excluded. Filters has ALREADY re-run the proxy
-        filter, in either scope -- so there is nothing to do here but re-word the footer.
-
-        Catalog scope used to start the debounce and re-run the search instead, which
-        reloaded the model with only the matching rows and left BuildFilters to rebuild
-        the tree from those: filter on one day and every other day disappeared from the
-        tree. A filter narrows what you are looking at; it does not redefine the set. */
-    connect(filters, &Filters::filterChange, this, [this](QString){
-        updateFooter();
-    });
-
-    connect(loadBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results, false, currentQuery());
-    });
-    connect(addBtn, &QPushButton::clicked, this, [this]{
-        if (!results.isEmpty()) emit loadResults(results, true, currentQuery());
-    });
     applyScope();
 }
 
@@ -116,7 +81,7 @@ void FindPanel::applyScope()
     asTimer.start();
 
 /*
-    Point the category tree at the right source and set the footer's verb.
+    Point the category tree at the right source and re-word the search box.
 
     THE SEARCH TEXT MOVES BOTH WAYS. Leaving Folders means the proxy filter must stop
     applying the text -- the whole datamodel comes back -- and returning to Folders means
@@ -136,8 +101,7 @@ void FindPanel::applyScope()
             the category head turns yellow, exactly as in Folders, instead of re-running a
             query that reloaded the model and rebuilt the tree from the survivors. */
         filters->showAllCategories();
-        loadRow->setVisible(true);
-        searchEdit->setPlaceholderText("Search every catalogued image...");
+        searchEdit->setPlaceholderText("Filter every catalogued image...");
         /*  Load the set; the categories follow from it. NOT requested explicitly here --
             the load is asynchronous, so a rebuild asked for now would run against the
             model being replaced. MW::folderChangeCompleted builds the filters when the
@@ -146,7 +110,6 @@ void FindPanel::applyScope()
     }
     else {
         filters->showAllCategories();
-        loadRow->setVisible(false);
         results.clear();
         totalMatches = 0;
         searchEdit->setPlaceholderText("Filter the loaded images...");
@@ -179,11 +142,10 @@ void FindPanel::refresh()
 {
     if (G::isLogger) G::log("FindPanel::refresh");
 
-    /*  runSearch is a no-op when the index could not be opened, so the footer -- which
-        is now the only place the catalog's state is reported -- has to be written here
-        rather than left to a search that will not run. */
+    /*  runSearch is a no-op when the index could not be opened, so the reason has to be
+        written here rather than left to a search that will not run. */
     if (currentScope == CatalogScope && Catalog::instance().isAvailable()) runSearch();
-    else updateFooter();
+    else updateStatus();
 }
 
 CatalogQuery FindPanel::currentQuery() const
@@ -209,22 +171,13 @@ void FindPanel::runSearch()
 
     const CatalogQuery q = currentQuery();
 
-    /*  AN EMPTY QUERY NOW SHOWS THE MOST RECENT IMAGES rather than nothing.
-
-        It used to report nothing and disable Load, on the reasoning that offering to
-        load a quarter of a million images is not a useful answer to having typed
-        nothing. But it made Catalog an empty room: the user picked a scope and was shown
-        a blank panel, while picking a folder shows pictures immediately. That difference
-        IS the paradigm split this removes -- so an empty query is answered the way a
-        folder is, with the newest images first (searchRows orders by captured DESC).
+    /*  AN EMPTY QUERY IS THE WHOLE CATALOG, newest first (searchRows orders by captured
+        DESC), and that is the ordinary case rather than a special one: opening the
+        catalog is opening all of it, exactly as opening a folder opens all of it.
 
         AND IT IS NO LONGER A WINDOW ONTO THE SET. The cap that made it one existed
         because a row cost ~20 KB and had to be read from its own file; neither is true
         now, so G::maxSearchResults defaults to no limit and the whole catalog loads. */
-    /*  Nothing ASKED, which is now purely about the text: a checked category is a filter
-        over the loaded set, not part of the question that defines it. */
-    noQuery = q.text.trimmed().isEmpty();
-
     /*  THE ROWS, NOT THE PATHS. searchRows returns everything a datamodel row displays
         from the query that found it, so loading the result opens no files -- measured at
         5.8x faster than asking for paths and looking each one up. The paths are still
@@ -232,13 +185,13 @@ void FindPanel::runSearch()
         also fire on a rating edited elsewhere. */
     const QStringList previous = resultPaths();
     results = Catalog::instance().searchRows(q, resultLimit(), &totalMatches);
-    updateFooter();
+    updateStatus();
 
-    /*  LOAD WITHOUT BEING ASKED. This is what removes the paradigm split: picking a
+    /*  LOADED WITHOUT BEING ASKED, which is the only way it is loaded now: picking a
         folder shows pictures, so picking Catalog -- or narrowing it -- must too. The
-        Load button stays for an explicit reload, and ADD stays because it is the one
-        thing this cannot do for the user: combining two searches is a decision, not a
-        default.
+        Load and Add buttons that used to sit under this are gone with the search-result
+        paradigm they belonged to; a collection, if one is ever built, is a menu command
+        over the loaded set, not a button in the filter panel.
 
         Guarded three ways, because a load is a full model reset plus a metadata read
         and must not run on every keystroke:
@@ -263,81 +216,38 @@ QStringList FindPanel::resultPaths() const
     return out;
 }
 
-void FindPanel::updateFooter()
+void FindPanel::updateStatus()
 {
 /*
-    The footer says what the panel is currently doing, and the verb changes with the
-    scope: Folders is showing a subset of what is loaded, Catalog has found images that
-    are not loaded at all and is offering to load them.
+    NOTHING TO REPORT IS NOTHING SHOWN.
+
+    This used to be a footer: a line of prose about what the panel was doing ("Filtering
+    the loaded images", "43,064 images found") over a Load and an Add button. All of it
+    is gone. Loading a search RESULT was a paradigm the catalog no longer has -- the
+    catalog is browsed whole and the panel filters it, so there is no found set to load
+    and nothing to add it to; and a running commentary on a filter the user can see the
+    effect of in the grid is words for their own sake.
+
+    What is left is the case the panel genuinely cannot answer: there is no index, or
+    there is nothing in it. Those are why-is-this-empty facts a user should not have to
+    open a dialog to learn, so they are said inline and the label hides again the moment
+    they stop being true.
 */
-    if (currentScope == FolderScope) {
-        loadBtn->setEnabled(false);
-        addBtn->setEnabled(false);
-        resultLabel->setText(filters->isAnyFilter()
-            ? "Filtering the loaded images."
-            : "No filter -- all loaded images are shown.");
+    if (currentScope != CatalogScope) {
+        statusLabel->setVisible(false);
         return;
     }
 
-    /*  THE FOOTER IS THE STATUS LINE NOW. The "N images catalogued ... Manage..." row
-        under the panel is gone (the roots editor is File > Manage Catalog...), so what
-        it said about the index -- unavailable, scanning, empty -- is said here. A search
-        that found nothing means something quite different when nothing is indexed, and
-        the user should not have to open a dialog to find out which case they are in. */
+    QString msg;
     if (!Catalog::instance().isAvailable()) {
-        loadBtn->setEnabled(false);
-        addBtn->setEnabled(false);
-        resultLabel->setText(
-            "The catalog is unavailable -- the local index database could not be "
-            "opened. Browsing and the Folders scope are unaffected.");
-        return;
+        msg = "The catalog is unavailable -- the local index database could not be "
+              "opened. Browsing and the Folders scope are unaffected.";
+    }
+    else if (totalMatches == 0 && !scanning) {
+        msg = "Nothing catalogued yet. Folders are catalogued as you open them, and "
+              "File > Manage Catalog... chooses what is indexed in the background.";
     }
 
-    /*  A FILTER IS A FILTER IN EITHER SCOPE, so say the same thing about it. The counts
-        below describe what is LOADED; once a category is checked the proxy decides what
-        is shown, and repeating the catalogued total would answer a question the user has
-        moved on from. */
-    if (filters->isAnyFilter()) {
-        loadBtn->setEnabled(!results.isEmpty());
-        addBtn->setEnabled(!results.isEmpty());
-        resultLabel->setText("Filtering the catalogued images.");
-        return;
-    }
-
-    const QString scanNote = scanning ? "\nCataloguing..." : QString();
-
-    if (totalMatches == 0) {
-        resultLabel->setText((noQuery
-            ? QString("Nothing catalogued yet. Folders are catalogued as you open them.")
-            : QString("No matches.")) + scanNote);
-    }
-    else if (noQuery) {
-        /*  No question asked: this is the catalog itself, newest first. With no cap
-            (the default) that IS the whole catalog and there is no subset to explain --
-            saying "showing the N most recent" when N is everything would invent a limit
-            the user does not have. */
-        resultLabel->setText(results.size() >= totalMatches
-            ? QString("%1 images catalogued in %2 %3 --\n"
-                      "search or check a filter to narrow it.%4")
-                  .arg(totalMatches)
-                  .arg(Catalog::instance().folderCount())
-                  .arg(Catalog::instance().folderCount() == 1 ? "folder" : "folders")
-                  .arg(scanNote)
-            : QString("%1 images catalogued. Showing the %2 most recent --\n"
-                      "search or check a filter to narrow it.%3")
-                  .arg(totalMatches).arg(results.size()).arg(scanNote));
-    }
-    else if (results.size() < totalMatches) {
-        /* Say plainly that this is a subset, and what would be loaded. */
-        resultLabel->setText(QString("%1 matches -- the first %2 will be loaded.%3")
-                                 .arg(totalMatches).arg(results.size()).arg(scanNote));
-    }
-    else {
-        resultLabel->setText(QString("%1 %2 found.%3")
-                                 .arg(totalMatches)
-                                 .arg(totalMatches == 1 ? "image" : "images")
-                                 .arg(scanNote));
-    }
-    loadBtn->setEnabled(!results.isEmpty());
-    addBtn->setEnabled(!results.isEmpty());
+    statusLabel->setText(msg);
+    statusLabel->setVisible(!msg.isEmpty());
 }
