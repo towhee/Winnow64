@@ -1,6 +1,6 @@
 #include "Develop/Properties/developproperties.h"
 #include "Cache/devpreviewcache.h"
-#include "Develop/Properties/scopeheaderbase.h"
+#include "Develop/Properties/scopeheader.h"
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
@@ -297,10 +297,10 @@ void DevelopProperties::buildTree()
        crash on data(). Clear it so only rows present after the rebuild have entries. */
     sourceIdx.clear();
 
-    /* Lab UI: the Global "Core" rows live in the RawPanel above the Scopes list, so the
-       tree omits them (addMaskItems stays until the Mask panel lands in Phase 4). */
-    if (activeScopeIndex == 0) { if (!G::useScopeHeaderLab) addCoreItems(); }
-    else                       addMaskItems();      // this scope's mask tool rows
+    /* The Global raw-decode rows live in the RawPanel above the scope bar, and a mask's
+       submasks in the MaskPanel below it, so the tree carries neither -- it is the
+       adjustment sections only. addMaskItems merely keeps selectedMaskIndex honest. */
+    if (activeScopeIndex != 0) addMaskItems();
     addBasic();
     addCurves();        // Lightroom's order: the tone curve sits directly under Basic
     addColor();
@@ -316,8 +316,7 @@ void DevelopProperties::buildTree()
     isPopulating = false;
     isRebuildingMasks = false;
 
-    /* Restore section expand-state (leaves the selected mask tool's own expansion, set in
-       addToolRow, untouched). */
+    /* Restore section expand-state. */
     auto setExpandOn = [this](const QString &name, bool on){
         const QModelIndex idx = findCaptionIndex(name);
         if (idx.isValid()) setExpanded(idx, on);
@@ -333,11 +332,10 @@ void DevelopProperties::buildTree()
     updateMaskEdit();
     updateHiddenRows(QModelIndex());
     applyScopeItemsCollapsed();      // re-assert the '>' collapse (a rebuild resets row visibility)
-    applyCoreVisibility();           // hide Demosaic/Denoise raw on preview
     if (!panelEnabled) applyItemsEnabled(false);   // keep captions greyed if disabled
-    syncRawPanel();                  // lab UI: reflect raw state + visibility in RawPanel
-    syncMaskPanel();                 // lab UI: the active mask's submask list + settings
-    scheduleContentFit();            // nested under a scope row: re-fit the block height
+    syncRawPanel();                  // reflect raw state + visibility in the RawPanel
+    syncMaskPanel();                 // the active mask's submask list + settings
+    scheduleContentFit();            // a detail of the scope bar: re-fit the block height
 }
 
 bool DevelopProperties::sectionExpanded(const QString &name, bool def) const
@@ -353,216 +351,6 @@ void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expa
     if (name == "BasicHeader" || name == "ColorHeader" || name == "DetailHeader" ||
         name == "EffectsHeader")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
-}
-
-void DevelopProperties::addCoreItems()
-{
-    if (G::isLogger) G::log("DevelopProperties::addCoreItems");
-    /* Global scope only. These rows apply to raw sensor data, so they are shown for RAW files only:
-       a JPG/TIFF/PNG is already the developable image (no demosaic, no raw denoise, no source
-       choice). Non-raw Global scopes get no Core rows. */
-    if (!currentIsRaw()) return;
-
-    /* Edit source selector (directly under the scope header): choose whether Develop edits the raw
-       sensor data or the embedded preview jpg. An A/B radio pair kept in sync with G::useRaw and
-       the status-bar useRaw button. "Edit:" is indented to line up with the Demosaic row
-       below it (isIndent = true); the radios are hosted in the value cell (DT_None = no
-       built-in editor, so the cell is ours). */
-    clearItemInfo(i);
-    i.name = "editSource";
-    i.parentName = "";              // root row (no section header)
-    i.captionText = "Edit:";
-    i.tooltip = "Edit the raw sensor data (demosaic) or the embedded preview jpg.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "editSource";
-    i.delegateType = DT_None;
-    addItem(i);
-    /* A little extra vertical breathing room (4px top + 4px bottom) to set the source
-       selector apart from the scope header above and the Demosaic row below. */
-    model->setData(capIdx, 8, UR_ExtraRowHeight);
-
-    const QModelIndex editValIdx = findValueIndex("editSource");
-    if (editValIdx.isValid()) {
-        /* Recreated on every rebuild; the previous widget is freed when removeRows() drops the row
-           (setIndexWidget gives the view ownership of the index widget). */
-        QWidget *w = new QWidget;
-        w->setAttribute(Qt::WA_TranslucentBackground);
-        QHBoxLayout *hb = new QHBoxLayout(w);
-        hb->setContentsMargins(0, 0, 0, 0);
-        hb->setSpacing(12);
-        QRadioButton *rawBtn  = new QRadioButton("Raw", w);
-        QRadioButton *prevBtn = new QRadioButton("Embedded Preview", w);
-        QButtonGroup *grp = new QButtonGroup(w);
-        grp->setExclusive(true);
-        grp->addButton(rawBtn);
-        grp->addButton(prevBtn);
-        rawBtn->setChecked(G::useRaw);
-        prevBtn->setChecked(!G::useRaw);
-        hb->addWidget(rawBtn);
-        hb->addWidget(prevBtn);
-        hb->addStretch(1);
-        editRawRadio = rawBtn;      // QPointer: cleared automatically when the row/widget is freed
-        connect(rawBtn, &QRadioButton::toggled, this, &DevelopProperties::onEditSourceChanged);
-        setIndexWidget(editValIdx, w);
-    }
-
-    /* Demosaic engine + raw noise reduction. Indented (isIndent = true) so they align with the
-       Basic-section sliders (e.g. "Temp"). Visible only when editing raw (applyCoreVisibility).
-       DT_None: we own the value cell and host a real QComboBox formatted like the scope
-       dropdown (ScopeHeader::combo), rather than the delegate's DT_Combo. */
-    clearItemInfo(i);
-    i.name = "demosaic";
-    i.parentName = "";
-    i.captionText = "Render using";
-    i.tooltip = "Select demosaic engine.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "demosaic";
-    i.delegateType = DT_None;
-    addItem(i);
-
-    const QModelIndex demosaicValIdx = findValueIndex("demosaic");
-    if (demosaicValIdx.isValid()) {
-        /* Real QComboBox in the value cell, formatted like the scope dropdown: a 12px
-           checkmark on the ACTIVE engine and a blank spacer on the other, expanding width.
-           Recreated on every rebuild (setIndexWidget gives the view ownership), so reading
-           G::decodeRawEngine here keeps the checkmark on the engine actually in effect. */
-        const int iconPx = 12;
-        QPixmap cm(":/images/checkmark.png");
-        const QIcon checkIcon = cm.isNull() ? QIcon()
-            : QIcon(cm.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        QPixmap blank(iconPx, iconPx);
-        blank.fill(Qt::transparent);
-        const QIcon blankIcon(blank);
-
-        const bool apple = G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
-        QComboBox *engine = new QComboBox;
-        engine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        engine->setIconSize(QSize(iconPx, iconPx));
-        engine->setToolTip("Select demosaic engine (Apple Core Image or in-house Winnow).");
-        engine->addItem(apple ? checkIcon : blankIcon, "Apple");
-        engine->addItem(apple ? blankIcon : checkIcon, "Winnow");
-        engine->setCurrentIndex(apple ? 0 : 1);
-        /* Switching the engine forces a re-decode (MW sets G::decodeRawEngine), then a
-           deferred rebuild adds/removes the raw-denoise rows -- doing it inline would
-           delete this live editor mid-signal. Mirrors the old DT_Combo itemChange. */
-        connect(engine, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
-            emit demosaicEngineChanged(idx == 0);       // 0 = Apple
-            QTimer::singleShot(0, this, [this]{ buildTree(); });
-        });
-        /* Host the combo in a container with a 10px right margin so it clears the panel's
-           right edge (setIndexWidget otherwise stretches it flush to the cell edge). */
-        QWidget *cell = new QWidget;
-        cell->setAttribute(Qt::WA_TranslucentBackground);
-        QHBoxLayout *cellHb = new QHBoxLayout(cell);
-        cellHb->setContentsMargins(0, 0, 10, 0);
-        cellHb->setSpacing(0);
-        cellHb->addWidget(engine);
-        setIndexWidget(demosaicValIdx, cell);
-    }
-    /* The Demosaic row is a plain leaf (no children, no decoration arrow), so it draws
-       in the ordinary caption colour like "Edit:" -- not the teal header colour. */
-
-    /* "Denoise raw": Global-scope, decode-time raw noise reduction (denoiseLuma/
-       denoiseChroma), baked into the pre-develop WorkingImage (global, not maskable) --
-       distinct from the Effects "Denoise" (localDenoiseLuma). Two Lightroom-style 0..100
-       sliders mapped to 0..1: Luminance = the master AI-denoise amount; Color = extra
-       chroma-noise suppression (default 100).
-
-       Shown only on the WINNOW engine (PMRID needs the CFA mosaic); on Apple the raw
-       denoise is inert so they are omitted. They are root-level SIBLINGS of the Demosaic
-       row (not children) so they always show with no collapse arrow; UR_ExtraIndent lines
-       their captions up one tree level, matching the Basic sliders. Their per-raw
-       visibility is handled with the Demosaic row in applyCoreVisibility. */
-    if (G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine) {
-        /* 4px gap-only divider (no line) to separate the Demosaic row from the denoise
-           sliders. Hidden with them in applyCoreVisibility. */
-        addDivider(4, 0, divColor, QModelIndex(), "", "denoiseGap");
-
-        /* Manual "Denoise" trigger + "Auto run" toggle. A full-width (spanned) row:
-           "Denoise" checkbox on the left (aligned with the Demosaic caption above), "Auto
-           run" checkbox on the right. Checking "Denoise" runs the PMRID denoise now
-           (MW::runRawDenoiseNow) and it relabels to "Denoised" when the result lands
-           (updateDenoiseRunState, driven by MW). "Auto run" (persisted to
-           Develop/autoRunDenoise) runs the denoise automatically instead. Hidden with the
-           denoise group in applyCoreVisibility. */
-        clearItemInfo(i);
-        i.name = "autoRunDenoise";
-        i.parentName = "";
-        i.captionText = "";
-        i.tooltip = "Run raw denoise, automatically (Auto run) or on demand (Denoise).";
-        i.isIndent = true;
-        i.hasValue = true;
-        i.captionIsEditable = false;
-        i.key = "autoRunDenoise";
-        i.delegateType = DT_None;
-        addItem(i);
-        const QModelIndex autoCapIdx = capIdx;
-        const QModelIndex autoValIdx = findValueIndex("autoRunDenoise");
-        model->setData(autoCapIdx, 6, UR_ExtraRowHeight);   // room for the checkboxes
-        if (autoCapIdx.isValid()) {
-            /* "Denoise" in the CAPTION cell -> left-aligns with the Demosaic caption.
-               Manual run + completion state: checked / "Denoised" reflects a ready
-               denoised base for the current image (queried from MW). */
-            const bool denoised = mw && mw->rawDenoiseReadyForCurrent();
-            QCheckBox *denCb = new QCheckBox(denoised ? "Denoised" : "Denoise");
-            denCb->setChecked(denoised);
-            denCb->setToolTip("Run the raw denoise; shows \"Denoised\" when complete.");
-            connect(denCb, &QCheckBox::toggled, this, [this](bool on){
-                setDenoiseRawFlag(on);
-                if (on) emit runRawDenoiseRequested();
-                else    emit clearRawDenoiseRequested();
-            });
-            denoiseRunCheck = denCb;      // QPointer: MW relabels it on completion
-            QWidget *capW = new QWidget;
-            capW->setAttribute(Qt::WA_TranslucentBackground);
-            QHBoxLayout *chb = new QHBoxLayout(capW);
-            chb->setContentsMargins(0, 0, 0, 0);
-            chb->setSpacing(0);
-            chb->addWidget(denCb);
-            chb->addStretch(1);
-            setIndexWidget(autoCapIdx, capW);
-        }
-        if (autoValIdx.isValid()) {
-            /* "Auto run" in the VALUE cell -> left-aligns with the Demosaic dropdown.
-               Persisted flag; when on the denoise runs automatically. */
-            QCheckBox *autoCb = new QCheckBox("Auto run");
-            autoCb->setChecked(setting->value("Develop/autoRunDenoise", true).toBool());
-            autoCb->setToolTip("On: denoise runs automatically. Off: use the Denoise box.");
-            connect(autoCb, &QCheckBox::toggled, this, [this](bool on){
-                setting->setValue("Develop/autoRunDenoise", on);
-                emit autoRunDenoiseToggled(on);
-            });
-            QWidget *valW = new QWidget;
-            valW->setAttribute(Qt::WA_TranslucentBackground);
-            QHBoxLayout *vhb = new QHBoxLayout(valW);
-            vhb->setContentsMargins(0, 0, 10, 0);
-            vhb->setSpacing(0);
-            vhb->addWidget(autoCb);
-            vhb->addStretch(1);
-            setIndexWidget(autoValIdx, valW);
-        }
-
-        addSlider("denoiseLuma", "Denoise Lum",
-                  "Raw luminance noise reduction (AI, whole image).",
-                  QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 75);
-        model->setData(capIdx, true, UR_ExtraIndent);
-        addSlider("denoiseChroma", "Denoise Color", "Raw colour (chroma) noise reduction.",
-                  QModelIndex(), "", 0, 100, 0, G::darkgray, G::lightgray, 100);
-        model->setData(capIdx, true, UR_ExtraIndent);
-
-        /* The amount sliders only scale the blend of a computed PMRID base, so start them
-           disabled and enable them once the denoise has produced that base (mirrors
-           updateDenoiseRunState, driven by MW on completion / clear). */
-        const bool denoiseReady = mw && mw->rawDenoiseReadyForCurrent();
-        setItemEnabled("denoiseLuma", denoiseReady);
-        setItemEnabled("denoiseChroma", denoiseReady);
-    }
-    /* Visibility (per G::useRaw + collapse) applied by buildTree() after
-       applyScopeItemsCollapsed. */
 }
 
 bool DevelopProperties::currentIsRaw() const
@@ -627,122 +415,44 @@ void DevelopProperties::onEditSourceChanged(bool raw)
 void DevelopProperties::syncEditRaw(bool useRaw)
 {
     if (G::isLogger) G::log("DevelopProperties::syncEditRaw");
-    if (editRawRadio) {
-        /* An exclusive QButtonGroup auto-unchecks the siblings when a button is CHECKED, but does
-           NOT auto-check a sibling when the checked button is unchecked. So editRawRadio->setChecked
-           (false) would leave both "Raw" and "Embedded Preview" blank. Always check the button that
-           should be selected: "Raw" when useRaw, otherwise its group sibling ("Embedded Preview").
-           editRawRadio is the only button connected to a slot, so blocking it also guards re-entry. */
-        QSignalBlocker block(editRawRadio);
-        QAbstractButton *target = editRawRadio;
-        if (!useRaw) {
-            if (QButtonGroup *grp = editRawRadio->group()) {
-                for (QAbstractButton *b : grp->buttons()) {
-                    if (b != editRawRadio) { target = b; break; }
-                }
-            }
-        }
-        target->setChecked(true);
-    }
-    if (rawPanel) rawPanel->setEditSource(useRaw);   // lab UI mirror
-    applyCoreVisibility();
-}
-
-void DevelopProperties::applyCoreVisibility()
-{
-    /* The Demosaic row and its raw-denoise sibling sliders (Winnow engine) are visible
-       only when editing raw AND the scope items are not collapsed ('>'). Scan root rows
-       for those names -- run AFTER applyScopeItemsCollapsed(), which would otherwise
-       re-show them on a non-collapsed rebuild. On the Apple engine the denoise rows are
-       absent (addCoreItems), so only the Demosaic row matches. */
-    const bool hide = !G::useRaw || scopeItemsCollapsed;
-    for (int r = 0; r < model->rowCount(); ++r) {
-        const QModelIndex cap = model->index(r, CapColumn);
-        const QString name = cap.data(UR_Name).toString();
-        if (name != "demosaic" && name != "denoiseGap" && name != "autoRunDenoise" &&
-            name != "denoiseLuma" && name != "denoiseChroma")
-            continue;
-        model->setData(cap, hide, UR_isHidden);   // remembered for updateHiddenRows()
-        setRowHidden(r, QModelIndex(), hide);
-    }
-    scheduleContentFit();       // setRowHidden emits nothing: re-fit the block ourselves
+    /* The Edit-source radios live in the RawPanel above the scope bar (MW's status-bar
+       useRaw button and this panel drive each other through G::useRaw). */
+    if (rawPanel) rawPanel->setEditSource(useRaw);
 }
 
 void DevelopProperties::addMaskItems()
 {
     if (G::isLogger) G::log("DevelopProperties::addMaskItems");
-    /* Non-Global scopes: the scope's ordered Add/Subtract mask tools as rows at the top of the tree.
-       The selected tool is expanded with its settings (addToolRow). */
+    /* Non-Global scopes: the mask itself lives in the MaskPanel below the scope bar --
+       its SubmaskList carries the submasks (including its own [+] for an empty mask) and
+       the open one shows its settings there. The tree holds no mask rows at all, so all
+       this does is keep selectedMaskIndex honest: nothing can be open on an empty mask. */
     EditScope *scope = activeScope();
-    if (!scope || activeScopeIndex == 0) { selectedMaskIndex = -1; return; }
-    const int n = scope->components.size();
-
-    /* Lab UI: the whole mask lives in the MaskPanel nested under this scope's row -- its
-       SubmaskList lists the submasks (including its own [+] for an empty mask) and the
-       open one shows its settings there. The tree carries no mask rows at all. */
-    if (G::useScopeHeaderLab) {
-        if (n == 0) selectedMaskIndex = -1;
-        return;
-    }
-
-    /* Legacy: the whole ordered tool list, the selected one expanded. A no-mask scope
-       shows a single "Add mask" placeholder row with a [+] button. */
-    if (n == 0) {
+    if (!scope || activeScopeIndex == 0 || scope->components.isEmpty())
         selectedMaskIndex = -1;
-        addAddMaskRow();
-        return;
-    }
-    if (selectedMaskIndex >= n) selectedMaskIndex = n - 1;
-    for (int m = 0; m < n; ++m)
-        addToolRow(QModelIndex(), m, scope->components[m], m == selectedMaskIndex);
 }
 
-void DevelopProperties::addAddMaskRow()
-{
-    /* Placeholder row shown only while the active (non-Global) scope has no mask: a header-style,
-       full-width single-line "Add mask" caption carrying just a [+] glyph (UR_AddBtn, no [-] and no
-       expand arrow). Clicking anywhere on the row pops the Add/Subtract chooser (showMaskMenu). It is
-       identified in mousePressEvent by its name ("addMask"), as it has no UR_MaskIndex. */
-    clearItemInfo(i);
-    i.name = "addMask";
-    i.parIdx = QModelIndex();
-    i.captionText = "Add mask";
-    i.tooltip = "This mask is empty. Click [+] to add a submask.";
-    i.isHeader = true;
-    i.isDecoration = true;
-    i.decorateGradient = false;
-    i.isIndent = true;
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    addItem(i);
-    const QModelIndex rowIdx = capIdx;
-    model->setData(rowIdx, true, UR_LeafSingleLine);
-    model->setData(rowIdx, true, UR_AddBtn);            // [+] add the first mask tool
-    setFirstColumnSpanned(rowIdx.row(), QModelIndex(), true);
-}
-
-void DevelopProperties::bindScopeHeader(ScopeHeaderBase *header)
+void DevelopProperties::bindScopeHeader(ScopeHeader *header)
 {
     if (G::isLogger) G::log("DevelopProperties::bindScopeHeader");
     scopeHeader = header;
     if (!scopeHeader) return;
 
-    connect(scopeHeader, &ScopeHeaderBase::scopeSelected,       this, &DevelopProperties::onScopeSelected);
-    connect(scopeHeader, &ScopeHeaderBase::renameRequested,     this, &DevelopProperties::renameActiveScope);
-    connect(scopeHeader, &ScopeHeaderBase::resetScopeRequested, this, &DevelopProperties::resetActiveScope);
-    connect(scopeHeader, &ScopeHeaderBase::removeScopeRequested,this, &DevelopProperties::deleteScope);
-    connect(scopeHeader, &ScopeHeaderBase::addScopeRequested,   this, &DevelopProperties::newScope);
-    connect(scopeHeader, &ScopeHeaderBase::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
-    connect(scopeHeader, &ScopeHeaderBase::resetAllEditsRequested, this, &DevelopProperties::resetAllEdits);
-    connect(scopeHeader, &ScopeHeaderBase::maskOverlayToggled,  this,
+    connect(scopeHeader, &ScopeHeader::scopeSelected,       this, &DevelopProperties::onScopeSelected);
+    connect(scopeHeader, &ScopeHeader::renameRequested,     this, &DevelopProperties::renameActiveScope);
+    connect(scopeHeader, &ScopeHeader::resetScopeRequested, this, &DevelopProperties::resetActiveScope);
+    connect(scopeHeader, &ScopeHeader::removeScopeRequested,this, &DevelopProperties::deleteScope);
+    connect(scopeHeader, &ScopeHeader::addScopeRequested,   this, &DevelopProperties::newScope);
+    connect(scopeHeader, &ScopeHeader::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
+    connect(scopeHeader, &ScopeHeader::resetAllEditsRequested, this, &DevelopProperties::resetAllEdits);
+    connect(scopeHeader, &ScopeHeader::maskOverlayToggled,  this,
             &DevelopProperties::maskOverlayToggleRequested);
-    connect(scopeHeader, &ScopeHeaderBase::previewToggled,      this, &DevelopProperties::onScopePreviewToggled);
-    connect(scopeHeader, &ScopeHeaderBase::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
-    connect(scopeHeader, &ScopeHeaderBase::scopeEnabledToggled, this, &DevelopProperties::onScopeEnabledToggled);
-    connect(scopeHeader, &ScopeHeaderBase::editsLayoutRequested, this, &DevelopProperties::setEditsLayout);
-    connect(scopeHeader, &ScopeHeaderBase::helpRequested,       this, &DevelopProperties::editsHelp);
+    connect(scopeHeader, &ScopeHeader::previewToggled,      this, &DevelopProperties::onScopePreviewToggled);
+    connect(scopeHeader, &ScopeHeader::collapseToggled,     this, &DevelopProperties::setTreeCollapsed);
+    connect(scopeHeader, &ScopeHeader::scopeEnabledToggled, this, &DevelopProperties::onScopeEnabledToggled);
+    connect(scopeHeader, &ScopeHeader::helpRequested,       this, &DevelopProperties::editsHelp);
 
-    /* Seed the dropdown + eye from the current stack. */
+    /* Seed the combo + eye from the current stack. */
     refreshScopeList();
     refreshPreviewButtons();
 }
@@ -786,9 +496,8 @@ void DevelopProperties::syncRawPanel()
 {
     if (!rawPanel) return;
     const bool raw = currentIsRaw();
-    /* Raw-decode strip: only for raw files, and only in the lab UI (legacy keeps the Core
-       rows in the tree). */
-    rawPanel->setVisible(raw && G::useScopeHeaderLab);
+    /* Raw-decode strip: raw files only. */
+    rawPanel->setVisible(raw);
     if (!raw) return;
 
     const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
@@ -1705,18 +1414,11 @@ void DevelopProperties::onScopeSelected(const QString &name)
 
     EditScope *l = activeScope();
     const bool hasMask = (idx > 0 && l && !l->components.isEmpty());
-    if (G::useScopeHeaderLab) {
-        /* Lab UI: arriving at a scope opens no submask -- show the scope's COMBINED mask
-           (red, no handles) via the latch when it has one. Its submasks are listed in the
-           panel below the row, and clicking one re-opens it. */
-        selectedMaskIndex = -1;
-        maskLatched = hasMask;
-    }
-    else {
-        /* Legacy: select the first mask tool so its coverage overlays the image. */
-        maskLatched = false;
-        selectedMaskIndex = hasMask ? 0 : -1;
-    }
+    /* Arriving at a scope opens no submask -- show the scope's COMBINED mask (red, no
+       handles) via the latch when it has one. Its submasks are listed in the MaskPanel
+       below the bar, and clicking one re-opens it. */
+    selectedMaskIndex = -1;
+    maskLatched = hasMask;
 
     refreshScopeList();          // move checkmark + re-caption actions to new scope
     buildTree();                  // swap top items (Core/masks) + repopulate sections
@@ -1971,21 +1673,20 @@ void DevelopProperties::onScopeEnabledToggled(int index, bool on)
     s.scopes[index].enabled = on;                 // compositor skips a disabled scope
     noteScopeEdit(s.scopes[index].name, on ? "Show" : "Hide");
     /* Push the new flag back into the header. Without this the eyes keep the state they
-       were built with: every eye in ScopeHeaderLab (row, header band, editor band and the
-       minimal bar) reads its icon and its next toggle target from the last setScopeRows,
-       so a stale cache made the SECOND click re-send the value already stored, which this
-       slot drops as a no-op -- the eye appeared dead after one toggle. */
+       was built with: the bar's eye reads its icon and its next toggle target from the
+       last setScopeRows, so a stale cache made the SECOND click re-send the value already
+       stored, which this slot drops as a no-op -- the eye appeared dead after one
+       toggle. */
     refreshScopeList();
     emit paramsChanged();                          // re-composite with the scope on/off
 }
 
 void DevelopProperties::setTreeCollapsed(bool collapsed)
 {
-    /* Hide only the SCOPE items -- the Core rows (Global) or mask-tool rows that sit ABOVE
-       the Basic/Color/Effects sections. The sections stay visible. */
+    /* Hide only the SCOPE items -- any root rows sitting ABOVE the Basic/Color/Effects
+       sections. The sections stay visible. */
     scopeItemsCollapsed = collapsed;
     applyScopeItemsCollapsed();
-    applyCoreVisibility();           // core rows also depend on collapse state
 
     /* Solo: showing the scope's items is one of the mutually-exclusive sections, so
        collapse its peers -- the three adjustment sections and the Raw panel (they would
@@ -1995,32 +1696,9 @@ void DevelopProperties::setTreeCollapsed(bool collapsed)
 
 int DevelopProperties::maskPanelCaptionWidth() const
 {
-    /* Only the NESTED layout insets the Mask panel; the others start it at the panel
-       edge, so there its split is the tree's split unchanged. */
-    return captionColumnWidth
-           - (G::developEditsLayout == G::EditsLayout::Nested ? kMaskPanelIndent : 0);
-}
-
-void DevelopProperties::setEditsLayout(int layout)
-{
-    if (G::isLogger) G::log("DevelopProperties::setEditsLayout");
-    const G::EditsLayout mode = G::EditsLayout(layout);
-    if (G::developEditsLayout == mode) return;
-    G::developEditsLayout = mode;
-    /* Both halves have to follow: buildTree re-emits the section headers (their caption
-       indent differs between the layouts -- addHeader/UR_ExtraIndent), and
-       refreshScopeList re-runs ScopeHeaderLab::rebuild, which is what actually moves the
-       editor block. Tree first: the list places the tree, so it should already be the
-       right shape when it lands. */
-    buildTree();
-    refreshScopeList();
-    /* An OPEN submask keeps the editor it was populated with, so its caption split has to
-       be re-pushed by hand: the panel's inset just changed under it. */
-    if (maskPanel) {
-        const int w = maskPanelCaptionWidth();
-        if (MaskEditor *ed = maskPanel->editor())      ed->setCaptionWidth(w);
-        if (MaskEditor *ed = maskPanel->levelEditor()) ed->setCaptionWidth(w);
-    }
+    /* The Mask panel starts at the panel edge, like the tree, so its caption split is the
+       tree's split unchanged. */
+    return captionColumnWidth;
 }
 
 void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepSection)
@@ -2632,9 +2310,9 @@ void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
 void DevelopProperties::showRawDemosaic()
 {
     if (G::isLogger) G::log("DevelopProperties::showRawDemosaic");
-    /* Lab UI: the Demosaic / raw-denoise controls live in the Raw panel, not the tree, so
-       just un-collapse it -- under Solo that folds its peers away. */
-    if (rawPanel && G::useScopeHeaderLab && currentIsRaw()) {   // == syncRawPanel's test
+    /* The Demosaic / raw-denoise controls live in the Raw panel, not the tree, so just
+       un-collapse it -- under Solo that folds its peers away. */
+    if (rawPanel && currentIsRaw()) {   // == syncRawPanel's test
         if (rawPanel->isCollapsed()) rawPanel->setCollapsed(false);
         soloCollapseOthers(SoloOwner::RawPanel);
         return;
@@ -2688,9 +2366,9 @@ void DevelopProperties::showMaskMenu()
         return;
     }
 
-    /* Lab UI: a plain tool list -- the Add/Subtract/Intersect choice is made later on the
+    /* A plain tool list -- the Add/Subtract/Intersect choice is made later on the
        MaskPanel, once the tool is defined (build-up model). */
-    if (G::useScopeHeaderLab) {
+    {
         maskMenu->clear();
         for (int t = 0; t <= int(MaskTool::Object); ++t) {
             QAction *a = maskMenu->addAction(maskToolName(t));
@@ -2768,246 +2446,6 @@ void DevelopProperties::deleteMask(int index)
     emit paramsChanged();       // less mask coverage on the scope -> re-composite
 }
 
-void DevelopProperties::addToolRow(QModelIndex parIdx, int index, const MaskComponent &m, bool selected)
-{
-    /* Header-style row: the "op + tool" caption draws single-line across the full row width (no
-       wrap) with an expand arrow; UR_LeafSingleLine paints it in the ordinary leaf colour (not
-       category teal). The row is made a single full-width spanned cell (setFirstColumnSpanned)
-       and the [-] remove button is drawn by the delegate at the right (UR_DeleteBtn), NOT a
-       value-column widget: a column-1 widget would cover and clip the caption overflow. The
-       delete click is hit-tested in mousePressEvent. */
-    clearItemInfo(i);
-    i.name = QString("maskTool%1").arg(index);
-    i.parIdx = parIdx;
-    i.captionText = opName(m.op) + " " + maskToolName(m.tool);
-    i.tooltip = "Submask. Click to show/hide its settings; [+] adds another, [-] removes it.";
-    i.isHeader = true;
-    i.isDecoration = true;
-    i.decorateGradient = false;
-    i.isIndent = true;
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    addItem(i);
-    const QModelIndex toolIdx = capIdx;
-    model->setData(toolIdx, index, UR_MaskIndex);
-    /* No role tint: the caption already reads "Subtract Brush Mask", and the overlay
-       speaks one colour (see MW::updateMaskOverlayTint), so a green/blue caption would
-       be re-introducing the colour key this design removed. */
-    model->setData(toolIdx, true, UR_LeafSingleLine);
-    model->setData(toolIdx, true, UR_DeleteBtn);
-    model->setData(toolIdx, true, UR_AddBtn);           // [+] left of [-]: add another mask tool
-    model->setData(toolIdx, true, UR_ShowDecoration);   // always show the expand arrow (settings on click)
-    /* Nest the tool header one indent (arrow + caption only; child rows unchanged). */
-    model->setData(toolIdx, true, UR_ExtraIndent);
-    setFirstColumnSpanned(toolIdx.row(), parIdx, true);
-
-    /* The selected tool reveals its settings as its OWN children (no duplicate tool-name row).
-       Clicking the tool caption again collapses it (see mousePressEvent), so no separate Done row is
-       needed. Gradients: Feather + Invert. Brush: Size, Feather, Flow, Auto mask, Invert. */
-    if (selected) {
-        if (m.tool == int(MaskTool::Brush)) {
-            addSlider("maskSize", "Size", "Brush diameter (% of the long edge).",
-                      toolIdx, "", 1, 1000, 10, G::darkgray, G::lightgray);
-            addSlider("maskFeather", "Feather", "Soft edge added OUTSIDE the brush size (0 = crisp).",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskEdge", "Edge",
-                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
-                      "full-size image. Feather softens an edge; Edge moves it.",
-                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskFlow", "Flow", "How much each stroke builds up.",
-                      toolIdx, "", 1, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskAutoMask", "Auto mask",
-                        "Keep the brush inside the edges under the cursor. Toggle with A.",
-                        toolIdx, "", false);
-            addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
-            setSliderReal("maskSize", brushNum(m.paramsJson, "size", 20));
-            setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskEdge", m.edge);
-            setSliderReal("maskFlow", brushNum(m.paramsJson, "flow", 100));
-            setCheckboxValue("maskAutoMask", brushBool(m.paramsJson, "autoMask", false));
-            setCheckboxValue("maskInvert", m.inverted);
-        }
-        else if (m.tool == int(MaskTool::LuminanceRange)) {
-            /* Selects a luminance band [lo,hi] (stored 0..1, shown 0..100). Feather softens the band
-               edges; Invert flips the selection. */
-            addSlider("maskRangeLo", "Range Min", "Lower luminance bound of the selected band.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskRangeHi", "Range Max", "Upper luminance bound of the selected band.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskFeather", "Feather", "Soften the band edges.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskEdge", "Edge",
-                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
-                      "full-size image. Feather softens an edge; Edge moves it.",
-                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
-            setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.25) * 100.0);
-            setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.75) * 100.0);
-            setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskEdge", m.edge);
-            setCheckboxValue("maskInvert", m.inverted);
-        }
-        else if (m.tool == int(MaskTool::Depth)) {
-            /* Selects a depth band [Near,Far] over the MiDaS depth field (stored 0=near..1=far,
-               shown 0..100). Same mechanics as Luminance Range but over depth. */
-            addSlider("maskRangeLo", "Near", "Near bound of the selected depth band (0 = nearest).",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskRangeHi", "Far", "Far bound of the selected depth band (100 = farthest).",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskFeather", "Feather", "Soften the depth-band edges.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskEdge", "Edge",
-                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
-                      "full-size image. Feather softens an edge; Edge moves it.",
-                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
-            setSliderReal("maskRangeLo", brushNum(m.paramsJson, "lo", 0.0) * 100.0);
-            setSliderReal("maskRangeHi", brushNum(m.paramsJson, "hi", 0.5) * 100.0);
-            setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskEdge", m.edge);
-            setCheckboxValue("maskInvert", m.inverted);
-        }
-        else if (m.tool == int(MaskTool::ColorRange)) {
-            /* Colours are sampled by clicking the loupe (shift-click adds, on-image
-               swatches remove). A hue/sat WHEEL above the sliders shows each sample + its
-               selection band; drag its handles or the Hue/Sat Lo/Hi sliders to widen the
-               band toward lower/higher hue and lower/higher saturation. Feather softens
-               all edges. The wheel is a spanned index widget, mirroring the Color Grade
-               wheel (addColorGrade). */
-            /* Hue preset chips: one click seeds the mask with a named band instead of
-               hunting for a pixel to pipette. Visible on the row itself, not behind a
-               menu -- this is the fast path and it has to be findable. */
-            clearItemInfo(i);
-            i.name = QString("maskHueChips%1").arg(index);
-            i.parIdx = toolIdx;
-            i.parentName = "";
-            i.captionText = "";
-            i.isIndent = true;
-            i.hasValue = false;
-            i.captionIsEditable = false;
-            addItem(i);
-            const QModelIndex chipsIdx = capIdx;
-            model->setData(chipsIdx, 8, UR_ExtraRowHeight);
-            setFirstColumnSpanned(chipsIdx.row(), toolIdx, true);
-            {
-                QWidget *cw = new QWidget;
-                cw->setAttribute(Qt::WA_TranslucentBackground);
-                QHBoxLayout *hb = new QHBoxLayout(cw);
-                hb->setContentsMargins(QTreeView::indentation() + 4, 2, 4, 2);
-                hb->setSpacing(3);
-                for (int b = 0; b < hueBandCount(); ++b) {
-                    const QColor swatch =
-                        QColor::fromHsvF(qMin(0.9999f, hueBandCentre(b) / 360.0f), 0.6, 1.0);
-                    QToolButton *chip = new QToolButton(cw);
-                    chip->setAutoRaise(true);
-                    chip->setFixedSize(18, 18);
-                    chip->setToolTip(QString("Select the %1 range").arg(hueBandName(b)));
-                    /* A saturated swatch would stay vivid on a greyed panel, so the
-                       disabled chip is the same hue blended halfway into the panel
-                       background: still identifiable, visibly dead. */
-                    const QColor dimSwatch = G::dimmed(swatch);
-                    chip->setStyleSheet(
-                        QString("QToolButton{background:%1;border:1px solid #00000060;"
-                                "border-radius:3px;}"
-                                "QToolButton:hover{border:1px solid #ffffffc0;}"
-                                "QToolButton:disabled{background:%2;"
-                                "border:1px solid #00000060;}")
-                            .arg(swatch.name(), dimSwatch.name()));
-                    connect(chip, &QToolButton::clicked, this,
-                            [this, b]{ applyColorRangeHuePreset(b); });
-                    hb->addWidget(chip);
-                }
-                hb->addStretch(1);
-                setIndexWidget(chipsIdx, cw);
-            }
-
-            clearItemInfo(i);
-            i.name = QString("maskColorWheel%1").arg(index);
-            i.parIdx = toolIdx;
-            i.parentName = "";
-            i.captionText = "";
-            i.isIndent = true;
-            i.hasValue = false;
-            i.captionIsEditable = false;
-            addItem(i);
-            const QModelIndex wheelIdx = capIdx;
-            model->setData(wheelIdx, 200, UR_ExtraRowHeight);
-            setFirstColumnSpanned(wheelIdx.row(), toolIdx, true);
-            {
-                ColorRangeWheel *wheel = new ColorRangeWheel;
-                colorRangeWheel = wheel;
-                wheel->setSamples(colorRangeSamplesHS(m.paramsJson));
-                wheel->setBounds(brushNum(m.paramsJson, "hueLo", 20),
-                                 brushNum(m.paramsJson, "hueHi", 20),
-                                 brushNum(m.paramsJson, "satLo", 25) / 100.0,
-                                 brushNum(m.paramsJson, "satHi", 25) / 100.0);
-                connect(wheel, &ColorRangeWheel::boundsChanged,   this,
-                        [this]{ onColorRangeWheelChanged(false); });
-                connect(wheel, &ColorRangeWheel::boundsCommitted, this,
-                        [this]{ onColorRangeWheelChanged(true); });
-                setIndexWidget(wheelIdx, wheel);
-            }
-            addSlider("maskHueLo", "Hue Lo",
-                      "Widen the selection toward LOWER hues (degrees) around the sampled "
-                      "colour. Click the image to sample; shift-click to add another colour.",
-                      toolIdx, "", 0, 90, 0, G::darkgray, G::lightgray);
-            addSlider("maskHueHi", "Hue Hi",
-                      "Widen the selection toward HIGHER hues (degrees) around the sample.",
-                      toolIdx, "", 0, 90, 0, G::darkgray, G::lightgray);
-            addSlider("maskSatLo", "Sat Lo",
-                      "Widen the selection toward LOWER saturation around the sample.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskSatHi", "Sat Hi",
-                      "Widen the selection toward HIGHER saturation around the sample.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskFeather", "Feather", "Soften the selection edge.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskEdge", "Edge",
-                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
-                      "full-size image. Feather softens an edge; Edge moves it.",
-                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
-            setSliderReal("maskHueLo", brushNum(m.paramsJson, "hueLo", 20));
-            setSliderReal("maskHueHi", brushNum(m.paramsJson, "hueHi", 20));
-            setSliderReal("maskSatLo", brushNum(m.paramsJson, "satLo", 25));
-            setSliderReal("maskSatHi", brushNum(m.paramsJson, "satHi", 25));
-            setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskEdge", m.edge);
-            setCheckboxValue("maskInvert", m.inverted);
-        }
-        else if (m.tool == int(MaskTool::Object)) {
-            /* Perimeter-paint: trace the object boundary with a solid brush (Alt erases;
-               [ ] or two-finger drag resize). Size = diameter; Feather softens edge. */
-            addSlider("maskSize", "Size", "Perimeter brush diameter (% of the long edge).",
-                      toolIdx, "", 1, 1000, 10, G::darkgray, G::lightgray);
-            addSlider("maskFeather", "Feather", "Soften the refined cutout edge.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskEdge", "Edge",
-                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
-                      "full-size image. Feather softens an edge; Edge moves it.",
-                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskInvert", "Invert", "Invert this mask's contribution.", toolIdx, "", false);
-            setSliderReal("maskSize", brushNum(m.paramsJson, "size", 8));
-            setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskEdge", m.edge);
-            setCheckboxValue("maskInvert", m.inverted);
-        }
-        else {
-            addSlider("maskFeather", "Feather", "Soften the mask edge.",
-                      toolIdx, "", 0, 100, 0, G::darkgray, G::lightgray);
-            addSlider("maskEdge", "Edge",
-                      "Grow (+) or shrink (-) this submask's boundary, in pixels of the "
-                      "full-size image. Feather softens an edge; Edge moves it.",
-                      toolIdx, "", -100, 100, 0, G::darkgray, G::lightgray);
-            addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.", toolIdx, "", false);
-            setSliderReal("maskFeather", m.feather);
-            setSliderReal("maskEdge", m.edge);
-            setCheckboxValue("maskInvert", m.inverted);
-        }
-        expand(toolIdx);
-    }
-}
-
 void DevelopProperties::setSelectedMask(int index)
 {
     selectedMaskIndex = index;
@@ -3016,12 +2454,12 @@ void DevelopProperties::setSelectedMask(int index)
 
 bool DevelopProperties::escapeMaskTool()
 {
-    /* Lab UI: Esc while a submask is still PENDING discards it (the blue preview, or the
-       just-created first tool) rather than collapsing a tree tool. */
+    /* Esc while a submask is still PENDING discards it (the blue preview, or the
+       just-created first tool). */
     if (maskPanelOpen) { cancelMaskTool(); return true; }
     /* A re-opened submask has nothing to discard: Esc just closes it, the same as the
        panel's "Done" button. */
-    if (G::useScopeHeaderLab && selectedMaskIndex >= 0) {
+    if (selectedMaskIndex >= 0) {
         commitPendingMask();                  // pendingIdx < 0 -> the "Done" path
         return true;
     }
@@ -3501,18 +2939,13 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        this cannot recurse into the paint either way. */
     if (fitToContents && sizeHint().height() != fittedHeight) scheduleContentFit();
 
-    /* The scope containment rail, continued from ScopeHeaderLab (which draws the same
-       2px G::selectionColor line from the selected scope row down to its bottom edge --
-       see G::scopeRailX/W). In FIT mode the tree is nested INSIDE the scope list, so the
-       rail runs the FULL viewport height: it must meet the list's rail again below this
-       widget (the scope rows after the selected one) with no visible gap. In the legacy
-       stacked dock it stops at the BOTTOM OF THE LAST ROW -- there the empty space under
-       a short tree is dock, not part of the scope's block.
-       The frame is off (initialize), so the viewport shares this widget's origin and the
-       two halves line up at the same x with no correction. */
-    /* Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
-       hides rows (Core / mask / raw-only rows), and indexBelow on a hidden index returns
-       an invalid index, which would end the walk immediately. */
+    /* NO CONTAINMENT RAIL: the scope bar sits directly above this tree, so there is no
+       list of scopes for a bracket to pick the editor's owner out of (see
+       ScopeHeader::paintEvent, which draws none either). All this paints is the rule that
+       closes the block.
+       Start from the topmost VISIBLE row (indexAt), not model row 0: the Develop tree
+       hides rows, and indexBelow on a hidden index returns an invalid index, which would
+       end the walk immediately. */
     QModelIndex last = indexAt(QPoint(0, 0));
     if (!last.isValid()) return;
     for (QModelIndex below = indexBelow(last); below.isValid(); below = indexBelow(below))
@@ -3522,50 +2955,26 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
 
     QPainter p(viewport());
     const int ruleY = bottom + kBlockCloseGap;
-    /* Greyed panel: the rail and its closing foot dim with everything else, in step with
-       the scope row band above them (which carries the same colour via :disabled). */
-    const QColor railColor = isEnabled() ? G::selectionColor
-                                         : G::dimmed(G::selectionColor);
-    /* The MINIMAL layout has no rail at all (see ScopeHeaderLab::paintEvent): with a
-       single scope bar directly above the editor there are no rows for a bracket to pick
-       the editor's owner out of. The closing rule then reverts to the ordinary panel
-       separator -- with no rail to turn the corner into, a rail-coloured foot starting
-       at the rail's right edge would be a stub of a line that goes nowhere. */
-    const bool rail = G::scopeRailW > 0 &&
-                      G::developEditsLayout != G::EditsLayout::Minimal;
-    if (rail) {
-        /* Fit mode: down to the FOOT of the bracket (the closing rule) and no further --
-           the clear gap under the rule separates this scope's block from the next scope
-           row. Legacy: to the last row, since the space below is plain dock. */
-        const int railBottom = fitToContents ? ruleY + G::panelBorderHeight : bottom;
-        p.fillRect(G::scopeRailX, 0, G::scopeRailW, railBottom, railColor);
-    }
-
     /* Close the block: the same separator every Develop panel carries along its bottom
        edge (G::panelBorderHeight in G::tabWidgetBorderColor), just under the last row --
        Effects is the last section, so this is the Effects panel's bottom border. Only
        when there is empty dock below it -- if the rows fill or overflow the viewport,
        the panel edge already ends the block and a rule pinned to the last visible row
        would be a false bottom. In FIT mode the viewport is exactly the rows plus the
-       band sizeHint reserves for this rule, so it always draws -- starting at the RIGHT
-       EDGE OF THE RAIL and painted in the RAIL'S OWN COLOUR: there it is the foot of the
-       bracket around the selected scope, so it reads as the rail turning the corner
-       rather than as a divider cutting across it. */
+       band sizeHint reserves for this rule, so it always draws. */
     if (fitToContents || ruleY < viewport()->height() - G::panelBorderHeight) {
-        const bool foot = fitToContents && rail;      // the bracket's foot, not a divider
-        const int ruleX = foot ? G::scopeRailX + G::scopeRailW : 0;
-        p.fillRect(ruleX, ruleY, viewport()->width() - ruleX, G::panelBorderHeight,
-                   foot ? railColor : G::tabWidgetBorderColor);
+        p.fillRect(0, ruleY, viewport()->width(), G::panelBorderHeight,
+                   G::tabWidgetBorderColor);
     }
 }
 
 void DevelopProperties::drawBranches(QPainter *, const QRect &, const QModelIndex &) const
 {
     /* Intentionally empty: draw no native branch indicator. Every expandable Develop row
-       draws its own winnow arrow through PropertyDelegate (section headers, mask tools,
-       and the Demosaic row), so the native triangle is redundant; on the Demosaic value
-       row (whose background fill is skipped when isAlternatingRows) it also showed
-       through beside the delegate arrow, giving a doubled, oversized decoration. */
+       draws its own winnow arrow through PropertyDelegate (the section headers), so the
+       native triangle is redundant; where a row's background fill is skipped (
+       isAlternatingRows) it also showed through beside the delegate arrow, giving a
+       doubled, oversized decoration. */
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -3610,30 +3019,12 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         i.delegateType = DT_None;
     }
     addItem(i);
-    /* Nest the section header (Basic/Color/Color Grade/Effects) under the scope it
-       belongs to. Only the header content shifts -- its child rows keep their own
-       indentation (the delegate reads UR_ExtraIndent on the header caption), so the
-       sliders keep their full width. In the lab UI the tree sits INSIDE the scope row
-       list, so the headers indent by the same inset as the other nested details
-       (kMaskPanelIndent) and line up under the scope NAME; the legacy dock keeps the
-       original one-indent-level nudge.
-       The FLAT and MINIMAL lab layouts (G::developEditsLayout) have no scope row above
-       the tree to line up under -- the editor is its own region below the list, or below
-       a single scope bar -- so their headers start at the panel edge, like the band
-       heading them. */
-    QVariant extraIndent(true);                        // legacy: one indent level
-    if (G::useScopeHeaderLab)
-        extraIndent = QVariant(G::developEditsLayout == G::EditsLayout::Nested
-                                   ? kMaskPanelIndent : 0);
-    model->setData(capIdx, extraIndent, UR_ExtraIndent);
-    /* A section header belongs to the scope selected in the Scope band above, so it can
-       read as a tier BELOW that band: a flat, band-less caption rather than the
-       panel-header gradient the Scope and Raw bands use. kGradientSectionHeaders
-       (developproperties.h) selects between that and the standard Winnow gradient band
-       used by Preferences -- when it is set the UR_HeaderFlat tag is withheld and the
-       delegate paints the gradient. */
-    if (previewGroup >= 0 && !kGradientSectionHeaders)
-        model->setData(capIdx, true, UR_HeaderFlat);
+    /* No extra indent: the tree is its own region under the scope bar, with no row above
+       to line up beneath, so the section headers start at the panel edge like the bar
+       heading them (the delegate reads UR_ExtraIndent on the header caption; 0 = flush).
+       Only the header content would shift in any case -- its child rows keep their own
+       indentation, so the sliders always keep their full width. */
+    model->setData(capIdx, QVariant(0), UR_ExtraIndent);
 }
 
 void DevelopProperties::addSlider(const QString &key, const QString &caption,
@@ -5804,15 +5195,14 @@ void DevelopProperties::refreshScopeList()
 {
     scopeList = currentScopeNames();
     if (activeScopeIndex < 0 || activeScopeIndex >= scopeList.size()) activeScopeIndex = 0;
-    /* Push names + per-scope enabled + selection into the header (no signal). The
-       dropdown header ignores enabled/isGlobal (default setScopeRows -> setScopes); the
-       list panel (ScopeHeaderLab) uses them to build the per-row show/hide checkboxes. */
+    /* Push names + per-scope enabled + selection into the header (no signal): the bar's
+       eye reads the ACTIVE scope's enabled flag from here. */
     if (scopeHeader) {
-        QVector<ScopeHeaderBase::ScopeRowInfo> rows;
+        QVector<ScopeHeader::ScopeRowInfo> rows;
         rows.reserve(scopeList.size());
         const EditStack s = stackCache.value(currentImagePath);
         for (int i = 0; i < scopeList.size(); ++i) {
-            ScopeHeaderBase::ScopeRowInfo r;
+            ScopeHeader::ScopeRowInfo r;
             r.name    = scopeList.at(i);
             r.isGlobal  = (i == 0);
             r.enabled = (i < s.scopes.size()) ? s.scopes.at(i).enabled : true;

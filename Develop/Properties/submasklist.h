@@ -13,7 +13,7 @@ class BarBtn;
 
 /*
     One row of the SubmaskList: everything the list needs to draw a submask without
-    reaching into the edit stack. Mirrors ScopeHeaderBase::ScopeRowInfo.
+    reaching into the edit stack. Mirrors ScopeHeader::ScopeRowInfo.
 */
 struct SubmaskRowInfo
 {
@@ -44,7 +44,7 @@ struct SubmaskRowInfo
 
     Carries NO model state beyond what setSubmasks() was handed: every control emits an
     index-based signal and DevelopProperties pushes the new list straight back. Like
-    ScopeHeaderLab, every emission is DEFERRED a tick -- the handler loops back through
+    ScopeHeader, every emission is DEFERRED a tick -- the handler loops back through
     setSubmasks(), which deletes the very row widget the click is being handled in.
 */
 class SubmaskList : public QWidget

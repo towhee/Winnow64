@@ -32,7 +32,7 @@ void SubmaskList::buildUi()
     outer->setSpacing(0);
 
     /* Header band: collapse arrow + "Submasks" + [+]. Translucent so paintEvent draws the
-       property-header gradient behind it (same idiom as RawPanel / ScopeHeaderLab). */
+       property-header gradient behind it (same idiom as RawPanel / ScopeHeader). */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);
@@ -88,7 +88,7 @@ void SubmaskList::buildUi()
     updateCollapseIcon();
 
     /* Rows container: one row widget per submask, rebuilt by setSubmasks. Translucent for
-       the same reason ScopeHeaderLab's is -- under the app stylesheet a plain QWidget
+       the same reason ScopeHeader's is -- under the app stylesheet a plain QWidget
        fills its background opaquely and would paint over the containment rail the scope
        list draws behind its children. */
     rowsContainer = new QWidget(this);

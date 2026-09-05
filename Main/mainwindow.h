@@ -55,7 +55,6 @@
 #include "Develop/History/historyview.h"
 #include "Develop/Presets/presetsview.h"
 #include "Develop/Properties/scopeheader.h"
-#include "Develop/Properties/scopeheaderlab.h"   // experimental, G::useScopeHeaderLab
 #include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
 #include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
 #include "Embellish/embelexport.h"

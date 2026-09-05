@@ -86,23 +86,6 @@ bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -
    re-enables the panel and the Fill/Object modes if the feature is revisited. */
 bool useReplaceFillModes = false;
 bool useFilterPanel = true;
-/* Develop dock Scope header: true swaps the experimental ScopeHeaderLab in for the
-   shipping ScopeHeader (both satisfy ScopeHeaderBase). Scratch flag for reshaping the
-   Scope section; retire it once the lab design is copied back over scopeheader.*. */
-bool useScopeHeaderLab = true;
-/* Develop Edits panel layout, switchable from the Edits [:] menu (live, no restart) and
-   remembered across sessions (QSettings "developEditsLayout", loaded before the docks are
-   built), so the candidates can be compared on real edits:
-   Nested  = the editor block is inserted directly under the selected scope row, so it
-             moves with the selection (the original lab layout).
-   Flat    = the scope list is a fixed selector at the top and the editor sits below the
-             WHOLE list in one region headed by the active scope's name. The sliders hold
-             still when the selection changes and the list stays whole for eye toggling.
-   Minimal = no list at all: one "Scope: [Global v] [+] [eye] [:]" bar, the editor
-             directly below it, and NO containment rail -- there is nothing left for the
-             rail to bracket, since the bar and the editor are already adjacent and alone.
-   Retire this flag once the comparison settles, deleting the losing branches. */
-EditsLayout developEditsLayout = EditsLayout::Flat;
 /* Brush/Object "erase from this stroke" (Opt while painting removes from the stroke)
    CANCELLED 2026-08-08. It existed because the developed effect only appeared on stroke
    release, so erasing inside the submask was the only way to correct a stroke you could
@@ -335,25 +318,17 @@ int propertyWidgetMarginLeft = 5;
 int propertyWidgetMarginRight = 2;
 /* Clear space between an expand/collapse arrow and the header title it precedes, in the
    Develop/property panels: the property tree rows (PropertyDelegate) and the widget
-   header bands (RawPanel, ScopeHeader, ScopeHeaderLab). Raise it to give crowded titles
-   more breathing room. */
+   header bands (RawPanel, MaskPanel, SubmaskList). Raise it to give crowded titles more
+   breathing room. */
 int decorationTitleGap = 3;
 /* Develop Scope/Edits panel TRAILING BUTTONS: every header and row there ends with the
-   same [eye] [:] pair (see ScopeHeaderLab / SubmaskList / DevelopProperties::addHeader).
+   same [eye] [:] pair (see ScopeHeader / SubmaskList / DevelopProperties::addHeader).
    headerBtnGap is the clear space between the two; headerBtnRightInset is the space from
    the panel's right edge to the menu button. Both are shared by the widget headers and by
    the tree's section headers (BarBtnEditor), which is what makes the pair line up on
    every line. */
 int headerBtnGap = 6;
 int headerBtnRightInset = 6;
-/* Develop dock CONTAINMENT RAIL: a vertical accent line down the left edge, running from
-   the top of the selected scope row (ScopeHeaderLab) through the whole property tree
-   (DevelopProperties), so the Basic/Color/Color Grade/Effects sections read as contents
-   of that scope rather than as siblings of the Scope band. Drawn in G::selectionColor, so
-   over the selected row itself it is invisible and the rail appears to grow out of it.
-   scopeRailW = 0 removes the rail everywhere. */
-int scopeRailX = 3;
-int scopeRailW = 3;
 /* Develop PANEL SEPARATOR: every Develop dock panel (Raw, Edits, Mask,
    Transform, Fill Replace) draws a rule this high across its bottom edge in
    G::tabWidgetBorderColor, so stacked panels read as distinct blocks. Each panel

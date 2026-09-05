@@ -142,7 +142,6 @@ set(WINNOW_SOURCES
     Develop/Properties/curveeditor.cpp
     Develop/Properties/detailpreview.cpp
     Develop/Properties/scopeheader.cpp
-    Develop/Properties/scopeheaderlab.cpp
     Develop/Properties/rawpanel.cpp
     Develop/Properties/maskpanel.cpp
     Develop/Properties/submasklist.cpp
@@ -442,8 +441,6 @@ set(WINNOW_HEADERS
     Develop/Properties/colorrangewheel.h
     Develop/Properties/curveeditor.h
     Develop/Properties/scopeheader.h
-    Develop/Properties/scopeheaderbase.h
-    Develop/Properties/scopeheaderlab.h
     Develop/Properties/detailpreview.h
     Develop/Properties/rawpanel.h
     Develop/Properties/maskpanel.h

@@ -7,246 +7,318 @@
 #include <QMenu>
 #include <QAction>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QPainter>
 #include <QPixmap>
 #include <QLinearGradient>
-#include <QMouseEvent>
+#include <QTimer>
 
-ScopeHeader::ScopeHeader(QWidget *parent) : ScopeHeaderBase(parent)
+/*
+    The Develop dock's scope control -- see scopeheader.h for the shape and the wiring.
+*/
+
+/* The scope caption (Global, Mask 1, ...) is yellow so the thing the panel below is
+   editing reads apart from the section headers and slider captions under it. */
+static const QColor kScopeTextColor(Qt::yellow);
+
+ScopeHeader::ScopeHeader(QWidget *parent) : QWidget(parent)
 {
     if (G::isLogger) G::log("ScopeHeader::ScopeHeader");
 
-    /* Checkmark for the active scope, plus a same-size transparent spacer so the other scopes'
-       captions line up with it in the popup. */
-    const int iconPx = 12;
-    QPixmap cm(":/images/checkmark.png");
-    if (!cm.isNull())
-        checkIcon = QIcon(cm.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    QPixmap blank(iconPx, iconPx);
-    blank.fill(Qt::transparent);
-    blankIcon = QIcon(blank);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    /* 4 px of dock background ABOVE the bar, so "Edits" is not welded to whatever ends
+       directly above it. It goes on the layout rather than the bar's own padding:
+       paintEvent fills scopeBar->geometry() with the header gradient, so padding the bar
+       would grow the gradient instead of leaving a gap. */
+    outer->setContentsMargins(0, 4, 0, 0);
+    outer->setSpacing(0);
 
-    /* Collapse arrow: hides/shows the selected scope's rows in the tree below. Matches
-       the tree's branch arrows (PropertyDelegate draws the same pixmap at 9x9, full
-       opacity in the gutter). The button is exactly icon-wide with no padding, so the
-       arrow sits in the tree's gutter and the "Scope" label, G::decorationTitleGap after
-       it, lands where the tree's section-header captions do. */
-    collapseBtn = new BarBtn();
-    collapseBtn->setToolTip("Hide or show this scope's settings");
-    collapseBtn->setIconSize(QSize(9, 9));
-    collapseBtn->setFixedSize(9, 16);
-    collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0; background: transparent; }");
-    connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
-    updateCollapseIcon();
+    buildScopeBar(outer);
 
-    scopeLabel = new QLabel(tr("Edits"), this);
-    /* Clicking the label toggles collapse as if the arrow was clicked. */
-    scopeLabel->setCursor(Qt::PointingHandCursor);
-    scopeLabel->installEventFilter(this);
-    /* Match the tree's section-header captions (PropertyDelegate): same point size
-       (G::strFontSize) and colour (G::header2Color), regular weight (headers are not
-       bold -- the delegate only sets the point size). Both via the stylesheet so they
-       don't fight a setFont() call. */
-    scopeLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
-
-    combo = new QComboBox(this);
-    combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    combo->setIconSize(QSize(iconPx, iconPx));
-    combo->setToolTip("The scope whose settings are shown below:\n"
-                      "Global, or one of this image's masks");
-    /* The scope name (Global, Subject, Mask 1 ...) is yellow so the thing the panel below
-       is editing reads apart from the section headers and slider captions under it. Only
-       the text colour is set here: every other QComboBox property still comes from
-       WidgetCSS::comboBox(), and the disabled rule is repeated because a widget's own
-       stylesheet outranks the application one. */
-    combo->setStyleSheet("QComboBox { color: " + QColor(Qt::yellow).name() + "; }"
-                         "QComboBox:disabled { color: " + G::disabledColor.name() + "; }");
-    /* The combo lists only scopes, so every activated row is a scope selection. */
-    connect(combo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
-        emit scopeSelected(combo->itemText(idx));
-    });
-
-    /* Scope-actions menu button (ellipsis): pops up the Add / Reset / Remove / Rename
-       menu, like EmbelProperties::effectNewBtn triggers effectContextMenu. */
-    scopeMenuBtn = new BarBtn();
-    scopeMenuBtn->setToolTip("Scope actions (new mask, reset, remove, rename)");
-    scopeMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
-    connect(scopeMenuBtn, &BarBtn::clicked, this, [this]{ showScopeMenu(); });
-
-    previewBtn = new BarBtn();
-    previewBtn->setToolTip("Preview: show or ignore this whole scope");
-    connect(previewBtn, &BarBtn::clicked, this, [this]{
-        previewShown = !previewShown;
-        updatePreviewIcon();
-        emit previewToggled(previewShown);
-    });
-    updatePreviewIcon();
-
-    QHBoxLayout *row = new QHBoxLayout(this);
-    /* margin.left 0 + an icon-wide arrow button + G::decorationTitleGap puts the arrow in
-       the tree's gutter and the "Scope" label just clear of it, aligning it with the
-       tree's section-header captions. Tweak if the tree frame/indentation changes. */
-    row->setContentsMargins(0, 3, 6, 3);
-    row->setSpacing(0);
-    row->addWidget(collapseBtn);
-    row->addSpacing(G::decorationTitleGap);
-    row->addWidget(scopeLabel);
-    row->addSpacing(6);
-    row->addWidget(combo, 1);
-    row->addSpacing(6);
-    row->addWidget(scopeMenuBtn);
-    row->addSpacing(6);
-    row->addWidget(previewBtn);
+    /* Host for the detail widgets, rebuilt by nobody: the details outlive every refresh.
+       Translucent for the same reason the bar is -- under the app stylesheet a plain
+       QWidget fills its background opaquely, painting over the dock background. */
+    rowsContainer = new QWidget(this);
+    rowsContainer->setAttribute(Qt::WA_TranslucentBackground);
+    rowsLayout = new QVBoxLayout(rowsContainer);
+    /* No bottom margin: the tree's first section header butts straight onto the bar's
+       block, so the scope control and the sections read as one uninterrupted block. */
+    rowsLayout->setContentsMargins(0, 0, 0, 0);
+    rowsLayout->setSpacing(0);
+    outer->addWidget(rowsContainer);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 }
 
+void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
+{
+    /* "Edits [Global v] [+] [eye] [:]" -- the whole scope control on one line. It stands
+       in for a panel header band, so it carries the band's gradient (painted in
+       paintEvent) and the trailing [eye] [:] pair, plus a [+] that promotes New mask out
+       of the menu it would otherwise be buried in. The combo lists every scope; the pair
+       acts on whichever it has selected.
+       NO collapse arrow: there is no scope list to hide, and the panel headers below
+       (Submasks, Basic, Color, ...) are always visible. */
+    scopeBar = new QWidget(this);
+    scopeBar->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *hb = new QHBoxLayout(scopeBar);
+    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
+    hb->setSpacing(0);
+
+    QLabel *barLabel = new QLabel(tr("Edits"), scopeBar);
+    barLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
+
+    scopeCombo = new QComboBox(scopeBar);
+    scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    scopeCombo->setToolTip("The scope the settings below belong to:\n"
+                           "Global, or one of this image's masks");
+    /* The scope name (Global, Subject, Mask 1 ...) is yellow so the thing the panel below
+       is editing reads apart from the section headers and slider captions under it. Only
+       the text colour is set: every other QComboBox property still comes from
+       WidgetCSS::comboBox(), and the disabled rule is repeated here because a widget's
+       own stylesheet outranks the application one. */
+    scopeCombo->setStyleSheet("QComboBox { color: " + kScopeTextColor.name() + "; }"
+                              "QComboBox:disabled { color: " + G::disabledColor.name() + "; }");
+    /* activated (not currentIndexChanged): only a USER pick selects a scope. The refill
+       in updateScopeBar is blocked as well, but activated never fires for it anyway. */
+    connect(scopeCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+        selectScopeDeferred(names.value(idx));
+    });
+
+    barAddBtn = new BarBtn();
+    barAddBtn->setToolTip("New mask");
+    /* new.png: the same [+] glyph SubmaskList's band uses for "add a submask", so the
+       two "add" affordances in the Develop dock read alike. */
+    barAddBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
+    barAddBtn->setIconSize(QSize(16, 16));
+    connect(barAddBtn, &BarBtn::clicked, this, [this]{
+        QTimer::singleShot(0, this, [this]{ emit addScopeRequested(); });
+    });
+
+    barEyeBtn = new BarBtn();
+    barEyeBtn->setToolTip("Show or hide the selected scope's changes");
+    setEyeIcon(barEyeBtn, true);
+    barEyeBtn->setIconSize(QSize(16, 16));
+    connect(barEyeBtn, &BarBtn::clicked, this, [this]{ toggleActiveEnabled(); });
+
+    barMenuBtn = new BarBtn();
+    barMenuBtn->setToolTip("Scope and panel actions");
+    /* ellipsis_vertical.png: the vertical "kebab" glyph the whole dock uses for its
+       action menus, dimmed by G::iconOpacity so it reads at the same brightness as the
+       "?" tip buttons above it. */
+    barMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
+    barMenuBtn->setIconSize(QSize(16, 16));
+    connect(barMenuBtn, &BarBtn::clicked, this, [this]{ showScopeMenu(); });
+
+    hb->addWidget(barLabel);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(scopeCombo, 1);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(barAddBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(barEyeBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(barMenuBtn);
+    outer->addWidget(scopeBar);
+}
+
+void ScopeHeader::updateScopeBar()
+{
+    /* Refill from the last setScopeRows. Blocked: setCurrentIndex must not read back as a
+       user pick. */
+    if (!scopeCombo) return;
+    const QSignalBlocker block(scopeCombo);
+    scopeCombo->clear();
+    scopeCombo->addItems(names);
+    scopeCombo->setCurrentIndex(activeIndex);
+    setEyeIcon(barEyeBtn, enabledStates.value(activeIndex, true));
+}
+
 void ScopeHeader::paintEvent(QPaintEvent *)
 {
-    /* The same top-to-bottom gradient the property-tree headers use (see PropertyDelegate::paint and
-       TransformPanel's header: backgroundShade +5 -> -15). */
+    /* The property-header gradient (backgroundShade +5 -> -15) behind the scope bar,
+       which stands in for a panel header band. Everything below sits on the dock
+       background.
+       NO containment rail and NO panel separator: the bar and the editor below it are
+       ONE BLOCK -- there is no list of scopes for a rail to pick the editor's owner out
+       of, and a rule under the bar would cut the block in two. */
+    if (!scopeBar || !scopeBar->isVisible()) return;
     QPainter p(this);
     const int a = G::backgroundShade + 5;
     const int b = G::backgroundShade - 15;
-    QLinearGradient g(0, 0, 0, height());
+    const QRect r = scopeBar->geometry();
+    QLinearGradient g(0, r.top(), 0, r.bottom());
     g.setColorAt(0, QColor(a, a, a));
     g.setColorAt(1, QColor(b, b, b));
-    p.fillRect(rect(), g);
+    p.fillRect(r, g);
 }
 
-void ScopeHeader::setScopes(const QStringList &names, int currentIndex)
+void ScopeHeader::setScopes(const QStringList &n, int currentIndex)
 {
-    const QSignalBlocker block(combo);
-    combo->clear();
+    /* Convenience contract (default callers): all scopes enabled, 0 = Global. */
+    QVector<ScopeRowInfo> rows;
+    rows.reserve(n.size());
+    for (int i = 0; i < n.size(); ++i) {
+        ScopeRowInfo r;
+        r.name = n.at(i);
+        r.isGlobal = (i == 0);
+        r.enabled = true;
+        rows.append(r);
+    }
+    setScopeRows(rows, currentIndex);
+}
 
-    scopeCount  = names.size();
-    activeIndex = (currentIndex >= 0 && currentIndex < scopeCount) ? currentIndex : 0;
+void ScopeHeader::setScopeRows(const QVector<ScopeRowInfo> &rows, int active)
+{
+    activeIndex = (active >= 0 && active < rows.size()) ? active : 0;
     globalActive  = (activeIndex == 0);
+    names.clear();
+    enabledStates.clear();
+    for (const ScopeRowInfo &r : rows) {
+        names << r.name;
+        enabledStates << r.enabled;
+    }
+    updateScopeBar();
+}
 
-    /* Scopes only; the active one carries the checkmark, the rest a blank spacer. The
-       scope actions now live on the scopeMenuBtn menu (see showScopeMenu). */
-    for (int i = 0; i < scopeCount; ++i)
-        combo->addItem(i == activeIndex ? checkIcon : blankIcon, names.at(i));
+void ScopeHeader::setRowDetail(QWidget *detail, int slot)
+{
+    if (slot < 0 || slot >= RowDetailSlotCount) return;
+    if (rowDetail[slot] == detail) return;
+    if (detailWrap[slot]) {
+        /* Hand any previous detail back before the wrapper goes: re-parent it to
+           rowsContainer, NOT nullptr -- a parentless QTreeView would briefly become a
+           top-level window and flash on screen. */
+        if (rowDetail[slot]) rowDetail[slot]->setParent(rowsContainer);
+        delete detailWrap[slot];
+        detailWrap[slot] = nullptr;
+    }
+    rowDetail[slot] = detail;
+    if (!detail) return;
 
-    combo->setCurrentIndex(activeIndex);
+    /* No indent: the details start at the panel edge, so the adjustment tree's left edge
+       -- and any rule it paints -- lines up with this widget's. The visible nesting comes
+       from the section-header indent inside the tree. The wrapper is kept even so: it
+       owns the slot's position in the layout, and detaching a detail must not disturb
+       the other slot. */
+    detailWrap[slot] = new QWidget(rowsContainer);
+    detailWrap[slot]->setAttribute(Qt::WA_TranslucentBackground);
+    QVBoxLayout *dl = new QVBoxLayout(detailWrap[slot]);
+    dl->setContentsMargins(0, 0, 0, 0);
+    dl->setSpacing(0);
+    dl->addWidget(detail);
+    /* Slot order IS layout order: MaskDetail (0) is bound before EditsDetail (1), and a
+       re-bind reuses the position its predecessor held. */
+    rowsLayout->insertWidget(qMin(slot, rowsLayout->count()), detailWrap[slot]);
+    detailWrap[slot]->show();
+}
+
+void ScopeHeader::selectScopeDeferred(const QString &name)
+{
+    /* Defer a tick: scopeSelected loops back through DevelopProperties -> setScopeRows,
+       which refills the combo this pick came from. */
+    QTimer::singleShot(0, this, [this, name]{ emit scopeSelected(name); });
+}
+
+void ScopeHeader::setEyeIcon(BarBtn *b, bool shown)
+{
+    if (!b) return;
+    b->setIcon(shown ? ":/images/icon16/eye.png" : ":/images/icon16/eye_off.png",
+               G::iconOpacity);
+}
+
+void ScopeHeader::toggleActiveEnabled()
+{
+    /* Flip the ACTIVE scope's enabled flag and let the owner push the new state back
+       through setScopeRows (which re-syncs the icon). Deferred like every other emission
+       here: the handler loops back through setScopeRows. */
+    const int index = activeIndex;
+    const bool on = enabledStates.value(index, true);
+    QTimer::singleShot(0, this,
+                       [this, index, on]{ emit scopeEnabledToggled(index, !on); });
+}
+
+void ScopeHeader::addHelpAction(QMenu *menu)
+{
+    /* "Edits help", last item in the menu -- the same place each section band in the tree
+       below carries its own help. */
+    if (!menu) return;
+    menu->addSeparator();
+    connect(menu->addAction(tr("Edits help")), &QAction::triggered,
+            this, [this]{ emit helpRequested(); });
 }
 
 void ScopeHeader::showScopeMenu()
 {
     if (G::isLogger) G::log("ScopeHeader::showScopeMenu");
 
+    /* The bar's [:] is the ONLY menu in the panel, so it carries BOTH the active scope's
+       actions and the panel-wide ones ("Reset all edits"). Read the choice as an int code
+       while the menu is alive, then fire everything on the next tick (a select refills
+       the combo this menu hangs off -- must not happen inside its own click handler). */
+    enum { AddMask = 1, Reset, Remove, Rename, NewScope };
+    const int index = activeIndex;
+    const QString name = names.value(index);
+    const bool isGlobal = (index == 0);
+
     QMenu menu(this);
-
-    /* "Add new scope" is always available. The tab'd key hints are the Develop mode local
-       shortcuts (MW::loadDevelopShortcuts); these are plain menu actions with no sequence
-       of their own, so the hint has to be part of the text. */
-    connect(menu.addAction(tr("New mask\tN")), &QAction::triggered,
-            this, [this]{ emit addScopeRequested(); });
-
-    /* Wipes the whole recipe (every scope, the geometry and the spots), the history and
-       the sidecar record, on every selected image. DevelopProperties confirms first. */
-    connect(menu.addAction(tr("Reset all edits")), &QAction::triggered,
-            this, [this]{ emit resetAllEditsRequested(); });
-
-    /* Per-scope actions, captioned with the active scope's name. Omitted for Global
-       (index 0), which applies globally and cannot be reset/removed/renamed here. */
-    if (!globalActive) {
-        const QString nm = currentScopeName();
+    if (isGlobal) {
+        /* Global applies to the whole image: it has no mask, cannot be renamed and cannot
+           be deleted, so its menu carries only what it can actually do. */
+        menu.addAction(tr("New mask\tN"))->setData(NewScope);
         menu.addSeparator();
-        connect(menu.addAction(tr("Tweak %1 mask\tM").arg(nm)), &QAction::triggered,
-                this, [this]{ emit addMaskRequested(); });
-        /* Show/hide the mask coverage tint on the loupe. Only meaningful while a submask
-           is being defined (its overlay is being edited), so the row is omitted if not.
-           Same action as the "O" Develop shortcut (MW::toggleMaskOverlay). */
-        if (maskOverlayAvailable) {
-            QAction *ov = menu.addAction(tr("Show mask overlay\tO"));
-            ov->setCheckable(true);
-            ov->setChecked(maskOverlayShown);
-            connect(ov, &QAction::triggered, this, [this]{ emit maskOverlayToggled(); });
-        }
-        connect(menu.addAction(tr("Reset %1").arg(nm)), &QAction::triggered,
-                this, [this]{ emit resetScopeRequested(); });
-        connect(menu.addAction(tr("Remove %1").arg(nm)), &QAction::triggered,
-                this, [this]{ emit removeScopeRequested(); });
-        connect(menu.addAction(tr("Rename %1").arg(nm)), &QAction::triggered,
-                this, [this]{ emit renameRequested(); });
+        menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
+    }
+    else {
+        QAction *aMask   = menu.addAction(tr("Modify %1 mask\tM").arg(name));
+        aMask->setData(AddMask);
+        menu.addSeparator();
+        menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
+        menu.addAction(tr("Rename %1").arg(name))->setData(Rename);
+        menu.addSeparator();
+        menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
     }
 
-    /* Last item, as on every band in the Develop dock: the Edits panel's help page. */
+    /* Wipes the whole recipe (every scope, the geometry and the spots), the history and
+       the sidecar record, on every selected image. DevelopProperties confirms first.
+       It fires through its own connect (no data code), so the per-scope dispatch below
+       simply ignores it. */
     menu.addSeparator();
-    connect(menu.addAction(tr("Edits help")), &QAction::triggered,
-            this, [this]{ emit helpRequested(); });
+    connect(menu.addAction(tr("Reset all edits")), &QAction::triggered,
+            this, [this]{ emit resetAllEditsRequested(); });
+    addHelpAction(&menu);
 
-    menu.exec(QCursor::pos());
-}
+    QAction *chosen = menu.exec(QCursor::pos());
+    const int code = chosen ? chosen->data().toInt() : 0;
+    if (code == 0) return;
 
-QString ScopeHeader::currentScopeName() const
-{
-    return combo ? combo->itemText(activeIndex) : QString();
+    QTimer::singleShot(0, this, [this, name, code]{
+        emit scopeSelected(name);            // make this the active scope first
+        /* The select can be REFUSED -- a submask still pending on the scope being left
+           prompts, and "Cancel" keeps the old scope active (DevelopProperties re-asserts
+           the rows, so currentScopeName reports the truth). Running the action anyway
+           would apply it to the wrong scope: "Remove Mask 2" would remove Mask 1. */
+        if (currentScopeName() != name) return;
+        switch (code) {
+            case AddMask:  emit addMaskRequested();     break;
+            case Reset:    emit resetScopeRequested();  break;
+            case Remove:   emit removeScopeRequested();  break;
+            case Rename:   emit renameRequested();      break;
+            case NewScope: emit addScopeRequested();    break;
+        }
+    });
 }
 
 void ScopeHeader::setCollapsed(bool c)
 {
+    /* State only -- the scope bar always stays visible. Hiding the adjustments below
+       belongs to DevelopProperties::setTreeCollapsed; DevelopProperties drives this from
+       Collapse-all / Solo / section-expand, so hiding anything here would take the scope
+       control down with them. */
     collapsed = c;
-    updateCollapseIcon();
 }
 
-void ScopeHeader::setPreviewShown(bool shown)
+QString ScopeHeader::currentScopeName() const
 {
-    previewShown = shown;
-    updatePreviewIcon();
-}
-
-void ScopeHeader::setMaskOverlayAvailable(bool available)
-{
-    maskOverlayAvailable = available;
-}
-
-void ScopeHeader::setMaskOverlayShown(bool shown)
-{
-    maskOverlayShown = shown;
-}
-
-void ScopeHeader::setGlobalActive(bool isGlobal)
-{
-    /* Global (index 0) applies globally: the dropdown omits the per-scope action group for it. */
-    globalActive = isGlobal;
-}
-
-void ScopeHeader::toggleCollapsed()
-{
-    collapsed = !collapsed;
-    updateCollapseIcon();
-    emit collapseToggled(collapsed);
-}
-
-bool ScopeHeader::eventFilter(QObject *watched, QEvent *event)
-{
-    if (watched == scopeLabel && event->type() == QEvent::MouseButtonRelease) {
-        QMouseEvent *me = static_cast<QMouseEvent *>(event);
-        if (me->button() == Qt::LeftButton && scopeLabel->rect().contains(me->pos())) {
-            toggleCollapsed();
-            return true;
-        }
-    }
-    return QWidget::eventFilter(watched, event);
-}
-
-void ScopeHeader::updatePreviewIcon()
-{
-    if (!previewBtn) return;
-    previewBtn->setIcon(previewShown ? ":/images/icon16/eye.png"
-                                     : ":/images/icon16/eye_off.png", G::iconOpacity);
-}
-
-void ScopeHeader::updateCollapseIcon()
-{
-    if (!collapseBtn) return;
-    /* Open branch (down) when settings show; closed branch (right) when hidden. Full
-       opacity + 9x9 (setIconSize in the ctor) to match the tree's branch arrows;
-       BarBtn::setIcon(path, opacity) would dim it (G::iconOpacity) at native 11x11, so
-       set a plain full-opacity icon instead. */
-    const QString path = collapsed ? ":/images/branch-closed-winnow.png"
-                                   : ":/images/branch-open-winnow.png";
-    collapseBtn->setIcon(QIcon(QPixmap(path)));
+    return (activeIndex >= 0 && activeIndex < names.size()) ? names.at(activeIndex) : QString();
 }
