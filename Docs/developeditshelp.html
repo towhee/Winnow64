@@ -14,51 +14,37 @@ which covers the whole frame.  Add a mask and you get a second scope &mdash; Mas
 &mdash; with its own complete set of Basic, Curves, Color, Calibrate, Color Grade and
 Effects values, applied only where the mask says.</p>
 
-<p>Selecting a scope in this list is what points the panels below at it.  The section
+<p>Selecting a scope in the dropdown is what points the panels below at it.  The section
 headers do not change; their values do.</p>
 
-<h2>The list</h2>
-<p>Each row is one scope:</p>
+<h2>The Edits bar</h2>
+<p>One line carries the whole scope control:</p>
 
 <ul>
-<li>The <b>name</b> &mdash; Global, or Mask 1, Mask 2 ... , which you can rename to
-something meaningful (Sky, Face, Foreground).  Click a row to make it active.</li>
-<li>The <b>eye</b> shows or hides that scope's whole contribution &mdash; a one-click
-before / after of everything in it, with no values lost.</li>
+<li>The <b>dropdown</b> lists every scope on the image &mdash; Global, or Mask 1,
+Mask 2 ... , which you can rename to something meaningful (Sky, Face, Foreground).
+Picking one makes it active, and everything below the bar then edits it.</li>
+<li><b>[+]</b> adds a new mask.</li>
+<li>The <b>eye</b> shows or hides the selected scope's whole contribution &mdash; a
+one-click before / after of everything in it, with no values lost.</li>
 <li>The <b>[&#8942;]</b> menu carries the actions for that scope: modify its mask
 (<b>M</b>), reset it, rename it, delete it.  Global cannot be renamed or deleted and has
-no mask; its menu offers <b>New mask</b> (<b>N</b>) and <b>Reset Global</b>.</li>
+no mask; its menu offers <b>New mask</b> (<b>N</b>) and <b>Reset Global</b>.  It also
+carries <b>Reset all edits</b> &mdash; which wipes the entire recipe, every scope, the
+crop and the spot heals, plus the history and the sidecar record, on every selected
+image, after a confirmation.</li>
 </ul>
 
-<p>The band at the top of the list has the same pair.  Its eye acts on the <b>selected</b>
-scope, and its menu adds <b>New mask</b>, <b>Reset all edits</b> &mdash; which wipes the
-entire recipe, every scope, the crop and the spot heals, plus the history and the sidecar
-record, on every selected image, after a confirmation &mdash; and the <b>Edits layout</b>
-picker.</p>
-
 <h2>Scopes stack</h2>
-<p>Scopes are applied in list order: Global first, then each mask on top of the result.
+<p>Scopes are applied in stack order: Global first, then each mask on top of the result.
 Two masks that overlap both act in the overlap, in order.  So the usual shape of an edit
 is a global rendering that is right for the frame as a whole, then masks that fix what the
 frame as a whole could not.</p>
 
-<h2>Layouts</h2>
-<p><b>Edits layout</b> in the band menu chooses how the list and the editor are
-arranged:</p>
-
-<ul>
-<li><b>Flat</b> &mdash; the scope list, with the editor below the whole list.</li>
-<li><b>Nested</b> &mdash; the editor sits under the selected scope's own row, so the
-sliders are visibly inside the scope they belong to.</li>
-<li><b>Minimal</b> &mdash; no list at all: one dropdown, a <b>[+]</b> for a new mask, and
-the editor.  The narrowest layout; in it the bar's <b>[&#8942;]</b> is the only menu in
-the panel, so it carries the panel actions too.</li>
-</ul>
-
 <h2>Masks</h2>
 <p>A mask scope is built from one or more <b>submasks</b> &mdash; gradients, a brush,
 colour and luminance ranges, and the AI selections (Subject, Sky, Background, Depth,
-Object) &mdash; combined in the Submasks list nested under the scope.  Press <b>N</b> for
+Object) &mdash; combined in the Submasks list below the bar.  Press <b>N</b> for
 a new mask, <b>M</b> to modify the active mask's, and <b>O</b> to show or hide the mask
 overlay on the image.  The Submasks band has its own help page.</p>
 

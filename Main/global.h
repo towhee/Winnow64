@@ -396,16 +396,6 @@ Q_NAMESPACE
        not a shelved feature. It is read at dock-creation time, so it takes a restart to
        change. */
     extern bool useFilterPanel;
-    extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
-    /* Develop Edits layout A/B/C -- where the scope is picked and where the editor (the
-       Mask panel + adjustment tree) sits. See global.cpp and Documentation.txt
-       "EDITS LAYOUT A/B/C". */
-    enum class EditsLayout {
-        Nested  = 0,    // scope list; editor inserted under the SELECTED row
-        Flat    = 1,    // scope list; editor below the WHOLE list, under its own band
-        Minimal = 2     // no list: one "Scope: [combo] [+] [eye] [:]" bar, no rail
-    };
-    extern EditsLayout developEditsLayout;
     extern bool useBrushEraseStroke;   // false = Opt always means Subtract, never erase
     extern int  spotFillCorrectMode;   // model-path heal correction 0-3, see global.cpp
     extern bool spotFillGrain;         // match surround grain into the heal (N toggles)
@@ -787,8 +777,6 @@ Q_NAMESPACE
     extern int decorationTitleGap;
     extern int headerBtnGap;            // Develop headers: gap between [eye] and [:]
     extern int headerBtnRightInset;     // ditto: inset from the panel's right edge
-    extern int scopeRailX;              // Develop scope containment rail: left edge
-    extern int scopeRailW;              // ditto: width (0 = no rail)
     extern int panelBorderHeight;       // Develop panel bottom separator rule height
 
     /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,

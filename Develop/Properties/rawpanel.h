@@ -13,10 +13,9 @@ class BarBtn;
 class PanelEditor;
 
 /*
-    RawPanel (experimental, behind G::useScopeHeaderLab) -- the Develop dock's raw-decode
-    strip, hoisted OUT of the property tree's Global "Core" rows into a self-contained panel
-    that sits ABOVE the Scopes list. Shown only for raw files (DevelopProperties toggles
-    its visibility via currentIsRaw()).
+    RawPanel -- the Develop dock's raw-decode strip, hoisted OUT of the property tree's
+    Global "Core" rows into a self-contained panel that sits ABOVE the scope bar. Shown
+    only for raw files (DevelopProperties toggles its visibility via currentIsRaw()).
 
         | Raw                               [?] |
         | Edit: (o) Raw  ( ) Embedded Preview   |

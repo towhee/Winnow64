@@ -15,11 +15,10 @@ class BarBtn;
 class MaskEditor;
 
 /*
-    MaskPanel (behind G::useScopeHeaderLab) -- the active mask's editor, NESTED under its
-    own row in the Edits (scope) list. It is up whenever a mask is the active scope, not
-    only while a submask is being built:
+    MaskPanel -- the active mask's editor, directly below the Edits scope bar. It is up
+    whenever a mask is the active scope, not only while a submask is being built:
 
-        | [x] Mask 2                          [:] |   <- the scope row (ScopeHeaderLab)
+        | Edits  [Mask 2 v] [+] [eye] [:]         |   <- the scope bar (ScopeHeader)
         | |  v Mask                          [:]  |   <- MASK level: the folded result
         | |    Edge      -----o-----              |
         | |    Halo      -----o-----              |

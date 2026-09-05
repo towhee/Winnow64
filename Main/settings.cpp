@@ -78,7 +78,6 @@ void MW::writeSettings()
     settings->setValue("combineRawJpg", combineRawJpg);
 
     // develop
-    settings->setValue("developEditsLayout", static_cast<int>(G::developEditsLayout));
     settings->setValue("previewSource", static_cast<int>(G::previewSource));
     settings->setValue("devPreviewMaxEdge", G::devPreviewMaxEdge);
     settings->setValue("devPreviewQuality", G::devPreviewQuality);
@@ -548,24 +547,6 @@ bool MW::loadSettings()
         G::decodeRawEngine = e;
     }
     // develop
-    /* Sticky Develop Edits layout (the Edits [:] menu > Edits layout). Read here rather
-       than in the Develop dock because loadSettings runs BEFORE createDocks, so the
-       panel and ScopeHeaderLab build in the remembered layout instead of building in the
-       compiled default and being rebuilt.
-
-       VALIDATE BEFORE CASTING, as for decodeRawEngine above: the stored value is a plain
-       int and a damaged one -- or one from a build carrying more layouts -- would name a
-       branch this build has no code for. A bad value here is only cosmetic, though, so it
-       falls back to the compiled default silently rather than spending a startup warning
-       on it. Retire the key in removeDeprecatedSettings when the lab flag goes. */
-    if (settings->contains("developEditsLayout")) {
-        bool ok = false;
-        const int layout = settings->value("developEditsLayout").toInt(&ok);
-        if (ok && layout >= int(G::EditsLayout::Nested)
-               && layout <= int(G::EditsLayout::Minimal))
-            G::developEditsLayout = static_cast<G::EditsLayout>(layout);
-    }
-
     /* Develop previews. previewSource is VALIDATED BEFORE CASTING for the same reason as
        the two enums above -- a damaged int would name a branch this build has no code
        for. The sizes and the quality are plain numbers, but an absurd one would either
@@ -857,6 +838,12 @@ void MW::removeDeprecatedSettings()
     QStringList deprecatedSettings;
     deprecatedSettings
         << "tryConcurrentLoading"
+        /* The Develop Edits layout A/B/C picker: the alternatives were dropped and the
+           one that stayed is now the only layout, so a remembered value names nothing. */
+        << "developEditsLayout"
            ;
 
+    /* The list was being built and then dropped on the floor, so a retired key stayed in
+       QSettings for ever. Remove each one for real. */
+    for (const QString &key : deprecatedSettings) settings->remove(key);
 }

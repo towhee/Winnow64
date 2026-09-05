@@ -19,7 +19,7 @@
 
 class MW;
 class ToneRegionSlider;
-class ScopeHeaderBase;
+class ScopeHeader;
 class RawPanel;
 class MaskPanel;
 class HistoryView;
@@ -231,26 +231,23 @@ public:
     int  selectedEditCount() const;
     int  selectedStillCount() const;
 
-    /* The scope dropdown (scopes + scope actions) and the preview eye live in a gradient header
-       widget ABOVE this tree (see ScopeHeaderBase). Bind it once; this class drives its
-       combo/eye and handles its signals. The concrete widget (ScopeHeader or the
-       experimental ScopeHeaderLab) is chosen in MW init behind G::useScopeHeaderLab. */
-    void bindScopeHeader(ScopeHeaderBase *header);
+    /* The scope combo (scopes + scope actions) and its eye live in a gradient header
+       widget ABOVE this tree (see ScopeHeader). Bind it once; this class drives its
+       combo/eye and handles its signals. */
+    void bindScopeHeader(ScopeHeader *header);
 
     /* The raw-decode controls (Edit source / Demosaic / Denoise) live in a RawPanel above
-       the Scopes list (lab UI), lifted out of the Global "Core" tree rows. Bind it once;
-       this class handles its signals (reusing the existing raw signal contract) and
-       pushes state back via syncRawPanel(). Constructed only when G::useScopeHeaderLab. */
+       the scope bar, not in the tree. Bind it once; this class handles its signals and
+       pushes state back via syncRawPanel(). */
     void bindRawPanel(RawPanel *panel);
 
-    /* The transient mask build-up strip (lab UI) above the Scopes list. Bind it once;
-       this class drives it and owns the mask model. */
+    /* The mask build-up panel, below the scope bar. Bind it once; this class drives it
+       and owns the mask model. */
     void bindMaskPanel(MaskPanel *panel);
 
-    /* Size the tree to its CONTENT instead of scrolling internally. Used when the tree is
-       nested under the active scope row (ScopeHeaderLab::EditsDetail) and the dock's own
-       QScrollArea does the scrolling; off (the default) keeps the legacy behaviour of a
-       stretch widget with its own scrollbars. */
+    /* Size the tree to its CONTENT instead of scrolling internally: it is a detail of the
+       scope bar (ScopeHeader::EditsDetail) and the dock's own QScrollArea does the
+       scrolling. Off (the default) leaves it a stretch widget with its own scrollbars. */
     void setFitToContentHeight(bool on);
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
@@ -348,13 +345,12 @@ protected:
        the tree; re-focus the slider so the caption double-click keeps the row lit. */
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     /* Suppress the native branch indicator; every expandable Develop row draws its own
-       winnow arrow via the delegate, so the native triangle is redundant (and shows
-       through beside the Demosaic value row's arrow). rootIsDecorated stays true. */
+       winnow arrow via the delegate, so the native triangle is redundant.
+       rootIsDecorated stays true. */
     void drawBranches(QPainter *painter, const QRect &rect,
                       const QModelIndex &index) const override;
-    /* Carry the Scope band's containment rail (G::scopeRailX/W) down the tree's left
-       edge, so the scope rows above and the sections below read as one block. Drawn
-       over the rows, after the base paint. */
+    /* Close the block with the rule every Develop panel carries along its bottom edge,
+       just under the last row. Drawn over the rows, after the base paint. */
     void paintEvent(QPaintEvent *event) override;
     /* Fit mode only: the tree never scrolls itself, so pass the wheel out to the dock's
        scroll area instead of letting QAbstractScrollArea swallow it. */
@@ -412,13 +408,8 @@ public slots:
     void deleteScope();                           // [-] remove the selected scope (not Global)
     void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new scope)
     void onScopePreviewToggled(bool shown);       // [E] show/ignore the whole scope
-    void onScopeEnabledToggled(int index, bool on); // list row show/hide checkbox
+    void onScopeEnabledToggled(int index, bool on); // the scope bar's show/hide eye
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the scope's items)
-    /* Edits [:] menu: switch G::developEditsLayout (Flat / Nested / Minimal -- see
-       global.h) and rebuild both halves. Session-scoped; goes away with the flag once
-       the comparison settles. Takes an int so the header's signal needs no G include. */
-    void setEditsLayout(int layout);
-
     void howThisWorks();                          // Develop help
     /* Section help: every band [:] menu ends with "<section> help", opening that
        section's own page (Docs/develop<section>help.html). sectionHelp takes a PV_*
@@ -592,13 +583,13 @@ private:
        emits on an edge (it is called from every focus change in the app). */
     bool sharpenMaskPreviewOn = false;
 
-    /* Build/rebuild the whole tree for the ACTIVE scope: the scope's top items (Core rows for Global,
-       else mask tool rows) followed by the Basic / Color / Effects sections. Called on image change,
-       scope switch and mask add/remove/select; section expand-state is preserved across the rebuild. */
+    /* Build/rebuild the whole tree for the ACTIVE scope: the Basic / Curves / Color /
+       Calibrate / Color Grade / Detail / Effects sections. (The raw-decode rows live in
+       the RawPanel above the scope bar and the mask in the MaskPanel below it, so neither
+       is in the tree.) Called on image change, scope switch and mask add/remove/select;
+       section expand-state is preserved across the rebuild. */
     void buildTree();
-    void addCoreItems();            // Global only: Demosaic + Denoise rows at the top of the tree
-    void addMaskItems();            // non-Global: the scope's mask tool rows at the top of the tree
-    void addAddMaskRow();           // non-Global with no mask: an "Add mask" [+] placeholder row
+    void addMaskItems();            // non-Global: keep selectedMaskIndex honest
     void applyScopeItemsCollapsed();// hide/show the scope's top items (not the sections)
 
     /* ---- Content-height fitting (nested under a scope row) ------------------------
@@ -770,8 +761,6 @@ private:
        another tool via showMaskMenu), and clicking a tool reveals its settings (Feather, Invert)
        below the list (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
        composites the mask into the render; see notes/Documentation.txt. */
-    /* One row per tool; the SELECTED tool also gets its settings (Feather/Invert/Done) as children. */
-    void addToolRow(QModelIndex parIdx, int index, const MaskComponent &m, bool selected);
     void newMask();                            // QAction handler: append the chosen Add/Subtract tool
     void deleteMask(int index);
     void setSelectedMask(int index);           // make a tool active (-1 = none, e.g. Done)
@@ -1104,20 +1093,9 @@ private:
        visibility/state. Called at the end of every buildTree, so the list tracks image,
        scope and mask changes without any caller having to remember. */
     void syncMaskPanel();
-    /* The MaskPanel is nested inside the active scope's row and therefore indented by
-       ScopeHeaderLab::kDetailIndent. Its embedded editor's caption column is narrowed by
-       the same amount so its VALUE column still lines up with the tree below. */
-    static constexpr int kMaskPanelIndent = 22;
-    /* EXPERIMENT (flip to false to restore the previous look): paint the Edits section
-       headers (Basic / Curves / Color / Calibrate / Color Grade / Detail / Effects) with
-       the standard Winnow header gradient band used by Preferences and the Embellish
-       tree, instead of the flat, band-less caption they had. When false the headers are
-       tagged UR_HeaderFlat and the delegate skips the gradient fill. */
-    static constexpr bool kGradientSectionHeaders = true;
-    /* Caption split for the MaskPanel's embedded editor: the tree's split less however
-       far the panel is inset, so its sliders line up with the tree's. The flat Edits
-       and minimal layouts do not indent the panel (G::developEditsLayout), so there the two
-       splits are the same, as they are in the minimal layout. */
+    /* Caption split for the MaskPanel's embedded editor. The panel starts at the panel
+       edge, like the tree, so this is simply the tree's split -- it stays a function so
+       the panel and the tree cannot drift apart. */
     int maskPanelCaptionWidth() const;
     /* MaskEditor (panel) change routing -- mirrors the tree's itemChange mask blocks. */
     void onMaskEditorSetting(const QString &key, const QVariant &value);
@@ -1135,7 +1113,7 @@ private:
     QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
     void emitSpotPins();                       // push spotPinCenters() to ImageView
     QMenu *maskMenu = nullptr;
-    ScopeHeaderBase *scopeHeader = nullptr; // scope dropdown + buttons, band above tree
+    ScopeHeader *scopeHeader = nullptr;     // scope combo + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
@@ -1145,19 +1123,16 @@ private:
     bool panelEnabled = true;
     void applyItemsEnabled(bool enabled);   // set UR_isEnabled on every row (recursively)
 
-    /* Raw "Edit source" selector (Global scope, raw files only). editRawRadio is the "Raw" button
-       of the A/B pair; the widget lives in the Edit row's value cell (recreated each buildTree).
-       currentIsRaw() gates the raw-only rows; onEditSourceChanged() drives G::useRaw via MW;
-       applyCoreVisibility() shows/hides the Demosaic + Denoise raw rows per G::useRaw. */
+    /* Raw "Edit source" (Global scope, raw files only): the A/B radio pair lives in the
+       RawPanel. currentIsRaw() gates the raw-only controls; onEditSourceChanged() drives
+       G::useRaw via MW, and syncEditRaw() pushes MW's state back into the panel. */
     bool currentIsRaw() const;
     void onEditSourceChanged(bool raw);
-    void applyCoreVisibility();
-    QPointer<QRadioButton> editRawRadio;
 
     /* RawPanel (lab UI) sync + handlers. syncRawPanel pushes the current raw state (edit
        source, engine, denoise run state, Global denoise amounts) into the panel and toggles
        its visibility (raw files only); setGlobalDenoise writes a slider change into the
-       Global scope's params. rawPanel is null in the legacy UI -- all guards no-op. */
+       Global scope's params. */
     RawPanel *rawPanel = nullptr;
     void syncRawPanel();
     void setGlobalDenoise(bool luma, int value0to100);
