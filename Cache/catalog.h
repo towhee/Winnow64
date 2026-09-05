@@ -189,7 +189,7 @@ struct CatalogQuery
     QString folder;
     /* The generic CATEGORY restriction, keyed by G::dataModelColumns: values within one
        column are OR-ed, columns are AND-ed, and exclude is AND-NOT over everything. This
-       is what lets the Find dock hand the same checked-item structure to either scope
+       is what lets the Filter dock hand the same checked-item structure to either scope
        instead of the query growing a named field per category. Keywords are NOT in here
        -- they need a join rather than a column compare, so they keep the two lists
        above. */
@@ -367,7 +367,7 @@ public:
     QList<CatalogKeyword> keywords();
 
     /* Every distinct value of one CATEGORY, with how many live images carry it -- the
-       catalog's half of the shared category vocabulary the Find dock renders in
+       catalog's half of the shared category vocabulary the Filter dock renders in
        Catalog scope. dmColumn is a G::dataModelColumns value, so the panel asks the
        index and the datamodel the same question in the same terms; a column the catalog
        cannot answer (duplicates, the search flag) returns empty and the panel hides that

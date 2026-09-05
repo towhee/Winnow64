@@ -167,7 +167,7 @@ void MW::setFilterDockVisibility()
 void MW::setCatalogDockVisibility()
 {
     if (G::isLogger) G::log("MW::setCatalogDockVisibility");
-    /* No separate dock in Find mode -- the Catalog is a scope of the Find panel. */
+    /* No separate dock in Filter mode -- the Catalog is a scope of the Filter panel. */
     if (!catalogDock) return;
     catalogDock->setVisible(catalogDockVisibleAction->isChecked());
 }
@@ -391,7 +391,7 @@ void MW::setScope(G::Scope s, QString src)
 /*
     THE ONE PLACE G::scope CHANGES.
 
-    Scope used to be private to the Find dock, and the Folders/Bookmarks trees knew
+    Scope used to be private to the Filter dock, and the Folders/Bookmarks trees knew
     nothing about it -- so selecting a folder and searching the catalog behaved like two
     different applications, and the catalog was reachable only by someone who already knew
     the panel existed. It is now one fact with three views (the Catalog row above each of
@@ -424,16 +424,16 @@ void MW::setScope(G::Scope s, QString src)
 
     if (s == G::Scope::Catalog) {
         // the panel is where a catalog scope is actually used, so bring it up
-        if (G::useFindDock && findPanel) {
+        if (G::useFilterPanel && filterPanel) {
             filterDock->setVisible(true);
             filterDock->raise();
             filterDockVisibleAction->setChecked(true);
-            findPanel->setScope(FindPanel::CatalogScope);
+            filterPanel->setScope(FilterPanel::CatalogScope);
         }
     }
     else {
-        if (G::useFindDock && findPanel)
-            findPanel->setScope(FindPanel::FolderScope);
+        if (G::useFilterPanel && filterPanel)
+            filterPanel->setScope(FilterPanel::FolderScope);
     }
 
     // the menu item reads as the scope, not as a panel
@@ -542,8 +542,8 @@ void MW::showCatalogDock()
 /*
     "Search Catalog" (Shift+F2, Window > Catalog Panel).
 
-    WITH THE FIND DOCK this is not a second panel but a SCOPE: show the Find dock, switch
-    it to the Catalog scope and focus its box. That is what makes the F2 / Shift+F2
+    WITH THE FILTER DOCK this is not a second panel but a SCOPE: show the Filter dock,
+    switch it to the Catalog scope and focus its box. That is what makes the F2 / Shift+F2
     pairing literally true -- the same box, the same words, a different set to ask.
 
     Focusing the box is the point of the shortcut either way: the user pressed it to
@@ -558,13 +558,13 @@ void MW::showCatalogDock()
         can only come back empty. See MW::catalogEmptyOpenManage. */
     if (catalogEmptyOpenManage("MW::showCatalogDock")) return;
 
-    if (G::useFindDock) {
-        if (!findPanel) return;
+    if (G::useFilterPanel) {
+        if (!filterPanel) return;
         filterDock->setVisible(true);
         filterDock->raise();
         filterDockVisibleAction->setChecked(true);
         setScope(G::Scope::Catalog, "MW::showCatalogDock");
-        findPanel->focusSearch();
+        filterPanel->focusSearch();
         return;
     }
 

@@ -173,7 +173,7 @@ void CatalogScopeTree::setScopeIsCatalog(bool isCatalog)
 {
 /*
     MW pushes the scope back here rather than this widget deciding it, so the two
-    instances and the Find panel cannot disagree. Leaving a chosen YEAR selected is the
+    instances and the Filter panel cannot disagree. Leaving a chosen YEAR selected is the
     point of the second clause: it is still the catalog, and it says which year.
 */
     if (!isCatalog) {

@@ -1261,7 +1261,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
 }
 
 /* ---------------------------------------------------------------------------------
-   The Find dock's shared-category interface (G::useFindDock)
+   The Filter dock's shared-category interface (G::useFilterPanel)
    --------------------------------------------------------------------------------- */
 
 QString Filters::currentSearchText() const
@@ -1396,7 +1396,7 @@ void Filters::showAllCategories()
         setRowHidden(i, QModelIndex(), false);
     /* The Search category stays hidden while the panel owns a search box -- it is the
        same fact shown twice, and the box is the one the user is looking at. */
-    if (G::useFindDock) setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+    if (G::useFilterPanel) setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
     /* Availability is conditional on what is loaded, so "show all" does not mean it. */
     updateAvailabilityVisibility();
 }

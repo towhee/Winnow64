@@ -1,6 +1,9 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
 
+/* PROBE copy-path (temporary): tagged tracing for the context-menu Copy path bug. */
+static const bool probeCopyPathMenus = true;
+
 void MW::createActions()
 {
     if (G::isLogger) G::log("MW::createActions");
@@ -179,6 +182,20 @@ void MW::createFileActions()
     copyFolderPathFromContextAction->setShortcutVisibleInContextMenu(true);
     addAction(copyFolderPathFromContextAction);
     connect(copyFolderPathFromContextAction, &QAction::triggered, this, &MW::copyFolderPathFromContext);
+    /* PROBE copy-path (temporary): enabled state at hover time, ie the instant before the
+       user clicks the item in the open context menu. */
+    connect(copyFolderPathFromContextAction, &QAction::hovered, this, [this]() {
+        qDebug().noquote() << "COPYPATH action hovered"
+                           << "enabled =" << copyFolderPathFromContextAction->isEnabled()
+                           << "text =" << copyFolderPathFromContextAction->text()
+                           << "mouseOverFolderPath =" << mouseOverFolderPath;
+    });
+    connect(copyFolderPathFromContextAction, &QAction::changed, this, [this]() {
+        qDebug().noquote() << "COPYPATH action changed"
+                           << "enabled =" << copyFolderPathFromContextAction->isEnabled()
+                           << "menuOpen ="
+                           << (QApplication::activePopupWidget() != nullptr);
+    });
 
     copyImagePathFromContextAction = new QAction("Copy path(s)", this);
     copyImagePathFromContextAction->setObjectName("copyPathFromContext");
@@ -198,7 +215,7 @@ void MW::createFileActions()
     addAction(refreshFoldersAction);
     connect(refreshFoldersAction, &QAction::triggered, this, &MW::refresh);
 
-    /*  THE CATALOG'S TWO FILE COMMANDS. Both used to live in the Find dock: a
+    /*  THE CATALOG'S TWO FILE COMMANDS. Both used to live in the Filter dock: a
         Folders|Catalog toggle at the top and a "Manage..." button under its footer.
         Opening the catalog is choosing what to browse, which is what the File menu is
         for, and which folders are indexed is configuration -- neither is part of the
@@ -1622,10 +1639,10 @@ void MW::createWindowActions()
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
-    /* With the Find dock this is not a second panel but its Catalog SCOPE, so the menu
+    /* With the Filter dock this is not a second panel but its Catalog SCOPE, so the menu
        item says what it now does. It still carries Shift+F2 either way. */
     catalogDockVisibleAction = new QAction(
-        G::useFindDock ? tr("Search Catalog") : tr("Catalog Panel"), this);
+        G::useFilterPanel ? tr("Search Catalog") : tr("Catalog Panel"), this);
     catalogDockVisibleAction->setObjectName("toggleCatalog");
     catalogDockVisibleAction->setShortcutVisibleInContextMenu(true);
     catalogDockVisibleAction->setCheckable(true);
@@ -2932,6 +2949,21 @@ void MW::enableSelectionDependentMenus()
 
     bool dmHasRows = dm->rowCount() > 0;
     bool hasSelection = sel->count() > 0;
+
+    /* PROBE copy-path (temporary): a non-null activePopupWidget means this ran while a
+       context menu was open, which re-gates (and greys) the open menu's actions. */
+    if (probeCopyPathMenus) {
+        qDebug().noquote()
+            << "COPYPATH enableSelectionDependentMenus"
+            << "rowCount =" << dm->rowCount()
+            << "dmHasRows =" << dmHasRows
+            << "activePopupWidget ="
+            << (QApplication::activePopupWidget()
+                ? QApplication::activePopupWidget()->metaObject()->className()
+                : "null")
+            << "copyPathEnabled =" << copyFolderPathFromContextAction->isEnabled();
+    }
+
     bool has2Selected = sel->count() >= 2;
     bool isUpDown = gridView->isVisible() || tableView->isVisible();
 
@@ -2981,10 +3013,18 @@ void MW::enableSelectionDependentMenus()
     /* ingest, nextPick, prevPick: enabled only when at least one image is picked */
     updatePickDependentActions();
     gate(revealFileAction, dmHasRows, needFolder);
-    gate(revealFileActionFromContext, dmHasRows, needFolder);
     gate(reportMetadataAction, dmHasRows, needFolder);
-    gate(copyFolderPathFromContextAction, dmHasRows, needFolder);
     gate(copyImagePathFromContextAction, dmHasRows, needFolder);
+
+    /* revealFileActionFromContext and copyFolderPathFromContextAction are deliberately NOT
+       gated here.  They act on the right-clicked folder (MW::mouseOverFolderPath), which is
+       knowable with no folder loaded, so dmHasRows is the wrong condition.  Their enabled
+       state is owned solely by the QEvent::ContextMenu branch of MW::eventFilter, which
+       enables them when the click hit a folder and disables them when it did not -- the same
+       treatment as the other folder-context actions (delete folder, eject, add bookmark).
+       Gating them here also greyed them mid-menu: QMenu::exec runs a nested event loop, so a
+       folder load landing while the context menu is open re-ran this function and disabled
+       the item the user was about to click. */
     gate(renameAction, canWrite, needWritable);
     gate(saveAsFileAction, dmHasRows, needFolder);
 

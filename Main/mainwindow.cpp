@@ -95,7 +95,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {folderDockTabText,   ":/images/icon16/foldertree_white.png"},
         {favDockTabText,      ":/images/icon16/bookmarks_white.png"},
         {filterDockTabText,   ":/images/icon16/filters_white.png"},
-        /* The filter dock keeps the "Filters" tab text even when G::useFindDock folds
+        /* The filter dock keeps the "Filters" tab text even when G::useFilterPanel folds
            the Catalog panel into it; the Catalog entry simply never matches then,
            because there is no separate Catalog tab to draw. */
         {catalogDockTabText,  ":/images/icon16/catalog_white.png"},
@@ -270,7 +270,7 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     if (tabText == folderDockTabText)   return folderDock;
     if (tabText == favDockTabText)      return favDock;
     if (tabText == filterDockTabText)   return filterDock;
-    /* catalogDockTabText is empty with G::useFindDock (the dock is never created), so
+    /* catalogDockTabText is empty with G::useFilterPanel (the dock is never created), so
        guard against an empty tabText matching it. */
     if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText) return catalogDock;
     if (tabText == metadataDockTabText) return metadataDock;
@@ -332,6 +332,9 @@ void MW::moveDroppedDockLast()
         }
     });
 }
+
+/* PROBE copy-path (temporary): tagged tracing for the context-menu Copy path bug. */
+static const bool probeCopyPath = true;
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
@@ -602,7 +605,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
 
         It had none. --selftest loads a FOLDER, and MW::loadCatalogResults --
         images from any number of folders as one browsable set, which is the whole
-        point of Catalog scope -- was reachable only by a person typing in the Find
+        point of Catalog scope -- was reachable only by a person typing in the Filter
         dock. Every measurement of catalog behaviour so far has been indirect:
         through the unit tests, or by reading the database afterwards. Restructuring
         the load path with one of its two callers uncovered is how something breaks
@@ -614,7 +617,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         nothing has been typed.
 
         Timed from the folder load's settle so the catalog commit has happened;
-        the query then replaces the model exactly as the Find dock would. */
+        the query then replaces the model exactly as the Filter dock would. */
     const QString catalogQuery = qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_QUERY");
     if (!catalogQuery.isNull()) {
         QTimer::singleShot(settleMs / 2, this, [this, catalogQuery]() {
@@ -622,7 +625,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             CatalogQuery q;
             q.text = catalogQuery;
             int total = 0;
-            /*  searchRows AND loadCatalogRows, because that is what the Find dock does.
+            /*  searchRows AND loadCatalogRows, because that is what the Filter dock does.
                 This used to run search() + loadCatalogResults(), which is now the older
                 paths shape kept for the separate Catalog panel -- leaving the live path
                 uncovered is exactly the hole this test was written to close. */
@@ -2104,8 +2107,10 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
         if (event->type() == QEvent::ContextMenu) {
 
-            // default enable
-            // qDebug() << "MW::eventFilter QEvent::ContextMenu";
+            /* Default enable.  This branch is the sole owner of the enabled state of the
+               folder-context actions: they act on the right-clicked folder, so they are
+               enabled here and disabled below when the click did not land on one.  They are
+               deliberately absent from MW::enableSelectionDependentMenus. */
             copyFolderPathFromContextAction->setEnabled(true);
             revealFileActionFromContext->setEnabled(true);
             deleteFSTreeFolderAction->setEnabled(true);
@@ -2189,6 +2194,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 renamePasteFilesAction(folderName);
                 renameAddBookmarkAction(folderName);
                 renameRemoveBookmarkAction(folderName);
+            }
+
+            /* PROBE copy-path (temporary) */
+            if (probeCopyPath) {
+                qDebug().noquote()
+                    << "COPYPATH eventFilter ContextMenu"
+                    << "obj =" << (obj ? obj->objectName() : QString("null"))
+                    << "class =" << (obj ? obj->metaObject()->className() : "null")
+                    << "folderName =" << folderName
+                    << "mouseOverFolderPath =" << mouseOverFolderPath
+                    << "enabled =" << copyFolderPathFromContextAction->isEnabled();
             }
 
             // continue to open context menu
@@ -2331,9 +2347,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         {
             static int prevTabIndex = -1;
             QString tabBarClassName = "QTabBar";
-#if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
+            #if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
             tabBarClassName = "QMainWindowTabBar";
-#endif
+            #endif
             if (QString(obj->metaObject()->className()) == tabBarClassName) {
 
             qDebug() << event << obj;
@@ -3435,7 +3451,7 @@ bool MW::catalogEmptyOpenManage(const QString &src)
 {
 /*
     A CATALOG WITH NOTHING IN IT IS A QUESTION, NOT A RESULT. Open Catalog, the Catalog
-    row above the folder tree and the Find panel's Everywhere scope all offered an empty
+    row above the folder tree and the Filter panel's Everywhere scope all offered an empty
     search box with no indication that the catalog was empty, why, or that filling it was
     the user's to do -- a dead end reached by the very command that should explain itself.
     So the invocation opens the Manage Catalog window instead, which is where the answer
@@ -3558,7 +3574,7 @@ int MW::reconcileCatalogToScope(bool confirm)
 
     updateCatalogScopeTrees();
     if (catalogView && catalogDock && catalogDock->isVisible()) catalogView->refresh();
-    if (findPanel && filterDock && filterDock->isVisible()) findPanel->refresh();
+    if (filterPanel && filterDock && filterDock->isVisible()) filterPanel->refresh();
     return gone;
 }
 
@@ -3694,7 +3710,7 @@ void MW::startCatalogScan()
     reconcileCatalogToScope(false);
 
     if (catalogView) catalogView->setScanning(true);
-    if (findPanel) findPanel->setScanning(true);
+    if (filterPanel) filterPanel->setScanning(true);
     if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
                               Q_ARG(CatalogScope, catalogScope));
@@ -4139,7 +4155,7 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
     Every automated check of this path runs on a fixture folder of about a thousand rows,
     and a thousand rows is not the case that hurts: two bugs in a row -- a pump that never
     pumped and a sort that built a million QFileInfos -- were invisible at that size and
-    obvious at 43,000. This drives the same entry point the Find dock does, on whatever
+    obvious at 43,000. This drives the same entry point the Filter dock does, on whatever
     the user actually has catalogued, and prints where the time went.
 
     It is not a test in tests/: it needs the user's own index, which no fixture can carry
@@ -4240,7 +4256,7 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
                     every row, so the fill has nothing to add, and everything the panel
                     and the proxy do around it happens over 43,000 loaded rows rather
                     than over an empty model. */
-                if (findPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_TWICE") == 1) {
+                if (filterPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_TWICE") == 1) {
                     auto again = std::make_shared<QElapsedTimer>();
                     again->start();
                     fprintf(stderr, "CATALOGLOAD: --- second click ---\n");
@@ -4275,18 +4291,18 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
     /*  THROUGH THE PANEL, not straight into the model, when the panel exists.
 
         The first version called loadCatalogRows directly, which is a real path but not
-        the one a PERSON takes: clicking Catalog goes through FindPanel::applyScope, which
-        also re-points the category tree and runs its own search. A beachball that lives
+        the one a PERSON takes: clicking Catalog goes through FilterPanel::applyScope,
+        which also re-points the category tree and runs its own search. A beachball that lives
         in applyScope was therefore invisible to this driver while it reported healthy
         load numbers -- so it now drives the click.
 
         WINNOW_CATALOGLOAD_DIRECT=1 forces the old model-only path, for isolating the fill
         from everything the panel does around it. */
     setScope(G::Scope::Catalog, "runCatalogLoadTest");
-    if (findPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_DIRECT") != 1) {
-        fprintf(stderr, "CATALOGLOAD: driving FindPanel::setScope(CatalogScope)\n");
+    if (filterPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_DIRECT") != 1) {
+        fprintf(stderr, "CATALOGLOAD: driving FilterPanel::setScope(CatalogScope)\n");
         fflush(stderr);
-        findPanel->setScope(FindPanel::CatalogScope);
+        filterPanel->setScope(FilterPanel::CatalogScope);
     }
     else {
         loadCatalogRows(rows, false, q);
@@ -5908,10 +5924,23 @@ void MW::folderChangeCompleted()
             nothing is ever catalogued and search finds nothing, with no sign that the
             choice was the user's to make -- so the one moment worth asking is the first
             folder of images they open. */
-        QVector<CatalogRow> rows = inCatalogScope(dm->catalogRows());
+        /*  THE FOLDERS ARE ASKED FIRST, and that is not an optimisation of the filter
+            below -- it is what keeps browsing outside the scope free. Every row of this
+            model shares one of a handful of folders, so whether ANY of them is in scope
+            is answerable before a single row is touched; inCatalogScope alone would
+            build ~40 columns of every row on the GUI thread and then discard the lot,
+            which at a 40,000-image folder is tens of seconds of dead event loop spent
+            to catalogue nothing. */
+        bool anyFolderInScope = false;
+        for (const QString &folder : dm->folderList) {
+            if (isCatalogScopeFolder(folder)) { anyFolderInScope = true; break; }
+        }
+        QVector<CatalogRow> rows;
+        if (anyFolderInScope) rows = inCatalogScope(dm->catalogRows());
         if (G::isPerfProbe)
             qDebug().noquote() << "[PERF] catalogRows()" << rows.size() << "rows in scope in"
-                               << ct.elapsed() << "ms (GUI thread)";
+                               << ct.elapsed() << "ms (GUI thread)"
+                               << (anyFolderInScope ? "" : "(no folder in scope; not built)");
         /* Only where the question is concrete: a folder that actually holds images. An
            empty folder is not the moment to ask what should be indexed. */
         if (catalogScope.isEmpty() && dm->rowCount() > 0) promptForCatalogScope();
@@ -5920,8 +5949,9 @@ void MW::folderChangeCompleted()
             so letting it run outside the scope would be harmless -- but "the table says
             what Winnow does with this folder" is easier to rely on than a rule with one
             exception in it. */
-        QHash<QString, QSet<QString>> present = reconcile ? dm->folderPathSets()
-                                                         : QHash<QString, QSet<QString>>();
+        QHash<QString, QSet<QString>> present =
+            (reconcile && anyFolderInScope) ? dm->folderPathSets()
+                                            : QHash<QString, QSet<QString>>();
         for (auto it = present.begin(); it != present.end(); ) {
             if (isCatalogScopeFolder(it.key())) ++it;
             else it = present.erase(it);
@@ -5940,7 +5970,7 @@ void MW::folderChangeCompleted()
                    must not be touched from the pool. */
                 QMetaObject::invokeMethod(this, [this]{
                     if (catalogDock && catalogDock->isVisible()) catalogView->refresh();
-                    if (findPanel && filterDock->isVisible()) findPanel->refresh();
+                    if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
                     updateCatalogScopeTrees();
                 }, Qt::QueuedConnection);
             });

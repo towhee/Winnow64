@@ -99,9 +99,9 @@ public:
        restyle it and emit filterChange. The one way an item's filter state changes. */
     void setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state);
 
-    /* --- The Find dock's shared-category interface (G::useFindDock) -------------------
+    /* --- The Filter dock's shared-category interface (G::useFilterPanel) -----------
        The same tree renders both scopes: Folders from the datamodel via BuildFilters,
-       and Catalog from the catalog via these. See Views/findpanel.h. */
+       and Catalog from the catalog via these. See Views/filterpanel.h. */
 
     /* Drive the Search category from the panel's search box instead of the editable tree
        item, so one box serves both scopes. Empty text restores the placeholder, which is
@@ -114,8 +114,8 @@ public:
     /* Where the items in the tree came from. The datamodel-readiness guards
        (G::allMetadataAttempted, buildingFilters) apply only to FromDatamodel: a catalog
        query does not care whether the loaded folder has finished reading its metadata,
-       and letting those guards swallow a click was what left the Find dock's Load button
-       disabled after checking a category item in Catalog scope. */
+       and letting those guards swallow a click was what left the Filter dock's Load
+       button disabled after checking a category item in Catalog scope. */
     enum CategorySource { FromDatamodel, FromCatalog };
     CategorySource categorySource() const { return categoriesFrom; }
 

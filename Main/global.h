@@ -278,9 +278,9 @@ Q_NAMESPACE
         Folders = whatever the Folders/Bookmarks selection loaded. Catalog = the
         whole local index, searched across folders. It is ONE fact with three
         views -- the Catalog row above the Folders tree, the same row above
-        Bookmarks, and the Find dock's Folders|Catalog buttons -- so it lives
+        Bookmarks, and the Filter dock's Folders|Catalog buttons -- so it lives
         here and MW::setScope is the only thing that changes it. Before this the
-        Find dock owned the scope privately and the trees knew nothing about it,
+        Filter dock owned the scope privately and the trees knew nothing about it,
         which is why selecting a folder and searching the catalog felt like two
         different applications. */
     enum class Scope : quint8 { Folders, Catalog };
@@ -390,12 +390,12 @@ Q_NAMESPACE
     extern bool useMultimedia;
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
     extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
-    /* The unified Find dock: one panel with a Folders/Catalog scope switch over one
+    /* The unified Filter dock: one panel with a Folders/Catalog scope switch over one
        category vocabulary, replacing the separate Filters and Catalog panels. False
        restores both panels exactly as they were -- an escape hatch while this proves out,
        not a shelved feature. It is read at dock-creation time, so it takes a restart to
        change. */
-    extern bool useFindDock;
+    extern bool useFilterPanel;
     extern bool useScopeHeaderLab;     // true = experimental ScopeHeaderLab in dock
     /* Develop Edits layout A/B/C -- where the scope is picked and where the editor (the
        Mask panel + adjustment tree) sits. See global.cpp and Documentation.txt

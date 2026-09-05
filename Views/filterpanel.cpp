@@ -1,13 +1,13 @@
-#include "Views/findpanel.h"
+#include "Views/filterpanel.h"
 #include "Datamodel/filters.h"
 #include "Main/global.h"
 
 #include <QVBoxLayout>
 
-FindPanel::FindPanel(Filters *f, QWidget *parent)
+FilterPanel::FilterPanel(Filters *f, QWidget *parent)
     : QWidget(parent), filters(f)
 {
-    if (G::isLogger) G::log("FindPanel::FindPanel");
+    if (G::isLogger) G::log("FilterPanel::FilterPanel");
 
     searchEdit = new QLineEdit;
     searchEdit->setClearButtonEnabled(true);
@@ -32,7 +32,7 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     debounce = new QTimer(this);
     debounce->setSingleShot(true);
     debounce->setInterval(kDebounceMs);
-    connect(debounce, &QTimer::timeout, this, &FindPanel::runSearch);
+    connect(debounce, &QTimer::timeout, this, &FilterPanel::runSearch);
 
     connect(searchEdit, &QLineEdit::textChanged, this, [this](const QString &t){
         if (currentScope == FolderScope) {
@@ -50,7 +50,7 @@ FindPanel::FindPanel(Filters *f, QWidget *parent)
     applyScope();
 }
 
-void FindPanel::setScope(Scope s)
+void FilterPanel::setScope(Scope s)
 {
 /*
     Switch scope, carrying the search TEXT.
@@ -62,7 +62,7 @@ void FindPanel::setScope(Scope s)
     The checked items do NOT carry -- see the header. The tree is rebuilt for whichever
     vocabulary it is now showing.
 */
-    if (G::isLogger) G::log("FindPanel::setScope");
+    if (G::isLogger) G::log("FilterPanel::setScope");
     if (s == currentScope) return;
     currentScope = s;
     applyScope();
@@ -72,7 +72,7 @@ void FindPanel::setScope(Scope s)
     emit scopeChanged(static_cast<int>(s));
 }
 
-void FindPanel::applyScope()
+void FilterPanel::applyScope()
 {
     /*  TIMED UNCONDITIONALLY -- once per scope switch is one line, and this is inside
         the click a person reported as a beachball: it re-points the category tree and is
@@ -121,26 +121,26 @@ void FindPanel::applyScope()
     refresh();
 
     if (G::isPerfProbe)
-        qDebug().noquote() << "[PERF] FindPanel::applyScope" << asTimer.elapsed()
+        qDebug().noquote() << "[PERF] FilterPanel::applyScope" << asTimer.elapsed()
                            << "ms  scope ="
                            << (currentScope == CatalogScope ? "Catalog" : "Folders");
 }
 
-void FindPanel::focusSearch()
+void FilterPanel::focusSearch()
 {
     searchEdit->setFocus();
     searchEdit->selectAll();
 }
 
-void FindPanel::setScanning(bool on)
+void FilterPanel::setScanning(bool on)
 {
     scanning = on;
     refresh();
 }
 
-void FindPanel::refresh()
+void FilterPanel::refresh()
 {
-    if (G::isLogger) G::log("FindPanel::refresh");
+    if (G::isLogger) G::log("FilterPanel::refresh");
 
     /*  runSearch is a no-op when the index could not be opened, so the reason has to be
         written here rather than left to a search that will not run. */
@@ -148,7 +148,7 @@ void FindPanel::refresh()
     else updateStatus();
 }
 
-CatalogQuery FindPanel::currentQuery() const
+CatalogQuery FilterPanel::currentQuery() const
 {
 /*
     THE TEXT ONLY. The checked category items used to go into the query as well
@@ -162,9 +162,9 @@ CatalogQuery FindPanel::currentQuery() const
     return q;
 }
 
-void FindPanel::runSearch()
+void FilterPanel::runSearch()
 {
-    if (G::isLogger) G::log("FindPanel::runSearch");
+    if (G::isLogger) G::log("FilterPanel::runSearch");
     debounce->stop();
     if (currentScope != CatalogScope) return;
     if (!Catalog::instance().isAvailable()) return;
@@ -208,7 +208,7 @@ void FindPanel::runSearch()
         emit loadResults(results, false, currentQuery());
 }
 
-QStringList FindPanel::resultPaths() const
+QStringList FilterPanel::resultPaths() const
 {
     QStringList out;
     out.reserve(results.size());
@@ -216,7 +216,7 @@ QStringList FindPanel::resultPaths() const
     return out;
 }
 
-void FindPanel::updateStatus()
+void FilterPanel::updateStatus()
 {
 /*
     NOTHING TO REPORT IS NOTHING SHOWN.

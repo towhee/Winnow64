@@ -1368,6 +1368,31 @@ void IconView::wheelEvent(QWheelEvent *event)
             currentDy = (numDegrees.y() / 15.0) * 20.0;
         }
 
+        /* HORIZONTAL THUMBVIEW: remap a vertical-only delta onto the x axis.
+
+           When the thumbDock is docked top or bottom the thumbView is a single
+           non-wrapping row: it has a horizontal scrollbar and no vertical one (see
+           MW::setThumbDockFeatures).  A mouse wheel only ever reports an
+           angleDelta().y(), so without this remap the whole delta is applied to a
+           vertical scrollbar with no range and nothing moves.  isWrapping() is the
+           axis test used throughout this class (scrollPosition, scrollDown,
+           scrollPageDown), so gridView and a wrapping thumbView (docked left/right
+           or floating) are unaffected, as are gestures that already carry an x
+           component (two-finger horizontal, tilt wheel, Shift+wheel on macOS).
+
+           This deliberately covers a trackpad vertical two-finger swipe as well as a
+           mouse wheel, which matches how a single-row list behaves elsewhere on
+           macOS.  To restrict it to a physical mouse only, add the source test:
+               if (!isWrapping() && currentDx == 0 && currentDy != 0 &&
+                   event->source() == Qt::MouseEventNotSynthesized)
+           after which a trackpad vertical swipe over a horizontal thumbView does
+           nothing.  This is the only place horizontal wheel scrolling is decided.
+        */
+        if (!isWrapping() && currentDx == 0 && currentDy != 0) {
+            currentDx = currentDy;
+            currentDy = 0;
+        }
+
         // Tap-to-Stop Fallback: In case your tap registered a tiny 1-pixel micro-movement
         if (event->phase() == Qt::ScrollBegin) {
             kineticScrollTimer.stop();

@@ -1,5 +1,5 @@
-#ifndef FINDPANEL_H
-#define FINDPANEL_H
+#ifndef FILTERPANEL_H
+#define FILTERPANEL_H
 
 #include <QLabel>
 #include <QLineEdit>
@@ -16,8 +16,8 @@
 class Filters;
 
 /*
-    The body of the Find dock: one search surface whose SCOPE is a control.
-    See notes/Documentation.txt "The Find Dock (Folders and Catalog)".
+    The body of the Filter dock: one search surface whose SCOPE is a control.
+    See notes/Documentation.txt "The Filter Dock (Folders and Catalog)".
 
     WHY ONE PANEL. Filters searched the datamodel and the Catalog panel searched the
     index, and they looked alike because they are the same question asked of different
@@ -69,7 +69,7 @@ class Filters;
     the panel can show nothing -- no index, or an empty one -- and it hides again as soon
     as that stops being true.
 */
-class FindPanel : public QWidget
+class FilterPanel : public QWidget
 {
     Q_OBJECT
 
@@ -78,7 +78,7 @@ public:
 
     /* filters is OWNED BY MW and re-parented into this layout -- it is the same widget
        the Filters dock used, so every existing filterDock reference keeps working. */
-    explicit FindPanel(Filters *filters, QWidget *parent = nullptr);
+    explicit FilterPanel(Filters *filters, QWidget *parent = nullptr);
 
     Scope scope() const { return currentScope; }
     void setScope(Scope scope);
@@ -174,4 +174,4 @@ private:
     static constexpr int kDebounceMs = 250;
 };
 
-#endif // FINDPANEL_H
+#endif // FILTERPANEL_H
