@@ -7,6 +7,9 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
+- Develop panels management needs a tweak
+- Tweak main menu (Library, Develop...)
+- Tweak preferences
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
 - Fix search in filter

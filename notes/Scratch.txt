@@ -3401,3 +3401,12 @@ confusing.
 
 
 MW::filterChange.ImageDecoder::decode failed "/Users/roryhill/Pictures/CR3/2020-10-14_0029.cr3"
+
+Keyword panel
+Keyword tree
+- show keyword heirarchy
+- rename keyword
+- add synonyms
+- drag to move to another parents
+- split view to drag to distant part of tree
+- insert parent
