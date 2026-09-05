@@ -5216,6 +5216,17 @@ void DataModel::reportScrollProbe(const QString &src)
 
 void DataModel::setCached(int sfRow, bool isCached, int instance)
 {
+/*
+    THE LAST UNTHROTTLED PROXY WRITE.
+
+    setValSf and setValDm both write under a QSignalBlocker and notify for VISIBLE ROWS
+    ONLY, because an unblocked dataChanged rebuilds the entire Cocoa accessibility element
+    array for the model (~27 ms per notification at 43,000 rows). This function wrote
+    straight through sf->setData, and it is called once per image entering or leaving the
+    image cache -- which is a burst of hundreds after every selection, since that is when
+    ImageCache re-targets and refills. So a click on a thumbnail in a large catalog paid
+    the whole rebuild hundreds of times before the loupe could be painted.
+*/
     // Do not use mutex here 2025-02-22
     QString src = "DataModel::setCached";
     QModelIndex sfIdx = sf->index(sfRow, G::IsCachedColumn);
@@ -5236,7 +5247,18 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
         // qDebug() << src << sfRow << "isCached =" << isCached << errMsg;
         return;
     }
-    sf->setData(sfIdx, isCached);
+    const QModelIndex dmIdx = sf->mapToSource(sfIdx);
+    if (!dmIdx.isValid()) {
+        errMsg = "Invalid dmIdx from sfIdx.  Src: " + src;
+        G::issue("Warning", errMsg, src, sfIdx.row());
+        return;
+    }
+    {
+        const QSignalBlocker blocker(this);
+        setData(dmIdx, isCached);
+    }
+    if (iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
+
     QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
     emit refreshViewsOnCacheChange(fPath, isCached, src);
 }

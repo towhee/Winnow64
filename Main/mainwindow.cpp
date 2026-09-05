@@ -4293,6 +4293,52 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
     }
 }
 
+namespace {
+/*
+    WHAT ONE SELECTION SPENT ITS TIME ON (G::isPerfProbe).
+
+    The scroll and icon probes measure the LOAD path, and on the click that stalls they
+    report almost no work at all: icons set in 0.3 ms, emits in 18.8 ms, while the GUI
+    stall watchdog reports two seconds. That means the time is being spent by something
+    the click itself calls, and MW::fileSelectionChange calls a dozen such things -- the
+    three view scrolls, the loupe load, the image cache reposition, the metadata panel --
+    with no way to tell them apart from outside.
+
+    A phase timer rather than a total: the total is already known (the watchdog prints
+    it). The line is only printed when the selection actually cost something (>= 100 ms),
+    and only phases worth 1 ms or more are listed, so an ordinary click stays silent.
+    Timed on destruction so the many early returns in fileSelectionChange are covered.
+*/
+struct SelectPhaseProbe
+{
+    explicit SelectPhaseProbe(bool on) : isOn(on) { if (isOn) timer.start(); }
+
+    void mark(const char *name)
+    {
+        if (!isOn) return;
+        const qint64 now = timer.nsecsElapsed();
+        const double ms = (now - lastNs) / 1.0e6;
+        lastNs = now;
+        if (ms >= 1.0)
+            parts << QString("%1=%2").arg(name).arg(QString::number(ms, 'f', 1));
+    }
+
+    ~SelectPhaseProbe()
+    {
+        if (!isOn) return;
+        const double totalMs = timer.nsecsElapsed() / 1.0e6;
+        if (totalMs < 100) return;
+        qDebug().noquote() << "[PERF] select" << QString::number(totalMs, 'f', 1)
+                           << "ms  " << parts.join("  ");
+    }
+
+    bool isOn;
+    QElapsedTimer timer;
+    qint64 lastNs = 0;
+    QStringList parts;
+};
+}  // namespace
+
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool clearSelection, QString src)
 {
 /*
@@ -4309,6 +4355,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 */
     // if starting program, return
     QString fun = "MW::fileSelectionChange";
+    SelectPhaseProbe probe(G::isPerfProbe);
     if (current.row() == -1) {
         if (G::isLogger || G::isFlowLogger)
             qDebug() << fun <<  "Invalid row";
@@ -4381,10 +4428,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
     enableStatusBarBtns();
+    probe.mark("menus");
 
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
     settings->setValue("lastFileSelection", fPath);
+    probe.mark("settings");
 
     /* Per-image Develop edit state: load this image's saved EditStack into the dock (also flushes
        the previous image's edits to its sidecar). The developed preview is applied after the
@@ -4438,15 +4487,19 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         tableView->scrollToCurrent();
     }
 
+    probe.mark("scrollSync");
+
     dm->scrollToIcon = dm->currentSfRow;
 
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
+    probe.mark("title");
 
     // update loupe/video view
     videoView->stop();
+    probe.mark("videoStop");
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
             G::isFirstImageNewInstance = false;
@@ -4482,11 +4535,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             if (G::operationMode == G::OperationMode::Develop) {
                 imageView->captureDevelopView(fPath);
             }
-            if (imageView->loadImage(fPath, false, fun)) {
+            const bool loaded = imageView->loadImage(fPath, false, fun);
+            probe.mark("loadImage");
+            if (loaded) {
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
+                    probe.mark("loupeDisplay");
                 }
                 applyDevelopPreviewIfEdited();   // overlay saved develop edits, if any
+                probe.mark("devPreview");
             }
             /* Image-cache miss in Develop mode on a RAW: the scene-linear sensor decode
                is slow (~2-3s), so paint the embedded JPG preview immediately instead of a
@@ -4542,6 +4599,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     }
 
     G::fileSelectionChangeSource = "";
+    probe.mark("view");
 
     // update ImageCache
     if (!(G::isSlideShow && isSlideShowRandom)
@@ -4558,11 +4616,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                                   Q_ARG(int, dm->currentSfRow));
         emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
     }
+    probe.mark("cachePos");
 
     workspaceChanged = false;
 
     // update the metadata panel
     if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
+    probe.mark("infoView");
 
     // initialize the thumbDock if just opened app
     if (G::isInitializing) {
@@ -4581,6 +4641,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (progress->isVisible()) {
         progress->updateCursor(dm->currentSfRow, dm->sf->rowCount());
     }
+    probe.mark("progress");
 
     // Remember last folder (showWindow not completed when initiated)
     if (dm->instance == 0 && dm->primaryFolderPath() == lastDir) {
