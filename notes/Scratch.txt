@@ -3400,4 +3400,4 @@ search the catalog but we are using a Filter concept instead, so references to '
 confusing.
 
 
-deal with the redundant re-sort in MW::filterChange.
+MW::filterChange.ImageDecoder::decode failed "/Users/roryhill/Pictures/CR3/2020-10-14_0029.cr3"

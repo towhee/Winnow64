@@ -7,9 +7,7 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- portrait videos not rotated
-- ImageCache has pauses while still cached items
-  ie /Users/roryhill/Pictures/2018-01-14_Lillian
+- Supress: "TIFF directory is missing required \"ImageLength\" field"
 - No imageView for /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
 - Mouse wheel not scrolling thumbView
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom

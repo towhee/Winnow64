@@ -104,19 +104,23 @@ void VideoWidget::paintEvent(QPaintEvent *)
     if (!currentFrame.isValid()) return;
 
     QPainter painter(this);
+
+    /*  QVideoFrame::toImage() applies the surface format transformation, which is
+        where the FFmpeg backend puts a clip's display-matrix rotation, so a portrait
+        clip already arrives upright (1080x1920 for a 1920x1080 stream).  Only the
+        frame's own presentation rotation is left to apply by hand, and playback
+        frames do not carry one.
+
+        Do NOT fall back to QMediaMetaData::Orientation here.  That reports the same
+        display-matrix angle toImage() has already applied, so using it rotated an
+        upright portrait frame a second time and it played back sideways. */
     QImage img = currentFrame.toImage();
 
-    // Determine rotation from frame or metadata
     int angle = 0;
     auto frameRotation = currentFrame.rotation();
     if (frameRotation == QtVideo::Rotation::Clockwise90) angle = 90;
     else if (frameRotation == QtVideo::Rotation::Clockwise180) angle = 180;
     else if (frameRotation == QtVideo::Rotation::Clockwise270) angle = 270;
-
-    if (angle == 0 && mediaPlayer) {
-        QVariant orientation = mediaPlayer->metaData().value(QMediaMetaData::Orientation);
-        if (orientation.isValid()) angle = orientation.toInt();
-    }
 
     if (angle != 0) {
         QTransform tr;
