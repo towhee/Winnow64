@@ -154,9 +154,10 @@ void MW::filterChange(QString source)
 
     /*  ONE ACCESSIBILITY REBUILD FOR THE WHOLE FILTER CHANGE, not one per row-insertion
         block and one per deferred view layout. See G::A11ySuspend for the measurement and
-        for why the guard has to cover scrollToCurrentRowIfNotVisible as well: that
-        function's G::wait(100) is a nested event loop, and the views' deferred layout --
-        with the accessibility notification it carries -- runs inside it. */
+        for why the guard has to cover scrollToCurrentRowIfNotVisible as well: the views'
+        deferred layout -- with the accessibility notification it carries -- is executed
+        from inside that function, by the visualRect and indexAt calls that measure cell
+        visibility. */
     G::A11ySuspend a11ySuspend;
 
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache

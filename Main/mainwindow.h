@@ -930,6 +930,10 @@ private slots:
     void keyScrollEnd();
     void keyScrollCurrent();
     void scrollToCurrentRowIfNotVisible();
+    /*  ONE RE-MEASURE OF THE VISIBLE WINDOW WHEN THE EVENT QUEUE TURNS, coalesced. See
+        MW::scheduleIconRangeSettle -- it is what replaced the nested event loop that
+        scrollToCurrentRowIfNotVisible used to open. */
+    void scheduleIconRangeSettle(const QString &src);
     void jump();
     void zoomToggle();
     // status functions
@@ -2111,6 +2115,7 @@ private:
     bool embelDockTabActivated;
 
     bool isFilterChange = false;        // prevent fileSelectionChange
+    bool iconRangeSettleQueued = false; // one pending scheduleIconRangeSettle at a time
 
     bool simulateJustInstalled;
     bool isSettings = false;

@@ -191,13 +191,29 @@ void MW::scrollToCurrentRowIfNotVisible()
     int sfRow = dm->currentSfRow;
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
 
-    /*  NOT A SLEEP -- G::wait runs a NESTED EVENT LOOP, so what this costs is whatever is
-        queued when it is reached, not the 100 ms asked for. Measured at 3,710 ms arriving
-        after a filter invalidate, against 119 ms once the accessibility rebuilds behind
-        that backlog were suspended (see G::A11ySuspend). It is also a re-entrancy hazard
-        in the middle of a filter change. Left as it is for now: the views' deferred
-        layout is what it is waiting for, and removing it wants its own measurement. */
-    G::wait(100);
+    /*  NO NESTED EVENT LOOP HERE. This was G::wait(100), which is not a sleep: it runs a
+        nested event loop, so it cost whatever was queued when it was reached rather than
+        the 100 ms asked for -- 3,710 ms after a filter invalidate, 123 ms once the
+        accessibility rebuilds behind that backlog were suspended (see G::A11ySuspend) --
+        and it re-entered the GUI in the middle of a filter change.
+
+        THE DEFERRED LAYOUT DOES NOT NEED IT. After an invalidate QAbstractItemView posts
+        its layout to a timer, but every reader below forces it synchronously already:
+        QListView::visualRect goes through rectForIndex and indexAt through
+        intersectingSet, both of which call executePostedLayout(); QHeaderView does the
+        same in its section lookups, which is what TableView::updateVisible reads through
+        rowAt(). The one reader that does NOT self-flush is TableView::isRowVisible, which
+        tests a cached firstVisibleRow/lastVisibleRow window refreshed from resize and
+        scroll events -- so refresh it here rather than pumping events until one arrives.
+
+        WHAT THE PUMP ALSO DID, AND WHAT REPLACES IT. It let the queued tail of the caller
+        run first -- the deferred layouts and the resize/rejustify they trigger -- so the
+        visible window updateIconRange measures below was taken over a settled view.
+        scheduleIconRangeSettle re-measures it ONCE when the queue turns, coalesced, and
+        re-dispatches only if the range actually moved: the same shape as
+        scheduleVisibleEmit and scheduleCompileFilters, with none of the re-entrancy. */
+    if (tableView->isVisible())
+        tableView->updateVisible("MW::scrollToCurrentRowIfNotVisible");
 
     G::ignoreScrollSignal = true;
     if (thumbView->isVisible() && !thumbView->isCellVisible(sfRow))
@@ -210,6 +226,39 @@ void MW::scrollToCurrentRowIfNotVisible()
     G::ignoreScrollSignal = false;
 
     updateIconRange("MW::scrollToCurrentRow");
+    scheduleIconRangeSettle("MW::scrollToCurrentRow");
+}
+
+void MW::scheduleIconRangeSettle(const QString &src)
+{
+/*
+    Re-measure the visible window once, after the event queue has run.
+
+    The views defer work that MOVES CELLS: a layout posted by an invalidate, and the
+    resize (and rejustify) that showing or hiding a scrollbar causes, each of which calls
+    MW::updateIconRange and nothing else. Measuring the window before those have run can
+    leave the icon chunk centred on where the view was rather than where it ended up --
+    and the chunk is what the loader reads. The old answer was to run a nested event loop
+    until they had happened; this one asks the same question again on the other side of
+    the queue.
+
+    COALESCED AND CHEAP: one pending settle at a time, a zero timer (which Qt runs at the
+    lowest priority, so it lands after the posted layouts and resizes it is waiting for),
+    and a re-dispatch ONLY if the range actually moved -- in the ordinary case the second
+    measurement agrees with the first and this costs one updateIconRange.
+*/
+    if (G::isInitializing || dm == nullptr) return;
+    if (iconRangeSettleQueued) return;
+    iconRangeSettleQueued = true;
+    QTimer::singleShot(0, this, [this, src]{
+        iconRangeSettleQueued = false;
+        if (G::isInitializing || G::stop || dm == nullptr) return;
+        const int before1 = dm->startIconRange;
+        const int before2 = dm->endIconRange;
+        updateIconRange(src + " settle");
+        if (dm->startIconRange != before1 || dm->endIconRange != before2)
+            reloadIconChunk();      // flushProxySnapshot + queued MetaRead::setStartRow
+    });
 }
 
 void MW::jump()
