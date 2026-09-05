@@ -3626,11 +3626,14 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         extraIndent = QVariant(G::developEditsLayout == G::EditsLayout::Nested
                                    ? kMaskPanelIndent : 0);
     model->setData(capIdx, extraIndent, UR_ExtraIndent);
-    /* A section header belongs to the scope selected in the Scope band above, so it is a
-       tier BELOW that band: a flat band, not the panel-header gradient the Scope and Raw
-       bands use. Without this the sections read as siblings of Scope rather than as its
-       contents. */
-    if (previewGroup >= 0) model->setData(capIdx, true, UR_HeaderFlat);
+    /* A section header belongs to the scope selected in the Scope band above, so it can
+       read as a tier BELOW that band: a flat, band-less caption rather than the
+       panel-header gradient the Scope and Raw bands use. kGradientSectionHeaders
+       (developproperties.h) selects between that and the standard Winnow gradient band
+       used by Preferences -- when it is set the UR_HeaderFlat tag is withheld and the
+       delegate paints the gradient. */
+    if (previewGroup >= 0 && !kGradientSectionHeaders)
+        model->setData(capIdx, true, UR_HeaderFlat);
 }
 
 void DevelopProperties::addSlider(const QString &key, const QString &caption,
