@@ -34,16 +34,27 @@ void winnowMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 }
 
 /*
-    libtiff routes its warnings through a global handler that prints to stderr by
-    default, producing noisy console output (eg "unknown field with tag", "wrong
-    data type"). Route warnings through this handler so they can be gated by
-    G::suppressTiffWarnings. Errors are left to libtiff's default handler since
-    they signal genuine decode failures.
+    libtiff routes its warnings and errors through global handlers that print to
+    stderr by default, producing noisy console output (eg "unknown field with tag",
+    "wrong data type", "TIFF directory is missing required \"ImageLength\" field").
+    Many of these come from raw files whose maker IFDs are only nominally TIFF, so
+    they are not actionable. Route both through these handlers so they can be gated
+    by G::suppressTiffWarnings. Failed decodes are reported by the caller (which
+    checks the libtiff return value), not by these messages.
 */
 static void winnowTiffWarningHandler(const char *module, const char *fmt, va_list ap)
 {
     if (G::suppressTiffWarnings) return;
     if (module) fprintf(stderr, "%s: Warning, ", module);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, ".\n");
+    fflush(stderr);
+}
+
+static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list ap)
+{
+    if (G::suppressTiffWarnings) return;
+    if (module) fprintf(stderr, "%s: Error, ", module);
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, ".\n");
     fflush(stderr);
@@ -87,13 +98,28 @@ int main(int argc, char *argv[])
     // Install the message handler at the very start of main
     qInstallMessageHandler(winnowMessageHandler);
 
-    // Gate libtiff console warnings behind G::suppressTiffWarnings
+    /* Gate libtiff console noise behind G::suppressTiffWarnings. It arrives by two
+       separate routes: Winnow's own TIFFOpen calls go through libtiff's global
+       handlers set here, while QImageReader hands TIFF (and any raw with TIFF magic)
+       to Qt's qtiff plugin, which STATICALLY links its own private libtiff and
+       re-emits its messages as qWarnings in the qt.imageformats.tiff logging
+       category (eg "TIFF directory is missing required \"ImageLength\" field").
+       That copy's handlers are unreachable from here, so the category is turned off
+       in the filter rules below instead.
+    */
     TIFFSetWarningHandler(winnowTiffWarningHandler);
+    TIFFSetErrorHandler(winnowTiffErrorHandler);
 
-    QLoggingCategory::setFilterRules(
+    /* All Qt logging category rules must be set here in ONE call: setFilterRules
+       REPLACES the previously set rules, it does not add to them. */
+    QString filterRules =
         "qt.multimedia.ffmpeg.*=false\n"
-        "qt.text.font.db=false"
-    );
+        "qt.text.font.db=false\n"
+        "qt.gui.imageio.jpeg.debug=false\n"
+        "qt.gui.imageio.jpeg.warning=false";
+    // Qt's qtiff plugin reports its private libtiff's warnings here (see above)
+    if (G::suppressTiffWarnings) filterRules += "\nqt.imageformats.tiff=false";
+    QLoggingCategory::setFilterRules(filterRules);
     qputenv("QT_FFMPEG_LOG", "0");
 
     // Headless self-test mode (smoke test layer, see tests/):
