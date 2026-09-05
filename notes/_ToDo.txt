@@ -7,8 +7,6 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- Supress: "TIFF directory is missing required \"ImageLength\" field"
-- No imageView for /Users/roryhill/Pictures/_ThumbTest/Heic1.heic
 - Mouse wheel not scrolling thumbView
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords

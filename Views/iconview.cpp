@@ -1332,7 +1332,9 @@ void IconView::wheelEvent(QWheelEvent *event)
 {
     if (G::isInitializing) return;
 
-    if (event->source() == Qt::MouseEventSynthesizedBySystem || event->source() == Qt::MouseEventNotSynthesized) {
+    if (event->source() == Qt::MouseEventSynthesizedBySystem ||
+        event->source() == Qt::MouseEventNotSynthesized)
+    {
 
         QPoint numPixels = event->pixelDelta();
         QPoint numDegrees = event->angleDelta() / 8;
@@ -1352,7 +1354,7 @@ void IconView::wheelEvent(QWheelEvent *event)
             return;
         }
 
-        // CRITICAL: We hijack the event and NEVER call QListView::wheelEvent.
+        // Hijack the event and NEVER call QListView::wheelEvent.
         event->accept();
 
         qreal currentDx = 0;
