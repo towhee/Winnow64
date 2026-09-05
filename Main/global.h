@@ -640,6 +640,15 @@ Q_NAMESPACE
     extern std::atomic<qint64> probeThumbSqlNs;       // prepare + exec + next + read blob
     extern std::atomic<qint64> probeThumbDecodeNs;    // loadFromData + scale + convertTo
     extern std::atomic<int>    probeThumbStamps;      // LRU stamps queued to the writer
+    /*  THE OTHER SIDE OF THE SAME MUTEX: how long the WRITER thread holds it, and how
+        many stamp transactions it opened to do so. A reader's lockWait can only be
+        explained by a holder, and these name it -- the read path itself now takes the
+        lock for a pointer, so anything left is the writer. */
+    extern std::atomic<qint64> probeThumbWriterHoldNs;   // mMutex held: the transactions
+    extern std::atomic<qint64> probeThumbWriterPrepNs;   // stat + skip-check + JPEG encode
+    extern std::atomic<qint64> probeThumbEvictNs;        // mMutex held: evictLocked
+    extern std::atomic<int>    probeThumbEvicts;
+    extern std::atomic<int>    probeThumbStampBatches;
     extern std::atomic<int>    probeIconCount;
     /*  HOW MANY PER-ROW dataChanged NOTIFICATIONS ACTUALLY REACH THE VIEWS, and how many
         the visible-row throttle suppressed. On macOS each one that gets through makes the

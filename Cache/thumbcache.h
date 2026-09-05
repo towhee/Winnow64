@@ -5,6 +5,8 @@
 #include <QByteArray>
 #include <QImage>
 #include <QList>
+#include <atomic>
+
 #include <QMutex>
 #include <QObject>
 #include <QSqlDatabase>
@@ -85,6 +87,9 @@ void take(const QString &fPath, const QImage &im);
         transaction, on the thread that already owns the cache's writes. */
 void takeStamp(const QString &key);
 void flushPending();
+    /*  Stamps only, on their own slow timer -- flushPending calls this first so a
+        blocking flush() still lands them. */
+void flushStamps();
 private:
 ThumbCache *mOwner;
         /*  Worker thread only -- never touched from anywhere else, which is the
@@ -92,6 +97,7 @@ ThumbCache *mOwner;
 QList<QPair<QString, QImage>> mPending;
 QStringList mPendingStamps;
 bool mScheduled = false;
+bool mStampScheduled = false;
 };
 
 
@@ -226,6 +232,12 @@ private:
     ~ThumbCache();
     Q_DISABLE_COPY(ThumbCache)
 
+    /*  The writer, started on first use. LOCK-FREE ON THE HOT PATH: the pointer is
+        atomic and only its CREATION takes mMutex, so a hit or a put never queues behind
+        a batch transaction just to learn where to post. Reading it under the mutex was
+        what a fixed read path left behind -- 794 puts waiting an average of 317 ms each
+        for a pointer. See Documentation.txt "The Mutex Was the Queue". */
+    ThumbWriter *writerOrStart();
     void startWriterLocked();
     /*  The bodies of put() and contains() without the lock, so writeBatch can
         call them inside the one transaction it already holds the lock for. */
@@ -241,10 +253,15 @@ private:
         recently used. Called after a put, with the lock held. */
     void evictLocked(QSqlDatabase &db);
 
+    /*  WHAT THIS MUTEX IS FOR, AND WHAT IT IS NOT. It guards the writer thread's
+        lifetime and the in-memory byte cap, and it serialises the WRITE paths against
+        each other. It does NOT guard reads: CacheDb gives every thread its own
+        connection and the file is in WAL, so a SELECT needs nothing from it. Holding it
+        across the read was the whole of a 17 s catalog load -- see ThumbCache::get. */
     mutable QMutex mMutex;
     qint64 mMaxBytes = 5LL * 1024 * 1024 * 1024;   // 5 GB; see setMaxBytes
     QThread *mThread = nullptr;
-    ThumbWriter *mWriter = nullptr;
+    std::atomic<ThumbWriter *> mWriter{nullptr};
     QAtomicInteger<qint64> mWritten = 0;
     /*  How many jobs have been posted and not yet written. Checked before
         posting so the backlog stays bounded -- a queued QImage is a quarter of

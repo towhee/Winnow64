@@ -104,6 +104,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Measuring a Live Session (--perfprobe and the Scroll Probe)
      Why a Catalog Scope Would Not Scroll (Nine Defects, One Policy, and Where It Ends)
      A Cache Hit Was Costing a Commit (the LRU Stamp, and the Stat, on the Read Path)
+     The Mutex Was the Queue (a WAL Read Needs No Lock, and a Zero-Timer Batches Nothing)
      Selecting an Image Rebuilt Two Views, Per Cached Image (the Click That Stalled)
      Memory Governor (Process Footprint, Decode Concurrency)
 
@@ -2057,7 +2058,44 @@ THE LESSON IS ABOUT THE INSTRUMENT, NOT THE CACHE. Summed-across-threads wall cl
 
 WHAT WAS KEPT, AND WHAT WAS TAKEN OUT. Two probes survive, both behind G::isPerfProbe: the PHASE TIMER on MW::filterChange (sfFilter / buildFilters / sort / status / refreshIcons / imageCache / select / scroll, plus a11ySuspended), which is what turns "the filter change is slow" into a line naming the phase; and the CACHE HIT SPLIT on the scroll line (hits, then stat / lockWait / sql / decode / lruStamps per hit), which is the only view of the thumbnail cache under an idle GUI thread -- the Phase2 icons line it started on is emitted from MetaRead::allFinished, once per load. Removed once they had answered: the invalidate/compile split and its rowsInserted BLOCK counters, the per-row filterAcceptsRow timer, the mutex hold-time probes, and the wait/scrollToRow/updateIconRange split inside scrollToCurrentRowIfNotVisible. Their findings are in the paragraphs above; the code to re-derive them is in the history.
 
-WHAT IS STILL OVER-LOCKED, and deliberately left alone for now. CacheDb hands out a connection PER THREAD, so mMutex is not protecting the connection -- it is a global serialiser over per-thread handles, and with the write gone from the read path a WAL SELECT does not need it. Removing it is a concurrency change to code TSan has been run over, and the measurement above says it is now worth about 1 ms an icon, so it is not the next thing to do on the strength of this. Recorded so the next person does not have to rediscover it.
+WHAT IS STILL OVER-LOCKED, and deliberately left alone at the time. CacheDb hands out a connection PER THREAD, so mMutex is not protecting the connection -- it is a global serialiser over per-thread handles, and with the write gone from the read path a WAL SELECT does not need it. Removing it is a concurrency change to code TSan has been run over, and the measurement above says it is now worth about 1 ms an icon, so it is not the next thing to do on the strength of this. Recorded so the next person does not have to rediscover it. THE NEXT PERSON DID NOT HAVE TO: see the section below, where a scope that reads 43,070 rows instead of a screenful turned that 1 ms an icon into the whole of the load.
+
+⏺ Caching > The Mutex Was the Queue (a WAL Read Needs No Lock, and a Zero-Timer Batches Nothing)
+
+THE SAME MUTEX, AT A SCALE THAT MADE IT MATTER. The section above measured ThumbCache's lock at about 1 ms an icon on a folder-sized load and deferred removing it, correctly, on those numbers. Opening the CATALOG scope with "cache thumbs just in time" turned OFF reads the whole scope rather than a few screens, and 1 ms an icon over 9,767 hits is not a rounding error:
+
+    [PERF] Phase2 icons  icons=0  cacheHit=9767  cacheMiss=22  cacheGet(ms)=304009.2
+           cache hit split:  stat(ms)=178.3  lockWait(ms)=299780.9  sql(ms)=347.2  decode(ms)=3608.4
+
+Phase 2 took 17.3 s of wall clock for a scope whose thumbnails were all already stored, and 98.6% of the accumulated hit time was the WAIT for mMutex against 0.35 s for the SELECT it was protecting. The volume was a setting; the price per hit was the defect, and the arithmetic says it plainly -- 300 s of waiting cannot be explained by 0.35 s of work.
+
+THE READ PATH NO LONGER LOCKS AT ALL. ThumbCache::get() takes mMutex only around the mWriter POINTER now, at the tail, and never around the statement. Nothing there needed it, for two reasons already true when it was written: CacheDb hands out one connection per thread, so no two threads share a QSqlDatabase, and the file is in WAL, where a reader blocks neither a writer nor another reader. The mutex was hand-serialising the two properties SQLite was already providing. It still guards what is genuinely shared -- the writer thread's lifetime, the byte cap, and the write paths against each other -- and that is now written on its declaration so the scope is not guessed at again.
+
+A ZERO-TIMER BATCHES A BURST, NOT A TRICKLE, and that is what was holding the lock. The stamp fix above moved the LRU UPDATE to the writer thread and batched it with QTimer::singleShot(0). A zero-timer fires as soon as the writer's event loop is idle -- which, with hits arriving one at a time from a pool that is busy decoding, is after EVERY stamp. The "batch" was one row, so the WAL commit per cache hit that the batching existed to prevent was still happening, just on another thread and under the same mutex the readers were queueing for. Stamps now coalesce on their own slow timer (kStampDelayMs 2000, kStampBatch 1024, ThumbWriter::flushStamps): nothing waits on an LRU stamp, it orders eviction at a day's granularity, and losing a batch at exit costs an eviction ordering nobody can perceive. The lesson generalises past this cache: a batching timer whose delay is zero is a batching timer only when the consumer is behind.
+
+THE WRITER SIDE IS NOW PROBED TOO, because the first measurement could name the waiters but not the holder. The Phase2 icons line gained "writer: hold(ms) / lruStamps / stampBatches" (G::probeThumbWriterHoldNs, probeThumbStampBatches), accumulated across writeBatch and writeStampBatch. A reader's lockWait has to be somebody's hold time; with the read path out of the lock, anything left belongs to the writer and says so.
+
+AND THE QUEUE MOVED, WHICH IS WHY THE PROBE HAD TO NAME THE HOLDER. With the read path out of the mutex the next run put the cost somewhere else entirely:
+
+    [PERF] Phase2 icons  icons=386  cacheHit=18732  cacheMiss=408  cacheGet(ms)=63333.1
+           load(ms)=8554.6  thumbCache(ms)=251732.4
+           cache hit split:  stat(ms)=523.3  lockWait(ms)=54077.1  sql(ms)=1413.8  decode(ms)=7127.1
+           writer:  hold(ms)=36480.5  lruStamps=2355  stampBatches=52
+
+thumbCache is the PUT side, and Reader only calls it for a picture the cache did not supply -- 794 of them, for 251.7 s, an average of 317 ms to hand a QImage to another thread. ThumbCache::putImage was taking mMutex to read the mWriter POINTER, so it queued behind exactly the transaction the readers had stopped queueing behind. The writer's own hold time, 36.5 s of it, is what they were all waiting on, and it took the new probe to say so: waiters need a holder, and the accounting has to balance.
+
+TWO CHANGES, ONE PRINCIPLE -- ONLY SHARED STATE GOES UNDER THE LOCK. The writer handle is now a std::atomic published after the object is wired up (ThumbCache::writerOrStart), double-checked so the mutex is reached once per session: a hit or a put reads a pointer, not a queue. And ThumbCache::writeBatch does its stat, its skip-if-present SELECT and its JPEG ENCODE outside the lock, keeping only the transaction inside -- sixty-four encodes at a few milliseconds each is a tenth of a second of pure CPU that was being charged to every other thread as well. The remaining hold is split in the probe (hold / prep / evict) so the next run says which of the three it is.
+
+MEASURED, THE SAME 43,070-ROW CATALOG OPEN WITH JIT THUMBS OFF -- the same 9,767 hits and 22 misses as the run at the top of this section, so the two lines compare directly:
+
+    before   cacheGet 304,009.2 ms   stat 178.3   lockWait 299,780.9   sql 347.2   decode 3,608.4
+    after    cacheGet   4,763.4 ms   stat 243.3   lockWait       0.0   sql 567.7   decode 3,855.0
+
+**64x, and lockWait is gone entirely.** (Two runs of the after case, the second on a clean rebuild, gave 5,032 ms and 4,763 ms: the spread between them is the run-to-run noise on this measurement, which is worth knowing before reading 5% off any future comparison as a change.) What is left is the work itself: 79% of a hit is now the JPEG decode, with the SELECT and the stat behind it, which is the shape a cache read is supposed to have. Note that stat and sql went UP in absolute terms while the total fell by 299 s -- the same lesson the section above records about summed-across-threads wall clock, read from the other end: those figures were never small, they were being dwarfed by a queue, and threads that no longer wait get scheduled more work per unit of wall clock.
+
+STILL OPEN, AND STILL UNMEASURED: evictLocked runs after EVERY batch, starts with a SELECT SUM(bytes) over a table of blobs, and deletes row by row outside a transaction -- one WAL commit per evicted row. The run above says nothing about it (evicts = 0, hold = 0.0: 22 misses produced no writes, and the cache is inside its byte cap), and neither the stamp coalescing nor the writer's transaction hold was exercised either -- lruStamps = 0, because the stamps were refreshed by the earlier runs the same day. Those three want a COLD folder with a full cache to be tested at all, and the probes are in place for when one turns up. Recorded so a green line is not mistaken for a proof.
+
+WHAT THE SETTING HAD TO DO WITH IT. "Cache thumbs just in time" off is the honest cause of the load being large -- it is the difference between reading a screenful and reading 43,070 rows -- and turning it back on made the symptom go away without touching the defect. Both are worth keeping straight: the setting decides HOW MANY thumbnails are read, and this section is about what each one cost. With JIT off, which is the case that exposed it, the load is now quick.
 
 THE LESSON, AND IT IS THE SAME ONE. The icon cost had been carried in this documentation as "~20 ms, mostly the header walk" and reasoned from repeatedly. One probe, first run, said otherwise. That is now four load-pipeline assumptions overturned by measurement on this work: the centralMsg repaint, "keywords are most of the saving", the ~20 ms metadata read, and this.
 
