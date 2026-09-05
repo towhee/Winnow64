@@ -203,7 +203,8 @@ void MW::createFileActions()
         Opening the catalog is choosing what to browse, which is what the File menu is
         for, and which folders are indexed is configuration -- neither is part of the
         search surface, and putting them in the panel meant they were only findable by
-        someone who had already opened it. Shift+F2 still opens the catalog. */
+        someone who had already opened it. Shift+O sits beside O (open a folder), and
+        Shift+F2 still opens the catalog too. */
     openCatalogAction = new QAction(tr("Open Catalog"), this);
     openCatalogAction->setObjectName("openCatalog");
     openCatalogAction->setShortcutVisibleInContextMenu(true);
@@ -3220,6 +3221,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         // File
         openAction->setShortcut(QKeySequence("O"));
+        /* Shift+O = "open the catalog" beside O = "open a folder": both choose what to
+           browse, so they read as a pair. */
+        openCatalogAction->setShortcut(QKeySequence("Shift+O"));
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
         renameAction->setShortcut(QKeySequence("Ctrl+F2"));

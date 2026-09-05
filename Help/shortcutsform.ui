@@ -104,6 +104,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Open Catalog</string>
+        </property>
+        <property name="text">
+         <string>Shift + O</string>
+        </property>
+        <property name="text">
+         <string>Browse the indexed catalog instead of a folder</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Refresh Current Folder</string>
         </property>
         <property name="text">
