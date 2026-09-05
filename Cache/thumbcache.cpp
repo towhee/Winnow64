@@ -101,7 +101,19 @@ void ThumbCache::putLocked(QSqlDatabase &db, const QString &fPath, const QByteAr
     for the measurement that made this necessary rather than optional, and for
     why the handoff is a queued signal rather than a queue of our own.
 */
-namespace { constexpr int kInFlightMax = 256; constexpr int kBatch = 64; }
+namespace {
+constexpr int kInFlightMax = 256;
+constexpr int kBatch = 64;
+
+/*  STAMPS COALESCE ON TIME, NOT ON ARRIVAL. A zero-timer batches a burst only while the
+    writer thread is busy; a steady trickle of hits found it idle every time, so each
+    stamp flushed on its own and the "batch" was one row -- one WAL commit per cache hit,
+    which is precisely what batching them was for. An LRU stamp is housekeeping that
+    orders eviction at a day's granularity: nothing waits on it, and losing a batch at
+    exit costs an eviction ordering nobody can perceive. So it waits. */
+constexpr int kStampBatch = 1024;
+constexpr int kStampDelayMs = 2000;
+}
 
 void ThumbWriter::take(const QString &fPath, const QImage &im)
 {
@@ -119,23 +131,29 @@ void ThumbWriter::take(const QString &fPath, const QImage &im)
 void ThumbWriter::takeStamp(const QString &key)
 {
     /*  Worker thread, like take(). Duplicates within a batch are harmless -- the same
-        UPDATE twice in one transaction is one write -- so they are not filtered here. */
+        UPDATE twice in one transaction is one write -- so they are not filtered here.
+        Scheduled on its OWN timer, and a slow one: see kStampDelayMs. */
     mPendingStamps.append(key);
-    if (mPendingStamps.size() >= kBatch) { flushPending(); return; }
-    if (!mScheduled) {
-        mScheduled = true;
-        QTimer::singleShot(0, this, &ThumbWriter::flushPending);
+    if (mPendingStamps.size() >= kStampBatch) { flushStamps(); return; }
+    if (!mStampScheduled) {
+        mStampScheduled = true;
+        QTimer::singleShot(kStampDelayMs, this, &ThumbWriter::flushStamps);
     }
+}
+
+void ThumbWriter::flushStamps()
+{
+    mStampScheduled = false;
+    if (mPendingStamps.isEmpty()) return;
+    const QStringList stamps = mPendingStamps;
+    mPendingStamps.clear();
+    mOwner->writeStampBatch(stamps);
 }
 
 void ThumbWriter::flushPending()
 {
     mScheduled = false;
-    if (!mPendingStamps.isEmpty()) {
-        const QStringList stamps = mPendingStamps;
-        mPendingStamps.clear();
-        mOwner->writeStampBatch(stamps);
-    }
+    flushStamps();
     if (mPending.isEmpty()) return;
     const QList<QPair<QString, QImage>> batch = mPending;
     mPending.clear();
@@ -150,56 +168,110 @@ void ThumbCache::writeBatch(const QList<QPair<QString, QImage>> &batch)
     inline version cost 14 ms an icon: in WAL every statement outside an explicit
     transaction is its own commit, and several reader threads were queueing for
     one writer. Sixty-four rows in one commit is the same work in one commit.
+
+    AND THE ENCODE HAPPENS OUTSIDE THE LOCK. Sixty-four JPEG encodes at a few
+    milliseconds each is a tenth of a second of pure CPU that has nothing to do with the
+    database, and it was being done with mMutex held -- so it was charged to every other
+    thread as well. The stat and the skip-if-present SELECT come out with it: reads need
+    no lock here (per-thread connection, WAL), and doing the check first is what keeps a
+    revisit from re-encoding a folder it already stored.
 */
+    QElapsedTimer prepTimer;
+    if (G::isPerfProbe) prepTimer.start();
+
+    struct Ready { QString path; QByteArray jpg; int w; int h; qint64 size; qint64 mtime; };
+    QList<Ready> ready;
+    ready.reserve(batch.size());
+    {
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return;
+        for (const auto &job : batch) {
+            const QFileInfo fi(job.first);
+            if (!fi.exists()) continue;
+            const qint64 srcSize = fi.size();
+            const qint64 srcMtime = fi.lastModified().toSecsSinceEpoch();
+
+            /*  SKIP IF THE INDEX ALREADY HAS THIS ONE, checked here rather than at
+                the producer so a revisit costs the loader nothing at all. Without
+                it every revisit re-encodes and rewrites the whole folder, which is
+                the opposite of what the cache is for. */
+            if (containsLocked(db, job.first, srcSize, srcMtime)) continue;
+
+            /*  Quality 85 at thumbnail size is visually indistinguishable from 100
+                and roughly half the bytes; the icon is a browsing aid, never a
+                source for anything. */
+            QByteArray jpg;
+            QBuffer buf(&jpg);
+            if (!buf.open(QIODevice::WriteOnly)) continue;
+            if (!job.second.save(&buf, "JPG", 85)) continue;
+            buf.close();
+            if (jpg.isEmpty()) continue;
+
+            ready.append({job.first, jpg, job.second.width(), job.second.height(),
+                          srcSize, srcMtime});
+        }
+    }
+    if (G::isPerfProbe)
+        G::probeThumbWriterPrepNs.fetch_add(prepTimer.nsecsElapsed(),
+                                            std::memory_order_relaxed);
+    if (ready.isEmpty()) return;
+
+    QElapsedTimer holdTimer;
+    if (G::isPerfProbe) holdTimer.start();
     QMutexLocker lk(&mMutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return;
 
     const bool inTxn = db.transaction();
-    for (const auto &job : batch) {
-        const QFileInfo fi(job.first);
-        if (!fi.exists()) continue;
-        const qint64 srcSize = fi.size();
-        const qint64 srcMtime = fi.lastModified().toSecsSinceEpoch();
-
-        /*  SKIP IF THE INDEX ALREADY HAS THIS ONE, checked here rather than at
-            the producer so a revisit costs the loader nothing at all. Without
-            it every revisit re-encodes and rewrites the whole folder, which is
-            the opposite of what the cache is for. */
-        if (containsLocked(db, job.first, srcSize, srcMtime)) continue;
-
-        /*  Quality 85 at thumbnail size is visually indistinguishable from 100
-            and roughly half the bytes; the icon is a browsing aid, never a
-            source for anything. */
-        QByteArray jpg;
-        QBuffer buf(&jpg);
-        if (!buf.open(QIODevice::WriteOnly)) continue;
-        if (!job.second.save(&buf, "JPG", 85)) continue;
-        buf.close();
-        if (jpg.isEmpty()) continue;
-
-        putLocked(db, job.first, jpg, job.second.width(), job.second.height(),
-                  srcSize, srcMtime);
+    for (const Ready &r : ready) {
+        putLocked(db, r.path, r.jpg, r.w, r.h, r.size, r.mtime);
         mWritten.fetchAndAddRelaxed(1);
     }
     if (inTxn) db.commit();
+    if (G::isPerfProbe) {
+        G::probeThumbWriterHoldNs.fetch_add(holdTimer.nsecsElapsed(),
+                                            std::memory_order_relaxed);
+        holdTimer.restart();
+    }
 
     evictLocked(db);
+    if (G::isPerfProbe) {
+        G::probeThumbEvictNs.fetch_add(holdTimer.nsecsElapsed(),
+                                       std::memory_order_relaxed);
+        G::probeThumbEvicts.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+ThumbWriter *ThumbCache::writerOrStart()
+{
+/*
+    THE FAST PATH IS AN ATOMIC LOAD. Every hit and every put needs this pointer and
+    nothing else from the cache's shared state, so taking mMutex for it put them back in
+    the queue the read path had just been taken out of -- behind whatever transaction the
+    writer was committing. Double-checked: the mutex is reached once per session.
+*/
+    if (ThumbWriter *w = mWriter.load(std::memory_order_acquire)) return w;
+    QMutexLocker lk(&mMutex);
+    startWriterLocked();
+    return mWriter.load(std::memory_order_acquire);
 }
 
 void ThumbCache::startWriterLocked()
 {
-    if (mWriter) return;
+    if (mWriter.load(std::memory_order_relaxed)) return;
     mThread = new QThread;
     mThread->setObjectName("ThumbWriter");
-    mWriter = new ThumbWriter(this);
-    mWriter->moveToThread(mThread);
+    ThumbWriter *w = new ThumbWriter(this);
+    w->moveToThread(mThread);
     /*  The connection belongs to the thread that opened it, so it is closed on
         the way out rather than left for whoever tears the thread down. */
-    QObject::connect(mThread, &QThread::finished, mWriter, [] {
+    QObject::connect(mThread, &QThread::finished, w, [] {
         CacheDb::instance().closeThisThread();
     });
-    QObject::connect(mThread, &QThread::finished, mWriter, &QObject::deleteLater);
+    QObject::connect(mThread, &QThread::finished, w, &QObject::deleteLater);
+    /*  PUBLISHED LAST: no other thread may see the pointer until the object is wired up
+        and its thread is running. */
+    mWriter.store(w, std::memory_order_release);
     mThread->start(QThread::LowPriority);
 }
 
@@ -211,12 +283,8 @@ void ThumbCache::putImage(const QString &fPath, const QImage &im, bool hasDevelo
     if (!G::cacheThumbnails || !wantsOriginalThumb(hasDevelopRecipe)) return;
     if (fPath.isEmpty() || im.isNull()) return;
 
-    ThumbWriter *w;
-    {
-        QMutexLocker lk(&mMutex);
-        startWriterLocked();
-        w = mWriter;
-    }
+    ThumbWriter *w = writerOrStart();
+    if (!w) return;
     /*  Bounded: drop rather than grow. See mInFlight in the header. */
     if (mInFlight.loadRelaxed() >= kInFlightMax) return;
     mInFlight.fetchAndAddRelaxed(1);
@@ -226,11 +294,7 @@ void ThumbCache::putImage(const QString &fPath, const QImage &im, bool hasDevelo
 
 void ThumbCache::flush()
 {
-    ThumbWriter *w;
-    {
-        QMutexLocker lk(&mMutex);
-        w = mWriter;
-    }
+    ThumbWriter *w = mWriter.load(std::memory_order_acquire);
     if (!w) return;
     /*  A BLOCKING invoke, which is the whole trick: it cannot run until every
         queued take() ahead of it has, so when it returns the backlog is
@@ -245,7 +309,7 @@ ThumbCache::~ThumbCache()
         QMutexLocker lk(&mMutex);
         t = mThread;
         mThread = nullptr;
-        mWriter = nullptr;
+        mWriter.store(nullptr, std::memory_order_release);
     }
     if (t) { t->quit(); t->wait(); delete t; }
 }
@@ -255,16 +319,25 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
     const QString key = cachePathKey(fPath);
     if (key.isEmpty()) return QByteArray();
 
-    /*  Probe only: the wait for mMutex is separated from the work done under it,
-        because EVERY Reader thread serialises here and a hit that looks expensive may
-        only be a hit that queued. */
+    /*  NO LOCK ROUND THE SELECT, AND THAT IS THE POINT.
+
+        This used to take mMutex for the whole read, which put every Reader thread in one
+        queue -- behind each other, and behind whatever the writer thread was committing.
+        MEASURED opening the 43,070-row catalog with the cache warm: 9,767 hits costing
+        304 s of pool-thread time, of which 299.8 s was the WAIT for this mutex and
+        0.35 s the SELECT it was protecting. Phase 2 took 17.3 s of wall clock for a
+        folder whose thumbnails were all already stored.
+
+        Nothing here needs the lock. CacheDb hands out ONE CONNECTION PER THREAD, so no
+        two threads share a QSqlDatabase, and the database is in WAL, where a reader
+        never blocks a writer nor a writer a reader -- the two properties this class was
+        serialising by hand. The mutex still guards what is genuinely shared: the writer
+        thread's lifetime (below) and the in-memory byte cap.
+
+        Probe only: the wait is still measured, because the tail of this function does
+        take the lock and a hit that looks expensive may only be a hit that queued. */
     QElapsedTimer gTimer;
     if (G::isPerfProbe) gTimer.start();
-    QMutexLocker lk(&mMutex);
-    if (G::isPerfProbe) {
-        G::probeThumbLockNs.fetch_add(gTimer.nsecsElapsed(), std::memory_order_relaxed);
-        gTimer.restart();
-    }
 
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return QByteArray();
@@ -273,8 +346,10 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
     q.prepare("SELECT jpg, srcsize, srcmtime, used FROM thumb WHERE pathkey = ?");
     q.addBindValue(key);
     const bool got = q.exec() && q.next();
-    if (G::isPerfProbe)
+    if (G::isPerfProbe) {
         G::probeThumbSqlNs.fetch_add(gTimer.nsecsElapsed(), std::memory_order_relaxed);
+        gTimer.restart();
+    }
     if (!got) return QByteArray();
 
     /*  STALENESS. The thumbnail is only valid for the bytes it was made from.
@@ -319,11 +394,16 @@ QByteArray ThumbCache::get(const QString &fPath, qint64 srcSize, qint64 srcMtime
         into one transaction the way it already does for the thumbnails themselves. */
     const qint64 rowUsed = q.value(3).toLongLong();
     if (nowSecs() - rowUsed >= kUsedStampMaxAgeSecs) {
-        startWriterLocked();
-        if (mWriter) {
+        /*  No lock at all on a warm hit: the writer already exists, so this is an
+            atomic load. Only the very first hit of a session can reach the mutex. */
+        ThumbWriter *w = writerOrStart();
+        if (G::isPerfProbe)
+            G::probeThumbLockNs.fetch_add(gTimer.nsecsElapsed(),
+                                          std::memory_order_relaxed);
+        if (w) {
             if (G::isPerfProbe)
                 G::probeThumbStamps.fetch_add(1, std::memory_order_relaxed);
-            QMetaObject::invokeMethod(mWriter, "takeStamp", Qt::QueuedConnection,
+            QMetaObject::invokeMethod(w, "takeStamp", Qt::QueuedConnection,
                                       Q_ARG(QString, key));
         }
     }
@@ -341,6 +421,11 @@ void ThumbCache::writeStampBatch(const QStringList &keys)
     the file gone.
 */
     if (keys.isEmpty()) return;
+    QElapsedTimer holdTimer;
+    if (G::isPerfProbe) {
+        holdTimer.start();
+        G::probeThumbStampBatches.fetch_add(1, std::memory_order_relaxed);
+    }
     QMutexLocker lk(&mMutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return;
@@ -355,6 +440,9 @@ void ThumbCache::writeStampBatch(const QStringList &keys)
         u.exec();
     }
     if (inTxn) db.commit();
+    if (G::isPerfProbe)
+        G::probeThumbWriterHoldNs.fetch_add(holdTimer.nsecsElapsed(),
+                                            std::memory_order_relaxed);
 }
 
 bool ThumbCache::wantsOriginalThumb(bool hasDevelopRecipe)

@@ -2004,7 +2004,14 @@ void MetaRead::allFinished(QString src)
             << " stat(ms)="     << ms_(G::probeThumbStatNs)
             << " lockWait(ms)=" << ms_(G::probeThumbLockNs)
             << " sql(ms)="      << ms_(G::probeThumbSqlNs)
-            << " decode(ms)="   << ms_(G::probeThumbDecodeNs);
+            << " decode(ms)="   << ms_(G::probeThumbDecodeNs)
+            << "\n         writer:"
+            << " hold(ms)="     << ms_(G::probeThumbWriterHoldNs)
+            << " prep(ms)="     << ms_(G::probeThumbWriterPrepNs)
+            << " evict(ms)="    << ms_(G::probeThumbEvictNs)
+            << " evicts="       << G::probeThumbEvicts.load(std::memory_order_relaxed)
+            << " lruStamps="    << G::probeThumbStamps.load(std::memory_order_relaxed)
+            << " stampBatches=" << G::probeThumbStampBatches.load(std::memory_order_relaxed);
     }
     /*
     qDebug() << fun << "Elapsed ms =" << ms
