@@ -116,8 +116,10 @@ void MW::initialize()
     G::useMyTiff = true;
     #endif
 
-    // prevent some warnings from Qt
-    QLoggingCategory::setFilterRules(QStringLiteral("qt.gui.imageio.jpeg.debug=false\nqt.gui.imageio.jpeg.warning=false"));
+    /* Qt logging categories are silenced in one place, in main(), because
+       setFilterRules REPLACES the rules set by any earlier call rather than
+       adding to them: a second call here would re-enable everything main()
+       turned off (that is how the qtiff messages came back). */
 }
 
 void MW::setupPlatform()
