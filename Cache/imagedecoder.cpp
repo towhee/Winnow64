@@ -339,6 +339,56 @@ bool ImageDecoder::ensureDecodeGeometry(int sfRow, ImageMetadata &geo)
     return true;
 }
 
+bool ImageDecoder::ensureIndependentGeometry()
+{
+/*
+    The INDEPENDENT twin of ensureDecodeGeometry.
+
+    An independent decode is handed a whole ImageMetadata (DataModel::imMetadata), and for
+    a row the CATALOG hydrated from the local index the decode geometry in it is empty --
+    the index stores what is displayed and searched, not what is needed to decode, and
+    imMetadata copies the scratch columns that were never written. The embedded-JPG
+    fallback then has nowhere to seek to, so the decode fails on a file that opens
+    perfectly well from its own folder, where the metadata pass had read the header.
+
+    A LOCAL Metadata, because the one this decoder was handed belongs to MW and the GUI
+    thread is using it -- parser state (the IFD hash, its own ImageMetadata) cannot be
+    shared across threads. The cache-mode decoders each own theirs for the same reason.
+
+    Nothing is published back to the model: an independent decode has no sfRow. Repeating
+    the walk on a second independent decode of the same image costs one header read
+    against the demosaic or the render it is part of.
+*/
+    if (isLog || G::isLogger) G::log("ImageDecoder::ensureIndependentGeometry", fPath);
+    if (fPath.isEmpty()) return false;
+    const QFileInfo fi(fPath);
+    if (!fi.exists()) return false;
+
+    /*  isRemote = true: this is not the live folder-load read, so the instance check that
+        rejects a stale one must not reject it. */
+    Metadata meta;
+    if (!meta.loadImageMetadata(fi, -1, dm ? int(dm->instance) : 0, true, true, false, true,
+                                "ImageDecoder::ensureIndependentGeometry", true))
+        return false;
+
+    const ImageMetadata &geo = meta.m;
+    indMeta.offsetFull = geo.offsetFull;
+    indMeta.lengthFull = geo.lengthFull;
+    indMeta.offsetThumb = geo.offsetThumb;
+    indMeta.lengthThumb = geo.lengthThumb;
+    indMeta.samplesPerPixel = geo.samplesPerPixel;
+    indMeta.isBigEnd = geo.isBigEnd;
+    indMeta.ifd0Offset = geo.ifd0Offset;
+    indMeta.widthOrigPreview = geo.widthOrigPreview;
+    indMeta.heightOrigPreview = geo.heightOrigPreview;
+    if (indMeta.iccBuf.isEmpty()) indMeta.iccBuf = geo.iccBuf;
+    /*  The SENSOR geometry too. A raw decoder that cannot self-walk its container falls
+        back to the embedded preview without it -- the same silent downgrade, one stage
+        earlier. */
+    if (!indMeta.rawInfo.isValid() && geo.rawInfo.isValid()) indMeta.rawInfo = geo.rawInfo;
+    return true;
+}
+
 bool ImageDecoder::load()
 {
     /*  THE ROW MAY HAVE NO DECODE GEOMETRY. When its metadata came from the local
@@ -406,6 +456,16 @@ bool ImageDecoder::load()
     /* A cached developed preview short-circuits the whole decode. Checked before the file
        is even opened, because a hit means the file is not read at all. */
     if (!abort.loadAcquire() && loadDevPreview()) return true;
+
+    /*  THE SAME GAP AS THE ROW PATH ABOVE, on the independent side. indMeta was built from
+        the datamodel row, so a catalog row hydrated from the index hands the decode zero
+        offsets. Only asked for the formats whose pixels live at an offset (raw and heic):
+        a jpg or tif has no embedded segment to find, and legitimately reports zero. Read
+        after the devPreview short-circuit, so a preview hit still opens nothing. */
+    if (isIndependent && indMeta.offsetFull == 0
+        && (metadata->hasJpg.contains(ext) || metadata->hasHeic.contains(ext))) {
+        ensureIndependentGeometry();
+    }
 
     QFile imFile(fPath);
 

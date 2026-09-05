@@ -14,9 +14,10 @@
 
     macOS uses a manual QVideoSink + paintEvent. QVideoWidget had an orientation
     bug on macOS (see the "Fix video orientation MacOS bug" commit), so frames
-    are grabbed and rotated/painted by hand using QVideoFrame::rotation().
-    That frame rotation is not populated on the Windows backend, which is why
-    the manual path can't be shared.
+    are grabbed and painted by hand. QVideoFrame::toImage() already applies the
+    display-matrix rotation (it lives on the surface format), so paintEvent only
+    adds QVideoFrame::rotation() on top; that frame rotation is not populated on
+    the Windows backend, which is why the manual path can't be shared.
 */
 
 #ifdef Q_OS_WIN

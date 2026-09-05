@@ -152,6 +152,9 @@ private:
     bool load();
     /* Read the header for a row whose metadata came from the index. */
     bool ensureDecodeGeometry(int sfRow, ImageMetadata &geo);
+    /* The same read for an INDEPENDENT decode, which has no row to read from
+       or publish to; fills indMeta in place. */
+    bool ensureIndependentGeometry();
     bool quit();
     void decodeUsingQt();
     void rotate();

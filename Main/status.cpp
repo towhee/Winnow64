@@ -546,11 +546,24 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 {
 /*
     This slot function is triggered by the tableView->horizontalHeader sortIndicatorChanged
-    signal being emitted, which tells us that the data model sort/filter has been re-sorted.
-    As a consequence we need to update the menu checked status for the correct column and also
-    resync the image cache. However, changing the menu checked state for any of the menu sort
-    actions triggers a sort, which needs to be suppressed while syncing the menu actions with
-    tableView.
+    signal being emitted, when a column header is clicked.  The menu checked status is
+    updated to match the column sorted.  However, changing the menu checked state for any
+    of the menu sort actions triggers a sort, which needs to be suppressed while syncing
+    the menu actions with tableView.
+
+    THE PROXY HAS NOT SORTED YET WHEN THIS ARRIVES.  QTableView does the sorting from its
+    own slot on the same signal, and MW::reset toggles setSortingEnabled off and on, which
+    RE-REGISTERS that slot behind this one -- so from the first folder load onwards this
+    function runs FIRST, before the sort.  Everything that follows a sort was therefore
+    computed against the OLD order: dm->currentSfRow (and the delegates' currentRow, the
+    scroll and the image cache resort) kept the pre-sort row while the selection model,
+    which Qt remaps correctly across the sort, moved to the new one.  The current image
+    appeared to jump, which the menu sort never did.
+
+    So the tail runs QUEUED -- after QTableView's slot, whatever order the connections are
+    in -- and it runs through sortChange, the SAME function the sort menu uses, rather
+    than a second copy of the same steps.  Re-sorting there is a no-op:
+    QSortFilterProxyModel::sort early-returns on the column and order it already holds.
 */
     // if (G::isLogger)
         G::log("MW::sortIndicatorChanged");
@@ -597,21 +610,19 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
         if (sortFocalLengthAction->isChecked()) sortFocalLengthAction->setChecked(false);
         if (sortTitleAction->isChecked()) sortTitleAction->setChecked(false);
     }
-    if(sortOrder == Qt::DescendingOrder) sortReverseAction->setChecked(true);
-    else sortReverseAction->setChecked(false);
     sortMenuUpdateToMatchTable = false;
 
-    // get the current selected item
-    dm->currentSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
-    dm->currentSfRow = dm->currentSfIdx.row();
-    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
-    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    /* Sync MW's own idea of the sort with the table.  Checking a menu action does not
+       emit triggered, so sortChangeFromAction never runs and sortColumn/isReverseSort
+       used to stay on whatever the menu last sorted by -- which MW::filterChange reads
+       (dm->sf->sortColumn() == sortColumn) to decide whether the sort needs recovering,
+       and would answer no, then re-sort back to the stale column on the next filter
+       change. toggleSortDirection also sets sortReverseAction and the statusbar button. */
+    sortColumn = column;
+    toggleSortDirection(sortOrder == Qt::DescendingOrder ? Tog::on : Tog::off);
 
-    if (thumbView->isVisible()) thumbView->refreshIcons("MW::sortIndicatorChanged");
-    if (gridView->isVisible()) gridView->refreshIcons("MW::sortIndicatorChanged");
-    scrollToCurrentRowIfNotVisible();
-
-    resortImageCache();
+    // the rest, after QTableView has actually sorted the proxy (see above)
+    QTimer::singleShot(0, this, [this]{ sortChange("MW::sortIndicatorChanged"); });
 }
 
 void MW::toggleModifyImagesClick()
