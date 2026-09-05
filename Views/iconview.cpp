@@ -320,24 +320,43 @@ QString IconView::diagnostics()
 
 void IconView::refreshIcon(QModelIndex idx, QString src)
 {
+/*
+    Repaint ONE cell.
+
+    This used to call forceFullRefresh() and then QAbstractItemView::dataChanged for the
+    single index, which is two whole-view operations for one badge: forceFullRefresh
+    rejustifies the layout, empties the delegate's icon cache (so every visible thumbnail
+    is rendered again) and calls MW::updateIconRange, while the view's dataChanged tells
+    the macOS accessibility bridge to rebuild its element array for EVERY ROW in the model
+    -- measured at ~27 ms per notification at 43,000 rows.
+
+    It is called once per image entering or leaving the image cache (MW::refreshViewsOnCacheChange,
+    for thumbView AND gridView), so one click that refills the cache paid for both, dozens
+    of times over: the click stalled the GUI for seconds while the loupe waited behind it
+    for its own queued signal. Nothing about a cache badge, a rotation or the loupe
+    rectangle changes the layout of the view, and a row nobody can see needs no repaint at
+    all -- the delegate reads the model when it is scrolled into view.
+*/
     if (!isVisible()) return;
-    if (isDebug) G::log("IconView::refreshThumb", objectName());
+    if (isDebug) G::log("IconView::refreshIcon", objectName());
 
     if (!idx.isValid()) {
         qDebug() << "WARNING"
-                   << "IconView::refreshThumb"
+                   << "IconView::refreshIcon"
                    << "idx =" << idx
                    << "is invalid";
         QString msg = "Invalid index.";
-        G::issue("Warning", msg, "IconView::refreshThumb");
+        G::issue("Warning", msg, "IconView::refreshIcon");
         return;
     }
 
-    forceFullRefresh("IconView::refreshThumb");
+    /*  This row's entry only: the icon itself may have changed (a rotation), but the
+        other 43,000 pixmaps in the cache have not. */
+    iconViewDelegate->clearCacheItem(idx.row());
 
-    QVector<int> roles;
-    roles.append(Qt::EditRole);
-    dataChanged(idx, idx, roles);
+    if (!isCellVisible(idx.row())) return;
+
+    update(idx);
 }
 
 void IconView::refreshIcons(QString src)
