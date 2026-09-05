@@ -3402,6 +3402,13 @@ confusing.
 
 MW::filterChange.ImageDecoder::decode failed "/Users/roryhill/Pictures/CR3/2020-10-14_0029.cr3"
 
+I want to experiment with the develop panel header format for the Edits subheaders shown
+in the attached screenshot in the yellow box.  Change them to the standard gradient look
+used throughout Winnow (example is the preferences shown at the bottom of the screenshot.
+If I do not like the change I want to revert to the current format. I have committed
+the current state.
+
+
 Keyword panel
 Keyword tree
 - show keyword heirarchy

@@ -1108,6 +1108,12 @@ private:
        ScopeHeaderLab::kDetailIndent. Its embedded editor's caption column is narrowed by
        the same amount so its VALUE column still lines up with the tree below. */
     static constexpr int kMaskPanelIndent = 22;
+    /* EXPERIMENT (flip to false to restore the previous look): paint the Edits section
+       headers (Basic / Curves / Color / Calibrate / Color Grade / Detail / Effects) with
+       the standard Winnow header gradient band used by Preferences and the Embellish
+       tree, instead of the flat, band-less caption they had. When false the headers are
+       tagged UR_HeaderFlat and the delegate skips the gradient fill. */
+    static constexpr bool kGradientSectionHeaders = true;
     /* Caption split for the MaskPanel's embedded editor: the tree's split less however
        far the panel is inset, so its sliders line up with the tree's. The flat Edits
        and minimal layouts do not indent the panel (G::developEditsLayout), so there the two
