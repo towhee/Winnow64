@@ -38,7 +38,7 @@
 #include "Views/videoview.h"
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
-#include "Views/findpanel.h"
+#include "Views/filterpanel.h"
 #include "Views/catalogscopetree.h"
 #include "Main/catalogscanner.h"
 #include "Dialogs/catalogrootsdlg.h"
@@ -502,7 +502,7 @@ public slots:
        append = true adds to it, the way ctrl-clicking a second folder does. */
     void loadCatalogResults(const QStringList &paths, bool append = false,
                             const CatalogQuery &query = CatalogQuery());
-    /*  The same load from whole index ROWS rather than paths -- what the Find dock now
+    /*  The same load from whole index ROWS rather than paths -- what the Filter dock now
         hands over. Nothing is read from disk to fill the model; see
         DataModel::addCatalogRows. */
     void loadCatalogRows(const QVector<CatalogRow> &rows, bool append = false,
@@ -1071,7 +1071,7 @@ private slots:
     void showFilterDock();
     void showCatalogDock();
     /*  THE ONE PLACE G::scope CHANGES. Every entry point -- either Catalog row,
-        the Find dock's Folders|Catalog buttons, F2/Shift+F2, and selecting a
+        the Filter dock's Folders|Catalog buttons, F2/Shift+F2, and selecting a
         folder -- routes here, and this pushes the result back to all of them so
         they cannot disagree. src is for the log only. */
     void setScope(G::Scope s, QString src = "");
@@ -1206,7 +1206,7 @@ private:
     QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
-    /*  The catalog's two entry points, in the File menu. The Find dock used to carry
+    /*  The catalog's two entry points, in the File menu. The Filter dock used to carry
         both -- a Folders|Catalog toggle and a "Manage..." button under its footer -- but
         picking a set to browse and choosing which folders are indexed are both File
         commands, not search-panel furniture. */
@@ -1581,8 +1581,8 @@ private:
     DockWidget *folderDock;
     DockWidget *favDock;
     DockWidget *filterDock;
-    /* NULL with G::useFindDock -- the Catalog is a scope of the Find dock, not a dock of
-       its own, so createCatalogDock returns before building it. Initialised here because
+    /* NULL with G::useFilterPanel -- the Catalog is a scope of the Filter dock, not a
+       dock of its own, so createCatalogDock returns before building it. Initialised here because
        createDocks and placeDocksAddedSince both reach for it before that is decided. */
     DockWidget *catalogDock = nullptr;
     DockWidget *metadataDock;
@@ -1679,8 +1679,8 @@ private:
     BookMarks *bookmarks;
     Filters *filters;
     /* The Catalog dock's body: cross-folder search over the local index. NULL with
-       G::useFindDock, which is the default -- createCatalogDock returns before building
-       it, and the guards that check it (startCatalogScan, the scanner's finished signal)
+       G::useFilterPanel, which is the default -- createCatalogDock returns before
+       building it, and the guards that check it (startCatalogScan, the scanner's finished signal)
        need it to be genuinely null rather than indeterminate. It was the one member of
        this group without an initialiser, and an uninitialised pointer passes `if (p)`. */
     CatalogView *catalogView = nullptr;
@@ -1704,12 +1704,12 @@ private:
     /* The scope editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */
     CatalogRootsDlg *catalogRootsDlg = nullptr;
-    /* The unified Find panel (G::useFindDock). When it exists it OWNS the layout the
+    /* The unified Filter panel (G::useFilterPanel). When it exists it OWNS the layout the
        filters tree sits in, catalogDock/catalogView are never created, and the Catalog
        entry points (Shift+F2, Window > Catalog Panel) switch its scope instead of showing
        a second dock. Null when the flag is off, in which case the two original panels are
        built exactly as before. */
-    FindPanel *findPanel = nullptr;
+    FilterPanel *filterPanel = nullptr;
     /*  The Catalog rows above the Folders tree. See Views/catalogscopetree.h -- a
         second view of G::scope, mirrored by MW::setScope. */
     CatalogScopeTree *folderCatalogTree = nullptr;

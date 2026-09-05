@@ -314,7 +314,7 @@ if(TARGET Winnow)
     # -------------------------------------------------------------------------
     # catalog_load — the OTHER load path. --selftest loads a FOLDER;
     # MW::loadCatalogResults (images from any number of folders as one browsable
-    # set) was reachable only by a person typing in the Find dock, so it had no
+    # set) was reachable only by a person typing in the Filter dock, so it had no
     # coverage at all. This loads the fixture folder, lets it reach the catalog,
     # then runs a catalog search and loads the result -- failing if the search
     # matches nothing or the model ends up empty.
@@ -335,7 +335,7 @@ if(TARGET Winnow)
     # MW::startCatalogScan has a single call site behind a preferences
     # sub-dialog button, so nothing headless ever reached it. It crashed on its
     # first line for every user: catalogView was declared without an
-    # initialiser, createCatalogDock returns early under G::useFindDock, and an
+    # initialiser, createCatalogDock returns early under G::useFilterPanel, and an
     # uninitialised pointer passes `if (p)`. The scan was never queued, so only
     # folders the user had browsed ever reached the catalog.
     #

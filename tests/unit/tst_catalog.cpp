@@ -1397,7 +1397,7 @@ void tst_catalog::migrationCollapsesDoubledPathSeparators()
 void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
 {
 /*
-    The Find dock shows ONE category list and the user cannot tell which scope produced
+    The Filter dock shows ONE category list and the user cannot tell which scope produced
     it,
     so a value the catalog offers must be spelled exactly as DataModel spells the same
     value -- otherwise checking "NEF" in Catalog would mean nothing in Folders, and the
@@ -1471,7 +1471,7 @@ void tst_catalog::categoryItemsAreEmptyForColumnsTheIndexCannotAnswer()
 {
 /*
     Duplicates is a comparison of what is LOADED and the search flag is the panel's own
-    box; neither means anything across a library. An empty answer is what tells the Find
+    box; neither means anything across a library. An empty answer is what tells the Filter
     dock to HIDE those categories rather than show them empty, which would read as "you
     have no duplicates" -- a claim the catalog is in no position to make.
 */
@@ -1487,7 +1487,7 @@ void tst_catalog::categoryItemsAreEmptyForColumnsTheIndexCannotAnswer()
 
 void tst_catalog::genericIncludeAndExcludeNarrowTheSearch()
 {
-/* The Find dock hands the SAME checked-item structure to either scope, so the query
+/* The Filter dock hands the SAME checked-item structure to either scope, so the query
     carries category items as a map keyed by datamodel column rather than a named field
     per category. Within a column the values are OR-ed, columns are AND-ed, and exclude is
     AND-NOT -- exactly what checking and Opt+clicking items in the tree means. */

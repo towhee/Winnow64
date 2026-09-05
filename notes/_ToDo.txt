@@ -7,12 +7,9 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- Mouse wheel not scrolling thumbView
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
-- Copy folder path does not always work
-- How browsing adds to catalog.
-- Scan xmp for lightroom keywords (subjectflat, subjectheirarchy)
+- Fix search in filter
 - Add a keyword module.
 - Auto keyword generator (k shortcut?)
 - Review RapidRaw masks / inpainting / model usage

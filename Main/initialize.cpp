@@ -446,7 +446,7 @@ void MW::createCatalogScanner()
                 Q_UNUSED(unreadable)
                 if (progress) progress->clearProgress(progressCatalogRow);
                 if (catalogView) catalogView->setScanning(false);
-                if (findPanel) findPanel->setScanning(false);
+                if (filterPanel) filterPanel->setScanning(false);
                 if (catalogRootsDlg) {
                     catalogRootsDlg->setScanning(false);
                     /* The dialog stays open across a scan, so the counts it shows -- what
@@ -461,7 +461,7 @@ void MW::createCatalogScanner()
                    those are in the Catalog panel. */
                 if (catalogView && catalogDock && catalogDock->isVisible())
                     catalogView->refresh();
-                if (findPanel && filterDock->isVisible()) findPanel->refresh();
+                if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
                 updateCatalogScopeTrees();
                 if (G::isLogger)
                     G::log("MW::createCatalogScanner",
@@ -1619,8 +1619,8 @@ void MW::createFavDock()
 void MW::createFilterDock()
 {
 /*
-    The Filter dock: with G::useFindDock it also carries the Catalog panel's function,
-    folded in behind a scope switch (Here/Everywhere). See Views/findpanel.h. The tab is
+    The Filter dock: with G::useFilterPanel it also carries the Catalog panel's function,
+    folded in behind a scope switch (Here/Everywhere). See Views/filterpanel.h. The tab is
     labelled "Filters" either way -- only the panel's reach changes, not the dock.
 
     IT IS THE SAME DOCK OBJECT DELIBERATELY. Everything that reaches for filterDock -- the
@@ -1725,45 +1725,45 @@ void MW::createFilterDock()
     filterLayout->setContentsMargins(0, 0, 0, 0);
     filterLayout->addWidget(filters->msgFrame);
 
-    if (G::useFindDock) {
-        /* FindPanel re-parents the filters tree into its own layout, so the tree is the
+    if (G::useFilterPanel) {
+        /* FilterPanel re-parents the filters tree into its own layout, so the tree is the
            SAME widget in both scopes rather than a copy that could drift. */
-        findPanel = new FindPanel(filters);
-        filterLayout->addWidget(findPanel);
-        connect(findPanel, &FindPanel::loadResults, this, &MW::loadCatalogRows);
+        filterPanel = new FilterPanel(filters);
+        filterLayout->addWidget(filterPanel);
+        connect(filterPanel, &FilterPanel::loadResults, this, &MW::loadCatalogRows);
         /* Returning to Folders: the tree is holding catalog values, so rebuild it from
            the datamodel. buildFilters->reset() clears the catalog items (and the checks
            that went with them) before build() repopulates from the model. */
     /*  The panel reports its own scope flips; MW mirrors them to the Catalog
         rows above the Folders and Bookmarks trees. */
-    connect(findPanel, &FindPanel::scopeChanged, this, [this](int sc){
+    connect(filterPanel, &FilterPanel::scopeChanged, this, [this](int sc){
         /*  Switching to Everywhere with nothing catalogued would leave the panel
             searching an empty index, so the window that fills it opens instead and the
             selector goes back to Here -- a scope the panel shows but cannot answer is
             the dead end MW::catalogEmptyOpenManage exists to close. Putting the
             selector back re-enters this lambda once and stops: MW::setScope
             early-returns when the scope already matches. */
-        if (sc == FindPanel::CatalogScope
-            && catalogEmptyOpenManage("FindPanel::scopeChanged")) {
-            findPanel->setScope(FindPanel::FolderScope);
+        if (sc == FilterPanel::CatalogScope
+            && catalogEmptyOpenManage("FilterPanel::scopeChanged")) {
+            filterPanel->setScope(FilterPanel::FolderScope);
             return;
         }
-        setScope(sc == FindPanel::CatalogScope ? G::Scope::Catalog
+        setScope(sc == FilterPanel::CatalogScope ? G::Scope::Catalog
                                                : G::Scope::Folders,
-                 "FindPanel::scopeChanged");
+                 "FilterPanel::scopeChanged");
     });
 
-        connect(findPanel, &FindPanel::rebuildFolderCategoriesRequested, this, [this]{
+        connect(filterPanel, &FilterPanel::rebuildFolderCategoriesRequested, this, [this]{
             if (G::isInitializing) return;
             buildFilters->reset(false /*collapse*/);
             buildFiltersWhenModelReady(dm->instance);
-            filterChange("FindPanel::rebuildFolderCategoriesRequested");
+            filterChange("FilterPanel::rebuildFolderCategoriesRequested");
         });
         /* Refresh when the dock is actually shown rather than on every folder load:
            re-reading the catalog categories is a query per category, and it is only worth
            doing for a panel someone is looking at. */
         connect(filterDock, &QDockWidget::visibilityChanged, this, [this](bool visible){
-            if (visible && findPanel) findPanel->refresh();
+            if (visible && filterPanel) filterPanel->refresh();
         });
     }
     else {
@@ -1787,12 +1787,12 @@ void MW::createCatalogDock()
 */
     if (G::isLogger) G::log("MW::createCatalogDock");
 
-    /* With the Find dock there is no separate Catalog panel: its search box, keyword
+    /* With the Filter dock there is no separate Catalog panel: its search box, keyword
        category and Load button are the Catalog scope of the one panel. catalogDock and
        catalogView stay NULL, and every entry point that used to show this dock
-       (Shift+F2, Window > Catalog Panel, the full-screen dock set) switches the Find
+       (Shift+F2, Window > Catalog Panel, the full-screen dock set) switches the Filter
        dock's scope instead. */
-    if (G::useFindDock) return;
+    if (G::useFilterPanel) return;
 
     catalogDockTabText = "Catalog";
     dockTextNames << catalogDockTabText;
@@ -3485,8 +3485,8 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     /* Catalog sits beside Filters: both answer "which images?", one over what is
        loaded and one over everything indexed. */
-    /* The Catalog tab exists only when it is a separate dock; with the Find dock its
-       place in the group is taken by the Find panel's Catalog scope. */
+    /* The Catalog tab exists only when it is a separate dock; with the Filter dock its
+       place in the group is taken by the Filter panel's Catalog scope. */
     if (catalogDock) MW::tabifyDockWidget(filterDock, catalogDock);
     if (G::useInfoView)
         MW::tabifyDockWidget(catalogDock ? catalogDock : filterDock, metadataDock);
@@ -3508,7 +3508,7 @@ void MW::createDocks()
     // without a reliable resize/show on the surviving docks.
     for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, metadataDock,
                           embelDock, developDock, historyDock, presetsDock}) {
-        if (!d) continue;       // catalogDock is null with G::useFindDock
+        if (!d) continue;       // catalogDock is null with G::useFilterPanel
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
         /* WORK IN PROGRESS - DISABLED.

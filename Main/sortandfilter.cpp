@@ -1084,21 +1084,21 @@ void MW::searchTextEdit()
     // set menu status for filterDock in window menu
     filterDockVisibleAction->setChecked(true);
 
-    /*  WITH THE FIND DOCK, F2 is the Folders half of the F2 / Shift+F2 pair: the
+    /*  WITH THE FILTER DOCK, F2 is the Folders half of the F2 / Shift+F2 pair: the
         same shared search box as Shift+F2, switched to the Folders scope (see
         MW::showCatalogDock for the other half).
 
         It used to open an editor on filters->searchTrue instead. But
         Filters::showAllCategories HIDES the Search category whenever
-        G::useFindDock -- the box is the same fact shown twice -- so F2 was
+        G::useFilterPanel -- the box is the same fact shown twice -- so F2 was
         opening an editor on an item the user could not see, and the box it
         should have focused was never touched. The searchTrue item still exists
         as the STORAGE the proxy predicate reads via Filters::setSearchText;
         it is just no longer the thing the user types into. */
-    if (G::useFindDock) {
-        if (!findPanel) return;
+    if (G::useFilterPanel) {
+        if (!filterPanel) return;
         setScope(G::Scope::Folders, "MW::searchTextEdit");
-        findPanel->focusSearch();
+        filterPanel->focusSearch();
         return;
     }
 

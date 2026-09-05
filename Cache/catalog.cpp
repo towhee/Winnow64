@@ -146,7 +146,7 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
     different from the item that was offered. Two expressions would drift the first time
     one was edited.
 
-    THE STRINGS MUST MATCH WHAT DataModel WRITES into the same column, because the Find
+    THE STRINGS MUST MATCH WHAT DataModel WRITES into the same column, because the Filter
     dock shows one list and the user does not know which scope produced it: TypeColumn is
     the suffix UPPER-cased, YearColumn is "yyyy", MonthColumn is the English abbreviation
     ("Jan".."Dec"), ISOColumn is the number right-justified to six, DayColumn is
@@ -806,7 +806,7 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
         asked about a folder's worth of paths and became a 30-second freeze the moment a
         catalog scope asked about 42,979 of them. The queries run off the GUI thread, so
         the pass itself was never the problem -- what blocked was every GUI-thread call
-        INTO the catalog (FindPanel::refresh, updateCatalogScopeTrees, the dock becoming
+        INTO the catalog (FilterPanel::refresh, updateCatalogScopeTrees, the dock becoming
         visible) waiting on a mutex held for one query per row. Measured from a person's
         click: GUI STALL 30,689 ms, beginning the instant the load completed, with every
         stage of the load itself under 30 ms.
@@ -1203,7 +1203,7 @@ QMap<QString, int> Catalog::categoryItems(int dmColumn)
     COUNTS ARE UNFILTERED -- the whole catalog, not the current query. Per-item counts
     under the live query would be one GROUP BY per category on every keystroke over a
     quarter of a million rows, which is exactly the shape the debounce exists to avoid.
-    The Find dock therefore leaves the filtered column blank in Catalog scope and says
+    The Filter dock therefore leaves the filtered column blank in Catalog scope and says
     so, rather than showing a number that is quietly the wrong one.
 */
     QMap<QString, int> out;

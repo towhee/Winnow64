@@ -130,7 +130,7 @@ private:
        itemCheckStateHasChanged. */
     bool keywordCheckJustChanged = false;
 
-    /*  See FindPanel::resultLimit -- one setting (G::maxSearchResults) drives
+    /*  See FilterPanel::resultLimit -- one setting (G::maxSearchResults) drives
         both panels, so the two cannot disagree about how much a search returns. */
     static int resultLimit() { return G::maxSearchResults > 0 ? G::maxSearchResults : INT_MAX; }
 };

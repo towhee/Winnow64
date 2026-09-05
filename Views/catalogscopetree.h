@@ -37,7 +37,7 @@
     ONE INSTANCE, IN THE FOLDERS PANEL. The same tree was offered above Bookmarks too,
     on the reasoning that scope is chosen in either -- but Bookmarks is a list of folders
     the USER put there, and a row nobody bookmarked reads as clutter in it. Clicking asks
-    MW to change scope and MW pushes the result back here, so this and the Find panel
+    MW to change scope and MW pushes the result back here, so this and the Filter panel
     cannot disagree about what is being looked at.
 */
 class CatalogScopeTree : public QTreeWidget

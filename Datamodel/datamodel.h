@@ -24,7 +24,7 @@
     WHAT SET OF IMAGES THE MODEL IS SHOWING, as ONE description.
 
     Winnow fills the model two ways -- a folder (or a folder tree) picked in the
-    Folders/Bookmarks panel, and a catalog search picked in the Find dock -- and until
+    Folders/Bookmarks panel, and a catalog search picked in the Filter dock -- and until
     now those were two functions with two call sites and nothing that named the thing
     they have in common. They ARE the same thing: a predicate over the catalogue of
     images, differing only in whether the filesystem is also walked to reconcile what
@@ -35,7 +35,7 @@
     the model answer "what am I showing" -- which is what a reload, a refresh and the
     reconcile write-back all need, and none of them could ask before.
 
-    paths IS CARRIED RATHER THAN RE-RESOLVED for catalog scope. The Find dock has
+    paths IS CARRIED RATHER THAN RE-RESOLVED for catalog scope. The Filter dock has
     already run the search (it shows the count), so resolving the query a second time
     here would be a second pass over the index for an answer we were handed.
 */
@@ -45,11 +45,11 @@ struct ScopeRequest
 
     /* What defines the set. For folder scope, query.folder is the folder and recurse
        says whether its subtree is included; for catalog scope it is what the user
-       asked the Find dock for. */
+       asked the Filter dock for. */
     CatalogQuery query;
 
     /* Catalog scope only: the result set the dock resolved. paths is the older shape,
-       still used by the separate Catalog panel; rows is what the Find dock supplies --
+       still used by the separate Catalog panel; rows is what the Filter dock supplies --
        the same images with everything a datamodel row displays already attached, so the
        fill opens no files. When rows is non-empty it is the set and paths is ignored. */
     QStringList paths;
@@ -537,7 +537,7 @@ signals:
 
 public slots:
     /*  THE ONE WAY THE MODEL IS FILLED. Both load paths -- a folder picked in the tree
-        and a search resolved by the Find dock -- come through here, so the model always
+        and a search resolved by the Filter dock -- come through here, so the model always
         knows what set it is showing. See ScopeRequest above and the .cpp. */
     void setScope(const ScopeRequest &req);
     const ScopeRequest &scopeRequest() const { return currentScope; }
