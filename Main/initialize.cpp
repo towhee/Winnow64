@@ -1639,7 +1639,14 @@ void MW::createFilterDock()
     QHBoxLayout *filterTitleLayout = new QHBoxLayout();
     filterTitleLayout->setContentsMargins(0, 0, 0, 0);
     filterTitleLayout->setSpacing(0);
-    filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
+    /*  THE TITLE CARRIES THE SCOPE -- "Filters (Folders)" or "Filters (Catalog)". The
+        panel used to say which set it was searching in the search box's placeholder
+        text, which vanished the moment anything was typed and was invisible while the
+        Search category was collapsed. MW::setScope rewrites it; the TAB stays "Filters"
+        either way, because a tab that changes width when the scope changes moves every
+        other tab beside it. */
+    filterTitleBar = new DockTitleBar(G::useFilterPanel ? "Filters (Folders)" : "Filters",
+                                      filterTitleLayout);
     filterDock->setTitleBarWidget(filterTitleBar);
     filterTitleBar->setToolTip(dockTabToolTip(filterDockTabText));
     connect(filterDock, &DockWidget::focus, this, &MW::focusOnDock);
@@ -1678,7 +1685,10 @@ void MW::createFilterDock()
     // question mark button
     BarBtn *filterQuestionBtn = new BarBtn();
     filterQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    filterQuestionBtn->setToolTip("How this works");
+    /*  ONE ? FOR THE PANEL, and the query grammar is in it -- see Filters::howThisWorks.
+        The search box that briefly lived above the tree had a ? of its own; two help
+        buttons in one dock only ask the user which one to try. */
+    filterQuestionBtn->setToolTip("How filters and queries work");
     connect(filterQuestionBtn, &BarBtn::clicked, filters, &Filters::howThisWorks);
     filterTitleLayout->addWidget(filterQuestionBtn);
 
@@ -1755,9 +1765,19 @@ void MW::createFilterDock()
 
         connect(filterPanel, &FilterPanel::rebuildFolderCategoriesRequested, this, [this]{
             if (G::isInitializing) return;
+            /*  THE QUERY IS CARRIED ACROSS THE REBUILD. It lives in the Search row of the
+                tree, and BuildFilters::reset clears that row along with every other item
+                (Filters::clearAll -> setSearchNewFolder), so a query asked of the catalog
+                would be silently dropped on the way back to the folder -- which is the
+                hand-off the two scopes exist for. Captured before the reset and written
+                back after it; setSearchText emits the filterChange itself. */
+            const QString query = filters->currentSearchText();
             buildFilters->reset(false /*collapse*/);
             buildFiltersWhenModelReady(dm->instance);
-            filterChange("FilterPanel::rebuildFolderCategoriesRequested");
+            if (query.isEmpty())
+                filterChange("FilterPanel::rebuildFolderCategoriesRequested");
+            else
+                filters->setSearchText(query);
         });
         /* Refresh when the dock is actually shown rather than on every folder load:
            re-reading the catalog categories is a query per category, and it is only worth
@@ -1790,7 +1810,7 @@ void MW::createCatalogDock()
     /* With the Filter dock there is no separate Catalog panel: its search box, keyword
        category and Load button are the Catalog scope of the one panel. catalogDock and
        catalogView stay NULL, and every entry point that used to show this dock
-       (Shift+F2, Window > Catalog Panel, the full-screen dock set) switches the Filter
+       (File > Open Catalog, Window > Search Catalog, the full-screen dock set) switches the Filter
        dock's scope instead. */
     if (G::useFilterPanel) return;
 
@@ -3099,6 +3119,14 @@ void MW::setOperationMode(G::OperationMode mode)
     if (historyDock) historyDock->setVisible(inDevelop);
     developDock->setVisible(inDevelop);
     if (inDevelop) developDock->raise();
+
+    /* The mode changes the TAB COUNT of whatever dock area holds Develop / History /
+       Presets, so the responsive tab titles must be re-evaluated: three more tabs may no
+       longer fit as text (switch to graphics), and three fewer may fit again. Deferred a
+       tick so the tab bar has been rebuilt and the docks have their final width. Called
+       before the no-change return below so it also covers a re-apply of the current
+       mode. */
+    scheduleDockTabUpdate();
 
     /* Save Develop Preset and Copy / Paste Develop Settings carry real shortcuts
        (Cmd+Shift+N, Cmd+Opt+C, Cmd+Opt+V), so gate them by mode here (before the

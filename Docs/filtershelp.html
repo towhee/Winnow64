@@ -63,5 +63,176 @@ include <span class="highlight">Vancouver</span>, Opt+click
 <span class="highlight">USA</span>. The amber marking needs the catalog; without it
 Winnow cannot tell which keywords are ambiguous and marks none.</p>
 
+<h1>Writing a query</h1>
+
+<p>The <span class="highlight">Search</span> category at the top of the Filter panel is
+a filter like the others, except that you type it. Click its row &mdash; the one reading
+<i>Enter search query</i> &mdash; type your query and press
+<span class="highlight">Return</span> to run it. Nothing happens while you type: a query
+is run when you say it is finished, not on every keystroke.</p>
+
+<p>Delete the text and press Return to remove the query; the row goes back to reading
+<i>Enter search query</i>. Unticking the row leaves the query in place but stops it
+filtering, and the <span class="highlight">No match</span> row beside it does the
+opposite &mdash; it shows the images the query did <b>not</b> find.</p>
+
+<h1>Room to type, and queries worth keeping</h1>
+
+<p><span class="highlight">Right-click</span> the search row for three things the row
+itself cannot offer, above the usual filter commands:</p>
+
+<ul>
+<li><span class="highlight">Larger query space...</span> &mdash; opens the query in a
+resizable window, with the operators listed beside it. Use it when a query has grown
+brackets and quoted phrases and no longer fits in the row.</li>
+<li><span class="highlight">Save query...</span> &mdash; give the current query a name
+and keep it. Saving under a name you have already used replaces it.</li>
+<li><span class="highlight">Load query</span> &mdash; picks a saved query and runs it.
+Hover a name to see the query it holds.</li>
+</ul>
+
+<h1>The two scopes</h1>
+
+<p>The same row searches whichever scope you are in &mdash; the dock title says which,
+<span class="highlight">Filters (Folders)</span> or
+<span class="highlight">Filters (Catalog)</span> &mdash; and the words mean the same
+thing in both:</p>
+
+<ul>
+<li><span class="highlight">Filters (Folders)</span> &mdash; searches the images that are
+loaded now.</li>
+<li><span class="highlight">Filters (Catalog)</span> &mdash; searches every image Winnow
+has catalogued, across all your folders.</li>
+</ul>
+
+<p><b>F2</b> jumps to the search row of whichever scope you are in. To change scope, click
+the <span class="highlight">Catalog</span> row above the Folders or Bookmarks tree, or use
+<span class="highlight">File &gt; Open Catalog</span>.</p>
+
+<p>A search of the loaded folder that found nothing is one scope switch away from being
+asked of the whole library: the text carries across.</p>
+
+<h1>What is searched</h1>
+
+<p>Everything Winnow holds as text for an image: its <b>full path</b> &mdash; folder and
+filename &mdash; plus keywords, title, creator, copyright, colour label, camera make and
+model, lens, dimensions, the shooting information, and any e-mail or URL. A query does
+not search the picture itself &mdash; for that, use the AI masks in Develop.</p>
+
+<p>The path being searched is easy to forget and occasionally surprising: a word that
+happens to be in your user name or a drive name is in every image's text.</p>
+
+<p><span class="warn">Your own name is probably in most of your library.</span> Creator
+and copyright are searched, and most cameras stamp them into every file, so searching for
+your own name will match nearly everything rather than narrowing anything. The same is
+true of a camera body you have owned for years. Add a second word.</p>
+
+<h1>The operators</h1>
+
+<table style="width: 620px;" border="silver">
+<tbody>
+<tr>
+    <th style="text-align: left;">Type this</th>
+    <th style="text-align: left;">To find</th>
+</tr>
+<tr>
+    <td><code>heron nanaimo</code></td>
+    <td>images with <b>both</b> words. Space means AND, which is the default.</td>
+</tr>
+<tr>
+    <td><code>heron AND nanaimo</code></td>
+    <td>the same thing. <code>AND</code> is accepted because people type it.</td>
+</tr>
+<tr>
+    <td><code>heron OR eagle</code></td>
+    <td>images with <b>either</b> word.</td>
+</tr>
+<tr>
+    <td><code>-heron</code></td>
+    <td>images <b>without</b> the word.</td>
+</tr>
+<tr>
+    <td><code>NOT heron</code></td>
+    <td>the same thing, spelled out.</td>
+</tr>
+<tr>
+    <td><code>"great blue"</code></td>
+    <td>the <b>phrase</b>, not the two words in any order.</td>
+</tr>
+<tr>
+    <td><code>(heron OR eagle) tide</code></td>
+    <td>brackets <b>group</b> &mdash; see below.</td>
+</tr>
+</tbody>
+</table>
+
+<p><span class="warn">OR, AND and NOT are operators only in capitals.</span> A photograph
+captioned "black or white" is searched for as written, because the lower-case <i>or</i>
+is just a word someone typed.</p>
+
+<h1>Brackets and what binds tightest</h1>
+
+<p>AND binds tighter than OR, which is the usual rule in search boxes and spreadsheets.
+So this:</p>
+
+<pre><code>heron OR eagle nanaimo</code></pre>
+
+<p>means <i>heron, or (eagle and nanaimo)</i> &mdash; every heron, plus the eagles at
+Nanaimo. Brackets say the other thing:</p>
+
+<pre><code>(heron OR eagle) nanaimo</code></pre>
+
+<p>which is <i>anything at Nanaimo that is either a heron or an eagle</i>. Brackets nest
+as deeply as you like:</p>
+
+<pre><code>((heron OR eagle) nanaimo) OR "great blue"</code></pre>
+
+<p>An unfinished bracket is not an error. A missing <code>)</code> is closed for you at
+the end of what you have typed, and a stray one is ignored, so a half-written query
+narrows rather than failing.</p>
+
+<p>To search for a bracket as a character &mdash; a filename like <code>DSC(2)</code>
+&mdash; put it in quotes: <code>"DSC(2)"</code>.</p>
+
+<h1>Leaving things out</h1>
+
+<p>A <code>-word</code> or <code>NOT word</code> excludes it from the whole result,
+wherever in the query you write it. These all mean the same:</p>
+
+<pre><code>tide -heron
+tide NOT heron
+tide -(heron OR eagle)      excludes both</code></pre>
+
+<p><span class="warn">A NOT inside a bracket still applies to the whole query.</span>
+<code>heron OR -tide</code> is read as <i>heron, and not tide</i> rather than as a
+choice, because that is the only reading the catalog index can carry out. If you mean two
+different exclusions, run them as two queries.</p>
+
+<h1>Examples</h1>
+
+<pre><code>heron                         anything mentioning heron
+"great blue" -captive         the phrase, minus one word
+(heron OR eagle) 2024         either bird, in a folder or filename with 2024
+Z9 (100-400mm OR 500mm)       one body, either of two lenses
+nanaimo NOT (fog OR rain)     a place, in decent weather</code></pre>
+
+<h1>Matching inside words</h1>
+
+<p>A word matches anywhere inside a word, in both scopes: <code>eron</code> finds
+Heron.</p>
+
+<p>The exception is if you have set a limit on search results in Preferences. The catalog
+then holds only the newest images up to that limit, so the rest have to be found in the
+index instead &mdash; and the index matches from the <i>start</i> of a word, where
+<code>eron</code> finds nothing and <code>her</code> finds Heron.</p>
+
+<h1>The query and the ticks work together</h1>
+
+<p>The categories below Search do the other half of the filtering: tick a rating, a
+camera, a keyword or a colour label and the view narrows to it. A query and a tick are
+AND-ed like any two categories, and the tree is rebuilt for whichever scope you are in
+&mdash; a folder offers the three cameras in it, the library offers all forty.</p>
+
+
 </body>
 </html>

@@ -7,13 +7,13 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
+- Fix search in filter
 - Develop panels management needs a tweak
 - Tweak main menu (Library, Develop...)
 - Tweak preferences
 - Tweak develop help
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
-- Fix search in filter
 - Add a keyword module.
 - Auto keyword generator (k shortcut?)
 - Review RapidRaw masks / inpainting / model usage

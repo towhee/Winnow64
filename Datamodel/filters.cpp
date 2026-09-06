@@ -121,7 +121,10 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     categoryBackground.setColorAt(1, QColor(b,b,b));
     categoryFont = this->font();
 
-    enterSearchString = "Enter search text...";
+    /*  The prompt in the Search category row when there is no query. It is also what
+        "no search" IS: ignoreSearchStrings is what DataModel::searchStringChange tests,
+        so the placeholder text must stay in that list. */
+    enterSearchString = "Enter search query";
     ignoreSearchStrings << "" << enterSearchString << enterSearchString.toLower();
     int c = G::textShade + 15;
     int d = G::textShade - 15;
@@ -222,7 +225,13 @@ void Filters::createPredefinedFilters()
     searchTrue->setFlags(searchTrue->flags() | Qt::ItemIsEditable);
     searchTrue->setFont(0, searchDefaultTextFont);
     searchTrue->setForeground(0, searchDefaultTextColor);
-    searchTrue->setToolTip(0, "Search text is not case sensitive");
+    searchTrue->setToolTip(0,
+        "Click to type a query, then press Return to run it.\n\n"
+        "Words are AND-ed. Use OR between alternatives, (brackets) to group,\n"
+        "\"quotes\" for a phrase, and -word or NOT word to leave something out.\n\n"
+        "Text is not case sensitive; OR, AND and NOT are operators only in capitals.\n"
+        "Click ? in the Filters title bar for the full syntax.\n\n"
+        "Right-click for a larger editing window, and to save and load queries.");
     searchTrueIdx = indexFromItem(searchTrue, 0);
 
     searchFalse = new QTreeWidgetItem(search);
@@ -1236,10 +1245,24 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     a feature, so the same three choices are here by name.
 */
     QTreeWidgetItem *item = itemAt(event->pos());
+
+    /*  The Search row is not a value to include or exclude, so it gets the query menu
+        instead -- see showSearchQueryMenu. It is offered whether or not the filters have
+        finished building: nothing on it reads the categories. */
+    if (item != nullptr && item == searchTrue) {
+        showSearchQueryMenu(event->globalPos());
+        return;
+    }
+
     const bool ready = categoriesFrom == FromCatalog
                        || (G::allMetadataAttempted && !buildingFilters);
     if (!isFilterableItem(item) || !ready) {
-        QTreeWidget::contextMenuEvent(event);
+        /*  The dock's own actions, which the widget can no longer show for itself -- see
+            addFilterActions. This is what a right-click anywhere else in the tree gives,
+            and it must stay exactly that. */
+        QMenu menu(this);
+        addFilterActions(menu);
+        menu.exec(event->globalPos());
         return;
     }
 
@@ -1253,11 +1276,220 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     inc->setChecked(now == Qt::Checked);
     exc->setChecked(now == Qt::PartiallyChecked);
     clr->setEnabled(now != Qt::Unchecked);
+    addFilterActions(menu);
 
     QAction *chosen = menu.exec(event->globalPos());
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
     else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
+}
+
+void Filters::addFilterActions(QMenu &menu)
+{
+/*
+    Append the dock's own filter actions -- Clear all filters, Invert, the token editor,
+    Expand/Collapse all, Solo -- under a separator.
+
+    THE WIDGET CANNOT SHOW THEM FOR ITSELF ANY MORE, and that is the point. They used to
+    be shown by Qt::ActionsContextMenu, which QWidget::event handles directly: with that
+    policy contextMenuEvent is NEVER CALLED, so the Include/Exclude/Clear menu below and
+    the Search row's query menu were unreachable however they were written -- every
+    right-click in the tree produced the same action list. The policy is
+    Qt::DefaultContextMenu now (MW::createFilterViewContextMenu) and every menu this
+    class builds ends with these, so nothing was taken away.
+
+    The actions run themselves: a QAction shown in a QMenu is triggered by the menu, so
+    no caller has to dispatch what it returns. They belong to the widget, not to the
+    temporary menu, so they survive it.
+*/
+    if (actions().isEmpty()) return;
+    if (!menu.isEmpty()) menu.addSeparator();
+    menu.addActions(actions());
+}
+
+void Filters::showSearchQueryMenu(const QPoint &globalPos)
+{
+/*
+    The context menu for the "Enter search query" row: the three things that are about
+    the QUERY, then the panel's ordinary filter actions.
+
+    THE FILTER ACTIONS STAY ON IT. Right-clicking anywhere in the tree has always offered
+    "Clear all filters", "Expand all" and the rest, and the search row is in the tree.
+    Taking them away on the one row a user is most likely to right-click -- because it is
+    the only row that is TYPED into -- would make the menu unpredictable. They are
+    appended, not replaced, and they run themselves: a QAction shown in a QMenu is
+    triggered by the menu, so nothing here has to dispatch them.
+
+    SAVE IS GREYED WITH ITS REASON IN THE ITEM rather than opening a dialog that then
+    says there is nothing to save.
+*/
+    if (G::isLogger) G::log("Filters::showSearchQueryMenu");
+
+    const QString query = currentSearchText();
+
+    QMenu menu(this);
+
+    QAction *larger = menu.addAction(tr("Larger query space..."));
+
+    QAction *save = menu.addAction(query.isEmpty()
+                                   ? tr("Save query... (no query to save)")
+                                   : tr("Save query..."));
+    save->setEnabled(!query.isEmpty());
+
+    QMenu *loadMenu = menu.addMenu(tr("Load query"));
+    const QList<QPair<QString, QString>> queries = savedSearchQueries();
+    if (queries.isEmpty()) {
+        QAction *none = loadMenu->addAction(tr("No saved queries"));
+        none->setEnabled(false);
+    }
+    else {
+        for (const QPair<QString, QString> &q : queries) {
+            QAction *a = loadMenu->addAction(q.first);
+            a->setToolTip(q.second);
+            a->setData(q.second);
+        }
+        loadMenu->setToolTipsVisible(true);
+    }
+
+    addFilterActions(menu);
+
+    QAction *chosen = menu.exec(globalPos);
+    if (chosen == nullptr) return;
+
+    if (chosen == larger) {
+        editSearchInLargeSpace();
+        return;
+    }
+    if (chosen == save) {
+        saveSearchQuery();
+        return;
+    }
+    if (chosen->parent() == loadMenu && chosen->data().isValid()) {
+        setSearchText(chosen->data().toString());
+        return;
+    }
+    /* Anything else is one of the filter actions, which the menu has already run. */
+}
+
+void Filters::editSearchInLargeSpace()
+{
+/*
+    Edit the query in a window instead of in the tree row.
+
+    The row is a single-line editor as wide as a dock panel, which is enough for "heron"
+    and not enough for the grammar it accepts: brackets, quoted phrases and negations
+    scroll out of sight while they are being typed. This is the same text in a resizable
+    box, with the grammar beside it.
+
+    IT COMMITS THE SAME WAY THE ROW DOES -- through setSearchText, so the guarded write,
+    the searchStringChange and the filterChange all happen exactly once. The text is
+    simplified() on the way in because Return in a QPlainTextEdit is a newline, and the
+    row shows one line.
+*/
+    if (G::isLogger) G::log("Filters::editSearchInLargeSpace");
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Search query"));
+
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+
+    QPlainTextEdit *edit = new QPlainTextEdit(currentSearchText(), &dlg);
+    edit->setTabChangesFocus(true);
+    layout->addWidget(edit, 1);
+
+    QLabel *hint = new QLabel(
+        tr("heron nanaimo\t\tboth must appear (AND is the default)\n"
+           "heron OR eagle\t\teither may appear\n"
+           "(heron OR eagle) tide\tbrackets group\n"
+           "\"great blue\"\t\tthe phrase, not the two words\n"
+           "-heron\t\t\tmust NOT appear\n\n"
+           "OR and NOT are recognised in upper case only."), &dlg);
+    layout->addWidget(hint);
+
+    QDialogButtonBox *buttons =
+        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    dlg.resize(600, 320);
+    edit->setFocus();
+
+    if (dlg.exec() != QDialog::Accepted) return;
+    setSearchText(edit->toPlainText().simplified());
+}
+
+void Filters::saveSearchQuery()
+{
+/*
+    Name the current query and keep it. The name is offered as the query itself, because
+    most queries are short enough to be their own name and the ones that are not are
+    exactly the ones worth renaming.
+*/
+    if (G::isLogger) G::log("Filters::saveSearchQuery");
+
+    const QString query = currentSearchText();
+    if (query.isEmpty()) return;
+
+    bool ok = false;
+    QString name = QInputDialog::getText(this, tr("Save query"), tr("Name:"),
+                                         QLineEdit::Normal, query.left(60), &ok).trimmed();
+    if (!ok || name.isEmpty()) return;
+
+    QList<QPair<QString, QString>> queries = savedSearchQueries();
+
+    for (int i = 0; i < queries.count(); ++i) {
+        if (queries.at(i).first.compare(name, Qt::CaseInsensitive) != 0) continue;
+        const auto answer =
+            QMessageBox::question(this, tr("Save query"),
+                                  tr("\"%1\" already exists. Replace it?").arg(name));
+        if (answer != QMessageBox::Yes) return;
+        queries[i].second = query;
+        writeSavedSearchQueries(queries);
+        return;
+    }
+
+    queries << qMakePair(name, query);
+    std::sort(queries.begin(), queries.end(),
+              [](const QPair<QString, QString> &a, const QPair<QString, QString> &b) {
+                  return a.first.compare(b.first, Qt::CaseInsensitive) < 0;
+              });
+    writeSavedSearchQueries(queries);
+}
+
+QList<QPair<QString, QString>> Filters::savedSearchQueries() const
+{
+    QList<QPair<QString, QString>> queries;
+    if (G::settings == nullptr) return queries;
+
+    const int count = G::settings->beginReadArray("SavedSearchQueries");
+    for (int i = 0; i < count; ++i) {
+        G::settings->setArrayIndex(i);
+        const QString name = G::settings->value("name").toString();
+        const QString query = G::settings->value("query").toString();
+        if (!name.isEmpty() && !query.isEmpty()) queries << qMakePair(name, query);
+    }
+    G::settings->endArray();
+    return queries;
+}
+
+void Filters::writeSavedSearchQueries(const QList<QPair<QString, QString>> &queries)
+{
+/*
+    The array is REMOVED before it is written, because beginWriteArray leaves any entries
+    beyond the new size in place: without this, deleting or replacing would leave the
+    tail of the previous list behind.
+*/
+    if (G::settings == nullptr) return;
+
+    G::settings->remove("SavedSearchQueries");
+    G::settings->beginWriteArray("SavedSearchQueries");
+    for (int i = 0; i < queries.count(); ++i) {
+        G::settings->setArrayIndex(i);
+        G::settings->setValue("name", queries.at(i).first);
+        G::settings->setValue("query", queries.at(i).second);
+    }
+    G::settings->endArray();
 }
 
 /* ---------------------------------------------------------------------------------
@@ -1275,7 +1507,7 @@ void Filters::setSearchText(const QString &text)
 /*
     Drive the Search category from the panel's search box.
 
-    ONE BOX FOR BOTH SCOPES is the point: F2 ("here") and Shift+F2 ("everywhere") are
+    ONE BOX FOR BOTH SCOPES is the point: "here" (Folders) and "everywhere" (Catalog) are
     meant to be the same question asked of different sets, and two separate text fields
     would be two places to type it. The editable searchTrue tree item stays as the
     STORAGE -- the predicate reads its text, and the placeholder is still what "no search"
@@ -1287,8 +1519,21 @@ void Filters::setSearchText(const QString &text)
 */
     if (G::isLogger) G::log("Filters::setSearchText", text);
 
+/*
+    THE WRITE IS GUARDED BECAUSE dataChanged CANNOT TELL IT FROM A USER EDIT.
+
+    setText on the searchTrue item reaches Filters::dataChanged with Qt::EditRole among
+    its roles, which is the inline-edit path -- and that path emits searchStringChange,
+    and filterChange too when the item is checked. So this function was running the whole
+    thing TWICE: two passes of DataModel::searchStringChange over every row (43,070 of
+    them in a catalog), and up to two dm->newInstance() bumps, one of which lands on work
+    the first had already dispatched. That instance churn is what fills the issue log with
+    "Instance clash" and is how a decode in flight ends up discarded.
+*/
     const QString t = text.trimmed();
+    settingSearchText = true;
     searchTrue->setText(0, t.isEmpty() ? enterSearchString : t);
+    settingSearchText = false;
     searchString = t;
     emit searchStringChange(searchString);
     setEachCatTextColor();
@@ -1394,9 +1639,12 @@ void Filters::showAllCategories()
     categoriesFrom = FromDatamodel;
     for (int i = 0; i < topLevelItemCount(); i++)
         setRowHidden(i, QModelIndex(), false);
-    /* The Search category stays hidden while the panel owns a search box -- it is the
-       same fact shown twice, and the box is the one the user is looking at. */
-    if (G::useFilterPanel) setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+    /*  SEARCH IS A CATEGORY AGAIN, in both scopes. It was hidden for a while because the
+        Filter panel carried a QLineEdit above the tree, which made the query a thing
+        beside the filters rather than one of them -- and left the two rows the category
+        has always had (matches, and "No match") with nowhere to live. The editable
+        searchTrue item is both the storage and the box now, as it was before the catalog
+        arrived. See "Searching Folders and Catalog" in Documentation.txt. */
     /* Availability is conditional on what is loaded, so "show all" does not mean it. */
     updateAvailabilityVisibility();
 }
@@ -2087,6 +2335,13 @@ void Filters::dataChanged(const QModelIndex &topLeft,
 
     itemCheckStateHasChanged = false;
 
+    /*  A programmatic write from setSearchText, which emits both signals itself. Without
+        this the panel's search box ran the whole pass twice -- see setSearchText. */
+    if (settingSearchText) {
+        QTreeWidget::dataChanged(topLeft, bottomRight, roles);
+        return;
+    }
+
     // searchText has changed
     if (roles.contains(Qt::EditRole)) {
         if (topLeft.column() != 0) return;
@@ -2102,8 +2357,12 @@ void Filters::dataChanged(const QModelIndex &topLeft,
                 emit filterChange("Filters::itemChangedSignal search text change");
                 return;
             }
-            // set searchString and filter
-            searchString = searchTrue->text(0).toLower();
+            /*  NOT LOWER-CASED. It used to be, from when a search was a substring test
+                and case did not matter. It matters now: the grammar reads OR, AND and
+                NOT as operators only in capitals (SearchTerms::parse), so lowering the
+                text turned "heron OR eagle" into a search for the word "or". Term
+                matching is case-insensitive inside the parser. */
+            searchString = searchTrue->text(0).trimmed();
             emit searchStringChange(searchString);
             if (isCatFiltering(search)) search->setForeground(0, QBrush(hdrIsFilteringColor));
             else search->setForeground(0, QBrush(G::textColor));
@@ -2364,11 +2623,34 @@ void Filters::mouseReleaseEvent(QMouseEvent * event)
 
 void Filters::howThisWorks()
 {
+/*
+    ONE HELP WINDOW FOR THE WHOLE PANEL. The query grammar lives here too -- brackets,
+    precedence and two spellings of NOT are more than the Search row's tooltip holds, and
+    a second ? beside the row would ask the user to guess which one answers their
+    question. The ? in the Filters title bar is where someone looking at the panel looks.
+*/
     if (G::isLogger) G::log("Filters::howThisWorks");
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - How filters work",
                    ":/Docs/filtershelp.html",
-                   QSize(600, 500), r, window());
+                   QSize(720, 640), r, window());
+}
+
+void Filters::editSearchText()
+{
+/*
+    Open the editor on the Search row -- what F2 lands on, in either scope.
+
+    The category is expanded and scrolled to first: the row is an ordinary tree item, so
+    an editor opened on a collapsed or scrolled-away category is an editor the user
+    cannot see, which is exactly what the shortcut felt like while the category was
+    hidden behind the panel's own search box.
+*/
+    if (G::isLogger) G::log("Filters::editSearchText");
+    setRowHidden(indexOfTopLevelItem(search), QModelIndex(), false);
+    expandItem(search);
+    scrollToItem(search);
+    editItem(searchTrue, 0);
 }
 
 QString Filters::diagnostics()

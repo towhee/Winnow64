@@ -872,8 +872,15 @@ QString WidgetCSS::doubleSpinBox()
 
 QString WidgetCSS::textEdit()
 {
+/*
+    QPlainTextEdit IS NOT A QTextEdit -- it derives from QAbstractScrollArea, so a rule
+    written for QTextEdit does not reach it and it falls back to the palette's Base,
+    which is the wrong shade beside every other edit box in the app. It is named here
+    rather than styled where it is used, so a plain text edit added anywhere matches the
+    line edits and text edits around it without knowing about this file.
+*/
     return
-    "QTextBrowser, QTextEdit {"
+    "QTextBrowser, QTextEdit, QPlainTextEdit {"
 //        "background: green;"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
 //        "border: 1px solid red;"

@@ -1070,7 +1070,7 @@ private slots:
     void showFilterDock();
     void showCatalogDock();
     /*  THE ONE PLACE G::scope CHANGES. Every entry point -- either Catalog row,
-        the Filter dock's Folders|Catalog buttons, F2/Shift+F2, and selecting a
+        the Filter dock's Folders|Catalog buttons, File > Open Catalog, and selecting a
         folder -- routes here, and this pushes the result back to all of them so
         they cannot disagree. src is for the log only. */
     void setScope(G::Scope s, QString src = "");
@@ -1705,7 +1705,8 @@ private:
     CatalogRootsDlg *catalogRootsDlg = nullptr;
     /* The unified Filter panel (G::useFilterPanel). When it exists it OWNS the layout the
        filters tree sits in, catalogDock/catalogView are never created, and the Catalog
-       entry points (Shift+F2, Window > Catalog Panel) switch its scope instead of showing
+       entry points (File > Open Catalog, Window > Search Catalog) switch its scope
+       instead of showing
        a second dock. Null when the flag is off, in which case the two original panels are
        built exactly as before. */
     FilterPanel *filterPanel = nullptr;
@@ -2194,6 +2195,7 @@ private:
     void moveDroppedDockLast();  // a dock dropped into a tab group lands last
     QDockWidget* dockForTabText(const QString &tabText);
     QHash<quint64, QString> dockTabTitleByKey;     // QMainWindow tab key -> dock title (learned)
+    QHash<QString, int> dockTabTextWidthByTitle;   // dock title -> its tab width in TEXT mode (learned)
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();

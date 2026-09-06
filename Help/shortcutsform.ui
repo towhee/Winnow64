@@ -431,7 +431,7 @@
          <string>F2</string>
         </property>
         <property name="text">
-         <string>Puts focus on search text box</string>
+         <string>Edit the Filters Search row in the current scope (Folders or Catalog). Return runs the query</string>
         </property>
        </item>
        <item>
@@ -1004,17 +1004,6 @@
         </property>
         <property name="text">
          <string>Toggles visibility</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Catalog Panel</string>
-        </property>
-        <property name="text">
-         <string>Shift + F2</string>
-        </property>
-        <property name="text">
-         <string>Search all catalogued images</string>
         </property>
        </item>
        <item>

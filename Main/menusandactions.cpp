@@ -220,8 +220,7 @@ void MW::createFileActions()
         Opening the catalog is choosing what to browse, which is what the File menu is
         for, and which folders are indexed is configuration -- neither is part of the
         search surface, and putting them in the panel meant they were only findable by
-        someone who had already opened it. Shift+O sits beside O (open a folder), and
-        Shift+F2 still opens the catalog too. */
+        someone who had already opened it. Shift+O sits beside O (open a folder). */
     openCatalogAction = new QAction(tr("Open Catalog"), this);
     openCatalogAction->setObjectName("openCatalog");
     openCatalogAction->setShortcutVisibleInContextMenu(true);
@@ -1640,7 +1639,8 @@ void MW::createWindowActions()
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
     /* With the Filter dock this is not a second panel but its Catalog SCOPE, so the menu
-       item says what it now does. It still carries Shift+F2 either way. */
+       item says what it now does. It carries no shortcut: F2 searches whichever scope is
+       current, and this is how the Catalog scope is entered. */
     catalogDockVisibleAction = new QAction(
         G::useFilterPanel ? tr("Search Catalog") : tr("Catalog Panel"), this);
     catalogDockVisibleAction->setObjectName("toggleCatalog");
@@ -2660,7 +2660,13 @@ void MW::createFiltersContextMenu()
     filterActions->append(filterSoloAction);
     // docking panels context menus
     filters->addActions(*filterActions);
-    filters->setContextMenuPolicy(Qt::ActionsContextMenu);
+    /*  DefaultContextMenu, NOT ActionsContextMenu, so that Filters::contextMenuEvent is
+        reached. QWidget::event handles an ActionsContextMenu policy itself and never
+        calls contextMenuEvent, which is why the Include/Exclude/Clear menu and the
+        Search row's query menu could not appear however they were written. Filters
+        builds these same actions into whichever menu it shows -- see
+        Filters::addFilterActions. */
+    filters->setContextMenuPolicy(Qt::DefaultContextMenu);
 }
 
 void MW::createInfoViewContextMenu()
@@ -3364,11 +3370,12 @@ void MW::loadShortcuts(bool defaultShortcuts)
         clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 
+        /*  ONE SEARCH KEY. F2 focuses the search box in the scope that is current --
+            Folders or Catalog -- rather than one key per scope. Shift+F2 used to be
+            "search the catalog", but a shortcut that also SWITCHES scope discards the
+            scope the user is in; the Catalog is entered from the Catalog rows, the
+            panel's Folders|Catalog buttons, or File > Open Catalog instead. */
         filterSearchAction->setShortcut(QKeySequence("F2"));
-        /* Shift+F2 = "search the catalog" beside F2 = "search the folders".
-           The dock F-keys F3-F9 are taken, and pairing it with the in-folder
-           search says what it does better than the next free F-key would. */
-        catalogDockVisibleAction->setShortcut(QKeySequence("Shift+F2"));
 
         filterRating1Action->setShortcut(QKeySequence("Shift+1"));
         filterRating2Action->setShortcut(QKeySequence("Shift+2"));
@@ -3431,6 +3438,15 @@ void MW::loadShortcuts(bool defaultShortcuts)
         // Help
         helpAction->setShortcut(QKeySequence("?"));
         //        toggleIconsListAction->setShortcut(QKeySequence("Ctrl+T"));
+    }
+
+    /*  RETIRED KEYS. Shift+F2 was "search the catalog" until F2 became the one search
+        key for both scopes. An existing profile has it saved in the Shortcuts group and
+        would have it loaded back above, leaving a second key that also switches scope --
+        so it is dropped from the action and from the settings, once. */
+    if (catalogDockVisibleAction->shortcut() == QKeySequence("Shift+F2")) {
+        catalogDockVisibleAction->setShortcut(QKeySequence());
+        settings->remove(catalogDockVisibleAction->objectName());
     }
 
     settings->endGroup();

@@ -501,7 +501,7 @@ void MW::builtInDefaultWorkspace()
     favDockVisibleAction->setChecked(true);
     filterDockVisibleAction->setChecked(true);
     /* Off in the shipped layout: an empty catalog has nothing to show, and the
-       left group is already four tabs deep. Shift+F2 or the Window menu opens it. */
+       left group is already four tabs deep. The Window menu opens it. */
     catalogDockVisibleAction->setChecked(false);
     metadataDockVisibleAction->setChecked(true);
     embelDockVisibleAction->setChecked(false);

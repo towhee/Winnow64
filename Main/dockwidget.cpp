@@ -680,18 +680,20 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (tabText == folderDockTabText)   return tip(folderDockTabText,   "F3");
     if (tabText == favDockTabText)      return tip(favDockTabText,      "F4");
     if (tabText == filterDockTabText) {
-        /* One panel, two scopes: F2 searches HERE (what is loaded) and Shift+F2 searches
-           EVERYWHERE (the catalog). F5 still raises the panel itself. */
+        /* One panel, two scopes, ONE search key: F2 searches whichever scope is current
+           (Folders = what is loaded, Catalog = everything indexed). F5 still raises the
+           panel itself. */
         if (G::useFilterPanel)
             return QString("<nobr><span style=\"color:#6CC1E8;\">Filters</span>: "
-                           "shortcut F5. F2 searches here, Shift+F2 everywhere.</nobr>");
+                           "shortcut F5. F2 searches the current scope.</nobr>");
         return tip(filterDockTabText, "F5");
     }
     /* Catalog searches the INDEX (every image seen), where Filters searches the
-       datamodel (what is loaded). Shift+F2 pairs it with F2, "search here". Not reached
-       with G::useFilterPanel -- there is no Catalog tab then. */
+       datamodel (what is loaded). Not reached with G::useFilterPanel -- there is no
+       Catalog tab then. */
     if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText)
-        return tip(catalogDockTabText,  "Shift+F2");
+        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+                       "Window > Catalog Panel.</nobr>").arg(catalogDockTabText);
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");

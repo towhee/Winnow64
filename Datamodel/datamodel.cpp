@@ -5547,24 +5547,75 @@ void DataModel::searchStringChange(QString searchString)
        the critical path of a keystroke at a hundred thousand images.
 
        Utilities/searchterms.h is the SAME grammar the catalog search uses, which is what
-       makes F2 ("here") and Shift+F2 ("everywhere") narrow the same way -- "heron OR
+       makes the Folders scope ("here") and the Catalog ("everywhere") narrow the same
+       way -- "heron OR
        eagle" used to find images in one and nothing in the other. */
     const SearchTerms terms = noSearch ? SearchTerms() : SearchTerms::parse(searchString);
 
+    /*  HOISTED OUT OF THE LOOP. This restores the "Enter search query" placeholder on the
+        tree item and has nothing to do with any row, but it sat inside the loop and so
+        ran once per image -- 43,000 QTreeWidgetItem::setText calls, each of them a view
+        update, to write the same string. */
+    if (noSearch) filters->searchTrue->setText(0, filters->enterSearchString);
+
     // update datamodel search string match
     QMutexLocker locker(&dmMutex);
-    for (int row = 0; row < rowCount(); ++row)  {
-        // no search string
-        if (noSearch) {
-            setData(index(row, G::SearchColumn), false);
-            filters->searchTrue->setText(0, filters->enterSearchString);
-        }
-        // there is a search string
-        else {
-            QString searchableText = index(row, G::SearchTextColumn).data().toString();
-            setData(index(row, G::SearchColumn), terms.matches(searchableText));
+
+    const int rows = rowCount();
+    if (rows == 0) return;
+
+/*
+    ONE dataChanged FOR THE WHOLE COLUMN, NOT ONE PER ROW.
+
+    THIS IS WHAT MADE A SEARCH OVER THE CATALOG UNUSABLE. DataModel::setData emits
+    dataChanged(idx, idx) on every write, and this loop writes G::SearchColumn for EVERY
+    row -- so a search over a 43,070-image catalog emitted 43,070 separate notifications,
+    each answered by the proxy, three views and, on macOS, by Qt rebuilding its entire
+    Cocoa accessibility table (see "Accessibility and dataChanged"). At ~27 ms a rebuild
+    that is not a slow search, it is a twenty-minute one, and it was reported as a
+    beachball that had to be force-quit.
+
+    The per-row signal buys nothing here. What re-filters the proxy is the filterChange
+    Filters::setSearchText emits immediately after this returns -- invalidateFilter
+    re-asks the predicate for every row regardless -- and what the views need is to
+    repaint, which one wide notification does. So the writes are made with signals
+    blocked and a single dataChanged spanning the column is emitted at the end.
+
+    THE WRITES THEMSELVES STILL GO THROUGH setData, deliberately: it is the one place the
+    row store, the load counters and the lock-free RowSync array are maintained together,
+    and a loop that wrote the store directly would be a second way to set a cell. The
+    blocker suppresses the notification, not the bookkeeping.
+
+    THE SAME SHAPE, AGAIN: SortFilter recompiling the predicate per tree item, MetaRead
+    re-dispatching per redo, clearIconsOutsideChunkRange emitting per evicted cell, and
+    now this. Each was invisible at folder scale and quadratic at catalog scale. See "The
+    Accessibility Bridge Rebuilds the Whole Table, Per Write".
+*/
+    {
+        /*  MW::filterChange holds one of these too, but it is not this one: setSearchText
+            emits searchStringChange BEFORE filterChange, so the writes below are outside
+            that guard entirely. Nested guards are harmless -- the inner one finds the
+            bridge already off and restores it to exactly that. */
+        G::A11ySuspend a11ySuspend;
+        const QSignalBlocker blockSelf(this);
+        for (int row = 0; row < rows; ++row)  {
+            // no search string
+            if (noSearch) {
+                setData(index(row, G::SearchColumn), false);
+            }
+            // there is a search string
+            else {
+                QString searchableText = index(row, G::SearchTextColumn).data().toString();
+                setData(index(row, G::SearchColumn), terms.matches(searchableText));
+            }
         }
     }
+    /*  UNLOCKED FIRST. The notification is answered synchronously by the proxy and three
+        views over every row, and none of that needs -- or should hold -- the model mutex.
+        The old code emitted from inside setData with the lock held, which was tolerable
+        only because each emit covered one cell. */
+    locker.unlock();
+    emit dataChanged(index(0, G::SearchColumn), index(rows - 1, G::SearchColumn));
 }
 
 void DataModel::rebuildTypeFilter()

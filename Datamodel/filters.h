@@ -103,13 +103,17 @@ public:
        The same tree renders both scopes: Folders from the datamodel via BuildFilters,
        and Catalog from the catalog via these. See Views/filterpanel.h. */
 
-    /* Drive the Search category from the panel's search box instead of the editable tree
-       item, so one box serves both scopes. Empty text restores the placeholder, which is
-       what "no search" means to the predicate. */
+    /* Set the Search category's query programmatically -- a scope switch re-applying the
+       text the user typed, not a user edit. Empty text restores the placeholder, which is
+       what "no search" means to the predicate. The user types into the editable
+       searchTrue tree item itself; see editSearchText. */
     void setSearchText(const QString &text);
-    /* What the box should show. Named to avoid the private searchText member, which is
-       the save/restore snapshot rather than the live value. */
+    /* The live query. Named to avoid the private searchText member, which is the
+       save/restore snapshot rather than the live value. */
     QString currentSearchText() const;
+    /* Open the editor on the Search row: expand the category, scroll to it and edit.
+       What F2 lands on, in either scope. */
+    void editSearchText();
 
     /* Where the items in the tree came from. The datamodel-readiness guards
        (G::allMetadataAttempted, buildingFilters) apply only to FromDatamodel: a catalog
@@ -150,6 +154,10 @@ public:
     QStringList ignoreSearchStrings;
     QString enterSearchString;
     bool itemCheckStateHasChanged = false;
+    /*  Set while setSearchText is writing the searchTrue item, so the dataChanged
+        override does not treat a programmatic write as a user edit and emit the whole
+        searchStringChange/filterChange pair a second time. See setSearchText. */
+    bool settingSearchText = false;
 
 signals:
     void filterChange(QString source);
@@ -223,6 +231,31 @@ private:
     /* True when this item may be included/excluded at all -- a child, enabled, and not
        one of the Search category's two fixed rows. */
     bool isFilterableItem(QTreeWidgetItem *item) const;
+
+    /*  THE SEARCH ROW HAS ITS OWN CONTEXT MENU, because the query is a different kind of
+        thing from the ticks below it: it is typed, it can outgrow the row it lives in,
+        and it is worth keeping. So the row prepends its own three items -- a larger
+        editor, save, and load -- to the panel's ordinary filter actions, which stay on
+        the menu so that right-clicking the row is never a dead end for "clear all
+        filters". Everything else in the tree keeps the include/exclude menu. */
+    void showSearchQueryMenu(const QPoint &globalPos);
+    /*  Append the dock's filter actions to any menu this class builds. The widget's
+        context menu policy is DefaultContextMenu so that contextMenuEvent is reached at
+        all, which means the actions are no longer shown by Qt -- see addFilterActions. */
+    void addFilterActions(QMenu &menu);
+    /*  Edit the query in a resizable dialog. The tree row is a single-line editor a few
+        centimetres wide; a query with brackets and quoted phrases cannot be read in it,
+        let alone revised. The text committed back is simplified(), because the row (and
+        the parser) want one line. */
+    void editSearchInLargeSpace();
+    /*  Name and keep the current query. */
+    void saveSearchQuery();
+    /*  The saved queries, name -> query, in the order they are shown (by name). Held in
+        the app settings as an ARRAY rather than as key = value, so that a name may
+        contain any character -- a '/' in a QSettings key is a group separator, and query
+        names are prose. */
+    QList<QPair<QString, QString>> savedSearchQueries() const;
+    void writeSavedSearchQueries(const QList<QPair<QString, QString>> &queries);
     /* SHIFT+CLICK RANGES, and where a range starts from. The anchor is the item last
        CHECKED, remembered as its category plus its text rather than as a pointer,
        because a category's items are destroyed and rebuilt every time the filters are

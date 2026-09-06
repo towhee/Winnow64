@@ -3399,6 +3399,8 @@ Refactor the 'Find' dock or panel references back to 'Filter'. You introduced th
 search the catalog but we are using a Filter concept instead, so references to 'Find' are
 confusing.
 
+gloria AND christopher
+
 
 MW::filterChange.ImageDecoder::decode failed "/Users/roryhill/Pictures/CR3/2020-10-14_0029.cr3"
 
@@ -3408,6 +3410,20 @@ used throughout Winnow (example is the preferences shown at the bottom of the sc
 If I do not like the change I want to revert to the current format. I have committed
 the current state.
 
+In Catalog, filtering on search "Gloria AND Christopher", the image
+/Users/roryhill/Pictures/CR3/2020-10-11_0007.cr3 loupe view is blank. However, when I
+selected the folder with the image it did show in loupe view.
+
+- Enlarge Query space
+- Save query
+- Separator
+- 1st saved query
+- 2nd saved query
+- ...
+
+When a dock location has multiple docks, the string named tabs may be too wide too fit,
+and the dock icon it used. Where is this determination made in Winnow.  What is the name
+of the function?
 
 Keyword panel
 Keyword tree
