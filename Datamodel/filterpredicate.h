@@ -40,10 +40,21 @@
 
       o Includes are OR-ed within a category and AND-ed between categories.
       o An exclude is an outright rejection evaluated ACROSS categories: if the
-        row carries an excluded value it is out, whatever else matches. That is
-        what makes "include Vancouver, exclude USA" mean what it reads like --
-        the keyword vocabulary is flat, so an ambiguous name is separated by
-        ruling one of its parents out rather than by descending a tree.
+        row carries an excluded value it is out, whatever else matches. For
+        keywords that is how a BRANCH is subtracted -- include "Location",
+        exclude "Location|USA" -- which is a question a tree raises rather than
+        answers. (It used to be how an AMBIGUOUS name was separated, back when a
+        keyword was a bare name and "Vancouver" meant two places; catalog schema
+        10 made identity the full path, so there is no ambiguity left to resolve
+        and this now does the plainer job.)
+      o KEYWORDS MATCH BY WHOLE-ELEMENT MEMBERSHIP, and that is what lets the
+        hierarchy cost nothing here. The row's keyword column holds every
+        ANCESTOR PREFIX of every path the image carries (see
+        G::KeywordsAllColumn), so filtering on a parent is the same
+        QStringList::contains as filtering on a leaf -- no separator awareness,
+        no prefix scan, no subtree walk in a loop that runs on every row on
+        every filter change. A bare leaf therefore matches NOTHING, which is
+        correct: a keyword's identity is its whole path.
       o An exclude must NOT make a category count as "filtering". A category
         holding only exclusions is not narrowing the set to those items, it is
         subtracting them; were it to count, every row lacking any of its items

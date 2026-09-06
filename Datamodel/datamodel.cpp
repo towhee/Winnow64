@@ -1,7 +1,7 @@
 #include "Datamodel/datamodel.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
-#include "Metadata/keywordflatten.h"
+#include "Metadata/keywordpaths.h"
 #include "Utilities/searchterms.h"
 #include "Metadata/indexmetadata.h"
 
@@ -3377,12 +3377,15 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     /* Ancestor names are only in the hierarchical form, so folding it into the search
        text is what lets a search for "Wildlife" find an image keyworded only "Heron". */
     search += Utilities::stringListToString(m.keywordPaths);
-    /* The flat vocabulary the Keywords filter category and the catalog category read:
-       both properties reduced to one de-duplicated list of names, so a tag Lightroom
-       wrote twice (leaf in dc:subject, path in lr:hierarchicalSubject) is ONE keyword and
-       an ancestor is a keyword in its own right. The two source columns above are left as
-       the file spelled them -- see G::KeywordsAllColumn on why they must be. */
-    QStringList keywordsAll = flattenKeywords(m.keywords, m.keywordPaths);
+    /* The keyword PATHS the Keywords filter category and the catalog category read.
+       Two steps, and both matter. keywordEffectivePaths resolves the tag Lightroom wrote
+       twice -- leaf in dc:subject, path in lr:hierarchicalSubject -- by CONSUMING the
+       leaf into the path, so it is one keyword rather than two. keywordPrefixExpand then
+       adds every ancestor of every path, so an ancestor is a keyword in its own right and
+       filtering on it needs no subtree walk. The two source columns above are left as the
+       file spelled them -- see G::KeywordsAllColumn on why they must be. */
+    QStringList keywordsAll =
+        keywordPrefixExpand(keywordEffectivePaths(m.keywords, m.keywordPaths));
     setData(index(row, G::KeywordsAllColumn), QVariant(keywordsAll));
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     search += m.shootingInfo;

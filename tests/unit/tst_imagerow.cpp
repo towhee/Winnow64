@@ -2,7 +2,7 @@
 
 #include "Datamodel/imagerow.h"
 #include "Main/global.h"
-#include "Metadata/keywordflatten.h"   // keywordPrefixExpand, for the row budget case
+#include "Metadata/keywordpaths.h"   // keywordPrefixExpand, for the row budget case
 
 /*
     THE PACKED ROW STORE IS NOW THE ONLY COPY.

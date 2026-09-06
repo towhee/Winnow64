@@ -238,11 +238,20 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
-# tst_keywordpaths pins the path algebra in Metadata/keywordflatten.h -- leaf
+# tst_keywordpaths pins the path algebra in Metadata/keywordpaths.h -- leaf
 # consumption, prefix expansion and the descendant test. It is header-only and shared by
 # the datamodel and the catalog, which is the point: if the two split a path differently
 # the category list and the search disagree about the same picture.
 winnow_add_unit_test(tst_keywordpaths unit/tst_keywordpaths.cpp)
+
+# tst_filters pins the NESTED Keywords category. Every other category is one level deep,
+# and that assumption was written into a dozen childCount loops and into save()'s
+# {parent, label} key -- all of which fail SILENTLY on a tree: a dropped filter is not a
+# crash, it is the user's filter quietly coming back empty after a folder change.
+# htmlwindow comes in for Filters::howThisWorks alone -- one help button, one symbol.
+winnow_add_unit_test(tst_filters unit/tst_filters.cpp
+    ${CMAKE_SOURCE_DIR}/Datamodel/filters.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/htmlwindow.cpp)
 
 # tst_rowfields pins Datamodel/rowfields.h -- the single declaration of an image's
 # fields -- against the catalog's image table. The table exists so the model's

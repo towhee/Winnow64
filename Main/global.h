@@ -63,14 +63,11 @@ Q_NAMESPACE
         DupHideRawRole,                 // manage raw/jpg pairs
         DupRawTypeRole,                 // manage raw/jpg pairs
         ColumnRole,                     // used by Filters
-        GeekRole,                       // used in TableView display of columns
-        /* Filters: true on a keyword item the catalog has seen under more than one
-           parent, so the item carries its own ambiguity rather than the panel consulting
-           a shared set. Written ONLY on the GUI thread (by
-           Filters::refreshAmbiguousKeywords) and read wherever an item is restyled --
-           including from the BuildFilters worker thread, which must not touch that set
-           while the GUI thread is rebuilding it. */
-        AmbiguousKeywordRole
+        GeekRole                        // used in TableView display of columns
+        /* An AmbiguousKeywordRole lived here, marking a keyword the catalog had seen
+           under more than one parent. Catalog schema 10 made a keyword's identity its
+           full path, so the two Vancouvers are two items with two counts and there is
+           nothing left to mark. */
     };
 
     // Per-row metadata read outcome, stored in MetadataStatusColumn.
@@ -213,15 +210,23 @@ Q_NAMESPACE
            Heron", parallel to KeywordsColumn's flat leaf names. Appended for the same
            reason as DevelopColumn. */
         KeywordPathsColumn,
-        /* The FLAT keyword vocabulary this image is filtered and searched on: the
-           de-duplicated union of KeywordsColumn's dc:subject leaves and every NODE of
-           KeywordPathsColumn's hierarchical paths (Metadata/keywordflatten.h). This is
-           what the Filters Keywords category and the catalog category both read.
+        /* The keyword PATHS this image is filtered and searched on: every path it
+           actually carries, plus every ANCESTOR PREFIX of each, de-duplicated
+           (Metadata/keywordpaths.h -- keywordEffectivePaths then keywordPrefixExpand).
+           So "Fauna|Bird|Heron" contributes three entries: "Fauna", "Fauna|Bird" and the
+           whole path. This is what the Filters Keywords category and the catalog category
+           both read.
+
+           THE EXPANSION IS WHY FILTERING STAYS CHEAP. Because an ancestor is present on
+           the row in its own right, filtering on it is QStringList::contains -- an exact,
+           whole-element match -- with no separator awareness and no subtree walk in the
+           per-row predicate, which runs on every row on every filter change.
 
            KeywordsColumn deliberately keeps the LITERAL dc:subject list rather than being
-           replaced by this one. The two are different facts and only one of them may ever
-           be written back to a file: emitting this column as dc:subject would put every
-           ancestor ("Wildlife", "Birds") into a property that never held them.
+           replaced by this one, and that separation matters MORE under path identity, not
+           less. The two are different facts and only one of them may ever be written back
+           to a file: emitting this column as dc:subject would put every ancestor PATH
+           ("Fauna", "Fauna|Bird") into a property that never held them.
 
            Appended for the same reason as DevelopColumn. */
         KeywordsAllColumn,

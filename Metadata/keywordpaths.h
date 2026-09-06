@@ -1,63 +1,49 @@
-#ifndef KEYWORDFLATTEN_H
-#define KEYWORDFLATTEN_H
+#ifndef KEYWORDPATHS_H
+#define KEYWORDPATHS_H
 
 #include <QSet>
 #include <QString>
 #include <QStringList>
 
 /*
-    STATUS, 2026-09-06: THE FLAT DECISION ARGUED FOR BELOW IS BEING REVERSED. Keyword
-    identity is going back to the full PATH, and this file is on its way to becoming
-    Metadata/keywordpaths.h. The path algebra at the BOTTOM of this header --
-    keywordEffectivePaths, keywordPrefixExpand, keywordParentPath, keywordIsDescendant --
-    is the new definition and is what new code should use. flattenKeywords and the essay
-    justifying it are still here because the datamodel and the index still call it, and
-    they change together or not at all; both go when they do. Until then, read the
-    rationale below as history rather than as the rule.
+    HOW A KEYWORD IS IDENTIFIED, and the one definition of it, shared by the datamodel and
+    the catalog index. See notes/Documentation.txt "Keywords and Cataloguing".
 
-    How a keyword hierarchy is turned into the flat vocabulary Winnow filters and
-    searches on. See notes/Documentation.txt "Keywords and Cataloguing".
+    A KEYWORD'S IDENTITY IS ITS FULL PATH. "Location|Canada|BC|Vancouver" and
+    "Location|USA|WA|Vancouver" are two keywords, not one name meaning two places. Two
+    properties carry keywords in a file: dc:subject, the flat list every application
+    writes, and lr:hierarchicalSubject, Lightroom's parallel list of full paths.
 
-    A KEYWORD'S IDENTITY IS ITS NAME. Two properties carry keywords: dc:subject, the flat
-    list of leaf names that every application writes, and lr:hierarchicalSubject,
-    Lightroom's parallel list of full paths ie "Location|Canada|BC|Vancouver". Winnow
-    flattens the second into its NODE NAMES, so that path contributes four keywords --
-    Location, Canada, BC and Vancouver -- each a first-class keyword in its own right.
+    THIS FILE USED TO ARGUE THE OPPOSITE, and the history is worth keeping because the
+    problem that drove it is real and is solved here rather than avoided. Winnow flattened
+    a path into its NODE NAMES, so a keyword was its bare leaf. That was done because a
+    hierarchical file carries the SAME tag twice -- Lightroom writes the leaf into
+    dc:subject and the path into lr:hierarchicalSubject -- and storing both forms put
+    "Heron" in the category list twice with its image count split between the entries.
 
-    WHY FLAT RATHER THAN A TREE. Three reasons, and the first is the one that forced it:
+    WHAT REPLACED IT is LEAF CONSUMPTION rather than flattening: keywordEffectivePaths
+    drops a dc:subject entry whose name matches the leaf of one of the SAME image's paths,
+    because the path is the richer statement of the same fact. One tag, one keyword, and
+    the hierarchy survives.
 
-      o A hierarchical file carries the SAME tag twice. Lightroom writes the leaf into
-        dc:subject and the path into lr:hierarchicalSubject, so storing both forms
-        separately put "Heron" in the category list twice, with the image counts split
-        between the two entries. Flattening collapses them by construction, because both
-        forms reduce to the same name.
-      o The hierarchy is NOT UNIVERSAL. Phone images, non-Adobe DAMs and IPTC-only files
-        carry dc:subject and nothing else. A tree is right for part of a library and
-        overhead for the rest; a flat list is right for all of it, and a hierarchical
-        library simply produces more keywords.
-      o Ancestor search still works, which was the only thing the tree bought. Searching
-        "Fauna" reaches an image tagged only "Fauna|Bird|Heron" because Fauna is now
-        genuinely one of that image's keywords, not an ancestor to be walked to.
+    THE OTHER TWO ARGUMENTS FOR FLAT ALSO HAVE ANSWERS. "The hierarchy is not universal"
+    -- phone images, non-Adobe DAMs and IPTC-only files carry dc:subject and nothing else
+    -- is true and costs nothing, because a flat list is a tree of depth one and those
+    keywords simply become roots. "Ancestor search is the only thing the tree bought" is
+    answered by keywordPrefixExpand: every ancestor is linked to the image in its own
+    right, so searching a parent is plain equality with no tree to walk.
 
-    WHAT IT COSTS, AND WHERE THAT IS PAID. A name that appears under two parents --
-    "Location|Canada|BC|Vancouver" and "Location|USA|Washington|Vancouver" -- becomes ONE
-    keyword meaning two places. The hierarchy could tell them apart and this cannot. That
-    is paid for elsewhere rather than here: the catalog records which parents a name has
-    been seen under (keyword_context), the Filters and Catalog docks colour an ambiguous
-    keyword and name its parents in the tooltip, and filter EXCLUSION resolves it --
-    include Vancouver, exclude USA.
+    WHAT FLAT IDENTITY COST, and why it was reversed in the end: a name used under two
+    parents became ONE keyword with the counts merged and nothing able to tell them apart.
+    In a real user vocabulary of 3,975 Lightroom keywords, 59 names appeared under more
+    than one parent -- including a Bear Lake in BC and another in Colorado.
 
-    THE RAW PATHS ARE STILL KEPT. G::KeywordPathsColumn holds lr:hierarchicalSubject
-    unchanged, and ImageMetadata::keywordPaths beside it. They are the evidence the
-    ambiguity marking is built from, and they are what a future write-back must emit --
-    NEVER the flattened list, which contains ancestors the file never had in dc:subject.
-
-    A FREE FUNCTION IN ITS OWN HEADER, not a Metadata member and not a Catalog private,
-    for the reason Metadata/xmpapply.h and Cache/pathkey.h give: the datamodel and the
-    index must split a path IDENTICALLY or the category and the search will disagree about
-    the same picture, and Metadata/metadata.h includes every parser header, so a member
-    would compile only as long as the include order happened to cooperate. This depends
-    on nothing but QString.
+    FREE FUNCTIONS IN THEIR OWN HEADER, not Metadata members and not Catalog privates, for
+    the reason Metadata/xmpapply.h and Cache/pathkey.h give: the datamodel and the index
+    must split a path IDENTICALLY or the category and the search will disagree about the
+    same picture, and Metadata/metadata.h includes every parser header, so a member would
+    compile only as long as the include order happened to cooperate. This depends on
+    nothing but QString.
 */
 
 /*
@@ -98,47 +84,6 @@ inline QString keywordLeafOf(const QString &path)
     const int i = path.lastIndexOf('|');
     return (i < 0 ? path : path.mid(i + 1)).trimmed();
 }
-
-/*
-    The flat keyword vocabulary for one image: the de-duplicated union of its dc:subject
-    leaves and every node of every lr:hierarchicalSubject path.
-
-    DE-DUPLICATION IS CASE-INSENSITIVE and FIRST SPELLING WINS. "Heron" and "heron" are
-    one keyword, and the one that survives is whichever the file listed first -- which for
-    a Lightroom file is the dc:subject leaf, the spelling the user actually typed.
-    Comparing case-sensitively would defeat the whole point on a library that has been
-    through more than one application.
-
-    ORDER IS PRESERVED (flat keywords first, then hierarchy in path order) rather than
-    sorted. The category lists sort for display anyway, and keeping insertion order makes
-    the stored column read the way the file does, which matters when diagnosing an image.
-*/
-inline QStringList flattenKeywords(const QStringList &keywords, const QStringList &paths)
-{
-    QStringList out;
-    QSet<QString> seen;
-
-    auto add = [&out, &seen](const QString &name) {
-        const QString trimmed = name.trimmed();
-        if (trimmed.isEmpty()) return;
-        const QString key = keywordFold(trimmed);
-        if (seen.contains(key)) return;
-        seen.insert(key);
-        out << trimmed;
-    };
-
-    for (const QString &k : keywords) add(k);
-    for (const QString &p : paths)
-        for (const QString &node : keywordNodes(p)) add(node);
-
-    return out;
-}
-
-/* ------------------------------------------------------------------------------------
-    PATH IDENTITY. Everything below treats a keyword's identity as its full path, which
-    is the model flattenKeywords above was written to replace and is now replacing IT.
-    See notes/Documentation.txt and the plan named in the STATUS note at the top.
-   --------------------------------------------------------------------------------- */
 
 /*
     The paths one image actually carries, from its two properties.
@@ -257,4 +202,4 @@ inline bool keywordIsDescendant(const QString &pathFold, const QString &ancestor
     return pathFold == ancestorFold || pathFold.startsWith(ancestorFold + '|');
 }
 
-#endif // KEYWORDFLATTEN_H
+#endif // KEYWORDPATHS_H

@@ -25,7 +25,7 @@
     questions, which is why they are separate docks rather than another Filters category.
 
     THE KEYWORD LIST IS FLAT, not a tree, because the vocabulary is
-    (Metadata/keywordflatten.h): a hierarchical path contributes each of its node names as
+    (Metadata/keywordpaths.h): a hierarchical path contributes each of its node names as
     an ordinary keyword. A name seen under more than one parent is AMBIGUOUS --
     "Vancouver" under both Canada and USA -- and is coloured, with its parents in the
     tooltip. It is resolved by EXCLUDING: include Vancouver, exclude USA. Opt+click or
@@ -122,7 +122,6 @@ private:
     /* Names the catalog has seen under more than one parent -- the keywords flattening
        made ambiguous. Case-folded; refreshed with the list. EMPTY MEANS UNKNOWN when
        there is no catalog, not "none are ambiguous". */
-    QSet<QString> ambiguousKeywords;
 
     /* Set by itemChanged when QTreeWidget has ALREADY toggled the box for us (a click on
        the indicator), so itemClicked knows not to toggle it a second time. Without it the
