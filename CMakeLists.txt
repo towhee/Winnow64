@@ -318,6 +318,13 @@ set(WINNOW_SOURCES
     Main/settings.cpp
     Main/slideshow.cpp
     Main/sortandfilter.cpp
+    Main/keywordedit.cpp
+    Datamodel/keywordvocab.cpp
+    Datamodel/keywordvocab.h
+    Views/keywordtree.cpp
+    Views/keywordtree.h
+    Dialogs/keywordretagdlg.cpp
+    Dialogs/keywordretagdlg.h
     Main/status.cpp
     Main/test.cpp
     Main/viewmodes.cpp

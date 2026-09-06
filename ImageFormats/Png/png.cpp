@@ -461,6 +461,10 @@ bool PNG::parse(MetadataParameters &p,
                    and the exif:/tiff: mirroring that follows are PNG-specific. */
                 m.keywords = xmp.getItemList("subject");
                 m.keywordPaths = xmp.getItemList("hierarchicalsubject");
+                /* The shadows applyXmp would have taken. Missing them here would make
+                   writeXMP think this file's keywords had been edited on every write. */
+                m._keywords = m.keywords;
+                m._keywordPaths = m.keywordPaths;
 
                 // EXIF camera fields — Lightroom/Photoshop drop the eXIf chunk
                 // and mirror these into the XMP exif:/tiff: namespaces.

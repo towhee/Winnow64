@@ -146,6 +146,8 @@ void MW::writeSettings()
     settings->setValue("isFilterDockVisible", filterDockVisibleAction->isChecked());
     settings->setValue("isCatalogDockVisible",
                        catalogDockVisibleAction->isChecked());
+    settings->setValue("isKeywordsDockVisible",
+                       keywordsDockVisibleAction->isChecked());
 
     /* The scope table the user nominated for background cataloguing. It lives HERE and
        not in the index database: CacheDb::moveAside discards that file without asking

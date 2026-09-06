@@ -238,6 +238,13 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
+# tst_keywordwrite pins the write-back CONTRACT: reading a written file must reproduce
+# exactly the keyword paths that were assigned. The failure modes are silent -- a leaf no
+# path claims becomes a spurious root on the next read, and a second write that is not
+# byte-identical makes every unrelated edit rewrite the user's keyword block.
+winnow_add_unit_test(tst_keywordwrite unit/tst_keywordwrite.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
+
 # tst_keywordpaths pins the path algebra in Metadata/keywordpaths.h -- leaf
 # consumption, prefix expansion and the descendant test. It is header-only and shared by
 # the datamodel and the catalog, which is the point: if the two split a path differently

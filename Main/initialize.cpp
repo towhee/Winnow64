@@ -2917,6 +2917,124 @@ void MW::createHistoryDock()
     historyTitleLayout->addSpacing(5);
 }
 
+void MW::createKeywordsDock()
+{
+/*
+    THE KEYWORDS DOCK: the vocabulary tree the user curates.
+
+    OFF BY DEFAULT, like catalogDock. The left group is already four tabs deep and a fifth
+    that most sessions never open would cost every session the space. Window > Keywords
+    Panel turns it on, which is also where a user finds out it exists.
+
+    ONE ZONE FOR NOW. The design is two -- this tree on top, and a chip zone below for the
+    keywords on the CURRENT SELECTION -- and the splitter is built here with the lower
+    half empty so the layout is settled before the chips arrive rather than rearranged
+    around them.
+
+    THE TREE HAS NO CHECKBOXES AND NEVER TAGS A PHOTOGRAPH. See Views/keywordtree.h: the
+    separation between curating the list and tagging the images is the whole point of the
+    panel's shape.
+*/
+    if (G::isLogger) G::log("MW::createKeywordsDock");
+
+    keywordsDockTabText = "Keywords";
+    dockTextNames << keywordsDockTabText;
+    keywordsDock = new DockWidget(keywordsDockTabText, "KeywordsDock", this);
+    keywordsDock->setObjectName("KeywordsDock");
+
+    keywordVocab = new KeywordVocab(this);
+    keywordTree = new KeywordTree(keywordVocab, keywordsDock);
+
+    QWidget *body = new QWidget(keywordsDock);
+    QVBoxLayout *bodyLayout = new QVBoxLayout(body);
+    bodyLayout->setContentsMargins(4, 4, 4, 4);
+    bodyLayout->setSpacing(4);
+
+    QLineEdit *filterEdit = new QLineEdit(body);
+    filterEdit->setPlaceholderText("Find keyword");
+    filterEdit->setClearButtonEnabled(true);
+    connect(filterEdit, &QLineEdit::textChanged,
+            keywordTree, &KeywordTree::setFilterText);
+    bodyLayout->addWidget(filterEdit);
+
+    /*  A splitter rather than two stacked widgets, so the eventual chip zone is
+        resizable from the first version the user sees and its size is remembered by the
+        dock state like every other splitter in the app. */
+    QSplitter *splitter = new QSplitter(Qt::Vertical, body);
+    splitter->addWidget(keywordTree);
+    QWidget *chipZone = new QWidget(splitter);
+    chipZone->setMinimumHeight(0);
+    splitter->addWidget(chipZone);
+    splitter->setStretchFactor(0, 1);
+    splitter->setStretchFactor(1, 0);
+    splitter->setSizes({400, 0});
+    bodyLayout->addWidget(splitter, 1);
+
+    keywordsDock->setWidget(body);
+    keywordsDock->setFloating(false);
+    keywordsDock->setVisible(false);
+    connect(keywordsDock, &DockWidget::focus, this, &MW::focusOnDock);
+
+    connect(keywordTree, &KeywordTree::pathChanged, this, &MW::keywordPathChanged);
+    connect(keywordTree, &KeywordTree::assignRequested, this, [this](const QString &p) {
+        applyKeywordsToSelection({p}, {});
+    });
+
+    // customize the keywordsDock titlebar
+    QHBoxLayout *keywordsTitleLayout = new QHBoxLayout();
+    keywordsTitleLayout->setContentsMargins(0, 0, 0, 0);
+    keywordsTitleLayout->setSpacing(0);
+    keywordsTitleBar = new DockTitleBar("Keywords", keywordsTitleLayout);
+    keywordsDock->setTitleBarWidget(keywordsTitleBar);
+    keywordsTitleBar->setToolTip(dockTabToolTip(keywordsDockTabText));
+
+    // question mark button
+    BarBtn *keywordsQuestionBtn = new BarBtn();
+    keywordsQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
+    keywordsQuestionBtn->setToolTip("How this works: keyword tips");
+    connect(keywordsQuestionBtn, &BarBtn::clicked, this, [this]{
+        if (G::popup) G::popup->showPopup(
+            "<b>Keywords</b><br>"
+            "This is your keyword LIST, not the keywords on a photo. Renaming, moving "
+            "or deleting here changes the list; it asks before changing images.<br><br>"
+            "A keyword is its whole path, so the same name under two parents is two "
+            "different keywords with their own counts.<br><br>"
+            "Double-click, or press Enter, to add a keyword to the selected images. "
+            "Right-click for rename, new keyword, insert parent and delete.<br><br>"
+            "A dot marks a keyword the current image already has.", 8000);
+    });
+    keywordsTitleLayout->addWidget(keywordsQuestionBtn);
+
+    keywordsTitleLayout->addSpacing(10);
+
+    // collapse/expand body button
+    if (G::useDWCollapse) {
+        BarBtn *keywordsCollapseBtn = new BarBtn();
+        keywordsCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
+        keywordsCollapseBtn->setToolTip("Collapse panel.");
+        connect(keywordsCollapseBtn, &BarBtn::clicked, keywordsDock,
+                &DockWidget::toggleCollapsed);
+        connect(keywordsDock, &DockWidget::collapsedChanged, keywordsCollapseBtn,
+                [keywordsCollapseBtn](bool c){
+            keywordsCollapseBtn->setIcon(c ? ":/images/icon16/expand.png"
+                                           : ":/images/icon16/collapse.png",
+                                         G::iconOpacity);
+            keywordsCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
+        });
+        keywordsTitleLayout->addWidget(keywordsCollapseBtn);
+        keywordsTitleLayout->addSpacing(10);
+    }
+
+    // close button
+    BarBtn *keywordsCloseBtn = new BarBtn();
+    keywordsCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
+    keywordsCloseBtn->setToolTip("Hide the Keywords Panel");
+    connect(keywordsCloseBtn, &BarBtn::clicked, this, &MW::closeKeywordsDock);
+    keywordsTitleLayout->addWidget(keywordsCloseBtn);
+
+    keywordsTitleLayout->addSpacing(5);
+}
+
 void MW::createPresetsDock()
 {
 /*
@@ -3468,6 +3586,7 @@ void MW::createDocks()
     createFavDock();
     createFilterDock();
     createCatalogDock();
+    createKeywordsDock();
     if (G::useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
@@ -3481,6 +3600,7 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
     if (catalogDock) addDockWidget(Qt::LeftDockWidgetArea, catalogDock);
+    if (keywordsDock) addDockWidget(Qt::LeftDockWidgetArea, keywordsDock);
     if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
@@ -3497,6 +3617,7 @@ void MW::createDocks()
     /* The Catalog tab exists only when it is a separate dock; with the Filter dock its
        place in the group is taken by the Filter panel's Catalog scope. */
     if (catalogDock) MW::tabifyDockWidget(filterDock, catalogDock);
+    if (keywordsDock) MW::tabifyDockWidget(filterDock, keywordsDock);
     if (G::useInfoView)
         MW::tabifyDockWidget(catalogDock ? catalogDock : filterDock, metadataDock);
     /* Do NOT tabify the LEFT-area metadataDock with the RIGHT-area embelDock: that cross-area
@@ -3515,8 +3636,9 @@ void MW::createDocks()
     // Re-evaluate responsive dock tab titles when a dock is dragged between
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
-    for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, metadataDock,
-                          embelDock, developDock, historyDock, presetsDock}) {
+    for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, keywordsDock,
+                          metadataDock, embelDock, developDock, historyDock,
+                          presetsDock}) {
         if (!d) continue;       // catalogDock is null with G::useFilterPanel
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
@@ -3539,6 +3661,7 @@ void MW::createDocks()
     wireSolo(favDock);
     wireSolo(filterDock);
     wireSolo(catalogDock);
+    wireSolo(keywordsDock);
     if (G::useInfoView) wireSolo(metadataDock);
     wireSolo(thumbDock);
     wireSolo(embelDock);

@@ -365,9 +365,20 @@ public:
         rows should not pay it per row. */
     QHash<QString, Availability> availabilityOf(const QStringList &paths);
 
-    /* Every keyword in the catalog with its image count and its parent names, for the
-       category list. */
+    /* Every keyword in the catalog with its image count, for the category list and the
+       vocabulary tree's counts. */
     QList<CatalogKeyword> keywords();
+
+    /*  How many live images carry this keyword path OR anything beneath it, optionally
+        restricted to one folder. What the retag confirmation reports before a rename or a
+        re-parent rewrites files -- so the number the user is shown is the number the
+        operation will actually touch.
+
+        THE ONLY PREFIX RANGE IN THE CODEBASE. Everywhere else a keyword query is plain
+        equality on pathfold, because every image is linked to every ancestor. A subtree
+        COUNT is the one question that equality cannot answer, and it is asked once per
+        dialog rather than per row, so it is affordable here and far from the filter. */
+    int imagesUnderKeyword(const QString &path, const QString &folder = QString());
 
     /* Every distinct value of one CATEGORY, with how many live images carry it -- the
        catalog's half of the shared category vocabulary the Filter dock renders in

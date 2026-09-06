@@ -24,11 +24,17 @@ BUGS / TO DO
         Phase 3 (nested Keywords tree in Filters, save/restore re-keyed on
                  {category, filter value}, keywordflatten.h renamed keywordpaths.h and
                  the dead flattenKeywords deleted).
-  NEXT: Phase 4 -- the WRITE path, driven from a debug action rather than UI:
-        _keywords/_keywordPaths shadows on ImageMetadata, change detection in
-        Metadata::writeXMP, MW::applyKeywordsToSelection. ORDERING TRAP: keywords write
-        the FILE first and the MODEL second, the opposite of MW::setRating, because there
-        is no shadow COLUMN and updating the model first hides the edit from detection.
+        Phase 4 (write path: _keywords shadows, writeXMP change detection,
+                 MW::applyKeywordsToSelection + keywordsInSelection).
+        Phase 5 (KeywordVocab model + Keywords DOCK, tree zone: rename, new keyword,
+                 insert parent, delete, filter box, applied dot, build-from-catalog,
+                 retag dialog; winnowStateVersion 4 -> 5). Assigning to the selection
+                 works (double-click / Enter / context menu).
+  NEXT: Phase 6 -- the CHIP ZONE (the splitter's lower half is empty), the type-ahead
+        completer, drag and drop (tree re-parent, tree->chips, images->node), and
+        EXECUTING the retag: MW::keywordPathChanged counts and asks but cannot yet act,
+        because applyKeywordsToSelection works on the selection and a retag spans folders
+        that are not loaded.
   Deliberately DEFERRED out of that work, each for a stated reason:
     - 9-slot keyword shortcut/set grid (number keys apply a keyword to the selection,
       switchable sets). Must clear MW::developShortcutIntercept, which eats number keys.

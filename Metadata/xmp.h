@@ -140,7 +140,18 @@ private:
     rapidxml::xml_node<> *rdfDescriptionNode = nullptr;
     rapidxml::xml_attribute<> *rdfAbout = nullptr;
     XmpElement nullXmpElement;
-    QByteArrayList a;               // attributes/nodes appended to xmlDoc
+    /*  Backing store for every name and value handed to rapidxml, which stores POINTERS
+        and never copies -- see keepName/keepValue, which are the ONLY things that may
+        append here.
+
+        THEY USED TO BE READ AS A PAIR: every writer appended one name and one value and
+        then indexed BOTH with "a.count() - 1", an unwritten invariant that the two grow
+        in lockstep. setItemList broke it the moment it landed, because one property
+        write appends three names (the property, rdf:Bag, rdf:li) and N values -- so the
+        NEXT writer's a.count()-1 indexed v out of range and the app aborted on a QList
+        assert. It survived the first tests only because their name and value counts
+        happened to be equal. Nothing indexes these by position any more. */
+    QByteArrayList a;               // names (nodes/attributes) appended to xmlDoc
     QByteArrayList v;               // values appended to xmlDoc
 
     QByteArray xmpBa;               // the xmpmeta packet

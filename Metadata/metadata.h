@@ -136,6 +136,11 @@ public:
 
     void clearMetadata();
     bool writeXMP(const QString &imageFileName, QString src = "Undefined");
+    /*  Set the keywords writeXMP will emit, on the metadata struct it holds. A setter
+        rather than the caller reaching into m, because the ORDER matters and this is
+        where it is written down: imMetadata() first (which fills the values AND their
+        shadows from the model), this second, writeXMP third, and only then the model. */
+    void setKeywords(const QStringList &subject, const QStringList &hierarchical);
     static void writeOrientation(QString fPath, QString orientationNumber);
 
     /* Per-image Develop edit state (base64 of the EditStack JSON) <-> the XMP sidecar's

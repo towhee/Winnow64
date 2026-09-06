@@ -154,6 +154,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     favDockVisibleAction->setChecked(w.isFavDockVisible);
     filterDockVisibleAction->setChecked(w.isFilterDockVisible);
     catalogDockVisibleAction->setChecked(w.isCatalogDockVisible);
+    keywordsDockVisibleAction->setChecked(w.isKeywordsDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
     developDockVisibleAction->setChecked(w.isDevelopDockVisible);
@@ -280,6 +281,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isFavDockVisible = favDockVisibleAction->isChecked();
     wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
     wsd.isCatalogDockVisible = catalogDockVisibleAction->isChecked();
+    wsd.isKeywordsDockVisible = keywordsDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
     wsd.isDevelopDockVisible = developDockVisibleAction->isChecked();
@@ -468,6 +470,7 @@ void MW::placeDocksAddedSince(int stateVersion)
         {2, historyDock, developDock, historyDockVisibleAction},
         {3, presetsDock, developDock, presetsDockVisibleAction},
         {4, catalogDock, filterDock, catalogDockVisibleAction},
+        {5, keywordsDock, filterDock, keywordsDockVisibleAction},
     };
 
     for (const AddedDock &a : added) {
@@ -503,6 +506,9 @@ void MW::builtInDefaultWorkspace()
     /* Off in the shipped layout: an empty catalog has nothing to show, and the
        left group is already four tabs deep. The Window menu opens it. */
     catalogDockVisibleAction->setChecked(false);
+    /*  Off, for the reason the Catalog panel is off: the left group is already four
+        tabs deep and a fifth most sessions never open costs every session the space. */
+    keywordsDockVisibleAction->setChecked(false);
     metadataDockVisibleAction->setChecked(true);
     embelDockVisibleAction->setChecked(false);
     thumbDockVisibleAction->setChecked(true);
@@ -633,6 +639,7 @@ QString MW::reportWorkspaces()
             << "\n  isFavDockVisible          " << G::s(ws.isFavDockVisible)
             << "\n  isFilterDockVisible       " << G::s(ws.isFilterDockVisible)
             << "\n  isCatalogDockVisible      " << G::s(ws.isCatalogDockVisible)
+            << "\n  isKeywordsDockVisible     " << G::s(ws.isKeywordsDockVisible)
             << "\n  isMetadataDockVisible     " << G::s(ws.isMetadataDockVisible)
             << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
             << "\n  isDevelopDockVisible      " << G::s(ws.isDevelopDockVisible)
@@ -706,6 +713,7 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisFavDockVisible" << ws.isFavDockVisible
         << "\nisFilterDockVisible" << ws.isFilterDockVisible
         << "\nisCatalogDockVisible" << ws.isCatalogDockVisible
+        << "\nisKeywordsDockVisible" << ws.isKeywordsDockVisible
         << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
         << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
         << "\nisDevelopDockVisible" << ws.isDevelopDockVisible
@@ -767,6 +775,9 @@ void MW::readWorkspaceSettings(WorkspaceData &wsd)
     wsd.isFavDockVisible = settings->value("isFavDockVisible").toBool();
     wsd.isFilterDockVisible = settings->value("isFilterDockVisible").toBool();
     wsd.isCatalogDockVisible = settings->value("isCatalogDockVisible").toBool();
+    /*  Absent from a workspace saved before the Keywords dock existed, which reads as
+        false -- the same as its default, so an old workspace needs no migration. */
+    wsd.isKeywordsDockVisible = settings->value("isKeywordsDockVisible").toBool();
     wsd.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
     wsd.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
     wsd.isDevelopDockVisible = settings->value("isDevelopDockVisible").toBool();
@@ -837,6 +848,7 @@ void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
     settings->setValue("isFavDockVisible", wsd.isFavDockVisible);
     settings->setValue("isFilterDockVisible", wsd.isFilterDockVisible);
     settings->setValue("isCatalogDockVisible", wsd.isCatalogDockVisible);
+    settings->setValue("isKeywordsDockVisible", wsd.isKeywordsDockVisible);
     settings->setValue("isMetadataDockVisible", wsd.isMetadataDockVisible);
     settings->setValue("isEmbelDockVisible", wsd.isEmbelDockVisible);
     settings->setValue("isDevelopDockVisible", wsd.isDevelopDockVisible);
