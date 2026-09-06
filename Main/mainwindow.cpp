@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Metadata/keywordpaths.h"
 #include <QtConcurrent>
 #include <QFutureWatcher>
 #include <QLocale>
@@ -99,6 +100,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
            the Catalog panel into it; the Catalog entry simply never matches then,
            because there is no separate Catalog tab to draw. */
         {catalogDockTabText,  ":/images/icon16/catalog_white.png"},
+        {keywordsDockTabText, ":/images/icon16/keywords_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
@@ -110,6 +112,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {favDockTabText,      favDock},
         {filterDockTabText,   filterDock},
         {catalogDockTabText,  catalogDock},
+        {keywordsDockTabText, keywordsDock},
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
@@ -293,6 +296,11 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     /* catalogDockTabText is empty with G::useFilterPanel (the dock is never created), so
        guard against an empty tabText matching it. */
     if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText) return catalogDock;
+    /*  Same guard as catalogDock and for the same reason: the Keywords dock ships off, so
+        its tab text is empty until createKeywordsDock has run, and an empty string
+        must not match an empty tabText. */
+    if (!keywordsDockTabText.isEmpty() && tabText == keywordsDockTabText)
+        return keywordsDock;
     if (tabText == metadataDockTabText) return metadataDock;
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
@@ -4539,6 +4547,19 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     probe.mark("title");
+
+    /*  The dot in the Keywords tree marks what THIS image carries. Guarded on the dock
+        being visible: it ships off, and walking a vocabulary on every arrow key for a
+        panel nobody has open is work for nothing. */
+    if (keywordVocab && keywordsDock && keywordsDock->isVisible()) {
+        const int kwRow = dm->currentSfRow >= 0
+            ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
+        if (kwRow >= 0) {
+            keywordVocab->setAppliedPaths(keywordEffectivePaths(
+                dm->index(kwRow, G::KeywordsColumn).data().toStringList(),
+                dm->index(kwRow, G::KeywordPathsColumn).data().toStringList()));
+        }
+    }
 
     // update loupe/video view
     videoView->stop();
@@ -12111,6 +12132,7 @@ void MW::updateState()
     setFavDockVisibility();
     setFilterDockVisibility();
     setCatalogDockVisibility();
+    setKeywordsDockVisibility();
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setDevelopDockVisibility();

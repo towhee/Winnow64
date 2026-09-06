@@ -692,10 +692,8 @@ void Xmp::fix()
         break;
     case Err::NoRdfAbout:
         QString aboutName = definedElements["about"].name;
-        a.append(aboutName.toUtf8());
-        v.append("");
-        int idx = a.count() - 1;
-        rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(a[idx], v[idx]);
+        rapidxml::xml_attribute<> *attr =
+            xmlDoc.allocate_attribute(keepName(aboutName.toUtf8()), keepValue(""));
         rdfDescriptionNode->append_attribute(attr);
         break;
     } // end switch
@@ -731,14 +729,10 @@ bool Xmp::includeSchemaNamespace(QString item)
 
     // check if schemaNamespace exists in xmlDoc
     if (!xmlDocElement(schemaNamespace, rdfDescriptionNode).exists()) {
-        // a and v are QByteArrayList to satisfy rapidxml pointer lifespan requirement
-        a.append(schemaNamespace.toUtf8());
-        v.append(definedElements[schema].value.toUtf8());
-        int idx = a.count() - 1;
-        /*
-        qDebug() << "Xmp::includeSchemaNamespace" << "Adding schema namespace/value" << a[idx] << v[idx];
-        //*/
-        rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(a[idx], v[idx]);
+        // keepName/keepValue satisfy rapidxml's pointer lifespan requirement
+        rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(
+            keepName(schemaNamespace.toUtf8()),
+            keepValue(definedElements[schema].value.toUtf8()));
         rdfDescriptionNode->insert_attribute(rdfAbout, attr);
     }
     return true;
@@ -978,25 +972,17 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     if (element.type == ElementType::Attribute && value != "") {
         XmpElement parElement = xmlDocElement(element.parentName, xmlDoc.first_node());
         if (!parElement.exists()) return false; // create parent node if missing!!
-        // class lifetime variables
-        a.append(element.name.toUtf8());
-        v.append(value);
-        // get last index for the append list
-        int idx = a.count() - 1;
-        // append attribute and value
-        rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(a[idx], v[idx]);
+        // class lifetime pointers -- see keepName/keepValue
+        rapidxml::xml_attribute<> *attr =
+            xmlDoc.allocate_attribute(keepName(element.name.toUtf8()), keepValue(value));
         parElement.node->append_attribute(attr);
     }
     if (element.type == ElementType::Node) {
         XmpElement parElement = xmlDocElement(element.parentName, xmlDoc.first_node());
         if (!parElement.exists()) return false;  // create parent node if missing!!
-        // class lifetime variables
-        a.append(element.name.toUtf8());
-        v.append(value);
-        // get just appended list index
-        int idx = a.count() - 1;
-        // append node and value
-        rapidxml::xml_node<> *node = xmlDoc.allocate_node(rapidxml::node_element, a[idx], v[idx]);
+        // class lifetime pointers -- see keepName/keepValue
+        rapidxml::xml_node<> *node = xmlDoc.allocate_node(
+            rapidxml::node_element, keepName(element.name.toUtf8()), keepValue(value));
         parElement.node->append_node(node);
     }
     return true;

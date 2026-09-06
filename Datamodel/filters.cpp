@@ -1992,6 +1992,56 @@ void Filters::updateSearchCategoryCount(QMap<QString, int> itemMap, bool isFilte
         searchFalse->setData(col, Qt::EditRole, 0);
 }
 
+void Filters::updateKeywordItems(const QMap<QString, int> &pathCounts,
+                                 QTreeWidgetItem *category)
+{
+/*
+    Refresh the Keywords tree after a keyword edit: rebuild it and put the user's state
+    back.
+
+    REBUILT RATHER THAN PATCHED IN PLACE, which is the opposite of what
+    updateCategoryItems does for the flat categories. Patching a tree means removing a
+    node whose children may still be wanted, re-parenting what is left, and pruning
+    branches that have become empty -- three chances to leave the tree malformed, on a
+    path that runs after every keyword edit. The vocabulary is a few thousand nodes, not a
+    few hundred thousand rows, so rebuilding it is cheap and cannot go half-done.
+
+    WHAT MUST SURVIVE THE REBUILD is what the user set: the check state, and the EXPANSION
+    state. Losing the second would collapse the whole tree every time a keyword was added
+    to an image, which is the kind of thing that makes a panel feel broken even though
+    nothing is wrong. Both are keyed on the PATH, so a node that still exists gets its
+    state back and a node that has genuinely gone does not.
+*/
+    if (G::isLogger) G::log("Filters::updateKeywordItems");
+
+    QHash<QString, Qt::CheckState> stateByPath;
+    QHash<QString, bool> expandedByPath;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        if (path.isEmpty()) continue;
+        if (item->checkState(0) != Qt::Unchecked)
+            stateByPath.insert(keywordFold(path), item->checkState(0));
+        if (item->isExpanded()) expandedByPath.insert(keywordFold(path), true);
+    }
+
+    {
+        QMutexLocker locker(&mutex);
+        qDeleteAll(category->takeChildren());
+    }
+
+    addKeywordItems(pathCounts, category);
+
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString fold = keywordFold(item->data(1, Qt::EditRole).toString());
+        const auto it = stateByPath.constFind(fold);
+        if (it != stateByPath.constEnd()) {
+            item->setCheckState(0, it.value());
+            styleFilterItem(item);
+        }
+        if (expandedByPath.value(fold, false)) item->setExpanded(true);
+    }
+}
+
 void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
@@ -2007,6 +2057,13 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
     item is not in the itemMap then it is removed.  After all filter items have been
     iterated, any remaining items in itemMap are added to the filter items.
 */
+    /*  Keywords are a TREE, and this function's remove-then-append pass is one level
+        deep in both halves. Delegated for the same reason addCategoryItems is. */
+    if (category == keywords) {
+        updateKeywordItems(itemMap, category);
+        return;
+    }
+
     if (G::isLogger) G::log("Filters::updateCategoryItems", category->text(0));
     if (debugFilters)
         qDebug() << "Filters::updateCategoryItems"

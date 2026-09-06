@@ -683,6 +683,15 @@ void BuildFilters::updateCategoryItems(const FilterSnapshot &snap, FilterOps &op
     case Category::CompareEdit: slot = FilterCat::Compare; cat = filters->compare;  break;
     case Category::AvailabilityEdit:
         slot = FilterCat::Availability; cat = filters->availability; break;
+    case Category::KeywordEdit:
+        /*  No slot: keywords are the one category counted from the row's LIST rather
+            than from a single column, so the ops are appended here and this returns. */
+        ops.append({FilterOp::CategoryItems, countKeywords(snap, false),
+                    filters->keywords, false, QString()});
+        if (abort) return;
+        ops.append({FilterOp::FilteredCount, countKeywords(snap, true),
+                    filters->keywords, false, QString()});
+        return;
     case Category::MissingThumbEdit:
         // no snapshot slot: the MissingThumb category is not built (see sinks())
         return;

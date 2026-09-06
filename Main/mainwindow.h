@@ -39,6 +39,8 @@
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
 #include "Views/filterpanel.h"
+#include "Views/keywordtree.h"
+#include "Datamodel/keywordvocab.h"
 #include "Views/catalogscopetree.h"
 #include "Main/catalogscanner.h"
 #include "Dialogs/catalogrootsdlg.h"
@@ -193,8 +195,8 @@ public:
        bars). MW::restoreWindowState restores the state at its own version and then places
        the newer docks, so a dock addition MIGRATES the user's layout rather than discarding
        it. v1: added developDock. v2: added historyDock. v3: added presetsDock.
-       v4: added catalogDock. */
-    static constexpr int winnowStateVersion = 4;
+       v4: added catalogDock. v5: added keywordsDock. */
+    static constexpr int winnowStateVersion = 5;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -246,6 +248,7 @@ public:
         bool isFavDockVisible;
         bool isFilterDockVisible;
         bool isCatalogDockVisible;
+        bool isKeywordsDockVisible;
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
         bool isDevelopDockVisible;
@@ -688,6 +691,15 @@ private slots:
     void setColorClass();
     void setColorClassForRow(int sfRow, QString colorClass);
 
+    /*  KEYWORDS (Main/keywordedit.cpp). Add and/or remove keyword PATHS across the whole
+        selection, writing each image's sidecar and updating the model, the filters and
+        the catalog. add and remove are full paths ("Fauna|Bird|Heron"), never leaves. */
+    void applyKeywordsToSelection(const QStringList &add, const QStringList &remove);
+    /*  The keyword paths the selection carries, and how many of the selected images carry
+        each -- what the Keywords dock's chip zone renders, where a count below the
+        selection size is the "* on some" marker. */
+    QMap<QString, int> keywordsInSelection() const;
+
     void setRotation(int degrees);
     /* A Develop dock slider changed: schedule a coalesced proxy re-render now and (re)arm the
        full-resolution settle render. Connected to DevelopProperties::paramsChanged. */
@@ -1042,6 +1054,7 @@ private slots:
     void setFavDockVisibility();
     void setFilterDockVisibility();
     void setCatalogDockVisibility();
+    void setKeywordsDockVisibility();
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
@@ -1059,6 +1072,7 @@ private slots:
     void closeFavDock();
     void closeFilterDock();
     void closeCatalogDock();
+    void closeKeywordsDock();
     void closeMetadataDock();
     void showThumbDock();
     void showEmbelDock();
@@ -1069,6 +1083,7 @@ private slots:
     void showFavDock();
     void showFilterDock();
     void showCatalogDock();
+    void showKeywordsDock();
     /*  THE ONE PLACE G::scope CHANGES. Every entry point -- either Catalog row,
         the Filter dock's Folders|Catalog buttons, File > Open Catalog, and selecting a
         folder -- routes here, and this pushes the result back to all of them so
@@ -1426,6 +1441,7 @@ private:
     QAction *favDockVisibleAction;
     QAction *filterDockVisibleAction;
     QAction *catalogDockVisibleAction;
+    QAction *keywordsDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
@@ -1584,6 +1600,10 @@ private:
        dock of its own, so createCatalogDock returns before building it. Initialised here because
        createDocks and placeDocksAddedSince both reach for it before that is decided. */
     DockWidget *catalogDock = nullptr;
+    /*  The Keywords dock: the vocabulary tree the user curates. Not created by default
+        (shipped off, like catalogDock -- the left group is already four tabs deep), so
+        every use is null-guarded. */
+    DockWidget *keywordsDock = nullptr;
     DockWidget *metadataDock;
     DockWidget *thumbDock;
     DockWidget *propertiesDock;
@@ -1668,6 +1688,7 @@ private:
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
     DockTitleBar *catalogTitleBar;
+    DockTitleBar *keywordsTitleBar = nullptr;
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
@@ -1683,6 +1704,8 @@ private:
        need it to be genuinely null rather than indeterminate. It was the one member of
        this group without an initialiser, and an uninitialised pointer passes `if (p)`. */
     CatalogView *catalogView = nullptr;
+    KeywordVocab *keywordVocab = nullptr;
+    KeywordTree *keywordTree = nullptr;
     /* Walks the designated roots on its own low-priority thread. */
     CatalogScanner *catalogScanner = nullptr;
     /* What the background scanner may walk: one ordered table of include/exclude rows,
@@ -2161,6 +2184,7 @@ private:
 
     QString filterDockTabText;
     QString catalogDockTabText;
+    QString keywordsDockTabText;
     QString metadataDockTabText;
     QString embelDockTabText;
     QString developDockTabText;
@@ -2178,6 +2202,11 @@ private:
     void createFavDock();
     void createFilterDock();
     void createCatalogDock();
+    void createKeywordsDock();
+    /*  A vocabulary node was renamed or re-parented: offer to bring the images that
+        carry the old path into line. The model has already changed the NAME; this is
+        only about the files. */
+    void keywordPathChanged(const QString &oldPath, const QString &newPath);
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();

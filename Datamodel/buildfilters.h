@@ -74,6 +74,10 @@ public:
             and leaves MW::filterChange to lift it, and filterChange must not run
             against a scope that has only just finished loading. */
         AvailabilityEdit,
+        /*  Keywords have no snapshot SLOT -- a row carries a LIST of them, so they are
+            counted by countKeywords rather than from the slot table (see sinks()). The
+            handler therefore appends its own ops instead of going through countSlot. */
+        KeywordEdit,
         MissingThumbEdit,
         CompareEdit
     } category;

@@ -62,6 +62,8 @@ inline void applyXmp(Xmp &xmp, ImageMetadata &m, MetadataParameters &p)
     m._url = m.url;
     m._orientation = m.orientation;
     m._rotationDegrees = m.rotationDegrees;
+    m._keywords = m.keywords;
+    m._keywordPaths = m.keywordPaths;
 }
 
 #endif // XMPAPPLY_H

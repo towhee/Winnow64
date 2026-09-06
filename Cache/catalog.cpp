@@ -1239,6 +1239,50 @@ QMap<QString, int> Catalog::categoryItems(int dmColumn)
     return out;
 }
 
+int Catalog::imagesUnderKeyword(const QString &path, const QString &folder)
+{
+/*
+    A HALF-OPEN RANGE ON pathfold, not a LIKE and not a recursive CTE.
+
+        pathfold = :p  OR  (pathfold >= :p||'|'  AND  pathfold < :p||'}')
+
+    '}' is 0x7D, one past '|' (0x7C), so the second clause is exactly "every path that
+    begins with this one followed by a separator". A range on the UNIQUE keyword_pathkey
+    index is guaranteed index-driven; LIKE 'x%' is only index-driven when SQLite
+    decides it can be, which depends on collation and on the pattern being a literal.
+
+    THE SEPARATOR IS WHY THE RANGE HAS TWO CLAUSES. Without it, a range from "fauna" would
+    also cover "faunal" and "fauna zoo" -- neither of which is beneath Fauna. Same trap
+    keywordIsDescendant guards in memory, and the two must agree or the dialog reports a
+    number the operation does not go on to touch.
+*/
+    if (path.trimmed().isEmpty()) return 0;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+
+    const QString p = fold(path);
+
+    QString sql = "SELECT COUNT(DISTINCT ik.image_id)"
+                  " FROM image_keyword ik"
+                  " JOIN keyword k ON k.id = ik.keyword_id"
+                  " JOIN image i   ON i.id = ik.image_id AND i.live = 1"
+                  " WHERE (k.pathfold = ?"
+                  "     OR (k.pathfold >= ? AND k.pathfold < ?))";
+    if (!folder.isEmpty()) sql += " AND i.folder = ?";
+
+    QSqlQuery q(db);
+    q.prepare(sql);
+    q.addBindValue(p);
+    q.addBindValue(p + "|");
+    q.addBindValue(p + "}");
+    if (!folder.isEmpty()) q.addBindValue(folder);
+
+    if (q.exec() && q.next()) return q.value(0).toInt();
+    return 0;
+}
+
 int Catalog::count()
 {
     QMutexLocker lk(&mutex);

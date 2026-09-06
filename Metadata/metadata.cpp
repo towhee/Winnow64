@@ -4,6 +4,7 @@
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
+#include "Metadata/keywordpaths.h"   // keywordFold, for writeXMP's change detection
 #include "Cache/devpreviewcache.h"
 #include "ImageFormats/Video/mov.h"
 
@@ -748,6 +749,22 @@ QByteArray Metadata::readDevThumb(QString fPath)
     return QByteArray::fromBase64(preview.toLatin1());
 }
 
+void Metadata::setKeywords(const QStringList &subject, const QStringList &hierarchical)
+{
+/*
+    What writeXMP will emit for this image. Call AFTER dm->imMetadata(fPath, true), which
+    is what loads m and takes the shadows the change detection compares against.
+
+    dc:subject and lr:hierarchicalSubject are one fact in two properties, so they are set
+    together. Writing only one of them would leave a file that contradicts itself, and the
+    next read would resolve the contradiction by leaf consumption in whichever direction
+    happened to win.
+*/
+    if (G::isLogger) G::log("Metadata::setKeywords");
+    m.keywords = subject;
+    m.keywordPaths = hierarchical;
+}
+
 bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*
@@ -803,6 +820,23 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     bool copyrightChanged = m.copyright != m._copyright;
     bool emailChanged = m.email != m._email;
     bool urlChanged = m.url != m._url;
+    /*
+        ORDER-INSENSITIVE, and it has to be. applyXmp reads the two properties in FILE
+        order and this writes them sorted, so a plain list compare would report a change
+        on every Lightroom-written file. writeXMP writes every changed field in one pass,
+        so that would mean a RATING edit silently rewriting the user's keyword block --
+        every time, on files Winnow had never been asked to retag.
+
+        Folded as well as sorted, so a re-spelling that differs only in case is not an
+        edit either. Both properties are compared because both are written together.
+    */
+    auto foldSorted = [](QStringList v) {
+        for (QString &s : v) s = keywordFold(s);
+        v.sort();
+        return v;
+    };
+    bool keywordsChanged = foldSorted(m.keywords) != foldSorted(m._keywords)
+                        || foldSorted(m.keywordPaths) != foldSorted(m._keywordPaths);
     // bool orientationChanged = m.orientation != m._orientation;
     // bool rotationChanged = m.rotationDegrees != m._rotationDegrees;
     if (   !ratingChanged
@@ -812,6 +846,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         && !copyrightChanged
         && !emailChanged
         && !urlChanged
+        && !keywordsChanged
         // && !orientationChanged
         // && !rotationChanged
        )
@@ -850,6 +885,14 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     if (titleChanged) xmp.setItem("title", m.title.toLatin1());
     if (labelChanged) xmp.setItem("Label", m.label.toLatin1());
     if (ratingChanged) xmp.setItem("Rating", m.rating.toLatin1());
+    /*  BOTH, whenever EITHER changed: they are one fact in two properties. setItemList
+        rather than setItem -- these are rdf:Bag lists, and setItem refuses them (it used
+        to delete them). An empty list removes the property, which is how the last
+        keyword is taken off an image. */
+    if (keywordsChanged) {
+        xmp.setItemList("subject", m.keywords);
+        xmp.setItemList("hierarchicalsubject", m.keywordPaths);
+    }
 
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
@@ -876,9 +919,15 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
     //*/
 
-    xmp.writeSidecar(p.file);
-
-    qDebug() << srcFun<< fPath;
+    /*  THE RETURN VALUE IS CHECKED, unlike before. writeOrientation and
+        writeDevelopSidecar both report a failed sidecar write and this did not, so a
+        failure here was silent -- and with keywords in the payload a silent failure is a
+        user losing tagging work they can see on screen and believe is saved. */
+    if (!xmp.writeSidecar(p.file)) {
+        G::issue("Warning", "Failed to write sidecar.", "Metadata::writeXMP", -1, fPath);
+        p.file.close();
+        return false;
+    }
 
     if (updateSidecar) emit updateSidecarStatus(fPath);
 
@@ -1198,6 +1247,12 @@ bool Metadata::parseSidecar()
        that is the whole point of the newer-wins rule this function already applies. */
     m.keywords = xmp.getItemList("subject");
     m.keywordPaths = xmp.getItemList("hierarchicalsubject");
+    /*  The originals, for writeXMP's change detection. This is the LAST word on a raw
+        file's keywords -- the sidecar is where Lightroom writes them -- so the shadow
+        has to be taken here too, after the sidecar has overwritten whatever the image
+        itself said. */
+    m._keywords = m.keywords;
+    m._keywordPaths = m.keywordPaths;
     /*
     qDebug() << "Metadata::parseSidecar" << s << sidecarPath;
     //*/

@@ -172,6 +172,13 @@ void MW::setCatalogDockVisibility()
     catalogDock->setVisible(catalogDockVisibleAction->isChecked());
 }
 
+void MW::setKeywordsDockVisibility()
+{
+    if (G::isLogger) G::log("MW::setKeywordsDockVisibility");
+    if (!keywordsDock) return;
+    keywordsDock->setVisible(keywordsDockVisibleAction->isChecked());
+}
+
 void MW::setMetadataDockVisibility()
 {
     if (G::isLogger) G::log("MW::setMetadataDockVisibility");
@@ -298,6 +305,13 @@ void MW::closeCatalogDock()
     catalogDock->setVisible(false);
     catalogDockVisibleAction->setChecked(false);
 }
+void MW::closeKeywordsDock()
+{
+    if (!keywordsDock) return;
+    keywordsDock->setVisible(false);
+    keywordsDockVisibleAction->setChecked(false);
+}
+
 void MW::closeMetadataDock()
 {
     metadataDock->setVisible(false);
@@ -545,6 +559,26 @@ void MW::setCatalogScopeWhole(QString src)
         appliedCatalogYear.clear();
     }
     setScope(G::Scope::Catalog, src);
+}
+
+void MW::showKeywordsDock()
+{
+/*
+    Window > Keywords Panel. Shows it, raises it to the front of its tab group and loads
+    the vocabulary -- reloading each time it is shown rather than on a timer, because the
+    tree only changes when the user changes it or an import does, and a panel that is
+    never open costs nothing to keep current.
+*/
+    if (G::isLogger) G::log("MW::showKeywordsDock");
+    if (G::isInitializing) return;
+    if (!keywordsDock) return;
+
+    const bool wanted = keywordsDockVisibleAction->isChecked();
+    keywordsDock->setVisible(wanted);
+    if (!wanted) return;
+
+    keywordsDock->raise();
+    if (keywordVocab) keywordVocab->reload();
 }
 
 void MW::showCatalogDock()

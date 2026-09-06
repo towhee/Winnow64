@@ -108,6 +108,15 @@ public:
     /* Hierarchical keyword paths from lr:hierarchicalSubject ie "Wildlife|Birds|Heron".
        Parallel to keywords, not a replacement: a file can carry either or both. */
     QStringList keywordPaths;
+    /*  THE ORIGINALS, as the file had them, so Metadata::writeXMP can tell an edit from a
+        re-read. Every other edited field has a shadow COLUMN in the datamodel beside it;
+        keywords deliberately do not -- two more QStringList columns at 250k rows is real
+        memory spent to re-derive something the model already holds. DataModel::imMetadata
+        sets these from the model's own values instead, and the caller mutates keywords
+        AFTERWARDS, which is why the keyword edit path writes the file before the model.
+        See Metadata::setKeywords. */
+    QStringList _keywords;
+    QStringList _keywordPaths;
 
     QString title = "";
     QString creator = "";

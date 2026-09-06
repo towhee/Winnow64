@@ -694,6 +694,13 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText)
         return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
                        "Window > Catalog Panel.</nobr>").arg(catalogDockTabText);
+    /*  Keywords has NO SHORTCUT, deliberately: F3-F9 are taken by the other docks and
+        F10-F12 are spoken for, and inventing a modifier chord for a panel that is off by
+        default would be a key nobody finds. It is reached from Window > Keywords Panel,
+        which is also where the user discovers it exists. */
+    if (!keywordsDockTabText.isEmpty() && tabText == keywordsDockTabText)
+        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+                       "Window > Keywords Panel.</nobr>").arg(keywordsDockTabText);
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
@@ -799,6 +806,7 @@ void MW::applyDockCollapseState()
     apply(favDock,      "BookmarkDock");
     apply(filterDock,   "FilterDock");
     apply(catalogDock,  "CatalogDock");
+    apply(keywordsDock, "KeywordsDock");
     apply(metadataDock, "MetadataDock");
     apply(thumbDock,    "ThumbDock");
     apply(embelDock,    "EmbelDock");

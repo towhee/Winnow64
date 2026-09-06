@@ -84,6 +84,10 @@ public:
         its full path. Reached through addCategoryItems rather than called directly, so
         every existing op dispatch and call site stays as it was. */
     void addKeywordItems(const QMap<QString, int> &pathCounts, QTreeWidgetItem *category);
+    /*  The nested counterpart of updateCategoryItems, reached the same way: by
+        delegation, so the op dispatch stays generic. */
+    void updateKeywordItems(const QMap<QString, int> &pathCounts,
+                            QTreeWidgetItem *category);
     /*  Every filterable item beneath a category, at ANY depth. Categories other than
         Keywords are one level deep and this is just their children; writing the loops
         against it is what stops a nested category being half-handled. */

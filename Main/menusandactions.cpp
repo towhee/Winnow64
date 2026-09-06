@@ -1656,6 +1656,20 @@ void MW::createWindowActions()
     addAction(catalogDockVisibleAction);
     connect(catalogDockVisibleAction, &QAction::triggered, this, &MW::showCatalogDock);
 
+    keywordsDockVisibleAction = new QAction(tr("Keywords Panel"), this);
+    keywordsDockVisibleAction->setObjectName("toggleKeywords");
+    keywordsDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    keywordsDockVisibleAction->setCheckable(true);
+    if (isSettings && settings->contains("isKeywordsDockVisible")) {
+        keywordsDockVisibleAction->setChecked(
+            settings->value("isKeywordsDockVisible").toBool());
+    }
+    /* Off by default, like the Catalog panel: the left group is already four tabs deep,
+       and a fifth that most sessions never open costs every session the space. */
+    else keywordsDockVisibleAction->setChecked(false);
+    addAction(keywordsDockVisibleAction);
+    connect(keywordsDockVisibleAction, &QAction::triggered, this, &MW::showKeywordsDock);
+
     metadataDockVisibleAction = new QAction(tr("Metadata Panel"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
     metadataDockVisibleAction->setShortcutVisibleInContextMenu(true);
@@ -2410,6 +2424,7 @@ void MW::createViewMenu()
     viewMenu->addAction(favDockVisibleAction);
     viewMenu->addAction(filterDockVisibleAction);
     viewMenu->addAction(catalogDockVisibleAction);
+    viewMenu->addAction(keywordsDockVisibleAction);
     viewMenu->addAction(metadataDockVisibleAction);
     viewMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
@@ -2474,6 +2489,7 @@ void MW::createWindowMenu()
     windowMenu->addAction(favDockVisibleAction);
     windowMenu->addAction(filterDockVisibleAction);
     windowMenu->addAction(catalogDockVisibleAction);
+    windowMenu->addAction(keywordsDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
@@ -3214,6 +3230,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[favDockVisibleAction->objectName()] = favDockVisibleAction;
     actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
     actionKeys[catalogDockVisibleAction->objectName()] = catalogDockVisibleAction;
+    actionKeys[keywordsDockVisibleAction->objectName()] = keywordsDockVisibleAction;
     actionKeys[openCatalogAction->objectName()] = openCatalogAction;
     actionKeys[manageCatalogAction->objectName()] = manageCatalogAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;

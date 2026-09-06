@@ -2864,6 +2864,18 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
     m.keywords = index(row, G::KeywordsColumn).data().toStringList();
     m.keywordPaths = index(row, G::KeywordPathsColumn).data().toStringList();
+    /*  THE MODEL IS THE ORIGINAL, so there is no _Keywords column and there does not need
+        to be one. Every other edited field carries a shadow column beside it, but two
+        more QStringList columns at 250k rows is memory spent to re-derive what the model
+        already holds -- so the shadow is simply the value read a moment ago, and any
+        difference from it IS the edit.
+
+        THE CALLER MUTATES m AFTER THIS RETURNS. That is why the keyword edit path writes
+        the FILE first and the model second, which is the opposite order to MW::setRating:
+        with no shadow column, updating the model first would make the edit invisible to
+        Metadata::writeXMP's comparison. See Metadata::setKeywords. */
+    m._keywords = m.keywords;
+    m._keywordPaths = m.keywordPaths;
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
     m.duration = index(row, G::DurationColumn).data().toString();
 
