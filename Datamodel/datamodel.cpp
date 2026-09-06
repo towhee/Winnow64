@@ -6691,7 +6691,6 @@ void SortFilter::suspend(bool suspendFiltering, QString src)
     QString msg = "suspendFiltering = " + QVariant(suspendFiltering).toString() +
               " src = " + src;
     if (G::isLogger) G::log("SortFilter::suspend", msg);
-    // qDebug() << "SortFilter::suspend =" << suspendFiltering << "src =" << src;
     this->suspendFiltering = suspendFiltering;
 }
 

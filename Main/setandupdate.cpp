@@ -177,6 +177,10 @@ void MW::setKeywordsDockVisibility()
     if (G::isLogger) G::log("MW::setKeywordsDockVisibility");
     if (!keywordsDock) return;
     keywordsDock->setVisible(keywordsDockVisibleAction->isChecked());
+    /*  THE ROUTE THAT USED TO MISS. A dock restored VISIBLE from settings never goes
+        through showKeywordsDock -- the user did not choose it this session, the saved
+        state did -- so nothing loaded the vocabulary and the panel came up empty. */
+    if (keywordsDockVisibleAction->isChecked()) ensureKeywordVocabLoaded();
 }
 
 void MW::setMetadataDockVisibility()
@@ -578,7 +582,7 @@ void MW::showKeywordsDock()
     if (!wanted) return;
 
     keywordsDock->raise();
-    if (keywordVocab) keywordVocab->reload();
+    ensureKeywordVocabLoaded();
     /*  The dock was hidden, so the selection-driven refresh has been skipping it; fill
         the chips and the dots now that it is on screen. */
     refreshKeywordsDock();

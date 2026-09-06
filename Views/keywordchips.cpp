@@ -199,6 +199,12 @@ void KeywordChips::commitTyped()
 
 void KeywordChips::setSelection(const QMap<QString, int> &counts, int selectionSize)
 {
+    /*  NOTHING TO DO IF NOTHING CHANGED, and it usually has not. fileSelectionChange
+        fires when the CURRENT image moves, not only when the selection set does, so
+        arrowing through a multi-selection delivers the same map over and over -- and
+        rebuilding means destroying and recreating every chip widget each time. */
+    if (selectionSize == this->selectionSize && counts == this->counts) return;
+
     this->counts = counts;
     this->selectionSize = selectionSize;
     rebuild();
@@ -219,11 +225,31 @@ void KeywordChips::rebuild()
     }
     addEdit->setEnabled(true);
 
+    /*  A CAP, because the union of a large selection's keywords is unbounded. Filtering
+        a real library to one branch and selecting it selects images spanning HUNDREDS of
+        distinct keywords -- 578 for one ordinary case -- and a chip apiece is a QFrame, a
+        layout, a label and a button each, built and torn down on every selection change.
+        That was slow enough to be felt while browsing and again on quit.
+
+        FULL-COVERAGE KEYWORDS COME FIRST because they are the actionable ones: a keyword
+        every selected image carries is one you might remove from all of them. A keyword
+        on three images out of eight hundred is noise at that scale, and if it is cut off
+        by the cap the count in the legend says so. */
+    const int kMaxChips = 60;
+
+    QStringList full, partialPaths;
+    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
+        if (it.value() >= selectionSize) full << it.key();
+        else partialPaths << it.key();
+    }
+    const QStringList ordered = full + partialPaths;
+    const int shown = qMin(ordered.size(), kMaxChips);
+
     bool anyPartial = false, anyUnfiled = false;
 
-    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
-        const QString path = it.key();
-        const bool partial = it.value() < selectionSize;
+    for (int i = 0; i < shown; ++i) {
+        const QString path = ordered.at(i);
+        const bool partial = counts.value(path) < selectionSize;
         const bool unfiled = !vocab->indexForPath(path).isValid();
         anyPartial |= partial;
         anyUnfiled |= unfiled;
@@ -243,6 +269,8 @@ void KeywordChips::rebuild()
     QStringList notes;
     if (selectionSize > 1)
         notes << QString("%1 images selected").arg(selectionSize);
+    if (ordered.size() > shown)
+        notes << QString("showing %1 of %2 keywords").arg(shown).arg(ordered.size());
     if (anyPartial) notes << "* on some";
     if (anyUnfiled) notes << "? not in your keyword list";
     legend->setText(notes.join("   ·   "));

@@ -100,6 +100,15 @@ public:
         harmless and running it after an import merges rather than replaces. */
     int buildFromCatalog();
 
+    /*  Merge a Lightroom keyword export into the vocabulary. MERGES, never replaces: a
+        node the user authored and the file does not mention is theirs and stays. Returns
+        how many nodes were added; `skipped` collects paths the file named that could not
+        be created, so the caller can say so rather than reporting a silent partial
+        success. */
+    int importLightroom(const QString &filePath, QStringList *skipped = nullptr);
+    /*  Write the whole vocabulary in the same format, parents before children. */
+    bool exportLightroom(const QString &filePath);
+
     // --- queries -------------------------------------------------------------------
     QModelIndex indexForPath(const QString &path) const;
     /*  Nodes whose LEAF starts with prefix, each carrying its full path, for the

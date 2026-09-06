@@ -67,6 +67,8 @@ private:
     void insertParentAboveSelected();
     void deleteSelected();
     void buildFromCatalog();
+    void importLightroom();
+    void exportLightroom();
     QModelIndex currentNode() const;
     /*  Names already used beside a node, for InputDlg's doNotUse list. */
     QStringList siblingNames(const QModelIndex &parent, const QModelIndex &except) const;

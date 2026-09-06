@@ -932,10 +932,20 @@ bool CacheDb::migrate(QSqlDatabase &db)
     unused: it is a second representation of what pathfold already carries, and
     maintaining two of those is what schema 3 -> 4 was undone for.
 
-    THE STAMP RESET, as in schemas 6 and 7. A keyword's meaning has widened from a name to
-    a path, and the rebuilt links are only as good as what keywordpaths recorded -- which
-    for a pre-schema-7 row is nothing, so it carries forward flat. Clearing the stamps is
-    what upgrades those rows to real hierarchy the next time they are visited.
+    THE STAMP RESET IS NARROW, and schemas 6 and 7 are the wrong precedent for it. Those
+    widened what EVERY row means, so every row had to be re-read. This does not: a row
+    that had keywordpaths and keywords_literal was rebuilt from them exactly, and is as
+    correct after the migration as a re-read would make it. Only a CARRIED-FORWARD row --
+    indexed before schema 7, so it had neither column and kept its old keyword names as
+    depth-1 paths -- is missing hierarchy a re-read would recover.
+
+    RESETTING EVERY ROW WAS ACTIVELY HARMFUL, which is how this was found. A stamp of -1
+    never matches the file, so MW::refreshStaleRows (the scroll-in verification) treats
+    the row as out of date, CLEARS ITS ICON and queues a re-read. Doing that to a whole
+    43,000-image library meant thumbnails blanking as they scrolled into view, continuous
+    re-reading, and -- because clearing a row decrements metadataAttemptedCount --
+    G::allMetadataAttempted flapping false, which silently disabled the filter panel. One
+    over-broad UPDATE, three symptoms that looked unrelated to it and to each other.
 */
         const char *ddl[] = {
             /* THE AUTHORED VOCABULARY, and it is a SEPARATE table from keyword on
@@ -1004,7 +1014,11 @@ bool CacheDb::migrate(QSqlDatabase &db)
         }
 
         const char *after[] = {
-            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1",
+            /*  Carried-forward rows only. kw_carry holds exactly the images that had
+                keyword links but neither verbatim column, which is the whole of the set
+                that would gain anything from being read again. */
+            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
+            " WHERE id IN (SELECT image_id FROM kw_carry)",
             "DROP TABLE IF EXISTS kw_carry",
         };
         for (const char *sql : after) {

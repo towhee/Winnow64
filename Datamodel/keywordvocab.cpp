@@ -4,10 +4,14 @@
 #include "Cache/catalog.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
+#include "Metadata/lrkeywords.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QFile>
+#include <QSaveFile>
+#include <QTextStream>
 #include <algorithm>
 
 /*
@@ -544,4 +548,116 @@ int KeywordVocab::buildFromCatalog()
 
     refreshCounts();
     return added;
+}
+
+int KeywordVocab::importLightroom(const QString &filePath, QStringList *skipped)
+{
+/*
+    Merge a Lightroom keyword export into the vocabulary.
+
+    A MERGE, NOT A REPLACE, and that is the whole shape of it. A user's vocabulary is
+    theirs: branches they built here and the file has never heard of must survive an
+    import, or importing would be a destructive operation wearing a friendly name. So
+    this only ever ADDS, and a path that already exists is left exactly as it is --
+    including its synonyms, which the file might disagree with. Nothing is renamed,
+    nothing is moved, nothing is deleted.
+
+    MATCHED BY FOLDED PATH, so a re-import after a small edit in Lightroom adds the few
+    new keywords and touches nothing else, and so that "Heron" and "heron" are the same
+    keyword rather than two.
+
+    PARENTS FIRST, which lrPaths already guarantees because the file is written
+    depth-first -- a child row always follows its parent. insertChild is called for each
+    missing ancestor in turn rather than trusting that, because a hand-edited file need
+    not be well formed and a missing parent must not lose a whole branch.
+
+    SYNONYMS ARE APPLIED ONLY TO NODES THIS IMPORT CREATED. Overwriting an existing
+    node's synonyms would be a replace by the back door.
+*/
+    if (G::isLogger) G::log("KeywordVocab::importLightroom", filePath);
+
+    QFile f(filePath);
+    if (!f.open(QIODevice::ReadOnly)) {
+        G::issue("Warning", "Could not open the keyword file.",
+                 "KeywordVocab::importLightroom", -1, filePath);
+        return 0;
+    }
+    const QList<LrKeyword> rows = lrParse(&f);
+    f.close();
+    if (rows.isEmpty()) return 0;
+
+    const QStringList paths = lrPaths(rows);
+    int added = 0;
+
+    for (int i = 0; i < paths.size(); ++i) {
+        const QString path = paths.at(i);
+        if (path.isEmpty()) continue;
+        if (byPathFold.contains(keywordFold(path))) continue;   // already ours
+
+        /*  Walk the path, creating what is missing. An ancestor that already exists is
+            reused, which is what makes this a merge rather than a parallel tree. */
+        QModelIndex parent;
+        QString built;
+        bool ok = true;
+        for (const QString &node : keywordNodes(path)) {
+            built = built.isEmpty() ? node : built + '|' + node;
+            const QModelIndex have = indexForPath(built);
+            if (have.isValid()) { parent = have; continue; }
+            parent = insertChild(parent, node);
+            if (!parent.isValid()) { ok = false; break; }
+            ++added;
+        }
+        if (!ok) {
+            if (skipped) *skipped << path;
+            continue;
+        }
+        if (!rows.at(i).synonyms.isEmpty() && parent.isValid())
+            setSynonyms(parent, rows.at(i).synonyms);
+    }
+
+    refreshCounts();
+    return added;
+}
+
+bool KeywordVocab::exportLightroom(const QString &filePath)
+{
+/*
+    Write the vocabulary in the format Lightroom reads.
+
+    SORTED BY FOLDED PATH, which is also depth-first order: a path is a prefix of its
+    children, so a parent always sorts immediately before them. That is exactly the order
+    the indented format needs, and getting it from the sort rather than from a tree walk
+    means the writer cannot disagree with the reader about what "one level deeper" is.
+*/
+    if (G::isLogger) G::log("KeywordVocab::exportLightroom", filePath);
+
+    QStringList paths;
+    QHash<QString, QStringList> synonyms;
+    for (auto it = byPathFold.constBegin(); it != byPathFold.constEnd(); ++it) {
+        paths << it.value()->path;
+        if (!it.value()->synonyms.isEmpty())
+            synonyms.insert(it.key(), it.value()->synonyms);
+    }
+    std::sort(paths.begin(), paths.end(), [](const QString &a, const QString &b) {
+        return keywordFold(a) < keywordFold(b);
+    });
+
+    /*  QSaveFile: an export that fails half way must not leave a truncated file where
+        the user's vocabulary used to be. Same reason Xmp::writeSidecar uses one. */
+    QSaveFile out(filePath);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        G::issue("Warning", "Could not write the keyword file.",
+                 "KeywordVocab::exportLightroom", -1, filePath);
+        return false;
+    }
+    {
+        QTextStream stream(&out);
+        lrWrite(stream, paths, synonyms);
+    }
+    if (!out.commit()) {
+        G::issue("Warning", "Could not write the keyword file.",
+                 "KeywordVocab::exportLightroom", -1, filePath);
+        return false;
+    }
+    return true;
 }

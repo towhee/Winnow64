@@ -16,6 +16,7 @@
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QMenu>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QPainter>
 #include <QStyledItemDelegate>
@@ -209,6 +210,16 @@ void KeywordTree::contextMenuEvent(QContextMenuEvent *event)
     build->setToolTip("Add a keyword for everything the catalog has indexed. "
                       "Never removes anything.");
     connect(build, &QAction::triggered, this, &KeywordTree::buildFromCatalog);
+
+    menu.addSeparator();
+
+    QAction *import = menu.addAction("Import Lightroom keywords...");
+    import->setToolTip("Merge a Lightroom keyword export into your list. "
+                       "Never removes anything.");
+    connect(import, &QAction::triggered, this, &KeywordTree::importLightroom);
+
+    QAction *exportAct = menu.addAction("Export keywords...");
+    connect(exportAct, &QAction::triggered, this, &KeywordTree::exportLightroom);
 
     menu.exec(event->globalPos());
     event->accept();
@@ -457,4 +468,53 @@ void KeywordTree::dropEvent(QDropEvent *event)
         return;
     }
     event->ignore();
+}
+
+void KeywordTree::importLightroom()
+{
+/*
+    MERGE, AND SAY SO BEFORE AND AFTER. An import that might replace someone's curated
+    vocabulary is a frightening thing to click, so the dialog title says "Merge" and the
+    result says what was added -- including "nothing new", which is the ordinary outcome
+    of a second import and should not look like a failure.
+*/
+    const QString path = QFileDialog::getOpenFileName(
+        this, "Merge Lightroom keywords", QString(),
+        "Lightroom keyword export (*.csv *.txt);;All files (*)");
+    if (path.isEmpty()) return;
+
+    QStringList skipped;
+    const int added = vocab->importLightroom(path, &skipped);
+
+    QString msg;
+    if (added > 0)
+        msg = QString("Added %1 keyword%2.").arg(added).arg(added == 1 ? "" : "s");
+    else msg = "Nothing new -- your keyword list already has everything in that file.";
+    /*  A partial import is REPORTED rather than rounded up to success. The usual cause is
+        a name that collides with a sibling under a different spelling, and the user can
+        only act on it if they are told. */
+    if (!skipped.isEmpty()) {
+        msg += QString("\n\n%1 could not be added:\n    %2")
+                   .arg(skipped.size())
+                   .arg(skipped.mid(0, 8).join("\n    "));
+        if (skipped.size() > 8) msg += "\n    ...";
+    }
+    QMessageBox::information(this, "Merge Lightroom keywords", msg);
+}
+
+void KeywordTree::exportLightroom()
+{
+    QString path = QFileDialog::getSaveFileName(
+        this, "Export keywords", "Keywords.csv",
+        "Lightroom keyword export (*.csv);;All files (*)");
+    if (path.isEmpty()) return;
+    if (!path.contains('.')) path += ".csv";
+
+    if (!vocab->exportLightroom(path)) {
+        QMessageBox::warning(this, "Export keywords",
+                             "Could not write \"" + path + "\".");
+    }
+    else if (G::popup) {
+        G::popup->showPopup("Keywords exported.", 2500);
+    }
 }
