@@ -30,11 +30,15 @@ BUGS / TO DO
                  insert parent, delete, filter box, applied dot, build-from-catalog,
                  retag dialog; winnowStateVersion 4 -> 5). Assigning to the selection
                  works (double-click / Enter / context menu).
-  NEXT: Phase 6 -- the CHIP ZONE (the splitter's lower half is empty), the type-ahead
-        completer, drag and drop (tree re-parent, tree->chips, images->node), and
-        EXECUTING the retag: MW::keywordPathChanged counts and asks but cannot yet act,
-        because applyKeywordsToSelection works on the selection and a retag spans folders
-        that are not loaded.
+        Phase 6 (chip zone + FlowLayout, type-ahead completer, drag and drop, and the
+                 retag EXECUTION via MW::retagKeywordPath +
+                 Metadata::writeKeywordsToSidecar).
+  NEXT: Phase 7 -- import/export the Lightroom keyword file. The format is ALREADY
+        VERIFIED against ~/Documents/LRKeywords/Lightroom Keywords.csv: CSV, 5 columns
+        (Include On Export, Export Containing Keywords, Export Synonyms, Person Type
+        Keyword, then the keyword), UTF-8 BOM, hierarchy by TAB indent inside the last
+        field, synonyms in {braces} one level deeper with BLANK flags. Do not re-derive
+        it. Import must MERGE by folded path, never replace.
   Deliberately DEFERRED out of that work, each for a stated reason:
     - 9-slot keyword shortcut/set grid (number keys apply a keyword to the selection,
       switchable sets). Must clear MW::developShortcutIntercept, which eats number keys.

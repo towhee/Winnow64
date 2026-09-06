@@ -141,6 +141,14 @@ public:
         where it is written down: imMetadata() first (which fills the values AND their
         shadows from the model), this second, writeXMP third, and only then the model. */
     void setKeywords(const QStringList &subject, const QStringList &hierarchical);
+    /*  Write ONLY the two keyword properties to fPath's sidecar, leaving every other
+        property exactly as the file has it. For images that are NOT loaded -- a retag
+        after a rename reaches folders the datamodel has never seen -- where writeXMP
+        cannot be used because it works from the single shared ImageMetadata m. Safe off
+        the GUI thread for the same reason writeDevelopSidecar is: it touches no shared
+        state. */
+    bool writeKeywordsToSidecar(const QString &fPath, const QStringList &subject,
+                                const QStringList &hierarchical);
     static void writeOrientation(QString fPath, QString orientationNumber);
 
     /* Per-image Develop edit state (base64 of the EditStack JSON) <-> the XMP sidecar's

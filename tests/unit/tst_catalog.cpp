@@ -60,6 +60,7 @@ private slots:
     void removedKeywordDisappearsFromCategory();
     void lightroomDoubleCollapsesToOneKeyword();
     void sameLeafUnderTwoParentsIsTwoKeywords();
+    void subtreeCountRespectsTheSeparator();
     void versionNineFileRebuildsPathKeyedKeywords();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
@@ -1181,6 +1182,58 @@ void tst_catalog::textSearchHonoursOrAndNot()
 
     q.text = "\"low tide\"";
     QCOMPARE(cat.search(q), QStringList{imagePath("t-heron.nef")});
+}
+
+void tst_catalog::subtreeCountRespectsTheSeparator()
+{
+/*
+    WHAT THE RETAG DIALOG PROMISES. Renaming a keyword offers "This folder (N)" and
+    "Everywhere (M)", and those numbers have to be the number of images the operation then
+    rewrites -- a dialog that over-counts asks the user to approve work that does not
+    happen, and one that under-counts changes files it did not mention.
+
+    THE COUNT IS A PREFIX RANGE, the only one in the codebase, because "how many images
+    are at or beneath this keyword" is the one keyword question plain equality cannot
+    answer. The range is half-open on pathfold:
+
+        pathfold = p  OR  (pathfold >= p||'|'  AND  pathfold < p||'}')
+
+    '}' is one past '|'. THE SEPARATOR IS THE WHOLE POINT: without it the range from
+    "fauna" would also cover "faunal" and "fauna zoo", so a rename would report -- and
+    the matching keywordIsDescendant would skip -- a different set. The two must agree,
+    and this pins the SQL half.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({
+        rowFor("k1.nef", {}, {"Fauna|Bird|Heron"}),
+        rowFor("k2.nef", {}, {"Fauna|Bird|Eagle"}),
+        rowFor("k3.nef", {}, {"Fauna|Mammal|Otter"}),
+        /*  The trap: a sibling whose name STARTS WITH the one being counted. A bare
+            prefix range would swallow it. */
+        rowFor("k4.nef", {}, {"Fauna|Birdsong"}),
+        rowFor("k5.nef", {}, {"Flora|Fern"}),
+    });
+
+    QCOMPARE(cat.imagesUnderKeyword("Fauna"), 4);           // everything but Flora
+    QCOMPARE(cat.imagesUnderKeyword("Fauna|Bird"), 2);      // Heron + Eagle, NOT Birdsong
+    QCOMPARE(cat.imagesUnderKeyword("Fauna|Birdsong"), 1);
+    QCOMPARE(cat.imagesUnderKeyword("Fauna|Bird|Heron"), 1);
+    QCOMPARE(cat.imagesUnderKeyword("Flora"), 1);
+
+    /*  A keyword nothing carries, and a keyword that does not exist: zero, not an error
+        and not everything. */
+    QCOMPARE(cat.imagesUnderKeyword("Fauna|Bird|Wren"), 0);
+    QCOMPARE(cat.imagesUnderKeyword(""), 0);
+
+    /*  AND THE IN-MEMORY TEST AGREES WITH THE SQL, which is the pairing that matters:
+        one decides what the dialog says, the other decides what the retag rewrites. */
+    QVERIFY(keywordIsDescendant(keywordFold("Fauna|Bird|Heron"), keywordFold("Fauna|Bird")));
+    QVERIFY(!keywordIsDescendant(keywordFold("Fauna|Birdsong"), keywordFold("Fauna|Bird")));
+
+    /*  Folder scope is a narrowing of the same query, so a folder that holds them all
+        gives the same answer and one that holds none gives zero. */
+    QCOMPARE(cat.imagesUnderKeyword("Fauna", QDir(tmp.path()).path()), 4);
+    QCOMPARE(cat.imagesUnderKeyword("Fauna", "/nowhere"), 0);
 }
 
 void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()

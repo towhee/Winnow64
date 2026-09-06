@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Metadata/keywordpaths.h"
 #include "Views/catalogscopetree.h"
 #include "Develop/workingimagecache.h"
 #include "Utilities/fileops.h"
@@ -2962,12 +2963,13 @@ void MW::createKeywordsDock()
         dock state like every other splitter in the app. */
     QSplitter *splitter = new QSplitter(Qt::Vertical, body);
     splitter->addWidget(keywordTree);
-    QWidget *chipZone = new QWidget(splitter);
-    chipZone->setMinimumHeight(0);
-    splitter->addWidget(chipZone);
+    keywordChips = new KeywordChips(keywordVocab, splitter);
+    splitter->addWidget(keywordChips);
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 0);
-    splitter->setSizes({400, 0});
+    /*  The tree gets most of the height and the chips enough for two or three rows: the
+        vocabulary is what the user browses, the chips are what they glance at. */
+    splitter->setSizes({420, 120});
     bodyLayout->addWidget(splitter, 1);
 
     keywordsDock->setWidget(body);
@@ -2978,6 +2980,36 @@ void MW::createKeywordsDock()
     connect(keywordTree, &KeywordTree::pathChanged, this, &MW::keywordPathChanged);
     connect(keywordTree, &KeywordTree::assignRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({p}, {});
+        refreshKeywordsDock();
+    });
+    connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
+
+    connect(keywordChips, &KeywordChips::addRequested, this, [this](const QString &p) {
+        applyKeywordsToSelection({p}, {});
+        refreshKeywordsDock();
+    });
+    connect(keywordChips, &KeywordChips::removeRequested, this, [this](const QString &p) {
+        applyKeywordsToSelection({}, {p});
+        refreshKeywordsDock();
+    });
+    connect(keywordChips, &KeywordChips::fileRequested, this, [this](const QString &p) {
+        /*  An unfiled keyword: put it in the vocabulary at the place its own path says it
+            belongs, creating the ancestors it names. Nothing is written to any image --
+            the keyword was already on it; only the LIST gains an entry. */
+        QModelIndex parent;
+        QString built;
+        for (const QString &node : keywordNodes(p)) {
+            built = built.isEmpty() ? node : built + '|' + node;
+            const QModelIndex have = keywordVocab->indexForPath(built);
+            parent = have.isValid() ? have : keywordVocab->insertChild(parent, node);
+            if (!parent.isValid()) break;
+        }
+        if (parent.isValid()) {
+            keywordTree->expandRecursively(parent.parent());
+            keywordTree->setCurrentIndex(parent);
+            keywordTree->scrollTo(parent);
+        }
+        refreshKeywordsDock();
     });
 
     // customize the keywordsDock titlebar

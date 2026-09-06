@@ -40,6 +40,9 @@ public:
     void setFilterText(const QString &text);
 
 signals:
+    /*  Images were dropped on a keyword node: tag them with its path. The view does not
+        touch a file -- the dock routes this to MW::applyKeywordsToSelection. */
+    void assignToPaths(const QString &keywordPath, const QStringList &imagePaths);
     /*  A node was renamed or re-parented and its path changed. The dock decides what, if
         anything, to do about the images that carry the old path. */
     void pathChanged(const QString &oldPath, const QString &newPath);
@@ -49,6 +52,14 @@ signals:
 protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    /*  Drag and drop, all at the VIEW rather than in the model. Two different things can
+        be dropped here -- a keyword node (re-parent) and a set of images (tag them) --
+        and only one of them is the model's business, so keeping both here avoids a model
+        that knows what an image is. */
+    void startDrag(Qt::DropActions supportedActions) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private:
     void renameSelected();

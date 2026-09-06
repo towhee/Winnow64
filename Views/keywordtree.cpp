@@ -7,6 +7,11 @@
 #include "Utilities/popup.h"
 
 #include <QAction>
+#include <QDrag>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QUrl>
 #include <QContextMenuEvent>
 #include <QHeaderView>
 #include <QKeyEvent>
@@ -78,6 +83,11 @@ KeywordTree::KeywordTree(KeywordVocab *vocab, QWidget *parent)
         codebase has been caught by before -- so the policy is left at the default and
         the override below does the work. */
     setContextMenuPolicy(Qt::DefaultContextMenu);
+
+    setDragEnabled(true);
+    setAcceptDrops(true);
+    setDropIndicatorShown(true);
+    setDragDropMode(QAbstractItemView::DragDrop);
 
     connect(this, &QTreeView::doubleClicked, this, [this](const QModelIndex &idx) {
         const QString path = idx.data(KeywordVocab::PathRole).toString();
@@ -339,4 +349,112 @@ void KeywordTree::buildFromCatalog()
             : QString("Your keyword list already has everything the catalog holds."),
             3000);
     }
+}
+
+/*  Shared with Views/keywordchips.cpp, which accepts a keyword dragged down from here. */
+extern const char *kVocabNodeMime;
+
+void KeywordTree::startDrag(Qt::DropActions)
+{
+/*
+    Dragging a keyword carries its PATH, not its row or its id. A row is meaningless once
+    the tree re-sorts, and an id would make the chip zone -- which has no business knowing
+    the vocabulary's primary keys -- look one up. The path is the identity everywhere else
+    in the keyword code, so it is the identity here too.
+*/
+    QStringList paths;
+    for (const QModelIndex &idx : selectionModel()->selectedRows(
+             KeywordVocab::NameColumn)) {
+        const QString p = idx.data(KeywordVocab::PathRole).toString();
+        if (!p.isEmpty()) paths << p;
+    }
+    if (paths.isEmpty()) return;
+
+    QMimeData *mime = new QMimeData;
+    mime->setData(kVocabNodeMime, paths.join('\n').toUtf8());
+    /*  Plain text too, so the path can be dropped into any text field -- a search box, a
+        note -- which costs nothing and is occasionally exactly what someone wants. */
+    mime->setText(paths.join('\n'));
+
+    QDrag *drag = new QDrag(this);
+    drag->setMimeData(mime);
+    drag->exec(Qt::MoveAction);
+}
+
+void KeywordTree::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasFormat(kVocabNodeMime) || event->mimeData()->hasUrls())
+        event->acceptProposedAction();
+    else
+        event->ignore();
+}
+
+void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
+{
+/*
+    REJECTING WHILE THE DRAG IS STILL MOVING, not at the drop. A drop that silently does
+    nothing reads as a broken widget, and the case users actually hit -- dragging a parent
+    onto its own child -- is exactly the one that has to be refused. ignore() here is what
+    puts the "no" cursor under the pointer.
+*/
+    const QModelIndex target = indexAt(event->position().toPoint());
+
+    if (event->mimeData()->hasFormat(kVocabNodeMime)) {
+        const QByteArray data = event->mimeData()->data(kVocabNodeMime);
+        for (const QByteArray &raw : data.split('\n')) {
+            const QModelIndex src = vocab->indexForPath(QString::fromUtf8(raw));
+            if (!src.isValid()) continue;
+            /*  Onto itself, onto its own parent (a move to where it already is) or onto
+                one of its own descendants: all no-ops or cycles. */
+            if (src == target || src.parent() == target) { event->ignore(); return; }
+            if (vocab->wouldCycle(src, target)) { event->ignore(); return; }
+        }
+        event->acceptProposedAction();
+        return;
+    }
+
+    /*  Images can only land ON a keyword, never between two of them: there is no
+        meaning to "tag these with the gap above Heron". */
+    if (event->mimeData()->hasUrls() && target.isValid()) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
+}
+
+void KeywordTree::dropEvent(QDropEvent *event)
+{
+    const QModelIndex target = indexAt(event->position().toPoint());
+
+    if (event->mimeData()->hasFormat(kVocabNodeMime)) {
+        const QByteArray data = event->mimeData()->data(kVocabNodeMime);
+        for (const QByteArray &raw : data.split('\n')) {
+            const QModelIndex src = vocab->indexForPath(QString::fromUtf8(raw));
+            if (!src.isValid()) continue;
+            if (!vocab->reparent(src, target)) {
+                /*  reparent refuses a name already taken under the new parent. Merging
+                    the two is a real operation and a bigger one than a drag -- it has to
+                    decide what happens to both nodes' images -- so it is named rather
+                    than attempted. */
+                QMessageBox::warning(this, "Move keyword",
+                    QString("Could not move \"%1\" there.\n\n"
+                            "A keyword of that name is already inside the destination.")
+                        .arg(keywordLeafOf(QString::fromUtf8(raw))));
+            }
+        }
+        if (target.isValid()) setExpanded(target, true);
+        event->acceptProposedAction();
+        return;
+    }
+
+    if (event->mimeData()->hasUrls() && target.isValid()) {
+        QStringList images;
+        for (const QUrl &u : event->mimeData()->urls())
+            if (u.isLocalFile()) images << u.toLocalFile();
+        const QString path = target.data(KeywordVocab::PathRole).toString();
+        if (!images.isEmpty() && !path.isEmpty()) emit assignToPaths(path, images);
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
 }

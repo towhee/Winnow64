@@ -290,18 +290,213 @@ void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
     dlg.exec();
     if (dlg.choice() == KeywordRetagDlg::NotNow) return;
 
-    /*  RETAGGING IS NOT YET WIRED to the file writer for images outside the selection.
-        applyKeywordsToSelection is exactly the right machinery -- it already removes a
-        subtree and adds a path in one pass per row -- but it works on the SELECTION, and
-        this needs to work on a query result that may span folders that are not loaded.
-        Loading them to edit them is the honest way to do it and it is the Phase 6 job;
-        promising it here and doing nothing would be worse than saying so. */
-    G::popup->showPopup(
-        QString("Retagging images is not implemented yet. Your keyword list is updated; "
-                "the %1 image%2 still carrying \"%3\" will show as unfiled.")
-            .arg(dlg.choice() == KeywordRetagDlg::ThisFolder ? folderCount : catalogCount)
-            .arg((dlg.choice() == KeywordRetagDlg::ThisFolder ? folderCount : catalogCount)
-                     == 1 ? "" : "s")
-            .arg(oldPath),
-        6000);
+    retagKeywordPath(oldPath, newPath,
+                     dlg.choice() == KeywordRetagDlg::ThisFolder ? folder : QString());
+}
+
+int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
+                         const QString &folder)
+{
+/*
+    Rewrite oldPath to newPath on every image that carries it, or anything beneath it.
+
+    THE IMAGES NEED NOT BE LOADED, and mostly are not: a rename near the root of the
+    vocabulary reaches folders the datamodel has never seen. So the work is driven from
+    the CATALOG rather than from the model -- Catalog::searchRows on the old path returns
+    every affected image with the two verbatim keyword lists it was indexed with, which is
+    everything needed to compute its new ones.
+
+    THE QUERY NEEDS NO SUBTREE WALK. Because every image is linked to every ANCESTOR
+    PREFIX of its keywords, asking for images with keyword "Location|Canada" already
+    returns everything filed beneath it. The prefix range in Catalog::imagesUnderKeyword
+    exists to COUNT them; finding them is plain equality.
+
+    A DESCENDANT IS REWRITTEN AT ITS PREFIX, not replaced. Renaming "Fauna|Bird" to
+    "Fauna|Birds" must turn "Fauna|Bird|Heron" into "Fauna|Birds|Heron" -- the leaf and
+    everything below the renamed node are the user's and must survive. keywordIsDescendant
+    decides what is affected, so this and the count the user was shown agree by
+    construction.
+
+    A LOADED ROW IS UPDATED IN THE MODEL TOO. The catalog is an index; the datamodel is
+    what the user is looking at. Writing only the file would leave the panel showing the
+    old keyword until the folder was reopened.
+*/
+    if (G::isLogger) G::log("MW::retagKeywordPath");
+    if (!metadata) return 0;
+
+    Catalog &cat = Catalog::instance();
+    if (!cat.isAvailable()) return 0;
+
+    CatalogQuery q;
+    q.keywords = {oldPath};
+    q.folder = folder;
+    const QVector<CatalogRow> rows = cat.searchRows(q, 0);
+    if (rows.isEmpty()) return 0;
+
+    const QString oldFold = keywordFold(oldPath);
+    int written = 0;
+
+    G::popup->setProgressVisible(true);
+    G::popup->setProgress(0);
+
+    for (int i = 0; i < rows.size(); ++i) {
+        const CatalogRow &r = rows.at(i);
+        if (r.path.isEmpty()) continue;
+
+        const QStringList have =
+            keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths);
+
+        QStringList next;
+        bool changed = false;
+        for (const QString &p : have) {
+            if (keywordIsDescendant(keywordFold(p), oldFold)) {
+                /*  Rewrite the PREFIX and keep the tail. mid() rather than replace(),
+                    because a path can legitimately contain the old text further along
+                    ("Fauna|Bird|Bird of prey") and only the prefix is being renamed. */
+                next << newPath + p.mid(oldPath.size());
+                changed = true;
+            }
+            else {
+                next << p;
+            }
+        }
+        if (!changed) continue;
+
+        next.sort(Qt::CaseInsensitive);
+
+        /*  Composed exactly as applyKeywordsToSelection composes it -- leaf into
+            dc:subject de-duplicated, depth-2-and-deeper paths into
+            lr:hierarchicalSubject -- so an image retagged here and one tagged from the
+            dock end up with the same shape. */
+        QStringList subject, hierarchical;
+        QSet<QString> subjectSeen;
+        for (const QString &p : next) {
+            const QString leaf = keywordLeafOf(p);
+            const QString leafFold = keywordFold(leaf);
+            if (!leafFold.isEmpty() && !subjectSeen.contains(leafFold)) {
+                subjectSeen.insert(leafFold);
+                subject << leaf;
+            }
+            if (p.contains('|')) hierarchical << p;
+        }
+
+        if (metadata->writeKeywordsToSidecar(r.path, subject, hierarchical)) ++written;
+
+        /*  If this image happens to be loaded, the model has to follow the file or the
+            panel keeps showing the old keyword until the folder is reopened. */
+        const int dmRow = dm ? dm->rowFromPath(r.path) : -1;
+        if (dmRow >= 0) {
+            const QStringList expanded =
+                keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
+            const QString src = "MW::retagKeywordPath";
+            emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src,
+                          Qt::EditRole);
+            emit setValDm(dmRow, G::KeywordPathsColumn, hierarchical, dm->instance, src,
+                          Qt::EditRole);
+            emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
+                          Qt::EditRole);
+            updateCatalogForRow(dmRow);
+        }
+        else {
+            /*  Not loaded, so the index is updated from the row that was just written
+                rather than from the model. Without this the catalog would keep serving
+                the old keyword to searches until the folder was next scanned. */
+            CatalogRow updated = r;
+            updated.keywordsLiteral = subject;
+            updated.keywordPaths = hierarchical;
+            updated.keywords =
+                keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
+            cat.commit({updated});
+        }
+
+        G::popup->setProgress(i + 1);
+    }
+
+    G::popup->setProgressVisible(false);
+
+    if (keywordVocab) keywordVocab->refreshCounts();
+    if (buildFilters && filters && filters->filtersBuilt) {
+        dm->sf->suspend(true, "MW::retagKeywordPath");
+        buildFilters->updateCategory(BuildFilters::KeywordEdit,
+                                     BuildFilters::NoAfterAction, /*runSync*/ true);
+        filterChange("MW::retagKeywordPath");
+    }
+
+    G::popup->showPopup(QString("Updated %1 image%2.")
+                            .arg(written).arg(written == 1 ? "" : "s"), 3000);
+    return written;
+}
+
+void MW::refreshKeywordsDock()
+{
+/*
+    Repaint the dock from the current selection: the chips below and the dots in the tree.
+
+    GUARDED ON VISIBILITY. The dock ships off, and walking a vocabulary on every arrow key
+    for a panel nobody has open is work for nothing.
+
+    THE CHIPS AND THE DOTS ANSWER DIFFERENT QUESTIONS and are fed differently. The chips
+    describe the SELECTION (with a count per keyword, so "on some" can be marked); the
+    dots describe the CURRENT image alone, because a dot is a yes/no mark and there is no
+    honest way to draw "sort of".
+*/
+    if (!keywordsDock || !keywordsDock->isVisible()) return;
+    if (!keywordVocab || !keywordChips || !dm || !sel) return;
+
+    keywordChips->setSelection(keywordsInSelection(), sel->selectedRows.size());
+
+    const int dmRow = dm->currentSfRow >= 0
+        ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
+    if (dmRow >= 0) {
+        keywordVocab->setAppliedPaths(keywordEffectivePaths(
+            dm->index(dmRow, G::KeywordsColumn).data().toStringList(),
+            dm->index(dmRow, G::KeywordPathsColumn).data().toStringList()));
+    }
+}
+
+void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imagePaths)
+{
+/*
+    Images were dropped onto a keyword in the tree. Tag exactly those, which are NOT
+    necessarily the selection -- dragging a thumbnail that is not selected must tag the
+    one that was dragged, not whatever happened to be highlighted.
+
+    IMPLEMENTED BY SELECTING THEM, which looks indirect and is deliberate. The whole
+    edit path -- sidecar write, raw+jpg mirroring, model update, catalog update, filter
+    rebuild -- lives in applyKeywordsToSelection, and a second implementation of it that
+    took a path list would be a second place for the raw+jpg pairing and the ordering rule
+    to be got wrong. The selection is restored afterwards so the drop does not silently
+    move the user somewhere else.
+*/
+    if (G::isLogger) G::log("MW::applyKeywordToPaths");
+    if (keywordPath.isEmpty() || imagePaths.isEmpty()) return;
+    if (!dm || !sel) return;
+
+    const QModelIndexList wasSelected = sel->selectedRows;
+    const QModelIndex wasCurrent = dm->sf->index(dm->currentSfRow, 0);
+
+    QItemSelection toSelect;
+    for (const QString &p : imagePaths) {
+        const int dmRow = dm->rowFromPath(p);
+        if (dmRow < 0) continue;                    // dropped from outside this folder
+        const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
+        if (sfIdx.isValid()) toSelect.select(sfIdx, sfIdx);
+    }
+    if (toSelect.isEmpty()) return;
+
+    dm->selectionModel->select(toSelect, QItemSelectionModel::ClearAndSelect
+                                             | QItemSelectionModel::Rows);
+    applyKeywordsToSelection({keywordPath}, {});
+
+    // put the user back where they were
+    QItemSelection restore;
+    for (const QModelIndex &idx : wasSelected) restore.select(idx, idx);
+    if (!restore.isEmpty()) {
+        dm->selectionModel->select(restore, QItemSelectionModel::ClearAndSelect
+                                                 | QItemSelectionModel::Rows);
+        if (wasCurrent.isValid())
+            dm->selectionModel->setCurrentIndex(wasCurrent,
+                                                QItemSelectionModel::NoUpdate);
+    }
+    refreshKeywordsDock();
 }
