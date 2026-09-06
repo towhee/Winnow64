@@ -1,6 +1,6 @@
 #include "Views/catalogview.h"
 #include "Main/global.h"
-#include "Metadata/keywordflatten.h"
+#include "Metadata/keywordpaths.h"
 
 #include <QApplication>
 #include <QFileDialog>
@@ -279,20 +279,17 @@ void CatalogView::refresh()
 void CatalogView::styleKeywordItem(QTreeWidgetItem *item) const
 {
 /*
-    One row's appearance, from its state. Two independent signals that must COMPOSE
-    rather than compete: exclusion is a font (strikethrough), ambiguity is a colour, so an
-    excluded ambiguous keyword still reads as both.
+    One row's appearance, from its state. Exclusion is a font (strikethrough) rather than
+    a colour; it used to have to compose with an amber "ambiguous" colour, which path
+    identity removed the need for.
 */
-    const QString name = item->data(0, kNameRole).toString();
     const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
-    const bool ambiguous = ambiguousKeywords.contains(keywordFold(name));
 
     QFont f = keywordTree->font();
     f.setStrikeOut(excluded);
     item->setFont(0, f);
 
     if (excluded) item->setForeground(0, QBrush(QColor(0xd0, 0x60, 0x60)));
-    else if (ambiguous) item->setForeground(0, QBrush(QColor(0xd0, 0xa0, 0x40)));
     else item->setForeground(0, QBrush(G::textColor));
 }
 
@@ -316,18 +313,18 @@ void CatalogView::setKeywordState(QTreeWidgetItem *item, Qt::CheckState state)
 void CatalogView::rebuildKeywordList()
 {
 /*
-    Render the keyword vocabulary as a FLAT list.
+    Render the keyword vocabulary as a FLAT list of PATHS.
 
-    There is no tree to build because there is no hierarchy left to render: a path like
-    "Location|Canada|BC" is flattened into three ordinary keywords before it is ever
-    indexed (Metadata/keywordflatten.h), so "Canada" is a keyword in its own right rather
-    than a node to expand. That is also why the counts need no summing -- an ancestor name
-    is linked directly to every image beneath it.
+    STILL A LIST RATHER THAN A TREE, although the vocabulary is hierarchical again
+    (catalog schema 10). This view is only reachable with G::useFilterPanel off -- the
+    Filter panel supersedes it and is where the tree is built -- so giving it a second
+    tree implementation would mean maintaining two. Each row is labelled with its LEAF and
+    carries its full path in the tooltip and in kNameRole, which is enough to tell the two
+    Vancouvers apart in the one place that matters: what gets filtered.
 
-    AMBIGUITY IS THE ONE THING FLATTENING LOSES, so it is the one thing this marks: a name
-    the catalog has seen under more than one parent is coloured and lists its parents in
-    its tooltip, which is what tells the user that "Vancouver" is two places before they
-    decide what to exclude.
+    COUNTS STILL NEED NO SUMMING, for a different reason than before. Not because the
+    vocabulary is flat, but because every image is linked to every ANCESTOR of its
+    keywords, so a parent's count is already its subtree total.
 
     THE SELECTION SURVIVES A REBUILD because it lives in includedKeywords /
     excludedKeywords rather than in the widget. A refresh after a folder load must not
@@ -337,35 +334,32 @@ void CatalogView::rebuildKeywordList()
        itemChanged and re-run the search. */
     const QSignalBlocker block(keywordTree);
     keywordTree->clear();
-    if (!Catalog::instance().isAvailable()) {
-        ambiguousKeywords.clear();
-        return;
-    }
+    if (!Catalog::instance().isAvailable()) return;
 
-    ambiguousKeywords = Catalog::instance().ambiguousKeywords();
-
-    /* Names that no longer exist in the catalog cannot go on restricting the search --
+    /* Paths that no longer exist in the catalog cannot go on restricting the search --
        the restriction would be invisible, because the row that described it is gone. */
     QSet<QString> live;
 
     for (const CatalogKeyword &k : Catalog::instance().keywords()) {
-        live.insert(k.name);
+        live.insert(k.path);
 
         QTreeWidgetItem *item = new QTreeWidgetItem(keywordTree);
+        /* LABELLED BY LEAF, KEYED BY PATH. The label is what a list can show without
+           becoming unreadable at depth; the path is the identity and is what the query
+           binds, so kNameRole must carry it and not the leaf. */
         item->setText(0, QString("%1  (%2)").arg(k.name).arg(k.count));
-        item->setData(0, kNameRole, k.name);
+        item->setData(0, kNameRole, k.path);
 
         Qt::CheckState state = Qt::Unchecked;
-        if (includedKeywords.contains(k.name)) state = Qt::Checked;
-        else if (excludedKeywords.contains(k.name)) state = Qt::PartiallyChecked;
+        if (includedKeywords.contains(k.path)) state = Qt::Checked;
+        else if (excludedKeywords.contains(k.path)) state = Qt::PartiallyChecked;
         item->setCheckState(0, state);
 
-        QString tip = k.contexts.size() > 1
-            ? QString("\"%1\" is used under more than one parent:\n    %2\n\n"
-                      "Include it and exclude a parent to narrow it down.")
-                  .arg(k.name, k.contexts.join("\n    "))
-            : QString("Click to include. Opt+click to exclude.");
-        item->setToolTip(0, tip);
+        /* The full path in the tooltip is how two keywords sharing a leaf are told
+           apart in a list that shows only leaves. */
+        item->setToolTip(0, k.path == k.name
+            ? QString("Click to include. Opt+click to exclude.")
+            : QString("%1\n\nClick to include. Opt+click to exclude.").arg(k.path));
 
         styleKeywordItem(item);
     }

@@ -32,6 +32,7 @@ private slots:
     void includesAreOrWithinACategory();
     void includesAreAndBetweenCategories();
     void excludeRejectsWhateverElseMatches();
+    void anAncestorPathMatchesEveryDescendant();
     void aCategoryOfOnlyExcludesDoesNotNarrow();
     void includeAllMatchesWithoutComparing();
     void keywordListsMatchByMembership();
@@ -103,18 +104,64 @@ void tst_filterpredicate::includesAreAndBetweenCategories()
 
 void tst_filterpredicate::excludeRejectsWhateverElseMatches()
 {
-    /*  "include Vancouver, exclude USA" -- the keyword vocabulary is flat, so
-        an ambiguous name is separated by ruling one of its parents out rather
-        than by descending a tree. The exclusion is in a DIFFERENT category from
-        the include and must still win. */
+    /*  "include everything under Location, except the American branch". Exclusion used to
+        be how an AMBIGUOUS name was separated -- include Vancouver, exclude USA -- and
+        path identity has made that particular need go away, because the two Vancouvers
+        are now two different values. The mechanism stays because excluding a BRANCH is a
+        question a tree raises rather than answers, and the rule being pinned is unchanged:
+        the exclusion is in a DIFFERENT category from the include and must still win. */
     FilterPredicate p;
-    p.categories << cat(G::KeywordsAllColumn, { "Vancouver" })
-                 << cat(G::KeywordsAllColumn, {}, { "USA" });
+    p.categories << cat(G::KeywordsAllColumn, { "Location" })
+                 << cat(G::KeywordsAllColumn, {}, { "Location|USA" });
 
-    Row bc { { G::KeywordsAllColumn, QStringList{ "Vancouver", "Canada" } } };
-    Row wa { { G::KeywordsAllColumn, QStringList{ "Vancouver", "USA" } } };
+    Row bc { { G::KeywordsAllColumn, QStringList{
+        "Location", "Location|Canada", "Location|Canada|BC|Vancouver" } } };
+    Row wa { { G::KeywordsAllColumn, QStringList{
+        "Location", "Location|USA", "Location|USA|WA|Vancouver" } } };
     QVERIFY(p.accepts(fetch(bc)));
     QVERIFY(!p.accepts(fetch(wa)));
+}
+
+void tst_filterpredicate::anAncestorPathMatchesEveryDescendant()
+{
+    /*  WHY THE PREDICATE DID NOT HAVE TO CHANGE when keyword identity went back to the
+        full path. The row's keyword column holds every ANCESTOR PREFIX of every path the
+        image carries, so filtering on a parent is the same whole-element membership test
+        as filtering on a leaf -- includeHit stays QStringList::contains, with no
+        separator awareness, no prefix scan and no subtree walk in the loop that runs on
+        every row on every filter change.
+
+        The two same-named leaves are the payoff: under flat identity both rows carried
+        the bare name "Vancouver" and no filter could tell them apart. */
+    Row bc { { G::KeywordsAllColumn, QStringList{
+        "Location", "Location|Canada", "Location|Canada|BC",
+        "Location|Canada|BC|Vancouver" } } };
+    Row wa { { G::KeywordsAllColumn, QStringList{
+        "Location", "Location|USA", "Location|USA|WA",
+        "Location|USA|WA|Vancouver" } } };
+
+    FilterPredicate ancestor;
+    ancestor.categories << cat(G::KeywordsAllColumn, { "Location" });
+    QVERIFY(ancestor.accepts(fetch(bc)));
+    QVERIFY(ancestor.accepts(fetch(wa)));
+
+    FilterPredicate oneBranch;
+    oneBranch.categories << cat(G::KeywordsAllColumn, { "Location|Canada" });
+    QVERIFY(oneBranch.accepts(fetch(bc)));
+    QVERIFY(!oneBranch.accepts(fetch(wa)));
+
+    FilterPredicate oneLeaf;
+    oneLeaf.categories << cat(G::KeywordsAllColumn, { "Location|USA|WA|Vancouver" });
+    QVERIFY(!oneLeaf.accepts(fetch(bc)));
+    QVERIFY(oneLeaf.accepts(fetch(wa)));
+
+    /*  A BARE LEAF IS NOT A KEYWORD. It matches nothing, and it must not match by
+        accident -- a prefix or substring test here would make "Vancouver" hit both rows
+        again and quietly undo the whole reversal. */
+    FilterPredicate bareLeaf;
+    bareLeaf.categories << cat(G::KeywordsAllColumn, { "Vancouver" });
+    QVERIFY(!bareLeaf.accepts(fetch(bc)));
+    QVERIFY(!bareLeaf.accepts(fetch(wa)));
 }
 
 void tst_filterpredicate::aCategoryOfOnlyExcludesDoesNotNarrow()

@@ -17,8 +17,18 @@ BUGS / TO DO
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
 - Keyword module: IN PROGRESS 2026-09-06. Keyword identity reverts to the hierarchical
   PATH (catalog schema v10, reversing the v4 flattening) + a new Keywords dock.
-  Plan: ~/.claude/plans/factor-in-that-we-majestic-pascal.md. Phase 0 (Xmp::setItemList
-  rdf:Bag writer + setItem refusing a List) DONE.
+  Plan: ~/.claude/plans/factor-in-that-we-majestic-pascal.md.
+  DONE: Phase 0 (Xmp::setItemList rdf:Bag writer + setItem refusing a List);
+        Phase 1 (path algebra in keywordpaths.h + the row-memory harness);
+        Phase 2 (schema v10 path identity: index writer, model, migration, vocab table);
+        Phase 3 (nested Keywords tree in Filters, save/restore re-keyed on
+                 {category, filter value}, keywordflatten.h renamed keywordpaths.h and
+                 the dead flattenKeywords deleted).
+  NEXT: Phase 4 -- the WRITE path, driven from a debug action rather than UI:
+        _keywords/_keywordPaths shadows on ImageMetadata, change detection in
+        Metadata::writeXMP, MW::applyKeywordsToSelection. ORDERING TRAP: keywords write
+        the FILE first and the MODEL second, the opposite of MW::setRating, because there
+        is no shadow COLUMN and updating the model first hides the edit from detection.
   Deliberately DEFERRED out of that work, each for a stated reason:
     - 9-slot keyword shortcut/set grid (number keys apply a keyword to the selection,
       switchable sets). Must clear MW::developShortcutIntercept, which eats number keys.

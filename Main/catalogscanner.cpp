@@ -1,5 +1,5 @@
 #include "Main/catalogscanner.h"
-#include "Metadata/keywordflatten.h"
+#include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
@@ -128,11 +128,18 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     row.width = m.width;
     row.height = m.height;
     row.gpsCoord = m.gpsCoord;
-    /* The FLAT vocabulary, exactly as DataModel::catalogRows supplies it -- the scanner
-       and the opportunistic capture must index the same image the same way, or a folder
-       would be catalogued differently depending on which of them saw it first. */
-    row.keywords = flattenKeywords(m.keywords, m.keywordPaths);
+    /* The prefix-expanded PATHS, exactly as DataModel::catalogRows supplies them -- the
+       scanner and the opportunistic capture must index the same image the same way, or a
+       folder would be catalogued differently depending on which of them saw it first. */
+    row.keywords = keywordPrefixExpand(keywordEffectivePaths(m.keywords, m.keywordPaths));
     row.keywordPaths = m.keywordPaths;
+    /*  dc:subject AS THE FILE SPELLED IT. The scanner was not filling this, so a row it
+        indexed carried an empty keywords_literal while the same row captured from a
+        loaded folder carried the real list -- meaning an image was described differently
+        depending on which of the two saw it first, which is exactly what the comment
+        above forbids. It matters beyond tidiness: the literal list is the only one that
+        may ever be written back to a file, and schema 10's rebuild reads it. */
+    row.keywordsLiteral = m.keywords;
     return true;
 }
 

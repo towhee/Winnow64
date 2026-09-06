@@ -102,16 +102,16 @@ inline void fill(ImageMetadata &m, const CatalogRow &r, const QDateTime &modifie
     m._url = r._url;
     m.developEdited = r.developed;
     m.devPreviewKey = r.devPreviewKey;
-    /*  The FLAT vocabulary, which is what the Filters category and the search
-        read, and the hierarchical paths as the file spelled them. Both are
-        needed: the flat list is what is filtered on, and the paths are part of
-        the row's searchable text, so a row without them searched differently
-        from the same row read from its file (schema 7 exists for this). */
-    /*  m.keywords is the LITERAL dc:subject list -- what may be written back
-        to a file. The flat vocabulary is derived downstream by
-        addMetadataForItem (flattenKeywords), so handing it the flat list here
-        would put every ancestor into the user's own dc:subject on the next
-        sidecar write. */
+    /*  m.keywords is the LITERAL dc:subject list -- what may be written back to
+        a file -- and m.keywordPaths is lr:hierarchicalSubject as the file
+        spelled it. Both are needed: the paths are part of the row's searchable
+        text, so a row without them searched differently from the same row read
+        from its file (schema 7 exists for this).
+
+        THE INDEXED FORM IS NOT SET HERE. addMetadataForItem derives it from
+        these two, by keywordEffectivePaths then keywordPrefixExpand, so handing
+        that list over here instead would put every ANCESTOR PATH into the user's
+        own dc:subject on the next sidecar write. */
     m.keywords = r.keywordsLiteral;
     m.keywordPaths = r.keywordPaths;
     m.isSearch = false;

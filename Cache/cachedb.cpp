@@ -1,6 +1,12 @@
 #include "Cache/cachedb.h"
 #include "Cache/pathkey.h"
 #include "Main/global.h"
+/*  Schema 10 rebuilds the keyword vocabulary from the paths already stored on each image,
+    and it must split and fold those paths EXACTLY as Catalog and DataModel do -- see
+    rebuildPathKeyedKeywords below for why that is done here in C++ rather than in SQL. */
+#include "Metadata/keywordpaths.h"
+
+#include <algorithm>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -13,7 +19,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 9;
+constexpr int kSchemaVersion = 10;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -212,6 +218,151 @@ bool CacheDb::applyPragmas(QSqlDatabase &db)
            && q.exec("PRAGMA foreign_keys = ON")
            && q.exec("PRAGMA busy_timeout = 5000");
 }
+
+namespace {
+
+/*
+    SCHEMA 10's REBUILD: repopulate keyword / image_keyword with PATH-keyed rows, and seed
+    the authored vocabulary from them. Called with the migration transaction already open,
+    the old rows already deleted and the carry-forward temp table already built.
+
+    WHY THIS IS C++ AND NOT SQL. The obvious version is a recursive CTE splitting on '|'.
+    It would have to reimplement keywordFold, and SQLite's lower() is not
+    QString::toCaseFolded() -- they disagree on the Turkish dotted I, on the German sharp
+    s, on anything outside ASCII. A migration whose pathfold disagreed with the writer's
+    would produce DUPLICATE keyword rows that ON CONFLICT cannot see, and therefore split
+    image counts, for every non-ASCII keyword in the library. That is the precise defect
+    schema 4 existed to end, so reintroducing it by a different route is not a trade worth
+    making for tidier SQL.
+
+    WHERE THE DATA COMES FROM. Nothing is re-read from disk. image.keywordpaths (schema 7)
+    holds the verbatim "A|B|C" strings and image.keywords_literal the verbatim dc:subject
+    list, and neither was touched by the schema 4 flattening -- so the hierarchy schema 4
+    discarded as STRUCTURE is still recoverable as TEXT. This is schema 4's own trick run
+    backwards.
+
+    CARRY-FORWARD, which is not optional. Both of those columns arrive at schema 7 with
+    DEFAULT '', so a row indexed before then has neither and would rebuild to no keywords
+    at all -- silently losing them. For those rows only, the previous keyword NAMES are
+    promoted to depth-1 paths. They are flat rather than hierarchical, which is honest:
+    that is all the row ever recorded. The stamp reset at the end of the block is what
+    eventually upgrades them.
+*/
+bool rebuildPathKeyedKeywords(QSqlDatabase &db)
+{
+    /*  The pre-schema-7 rows' old keyword names, by image. Restricted in SQL to exactly
+        those rows, so this is a handful of entries on a modern index rather than a copy
+        of every link in the library. */
+    QHash<qint64, QStringList> carry;
+    {
+        QSqlQuery c(db);
+        if (!c.exec("SELECT image_id, name FROM kw_carry")) return false;
+        while (c.next()) carry[c.value(0).toLongLong()] << c.value(1).toString();
+    }
+
+    QSqlQuery insKw(db);
+    insKw.prepare("INSERT INTO keyword (name, namefold, path, pathfold, parent)"
+                  " VALUES (?, ?, ?, ?, NULL)"
+                  " ON CONFLICT(pathfold) DO NOTHING");
+    QSqlQuery selKw(db);
+    selKw.prepare("SELECT id FROM keyword WHERE pathfold = ?");
+    QSqlQuery insLink(db);
+    insLink.prepare("INSERT OR IGNORE INTO image_keyword (image_id, keyword_id)"
+                    " VALUES (?, ?)");
+
+    QHash<QString, qint64> ids;     // pathfold -> keyword.id
+    QStringList paths;              // every distinct path, in first-seen order
+
+    QSqlQuery img(db);
+    if (!img.exec("SELECT id, keywordpaths, keywords_literal FROM image")) return false;
+
+    while (img.next()) {
+        const qint64 imageId = img.value(0).toLongLong();
+        const QString kp = img.value(1).toString();
+        const QString kl = img.value(2).toString();
+
+        QStringList effective;
+        if (kp.isEmpty() && kl.isEmpty()) {
+            effective = carry.value(imageId);
+        }
+        else {
+            effective = keywordEffectivePaths(kl.split('\n', Qt::SkipEmptyParts),
+                                              kp.split('\n', Qt::SkipEmptyParts));
+        }
+        if (effective.isEmpty()) continue;
+
+        for (const QString &p : keywordPrefixExpand(effective)) {
+            const QString pathFold = keywordFold(p);
+            qint64 id = ids.value(pathFold, 0);
+            if (!id) {
+                const QString leaf = keywordLeafOf(p);
+                insKw.addBindValue(leaf);
+                insKw.addBindValue(keywordFold(leaf));
+                insKw.addBindValue(p);
+                insKw.addBindValue(pathFold);
+                if (!insKw.exec()) return false;
+                id = insKw.lastInsertId().toLongLong();
+                if (!id) {
+                    /* DO NOTHING fired -- the row exists from an earlier image. */
+                    selKw.addBindValue(pathFold);
+                    if (selKw.exec() && selKw.next()) id = selKw.value(0).toLongLong();
+                    selKw.finish();
+                }
+                if (!id) continue;
+                ids.insert(pathFold, id);
+                paths << p;
+            }
+            insLink.addBindValue(imageId);
+            insLink.addBindValue(id);
+            if (!insLink.exec()) return false;
+        }
+    }
+    img.finish();
+
+    /*  SEED THE AUTHORED VOCABULARY from what was just observed, so the Keywords dock
+        opens on the user's own hierarchy rather than on an empty tree they would have to
+        find a button to fill. The same code later backs "Build vocabulary from catalog".
+
+        SHALLOWEST FIRST, so a parent's row always exists before a child needs its id.
+        Prefix expansion guarantees every intermediate path is in the list, so no parent
+        can be missing -- only out of order, which the sort fixes. */
+    std::stable_sort(paths.begin(), paths.end(),
+                     [](const QString &a, const QString &b) {
+                         return a.count('|') < b.count('|');
+                     });
+
+    QSqlQuery insVocab(db);
+    insVocab.prepare("INSERT INTO vocab (name, namefold, path, pathfold, parent)"
+                     " VALUES (?, ?, ?, ?, ?)"
+                     " ON CONFLICT(pathfold) DO NOTHING");
+    QHash<QString, qint64> vocabIds;    // pathfold -> vocab.id
+
+    for (const QString &p : paths) {
+        const QString pathFold = keywordFold(p);
+        const QString parent = keywordParentPath(p);
+        const QString leaf = keywordLeafOf(p);
+
+        QVariant parentId;              // stays NULL for a root
+        if (!parent.isEmpty()) {
+            const qint64 pid = vocabIds.value(keywordFold(parent), 0);
+            if (pid) parentId = pid;
+        }
+
+        insVocab.addBindValue(leaf);
+        insVocab.addBindValue(keywordFold(leaf));
+        insVocab.addBindValue(p);
+        insVocab.addBindValue(pathFold);
+        insVocab.addBindValue(parentId);
+        if (!insVocab.exec()) return false;
+
+        qint64 id = insVocab.lastInsertId().toLongLong();
+        if (id) vocabIds.insert(pathFold, id);
+    }
+
+    return true;
+}
+
+}   // namespace
 
 bool CacheDb::migrate(QSqlDatabase &db)
 {
@@ -437,7 +588,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
            on (path, name) and so stored a hierarchical tag TWICE -- once as the flat
            dc:subject leaf and once as the hierarchy node -- which put the same keyword in
            the category list twice with the image counts split between the entries. See
-           Metadata/keywordflatten.h for why flat, and notes/Documentation.txt.
+           Metadata/keywordpaths.h for why flat, and notes/Documentation.txt.
 
            THIS MIGRATES IN PLACE AND RE-READS NOTHING. Everything needed is already here:
            schema 3's writer linked the image to every ANCESTOR as well as the leaf, so
@@ -749,6 +900,118 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec("ALTER TABLE image ADD COLUMN unreadable INTEGER NOT NULL DEFAULT 0")) {
             db.rollback();
             return false;
+        }
+    }
+
+    if (version < 10) {
+/*
+    KEYWORD IDENTITY GOES BACK TO THE PATH, reversing schema 4.
+
+    WHY, GIVEN SCHEMA 4's REASONS WERE GOOD ONES. Two of the three still hold and are
+    answered differently rather than denied. The Lightroom double -- the same tag listed
+    once as a dc:subject leaf and once as a hierarchical path -- is now resolved by LEAF
+    CONSUMPTION in keywordEffectivePaths, so it never becomes two rows. A file with no
+    hierarchy is not a degraded case, because a flat list is a tree of depth one. What
+    schema 4 bought and this gives up is nothing; what it COST was that a name used in two
+    places became one keyword, and that cost turned out to be large: a real user
+    vocabulary of 3,975 keywords had 59 names appearing under more than one parent, with
+    their image counts merged and no way to tell them apart.
+
+    ANCESTOR SEARCH STAYS FREE. Every image is linked to every ANCESTOR PREFIX of every
+    path it carries, not just the leaf -- so a filter on "Fauna" reaches an image tagged
+    only "Fauna|Bird|Heron" by plain equality on pathfold. No subtree walk in the
+    predicate, no LIKE, no recursive CTE; the cost is paid once, at write time. That is
+    what lets Datamodel/filterpredicate.h and BuildFilters::countKeywords stay untouched.
+
+    keyword_context IS RETIRED. It existed only to mark a name as ambiguous, and under
+    path identity there is no ambiguity to mark: the two Vancouvers are two rows. The
+    table is emptied and kept, because this file's rule is additive-only.
+
+    path / pathfold / parent NEED NO ALTER -- schema 3 created them and schema 4 blanked
+    them rather than dropping them, for exactly this kind of reason. parent stays NULL and
+    unused: it is a second representation of what pathfold already carries, and
+    maintaining two of those is what schema 3 -> 4 was undone for.
+
+    THE STAMP RESET, as in schemas 6 and 7. A keyword's meaning has widened from a name to
+    a path, and the rebuilt links are only as good as what keywordpaths recorded -- which
+    for a pre-schema-7 row is nothing, so it carries forward flat. Clearing the stamps is
+    what upgrades those rows to real hierarchy the next time they are visited.
+*/
+        const char *ddl[] = {
+            /* THE AUTHORED VOCABULARY, and it is a SEPARATE table from keyword on
+               purpose. keyword is OBSERVED: its rows are created as a side effect of
+               indexing and cascade away with their images, and its identity is pathfold,
+               which changes wholesale when a node is renamed. vocab is AUTHORED: its rows
+               are user intent, only an explicit delete removes one, it holds branches no
+               image uses yet, and its identity is an id that SURVIVES a rename -- as it
+               must, because the synonyms and the export flag attach to the node rather
+               than to its current spelling. One table cannot be keyed both ways.
+
+               They join on pathfold. A vocab row with no keyword match is a branch with
+               no images; a keyword row with no vocab match is a tag found in a file
+               that the user has not filed yet.
+
+               Created here rather than in a schema of its own so the dock that uses it
+               needs no migration when it lands. */
+            "CREATE TABLE IF NOT EXISTS vocab ("
+            "  id         INTEGER PRIMARY KEY,"
+            "  name       TEXT    NOT NULL,"
+            "  namefold   TEXT    NOT NULL,"
+            "  path       TEXT    NOT NULL,"
+            "  pathfold   TEXT    NOT NULL,"
+            "  parent     INTEGER REFERENCES vocab(id) ON DELETE CASCADE,"
+            "  synonyms   TEXT    NOT NULL DEFAULT '',"
+            "  exportable INTEGER NOT NULL DEFAULT 1,"
+            "  sort       INTEGER NOT NULL DEFAULT 0)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS vocab_pathkey ON vocab(pathfold)",
+            /* By LEAF name, which is what the type-ahead completer searches: typing
+               "vancouv" must offer both Vancouvers as distinct entries. */
+            "CREATE INDEX IF NOT EXISTS vocab_namefold ON vocab(namefold)",
+            "CREATE INDEX IF NOT EXISTS vocab_parent   ON vocab(parent)",
+
+            /* CARRY-FORWARD SNAPSHOT, taken BEFORE the deletes below and restricted to
+               the only rows that need it: those indexed before schema 7, which have
+               neither keywordpaths nor keywords_literal to rebuild from. On a modern
+               index this selects nothing. */
+            "CREATE TEMP TABLE kw_carry AS"
+            " SELECT ik.image_id AS image_id, k.name AS name"
+            " FROM image_keyword ik"
+            " JOIN keyword k ON k.id = ik.keyword_id"
+            " JOIN image i   ON i.id = ik.image_id"
+            " WHERE i.keywordpaths = '' AND i.keywords_literal = ''",
+
+            "DELETE FROM keyword_context",
+            "DELETE FROM image_keyword",
+            "DELETE FROM keyword",
+
+            /* The rows are gone, so the unique key can move without a conflict. */
+            "DROP INDEX IF EXISTS keyword_namekey",
+            "CREATE UNIQUE INDEX IF NOT EXISTS keyword_pathkey ON keyword(pathfold)",
+            /* keyword_name (namefold, from schema 3) is KEPT and now indexes the LEAF
+               name, which is what a completer and a "where else is this name used?"
+               lookup want. */
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+
+        if (!rebuildPathKeyedKeywords(db)) {
+            db.rollback();
+            return false;
+        }
+
+        const char *after[] = {
+            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1",
+            "DROP TABLE IF EXISTS kw_carry",
+        };
+        for (const char *sql : after) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
         }
     }
 

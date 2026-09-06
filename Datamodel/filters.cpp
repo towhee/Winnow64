@@ -1,9 +1,10 @@
 #include "Datamodel/filters.h"
 #include "Cache/catalog.h"
-#include "Metadata/keywordflatten.h"
+#include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
 #include <QStyleFactory>
+#include <functional>
 
 /*
     OVERVIEW
@@ -107,10 +108,10 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     hdrIsFilteringColor = QColor(Qt::yellow);
     hdrIsEmptyColor = G::disabledColor;
-    /* Red reads as "taken out" and amber as "look at this", and neither collides with the
-       yellow a filtering category header uses, which sits on a different row. */
+    /* Red reads as "taken out", and does not collide with the yellow a filtering
+       category header uses, which sits on a different row. (An amber "ambiguous keyword"
+       colour lived here too, until path identity made ambiguity impossible.) */
     itemIsExcludedColor = QColor(0xd0, 0x60, 0x60);
-    itemIsAmbiguousColor = QColor(0xd0, 0xa0, 0x40);
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -149,7 +150,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catTitle] = G::TitleColumn;
     /* The FLAT vocabulary (leaves + every hierarchy node), not the literal dc:subject, so
        a Lightroom tag written both ways is one filter item and an ancestor is filterable
-       in its own right. See Metadata/keywordflatten.h. */
+       in its own right. See Metadata/keywordpaths.h. */
     filterCategoryToDmColumn[catKeyword] = G::KeywordsAllColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
     filterCategoryToDmColumn[catAvailability] = G::AvailabilityColumn;
@@ -979,9 +980,7 @@ void Filters::finishedBuildFilters()
     msgFrame->setVisible(false);
     // disableColorZeroCountItems();
     setEnabled(true);
-    /* The keyword items have just been (re)built, so this is where they learn which of
-       them are ambiguous. On the GUI thread, unlike the build itself. */
-    refreshAmbiguousKeywords();
+    setKeywordCategoryToolTip();
     //if (isSolo) collapseAll();
     //else expandAll();
 }
@@ -1089,19 +1088,12 @@ void Filters::styleFilterItem(QTreeWidgetItem *item)
     if (!item || !item->parent()) return;
 
     const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
-    /* Read off the ITEM, not off ambiguousKeywords. This runs on the BuildFilters worker
-       thread as well as the GUI thread (addCategoryItems and updateCategoryItems are
-       called from run()), and reading a QSet the GUI thread may be rebuilding underneath
-       it is a data race with teeth -- a rehash mid-read is undefined, not merely stale.
-       The set is touched only in refreshAmbiguousKeywords, which stamps this role. */
-    const bool ambiguous = item->data(0, G::AmbiguousKeywordRole).toBool();
 
     QFont f = font();
     f.setStrikeOut(excluded);
     item->setFont(0, f);
 
     if (excluded) item->setForeground(0, QBrush(itemIsExcludedColor));
-    else if (ambiguous) item->setForeground(0, QBrush(itemIsAmbiguousColor));
     else item->setForeground(0, QBrush(G::textColor));
 }
 
@@ -1193,48 +1185,30 @@ bool Filters::applyRangeCheck(QTreeWidgetItem *item)
     return true;
 }
 
-void Filters::refreshAmbiguousKeywords()
+void Filters::setKeywordCategoryToolTip()
 {
 /*
-    Which keywords mean more than one thing, and mark them.
+    The Keywords category's tooltip. A separate function only because two places need it
+    -- the end of a build and the end of a rebuild -- and it used to be carried along by
+    the ambiguity refresh that lived here.
 
-    WHY THE CATALOG RATHER THAN THE LOADED FOLDER. Ambiguity is a property of the
-    VOCABULARY, not of what happens to be open: "Vancouver" is two places whether or not
-    both are in front of you. Computing it from the datamodel would make the same keyword
-    change colour as the user browses, and would make this panel disagree with the Catalog
-    dock about the same word.
-
-    NOTHING IS MARKED WHEN THERE IS NO CATALOG, and that is not the same as "nothing is
-    ambiguous" -- we do not know. Colouring nothing while implying we had checked would be
-    a quiet lie, so the category tooltip says the marking needs a catalog.
+    THERE IS NO AMBIGUITY MARKING ANY MORE, and there is nothing left to mark: a keyword's
+    identity is its full path (catalog schema 10), so "Vancouver" under Canada and
+    "Vancouver" under USA are two separate items with two separate counts rather than one
+    amber item meaning both. What used to need a colour, a role, a shared QSet and a
+    catalog lookup is now simply two rows.
 */
-    if (G::isLogger) G::log("Filters::refreshAmbiguousKeywords");
+    if (G::isLogger) G::log("Filters::setKeywordCategoryToolTip");
 
-    const bool haveCatalog = Catalog::instance().isAvailable();
-    ambiguousKeywords = haveCatalog ? Catalog::instance().ambiguousKeywords()
-                                    : QSet<QString>();
+    keywords->setToolTip(0,
+        "A keyword is its whole path, so the same name under two parents is two\n"
+        "keywords with two counts.\n\n"
+        "Every image is also linked to each ANCESTOR of its keywords, so including\n"
+        "a parent finds everything beneath it.");
 
-    keywords->setToolTip(0, haveCatalog
-        ? "Keywords are flat: a hierarchy contributes each of its levels as its own\n"
-          "keyword, so including a parent finds everything that was beneath it.\n\n"
-          "A keyword shown in amber is used under more than one parent -- exclude\n"
-          "the parent you do not want (Opt+click) to tell them apart."
-        : "Keywords are flat: a hierarchy contributes each of its levels as its own\n"
-          "keyword, so including a parent finds everything that was beneath it.\n\n"
-          "Keywords used under more than one parent cannot be marked here: that\n"
-          "needs the catalog, which is not available.");
-
-    for (int i = 0; i < keywords->childCount(); i++) {
-        QTreeWidgetItem *item = keywords->child(i);
-        item->setData(0, G::AmbiguousKeywordRole,
-                      ambiguousKeywords.contains(keywordFold(item->text(0))));
-        item->setToolTip(0, item->data(0, G::AmbiguousKeywordRole).toBool()
-            ? QString("\"%1\" is used under more than one parent, so it means more than\n"
-                      "one thing. Exclude a parent (Opt+click) to tell them apart.")
-                  .arg(item->text(0))
-            : QString("Click to include. Opt+click to exclude. Right-click for both."));
-        styleFilterItem(item);
-    }
+    /*  The per-item tooltips are set by addKeywordItems as each node is built, because a
+        nested item's tooltip carries its full PATH -- which is how two keywords sharing a
+        leaf are told apart in a tree that shows only leaves. */
 }
 
 void Filters::contextMenuEvent(QContextMenuEvent *event)
@@ -1607,9 +1581,8 @@ bool Filters::loadCatalogCategories()
         addCategoryItems(map, c.item);
         /* Both columns get the library total: column 2 is normally the filtered count,
            and leaving it blank would make every row look half-loaded. */
-        for (int i = 0; i < c.item->childCount(); i++) {
-            QTreeWidgetItem *child = c.item->child(i);
-            const int n = map.value(child->text(0), 0);
+        for (QTreeWidgetItem *child : itemsInCategory(c.item)) {
+            const int n = map.value(itemMapKey(c.item, child), 0);
             child->setData(2, Qt::EditRole, n);
             child->setData(3, Qt::EditRole, n);
         }
@@ -1628,7 +1601,7 @@ bool Filters::loadCatalogCategories()
     updateAvailabilityVisibility();
 
     filtersBuilt = true;
-    refreshAmbiguousKeywords();
+    setKeywordCategoryToolTip();
     setEachCatTextColor();
     return true;
 }
@@ -1679,11 +1652,15 @@ void Filters::fillQuery(CatalogQuery &q) const
 
     for (const Cat &c : cats) {
         QStringList inc, exc;
-        for (int i = 0; i < c.item->childCount(); i++) {
-            QTreeWidgetItem *child = c.item->child(i);
+        /*  itemsInCategory rather than childCount, and the item's VALUE rather than its
+            label: the Keywords category is nested and its labels are leaves, so a
+            childCount loop would see only the roots and a label would bind the wrong
+            one of two same-named keywords. */
+        for (QTreeWidgetItem *child : itemsInCategory(c.item)) {
             const Qt::CheckState st = child->checkState(0);
-            if (st == Qt::Checked) inc << child->text(0);
-            else if (st == Qt::PartiallyChecked) exc << child->text(0);
+            const QString value = itemMapKey(c.item, child);
+            if (st == Qt::Checked) inc << value;
+            else if (st == Qt::PartiallyChecked) exc << value;
         }
         if (c.dmColumn == G::KeywordsAllColumn) {
             q.keywords = inc;
@@ -1707,8 +1684,17 @@ bool Filters::isAnyCatalogFilter() const
 void Filters::save()
 /*
     The filters tree (this) is iterated, and every item that is not Unchecked is added to
-    the list as an ItemState, which includes the parent name, the item name and its STATE.
-    Also, the search text is saved in searchTextState.
+    the list as an ItemState, which includes the TOP-LEVEL CATEGORY, the item's FILTER
+    VALUE and its STATE. Also, the search text is saved in searchTextState.
+
+    KEYED ON THE ROOT ANCESTOR, NOT THE PARENT. Those were the same thing while every
+    category was one level deep. The Keywords category is a tree now, so an item's parent
+    is another keyword -- saving "Heron" under "Bird" and then looking for it under
+    "Keywords" would restore nothing at all, and restore() has no way to notice it found
+    no match. See ItemState.
+
+    KEYED ON THE VALUE, NOT THE LABEL, for the same reason fillQuery is: a keyword's
+    label is only its leaf, and two keywords can share one.
 
     The state travels with the item because there are three of them: an exclusion restored
     as an inclusion would invert what the user asked for, silently, on every rebuild.
@@ -1723,21 +1709,19 @@ void Filters::save()
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent()/* && (*it)->parent() != search*/) {
-            /*
-            qDebug().noquote()
-                     << (*it)->parent()->text(0).leftJustified(15)
-                     << (*it)->text(0).leftJustified(50, '.') + " "
-                     << (*it)->checkState(0);//*/
-            if ((*it)->checkState(0) != Qt::Unchecked) {
-                ItemState state;
-                state.parent = (*it)->parent()->text(0);
-                state.item = (*it)->text(0);
-                state.state = (*it)->checkState(0);
-                itemStates << state;
-            }
-        }
+        QTreeWidgetItem *item = *it;
         ++it;
+        if (!item->parent()) continue;
+        if (item->checkState(0) == Qt::Unchecked) continue;
+
+        QTreeWidgetItem *root = item;
+        while (root->parent()) root = root->parent();
+
+        ItemState state;
+        state.category = root->text(0);
+        state.value = itemMapKey(root, item);
+        state.state = item->checkState(0);
+        itemStates << state;
     }
     searchText = searchTrue->text(0);
     if (searchText == enterSearchString) searchText = "";
@@ -1752,30 +1736,29 @@ void Filters::restore()
     if (G::isLogger || G::isFlowLogger) G::log("Filters::restore");
     uncheckAllFilters();
 
-    // build lookup map (faster than iterating through tree)
-    QMap<QString, QList<QTreeWidgetItem*>> parentToChildrenMap;
+    /*  Keyed the same way save() keys, which is the whole point: {top-level category,
+        filter value}. Built once rather than searched per state. */
+    QHash<QString, QHash<QString, QTreeWidgetItem *>> byCategoryAndValue;
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        QTreeWidgetItem* item = *it;
-        if (item->parent()) {
-            parentToChildrenMap[item->parent()->text(0)].append(item);
-        }
+        QTreeWidgetItem *item = *it;
         ++it;
+        if (!item->parent()) continue;
+        QTreeWidgetItem *root = item;
+        while (root->parent()) root = root->parent();
+        byCategoryAndValue[root->text(0)].insert(itemMapKey(root, item), item);
     }
 
     // restore checked items
-    for (const auto& state : itemStates) {
-        const auto& children = parentToChildrenMap.value(state.parent);
-        for (QTreeWidgetItem* child : children) {
-            if (child->text(0) == state.item) {
-                child->setCheckState(0, state.state);
-                styleFilterItem(child);
-                /*
-                qDebug().noquote() << state.parent.leftJustified(15)
-                                   << child->text(0); //*/
-                break;
-            }
-        }
+    for (const auto &state : itemStates) {
+        QTreeWidgetItem *item =
+            byCategoryAndValue.value(state.category).value(state.value, nullptr);
+        /*  A state with no matching item is normal rather than an error: the value is
+            simply not in this folder, or the keyword was re-parented and its path
+            changed, in which case dropping the filter is correct. */
+        if (!item) continue;
+        item->setCheckState(0, state.state);
+        styleFilterItem(item);
     }
     searchTrue->setText(0, searchText);
     // emit filterChange("Filters::restore");
@@ -1784,8 +1767,8 @@ void Filters::restore()
 void Filters::reportSaved()
 {
     for (const auto& state : itemStates) {
-        qDebug().noquote() << state.parent.leftJustified(15)
-                           << state.item;
+        qDebug().noquote() << state.category.leftJustified(15)
+                           << state.value;
     }
 
 }
@@ -2081,6 +2064,111 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
     if (category == availability) updateAvailabilityVisibility();
 }
 
+QList<QTreeWidgetItem *> Filters::itemsInCategory(QTreeWidgetItem *category) const
+{
+/*
+    Every filterable item beneath a category, at any depth, in tree order.
+
+    ONE LEVEL WAS AN ASSUMPTION, NOT A FACT, and it was written into a dozen loops as
+    "for i < category->childCount()". The Keywords category is nested now, so each of
+    those loops would have seen only the roots -- counts on branches, nothing on leaves,
+    and no error anywhere. This is the one place that knows how deep a category goes.
+*/
+    QList<QTreeWidgetItem *> out;
+    if (!category) return out;
+
+    std::function<void(QTreeWidgetItem *)> walk = [&](QTreeWidgetItem *parent) {
+        for (int i = 0; i < parent->childCount(); ++i) {
+            QTreeWidgetItem *child = parent->child(i);
+            out << child;
+            if (child->childCount()) walk(child);
+        }
+    };
+    walk(category);
+    return out;
+}
+
+QString Filters::itemMapKey(const QTreeWidgetItem *category,
+                            const QTreeWidgetItem *item) const
+{
+    if (!item) return QString();
+    /*  Keywords are keyed on the PATH the item carries, because the label is only the
+        leaf and two keywords can share one -- keying on the label would put both
+        Vancouvers' counts on whichever item was visited first. */
+    if (category == keywords) return item->data(1, Qt::EditRole).toString();
+    return item->text(0);
+}
+
+void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
+                              QTreeWidgetItem *category)
+{
+/*
+    Build the Keywords category as a TREE, from a map keyed on full paths.
+
+    NO SUMMING, AND THAT IS THE POINT. Every image is linked to every ANCESTOR PREFIX of
+    every keyword path it carries (see G::KeywordsAllColumn), so countKeywords has
+    already produced a count for "Fauna" as well as for "Fauna|Bird|Heron". Each node
+    therefore reads its own count straight out of the map: no second pass, no rolling up
+    children, and BuildFilters did not have to change at all. It is the nicest consequence
+    of expanding at write time rather than at query time.
+
+    THE MAP'S ORDER PUTS PARENTS FIRST for free: a QMap is sorted by key, and a path is a
+    prefix of its children, so "Fauna" is visited before "Fauna|Bird". ensureNode does not
+    rely on that -- it creates a missing ancestor on demand -- but it means the common
+    case creates nothing on demand at all.
+
+    A SYNTHESISED ANCESTOR gets a zero count rather than being skipped. It should never
+    happen (an ancestor with no count would mean an image linked to a leaf but not to its
+    prefix, which the expansion makes impossible), but a tree with a hole in it would be
+    worse than a branch reading zero.
+*/
+    QMutexLocker locker(&mutex);
+
+    /*  Seed from whatever is already there, so this composes with a second call the way
+        addCategoryItems' duplicate-elimination pass does rather than building the tree
+        twice. */
+    QHash<QString, QTreeWidgetItem *> byPath;
+    for (QTreeWidgetItem *existing : itemsInCategory(category)) {
+        const QString path = existing->data(1, Qt::EditRole).toString();
+        if (!path.isEmpty()) byPath.insert(keywordFold(path), existing);
+    }
+
+    std::function<QTreeWidgetItem *(const QString &)> ensureNode =
+        [&](const QString &path) -> QTreeWidgetItem * {
+        const QString fold = keywordFold(path);
+        if (QTreeWidgetItem *have = byPath.value(fold, nullptr)) return have;
+
+        const QString parentPath = keywordParentPath(path);
+        QTreeWidgetItem *parent =
+            parentPath.isEmpty() ? category : ensureNode(parentPath);
+
+        QTreeWidgetItem *node = new QTreeWidgetItem(parent);
+        /*  THE LABEL IS THE LEAF AND THE VALUE IS THE PATH. A tree that repeated the
+            whole path on every row would be unreadable at depth, and a filter that bound
+            the leaf would match the wrong Vancouver. */
+        node->setText(0, keywordLeafOf(path));
+        node->setData(1, Qt::EditRole, path);
+        node->setCheckState(0, Qt::Unchecked);
+        node->setData(2, Qt::EditRole, 0);
+        node->setData(3, Qt::EditRole, 0);
+        node->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        node->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        node->setToolTip(0, path == node->text(0)
+            ? QString("Click to include. Opt+click to exclude. Right-click for both.")
+            : QString("%1\n\nClick to include. Opt+click to exclude.").arg(path));
+        byPath.insert(fold, node);
+        return node;
+    };
+
+    for (auto it = pathCounts.constBegin(); it != pathCounts.constEnd(); ++it) {
+        if (G::stop) return;
+        if (it.key().isEmpty()) continue;       // a blank path is a bad row, not a value
+        QTreeWidgetItem *node = ensureNode(it.key());
+        node->setData(2, Qt::EditRole, it.value());
+        node->setData(3, Qt::EditRole, it.value());
+    }
+}
+
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
@@ -2100,6 +2188,14 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         qDebug() << "Filters::addCategoryItems"
                  << "category =" << category->text(0)
                     ;
+
+    /*  Keywords are a TREE and have their own builder. Delegating here rather than at
+        every call site keeps the BuildFilters op dispatch and the catalog-scope loop
+        generic, which is what stops one of them being forgotten. */
+    if (category == keywords) {
+        addKeywordItems(itemMap, category);
+        return;
+    }
 
     QMutexLocker locker(&mutex);
 
@@ -2208,11 +2304,11 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
 
     QMutexLocker locker(&mutex);
 
-    for (int i = 0; i < category->childCount(); i++) {
-        category->child(i)->setData(3, Qt::EditRole, 0);
-        QString key = category->child(i)->text(0);
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        item->setData(3, Qt::EditRole, 0);
+        const QString key = itemMapKey(category, item);
         if (itemMap.contains(key))
-            category->child(i)->setData(3, Qt::EditRole, itemMap.value(key));
+            item->setData(3, Qt::EditRole, itemMap.value(key));
     }
 
     // sort the result
@@ -2240,12 +2336,12 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
 
     QMutexLocker locker(&mutex);
 
-    for (int i = 0; i < category->childCount(); i++) {
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
         if (G::stop) return;
-        category->child(i)->setData(2, Qt::EditRole, 0);
-        QString key = category->child(i)->text(0);
+        item->setData(2, Qt::EditRole, 0);
+        const QString key = itemMapKey(category, item);
         if (itemMap.contains(key))
-            category->child(i)->setData(2, Qt::EditRole, itemMap.value(key));
+            item->setData(2, Qt::EditRole, itemMap.value(key));
     }
 
     // sort the result
@@ -2271,25 +2367,23 @@ void Filters::updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidge
 
     QMutexLocker locker(&mutex);
 
-    for (int i = 0; i < category->childCount(); i++) {
-        //category->child(i)->setData(2, Qt::EditRole, 0);
+    for (QTreeWidgetItem *child : itemsInCategory(category)) {
         // is the item checked
         qDebug() << "Filters::updateZeroCountCheckedItems prior"
-                 << "item =" << category->child(i)->text(0)
-                 << "checkState =" << category->child(i)->checkState(0);
+                 << "item =" << child->text(0)
+                 << "checkState =" << child->checkState(0);
         /* Qt::Checked only. An EXCLUSION of something with a zero count excludes
            nothing, so it cannot produce the null result this guards against -- and
            clearing it would silently discard the user's intent the moment the value
            came back into the folder. */
-        if (category->child(i)->checkState(0) == Qt::Checked) {
-            QString key = category->child(i)->text(0);
-            //qDebug() << "Filters::addFilteredCountPerItem  key =" << key;
+        if (child->checkState(0) == Qt::Checked) {
+            const QString key = itemMapKey(category, child);
             // if the unfiltered item count zero then uncheck item
             if (itemMap.contains(key) && itemMap.value(key) == 0) {
-                category->child(i)->setCheckState(0, Qt::Unchecked);
+                child->setCheckState(0, Qt::Unchecked);
                 qDebug() << "Filters::updateZeroCountCheckedItems after"
-                         << "item =" << category->child(i)->text(0)
-                         << "checkState =" << category->child(i)->checkState(0);
+                         << "item =" << child->text(0)
+                         << "checkState =" << child->checkState(0);
             }
         }
     }

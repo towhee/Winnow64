@@ -10,7 +10,7 @@
 #include "Cache/catalog.h"
 #include "Cache/pathkey.h"
 #include "Cache/devpreviewcache.h"
-#include "Metadata/keywordflatten.h"
+#include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 
 /*
@@ -59,7 +59,8 @@ private slots:
     void staleOfSkipsUnchangedOnRescan();
     void removedKeywordDisappearsFromCategory();
     void lightroomDoubleCollapsesToOneKeyword();
-    void ambiguousKeywordIsReported();
+    void sameLeafUnderTwoParentsIsTwoKeywords();
+    void versionNineFileRebuildsPathKeyedKeywords();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     /* Declared ahead of the migration cases deliberately: those reopen the
@@ -117,11 +118,18 @@ CatalogRow tst_catalog::rowFor(const QString &name, const QStringList &keywords,
     r.srcSize = fi.size();
     r.srcMtime = fi.lastModified().toSecsSinceEpoch();
     r.captured = QDateTime::fromSecsSinceEpoch(1600000000);
-    /* Flattened HERE because that is where the real callers do it -- both
+    /* EXPANDED HERE because that is where the real callers do it -- both
        DataModel::catalogRows and CatalogScanner hand Catalog the output of
-       flattenKeywords, never the two raw lists. A test that skipped this would be
-       exercising a shape the app never produces. */
-    r.keywords = flattenKeywords(keywords, paths);
+       keywordPrefixExpand(keywordEffectivePaths(...)), never the two raw lists. A test
+       that skipped this would be exercising a shape the app never produces.
+
+       All three lists are set, and they are three different facts: r.keywords is the
+       INDEXED form (paths, prefix-expanded), r.keywordsLiteral is dc:subject as the file
+       spelled it, and r.keywordPaths is lr:hierarchicalSubject as the file spelled it.
+       The last two are what schema 10's migration rebuilds from, so a fixture that left
+       them empty would exercise the carry-forward branch instead of the ordinary one. */
+    r.keywords = keywordPrefixExpand(keywordEffectivePaths(keywords, paths));
+    r.keywordsLiteral = keywords;
     r.keywordPaths = paths;
     return r;
 }
@@ -168,8 +176,12 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         path separator a trailing-slash catalog root wrote into image.path and
         devpreview.path; version 9 added image.unreadable, the flag that lets a
         file Winnow cannot parse be catalogued as a stub and reported as an
-        Availability rather than vanishing. */
-    QCOMPARE(CacheDb::schemaVersion(), 9);
+        Availability rather than vanishing; version 10 moved keyword identity
+        back to the full PATH (reversing version 4's flattening), rebuilding
+        keyword/image_keyword from image.keywordpaths without re-reading a file,
+        retiring keyword_context and adding the AUTHORED vocabulary table vocab
+        that the Keywords dock curates. */
+    QCOMPARE(CacheDb::schemaVersion(), 10);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -204,23 +216,29 @@ void tst_catalog::commitThenSearchByKeyword()
 void tst_catalog::hierarchyReachesAncestors()
 {
 /*
-    Why the hierarchy is read at all, now that it is FLATTENED. The image is tagged only
-    with the leaf "Heron" in dc:subject; the ancestors "Fauna" and "Bird" exist nowhere
-    but lr:hierarchicalSubject. Flattening makes each of them a keyword in its own right,
-    so a search for a parent still finds the picture -- with no tree to walk.
+    Why an ancestor query needs no tree walk. The image is tagged with the leaf "Heron" in
+    dc:subject and the path "Fauna|Bird|Heron" in lr:hierarchicalSubject. Every ANCESTOR
+    PREFIX of that path is linked to the image in its own right, so querying a parent is
+    plain equality -- no LIKE, no recursive CTE, no subtree walk in the predicate.
 
-    Note there is no "Fauna|Bird" keyword to search for any more. A PATH is not a name,
-    and the flat vocabulary has only names.
+    THE SEARCH TERM IS A PATH, not a name. "Bird" on its own matches nothing here, and
+    that is correct rather than a regression: a keyword's identity is its whole path, and
+    a bare leaf is not one. The Filters tree shows the leaf and binds the path, so what
+    the user clicks and what is queried differ by design.
 */
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("b.nef", {"Heron"}, {"Fauna|Bird|Heron"})});
 
     CatalogQuery q;
-    for (const QString &k : {"Fauna", "Bird", "Heron"}) {
+    for (const QString &k : {"Fauna", "Fauna|Bird", "Fauna|Bird|Heron"}) {
         q.keywords = {k};
         QVERIFY2(cat.search(q).size() == 1,
                  qPrintable("ancestor search failed for " + k));
     }
+
+    /* A bare leaf is not a keyword. */
+    q.keywords = {"Bird"};
+    QCOMPARE(cat.search(q).size(), 0);
 
     /* Free text must agree with the category item, or the two halves of the UI would
        disagree about the same picture. */
@@ -452,9 +470,14 @@ void tst_catalog::fetchFreshReturnsWhatNeedNotBeRead()
         the sidecar, not the file header -- so getting them back is most of the
         saving. Flat, as everything downstream of schema 4 expects. */
     QSet<QString> kws(r.keywords.begin(), r.keywords.end());
-    QVERIFY2(kws.contains("Heron"), "the leaf keyword did not come back");
+    QVERIFY2(kws.contains("Wildlife|Birds|Heron"),
+             "the keyword PATH did not come back -- a leaf here would make a row served "
+             "from the index filter differently from the same row read from its file");
+    /*  The ANCESTOR PREFIXES, which are what make a parent query plain equality. Each is
+        a path in its own right -- "Wildlife|Birds", not a bare "Birds". */
     QVERIFY2(kws.contains("Wildlife"), "an ancestor did not come back");
-    QVERIFY2(kws.contains("Birds"), "an ancestor did not come back");
+    QVERIFY2(kws.contains("Wildlife|Birds"), "an ancestor did not come back");
+    QVERIFY2(!kws.contains("Birds"), "a bare leaf is not a keyword under path identity");
 
     /*  A file that changed is ABSENT rather than stale: it is the gap the
         reader still has to fill. */
@@ -748,8 +771,8 @@ void tst_catalog::displayFieldsSurviveTheRoundTrip()
     QVERIFY(kb.keywordPaths.contains("Places|Canada|BC"));
     /*  And the flat vocabulary is still the flat one -- the two representations
         coexist without either becoming the other. */
-    QVERIFY(kb.keywords.contains("Heron"));
-    QVERIFY(kb.keywords.contains("Wildlife"));
+    QVERIFY(kb.keywords.contains("Wildlife|Birds|Heron"));
+    QVERIFY(kb.keywords.contains("Wildlife"));      // the ancestor, in its own right
 }
 
 void tst_catalog::sweepDemotesMissingSource()
@@ -1047,56 +1070,83 @@ void tst_catalog::lightroomDoubleCollapsesToOneKeyword()
     QCOMPARE(cat.search(q).size(), 2);
 }
 
-void tst_catalog::ambiguousKeywordIsReported()
+void tst_catalog::sameLeafUnderTwoParentsIsTwoKeywords()
 {
 /*
-    What flattening genuinely loses, and the one thing the docks mark: a name used under
-    more than one parent means more than one thing.
+    THE CASE THE SCHEMA 10 REVERSAL IS FOR, and the exact inverse of what stood here
+    before it. Under flat identity these two Vancouvers were ONE keyword: the vocabulary
+    listed it once with a merged count, and telling them apart needed keyword_context, an
+    amber colour, a tooltip naming the parents and an exclusion filter. Under path
+    identity they are simply two rows.
+
+    A real user vocabulary of 3,975 keywords had 59 names appearing in more than one
+    place, so this is the ordinary case rather than a corner of one.
 */
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("bc.nef", {}, {"Location|Canada|BC|Vancouver"}),
                 rowFor("wa.nef", {}, {"Location|USA|Washington|Vancouver"}),
                 rowFor("hn.nef", {}, {"Fauna|Bird|Heron"})});
 
-    const QSet<QString> ambiguous = cat.ambiguousKeywords();
-    QVERIFY(ambiguous.contains("vancouver"));       // two parents: BC and Washington
-    QVERIFY(!ambiguous.contains("heron"));          // only ever under Bird
-    QVERIFY(!ambiguous.contains("location"));       // a root, no parent at all
-
-    /* The category item carries the parents so the panel can name them in a tooltip --
-       knowing a word is ambiguous is not much use without knowing what the choices
-       are. */
+    int vancouvers = 0;
+    /*  A LIST, not a set: "the shared ancestor appears once" is the assertion, and a set
+        would satisfy it by construction rather than by test. */
+    QStringList paths;
     for (const CatalogKeyword &k : cat.keywords()) {
-        if (keywordFold(k.name) != "vancouver") continue;
-        QCOMPARE(k.contexts.size(), 2);
-        QVERIFY(k.contexts.contains("BC"));
-        QVERIFY(k.contexts.contains("Washington"));
+        paths << k.path;
+        if (keywordFold(k.name) == "vancouver") {
+            ++vancouvers;
+            /* One image each, NOT two merged into one entry. */
+            QCOMPARE(k.count, 1);
+        }
     }
+    QCOMPARE(vancouvers, 2);
+    QVERIFY(paths.contains("Location|Canada|BC|Vancouver"));
+    QVERIFY(paths.contains("Location|USA|Washington|Vancouver"));
+
+    /* The LEAF is kept beside the path for display; the path is the identity. */
+    QVERIFY(paths.contains("Location"));            // the shared ancestor, once
+    QCOMPARE(paths.count("Location"), 1);
+
+    /* Filtering on one path reaches only its own image. This is what flat identity could
+       not do at all. */
+    CatalogQuery q;
+    q.keywords = {"Location|Canada|BC|Vancouver"};
+    QCOMPARE(cat.search(q), QStringList{imagePath("bc.nef")});
+
+    /* And an ANCESTOR still reaches everything beneath it, by plain equality, because
+       every image is linked to every prefix. */
+    q.keywords = {"Location"};
+    QCOMPARE(cat.search(q).size(), 2);
+    q.keywords = {"Fauna|Bird"};
+    QCOMPARE(cat.search(q), QStringList{imagePath("hn.nef")});
 }
 
 void tst_catalog::excludeKeywordSeparatesTwoPlaces()
 {
 /*
-    How an ambiguous keyword is resolved without a hierarchy: include the name, exclude
-    the parent you do not want. This is the headline case for filter exclusion.
+    EXCLUSION OUTLIVED THE AMBIGUITY IT WAS BUILT FOR. Under flat identity this was the
+    only way to tell two Vancouvers apart; path identity does that on its own now. But
+    excluding a BRANCH is still the only way to say "everything under Location except the
+    American one", which is a question a tree raises rather than answers -- so the
+    mechanism stays and this case now pins it on paths.
 */
     Catalog &cat = Catalog::instance();
     cat.commit({rowFor("x-bc.nef", {}, {"Location|Canada|BC|Vancouver"}),
                 rowFor("x-wa.nef", {}, {"Location|USA|Washington|Vancouver"})});
 
     CatalogQuery q;
-    q.keywords = {"Vancouver"};
-    QCOMPARE(cat.search(q).size(), 2);              // both, as the name is ambiguous
+    q.keywords = {"Location"};                      // the shared ancestor
+    QCOMPARE(cat.search(q).size(), 2);
 
-    q.excludeKeywords = {"USA"};
+    q.excludeKeywords = {"Location|USA"};
     QCOMPARE(cat.search(q), QStringList{imagePath("x-bc.nef")});
 
-    q.excludeKeywords = {"Canada"};
+    q.excludeKeywords = {"Location|Canada"};
     QCOMPARE(cat.search(q), QStringList{imagePath("x-wa.nef")});
 
     /* Excluding something no image carries changes nothing -- an exclusion subtracts,
        so an empty subtraction is not an empty result. */
-    q.excludeKeywords = {"Mexico"};
+    q.excludeKeywords = {"Location|Mexico"};
     QCOMPARE(cat.search(q).size(), 2);
 }
 
@@ -1133,6 +1183,105 @@ void tst_catalog::textSearchHonoursOrAndNot()
     QCOMPARE(cat.search(q), QStringList{imagePath("t-heron.nef")});
 }
 
+void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()
+{
+/*
+    THE ORDINARY MIGRATION, as against the v3 fixture's carry-forward corner: a file
+    written by a recent Winnow, which HAS image.keywordpaths and image.keywords_literal
+    because schema 7 added them. Schema 10 rebuilds a path-keyed vocabulary from those two
+    columns alone, re-reading no files -- schema 4's own trick, run backwards.
+
+    Rather than hand-build a version 9 file column by column (schema 7 alone added three
+    columns to a table that already had forty), this lets the current code create one and
+    then stamps it back to 9 with its keyword tables emptied, which is the same shape a
+    real version 9 file has: image rows carrying the verbatim keyword text, and a keyword
+    vocabulary that has to be derived from them.
+*/
+    QTemporaryDir v9Dir;
+    QVERIFY(v9Dir.isValid());
+    const QString dbPath = QDir(v9Dir.path()).absoluteFilePath("index.db");
+
+    /* Build a current file and populate it through the ordinary write path, so the
+       verbatim columns hold exactly what a real index holds. */
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+    cat.commit({rowFor("bc.nef",  {"Vancouver"}, {"Location|Canada|BC|Vancouver"}),
+                rowFor("wa.nef",  {"Vancouver"}, {"Location|USA|WA|Vancouver"}),
+                rowFor("flat.nef", {"Sooke", "Beach"}, {})});
+
+    /* Now put it back to 9: empty the derived tables and drop the version, leaving only
+       the verbatim per-image text for the rebuild to work from. */
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("DELETE FROM image_keyword"));
+        QVERIFY(q.exec("DELETE FROM keyword"));
+        QVERIFY(q.exec("DROP INDEX IF EXISTS keyword_pathkey"));
+        QVERIFY(q.exec("CREATE UNIQUE INDEX IF NOT EXISTS keyword_namekey"
+                       " ON keyword(namefold)"));
+        QVERIFY(q.exec("DROP TABLE IF EXISTS vocab"));
+        QVERIFY(q.exec("PRAGMA user_version = 9"));
+    }
+    /*  NOT Catalog::clear() here, which deletes every image row -- the very text the
+        migration has to rebuild from. Only the connection is dropped. */
+    CacheDb::instance().closeThisThread();
+
+    /* Reopening runs the migration. setPath early-returns when handed the path it
+       already holds, so it is pointed elsewhere first to force a genuine reopen. */
+    CacheDb::instance().setPath(QDir(v9Dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(cat.isAvailable(), "a version 9 file must migrate, not be moved aside");
+
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("PRAGMA user_version") && q.next());
+        QCOMPARE(q.value(0).toInt(), CacheDb::schemaVersion());
+
+        QVERIFY(q.exec("SELECT path FROM keyword ORDER BY pathfold"));
+        QStringList paths;
+        while (q.next()) paths << q.value(0).toString();
+
+        /* Every ancestor prefix, once each, from two branches that share a root. */
+        QVERIFY(paths.contains("Location"));
+        QVERIFY(paths.contains("Location|Canada"));
+        QVERIFY(paths.contains("Location|Canada|BC"));
+        QVERIFY(paths.contains("Location|Canada|BC|Vancouver"));
+        QVERIFY(paths.contains("Location|USA|WA|Vancouver"));
+        QCOMPARE(paths.count("Location"), 1);
+
+        /* THE LIGHTROOM DOUBLE, through the migration rather than through a commit: the
+           dc:subject leaf "Vancouver" was consumed by the path that ends in it, so there
+           is no root-level "Vancouver" beside the two real ones. */
+        QVERIFY2(!paths.contains("Vancouver"), "the flat leaf must be consumed");
+
+        /* A file with no hierarchy at all keeps its keywords, as depth-1 paths. */
+        QVERIFY(paths.contains("Sooke"));
+        QVERIFY(paths.contains("Beach"));
+
+        /* keyword_context is retired rather than dropped. */
+        QVERIFY(q.exec("SELECT COUNT(*) FROM keyword_context") && q.next());
+        QCOMPARE(q.value(0).toInt(), 0);
+
+        /* And the AUTHORED vocabulary was seeded from the observed one, with its parent
+           links wired -- so the Keywords dock opens on the user's own hierarchy rather
+           than on an empty tree. */
+        QVERIFY(q.exec("SELECT COUNT(*) FROM vocab") && q.next());
+        QCOMPARE(q.value(0).toInt(), paths.size());
+        QVERIFY(q.exec("SELECT c.path FROM vocab c JOIN vocab p ON p.id = c.parent"
+                       " WHERE p.pathfold = 'location|canada'") && q.next());
+        QCOMPARE(q.value(0).toString(), QString("Location|Canada|BC"));
+        QVERIFY(q.exec("SELECT COUNT(*) FROM vocab WHERE parent IS NULL") && q.next());
+        QCOMPARE(q.value(0).toInt(), 3);    // Location, Sooke, Beach
+    }
+
+    /* Point the shared database back at the sandbox -- see the note in the version 3
+       case for why this cannot be left to DevPreviewCache::setCacheDir. */
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
 void tst_catalog::migrationFromVersionThreeMergesKeywords()
 {
 /*
@@ -1142,8 +1291,17 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
     A version 3 file is built here by hand, in the shape schema 3 actually wrote -- one
     keyword row per hierarchy NODE with its path, PLUS a path-less row for the flat
     dc:subject leaf, with the image linked to all of them. After migration that image must
-    have exactly the same keyword VOCABULARY, with the duplicate leaf merged away and the
-    parent relationships preserved as contexts.
+    have exactly the same keyword VOCABULARY, with the duplicate leaf merged away.
+
+    IT IS ALSO THE CARRY-FORWARD PROOF, and that is why the numbers below did not change
+    when schema 10 rebuilt the vocabulary from image.keywordpaths. This fixture predates
+    schema 7, so its image row gets keywordpaths = '' and keywords_literal = '' by DEFAULT
+    and has NOTHING for schema 10 to rebuild from. A rebuild that read only those columns
+    would leave this image with no keywords at all -- silently -- and the honest-looking
+    fix would be to edit the expectations here, which would be papering over real data
+    loss. Instead the migration snapshots the existing links first and promotes their
+    names to depth-1 paths, so the vocabulary survives, flat, which is all this row ever
+    recorded. The stamp reset is what upgrades it to real hierarchy when it is next seen.
 */
     /* A separate database, so the migration is exercised from 3 and not from scratch. */
     QTemporaryDir v3Dir;
@@ -1254,9 +1412,19 @@ void tst_catalog::migrationFromVersionThreeMergesKeywords()
         names.sort();
         QCOMPARE(names, (QStringList{"bird", "fauna", "heron"}));
 
-        /* The hierarchy survives as contexts, which is what ambiguity detection needs. */
+        /*  CARRIED FORWARD FLAT: three depth-1 paths, because the file recorded no
+            hierarchy for schema 10 to recover. Not "Fauna|Bird|Heron" -- claiming a
+            hierarchy this row never carried would be inventing data, and the paths it
+            DID once have are exactly what schema 4 discarded. */
+        QVERIFY(q.exec("SELECT path FROM keyword ORDER BY pathfold"));
+        QStringList paths;
+        while (q.next()) paths << q.value(0).toString();
+        QCOMPARE(paths, (QStringList{"Bird", "Fauna", "Heron"}));
+
+        /* keyword_context is retired: emptied, and the table kept for the additive
+           rule's sake. */
         QVERIFY(q.exec("SELECT COUNT(*) FROM keyword_context") && q.next());
-        QCOMPARE(q.value(0).toInt(), 2);    // Bird under Fauna, Heron under Bird
+        QCOMPARE(q.value(0).toInt(), 0);
     }
 
     /* Point the shared database back at the sandbox EXPLICITLY.

@@ -80,6 +80,19 @@ public:
     void updateSearchCategoryCount(QMap<QString, int> itemMap, bool isFiltered);
     void updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    /*  The Keywords category is the one NESTED category, because a keyword's identity is
+        its full path. Reached through addCategoryItems rather than called directly, so
+        every existing op dispatch and call site stays as it was. */
+    void addKeywordItems(const QMap<QString, int> &pathCounts, QTreeWidgetItem *category);
+    /*  Every filterable item beneath a category, at ANY depth. Categories other than
+        Keywords are one level deep and this is just their children; writing the loops
+        against it is what stops a nested category being half-handled. */
+    QList<QTreeWidgetItem *> itemsInCategory(QTreeWidgetItem *category) const;
+    /*  The key an itemMap from BuildFilters or the catalog is keyed on for this item: the
+        LABEL everywhere except Keywords, where it is the PATH, because two keywords can
+        share a leaf name and a label would collide them back together. */
+    QString itemMapKey(const QTreeWidgetItem *category,
+                       const QTreeWidgetItem *item) const;
     void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
@@ -138,7 +151,7 @@ public:
     bool isAnyCatalogFilter() const;
     /* Re-read which keywords the catalog has seen under more than one parent and repaint
        the Keywords category. GUI thread only -- it queries the catalog. */
-    void refreshAmbiguousKeywords();
+    void setKeywordCategoryToolTip();
 
     QString diagnostics();
 
@@ -270,15 +283,18 @@ private:
     /* mousePressEvent settled the state itself, so the matching release must not reach
        the base class: it would emit itemClicked and toggle the item a second time. */
     bool swallowNextRelease = false;
-    /* Keyword names the catalog has seen under more than one parent, case-folded. Empty
-       also means "no catalog", in which case nothing is marked -- we do not know. */
-    QSet<QString> ambiguousKeywords;
     CategorySource categoriesFrom = FromDatamodel;
     QColor itemIsExcludedColor;
-    QColor itemIsAmbiguousColor;
     struct ItemState {
-        QString parent;
-        QString item;
+        /*  KEYED ON THE TOP-LEVEL CATEGORY AND THE ITEM'S FILTER VALUE, not on the
+            item's parent and its label. Those were the same thing while every category
+            was one level deep; with the Keywords category nested, an item's parent is
+            another KEYWORD, so a saved state would look for "Heron" under "Bird" and a
+            rebuild would silently restore nothing -- and silently, because restore()
+            simply finds no match. The filter value is also unique where a label is not:
+            it distinguishes the two Vancouvers, which the old key never could. */
+        QString category;
+        QString value;
         /* Qt::Checked (include) or Qt::PartiallyChecked (exclude). Unchecked items are
            not saved at all, so this is never Unchecked. */
         Qt::CheckState state = Qt::Checked;

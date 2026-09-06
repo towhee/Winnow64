@@ -61,18 +61,22 @@
     image row, because the category list the UI wants ("show me every keyword, with
     counts") is then an index scan instead of a quarter of a million string splits.
 
-    KEYWORDS ARE FLAT, keyed on the NAME alone. The hierarchy is flattened before it gets
-    here -- Metadata/keywordflatten.h turns "Location|Canada|BC" into three keywords -- so
-    an ancestor is an ordinary keyword and a tag Lightroom wrote both ways (leaf in
-    dc:subject, path in lr:hierarchicalSubject) is ONE row rather than two. Schema 3 kept
-    both forms and so listed the same keyword twice with its image count split; schema 4
-    merges them, in place, without re-reading a single file.
+    A KEYWORD'S IDENTITY IS ITS FULL PATH (schema 10, reversing schema 4). "Vancouver"
+    under Canada and "Vancouver" under USA are two keywords with two counts, which is what
+    a real vocabulary needs: one user's 3,975 keywords had 59 names appearing in more than
+    one place. The tag Lightroom writes both ways -- leaf in dc:subject, path in
+    lr:hierarchicalSubject -- is still ONE row, because keywordEffectivePaths CONSUMES a
+    leaf that matches one of the same image's paths rather than admitting it separately.
+    That was schema 3's defect and it is fixed here without giving up the hierarchy.
 
-    WHAT THE HIERARCHY LEAVES BEHIND is keyword_context: which parents a name has been
-    seen under. A name with more than one parent is AMBIGUOUS -- "Vancouver" under both
-    Canada and USA -- which is the one thing flattening genuinely loses. The docks colour
-    those and name their parents, and the user resolves them with an exclude filter
-    (include Vancouver, exclude USA). Nothing else reads the old hierarchy.
+    EVERY ANCESTOR PREFIX IS LINKED, not just the leaf: an image tagged "Fauna|Bird|Heron"
+    is linked to "Fauna", to "Fauna|Bird" and to the whole path. So an ancestor query is
+    plain equality on pathfold -- no subtree walk, no LIKE, no recursive CTE -- and a
+    parent's count is already its subtree total, with nothing to sum. The cost is paid
+    once, at write time, by keywordPrefixExpand.
+
+    keyword_context IS RETIRED. It marked a name as ambiguous, and under path identity
+    there is nothing to mark.
 
     THREADING. Commit and Sweep run on pool threads; Search runs on the GUI thread while
     the user types. Each thread has its own connection (CacheDb) and WAL means a search
@@ -115,9 +119,9 @@ struct CatalogRow
     int width = 0;
     int height = 0;
     QString gpsCoord;
-    /* The FLAT vocabulary, already de-duplicated by flattenKeywords: dc:subject's leaves
-       and every node of every hierarchical path, as one list of names. This is what gets
-       indexed and searched. */
+    /* The image's keyword PATHS, prefix-expanded and de-duplicated by the caller -- every
+       path it carries plus every ancestor of each. This is what gets indexed and
+       searched, and the expansion is why an ancestor query needs no subtree walk. */
     /*  --- schema 6: the fields a datamodel ROW displays that a search index
         never needed. Added when serving a row's metadata from the catalog was
         fingerprinted against reading it from the file and these were exactly
@@ -156,9 +160,9 @@ struct CatalogRow
         above. Only this one may be written back to a file; see the schema 7
         note in cachedb.cpp. */
     QStringList keywordsLiteral;
-    /* lr:hierarchicalSubject as the file spelled it, "A|B|C". NOT indexed as structure --
-       it is read only to record which parent each name was seen under (keyword_context),
-       which is what makes ambiguity detectable. */
+    /* lr:hierarchicalSubject as the file spelled it, "A|B|C". Kept verbatim because it is
+       what a write-back must emit and what the full-text row is tokenised from; the
+       INDEXED form is the prefix-expanded list above. */
     QStringList keywordPaths;
 };
 
@@ -203,13 +207,12 @@ struct CatalogQuery
 /* A keyword and how many catalogued images carry it -- what the category list renders. */
 struct CatalogKeyword
 {
+    /* The LEAF name, for display, and the full path, which is the identity. A list shows
+       name and a tree splits path; nothing may key on name, because two keywords can
+       share one -- which is the whole reason identity moved back to the path. */
     QString name;
+    QString path;
     int count = 0;
-    /* The parent names this keyword has been seen under, from keyword_context. Empty for
-       a keyword that has only ever been flat. More than ONE means the name is ambiguous:
-       the docks colour it and list these in its tooltip, so the user can see that
-       "Vancouver" is two places before deciding what to exclude. */
-    QStringList contexts;
 };
 
 class Catalog
@@ -376,13 +379,6 @@ public:
        what it means. */
     QMap<QString, int> categoryItems(int dmColumn);
 
-    /* The names recorded under more than one parent -- the keywords whose meaning
-       flattening made ambiguous. Case-folded, so callers compare with keywordFold().
-       Cheap enough (one indexed GROUP BY over the vocabulary, not the images) to call
-       once per filter build. Empty when there is no catalog, which callers must treat as
-       "unknown", not as "nothing is ambiguous". */
-    QSet<QString> ambiguousKeywords();
-
     /* How many images the catalog holds, and how many folders they came from. */
     int count();
     int folderCount();
@@ -485,16 +481,17 @@ private:
                           QStringList &where, QVariantList &binds);
     void ensureLoadedLocked();
 
-    /* Id for a keyword name, inserting it if new. Memoised, so a folder commit costs one
+    /* Id for a keyword PATH, inserting it if new. Memoised, so a folder commit costs one
        round trip per DISTINCT keyword rather than one per image. */
-    qint64 keywordIdLocked(QSqlDatabase &db, const QString &name);
+    qint64 keywordIdLocked(QSqlDatabase &db, const QString &path);
     /* Write one row's keyword links, replacing whatever it had. */
     void writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r);
     void writeFtsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r);
 
     mutable QMutex mutex;
-    /* namefold -> keyword.id. Cleared by clear(); otherwise it only grows, and a keyword
-       id is stable for the life of the database. */
+    /* pathfold -> keyword.id, keyed on what the unique index is keyed on so the memo and
+       the table cannot disagree about what identifies a keyword. Cleared by clear();
+       otherwise it only grows, and a keyword id is stable for the life of the db. */
     QHash<QString, qint64> keywordIds;
     /* Which database the memo above describes, so pointing CacheDb at a different file
        invalidates it rather than mixing two files' primary keys. */

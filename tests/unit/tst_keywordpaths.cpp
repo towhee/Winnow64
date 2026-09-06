@@ -1,6 +1,6 @@
 #include <QtTest>
 
-#include "Metadata/keywordflatten.h"
+#include "Metadata/keywordpaths.h"
 
 /*
     THE PATH ALGEBRA, which is the whole of keyword identity in one place.
