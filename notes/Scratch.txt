@@ -3425,11 +3425,684 @@ When a dock location has multiple docks, the string named tabs may be too wide t
 and the dock icon it used. Where is this determination made in Winnow.  What is the name
 of the function?
 
-Keyword panel
-Keyword tree
-- show keyword heirarchy
-- rename keyword
+I want to add a keyword module to Winnow.  Review how other asset managers manage keywords and
+generate some options for me to review.  Here are some of my initial thoughts:
+
+The Keyword panel will contain a treeview showing the keywork heirarchy.  I know I
+previously decided on a flat keyword structure, but I am changing my mind and want to
+use the heirarchy with parent/child relationships. Some things to consider:
+- rename keywords
 - add synonyms
-- drag to move to another parents
+- drag to move to another parent in tree
 - split view to drag to distant part of tree
-- insert parent
+- insert parent in tree
+- save keywords
+- import lightroom keywords file
+
+
+================= KEYWORDING PLAN =======================
+
+Hierarchical Keywords: Path Identity, Vocabulary, Keywords Dock
+
+ Context
+
+ Winnow reads keywords but cannot write them. dc:subject and
+ lr:hierarchicalSubject arrive through applyXmp, are flattened to node names by
+ Metadata/keywordflatten.h, and are indexed under flat, name-only identity
+ (catalog schema 4). There is no keyword authoring UI of any kind, and Xmp cannot
+ emit an rdf:Bag, so nothing can be written back.
+
+ The flat decision was made deliberately (see the lexical-gadget plan) for three
+ reasons: a Lightroom file carries the same tag twice and a naive tree double-counted
+ it; the hierarchy is not universal; and ancestor search survived flattening. It was
+ also the enabler for one shared facet renderer across the Here/Everywhere scopes.
+
+ The user is reversing that decision and wants a hierarchical Keyword module. All
+ three original arguments have answers once the tree is the primary UI, and the cost
+ of flatness is now measurable rather than hypothetical: the user's own Lightroom
+ export (~/Documents/LRKeywords/Lightroom Keywords.csv, 3,975 keywords, 8 levels
+ deep) contains 59 names that appear in more than one place. Bear Lake is both
+ Location|Canada|BC|Northern BC|Bear Lake and
+ Location|USA|Colorado|Rocky Mountain NP|Bear Lake; likewise Bath, Aspen,
+ Branch, Camera. Flat identity merges all 59 pairs into single filter entries
+ with summed counts, permanently.
+
+ Pre-1.0 (no 1.06 released), so migration cost is not a constraint.
+
+ Outcome: a keyword's identity becomes its full path; a new Keywords dock curates
+ the vocabulary and tags images; keywords are written back to XMP sidecars; Lightroom
+ keyword files import and export.
+
+ Decisions already made - do not re-litigate
+
+ 1. Identity = full hierarchical path. Schema v10 reverses the v4 flattening.
+ 2. Row column = prefix expansion. G::KeywordsAllColumn holds every ancestor
+    prefix (Fauna, Fauna|Bird, Fauna|Bird|Heron). This keeps
+    filterpredicate.h's QStringList::contains untouched in the hot loop, keeps
+    countKeywords untouched, and keeps the catalog join as indexed equality - no
+    LIKE, no recursive CTE.
+ 3. Leaf consumption solves the Lightroom double. A dc:subject leaf matching
+    the leaf of any of the same image's paths is consumed by that path. Only
+    unmatched entries become depth-1 roots.
+ 4. UI = two zones in one dock. Top: vocabulary tree, no checkboxes, never
+    tags a photo. Bottom: the selection's keywords as chips plus a type-ahead Add
+    field whose completer offers same-named keywords as distinct entries showing
+    their branch.
+ 5. Rename/re-parent asks, showing the image count - This folder / Everywhere /
+    Not now.
+ 6. No keyword shortcut/set grid. Record in notes/_ToDo.txt as future work.
+ 7. "Build vocabulary from catalog" seeds the tree from what is already indexed.
+ 8. Lightroom keyword import/export.
+
+ Storage: two tables, not one
+
+ keyword (existing, re-keyed at v10) is the observed path set, prefix-expanded.
+ Written by the index writer on pool threads as a side effect of indexing. Rows
+ appear and vanish with images, so ON DELETE CASCADE is correct. Identity is
+ pathfold, which changes wholesale when a node is renamed. Holds no zero-image
+ nodes, and must not.
+
+ vocab (new) is the authored tree. Written by the user on the GUI thread. Rows
+ are user intent; only an explicit delete removes one. Identity is a stable id that
+ survives a rename. Holds zero-image nodes, synonyms, export flags, sibling order.
+
+ The decisive argument is identity under rename: renaming Fauna|Bird rewrites
+ the pathfold of every observed row beneath it, but the authored node must keep its
+ identity because its synonyms, export flag and tree position attach to it, not to
+ its current spelling. One table cannot be keyed both ways. Secondary: a keyword
+ row no image references is garbage; a vocab node no image references is a
+ user-created empty branch. Same row, opposite correct behaviour.
+
+ They join on pathfold. A vocab node with no keyword match shows count 0, greyed. A
+ keyword row with no vocab match is the ? orphan chip that offers to file itself
+ into the tree.
+
+ keyword.parent stays blank and unused - a second representation of what pathfold
+ already carries, and maintaining two is exactly what 3-to-4 was undone for. Say so
+ in the DDL comment.
+
+ ---
+
+ Phase 0 - The rdf:Bag writer
+
+ Goal: Xmp can write a list property and can no longer silently delete one. No
+ caller; the app is byte-identical.
+
+ Files: Metadata/xmp.h, Metadata/xmp.cpp, tests/unit/tst_xmpkeywords.cpp.
+
+ definedElements already declares subject as dc:subject and
+ hierarchicalsubject as lr:hierarchicalSubject, both ElementType::List
+ (xmp.cpp:442-456), and xmlns:lr is registered (:631-634). But setItem
+ (:915-990) has only Attribute and Node branches, so calling it on
+ subject removes the existing element at :954-959 and writes nothing - a live
+ keyword-deletion hazard.
+
+ bool Xmp::setItemList(QByteArray item, const QStringList &values);
+
+ - Take a QStringList and toUtf8() internally. Do not copy setItem's
+   QByteArray plus caller-side .toLatin1() pattern (metadata.cpp:842-848) -
+   keyword text is user text.
+ - Require definedElements[item].type == ElementType::List; and add the inverse
+   guard to setItem at :944, returning false before the removal at :954.
+   That one line closes the hazard, and is why this phase can land alone.
+ - Extract the removal block at :952-960 as
+   removeItemLocked(const XmpElement&), handling both Node and Attribute form,
+   guarded on element.parent != nullptr (xmlDocElement only fills parent when
+   recursing).
+ - if (values.isEmpty()) return true; after removal - an empty list means the
+   property is absent, which is what makes deletion round-trip through
+   parseSidecar's deliberately unguarded read (metadata.cpp:1191-1200).
+ - Lifetime: rapidxml holds pointers only, so route every name and value through
+   keepName() / keepValue() helpers appending to the class-lifetime a / v
+   (xmp.h:120-121). "rdf:Bag" and "rdf:li" are appended once and their
+   pointers reused - rapidxml never mutates a name buffer; say why in the comment.
+ - Allocate the property and rdf:Bag nodes with nullptr, not "".
+   print_element_node prints a node's value instead of recursing into children
+   when it has one.
+
+ No escaping helper is needed. docToQString (xmp.cpp:1141-1160) uses
+ rapidxml::print, whose copy_and_expand_chars
+ (rapidxml_print_rgh.h:72-105) expands & < > " ' on values, and parse<0>
+ (:334) translates entities on read. The round trip is already correct - but pin
+ it with a test, because it is one flag or one revival of the commented-out walk()
+ away from corrupting sidecars, and the user's vocabulary contains
+ Category|Forest status|F&B.
+
+ Tests in tst_xmpkeywords.cpp:
+
+ - setItemListWritesAnRdfBag
+ - setItemListRoundTripsSpecialCharacters - "A & B", "<c>", a quote, an
+   accented word, a CJK word
+ - setItemListOnEmptyRemovesTheProperty
+ - setItemRefusesAListProperty - returns false and the existing Bag survives
+ - setItemListReplacesAnAttributeFormSubject
+ - hierarchicalSubjectWritesUnderTheLrNamespace
+
+ Fix in passing: getItemList (:889-910) appends val unconditionally then also
+ appends the attribute value when empty, so a malformed <rdf:li/> yields two
+ entries.
+
+ ---
+
+ Phase 1 - Path algebra and the memory harness
+
+ Goal: one definition of leaf consumption and prefix expansion, plus the ability
+ to measure Phase 2's cost. Still no caller.
+
+ Files: Metadata/keywordflatten.h, Datamodel/imagerow.h/.cpp, new
+ tests/unit/tst_keywordpaths.cpp, tests/unit/tst_imagerow.cpp,
+ tests/CMakeLists.txt.
+
+ New free functions beside the existing ones (header-only, QString-only, same
+ rationale as Cache/pathkey.h):
+
+ - keywordEffectivePaths(subject, hierarchical) - leaf consumption. Fold-set of
+   path leaves; output every path, then every subject entry whose fold is not in
+   that set, as depth-1. De-duplicate on keywordFold, first spelling wins.
+ - keywordPrefixExpand(paths) - root first, then the path; de-duplicated on fold
+   across the whole set. Deterministic order matters - it keeps interner ids
+   stable and makes a re-index a no-op.
+ - keywordParentPath(path) - "" for a root.
+ - keywordIsDescendant(pathFold, ancestorFold) - == or
+   startsWith(ancestorFold + '|'). O(1), no tree walk. Shared by the drop
+   rejection and the retag count.
+
+ The memory harness does not exist - there is no approxBytes, no byte counter,
+ nothing in tst_rowfields.cpp or tst_imagerow.cpp. The 573/413 figures in
+ rowfields.h:44-57 came from the disposable prototype that header admits to. Build
+ it here:
+
+ - ImageRow::approxBytes() - sizeof(*this) plus string capacity x2 plus vector
+   capacity x4.
+ - Interner::approxBytes() - value capacities x2 plus a bucket estimate.
+ - tst_imagerow::prefixExpansionStaysInBudget - 20,000 rows, synthetic vocabulary
+   of ~400 paths at mean depth 3.2, 5 assigned paths per row.
+
+ Five leaves become ~11 distinct prefixes (siblings share ancestors), so
+ keywordAllIds goes 5 to 11 ids: +24 bytes, but QVector grows in powers of two so
+ capacity 8 to 16 is +32, of which squeeze() recovers 20. The interner grows by
+ the vocabulary, not by rows - under 1 byte/row at 250k. So:
+
+ - expected ~605 B/row, 145 MB at 250k
+ - red line 650 B/row, 160 MB at 250k
+
+ Assert that literal with the derivation in the comment, the way rowfields.h:44-57
+ does.
+
+ If it breaches: drop keywordIds (the dc:subject literal list) from ImageRow
+ entirely - it is needed only at write time, one image at a time, and is re-readable
+ from the model column. That reclaims more than expansion costs. Do not spend it
+ pre-emptively.
+
+ Also: keywordAllIds.squeeze() after filling in addMetadataForItem, and pre-seed
+ the interner with the vocabulary when a scope opens (from Phase 5). The second is a
+ real improvement, not a mitigation - it collapses the load-time appends that the
+ realloc race at imagerow.h:44-56 rides on.
+
+ ---
+
+ Phase 2 - Path identity: schema v10, index and model together
+
+ Goal: a keyword is a path, end to end. Deliberately one phase: the model and
+ the index must not disagree for even one commit.
+
+ v10 migration - Cache/cachedb.cpp
+
+ kSchemaVersion 9 to 10 (:16), new if (version < 10) block before the
+ user_version write at :752.
+
+ DROP INDEX IF EXISTS keyword_namekey;
+ CREATE UNIQUE INDEX IF NOT EXISTS keyword_pathkey ON keyword(pathfold);
+ CREATE INDEX IF NOT EXISTS keyword_leaf ON keyword(namefold);
+ DELETE FROM keyword_context;   -- retired; table kept, additive-only rule
+ DELETE FROM image_keyword;
+ DELETE FROM keyword;
+
+ Rebuild in C++, not SQL. cachedb.cpp includes Metadata/keywordflatten.h. A
+ pure-SQL rebuild would have to reimplement keywordFold, and SQLite's lower() is
+ not toCaseFolded() - they disagree on non-ASCII. A migration whose pathfold
+ disagrees with the writer's produces duplicate rows that ON CONFLICT cannot see,
+ and therefore double counts, for every non-ASCII keyword. Not worth the tidiness.
+
+ One prepared-statement pass over
+ SELECT id, keywordpaths, keywords_literal FROM image:
+
+ if (paths.isEmpty() && literal.isEmpty())
+     effective = <names from the pre-delete link snapshot>   // carry-forward
+ else
+     effective = keywordEffectivePaths(literal, paths)
+
+ for (p : keywordPrefixExpand(effective)) {
+     INSERT INTO keyword (name, namefold, path, pathfold, parent)
+       VALUES (leafOf(p), fold(leafOf(p)), p, fold(p), NULL)
+       ON CONFLICT(pathfold) DO NOTHING;
+     INSERT OR IGNORE INTO image_keyword (image_id, keyword_id)
+       SELECT ?, id FROM keyword WHERE pathfold = ?;
+ }
+
+ Carry-forward is required, not optional. tst_catalog.cpp:1142-1240 migrates a
+ hand-built v3 file whose image row has keywordpaths='' and
+ keywords_literal='' (both added at v7 with DEFAULT ''), and asserts
+ COUNT(keyword)==3. Rebuilding only from those columns turns that fixture into
+ zero, and editing the assertion to match would be papering over a real regression.
+ So snapshot the old links first with a temp table
+ (SELECT ik.image_id, k.name FROM image_keyword ik JOIN keyword k ...), the shape
+ v4's kw_canon used at :487-492, and drop it at the end. The v3 case then stays
+ byte-identical and is the carry-forward proof.
+
+ Stamp reset: yes - UPDATE image SET srcsize=-1, srcmtime=-1, sidecarmtime=-1;.
+ Precedent v6 (:604) and v7 (:663); a keyword's meaning has widened from a name
+ to a path, and carry-forward rows are honest but flat until re-read.
+
+ Seed vocab in the same pass, from the distinct expanded path set sorted by
+ depth (shortest first, so a parent id exists before its child needs it). That makes
+ decision 7 the default state after migration; the button becomes a re-run of the
+ same code.
+
+ Index writer - Cache/catalog.cpp
+
+ - keywordIdLocked(db, name) becomes keywordIdLocked(db, const QString &path).
+   ON CONFLICT(pathfold), SELECT id WHERE pathfold = ?; memo keywordIds
+   (catalog.h:498) re-keys on pathfold. The invariant at :283-285 is preserved
+   verbatim - only the key changes. Rewrite :270-285.
+ - writeKeywordsLocked (:319-378): the link loop is unchanged, since
+   r.keywords now arrives prefix-expanded. Delete the keyword_context block at
+   :368-378. Rewrite :330-334: "already flat" becomes "already prefix-expanded,
+   and that is what keeps a filter on Fauna reaching an image tagged only
+   Fauna|Bird|Heron with plain equality".
+ - writeFtsLocked (:399-401): r.keywords now contains '|'; apply
+   replace('|',' ') to it too and de-duplicate the union with the paths loop.
+ - buildQueryLocked include (:901-916) and exclude (:918-937): k.namefold IN
+   becomes k.pathfold IN, binds become keywordFold(path). Rewrite the "the
+   vocabulary is flat" comment - still equality, for a new reason. Keep
+   excludeKeywords: it is still how "everything under Fauna except Fauna|Bird"
+   is expressed.
+ - Catalog::keywords() (:1143-1181): CatalogKeyword loses contexts, gains
+   path; drop the second pass at :1166-1177.
+ - categoryItems (:1216-1226): SELECT k.path, ORDER BY k.pathfold.
+ - ambiguousKeywords() (:1266-1276): delete. Path identity is the
+   disambiguation.
+ - fetchFresh (:749-750) and searchRows' second keyword pass
+   (:1101-1108): k.name becomes k.path. Correctness, not cosmetics - these
+   feed CatalogRow::keywords back into the datamodel, and a name there makes a
+   catalog-served row filter differently from the same row read from its file.
+ - Update catalog.h:60-75 and the CatalogRow::keywords comment at
+   catalog.h:154.
+
+ Model
+
+ - DataModel::addMetadataForItem (datamodel.cpp:3385-3386): flattenKeywords
+   becomes
+   keywordPrefixExpand(keywordEffectivePaths(m.keywords, m.keywordPaths)), then
+   squeeze().
+ - Main/catalogscanner.cpp:134: same substitution.
+ - DataModel::catalogRowFor (:2671-2679): no change.
+ - Datamodel/filterpredicate.h: untouched - the payoff. Rewrite the comment at
+   :44-48 to say why it is untouched.
+ - Datamodel/buildfilters.cpp: untouched - countKeywords (:567-577) and
+   its three call sites (:614, :638, :789). The map keys are now paths.
+ - Main/global.h:216-227: rewrite. The never-write-this-one warning gets more
+   important, since the column now holds ancestor paths.
+ - Views/catalogview.cpp rebuildKeywordList (:316-378): two-line change -
+   label with keywordLeafOf(path), full path as tooltip - so the flat list stays
+   readable. Update :318-331.
+
+ Tests: bump the tst_catalog version tripwire (:160-172) to 10 with a
+ paragraph on what v10 does; add versionNineFileRebuildsPathKeyedKeywords (a v9
+ fixture with keywordpaths populated - assert the expanded set, assert the
+ Lightroom double produces no stray root, assert keyword_context is empty); the v3
+ case stays byte-identical. Rewrite tst_filterpredicate.cpp:104-118 onto full
+ paths and add anAncestorPathMatchesEveryDescendant, keeping one exclusion case.
+
+ By hand: open a Lightroom-keyworded folder. Filters > Keywords shows full paths
+ - flat and ugly, for exactly one phase. Each filters correctly; Fauna count is
+   at least Fauna|Bird's; catalog search finds the same images as the folder filter
+   for the same path.
+
+ ---
+
+ Phase 3 - Nested tree in Filters, and the save/restore re-key
+
+ Files: Datamodel/filters.cpp/.h, Main/global.h.
+
+ New Filters::addKeywordItems(const QMap<QString,int> &pathCounts, QTreeWidgetItem *category) beside addCategoryItems (:2084-2148). Because the
+ column is prefix-expanded, countKeywords already returns a count for every
+ ancestor, so the tree is built by splitting keys on '|' and each node reads its
+ own count straight out of the map. No summing, no second pass. That is the nicest
+ consequence of prefix expansion; put it in the comment.
+
+ Per item: text(0) is the leaf name; data(1, Qt::EditRole) is the full path;
+ tooltip is the full path. filterValueFor (:2157-2165) grows a second exception.
+
+ The one-level assumption is everywhere. Grep childCount() in filters.cpp
+ and convert each to a recursive walk, or an explicit keywords opt-out. Known sites:
+ fillQuery (:1653-1696) - recurse, and read data(1, Qt::EditRole) rather than
+ text(0); the G::KeywordsAllColumn special case at :1688 stays and now earns
+ its keep. Same for the datamodel-side predicate compilation around :1601.
+
+ The trap: Filters::save/restore (:1707-1760) key on
+ {parent->text(0), item->text(0)}. With a nested tree the parent of Heron is
+ Bird, so saved state fails to restore silently on every rebuild. Re-key on
+ {top-level category text, filter value}:
+
+ struct ItemState { QString category; QString value; Qt::CheckState state; };
+
+ save walks up to the root ancestor for the category and stores
+ filterValueFor(rootAncestor, item). Stable under re-parenting (path changes, so
+ the entry is dropped, which is correct) and unique across the two Vancouvers, which
+ the old key never was. Add a test: check a nested keyword, save(), rebuild,
+ restore(), assert the same node is checked and the same-named sibling in the
+ other branch is not.
+
+ Delete: Filters::refreshAmbiguousKeywords (:1196-1233) with both tooltip
+ variants; G::AmbiguousKeywordRole (global.h:70-73) and its read at
+ :1085-1097; the ambiguousKeywords member and call sites at :984, :1631.
+
+ Rename Metadata/keywordflatten.h to Metadata/keywordpaths.h and rewrite its
+ header - nothing in it flattens any more. flattenKeywords() is dead after Phase 2;
+ delete it rather than leave a second, wrong definition of the same idea.
+
+ ---
+
+ Phase 4 - The write path, no UI
+
+ Driven from a temporary debug action or a test, so the mechanism is proven before
+ the dock sits on it.
+
+ Files: Metadata/imagemetadata.h, Metadata/xmpapply.h, the PNG parser,
+ Metadata/metadata.cpp, Datamodel/datamodel.cpp, new Main/keywordedit.cpp.
+
+ ImageMetadata (imagemetadata.h:107-110) gains
+ QStringList _keywords, _keywordPaths;. Every site that assigns m.keywords must
+ set the shadow: applyXmp's snapshot block (xmpapply.h:57-65), the PNG parser's
+ private copy, Metadata::parseSidecar (metadata.cpp:1191-1200), and
+ DataModel::imMetadata (datamodel.cpp:2865-2866).
+
+ Do not add G::_KeywordsColumn / _KeywordPathsColumn. Two more QStringList
+ columns at 250k rows is exactly the budget Phase 1 just measured, spent to re-derive
+ something already known. imMetadata sets the shadows from the model values
+ themselves - the model holds what the file holds, so a difference from the model
+ is the edit. New setter Metadata::setKeywords(subject, hierarchical) makes the
+ caller's intent explicit.
+
+ Ordering trap, state it loudly: MW::setRating (sortandfilter.cpp:757-770)
+ sets the model first, then imMetadata, then writeXMP. Keywords must be the
+ other way round - write the file first, then the model - because with no shadow
+ column, updating the model first makes the edit invisible to change detection.
+ Anyone "making it consistent with setRating" breaks keyword writing silently.
+ Comment it in the function and in Documentation.txt.
+
+ Metadata::writeXMP (:751-887):
+
+ /* ORDER-INSENSITIVE, because applyXmp reads in FILE order and this writes
+    sorted. A plain list compare would report a change on every Lightroom-written
+    file, and writeXMP writes every changed field -- so a rating edit would
+    rewrite the user's keywords, every time. */
+ const bool keywordsChanged =
+        foldSorted(m.keywords)     != foldSorted(m._keywords)
+     || foldSorted(m.keywordPaths) != foldSorted(m._keywordPaths);
+
+ Add to the guard at :799-822; when set, write both properties - they are one
+ fact in two places and writing half makes the file self-contradictory. Fix :879
+ while here: writeSidecar's return is ignored, unlike writeOrientation and
+ writeDevelopSidecar. A silently failed keyword write is lost tagging work.
+
+ What gets written. Given assigned vocabulary paths P and orphan flat names
+ O:
+
+ - lr:hierarchicalSubject is every p in P of depth 2 or more, as the full
+   path string.
+ - dc:subject is { keywordLeafOf(p) : p in P } united with O.
+ - Depth-1 paths go to dc:subject only, never as a one-element hierarchical entry.
+ - Both sorted by fold, so a no-op rewrite is byte-identical.
+
+ Idempotence: reading back, keywordEffectivePaths consumes exactly the leaves we
+ emitted, leaving O as depth-1 paths. P united with O is reconstructed exactly.
+
+ Synonyms are not exported in this pass. An exported synonym returns as an
+ unmatched dc:subject entry and becomes a spurious root on the next read;
+ consuming it correctly needs a vocab lookup during parsing, on parser threads with
+ no catalog access. Synonyms are stored, shown, imported and exported in the
+ Lightroom file, but not emitted. Non-exporting nodes are honoured on Lightroom
+ export only, not on sidecar write - a flag that silently drops a tag from the file
+ drops it from the image on the next read. Both go in _ToDo.txt as deliberate
+ limits.
+
+ The batch - MW::applyKeywordsToSelection(const QStringList &add, const QStringList &remove), modelled line-for-line on MW::setRating
+ (:738-790):
+
+ 1. Snapshot selection rows into a QList<int> first - the proxy changes during
+    iteration.
+ 2. Per row: imMetadata, compute, setKeywords, writeXMP, then setValDm
+    for KeywordsColumn, KeywordPathsColumn, KeywordsAllColumn,
+    updateCatalogForRow, progress.
+ 3. Mirror onto the hidden raw row of a raw+jpg pair as setRating does at
+    :752-765, or a keyword filter hides half a pair.
+ 4. After the loop: refreshIcons, sf->suspend(true),
+    buildFilters->updateCategory(BuildFilters::KeywordEdit) (new enum value),
+    filterChange.
+
+ updateCatalogForRow is already scope-gated, so the rule at
+ Documentation.txt:4807 is honoured for free.
+
+ Tests in new tests/unit/tst_keywordwrite.cpp: write a set, re-parse,
+ keywordEffectivePaths reproduces it exactly; write twice, second document
+ byte-identical; write an empty set and both properties are gone; a path whose leaf
+ collides with an orphan name round-trips without merging.
+
+ By hand: tag one image, quit, reopen, tag survives. Tag 200 images and watch the
+ counts move. Rate an image with Lightroom keywords in a different order and confirm
+ its keyword block is untouched.
+
+ ---
+
+ Phase 5 - vocab model and the dock (tree zone)
+
+ Files: new Datamodel/keywordvocab.h/.cpp, new Views/keywordtree.h/.cpp,
+ Main/initialize.cpp, Main/mainwindow.h/.cpp, Main/menusandactions.cpp,
+ Main/setandupdate.cpp, Main/settings.cpp, Main/workspaces.cpp,
+ Main/dockwidget.cpp, winnow.qrc, images/icon16/keywords_white.png. The
+ vocab DDL landed in v10, so no new schema version.
+
+ KeywordVocab is a QAbstractItemModel over vocab, GUI-thread-only, loaded whole
+ (thousands of nodes, not 250k rows). It owns rename, reparent, insertChild,
+ insertParentAbove, completions(prefix) (hits vocab_namefold, returns
+ distinct nodes each carrying its full path - what makes the two Vancouvers two
+ completer entries), rebuildFromCatalog(), and counts() (one query joined on
+ pathfold, refreshed on catalog change, not per keystroke). The descendant guard is
+ keywordIsDescendant from Phase 1.
+
+ Dock checklist - notes/Documentation.txt:284-295, with the fuller catalogDock
+ record at :4616. Copy MW::createHistoryDock (initialize.cpp:2849-2900+) for
+ the frame and MW::createCatalogDock (:1798-1893) for the title bar:
+
+ 1. images/icon16/keywords_white.png, 16x16 white-on-transparent, matching weight.
+ 2. Register in winnow.qrc.
+ 3. graphicFor (mainwindow.cpp:94-106) and dockFor (:108-117).
+ 4. keywordsDockTabText = "Keywords" and append to dockTextNames, mirroring
+    :1816-1818.
+ 5. MW::dockTabToolTip case (dockwidget.cpp:670-707); MW::dockForTabText
+    (:288-303).
+ 6. winnowStateVersion 4 to 5 (mainwindow.h:197) and
+    {5, keywordsDock, filterDock, keywordsDockVisibleAction} in
+    placeDocksAddedSince (workspaces.cpp:466-471).
+
+ Plus collapsed-state restore (dockwidget.cpp:801); addDockWidget and
+ tabifyDockWidget (initialize.cpp:3483, 3499); the dock loop (:3518-3520);
+ wireSolo (:3541); the action (menusandactions.cpp:1644-1657); menus (:2412,
+ :2476); actionKeys (:3216); visibility, scope and full-screen
+ (setandupdate.cpp:171-172, 297-299, 449-450, 580-582); settings
+ (settings.cpp:148); builtInDefaultWorkspace (workspaces.cpp:503-505) - ship
+ it off like catalogDock, the left group is already four tabs deep. Steps 1-3
+ are mandatory: a dock in the group with no glyph makes the bar flicker at narrow
+ widths.
+
+ Ships the tree zone only: no checkboxes, a dot on nodes applied to the current
+ image, per-node counts, rename / insert-parent / delete via context menu, and the
+ retag dialog - built here, since rename needs it. Vertical splitter with an empty
+ lower zone so the layout is right before the chips arrive.
+
+ ---
+
+ Phase 6 - Chips, drag and drop, retag dialog
+
+ Files: new Views/keywordchips.h/.cpp, new
+ Dialogs/keywordretagdlg.h/.cpp, Views/keywordtree.cpp.
+
+ Chips read the selection through the same snapshot discipline as setRating. One
+ chip per distinct path: plain means on every selected image; * means on some; ?
+ means no matching vocab node, with a "File into vocabulary..." action. The
+ completer popup shows leaf name bold, full path dimmed on one row, as distinct
+ entries - it must not de-duplicate by display text.
+
+ Chip removal calls applyKeywordsToSelection's remove. Ancestors with no
+ surviving descendant fall away automatically because the column is re-expanded from
+ the remaining set, while ancestors shared with another surviving path stay. Another
+ consequence of expanding at write time - say so.
+
+ Drag and drop, one mime type application/x-winnow-vocab-node carrying node
+ ids:
+
+ - tree to tree, re-parent: reject if
+   keywordIsDescendant(targetFold, srcFold); reject a fold-duplicate sibling name,
+   offering merge instead.
+ - tree to chip zone, tag: apply the path to the current selection.
+ - thumb/grid to tree node, tag: apply that node's path to the dropped rows.
+
+ dragMoveEvent must event->ignore() on an invalid target so the cursor shows the
+ rejection while dragging. A drop that silently does nothing reads as a broken
+ widget, and dragging a parent onto its own child is the case users will actually
+ hit. For images-to-node, reuse whatever mime the thumb views already set; do not
+ invent a second image drag format.
+
+ Retag dialog - a real dialog, not a QMessageBox, because there are two scopes
+ and a defer. The count is one indexed query per scope, run before the vocabulary
+ write commits, using an explicit half-open range on keyword_pathkey rather than
+ LIKE:
+
+ SELECT COUNT(DISTINCT ik.image_id)
+ FROM image_keyword ik
+ JOIN keyword k ON k.id = ik.keyword_id
+ JOIN image  i ON i.id = ik.image_id AND i.live = 1
+ WHERE k.pathfold = :p
+    OR (k.pathfold >= :p || '|' AND k.pathfold < :p || '}')
+ [ AND i.folder = :folder ]
+
+ '}' is 0x7D, one past '|'. This is the only place a prefix range appears;
+ the hot filter path stays equality. Two runs give both numbers for one dialog:
+ This folder only (N), Everywhere in the catalog (M), Not now.
+
+ "Not now" needs no pending-work table. The old path now has no vocab node, so those
+ images' chips show as ? orphans and the tree offers to file them - the deferral is
+ visible in the UI rather than hidden in a table the user cannot see. Note the
+ resumable alternative in _ToDo.txt; do not build it. The retag itself reuses
+ applyKeywordsToSelection over the queried image list.
+
+ ---
+
+ Phase 7 - Lightroom keyword import/export
+
+ The format is already verified against
+ ~/Documents/LRKeywords/Lightroom Keywords.csv (3,975 rows). Do not re-derive it,
+ and do not trust the blog-post description:
+
+ - CSV, not tab-indented .txt. Header is
+   Include On Export,Export Containing Keywords,Export Synonyms,Person Type Keyword, - five columns, the keyword last. UTF-8 with BOM.
+ - Hierarchy is TAB indentation inside the last field. Max depth observed is 8
+   levels.
+ - Synonyms are {Braces}, one level deeper than their keyword, and carry
+   blank flags - all 28 brace rows are exactly the 28 blank-flag rows. A synonym
+   attaches to the nearest preceding non-synonym row at depth minus 1, because
+   consecutive synonyms share a parent and a naive "previous row" rule is wrong.
+ - No [brackets] and no N in Include On Export in this file. Write those
+   paths defensively; they cannot be verified against real data.
+ - Commit the file, or a trimmed excerpt preserving all the shapes above, to
+   tests/fixtures/ and pin the parser against it.
+
+ Import must merge by folded path, never replace, and report conflicts. It must
+ survive a messy real vocabulary: Bird exists three times including
+ Fauna|Bird|Gyrefalcon|Bird, and Canada exists both at top level and as
+ Location|Canada. Import maps to KeywordVocab::insertChild plus vocab_synonym;
+ export walks the tree. Both are pure vocabulary operations touching no image, which
+ is why this phase is last.
+
+ ---
+
+ Verification
+
+ Per phase above; end to end:
+
+ cmake --build build/mac-debug
+ ctest --test-dir build/mac-debug --output-on-failure
+
+ New or changed suites: tst_xmpkeywords (Phase 0), tst_keywordpaths and
+ tst_imagerow (Phase 1), tst_catalog and tst_filterpredicate (Phase 2), a
+ Filters save/restore case (Phase 3), tst_keywordwrite (Phase 4), the LR fixture
+ parse (Phase 7). tst_catalog's version literal is a deliberate tripwire - bumping
+ kSchemaVersion fails it on purpose.
+
+ In the app, against a Lightroom-keyworded folder and a catalog-scope root: the
+ Filters keyword tree matches the vocabulary tree; the two Bear Lake nodes filter
+ to disjoint image sets; tagging a 200-image selection writes sidecars and moves the
+ counts; a rename reports a plausible image count in both scopes; quitting and
+ reopening restores checked keyword filters and the dock's position.
+
+ The one behaviour to watch for regression: rating or label edits must not
+ rewrite an image's keyword block. That is what the fold-sorted comparison in
+ Phase 4 exists to prevent.
+
+ Ordering
+
+ ┌─────┬──────────────────────────────────────────┬───────────────────────────────────┐
+ │  #  │                  ships                   │       state at the boundary       │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 0   │ setItemList; setItem refuses a List      │ unchanged; hazard closed          │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 1   │ path algebra + memory harness            │ unchanged; numbers on record      │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 2   │ v10 + index + model, together            │ works; Filters shows full paths   │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 3   │ nested Filters tree, save/restore re-key │ looks right; read-only            │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 4   │ write path, no UI                        │ tagging works from a debug action │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 5   │ vocab model + dock, tree zone            │ vocabulary editable, retaggable   │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 6   │ chips, completer, DnD, retag dialog      │ feature complete                  │
+ ├─────┼──────────────────────────────────────────┼───────────────────────────────────┤
+ │ 7   │ LR import/export                         │ done                              │
+ └─────┴──────────────────────────────────────────┴───────────────────────────────────┘
+
+ Phases 2 and 3 are the only pair whose intermediate state is ugly rather than
+ wrong. Splitting 2 further would leave the folder scope and the catalog scope
+ disagreeing about the same picture - the one thing keywordflatten.h's header
+ exists to prevent.
+
+ Documentation and ToDo
+
+ Each phase carries its own notes/Documentation.txt edit; there is no
+ documentation phase. Section 20 (:4514-4838) is rewritten across the phases:
+
+ - "Reading Keywords" (:4516) gets leaf consumption and loses "WRITING KEYWORDS IS
+   NOT IMPLEMENTED".
+ - "The Catalog" (:4543) gets path identity, prefix expansion and the two-table
+   split; the "KEYWORDS ARE FLAT" paragraph is deleted rather than amended.
+ - Two new subsections: "The Keyword Vocabulary" (observed vs authored, the rename
+   identity argument, retag scopes) and "The Keywords Dock" (two zones, chip
+   markers, drag flows).
+ - Ambiguity marking (:4584, :4621) deleted, with a short note on what replaced
+   it.
+
+ Also rewritten: the header of keywordflatten.h (renamed keywordpaths.h),
+ Cache/catalog.h:60-75, cachedb.cpp:434-441, catalog.cpp:273-285 and
+ :330-334, filterpredicate.h:44-48, Views/catalogview.cpp:318-331,
+ Main/global.h:216-227, rowfields.h:44-57. Table of Contents sync last.
+
+ notes/_ToDo.txt - replace the existing "Add a keyword module." line, and record
+ as future work:
+
+ - the 9-slot keyword shortcut/set grid (decision 6); note it must clear
+   MW::developShortcutIntercept
+ - synonym export to dc:subject, and the read-side consumption it needs
+ - resumable deferred retag
+ - per-node export flags honoured on sidecar write
