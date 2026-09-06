@@ -2,6 +2,7 @@
 
 #include "Datamodel/imagerow.h"
 #include "Main/global.h"
+#include "Metadata/keywordflatten.h"   // keywordPrefixExpand, for the row budget case
 
 /*
     THE PACKED ROW STORE IS NOW THE ONLY COPY.
@@ -40,6 +41,7 @@ private slots:
     void internedRepeatsCollapse();
     void insertRowsShiftsTheRowsAfterIt();
     void removeRowsSplicesRatherThanTruncates();
+    void prefixExpansionStaysInBudget();
 
 private:
     static void fill(RowStore &s, int row, const QString &path)
@@ -317,6 +319,113 @@ void tst_imagerow::removeRowsSplicesRatherThanTruncates()
     s.removeRows(1, 99);
     QCOMPARE(s.size(), 1);
     QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
+}
+
+void tst_imagerow::prefixExpansionStaysInBudget()
+{
+/*
+    WHAT PREFIX EXPANSION COSTS A ROW, MEASURED RATHER THAN ARGUED.
+
+    Keyword identity is becoming the full PATH, and the column the filters run on holds
+    every ANCESTOR PREFIX of every path -- so a row carrying five keywords carries about
+    eleven entries instead of five. That is the price of leaving filterpredicate.h's
+    QStringList::contains and the catalog's indexed equality join untouched, and it is
+    only worth paying if it is small.
+
+    THE GATE IS THE DELTA, NOT THE ABSOLUTE, and that is a deliberate choice made after
+    measuring both. The absolute is dominated by two things this change does not control:
+    sizeof(ImageRow) is 472 bytes on its own, and QVector over-allocates, so resize(20000)
+    reserves capacity for ~35,500 rows and roughly 366 bytes a row of the total is spare
+    capacity the store really has allocated but is not using. Gating the absolute would
+    mean gating those, and a red line drawn round them would fire on an unrelated change
+    and say nothing true about keywords. The two builds below differ ONLY in whether the
+    keyword column is expanded, so everything else cancels.
+
+    (Note for anyone reading rowfields.h: its 573-bytes-a-row figure is STALE, from the
+    prototype, and predates the second and third batches of columns. Measured here a
+    populated row is ~1,050 bytes including that spare capacity, ~600 without it. That is
+    a pre-existing fact about the row, not something keywords did, and it is still an
+    order of magnitude under the ~19,900 the QStandardItems cost.)
+
+    MEASURED: expansion costs SIX bytes a row -- far less than the arithmetic suggested,
+    because siblings share ancestors (five leaves expand to ~11 distinct prefixes, not
+    15) and because the ids land inside a QVector block the row had already rounded up
+    to. The red line is 64, an order of magnitude of headroom, so it fires on a real
+    regression and not on allocator noise.
+
+    If it is ever breached the escape hatch is to drop keywordIds (the literal dc:subject
+    list) from the row entirely: it is needed one image at a time at write time and is
+    re-readable from the model column, which reclaims more than the expansion costs. Do
+    not spend that pre-emptively.
+*/
+    const int kRows = 20000;
+    const size_t kMaxExpansionBytesPerRow = 64;
+
+    /*  A synthetic vocabulary shaped like a real one: 400 paths, mean depth about 3.2,
+        names that repeat across the library exactly as a shoot's do. */
+    QStringList vocab;
+    const QStringList roots = {"Fauna", "Flora", "Location", "Category", "Activity"};
+    for (const QString &root : roots) {
+        for (int b = 0; b < 8; ++b) {
+            const QString branch = root + "|Branch" + QString::number(b);
+            vocab << branch;
+            for (int l = 0; l < 9; ++l)
+                vocab << branch + "|Leaf" + QString::number(l);
+        }
+    }
+    QCOMPARE(vocab.size(), 400);
+
+    /*  Identical in every respect except the keyword column, so the difference between
+        the two returns is the cost of expansion and nothing else. */
+    auto measure = [&](bool expand, int *distinctStrings) {
+        RowStore s;
+        s.resize(kRows);
+        for (int row = 0; row < kRows; ++row) {
+            const QString path = QString("/Volumes/Photos/2024/shoot/DSC_%1.NEF")
+                                     .arg(row, 6, 10, QChar('0'));
+            s.setValue(row, G::PathColumn, G::PathRole, path);
+            s.setValue(row, G::NameColumn, Qt::EditRole, path.section('/', -1));
+            s.setValue(row, G::TypeColumn, Qt::EditRole, "NEF");
+            s.setValue(row, G::TitleColumn, Qt::EditRole, "A title for every row");
+
+            QStringList assigned;
+            for (int k = 0; k < 5; ++k)
+                assigned << vocab.at((row * 5 + k) % vocab.size());
+
+            s.setValue(row, G::KeywordsAllColumn, Qt::EditRole,
+                       expand ? keywordPrefixExpand(assigned) : assigned);
+            s.setValue(row, G::KeywordsColumn, Qt::EditRole, assigned);
+        }
+        if (distinctStrings) *distinctStrings = s.strings().distinctCount();
+        return s.approxBytes() / size_t(kRows);
+    };
+
+    int distinctFlat = 0, distinctExpanded = 0;
+    const size_t flat     = measure(false, &distinctFlat);
+    const size_t expanded = measure(true,  &distinctExpanded);
+    const size_t delta    = (expanded > flat) ? expanded - flat : 0;
+
+    /*  Reported unconditionally, not only on failure: the numbers are the point of the
+        case, and a silent pass tells the next person nothing about which way they
+        moved. */
+    qInfo() << "bytes/row  flat:" << flat << " expanded:" << expanded
+            << " delta:" << delta
+            << "| interned strings  flat:" << distinctFlat
+            << " expanded:" << distinctExpanded;
+
+    QVERIFY2(delta < kMaxExpansionBytesPerRow,
+             qPrintable(QString("prefix expansion costs %1 bytes/row, ceiling %2 -- read "
+                                "the comment above before moving the ceiling")
+                            .arg(delta).arg(kMaxExpansionBytesPerRow)));
+
+    /*  THE INTERNER MUST SCALE WITH THE VOCABULARY, NOT THE ROW COUNT. Expansion adds the
+        ancestor paths as strings of their own, so this number grows -- but it must stay a
+        function of how many distinct paths exist, not of how many images carry them. If
+        it ever approached kRows the interning would have broken and the per-row figures
+        above would be measuring the wrong thing entirely. */
+    QVERIFY(distinctExpanded > distinctFlat);
+    QVERIFY2(distinctExpanded < kRows / 10,
+             "interned strings must scale with the vocabulary, not the row count");
 }
 
 QTEST_MAIN(tst_imagerow)

@@ -61,6 +61,7 @@ public:
     QString getItem(QByteArray item);
     QStringList getItemList(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
+    bool setItemList(QByteArray item, const QStringList &values);
     void fix();
 
     QString srcToString();
@@ -80,6 +81,24 @@ private:
     bool includeSchemaNamespace(QString item);
     void report(XmpElement o);
     static QByteArray skeleton();
+
+    /*
+        rapidxml stores POINTERS, never copies, so every node name and value handed to
+        allocate_node/allocate_attribute must outlive xmlDoc. a and v are the
+        class-lifetime stores that satisfy that. These two append and hand back the
+        stable pointer, so the lifetime rule is written down once instead of at every
+        call site.
+
+        The pointer survives a and v reallocating around it: QByteArray owns a heap
+        block and has no small-string buffer, so moving the QByteArray object during a
+        QList regrow does not move the bytes constData() points at.
+    */
+    const char *keepName(const QByteArray &name);
+    const char *keepValue(const QByteArray &value);
+
+    /* Remove an element from xmlDoc in either of the two forms xmlDocElement can
+       report, doing nothing if it was not found. */
+    void removeItem(const XmpElement &element);
 
     XmpElement xmlDocElement(QString name,
                      rapidxml::xml_node<> *node,

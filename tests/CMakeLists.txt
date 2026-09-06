@@ -238,6 +238,12 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
+# tst_keywordpaths pins the path algebra in Metadata/keywordflatten.h -- leaf
+# consumption, prefix expansion and the descendant test. It is header-only and shared by
+# the datamodel and the catalog, which is the point: if the two split a path differently
+# the category list and the search disagree about the same picture.
+winnow_add_unit_test(tst_keywordpaths unit/tst_keywordpaths.cpp)
+
 # tst_rowfields pins Datamodel/rowfields.h -- the single declaration of an image's
 # fields -- against the catalog's image table. The table exists so the model's
 # columns, the SQL schema and categorySql cannot drift apart; a table nothing

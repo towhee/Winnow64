@@ -900,12 +900,17 @@ QStringList Xmp::getItemList(QByteArray item)
             nodeName = xmlNodeName(n);
             if (nodeName == "rdf:li") {
                 val = xmlNodeValue(n);
-                valList << val;
-                if (val != "") continue;
-                rapidxml::xml_attribute<>* a = n->first_attribute();
-                if (a == 0) continue;
-                val = xmlAttributeName(a);
-                valList << val;
+                /* A valued <rdf:li> is the ordinary case. Only a VALUELESS one falls
+                   through to its attribute -- appending val first put an empty entry
+                   in the list AND then the attribute, so one malformed <rdf:li/>
+                   yielded two keywords, one of them blank. */
+                if (val != "") {
+                    valList << val;
+                    continue;
+                }
+                rapidxml::xml_attribute<>* attr = n->first_attribute();
+                if (attr == nullptr) continue;
+                valList << xmlAttributeName(attr);
             }
         }
     }
@@ -946,17 +951,25 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
         G::issueDedup("Warning", msg, "Xmp::setItem", -1, filePath);
     }
 
+    /*
+        A List property -- dc:subject and lr:hierarchicalSubject -- is an rdf:Bag of
+        rdf:li and belongs to setItemList. Refusing it HERE, before the removal below,
+        matters more than it looks: neither branch that follows writes a List, so the
+        removal would delete the user's existing keyword Bag and put nothing back. That
+        made setItem("subject", ...) a silent keyword deleter.
+    */
+    if (definedElements[item].type == ElementType::List) {
+        QString msg = "Item " + item + " is a list property. Use Xmp::setItemList.";
+        G::issueDedup("Warning", msg, "Xmp::setItem", -1, filePath);
+        return false;
+    }
+
     // check the item schema namespace has been defined in rdf:description
     if (!includeSchemaNamespace(item)) return false;
 
     // if item exists in xmp remove item so we can replace
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
-    if (element.exists()) {
-        if (element.type == ElementType::Attribute)
-            element.node->remove_attribute(element.attr);
-        if (element.type == ElementType::Node)
-            element.parent->remove_node(element.node);
-    }
+    removeItem(element);
 
     // get default XmpObj for item
     element = definedElements[item];
@@ -986,6 +999,110 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
         rapidxml::xml_node<> *node = xmlDoc.allocate_node(rapidxml::node_element, a[idx], v[idx]);
         parElement.node->append_node(node);
     }
+    return true;
+}
+
+const char *Xmp::keepName(const QByteArray &name)
+{
+    a.append(name);
+    return a.last().constData();
+}
+
+const char *Xmp::keepValue(const QByteArray &value)
+{
+    v.append(value);
+    return v.last().constData();
+}
+
+void Xmp::removeItem(const XmpElement &element)
+{
+    if (!element.exists()) return;
+    if (element.type == ElementType::Attribute && element.node && element.attr)
+        element.node->remove_attribute(element.attr);
+    /* parent is only filled in when xmlDocElement RECURSES, so a hit on the very first
+       node reports a null parent. Not reachable for a property under rdf:Description,
+       but a null deref is not worth leaving to the layout of a file we did not write. */
+    if (element.type == ElementType::Node && element.parent && element.node)
+        element.parent->remove_node(element.node);
+}
+
+bool Xmp::setItemList(QByteArray item, const QStringList &values)
+{
+/*
+    Write a List property -- dc:subject or lr:hierarchicalSubject -- as an rdf:Bag of
+    rdf:li, which is the shape Lightroom writes and Xmp::getItemList reads:
+
+        <dc:subject>
+         <rdf:Bag>
+          <rdf:li>Heron</rdf:li>
+          <rdf:li>Neck Point</rdf:li>
+         </rdf:Bag>
+        </dc:subject>
+
+    AN EMPTY LIST REMOVES THE PROPERTY rather than writing an empty Bag. That is what
+    lets keyword DELETION sync: Metadata::parseSidecar reads keywords unguarded on
+    isEmpty precisely so that a sidecar which no longer carries dc:subject clears the
+    keywords, and a present-but-empty Bag would defeat it.
+
+    Values are QString, not QByteArray as setItem takes. Keyword text is the user's --
+    accents, CJK, dashes -- and every setItem caller reaches it through toLatin1(),
+    which would mangle all three. Nothing here needs to escape & or <: docToQString
+    prints through rapidxml::print, whose copy_and_expand_chars expands them, and
+    parse<0> translates them back on read.
+
+    Check Xmp::err before calling. If err then call Xmp::fix() first, as with setItem.
+*/
+    if (G::isLogger) G::log("Xmp::setItemList");
+
+    if (err) return false;
+
+    item = item.toLower();
+    if (!definedElements.contains(item)) {
+        QString msg = "Failed for " + item + ".";
+        G::issueDedup("Warning", msg, "Xmp::setItemList", -1, filePath);
+        return false;
+    }
+    if (definedElements[item].type != ElementType::List) {
+        QString msg = "Item " + item + " is not a list property. Use Xmp::setItem.";
+        G::issueDedup("Warning", msg, "Xmp::setItemList", -1, filePath);
+        return false;
+    }
+
+    // check the item schema namespace has been defined in rdf:description
+    if (!includeSchemaNamespace(item)) return false;
+
+    /* Remove any existing form of the property first. It can be a node (the Bag shape
+       above) or an attribute, because an application that wrote a single keyword may
+       have written dc:subject="Heron" on rdf:Description. */
+    removeItem(xmlDocElement(definedElements[item].name, xmlDoc.first_node()));
+
+    if (values.isEmpty()) return true;
+
+    const XmpElement element = definedElements[item];
+    XmpElement parElement = xmlDocElement(element.parentName, xmlDoc.first_node());
+    if (!parElement.exists() || parElement.node == nullptr) return false;
+
+    /* The property and Bag nodes are containers and are given NO value. rapidxml's
+       printer emits a node's value INSTEAD of recursing into its children, so a
+       container handed "" rather than nullptr prints as empty and every keyword is
+       silently lost. */
+    rapidxml::xml_node<> *propertyNode =
+        xmlDoc.allocate_node(rapidxml::node_element, keepName(element.name.toUtf8()));
+    rapidxml::xml_node<> *bagNode =
+        xmlDoc.allocate_node(rapidxml::node_element, keepName(QByteArrayLiteral("rdf:Bag")));
+    propertyNode->append_node(bagNode);
+
+    /* One name pointer serves every rdf:li. rapidxml treats a name as read-only and
+       never writes through the pointer, so appending N copies of "rdf:li" to a would
+       buy nothing. Values cannot be shared -- each is a different string. */
+    const char *liName = keepName(QByteArrayLiteral("rdf:li"));
+    for (const QString &value : values) {
+        rapidxml::xml_node<> *liNode =
+            xmlDoc.allocate_node(rapidxml::node_element, liName, keepValue(value.toUtf8()));
+        bagNode->append_node(liNode);
+    }
+
+    parElement.node->append_node(propertyNode);
     return true;
 }
 

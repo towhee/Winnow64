@@ -209,7 +209,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      HEIC and the colr Box
 
 20. KEYWORDS AND CATALOGUING
-     Reading Keywords (dc:subject and lr:hierarchicalSubject)
+     Reading and Writing Keywords (dc:subject and lr:hierarchicalSubject)
      The Catalog (Cross-folder Search)
      The Catalog Dock and Loading Results
      The Filter Dock (Folders and Catalog)
@@ -778,6 +778,10 @@ WHAT A ROW COSTS, MEASURED. The plan to make the catalog browsable rests on one 
 THE 19,900 IS WHY THE CATALOG HAS A LOAD BUTTON. Each populated cell is a QStandardItem plus its QStandardItemData role list plus a pointer slot; addFileDataForRow sets ~30 and addMetadataForItem ~80, and 92 columns of that is roughly 20 KB before a single thumbnail. It is worse than the 15-18 KB the plan estimated from the type sizes, which is the ordinary reason for measuring rather than deriving.
 
 573 IS THE PESSIMISTIC END -- every row given a title and five keywords. A sparse row (neither) measured 413 bytes, so a real library lands between 98 MB and 137 MB. Two design questions were settled by the same harness rather than by argument: storing the full path costs ~190 bytes of the 573, and it is KEPT anyway, because the path is the identity key that icd, fPathRow and the proxy snapshot all use and composing it per access would trade 45 MB for an allocation on every hot path; and interning the repeated strings (folder, type, make, model, lens, year, day, creator, copyright, keywords) is what makes the rest affordable, since those are the same handful of values across a whole shoot.
+
+THOSE TWO NUMBERS ARE STALE AND THE RATIO THEY WERE QUOTED FOR IS NOT. The prototype harness was disposable, so nothing could re-measure a row as three batches of columns moved onto it; RowStore::approxBytes() and tst_imagerow::prefixExpansionStaysInBudget now exist so that is no longer true. Measured 2026-09-06 over 20,000 populated rows: a populated row is ~1,050 bytes/row including spare capacity, ~600 bytes/row of content alone, and sizeof(ImageRow) is 472 of that on its own. Roughly 366 bytes a row of the first figure is the row VECTOR's unused capacity -- resize(20,000) reserves about 35,500 -- which is genuinely allocated and so is honestly counted, but is a property of QVector's growth rather than of a row. Even at the pessimistic reading a row is an order of magnitude under the 19,900 the QStandardItems cost, so the decision the measurement was taken for stands; what changed is that it can now be re-taken.
+
+THE TEST GATES A DELTA, NOT AN ABSOLUTE, and that is a choice made after measuring both. The absolute is dominated by sizeof(ImageRow) and by allocator spare capacity, neither of which the change under test controls, so a red line drawn round them would fire on unrelated work while saying nothing true about the change. The first delta it gated: making G::KeywordsAllColumn hold every ancestor PREFIX of every keyword path cost SIX bytes a row, against an estimate of thirty-two -- siblings share ancestors, so five assigned paths expand to about eleven distinct prefixes rather than fifteen, and those ids landed inside a QVector block the row had already rounded up to.
 
 Datamodel/rowfields.h IS THE FIELD TABLE, and it is the answer to "should the index and the datamodel be one entity": YES, one SCHEMA and one loader, not one storage engine. The same facts about an image are currently written out four times by hand -- G::dataModelColumns, the datamodel cells, the catalog's image table, and Catalog::categorySql -- and that they agree is a matter of vigilance that has already been paid for, since tst_catalog::categoryItemsMatchWhatTheDatamodelWrites exists only to pin two of them against the other two. The table is an X-macro so a field declared once can generate all four.
 
@@ -4513,7 +4517,7 @@ The chain from here is generic: Heic::colrBox fills m->iccBuf, DataModel writes 
 
 *** KEYWORDS AND CATALOGUING ***
 
-⏺ Keywords and Cataloguing > Reading Keywords (dc:subject and lr:hierarchicalSubject)
+⏺ Keywords and Cataloguing > Reading and Writing Keywords (dc:subject and lr:hierarchicalSubject)
 
 WINNOW USED TO LOSE ALMOST EVERY KEYWORD IT WAS SHOWN. Two properties carry them: dc:subject, the flat list of leaf names that every application writes, and lr:hierarchicalSubject, Lightroom's parallel list of full keyword paths with '|' separators ie "Location|Canada|BC|Vancouver Island". Winnow read the first in exactly two places -- Jpeg::parse and PNG::parse -- and the second nowhere at all: it was not even in Xmp::definedElements, so getItemList would have refused the name.
 
@@ -4535,9 +4539,13 @@ WHAT IT COSTS is ambiguity, and that is paid for elsewhere rather than avoided. 
 
 G::KeywordsColumn DELIBERATELY KEEPS THE LITERAL dc:subject LIST rather than being replaced by the flattened one, and DataModel::imMetadata still reads that one. The two are different facts and only one of them may ever be written back: emitting the flattened column as dc:subject would put every ancestor into a property that never held them. When keyword writing is implemented, dc:subject comes from KeywordsColumn and lr:hierarchicalSubject from KeywordPathsColumn -- never from KeywordsAllColumn.
 
-WRITING KEYWORDS IS NOT IMPLEMENTED and is deliberately separate work. Xmp::setItem can only write an ATTRIBUTE on rdf:Description; no code path emits an rdf:Bag of rdf:li, so there is currently no way to write either property. ImageMetadata also has no _keywords shadow, which is what Metadata::writeXMP's change detection depends on. Until that exists, keywords are read-only and the files remain whatever Lightroom made them.
+THE LIST WRITER EXISTS; NOTHING CALLS IT YET. Xmp::setItemList writes a List property -- dc:subject or lr:hierarchicalSubject -- as an rdf:Bag of rdf:li, which is the shape Lightroom writes and Xmp::getItemList reads. It takes a QStringList rather than the QByteArray setItem takes, because keyword text is the user's (accents, CJK, dashes) and every setItem caller reaches it through toLatin1(), which would mangle all three. AN EMPTY LIST REMOVES THE PROPERTY rather than writing an empty Bag: Metadata::parseSidecar reads keywords unguarded on isEmpty precisely so that clearing every keyword elsewhere syncs, and a present-but-empty Bag would defeat that. Nothing escapes & or < anywhere in Xmp and nothing needs to -- docToQString prints through rapidxml::print, whose copy_and_expand_chars expands them, and parse<0> translates them back on read; that is a property of the PRINTER rather than of the writer, so tst_xmpkeywords pins it.
 
-tests/unit/tst_xmpkeywords.cpp pins all of it: both properties off a Lightroom-shaped fixture, an absent-keyword document staying quiet rather than warning, applyXmp filling both lists, and applyXmp still taking the underscore snapshot that writeXMP needs.
+AND setItem NOW REFUSES A LIST PROPERTY, which is a bug fix rather than tidiness. setItem removes the existing element before deciding what to write and has only an Attribute branch and a Node branch, so setItem("subject", ...) deleted every keyword in the file and put nothing back -- silently, leaving a still-valid document. The guard returns false BEFORE the removal. Nothing had ever called it that way, so nothing was lost; the hazard was that the first keyword-writing caller would have found it the hard way.
+
+WHAT IS STILL MISSING before a keyword edit can be saved: ImageMetadata has no _keywords or _keywordPaths shadow, which is what Metadata::writeXMP's change detection depends on, and no UI produces an edit. Until those land, keywords are read-only and the files remain whatever Lightroom or the camera left.
+
+tests/unit/tst_xmpkeywords.cpp pins all of it: both properties off a Lightroom-shaped fixture, an absent-keyword document staying quiet rather than warning, applyXmp filling both lists, applyXmp still taking the underscore snapshot that writeXMP needs, and -- on the write side -- an rdf:Bag that survives a re-parse in order, ampersands and CJK round-tripping, an empty list removing the property while leaving the other one alone, setItem refusing a list property WITHOUT having eaten the Bag first, an attribute-form dc:subject being replaced rather than duplicated, and lr: being declared when the hierarchy is written into a file that never had it.
 
 
 ⏺ Keywords and Cataloguing > The Catalog (Cross-folder Search)

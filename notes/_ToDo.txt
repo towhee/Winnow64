@@ -12,9 +12,23 @@ BUGS / TO DO
 - Tweak main menu (Library, Develop...)
 - Tweak preferences
 - Tweak develop help
+- Tweak workspaces - more sophicated default
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
-- Add a keyword module.
+- Keyword module: IN PROGRESS 2026-09-06. Keyword identity reverts to the hierarchical
+  PATH (catalog schema v10, reversing the v4 flattening) + a new Keywords dock.
+  Plan: ~/.claude/plans/factor-in-that-we-majestic-pascal.md. Phase 0 (Xmp::setItemList
+  rdf:Bag writer + setItem refusing a List) DONE.
+  Deliberately DEFERRED out of that work, each for a stated reason:
+    - 9-slot keyword shortcut/set grid (number keys apply a keyword to the selection,
+      switchable sets). Must clear MW::developShortcutIntercept, which eats number keys.
+    - Synonym export to dc:subject. An exported synonym returns as an unmatched leaf and
+      becomes a spurious root on the next read; consuming it needs a vocabulary lookup
+      during parsing, on parser threads that have no catalog access.
+    - Per-node export flags honoured on SIDECAR write. Honoured on Lightroom export only
+      for now: a flag that drops a tag from the file drops it from the image next read.
+    - Resumable deferred retag (a vocab_retag table). "Not now" currently leaves the
+      images showing as ? orphans in the dock, which is visible rather than hidden.
 - Auto keyword generator (k shortcut?)
 - Review RapidRaw masks / inpainting / model usage
 - Does detail need Denoise / color?

@@ -56,6 +56,33 @@
     proxy snapshot all use, and composing it per access would trade 45 MB for an
     allocation on every hot path.
 
+    THOSE TWO NUMBERS ARE NOW STALE, and the ratio they were quoted for is not.
+    The prototype harness was disposable, so nothing could re-measure the row
+    for three batches of added columns; RowStore::approxBytes() and
+    tst_imagerow::prefixExpansionStaysInBudget exist so that is no longer true.
+    Measured 2026-09-06 over 20,000 populated rows:
+
+      populated row, incl. spare capacity   ~1,050 bytes/row
+      the same row's content alone            ~600 bytes/row
+      sizeof(ImageRow) by itself                 472 bytes
+
+    Roughly 366 bytes a row of the first figure is the row VECTOR's unused
+    capacity -- resize(20,000) reserves ~35,500 -- which is genuinely allocated
+    and so is honestly counted, but is a property of QVector's growth rather
+    than of a row. The row itself grew because the second and third column
+    batches moved ~55 more columns onto it, which was the point of those passes.
+    Even at the pessimistic reading it is still an order of magnitude under the
+    19,900 the QStandardItems cost, so the decision the table serves stands.
+
+    A CEILING, NOT A BUDGET, is what the test asserts. It gates the DELTA a
+    change makes, because the absolute is dominated by sizeof(ImageRow) and by
+    allocator spare capacity -- neither of which a keyword or column change
+    controls, and a red line drawn round them would fire on unrelated work while
+    saying nothing true. The first delta it gated: making the keyword column
+    hold every ancestor PREFIX of every path cost SIX bytes a row, because
+    siblings share ancestors and the extra ids landed inside a QVector block the
+    row had already rounded up to.
+
     -------------------------------------------------------------------------
     HOW TO USE IT. WINNOW_ROW_FIELDS is an X-macro: define WF and include it.
     Fields are declared as
