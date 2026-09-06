@@ -4548,18 +4548,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     probe.mark("title");
 
-    /*  The dot in the Keywords tree marks what THIS image carries. Guarded on the dock
-        being visible: it ships off, and walking a vocabulary on every arrow key for a
-        panel nobody has open is work for nothing. */
-    if (keywordVocab && keywordsDock && keywordsDock->isVisible()) {
-        const int kwRow = dm->currentSfRow >= 0
-            ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
-        if (kwRow >= 0) {
-            keywordVocab->setAppliedPaths(keywordEffectivePaths(
-                dm->index(kwRow, G::KeywordsColumn).data().toStringList(),
-                dm->index(kwRow, G::KeywordPathsColumn).data().toStringList()));
-        }
-    }
+    /*  The Keywords dock follows the selection: the chips below and the dots in the
+        tree. Guarded inside on the dock being visible -- it ships off. */
+    refreshKeywordsDock();
 
     // update loupe/video view
     videoView->stop();

@@ -40,6 +40,7 @@
 #include "Views/catalogview.h"
 #include "Views/filterpanel.h"
 #include "Views/keywordtree.h"
+#include "Views/keywordchips.h"
 #include "Datamodel/keywordvocab.h"
 #include "Views/catalogscopetree.h"
 #include "Main/catalogscanner.h"
@@ -1706,6 +1707,7 @@ private:
     CatalogView *catalogView = nullptr;
     KeywordVocab *keywordVocab = nullptr;
     KeywordTree *keywordTree = nullptr;
+    KeywordChips *keywordChips = nullptr;
     /* Walks the designated roots on its own low-priority thread. */
     CatalogScanner *catalogScanner = nullptr;
     /* What the background scanner may walk: one ordered table of include/exclude rows,
@@ -2207,6 +2209,16 @@ private:
         carry the old path into line. The model has already changed the NAME; this is
         only about the files. */
     void keywordPathChanged(const QString &oldPath, const QString &newPath);
+    /*  Repaint the dock from the current selection -- the chips and the tree's dots.
+        Cheap and guarded on the dock being visible; it ships off. */
+    void refreshKeywordsDock();
+    /*  Tag specific image PATHS (dropped on a keyword node) rather than the selection. */
+    void applyKeywordToPaths(const QString &keywordPath, const QStringList &imagePaths);
+    /*  Rewrite oldPath to newPath on every image carrying it or anything beneath it,
+        optionally restricted to one folder. Driven from the CATALOG, so it reaches
+        images the datamodel has never loaded. Returns how many files were written. */
+    int retagKeywordPath(const QString &oldPath, const QString &newPath,
+                         const QString &folder = QString());
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();

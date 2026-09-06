@@ -765,6 +765,69 @@ void Metadata::setKeywords(const QStringList &subject, const QStringList &hierar
     m.keywordPaths = hierarchical;
 }
 
+bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &subject,
+                                      const QStringList &hierarchical)
+{
+/*
+    The two keyword properties, and nothing else.
+
+    WHY THIS EXISTS BESIDE writeXMP. writeXMP decides what to write by comparing the
+    shared ImageMetadata m against its shadows, so it can only be used for an image the
+    datamodel has loaded. A retag after a keyword rename reaches every image carrying the
+    old path, which spans folders that are not loaded and may never be. Reconstructing a
+    whole ImageMetadata for each of them -- to write two properties -- would mean getting
+    every OTHER field right as well, and getting one wrong would silently rewrite it.
+
+    So this opens the sidecar and replaces the two properties in place. Every other
+    property in the document is left exactly as it was found, because rapidxml is
+    re-serialising the document it parsed rather than a document we composed. That is a
+    narrower and safer operation than the general writer, not a shortcut around it.
+
+    AN EMPTY PAIR REMOVES BOTH PROPERTIES -- setItemList's contract -- which is how the
+    last keyword comes off an image.
+*/
+    if (G::isLogger) G::log("Metadata::writeKeywordsToSidecar", fPath);
+    if (isPreviewCachePath(fPath, "Metadata::writeKeywordsToSidecar")) return false;
+
+    const QString sPath = sidecarPath(fPath);
+    /*  Nothing to write and nothing to clear: an image with no keywords and no sidecar
+        must not have one created for it. */
+    if (subject.isEmpty() && hierarchical.isEmpty() && !QFileInfo::exists(sPath))
+        return true;
+
+    // Refuse to write through a symlink, as every other sidecar writer here does.
+    if (QFileInfo(sPath).isSymLink()) {
+        G::issue("Warning", "Refusing to write sidecar: path is a symlink.",
+                 "Metadata::writeKeywordsToSidecar", -1, sPath);
+        return false;
+    }
+
+    QFile sidecarFile(sPath);
+    if (!sidecarFile.open(QIODevice::ReadWrite)) {
+        G::issue("Warning", "Failed to open sidecar to write keywords.",
+                 "Metadata::writeKeywordsToSidecar", -1, sPath);
+        return false;
+    }
+
+    Xmp xmp(sidecarFile, G::dmInstance);
+    if (!xmp.isValid) xmp.fix();
+
+    xmp.setItemList("subject", subject);
+    xmp.setItemList("hierarchicalsubject", hierarchical);
+
+    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
+        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
+    xmp.setItem("modifydate", modifyDate.toLatin1());
+
+    const bool ok = xmp.writeSidecar(sidecarFile);
+    if (!ok) {
+        G::issue("Warning", "Failed to write keywords to sidecar.",
+                 "Metadata::writeKeywordsToSidecar", -1, sPath);
+    }
+    sidecarFile.close();
+    return ok;
+}
+
 bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*
