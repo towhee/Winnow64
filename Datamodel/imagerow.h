@@ -79,6 +79,20 @@ public:
     void clear() { mIds.clear(); mValues.clear(); }
     int distinctCount() const { return mValues.size(); }
 
+    /*  Approximate resident bytes. See ImageRow::approxBytes for why "approximate" is
+        the honest word and what the number is for.
+
+        The hash KEY is the same QString as the value it maps to, and QString is
+        implicitly shared, so the characters are counted once (in the mValues loop) and
+        the hash contributes only its nodes and buckets. */
+    size_t approxBytes() const
+    {
+        size_t n = size_t(mValues.capacity()) * sizeof(QString);
+        for (const QString &s : mValues) n += size_t(s.capacity()) * 2;
+        n += size_t(mIds.capacity()) * (sizeof(void *) + sizeof(QString) + sizeof(qint32));
+        return n;
+    }
+
 private:
     QHash<QString, qint32> mIds;
     QVector<QString> mValues;
@@ -190,6 +204,32 @@ struct ImageRow
     bool hasSidecar = false;
     bool developEdited = false;
 
+    /*  APPROXIMATE RESIDENT BYTES for this row: the struct itself, plus the heap each of
+        its owning members points at. It exists because the 573-bytes-a-row figure the
+        whole packed-row design rests on came from a throwaway prototype and there was no
+        way to re-measure it in place -- so a change that widened a row could only be
+        argued about. tst_imagerow::prefixExpansionStaysInBudget is the caller.
+
+        APPROXIMATE, and the ways it is wrong are worth knowing rather than fixing:
+        allocator overhead per block is not counted, interned strings are not counted
+        here at all (they belong to the Interner, which measures itself, and counting
+        them per row would multiply one string by every row that references it), and
+        QString capacity is characters so it doubles for UTF-16. It is a budget
+        instrument, not an allocator audit; what matters is that it moves when a row
+        genuinely grows and does not when a row merely points at more shared text. */
+    size_t approxBytes() const
+    {
+        auto str = [](const QString &s) { return size_t(s.capacity()) * 2; };
+        size_t n = sizeof(ImageRow);
+        n += str(path) + str(name) + str(title) + str(searchText);
+        n += size_t(err.capacity()) * sizeof(QString);
+        for (const QString &e : err) n += str(e);
+        n += size_t(keywordIds.capacity()) * sizeof(qint32);
+        n += size_t(keywordPathIds.capacity()) * sizeof(qint32);
+        n += size_t(keywordAllIds.capacity()) * sizeof(qint32);
+        return n;
+    }
+
     /*  WHICH FIELDS HAVE ACTUALLY BEEN WRITTEN. The scratch store learned this
         first (see rowscratch.h) and it matters more here, because this batch
         brought in the first genuinely CONDITIONAL resident columns: Duration is
@@ -246,6 +286,17 @@ public:
     /*  Reporting only, and NOT locked -- the caller holds a reference into the
         interner, which no lock taken here could keep valid. GUI thread. */
     const Interner &strings() const { return mStrings; }
+
+    /*  Approximate resident bytes for the whole store: the row vector, the heap each row
+        owns, and the interner once. Rows are counted through the vector's CAPACITY and
+        then topped up per row, so a row's own sizeof is not paid twice. */
+    size_t approxBytes() const
+    {
+        QReadLocker l(&mLock);
+        size_t n = size_t(mRows.capacity()) * sizeof(ImageRow);
+        for (const ImageRow &r : mRows) n += r.approxBytes() - sizeof(ImageRow);
+        return n + mStrings.approxBytes();
+    }
 
     /*  Which datamodel columns this store can answer. Deliberately explicit
         rather than "everything not listed as scratch": a column silently

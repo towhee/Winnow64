@@ -14,8 +14,16 @@ f=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
 # notes/Documentation.txt is EXEMPT: it is soft-wrapped (the editor wraps it), so one
 # paragraph is one line by design and hard-wrapping it to 90 would be the bug, not the
 # fix. Everything else in notes/ still follows the rule.
+#
+# The auto-memory directory is EXEMPT for the same reason plus a harder one: the 90-char
+# rule is for CODE COMMENTS, and MEMORY.md is an index that must also stay under a
+# ~140-line budget so it can be read in one go. At ~95 entries those two limits cannot
+# both hold -- wrapped to 90 the index is 210 lines, and forcing one 90-char line per
+# entry leaves about 25 characters of hook, which turns entries into "parked" and
+# "not real". Line count wins there; wrapping does not.
 case "$f" in
   */notes/Documentation.txt) exit 0 ;;
+  */memory/*.md)             exit 0 ;;
 esac
 
 case "$f" in
