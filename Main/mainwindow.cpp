@@ -150,24 +150,41 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         return;
     }
 
-    // Width the text titles need vs. the width available. In text mode the tab
-    // bar's sizeHint is exact; remember it so graphic mode uses the *same*
-    // threshold (otherwise an under-estimate makes the two modes disagree and
-    // flip-flop at the boundary). Falls back to a font estimate only before the
-    // first text-mode pass / right after a rebuild.
-    int needTextWidth;
+    /* Width the text titles need vs. the width available.
+
+       In text mode the tab bar's sizeHint is exact, so it sets the threshold; the
+       per-tab widths are learned by TITLE at the same time (plus whatever the bar
+       adds beyond their sum) so graphic mode can rebuild the same total from the
+       tabs it currently has. Rebuilding it per title is what makes a change in the
+       tab SET work: caching one total for the bar meant the total learned from
+       seven tabs (Develop + History + Presets showing) was still the threshold
+       after leaving Develop hid three of them, so four tabs that plainly fit were
+       stuck in graphic mode forever. Reusing the learned widths - rather than
+       re-estimating - also keeps the two modes on the *same* threshold, which is
+       what stops a flip-flop at the boundary. A font estimate is the fallback for
+       a title not yet seen in text mode (first pass / right after a rebuild). */
+    int needTextWidth = 0;
+    const int nTabs = qMin(id.size(), tabBar->count());
     if (anyText) {
+        int sum = 0;
+        for (int i = 0; i < nTabs; ++i) {
+            int w = tabBar->tabRect(i).width();
+            if (w <= 0) continue;
+            sum += w;
+            dockTabTextWidthByTitle.insert(id.at(i), w);
+        }
         needTextWidth = tabBar->sizeHint().width();
-        tabBar->setProperty("dockTabTextWidth", needTextWidth);
+        tabBar->setProperty("dockTabBarOverhead", sum > 0 ? needTextWidth - sum : 0);
     }
     else {
-        needTextWidth = tabBar->property("dockTabTextWidth").toInt();
-        if (needTextWidth <= 0) {
-            int pad = qMax(tabBar->style()->pixelMetric(QStyle::PM_TabBarTabHSpace, nullptr, tabBar), 16);
-            needTextWidth = 0;
-            for (const QString &t : id)
-                needTextWidth += tabBar->fontMetrics().horizontalAdvance(t) + pad;
+        const int pad =
+            qMax(tabBar->style()->pixelMetric(QStyle::PM_TabBarTabHSpace, nullptr, tabBar), 16);
+        for (const QString &t : id) {
+            int w = dockTabTextWidthByTitle.value(t, 0);
+            if (w <= 0) w = tabBar->fontMetrics().horizontalAdvance(t) + pad;
+            needTextWidth += w;
         }
+        needTextWidth += tabBar->property("dockTabBarOverhead").toInt();
     }
     // Available width is the dock AREA width, not tabBar->width() (the tab bar
     // shrinks to fit its tabs). Use the FRONT (visible, un-occluded) dock: a
@@ -251,12 +268,15 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
 void MW::scheduleDockTabUpdate()
 {
 /*
-    Re-evaluate every dock tab bar after the layout settles. Connected to each
-    tabified dock's dockLocationChanged / topLevelChanged: dragging a dock into
-    a tab group adds a tab but fires no reliable resize/show on the surviving
-    docks, so the tab count can change without the event-filter path noticing.
-    Deferred with a zero timer so the new tab and final geometry exist when it
-    runs.
+    Re-evaluate every dock tab bar after the layout settles. For any change in
+    the NUMBER of tabs, which the event-filter path (tab-bar events, dock
+    Resize/Show) does not reliably see: dragging a dock into a tab group adds a
+    tab but fires no resize/show on the surviving docks, and a dock Hide arrives
+    while its tab is still in the bar. Callers: each tabified dock's
+    dockLocationChanged / topLevelChanged, a dock Hide, and setOperationMode
+    (Preview <-> Develop shows/hides Develop, History and Presets together).
+    Deferred with a zero timer so the rebuilt tab bar and final geometry exist
+    when it runs.
 */
     if (!G::useDockTitleGraphic) return;
     QTimer::singleShot(0, this, [this]() {
@@ -2326,11 +2346,18 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         // miss it - re-evaluate the dock tab graphics on dock resize/show too.
         // This also covers workspace switches: invokeWorkspace's restoreState
         // resizes and shows the docks, firing these events.
-        if (G::useDockTitleGraphic
-                && (event->type() == QEvent::Resize || event->type() == QEvent::Show)
-                && qobject_cast<QDockWidget *>(obj)) {
-            const QList<QTabBar *> bars = findChildren<QTabBar *>();
-            for (QTabBar *b : bars) updateDockTabGraphics(b);
+        if (G::useDockTitleGraphic && qobject_cast<QDockWidget *>(obj)) {
+            if (event->type() == QEvent::Resize || event->type() == QEvent::Show) {
+                const QList<QTabBar *> bars = findChildren<QTabBar *>();
+                for (QTabBar *b : bars) updateDockTabGraphics(b);
+            }
+            /* A dock HIDE removes a tab (leaving Develop hides develop/history/presets),
+               so the surviving titles may now fit and should revert to text. The tab is
+               still present when the Hide arrives, so defer to let the tab bar rebuild
+               (scheduleDockTabUpdate re-evaluates every bar on a zero timer). */
+            else if (event->type() == QEvent::Hide) {
+                scheduleDockTabUpdate();
+            }
         }
 
         // thumbDock uses Qt's default title bar (no DockTitleBar widget).

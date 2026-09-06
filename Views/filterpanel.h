@@ -2,9 +2,7 @@
 #define FILTERPANEL_H
 
 #include <QLabel>
-#include <QLineEdit>
 #include <QStringList>
-#include <QTimer>
 #include <QWidget>
 
 #include <climits>
@@ -40,15 +38,23 @@ class Filters;
 
     THE SCOPE IS NOT SET FROM THIS PANEL. The Folders|Catalog buttons and the "Manage..."
     row are gone: choosing the catalog is File > Open Catalog (or the Catalog row above
-    the Folders and Bookmarks trees, or Shift+F2), and choosing a folder is selecting one.
+    the Folders and Bookmarks trees, or File > Open Catalog), and choosing a folder is
+    selecting one.
     Which folders are indexed is configuration, and lives in File > Manage Catalog...
     The panel is the search surface for whichever scope MW has set; it does not own it.
 
-    SWITCHING SCOPE CARRIES THE SEARCH TEXT, AND CLEARS THE CHECKED ITEMS. The text is
-    the question, and carrying it is the hand-off in both directions: a folder search that
-    found nothing is one click from being asked of the whole library, and a library search
-    can be narrowed once it is loaded. It is also why "seed the filters from the catalog
-    query after a load" is not a separate feature -- it is this.
+    LEAVING THE CATALOG CARRIES THE QUERY, AND EVERY SCOPE SWITCH CLEARS THE CHECKED
+    ITEMS. The query is the question, and carrying it back to the folder is the hand-off a
+    library search earns: what was asked of everything can then be narrowed to what is in
+    front of you. It has to be carried deliberately, because the query lives in a tree row
+    and rebuilding the tree resets it -- see the rebuildFolderCategoriesRequested lambda in
+    MW::createFilterDock.
+
+    GOING THE OTHER WAY IT DOES NOT, and the row says so rather than showing text that is
+    no longer filtering. Entering Catalog scope LOADS the catalog, and a load resets the
+    filters like any folder change. (The QLineEdit that briefly sat above the tree claimed
+    to carry the text both ways and did not: it kept showing what the user had typed while
+    Filters::clearAll had already emptied the row the predicate reads.)
 
     The category CHECKS deliberately do not carry, because the two scopes are different
     vocabularies: a folder offers the three camera models in it, the library offers forty.
@@ -56,9 +62,27 @@ class Filters;
     from the one the user set up, and the items they had checked may not exist on the
     other side at all. The tree is rebuilt for the scope it is showing.
 
-    THE SEARCH BOX IS SHARED. F2 focuses it in Folders, Shift+F2 focuses it in Catalog,
-    so the pairing those two shortcuts always implied is now literally true. The text is
-    parsed by one grammar (Utilities/searchterms.h) whichever scope runs it.
+    SEARCH IS A FILTER CATEGORY, NOT A BOX ABOVE THE TREE. The query is typed into the
+    editable Search row, where it sits among the other things that narrow the view, with
+    its counts in the same two columns and its "No match" row beside it. The panel carried
+    a QLineEdit for a while, when the catalog arrived: that made the query look like a
+    different kind of thing from the ticks below it, cost the category its two rows, and
+    put a second ? in the panel. The Filters title bar already has one.
+
+    THE ROW IS SHARED BETWEEN THE SCOPES. F2 opens it in whichever scope is current, so
+    the pairing those two shortcuts always implied is literally true. The text is parsed
+    by one grammar (Utilities/searchterms.h) whichever scope runs it, and it carries
+    across a scope switch.
+
+    THE QUERY IS COMMITTED, NOT TYPED, which the tree item gives for nothing: a
+    QTreeWidget editor writes on Return (or on losing focus), never per keystroke. That
+    matters at library size -- the panel once searched the catalog on a 250 ms debounce,
+    where a single letter is a PREFIX to FTS5, matched most of the index, ran on the GUI
+    thread and had its result LOADED. One letter beachballed the application.
+
+    WHICH SCOPE IS SHOWING IS SAID IN THE DOCK TITLE -- "Filters (Folders)" or "Filters
+    (Catalog)" -- rather than in the search row's prompt, so it is legible whether or not
+    the Search category is expanded. MW::setScope writes it; see Main/setandupdate.cpp.
 
     IT DOES NOT SHOW THUMBNAILS. A picture list in a narrow dock would be a worse version
     of the grid Winnow already has: what the catalog scope matches is loaded into the
@@ -83,8 +107,8 @@ public:
     Scope scope() const { return currentScope; }
     void setScope(Scope scope);
 
-    /* Put the cursor in the search box, selecting what is there so typing replaces it.
-       F2 and Shift+F2 call this after switching to their scope. */
+    /* Open the editor on the Search category row. F2 calls this after
+       switching to their scope. */
     void focusSearch();
 
     /* Re-read the catalog size and, in Catalog scope, its categories. Called when the
@@ -114,11 +138,22 @@ signals:
     void scopeChanged(int scope);
 
 private slots:
-    /* Run the Catalog query. Debounced; a no-op in Folders scope, where the tree drives
-       the proxy filter directly. */
-    void runSearch();
+    /*  The Search row was edited (Filters::searchStringChange). The edit has already
+        filtered the proxy, which is all an uncapped scope needs; this is here for the
+        one case that still has to ask the index -- see currentQuery. */
+    void searchTextChanged(const QString &text);
 
 private:
+    /*  LOAD the Catalog scope; a no-op in Folders scope. This is not what an ordinary
+        query runs -- an uncapped catalog is browsed whole and the query filters the
+        proxy. It runs on a scope switch, on the dock being shown, and (only when a cap
+        is set) on an edit to the Search row.
+
+        force loads even when the result set is unchanged, which a scope ENTRY must:
+        coming back from Folders the model holds a folder while results still names the
+        catalog rows from last time, and the changed-check would load nothing. */
+    void runSearch(bool force = false);
+
     void updateStatus();
     void applyScope();
     /* The query the box and the checked items currently describe. */
@@ -126,13 +161,9 @@ private:
 
     Filters *filters = nullptr;
 
-    QLineEdit *searchEdit = nullptr;
-
     /*  Shown ONLY when there is a reason the panel can show nothing: no index, or an
         empty one. Hidden the rest of the time -- see updateStatus. */
     QLabel *statusLabel = nullptr;
-
-    QTimer *debounce = nullptr;
 
     /* The most recent Catalog result: what was loaded, held so the next run can tell
        whether the set actually changed before loading it again. */
@@ -169,9 +200,6 @@ private:
         can be told apart again if an automatic load ever feels heavy. */
     static int autoLoadMax()  { return G::maxSearchResults > 0 ? G::maxSearchResults
                                                               : INT_MAX; }
-    /* Keystrokes are coalesced into one query: it hits SQLite and FTS5 on the GUI thread,
-       and at a quarter of a million rows a query per character would be felt. */
-    static constexpr int kDebounceMs = 250;
 };
 
 #endif // FILTERPANEL_H

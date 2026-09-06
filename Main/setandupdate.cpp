@@ -415,6 +415,15 @@ void MW::setScope(G::Scope s, QString src)
         back cannot loop. */
     if (folderCatalogTree) folderCatalogTree->setScopeIsCatalog(s == G::Scope::Catalog);
 
+    /*  WHICH SET THE PANEL IS FILTERING, said where it stays visible. The Search category
+        can be collapsed and the query is typed into a tree row, so there is no
+        placeholder to carry it; the dock title is the one part of the panel that is
+        always on screen. Re-asserted even when the scope did not change, for the same
+        reason the Catalog rows above are. */
+    if (G::useFilterPanel && filterTitleBar)
+        filterTitleBar->setTitle(s == G::Scope::Catalog ? "Filters (Catalog)"
+                                                        : "Filters (Folders)");
+
     if (!changed) return;
 
     /*  A folder stays SELECTED in the tree while the catalog is the scope. It is still
@@ -540,15 +549,15 @@ void MW::setCatalogScopeWhole(QString src)
 
 void MW::showCatalogDock()
 /*
-    "Search Catalog" (Shift+F2, Window > Catalog Panel).
+    "Search Catalog" (Window > Search Catalog, File > Open Catalog / Shift+O).
 
     WITH THE FILTER DOCK this is not a second panel but a SCOPE: show the Filter dock,
-    switch it to the Catalog scope and focus its box. That is what makes the F2 / Shift+F2
-    pairing literally true -- the same box, the same words, a different set to ask.
+    switch it to the Catalog scope and focus its box -- the same box the Folders scope
+    types into, the same words, a different set to ask.
 
-    Focusing the box is the point of the shortcut either way: the user pressed it to
-    search, and a panel that appears with the cursor somewhere else just asks them to
-    click.
+    Focusing the box is the point of the command: the user chose it to search, and a panel
+    that appears with the cursor somewhere else just asks them to click. F2 then re-opens
+    that box for as long as the Catalog stays the scope.
 */
 {
     if (G::isLogger) G::log("MW::showCatalogDock");

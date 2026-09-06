@@ -587,9 +587,41 @@ bool ImageDecoder::load()
     int lengthFull = isIndependent ? int(indMeta.lengthFull)
                    : haveGeoMeta   ? int(geoMeta.lengthFull)
                                    : dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
-    // embedded image type but no offset
-    if (metadata->hasJpg.contains(ext) && offsetFull == 0) {
+/*
+    EMBEDDED IMAGE TYPE BUT NO OFFSET -- the guard that was left empty.
 
+    A raw file's pixels live at an offset inside it. Zero is not one: it is what the model
+    reads back when nobody has found the offset yet, and decoding from it reads the file
+    header as if it were a JPEG, which produces a null image and a Status::Failed.
+
+    THAT STATUS IS TERMINAL AND KEYED BY PATH. ImageCache::okToDecode refuses to retry a
+    path whose last decode ended Failed, so ONE decode attempted before the geometry was
+    available blanked the image for the rest of the session -- no amount of re-selecting
+    it would try again, while the same file opened from its folder was fine. That is what
+    a filtered Catalog scope did: the filter change bumps dm->instance, the geometry
+    publish from ensureDecodeGeometry is rejected as a stale write, the row is decoded
+    with a zero offset, and the failure latches.
+
+    So this is the last chance to find the geometry, and if it cannot be found the decode
+    must NOT be attempted. Undefined is deliberate: okToDecode treats Undefined, Abort and
+    InstanceClash as transient and keeps the row retry-eligible, which is the honest state
+    -- nothing about the FILE has been shown to be wrong, only that this attempt was made
+    before its geometry was known.
+*/
+    if (metadata->hasJpg.contains(ext) && offsetFull == 0) {
+        if (!isIndependent && !haveGeoMeta && dm && sfRow >= 0)
+            haveGeoMeta = ensureDecodeGeometry(sfRow, geoMeta);
+        if (haveGeoMeta) {
+            offsetFull = int(geoMeta.offsetFull);
+            lengthFull = int(geoMeta.lengthFull);
+        }
+        if (offsetFull == 0) {
+            errMsg = "No embedded jpg offset.";
+            G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
+            status = Status::Undefined;     // transient: retry when the geometry is known
+            imFile.close();
+            return false;
+        }
     }
     // raw file or jpg
     if (metadata->hasJpg.contains(ext) || (ext == "jpg" && offsetFull)) {

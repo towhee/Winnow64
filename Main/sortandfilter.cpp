@@ -1063,6 +1063,17 @@ void MW::updateColorClassLog(QString fPath, QString label)
 }
 
 void MW::searchTextEdit()
+/*
+    F2 -- SEARCH, in whichever scope is current.
+
+    There used to be two keys: F2 searched the folders and Shift+F2 searched the catalog,
+    each one FORCING its scope on the way in. That made the shortcut a scope switch as
+    much as a search, so pressing the one you had learnt threw away the scope you were
+    already working in. Scope is now chosen where scope is chosen (the Catalog rows above
+    the Folders and Bookmarks trees, the panel's Folders|Catalog buttons, File > Open
+    Catalog); F2 just puts the cursor in the search box of whatever is active and leaves
+    the scope alone.
+*/
 {
     if (G::isLogger) G::log("MW::searchTextEdit");
 
@@ -1084,20 +1095,15 @@ void MW::searchTextEdit()
     // set menu status for filterDock in window menu
     filterDockVisibleAction->setChecked(true);
 
-    /*  WITH THE FILTER DOCK, F2 is the Folders half of the F2 / Shift+F2 pair: the
-        same shared search box as Shift+F2, switched to the Folders scope (see
-        MW::showCatalogDock for the other half).
-
-        It used to open an editor on filters->searchTrue instead. But
-        Filters::showAllCategories HIDES the Search category whenever
-        G::useFilterPanel -- the box is the same fact shown twice -- so F2 was
-        opening an editor on an item the user could not see, and the box it
-        should have focused was never touched. The searchTrue item still exists
-        as the STORAGE the proxy predicate reads via Filters::setSearchText;
-        it is just no longer the thing the user types into. */
+    /*  WITH THE FILTER DOCK there is one Search category row and both scopes type into
+        it, so there is nothing to switch: focus the row the current scope is already
+        showing. In the Catalog scope with nothing indexed, offer the window that fills
+        the catalog rather than a box that can only come back empty (the same bail
+        MW::showCatalogDock makes). */
     if (G::useFilterPanel) {
         if (!filterPanel) return;
-        setScope(G::Scope::Folders, "MW::searchTextEdit");
+        if (G::scope == G::Scope::Catalog
+            && catalogEmptyOpenManage("MW::searchTextEdit")) return;
         filterPanel->focusSearch();
         return;
     }

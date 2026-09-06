@@ -58,7 +58,7 @@ public:
     void refresh();
 
     /* Put the cursor in the search box, selecting whatever is there so typing replaces
-       it. The Shift+F2 action calls this after showing the dock. */
+       it. MW::showCatalogDock calls this after showing the dock. */
     void focusSearch();
 
     /* Reflect whether a scan is running. The controls that start one now live in the
