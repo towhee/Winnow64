@@ -1229,7 +1229,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     }
 
     const bool ready = categoriesFrom == FromCatalog
-                       || (G::allMetadataAttempted && !buildingFilters);
+                       || (!G::isModifyingDatamodel && !buildingFilters);
     if (!isFilterableItem(item) || !ready) {
         /*  The dock's own actions, which the widget can no longer show for itself -- see
             addFilterActions. This is what a right-click anywhere else in the tree gives,
@@ -2571,7 +2571,10 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     if (item->isDisabled() ||
         column > 0 ||
         !item->parent() ||
-        (needsModel && !G::allMetadataAttempted) ||
+        /*  A LOAD RUNNING, not "every row read" -- see the note in MW::filterChange.
+            G::allMetadataAttempted goes false whenever the scroll-in verifier clears a
+            stale row, which silently disabled every filter click. */
+        (needsModel && G::isModifyingDatamodel) ||
         (needsModel && buildingFilters))
     {
         /*

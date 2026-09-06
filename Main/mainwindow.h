@@ -2212,6 +2212,11 @@ private:
     /*  Repaint the dock from the current selection -- the chips and the tree's dots.
         Cheap and guarded on the dock being visible; it ships off. */
     void refreshKeywordsDock();
+    /*  Load the vocabulary if it is not loaded yet. Called from EVERY route by which the
+        dock can become visible, because there are several and only one of them used to
+        do it. Retries rather than latching: see the definition. */
+    void ensureKeywordVocabLoaded();
+    void keywordsDockVisibilityChange(bool visible);
     /*  Tag specific image PATHS (dropped on a keyword node) rather than the selection. */
     void applyKeywordToPaths(const QString &keywordPath, const QStringList &imagePaths);
     /*  Rewrite oldPath to newPath on every image carrying it or anything beneath it,

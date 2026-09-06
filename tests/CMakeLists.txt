@@ -238,6 +238,11 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
+# tst_lrkeywords pins the Lightroom keyword file against a REAL export, trimmed into
+# tests/fixtures/lightroom_keywords.csv. The format everyone describes -- a tab-indented
+# .txt -- is not what Lightroom writes, so the fixture is evidence rather than a mock.
+winnow_add_unit_test(tst_lrkeywords unit/tst_lrkeywords.cpp)
+
 # tst_keywordwrite pins the write-back CONTRACT: reading a written file must reproduce
 # exactly the keyword paths that were assigned. The failure modes are silent -- a leaf no
 # path claims becomes a spurious root on the next read, and a second write that is not

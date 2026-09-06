@@ -110,12 +110,53 @@ void MW::filterChange(QString source)
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
     // qDebug() << "MW::filterChange" << "called from:" << source;
 
-    // ignore if new folder is being loaded
-    if (!G::allMetadataAttempted) {
-         return;
-    }
+    /*
+        A LATCH MUST BE RELEASED ON EVERY PATH OUT, and these two returns did not release
+        it. Callers suspend proxy filtering before rebuilding a filter category and rely
+        on this function to lift it again -- MW::setRating, setColorClass, togglePick,
+        applyKeywordsToSelection and BuildFilters::updateCategory itself all do it. The
+        lift is at the bottom of this function, below both of these returns, so either
+        one left suspendFiltering TRUE for the rest of the session and every later filter
+        change was accepted, compiled, and then silently ignored by filterAcceptsRow.
 
-    if (G::stop) return;
+        The symptom is filtering that works once and then stops: unchecking an item does
+        nothing, checking a different category does nothing, and the status bar keeps
+        reporting the old count. Nothing reports an error because nothing failed -- the
+        proxy was told not to filter and did as it was told.
+
+        G::stop makes the window wide. It is a transient teardown latch that MW::stop
+        sets and clears around EVERY folder change, so any category rebuild that lands in
+        that window used to disable filtering permanently. A big catalog scope widens it
+        further, because everything takes longer.
+
+        Lifting here is safe: filterAcceptsRow evaluates a COMPILED FilterPredicate
+        (Datamodel/filterpredicate.h) and no longer walks the tree items the suspension
+        was originally protecting it from.
+    */
+    /*
+        THE GATE IS "IS A LOAD RUNNING", NOT "HAS EVERY ROW BEEN READ".
+
+        It was G::allMetadataAttempted, and that flag does not mean what this needs.
+        DataModel::addMetadataForItem republishes it on EVERY metadata read as
+        isMetaReadFinished() -- metadataAttemptedCount >= rowCount() -- and
+        MW::refreshStaleRows (the scroll-in verification) clears stale rows back to
+        MetaNotAttempted, which DECREMENTS that counter. So one stale row found while
+        scrolling flipped the flag false and silently disabled the whole filter panel:
+        the checkbox toggled, because QTreeWidget does that itself, and nothing else
+        happened. In a catalog scope it did not recover on its own, because every filter
+        change moves the visible window and the verifier then finds more stale rows.
+
+        G::isModifyingDatamodel is set by the two paths that actually BUILD the model
+        (MW::folderSelectionChange, MW::loadCatalogScope) and cleared when the load
+        completes; refreshStaleRows does not touch it. That is the distinction that
+        matters -- the model is fully populated while a handful of its rows are re-read,
+        and filtering it is perfectly well defined. A row whose metadata has not landed
+        does not match an active filter, and BuildFilters re-runs when it does.
+    */
+    if (G::isModifyingDatamodel || G::stop) {
+        dm->sf->suspend(false, "MW::filterChange early return");
+        return;
+    }
 
     /*  BOTH SCOPES FILTER THE PROXY NOW, and this gate is gone.
 

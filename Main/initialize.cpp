@@ -2976,6 +2976,10 @@ void MW::createKeywordsDock()
     keywordsDock->setFloating(false);
     keywordsDock->setVisible(false);
     connect(keywordsDock, &DockWidget::focus, this, &MW::focusOnDock);
+    /*  Covers the two routes to visibility that are neither the menu nor a settings
+        restore: a workspace being applied, and the dock being raised as a tab. */
+    connect(keywordsDock, &QDockWidget::visibilityChanged,
+            this, &MW::keywordsDockVisibilityChange);
 
     connect(keywordTree, &KeywordTree::pathChanged, this, &MW::keywordPathChanged);
     connect(keywordTree, &KeywordTree::assignRequested, this, [this](const QString &p) {

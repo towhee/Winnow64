@@ -427,6 +427,45 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
     return written;
 }
 
+void MW::ensureKeywordVocabLoaded()
+{
+/*
+    Load the vocabulary if it is not loaded yet.
+
+    THERE ARE FOUR WAYS THE DOCK CAN BECOME VISIBLE and only one of them used to load
+    anything: Window > Keywords Panel (showKeywordsDock), a layout RESTORED from settings
+    with the dock already on, a workspace being applied, and the dock being raised as a
+    tab. The vocabulary was loaded only on the first, so a restart with the panel left
+    open showed an empty tree -- which looks exactly like "the keywords are gone".
+
+    IT RETRIES RATHER THAN LATCHING. Emptiness is the test, so a call that arrives before
+    CacheDb has a path (which can happen during startup) simply does nothing and the next
+    route to visibility tries again. A flag saying "we have loaded" would remember the
+    failure instead of recovering from it.
+
+    NOT RELOADED WHEN ALREADY POPULATED, because reload() resets the model and the user's
+    expansion state goes with it -- and being raised as a tab is not a reason to collapse
+    the branch someone was reading. Counts are refreshed instead, which is what actually
+    goes stale.
+*/
+    if (!keywordVocab || !keywordsDock) return;
+
+    if (keywordVocab->rowCount(QModelIndex()) > 0) {
+        keywordVocab->refreshCounts();
+        return;
+    }
+    /*  No database yet: not an error and not an empty vocabulary, just too early. */
+    if (!Catalog::instance().isAvailable()) return;
+    keywordVocab->reload();
+}
+
+void MW::keywordsDockVisibilityChange(bool visible)
+{
+    if (!visible) return;
+    ensureKeywordVocabLoaded();
+    refreshKeywordsDock();
+}
+
 void MW::refreshKeywordsDock()
 {
 /*

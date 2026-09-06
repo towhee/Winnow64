@@ -1,0 +1,15 @@
+﻿Include On Export,Export Containing Keywords,Export Synonyms,Person Type Keyword,
+Y,Y,Y,N,Category
+Y,Y,Y,N,	Forest status
+Y,Y,Y,N,		F&B
+Y,Y,Y,N,	Household Inventory
+,,,,		{Insurance}
+,,,,		{Contents}
+Y,Y,Y,N,Location
+Y,Y,Y,N,	Canada
+Y,Y,Y,N,		BC
+Y,Y,Y,N,			Vancouver
+Y,Y,Y,N,	USA
+Y,Y,Y,N,		Washington
+Y,Y,Y,N,			Vancouver
+Y,Y,Y,N,Sooke

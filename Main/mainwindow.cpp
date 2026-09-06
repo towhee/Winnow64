@@ -1176,6 +1176,14 @@ void MW::showEvent(QShowEvent *event)
         catalog opens lazily and a count taken before that reads as "no index". */
     updateCatalogScopeTrees();
 
+    /*  And the keyword vocabulary, for the same reason and at the same moment: it lives
+        in that index. THIS IS THE ROUTE THAT MATTERS -- restoreState() above has already
+        put the dock back on screen if the last session had it open, and being restored is
+        not a gesture, so nothing the USER does would ever load it. The panel came up
+        empty, which reads as "my keywords are gone" rather than as "nothing asked for
+        them yet". */
+    ensureKeywordVocabLoaded();
+
     G::issueBeginSession();
 
     if (G::issueLog->failedToOpen) {
