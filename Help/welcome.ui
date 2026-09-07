@@ -112,7 +112,7 @@
          <item>
           <widget class="QLabel" name="getStartedLabel">
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;To get started select a folder with images from the Folders panel &lt;br/&gt;or from the menu: &lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-style:italic; color:#cccccc;&quot;&gt;File &amp;gt; Open Folder&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt; (Shortcut &amp;quot;O&amp;quot;)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;To get started select a folder with images from the Source panel &lt;br/&gt;or from the menu: &lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-style:italic; color:#cccccc;&quot;&gt;File &amp;gt; Open Folder&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt; (Shortcut &amp;quot;O&amp;quot;)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>

@@ -9,7 +9,8 @@
 /*
     THE CATALOG AS A SCOPE, SHOWN WHERE SCOPE IS CHOSEN.
 
-    A small tree that sits ABOVE the Folders tree and above the Bookmarks list:
+    A small tree that sits ABOVE the Folders tree, under its own "Catalog" band in the
+    Source panel:
 
         > 🗀 Catalog                    43050
             🗀 2017                      4171
@@ -36,7 +37,7 @@
     are read as one list. The neighbour's metric string and margin are passed in rather
     than assumed, so this is not tied to FSTree's arithmetic.
 
-    ONE INSTANCE, IN THE FOLDERS PANEL. The same tree was offered above Bookmarks too,
+    ONE INSTANCE, IN THE SOURCE PANEL. The same tree was offered above Bookmarks too,
     on the reasoning that scope is chosen in either -- but Bookmarks is a list of folders
     the USER put there, and a row nobody bookmarked reads as clutter in it. Clicking asks
     MW to change scope and MW pushes the result back here, so this and the Filter panel

@@ -1456,7 +1456,16 @@ static QWidget *wrapWithCatalogScopeTree(CatalogScopeTree *row, QWidget *tree)
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log("MW::createFolderDock");
-    folderDockTabText = "Folders";
+    /*  "Source" on the TAB as well as in the title bar. The panel holds two subpanels,
+        Catalog and Folders, and a tab naming only one of them was half the confusion the
+        rename fixes -- a tab reading Folders over a title bar reading Source would be the
+        other half. This string is the KEY for dockTextNames, the tab-graphic maps
+        (graphicFor/dockFor), dockForTabText and dockTabToolTip, but every one of those
+        reads the variable, so they move with it. Saved layouts are unaffected: Qt keys
+        QMainWindow::saveState on the dock's objectName ("FolderDock", unchanged), not on
+        its title, so no winnowStateVersion bump -- that version names the dock SET, and
+        no dock was added. */
+    folderDockTabText = "Source";
     // folderDockTabText = "  📁  ";
     QPixmap pm(":/images/icon16/anchor.png");
     folderDockTabRichText = "test";
@@ -1494,9 +1503,8 @@ void MW::createFolderDock()
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
     folderTitleLayout->setSpacing(0);
     /*  "Source", not "Folders": the panel holds the Catalog subpanel as well, and a
-        header naming only one of the two was what made the distinction confusing. The
-        TAB still reads "Folders" (folderDockTabText) -- it keys dockTextNames, the tab
-        graphic map and the saved window state. */
+        header naming only one of the two was what made the distinction confusing. Same
+        word as the tab (folderDockTabText). */
     folderTitleBar = new DockTitleBar("Source", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
     folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
@@ -1554,7 +1562,7 @@ void MW::createFolderDock()
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    folderCloseBtn->setToolTip("Hide the Folders Panel");
+    folderCloseBtn->setToolTip("Hide the Source Panel");
     connect(folderCloseBtn, &BarBtn::clicked, this, &MW::closeFolderDock);
     folderTitleLayout->addWidget(folderCloseBtn);
 
@@ -1575,7 +1583,7 @@ void MW::createFavDock()
     /*  NO CATALOG TREE HERE. It was offered above both scope trees on the reasoning
         that scope is chosen in either -- but Bookmarks is a list of folders the user
         put there, and a row nobody bookmarked reads as clutter in it. One place to
-        choose the catalog is enough, and the Folders panel is where the tree it belongs
+        choose the catalog is enough, and the Source panel is where the tree it belongs
         beside actually lives. */
     favDock->setWidget(bookmarks);
     connect(favDock, &DockWidget::focus, this, &MW::focusOnDock);

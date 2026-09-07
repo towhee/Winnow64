@@ -122,7 +122,7 @@ QVariant KeywordVocab::data(const QModelIndex &idx, int role) const
 
     case Qt::TextAlignmentRole:
         /*  Counts right-justified, the same as the Filters panel's count columns and the
-            Folders panel's -- a column of numbers is read down its last digit. */
+            Source panel's -- a column of numbers is read down its last digit. */
         if (idx.column() == CountColumn)
             return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
         return QVariant();

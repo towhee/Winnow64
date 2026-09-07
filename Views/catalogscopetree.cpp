@@ -120,7 +120,7 @@ void CatalogScopeTree::refreshYears()
 {
 /*
     Read the years OFF THE GUI THREAD. It is a GROUP BY over every indexed image, and
-    this widget lives in the Folders panel where the user is clicking -- the one place
+    this widget lives in the Source panel where the user is clicking -- the one place
     a stall would be felt. One query at a time: a burst of catalog commits during a
     folder load would otherwise queue up a query per commit for the same answer.
 */
