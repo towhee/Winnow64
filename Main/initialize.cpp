@@ -1480,6 +1480,22 @@ void MW::createFolderDock()
         stretch their last section, so the counts hang off the VIEWPORT edge, which the
         scrollbar moves in one tree and not the other. See CatalogScopeTree::alignCountColumn. */
     folderCatalogTree->setAlignWith(fsTree);
+    /*  BOTH TREES CARRY THE SAME WIDTH CAP, AND BOTH LOSE IT WHEN THE PANEL FLOATS.
+        fsTree is capped at folderMaxWidth (MW::createFSTree) so a docked panel dragged
+        wide cannot eat the window. A FLOATING panel is a window the user sized
+        deliberately, and a tree that stops at the cap inside it is the panel refusing the
+        space it was given: folder names elide while a blank strip sits to their right,
+        and the counts strand mid-panel. The catalog tree takes the same cap so the two
+        are the same width in every state, which is what keeps their count columns lined
+        up in the first place -- without it, a docked area wider than the cap would part
+        them. A dock restored FLOATING gets this too: QMainWindow::restoreState floats it
+        after it was built docked, so topLevelChanged fires. */
+    folderCatalogTree->setMaximumWidth(folderMaxWidth);
+    connect(folderDock, &QDockWidget::topLevelChanged, this, [this](bool floating) {
+        const int cap = floating ? QWIDGETSIZE_MAX : folderMaxWidth;
+        fsTree->setMaximumWidth(cap);
+        folderCatalogTree->setMaximumWidth(cap);
+    });
     connect(folderCatalogTree, &CatalogScopeTree::catalogChosen, this, [this]{
         setCatalogScopeWhole("folderCatalogTree");
     });

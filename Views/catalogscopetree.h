@@ -31,7 +31,9 @@
     shows EVERY year, because a list of years that stops partway through is not a list of
     the catalog's years. The only limit is the panel itself -- it will not take the last
     kMinFolderRows of the dock, so the folder tree beneath is always still usable -- and
-    that limit only bites in a dock too short to hold both.
+    that limit only bites in a dock too short to hold both, where this scrolls instead.
+    It NEVER resizes the window to fit: see fitToContents on why the height is a MAXIMUM
+    and not a fixed height.
 
     THE COUNT COLUMN LINES UP with the count column of the tree below, because the two
     are read as one list. The neighbour's metric string and margin are passed in rather
@@ -76,6 +78,12 @@ public:
         alignCountColumn(). */
     void setAlignWith(QAbstractScrollArea *neighbour);
 
+    /*  The height the years WANT, which the layout gives us when the panel has it. The
+        vertical size policy is Maximum, so this is an upper bound the layout may shrink
+        below -- it is never a floor, and so can never push the dock (and with it the
+        window) taller. */
+    QSize sizeHint() const override;
+
 public slots:
     /*  Fold the years away. MW calls this when the user picks a folder or a bookmark:
         the years are only of interest while the catalog is the thing being chosen, and
@@ -83,6 +91,11 @@ public slots:
         to is the panel's biggest row group saying nothing. Collapsing is a VIEW change
         only -- it does not touch the scope, so a year already chosen stays chosen. */
     void collapseCatalog();
+
+    /*  Put our count column back over the neighbour's. Public because MW changes the
+        neighbour's width MAXIMUM when the panel floats, which is a width change this
+        widget cannot see coming. */
+    void alignCountColumn();
 
 signals:
     /*  The whole catalog was chosen. */
@@ -101,7 +114,7 @@ protected:
 
 private:
     /*  Rows of the tree BELOW that must survive, however many years there are. */
-    static constexpr int kMinFolderRows = 4;
+    static constexpr int kMinFolderRows = 3;
 
     QTreeWidgetItem *catalogItem = nullptr;
     qint64 imageCount = -1;
@@ -113,9 +126,9 @@ private:
     QIcon yearIcon;
     QPointer<QAbstractScrollArea> alignWith;   // the folder tree beneath
     int countInset = 0;                        // right viewport margin, in px
+    int wantedHeight = 0;                      // what sizeHint() reports
 
     void refreshText();
-    void alignCountColumn();
     void setYears(const QMap<QString, int> &years);
     void fitToContents();
     void resizeColumns();
