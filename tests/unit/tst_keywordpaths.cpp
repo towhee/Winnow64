@@ -83,7 +83,7 @@ void tst_keywordpaths::anUnmatchedFlatKeywordBecomesARoot()
 {
 /*
     A keyword the hierarchy says nothing about is still a keyword. It becomes a depth-1
-    path, which is what the Keywords dock later shows as an unfiled "?" chip.
+    path, which is what the Keywords dock later shows as an unfiled "?" tag.
 */
     const QStringList out = keywordEffectivePaths({"Heron", "Sooke"},
                                                   {"Fauna|Bird|Heron"});

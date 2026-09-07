@@ -30,19 +30,25 @@ QMap<QString, int> MW::keywordsInSelection() const
 {
 /*
     Every keyword path carried by the selection, with how many of the selected images
-    carry it. The chip zone shows a chip per key and marks the ones whose count is below
+    carry it. The tag zone shows a tag per key and marks the ones whose count is below
     the selection size as partial.
 
     READ FROM THE LITERAL AND HIERARCHICAL COLUMNS, not from G::KeywordsAllColumn. That
     column holds the prefix EXPANSION -- every ancestor of every path -- which is what
     gets filtered on and is emphatically not what the user assigned. Showing it would put
-    a chip for "Fauna" on an image the user only ever tagged "Fauna|Bird|Heron", and
-    removing that chip would then have to mean something.
+    a tag for "Fauna" on an image the user only ever tagged "Fauna|Bird|Heron", and
+    removing that tag would then have to mean something.
 */
     QMap<QString, int> out;
     if (!dm || !sel) return out;
 
-    const QModelIndexList selection = sel->selectedRows;
+    /*  dm->selectionModel->selectedRows(), NOT Selection::selectedRows. That member
+        exists, compiles, and is NEVER ASSIGNED -- the only code that filled it is inside
+        a commented-out "old code" block in Selection::save. Reading it returns an empty
+        list forever, so the tag zone reported "No images selected" with an image
+        selected, and applyKeywordsToSelection quietly did nothing at all. The live
+        selection is the QItemSelectionModel's, which is what MW::setRating uses. */
+    const QModelIndexList selection = dm->selectionModel->selectedRows();
     for (const QModelIndex &sfIdx : selection) {
         const int dmRow = dm->modelRowFromProxyRow(sfIdx.row());
         if (dmRow < 0) continue;
@@ -74,7 +80,13 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     if (!dm || !sel || !metadata) return;
     if (add.isEmpty() && remove.isEmpty()) return;
 
-    const QModelIndexList selection = sel->selectedRows;
+    /*  dm->selectionModel->selectedRows(), NOT Selection::selectedRows. That member
+        exists, compiles, and is NEVER ASSIGNED -- the only code that filled it is inside
+        a commented-out "old code" block in Selection::save. Reading it returns an empty
+        list forever, so the tag zone reported "No images selected" with an image
+        selected, and applyKeywordsToSelection quietly did nothing at all. The live
+        selection is the QItemSelectionModel's, which is what MW::setRating uses. */
+    const QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
 
     /*  Snapshot the rows FIRST. The proxy re-filters as the model changes, so iterating
@@ -469,20 +481,21 @@ void MW::keywordsDockVisibilityChange(bool visible)
 void MW::refreshKeywordsDock()
 {
 /*
-    Repaint the dock from the current selection: the chips below and the dots in the tree.
+    Repaint the dock from the current selection: the tags above and the dots in the tree.
 
     GUARDED ON VISIBILITY. The dock ships off, and walking a vocabulary on every arrow key
     for a panel nobody has open is work for nothing.
 
-    THE CHIPS AND THE DOTS ANSWER DIFFERENT QUESTIONS and are fed differently. The chips
+    THE TAGS AND THE DOTS ANSWER DIFFERENT QUESTIONS and are fed differently. The tags
     describe the SELECTION (with a count per keyword, so "on some" can be marked); the
     dots describe the CURRENT image alone, because a dot is a yes/no mark and there is no
     honest way to draw "sort of".
 */
     if (!keywordsDock || !keywordsDock->isVisible()) return;
-    if (!keywordVocab || !keywordChips || !dm || !sel) return;
+    if (!keywordVocab || !keywordTags || !dm || !sel) return;
 
-    keywordChips->setSelection(keywordsInSelection(), sel->selectedRows.size());
+    keywordTags->setSelection(keywordsInSelection(),
+                               dm->selectionModel->selectedRows().size());
 
     const int dmRow = dm->currentSfRow >= 0
         ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
@@ -511,7 +524,7 @@ void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imag
     if (keywordPath.isEmpty() || imagePaths.isEmpty()) return;
     if (!dm || !sel) return;
 
-    const QModelIndexList wasSelected = sel->selectedRows;
+    const QModelIndexList wasSelected = dm->selectionModel->selectedRows();
     const QModelIndex wasCurrent = dm->sf->index(dm->currentSfRow, 0);
 
     QItemSelection toSelect;

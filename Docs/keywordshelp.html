@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>What a keyword is</h1>
+
+<p>A keyword is a word you attach to a photograph so you can find it again &mdash;
+<span class="highlight">Heron</span>, <span class="highlight">Vancouver Island</span>,
+<span class="highlight">Client work</span>. An image can carry as many as you like.</p>
+
+<p>Keywords are filed in a <span class="highlight">tree</span>, so Heron can sit under
+Bird, which sits under Fauna. A keyword is its <span class="highlight">whole path</span>:
+Fauna &gt; Bird &gt; Heron. Two keywords with the same name in different branches are two
+different keywords, so a Vancouver in British Columbia and a Vancouver in Washington keep
+their own images. Because names repeat, only the last part is shown &mdash; hover any
+keyword to see its full path.</p>
+
+<p>Winnow writes keywords into each image's <span class="highlight">XMP sidecar</span>,
+which is where Lightroom and other applications read them from.</p>
+
+<h1>The two halves of the panel</h1>
+
+<p>At the top, under <span class="highlight">Selected images tags</span>, are the keywords
+carried by the images you have <span class="highlight">selected</span>. This is where you
+put a keyword onto a photograph, and where you take one off.</p>
+
+<p>At the bottom, under <span class="highlight">Keyword list</span>, is your own
+vocabulary: every keyword you have available to use, in its tree. Adding, renaming, moving
+or deleting here changes the <span class="highlight">list</span>, not your photographs. If
+images would be affected, Winnow asks first and tells you how many.</p>
+
+<h1>Tagging the selected images</h1>
+
+<p>Select one or more images, then do any of these:</p>
+
+<ul>
+<li>Type in the <span class="highlight">Add keyword</span> box. As you type, matching
+keywords are offered with their branch shown faintly beside them, so two keywords sharing
+a name are two distinct choices. Press <span class="highlight">Return</span> without
+choosing one to create the keyword exactly as you typed it.</li>
+<li><span class="highlight">Double-click</span> a keyword in the list, or select it and
+press <span class="highlight">Return</span>.</li>
+<li><span class="highlight">Drag</span> a keyword from the list up onto the tags.</li>
+<li><span class="highlight">Drag images</span> from the thumbnails onto a keyword in the
+list.</li>
+</ul>
+
+<p>To remove a keyword, click the <span class="highlight">&times;</span> on its tag. It is
+removed from every selected image, along with anything filed beneath it &mdash; taking
+Fauna &gt; Bird off an image cannot leave Fauna &gt; Bird &gt; Heron on it.</p>
+
+<p>A <span class="highlight">dot</span> beside a keyword in the list marks one the current
+image already has.</p>
+
+<h1>What the tag markings mean</h1>
+
+<ul>
+<li>A plain tag is on <span class="highlight">every</span> selected image.</li>
+<li><span class="highlight">*</span> means only <span class="highlight">some</span> of
+them have it. Click the tag to give it to all of them.</li>
+<li><span class="highlight">?</span> means the image carries a keyword that is not in your
+list &mdash; written by another application, perhaps, or left behind by a rename you chose
+not to apply. Click it to add it to your list, where its own path says it belongs.</li>
+</ul>
+
+<h1>Organising your list</h1>
+
+<p>Right-click any keyword for <span class="highlight">Rename</span>,
+<span class="highlight">New keyword inside</span>,
+<span class="highlight">Insert parent above</span> and
+<span class="highlight">Delete</span>. <span class="highlight">Drag</span> a keyword onto
+another to move it there; a keyword cannot be dropped inside itself, and the cursor says
+so before you let go.</p>
+
+<p>The <span class="highlight">Find keyword</span> box above the list finds a keyword by
+name or by synonym, keeping its parents visible so you can see where it sits.</p>
+
+<p>The <span class="highlight">number</span> beside a keyword is how many images carry it.
+It counts everything filed beneath it as well, so Fauna's number already includes your
+herons, and there is nothing to add up. A blank means none. Only images Winnow has
+<span class="highlight">catalogued</span> are counted, so a keyword used only in folders
+that have never been indexed shows no number. The
+<span class="highlight">Catalogued Folders</span> dialog is where you say which folders
+those are.</p>
+
+<p>Deleting a keyword removes it from your <span class="highlight">list only</span>. Images
+already tagged with it keep it in their own files, where it shows as a
+<span class="highlight">?</span> tag.</p>
+
+<h1>When images need updating</h1>
+
+<p>Renaming or moving a keyword changes your list at once. Photographs already tagged with
+it still carry the old keyword in their own files, so Winnow asks what to do and tells you
+how many images each choice would rewrite:</p>
+
+<ul>
+<li><span class="highlight">This folder</span> &mdash; only the images in the folder you
+are looking at.</li>
+<li><span class="highlight">Everywhere</span> &mdash; every catalogued image carrying it,
+including folders that are not open.</li>
+<li><span class="highlight">Not now</span> &mdash; leave the files alone. Those images show
+the old keyword as a <span class="highlight">?</span> tag until you deal with it, so
+nothing is lost track of.</li>
+</ul>
+
+<h1>Starting from what you already have</h1>
+
+<p>Two commands on the right-click menu fill your list without any typing:</p>
+
+<ul>
+<li><span class="highlight">Build vocabulary from catalog</span> &mdash; adds a keyword for
+everything Winnow has already indexed in your pictures.</li>
+<li><span class="highlight">Import Lightroom keywords...</span> &mdash; reads a keyword
+list exported from Lightroom, hierarchy and synonyms included.</li>
+</ul>
+
+<p>Both <span class="highlight">merge</span>. Neither ever removes a keyword you created,
+and running either a second time adds only what is new. <span class="highlight">Export
+keywords...</span> writes your list back out in the same format.</p>
+
+<h1>Finding images by keyword</h1>
+
+<p>The <span class="highlight">Keywords</span> category in the Filter panel is the same
+tree. Check a branch to find everything beneath it &mdash; checking Fauna finds your herons
+without opening the branch &mdash; or Opt+click (Alt+click on Windows) to leave a branch
+out, so you can include Location and exclude Location &gt; USA.</p>
+
+</body>
+</html>

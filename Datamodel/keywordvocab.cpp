@@ -120,6 +120,13 @@ QVariant KeywordVocab::data(const QModelIndex &idx, int role) const
                                                             : QString();
         return QVariant();
 
+    case Qt::TextAlignmentRole:
+        /*  Counts right-justified, the same as the Filters panel's count columns and the
+            Folders panel's -- a column of numbers is read down its last digit. */
+        if (idx.column() == CountColumn)
+            return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
+        return QVariant();
+
     case Qt::ToolTipRole:
         return n->path == n->name ? n->name : n->path;
 

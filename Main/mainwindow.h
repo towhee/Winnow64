@@ -40,7 +40,7 @@
 #include "Views/catalogview.h"
 #include "Views/filterpanel.h"
 #include "Views/keywordtree.h"
-#include "Views/keywordchips.h"
+#include "Views/keywordtags.h"
 #include "Datamodel/keywordvocab.h"
 #include "Views/catalogscopetree.h"
 #include "Main/catalogscanner.h"
@@ -697,7 +697,7 @@ private slots:
         the catalog. add and remove are full paths ("Fauna|Bird|Heron"), never leaves. */
     void applyKeywordsToSelection(const QStringList &add, const QStringList &remove);
     /*  The keyword paths the selection carries, and how many of the selected images carry
-        each -- what the Keywords dock's chip zone renders, where a count below the
+        each -- what the Keywords dock's tag zone renders, where a count below the
         selection size is the "* on some" marker. */
     QMap<QString, int> keywordsInSelection() const;
 
@@ -1707,7 +1707,7 @@ private:
     CatalogView *catalogView = nullptr;
     KeywordVocab *keywordVocab = nullptr;
     KeywordTree *keywordTree = nullptr;
-    KeywordChips *keywordChips = nullptr;
+    KeywordTags *keywordTags = nullptr;
     /* Walks the designated roots on its own low-priority thread. */
     CatalogScanner *catalogScanner = nullptr;
     /* What the background scanner may walk: one ordered table of include/exclude rows,
@@ -2209,7 +2209,7 @@ private:
         carry the old path into line. The model has already changed the NAME; this is
         only about the files. */
     void keywordPathChanged(const QString &oldPath, const QString &newPath);
-    /*  Repaint the dock from the current selection -- the chips and the tree's dots.
+    /*  Repaint the dock from the current selection -- the tags and the tree's dots.
         Cheap and guarded on the dock being visible; it ships off. */
     void refreshKeywordsDock();
     /*  Load the vocabulary if it is not loaded yet. Called from EVERY route by which the

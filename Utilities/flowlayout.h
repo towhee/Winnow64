@@ -10,13 +10,13 @@
     A layout that wraps its items onto as many rows as they need, like words in a
     paragraph. Qt ships one as an example but not as a class, so here it is.
 
-    THE KEYWORDS DOCK NEEDS IT for the chip zone: an image's keywords are a handful of
+    THE KEYWORDS DOCK NEEDS IT for the tag zone: an image's keywords are a handful of
     variable-width labels whose number and widths are not known until the selection
     changes, in a dock the user can make any width. A grid would need a column count
     nobody can choose correctly and a horizontal box would clip.
 
     heightForWidth IS THE WHOLE POINT and is why this is a layout rather than a widget
-    doing its own geometry: the containing scroll area has to know how tall the chips will
+    doing its own geometry: the containing scroll area has to know how tall the tags will
     be at the width it is about to give them, and only the layout can answer that.
 */
 class FlowLayout : public QLayout

@@ -4556,7 +4556,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     probe.mark("title");
 
-    /*  The Keywords dock follows the selection: the chips below and the dots in the
+    /*  The Keywords dock follows the selection: the tags above and the dots in the
         tree. Guarded inside on the dock being visible -- it ships off. */
     refreshKeywordsDock();
 

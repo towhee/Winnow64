@@ -3,6 +3,7 @@
 #include "Views/catalogscopetree.h"
 #include "Develop/workingimagecache.h"
 #include "Utilities/fileops.h"
+#include "Utilities/gradientheader.h"
 #include "Cache/devpreviewcache.h"
 
 void MW::initialize()
@@ -2927,10 +2928,10 @@ void MW::createKeywordsDock()
     that most sessions never open would cost every session the space. Window > Keywords
     Panel turns it on, which is also where a user finds out it exists.
 
-    ONE ZONE FOR NOW. The design is two -- this tree on top, and a chip zone below for the
-    keywords on the CURRENT SELECTION -- and the splitter is built here with the lower
-    half empty so the layout is settled before the chips arrive rather than rearranged
-    around them.
+    TWO ZONES. The TAG ZONE on top carries the keywords on the CURRENT SELECTION, and the
+    vocabulary TREE sits below it with its own Find field. The tags come first because
+    they are what the user reads on every selection change; the tree is what they go to
+    only when a keyword is not already in reach.
 
     THE TREE HAS NO CHECKBOXES AND NEVER TAGS A PHOTOGRAPH. See Views/keywordtree.h: the
     separation between curating the list and tagging the images is the whole point of the
@@ -2951,25 +2952,39 @@ void MW::createKeywordsDock()
     bodyLayout->setContentsMargins(4, 4, 4, 4);
     bodyLayout->setSpacing(4);
 
-    QLineEdit *filterEdit = new QLineEdit(body);
+    /*  A splitter rather than two stacked widgets, so the tag zone is resizable and the
+        user decides how much of the dock the vocabulary gets. */
+    QSplitter *splitter = new QSplitter(Qt::Vertical, body);
+    keywordTags = new KeywordTags(keywordVocab, splitter);
+    splitter->addWidget(keywordTags);
+
+    /*  The Find field travels WITH the tree rather than sitting at the top of the dock:
+        it filters the vocabulary and nothing else, and a search box floating above the
+        tags would read as searching them. */
+    QWidget *treePane = new QWidget(splitter);
+    QVBoxLayout *treeLayout = new QVBoxLayout(treePane);
+    treeLayout->setContentsMargins(0, 0, 0, 0);
+    treeLayout->setSpacing(4);
+
+    /*  Both zones carry a band, so neither reads as a stray widget stacked on the other:
+        the tags name the SELECTION they came from, this one names the vocabulary. */
+    treeLayout->addWidget(new GradientHeader(tr("Keyword list"), treePane));
+
+    QLineEdit *filterEdit = new QLineEdit(treePane);
     filterEdit->setPlaceholderText("Find keyword");
     filterEdit->setClearButtonEnabled(true);
     connect(filterEdit, &QLineEdit::textChanged,
             keywordTree, &KeywordTree::setFilterText);
-    bodyLayout->addWidget(filterEdit);
+    treeLayout->addWidget(filterEdit);
+    keywordTree->setParent(treePane);
+    treeLayout->addWidget(keywordTree, 1);
+    splitter->addWidget(treePane);
 
-    /*  A splitter rather than two stacked widgets, so the eventual chip zone is
-        resizable from the first version the user sees and its size is remembered by the
-        dock state like every other splitter in the app. */
-    QSplitter *splitter = new QSplitter(Qt::Vertical, body);
-    splitter->addWidget(keywordTree);
-    keywordChips = new KeywordChips(keywordVocab, splitter);
-    splitter->addWidget(keywordChips);
-    splitter->setStretchFactor(0, 1);
-    splitter->setStretchFactor(1, 0);
-    /*  The tree gets most of the height and the chips enough for two or three rows: the
-        vocabulary is what the user browses, the chips are what they glance at. */
-    splitter->setSizes({420, 120});
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+    /*  The tags get enough for two or three rows and the tree the rest: the tags are
+        what the user glances at, the vocabulary is what they browse. */
+    splitter->setSizes({120, 420});
     bodyLayout->addWidget(splitter, 1);
 
     keywordsDock->setWidget(body);
@@ -2988,15 +3003,15 @@ void MW::createKeywordsDock()
     });
     connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
 
-    connect(keywordChips, &KeywordChips::addRequested, this, [this](const QString &p) {
+    connect(keywordTags, &KeywordTags::addRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({p}, {});
         refreshKeywordsDock();
     });
-    connect(keywordChips, &KeywordChips::removeRequested, this, [this](const QString &p) {
+    connect(keywordTags, &KeywordTags::removeRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({}, {p});
         refreshKeywordsDock();
     });
-    connect(keywordChips, &KeywordChips::fileRequested, this, [this](const QString &p) {
+    connect(keywordTags, &KeywordTags::fileRequested, this, [this](const QString &p) {
         /*  An unfiled keyword: put it in the vocabulary at the place its own path says it
             belongs, creating the ancestors it names. Nothing is written to any image --
             the keyword was already on it; only the LIST gains an entry. */
@@ -3027,17 +3042,16 @@ void MW::createKeywordsDock()
     // question mark button
     BarBtn *keywordsQuestionBtn = new BarBtn();
     keywordsQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    keywordsQuestionBtn->setToolTip("How this works: keyword tips");
+    keywordsQuestionBtn->setToolTip("How this works: keywords");
+    /*  A HELP WINDOW, not a popup. The panel has two halves that do different jobs and a
+        handful of markings that mean specific things -- more than a popup can hold and
+        more than a reader can take in before it fades. Same treatment as the Filters
+        panel's ?: Docs/keywordshelp.html through HtmlWindow, so it is scrollable,
+        stays open while the user tries what it describes, and scales with the app. */
     connect(keywordsQuestionBtn, &BarBtn::clicked, this, [this]{
-        if (G::popup) G::popup->showPopup(
-            "<b>Keywords</b><br>"
-            "This is your keyword LIST, not the keywords on a photo. Renaming, moving "
-            "or deleting here changes the list; it asks before changing images.<br><br>"
-            "A keyword is its whole path, so the same name under two parents is two "
-            "different keywords with their own counts.<br><br>"
-            "Double-click, or press Enter, to add a keyword to the selected images. "
-            "Right-click for rename, new keyword, insert parent and delete.<br><br>"
-            "A dot marks a keyword the current image already has.", 8000);
+        QRect r = QRect(keywordsDock->mapToGlobal(QPoint(0, 0)), keywordsDock->size());
+        new HtmlWindow("Winnow - Keywords", ":/Docs/keywordshelp.html",
+                       QSize(720, 640), r, window());
     });
     keywordsTitleLayout->addWidget(keywordsQuestionBtn);
 

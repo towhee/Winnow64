@@ -44,24 +44,28 @@ the one you excluded from.</p>
 color class red shows everything that is not red, not "nothing, because no image is
 in the empty set of included colors".</p>
 
-<h1>Keywords that mean two things</h1>
+<h1>Keywords are a tree</h1>
 
-<p>Keywords are <span class="highlight">flat</span>. A keyword hierarchy such as
-Location &gt; Canada &gt; BC &gt; Vancouver contributes each of its levels as its own
-keyword, so filtering on <span class="highlight">Canada</span> finds everything that
-was beneath it &mdash; there is no tree to open.</p>
+<p>A keyword is its <span class="highlight">whole path</span>, so the Keywords category is
+shown as a tree rather than a list. Each row shows the last part of the name; hover it to
+see the full path.</p>
 
-<p>The cost is that one name can mean two things. If you keyword both
+<p>Every image is linked to each <span class="highlight">ancestor</span> of its keywords,
+so checking <span class="highlight">Canada</span> finds everything filed beneath it
+without opening the branch, and a branch's count is already the total of everything
+inside it.</p>
+
+<p>Two keywords with the same name are two different keywords. If you have filed
 Location &gt; Canada &gt; BC &gt; Vancouver and
-Location &gt; USA &gt; Washington &gt; Vancouver, there is a single
-<span class="highlight">Vancouver</span> keyword covering both cities. Winnow shows
-such a keyword in <span class="highlight">amber</span> and lists its parents in the
-tooltip.</p>
+Location &gt; USA &gt; Washington &gt; Vancouver, they appear as separate rows under their
+own parents, each with its own count, and checking one finds only its own images.</p>
 
-<p>To tell them apart, include the keyword and exclude the parent you do not want:
-include <span class="highlight">Vancouver</span>, Opt+click
-<span class="highlight">USA</span>. The amber marking needs the catalog; without it
-Winnow cannot tell which keywords are ambiguous and marks none.</p>
+<p>To include a branch but leave part of it out, exclude the part you do not want:
+check <span class="highlight">Location</span>, then Opt+click
+<span class="highlight">Location &gt; USA</span>.</p>
+
+<p>Use the <span class="highlight">Keywords panel</span> (Window &gt; Keywords Panel) to
+add, rename, move and delete keywords, and to tag the selected images.</p>
 
 <h1>Writing a query</h1>
 

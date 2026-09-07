@@ -584,7 +584,7 @@ void MW::showKeywordsDock()
     keywordsDock->raise();
     ensureKeywordVocabLoaded();
     /*  The dock was hidden, so the selection-driven refresh has been skipping it; fill
-        the chips and the dots now that it is on screen. */
+        the tags and the dots now that it is on screen. */
     refreshKeywordsDock();
 }
 
