@@ -181,8 +181,13 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         back to the full PATH (reversing version 4's flattening), rebuilding
         keyword/image_keyword from image.keywordpaths without re-reading a file,
         retiring keyword_context and adding the AUTHORED vocabulary table vocab
-        that the Keywords dock curates. */
-    QCOMPARE(CacheDb::schemaVersion(), 10);
+        that the Keywords dock curates; version 11 added NO table either -- it is
+        the second data repair, re-deriving keyword/image_keyword from the same
+        two verbatim columns after keywordEffectivePaths began consuming EVERY
+        node of a path from dc:subject rather than only its leaf, which is what
+        had been manufacturing a phantom top-level keyword out of every ancestor
+        name Lightroom writes with "export containing keywords" on. */
+    QCOMPARE(CacheDb::schemaVersion(), 11);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

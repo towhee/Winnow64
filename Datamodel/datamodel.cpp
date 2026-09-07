@@ -6589,8 +6589,29 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // Suspend?
     if (suspendFiltering) return true;
 
-    // still loading metadata
-    if (!G::allMetadataAttempted) return true;
+    /*  IS A LOAD RUNNING -- not "has every row been read".
+
+        This was !G::allMetadataAttempted, and accepting every row when that flag is
+        false is the same defect MW::filterChange and Filters::itemClickedSignal were
+        already fixed for; the fix simply never reached the proxy itself. The flag is
+        republished on EVERY metadata read as isMetaReadFinished()
+        (metadataAttemptedCount >= rowCount()), and MW::refreshStaleRows -- the scroll-in
+        verification -- clears stale rows back to MetaNotAttempted, which DECREMENTS that
+        counter. So one stale row found while scrolling turned filtering OFF for the
+        whole model: the Filters panel kept its checks, filterAcceptsRow accepted
+        everything, and the view silently widened to the entire scope. A catalog scope
+        makes it routine rather than rare, because every filter change moves the visible
+        window and the verifier then finds more stale rows.
+
+        G::isModifyingDatamodel is set by the two paths that actually BUILD the model
+        (MW::folderSelectionChange, MW::loadCatalogScope) and cleared when the load
+        completes; refreshStaleRows does not touch it. That is the distinction that
+        matters: the model is fully populated while a handful of its rows are re-read,
+        and filtering it is perfectly well defined. A row whose metadata has not landed
+        does not match an active filter, and BuildFilters re-runs when it does. With no
+        filter set the predicate acceptsEverything() below, so ordinary browsing during a
+        re-read is unaffected either way. */
+    if (G::isModifyingDatamodel) return true;
 
     // Check Raw + Jpg
     if (combineRawJpg) {
