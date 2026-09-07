@@ -1471,7 +1471,7 @@ void MW::createFolderDock()
     folderDockTabRichText = "test";
     // folderDockTabRichText = Utilities::pixmapToString(pm);
     dockTextNames << folderDockTabText;
-    folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
+    folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Source 📁
     // folderDock->setObjectName("FoldersDock");
     /*  The count metric and margin are FSTree::resizeColumns', so the catalog counts
         line up with the folder counts directly beneath them. */
@@ -1799,7 +1799,7 @@ void MW::createFilterDock()
            the datamodel. buildFilters->reset() clears the catalog items (and the checks
            that went with them) before build() repopulates from the model. */
     /*  The panel reports its own scope flips; MW mirrors them to the Catalog
-        rows above the Folders and Bookmarks trees. */
+        rows in the Source panel's Catalog subpanel. */
     connect(filterPanel, &FilterPanel::scopeChanged, this, [this](int sc){
         /*  Switching to Everywhere with nothing catalogued would leave the panel
             searching an empty index, so the window that fills it opens instead and the

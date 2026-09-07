@@ -61,7 +61,7 @@ Window
    - added workspaces
 —
 - Thumbnail panel
-- Folders panel
+- Source panel
 - Favourites panel
 - Metadata panel
 —

@@ -1111,7 +1111,7 @@ void MW::searchTextEdit()
     each one FORCING its scope on the way in. That made the shortcut a scope switch as
     much as a search, so pressing the one you had learnt threw away the scope you were
     already working in. Scope is now chosen where scope is chosen (the Catalog rows above
-    the Folders and Bookmarks trees, the panel's Folders|Catalog buttons, File > Open
+    the Source panel's Catalog subpanel, the panel's own Folders|Catalog buttons, File > Open
     Catalog); F2 just puts the cursor in the search box of whatever is active and leaves
     the scope alone.
 */
