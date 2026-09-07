@@ -59,7 +59,7 @@ void FilterPanel::applyScope()
 {
     /*  TIMED UNCONDITIONALLY -- once per scope switch is one line, and this is inside
         the click a person reported as a beachball: it re-points the category tree and is
-        what the Catalog row in the Folders panel calls into. */
+        what the Catalog row in the Source panel calls into. */
     QElapsedTimer asTimer;
     asTimer.start();
 

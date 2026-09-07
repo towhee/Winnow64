@@ -203,7 +203,7 @@
          <string>Opt/Alt + C</string>
         </property>
         <property name="text">
-         <string>Show only drives in Folders panel</string>
+         <string>Show only drives in the Folders tree</string>
         </property>
        </item>
        <item>
@@ -975,7 +975,7 @@
        </property>
        <item>
         <property name="text">
-         <string>Files Panel</string>
+         <string>Source Panel</string>
         </property>
         <property name="text">
          <string>F3</string>

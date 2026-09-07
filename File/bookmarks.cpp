@@ -372,7 +372,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     if (event->modifiers() & Utilities::modifiersMask) {
         QString msg =
             "Modifier keys for multi-folder selection<br>"
-            "only works in the Folder panel."
+            "only works in the Folders tree of the Source panel."
             ;
         G::popup->showPopup(msg, 2000);
         if (G::useProcessEvents) qApp->processEvents();

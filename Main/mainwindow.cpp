@@ -2419,7 +2419,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 tabBar->setFont(glyphs);
                 for (int i = 0; i < tabBar->count(); ++i) {
                     if (tabBar->tabText(i) == folderDockTabText) {
-                        tabBar->setTabToolTip(i, "System Folders Panel (F3)");
+                        tabBar->setTabToolTip(i, "Source Panel (F3)");
                     }
                     if (tabBar->tabText(i) == favDockTabText) {
                         tabBar->setTabToolTip(i, "Bookmarks Panel (F4)");
@@ -6797,7 +6797,7 @@ void MW::setShowImageCount()
 {
     if (G::isLogger) G::log("MW::setShowImageCount");
     if (!fsTree->isVisible()) {
-        G::popup->showPopup("Show image count is only available when the Folders Panel is visible",
+        G::popup->showPopup("Show image count is only available when the Source Panel is visible",
               1500);
     }
     bool isShow = showImageCountAction->isChecked();

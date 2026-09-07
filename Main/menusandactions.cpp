@@ -1611,7 +1611,7 @@ void MW::createWindowActions()
     addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, &QAction::triggered, this, &MW::setStatusBarVisibility);
 
-    folderDockVisibleAction = new QAction(tr("Folders Panel"), this);
+    folderDockVisibleAction = new QAction(tr("Source Panel"), this);
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
