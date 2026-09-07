@@ -321,12 +321,13 @@ set(WINNOW_SOURCES
     Main/keywordedit.cpp
     Utilities/flowlayout.cpp
     Utilities/flowlayout.h
+    Utilities/gradientheader.h
     Datamodel/keywordvocab.cpp
     Datamodel/keywordvocab.h
     Views/keywordtree.cpp
     Views/keywordtree.h
-    Views/keywordchips.cpp
-    Views/keywordchips.h
+    Views/keywordtags.cpp
+    Views/keywordtags.h
     Dialogs/keywordretagdlg.cpp
     Dialogs/keywordretagdlg.h
     Main/status.cpp

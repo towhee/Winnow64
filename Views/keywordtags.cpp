@@ -1,9 +1,10 @@
-#include "Views/keywordchips.h"
+#include "Views/keywordtags.h"
 
 #include "Datamodel/keywordvocab.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
 #include "Utilities/flowlayout.h"
+#include "Utilities/gradientheader.h"
 
 #include <QCompleter>
 #include <QDragEnterEvent>
@@ -21,7 +22,7 @@
 #include <QVBoxLayout>
 
 /*
-    See keywordchips.h. The mime type is shared with Views/keywordtree.cpp.
+    See keywordtags.h. The mime type is shared with Views/keywordtree.cpp.
 */
 const char *kVocabNodeMime = "application/x-winnow-vocab-node";
 
@@ -30,11 +31,11 @@ namespace {
 /*  One keyword on the selection. A widget rather than a styled QPushButton because it has
     two hit targets that mean different things -- the label (promote to all) and the x
     (remove from all) -- and one button cannot offer both. */
-class Chip : public QFrame
+class Tag : public QFrame
 {
 public:
-    Chip(const QString &path, const QString &label, bool partial, bool unfiled,
-         QWidget *parent)
+    Tag(const QString &path, const QString &label, bool partial, bool unfiled,
+        QWidget *parent)
         : QFrame(parent), path(path)
     {
         setFrameShape(QFrame::StyledPanel);
@@ -48,7 +49,7 @@ public:
         if (partial) text += " *";
         if (unfiled) text.prepend("? ");
         QLabel *name = new QLabel(text, this);
-        /*  The full path in the tooltip is how two chips showing the same leaf are told
+        /*  The full path in the tooltip is how two tags showing the same leaf are told
             apart -- and they will, because that is the case path identity exists for. */
         name->setToolTip(path);
         l->addWidget(name);
@@ -117,7 +118,7 @@ public:
 
 }   // namespace
 
-KeywordChips::KeywordChips(KeywordVocab *vocab, QWidget *parent)
+KeywordTags::KeywordTags(KeywordVocab *vocab, QWidget *parent)
     : QWidget(parent), vocab(vocab)
 {
     setAcceptDrops(true);
@@ -126,6 +127,22 @@ KeywordChips::KeywordChips(KeywordVocab *vocab, QWidget *parent)
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(3);
 
+    /*  The band names WHOSE keywords these are, which is the one thing a tag cannot say
+        for itself: the zone follows the SELECTION, so the same tag means something
+        different with one image selected than with forty. rebuild() keeps the count in
+        it. */
+    header = new GradientHeader(headerText(), this);
+    outer->addWidget(header);
+
+    /*  THE ADD FIELD HEADS THE ZONE, above the tags rather than under them. The zone now
+        sits on top of the dock, so a field at its foot would land against the tree's
+        "Find keyword" box with only the dim legend between them -- two text fields in a
+        row, doing opposite things. */
+    addEdit = new QLineEdit(this);
+    addEdit->setPlaceholderText("Add keyword");
+    addEdit->setClearButtonEnabled(true);
+    outer->addWidget(addEdit);
+
     /*  Scrolled, because an image can carry twenty keywords and the dock is not tall.
         widgetResizable so the flow layout is asked for its height at the real width. */
     QScrollArea *scroll = new QScrollArea(this);
@@ -133,16 +150,11 @@ KeywordChips::KeywordChips(KeywordVocab *vocab, QWidget *parent)
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    chipArea = new QWidget(scroll);
-    flow = new FlowLayout(chipArea, 2, 4, 3);
-    chipArea->setLayout(flow);
-    scroll->setWidget(chipArea);
+    tagArea = new QWidget(scroll);
+    flow = new FlowLayout(tagArea, 2, 4, 3);
+    tagArea->setLayout(flow);
+    scroll->setWidget(tagArea);
     outer->addWidget(scroll, 1);
-
-    addEdit = new QLineEdit(this);
-    addEdit->setPlaceholderText("Add keyword");
-    addEdit->setClearButtonEnabled(true);
-    outer->addWidget(addEdit);
 
     legend = new QLabel(this);
     legend->setEnabled(false);
@@ -184,12 +196,18 @@ KeywordChips::KeywordChips(KeywordVocab *vocab, QWidget *parent)
     /*  Return with nothing chosen from the popup takes the text literally, which is how
         a keyword that is not in the vocabulary yet gets added. It becomes a root; the
         user files it from the tree or by dragging. */
-    connect(addEdit, &QLineEdit::returnPressed, this, &KeywordChips::commitTyped);
+    connect(addEdit, &QLineEdit::returnPressed, this, &KeywordTags::commitTyped);
 
     rebuild();
 }
 
-void KeywordChips::commitTyped()
+QString KeywordTags::headerText() const
+{
+    return selectionSize == 1 ? tr("Selected image tags")
+                              : tr("Selected images tags");
+}
+
+void KeywordTags::commitTyped()
 {
     const QString typed = keywordNodes(addEdit->text()).join('|');
     if (typed.isEmpty()) return;
@@ -197,12 +215,12 @@ void KeywordChips::commitTyped()
     emit addRequested(typed);
 }
 
-void KeywordChips::setSelection(const QMap<QString, int> &counts, int selectionSize)
+void KeywordTags::setSelection(const QMap<QString, int> &counts, int selectionSize)
 {
     /*  NOTHING TO DO IF NOTHING CHANGED, and it usually has not. fileSelectionChange
         fires when the CURRENT image moves, not only when the selection set does, so
         arrowing through a multi-selection delivers the same map over and over -- and
-        rebuilding means destroying and recreating every chip widget each time. */
+        rebuilding means destroying and recreating every tag widget each time. */
     if (selectionSize == this->selectionSize && counts == this->counts) return;
 
     this->counts = counts;
@@ -210,8 +228,10 @@ void KeywordChips::setSelection(const QMap<QString, int> &counts, int selectionS
     rebuild();
 }
 
-void KeywordChips::rebuild()
+void KeywordTags::rebuild()
 {
+    header->setText(headerText());
+
     QLayoutItem *item;
     while ((item = flow->takeAt(0))) {
         delete item->widget();
@@ -227,7 +247,7 @@ void KeywordChips::rebuild()
 
     /*  A CAP, because the union of a large selection's keywords is unbounded. Filtering
         a real library to one branch and selecting it selects images spanning HUNDREDS of
-        distinct keywords -- 578 for one ordinary case -- and a chip apiece is a QFrame, a
+        distinct keywords -- 578 for one ordinary case -- and a tag apiece is a QFrame, a
         layout, a label and a button each, built and torn down on every selection change.
         That was slow enough to be felt while browsing and again on quit.
 
@@ -235,7 +255,7 @@ void KeywordChips::rebuild()
         every selected image carries is one you might remove from all of them. A keyword
         on three images out of eight hundred is noise at that scale, and if it is cut off
         by the cap the count in the legend says so. */
-    const int kMaxChips = 60;
+    const int kMaxTags = 60;
 
     QStringList full, partialPaths;
     for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
@@ -243,7 +263,7 @@ void KeywordChips::rebuild()
         else partialPaths << it.key();
     }
     const QStringList ordered = full + partialPaths;
-    const int shown = qMin(ordered.size(), kMaxChips);
+    const int shown = qMin(ordered.size(), kMaxTags);
 
     bool anyPartial = false, anyUnfiled = false;
 
@@ -254,16 +274,16 @@ void KeywordChips::rebuild()
         anyPartial |= partial;
         anyUnfiled |= unfiled;
 
-        Chip *chip = new Chip(path, keywordLeafOf(path), partial, unfiled, chipArea);
-        chip->onRemove = [this](const QString &p) { emit removeRequested(p); };
-        chip->onClick = [this, partial, unfiled](const QString &p) {
-            /*  A partial chip promotes to the whole selection -- the obvious meaning of
+        Tag *tag = new Tag(path, keywordLeafOf(path), partial, unfiled, tagArea);
+        tag->onRemove = [this](const QString &p) { emit removeRequested(p); };
+        tag->onClick = [this, partial, unfiled](const QString &p) {
+            /*  A partial tag promotes to the whole selection -- the obvious meaning of
                 clicking "some of these have it". An unfiled one offers the tree instead,
                 because filing it is the only thing that changes anything. */
             if (partial) emit addRequested(p);
             else if (unfiled) emit fileRequested(p);
         };
-        flow->addWidget(chip);
+        flow->addWidget(tag);
     }
 
     QStringList notes;
@@ -276,13 +296,13 @@ void KeywordChips::rebuild()
     legend->setText(notes.join("   ·   "));
 }
 
-void KeywordChips::dragEnterEvent(QDragEnterEvent *event)
+void KeywordTags::dragEnterEvent(QDragEnterEvent *event)
 {
     if (event->mimeData()->hasFormat(kVocabNodeMime) && selectionSize > 0)
         event->acceptProposedAction();
 }
 
-void KeywordChips::dropEvent(QDropEvent *event)
+void KeywordTags::dropEvent(QDropEvent *event)
 {
     const QByteArray data = event->mimeData()->data(kVocabNodeMime);
     if (data.isEmpty()) return;

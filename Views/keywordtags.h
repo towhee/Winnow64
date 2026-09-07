@@ -1,24 +1,25 @@
-#ifndef KEYWORDCHIPS_H
-#define KEYWORDCHIPS_H
+#ifndef KEYWORDTAGS_H
+#define KEYWORDTAGS_H
 
 #include <QMap>
 #include <QString>
 #include <QWidget>
 
 class FlowLayout;
+class GradientHeader;
 class KeywordVocab;
 class QLineEdit;
 class QLabel;
 
 /*
-    THE CHIP ZONE -- the lower half of the Keywords dock, and the only place a keyword is
+    THE TAG ZONE -- the upper zone of the Keywords dock, and the only place a keyword is
     put on a photograph.
 
-    ONE CHIP PER KEYWORD THE SELECTION CARRIES, marked by what it is:
+    ONE TAG PER KEYWORD THE SELECTION CARRIES, marked by what it is:
 
       plain   on every selected image
-      *       on SOME of them. Clicking the chip promotes it to all; the x removes it
-              from all. Without this marker a chip would be a lie the moment more than
+      *       on SOME of them. Clicking the tag promotes it to all; the x removes it
+              from all. Without this marker a tag would be a lie the moment more than
               one image is selected, which is most of the time.
       ?       on the image but NOT in the vocabulary -- a keyword some other application
               wrote, or one whose vocabulary node was renamed and the files declined.
@@ -32,20 +33,20 @@ class QLabel;
     branch, so the two Vancouvers are two choices rather than one ambiguous one, and
     picking either is one keystroke. It completes on synonyms too.
 
-    IT READS PATHS AND NEVER LEAVES. What the chips show is the keywords the user
+    IT READS PATHS AND NEVER LEAVES. What the tags show is the keywords the user
     ASSIGNED -- not G::KeywordsAllColumn, which holds every ancestor of every path and
-    would put a "Fauna" chip on an image tagged only "Fauna|Bird|Heron". Removing that
-    chip would then have to mean something, and there is no good answer to what.
+    would put a "Fauna" tag on an image tagged only "Fauna|Bird|Heron". Removing that
+    tag would then have to mean something, and there is no good answer to what.
 */
-class KeywordChips : public QWidget
+class KeywordTags : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit KeywordChips(KeywordVocab *vocab, QWidget *parent = nullptr);
+    explicit KeywordTags(KeywordVocab *vocab, QWidget *parent = nullptr);
 
     /*  Rebuild from the selection: path -> how many of the selected images carry it,
-        which is what MW::keywordsInSelection returns. selectionSize decides which chips
+        which is what MW::keywordsInSelection returns. selectionSize decides which tags
         are partial. */
     void setSelection(const QMap<QString, int> &counts, int selectionSize);
 
@@ -65,10 +66,14 @@ protected:
 private:
     void rebuild();
     void commitTyped();
+    /*  "Selected image tags" / "Selected images tags" -- the band tracks the selection
+        because one image and forty are different questions. */
+    QString headerText() const;
 
     KeywordVocab *vocab = nullptr;
+    GradientHeader *header = nullptr;
     FlowLayout *flow = nullptr;
-    QWidget *chipArea = nullptr;
+    QWidget *tagArea = nullptr;
     QLineEdit *addEdit = nullptr;
     QLabel *legend = nullptr;
 
@@ -76,4 +81,4 @@ private:
     int selectionSize = 0;
 };
 
-#endif // KEYWORDCHIPS_H
+#endif // KEYWORDTAGS_H

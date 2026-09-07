@@ -362,14 +362,14 @@ void KeywordTree::buildFromCatalog()
     }
 }
 
-/*  Shared with Views/keywordchips.cpp, which accepts a keyword dragged down from here. */
+/*  Shared with Views/keywordtags.cpp, which accepts a keyword dragged down from here. */
 extern const char *kVocabNodeMime;
 
 void KeywordTree::startDrag(Qt::DropActions)
 {
 /*
     Dragging a keyword carries its PATH, not its row or its id. A row is meaningless once
-    the tree re-sorts, and an id would make the chip zone -- which has no business knowing
+    the tree re-sorts, and an id would make the tag zone -- which has no business knowing
     the vocabulary's primary keys -- look one up. The path is the identity everywhere else
     in the keyword code, so it is the identity here too.
 */

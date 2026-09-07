@@ -12,13 +12,13 @@ class QLineEdit;
 
     IT HAS NO CHECKBOXES AND IT NEVER TAGS A PHOTOGRAPH. That is the whole shape of the
     panel: this tree curates the keyword LIST (rename, re-parent, insert a parent, add,
-    delete, import), and the zone below it assigns keywords to the SELECTION. The two jobs
+    delete, import), and the zone above it assigns keywords to the SELECTION. The two jobs
     are separated because they have different consequences -- reorganising a vocabulary is
     cheap and reversible, retagging a thousand files is neither -- and because a checkbox
     that does both puts every reorganising gesture one mis-click from a mass edit.
 
     A DOT marks a node the current image carries. It is the one thing here that depends on
-    what is selected, and it is a hint rather than a control: the chips below are what the
+    what is selected, and it is a hint rather than a control: the tags above are what the
     user acts on.
 
     RENAME AND RE-PARENT ASK BEFORE TOUCHING FILES. The model changes the vocabulary
