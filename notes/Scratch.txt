@@ -4107,4 +4107,5 @@ Hierarchical Keywords: Path Identity, Vocabulary, Keywords Dock
  - resumable deferred retag
  - per-node export flags honoured on sidecar write
 
-Say the word if you want the tab to read "Source" too and I'll do that pass properly.
+Review all code / documentation / help referencing Folders or Catalog to determine if it
+correctly reflects the architecture change from Folders to Source: Catalog or Folders.

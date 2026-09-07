@@ -34,7 +34,10 @@ CatalogScopeTree::CatalogScopeTree(const QString &countMetric, int countMargin,
     setSelectionMode(QAbstractItemView::SingleSelection);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    /*  Maximum, not Fixed: Fixed makes the sizeHint a FLOOR as well as a ceiling, and a
+        floor on a docked widget is what resizes the application window. See
+        fitToContents. */
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
     setFrameShape(QFrame::NoFrame);
 
     catalogItem = new QTreeWidgetItem(this);
@@ -211,17 +214,60 @@ void CatalogScopeTree::fitToContents()
     THE ONLY LIMIT IS THE PANEL. However many years there are, kMinFolderRows of the dock
     are left for the folder tree beneath, so it can never be squeezed out of existence;
     past that this scrolls. In a dock of any ordinary height that limit is never reached.
+
+    A MAXIMUM, NEVER A FIXED HEIGHT. setFixedHeight sets the MINIMUM as well, and a
+    minimum on a docked widget propagates: the container's minimum grows, the dock's
+    grows, QMainWindow's minimumSizeHint grows, and the WINDOW is resized to fit. So
+    expanding a twenty-year catalog in a short dock grew the whole application window --
+    and worse, it did it in a loop, because the cap below is measured against the parent's
+    height, which had just been made taller by our own minimum. Every part of the
+    arithmetic here was right and none of it could be enforced.
+
+    The height is therefore a MAXIMUM plus a sizeHint, with the minimum pinned at one row
+    and the vertical size policy set to Maximum (shrinkable, never demanding). The layout
+    gives us the years when the panel has the room and less when it does not; the panel's
+    own scrollbar (ScrollBarAsNeeded) shows the rest. Nothing here can make the window
+    move.
+
+    THE BUDGET SUBTRACTS THE TWO BANDS, not just the folder rows. The panel is
+    band/catalog/band/folder-tree, and the "Catalog" and "Folders" headers are real
+    height -- leaving only kMinFolderRows out of the parent's height would hand the folder
+    tree three rows minus two bands. The bands are found as the parent's other children,
+    so nothing here has to know how many there are.
 */
     int rows = 1;
     if (catalogItem && catalogItem->isExpanded()) rows += catalogItem->childCount();
     const int rowHeight = qMax(sizeHintForRow(0), fontMetrics().height() + 6);
+    const int frame = 2 * frameWidth();
 
-    int maxHeight = rows * rowHeight;
+    int wanted = rows * rowHeight + frame;
     if (parentWidget()) {
-        const int forFolders = kMinFolderRows * rowHeight;
-        maxHeight = qMax(rowHeight, parentWidget()->height() - forFolders);
+        int bands = 0;
+        const QList<QWidget *> kids =
+            parentWidget()->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
+        for (QWidget *w : kids) {
+            if (w == this || w == alignWith || !w->isVisible()) continue;
+            bands += w->height();
+        }
+        const int budget = parentWidget()->height() - bands - kMinFolderRows * rowHeight;
+        wanted = qMin(wanted, qMax(rowHeight + frame, budget));
     }
-    setFixedHeight(qMin(rows * rowHeight, maxHeight) + 2 * frameWidth());
+
+    /*  The minimum is re-asserted every time because rowHeight moves with the app font,
+        and updateGeometry only when the wanted height actually changed -- fitToContents
+        runs on every parent resize. */
+    setMinimumHeight(rowHeight + frame);
+    setMaximumHeight(wanted);
+    if (wanted != wantedHeight) {
+        wantedHeight = wanted;
+        updateGeometry();
+    }
+}
+
+QSize CatalogScopeTree::sizeHint() const
+{
+    const QSize base = QTreeWidget::sizeHint();
+    return QSize(base.width(), wantedHeight > 0 ? wantedHeight : base.height());
 }
 
 bool CatalogScopeTree::eventFilter(QObject *watched, QEvent *event)
@@ -230,6 +276,9 @@ bool CatalogScopeTree::eventFilter(QObject *watched, QEvent *event)
     /*  The folder tree's scrollbar appearing or disappearing moves its viewport edge, and
         with it the counts this tree lines up with. Resize is watched too, for a platform
         or theme that changes the scrollbar's thickness after it is up. */
+    if (alignWith && event->type() == QEvent::Resize && watched == alignWith) {
+        alignCountColumn();
+    }
     if (alignWith && watched == alignWith->verticalScrollBar()
         && (event->type() == QEvent::Show || event->type() == QEvent::Hide
             || event->type() == QEvent::Resize)) {
@@ -258,6 +307,11 @@ void CatalogScopeTree::setAlignWith(QAbstractScrollArea *neighbour)
         scrollbar that appears because folders were expanded in a dock that did not
         change size. */
     if (QScrollBar *sb = neighbour->verticalScrollBar()) sb->installEventFilter(this);
+    /*  And the tree itself, because it can change width without this one changing:
+        fsTree carries a maximumWidth (folderMaxWidth) that MW lifts when the panel
+        floats, so in a panel wider than the cap the two trees are not the same width and
+        do not resize together. */
+    neighbour->installEventFilter(this);
     alignCountColumn();
 }
 
@@ -330,8 +384,17 @@ void CatalogScopeTree::resizeColumns()
     /*  The item's own left/right text margins, which are not in the string's width. */
     countWidth = qMax(countWidth, widest + 8);
 
+    /*  THE VIEWPORT, NOT width(). The count column is the stretched last section, so it
+        ends where the VIEWPORT ends -- and the viewport is already short by our own
+        scrollbar and by whatever right margin alignCountColumn has set. Taking a nominal
+        G::scrollBarThickness off the WIDGET width instead made column 0 wider than the
+        viewport as soon as there was an inset to absorb, which squeezed the count column
+        down to the header's minimum section size and pushed the number out of sight
+        entirely. That is what a floated Source panel showed: fsTree is capped at
+        folderMaxWidth, so the inset was the whole 100-odd px the panel had over the cap. */
+    const int avail = viewport() ? viewport()->width() : width();
     setColumnWidth(1, countWidth);
-    setColumnWidth(0, width() - G::scrollBarThickness - countWidth - countMargin);
+    setColumnWidth(0, qMax(0, avail - countWidth - countMargin));
 }
 
 void CatalogScopeTree::resizeEvent(QResizeEvent *event)
