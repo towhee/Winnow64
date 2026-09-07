@@ -1092,7 +1092,7 @@ private slots:
     void setScope(G::Scope s, QString src = "");
     void updateCatalogScopeTrees();   // push the catalogued count onto both trees
     /*  The catalog, prefiltered on one year -- what selecting a year under the Catalog
-        row in the Folders or Bookmarks panel means. See Views/catalogscopetree.h. */
+        row in the Source panel's Catalog subpanel means. See Views/catalogscopetree.h. */
     void setCatalogScopeForYear(const QString &year);
     /*  Check the year setCatalogScopeForYear remembered, once the Filters panel has a
         Years category to check it in. Called from buildFiltersWhenModelReady. */

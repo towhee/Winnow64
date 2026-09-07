@@ -38,7 +38,7 @@ class Filters;
 
     THE SCOPE IS NOT SET FROM THIS PANEL. The Folders|Catalog buttons and the "Manage..."
     row are gone: choosing the catalog is File > Open Catalog (or the Catalog row above
-    the Folders and Bookmarks trees, or File > Open Catalog), and choosing a folder is
+    the Source panel's Catalog subpanel, or File > Open Catalog), and choosing a folder is
     selecting one.
     Which folders are indexed is configuration, and lives in File > Manage Catalog...
     The panel is the search surface for whichever scope MW has set; it does not own it.

@@ -1765,8 +1765,8 @@ void Preferences::addFullScreen()
     // Full screen - show folders
     i.name = "fullScreenShowFolders";
     i.parentName = "FullScreenHeader";
-    i.captionText = "Show folders";
-    i.tooltip = "When you switch to full screen show the folders dock.";
+    i.captionText = "Show source";
+    i.tooltip = "When you switch to full screen show the Source panel (Catalog and folders).";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isFolders;
