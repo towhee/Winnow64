@@ -4106,3 +4106,5 @@ Hierarchical Keywords: Path Identity, Vocabulary, Keywords Dock
  - synonym export to dc:subject, and the read-side consumption it needs
  - resumable deferred retag
  - per-node export flags honoured on sidecar write
+
+Say the word if you want the tab to read "Source" too and I'll do that pass properly.

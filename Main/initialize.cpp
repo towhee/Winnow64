@@ -1432,6 +1432,13 @@ void MW::createStatusBar()
     the tree fills the rest. The DOCK keeps its objectName, so a WindowState saved
     before the catalog rows existed still restores -- Qt keys dock state on the dock, not
     on what it contains.
+
+    TWO NAMED SUBPANELS, not two bare trees. The panel is titled "Source" because that is
+    what both halves answer -- where the images being looked at come from -- and each half
+    gets its own gradient band, the same band the Keywords panel uses, so "Catalog" and
+    "Folders" read as the two answers rather than as one tree with odd rows on top.
+    Without the bands the catalog rows look like part of the file tree, which is the
+    confusion this fixes.
 */
 static QWidget *wrapWithCatalogScopeTree(CatalogScopeTree *row, QWidget *tree)
 {
@@ -1439,7 +1446,9 @@ static QWidget *wrapWithCatalogScopeTree(CatalogScopeTree *row, QWidget *tree)
     QVBoxLayout *v = new QVBoxLayout(box);
     v->setContentsMargins(0, 0, 0, 0);
     v->setSpacing(0);
+    v->addWidget(new GradientHeader(QObject::tr("Catalog"), box));
     v->addWidget(row);
+    v->addWidget(new GradientHeader(QObject::tr("Folders"), box));
     v->addWidget(tree, 1);
     return box;
 }
@@ -1458,18 +1467,37 @@ void MW::createFolderDock()
     /*  The count metric and margin are FSTree::resizeColumns', so the catalog counts
         line up with the folder counts directly beneath them. */
     folderCatalogTree = new CatalogScopeTree("(99999", 10);
+    /*  And it keeps lining up when the folder tree grows a vertical scrollbar: both trees
+        stretch their last section, so the counts hang off the VIEWPORT edge, which the
+        scrollbar moves in one tree and not the other. See CatalogScopeTree::alignCountColumn. */
+    folderCatalogTree->setAlignWith(fsTree);
     connect(folderCatalogTree, &CatalogScopeTree::catalogChosen, this, [this]{
         setCatalogScopeWhole("folderCatalogTree");
     });
     connect(folderCatalogTree, &CatalogScopeTree::catalogYearChosen, this,
             [this](const QString &year){ setCatalogScopeForYear(year); });
+    /*  Choosing a folder or a bookmark folds the years away: the user has moved to the
+        other subpanel, and an expanded year list left over it is the tallest thing in the
+        panel saying nothing about what they are now looking at. FSTree's own signal
+        rather than QAbstractItemView::clicked, because FSTree::mousePressEvent only
+        chains to the base class on one of its branches, so clicked() does not fire for a
+        modifier click. BookMarks does chain, so itemPressed is reliable there -- and it
+        is what MW::bookmarkClicked already listens to. */
+    connect(fsTree, &FSTree::folderSelectionChange,
+            folderCatalogTree, &CatalogScopeTree::collapseCatalog);
+    connect(bookmarks, &QTreeWidget::itemPressed,
+            folderCatalogTree, &CatalogScopeTree::collapseCatalog);
     folderDock->setWidget(wrapWithCatalogScopeTree(folderCatalogTree, fsTree));
     connect(folderDock, &DockWidget::focus, this, &MW::focusOnDock);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
     folderTitleLayout->setSpacing(0);
-    folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
+    /*  "Source", not "Folders": the panel holds the Catalog subpanel as well, and a
+        header naming only one of the two was what made the distinction confusing. The
+        TAB still reads "Folders" (folderDockTabText) -- it keys dockTextNames, the tab
+        graphic map and the saved window state. */
+    folderTitleBar = new DockTitleBar("Source", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
     folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
     // The folders tab starts with its text title; when G::useDockTitleGraphic
@@ -1500,7 +1528,7 @@ void MW::createFolderDock()
     // question mark button
     BarBtn *folderQuestionBtn = new BarBtn();
     folderQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    folderQuestionBtn->setToolTip("How this works: folder selection tips");
+    folderQuestionBtn->setToolTip("How this works: the Source panel (Catalog and Folders)");
     connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
     folderTitleLayout->addWidget(folderQuestionBtn);
 

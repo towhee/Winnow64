@@ -1,8 +1,10 @@
 #ifndef CATALOGSCOPETREE_H
 #define CATALOGSCOPETREE_H
 
-#include <QTreeWidget>
+#include <QAbstractScrollArea>
+#include <QPointer>
 #include <QString>
+#include <QTreeWidget>
 
 /*
     THE CATALOG AS A SCOPE, SHOWN WHERE SCOPE IS CHOSEN.
@@ -67,6 +69,20 @@ public:
     // Re-apply the palette-derived stylesheet; MW::setBackgroundShade calls it.
     void updateStyle();
 
+    /*  The tree BELOW whose count column this one lines up with (FSTree). Passing the
+        widget rather than a number because the thing that has to match is where its
+        VIEWPORT ends, which moves when it grows a vertical scrollbar -- see
+        alignCountColumn(). */
+    void setAlignWith(QAbstractScrollArea *neighbour);
+
+public slots:
+    /*  Fold the years away. MW calls this when the user picks a folder or a bookmark:
+        the years are only of interest while the catalog is the thing being chosen, and
+        an expanded list of them left standing over a folder tree the user has just moved
+        to is the panel's biggest row group saying nothing. Collapsing is a VIEW change
+        only -- it does not touch the scope, so a year already chosen stays chosen. */
+    void collapseCatalog();
+
 signals:
     /*  The whole catalog was chosen. */
     void catalogChosen();
@@ -94,8 +110,11 @@ private:
     bool yearsPending = false;   // a query is in flight
     QIcon catalogIcon;
     QIcon yearIcon;
+    QPointer<QAbstractScrollArea> alignWith;   // the folder tree beneath
+    int countInset = 0;                        // right viewport margin, in px
 
     void refreshText();
+    void alignCountColumn();
     void setYears(const QMap<QString, int> &years);
     void fitToContents();
     void resizeColumns();

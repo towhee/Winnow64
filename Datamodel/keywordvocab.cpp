@@ -206,6 +206,20 @@ void KeywordVocab::reload()
     refreshCounts();
 }
 
+Qt::ItemFlags KeywordVocab::flags(const QModelIndex &idx) const
+{
+    /*  THE INVALID INDEX IS THE ROOT, and it is a drop target on purpose: dragging a
+        keyword onto blank space below the tree moves it to the top level, which is the
+        only gesture that gets a node OUT of a branch. KeywordTree::dropEvent already
+        passes an invalid target through to reparent(). */
+    if (!idx.isValid()) return Qt::ItemIsDropEnabled;
+
+    /*  Not editable: renaming goes through the context menu's dialog (see
+        KeywordTree), because a rename can rewrite files and has to ask first. */
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled
+         | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+}
+
 void KeywordVocab::refreshCounts()
 {
     if (G::isLogger) G::log("KeywordVocab::refreshCounts");
