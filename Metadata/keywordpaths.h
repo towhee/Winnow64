@@ -21,10 +21,12 @@
     dc:subject and the path into lr:hierarchicalSubject -- and storing both forms put
     "Heron" in the category list twice with its image count split between the entries.
 
-    WHAT REPLACED IT is LEAF CONSUMPTION rather than flattening: keywordEffectivePaths
-    drops a dc:subject entry whose name matches the leaf of one of the SAME image's paths,
+    WHAT REPLACED IT is NODE CONSUMPTION rather than flattening: keywordEffectivePaths
+    drops a dc:subject entry whose name matches ANY node of one of the SAME image's paths,
     because the path is the richer statement of the same fact. One tag, one keyword, and
-    the hierarchy survives.
+    the hierarchy survives. It consumed only the LEAF at first, which left every ANCESTOR
+    name Lightroom's "export containing keywords" writes into dc:subject standing as a
+    phantom depth-1 keyword -- see the note on the nodes set in the function itself.
 
     THE OTHER TWO ARGUMENTS FOR FLAT ALSO HAVE ANSWERS. "The hierarchy is not universal"
     -- phone images, non-Adobe DAMs and IPTC-only files carry dc:subject and nothing else
@@ -115,12 +117,37 @@ inline QStringList keywordEffectivePaths(const QStringList &subject,
 {
     QStringList out;
     QSet<QString> seen;      // folded paths already emitted
-    QSet<QString> leaves;    // folded leaf of every hierarchical path
+    QSet<QString> nodes;     // folded name of EVERY node of every hierarchical path
 
-    for (const QString &p : hierarchical) {
-        const QString leaf = keywordLeafOf(p);
-        if (!leaf.isEmpty()) leaves.insert(keywordFold(leaf));
-    }
+    /*  EVERY NODE, NOT JUST THE LEAF.
+
+        This collected leaves only, and a dc:subject entry naming an ANCESTOR of a path
+        the image already carries therefore survived as a separate depth-1 keyword. That
+        is not a rare shape: it is what Lightroom writes with "export containing
+        keywords" on. One real row --
+
+            dc:subject             Animal, BC, Canada, Chipmunk, Fauna,
+                                   Kettle River Recreation Area, Location, Southern BC,
+                                   Squirrel
+            lr:hierarchicalSubject Fauna|Animal|Squirrel|Chipmunk
+                                   Location|Canada|BC|Southern BC|Kettle River Recreation Area
+
+        -- consumed Chipmunk and Kettle River Recreation Area and kept the other SEVEN,
+        every one of them an ancestor name from those same two paths. The library then
+        carries a phantom top-level "Squirrel" beside the real "Fauna|Animal|Squirrel",
+        with its own image count, and the Filters panel offers two identically labelled
+        nodes with nothing to choose between them. Checking the wrong one filters to
+        nothing and says nothing about why.
+
+        A NODE NAME IS CONSUMED WHEREVER IT SITS in a path the image carries, because
+        keywordPrefixExpand emits every ancestor as a keyword in its own right -- so
+        "Fauna|Animal" is already searchable and a bare "Animal" beside it is not a second
+        fact, it is the same one spelled without its parents. A subject naming something
+        NO path mentions is still kept: that is a genuinely unfiled keyword and the panel
+        shows it as one. */
+    for (const QString &p : hierarchical)
+        for (const QString &node : keywordNodes(p))
+            if (!node.isEmpty()) nodes.insert(keywordFold(node));
 
     auto add = [&out, &seen](const QString &path) {
         if (path.isEmpty()) return;
@@ -137,7 +164,7 @@ inline QStringList keywordEffectivePaths(const QStringList &subject,
     for (const QString &s : subject) {
         const QString trimmed = s.trimmed();
         if (trimmed.isEmpty()) continue;
-        if (leaves.contains(keywordFold(trimmed))) continue;   // consumed by a path
+        if (nodes.contains(keywordFold(trimmed))) continue;    // named by a path already
         add(keywordNodes(trimmed).join('|'));
     }
 

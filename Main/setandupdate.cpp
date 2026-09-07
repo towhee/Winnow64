@@ -1078,14 +1078,29 @@ void MW::updateClassification()
 
 void MW::updateSidecarStatus(QString fPath)
 {
+/*
+    A sidecar now exists for fPath. Record it on the row.
+
+    THE DATAMODEL ROW, NOT THE PROXY ROW. This mapped the path through the PROXY and wrote
+    with setValSf, so an image the current filter excludes -- which is exactly the case
+    when the user is tagging inside a filtered set -- mapped to row -1 and the write went
+    nowhere. The flag then stayed false with a sidecar on disk, and
+    DataModel::catalogRowFor reported sidecarMtime = 0, which is enough to make the
+    catalog skip the row forever (see Metadata::writeXMP). The datamodel row exists
+    whether or not the proxy is showing it.
+
+    The icon refresh still goes through the proxy, because that is what a VIEW draws, and
+    an invalid index there simply means there is nothing on screen to repaint.
+*/
     QString srcFun = "MW::updateSidecarStatus";
     if (G::isLogger) G::log(srcFun, fPath);
-    qDebug() << srcFun<< fPath;
 
-    QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
-    emit  setValSf(sfIdx.row(), G::SidecarColumn, true, G::dmInstance,
-                  srcFun, Qt::EditRole);
-    thumbView->refreshIcon(sfIdx, srcFun);
+    const int dmRow = dm->rowFromPath(fPath);
+    if (dmRow < 0) return;
+    emit setValDm(dmRow, G::SidecarColumn, true, dm->instance, srcFun, Qt::EditRole);
+
+    const QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
+    if (sfIdx.isValid()) thumbView->refreshIcon(sfIdx, srcFun);
 }
 
 void MW::setIgnoreAddThumbnailsDlg(bool ignore)

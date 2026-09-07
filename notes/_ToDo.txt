@@ -7,7 +7,7 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- Fix search in filter
+- Test search in filter
 - Develop panels management needs a tweak
 - Tweak welcome screen re to get started incl Catalog ??
 - Tweak develop basic tone sliders
@@ -15,40 +15,9 @@ BUGS / TO DO
 - Tweak preferences
 - Tweak develop help
 - Tweak workspaces - more sophicated default
+- Check for orphaned developed previews
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
-- Keyword module: IN PROGRESS 2026-09-06. Keyword identity reverts to the hierarchical
-  PATH (catalog schema v10, reversing the v4 flattening) + a new Keywords dock.
-  Plan: ~/.claude/plans/factor-in-that-we-majestic-pascal.md.
-  DONE: Phase 0 (Xmp::setItemList rdf:Bag writer + setItem refusing a List);
-        Phase 1 (path algebra in keywordpaths.h + the row-memory harness);
-        Phase 2 (schema v10 path identity: index writer, model, migration, vocab table);
-        Phase 3 (nested Keywords tree in Filters, save/restore re-keyed on
-                 {category, filter value}, keywordflatten.h renamed keywordpaths.h and
-                 the dead flattenKeywords deleted).
-        Phase 4 (write path: _keywords shadows, writeXMP change detection,
-                 MW::applyKeywordsToSelection + keywordsInSelection).
-        Phase 5 (KeywordVocab model + Keywords DOCK, tree zone: rename, new keyword,
-                 insert parent, delete, filter box, applied dot, build-from-catalog,
-                 retag dialog; winnowStateVersion 4 -> 5). Assigning to the selection
-                 works (double-click / Enter / context menu).
-        Phase 6 (chip zone + FlowLayout, type-ahead completer, drag and drop, and the
-                 retag EXECUTION via MW::retagKeywordPath +
-                 Metadata::writeKeywordsToSidecar).
-        Phase 7 (Lightroom keyword import/export: Metadata/lrkeywords.h + fixture +
-                 tst_lrkeywords; merge by folded path, idempotent, verified against the
-                 real 3,975-keyword export).
-  ALL SEVEN PHASES DONE. The keyword module is feature complete.
-  Deliberately DEFERRED out of that work, each for a stated reason:
-    - 9-slot keyword shortcut/set grid (number keys apply a keyword to the selection,
-      switchable sets). Must clear MW::developShortcutIntercept, which eats number keys.
-    - Synonym export to dc:subject. An exported synonym returns as an unmatched leaf and
-      becomes a spurious root on the next read; consuming it needs a vocabulary lookup
-      during parsing, on parser threads that have no catalog access.
-    - Per-node export flags honoured on SIDECAR write. Honoured on Lightroom export only
-      for now: a flag that drops a tag from the file drops it from the image next read.
-    - Resumable deferred retag (a vocab_retag table). "Not now" currently leaves the
-      images showing as ? orphans in the dock, which is visible rather than hidden.
 - Auto keyword generator (k shortcut?)
 - Review RapidRaw masks / inpainting / model usage
 - Does detail need Denoise / color?

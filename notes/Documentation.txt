@@ -66,6 +66,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Retiring the Items (Alignment, Tooltips, and the Deletion Pass)
      The Second Batch (Covering the Rest, and the Set Mask)
      Compiling the Filters (Off the Tree, Once per Change)
+     "Is A Load Running", Not "Has Every Row Been Read" (the Filter That Turns Itself Off)
      Settling Search and Ingested (and a Fact That Was Wrong)
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
      Thumbnails in the Index (Schema 5)
@@ -213,6 +214,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Catalog (Cross-folder Search)
      The Catalog Dock and Loading Results
      The Filter Dock (Folders and Catalog)
+     Node Consumption (the Phantom Top-Level Keyword)
      Scope: Catalog Beside the Folders (One Choice, Two Views, and Its Years)
      Filter Exclusion (Include This, Not That)
      Searching Folders and Catalog (One Grammar)
@@ -975,6 +977,21 @@ MEASURED: a full pass over the 50-row folder with a 200-item tree and three item
 tst_filterpredicate REPLACES THE SHADOW, which went with the old implementation. The evaluation is a template taking a callable rather than a model, so the whole decision is testable without one -- including that a category is read once per row and not once per item.
 
 SearchColumn and IngestedColumn were the last things left on the items; they are settled below.
+
+⏺ DataModel Changes > "Is A Load Running", Not "Has Every Row Been Read" (the Filter That Turns Itself Off)
+
+A KEYWORD ADDED IN A FILTERED CATALOG SCOPE WIDENED THE VIEW TO THE WHOLE CATALOG. Reported from a catalog filtered on 2026: double-clicking a keyword in the Keyword list wrote the tag, and the grid and status bar then showed all 43,000 images while the Filters panel still showed 2026 checked. The keyword itself was written correctly -- the sidecar carried dc:subject Squirrel and lr:hierarchicalSubject Fauna|Animal|Squirrel -- so nothing about the edit failed. What failed was the filter.
+
+THE CAUSE IS G::allMetadataAttempted, USED AS THOUGH IT MEANT "THE MODEL IS READY". It does not. DataModel::addMetadataForItem republishes it on EVERY metadata read as isMetaReadFinished() (metadataAttemptedCount >= rowCount()), and MW::refreshStaleRows -- the scroll-in verification -- clears stale rows back to MetaNotAttempted, which DECREMENTS that counter. It therefore flaps false during ordinary scrolling, and in a catalog scope it flaps false constantly, because every filter change moves the visible window and the verifier then finds more stale rows.
+
+MW::filterChange and Filters::itemClickedSignal were fixed for exactly this, and the fix stopped there. Four more places still read the flag, and the two that matter are the ones this bug ran through:
+
+- SortFilter::filterAcceptsRow began "if (!G::allMetadataAttempted) return true", so the PROXY accepted every row. The panel's checkboxes were untouched, nothing errored, and the scope silently widened -- the filter was told not to filter and did as it was told.
+- BuildFilters::update, updateAllCounts and updateCategory each skipped their rebuild on the same flag. updateCategory was worse than the other two: it suspends the proxy on entry and, on that path, returned WITHOUT lifting the suspension and without rebuilding, so the category the edit had just changed was never updated.
+
+All four now gate on G::isModifyingDatamodel -- set by the two paths that actually BUILD the model (MW::folderSelectionChange, MW::loadCatalogScope) and cleared when the load completes, and untouched by refreshStaleRows. That is the distinction that matters: a model fully populated while a handful of its rows are re-read is perfectly well defined to filter. A row whose metadata has not landed does not match an active filter, and BuildFilters re-runs when it does. WITH NO FILTER SET NOTHING CHANGES EITHER WAY, because the compiled predicate acceptsEverything() -- so this only bites where the user has actually asked for a filter, which is where they want one.
+
+updateCategory ALSO LIFTS ITS OWN SUSPENSION on the deferred path now. Callers do follow it with MW::filterChange, which lifts the latch on both of its paths, but a latch whose release lives in whoever remembers to call the right thing next is how it was lost the first time.
 
 ⏺ DataModel Changes > Settling Search and Ingested (and a Fact That Was Wrong)
 
@@ -4776,6 +4793,29 @@ THE CATALOG PANEL IS NOT BUILT at all under this flag: catalogDock and catalogVi
 
 G::useFilterPanel IS AN ESCAPE HATCH, not a shelved feature. False rebuilds both original panels exactly as they were, which is what makes this reversible without a revert. It is read at dock-creation time, so changing it takes a restart.
 
+
+⏺ Keywords and Cataloguing > Node Consumption (the Phantom Top-Level Keyword)
+
+A KEYWORD FILTER THAT APPEARED TO DO NOTHING. Reported as "I tagged the image, the tag is on the file, and filtering on it finds nothing." Traced with five temporary probes down the whole path -- the edit, the snapshot, the category rebuild, the compiled predicate, the row test -- and every stage was right. The compiled predicate read:
+
+    col 31 include[2026]  /  col 94 include[Squirrel]
+
+Two facts, neither of them a filter bug: a year filter was still checked from an earlier catalog-year scope, and the item checked was a TOP-LEVEL "Squirrel" (9 images, none of them 2026), not the "Fauna|Animal|Squirrel" (5) sitting inside the tree. The panel drew both as the single word "Squirrel".
+
+THE PHANTOM IS MANUFACTURED BY keywordEffectivePaths, and that IS a bug. It built its consumed set from the LEAF of each hierarchical path only, so a dc:subject entry naming an ANCESTOR of a path the same image carries survived as a separate depth-1 keyword. That is not an exotic shape -- it is what Lightroom writes with "export containing keywords" on. One real row from the user's library:
+
+    dc:subject              Animal, BC, Canada, Chipmunk, Fauna,
+                            Kettle River Recreation Area, Location, Southern BC, Squirrel
+    lr:hierarchicalSubject  Fauna|Animal|Squirrel|Chipmunk
+                            Location|Canada|BC|Southern BC|Kettle River Recreation Area
+
+Chipmunk and Kettle River Recreation Area were consumed as leaves. The other SEVEN survived -- every one of them an ancestor name from those same two paths -- each becoming a top-level keyword with its own image count. Across that library it produced Squirrel=9 beside Fauna|Animal|Squirrel=5, Gray Squirrel=18 beside Fauna|Animal|Gray Squirrel=8, and so on.
+
+CONSUME EVERY NODE, NOT JUST THE LEAF. A node name is dropped from dc:subject wherever it sits in a path the image carries, because keywordPrefixExpand already emits every ancestor as a keyword in its own right: "Fauna|Animal" is searchable, and a bare "Animal" beside it is not a second fact but the same one spelled without its parents. A subject naming something NO path mentions is still kept -- that is a genuinely unfiled keyword, and the panel shows it as one.
+
+SCHEMA 11 RE-DERIVES, AND READS NO FILES. The links already in the index were derived under the old rule, and no file changed, so nothing would re-read them -- the freshness stamp is still correct, which is exactly why this needs a migration rather than healing on its own. The keyword tables are rebuilt from image.keywordpaths and image.keywords_literal, which the rows already hold verbatim. No DDL: the derivation changed, not the shape. Schema 10's carry-forward is not repeated -- it existed for pre-schema-7 rows, which schema 10 already reset for re-reading.
+
+THE DUPLICATE IS STILL POSSIBLE, AND IS NOW MARKED. A library where some images were tagged flat and others hierarchically genuinely holds both, and no rule can merge them without deciding for the user that they mean the same thing. So Filters::addKeywordItems draws a top-level keyword whose name also appears inside the tree in ITALIC, with a tooltip naming the other paths and saying plainly that they are different keywords. Only the top-level copy is marked: the one inside the tree has its parents on screen above it and its full path in its tooltip already.
 
 ⏺ Keywords and Cataloguing > Scope: Catalog Beside the Folders (One Choice, Two Views, and Its Years)
 

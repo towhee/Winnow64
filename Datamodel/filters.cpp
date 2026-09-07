@@ -2224,6 +2224,48 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         node->setData(2, Qt::EditRole, it.value());
         node->setData(3, Qt::EditRole, it.value());
     }
+
+    /*
+        MARK A TOP-LEVEL KEYWORD THAT SHARES ITS NAME WITH ONE INSIDE THE TREE.
+
+        The tree can hold "Squirrel" at the top AND "Fauna|Animal|Squirrel" beneath, and
+        both draw as the single word "Squirrel". They are DIFFERENT keywords -- the whole
+        path is the identity -- so checking one and expecting the other's images is a
+        filter that appears to do nothing, with nothing on screen to explain it. That is
+        what it did.
+
+        Most of these were manufactured by keywordEffectivePaths keeping an ancestor name
+        out of dc:subject, which it no longer does. The rest are real: a library where
+        some images were tagged flat and others hierarchically genuinely has both, and no
+        rule can merge them without deciding for the user that they mean the same thing.
+        So the DUPLICATE IS SHOWN AS ONE, in italic and with a tooltip that names the
+        other, rather than being hidden or silently folded in.
+
+        ONLY THE TOP-LEVEL COPY IS MARKED. The one inside the tree is not ambiguous: its
+        parents are on screen above it, and its tooltip already carries the full path.
+    */
+    QHash<QString, QStringList> deeperByName;   // folded leaf -> paths of depth > 1
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        if (!path.contains('|')) continue;
+        deeperByName[keywordFold(keywordLeafOf(path))] << path;
+    }
+    for (int i = 0; i < category->childCount(); ++i) {
+        QTreeWidgetItem *item = category->child(i);
+        const QString path = item->data(1, Qt::EditRole).toString();
+        if (path.isEmpty() || path.contains('|')) continue;
+        const QStringList also = deeperByName.value(keywordFold(path));
+        if (also.isEmpty()) continue;
+        QFont f = item->font(0);
+        f.setItalic(true);
+        item->setFont(0, f);
+        item->setToolTip(0, QString(
+            "%1\n\nA TOP-LEVEL keyword, filed under nothing. The same name also appears "
+            "in the tree as:\n    %2\n\nThose are different keywords -- a keyword is its "
+            "whole path -- so this filters only the images tagged with the bare name.\n\n"
+            "Click to include. Opt+click to exclude.")
+            .arg(path, also.join("\n    ")));
+    }
 }
 
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)

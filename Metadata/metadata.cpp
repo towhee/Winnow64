@@ -919,12 +919,22 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         return false;
     }
 
-    // if no existing sidecar then need to update sidecar in DataModel and icon delegate
-    bool updateSidecar = false;
-    QFileInfo fileInfo(sPath);
-    if (!fileInfo.exists()) {
-        updateSidecar = true;
-    }
+    /*  THE DATAMODEL IS TOLD ON EVERY SUCCESSFUL WRITE, not only when the sidecar is
+        NEW. This was gated on the file not already existing, on the reasoning that a
+        sidecar that was already there cannot have changed the row's Sidecar flag. It can:
+        the flag is set from the FILE SCAN, and a row whose scan predates the sidecar --
+        or whose write went to a row the proxy was filtering out, see
+        MW::updateSidecarStatus -- carries false with a sidecar sitting on disk.
+
+        A STALE FALSE IS NOT COSMETIC. DataModel::catalogRowFor reads this flag to decide
+        whether to stat the sidecar, so a false flag reports sidecarMtime = 0; the catalog
+        then sees a freshness stamp identical to the one it stored (the image file itself
+        is untouched by a sidecar write) and SKIPS the row. The edit reaches the file and
+        the model and never the index -- and because the stamps still match, every later
+        commit for that row is skipped too, so it stays wrong permanently. That is what
+        left a keyword written to disk with no count against it in the Keyword list and
+        nothing found when filtering on it, across restarts. */
+    const bool updateSidecar = true;
 
     // data edited, open image file
     p.file.setFileName(sPath);

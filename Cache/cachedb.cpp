@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 10;
+constexpr int kSchemaVersion = 11;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1026,6 +1026,57 @@ bool CacheDb::migrate(QSqlDatabase &db)
                 db.rollback();
                 return false;
             }
+        }
+    }
+
+    if (version < 11) {
+    /*
+        NO DDL AT ALL -- the DERIVATION changed, not the shape.
+
+        keywordEffectivePaths used to consume only a path's LEAF from dc:subject, so every
+        ANCESTOR name Lightroom writes with "export containing keywords" survived as a
+        phantom depth-1 keyword: a top-level "Squirrel" beside the real
+        "Fauna|Animal|Squirrel", each with its own count and nothing in the Filters panel
+        to tell them apart. It now consumes every node of every path.
+
+        The links already in the index were derived under the old rule and no file has
+        changed, so nothing would re-read them -- the freshness stamp is still correct,
+        which is exactly why this has to be a migration rather than something that heals
+        on its own. The keyword tables are rebuilt from image.keywordpaths and
+        image.keywords_literal, which the rows already hold verbatim, so NO IMAGE IS READ
+        and no stamp is touched.
+
+        THE SCHEMA 10 CARRY-FORWARD IS NOT REPEATED. It existed for rows indexed before
+        schema 7, which have neither verbatim column; schema 10 already reset those rows'
+        stamps so they are re-read from their files. A row that still has neither column
+        here has nothing to rebuild FROM, and its links are left exactly as they are
+        rather than being deleted -- which is what the empty kw_carry table gives us for
+        free, since rebuildPathKeyedKeywords reads it and finds nothing to carry.
+    */
+        const char *ddl[] = {
+            "CREATE TEMP TABLE kw_carry AS"
+            " SELECT ik.image_id AS image_id, k.name AS name"
+            " FROM image_keyword ik"
+            " JOIN keyword k ON k.id = ik.keyword_id"
+            " JOIN image i   ON i.id = ik.image_id"
+            " WHERE i.keywordpaths = \'\' AND i.keywords_literal = \'\'",
+            "DELETE FROM keyword_context",
+            "DELETE FROM image_keyword",
+            "DELETE FROM keyword",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+        if (!rebuildPathKeyedKeywords(db)) {
+            db.rollback();
+            return false;
+        }
+        if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            db.rollback();
+            return false;
         }
     }
 

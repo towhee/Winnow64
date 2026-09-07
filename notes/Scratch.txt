@@ -4109,3 +4109,9 @@ Hierarchical Keywords: Path Identity, Vocabulary, Keywords Dock
 
 Review all code / documentation / help referencing Folders or Catalog to determine if it
 correctly reflects the architecture change from Folders to Source: Catalog or Folders.
+
+--perfprobe
+I added squirrel keyword to /Users/roryhill/Pictures/Zen2048/pbase2048/2026-04-24_0014_Zen2048.JPG
+again (see screenshot) and then filtered on Squirrel, but the filters had not been updated
+to include the laatest change and 2026-04-24_0014_Zen2048.JPG was not filtered.  I closed
+Winnow, reopened, and the filter count for squirell was still not updated.
