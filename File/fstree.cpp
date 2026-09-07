@@ -1980,7 +1980,7 @@ void FSTree::howThisWorks()
 {
     if (G::isLogger) G::log("FSTree::howThisWorks");
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
-    new HtmlWindow("Winnow - How folders work",
-                   ":/Docs/foldershelp.html",
+    new HtmlWindow("Winnow - How the Source panel works",
+                   ":/Docs/sourcecatalogfoldershelp.html",
                    QSize(700, 600), r, window());
 }

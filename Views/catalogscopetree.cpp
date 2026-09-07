@@ -5,6 +5,7 @@
 #include <QHeaderView>
 #include <QPainter>
 #include <QPointer>
+#include <QScrollBar>
 #include <QThreadPool>
 
 namespace {
@@ -187,6 +188,17 @@ void CatalogScopeTree::setScopeIsCatalog(bool isCatalog)
     }
 }
 
+void CatalogScopeTree::collapseCatalog()
+{
+/*
+    Cheap to call, and called from every folder/bookmark click: it does nothing unless the
+    row is actually expanded, so the shift-select loop that emits one folderSelectionChange
+    per folder costs one isExpanded() test each. The itemCollapsed handler does the
+    fitToContents, so the panel gives the rows back to the folder tree.
+*/
+    if (catalogItem && catalogItem->isExpanded()) catalogItem->setExpanded(false);
+}
+
 void CatalogScopeTree::fitToContents()
 {
 /*
@@ -215,6 +227,14 @@ void CatalogScopeTree::fitToContents()
 bool CatalogScopeTree::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == parentWidget() && event->type() == QEvent::Resize) fitToContents();
+    /*  The folder tree's scrollbar appearing or disappearing moves its viewport edge, and
+        with it the counts this tree lines up with. Resize is watched too, for a platform
+        or theme that changes the scrollbar's thickness after it is up. */
+    if (alignWith && watched == alignWith->verticalScrollBar()
+        && (event->type() == QEvent::Show || event->type() == QEvent::Hide
+            || event->type() == QEvent::Resize)) {
+        alignCountColumn();
+    }
     return QTreeWidget::eventFilter(watched, event);
 }
 
@@ -225,6 +245,60 @@ void CatalogScopeTree::showEvent(QShowEvent *event)
         rather than the layout's initial guess. */
     if (parentWidget()) parentWidget()->installEventFilter(this);
     fitToContents();
+    alignCountColumn();
+}
+
+void CatalogScopeTree::setAlignWith(QAbstractScrollArea *neighbour)
+{
+    alignWith = neighbour;
+    if (!neighbour) return;
+    /*  The scrollbar itself is watched, not the tree: it is SHOWN and HIDDEN as the
+        folder list grows past the panel or is collapsed back, and those are exactly the
+        moments the count column has to move. Watching the tree's resize would miss a
+        scrollbar that appears because folders were expanded in a dock that did not
+        change size. */
+    if (QScrollBar *sb = neighbour->verticalScrollBar()) sb->installEventFilter(this);
+    alignCountColumn();
+}
+
+void CatalogScopeTree::alignCountColumn()
+{
+/*
+    KEEP THE TWO COUNT COLUMNS ENDING AT THE SAME X.
+
+    Both trees leave stretchLastSection at QTreeView's default, so in each of them the
+    count column is the LAST section and is stretched to the end of the VIEWPORT -- and
+    the counts are right-aligned in it. That makes the right edge of the viewport, not any
+    column width, the thing the numbers hang off. When the folder tree grows a vertical
+    scrollbar its viewport ends a scrollbar's width sooner, its counts step left, and this
+    tree's -- which is sized to its contents and almost never scrolls -- stay put. The
+    columns were lined up by construction (countMetric/countMargin) and come apart anyway.
+
+    So the correction is geometric rather than arithmetic: measure where the neighbour's
+    viewport actually ends, measure where ours does, and put the difference into our RIGHT
+    VIEWPORT MARGIN. Measuring beats subtracting a scrollbar width because it also absorbs
+    the differences neither widget declares -- frame widths, a stylesheet border on one
+    tree and not the other, a platform scrollbar of some other thickness, and this tree's
+    OWN scrollbar on the rare occasion the years outrun the panel.
+
+    IT CONVERGES IN ONE PASS. setViewportMargins triggers a resize, which brings us back
+    here with a delta of zero, which changes nothing and stops.
+*/
+    if (!alignWith || !isVisible() || !alignWith->isVisible()) return;
+    if (!viewport() || !alignWith->viewport()) return;
+
+    const int targetRight = alignWith->viewport()
+        ->mapToGlobal(QPoint(alignWith->viewport()->width(), 0)).x();
+    const int myRight = viewport()
+        ->mapToGlobal(QPoint(viewport()->width(), 0)).x();
+    const int delta = myRight - targetRight;
+    if (delta == 0) return;
+
+    const int inset = qMax(0, countInset + delta);
+    if (inset == countInset) return;
+    countInset = inset;
+    setViewportMargins(0, 0, countInset, 0);
+    resizeColumns();
 }
 
 void CatalogScopeTree::resizeColumns()
@@ -264,6 +338,7 @@ void CatalogScopeTree::resizeEvent(QResizeEvent *event)
 {
     QTreeWidget::resizeEvent(event);
     resizeColumns();
+    alignCountColumn();
 }
 
 void CatalogScopeTree::updateStyle()

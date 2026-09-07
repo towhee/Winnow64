@@ -86,6 +86,13 @@ public:
     QVariant data(const QModelIndex &idx, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation o,
                         int role = Qt::DisplayRole) const override;
+    /*  WITHOUT THIS THERE IS NO DRAG AT ALL. KeywordTree does every part of drag and
+        drop itself, but the view will not even CALL startDrag unless the pressed index
+        advertises Qt::ItemIsDragEnabled, and the default QAbstractItemModel::flags()
+        offers only Selectable|Enabled. Measured, not assumed: a QTreeView with
+        setDragEnabled(true) over a model whose flags lack the bit starts 0 drags, and 1
+        with it. */
+    Qt::ItemFlags flags(const QModelIndex &idx) const override;
 
     /*  Reload the whole tree from the database, then the counts from the catalog. Cheap
         enough to call on a folder change; a vocabulary is not a library. */
