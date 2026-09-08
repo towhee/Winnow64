@@ -59,6 +59,9 @@ private slots:
     void staleOfSkipsUnchangedOnRescan();
     void removedKeywordDisappearsFromCategory();
     void lightroomDoubleCollapsesToOneKeyword();
+    void flatKeywordsAreTheROOTSAnImageCarries();
+    void flatKeywordRowsMatchTheCounts();
+    void pruneUnusedKeywordsKeepsWhatIsStillLinked();
     void sameLeafUnderTwoParentsIsTwoKeywords();
     void subtreeCountRespectsTheSeparator();
     void versionNineFileRebuildsPathKeyedKeywords();
@@ -1929,6 +1932,111 @@ void tst_catalog::forgetFoldersHandlesMoreFoldersThanOneBind()
     QCOMPARE(cat.forgetFolders(folders), n - 1);
     QCOMPARE(cat.count(), 1);
     QCOMPARE(cat.folderCounts().value(survivor), 1);
+}
+
+void tst_catalog::flatKeywordsAreTheROOTSAnImageCarries()
+{
+/*
+    THE DISTINCTION THE TIDY DEPENDS ON. "Fauna" is a keyword ROW -- prefix expansion
+    links every image under Fauna|Bird|Heron to it -- but no image carries it as a flat
+    keyword unless a file actually said "Fauna" on its own with nothing hierarchical
+    naming it. A tidy that read the keyword table and called every separator-less path
+    flat would offer to delete the entire top level of the vocabulary.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("hier.nef", {"Heron"}, {"Fauna|Bird|Heron"}),
+                rowFor("flat1.jpg", {"Heron", "Nanaimo"}, {}),
+                rowFor("flat2.jpg", {"heron"}, {})});
+
+    QHash<QString, int> flat;
+    for (const CatalogKeyword &k : cat.flatKeywords()) flat.insert(keywordFold(k.path),
+                                                                   k.count);
+
+    /* The hierarchical file contributes NOTHING: its dc:subject "Heron" is consumed by
+       its own path, and Fauna and Fauna|Bird are ancestors, not flat keywords. */
+    QCOMPARE(flat.value("heron"), 2);           // the two flat files, folded together
+    QCOMPARE(flat.value("nanaimo"), 1);
+    QVERIFY2(!flat.contains("fauna"), "an ancestor is not a flat keyword");
+    QVERIFY2(!flat.contains("fauna|bird"), "and a path is not one either");
+
+    /* Biggest first, which is the order the review list is read in. */
+    const QList<CatalogKeyword> ordered = cat.flatKeywords();
+    QVERIFY(ordered.size() >= 2);
+    QVERIFY(ordered.first().count >= ordered.last().count);
+}
+
+void tst_catalog::flatKeywordRowsMatchTheCounts()
+{
+/*
+    The dialog counts from flatKeywords() and the apply walks flatKeywordRows(). If those
+    two disagreed, the operation would touch images the user was never shown -- so they
+    are the same scan and the same test, and this is what says so.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("hier.nef", {"Heron"}, {"Fauna|Bird|Heron"}),
+                rowFor("flat1.jpg", {"Heron"}, {}),
+                rowFor("flat2.jpg", {"Nanaimo"}, {})});
+
+    const QVector<CatalogRow> rows = cat.flatKeywordRows();
+    QCOMPARE(rows.size(), 2);                   // the hierarchical file is not in it
+
+    int total = 0;
+    for (const CatalogKeyword &k : cat.flatKeywords()) total += k.count;
+    QCOMPARE(total, 2);                         // one flat keyword on each of two rows
+
+    /*  THE ROWS COME BACK WHOLE, because the caller commits them again with new
+        keywords and commit() replaces the row: a partial row would erase the fields it
+        did not carry. */
+    for (const CatalogRow &r : rows) {
+        QVERIFY(!r.folder.isEmpty());
+        QVERIFY(!r.filename.isEmpty());
+        QVERIFY(r.captured.isValid());
+        QVERIFY(r.srcSize > 0);
+    }
+}
+
+void tst_catalog::pruneUnusedKeywordsKeepsWhatIsStillLinked()
+{
+/*
+    After a tidy the flat keyword is on no image. Its OBSERVED row would otherwise sit in
+    the Find panel's keyword list forever, offering a filter that matches nothing -- and
+    the memo that maps a path to its row id has to be dropped with it, or the next commit
+    would link an image to an id that no longer exists.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("a.jpg", {"Nanaimo"}, {}),
+                rowFor("b.nef", {"Heron"}, {"Fauna|Bird|Heron"})});
+
+    /*  The tidy's effect: a.jpg is refiled, so nothing says "Nanaimo" any more.
+
+        THE FILE IS CHANGED FIRST, and this is not incidental: commit() skips a row whose
+        (size, mtime) still match the index -- see unchangedRowsAreSkipped -- so a fixture
+        that only handed it new keywords would be asserting against a write that never
+        happened. A real tidy rewrites the sidecar, which is exactly this stamp moving. */
+    {
+        QFile f(imagePath("a.jpg"));
+        QVERIFY(f.open(QIODevice::Append));
+        f.write("edited");
+        f.close();
+    }
+    cat.commit({rowFor("a.jpg", {"Nanaimo"},
+                       {"Location|Canada|BC|Vancouver Island|Nanaimo"})});
+
+    QVERIFY(cat.pruneUnusedKeywords() > 0);
+
+    QSet<QString> left;
+    for (const CatalogKeyword &k : cat.keywords()) left.insert(keywordFold(k.path));
+    QVERIFY2(!left.contains("nanaimo"), "the emptied root is gone");
+    QVERIFY(left.contains("location|canada|bc|vancouver island|nanaimo"));
+    QVERIFY(left.contains("fauna|bird|heron"));
+    QVERIFY(left.contains("fauna"));            // an ancestor is still linked
+
+    /*  AND THE INDEX STILL WORKS AFTERWARDS, which is the memo's half of it: a commit
+        following the prune must relink, not reuse a deleted id. */
+    cat.commit({rowFor("c.jpg", {"Nanaimo"}, {})});
+    CatalogQuery q;
+    q.keywords = {"Nanaimo"};
+    QCOMPARE(cat.search(q).size(), 1);
 }
 
 QTEST_MAIN(tst_catalog)

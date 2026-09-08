@@ -7,6 +7,7 @@
 #include "Utilities/searchterms.h"
 
 #include <QDir>
+#include <algorithm>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QSqlError>
@@ -136,6 +137,23 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
     if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
     return q.value(0).toLongLong();
 }
+
+/*
+    The two flat-keyword scans share this: the depth-1 paths ONE image carries.
+
+    A path is flat when it has no separator after keywordEffectivePaths has run -- that
+    is, a dc:subject entry that names no node of any of the same image's hierarchical
+    paths. Everything else about a flat keyword follows from that one test, so both
+    scans ask it here rather than each spelling out the rule.
+*/
+QStringList flatOf(const CatalogRow &r)
+{
+    QStringList out;
+    for (const QString &p : keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths))
+        if (!p.contains('|')) out << p;
+    return out;
+}
+
 
 /*
     The SQL that produces one category item's value, keyed by the datamodel column the
@@ -1282,6 +1300,132 @@ int Catalog::imagesUnderKeyword(const QString &path, const QString &folder)
     if (q.exec() && q.next()) return q.value(0).toInt();
     return 0;
 }
+
+QList<CatalogKeyword> Catalog::flatKeywords(const QString &folder)
+{
+/*
+    See the header: a flat keyword is one an image carries as a ROOT, not a keyword row
+    without a separator. The distinction is the whole reason this is a scan.
+
+    TWO COLUMNS, NO JOIN. The verbatim lists are on the image row, so the query reads
+    keywords_literal and keywordpaths and nothing else -- the fastest shape available for
+    a question that has to look at every image anyway.
+*/
+    QList<CatalogKeyword> out;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QString sql = "SELECT keywords_literal, keywordpaths FROM image"
+                  " WHERE live = 1 AND keywords_literal <> ''";
+    if (!folder.isEmpty()) sql += " AND folder = ?";
+
+    QSqlQuery q(db);
+    q.prepare(sql);
+    if (!folder.isEmpty()) q.addBindValue(folder);
+    if (!q.exec()) return out;
+
+    /*  Folded name -> (spelling as first seen, count). Two files spelling one keyword
+        "heron" and "Heron" are ONE flat keyword, because everything downstream -- the
+        merge, the vocabulary lookup, keywordEffectivePaths itself -- matches folded. */
+    QHash<QString, QPair<QString, int>> tally;
+    while (q.next()) {
+        CatalogRow r;
+        const QString kl = q.value(0).toString();
+        const QString kp = q.value(1).toString();
+        if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
+        if (!kp.isEmpty()) r.keywordPaths = kp.split('\n', Qt::SkipEmptyParts);
+        for (const QString &f : flatOf(r)) {
+            auto &e = tally[keywordFold(f)];
+            if (e.second == 0) e.first = f;
+            e.second++;
+        }
+    }
+
+    for (auto it = tally.constBegin(); it != tally.constEnd(); ++it) {
+        CatalogKeyword k;
+        k.name = it.value().first;
+        k.path = it.value().first;      // a flat keyword IS its own path
+        k.count = it.value().second;
+        out << k;
+    }
+    /* Biggest first: the legacy tags worth dealing with are the ones on thousands of
+       images, and a 1,000-row list sorted alphabetically buries them. */
+    std::sort(out.begin(), out.end(),
+              [](const CatalogKeyword &a, const CatalogKeyword &b) {
+                  if (a.count != b.count) return a.count > b.count;
+                  return a.path.compare(b.path, Qt::CaseInsensitive) < 0;
+              });
+    return out;
+}
+
+QVector<CatalogRow> Catalog::flatKeywordRows(const QString &folder)
+{
+/*
+    Every image with at least one flat keyword, as WHOLE rows.
+
+    WHOLE ROWS BECAUSE THE CALLER MUST COMMIT THEM BACK. An image the tidy rewrites is
+    usually not loaded -- a merge near the root of the vocabulary reaches folders the
+    datamodel has never seen -- so its index entry is updated by committing the row it
+    came from with new keywords. commit() replaces the row, so a partial row would erase
+    everything it did not carry.
+
+    ONE PASS, FILTERED HERE. Asking instead for images matching each flat keyword would
+    be one query per keyword over an OR-ed join, and would return every image linked to
+    that name as an ANCESTOR -- a superset that then has to be filtered by this same test
+    anyway. This walks the images once and keeps the ones that qualify.
+*/
+    QVector<CatalogRow> out;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+
+    QString sql = QString("SELECT") + kRowColumns + " FROM image i"
+                  " WHERE i.live = 1 AND i.keywords_literal <> ''";
+    if (!folder.isEmpty()) sql += " AND i.folder = ?";
+
+    QSqlQuery q(db);
+    q.prepare(sql);
+    if (!folder.isEmpty()) q.addBindValue(folder);
+    if (!q.exec()) return out;
+
+    while (q.next()) {
+        CatalogRow r;
+        readRow(q, r);
+        if (flatOf(r).isEmpty()) continue;
+        /*  r.keywords -- the prefix expansion -- is deliberately NOT fetched. The caller
+            recomputes it from the keywords it is about to write, exactly as
+            MW::retagKeywordPath does, so a joined copy of the OLD expansion would only
+            be a chance to commit it back by mistake. */
+        out << r;
+    }
+    return out;
+}
+
+int Catalog::pruneUnusedKeywords()
+{
+/*
+    See the header. One statement, and the memo has to go with it: keywordIds maps
+    pathfold to a row id, so leaving it populated after deleting the rows would have the
+    next commit link an image to an id that no longer exists -- silently, because the
+    insert is skipped when the memo answers.
+*/
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+
+    QSqlQuery q(db);
+    if (!q.exec("DELETE FROM keyword"
+                " WHERE id NOT IN (SELECT DISTINCT keyword_id FROM image_keyword)"))
+        return 0;
+
+    const int gone = q.numRowsAffected();
+    if (gone > 0) keywordIds.clear();
+    return gone;
+}
+
 
 int Catalog::count()
 {

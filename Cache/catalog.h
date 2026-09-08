@@ -380,6 +380,43 @@ public:
         dialog rather than per row, so it is affordable here and far from the filter. */
     int imagesUnderKeyword(const QString &path, const QString &folder = QString());
 
+    /*  THE FLAT KEYWORDS: every depth-1 path an image actually carries, with how many
+        images carry it. This is NOT "the keyword rows with no separator" -- the keyword
+        table holds a row for every ancestor PREFIX, so "Location" sits there as the
+        parent of Location|Canada whether or not any file ever said "Location" on its own.
+        A flat keyword is one an image carries AS A ROOT after leaf consumption: a
+        dc:subject entry naming nothing in that image's own hierarchy.
+
+        SCANNED, NOT JOINED, for that reason. The question is about each image's own two
+        verbatim lists, so the answer comes from keywordEffectivePaths over
+        (keywords_literal, keywordpaths) exactly as the indexer computes it -- one pass
+        over the images, no keyword join at all. At 43,000 rows it is two columns and a
+        string split, and it is asked once when the tidy dialog opens.
+
+        Grouped case-insensitively, reported with the spelling first seen, and sorted by
+        count descending: the biggest legacy tags are what the user wants to deal with
+        first. folder restricts to one folder, as everywhere else here. */
+    QList<CatalogKeyword> flatKeywords(const QString &folder = QString());
+
+    /*  The whole rows of every image carrying at least one flat keyword -- what the tidy
+        operation rewrites. Same scan and same test as flatKeywords(), so the count the
+        dialog showed and the set the apply touches cannot disagree. */
+    QVector<CatalogRow> flatKeywordRows(const QString &folder = QString());
+
+    /*  Delete every keyword row no live image links to any more, and report how many
+        went. An emptied keyword is DERIVED rubbish, not a decision: the `keyword` table
+        is the OBSERVED vocabulary, so a row whose last image was retagged or deleted is
+        a name nothing in the library says. It would otherwise sit in the Find panel's
+        keyword list forever, offering a filter that matches nothing.
+
+        THE AUTHORED TREE IS UNTOUCHED. A `vocab` node with no images is legitimate -- an
+        empty branch the user made room for -- and only an explicit delete removes one.
+        The two tables mean different things and this is the one that is a side effect.
+
+        Called after a tidy rather than on every commit: a folder change routinely leaves
+        a keyword momentarily unlinked while rows are being rewritten. */
+    int pruneUnusedKeywords();
+
     /* Every distinct value of one CATEGORY, with how many live images carry it -- the
        catalog's half of the shared category vocabulary the Filter dock renders in
        Catalog scope. dmColumn is a G::dataModelColumns value, so the panel asks the

@@ -121,6 +121,46 @@ list exported from Lightroom, hierarchy and synonyms included.</li>
 and running either a second time adds only what is new. <span class="highlight">Export
 keywords...</span> writes your list back out in the same format.</p>
 
+<h1>Tidying keywords that sit outside the tree</h1>
+
+<p>Keywords from an application that never wrote a hierarchy arrive as bare names &mdash;
+<span class="highlight">Nanaimo</span> rather than <span class="highlight">Location &gt;
+Canada &gt; BC &gt; Vancouver Island &gt; Nanaimo</span>. They work, but they pile up at
+the top of your list beside the branches they belong in.</p>
+
+<p><span class="highlight">Tidy flat keywords...</span> on the right-click menu files them
+all in one go. It lists every such keyword with how many images carry it, and what it
+matched in your keyword list. For each one you can:</p>
+
+<ul>
+<li><span class="highlight">Move</span> it into the branch shown &mdash; the deepest match
+is chosen for you, and you can pick another or type any keyword path.</li>
+<li><span class="highlight">Remove</span> it from those images. This is the default for a
+name that matched nothing, which is usually a container name such as
+<span class="highlight">Location</span> or <span class="highlight">Fauna</span>: an image
+filed under Location &gt; Canada is already found by searching for Location, so the bare
+name adds nothing.</li>
+<li><span class="highlight">Leave alone</span>.</li>
+</ul>
+
+<p>Rows marked <span class="highlight">review</span> matched more than one branch &mdash;
+hover the match to see the alternatives with the number of images each already holds.</p>
+
+<p>The <span class="highlight">Show</span> list above the table is how you deal with a
+whole class of keywords at once. To file every keyword that matched exactly one branch,
+choose <span class="highlight">Matched one branch</span> and press
+<span class="highlight">Move</span>; then look at
+<span class="highlight">Matched several &mdash; review</span> at your leisure. The three
+buttons act on the rows you have selected, or on every row shown if you have selected
+nothing &mdash; the note beside them always says which.</p>
+
+<p><span class="highlight">Apply carries out every row's Action</span>, not just the rows
+you selected, and its button says how many keywords that is.</p>
+
+<p>Applying rewrites the keywords in each image's own file or sidecar, everywhere in the
+catalog, whether or not the folder is open. Winnow tells you how many images that is and
+asks once more before it starts. It cannot be undone from inside Winnow.</p>
+
 <h1>Finding images by keyword</h1>
 
 <p>The <span class="highlight">Keywords</span> category in the Filter panel is the same

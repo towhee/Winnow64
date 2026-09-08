@@ -1,6 +1,59 @@
 #include "Main/mainwindow.h"
 #include "Dialogs/keywordretagdlg.h"
+#include "Dialogs/keywordtidydlg.h"
 #include "Metadata/keywordpaths.h"
+
+#include <QApplication>
+#include <QEventLoop>
+#include <QFileInfo>
+#include <QLocale>
+#include <QMessageBox>
+
+#include <functional>
+
+namespace {
+
+/*
+    THE TWO PROPERTIES A SET OF PATHS IS WRITTEN AS.
+
+    dc:subject gets the LEAF of every path plus any depth-1 path (which is a leaf
+    already); lr:hierarchicalSubject gets the paths of depth 2 or more, whole. A depth-1
+    path is deliberately NOT written as a one-element hierarchical entry: it carries no
+    hierarchy, it is fewer bytes, and it is what an application that has never heard of
+    lr: writes.
+
+    READING THIS BACK IS IDEMPOTENT, which is the property that matters.
+    keywordEffectivePaths consumes exactly the dc:subject entries that name a node of one
+    of the paths -- which is precisely the set emitted here -- leaving the depth-1 entries
+    as roots. So the input list is reconstructed exactly, and a second write of an
+    unchanged image is a no-op rather than a slow drift.
+
+    dc:subject IS DE-DUPLICATED, because two keywords can share a leaf: the two Vancouvers
+    would otherwise put "Vancouver" into dc:subject twice, which no other application does
+    and which reads as a duplicate tag anywhere this file is opened. It costs nothing on
+    read-back -- one entry is consumed by both paths, and both paths survive in
+    lr:hierarchicalSubject.
+
+    SHARED BY ALL THREE WRITERS -- the dock, a retag after a rename, and the flat-keyword
+    tidy -- because an image tagged from one and rewritten by another must end up with the
+    same shape, and three copies of this is three chances for one of them to drift.
+*/
+void composeKeywordWrite(const QStringList &paths, QStringList &subject,
+                         QStringList &hierarchical)
+{
+    QSet<QString> subjectSeen;
+    for (const QString &p : paths) {
+        const QString leaf = keywordLeafOf(p);
+        const QString leafFold = keywordFold(leaf);
+        if (!leafFold.isEmpty() && !subjectSeen.contains(leafFold)) {
+            subjectSeen.insert(leafFold);
+            subject << leaf;
+        }
+        if (p.contains('|')) hierarchical << p;
+    }
+}
+
+}  // namespace
 
 /*
     APPLYING KEYWORDS TO A SELECTION.
@@ -162,33 +215,10 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
             continue;
         }
 
-        /*  WHAT GOES INTO THE FILE. dc:subject gets the LEAF of every path plus any
-            depth-1 path (which is a leaf already); lr:hierarchicalSubject gets the paths
-            of depth 2 or more, whole. A depth-1 path is deliberately NOT written as a
-            one-element hierarchical entry: it carries no hierarchy, it is fewer bytes,
-            and it is what an application that has never heard of lr: writes.
-
-            READING THIS BACK IS IDEMPOTENT, which is the property that matters.
-            keywordEffectivePaths consumes exactly the dc:subject leaves that match a
-            path's leaf -- which is precisely the set emitted here -- leaving the depth-1
-            entries as roots. So `next` is reconstructed exactly, and a second write of an
-            unchanged image is a no-op rather than a slow drift. */
+        /*  WHAT GOES INTO THE FILE -- see composeKeywordWrite at the top of this file
+            for the shape and for why reading it back is idempotent. */
         QStringList subject, hierarchical;
-        QSet<QString> subjectSeen;
-        for (const QString &p : next) {
-            /*  DE-DUPLICATED, because two keywords can share a leaf: the two Vancouvers
-                would otherwise put "Vancouver" into dc:subject twice, which no other
-                application does and which reads as a duplicate tag anywhere this file
-                is opened. It costs nothing on read-back -- one entry is consumed by
-                both paths, and both paths survive in lr:hierarchicalSubject. */
-            const QString leaf = keywordLeafOf(p);
-            const QString leafFold = keywordFold(leaf);
-            if (!leafFold.isEmpty() && !subjectSeen.contains(leafFold)) {
-                subjectSeen.insert(leafFold);
-                subject << leaf;
-            }
-            if (p.contains('|')) hierarchical << p;
-        }
+        composeKeywordWrite(next, subject, hierarchical);
 
         /*  THE FILE FIRST. See the note at the top of this file: with no shadow column,
             updating the model before this would hide the edit from writeXMP. */
@@ -376,50 +406,19 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
 
         next.sort(Qt::CaseInsensitive);
 
-        /*  Composed exactly as applyKeywordsToSelection composes it -- leaf into
-            dc:subject de-duplicated, depth-2-and-deeper paths into
-            lr:hierarchicalSubject -- so an image retagged here and one tagged from the
-            dock end up with the same shape. */
+        /*  Composed exactly as applyKeywordsToSelection composes it, because it is the
+            same function: an image retagged here and one tagged from the dock must end
+            up with the same shape. */
         QStringList subject, hierarchical;
-        QSet<QString> subjectSeen;
-        for (const QString &p : next) {
-            const QString leaf = keywordLeafOf(p);
-            const QString leafFold = keywordFold(leaf);
-            if (!leafFold.isEmpty() && !subjectSeen.contains(leafFold)) {
-                subjectSeen.insert(leafFold);
-                subject << leaf;
-            }
-            if (p.contains('|')) hierarchical << p;
-        }
+        composeKeywordWrite(next, subject, hierarchical);
 
         if (metadata->writeKeywordsToSidecar(r.path, subject, hierarchical)) ++written;
 
-        /*  If this image happens to be loaded, the model has to follow the file or the
-            panel keeps showing the old keyword until the folder is reopened. */
-        const int dmRow = dm ? dm->rowFromPath(r.path) : -1;
-        if (dmRow >= 0) {
-            const QStringList expanded =
-                keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
-            const QString src = "MW::retagKeywordPath";
-            emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src,
-                          Qt::EditRole);
-            emit setValDm(dmRow, G::KeywordPathsColumn, hierarchical, dm->instance, src,
-                          Qt::EditRole);
-            emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
-                          Qt::EditRole);
-            updateCatalogForRow(dmRow);
-        }
-        else {
-            /*  Not loaded, so the index is updated from the row that was just written
-                rather than from the model. Without this the catalog would keep serving
-                the old keyword to searches until the folder was next scanned. */
-            CatalogRow updated = r;
-            updated.keywordsLiteral = subject;
-            updated.keywordPaths = hierarchical;
-            updated.keywords =
-                keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
-            cat.commit({updated});
-        }
+        /*  The model if the row is loaded, the index either way -- see
+            MW::publishKeywordWrite, which the tidy shares. Writing only the file would
+            leave the panel showing the old keyword until the folder was reopened, and
+            leave the catalog serving it to searches until the folder was rescanned. */
+        publishKeywordWrite(r, subject, hierarchical);
 
         G::popup->setProgress(i + 1);
     }
@@ -438,6 +437,329 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
                             .arg(written).arg(written == 1 ? "" : "s"), 3000);
     return written;
 }
+
+void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
+                             const QStringList &hierarchical)
+{
+/*
+    The file has just been written. This is the other two places the same fact lives.
+
+    A LOADED ROW IS UPDATED IN THE MODEL, because the catalog is an index and the
+    datamodel is what the user is looking at: writing only the file would leave the panel
+    showing the old keyword until the folder was reopened.
+
+    A ROW THAT IS NOT LOADED IS COMMITTED TO THE INDEX from the CatalogRow it came from,
+    with only its keywords replaced. commit() replaces the whole row, which is why the
+    caller has to have fetched a whole one.
+
+    ALL THREE COLUMNS EITHER WAY. The two source columns hold what the file now holds; the
+    third is the prefix expansion the filters and the catalog read, derived here exactly
+    as DataModel::addMetadataForItem derives it so an edited row and a freshly read one
+    cannot disagree.
+*/
+    const QStringList expanded =
+        keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
+
+    const int dmRow = dm ? dm->rowFromPath(r.path) : -1;
+    if (dmRow >= 0) {
+        const QString src = "MW::publishKeywordWrite";
+        emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src, Qt::EditRole);
+        emit setValDm(dmRow, G::KeywordPathsColumn, hierarchical, dm->instance, src,
+                      Qt::EditRole);
+        emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
+                      Qt::EditRole);
+        updateCatalogForRow(dmRow);
+        return;
+    }
+
+    CatalogRow updated = r;
+    updated.keywordsLiteral = subject;
+    updated.keywordPaths = hierarchical;
+    updated.keywords = expanded;
+
+    /*  RE-STAMPED, OR THE COMMIT IS SILENTLY DISCARDED. Catalog::commit skips a row whose
+        (srcSize, srcMtime, sidecarMtime) still match the index -- the skip that makes
+        revisiting a folder free -- and r carries the stamps it was INDEXED with. The
+        write above has just moved the sidecar's mtime, so committing r unchanged offers
+        the index a row that looks identical to the one it holds, and the new keywords go
+        nowhere: searching in Catalog scope would keep returning the old ones until the
+        folder was next opened. Two stats against a file write already paid for. */
+    const QFileInfo fi(r.path);
+    if (fi.exists()) {
+        updated.srcSize = fi.size();
+        updated.srcMtime = fi.lastModified().toSecsSinceEpoch();
+    }
+    const QFileInfo si(metadata->sidecarPath(r.path));
+    updated.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
+
+    Catalog::instance().commit({updated});
+}
+
+void MW::tidyFlatKeywords()
+{
+/*
+    FILE THE FLAT KEYWORDS INTO THE TREE -- the whole legacy vocabulary in one review.
+
+    WHY IT IS ONE OPERATION AND NOT A THOUSAND RENAMES. Every flat keyword could be filed
+    by hand: drag the node into place in the tree and accept the retag. On a library that
+    predates hierarchical keywords there are around a thousand of them, and each hand
+    filing is a dialog, a catalog query and a pass over the files it touches. Doing them
+    together means ONE pass over the images, so an image carrying six flat keywords is
+    written once rather than six times -- which is the difference between a tidy and a
+    day of watching sidecars being rewritten.
+
+    THE VOCABULARY IS THE MATCHER. A flat keyword is filed by finding a vocabulary node
+    whose LEAF is that name; the user's Lightroom import is what makes that work, and it
+    is also why the ambiguity is real -- 59 names in that export appear in more than one
+    branch. The dialog shows what each row matched and pre-selects the deepest.
+
+    NOTHING IS WRITTEN UNTIL IT IS CONFIRMED TWICE: the review list, and then a count of
+    the files about to change. This rewrites metadata in thousands of photographs, and it
+    is not undoable from inside Winnow.
+*/
+    if (G::isLogger) G::log("MW::tidyFlatKeywords");
+
+    Catalog &cat = Catalog::instance();
+    if (!cat.isAvailable()) {
+        G::popup->showPopup("The catalog is not available.", 2000);
+        return;
+    }
+
+    /*  The vocabulary has to be loaded, and not only because the dialog needs its paths:
+        the dock may never have been opened this session, and an empty tree would report
+        that every flat keyword matched nothing and offer to delete the lot. */
+    ensureKeywordVocabLoaded();
+
+    QStringList vocabPaths;
+    if (keywordVocab) {
+        /*  From the AUTHORED tree, not the observed keyword table. The observed table
+            holds every path any file ever carried, including the malformed ones this is
+            here to clean up, so matching against it would offer to file "Nanaimo" under
+            a branch that is itself a stray. */
+        std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+            const int n = keywordVocab->rowCount(parent);
+            for (int i = 0; i < n; ++i) {
+                const QModelIndex idx = keywordVocab->index(i, 0, parent);
+                vocabPaths << idx.data(KeywordVocab::PathRole).toString();
+                walk(idx);
+            }
+        };
+        walk(QModelIndex());
+    }
+
+    if (vocabPaths.isEmpty()) {
+        QMessageBox::information(this, "Tidy Flat Keywords",
+            "Your keyword list is empty, so there is nothing to file these keywords "
+            "into.\n\nImport a keyword list, or build one from the catalog, from the "
+            "Keywords panel first.");
+        return;
+    }
+
+    G::popup->showPopup("Looking for flat keywords...", 0, true, 0.75);
+    qApp->processEvents();
+    const QList<CatalogKeyword> flat = cat.flatKeywords();
+    G::popup->reset();
+
+    if (flat.isEmpty()) {
+        QMessageBox::information(this, "Tidy Flat Keywords",
+            "Every keyword in the catalog is already filed in your keyword list.");
+        return;
+    }
+
+    /*  The counts the review rows are decided on, from the OBSERVED table: how many
+        images each vocabulary path already holds. Keyed folded, as everything that
+        compares keyword paths is. */
+    QHash<QString, int> pathCounts;
+    for (const CatalogKeyword &k : cat.keywords())
+        pathCounts.insert(keywordFold(k.path), k.count);
+
+    KeywordTidyDlg dlg(flat, vocabPaths, pathCounts, this);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    const QList<KeywordTidyAction> plan = dlg.plan();
+    if (plan.isEmpty()) return;
+
+    /*  THE SECOND CONFIRMATION, and the only place a real file count appears: the dialog
+        can only add up its rows, and an image carrying six flat keywords is one file. */
+    const int images = cat.flatKeywordRows().size();
+    const QString ask =
+        QString("%1 keyword%2 will be changed in up to %3 image%4.\n\n"
+                "Winnow writes the change into each image's XMP sidecar or file. This "
+                "cannot be undone from inside Winnow.\n\nGo ahead?")
+            .arg(plan.size()).arg(plan.size() == 1 ? "" : "s")
+            .arg(QLocale().toString(images)).arg(images == 1 ? "" : "s");
+    if (QMessageBox::question(this, "Tidy Flat Keywords", ask,
+                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+        != QMessageBox::Yes) return;
+
+    const int written = applyKeywordTidyPlan(plan);
+
+    /*  THE VOCABULARY AND THE INDEX ARE TIDIED LAST, in that order, because both are
+        answering "is anything still using this?" and the answer only becomes true once
+        the images have been rewritten.
+
+        The observed keyword rows go first-class through pruneUnusedKeywords: a flat
+        keyword that has just been moved off every image it was on is a name nothing in
+        the library says any more, and leaving it would keep offering a filter that
+        matches nothing. The AUTHORED nodes are removed only where the user had one for a
+        flat keyword and it is now empty -- see KeywordVocab::removeUnusedRoots. */
+    QStringList tidied;
+    for (const KeywordTidyAction &a : plan) tidied << a.flat;
+    cat.pruneUnusedKeywords();
+    int vocabGone = 0;
+    if (keywordVocab) {
+        keywordVocab->refreshCounts();
+        vocabGone = keywordVocab->removeUnusedRoots(tidied);
+    }
+    refreshKeywordsDock();
+
+    QMessageBox::information(this, "Tidy Flat Keywords",
+        QString("Filed %1 keyword%2 and updated %3 image%4.%5")
+            .arg(plan.size()).arg(plan.size() == 1 ? "" : "s")
+            .arg(QLocale().toString(written)).arg(written == 1 ? "" : "s")
+            .arg(vocabGone > 0
+                     ? QString("\n\n%1 empty keyword%2 removed from your keyword list.")
+                           .arg(vocabGone).arg(vocabGone == 1 ? " was" : "s were")
+                     : QString()));
+}
+
+int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
+{
+/*
+    ONE PASS OVER THE IMAGES, WITH THE WHOLE PLAN IN HAND. That is the reason this is not
+    a loop of retagKeywordPath calls: images overlap heavily between keywords -- the same
+    photograph carries "Nanaimo" and "Heron" and "16x9" -- so a call per keyword would
+    open, rewrite and re-index the same sidecar once per keyword it happens to carry, and
+    would touch every file's ModifyDate that many times.
+
+    THE SET IT WALKS IS Catalog::flatKeywordRows, the same scan and the same test that
+    produced the counts the user was shown, so a row cannot be affected here that the
+    dialog did not know about.
+
+    REDUNDANT ANCESTORS ARE PRUNED, and this is the operation that creates them: moving a
+    flat "Canada" onto an image that already carries Location|Canada|BC would otherwise
+    leave both, and the second says nothing the first does not (see
+    keywordPruneAncestors). It is scoped to the rows this rewrites -- nothing goes looking
+    for redundancy in images the tidy is not already touching.
+
+    A REMOVAL IS NOT A DELETION OF THE KEYWORD, it is the removal of a bare name from the
+    images carrying it. "Location" on its own, beside Location|Canada|BC, is the same fact
+    without its parents; prefix expansion still answers a search for Location.
+*/
+    if (G::isLogger) G::log("MW::applyKeywordTidyPlan");
+    if (!metadata || plan.isEmpty()) return 0;
+
+    Catalog &cat = Catalog::instance();
+    if (!cat.isAvailable()) return 0;
+
+    QHash<QString, QString> moveTo;     // folded flat keyword -> the path it becomes
+    QSet<QString> removeFold;
+    for (const KeywordTidyAction &a : plan) {
+        const QString fold = keywordFold(a.flat);
+        if (fold.isEmpty()) continue;
+        if (a.remove) removeFold.insert(fold);
+        else if (!a.target.isEmpty()) moveTo.insert(fold, a.target);
+    }
+    if (moveTo.isEmpty() && removeFold.isEmpty()) return 0;
+
+    const QVector<CatalogRow> rows = cat.flatKeywordRows();
+    if (rows.isEmpty()) return 0;
+
+    int written = 0;
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(rows.size());
+    G::popup->setProgress(0);
+    G::popup->showPopup(QString("Tidying keywords in %1 images...")
+                            .arg(QLocale().toString(rows.size())), 0, true, 0.75);
+
+    /*  THE POPUP IS SHOWN BY A QUEUED SINGLE-SHOT, so it does not appear until the event
+        loop runs -- and this function then holds the GUI thread for minutes. Without this
+        pump the popup was still QUEUED when the loop finished, reset() hid a window that
+        had never been shown, and the queued show finally fired inside the completion
+        QMessageBox's own event loop: a "Tidying keywords" popup appeared AFTER the work
+        was over, with msDuration 0 (no hide timer) and nothing left to hide it. It sat on
+        screen until the app was restarted, reporting work that had finished hours before.
+        Reported from use, and the reason for both pumps in this function. */
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    for (int i = 0; i < rows.size(); ++i) {
+        const CatalogRow &r = rows.at(i);
+        if (r.path.isEmpty()) continue;
+
+        const QStringList have =
+            keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths);
+
+        QStringList next;
+        QSet<QString> seen;
+        bool changed = false;
+        for (const QString &p : have) {
+            QString use = p;
+            /*  ONLY DEPTH-1 PATHS ARE IN THE PLAN. A hierarchical path is not touched
+                even when its ROOT is a flat keyword being filed: "Canada|BC|Nanaimo" is
+                a hierarchy the user has, moving it is a re-parent, and it is offered in
+                the vocabulary tree where the counts and the confirmation are about that.
+                Doing it here would rewrite thousands of paths the dialog never named. */
+            if (!use.contains('|')) {
+                const QString fold = keywordFold(use);
+                if (removeFold.contains(fold)) { changed = true; continue; }
+                const auto it = moveTo.constFind(fold);
+                if (it != moveTo.constEnd()) { use = it.value(); changed = true; }
+            }
+            const QString useFold = keywordFold(use);
+            /*  A move can land on a path the image ALREADY carries -- the ordinary case
+                for a Lightroom library where some files were tagged the new way and some
+                the old. That is a merge, not a duplicate. */
+            if (seen.contains(useFold)) { changed = true; continue; }
+            seen.insert(useFold);
+            next << use;
+        }
+        if (!changed) continue;
+
+        const QStringList pruned = keywordPruneAncestors(next);
+        if (pruned.size() != next.size()) next = pruned;
+        next.sort(Qt::CaseInsensitive);
+
+        QStringList subject, hierarchical;
+        composeKeywordWrite(next, subject, hierarchical);
+
+        if (metadata->writeKeywordsToSidecar(r.path, subject, hierarchical)) ++written;
+        publishKeywordWrite(r, subject, hierarchical);
+
+        G::popup->setProgress(i + 1);
+
+        /*  AND THE BAR HAS TO BE ALLOWED TO PAINT. This loop owns the GUI thread for the
+            whole run -- thousands of sidecar writes -- so without a pump the progress bar
+            is a still picture and the only honest answer to "how far has it got?" is to
+            watch the file system. Every 25 rows keeps the cost negligible against a file
+            write. USER INPUT STAYS EXCLUDED: the model, the filters and the catalog are
+            all mid-rewrite, and a click that started a folder change here would reenter
+            everything this is walking. */
+        if ((i % 25) == 0) qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
+
+    if (G::isLogger)
+        G::log("MW::applyKeywordTidyPlan", QString("wrote %1 of %2 rows")
+                                               .arg(written).arg(rows.size()));
+
+    /*  Same order and same reason as MW::applyKeywordsToSelection: suspend the proxy,
+        rebuild the keyword category INLINE, then let filterChange lift the suspension and
+        re-run. runSync is not optional when a filterChange follows -- the rebuild deletes
+        and recreates the whole keyword tree. */
+    if (buildFilters && filters && filters->filtersBuilt) {
+        dm->sf->suspend(true, "MW::applyKeywordTidyPlan");
+        buildFilters->updateCategory(BuildFilters::KeywordEdit,
+                                     BuildFilters::NoAfterAction, /*runSync*/ true);
+        filterChange("MW::applyKeywordTidyPlan");
+    }
+
+    thumbView->refreshIcons("MW::applyKeywordTidyPlan");
+    gridView->refreshIcons("MW::applyKeywordTidyPlan");
+    return written;
+}
+
 
 void MW::ensureKeywordVocabLoaded()
 {

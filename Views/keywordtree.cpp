@@ -206,6 +206,11 @@ void KeywordTree::contextMenuEvent(QContextMenuEvent *event)
 
     menu.addSeparator();
 
+    QAction *tidy = menu.addAction("Tidy flat keywords...");
+    tidy->setToolTip("File keywords that sit outside the tree into their branches, "
+                     "in the keyword list and in the images.");
+    connect(tidy, &QAction::triggered, this, &KeywordTree::tidyRequested);
+
     QAction *build = menu.addAction("Build vocabulary from catalog");
     build->setToolTip("Add a keyword for everything the catalog has indexed. "
                       "Never removes anything.");
