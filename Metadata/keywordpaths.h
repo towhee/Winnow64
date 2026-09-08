@@ -274,4 +274,50 @@ inline bool keywordIsDescendant(const QString &pathFold, const QString &ancestor
     return pathFold == ancestorFold || pathFold.startsWith(ancestorFold + '|');
 }
 
+/*
+    THE VOCABULARY PATH A CHECKED KEYWORD BECOMES when its images are dropped on the
+    vocabulary node targetPath. See notes/Documentation.txt "Filing Keywords by Drag".
+
+    THREE OUTCOMES, AND ONLY THE THIRD CREATES ANYTHING. The target node itself when its
+    leaf is the keyword's leaf ("Squirrel" dropped on Fauna|Animal|Squirrel is a merge,
+    not a request for Fauna|Animal|Squirrel|Squirrel); an existing child of the target
+    with that leaf; otherwise a new child of the target. Returning the path either way is
+    what lets the caller create only what is genuinely missing.
+
+    PURE, AND THE CHILD LEAVES ARE PASSED IN, because the rule is the part worth pinning
+    in a test and a model is the part that is not. The caller reads the children off
+    KeywordVocab once and asks this per keyword.
+
+    THE KEYWORD'S LEAF IS WHAT MOVES, not its whole path. A stray is usually a root, where
+    the two are the same thing; when it is not -- filing "Trip|Kenya" under Location --
+    "Trip" is the spelling being abandoned and carrying it along would rebuild the branch
+    the move exists to leave behind.
+
+    EMPTY when the keyword is already at that path, so the caller can say "already filed"
+    rather than writing every image in it for no change.
+*/
+inline QString keywordDropTarget(const QString &checked, const QString &targetPath,
+                                 const QStringList &targetChildLeaves)
+{
+    const QString leaf = keywordLeafOf(checked);
+    if (leaf.isEmpty() || targetPath.isEmpty()) return QString();
+
+    const QString leafFold = keywordFold(leaf);
+    QString target = targetPath + '|' + leaf;
+
+    if (keywordFold(keywordLeafOf(targetPath)) == leafFold) {
+        target = targetPath;
+    }
+    else {
+        for (const QString &child : targetChildLeaves) {
+            if (keywordFold(child) != leafFold) continue;
+            target = targetPath + '|' + child;
+            break;
+        }
+    }
+
+    if (keywordFold(target) == keywordFold(checked)) return QString();
+    return target;
+}
+
 #endif // KEYWORDPATHS_H

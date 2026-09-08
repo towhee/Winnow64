@@ -4118,3 +4118,24 @@ Winnow, reopened, and the filter count for squirell was still not updated.
 
 I need a tool to help me move all the flat keywords into the heirarchical keywords and
 then delete the unused flat keywords.
+
+I think we need a different tidy keywords tool.  I have set up Winnow to show the Filters panel
+on the left and the Keywords panel on the right.  The Filters keywords are from the Catalog.
+I want to integrate them into the Keyword list, which is the ultimate authority.  I need to
+see which catalog keywords do not match the keyword list.  The catalog keywords can be:
+- moved into an existing keyword list keyword and updated in all image keywording.
+  [action] - drag selected images on top of matching keyword in keyword list.
+- moved into an existing keyword list branch, appending the catalog keyword to the keyword
+  list and and updated in all image keywording.
+  [action] - drag selected images on top of a keyword list branch.  The catalog keyword is
+  appended to the keyword list branch.
+- if catalog keyword does not fit the keyword list, then user creates appropriate branch(s)
+  first, and then does a select drag.
+
+Winnow should not automatically change the keyword list.  This must be done under the
+guidance of the user.
+
+Should we use the existing Filters, and add a color code (dull red) to identify keywords
+that do not match the keyword list or should we build a separate tool to manage this?
+
+Give me your thoughts on this before creating the plan.

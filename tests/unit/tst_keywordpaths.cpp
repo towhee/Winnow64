@@ -48,6 +48,12 @@ private slots:
     void descendantTestRespectsTheSeparator();
     void pruningDropsOnlyProperAncestors();
     void pruningIsWhatMakesATidyMergeRatherThanDouble();
+    void aDropOnItsOwnLeafIsAMergeNotANesting();
+    void aDropOnABranchWithThatChildMergesRatherThanDuplicates();
+    void aDropOnABranchWithoutThatChildNamesTheNewPath();
+    void dropResolutionFoldsCase();
+    void aKeywordAlreadyAtItsTargetResolvesToNothing();
+    void onlyTheLeafOfTheCheckedKeywordMoves();
 };
 
 void tst_keywordpaths::aPathSurvivesIntact()
@@ -229,6 +235,83 @@ void tst_keywordpaths::pruningIsWhatMakesATidyMergeRatherThanDouble()
     QCOMPARE(merged, QStringList() << "Location|Canada|BC");
 
     QCOMPARE(keywordEffectivePaths({"BC"}, merged), merged);
+}
+
+/*
+    THE DROP RULE. Three outcomes, and the point of pinning them is that only ONE of them
+    may create a vocabulary node -- the keyword list is the user's, and a drag that
+    quietly grew it a level deeper than they meant would be the one thing this feature
+    must never do.
+*/
+void tst_keywordpaths::aDropOnItsOwnLeafIsAMergeNotANesting()
+{
+/*
+    "Squirrel" dropped ON Fauna|Animal|Squirrel is the commonest gesture there is: the
+    user found the stray's real home and dropped it there. Appending the leaf again would
+    give them Fauna|Animal|Squirrel|Squirrel, which is the self-nesting artifact the tidy
+    dialog already has to rank last.
+*/
+    QCOMPARE(keywordDropTarget("Squirrel", "Fauna|Animal|Squirrel", {"Chipmunk"}),
+             QString("Fauna|Animal|Squirrel"));
+}
+
+void tst_keywordpaths::aDropOnABranchWithThatChildMergesRatherThanDuplicates()
+{
+/*
+    The branch already has the keyword as a child. Nothing is created; the images simply
+    move into the node that is already there.
+*/
+    QCOMPARE(keywordDropTarget("Squirrel", "Fauna|Animal",
+                               {"Bear", "Squirrel", "Vole"}),
+             QString("Fauna|Animal|Squirrel"));
+}
+
+void tst_keywordpaths::aDropOnABranchWithoutThatChildNamesTheNewPath()
+{
+/*
+    The one case that creates. Several checked keywords dropped on one branch each get
+    their own child -- they are never all collapsed onto the branch itself.
+*/
+    QCOMPARE(keywordDropTarget("Bunny", "Fauna|Animal", {"Bear"}),
+             QString("Fauna|Animal|Bunny"));
+    QCOMPARE(keywordDropTarget("Vole", "Fauna|Animal", {"Bear"}),
+             QString("Fauna|Animal|Vole"));
+}
+
+void tst_keywordpaths::dropResolutionFoldsCase()
+{
+/*
+    Case decides all three outcomes, and it must decide them the way the rest of keyword
+    identity does -- keywordFold, not toLower. A vocabulary spelling "Squirrel" and a
+    stray spelling "squirrel" are the same keyword, so this is a merge; creating
+    Fauna|Animal|squirrel beside it would be the duplicate the whole exercise is about.
+*/
+    QCOMPARE(keywordDropTarget("squirrel", "Fauna|Animal", {"Squirrel"}),
+             QString("Fauna|Animal|Squirrel"));
+    QCOMPARE(keywordDropTarget("SQUIRREL", "Fauna|Animal|Squirrel", QStringList()),
+             QString("Fauna|Animal|Squirrel"));
+}
+
+void tst_keywordpaths::aKeywordAlreadyAtItsTargetResolvesToNothing()
+{
+/*
+    Dropping a keyword onto the branch it already sits in. Empty rather than the path it
+    already has, so the caller reports "already filed" instead of rewriting every image
+    in it to the value it is holding.
+*/
+    QCOMPARE(keywordDropTarget("Fauna|Animal|Vole", "Fauna|Animal", {"Vole"}),
+             QString());
+}
+
+void tst_keywordpaths::onlyTheLeafOfTheCheckedKeywordMoves()
+{
+/*
+    Filing "Trip|Kenya" under Location gives Location|Kenya, not Location|Trip|Kenya.
+    "Trip" is the spelling being abandoned; carrying it along would rebuild the branch the
+    move exists to leave behind.
+*/
+    QCOMPARE(keywordDropTarget("Trip|Kenya", "Location", {"Canada"}),
+             QString("Location|Kenya"));
 }
 
 QTEST_APPLESS_MAIN(tst_keywordpaths)

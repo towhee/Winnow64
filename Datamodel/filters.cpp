@@ -112,6 +112,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
        category header uses, which sits on a different row. (An amber "ambiguous keyword"
        colour lived here too, until path identity made ambiguity impossible.) */
     itemIsExcludedColor = QColor(0xd0, 0x60, 0x60);
+    itemIsUnfiledColor = QColor(0x9a, 0x5a, 0x5a);
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -250,6 +251,11 @@ void Filters::createFilter(QTreeWidgetItem *cat, QString name)
                  << "cat =" << cat->text(0)
                     ;
     cat->setText(0, name);
+    /*  THE STABLE NAME, which save() and restore() key on. text(0) is the DISPLAY and the
+        Keywords header appends its unfiled count to it; keying the saved filters on
+        something that moves with a count would drop every restored keyword filter the
+        first time a keyword was filed. */
+    cat->setData(0, CategoryNameRole, name);
     cat->setData(0, G::ColumnRole, filterCategoryToDmColumn[name]);
     cat->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 }
@@ -1088,13 +1094,159 @@ void Filters::styleFilterItem(QTreeWidgetItem *item)
     if (!item || !item->parent()) return;
 
     const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
+    const bool duplicate = item->data(0, DuplicateRole).toBool();
+    const bool unfiled = item->data(0, UnfiledRole).toBool();
 
+    /*  BOTH FONT MARKS ARE REBUILT FROM font(), never from the item's current font, so
+        the style cannot accumulate across calls. That is also why the duplicate italic is
+        carried in a data role: it is somebody else's mark (addKeywordItems), and reading
+        it back off the font is exactly how it used to be lost on the next click. */
     QFont f = font();
     f.setStrikeOut(excluded);
+    f.setItalic(duplicate);
     item->setFont(0, f);
 
-    if (excluded) item->setForeground(0, QBrush(itemIsExcludedColor));
-    else item->setForeground(0, QBrush(G::textColor));
+    /*  UNFILED WINS THE COLOUR when both apply, because exclusion still has the strikeout
+        to say it with and "this keyword is not in your list" has nothing else. */
+    if (unfiled)        item->setForeground(0, QBrush(itemIsUnfiledColor));
+    else if (excluded)  item->setForeground(0, QBrush(itemIsExcludedColor));
+    else                item->setForeground(0, QBrush(G::textColor));
+}
+
+void Filters::setVocabPaths(const QSet<QString> &pathsFold)
+{
+/*
+    The authored keyword vocabulary, as a set of folded paths.
+
+    PUSHED IN AS A VALUE, not reached through a KeywordVocab *. The vocabulary is loaded
+    lazily and its dock is off by default, so a pointer here would be null exactly when it
+    was wanted; and it is rebuilt wholesale by an import or a "build from catalog", so a
+    pointer could also be stale. A value cannot be either, and it makes the marking a pure
+    function of what MW last said -- see MW::refreshFilterVocabMarking.
+
+    AN EMPTY SET MEANS UNKNOWN AND TURNS THE MARKING OFF. A fresh install has no authored
+    vocabulary at all, and a panel in which every keyword read as an error would be saying
+    the opposite of the truth: nothing is misfiled, there is simply nothing to file
+    against yet.
+*/
+    if (G::isLogger) G::log("Filters::setVocabPaths");
+    if (pathsFold == vocabPathsFold) return;
+
+    QMutexLocker locker(&mutex);
+    vocabPathsFold = pathsFold;
+    applyVocabMarking();
+}
+
+void Filters::applyVocabMarking()
+{
+/*
+    Re-read UnfiledRole for every keyword item and restyle it.
+
+    NO LOCK OF ITS OWN, deliberately: both callers already hold the mutex (setVocabPaths
+    takes it, addKeywordItems holds it for its whole body) and QMutex is not recursive, so
+    taking it here would deadlock the rebuild rather than protect anything.
+*/
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        if (path.isEmpty()) continue;
+        const bool unfiled = !vocabPathsFold.isEmpty()
+                             && !vocabPathsFold.contains(keywordFold(path));
+        item->setData(0, UnfiledRole, unfiled);
+        styleFilterItem(item);
+    }
+    updateKeywordCategoryHeader();
+    applyUnfiledVisibility(keywords);
+}
+
+int Filters::unfiledKeywordCount() const
+{
+    int n = 0;
+    for (QTreeWidgetItem *item : itemsInCategory(keywords))
+        if (item->data(0, UnfiledRole).toBool()) ++n;
+    return n;
+}
+
+void Filters::updateKeywordCategoryHeader()
+{
+/*
+    "Keywords", or "Keywords (63 unfiled)".
+
+    THE COUNT IS ON THE HEADER BECAUSE THE STRAYS ARE NOT VISIBLE FROM IT. A dull red row
+    says everything once you have found it, and in a vocabulary a thousand nodes deep that
+    is the hard part; the number on the collapsed category is what says there is anything
+    to look for, and it is what makes "Show unfiled only" in the context menu something a
+    user has a reason to go looking for.
+
+    SAFE ONLY BECAUSE THE SAVED FILTERS NO LONGER KEY ON text(0) -- see createFilter and
+    CategoryNameRole. They did, and a header that changed with the count would have
+    dropped every restored keyword filter.
+*/
+    QString name = keywords->data(0, CategoryNameRole).toString();
+    if (name.isEmpty()) name = catKeyword;      // before createFilter has run
+    const int n = unfiledKeywordCount();
+    keywords->setText(0, n > 0 ? QString("%1 (%2 unfiled)").arg(name).arg(n) : name);
+}
+
+bool Filters::applyUnfiledVisibility(QTreeWidgetItem *item)
+{
+/*
+    Hide the keyword items that are filed. Returns whether anything at or beneath item is
+    still visible, which is what keeps an unfiled node's ANCESTORS on screen: a stray
+    shown with no branch above it cannot be read, and reading the branch is the whole
+    decision the user is making. The same rule KeywordTree::setFilterText uses.
+*/
+    if (!item) return false;
+    if (item == keywords) {
+        bool any = false;
+        for (int i = 0; i < item->childCount(); ++i)
+            if (applyUnfiledVisibility(item->child(i))) any = true;
+        return any;
+    }
+
+    bool visible = !showUnfiledOnly || item->data(0, UnfiledRole).toBool();
+    for (int i = 0; i < item->childCount(); ++i)
+        if (applyUnfiledVisibility(item->child(i))) visible = true;
+
+    item->setHidden(!visible);
+    return visible;
+}
+
+void Filters::setShowUnfiledOnly(bool showUnfiled)
+{
+/*
+    SESSION-ONLY, AND NOT SAVED. A filter that hides most of a category and came back
+    after a restart would look like a panel that had lost its keywords, with the control
+    that did it three levels into a context menu. It is re-applied after every keyword
+    rebuild within the session, which is what it needs to survive an edit.
+
+    IT DOES NOT CHANGE WHAT IS FILTERED. Hidden items keep their check state, so turning
+    this on while a keyword is checked does not silently widen the user's search.
+*/
+    if (G::isLogger) G::log("Filters::setShowUnfiledOnly");
+    if (showUnfiledOnly == showUnfiled) return;
+
+    QMutexLocker locker(&mutex);
+    showUnfiledOnly = showUnfiled;
+    applyUnfiledVisibility(keywords);
+    if (showUnfiledOnly) keywords->setExpanded(true);
+}
+
+QStringList Filters::checkedKeywordPaths() const
+{
+/*
+    The keyword paths currently INCLUDED. What a drop onto the keyword list files.
+
+    EXCLUDED ITEMS ARE NOT SOURCES. "Show me everything but this" does not name a keyword
+    the user wants moved, and treating it as one would file the very keyword they had just
+    said to leave out.
+*/
+    QStringList paths;
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        if (item->checkState(0) != Qt::Checked) continue;
+        const QString path = item->data(1, Qt::EditRole).toString();
+        if (!path.isEmpty()) paths << path;
+    }
+    return paths;
 }
 
 void Filters::setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state)
@@ -1228,6 +1380,14 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         return;
     }
 
+    /*  IN THE KEYWORDS CATEGORY, INCLUDING ON ITS HEADER. The unfiled toggle has to be
+        reachable from the header row, because that is where the count that advertises it
+        is -- and the header is not a filterable item, so it takes the early return
+        below. */
+    QTreeWidgetItem *root = item;
+    while (root != nullptr && root->parent()) root = root->parent();
+    const bool inKeywords = root == keywords;
+
     const bool ready = categoriesFrom == FromCatalog
                        || (!G::isModifyingDatamodel && !buildingFilters);
     if (!isFilterableItem(item) || !ready) {
@@ -1235,8 +1395,11 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
             addFilterActions. This is what a right-click anywhere else in the tree gives,
             and it must stay exactly that. */
         QMenu menu(this);
+        QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
         addFilterActions(menu);
-        menu.exec(event->globalPos());
+        QAction *chosen = menu.exec(event->globalPos());
+        if (unfiled != nullptr && chosen == unfiled)
+            setShowUnfiledOnly(!showUnfiledOnly);
         return;
     }
 
@@ -1250,12 +1413,42 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     inc->setChecked(now == Qt::Checked);
     exc->setChecked(now == Qt::PartiallyChecked);
     clr->setEnabled(now != Qt::Unchecked);
+    QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
     addFilterActions(menu);
 
     QAction *chosen = menu.exec(event->globalPos());
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
     else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
+    else if (unfiled != nullptr && chosen == unfiled)
+        setShowUnfiledOnly(!showUnfiledOnly);
+}
+
+QAction *Filters::addUnfiledAction(QMenu &menu)
+{
+/*
+    "Show unfiled only", on the Keywords category and everything in it.
+
+    DISABLED WITH THE REASON IN THE ITEM rather than hidden, when there is no authored
+    vocabulary to compare against. A control that is simply absent teaches nothing; one
+    that is greyed and says why sends the user to the Keywords dock, which is where the
+    vocabulary is built.
+*/
+    menu.addSeparator();
+    QAction *a = menu.addAction("Show unfiled only");
+    a->setCheckable(true);
+    a->setChecked(showUnfiledOnly);
+    if (vocabPathsFold.isEmpty()) {
+        a->setEnabled(false);
+        a->setText("Show unfiled only - no keyword list yet");
+        a->setToolTip("Build or import a keyword list in the Keywords dock first. "
+                      "Until there is one, no keyword can be said to be unfiled.");
+    }
+    else {
+        a->setToolTip("Show only the keywords that are not in your keyword list, "
+                      "with the branches above them.");
+    }
+    return a;
 }
 
 void Filters::addFilterActions(QMenu &menu)
@@ -1718,7 +1911,7 @@ void Filters::save()
         while (root->parent()) root = root->parent();
 
         ItemState state;
-        state.category = root->text(0);
+        state.category = root->data(0, CategoryNameRole).toString();
         state.value = itemMapKey(root, item);
         state.state = item->checkState(0);
         itemStates << state;
@@ -1746,7 +1939,8 @@ void Filters::restore()
         if (!item->parent()) continue;
         QTreeWidgetItem *root = item;
         while (root->parent()) root = root->parent();
-        byCategoryAndValue[root->text(0)].insert(itemMapKey(root, item), item);
+        byCategoryAndValue[root->data(0, CategoryNameRole).toString()]
+            .insert(itemMapKey(root, item), item);
     }
 
     // restore checked items
@@ -2190,6 +2384,12 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         if (!path.isEmpty()) byPath.insert(keywordFold(path), existing);
     }
 
+    /*  Not in the AUTHORED vocabulary. Unknown rather than false when the vocabulary has
+        not been pushed in yet -- see setVocabPaths. */
+    auto isUnfiled = [this](const QString &path) {
+        return !vocabPathsFold.isEmpty() && !vocabPathsFold.contains(keywordFold(path));
+    };
+
     std::function<QTreeWidgetItem *(const QString &)> ensureNode =
         [&](const QString &path) -> QTreeWidgetItem * {
         const QString fold = keywordFold(path);
@@ -2213,6 +2413,12 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         node->setToolTip(0, path == node->text(0)
             ? QString("Click to include. Opt+click to exclude. Right-click for both.")
             : QString("%1\n\nClick to include. Opt+click to exclude.").arg(path));
+        /*  STYLED AT CREATION. Every other category's items are styled by
+            addCategoryItems as it makes them; a keyword node made here was not styled at
+            all until something happened to it, so an unfiled keyword drew in the ordinary
+            colour until the first time it was clicked. */
+        node->setData(0, UnfiledRole, isUnfiled(path));
+        styleFilterItem(node);
         byPath.insert(fold, node);
         return node;
     };
@@ -2256,9 +2462,11 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         if (path.isEmpty() || path.contains('|')) continue;
         const QStringList also = deeperByName.value(keywordFold(path));
         if (also.isEmpty()) continue;
-        QFont f = item->font(0);
-        f.setItalic(true);
-        item->setFont(0, f);
+        /*  THE MARK IS A ROLE, NOT A FONT WRITE. styleFilterItem rebuilds the font from
+            font() on every check, rebuild and restore, so an italic set only on the item
+            was lost the first time the user clicked the row it was explaining. */
+        item->setData(0, DuplicateRole, true);
+        styleFilterItem(item);
         item->setToolTip(0, QString(
             "%1\n\nA TOP-LEVEL keyword, filed under nothing. The same name also appears "
             "in the tree as:\n    %2\n\nThose are different keywords -- a keyword is its "
@@ -2266,6 +2474,9 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
             "Click to include. Opt+click to exclude.")
             .arg(path, also.join("\n    ")));
     }
+
+    updateKeywordCategoryHeader();
+    applyUnfiledVisibility(category);
 }
 
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)

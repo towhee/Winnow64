@@ -697,7 +697,17 @@ private slots:
     /*  KEYWORDS (Main/keywordedit.cpp). Add and/or remove keyword PATHS across the whole
         selection, writing each image's sidecar and updating the model, the filters and
         the catalog. add and remove are full paths ("Fauna|Bird|Heron"), never leaves. */
-    void applyKeywordsToSelection(const QStringList &add, const QStringList &remove);
+    void applyKeywordsToSelection(const QStringList &add, const QStringList &remove,
+                                  bool rebuildFilters = true);
+    /*  Rebuild the Keywords filter category after keywords were written. Separate so a
+        caller filing several keywords at once pays for one rebuild, not one each. */
+    void rebuildKeywordFilters(const QString &src);
+    /*  File the CHECKED Filters keywords into the vocabulary node these images were
+        dropped on -- one pass per keyword. Returns how many images were filed. */
+    int applyKeywordMoves(const QString &targetNodePath, const QStringList &imagePaths);
+    /*  Push the authored vocabulary into Filters, so it can mark the keywords that match
+        no node in it. */
+    void refreshFilterVocabMarking();
     /*  The keyword paths the selection carries, and how many of the selected images carry
         each -- what the Keywords dock's tag zone renders, where a count below the
         selection size is the "* on some" marker. */

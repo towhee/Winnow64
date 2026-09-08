@@ -238,9 +238,12 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
-# tst_lrkeywords pins the Lightroom keyword file against a REAL export, trimmed into
-# tests/fixtures/lightroom_keywords.csv. The format everyone describes -- a tab-indented
-# .txt -- is not what Lightroom writes, so the fixture is evidence rather than a mock.
+# tst_lrkeywords pins the Lightroom keyword file against TWO real exports, trimmed into
+# tests/fixtures/lightroom_keywords.csv and .txt -- Lightroom writes both a five-column
+# CSV and the tab-indented .txt everyone describes, and the reader accepted only the
+# first, so importing the second added nothing and said so cheerfully. The fixtures are
+# evidence rather than mocks; the indented cases go after the depth arithmetic, where a
+# branch backing out several levels at once re-parents the rest of the file in silence.
 winnow_add_unit_test(tst_lrkeywords unit/tst_lrkeywords.cpp)
 
 # tst_keywordwrite pins the write-back CONTRACT: reading a written file must reproduce

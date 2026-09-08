@@ -305,6 +305,12 @@ void MW::createDataModel()
         this. See MW::applyPendingCatalogYear. */
     connect(buildFilters, &BuildFilters::finishedBuildFilters,
             this, &MW::applyPendingCatalogYear);
+    /*  AND THE UNFILED MARKING, for the same reason: the build runs on a THREAD, so the
+        Keywords category has no items to mark until its Done op has run on the GUI
+        thread. This is also what marks the panel on the FIRST folder of a session, when
+        the vocabulary has never been pushed in. */
+    connect(buildFilters, &BuildFilters::finishedBuildFilters,
+            this, &MW::refreshFilterVocabMarking);
     connect(buildFilters, &BuildFilters::updateFilterMenu, this, &MW::updateFilterMenu);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);
@@ -3049,6 +3055,21 @@ void MW::createKeywordsDock()
             this, &MW::keywordsDockVisibilityChange);
 
     connect(keywordTree, &KeywordTree::pathChanged, this, &MW::keywordPathChanged);
+
+    /*  THE FILTERS PANEL'S UNFILED MARKING FOLLOWS THE VOCABULARY, and it is hooked to
+        the MODEL rather than to each gesture that changes it. Add, delete, rename,
+        re-parent, "build from catalog" and a Lightroom import all mutate the vocabulary,
+        and three of them are done by the view without telling anyone; connecting to the
+        model's own signals is the only way to catch all six without a signal per
+        gesture that a seventh would then forget to emit. */
+    connect(keywordVocab, &QAbstractItemModel::modelReset,
+            this, &MW::refreshFilterVocabMarking);
+    connect(keywordVocab, &QAbstractItemModel::rowsInserted,
+            this, &MW::refreshFilterVocabMarking);
+    connect(keywordVocab, &QAbstractItemModel::rowsRemoved,
+            this, &MW::refreshFilterVocabMarking);
+    connect(keywordVocab, &KeywordVocab::pathChanged,
+            this, &MW::refreshFilterVocabMarking);
     connect(keywordTree, &KeywordTree::assignRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({p}, {});
         refreshKeywordsDock();

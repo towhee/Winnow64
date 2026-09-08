@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Dialogs/keyworddropdlg.h"
 #include "Dialogs/keywordretagdlg.h"
 #include "Dialogs/keywordtidydlg.h"
 #include "Metadata/keywordpaths.h"
@@ -114,7 +115,8 @@ QMap<QString, int> MW::keywordsInSelection() const
     return out;
 }
 
-void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &remove)
+void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &remove,
+                                 bool rebuildFilters)
 {
 /*
     Add and/or remove keyword paths across the selection.
@@ -273,20 +275,34 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         G::log("MW::applyKeywordsToSelection", QString("wrote %1 of %2 rows")
                                                    .arg(written).arg(rows.size()));
 
-    /*  MUST EXECUTE IN THIS ORDER: suspend the proxy, rebuild the category, then let
-        filterChange lift the suspension and re-run.
+    /*  HOISTED OUT WHEN THE CALLER IS LOOPING. Filing several checked keywords at once
+        is one user action and must cost one rebuild, not one per keyword -- this deletes
+        and recreates the entire keyword tree. See MW::applyKeywordMoves. */
+    if (rebuildFilters) rebuildKeywordFilters(src);
+}
 
-        runSync = TRUE, which is where this departs from MW::setRating rather than
-        copying it. BuildFilters::updateCategory documents the rule: a caller that
-        immediately follows it with MW::filterChange must run the rebuild inline, because
-        otherwise filterChange un-suspends and re-runs filterAcceptsRow while the WORKER
-        thread is still mutating the category tree items -- a use-after-free (see
-        MW::togglePick, which passes runSync exactly when a filterChange follows).
-        setRating and setColorClass do not, which looks like a latent instance of the same
-        hazard; that is not this file's to fix, but it is not a pattern to copy either.
-        Keywords have more reason to obey it than any other category: this rebuild DELETES
-        and recreates the whole tree (Filters::updateKeywordItems), so there is strictly
-        more for a live filter pass to walk into. */
+void MW::rebuildKeywordFilters(const QString &src)
+{
+/*
+    Rebuild the Keywords category after keywords were written, and repaint the icons.
+
+    MUST EXECUTE IN THIS ORDER: suspend the proxy, rebuild the category, then let
+    filterChange lift the suspension and re-run.
+
+    runSync = TRUE, which is where this departs from MW::setRating rather than copying it.
+    BuildFilters::updateCategory documents the rule: a caller that immediately follows it
+    with MW::filterChange must run the rebuild inline, because otherwise filterChange
+    un-suspends and re-runs filterAcceptsRow while the WORKER thread is still mutating the
+    category tree items -- a use-after-free (see MW::togglePick, which passes runSync
+    exactly when a filterChange follows). setRating and setColorClass do not, which looks
+    like a latent instance of the same hazard; that is not this file's to fix, but it is
+    not a pattern to copy either. Keywords have more reason to obey it than any other
+    category: this rebuild DELETES and recreates the whole tree
+    (Filters::updateKeywordItems), so there is strictly more for a live filter pass to
+    walk into.
+*/
+    if (!dm || !buildFilters) return;
+
     dm->sf->suspend(true, src);
     buildFilters->updateCategory(BuildFilters::KeywordEdit,
                                  BuildFilters::NoAfterAction, /*runSync*/ true);
@@ -294,6 +310,10 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
 
     thumbView->refreshIcons(src);
     gridView->refreshIcons(src);
+
+    /*  The rebuild recreated every keyword item, so the unfiled marking has to be put
+        back on the new ones. Cheap: a set lookup per node. */
+    refreshFilterVocabMarking();
 }
 
 void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
@@ -828,6 +848,259 @@ void MW::refreshKeywordsDock()
     }
 }
 
+void MW::refreshFilterVocabMarking()
+{
+/*
+    Push the authored vocabulary into the Filters panel, so the keywords that match no
+    node in it can be drawn as unfiled.
+
+    A VALUE, NOT A POINTER, and the reason is in Filters::setVocabPaths: the vocabulary is
+    loaded lazily and rebuilt wholesale by an import, so a Filters that held a
+    KeywordVocab * would be reaching into something that may be empty or may have just
+    been replaced. Here MW -- which owns both -- says what the vocabulary currently is.
+
+    THE VOCABULARY IS LOADED EVEN WITH THE DOCK SHUT. The Filters panel is the place this
+    marking appears and it has nothing to do with whether the Keywords dock is open;
+    ensureKeywordVocabLoaded is a few thousand rows out of SQLite, not a reason to make
+    the marking depend on a panel being visible.
+*/
+    if (G::isLogger) G::log("MW::refreshFilterVocabMarking");
+    if (!filters || !keywordVocab) return;
+
+    /*  RE-ENTRANT, because this is connected to the model's own signals and loading the
+        vocabulary below emits modelReset straight back into here. The nested call would
+        find it populated and do the real work twice rather than loop forever, but there
+        is no reason to walk a few thousand nodes twice for one load. */
+    static bool inProgress = false;
+    if (inProgress) return;
+    inProgress = true;
+    struct Done { bool &f; ~Done() { f = false; } } done{inProgress};
+
+    /*  LOADED ONLY IF EMPTY, not through ensureKeywordVocabLoaded, which also refreshes
+        the COUNTS -- a catalog query per node. This runs after every filter build, which
+        means after every folder load, and the counts are the dock's business rather than
+        the marking's. */
+    if (keywordVocab->rowCount(QModelIndex()) == 0) {
+        if (!Catalog::instance().isAvailable()) return;
+        keywordVocab->reload();
+    }
+
+    /*  The same recursive walk MW::tidyFlatKeywords uses. There is no allPaths() on the
+        model, and adding one would be a second way to enumerate the vocabulary. */
+    QSet<QString> pathsFold;
+    std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+        for (int i = 0; i < keywordVocab->rowCount(parent); ++i) {
+            const QModelIndex idx = keywordVocab->index(i, 0, parent);
+            const QString p = idx.data(KeywordVocab::PathRole).toString();
+            if (!p.isEmpty()) pathsFold.insert(keywordFold(p));
+            walk(idx);
+        }
+    };
+    walk(QModelIndex());
+
+    filters->setVocabPaths(pathsFold);
+}
+
+int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imagePaths)
+{
+/*
+    File the CHECKED keywords into the vocabulary node the images were dropped on.
+
+    ONE PASS PER CHECKED KEYWORD, WHICH IS THE WHOLE SHAPE OF THIS FUNCTION. Several
+    checked keywords are OR-ed by the filter, so the images that were dragged are a mixed
+    bag: one carries only "Bunny", the next only "Vole". applyKeywordsToSelection applies
+    one add list and one remove list to every row it is given, so a single call would tag
+    every dropped image with every target -- giving the Bunny picture an "Animal|Vole" it
+    was never near. So each keyword gets its own pass over its own subset.
+
+    THE REBUILD IS HOISTED OUT OF THAT LOOP. It deletes and recreates the entire keyword
+    tree, and filing five keywords is one user action, not five.
+
+    NOTHING IS CREATED BEFORE THE USER AGREES. The targets are resolved first -- which
+    only computes paths -- then shown, and the vocabulary nodes are inserted afterwards.
+    Cancelling leaves the keyword list exactly as it was, not merely the files. Winnow
+    does not change the keyword list on its own; a drop onto a branch is the user asking
+    for a child, and this is where they are asked to mean it.
+*/
+    if (G::isLogger) G::log("MW::applyKeywordMoves");
+    if (!dm || !sel || !filters) return 0;
+
+    ensureKeywordVocabLoaded();
+    if (!keywordVocab) return 0;
+
+    const QModelIndex targetIdx = keywordVocab->indexForPath(targetNodePath);
+    if (!targetIdx.isValid()) return 0;
+
+    /*  The target's existing children, so keywordDropTarget can merge into one rather
+        than making a second node with the same name. Read once for all the keywords. */
+    QStringList childLeaves;
+    for (int i = 0; i < keywordVocab->rowCount(targetIdx); ++i) {
+        const QString p = keywordVocab->index(i, 0, targetIdx)
+                              .data(KeywordVocab::PathRole).toString();
+        if (!p.isEmpty()) childLeaves << keywordLeafOf(p);
+    }
+
+    /*  THE DROPPED IMAGES AS ROWS, WITH WHAT EACH ONE CARRIES, resolved once. A path with
+        no row is an image the datamodel has not loaded -- in Folders scope that is every
+        other folder in the library -- and it is silently unreachable, which is what the
+        dialog's scope paragraph exists to say out loud. */
+    QList<int> rows;
+    QList<QStringList> haveByRow;
+    for (const QString &p : imagePaths) {
+        const int dmRow = dm->rowFromPath(p);
+        if (dmRow < 0) continue;
+        rows << dmRow;
+        haveByRow << keywordEffectivePaths(
+            dm->index(dmRow, G::KeywordsColumn).data().toStringList(),
+            dm->index(dmRow, G::KeywordPathsColumn).data().toStringList());
+    }
+    if (rows.isEmpty()) {
+        G::popup->showPopup("None of those images are loaded, so there is nothing to "
+                            "file. Open the folder they are in, or switch the Filters "
+                            "panel to Catalog scope.", 3000);
+        return 0;
+    }
+
+    QList<KeywordMove> moves;
+    QStringList skipped;
+    QSet<QString> targetsSeen;
+
+    for (const QString &checked : filters->checkedKeywordPaths()) {
+        const QString to = keywordDropTarget(checked, targetNodePath, childLeaves);
+        if (to.isEmpty()) {
+            skipped << QString("%1 (already filed there)").arg(checked);
+            continue;
+        }
+
+        /*  How many of the DROPPED images carry it. Descendants count: filing "Trip"
+            takes "Trip|Kenya" with it, exactly as a remove does. */
+        const QString checkedFold = keywordFold(checked);
+        int n = 0;
+        for (const QStringList &have : haveByRow) {
+            for (const QString &p : have) {
+                if (!keywordIsDescendant(keywordFold(p), checkedFold)) continue;
+                ++n;
+                break;
+            }
+        }
+        if (n == 0) {
+            skipped << QString("%1 (none of these images carry it)").arg(checked);
+            continue;
+        }
+
+        KeywordMove m;
+        m.from = checked;
+        m.to = to;
+        m.images = n;
+        /*  targetsSeen, not just the model, because two checked keywords can resolve to
+            the SAME new path -- "BC" from two branches both filed under Location -- and
+            only the first of them creates it. Saying "(new)" twice would promise the user
+            two nodes and deliver one. */
+        m.createsNode = !keywordVocab->indexForPath(to).isValid()
+                        && !targetsSeen.contains(keywordFold(to));
+        targetsSeen.insert(keywordFold(to));
+        moves << m;
+    }
+
+    if (moves.isEmpty()) {
+        G::popup->showPopup(skipped.isEmpty()
+            ? QString("There is nothing to file.")
+            : QString("Nothing to file: %1.").arg(skipped.join("; ")), 4000);
+        return 0;
+    }
+
+    const bool folderScope = G::scope != G::Scope::Catalog;
+    const QString folderName = dm->rowCount() > 0
+        ? dm->index(0, G::FolderNameColumn).data().toString() : QString();
+
+    KeywordDropDlg dlg(targetNodePath, moves, skipped, folderScope, folderName, this);
+    if (dlg.exec() != QDialog::Accepted) return 0;
+
+    /*  NOW the vocabulary changes. insertChild writes the row and the tree together, and
+        the parent always exists: a resolved target is either the drop node itself, one of
+        its children, or a new child of it. */
+    for (const KeywordMove &m : moves) {
+        if (keywordVocab->indexForPath(m.to).isValid()) continue;
+        const QModelIndex parent = keywordVocab->indexForPath(keywordParentPath(m.to));
+        if (!parent.isValid()) continue;
+        keywordVocab->insertChild(parent, keywordLeafOf(m.to));
+    }
+
+    /*  Where the user was, restored at the end: a drop must not silently move them. Same
+        contract as applyKeywordToPaths, which is why it is spelled the same way. */
+    const QModelIndexList wasSelected = dm->selectionModel->selectedRows();
+    const QModelIndex wasCurrent = dm->sf->index(dm->currentSfRow, 0);
+
+    const QString src = "MW::applyKeywordMoves";
+    int filed = 0;
+
+    /*  THE PROXY IS SUSPENDED FOR THE WHOLE LOOP, and this is not the usual "suspend
+        around a rebuild". A keyword filter is ACTIVE by definition here -- the checked
+        keywords are what made this a move -- so removing one from an image is removing
+        the very thing keeping its row in the filtered set. Left live, a row would drop
+        out of the proxy the instant its first keyword was filed, and the next keyword's
+        pass would find mapFromSource invalid and silently skip an image the confirmation
+        dialog had already counted. filterChange, at the end of rebuildKeywordFilters,
+        lifts it. */
+    dm->sf->suspend(true, src);
+
+    for (const KeywordMove &m : moves) {
+        const QString fromFold = keywordFold(m.from);
+
+        QItemSelection toSelect;
+        for (int i = 0; i < rows.size(); ++i) {
+            bool carries = false;
+            for (const QString &p : haveByRow.at(i)) {
+                if (!keywordIsDescendant(keywordFold(p), fromFold)) continue;
+                carries = true;
+                break;
+            }
+            if (!carries) continue;
+            const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(rows.at(i), 0));
+            if (sfIdx.isValid()) toSelect.select(sfIdx, sfIdx);
+        }
+        if (toSelect.isEmpty()) continue;
+
+        dm->selectionModel->select(toSelect, QItemSelectionModel::ClearAndSelect
+                                                 | QItemSelectionModel::Rows);
+        applyKeywordsToSelection({m.to}, {m.from}, /*rebuildFilters*/ false);
+        filed += m.images;
+    }
+
+    QItemSelection restore;
+    for (const QModelIndex &idx : wasSelected) restore.select(idx, idx);
+    if (!restore.isEmpty()) {
+        dm->selectionModel->select(restore, QItemSelectionModel::ClearAndSelect
+                                                | QItemSelectionModel::Rows);
+        if (wasCurrent.isValid())
+            dm->selectionModel->setCurrentIndex(wasCurrent,
+                                                QItemSelectionModel::NoUpdate);
+    }
+
+    /*  ONE rebuild for the whole drop, then the counts and the marking. removeUnusedRoots
+        must come AFTER refreshCounts, which is the condition it tests: a root is only
+        deleted when it is depth 1, childless, and now carries nothing. A keyword only
+        partly filed -- because the other images live in a folder this scope cannot reach
+        -- still has a count, and correctly survives. */
+    rebuildKeywordFilters(src);
+
+    Catalog &cat = Catalog::instance();
+    if (cat.isAvailable()) cat.pruneUnusedKeywords();
+    keywordVocab->refreshCounts();
+
+    QStringList movedFrom;
+    for (const KeywordMove &m : moves) movedFrom << m.from;
+    keywordVocab->removeUnusedRoots(movedFrom);
+
+    refreshFilterVocabMarking();
+    refreshKeywordsDock();
+
+    if (G::isLogger)
+        G::log("MW::applyKeywordMoves", QString("filed %1 images into %2")
+                                            .arg(filed).arg(targetNodePath));
+    return filed;
+}
+
 void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imagePaths)
 {
 /*
@@ -845,6 +1118,18 @@ void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imag
     if (G::isLogger) G::log("MW::applyKeywordToPaths");
     if (keywordPath.isEmpty() || imagePaths.isEmpty()) return;
     if (!dm || !sel) return;
+
+    /*  THE CHECKED KEYWORDS TURN THIS DROP INTO A MOVE. With nothing checked in
+        Filters|Keywords this stays what it has always been -- drag pictures onto a
+        keyword to tag them. With one or more checked, the drop is the user saying "these
+        keywords belong there", and the checked keyword is what makes that sayable: it
+        names the keyword to REMOVE, which the images alone never could. An image can
+        carry several strays, and nothing in a bag of thumbnails says which of them the
+        drop was about. */
+    if (filters != nullptr && !filters->checkedKeywordPaths().isEmpty()) {
+        applyKeywordMoves(keywordPath, imagePaths);
+        return;
+    }
 
     const QModelIndexList wasSelected = dm->selectionModel->selectedRows();
     const QModelIndex wasCurrent = dm->sf->index(dm->currentSfRow, 0);
