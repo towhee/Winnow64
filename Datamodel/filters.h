@@ -228,6 +228,51 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
 
+public:
+    /*  ITEM DATA ROLES on column 0. Both are state the item must CARRY rather than have
+        recomputed, because styleFilterItem is the one place appearance is written and it
+        runs on every check, rebuild and restore -- it cannot go and ask the vocabulary,
+        and it must not lose a mark somebody else set. */
+    enum ItemRole {
+        /*  A top-level keyword whose name also appears inside the tree, drawn italic --
+            see addKeywordItems. Held here because styleFilterItem builds its font from
+            font() and would otherwise wipe the italic on the next click. */
+        DuplicateRole = Qt::UserRole + 1,
+        /*  This keyword's path is not in the AUTHORED vocabulary. Set by setVocabPaths
+            and by addKeywordItems; read by styleFilterItem and by the unfiled filter. */
+        UnfiledRole,
+        /*  The category's name as createFilter was given it, which save() and restore()
+            key on. NOT text(0): the Keywords header appends its unfiled count, and a
+            key that moved with the display text would silently drop every restored
+            keyword filter the first time that count changed. */
+        CategoryNameRole
+    };
+
+    /*  THE AUTHORED VOCABULARY, PUSHED IN AS A VALUE rather than reached through a
+        KeywordVocab *. The vocabulary is loaded lazily and its dock is off by default, so
+        a pointer here would be null exactly when it was wanted and dangling if the dock
+        were rebuilt; a set of folded paths cannot be either. MW::refreshFilterVocabMarking
+        owns the pushing.
+
+        AN EMPTY SET TURNS THE MARKING OFF, which is the important case: a fresh install
+        has no authored vocabulary, and every keyword in the panel reading as an error
+        would say the opposite of the truth. */
+    void setVocabPaths(const QSet<QString> &pathsFold);
+
+    /*  The keyword paths currently INCLUDED, which is what a drop onto the keyword list
+        files. Excluded items (Qt::PartiallyChecked) are not sources: "not this one" does
+        not name a keyword to move. */
+    QStringList checkedKeywordPaths() const;
+
+    /*  How many keyword items are unfiled, for the category header. */
+    int unfiledKeywordCount() const;
+
+    /*  Hide keyword items that ARE filed, keeping the ancestors of an unfiled one visible
+        so its branch can still be read -- the rule KeywordTree::setFilterText already
+        uses. Session-only, and re-applied after every keyword rebuild. */
+    void setShowUnfiledOnly(bool showUnfiledOnly);
+    bool isShowUnfiledOnly() const { return showUnfiledOnly; }
+
 private:
     QMutex mutex;
     void resizeColumns();
@@ -245,6 +290,15 @@ private:
        category, ambiguous (amber). The two compose -- an excluded ambiguous keyword must
        still read as both. */
     void styleFilterItem(QTreeWidgetItem *item);
+    /*  Re-read UnfiledRole for every keyword item from vocabPathsFold, restyle them, and
+        put the count on the category header. */
+    void applyVocabMarking();
+    /*  Show or hide keyword items for showUnfiledOnly. Returns true when anything at or
+        beneath item is visible, which is how an unfiled node keeps its ancestors. */
+    bool applyUnfiledVisibility(QTreeWidgetItem *item);
+    /*  "Keywords", or "Keywords (63 unfiled)". The stable name is in CategoryNameRole, so
+        this may say whatever is most useful. */
+    void updateKeywordCategoryHeader();
     /* True when this item may be included/excluded at all -- a child, enabled, and not
        one of the Search category's two fixed rows. */
     bool isFilterableItem(QTreeWidgetItem *item) const;
@@ -260,6 +314,9 @@ private:
         context menu policy is DefaultContextMenu so that contextMenuEvent is reached at
         all, which means the actions are no longer shown by Qt -- see addFilterActions. */
     void addFilterActions(QMenu &menu);
+    /*  The "Show unfiled only" toggle, appended to whichever menu a right-click in the
+        Keywords category built. Returns it so the caller can recognise it. */
+    QAction *addUnfiledAction(QMenu &menu);
     /*  Edit the query in a resizable dialog. The tree row is a single-line editor a few
         centimetres wide; a query with brackets and quoted phrases cannot be read in it,
         let alone revised. The text committed back is simplified(), because the row (and
@@ -289,6 +346,14 @@ private:
     bool swallowNextRelease = false;
     CategorySource categoriesFrom = FromDatamodel;
     QColor itemIsExcludedColor;
+    /*  A keyword that matches no node in the authored list. A DULL red, deliberately
+        unlike itemIsExcludedColor: "not in your keyword list" and "excluded from this
+        filter" are different facts and must not be read as each other. */
+    QColor itemIsUnfiledColor;
+    /*  Folded paths of the authored vocabulary. Empty means unknown, not "nothing is
+        filed" -- see setVocabPaths. */
+    QSet<QString> vocabPathsFold;
+    bool showUnfiledOnly = false;
     struct ItemState {
         /*  KEYED ON THE TOP-LEVEL CATEGORY AND THE ITEM'S FILTER VALUE, not on the
             item's parent and its label. Those were the same thing while every category

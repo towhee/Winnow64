@@ -1,0 +1,28 @@
+16x9
+Activity
+	Catch
+	Gold Mining
+Category
+	Forest status
+		F&B
+Fauna
+	Animal
+		Agouti
+		Alaska Brown Bear
+			Cubs
+		Artic Ground Squirrel
+	Bird
+		Heron
+Household
+	Household Inventory
+		{Insurance}
+		{Contents}
+		2016 inventory
+			{2016 insurance}
+Location
+	Canada
+		BC
+			Vancouver, BC
+Sports
+	Catch
+Sooke
