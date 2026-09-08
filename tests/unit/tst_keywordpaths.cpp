@@ -48,6 +48,8 @@ private slots:
     void descendantTestRespectsTheSeparator();
     void pruningDropsOnlyProperAncestors();
     void pruningIsWhatMakesATidyMergeRatherThanDouble();
+    void aDropOnAChildlessKeywordIsAMergeWhateverItIsCalled();
+    void severalSpellingsCanBeMergedIntoOneKeyword();
     void aDropOnItsOwnLeafIsAMergeNotANesting();
     void aDropOnABranchWithThatChildMergesRatherThanDuplicates();
     void aDropOnABranchWithoutThatChildNamesTheNewPath();
@@ -243,6 +245,36 @@ void tst_keywordpaths::pruningIsWhatMakesATidyMergeRatherThanDouble()
     quietly grew it a level deeper than they meant would be the one thing this feature
     must never do.
 */
+void tst_keywordpaths::aDropOnAChildlessKeywordIsAMergeWhateverItIsCalled()
+{
+/*
+    THE CASE THAT DEFINES THE RULE. "Animals" dropped on Fauna|Bird|Ferruginous Hawk says
+    "these two pictures ARE that bird" -- the node's own name has nothing to do with it.
+    Matching on the name instead produced Fauna|Bird|Ferruginous Hawk|Animals, which is
+    not a keyword anybody wants and quietly grew the vocabulary a level.
+
+    A KEYWORD IS A NODE WITH NO CHILDREN; a branch is a node with children. That is the
+    whole of the distinction, and it is the one the user makes when choosing where to
+    drop.
+*/
+    QCOMPARE(keywordDropTarget("Animals", "Fauna|Bird|Ferruginous Hawk", QStringList()),
+             QString("Fauna|Bird|Ferruginous Hawk"));
+}
+
+void tst_keywordpaths::severalSpellingsCanBeMergedIntoOneKeyword()
+{
+/*
+    What the childless rule is FOR, beyond the case that found it: a library holds the
+    same bird spelled three ways, and checking all three and dropping them on the one
+    real keyword is the shortest path from that to a tidy vocabulary. Each resolves to
+    the same node, which the caller merges into rather than creating twice.
+*/
+    const QString hawk = "Fauna|Bird|Ferruginous Hawk";
+    QCOMPARE(keywordDropTarget("Ferruginous hawk", hawk, QStringList()), hawk);
+    QCOMPARE(keywordDropTarget("Ferr. Hawk", hawk, QStringList()), hawk);
+    QCOMPARE(keywordDropTarget("Buteo regalis", hawk, QStringList()), hawk);
+}
+
 void tst_keywordpaths::aDropOnItsOwnLeafIsAMergeNotANesting()
 {
 /*
@@ -269,8 +301,10 @@ void tst_keywordpaths::aDropOnABranchWithThatChildMergesRatherThanDuplicates()
 void tst_keywordpaths::aDropOnABranchWithoutThatChildNamesTheNewPath()
 {
 /*
-    The one case that creates. Several checked keywords dropped on one branch each get
-    their own child -- they are never all collapsed onto the branch itself.
+    The one case that creates, and the counterpart of the childless rule above: the SAME
+    keyword dropped on a node with children is filed UNDER it rather than merged INTO it.
+    Several checked keywords dropped on one branch each get their own child -- they are
+    never all collapsed onto the branch itself.
 */
     QCOMPARE(keywordDropTarget("Bunny", "Fauna|Animal", {"Bear"}),
              QString("Fauna|Animal|Bunny"));
