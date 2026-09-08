@@ -278,15 +278,29 @@ inline bool keywordIsDescendant(const QString &pathFold, const QString &ancestor
     THE VOCABULARY PATH A CHECKED KEYWORD BECOMES when its images are dropped on the
     vocabulary node targetPath. See notes/Documentation.txt "Filing Keywords by Drag".
 
-    THREE OUTCOMES, AND ONLY THE THIRD CREATES ANYTHING. The target node itself when its
-    leaf is the keyword's leaf ("Squirrel" dropped on Fauna|Animal|Squirrel is a merge,
-    not a request for Fauna|Animal|Squirrel|Squirrel); an existing child of the target
-    with that leaf; otherwise a new child of the target. Returning the path either way is
-    what lets the caller create only what is genuinely missing.
+    A KEYWORD AND A BRANCH ARE DIFFERENT DROP TARGETS, and that -- not whether the names
+    match -- is what decides the answer. Dropping "Animals" on Fauna|Bird|Ferruginous Hawk
+    says THESE ARE THAT BIRD; the drop is the user identifying a stray, and the node's own
+    name is beside the point. Dropping it on Fauna|Bird says FILE IT UNDER HERE, and the
+    branch gains a child. A node with no children is a keyword; a node with children is a
+    branch.
+
+    THE NAME STILL DECIDES FIRST, in the two cases where it is unambiguous: a target whose
+    own leaf IS the keyword ("Squirrel" onto Fauna|Animal|Squirrel), and a target that
+    already HAS a child of that name. Both are merges, and both must beat the branch rule
+    -- otherwise a squirrel dropped on Squirrel-with-a-Chipmunk-under-it would become
+    Fauna|Animal|Squirrel|Squirrel, the self-nesting artifact the tidy dialog has to rank
+    last.
+
+    SO THERE ARE FOUR OUTCOMES AND ONLY THE LAST CREATES ANYTHING: the target because it
+    is named for the keyword; an existing child named for it; the target because it is a
+    keyword rather than a branch; otherwise a new child of the branch.
 
     PURE, AND THE CHILD LEAVES ARE PASSED IN, because the rule is the part worth pinning
-    in a test and a model is the part that is not. The caller reads the children off
-    KeywordVocab once and asks this per keyword.
+    in a test and a model is the part that is not. An EMPTY list is therefore load-bearing
+    twice over -- it means "no children", which is what makes the target a keyword rather
+    than a branch -- so a caller that cannot be bothered to read the children changes the
+    answer rather than merely losing a merge.
 
     THE KEYWORD'S LEAF IS WHAT MOVES, not its whole path. A stray is usually a root, where
     the two are the same thing; when it is not -- filing "Trip|Kenya" under Location --
@@ -303,17 +317,22 @@ inline QString keywordDropTarget(const QString &checked, const QString &targetPa
     if (leaf.isEmpty() || targetPath.isEmpty()) return QString();
 
     const QString leafFold = keywordFold(leaf);
-    QString target = targetPath + '|' + leaf;
+    QString target;
 
     if (keywordFold(keywordLeafOf(targetPath)) == leafFold) {
-        target = targetPath;
+        target = targetPath;                        // the target IS this keyword
     }
     else {
         for (const QString &child : targetChildLeaves) {
             if (keywordFold(child) != leafFold) continue;
-            target = targetPath + '|' + child;
+            target = targetPath + '|' + child;      // a child IS this keyword
             break;
         }
+    }
+    if (target.isEmpty()) {
+        target = targetChildLeaves.isEmpty()
+            ? targetPath                            // a keyword: these are that keyword
+            : targetPath + '|' + leaf;              // a branch: file it under here
     }
 
     if (keywordFold(target) == keywordFold(checked)) return QString();
