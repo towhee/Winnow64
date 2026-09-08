@@ -46,6 +46,8 @@ private slots:
     void sameLeafUnderTwoParentsStaysTwoKeywords();
     void parentOfARootIsEmpty();
     void descendantTestRespectsTheSeparator();
+    void pruningDropsOnlyProperAncestors();
+    void pruningIsWhatMakesATidyMergeRatherThanDouble();
 };
 
 void tst_keywordpaths::aPathSurvivesIntact()
@@ -189,6 +191,44 @@ void tst_keywordpaths::descendantTestRespectsTheSeparator()
     QVERIFY(!keywordIsDescendant("fauna|birdsong", "fauna|bird"));
     QVERIFY(!keywordIsDescendant("fauna", "fauna|bird"));          // the other direction
     QVERIFY(!keywordIsDescendant("fauna|bird", QString()));
+}
+
+void tst_keywordpaths::pruningDropsOnlyProperAncestors()
+{
+/*
+    An ancestor of another path in the same list goes; a path that merely shares a PREFIX
+    STRING does not. "Fauna|Bird" must survive beside "Fauna|Birdsong|Dawn", which is the
+    same separator trap keywordIsDescendant guards, in the other direction.
+*/
+    QCOMPARE(keywordPruneAncestors({"Location", "Location|Canada", "Location|Canada|BC"}),
+             QStringList() << "Location|Canada|BC");
+
+    QCOMPARE(keywordPruneAncestors({"Fauna|Bird", "Fauna|Birdsong|Dawn"}),
+             QStringList() << "Fauna|Bird" << "Fauna|Birdsong|Dawn");
+
+    /* Unrelated paths and a lone path are returned as they came, in order. */
+    QCOMPARE(keywordPruneAncestors({"Fauna|Bird|Heron", "Location|Canada"}),
+             QStringList() << "Fauna|Bird|Heron" << "Location|Canada");
+}
+
+void tst_keywordpaths::pruningIsWhatMakesATidyMergeRatherThanDouble()
+{
+/*
+    THE CASE THE TIDY CREATES. An image already filed as Location|Canada|BC also carries a
+    flat "Canada" from an older application. Moving that flat keyword to Location|Canada
+    -- what MW::applyKeywordTidyPlan does -- would leave the image claiming both, which is
+    one fact written twice: prefix expansion already answers a search for Location|Canada
+    from the deeper path alone. Pruning is what turns the move into a merge.
+
+    And the write survives a read-back unchanged, which is the property that stops a tidy
+    from drifting: composing these paths into dc:subject and lr:hierarchicalSubject and
+    reading them back must give the pruned list, not the one that went in.
+*/
+    const QStringList merged = keywordPruneAncestors({"Location|Canada",
+                                                      "Location|Canada|BC"});
+    QCOMPARE(merged, QStringList() << "Location|Canada|BC");
+
+    QCOMPARE(keywordEffectivePaths({"BC"}, merged), merged);
 }
 
 QTEST_APPLESS_MAIN(tst_keywordpaths)

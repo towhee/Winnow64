@@ -4115,3 +4115,6 @@ I added squirrel keyword to /Users/roryhill/Pictures/Zen2048/pbase2048/2026-04-2
 again (see screenshot) and then filtered on Squirrel, but the filters had not been updated
 to include the laatest change and 2026-04-24_0014_Zen2048.JPG was not filtered.  I closed
 Winnow, reopened, and the filter count for squirell was still not updated.
+
+I need a tool to help me move all the flat keywords into the heirarchical keywords and
+then delete the unused flat keywords.

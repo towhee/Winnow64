@@ -206,6 +206,51 @@ inline QStringList keywordPrefixExpand(const QStringList &paths)
     return out;
 }
 
+/*
+    Drop every path that is a proper ANCESTOR of another path in the same list.
+
+        {"Location", "Location|Canada", "Location|Canada|BC", "Fauna|Bird"}
+            -> {"Location|Canada|BC", "Fauna|Bird"}
+
+    WHY IT IS SAFE TO DROP THEM. keywordPrefixExpand emits every ancestor of every path,
+    so "Location" stays searchable, filterable and countable for an image tagged only
+    "Location|Canada|BC". A separate depth-1 "Location" is therefore not a second fact
+    about the picture -- it is the same fact spelled without its parents, which is exactly
+    what keywordEffectivePaths already consumes when the file says it twice.
+
+    IT IS NOT USED ON THE READ PATH. Reading keeps what the file says; only an operation
+    that deliberately merges keywords (Tidy flat keywords) prunes, because that is the
+    operation that CREATES the redundancy -- moving a flat "Canada" onto an image that
+    already carries "Location|Canada|BC" would otherwise leave both.
+
+    ORDER IS PRESERVED for the survivors, so a pruned list stays as deterministic as the
+    list it came from.
+*/
+inline QStringList keywordPruneAncestors(const QStringList &paths)
+{
+    QStringList out;
+    QList<QString> folded;
+    folded.reserve(paths.size());
+    for (const QString &p : paths) folded << keywordFold(p);
+
+    for (int i = 0; i < paths.size(); ++i) {
+        bool covered = false;
+        for (int j = 0; j < paths.size(); ++j) {
+            if (i == j) continue;
+            /*  A PROPER ancestor: the separator test, not startsWith, or "Fauna" would
+                be swallowed by "Faunal|Study". Equality is not pruning -- two identical
+                paths are a duplicate, which the callers de-duplicate on their own. */
+            if (folded.at(j) != folded.at(i)
+                && folded.at(j).startsWith(folded.at(i) + '|')) {
+                covered = true;
+                break;
+            }
+        }
+        if (!covered) out << paths.at(i);
+    }
+    return out;
+}
+
 /* The parent of a path -- "A|B|C" -> "A|B". A root has no parent and returns empty. */
 inline QString keywordParentPath(const QString &path)
 {

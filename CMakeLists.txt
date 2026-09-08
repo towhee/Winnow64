@@ -330,6 +330,8 @@ set(WINNOW_SOURCES
     Views/keywordtags.h
     Dialogs/keywordretagdlg.cpp
     Dialogs/keywordretagdlg.h
+    Dialogs/keywordtidydlg.cpp
+    Dialogs/keywordtidydlg.h
     Main/status.cpp
     Main/test.cpp
     Main/viewmodes.cpp

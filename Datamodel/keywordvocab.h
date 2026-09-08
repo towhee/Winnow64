@@ -134,6 +134,17 @@ public:
         Location branch above all these places." */
     QModelIndex insertParentAbove(const QModelIndex &idx, const QString &name);
     bool remove(const QModelIndex &idx);
+    /*  Delete the ROOT node for each of these names if it is empty and childless --
+        the tail of a flat-keyword tidy (MW::tidyFlatKeywords), where a bare "Nanaimo"
+        that has just been filed under Location|...|Nanaimo leaves behind a top-level
+        node no image uses.
+
+        THREE CONDITIONS, ALL NECESSARY. Depth 1, because only a root can be the leftover
+        of a flat keyword; no children, because a branch is somebody's structure whatever
+        its own count says; and a count of zero, which is the actual test -- refreshCounts
+        must have run since the images were rewritten or this deletes nodes still in use.
+        Returns how many went. */
+    int removeUnusedRoots(const QStringList &names);
     bool setSynonyms(const QModelIndex &idx, const QStringList &synonyms);
     bool setExportable(const QModelIndex &idx, bool exportable);
 

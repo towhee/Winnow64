@@ -3054,6 +3054,7 @@ void MW::createKeywordsDock()
         refreshKeywordsDock();
     });
     connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
+    connect(keywordTree, &KeywordTree::tidyRequested, this, &MW::tidyFlatKeywords);
 
     connect(keywordTags, &KeywordTags::addRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({p}, {});

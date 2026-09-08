@@ -511,6 +511,34 @@ bool KeywordVocab::remove(const QModelIndex &idx)
     return true;
 }
 
+int KeywordVocab::removeUnusedRoots(const QStringList &names)
+{
+/*
+    See the header for the three conditions. The removals go through remove() rather than
+    one DELETE, so the model is reset and the tree redrawn exactly as a hand delete would
+    -- a bulk path that bypassed it would be a second way for the tree and the table to
+    drift.
+
+    THE INDEX IS TAKEN INSIDE THE LOOP because each remove() resets the model, which
+    invalidates every index taken before it.
+*/
+    if (G::isLogger) G::log("KeywordVocab::removeUnusedRoots");
+
+    int gone = 0;
+    for (const QString &name : names) {
+        const QString trimmed = keywordNodes(name).join('|');
+        if (trimmed.isEmpty() || trimmed.contains('|')) continue;   // roots only
+
+        const VocabNode *n = byPathFold.value(keywordFold(trimmed), nullptr);
+        if (!n || n->parent != root) continue;
+        if (!n->children.isEmpty() || n->count > 0) continue;
+
+        const QModelIndex idx = indexForPath(n->path);
+        if (idx.isValid() && remove(idx)) ++gone;
+    }
+    return gone;
+}
+
 bool KeywordVocab::setSynonyms(const QModelIndex &idx, const QStringList &synonyms)
 {
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;

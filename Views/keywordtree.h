@@ -48,6 +48,10 @@ signals:
     void pathChanged(const QString &oldPath, const QString &newPath);
     /*  The user asked to put this path on the selection (Enter, or double-click). */
     void assignRequested(const QString &path);
+    /*  "Tidy flat keywords...": file the whole legacy flat vocabulary into the tree.
+        Emitted rather than done here for the same reason as the rest of this class --
+        it rewrites IMAGES, and this view never touches one. MW::tidyFlatKeywords. */
+    void tidyRequested();
 
 protected:
     void contextMenuEvent(QContextMenuEvent *event) override;

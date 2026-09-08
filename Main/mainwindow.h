@@ -130,6 +130,8 @@
 //#include "Utilities/mac.h"
 #endif
 
+struct KeywordTidyAction;
+
 class QNetworkAccessManager;
 class QNetworkReply;
 
@@ -2224,6 +2226,19 @@ private:
         images the datamodel has never loaded. Returns how many files were written. */
     int retagKeywordPath(const QString &oldPath, const QString &newPath,
                          const QString &folder = QString());
+    /*  TIDY FLAT KEYWORDS: open the review list of every depth-1 keyword the catalog
+        holds, then carry out what the user approved. See Dialogs/keywordtidydlg.h for
+        what a flat keyword is and why the list is reviewed rather than applied. */
+    void tidyFlatKeywords();
+    /*  Carry out an approved tidy: ONE pass over the affected images, applying every
+        move and removal at once. Returns how many files were written. */
+    int applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan);
+    /*  An image's keywords have been written to its file: put the new lists into the
+        MODEL if the row is loaded, and into the INDEX either way. Shared by the retag
+        and the tidy, which differ in what they compute and not at all in how the result
+        is published. */
+    void publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
+                             const QStringList &hierarchical);
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();
