@@ -131,6 +131,7 @@
 #endif
 
 struct KeywordTidyAction;
+struct KeywordMove;
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -702,9 +703,15 @@ private slots:
     /*  Rebuild the Keywords filter category after keywords were written. Separate so a
         caller filing several keywords at once pays for one rebuild, not one each. */
     void rebuildKeywordFilters(const QString &src);
+    /*  Diagnose an empty Keywords filter category at the moment it happens -- see the
+        note on the definition. Costs nothing while the panel is healthy. */
+    void reportEmptyKeywordCategory(const QString &src);
     /*  File the CHECKED Filters keywords into the vocabulary node these images were
         dropped on -- one pass per keyword. Returns how many images were filed. */
     int applyKeywordMoves(const QString &targetNodePath, const QStringList &imagePaths);
+    /*  Do the datamodel, the Filters item and the catalog agree about each moved keyword?
+        Reports the three numbers when they do not -- see the note on the definition. */
+    void verifyKeywordMoveCounts(const QList<KeywordMove> &moves);
     /*  Push the authored vocabulary into Filters, so it can mark the keywords that match
         no node in it. */
     void refreshFilterVocabMarking();
@@ -2224,6 +2231,9 @@ private:
     /*  Repaint the dock from the current selection -- the tags and the tree's dots.
         Cheap and guarded on the dock being visible; it ships off. */
     void refreshKeywordsDock();
+    /*  Coalesced refresh for selectionChanged, which a rubber band emits per row. */
+    void scheduleKeywordsDockRefresh();
+    bool keywordsDockRefreshPending = false;
     /*  Load the vocabulary if it is not loaded yet. Called from EVERY route by which the
         dock can become visible, because there are several and only one of them used to
         do it. Retries rather than latching: see the definition. */

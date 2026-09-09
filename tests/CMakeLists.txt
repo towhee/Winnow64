@@ -238,6 +238,17 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 
+# tst_keywordvocab covers the AUTHORED vocabulary's tree surgery, and above all the MERGE
+# -- the one operation that walks two trees at once and destroys part of one of them.
+# A library keyworded by two applications holds the same place twice ("Canada|BC|..."
+# beside "Location|Canada|BC|..."), and folding one into the other is the only way out
+# that keeps the tails. The cases pin that the tails survive at every depth, that a
+# colliding child merges rather than duplicating, and that exactly ONE pathChanged comes
+# out -- that signal raises a dialog which rewrites files, and one per node moved would
+# raise it once per keyword in the branch.
+winnow_add_unit_test(tst_keywordvocab unit/tst_keywordvocab.cpp
+    ${CMAKE_SOURCE_DIR}/Datamodel/keywordvocab.cpp)
+
 # tst_lrkeywords pins the Lightroom keyword file against TWO real exports, trimmed into
 # tests/fixtures/lightroom_keywords.csv and .txt -- Lightroom writes both a five-column
 # CSV and the tab-indented .txt everyone describes, and the reader accepted only the

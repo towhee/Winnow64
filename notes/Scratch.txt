@@ -4139,3 +4139,20 @@ Should we use the existing Filters, and add a color code (dull red) to identify 
 that do not match the keyword list or should we build a separate tool to manage this?
 
 Give me your thoughts on this before creating the plan.
+
+In File keywords dialog:
+- Change title from 'File keywords' to 'Sync image and keyword list keywords'
+- Above the table, remove 'Filing # keyword into ...'.  It is redundant.
+- Change button 'File #' to 'Update image file(s) keywords'
+- Allow user to drag adjust table column widths
+
+When drag onto Keyword list highlight Keyword list row in the same gray used in Folders.
+
+When updating image file keywords and refreshing the Filters after a keyword drag, display
+a popup 'Busy updating the image file keywords and refreshing this filter'.
+
+I dragged the Filters|Keywords|Artist onto Keyword list|Category.  Artist was correctly
+added to Category and the Keyword list image count was correctly updated to 1.  However,
+Filters|Keywords|Category|Artist is now visible, but its count is still zero.
+
+

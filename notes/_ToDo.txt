@@ -7,6 +7,7 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
+- In loupe mode, 'Esc' swith to grid mode (gridView)
 - Test search in filter
 - Develop panels management needs a tweak
 - Tweak welcome screen re to get started incl Catalog ??

@@ -299,7 +299,23 @@ bool KeywordVocab::writeNode(const VocabNode *n)
     q.addBindValue(n->path);
     q.addBindValue(keywordFold(n->path));
     q.addBindValue(n->parent && n->parent != root ? QVariant(n->parent->id) : QVariant());
-    q.addBindValue(n->synonyms.join('\n'));
+    /*  AN EMPTY LIST JOINS TO A NULL QString, AND THE COLUMN IS "NOT NULL DEFAULT ''".
+        QStringList::join returns a default-constructed QString for an empty list, Qt binds
+        a null QString as SQL NULL, and SQLite then refuses the UPDATE -- so EVERY write of
+        a node with no synonyms failed, which is very nearly every node there is.
+
+        WHAT THAT COST, because it is not what it looks like. rename checked the result and
+        returned false, so it changed the in-memory name and never wrote it, never emitted
+        pathChanged, and never offered to retag the photographs; reparent and rewritePaths
+        did not check at all, so a moved branch looked moved until the next reload put it
+        back. Both failures are invisible in a running session -- the tree on screen is the
+        in-memory one -- which is why this survived long enough for a merge to find it.
+
+        NOT the empty-string literal by accident: QString::fromLatin1("") is non-null,
+        where QString() is null and binds as NULL. */
+    const QString synonyms = n->synonyms.isEmpty() ? QString::fromLatin1("")
+                                                   : n->synonyms.join('\n');
+    q.addBindValue(synonyms);
     q.addBindValue(n->exportable ? 1 : 0);
     q.addBindValue(n->id);
     if (!q.exec()) {
@@ -310,18 +326,24 @@ bool KeywordVocab::writeNode(const VocabNode *n)
     return true;
 }
 
-void KeywordVocab::rewritePaths(VocabNode *n)
+bool KeywordVocab::rewritePaths(VocabNode *n)
 {
     /*  n's own path has already been set by the caller; this fixes its descendants and
         keeps byPathFold in step. Depth-first, so a child is rewritten against a parent
-        path that is already correct. */
+        path that is already correct.
+
+        IT REPORTS NOW, and it did not. Every write here was issued and its result thrown
+        away, so a descendant whose row would not write left the tree and the database
+        disagreeing for the rest of the session with nothing said -- which is exactly how
+        the null-synonyms bug in writeNode stayed hidden. */
     for (VocabNode *c : n->children) {
         byPathFold.remove(keywordFold(c->path));
         c->path = joinPath(n->path, c->name);
         byPathFold.insert(keywordFold(c->path), c);
-        writeNode(c);
-        rewritePaths(c);
+        if (!writeNode(c)) return false;
+        if (!rewritePaths(c)) return false;
     }
+    return true;
 }
 
 bool KeywordVocab::rename(const QModelIndex &idx, const QString &newName)
@@ -349,8 +371,12 @@ bool KeywordVocab::rename(const QModelIndex &idx, const QString &newName)
     n->path = joinPath(p == root ? QString() : p->path, name);
     byPathFold.insert(keywordFold(n->path), n);
 
-    if (!writeNode(n)) return false;
-    rewritePaths(n);
+    if (!writeNode(n) || !rewritePaths(n)) {
+        G::issue("Warning", "Keyword rename could not be saved", "KeywordVocab::rename",
+                 -1, n->path);
+        reload();
+        return false;
+    }
 
     /*  The children's ORDER may have changed with the name. Re-sorting is a layout
         change rather than a data change, so the view is told to re-read the branch. */
@@ -399,12 +425,180 @@ bool KeywordVocab::reparent(const QModelIndex &idx, const QModelIndex &newParent
     byPathFold.remove(keywordFold(n->path));
     n->path = joinPath(p == root ? QString() : p->path, n->name);
     byPathFold.insert(keywordFold(n->path), n);
-    writeNode(n);
-    rewritePaths(n);
+    const bool written = writeNode(n) && rewritePaths(n);
     endResetModel();
+
+    /*  A MOVE THAT DID NOT REACH THE DATABASE IS NOT A MOVE. It used to be reported as
+        one -- the writes were unchecked -- so the branch sat in its new place until the
+        next reload silently put it back. reload() re-reads what was actually stored, so
+        what the user sees is what they have. */
+    if (!written) {
+        G::issue("Warning", "Keyword move could not be saved", "KeywordVocab::reparent",
+                 -1, n->path);
+        reload();
+        return false;
+    }
 
     emit pathChanged(oldPath, n->path);
     return true;
+}
+
+bool KeywordVocab::wouldMerge(const QModelIndex &idx, const QModelIndex &newParent) const
+{
+    const VocabNode *n = nodeOf(idx);
+    if (!n) return false;
+    if (wouldCycle(idx, newParent)) return false;
+
+    const VocabNode *p = newParent.isValid() ? nodeOf(newParent) : root;
+    if (!p) p = root;
+    if (n->parent == p) return false;           // already there; nothing to merge
+
+    for (const VocabNode *sib : p->children)
+        if (keywordFold(sib->name) == keywordFold(n->name)) return true;
+    return false;
+}
+
+bool KeywordVocab::deleteLeafNode(VocabNode *n)
+{
+/*
+    ONE ROW, AND IT MUST BE CHILDLESS. remove() leans on ON DELETE CASCADE, which is right
+    for deleting a branch and wrong here: by the time a merge reaches this the children
+    have been moved out from under n, and a cascade would take whatever was still hanging
+    off it. mergeNodes empties n first, so there is nothing to cascade to -- but the
+    distinction is worth having in the name.
+*/
+    QSqlDatabase db = CacheDb::instance().db();
+    if (!db.isOpen()) return false;
+
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM vocab WHERE id = ?");
+    q.addBindValue(n->id);
+    if (!q.exec()) {
+        G::issue("Warning", "Vocabulary merge delete failed: " + q.lastError().text(),
+                 "KeywordVocab::deleteLeafNode", -1, n->path);
+        return false;
+    }
+
+    byId.remove(n->id);
+    byPathFold.remove(keywordFold(n->path));
+    if (n->parent) n->parent->children.removeOne(n);
+    delete n;
+    return true;
+}
+
+bool KeywordVocab::mergeNodes(VocabNode *src, VocabNode *dst)
+{
+/*
+    Fold src into dst. Recursive, depth-first, and src is gone when this returns true.
+
+    THE CHILDREN ARE COPIED BEFORE THE LOOP because the loop mutates src->children --
+    every branch of it either moves a child out or merges it away, and iterating the list
+    being emptied is the obvious way to get this wrong.
+
+    A MOVED CHILD'S PATH IS FREE BY CONSTRUCTION. It only moves when dst has no
+    counterpart for it, which is exactly the condition under which its new path cannot
+    already exist -- so the unique index on pathfold cannot fire. Where a counterpart does
+    exist the two are merged instead, and nothing is written at that path at all.
+
+    SYNONYMS ARE UNIONED rather than one side winning. They are alternative spellings, and
+    two nodes that turn out to be the same keyword have between them every spelling the
+    user has recorded for it; dropping either half would lose completions they had already
+    set up.
+*/
+    QStringList syn = dst->synonyms;
+    for (const QString &a : src->synonyms) {
+        bool have = false;
+        for (const QString &b : syn) {
+            if (keywordFold(a) != keywordFold(b)) continue;
+            have = true;
+            break;
+        }
+        if (!have) syn << a;
+    }
+    if (syn != dst->synonyms) {
+        dst->synonyms = syn;
+        if (!writeNode(dst)) return false;
+    }
+
+    const QList<VocabNode *> kids = src->children;
+    for (VocabNode *c : kids) {
+        VocabNode *twin = nullptr;
+        for (VocabNode *d : dst->children) {
+            if (keywordFold(d->name) != keywordFold(c->name)) continue;
+            twin = d;
+            break;
+        }
+
+        if (twin) {
+            if (!mergeNodes(c, twin)) return false;      // c is deleted inside
+            continue;
+        }
+
+        src->children.removeOne(c);
+        c->parent = dst;
+        dst->children.append(c);
+        byPathFold.remove(keywordFold(c->path));
+        c->path = joinPath(dst->path, c->name);
+        byPathFold.insert(keywordFold(c->path), c);
+        if (!writeNode(c)) return false;
+        rewritePaths(c);
+    }
+
+    sortChildren(dst);
+    return deleteLeafNode(src);
+}
+
+QString KeywordVocab::reparentMerging(const QModelIndex &idx, const QModelIndex &newParent)
+{
+    VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
+    if (!n) return QString();
+    if (wouldCycle(idx, newParent)) return QString();
+
+    VocabNode *p = newParent.isValid()
+                       ? const_cast<VocabNode *>(nodeOf(newParent)) : root;
+    if (!p) p = root;
+    if (n->parent == p) return n->path;
+
+    VocabNode *twin = nullptr;
+    for (VocabNode *sib : p->children) {
+        if (keywordFold(sib->name) != keywordFold(n->name)) continue;
+        twin = sib;
+        break;
+    }
+    /*  Nothing to merge with: this is an ordinary move, and reparent already does it --
+        including its own pathChanged. Two ways to move a node would be two places for the
+        path rewrite to drift. */
+    if (!twin) return reparent(idx, newParent) ? n->path : QString();
+
+    const QString oldPath = n->path;
+    const QString newPath = twin->path;
+
+    /*  ONE TRANSACTION FOR THE WHOLE MERGE. It is many UPDATEs and many DELETEs across a
+        branch, and a half-merged vocabulary -- some children moved, their old parent still
+        standing -- is not a state the tree can be read back from. On failure the rows roll
+        back and reload() puts the in-memory tree back in step with them; without that the
+        two would disagree for the rest of the session, which is the one thing every
+        mutator here is written to prevent. */
+    QSqlDatabase db = CacheDb::instance().db();
+    if (!db.isOpen()) return QString();
+    const bool inTransaction = db.transaction();
+
+    beginResetModel();
+    const bool ok = mergeNodes(n, twin);
+    endResetModel();
+
+    if (!ok) {
+        if (inTransaction) db.rollback();
+        reload();
+        return QString();
+    }
+    if (inTransaction && !db.commit()) {
+        reload();
+        return QString();
+    }
+
+    emit pathChanged(oldPath, newPath);
+    return newPath;
 }
 
 QModelIndex KeywordVocab::insertChild(const QModelIndex &parent, const QString &name)

@@ -964,6 +964,50 @@ void BuildFilters::run()
         snapshot = pendingSnap;
     }
     if (!snapshot) snapshot = std::make_shared<FilterSnapshot>();
+
+    /*
+        AN EMPTY SNAPSHOT MUST NOT EMPTY THE CATEGORIES, and until now it did.
+
+        A category is rebuilt from the counts this run produces: updateCategoryItems
+        removes every item the count map does not mention, and updateKeywordItems deletes
+        the whole keyword subtree and remakes it from the map. So a snapshot with NO ROWS
+        does not mean "nothing to update", it means "delete everything" -- the Filters
+        panel comes back with Titles, Keywords and Creators empty and greyed by
+        setEachCatTextColor's childCount() == 0 test, and nothing repairs it until the
+        user switches scope. That was reported three times.
+
+        A SNAPSHOT CAN BE EMPTY WHILE THE MODEL IS NOT. makeSnapshot returns an empty one
+        when dm is null, and reads dm->rowCount() at the instant it runs -- and
+        DataModel::addCatalogRows fills the model in BATCHES from pendingCatalogRows, so
+        there is a window in every catalog load where the model has few rows or none.
+        Anything that rebuilds a category inside that window used to wipe it.
+
+        THE TEST IS THE MODEL, NOT THE SNAPSHOT. A folder that genuinely holds no images
+        must still clear the tree -- that is a real empty, and a Reset on it is correct.
+        What cannot be right is a snapshot claiming zero rows while the datamodel holds
+        thousands, and that is the only case skipped here.
+
+        SKIPPING LEAVES THE TREE STALE, WHICH IS THE RIGHT FAILURE: stale is recoverable
+        and self-correcting -- the next rebuild replaces it -- where empty is neither.
+    */
+    if (snapshot->rows.isEmpty() && dm != nullptr && dm->rowCount() > 0) {
+        G::issue("Warning",
+                 QString("Filter rebuild skipped: snapshot held 0 rows but the datamodel "
+                         "holds %1 (action %2). The category tree was left as it was.")
+                     .arg(dm->rowCount()).arg(static_cast<int>(action)),
+                 "BuildFilters::run");
+        /*  Finished the way an ordinary run finishes -- the Done op and the same two
+            lines -- so nothing downstream is left waiting on a build that decided not to
+            build. The proxy suspension taken in updateCategory is lifted by the caller's
+            filterChange, exactly as on the normal path. */
+        FilterOps done;
+        done.append({FilterOp::Done, {}, nullptr, false, QString()});
+        dispatchOps(done);
+        setIdle();
+        emit stopped("BuildFilters");
+        return;
+    }
+
     const FilterSnapshot &snap = *snapshot;
 
     FilterOps ops;

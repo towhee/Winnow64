@@ -1231,6 +1231,52 @@ void Filters::setShowUnfiledOnly(bool showUnfiled)
     if (showUnfiledOnly) keywords->setExpanded(true);
 }
 
+int Filters::keywordItemCount(const QString &path, bool filtered) const
+{
+/*
+    What the panel is SHOWING for one keyword: the filtered count (the "Filter" column) or
+    the unfiltered one (the "All" column). -1 when there is no such item at all, which is
+    a different answer from 0 and the distinction the drop's self-check needs -- "the
+    keyword is not in the tree" and "the keyword is in the tree claiming no images" have
+    different causes.
+*/
+    const QString fold = keywordFold(path);
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        if (keywordFold(item->data(1, Qt::EditRole).toString()) != fold) continue;
+        return item->data(filtered ? 2 : 3, Qt::EditRole).toInt();
+    }
+    return -1;
+}
+
+void Filters::setKeywordChecked(const QString &path, bool checked)
+{
+/*
+    Check or uncheck one keyword by PATH, without emitting filterChange.
+
+    QUIET ON PURPOSE. The caller is in the middle of a keyword move and will rebuild and
+    re-filter once at the end; a filterChange per keyword would re-run the proxy against a
+    tree that is about to be deleted and recreated, which is the use-after-free
+    BuildFilters::updateCategory's runSync rule exists to prevent.
+
+    A PATH THAT IS NOT THERE IS NOT AN ERROR, it is simply nothing to do. The caller must
+    therefore run this AFTER the rebuild that creates the item, not before:
+    Filters::updateKeywordItems does its own inline save and restore of check state from
+    the items it is about to delete, so a state set on an item that does not exist yet has
+    nothing to be carried by and is silently lost.
+*/
+    if (path.isEmpty()) return;
+    const QString fold = keywordFold(path);
+    const Qt::CheckState state = checked ? Qt::Checked : Qt::Unchecked;
+
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        if (keywordFold(item->data(1, Qt::EditRole).toString()) != fold) continue;
+        item->setCheckState(0, state);
+        styleFilterItem(item);
+        return;
+    }
+
+}
+
 QStringList Filters::checkedKeywordPaths() const
 {
 /*
@@ -2208,6 +2254,21 @@ void Filters::updateKeywordItems(const QMap<QString, int> &pathCounts,
 */
     if (G::isLogger) G::log("Filters::updateKeywordItems");
 
+    /*  NOTHING IS DEMOLISHED DURING A TEARDOWN. The children are deleted below and
+        remade by addKeywordItems, which ABORTS on G::stop -- so a latch landing between
+        the two leaves the category permanently EMPTY: no keywords, the header greyed by
+        setEachCatTextColor's childCount() == 0 test, and nothing to repair it until some
+        later rebuild happens to run. That is exactly the window MW::filterChange warns
+        about ("a transient teardown latch that MW::stop sets and clears around EVERY
+        folder change ... a big catalog scope widens it further"), and a keyword edit is
+        one of the things most likely to be in it, because the edit path pumps the event
+        loop to keep its progress popup alive.
+
+        LEAVING THE OLD TREE IS THE RIGHT FAILURE. It is momentarily stale, which is
+        recoverable and self-correcting -- the next rebuild replaces it -- where an empty
+        category is neither. */
+    if (G::stop) return;
+
     QHash<QString, Qt::CheckState> stateByPath;
     QHash<QString, bool> expandedByPath;
     for (QTreeWidgetItem *item : itemsInCategory(category)) {
@@ -2424,7 +2485,11 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
     };
 
     for (auto it = pathCounts.constBegin(); it != pathCounts.constEnd(); ++it) {
-        if (G::stop) return;
+        /*  ABORTED HALF-BUILT, which is allowed -- but the header must not go on
+            describing a tree that is no longer there. updateKeywordCategoryHeader counts
+            what is actually in the category, so calling it on the way out is what stops
+            "Keywords (282 unfiled)" sitting above nothing at all. */
+        if (G::stop) { updateKeywordCategoryHeader(); return; }
         if (it.key().isEmpty()) continue;       // a blank path is a bad row, not a value
         QTreeWidgetItem *node = ensureNode(it.key());
         node->setData(2, Qt::EditRole, it.value());

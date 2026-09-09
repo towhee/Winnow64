@@ -18,19 +18,15 @@ KeywordDropDlg::KeywordDropDlg(const QString &targetPath, const QList<KeywordMov
                                const QString &folderName, QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle("File keywords");
+    setWindowTitle("Sync image and keyword list keywords");
     setModal(true);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
 
-    QLabel *what = new QLabel(
-        QString("Filing %1 into <b>%2</b>")
-            .arg(moves.size() == 1 ? QString("1 keyword")
-                                   : QString("%1 keywords").arg(moves.size()),
-                 targetPath.toHtmlEscaped()), this);
-    what->setTextFormat(Qt::RichText);
-    layout->addWidget(what);
-
+    /*  NO "FILING 1 KEYWORD INTO X" LINE. It said what the table below says, in worse
+        detail: the table names every keyword, its destination and its count, so a
+        sentence summarising it is one more thing to read before the answer.
+*/
     /*  A TABLE RATHER THAN A SENTENCE, because several keywords dropped on one branch is
         the ordinary case and each of them lands somewhere different. A prose summary of
         five moves is unreadable; five rows are not. */
@@ -39,12 +35,17 @@ KeywordDropDlg::KeywordDropDlg(const QString &targetPath, const QList<KeywordMov
     table->verticalHeader()->hide();
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setSelectionMode(QAbstractItemView::NoSelection);
-    table->horizontalHeader()->setSectionResizeMode(ColFrom, QHeaderView::Stretch);
-    table->horizontalHeader()->setSectionResizeMode(ColArrow,
-                                                    QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(ColTo, QHeaderView::Stretch);
-    table->horizontalHeader()->setSectionResizeMode(ColImages,
-                                                    QHeaderView::ResizeToContents);
+
+    /*  INTERACTIVE, NOT STRETCHED. Keyword paths are long and their lengths are nothing
+        like each other -- "Animals" beside "Fauna|Bird|Ferruginous Hawk" -- so a split
+        that suits one row elides the next. Stretch mode also refuses to be dragged at
+        all, which is what made this unreadable: the column you needed wider was the one
+        Qt would not let you widen. The initial widths still come from the CONTENT
+        (resizeColumnsToContents below, then switched to Interactive), so the common case
+        needs no dragging and the uncommon one is possible. */
+    QHeaderView *hh = table->horizontalHeader();
+    hh->setSectionResizeMode(QHeaderView::Interactive);
+    hh->setStretchLastSection(false);
 
     int total = 0;
     int creating = 0;
@@ -99,8 +100,12 @@ KeywordDropDlg::KeywordDropDlg(const QString &targetPath, const QList<KeywordMov
     layout->addSpacing(6);
 
     QDialogButtonBox *buttons = new QDialogButtonBox(this);
+    /*  THE BUTTON NAMES THE CONSEQUENCE, not the count. "File 62" reads as a quantity
+        of nothing in particular; what the press actually does is rewrite the keywords
+        inside the user's image files, which is the fact worth having under the cursor.
+        The count is two lines above it. */
     QPushButton *goBtn = buttons->addButton(
-        QString("File %1").arg(total), QDialogButtonBox::AcceptRole);
+        "Update image file(s) keywords", QDialogButtonBox::AcceptRole);
     QPushButton *cancelBtn = buttons->addButton(QDialogButtonBox::Cancel);
 
     goBtn->setEnabled(total > 0);
@@ -114,5 +119,9 @@ KeywordDropDlg::KeywordDropDlg(const QString &targetPath, const QList<KeywordMov
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
 
     layout->addWidget(buttons);
-    resize(620, qMin(560, 260 + moves.size() * 24));
+
+    /*  Content widths first, THEN Interactive: sizing a section after the mode is set
+        keeps the width Qt calculated while leaving the handle draggable. */
+    table->resizeColumnsToContents();
+    resize(680, qMin(560, 280 + moves.size() * 24));
 }

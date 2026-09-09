@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 11;
+constexpr int kSchemaVersion = 12;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -248,7 +248,21 @@ namespace {
     that is all the row ever recorded. The stamp reset at the end of the block is what
     eventually upgrades them.
 */
-bool rebuildPathKeyedKeywords(QSqlDatabase &db)
+/*
+    Rebuild keyword and image_keyword from the two verbatim columns every image already
+    holds. NO FILE IS READ and no freshness stamp is touched, which is what lets a
+    derivation change be repaired by a migration rather than by re-indexing a library.
+
+    seedVocab SEEDS THE AUTHORED VOCABULARY from what was observed, and a repair must pass
+    FALSE. The seeding exists so a first-ever index opens the Keywords dock on the user's
+    own hierarchy instead of an empty tree, and it is additive -- which is right once and
+    wrong every time after. On a later repair it would re-inject every path the library
+    happens to contain, including the mis-parented ones the user has since spent an
+    afternoon filing away ("Buoy|Thing", "Category|Moire|Category"), silently undoing that
+    work. The links are DERIVED and may be rebuilt at will; the vocabulary is AUTHORED and
+    may not.
+*/
+bool rebuildPathKeyedKeywords(QSqlDatabase &db, bool seedVocab)
 {
     /*  The pre-schema-7 rows' old keyword names, by image. Restricted in SQL to exactly
         those rows, so this is a handful of entries on a modern index rather than a copy
@@ -318,6 +332,8 @@ bool rebuildPathKeyedKeywords(QSqlDatabase &db)
         }
     }
     img.finish();
+
+    if (!seedVocab) return true;
 
     /*  SEED THE AUTHORED VOCABULARY from what was just observed, so the Keywords dock
         opens on the user's own hierarchy rather than on an empty tree they would have to
@@ -1008,7 +1024,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
             }
         }
 
-        if (!rebuildPathKeyedKeywords(db)) {
+        if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ true)) {
             db.rollback();
             return false;
         }
@@ -1070,7 +1086,65 @@ bool CacheDb::migrate(QSqlDatabase &db)
                 return false;
             }
         }
-        if (!rebuildPathKeyedKeywords(db)) {
+        if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ true)) {
+            db.rollback();
+            return false;
+        }
+        if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 12) {
+    /*
+        NO DDL EITHER -- the third data repair, and the same two tables as version 11.
+
+        THE LINKS HAD DRIFTED FROM THE TEXT THEY ARE DERIVED FROM. On the author's
+        43,000-image library a 300-image sample found 179 rows whose image_keyword links
+        did not match the prefix expansion of their own keywordpaths and keywords_literal:
+        1,285 links missing and 689 present that the image does not carry. One image's
+        text read "Buoy|Thing", "Location|Canada|BC|Southern BC|Kettle River Recreation
+        Area" and "Thing|Rain" while its links read "People" and "Thing|Rain" -- not
+        expanded, most of them absent, and one belonging to some other picture entirely.
+
+        WHAT THAT COSTS is two counts of the same keyword that disagree. The Filters panel
+        counts the datamodel, which is built from the text; the Keywords dock and every
+        catalog keyword search count the links. So a keyword read 574 images in one panel
+        and 1 in the other, which is how this was found.
+
+        NOTHING HEALS IT ON ITS OWN, which is why it is a migration. The text columns are
+        correct and the files are unchanged, so every freshness stamp still matches and
+        Catalog::commit skips the row -- a rescan is precisely the thing that cannot fix
+        it, and the user reported exactly that.
+
+        THE ROOT CAUSE IS NOT ESTABLISHED. This repairs the data; it does not claim to
+        know how the data got that way, and if the links drift again that is worth knowing
+        rather than papering over -- see MW::verifyKeywordMoveCounts, which reports a
+        disagreement between the two counts at the moment it appears.
+
+        seedVocab IS FALSE. See rebuildPathKeyedKeywords: seeding is additive and would
+        push every observed path back into the vocabulary the user curates, including the
+        mis-parented ones they have since filed away.
+    */
+        const char *ddl[] = {
+            "CREATE TEMP TABLE kw_carry AS"
+            " SELECT ik.image_id AS image_id, k.name AS name"
+            " FROM image_keyword ik"
+            " JOIN keyword k ON k.id = ik.keyword_id"
+            " JOIN image i   ON i.id = ik.image_id"
+            " WHERE i.keywordpaths = \'\' AND i.keywords_literal = \'\'",
+            "DELETE FROM keyword_context",
+            "DELETE FROM image_keyword",
+            "DELETE FROM keyword",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+        if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ false)) {
             db.rollback();
             return false;
         }

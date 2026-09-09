@@ -265,16 +265,47 @@ void KeywordTags::rebuild()
     const QStringList ordered = full + partialPaths;
     const int shown = qMin(ordered.size(), kMaxTags);
 
+    /*  WHAT A TAG IS CALLED, and the rule is about STABILITY before brevity.
+
+        AN UNFILED TAG SHOWS ITS WHOLE PATH. A "?" tag is one the user is deciding about
+        -- it matches nothing in their keyword list -- and its identity is the whole
+        question, so hiding all but its last word is hiding the thing they came here to
+        look at. "Buoy|Thing" drawn as "Thing" is not a short label, it is a different
+        keyword.
+
+        A FILED TAG SHOWS ITS LEAF, because the user filed it there and already knows
+        where it lives; "Category|Aspect|16x10" is "16x10" to the person who put it under
+        Aspect, and a panel of full paths would be unreadable at depth for no gain.
+
+        THE LABEL DEPENDS ONLY ON THE TAG, NOT ON ITS NEIGHBOURS, and that is the point.
+        An earlier version showed the full path only where two tags' leaves COLLIDED,
+        which meant deleting "Dinghy|Thing" silently relabelled "Buoy|Thing" from
+        "Buoy|Thing" back to "Thing" -- the user went looking for a chip that was on
+        screen the whole time under a different name. A label that moves because of what
+        else happens to be selected is worse than one that is merely short.
+
+        THE ONE EXCEPTION IS TWO FILED TAGS THAT SHARE A LEAF -- the two Vancouvers, of
+        which a real vocabulary has dozens. There the collision rule survives, instability
+        and all, because the alternative is two identical chips each with a destructive x:
+        a label that varies is a nuisance, and removing the wrong keyword from a thousand
+        photographs is not. Unfiled tags cannot reach this case; they are already full. */
+    QHash<QString, int> leafUses;
+    for (int i = 0; i < shown; ++i)
+        leafUses[keywordFold(keywordLeafOf(ordered.at(i)))]++;
+
     bool anyPartial = false, anyUnfiled = false;
 
     for (int i = 0; i < shown; ++i) {
         const QString path = ordered.at(i);
+        const QString leaf = keywordLeafOf(path);
         const bool partial = counts.value(path) < selectionSize;
         const bool unfiled = !vocab->indexForPath(path).isValid();
+        const bool collides = leafUses.value(keywordFold(leaf)) > 1;
+        const QString label = (unfiled || collides) ? path : leaf;
         anyPartial |= partial;
         anyUnfiled |= unfiled;
 
-        Tag *tag = new Tag(path, keywordLeafOf(path), partial, unfiled, tagArea);
+        Tag *tag = new Tag(path, label, partial, unfiled, tagArea);
         tag->onRemove = [this](const QString &p) { emit removeRequested(p); };
         tag->onClick = [this, partial, unfiled](const QString &p) {
             /*  A partial tag promotes to the whole selection -- the obvious meaning of

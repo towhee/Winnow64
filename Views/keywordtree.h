@@ -6,6 +6,7 @@
 
 class KeywordVocab;
 class QLineEdit;
+class QStyledItemDelegate;
 
 /*
     THE VOCABULARY TREE -- the top zone of the Keywords dock.
@@ -64,6 +65,9 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    /*  Clears the drop highlight when the drag goes elsewhere. Without it the grey row
+        outlives the drag that put it there. */
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
 
 private:
     void renameSelected();
@@ -78,7 +82,14 @@ private:
     QStringList siblingNames(const QModelIndex &parent, const QModelIndex &except) const;
     void applyFilter(const QModelIndex &parent, const QString &needle);
 
+    /*  Highlight the row a drag is over, in the grey Folders and Bookmarks use. Held on
+        the delegate, because that is what paints the row. */
+    void setDropRow(const QModelIndex &idx);
+
     KeywordVocab *vocab = nullptr;
+    /*  The item delegate, kept so the drop highlight can reach it. Base type: the
+        delegate class is private to keywordtree.cpp. */
+    QStyledItemDelegate *dotDelegate = nullptr;
     QString filterText;
 };
 
