@@ -129,6 +129,33 @@ public:
     // --- mutators. Each writes the database and the tree together. ------------------
     bool rename(const QModelIndex &idx, const QString &newName);
     bool reparent(const QModelIndex &idx, const QModelIndex &newParent);
+    /*  Would re-parenting src under newParent land on a node of the same name? That is
+        the case plain reparent REFUSES, and the one reparentMerging exists for. Asked by
+        the view so it can offer the merge instead of reporting a dead end. */
+    bool wouldMerge(const QModelIndex &idx, const QModelIndex &newParent) const;
+    /*  MERGE A BRANCH INTO THE ONE ALREADY THERE, recursively, and return the path it now
+        occupies (empty on failure).
+
+        WHAT reparent REFUSES. A vocabulary grown from two sources holds the same place
+        twice -- "Canada|BC|Vancouver Island" beside "Location|Canada|BC|Vancouver
+        Island" -- and the fix is to put one inside the other. reparent cannot: a name
+        already taken in the destination is a collision it declines, because merging "has
+        to decide what happens to both nodes' images". This is that decision, made once,
+        here.
+
+        NAME BY NAME, ALL THE WAY DOWN. Each child of src either has a counterpart under
+        dst, in which case the two are merged in turn, or it does not, in which case it
+        simply moves. Tails at any depth survive, which is the whole point: filing
+        "Canada" under "Location" must keep "Canada|BC|Nanaimo" as
+        "Location|Canada|BC|Nanaimo" rather than flattening it.
+
+        ONE pathChanged FOR THE WHOLE MERGE, not one per node. retagKeywordPath rewrites
+        every descendant at its PREFIX, so the top-level move describes the whole subtree;
+        emitting per node would raise the retag dialog once per keyword moved.
+
+        THE IMAGES ARE STILL NOT TOUCHED HERE. As with every other mutator on this class,
+        the vocabulary changes and the caller decides what that means for the files. */
+    QString reparentMerging(const QModelIndex &idx, const QModelIndex &newParent);
     QModelIndex insertChild(const QModelIndex &parent, const QString &name);
     /*  Put a new node BETWEEN idx and its parent, adopting idx. "I should have had a
         Location branch above all these places." */
@@ -166,7 +193,15 @@ private:
     void clearTree();
     /*  Rewrite this node's path and every descendant's, in the tree and in one SQL
         statement, after its name or its parent changed. */
-    void rewritePaths(VocabNode *n);
+    bool rewritePaths(VocabNode *n);
+    /*  Fold src into dst: move or merge every child, union the synonyms, then delete src.
+        NO MODEL SIGNALS -- the caller holds one beginResetModel around the whole merge,
+        because a reset per node would be a reset per keyword in the branch. */
+    bool mergeNodes(VocabNode *src, VocabNode *dst);
+    /*  Delete one CHILDLESS node's row and free it, without the model reset and without
+        relying on ON DELETE CASCADE -- which would be wrong here, since the children have
+        already been moved out from under it. */
+    bool deleteLeafNode(VocabNode *n);
     bool writeNode(const VocabNode *n);
     void sortChildren(VocabNode *n);
 

@@ -789,6 +789,18 @@ void MW::createSelection()
        tracks the selection set (and any queued propagation lands before it changes). */
     connect(sel->sm, &QItemSelectionModel::selectionChanged,
             this, &MW::updateDevelopSelectionWarning);
+    /*  The Keywords dock's tag zone describes the SELECTION and acts on the whole of it,
+        so it has to follow the selection SET too. It followed only fileSelectionChange,
+        which fires on the CURRENT index -- so Select All left it showing one image's
+        tags, and a keyword every selected image carried had no chip to remove. The
+        remove itself was never wrong (applyKeywordsToSelection reads the live
+        selection); it simply could not be reached.
+
+        COALESCED, because a rubber band emits this per row crossed and a rebuild is a
+        QFrame, a layout, a label and a button per tag. KeywordTags::rebuild already caps
+        the tags at 60; this caps the rebuilds. */
+    connect(sel->sm, &QItemSelectionModel::selectionChanged,
+            this, &MW::scheduleKeywordsDockRefresh);
     connect(sel, &Selection::updateStatus, this, &MW::updateStatus);
     connect(sel, &Selection::updateCurrent, dm, &DataModel::setCurrentSF);
 }

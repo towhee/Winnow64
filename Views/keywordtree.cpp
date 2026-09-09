@@ -36,11 +36,35 @@ class AppliedDotDelegate : public QStyledItemDelegate
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
+    /*  THE ROW A DRAG IS CURRENTLY OVER, painted in the same grey the Folders and
+        Bookmarks trees use for the same thing (File/hoverdelegate.cpp -- backgroundShade
+        + 20). Qt's own drop indicator is a one-pixel rule between rows, which answers the
+        wrong question: dropping BETWEEN two keywords has no meaning, and what the user
+        needs to know is which keyword they are about to file into. Winnow already
+        answered that with a filled row everywhere else a drop lands on something, so this
+        does not invent a second visual language for it.
+
+        HERE RATHER THAN IN File/hoverdelegate.h, because this tree also draws the applied
+        dot and a view has one delegate. Sharing the colour is what matters; sharing the
+        class would cost the dot. */
+    void setDropRow(const QModelIndex &idx)
+    {
+        const QModelIndex row = idx.isValid()
+            ? idx.sibling(idx.row(), KeywordVocab::NameColumn) : QModelIndex();
+        dropRow = row;
+    }
+
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override
     {
         QStyleOptionViewItem opt = option;
         initStyleOption(&opt, index);
+
+        if (dropRow.isValid()
+            && index.sibling(index.row(), KeywordVocab::NameColumn) == dropRow) {
+            const int b = G::backgroundShade + 20;
+            painter->fillRect(opt.rect, QColor(b, b, b));
+        }
 
         const bool applied = index.data(KeywordVocab::AppliedRole).toBool();
         if (applied && index.column() == KeywordVocab::NameColumn) {
@@ -57,6 +81,9 @@ public:
         }
         QStyledItemDelegate::paint(painter, opt, index);
     }
+
+private:
+    QModelIndex dropRow;
 };
 
 }   // namespace
@@ -72,7 +99,8 @@ KeywordTree::KeywordTree(KeywordVocab *vocab, QWidget *parent)
     setExpandsOnDoubleClick(false);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
-    setItemDelegate(new AppliedDotDelegate(this));
+    dotDelegate = new AppliedDotDelegate(this);
+    setItemDelegate(dotDelegate);
 
     header()->setStretchLastSection(false);
     header()->setSectionResizeMode(KeywordVocab::NameColumn, QHeaderView::Stretch);
@@ -397,6 +425,27 @@ void KeywordTree::startDrag(Qt::DropActions)
     drag->exec(Qt::MoveAction);
 }
 
+/*  The delegate, typed. It is created here and never replaced, so the cast is a fact
+    rather than a hope; the member is held as the base type because the delegate class is
+    private to this file. */
+static AppliedDotDelegate *dropDelegateOf(QStyledItemDelegate *d)
+{
+    return static_cast<AppliedDotDelegate *>(d);
+}
+
+void KeywordTree::setDropRow(const QModelIndex &idx)
+{
+    if (dotDelegate == nullptr) return;
+    dropDelegateOf(dotDelegate)->setDropRow(idx);
+    viewport()->update();
+}
+
+void KeywordTree::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    setDropRow(QModelIndex());
+    QTreeView::dragLeaveEvent(event);
+}
+
 void KeywordTree::dragEnterEvent(QDragEnterEvent *event)
 {
     if (event->mimeData()->hasFormat(kVocabNodeMime) || event->mimeData()->hasUrls())
@@ -415,6 +464,9 @@ void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
 */
     const QModelIndex target = indexAt(event->position().toPoint());
 
+    /*  THE HIGHLIGHT IS CLEARED ON EVERY REFUSAL, not only set on every acceptance. A
+        grey row left behind under a "no" cursor says the drop will land there, which is
+        the one thing it will not do. */
     if (event->mimeData()->hasFormat(kVocabNodeMime)) {
         const QByteArray data = event->mimeData()->data(kVocabNodeMime);
         for (const QByteArray &raw : data.split('\n')) {
@@ -422,9 +474,18 @@ void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
             if (!src.isValid()) continue;
             /*  Onto itself, onto its own parent (a move to where it already is) or onto
                 one of its own descendants: all no-ops or cycles. */
-            if (src == target || src.parent() == target) { event->ignore(); return; }
-            if (vocab->wouldCycle(src, target)) { event->ignore(); return; }
+            if (src == target || src.parent() == target) {
+                setDropRow(QModelIndex());
+                event->ignore();
+                return;
+            }
+            if (vocab->wouldCycle(src, target)) {
+                setDropRow(QModelIndex());
+                event->ignore();
+                return;
+            }
         }
+        setDropRow(target);
         event->acceptProposedAction();
         return;
     }
@@ -432,29 +493,52 @@ void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
     /*  Images can only land ON a keyword, never between two of them: there is no
         meaning to "tag these with the gap above Heron". */
     if (event->mimeData()->hasUrls() && target.isValid()) {
+        setDropRow(target);
         event->acceptProposedAction();
         return;
     }
+    setDropRow(QModelIndex());
     event->ignore();
 }
 
 void KeywordTree::dropEvent(QDropEvent *event)
 {
     const QModelIndex target = indexAt(event->position().toPoint());
+    setDropRow(QModelIndex());
 
     if (event->mimeData()->hasFormat(kVocabNodeMime)) {
         const QByteArray data = event->mimeData()->data(kVocabNodeMime);
         for (const QByteArray &raw : data.split('\n')) {
             const QModelIndex src = vocab->indexForPath(QString::fromUtf8(raw));
             if (!src.isValid()) continue;
-            if (!vocab->reparent(src, target)) {
-                /*  reparent refuses a name already taken under the new parent. Merging
-                    the two is a real operation and a bigger one than a drag -- it has to
-                    decide what happens to both nodes' images -- so it is named rather
-                    than attempted. */
+            /*  A NAME ALREADY TAKEN IN THE DESTINATION IS A MERGE, NOT A DEAD END. This
+                used to warn and stop, on the reasoning that merging is a bigger operation
+                than a drag -- which is true, and is why it is ASKED rather than done. It
+                is also the operation a vocabulary grown from two sources most needs: the
+                same place filed twice, "Canada|BC|..." beside
+                "Location|Canada|BC|...", is exactly what a drag onto Location is trying
+                to say. */
+            if (vocab->wouldMerge(src, target)) {
+                const QString from = src.data(KeywordVocab::PathRole).toString();
+                const QString into = target.data(KeywordVocab::PathRole).toString();
+                const QString answer = QString(
+                    "\"%1\" already exists inside \"%2\".\n\n"
+                    "Merge the two? Everything under \"%1\" moves across, keeping its "
+                    "own branches, and \"%1\" itself is removed from the keyword "
+                    "list.\n\nYour photographs are not changed yet -- you will be asked "
+                    "about those next.").arg(from, into);
+                if (QMessageBox::question(this, "Merge keywords", answer,
+                                          QMessageBox::Yes | QMessageBox::No,
+                                          QMessageBox::No) != QMessageBox::Yes) continue;
+
+                if (vocab->reparentMerging(src, target).isEmpty()) {
+                    QMessageBox::warning(this, "Merge keywords",
+                        QString("Could not merge \"%1\".").arg(from));
+                }
+            }
+            else if (!vocab->reparent(src, target)) {
                 QMessageBox::warning(this, "Move keyword",
-                    QString("Could not move \"%1\" there.\n\n"
-                            "A keyword of that name is already inside the destination.")
+                    QString("Could not move \"%1\" there.")
                         .arg(keywordLeafOf(QString::fromUtf8(raw))));
             }
         }

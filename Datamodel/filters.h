@@ -264,6 +264,16 @@ public:
         not name a keyword to move. */
     QStringList checkedKeywordPaths() const;
 
+    /*  Check or uncheck one keyword by path, quietly -- no filterChange. For a caller
+        that is re-pointing the filter at where a move sent the images and will rebuild
+        once at the end. */
+    void setKeywordChecked(const QString &path, bool checked);
+
+    /*  What the panel is showing for one keyword: the Filter column (filtered = true) or
+        the All column. -1 when the keyword has no item, which is deliberately distinct
+        from 0. */
+    int keywordItemCount(const QString &path, bool filtered = false) const;
+
     /*  How many keyword items are unfiled, for the category header. */
     int unfiledKeywordCount() const;
 

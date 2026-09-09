@@ -161,6 +161,27 @@ you selected, and its button says how many keywords that is.</p>
 catalog, whether or not the folder is open. Winnow tells you how many images that is and
 asks once more before it starts. It cannot be undone from inside Winnow.</p>
 
+<p>A tag marked <span class="highlight">?</span> &mdash; one that is not in your keyword
+list &mdash; shows its whole keyword, because that is the one you are deciding about:
+<span class="highlight">Buoy|Thing</span>, not just
+<span class="highlight">Thing</span>. A tag that <em>is</em> in your list shows only its
+last part, since you already know where you filed it. Hovering any tag shows the whole
+keyword either way.</p>
+
+<h1>Merging two branches</h1>
+
+<p>A library keyworded by more than one program often holds the same place twice &mdash;
+<span class="highlight">Canada &gt; BC &gt; Vancouver Island</span> beside
+<span class="highlight">Location &gt; Canada &gt; BC &gt; Vancouver Island</span>. Drag one
+onto the other's parent and Winnow offers to <span class="highlight">merge</span> them.</p>
+
+<p>Everything under the branch you dragged moves across and keeps its own sub-branches, at
+any depth; where both sides have a keyword of the same name, the two are combined rather
+than duplicated. The branch you dragged is then removed from your keyword list.</p>
+
+<p>Your photographs are not changed until you say so &mdash; Winnow asks separately, and
+tells you how many images are affected in this folder and in the whole catalog.</p>
+
 <h1>Filing keywords one at a time, by dragging</h1>
 
 <p>The tidy dialog above is for the big first pass. For the strays that keep arriving
@@ -199,11 +220,19 @@ Ferruginous Hawk keyword.</p>
 and each becomes its own keyword under that branch &mdash; and each image only gets the
 keyword it actually carried.</p>
 
+<p>As you drag, the keyword you are about to drop on is highlighted in grey, the same way
+the Folders panel highlights a folder you are dropping files into.</p>
+
 <p>Winnow never changes your keyword list on its own. Before anything is written you are
 shown exactly what will move, which keywords are new, and how many images will be
 rewritten; cancelling leaves both your list and your images untouched. Dragging images
 onto a keyword with <em>nothing</em> checked in the Filters panel still simply tags them,
 as it always has.</p>
+
+<p>Once the move is done, Winnow ticks the keyword the images went into and unticks the
+one they came from, so you keep looking at the same photographs. Rewriting the files and
+rebuilding the filter can take a while on a large library; a message tells you it is
+working.</p>
 
 <p>A drag can only change the images Winnow has open. In
 <span class="highlight">Folders</span> scope that is the current folder, so the keyword

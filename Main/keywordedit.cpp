@@ -9,6 +9,7 @@
 #include <QFileInfo>
 #include <QLocale>
 #include <QMessageBox>
+#include <QTimer>
 
 #include <functional>
 
@@ -281,6 +282,52 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     if (rebuildFilters) rebuildKeywordFilters(src);
 }
 
+void MW::reportEmptyKeywordCategory(const QString &src)
+{
+/*
+    THE KEYWORD CATEGORY CAME BACK EMPTY. Say why, with the numbers.
+
+    This has been reported three times and reasoned about twice without being reproduced,
+    which is two times too many. The category can only be empty for one of a few reasons
+    and they are trivially distinguishable at the moment it happens -- but only at that
+    moment, because every one of them is transient. So the state is captured here rather
+    than argued about later:
+
+      o the DATAMODEL is empty or tiny        -> the rebuild had nothing to count
+      o the model has rows but no KEYWORDS    -> metadata has not been read, or was
+                                                 cleared and the re-read aborted
+      o rows and keywords both present        -> the fault is in the counting or in the
+                                                 tree build, not in the data
+
+    IT COSTS NOTHING WHEN NOTHING IS WRONG: the walk runs only once the category is
+    already known to be empty, which on a healthy panel never happens.
+*/
+    if (!dm || !filters || !filters->keywords) return;
+    if (filters->keywords->childCount() > 0) return;
+
+    const int rows = dm->rowCount();
+    int withKeywords = 0;
+    int withTitle = 0;
+    int withCreator = 0;
+    for (int row = 0; row < rows; ++row) {
+        if (!dm->index(row, G::KeywordsAllColumn).data().toStringList().isEmpty())
+            ++withKeywords;
+        if (!dm->index(row, G::TitleColumn).data().toString().isEmpty()) ++withTitle;
+        if (!dm->index(row, G::CreatorColumn).data().toString().isEmpty()) ++withCreator;
+    }
+
+    const QString msg =
+        QString("Keywords filter category is EMPTY after %1. "
+                "datamodel rows %2, rows with keywords %3, with title %4, with creator "
+                "%5; isModifyingDatamodel %6, stop %7, filtersBuilt %8")
+            .arg(src).arg(rows).arg(withKeywords).arg(withTitle).arg(withCreator)
+            .arg(QVariant(G::isModifyingDatamodel).toString(),
+                 QVariant(G::stop).toString(),
+                 QVariant(filters->filtersBuilt).toString());
+    qWarning().noquote() << msg;
+    G::issue("Warning", msg, "MW::reportEmptyKeywordCategory");
+}
+
 void MW::rebuildKeywordFilters(const QString &src)
 {
 /*
@@ -314,6 +361,8 @@ void MW::rebuildKeywordFilters(const QString &src)
     /*  The rebuild recreated every keyword item, so the unfiled marking has to be put
         back on the new ones. Cheap: a set lookup per node. */
     refreshFilterVocabMarking();
+
+    reportEmptyKeywordCategory(src);
 }
 
 void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
@@ -423,6 +472,22 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
             }
         }
         if (!changed) continue;
+
+        /*  DE-DUPLICATED, and a MERGE is what makes this necessary rather than tidy. When
+            two branches are folded together, an image filed under both -- "Canada|BC|
+            Nanaimo" and "Location|Canada|BC|Nanaimo" -- has them rewritten to the SAME
+            path, and without this the file would be written with that keyword twice.
+            dc:subject de-duplicates on the way out; lr:hierarchicalSubject does not, so
+            the double would survive into the sidecar and be read straight back. */
+        QStringList unique;
+        QSet<QString> seen;
+        for (const QString &p : next) {
+            const QString fold = keywordFold(p);
+            if (seen.contains(fold)) continue;
+            seen.insert(fold);
+            unique << p;
+        }
+        next = unique;
 
         next.sort(Qt::CaseInsensitive);
 
@@ -820,6 +885,33 @@ void MW::keywordsDockVisibilityChange(bool visible)
     refreshKeywordsDock();
 }
 
+void MW::scheduleKeywordsDockRefresh()
+{
+/*
+    Refresh the Keywords dock once for a burst of selection changes.
+
+    WHY NOT CONNECT refreshKeywordsDock DIRECTLY. Dragging a rubber band over a grid emits
+    selectionChanged for every row it crosses, and each refresh walks the whole selection
+    and rebuilds up to 60 tags, every one of them a QFrame with a layout, a label and a
+    button. At library scale that is felt as lag while selecting -- which is how the tag
+    zone came to follow only the current index in the first place, trading a real bug for
+    a performance one.
+
+    50 ms RATHER THAN A ZERO TIMER. A zero timer coalesces only within one turn of the
+    event loop, and a drag spreads its signals across many; the delay is well under the
+    threshold where a panel feels stale and comfortably above the interval those signals
+    arrive at.
+*/
+    if (!keywordsDock || !keywordsDock->isVisible()) return;
+    if (keywordsDockRefreshPending) return;
+
+    keywordsDockRefreshPending = true;
+    QTimer::singleShot(50, this, [this] {
+        keywordsDockRefreshPending = false;
+        refreshKeywordsDock();
+    });
+}
+
 void MW::refreshKeywordsDock()
 {
 /*
@@ -899,6 +991,72 @@ void MW::refreshFilterVocabMarking()
     walk(QModelIndex());
 
     filters->setVocabPaths(pathsFold);
+}
+
+void MW::verifyKeywordMoveCounts(const QList<KeywordMove> &moves)
+{
+/*
+    AFTER A MOVE, DO THE THREE PLACES THAT COUNT A KEYWORD AGREE?
+
+    A drop that succeeded everywhere except the Filters panel is the failure this exists to
+    catch, and it was reported exactly that way: the keyword list showed 1 image and the
+    Filters row showed 0. Three separate things count a keyword and they are derived
+    differently --
+
+      o the DATAMODEL, G::KeywordsAllColumn, which is what BuildFilters counts and what
+        the panel's numbers are made of;
+      o the FILTERS ITEM, which is what the user is actually reading;
+      o the CATALOG, which is what the Keywords dock's own count comes from.
+
+    -- so when the panel disagrees with the dock, WHICH of them is wrong is the whole
+    question, and no amount of reading the write path answers it. This says so out loud,
+    with all three numbers, at the moment they diverge.
+
+    IT REPORTS RATHER THAN REPAIRS, and it stays. Papering over a mismatch here would hide
+    a write path that is genuinely losing an edit, which would then show up somewhere with
+    no numbers attached. A count that is right costs one walk of the loaded rows per moved
+    keyword, which against a drop that has just rewritten sidecars is nothing.
+*/
+    if (!dm || !filters) return;
+
+    Catalog &cat = Catalog::instance();
+    const bool haveCat = cat.isAvailable();
+
+    for (const KeywordMove &m : moves) {
+        const QString toFold = keywordFold(m.to);
+
+        /*  What the datamodel now holds. The SAME column and the same containment test
+            BuildFilters::countKeywords uses, so a disagreement between this and the item
+            is a disagreement inside the filter machinery rather than about the question
+            being asked. */
+        int inModel = 0;
+        for (int row = 0; row < dm->rowCount(); ++row) {
+            const QStringList all =
+                dm->index(row, G::KeywordsAllColumn).data().toStringList();
+            for (const QString &k : all) {
+                if (keywordFold(k) != toFold) continue;
+                ++inModel;
+                break;
+            }
+        }
+
+        const int inFilters = filters->keywordItemCount(m.to, /*filtered*/ false);
+        const int inCatalog = haveCat ? cat.imagesUnderKeyword(m.to) : -1;
+
+        /*  The datamodel and the panel MUST agree -- one is made from the other. The
+            catalog legitimately differs: it counts the whole library, the datamodel only
+            what is loaded, so it is reported for context and never asserted on. */
+        if (inFilters == inModel) continue;
+
+        const QString msg =
+            QString("Keyword move count mismatch for \"%1\": "
+                    "datamodel %2, Filters item %3, catalog %4 "
+                    "(%5 images were filed from \"%6\")")
+                .arg(m.to).arg(inModel).arg(inFilters).arg(inCatalog)
+                .arg(m.images).arg(m.from);
+        qWarning().noquote() << msg;
+        G::issue("Warning", msg, "MW::verifyKeywordMoveCounts");
+    }
 }
 
 int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imagePaths)
@@ -1044,6 +1202,20 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
         lifts it. */
     dm->sf->suspend(true, src);
 
+    /*  A BUSY POPUP FOR THE WHOLE OPERATION, and it must be PUMPED onto the screen before
+        the loop starts. This is a synchronous rewrite of every affected sidecar followed
+        by a synchronous rebuild of the entire keyword tree; on a real library that is
+        minutes of a frozen window, which is indistinguishable from a hang and was
+        reported as one for the tidy dialog. Same rule, same fix -- see "TWO PUMPS FIX IT"
+        in the Tidying Flat Keywords notes. msDuration 0 means it stays until reset.
+
+        USER INPUT STAYS EXCLUDED: the model, the filters and the catalog are all
+        mid-rewrite, and a click that started a folder change would reenter everything
+        this is walking. */
+    G::popup->showPopup("Busy updating the image file keywords and refreshing this "
+                        "filter", 0);
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
     for (const KeywordMove &m : moves) {
         const QString fromFold = keywordFold(m.from);
 
@@ -1092,8 +1264,27 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     for (const KeywordMove &m : moves) movedFrom << m.from;
     keywordVocab->removeUnusedRoots(movedFrom);
 
+    /*  THE CHECKED KEYWORDS ARE RE-POINTED AT WHERE THEIR IMAGES WENT. Leaving them
+        checked leaves the panel filtering on a keyword that, having just been filed, no
+        image carries any more: an empty view and a column of zeroes as the result of an
+        operation that succeeded. Checking the targets instead keeps the SAME photographs
+        in front of the user, which is what they were looking at and is the only honest
+        way to show the move worked.
+
+        AFTER THE REBUILD, NOT BEFORE. The target usually did not exist as a filter item
+        until a moment ago, and Filters::updateKeywordItems carries check state across a
+        rebuild only for items it already had. Setting it first would be silently lost. */
+    for (const KeywordMove &m : moves) {
+        filters->setKeywordChecked(m.from, false);
+        filters->setKeywordChecked(m.to, true);
+    }
+    filterChange(src);
+
     refreshFilterVocabMarking();
     refreshKeywordsDock();
+    G::popup->reset();
+
+    verifyKeywordMoveCounts(moves);
 
     if (G::isLogger)
         G::log("MW::applyKeywordMoves", QString("filed %1 images into %2")

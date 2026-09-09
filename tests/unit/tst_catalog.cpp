@@ -65,6 +65,7 @@ private slots:
     void sameLeafUnderTwoParentsIsTwoKeywords();
     void subtreeCountRespectsTheSeparator();
     void versionNineFileRebuildsPathKeyedKeywords();
+    void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     /* Declared ahead of the migration cases deliberately: those reopen the
@@ -189,8 +190,15 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         two verbatim columns after keywordEffectivePaths began consuming EVERY
         node of a path from dc:subject rather than only its leaf, which is what
         had been manufacturing a phantom top-level keyword out of every ancestor
-        name Lightroom writes with "export containing keywords" on. */
-    QCOMPARE(CacheDb::schemaVersion(), 11);
+        name Lightroom writes with "export containing keywords" on; version 12 added
+        no table either -- it is the THIRD data repair, rebuilding the same two tables
+        from the same two verbatim columns after the links were found to have drifted
+        from the text they are derived from (179 of a 300-image sample disagreed: 1,285
+        links missing, 689 belonging to other images). It differs from 11 in ONE respect
+        that matters more than the repair: it passes seedVocab = false, because seeding
+        the AUTHORED vocabulary is additive and a repeat would push every observed path
+        back into the list the user curates. */
+    QCOMPARE(CacheDb::schemaVersion(), 12);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1341,6 +1349,88 @@ void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()
        case for why this cannot be left to DevPreviewCache::setCacheDir. */
     CacheDb::instance().closeThisThread();
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
+void tst_catalog::versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone()
+{
+/*
+    THE THIRD DATA REPAIR, and the case that made it necessary: an index whose
+    image_keyword links no longer match the text they are derived from. On the author's
+    library 179 of a 300-image sample disagreed -- 1,285 links missing and 689 belonging
+    to some other picture -- which made the Filters panel (counting the datamodel, built
+    from the text) and the Keywords dock (counting the links) report different numbers for
+    the same keyword: 574 images against 1.
+
+    A RESCAN CANNOT FIX IT, which is why this is a migration. The text is correct and the
+    files are untouched, so every freshness stamp still matches and Catalog::commit skips
+    the row. The user reported precisely that: "I did a new scan - no change."
+
+    THE SECOND HALF OF THIS TEST IS THE HALF THAT WILL SAVE SOMEONE. rebuildPathKeyedKeywords
+    also SEEDS the authored vocabulary, additively, so that a first-ever index opens the
+    Keywords dock on the user's own hierarchy. Run again as part of a repair that would push
+    every observed path back into the vocabulary -- including the mis-parented ones
+    ("Buoy|Thing") the user has since spent an afternoon filing away. Links are DERIVED and
+    may be rebuilt at will; the vocabulary is AUTHORED and may not. So the repair passes
+    seedVocab = false, and this pins it.
+*/
+    QTemporaryDir v11Dir;
+    QVERIFY(v11Dir.isValid());
+    const QString dbPath = QDir(v11Dir.path()).absoluteFilePath("index.db");
+
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+    cat.commit({rowFor("a.nef", {"Heron"}, {"Fauna|Bird|Heron"}),
+                rowFor("b.nef", {"Rain"},  {"Thing|Rain"})});
+
+    /*  Drift the links exactly the way the real index had drifted: drop most of them and
+        attach one that belongs to nothing in this image. Then stamp back to 11, leaving
+        the verbatim text -- which is correct -- for the repair to work from. */
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("DELETE FROM image_keyword"));
+        QVERIFY(q.exec("INSERT INTO keyword (name, namefold, path, pathfold, parent)"
+                       " VALUES ('People','people','People','people',NULL)"));
+        QVERIFY(q.exec("INSERT INTO image_keyword (image_id, keyword_id)"
+                       " SELECT (SELECT id FROM image WHERE path LIKE '%a.nef'),"
+                       "        (SELECT id FROM keyword WHERE pathfold='people')"));
+
+        /*  A vocabulary the user has curated: it holds Fauna|Bird and NOT the junk path.
+            If the repair seeds, "Thing|Rain" and "Thing" reappear here. */
+        QVERIFY(q.exec("DELETE FROM vocab"));
+        QVERIFY(q.exec("INSERT INTO vocab (name, namefold, path, pathfold, parent)"
+                       " VALUES ('Fauna','fauna','Fauna','fauna',NULL)"));
+        QVERIFY(q.exec("PRAGMA user_version = 11"));
+    }
+    CacheDb::instance().closeThisThread();
+
+    CacheDb::instance().setPath(QDir(v11Dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(cat.isAvailable(), "a version 11 file must migrate, not be moved aside");
+
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("PRAGMA user_version") && q.next());
+        QCOMPARE(q.value(0).toInt(), CacheDb::schemaVersion());
+
+        /*  a.nef is linked to its whole prefix expansion again, and NOT to the stray. */
+        QVERIFY(q.exec("SELECT k.path FROM image_keyword ik"
+                       " JOIN keyword k ON k.id = ik.keyword_id"
+                       " JOIN image i   ON i.id = ik.image_id"
+                       " WHERE i.path LIKE '%a.nef' ORDER BY k.pathfold"));
+        QStringList links;
+        while (q.next()) links << q.value(0).toString();
+        QCOMPARE(links, QStringList({"Fauna", "Fauna|Bird", "Fauna|Bird|Heron"}));
+
+        /*  THE VOCABULARY IS UNTOUCHED. Exactly what the user authored, and nothing the
+            repair happened to observe. */
+        QVERIFY(q.exec("SELECT path FROM vocab ORDER BY pathfold"));
+        QStringList vocab;
+        while (q.next()) vocab << q.value(0).toString();
+        QCOMPARE(vocab, QStringList({"Fauna"}));
+    }
 }
 
 void tst_catalog::migrationFromVersionThreeMergesKeywords()
