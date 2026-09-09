@@ -1146,11 +1146,21 @@ void Filters::applyVocabMarking()
     takes it, addKeywordItems holds it for its whole body) and QMutex is not recursive, so
     taking it here would deadlock the rebuild rather than protect anything.
 */
+    /*  ONLY WHAT CHANGED. This used to rewrite the role, the font and the brush on every
+        keyword item unconditionally -- 1,762 of them on a real vocabulary -- and it runs
+        several times per keyword move, because it is connected to the vocabulary's
+        rowsInserted, rowsRemoved, modelReset and pathChanged as well as to
+        finishedBuildFilters. Every one of those writes is an itemChanged from a
+        QTreeWidget, and on macOS a run of them is an accessibility rebuild apiece; the
+        user reported a keyword move that took over a minute with the panel apparently
+        idle. A move changes the filed-ness of ONE keyword, so this should be a handful of
+        writes, not five thousand. */
     for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
         const QString path = item->data(1, Qt::EditRole).toString();
         if (path.isEmpty()) continue;
         const bool unfiled = !vocabPathsFold.isEmpty()
                              && !vocabPathsFold.contains(keywordFold(path));
+        if (item->data(0, UnfiledRole).toBool() == unfiled) continue;
         item->setData(0, UnfiledRole, unfiled);
         styleFilterItem(item);
     }
@@ -1207,7 +1217,9 @@ bool Filters::applyUnfiledVisibility(QTreeWidgetItem *item)
     for (int i = 0; i < item->childCount(); ++i)
         if (applyUnfiledVisibility(item->child(i))) visible = true;
 
-    item->setHidden(!visible);
+    /*  Guarded for the same reason as the marking above: this walks every keyword item
+        every time, and setHidden on an unchanged value is still a view update. */
+    if (item->isHidden() == visible) item->setHidden(!visible);
     return visible;
 }
 
@@ -1246,35 +1258,6 @@ int Filters::keywordItemCount(const QString &path, bool filtered) const
         return item->data(filtered ? 2 : 3, Qt::EditRole).toInt();
     }
     return -1;
-}
-
-void Filters::setKeywordChecked(const QString &path, bool checked)
-{
-/*
-    Check or uncheck one keyword by PATH, without emitting filterChange.
-
-    QUIET ON PURPOSE. The caller is in the middle of a keyword move and will rebuild and
-    re-filter once at the end; a filterChange per keyword would re-run the proxy against a
-    tree that is about to be deleted and recreated, which is the use-after-free
-    BuildFilters::updateCategory's runSync rule exists to prevent.
-
-    A PATH THAT IS NOT THERE IS NOT AN ERROR, it is simply nothing to do. The caller must
-    therefore run this AFTER the rebuild that creates the item, not before:
-    Filters::updateKeywordItems does its own inline save and restore of check state from
-    the items it is about to delete, so a state set on an item that does not exist yet has
-    nothing to be carried by and is silently lost.
-*/
-    if (path.isEmpty()) return;
-    const QString fold = keywordFold(path);
-    const Qt::CheckState state = checked ? Qt::Checked : Qt::Unchecked;
-
-    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
-        if (keywordFold(item->data(1, Qt::EditRole).toString()) != fold) continue;
-        item->setCheckState(0, state);
-        styleFilterItem(item);
-        return;
-    }
-
 }
 
 QStringList Filters::checkedKeywordPaths() const

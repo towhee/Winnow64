@@ -2068,12 +2068,32 @@ void IconView::startDrag(Qt::DropActions)
         result = drag->exec(Qt::CopyAction);
     }
 
-    // move
+    /*
+        MOVE, BUT COPY IS OFFERED TOO, AND ONLY A MOVE DELETES.
+
+        This used to offer MoveAction alone and then delete the files whenever exec()
+        returned anything but IgnoreAction. That made the DELETION the default for every
+        drop target in the application: a target has to accept the drop to receive it, and
+        accepting a move-only drag says "the files are mine now, remove yours". The
+        Keywords dock accepts image drops to TAG them -- nothing moves -- and so it
+        tagged the image and trashed the file, six times, before anyone connected the two.
+
+        REFUSING IS NOT AN ANSWER FOR SUCH A TARGET. Setting IgnoreAction to avoid the
+        delete also tells Qt the target declines, and dropEvent is never delivered -- the
+        drag simply does nothing, which is what the first attempt at this fix did.
+
+        SO THE DRAG OFFERS BOTH ACTIONS and the target says which it performed. A file
+        destination (FSTree, BookMarks, the Finder) takes the proposed MoveAction and the
+        originals go, exactly as before -- MoveAction stays the DEFAULT so nothing about
+        those drops changes. A target that only reads the paths declares CopyAction, is
+        delivered its drop, and costs nothing. A new drop target that thinks about neither
+        gets the safe half of the bargain rather than the destructive one.
+    */
     if (key == Qt::NoModifier) {
-        result = drag->exec(Qt::MoveAction);
+        result = drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::MoveAction);
 
         // moved, so remove drag items from datamodel unless drag onto self
-        if (result != Qt::IgnoreAction) m2->deleteFiles(paths);
+        if (result == Qt::MoveAction) m2->deleteFiles(paths);
     }
 }
 

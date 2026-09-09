@@ -703,9 +703,11 @@ private slots:
     /*  Rebuild the Keywords filter category after keywords were written. Separate so a
         caller filing several keywords at once pays for one rebuild, not one each. */
     void rebuildKeywordFilters(const QString &src);
-    /*  Diagnose an empty Keywords filter category at the moment it happens -- see the
-        note on the definition. Costs nothing while the panel is healthy. */
-    void reportEmptyKeywordCategory(const QString &src);
+    /*  Re-run a full filter build that was aborted after clearing the category tree --
+        see the note on the definition. */
+    void rebuildAbortedFilters();
+    /*  A full build completed: restore the aborted-rebuild retry allowance. */
+    void filterBuildCompleted();
     /*  File the CHECKED Filters keywords into the vocabulary node these images were
         dropped on -- one pass per keyword. Returns how many images were filed. */
     int applyKeywordMoves(const QString &targetNodePath, const QStringList &imagePaths);
@@ -2234,6 +2236,13 @@ private:
     /*  Coalesced refresh for selectionChanged, which a rubber band emits per row. */
     void scheduleKeywordsDockRefresh();
     bool keywordsDockRefreshPending = false;
+    /*  One pending restart at a time -- see MW::rebuildAbortedFilters. NOT in the
+        private slots block above: a plain member there is moc'd as a slot declaration
+        and the build fails with "Not a signal or slot declaration". */
+    bool filterRebuildPending = false;
+    /*  Consecutive aborted-rebuild retries, capped so a chain of full rebuilds cannot
+        become a minute of apparent idleness. Cleared by filterBuildCompleted. */
+    int filterRebuildAttempts = 0;
     /*  Load the vocabulary if it is not loaded yet. Called from EVERY route by which the
         dock can become visible, because there are several and only one of them used to
         do it. Retries rather than latching: see the definition. */

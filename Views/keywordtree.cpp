@@ -446,12 +446,39 @@ void KeywordTree::dragLeaveEvent(QDragLeaveEvent *event)
     QTreeView::dragLeaveEvent(event);
 }
 
+/*
+    TAGGING IS NOT A FILE MOVE, AND SAYING SO IS NOT OPTIONAL.
+
+    IconView::startDrag runs a no-modifier thumbnail drag with MoveAction as its default,
+    and deletes the dragged files when the drop comes back as a MOVE -- on macOS, into the
+    Trash. A target that calls acceptProposedAction() on that drag has therefore agreed to
+    the originals being deleted. This one did, and six photographs went before the pattern
+    was seen; cancelling the confirmation made no difference, because the delete happens in
+    the drag SOURCE after exec() returns.
+
+    THE ANSWER IS Qt::CopyAction, NOT Qt::IgnoreAction. Ignore does prevent the delete, but
+    it also tells Qt the target refuses -- dropEvent is never delivered and the drag does
+    nothing at all, which is what the first attempt at this fix shipped. Copy says the
+    truthful thing: the drop is accepted, and nothing moved. The Keywords dock is not a
+    destination for files; dropping images on a keyword TAGS them and there is nothing for
+    the source to clean up.
+
+    ON EVERY ONE OF THE THREE HANDLERS, because the action is re-proposed as the pointer
+    moves and what exec() returns is whatever the last handler said. The drop sets it
+    BEFORE emitting assignToPaths, so an early return, or a user who cancels the
+    confirmation, still cannot leave the source believing a move happened.
+*/
+static void acceptWithoutMoving(QDropEvent *event)
+{
+    event->setDropAction(Qt::CopyAction);
+    event->accept();
+}
+
 void KeywordTree::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (event->mimeData()->hasFormat(kVocabNodeMime) || event->mimeData()->hasUrls())
-        event->acceptProposedAction();
-    else
-        event->ignore();
+    if (event->mimeData()->hasUrls()) acceptWithoutMoving(event);
+    else if (event->mimeData()->hasFormat(kVocabNodeMime)) event->acceptProposedAction();
+    else event->ignore();
 }
 
 void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
@@ -494,7 +521,7 @@ void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
         meaning to "tag these with the gap above Heron". */
     if (event->mimeData()->hasUrls() && target.isValid()) {
         setDropRow(target);
-        event->acceptProposedAction();
+        acceptWithoutMoving(event);
         return;
     }
     setDropRow(QModelIndex());
@@ -552,8 +579,11 @@ void KeywordTree::dropEvent(QDropEvent *event)
         for (const QUrl &u : event->mimeData()->urls())
             if (u.isLocalFile()) images << u.toLocalFile();
         const QString path = target.data(KeywordVocab::PathRole).toString();
+        /*  IGNORE-BUT-ACCEPTED BEFORE the tagging is even asked for, so that an early
+            return, an exception, or a user who cancels the confirmation still cannot
+            leave the source believing the files were moved. */
+        acceptWithoutMoving(event);
         if (!images.isEmpty() && !path.isEmpty()) emit assignToPaths(path, images);
-        event->acceptProposedAction();
         return;
     }
     event->ignore();

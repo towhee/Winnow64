@@ -807,6 +807,37 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
 {
     if (parent.isValid() || count <= 0) return false;
     if (row < 0 || row + count > rowCount()) return false;
+
+    /*
+        A SMALL REMOVAL FROM A LOADED MODEL IS AN ANOMALY, SO IT SAYS SO.
+
+        Winnow removes rows in exactly two situations: a folder is dropped from the
+        selection (DataModel::removeFolder, which removes every row in it) and a file
+        Winnow itself deleted goes (DataModel::remove). Neither is anything a metadata
+        edit does -- and yet a keyword edit over two images was reported alongside a
+        datamodel that went 41448, 41447, 41446. Rows leaving quietly is enough on its own
+        to empty the Filters categories, since every one of them is counted from the
+        model.
+
+        WHICH ROW AND WHICH FILE, because "the model shrank" is not actionable and "row
+        31402, Colour|2019-08-02_0031.tif, one row, model was 41448" is. This is a report
+        with no opinion attached: the removal still happens. It is deliberately narrow --
+        a handful of rows out of a populated model -- so a folder change, which removes
+        thousands, and a teardown, which removes them all, stay silent.
+    */
+    if (count < 10 && rowCount() > 100) {
+        const QString fPath = index(row, 0).data(G::PathRole).toString();
+        qWarning().noquote()
+            << "ROWLOSS DataModel::removeRows row" << row << "count" << count
+            << "of" << rowCount() << "instance" << instance << fPath;
+
+
+        G::issue("Warning",
+                 QString("Unexpected datamodel row removal: %1 row(s) at %2 of %3 (%4)")
+                     .arg(count).arg(row).arg(rowCount()).arg(fPath),
+                 "DataModel::removeRows");
+    }
+
     beginRemoveRows(QModelIndex(), row, row + count - 1);
     rowStore.removeRows(row, count);
     scratchStore.removeRows(row, count);

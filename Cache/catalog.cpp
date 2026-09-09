@@ -353,21 +353,42 @@ void Catalog::writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
     to be worth anything. Removing a keyword in Lightroom must remove it here too, and
     this is what makes that fall out for free.
 
-    r.keywords IS ALREADY PREFIX-EXPANDED. DataModel::catalogRows and CatalogScanner both
-    hand over keywordPrefixExpand(keywordEffectivePaths(...)) -- every path the image
-    carries plus every ancestor of each, de-duplicated -- so there is nothing to walk here
-    and no second form of the same tag to reconcile. An ancestor is an ordinary row in
-    that list, which is what keeps a filter on "Fauna" reaching an image tagged only
-    "Fauna|Bird|Heron" with plain equality, and what makes a parent's count already its
-    subtree total.
+    THE LINKS ARE DERIVED FROM THE TEXT THIS SAME COMMIT IS STORING, not from r.keywords.
+    That is the whole point of the two lines below, and it was not always so.
+
+    r.keywords is ALSO the prefix expansion -- DataModel::catalogRowFor reads it out of
+    G::KeywordsAllColumn, and CatalogScanner computes it -- so using it looks equivalent
+    and saves a little work. It is not equivalent: it is a SECOND source for the same
+    fact, and two sources drift. The image row's keywords_literal and keywordpaths come
+    from r.keywordsLiteral and r.keywordPaths; the links came from r.keywords; and when
+    the datamodel column was stale or half-written the commit stored text that said one
+    thing and links that said another. On the author's library that left an image whose
+    text carried "Location|New Zealand|Castlepoint" with no link to it -- the Filters
+    panel, which counts the text, said four images and the Keywords dock, which counts the
+    links, said one. Schema 12 repaired a library-wide instance of exactly this, and the
+    drift came back, because a repair cannot outrun a writer that keeps producing it.
+
+    DERIVING THEM HERE MAKES THE DISAGREEMENT IMPOSSIBLE rather than rare. Whatever state
+    any datamodel column was in, the links this row gets are the prefix expansion of the
+    text this row gets, computed together from the same two strings by the same functions
+    the migration uses. The cost is one keywordEffectivePaths and one keywordPrefixExpand
+    per committed row, against a commit that is already writing several columns and a
+    full-text row.
+
+    AN ANCESTOR IS AN ORDINARY ROW in the resulting list, which is what keeps a filter on
+    "Fauna" reaching an image tagged only "Fauna|Bird|Heron" with plain equality, and what
+    makes a parent's count already its subtree total.
 */
     QSqlQuery del(db);
     del.prepare("DELETE FROM image_keyword WHERE image_id = ?");
     del.addBindValue(imageId);
     del.exec();
 
+    const QStringList expanded =
+        keywordPrefixExpand(keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths));
+
     QSet<qint64> ids;
-    for (const QString &k : r.keywords) {
+    for (const QString &k : expanded) {
         const qint64 id = keywordIdLocked(db, k);
         if (id) ids.insert(id);
     }
