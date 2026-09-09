@@ -92,6 +92,10 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
+    /*  A full build CLEARED the category tree and was then aborted before refilling it,
+        leaving the tail of the categories empty with nothing to put them back. The
+        receiver must re-run the build -- see the note at the end of run(). */
+    void abortedAfterClearing();
     void stopped(QString src);
     void updateProgress(int progress);
     // void addToDatamodel(ImageMetadata m, QString src);

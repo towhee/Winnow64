@@ -66,6 +66,7 @@ private slots:
     void subtreeCountRespectsTheSeparator();
     void versionNineFileRebuildsPathKeyedKeywords();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
+    void linksFollowTheTextEvenWhenTheExpansionDisagrees();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     /* Declared ahead of the migration cases deliberately: those reopen the
@@ -311,9 +312,18 @@ void tst_catalog::sidecarEditForcesReindex()
     QCOMPARE(cat.commit({r}), 1);
     QCOMPARE(cat.commit({r}), 0);
 
-    // the sidecar was rewritten, and the keyword changed with it
+    /*  The sidecar was rewritten and the keyword changed with it -- in ALL THREE lists,
+        because that is what a real writer does. DataModel::catalogRowFor reads the three
+        from three model columns written together, and CatalogScanner derives r.keywords
+        from the very lists it puts in the other two. Moving only r.keywords here would
+        describe a row the application never produces, and since the links are now derived
+        from the TEXT (see Catalog::writeKeywordsLocked) it would also describe an image
+        whose keywords did not actually change. */
     r.sidecarMtime = 2000;
-    r.keywords = QStringList{"Eagle"};
+    r.keywordsLiteral = QStringList{"Eagle"};
+    r.keywordPaths = QStringList();
+    r.keywords = keywordPrefixExpand(
+        keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths));
     QCOMPARE(cat.commit({r}), 1);
 
     CatalogQuery q;
@@ -1047,8 +1057,12 @@ void tst_catalog::removedKeywordDisappearsFromCategory()
     QCOMPARE(countOf("Heron"), 2);
     QCOMPARE(countOf("BC"), 1);
 
-    // the user removed "BC" from fa.nef and Lightroom rewrote the sidecar
-    a.keywords = QStringList{"Heron"};
+    /*  The user removed "BC" from fa.nef and Lightroom rewrote the sidecar. All three
+        lists move together -- see the note in sidecarEditForcesReindex. */
+    a.keywordsLiteral = QStringList{"Heron"};
+    a.keywordPaths = QStringList();
+    a.keywords = keywordPrefixExpand(
+        keywordEffectivePaths(a.keywordsLiteral, a.keywordPaths));
     a.sidecarMtime += 1;
     QCOMPARE(cat.commit({a}), 1);
 
@@ -1349,6 +1363,53 @@ void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()
        case for why this cannot be left to DevPreviewCache::setCacheDir. */
     CacheDb::instance().closeThisThread();
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
+void tst_catalog::linksFollowTheTextEvenWhenTheExpansionDisagrees()
+{
+/*
+    ONE SOURCE OF TRUTH PER COMMIT, and this is the case that proved it was needed.
+
+    A CatalogRow carries the keywords THREE ways: keywordsLiteral and keywordPaths, which
+    are stored verbatim on the image row, and keywords, which is their prefix expansion and
+    used to be what image_keyword was built from. Two sources for one fact, and they drift:
+    keywords is read out of the datamodel's G::KeywordsAllColumn, and a row committed while
+    that column was stale or half-written stored text saying one thing and links saying
+    another. On the author's library an image whose text carried
+    "Location|New Zealand|Castlepoint" had no link to it, so the Filters panel counted four
+    images and the Keywords dock counted one. Schema 12 repaired a library-wide instance of
+    exactly that, and it came back -- a repair cannot outrun a writer that keeps producing
+    it.
+
+    SO THE ROW IS COMMITTED WITH A DELIBERATELY WRONG keywords FIELD. If the links follow
+    it, they are wrong; they must follow the text instead, and be its full prefix
+    expansion.
+*/
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+
+    CatalogRow r = rowFor("truck.jpg", {"Castlepoint"},
+                          {"Location|New Zealand|Castlepoint", "Thing|Toy"});
+    /*  What a stale G::KeywordsAllColumn looks like: a plausible subset, missing the
+        branch the image actually carries. */
+    r.keywords = QStringList{"Thing", "Thing|Toy"};
+    cat.commit({r});
+
+    QSqlQuery q(CacheDb::instance().db());
+    QVERIFY(q.exec("SELECT k.path FROM image_keyword ik"
+                   " JOIN keyword k ON k.id = ik.keyword_id"
+                   " JOIN image i   ON i.id = ik.image_id"
+                   " WHERE i.path LIKE '%truck.jpg' ORDER BY k.pathfold"));
+    QStringList links;
+    while (q.next()) links << q.value(0).toString();
+
+    QCOMPARE(links, QStringList({"Location", "Location|New Zealand",
+                                 "Location|New Zealand|Castlepoint",
+                                 "Thing", "Thing|Toy"}));
+
+    /*  And the count the Keywords dock reads now agrees with the text the Filters panel
+        counts -- the two numbers that disagreed in the report. */
+    QCOMPARE(cat.imagesUnderKeyword("Location|New Zealand|Castlepoint"), 1);
 }
 
 void tst_catalog::versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone()

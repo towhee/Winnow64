@@ -7,7 +7,9 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- In loupe mode, 'Esc' swith to grid mode (gridView)
+- Add keyword diagnostics.
+- When quit dock widths are not persistent with next session
+- In loupe mode, 'Esc' switch to grid mode (gridView)
 - Test search in filter
 - Develop panels management needs a tweak
 - Tweak welcome screen re to get started incl Catalog ??
@@ -1423,3 +1425,27 @@ DONE/FIXED
 - Thumbs to dock
 - Change default docking locations including tabify
 - Move styles.css to resources
+
+KEYWORD MANAGEMENT REVIEW (2026-09-09)
+
+A keyword move is slow -- seconds to minutes before the Keyword list count updates, and it
+got worse over a session of changes, so the recent additions are suspects rather than
+bystanders: MW::refreshFilterVocabMarking runs several times per move (it is connected to
+four KeywordVocab signals as well as finishedBuildFilters) and walks the vocabulary and
+every keyword filter item each time; MW::scheduleKeywordsDockRefresh runs on every
+selection change; MW::rebuildAbortedFilters schedules full rebuilds over 41,000 rows.
+Diagnostic scaffolding has been stripped so the next pass profiles a clean build. MEASURE
+FIRST -- put a QElapsedTimer on each phase of MW::applyKeywordMoves and give the delay a
+name before changing anything.
+
+Also open:
+- Schema 13 to re-run rebuildPathKeyedKeywords(seedVocab = false). writeKeywordsLocked now
+  derives the links from the text so new commits agree, but rows that drifted earlier stay
+  wrong until they are re-committed -- the Filters panel and the Keywords dock still
+  disagree about those.
+- Feedback for the phases after the drop. The move runs inside KeywordTree::dropEvent,
+  inside the drag's nested event loop; when that unwinds Qt delivers a drag-leave and
+  MW::dragLeaveEvent resets the popup, so anything still running is silent wherever the
+  reset is put. Wants a status-bar progress channel instead.
+- Branch merge is vocabulary-node to vocabulary-node only. An unfiled OBSERVED branch has
+  no node to drag onto, so it still needs the check-the-tails route.

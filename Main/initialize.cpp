@@ -311,6 +311,13 @@ void MW::createDataModel()
         the vocabulary has never been pushed in. */
     connect(buildFilters, &BuildFilters::finishedBuildFilters,
             this, &MW::refreshFilterVocabMarking);
+    /*  A build that cleared the categories and was then aborted leaves the tail of them
+        empty with nothing to put them back -- the update that did the aborting fills only
+        its own. Re-run it. */
+    connect(buildFilters, &BuildFilters::abortedAfterClearing,
+            this, &MW::rebuildAbortedFilters);
+    connect(buildFilters, &BuildFilters::finishedBuildFilters,
+            this, &MW::filterBuildCompleted);
     connect(buildFilters, &BuildFilters::updateFilterMenu, this, &MW::updateFilterMenu);
     connect(buildFilters, &BuildFilters::quickFilter, this, &MW::quickFilterComplete);
     connect(buildFilters, &BuildFilters::filterLastDay, this, &MW::filterLastDay);

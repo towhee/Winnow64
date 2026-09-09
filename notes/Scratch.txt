@@ -4155,4 +4155,7 @@ I dragged the Filters|Keywords|Artist onto Keyword list|Category.  Artist was co
 added to Category and the Keyword list image count was correctly updated to 1.  However,
 Filters|Keywords|Category|Artist is now visible, but its count is still zero.
 
+41440 in catalog
+image /Users/roryhill/Pictures/Zenfolio/Archive/2013-02-02_0888.jpg
 
+Review keyword management

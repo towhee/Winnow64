@@ -282,50 +282,63 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     if (rebuildFilters) rebuildKeywordFilters(src);
 }
 
-void MW::reportEmptyKeywordCategory(const QString &src)
+void MW::filterBuildCompleted()
 {
 /*
-    THE KEYWORD CATEGORY CAME BACK EMPTY. Say why, with the numbers.
-
-    This has been reported three times and reasoned about twice without being reproduced,
-    which is two times too many. The category can only be empty for one of a few reasons
-    and they are trivially distinguishable at the moment it happens -- but only at that
-    moment, because every one of them is transient. So the state is captured here rather
-    than argued about later:
-
-      o the DATAMODEL is empty or tiny        -> the rebuild had nothing to count
-      o the model has rows but no KEYWORDS    -> metadata has not been read, or was
-                                                 cleared and the re-read aborted
-      o rows and keywords both present        -> the fault is in the counting or in the
-                                                 tree build, not in the data
-
-    IT COSTS NOTHING WHEN NOTHING IS WRONG: the walk runs only once the category is
-    already known to be empty, which on a healthy panel never happens.
+    A full build finished without being aborted, so the retry allowance is restored. See
+    MW::rebuildAbortedFilters for why there is an allowance at all.
 */
-    if (!dm || !filters || !filters->keywords) return;
-    if (filters->keywords->childCount() > 0) return;
+    filterRebuildAttempts = 0;
+}
 
-    const int rows = dm->rowCount();
-    int withKeywords = 0;
-    int withTitle = 0;
-    int withCreator = 0;
-    for (int row = 0; row < rows; ++row) {
-        if (!dm->index(row, G::KeywordsAllColumn).data().toStringList().isEmpty())
-            ++withKeywords;
-        if (!dm->index(row, G::TitleColumn).data().toString().isEmpty()) ++withTitle;
-        if (!dm->index(row, G::CreatorColumn).data().toString().isEmpty()) ++withCreator;
+void MW::rebuildAbortedFilters()
+{
+/*
+    A full filter build cleared the category tree and was aborted before refilling it.
+    Run it again.
+
+    DELAYED AND COALESCED, because the abort means something else wanted the filters
+    rebuilt and may still be arriving -- restarting instantly would be aborted by the next
+    one and could ping-pong. A quarter of a second is long enough for a burst of row
+    removals or a scroll-in verification to finish and far below noticing.
+
+    ONE PENDING RESTART AT A TIME, which is what stops the ping-pong outright: a second
+    abort while a restart is already queued changes nothing, and the queued build will
+    pick up whatever the model looks like when it runs.
+
+    IT IS ALLOWED TO ABORT AGAIN. If it does, this fires again -- and that is correct
+    rather than a loop, because each abort means a newer request took over, and the churn
+    ends when the thing causing it does. What is not allowed is stopping with the tree
+    half-cleared, which is where this started.
+*/
+    if (G::isLogger) G::log("MW::rebuildAbortedFilters");
+    if (!buildFilters || !filters) return;
+    if (filterRebuildPending) return;
+
+    /*  BOUNDED, because a re-run can be aborted too and would ask for another. Each one
+        is a FULL rebuild over every row in the model -- seconds on a catalog scope -- so
+        a chain of them is a minute of the application apparently doing nothing, which is
+        exactly what an unbounded retry earned. Three consecutive attempts is enough to
+        ride out a burst of row removals or a scroll-in verification; past that the churn
+        is not a burst and retrying is not the answer. The counter is cleared by
+        BuildFilters::finishedBuildFilters, which only fires when a build COMPLETES, so a
+        successful rebuild restores the full allowance. */
+    if (++filterRebuildAttempts > 3) {
+        G::issue("Warning", "Gave up re-running an aborted filter build; the filter "
+                            "categories may be incomplete",
+                 "MW::rebuildAbortedFilters");
+        return;
     }
 
-    const QString msg =
-        QString("Keywords filter category is EMPTY after %1. "
-                "datamodel rows %2, rows with keywords %3, with title %4, with creator "
-                "%5; isModifyingDatamodel %6, stop %7, filtersBuilt %8")
-            .arg(src).arg(rows).arg(withKeywords).arg(withTitle).arg(withCreator)
-            .arg(QVariant(G::isModifyingDatamodel).toString(),
-                 QVariant(G::stop).toString(),
-                 QVariant(filters->filtersBuilt).toString());
-    qWarning().noquote() << msg;
-    G::issue("Warning", msg, "MW::reportEmptyKeywordCategory");
+    filterRebuildPending = true;
+    QTimer::singleShot(250, this, [this] {
+        filterRebuildPending = false;
+        if (!buildFilters || !dm || dm->rowCount() == 0) return;
+        /*  The model is being rebuilt; that load ends with its own full build, which is
+            the re-run this wanted. Retrying into it would only be aborted again. */
+        if (G::isModifyingDatamodel || G::stop) return;
+        buildFilters->build(BuildFilters::NoAfterAction);
+    });
 }
 
 void MW::rebuildKeywordFilters(const QString &src)
@@ -361,8 +374,6 @@ void MW::rebuildKeywordFilters(const QString &src)
     /*  The rebuild recreated every keyword item, so the unfiled marking has to be put
         back on the new ones. Cheap: a set lookup per node. */
     refreshFilterVocabMarking();
-
-    reportEmptyKeywordCategory(src);
 }
 
 void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
@@ -996,64 +1007,42 @@ void MW::refreshFilterVocabMarking()
 void MW::verifyKeywordMoveCounts(const QList<KeywordMove> &moves)
 {
 /*
-    AFTER A MOVE, DO THE THREE PLACES THAT COUNT A KEYWORD AGREE?
+    AFTER A MOVE, DO THE PANEL AND THE DOCK AGREE ABOUT EACH KEYWORD?
 
-    A drop that succeeded everywhere except the Filters panel is the failure this exists to
-    catch, and it was reported exactly that way: the keyword list showed 1 image and the
-    Filters row showed 0. Three separate things count a keyword and they are derived
-    differently --
+    They are counted from different stores and that is the whole point of asking. The
+    Filters item's "All" column is the DATAMODEL's count, computed by BuildFilters from
+    G::KeywordsAllColumn; the Keywords dock's count comes from the CATALOG's
+    image_keyword links. A drop that succeeded everywhere except one of them is the
+    failure this exists to catch, and it was reported exactly that way -- the dock said
+    one image and the panel said four.
 
-      o the DATAMODEL, G::KeywordsAllColumn, which is what BuildFilters counts and what
-        the panel's numbers are made of;
-      o the FILTERS ITEM, which is what the user is actually reading;
-      o the CATALOG, which is what the Keywords dock's own count comes from.
+    TWO CHEAP LOOKUPS, NOT A WALK OF THE MODEL. The first version of this counted the
+    datamodel itself, row by row, converting a QStringList per row -- 41,000 of them, per
+    moved keyword, on the GUI thread, and the user felt it as several seconds of a panel
+    that had apparently finished. It was also asking a tautology: the Filters item IS the
+    datamodel's count, so comparing the two could only ever agree. The number worth
+    comparing it against is the catalog's, which is one indexed query.
 
-    -- so when the panel disagrees with the dock, WHICH of them is wrong is the whole
-    question, and no amount of reading the write path answers it. This says so out loud,
-    with all three numbers, at the moment they diverge.
-
-    IT REPORTS RATHER THAN REPAIRS, and it stays. Papering over a mismatch here would hide
-    a write path that is genuinely losing an edit, which would then show up somewhere with
-    no numbers attached. A count that is right costs one walk of the loaded rows per moved
-    keyword, which against a drop that has just rewritten sidecars is nothing.
+    CATALOG SCOPE ONLY. In Folders scope the two SHOULD differ -- the catalog counts the
+    whole library while the datamodel holds one folder -- so asserting there would report
+    a disagreement on every move and teach the user to ignore it.
 */
     if (!dm || !filters) return;
+    if (G::scope != G::Scope::Catalog) return;
 
     Catalog &cat = Catalog::instance();
-    const bool haveCat = cat.isAvailable();
+    if (!cat.isAvailable()) return;
 
     for (const KeywordMove &m : moves) {
-        const QString toFold = keywordFold(m.to);
-
-        /*  What the datamodel now holds. The SAME column and the same containment test
-            BuildFilters::countKeywords uses, so a disagreement between this and the item
-            is a disagreement inside the filter machinery rather than about the question
-            being asked. */
-        int inModel = 0;
-        for (int row = 0; row < dm->rowCount(); ++row) {
-            const QStringList all =
-                dm->index(row, G::KeywordsAllColumn).data().toStringList();
-            for (const QString &k : all) {
-                if (keywordFold(k) != toFold) continue;
-                ++inModel;
-                break;
-            }
-        }
-
         const int inFilters = filters->keywordItemCount(m.to, /*filtered*/ false);
-        const int inCatalog = haveCat ? cat.imagesUnderKeyword(m.to) : -1;
-
-        /*  The datamodel and the panel MUST agree -- one is made from the other. The
-            catalog legitimately differs: it counts the whole library, the datamodel only
-            what is loaded, so it is reported for context and never asserted on. */
-        if (inFilters == inModel) continue;
+        if (inFilters < 0) continue;            // no item: nothing was claimed
+        const int inCatalog = cat.imagesUnderKeyword(m.to);
+        if (inFilters == inCatalog) continue;
 
         const QString msg =
-            QString("Keyword move count mismatch for \"%1\": "
-                    "datamodel %2, Filters item %3, catalog %4 "
-                    "(%5 images were filed from \"%6\")")
-                .arg(m.to).arg(inModel).arg(inFilters).arg(inCatalog)
-                .arg(m.images).arg(m.from);
+            QString("Keyword count mismatch for \"%1\": Filters (datamodel) %2, "
+                    "catalog %3 (%4 images filed from \"%5\")")
+                .arg(m.to).arg(inFilters).arg(inCatalog).arg(m.images).arg(m.from);
         qWarning().noquote() << msg;
         G::issue("Warning", msg, "MW::verifyKeywordMoveCounts");
     }
@@ -1249,12 +1238,26 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
                                                 QItemSelectionModel::NoUpdate);
     }
 
+    /*  THE PHASES AFTER THE WRITING ARE NOT FREE AND THE POPUP SAYS WHICH ONE IS RUNNING.
+        Rebuilding the keyword tree and re-counting the vocabulary are seconds on a real
+        library, and a popup still reading "updating the image file keywords" while they
+        run describes work that finished a while ago. Each pump is what actually repaints
+        it -- a message set and not pumped is a message nobody sees. */
+    auto phase = [](const QString &text) {
+        G::popup->showPopup(text, 0);
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    };
+
+    phase("Rebuilding the keyword filters");
+
     /*  ONE rebuild for the whole drop, then the counts and the marking. removeUnusedRoots
         must come AFTER refreshCounts, which is the condition it tests: a root is only
         deleted when it is depth 1, childless, and now carries nothing. A keyword only
         partly filed -- because the other images live in a folder this scope cannot reach
         -- still has a count, and correctly survives. */
     rebuildKeywordFilters(src);
+
+    phase("Updating the keyword list counts");
 
     Catalog &cat = Catalog::instance();
     if (cat.isAvailable()) cat.pruneUnusedKeywords();
@@ -1264,27 +1267,35 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     for (const KeywordMove &m : moves) movedFrom << m.from;
     keywordVocab->removeUnusedRoots(movedFrom);
 
-    /*  THE CHECKED KEYWORDS ARE RE-POINTED AT WHERE THEIR IMAGES WENT. Leaving them
-        checked leaves the panel filtering on a keyword that, having just been filed, no
-        image carries any more: an empty view and a column of zeroes as the result of an
-        operation that succeeded. Checking the targets instead keeps the SAME photographs
-        in front of the user, which is what they were looking at and is the only honest
-        way to show the move worked.
+    /*  THE FILTERS ARE REFRESHED, NOT REPOINTED, AND NOT CLEARED. Winnow does not touch
+        the checks at all here, and that is the whole of it: rebuildKeywordFilters has
+        already remade the keyword tree, and Filters::updateKeywordItems carries check
+        state across that rebuild keyed on the PATH. So a keyword moved in full loses its
+        item and its tick with it, and a keyword moved in part keeps both and goes on
+        showing what is left to file -- which is exactly what a user in the middle of
+        tidying wants to see next.
 
-        AFTER THE REBUILD, NOT BEFORE. The target usually did not exist as a filter item
-        until a moment ago, and Filters::updateKeywordItems carries check state across a
-        rebuild only for items it already had. Setting it first would be silently lost. */
-    for (const KeywordMove &m : moves) {
-        filters->setKeywordChecked(m.from, false);
-        filters->setKeywordChecked(m.to, true);
-    }
-    filterChange(src);
+        AN EARLIER VERSION TICKED THE TARGET, on the reasoning that the same photographs
+        should stay in front of the user. That only holds when the target had no images of
+        its own; when it had, the panel answered a question nobody asked -- one image was
+        moved into Location|New Zealand|Castlepoint and the view came back showing FOUR,
+        the three that had been filed there all along included.
+
+        CLEARING THE FILTERS WOULD BE WRONG TOO, and for a better reason: the keyword is
+        rarely the only thing checked. A rating, a year, another keyword are all still
+        valid and still the user's, and one item disappearing is no reason to discard the
+        rest. Only the item that moved should go, and the rebuild is what removes it.
+*/
 
     refreshFilterVocabMarking();
     refreshKeywordsDock();
-    G::popup->reset();
-
     verifyKeywordMoveCounts(moves);
+
+    /*  RESET LAST, AFTER EVERY PHASE. The popup used to close here and leave the counts,
+        the marking and the verification running behind a window that looked finished --
+        which is exactly the interval the user reported as "the count took several
+        seconds". Feedback has to outlast the work, not the writing. */
+    G::popup->reset();
 
     if (G::isLogger)
         G::log("MW::applyKeywordMoves", QString("filed %1 images into %2")

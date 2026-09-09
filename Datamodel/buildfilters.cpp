@@ -934,6 +934,24 @@ void BuildFilters::run()
 {
     idle = false;
     abort = false;
+
+    /*
+        THE ACTION THIS RUN WAS ASKED FOR, CAPTURED ONCE.
+
+        `action` is a plain member set on the GUI THREAD and read here on the worker.
+        BuildFilters::updateCategory sets it to UpdateCategory immediately after calling
+        abortProcessing(), so a full Reset already in flight has the value describing it
+        REPLACED underneath it -- and then decides what to do, and reports what it did,
+        against somebody else's request. That is what made the first attempt at the
+        aborted-build recovery below do nothing: by the time run() reached its check the
+        member said UpdateCategory, so the Reset that had just cleared the tree and been
+        cut short never reported itself.
+
+        Reading it once is also the fix for the switch: a run should carry out the request
+        it started on, not whichever request happens to have arrived by the time it
+        reaches a given line.
+    */
+    const Action ranAction = action;
     if (G::isLogger || G::isFlowLogger)
         G::log("BuildFilters::run", "afteraction = " + QString::number(afterAction));
     if (debugBuildFilters)
@@ -1012,7 +1030,7 @@ void BuildFilters::run()
 
     FilterOps ops;
 
-    switch (action) {
+    switch (ranAction) {
     case Action::Reset:
         if (!abort) appendUniqueItems(snap, ops);
         [[fallthrough]]; // deliberate fall-through
@@ -1050,6 +1068,33 @@ void BuildFilters::run()
     dispatchOps(ops);
 
     setIdle();
+
+    /*
+        AN ABORTED RESET LEAVES THE TREE CLEARED AND ONLY PARTLY REFILLED, SO IT MUST RUN
+        AGAIN.
+
+        BuildFilters::build calls Filters::startBuildFilters, which calls
+        removeChildrenDynamicFilters -- every dynamic category is emptied BEFORE the
+        refill starts. The refill then walks the categories in creation order and checks
+        `abort` as it goes, and abortProcessing() is called at the top of every
+        updateCategory. So anything that asks for a category update while a full build is
+        in flight stops it partway, and the categories after that point stay empty: on the
+        reported failure they were ISO, Titles, Keywords, Creators, Availability and
+        Duplicates -- exactly the tail of createDynamicFilters, with everything up to
+        Focal lengths intact.
+
+        NOTHING PUT THEM BACK. The update that did the aborting fills its OWN category and
+        returns, so the rest stayed empty until the user switched scope. The panel showed
+        them greyed, which reads as "disabled" and was reported three times as such.
+
+        THE ABORT ITSELF IS CORRECT -- a newer request supersedes an older one. What is
+        wrong is treating a half-cleared tree as a resting place, so the abort is reported
+        and the build re-run. Not from here: this runs on the worker thread, and the
+        restart has to happen on the GUI thread once the churn that caused the abort has
+        settled.
+    */
+    if (abort && ranAction == Action::Reset) emit abortedAfterClearing();
+
     emit stopped("BuildFilters");
 
     /* elapsed time
