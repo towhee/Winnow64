@@ -130,6 +130,7 @@ void MW::togglePick()
     if (G::isLogger) G::log("MW::togglePick");
     QModelIndexList selection = dm->selectionModel->selectedRows();
     qint64 n = selection.count();
+    if (G::isIngestProbe) IngestProbe::Instance().BeginEdit("pick", int(n));
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
     QList<int> rows;
@@ -178,6 +179,7 @@ void MW::togglePick()
         updatePickLog(fPath, pickStatus);
     }
     if (n > 1) pushPick("End multiple select");
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model");
 
     // avoid null proxy filter
     // buildFilters->updateZeroCountCheckedItems(filters->picks, G::PickColumn);
@@ -189,18 +191,22 @@ void MW::togglePick()
     // and re-runs filterAcceptsRow over it - a use-after-free crash.
     buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
                                  picksBeingFiltered);
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
     if (picksBeingFiltered) {
         filterChange("MW::togglePick");
+        if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
     }
     else {
         thumbView->refreshIcons("MW::togglePick");
         gridView->refreshIcons("MW::togglePick");
+        if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
     }
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updatePickDependentActions();
     updateStatus(true, "", "MW::togglePick");
     updateClassification();
+    if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
 
     // auto advance
     if (G::autoAdvance && !picksBeingFiltered) sel->next();

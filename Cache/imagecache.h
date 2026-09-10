@@ -364,7 +364,13 @@ private:
     void toCacheRemove(int sfRow);
     void toCacheAppend(int sfRow);
     void memChk();                  // still room in system memory for cache?
-    bool instanceClash(bool id);
+    /*  id is a DECODER INDEX. It was declared `bool id`, so every id above 1 collapsed
+        to 1 and okToCache tested decoder 1's instance instead of the returning decoder's
+        -- with decoderCount = idealThreadCount that is most of the pool checking the
+        wrong thread. A stale decode could be accepted and a current one refused,
+        at random, which is the worst possible behaviour for a guard whose whole job is
+        to keep a previous folder's pixels out of this one's cache. */
+    bool instanceClash(int id);
     bool isValidKey(int key);
 
     void updateTargets(bool dotForward, bool isAhead, int &pos,

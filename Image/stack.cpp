@@ -81,10 +81,9 @@ QString Stack::mean()
     for (int i = 0; i < n; ++i) {
         if (abort) break;
         QString fPath = selection.at(i);
-        if (icd->contains(fPath)) {
-            image = icd->imCache.value(fPath);
-        }
-        else {
+        /*  One locked lookup: contains() then imCache.value() read the hash without the
+            lock in between, while the ImageCache thread trims it.  See ImageCacheData::get. */
+        if (!icd->get(fPath, image) || image.isNull()) {
             pix->load(fPath, image, "Stack::doMean");
         }
         // get image width/height from QImage - might be different than metadata for raw

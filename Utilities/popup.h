@@ -2,6 +2,7 @@
 #define POPUP_H
 
 #include <QWidget>
+#include <QElapsedTimer>
 #include <QLabel>
 #include <QProgressBar>
 #include <QGridLayout>
@@ -25,6 +26,16 @@ public:
     void setProgressVisible(bool isVisible);
     void setProgressMax(int maxProgress);
     void setProgress(int progress);
+
+    /*  THE GUI THREAD'S OWN ROUTE TO THE SCREEN. showPopup defers through a zero timer;
+        these two do the work now, so a synchronous loop does not have to pump the whole
+        application to be seen. See the definitions. */
+    void showPopupNow(const QString &text,
+                      int msDuration = 1500,
+                      bool isAutoSize = true,
+                      float opacity = 0.75,
+                      Qt::Alignment alignment = Qt::AlignHCenter);
+    void pulse(int minIntervalMs = 100);
     QLabel label;
     QProgressBar progressBar;
     bool openAndNoTimeout = false;
@@ -59,6 +70,7 @@ private:
     bool isProgressBar = false;
     QString popupText;
     QWidget *source;
+    QElapsedTimer pulseClock;
 };
 
 #endif // POPUP_H

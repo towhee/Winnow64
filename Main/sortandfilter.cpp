@@ -106,6 +106,7 @@ void MW::filterChange(QString source)
     required for sorting operations.
 */
 
+    IngestProbe::Scope _ip("MW::filterChange");
     QString srcFun = "MW::filterChange";
     if (G::isLogger || G::isFlowLogger) G::log("MW::filterChange  Src: ", source);
     // qDebug() << "MW::filterChange" << "called from:" << source;
@@ -203,7 +204,7 @@ void MW::filterChange(QString source)
 
     // increment the dm->instance.  This is necessary to ignore any updates to ImageCache
     // and MetaRead for the prior datamodel filter.
-    dm->newInstance();
+    dm->newInstance("filterChange: " + source);
 
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") syncActionsWithFilters();
@@ -748,6 +749,8 @@ void MW::setRating()
     if (s == "Rate5") rating = "5";
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
+    if (G::isIngestProbe)
+        IngestProbe::Instance().BeginEdit("rating", selection.count());
     // check if selection is entirely rating already - if so set no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -810,10 +813,12 @@ void MW::setRating()
         updateCatalogForRow(dmRow);
         G::popup->setProgress(i+1);
     }
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
 
     // update thumbnail appearance to show classification
     thumbView->refreshIcons("MW::setRating");
     gridView->refreshIcons("MW::setRating");
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
 
     /* must execute in order:
        - suspend proxy updates
@@ -823,11 +828,21 @@ void MW::setRating()
 
     // update category list in filters
     dm->sf->suspend(true, "MW::setRating");
-    buildFilters->updateCategory(BuildFilters::RatingEdit);
+    /*  runSync = TRUE because filterChange follows immediately. Without it the category
+        tree is rebuilt on the BuildFilters worker thread while filterChange un-suspends
+        the proxy and re-runs filterAcceptsRow over it -- the use-after-free MW::togglePick
+        was fixed for, and which crashed a 2.05 cull at
+        SortFilter::filterAcceptsRow via MW::setColorClass on 2026-09-09. See the
+        contract in BuildFilters::updateCategory. */
+    buildFilters->updateCategory(BuildFilters::RatingEdit, BuildFilters::NoAfterAction,
+                                 /*runSync*/ true);
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
     filterChange("MW::setRating");
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
 
     // update ImageView classification badge
     updateClassification();
+    if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
 
     // auto advance
     if (G::autoAdvance) sel->next();
@@ -910,7 +925,9 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
     thumbView->refreshIcons("MW::setColorClassForRow");
     gridView->refreshIcons("MW::setColorClassForRow");
     dm->sf->suspend(true, "MW::setColorClass");
-    buildFilters->updateCategory(BuildFilters::LabelEdit);
+    // runSync: filterChange follows -- see MW::setColorClass.
+    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction,
+                                 /*runSync*/ true);
     filterChange("MW::setColorClass"); // sets dm->sf->suspend = false
     // update ImageView classification badge
     updateClassification();
@@ -953,6 +970,8 @@ void MW::setColorClass()
     if (s == "Label5") colorClass = "Purple";
 
     QModelIndexList selection = dm->selectionModel->selectedRows();
+    if (G::isIngestProbe)
+        IngestProbe::Instance().BeginEdit("colour", selection.count());
     // check if selection is entirely label color already - if so set no label
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -1011,10 +1030,12 @@ void MW::setColorClass()
         updateCatalogForRow(dmRow);
         G::popup->setProgress(i+1);
     }
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
 
     // update thumbnail appearance to show classification
     thumbView->refreshIcons("MW::setColorClass");
     gridView->refreshIcons("MW::setColorClass");
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
 
     /* must execute in order:
        - suspend proxy updates
@@ -1025,8 +1046,14 @@ void MW::setColorClass()
 
     // update category list in filters
     dm->sf->suspend(true, "MW::setColorClass");
-    buildFilters->updateCategory(BuildFilters::LabelEdit);
+    /*  runSync = TRUE: filterChange follows, and an asynchronous category rebuild racing
+        it is the crash described in MW::setRating above and in
+        BuildFilters::updateCategory. */
+    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction,
+                                 /*runSync*/ true);
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
     filterChange("MW::setColorClass");
+    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
 
     // // // was this rating filtered
     // if (filters->isLabelChecked(colorClass)) {
@@ -1036,6 +1063,7 @@ void MW::setColorClass()
 
     // update ImageView classification badge
     updateClassification();
+    if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
 
     // auto advance
     if (G::autoAdvance) sel->next();

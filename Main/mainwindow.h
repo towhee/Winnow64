@@ -88,6 +88,7 @@
 #include "loadusbdlg.h"
 #include "erasememcardimagesdlg.h"
 #include "Utilities/utilities.h"
+#include "Utilities/ingestprobe.h"
 #include "Utilities/renamefile.h"
 #include "Utilities/usbutil.h"
 #include "Utilities/inputdlg.h"
@@ -537,6 +538,7 @@ public slots:
         did it. Armed automatically once the model is large (a catalog scope), so a person
         can reproduce a stall without setting an environment variable first. */
     void armGuiStallWatchdog();
+    int  guiStallInterval() const;
     /* Start / stop the background scan over catalogScope. */
     void startCatalogScan();
     /*  IS THIS FOLDER INSIDE THE CATALOG SCOPE? The scope table is definitive: browsing
@@ -1525,6 +1527,10 @@ private:
     QAction *diagnosticsPixmapAction;
     QAction *diagnosticsThumbAction;
     QAction *diagnosticsIngestAction;
+    /*  Arms / disarms the ingest probe (Utilities/ingestprobe.h). Checkable, because
+        the state matters: the probe records nothing until it is on, and a report read
+        without it having been armed says so rather than showing zeros. */
+    QAction *ingestProbeArmAction;
     QAction *diagnosticsZoomAction;
 
     // Testing Menu (under Help Diagnostics Menu)
@@ -1681,8 +1687,17 @@ private:
        changed while that ran. */
     void startDevPreviewBuild(const QStringList &paths, const QString &src, int instance);
     void devPreviewBuildNext();
-    /* expectKey is the key captured when this render was dispatched; the write is dropped
-       if the image has moved under it since. */
+    /*  ONE STEP OF THE BUILD IS FINISHED, whatever happened to it. The loop is one image
+        at a time and devPreviewStore is now asynchronous, so the advance cannot sit at the
+        bottom of the render callback any more -- it has to be the single thing every exit
+        path calls, or the build either stalls or runs two images at once. */
+    void devPreviewBuildStepDone();
+    /*  expectKey is the key captured when this render was dispatched; the write is dropped
+        if the image has moved under it since.
+
+        ASYNCHRONOUS: the scale and JPEG encode run on a pool thread and the writes resume
+        on the GUI thread. Calls devPreviewBuildStepDone() on every path out -- including
+        the early returns -- so it always advances the build exactly once. */
     void devPreviewStore(const QString &fPath, const QImage &full,
                          const QString &expectKey);
     void devPreviewBuildFinish(const QString &reason = QString());
@@ -2245,11 +2260,16 @@ private:
     int filterRebuildAttempts = 0;
     /*  Load the vocabulary if it is not loaded yet. Called from EVERY route by which the
         dock can become visible, because there are several and only one of them used to
-        do it. Retries rather than latching: see the definition. */
-    void ensureKeywordVocabLoaded();
+        do it. Retries rather than latching: see the definition.
+        withCounts = false for a caller that is about to change the counts itself. */
+    void ensureKeywordVocabLoaded(bool withCounts = true);
     void keywordsDockVisibilityChange(bool visible);
     /*  Tag specific image PATHS (dropped on a keyword node) rather than the selection. */
     void applyKeywordToPaths(const QString &keywordPath, const QStringList &imagePaths);
+    /*  Merge an unfiled keyword BRANCH from the Filters panel into the keyword list,
+        tails and all. The one operation neither the drag nor KeywordVocab's own merge
+        could do -- see the definition. */
+    void mergeUnfiledKeyword(const QString &unfiledPath);
     /*  Rewrite oldPath to newPath on every image carrying it or anything beneath it,
         optionally restricted to one folder. Driven from the CATALOG, so it reaches
         images the datamodel has never loaded. Returns how many files were written. */
@@ -2478,6 +2498,7 @@ private:
     void diagnosticsPixmap();
     void diagnosticsThumb();
     void diagnosticsIngest();
+    void toggleIngestProbe();
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString, QString title = "Winnow Diagnostics");
     void allIssuesReport();

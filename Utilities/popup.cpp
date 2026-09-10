@@ -3,6 +3,7 @@
 #include <QPainter>
 #include <QApplication>
 #include <QDebug>
+#include <QThread>
 
 // --- macOS special case: show window even if app inactive (e.g., Finder drag) ---
 #ifdef Q_OS_MAC
@@ -99,6 +100,71 @@ void Popup::showPopup(const QString &text,
         self->raise();
         self->update();
     });
+}
+
+void Popup::showPopupNow(const QString &text,
+                         int msDuration,
+                         bool isAutoSize,
+                         float opacity,
+                         Qt::Alignment alignment)
+{
+/*
+    THE SAME MESSAGE, ON THE SCREEN NOW, WITHOUT PUMPING THE APPLICATION.
+
+    showPopup defers through a zero timer, and that deferral is what makes it safe to
+    call from any thread. The price is paid by a SYNCHRONOUS GUI-THREAD loop, which has
+    to turn the event loop before its message is seen -- and qApp->processEvents() does
+    not just deliver that one timer, it repaints the entire main window. Measured on a
+    keyword move: 923 ms across three such pumps, of which 678 ms was tree-view rows
+    drawn through the stylesheet style and an AppKit NSAppearance block apiece. The
+    message itself is a small top-level window and costs none of that.
+
+    FALLS BACK TO THE QUEUED ROUTE OFF THE GUI THREAD rather than asserting. Callers do
+    not all know which thread they are on, and a diagnostic message is never worth a
+    crash; the deferred path is correct everywhere, just later.
+*/
+    if (QThread::currentThread() != thread()) {
+        showPopup(text, msDuration, isAutoSize, opacity, alignment);
+        return;
+    }
+
+    /*  ANY SHOW ALREADY IN THE QUEUE IS DELIVERED FIRST, or an earlier showPopup's
+        single-shot would land later and overwrite this message with a stale one.
+        sendPostedEvents is aimed at THIS OBJECT, so it delivers the popup's own events
+        and nothing else -- which is the whole distinction being drawn here. A bare
+        processEvents would deliver the main window's pending update requests too, and
+        those are the 112-577 ms this exists to stop paying. */
+    QCoreApplication::sendPostedEvents(this, 0);
+
+    showPopup1(text, msDuration, isAutoSize, opacity, alignment);
+    raise();
+    repaint();
+    pulseClock.restart();
+}
+
+void Popup::pulse(int minIntervalMs)
+{
+/*
+    Repaint the popup from inside a long synchronous loop.
+
+    THE PROGRESS BAR HAS NEVER ACTUALLY BEEN DRAWN by the loops that set it. setProgress
+    writes the value and returns; with nothing turning the event loop the widget is never
+    asked to paint, so a rewrite of several thousand sidecars showed a bar frozen at zero
+    -- indistinguishable from a hang, which is how it was reported.
+
+    THROTTLED, or it becomes the cost it was written to avoid. A repaint per row is a
+    pump per row in smaller pieces; ten a second is past the rate anyone reads a number
+    at, and is what keeps this a rounding error against the work it is reporting.
+
+    SILENT WHEN THERE IS NOTHING TO SEE -- not visible, or called from a worker -- so a
+    caller can sprinkle it without first proving the popup is up.
+*/
+    if (QThread::currentThread() != thread()) return;
+    if (!isVisible()) return;
+    if (pulseClock.isValid() && pulseClock.elapsed() < minIntervalMs) return;
+    pulseClock.restart();
+    QCoreApplication::sendPostedEvents(this, 0);
+    repaint();
 }
 
 void Popup::showPopup1(const QString &text,

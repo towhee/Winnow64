@@ -1,6 +1,8 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
 #include "ImageFormats/Raw/rawformat.h"
+#include <QtConcurrent>
+#include <QFutureWatcher>
 
 /*
     BUILDING devPreviews FOR IMAGES THAT ARE NOT OPEN IN DEVELOP
@@ -215,12 +217,37 @@ void MW::devPreviewBuildNext()
     /* 8-bit sRGB: a devPreview is a JPEG for the screen, not an export master. */
     developPixelSource(fPath, /*want16Bit*/false, OutputTransform::Space::sRGB,
         [this, fPath, expectKey](bool ok, const QImage &out) {
+            /*  devPreviewStore OWNS THE ADVANCE now. It encodes on a pool thread, so it
+                returns long before the step is finished and the counters cannot be
+                bumped here -- doing so would start the next render while this one was
+                still encoding, which is the one thing the queue exists to prevent. */
             if (ok && !out.isNull()) devPreviewStore(fPath, out, expectKey);
-            ++devPreviewBuildDone;
-            devPreviewBuildCurrent.clear();
-            devPreviewBuildNext();
+            else devPreviewBuildStepDone();
         });
 }
+
+void MW::devPreviewBuildStepDone()
+{
+/*
+    One image is finished with -- written, dropped, or never rendered -- so count it and
+    start the next. The single place the build advances.
+*/
+    ++devPreviewBuildDone;
+    devPreviewBuildCurrent.clear();
+    devPreviewBuildNext();
+}
+
+namespace {
+/*  What the pool thread produces. QImage as well as the bytes: the caller needs the
+    scaled thumbnail itself to hand to devPreviewUpdated, and rescaling it on the GUI
+    thread to get it back would put part of the cost straight back where it was. */
+struct DevPreviewEncoded
+{
+    QByteArray thumbJpg;
+    QByteArray previewJpg;
+    QImage thumb;
+};
+}  // namespace
 
 void MW::devPreviewStore(const QString &fPath, const QImage &full,
                          const QString &expectKey)
@@ -229,27 +256,44 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
     Write the freshly rendered full-resolution image to the preview cache, and -- for an
     EDITED image only -- the 256px thumbnail into its XMP sidecar.
 
-    This deliberately mirrors the provider lambda in initialize.cpp rather than calling it
-    -- the provider serves the image on screen and reads developFrame / developFullFrame,
-    neither of which describes an image the builder just rendered off-thread.
+    THE SCALE AND THE ENCODE RUN ON A POOL THREAD. They used to run here, on the GUI
+    thread, and with devPreviewMaxEdge at its default (no cap) that is a full-sensor JPEG
+    encode: measured at 283 ms per image on a 60 MP ARW, 832 of 852 main-thread samples
+    inside jpeg_write_scanlines. The build renders one image at a time and starts the next
+    immediately, so with the background preference on it repeated every ~1.4 s for as long
+    as the folder stayed open -- a 20% duty cycle on the GUI thread, which is what a person
+    holding the arrow key felt as "a short pause every 35 images". Nothing in either step
+    touches a widget or the model: they are pixels in, bytes out.
 
-    THE KEY IS RE-DERIVED HERE and checked against the one captured when the render started.
-    A render takes seconds and the user may have edited the image, or switched raw engine, in
-    between; either would make the pixels in hand depict something other than what the key
-    now says. On a mismatch the write is skipped and the image simply misses again -- it will
-    be rebuilt, correctly, next time.
+    WHAT STAYS HERE. Reading the recipe (developBlobFor) reads the Develop dock, and the
+    writes that follow touch the model and the views, so those keep the GUI thread. The
+    sidecar and cache writes stay too -- they are small and only the edited tier writes a
+    sidecar at all, and the sample put neither of them above the noise.
+
+    THE KEY IS CHECKED TWICE, and the second check is the price of going asynchronous. It
+    was already re-derived here because a render takes seconds and the user may have edited
+    the image, or switched raw engine, meanwhile; the encode adds a few hundred milliseconds
+    more of that same window, so it is re-derived again on the way back in. On a mismatch
+    the write is skipped and the image simply misses again -- it will be rebuilt, correctly,
+    next time.
 
     NO SIDECAR FOR AN UNEDITED RAW. Its preview is the default render, which the user never
     asked for by editing anything, so creating an XMP file beside it would be writing to their
     library as a side effect of a cache fill. The grid keeps the camera-embedded thumbnail --
     already read during the metadata pass, and just as fast. Only the large tier is cached,
     which is the tier that saves the demosaic.
+
+    EVERY PATH OUT CALLS devPreviewBuildStepDone, including the early returns. It is the
+    only thing that advances the build now (see devPreviewBuildNext).
 */
     if (G::isLogger) G::log("MW::devPreviewStore");
-    if (!developProperties) return;
+    if (!developProperties) { devPreviewBuildStepDone(); return; }
 
     const QString key = devPreviewBuildKey(fPath);
-    if (key.isEmpty() || key != expectKey) return;   // moved under us; drop this render
+    if (key.isEmpty() || key != expectKey) {    // moved under us; drop this render
+        devPreviewBuildStepDone();
+        return;
+    }
 
     /* Which TIER this render belongs to, decided from the recipe itself rather than from
        how devPreviewBuildKey happened to answer. A non-empty recipe whose hash is not the
@@ -258,61 +302,89 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
        description it does not match. Drop it; the next pass rebuilds from a settled state. */
     const QString blob = developProperties->developBlobFor(fPath);
     const QString recipeKey = Metadata::devPreviewKey(blob);   // empty when blob is empty
-    if (!recipeKey.isEmpty() && recipeKey != key) return;
-    const bool edited = !recipeKey.isEmpty();
-
-    auto encode = [](const QImage &im, int quality, QByteArray &out) {
-        QBuffer buf(&out);
-        if (!buf.open(QIODevice::WriteOnly)) return false;
-        return im.save(&buf, "JPG", quality);
-    };
-
-    /* Thumbnail tier: a 256 px grid icon in the sidecar, fixed at 85. It is deliberately
-       NOT governed by the "Developed preview quality" preference -- that setting is about
-       what the loupe shows at 100%, and a few KB of icon is not where disk is spent. */
-    QByteArray thumbJpg;
-    QImage thumb;
-    if (edited) {
-        thumb = full.scaled(G::maxIconSize, G::maxIconSize,
-                            Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        if (!encode(thumb, 85, thumbJpg)) thumbJpg.clear();
-    }
-
-    QByteArray previewJpg;
-    QImage preview = full;
-    const int cap = G::devPreviewMaxEdge;
-    if (cap > 0 && qMax(preview.width(), preview.height()) > cap)
-        preview = preview.scaled(cap, cap, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    if (!encode(preview, G::devPreviewQuality, previewJpg)) previewJpg.clear();
-
-    if (thumbJpg.isEmpty() && previewJpg.isEmpty()) return;
-
-    /* Sidecar first: writeDevelopSidecar writes the recipe, the thumbnail and the key in
-       ONE pass, so the three can never disagree. The recipe is passed through
-       unchanged -- this is not a recipe edit. */
-    if (!thumbJpg.isEmpty())
-        Metadata::writeDevelopSidecar(fPath, blob, thumbJpg.toBase64());
-    if (!previewJpg.isEmpty())
-        DevPreviewCache::instance().put(fPath, key.toLatin1(), previewJpg);
-
-    if (edited) {
-        /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */
-        devPreviewUpdated(fPath, thumbJpg.isEmpty() ? QImage() : thumb);
+    if (!recipeKey.isEmpty() && recipeKey != key) {
+        devPreviewBuildStepDone();
         return;
     }
+    const bool edited = !recipeKey.isEmpty();
 
-    /* DEFAULT RENDER: devPreviewUpdated would be actively harmful here. It is written for an
-       edit, so a null thumbnail means "the icon on screen is now stale" and it clears the
-       row, tells MetaRead to re-arm (invalidateLoadedIcons) and calls reloadIconChunk. None
-       of that is true of an unedited raw -- its camera thumbnail is correct and unchanged --
-       and doing it once per image through a thousand-image build would thrash the grid for
-       the whole run.
+    /*  Read on the GUI thread and captured by value: these are preferences the user can
+        change from a dialog while the encode is in flight. */
+    const int cap = G::devPreviewMaxEdge;
+    const int quality = G::devPreviewQuality;
+    const int iconEdge = G::maxIconSize;
 
-       The one thing worth doing is dropping the full-size image cached for this path: it was
-       decoded from the camera JPEG, and the next visit should serve the devPreview just
-       written instead. Skipped for the image ON SCREEN, whose loupe pixmap is that cached
-       decode -- it picks the preview up on the next visit rather than blinking now. */
-    if (icd && dm && fPath != dm->currentFilePath) icd->remove(fPath);
+    auto *watcher = new QFutureWatcher<DevPreviewEncoded>(this);
+    connect(watcher, &QFutureWatcher<DevPreviewEncoded>::finished, this,
+            [this, watcher, fPath, key, blob, edited, expectKey]
+    {
+        watcher->deleteLater();
+        const DevPreviewEncoded r = watcher->result();
+
+        /*  The second key check. Between dispatching the encode and arriving here the user
+            may have edited this image, and writing now would stamp the pre-edit pixels with
+            a key that no longer describes them. */
+        if (devPreviewBuildKey(fPath) != expectKey) { devPreviewBuildStepDone(); return; }
+        if (devPreviewBuildCancelled) { devPreviewBuildStepDone(); return; }
+        if (r.thumbJpg.isEmpty() && r.previewJpg.isEmpty()) { devPreviewBuildStepDone(); return; }
+
+        /* Sidecar first: writeDevelopSidecar writes the recipe, the thumbnail and the key in
+           ONE pass, so the three can never disagree. The recipe is passed through
+           unchanged -- this is not a recipe edit. */
+        if (!r.thumbJpg.isEmpty())
+            Metadata::writeDevelopSidecar(fPath, blob, r.thumbJpg.toBase64());
+        if (!r.previewJpg.isEmpty())
+            DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg);
+
+        if (edited) {
+            /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */
+            devPreviewUpdated(fPath, r.thumbJpg.isEmpty() ? QImage() : r.thumb);
+            devPreviewBuildStepDone();
+            return;
+        }
+
+        /* DEFAULT RENDER: devPreviewUpdated would be actively harmful here. It is written for an
+           edit, so a null thumbnail means "the icon on screen is now stale" and it clears the
+           row, tells MetaRead to re-arm (invalidateLoadedIcons) and calls reloadIconChunk. None
+           of that is true of an unedited raw -- its camera thumbnail is correct and unchanged --
+           and doing it once per image through a thousand-image build would thrash the grid for
+           the whole run.
+
+           The one thing worth doing is dropping the full-size image cached for this path: it was
+           decoded from the camera JPEG, and the next visit should serve the devPreview just
+           written instead. Skipped for the image ON SCREEN, whose loupe pixmap is that cached
+           decode -- it picks the preview up on the next visit rather than blinking now. */
+        if (icd && dm && fPath != dm->currentFilePath) icd->remove(fPath);
+        devPreviewBuildStepDone();
+    });
+
+    /*  THE POOL THREAD. `full` is captured by value, which is a QImage refcount rather than
+        a copy of the pixels, and nothing else writes it. */
+    watcher->setFuture(QtConcurrent::run([full, edited, cap, quality, iconEdge] {
+        auto encode = [](const QImage &im, int q, QByteArray &out) {
+            QBuffer buf(&out);
+            if (!buf.open(QIODevice::WriteOnly)) return false;
+            return im.save(&buf, "JPG", q);
+        };
+
+        DevPreviewEncoded r;
+
+        /* Thumbnail tier: a 256 px grid icon in the sidecar, fixed at 85. It is deliberately
+           NOT governed by the "Developed preview quality" preference -- that setting is about
+           what the loupe shows at 100%, and a few KB of icon is not where disk is spent. */
+        if (edited) {
+            r.thumb = full.scaled(iconEdge, iconEdge,
+                                  Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            if (!encode(r.thumb, 85, r.thumbJpg)) r.thumbJpg.clear();
+        }
+
+        QImage preview = full;
+        if (cap > 0 && qMax(preview.width(), preview.height()) > cap)
+            preview = preview.scaled(cap, cap, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        if (!encode(preview, quality, r.previewJpg)) r.previewJpg.clear();
+
+        return r;
+    }));
 }
 
 void MW::updateDevPreviewBuildProgress()

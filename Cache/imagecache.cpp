@@ -2,6 +2,7 @@
 #include "Main/global.h"
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/rawformat.h"
+#include "Utilities/ingestprobe.h"
 #include <QFileInfo>
 
 /*  How the Image Cache works:
@@ -241,8 +242,12 @@ void ImageCache::stop()
     // emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
 }
 
-bool ImageCache::instanceClash(bool id)
+bool ImageCache::instanceClash(int id)
 {
+    /*  See the declaration for why the parameter type matters. Bounds-checked because an
+        out-of-range id now reaches the subscript instead of being folded to 0 or 1;
+        "clash" is the safe answer, since it only refuses an image. */
+    if (id < 0 || id >= decoders.count()) return true;
     return decoders[id]->instance != G::dmInstance;
 }
 
@@ -2984,6 +2989,11 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
     const auto effectiveStatus = static_cast<ImageDecoder::Status>(doneStatus);
 
     if (instanceClash(id)) {
+        /*  A FINISHED DECODE, THROWN AWAY. The file was read and converted while the
+            user waited; the row goes back on the queue and is read again. During a cull
+            these come from filter changes provoked by the classification keys, not from
+            folder changes -- see the ingest probe's instance-bump tally. */
+        if (G::isIngestProbe) IngestProbe::Instance().NoteDiscardedDecode();
         msg += "Failed: instance clash. ";
         success = false;
     }

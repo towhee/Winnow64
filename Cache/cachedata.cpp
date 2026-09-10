@@ -23,6 +23,15 @@ bool ImageCacheData::contains(const QString &key)
     return imCache.contains(key);
 }
 
+bool ImageCacheData::get(const QString &key, QImage &image) const
+{
+    QMutexLocker locker(&rwLock);
+    const auto it = imCache.constFind(key);
+    if (it == imCache.constEnd()) return false;
+    image = it.value();
+    return true;
+}
+
 void ImageCacheData::insert(const QString &key, const QImage &image)
 {
     QMutexLocker locker(&rwLock);

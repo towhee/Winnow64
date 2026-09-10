@@ -179,6 +179,12 @@ public:
 signals:
     void filterChange(QString source);
     void searchStringChange(QString searchString);
+    /*  An unfiled keyword the user wants merged into the keyword list, with everything
+        beneath it. The panel knows WHICH keyword and nothing else -- where it can go, how
+        many photographs it touches and what the merge would add to the list are all
+        questions about the vocabulary and the catalog, so MW answers them. See
+        MW::mergeUnfiledKeyword. */
+    void mergeUnfiledKeyword(const QString &path);
 
 public slots:
 
@@ -323,6 +329,9 @@ private:
     /*  The "Show unfiled only" toggle, appended to whichever menu a right-click in the
         Keywords category built. Returns it so the caller can recognise it. */
     QAction *addUnfiledAction(QMenu &menu);
+    /*  Does the keyword list hold any branch whose leaf is this folded name? Answered
+        from vocabPathsFold, which the panel already holds for the unfiled marking. */
+    bool vocabHasLeaf(const QString &leafFold) const;
     /*  Edit the query in a resizable dialog. The tree row is a single-line editor a few
         centimetres wide; a query with brackets and quoted phrases cannot be read in it,
         let alone revised. The text committed back is simplified(), because the row (and

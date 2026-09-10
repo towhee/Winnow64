@@ -3,6 +3,7 @@
 
 #include <QTreeView>
 #include <QWidget>
+#include <QSet>
 
 class KeywordVocab;
 class QLineEdit;
@@ -85,6 +86,17 @@ private:
     /*  Highlight the row a drag is over, in the grey Folders and Bookmarks use. Held on
         the delegate, because that is what paints the row. */
     void setDropRow(const QModelIndex &idx);
+
+    /*  EXPANSION AND PLACE, KEPT ACROSS A MODEL RESET. Every vocabulary mutation --
+        rename, re-parent, merge, insert, delete, reload -- resets the model, and QTreeView
+        collapses the whole tree on a reset. Keyed on PATH, the same way
+        Filters::updateKeywordItems carries its state across the identical problem one
+        panel over. See rememberOpenBranches/restoreOpenBranches. */
+    void rememberOpenBranches();
+    void restoreOpenBranches();
+    void restoreCurrent();
+    QSet<QString> openFold;             // folded paths that were expanded
+    QString currentFold;                // folded path of the current node
 
     KeywordVocab *vocab = nullptr;
     /*  The item delegate, kept so the drop highlight can reach it. Base type: the

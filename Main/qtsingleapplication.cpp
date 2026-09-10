@@ -317,3 +317,47 @@ void QtSingleApplication::activateWindow()
     \fn void QtSingleApplication::initialize(bool dummy = true)
     \obsolete
 */
+
+#include "Main/global.h"
+#include "Utilities/ingestprobe.h"
+#include <QElapsedTimer>
+
+bool QtSingleApplication::notify(QObject *receiver, QEvent *event)
+{
+/*
+    See the declaration. The measurement is the delivery, start to finish, so an event
+    loop that goes idle in the middle of a slow run of events cannot be mistaken for one.
+
+    RE-ENTRANT BY NATURE -- a slot can send an event, which comes back through here -- so
+    the timer is a local and the inner delivery is charged to itself. The outer one still
+    includes it, which is correct: nesting is how the innermost long-running leaf gets
+    found, and it is charged to the leaf as well.
+
+    The receiver's identity is read BEFORE delivery. An object can be destroyed by its own
+    event (deleteLater arriving at a widget), and reading its metaObject afterwards is a
+    use-after-free.
+*/
+    /*  THE GUI THREAD ONLY, and the guard is not a filter -- it is correctness.
+
+        notify() runs on whatever thread is delivering, so a decoder thread's own queued
+        events come through here too: the first run measured ImageDecoder/MetaCall at a
+        1,596 ms mean, which is a RAW decode doing exactly its job and says nothing about
+        a pause. Worse, the probe's tallies are plain QMaps, so recording from several
+        threads at once would be a data race inside the diagnostic.
+
+        A stall is a GUI-thread event by definition -- that is what "the window stopped
+        responding" means -- so nothing is lost. */
+    if (!G::isIngestProbe.load(std::memory_order_relaxed) || !G::isGuiThread())
+        return QApplication::notify(receiver, event);
+
+    const char *cls = receiver ? receiver->metaObject()->className() : "?";
+    const QString name = receiver ? receiver->objectName() : QString();
+    const int type = int(event->type());
+
+    QElapsedTimer t;
+    t.start();
+    const bool result = QApplication::notify(receiver, event);
+    const qint64 ms = t.elapsed();
+    if (ms >= 25) IngestProbe::Instance().NoteEventCost(ms, cls, name, type);
+    return result;
+}

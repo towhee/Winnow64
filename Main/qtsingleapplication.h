@@ -82,6 +82,18 @@ public:
     bool isRunning();
     QString id() const;
 
+    /*  TRUE EVENT-DELIVERY TIME, for the ingest probe (Utilities/ingestprobe.h).
+
+        The probe first measured this with an event filter on qApp, timing from one filter
+        call to the next. That measures the interval BETWEEN deliveries, which equals the
+        delivery only while the loop is busy: go idle and the wait is charged to whatever
+        was delivered last. It reported the 50 ms memory watchdog as a 50 ms stall, every
+        tick, which is the whole interval and none of the work.
+
+        notify() brackets the delivery itself, so idle time belongs to nobody. Inert
+        unless the probe is armed -- one relaxed atomic load per event. */
+    bool notify(QObject *receiver, QEvent *event) override;
+
     void setActivationWindow(QWidget* aw, bool activateOnMessage = true);
     QWidget* activationWindow() const;
 

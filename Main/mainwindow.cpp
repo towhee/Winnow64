@@ -608,6 +608,22 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     const bool recurse = qEnvironmentVariableIntValue("WINNOW_SELFTEST_RECURSE") == 1;
     const int navMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV_MS");
 
+    /*  WINNOW_SELFTEST_DEVPREVIEWS=1 TURNS THE BACKGROUND PREVIEW BUILDER ON, which is
+        otherwise a preference and therefore unreachable from a headless run (test mode
+        starts from defaults, and the default is off).
+
+        It exists because that builder was the one thing on the browse path capable of
+        holding the GUI thread for a quarter of a second at a time -- a full-sensor JPEG
+        encode, once per rendered image -- and a fix that moves the encode off the GUI
+        thread cannot be verified by reading it. With this on, an --ingestprobe run over a
+        raw folder either shows the periodic MW(MW)/MetaCall stall or it does not.
+
+        Writes go to the test-mode preview cache, not the user's. */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_DEVPREVIEWS") == 1) {
+        G::buildDevPreviewsInBackground = true;
+        fprintf(stderr, "SELFTEST: background devPreview build enabled\n");
+    }
+
     /*  WINNOW_SELFTEST_MODELTEST=1 attaches QAbstractItemModelTester to the
         datamodel and the proxy for the whole load.
 
@@ -837,6 +853,10 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             dm->removeRows(1, 1);
             fprintf(stderr, "SELFTEST: removed row 1, rows now %d\n", dm->rowCount());
         }
+        /*  The ingest probe's report, before _Exit skips every destructor. This is the
+            only way to read it from a headless sweep (--ingestprobe --selftest), which
+            is what makes the probe testable without a person driving the keyboard. */
+        IngestProbe::Instance().DumpReport();
         fflush(stderr);
         // Exit immediately, skipping Qt/C++ teardown. We've measured health at the
         // loaded steady state; forcing the event loop to unwind here delivers
@@ -1225,6 +1245,11 @@ void MW::closeEvent(QCloseEvent *event)
 
     // for debugging crash test
     //if (testCrash) return;
+
+    /*  The ingest probe's report goes to the console on the way out, so a session
+        driven with it armed leaves the summary next to the [INGEST] lines it explains.
+        Silent when the probe was never armed. */
+    IngestProbe::Instance().DumpReport();
 
     // persist any unsaved per-image Develop edits to their sidecars before teardown
     if (developProperties) developProperties->flushAll();
@@ -4079,6 +4104,7 @@ void MW::refreshStaleRows(const QStringList &paths)
     skips committing a hydrated catalog scope precisely because these are the only rows
     in it worth writing.
 */
+    IngestProbe::Scope _ip("MW::refreshStaleRows");
     if (G::isLogger) G::log("MW::refreshStaleRows", QString::number(paths.size()));
     if (paths.isEmpty() || !dm) return;
 
@@ -4173,9 +4199,17 @@ void MW::armGuiStallWatchdog()
         const qint64 now = guiStallClock.elapsed();
         const qint64 late = now - guiStallLastMs;
         guiStallLastMs = now;
-        /*  750 ms, not 250: scheduling jitter and one slow repaint are not a stall, and a
-            line per tick would bury the thing being looked for. */
-        if (late > 750) {
+        /*  THE FIGURE IS THE WHOLE INTERVAL, NOT THE LATENESS, so the threshold has to
+            clear the tick or every tick is a stall. 250 + 500 = the 750 ms this has
+            always reported.
+
+            THE INGEST PROBE TIGHTENS BOTH, because the complaint it exists for is "a
+            SHORT pause" while a key is held down -- a quarter of a second, which a 250 ms
+            tick cannot resolve and a 750 ms threshold never sees. 50 ms ticks with 100 ms
+            of slack report a stall of about 150 ms or more. */
+        const qint64 slackMs = G::isIngestProbe ? 100 : 500;
+        if (late > guiStallTimer->interval() + slackMs) {
+            if (G::isIngestProbe) IngestProbe::Instance().NoteStall(late);
             qDebug().noquote() << "[PERF] GUI STALL" << late << "ms  ending at t ="
                                << now << "ms  dmRows =" << (dm ? dm->rowCount() : 0)
                                << " sfRows =" << (dm && dm->sf ? dm->sf->rowCount() : 0)
@@ -4187,7 +4221,18 @@ void MW::armGuiStallWatchdog()
                                << "-" << (dm ? dm->lastVisibleIcon : -1);
         }
     });
-    guiStallTimer->start(250);
+    guiStallTimer->start(guiStallInterval());
+}
+
+int MW::guiStallInterval() const
+{
+/*
+    How often the stall watchdog checks. 250 ms is enough to catch a beachball and costs
+    four callbacks a second; the ingest probe needs 50 ms because the pause it is chasing
+    is shorter than one 250 ms tick, and a tick that cannot resolve the event cannot
+    measure it either.
+*/
+    return G::isIngestProbe ? 50 : 250;
 }
 
 void MW::runCatalogLoadTest(const QString &pathFilter)
@@ -4374,6 +4419,11 @@ struct SelectPhaseProbe
 
     void mark(const char *name)
     {
+        /*  The ingest probe takes the SAME phase marks, so a phase added for one is
+            never missing from the other. It keeps its own clock (this one is not
+            started when isOn is false) and its own arming flag -- the two probes answer
+            different questions and are turned on separately. */
+        if (G::isIngestProbe) IngestProbe::Instance().MarkSelection(name);
         if (!isOn) return;
         const qint64 now = timer.nsecsElapsed();
         const double ms = (now - lastNs) / 1.0e6;
@@ -4384,6 +4434,10 @@ struct SelectPhaseProbe
 
     ~SelectPhaseProbe()
     {
+        /*  Closes the ingest probe's selection record on EVERY path out, including the
+            half dozen early returns above -- which is the whole reason both probes are
+            timed by a destructor. Inert when no selection was opened. */
+        if (G::isIngestProbe) IngestProbe::Instance().EndSelection();
         if (!isOn) return;
         const double totalMs = timer.nsecsElapsed() / 1.0e6;
         if (totalMs < 100) return;
@@ -4432,6 +4486,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         if (G::isLogger || G::isFlowLogger)
         qDebug() << fun << "G::stop = true so exit";
         return;
+    }
+
+    /*  The ingest probe's record of this selection opens here -- after the two guards
+        that mean "there is no selection", and before the first thing that costs
+        anything, so the whole keypress is inside it. Closed by ~SelectPhaseProbe. */
+    if (G::isIngestProbe) {
+        IngestProbe::Instance().BeginSelection(
+            current.row(), dm->sf->index(current.row(), 0).data(G::PathRole).toString());
     }
 
     /* debug
@@ -4563,8 +4625,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // update loupe/video view
     videoView->stop();
     probe.mark("videoStop");
+    if (G::isIngestProbe) IngestProbe::Instance().NoteLoupe(IngestProbe::NoView);
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
+            if (G::isIngestProbe) IngestProbe::Instance().NoteLoupe(IngestProbe::Video);
             G::isFirstImageNewInstance = false;
             updateClassification();
             if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
@@ -4600,6 +4664,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             }
             const bool loaded = imageView->loadImage(fPath, false, fun);
             probe.mark("loadImage");
+            /*  MISS UNTIL SHOWN OTHERWISE. loadImage returns false on a cache miss and
+                leaves the loupe blank; the ingest probe holds that open and closes it
+                when (or if) refreshViewsOnCacheChange repairs it. The Develop interim
+                branch below overrides this with Interim. */
+            if (G::isIngestProbe)
+                IngestProbe::Instance().NoteLoupe(loaded ? IngestProbe::Cached
+                                                         : IngestProbe::Miss);
             if (loaded) {
                 if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                     loupeDisplay(fun);
@@ -4621,6 +4692,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 const QImage cachedPreview = devPreview(fPath);
                 developInterimIsDevPreview = !cachedPreview.isNull();
                 if (imageView->loadImageInterim(fPath, cachedPreview)) {
+                    if (G::isIngestProbe)
+                        IngestProbe::Instance().NoteLoupe(IngestProbe::Interim);
                     if (G::mode == "Loupe" ||
                         G::fileSelectionChangeSource == "IconMouseDoubleClick") {
                         loupeDisplay(fun);
@@ -5065,7 +5138,7 @@ bool MW::reset(QString src)
     dm->currentSfRow = 0;
     dm->clearDataModel();
     // new instance: only done here and if sort/filter operation
-    dm->newInstance();
+    dm->newInstance("folderSelectionChange");
     emit initializeImageCache();    // may not be req'd
 
     G::allMetadataAttempted = false;
@@ -5343,6 +5416,7 @@ void MW::updateIconRange(QString src)
     The number of thumbnails to cache in the DataModel (dm->iconChunkSize) is increased if
     it is less than the visible thumbnails.
 */
+    IngestProbe::Scope _ip("MW::updateIconRange");
     if (G::isInitializing) return;
 
     if (G::isLogger || G::isFlowLogger)
@@ -5481,6 +5555,7 @@ void MW::reloadIconChunk()
     by setIconRange; here we just re-dispatch MetaRead at the current row so the newly
     in-range icons (re)load.
 */
+    IngestProbe::Scope _ip("MW::reloadIconChunk");
     if (G::isLogger) G::log("MW::reloadIconChunk");
     if (G::isInitializing || !G::useReadMeta) return;
     /*  The snapshot the worker will read must be current BEFORE it is queued: the
@@ -5500,6 +5575,7 @@ void MW::folderChanged(bool aborted)
     Signaled from DataModel::processNextFolder after all folders in the DataModel
     folderQueue have been added or deleted.
 */
+    IngestProbe::Scope _ip("MW::folderChanged");
     QString fun = "MW::folderChanged";
     QString msg = " dm->folderList.count = " + QString::number(dm->folderList.count());
     msg += " dm->rowCount = " + QString::number(dm->rowCount());
@@ -5666,6 +5742,7 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
 
 */
 {
+    IngestProbe::Scope _ip("MW::updateChange");
     if (G::stop || dm->abort) return;
 
     QString fun = "MW::updateChange";
@@ -5864,6 +5941,7 @@ void MW::folderChangeCompleted()
     - update filters
     - resize tableView columns
 */
+    IngestProbe::Scope _ip("MW::folderChangeCompleted");
     if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
@@ -6364,6 +6442,7 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
     in the info panel. All status info is passed by copy to prevent collisions on
     source data, which is being continuously updated by ImageCache
 */
+    IngestProbe::Scope _ip("MW::updateImageCacheStatus");
     // if (G::instanceClash(instance, "MW::updateImageCacheStatus")) return;
 
     if (G::isLogger) {
@@ -6439,6 +6518,11 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
         instruction == ImageCache::StatusAction::Clear)
     {
         int rows = dm->sf->rowCount();
+        /*  HOW MUCH THIS COSTS, because it is called once per image ENTERING OR LEAVING
+            the cache and repaints the whole target range each time -- a QPainter per
+            cell, and a re-targeting after one selection can move hundreds of images. */
+        if (G::isIngestProbe)
+            IngestProbe::Instance().NoteCacheStatusPaint(qMax(0, tLast - tFirst + 1));
         // clear progress
         progress->clearImageCacheProgress();
         progress->updateImageCacheProgress(tFirst, tLast, rows,
@@ -9789,9 +9873,10 @@ void MW::renderDevelopPreview(bool fullRes)
     if (!work) {
         /* Non-raw (JPG/TIFF/HEIC), or the raw re-decode failed: build the pre-develop WorkingImage
            from the decoded display image. Correct for display-referred files; a last resort for raw. */
-        if (!icd->contains(fPath)) return;          // not decoded yet; nothing to preview
-        const QImage src = icd->imCache.value(fPath);
-        if (src.isNull()) return;
+        /*  One locked lookup: contains() then imCache.value() left the hash unguarded
+            between the two while the ImageCache thread trims it.  See ImageCacheData::get. */
+        QImage src;
+        if (!icd->get(fPath, src) || src.isNull()) return;   // not decoded yet
         auto built = std::make_shared<WorkingImage>();
         InputTransform input;
         if (!input.FromImage(src, *built)) return;
@@ -10150,7 +10235,9 @@ void MW::applyDevelopPreviewIfEdited()
        setDevelopPreview. Otherwise nothing overlays the loupe, so refresh the scopes here from the
        decoded image actually shown (valid in preview mode too). */
     if (!currentDevelopEditsVisible()) {
-        updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
+        QImage shown;
+        icd->get(dm->currentFilePath, shown);   // locked; null when not cached
+        updateDevelopScopes(shown);
         return;
     }
     developParamsChange();   // schedule the proxy + full-res settle render of the saved params
@@ -10864,6 +10951,7 @@ bool MW::rawDenoiseReadyForCurrent()
 
 void MW::onDemosaicProgress(const QString &fPath, int done, int total)
 {
+    IngestProbe::Scope _ip("MW::onDemosaicProgress");
     /* Relayed from an ImageCache decoder thread. Show the "Demosaic" status-bar row only
        for the CURRENT image's Winnow raw demosaic while Auto-run denoise is off (with it
        on, the "Denoise raw" path shows its own row). Cleared when the current image
@@ -10969,9 +11057,9 @@ void MW::ensureWorkingImageNow(const QString &fPath)
     }
     if (work && work->isValid()) return;
 
-    if (!icd->contains(fPath)) return;      // not decoded yet; nothing to build from
-    const QImage src = icd->imCache.value(fPath);
-    if (src.isNull()) return;
+    // One locked lookup -- see ImageCacheData::get.
+    QImage src;
+    if (!icd->get(fPath, src) || src.isNull()) return;   // not decoded yet
     auto built = std::make_shared<WorkingImage>();
     InputTransform input;
     if (!input.FromImage(src, *built)) return;
@@ -11120,10 +11208,14 @@ void MW::setDevelopScopesVisible(bool isVisible)
     if (developScopesBtn) developScopesBtn->setActive(developScopesVisible);
     settings->setValue("Develop/scopesVisible", developScopesVisible);
     if (developScopesVisible) {
-        if (currentDevelopEditsVisible())
+        if (currentDevelopEditsVisible()) {
             developParamsChange();
-        else
-            updateDevelopScopes(icd->imCache.value(dm->currentFilePath));
+        }
+        else {
+            QImage shown;
+            icd->get(dm->currentFilePath, shown);   // locked; null when not cached
+            updateDevelopScopes(shown);
+        }
     }
 }
 
@@ -13221,7 +13313,10 @@ void MW::findDuplicates()
     if (findDuplicatesDlg->exec()) {
         qDebug() << srcFun << "accepted";
         // add true to compare filter
-        buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction);
+        /*  runSync: filterChange follows, and an async category rebuild racing it is a
+            use-after-free -- see the contract in BuildFilters::updateCategory. */
+        buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction,
+                                     /*runSync*/ true);
         filterChange(srcFun);
     }
 }

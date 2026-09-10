@@ -7,10 +7,12 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
+- Add a use catalog preference.
 - Add keyword diagnostics.
 - When quit dock widths are not persistent with next session
 - In loupe mode, 'Esc' switch to grid mode (gridView)
 - Test search in filter
+- Add Defaults section to Workspaces menu (Ingest, View, Develop, Keywords, Embellish)
 - Develop panels management needs a tweak
 - Tweak welcome screen re to get started incl Catalog ??
 - Tweak develop basic tone sliders

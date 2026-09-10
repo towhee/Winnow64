@@ -332,6 +332,8 @@ set(WINNOW_SOURCES
     Dialogs/keywordretagdlg.h
     Dialogs/keyworddropdlg.cpp
     Dialogs/keyworddropdlg.h
+    Dialogs/keywordmergedlg.cpp
+    Dialogs/keywordmergedlg.h
     Dialogs/keywordtidydlg.cpp
     Dialogs/keywordtidydlg.h
     Main/status.cpp
@@ -376,6 +378,7 @@ set(WINNOW_SOURCES
     Utilities/foldercompressor.cpp
     Utilities/htmlwindow.cpp
     Utilities/icc.cpp
+    Utilities/ingestprobe.cpp
     Utilities/inputdlg.cpp
     Utilities/performance.cpp
     Utilities/popup.cpp
@@ -639,6 +642,7 @@ set(WINNOW_HEADERS
     Utilities/foldercompressor.h
     Utilities/htmlwindow.h
     Utilities/icc.h
+    Utilities/ingestprobe.h
     Utilities/inputdlg.h
     Utilities/movingavg.h
     Utilities/performance.h

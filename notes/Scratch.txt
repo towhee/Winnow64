@@ -4159,3 +4159,42 @@ Filters|Keywords|Category|Artist is now visible, but its count is still zero.
 image /Users/roryhill/Pictures/Zenfolio/Archive/2013-02-02_0888.jpg
 
 Review keyword management
+
+Not changed — your call
+
+  - setColorClass/setRating call filterChange unconditionally. togglePick only does so
+  when the category is actually filtered. Every colour keypress currently costs a
+  dm->newInstance() bump (invalidating in-flight decodes), a full proxy invalidate, and
+  up to four whole-model dataChanged emissions — each of which rebuilds the Cocoa
+  accessibility table. This is the biggest latency win available, but it interacts with
+  G::autoAdvance (togglePick uses a different auto-advance rule), so I left it to you.
+
+  - A Preview-mode placeholder on a miss — scale the row's icon, or reuse the embedded
+  JPG, instead of blanking.
+
+  - MW::updateImageCacheStatus repaints the whole target range with a QPainter per cell,
+  once per image entering or leaving the cache. The probe counts it.
+
+  - IconViewDelegate::paint overflows a QRect — a separate confirmed abort in your dev
+  build (Winnow-2026-09-06-163509.ips), debug-only.
+
+  - MW::updateIconRange is the only writer of dm->firstVisibleIcon/lastVisibleIcon, and
+  it's reached only from the scroll handlers — which are gated on G::ignoreScrollSignal
+  == false. But IconView::scrollToCurrent sets that flag true immediately before it
+  scrolls. So during keyboard navigation the visible range is never updated, and
+  iconRowVisible() suppresses the dataChanged for every row actually on screen. Not your
+  pause, and largely masked because scrolling repaints the strip anyway — but it isn't
+  intended, and it's worth a separate look.
+
+  - One thing to note from my attempt to reproduce it: driving the dev build with a file
+  path while it had no folder open hit ASSERT failure in QList::at: "index out of range".
+  That's the startup-args path, unrelated to this, but it's real and it's in the current
+  build.
+
+  - Two other things the new Scope output caught on this run, both one-off rather than
+  periodic: MW::folderChangeCompleted at 809 ms, and QAction(openUsbFolder)/MetaCall at
+  1128 ms. Also metaRead::updateProgressInStatusbar fired 3386 queued MetaCalls into MW
+  during the load for 1 ms of total work — harmless, but that's one cross-thread event
+  per row.
+
+

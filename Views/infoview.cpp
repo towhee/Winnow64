@@ -253,7 +253,10 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
         if (field == "Title*") {
             dm->sf->suspend(true, "InfoView::dataChanged Title");
-            buildFilters->updateCategory(BuildFilters::TitleEdit);
+            /*  runSync: filterChange follows, and an async category rebuild racing it is
+                a use-after-free -- see the contract in BuildFilters::updateCategory. */
+            buildFilters->updateCategory(BuildFilters::TitleEdit,
+                                         BuildFilters::NoAfterAction, /*runSync*/ true);
             //emit updateFilter(BuildFilters::TitleEdit, BuildFilters::NoAfterAction);
             if (filters->isAnyCatItemChecked(filters->titles))
                 thumbView->selectionModel()->clear();
@@ -261,7 +264,9 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         }
         if (field == "Creator*") {
             dm->sf->suspend(true, "InfoView::dataChanged Creator");
-            buildFilters->updateCategory(BuildFilters::CreatorEdit);
+            // runSync: filterChange follows -- see the Title branch above.
+            buildFilters->updateCategory(BuildFilters::CreatorEdit,
+                                         BuildFilters::NoAfterAction, /*runSync*/ true);
             //emit updateFilter(BuildFilters::CreatorEdit, BuildFilters::NoAfterAction);
             if (filters->isAnyCatItemChecked(filters->creators))
                 thumbView->selectionModel()->clear();

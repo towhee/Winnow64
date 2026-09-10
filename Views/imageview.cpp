@@ -4,6 +4,7 @@
 #include "Main/global.h"
 #include "Views/imageview.h"
 #include "Develop/Transform/croptransform.h"
+#include "Utilities/ingestprobe.h"
 
 namespace {
 /* The crop cursor: an arrow pointer with a corner-bracket crop glyph to its lower-right (drawn at
@@ -438,12 +439,26 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         return false;
     }
 
-    if (icd->contains(fPath)) {
-        QImage image; // confirm the cached image is in the image cache
+    /*  ONE LOCKED LOOKUP, AND A NULL IMAGE IS A MISS.
+
+        This was icd->contains(fPath) followed by icd->imCache.value(fPath) -- two
+        separate locks with the GUI thread's own code between them, while the ImageCache
+        thread trims the same hash. Losing that race handed back a default-constructed
+        QImage, which was then set as the pixmap with isLoaded = TRUE: a blank loupe
+        reported as a successful load, and nothing further to repair it because
+        refreshViewsOnCacheChange only reloads on a cache CHANGE. The unguarded read was
+        also a genuine data race against a rehash.
+
+        A null image can also be in the cache legitimately -- see
+        ImageCache::nullInImCache, which exists to find and re-queue them -- so the null
+        test is needed whether or not a trim raced. Treating it as a miss lets the normal
+        repair path run. */
+    QImage cached;
+    if (icd->get(fPath, cached) && !cached.isNull()) {
         if (isDebug)
             qDebug() << srcFun + "  row =" << sfRow << fPath;
 
-        pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
+        pmItem->setPixmap(QPixmap::fromImage(cached));
         isLoaded = true;
         if (isDebug)
             qDebug() << srcFun
@@ -453,6 +468,8 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
                      << fPath;
     }
     else {
+        if (G::isIngestProbe && cached.isNull() && icd->contains(fPath))
+            IngestProbe::Instance().NoteHollowCacheHit();
         if (isDebug)
             qDebug() << srcFun << "isCached = false";
     }
