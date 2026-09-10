@@ -1434,6 +1434,37 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
 
     const Qt::CheckState now = item->checkState(0);
     QMenu menu(this);
+
+    /*  MERGING AN UNFILED KEYWORD INTO THE LIST, offered where the user is already
+        looking at the problem. An unfiled keyword is drawn in itemIsUnfiledColor here and
+        nowhere else, so this is the one panel that can say "that one" -- and the
+        alternative routes both need something the user does not have: dragging the
+        photographs onto a node carries only the LEAF and flattens the branch, and
+        KeywordVocab's own merge needs a vocabulary node on both sides, which is exactly
+        what being unfiled means there isn't. */
+    QAction *merge = nullptr;
+    if (inKeywords && item->data(0, UnfiledRole).toBool()) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        merge = menu.addAction("Merge into keyword list...");
+        /*  DISABLED WITH THE REASON IN THE ITEM when the keyword list holds nothing of
+            that name -- there is no branch to merge INTO, and a menu entry that opens a
+            dialog saying so would have wasted the click. The remaining route is named,
+            because "you cannot do this here" is only half an answer. */
+        if (!vocabHasLeaf(keywordFold(keywordLeafOf(path)))) {
+            merge->setEnabled(false);
+            merge->setText("Merge into keyword list - no branch of that name");
+            merge->setToolTip("Your keyword list has no branch called \""
+                              + keywordLeafOf(path) + "\". Add one in the Keywords dock, "
+                              "or drag these images onto the branch it belongs under.");
+        }
+        else {
+            merge->setToolTip("Move this keyword and everything under it into your "
+                              "keyword list, keeping its own branches, and rewrite the "
+                              "images that carry it.");
+        }
+        menu.addSeparator();
+    }
+
     QAction *inc = menu.addAction("Include");
     QAction *exc = menu.addAction("Exclude");
     QAction *clr = menu.addAction("Clear");
@@ -1449,8 +1480,33 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
     else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
+    else if (merge != nullptr && chosen == merge)
+        emit mergeUnfiledKeyword(item->data(1, Qt::EditRole).toString());
     else if (unfiled != nullptr && chosen == unfiled)
         setShowUnfiledOnly(!showUnfiledOnly);
+}
+
+bool Filters::vocabHasLeaf(const QString &leafFold) const
+{
+/*
+    Does the keyword list hold ANY branch whose leaf is this name?
+
+    THE PANEL ALREADY HOLDS WHAT IT NEEDS. vocabPathsFold is the authored vocabulary as a
+    set of folded PATHS -- pushed in by MW::refreshFilterVocabMarking for the unfiled
+    marking -- and a leaf is the tail of a path, so the question is answerable here
+    without reaching for a KeywordVocab the panel deliberately does not hold (see
+    Filters::setVocabPaths for why it holds a value rather than a pointer).
+
+    A LINEAR SCAN, and it stays one. It runs once when a context menu opens, over a few
+    thousand entries; an index keyed on leaves would be a second copy of the vocabulary to
+    keep in step with the first for no measurable gain.
+*/
+    if (leafFold.isEmpty()) return false;
+    for (const QString &p : vocabPathsFold) {
+        const int i = p.lastIndexOf('|');
+        if ((i < 0 ? p : p.mid(i + 1)) == leafFold) return true;
+    }
+    return false;
 }
 
 QAction *Filters::addUnfiledAction(QMenu &menu)

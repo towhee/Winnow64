@@ -277,6 +277,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::stop, this, &MW::stop, Qt::BlockingQueuedConnection);
     connect(dm, &DataModel::folderChange, this, &MW::folderChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
+    connect(filters, &Filters::mergeUnfiledKeyword, this, &MW::mergeUnfiledKeyword);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
@@ -418,6 +419,8 @@ void MW::createMetaRead()
     // update loading metadata in statusbar
     connect(metaRead, &MetaRead::updateProgressInStatusbar, this,
             [this](int item, int items, QColor color) {
+                // Named for the ingest probe -- see catalogScanner::status below.
+                IngestProbe::Scope _ip("metaRead::updateProgressInStatusbar");
                 progress->updateProgress(progressMetaReadRow, item, items, color);
             });
 
@@ -487,6 +490,10 @@ void MW::createCatalogScanner()
             }, Qt::QueuedConnection);
 
     connect(catalogScanner, &CatalogScanner::status, this, [this](const QString &msg) {
+        /*  A lambda with MW as its context object is a QEvent::MetaCall ON MW, exactly
+            like a slot -- so it needs its own Scope or the ingest probe's slot tally
+            cannot see it, and a stall lands as an unattributed MW(MW)/MetaCall. */
+        IngestProbe::Scope _ip("catalogScanner::status -> setRowText");
         if (progress) progress->setRowText(progressCatalogRow, msg);
     }, Qt::QueuedConnection);
 }
@@ -600,6 +607,8 @@ void MW::createImageCache()
        Winnow + Auto-run off). Clear it when the current image finishes caching. */
     connect(imageCache, &ImageCache::demosaicProgress, this, &MW::onDemosaicProgress);
     connect(imageCache, &ImageCache::setCached, this, [this](int sfRow, bool isCached, int){
+        // Named for the ingest probe -- see catalogScanner::status.
+        IngestProbe::Scope _ip("imageCache::setCached -> clearProgress");
         if (isCached && dm && sfRow == dm->currentSfRow)
             progress->clearProgress(progressDemosaicRow);
     });
@@ -3100,6 +3109,12 @@ void MW::createKeywordsDock()
         applyKeywordsToSelection({p}, {});
         refreshKeywordsDock();
     });
+    connect(keywordTags, &KeywordTags::addManyRequested, this,
+            [this](const QStringList &paths) {
+        /*  ONE pass and ONE rebuild for a multi-keyword drop, not one per keyword. */
+        applyKeywordsToSelection(paths, {});
+        refreshKeywordsDock();
+    });
     connect(keywordTags, &KeywordTags::removeRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({}, {p});
         refreshKeywordsDock();
@@ -3432,9 +3447,9 @@ void MW::setOperationMode(G::OperationMode mode)
        what Preview showed. Small, downscaled copy; the display-vs-Preview check runs in
        updateDevelopScopes. Entering Develop only (leaving it, there is no Develop render
        to verify). */
+    QImage prev;
     if (mode == G::OperationMode::Develop && icd && dm && !dm->currentFilePath.isEmpty()
-        && icd->contains(dm->currentFilePath)) {
-        const QImage prev = icd->imCache.value(dm->currentFilePath);
+        && icd->get(dm->currentFilePath, prev)) {     // one locked lookup
         developVerifyPreviewBaseline = prev.isNull()
             ? QImage()
             : prev.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation);

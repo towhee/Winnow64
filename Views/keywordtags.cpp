@@ -337,9 +337,13 @@ void KeywordTags::dropEvent(QDropEvent *event)
 {
     const QByteArray data = event->mimeData()->data(kVocabNodeMime);
     if (data.isEmpty()) return;
+
+    /*  ONE SIGNAL FOR THE WHOLE DROP -- see addManyRequested. */
+    QStringList paths;
     for (const QByteArray &p : data.split('\n')) {
         const QString path = QString::fromUtf8(p);
-        if (!path.isEmpty()) emit addRequested(path);
+        if (!path.isEmpty()) paths << path;
     }
+    if (!paths.isEmpty()) emit addManyRequested(paths);
     event->acceptProposedAction();
 }

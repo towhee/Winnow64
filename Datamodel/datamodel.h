@@ -238,7 +238,10 @@ public:
     bool isDupHiddenRaw(int dmRow) const;   // the raw half, hidden if combined
     QString dupRawType(int dmRow) const;    // "NEF", "ORF" ... else empty
     void clearDataModel();
-    void newInstance();
+    /*  src names the caller for the ingest probe's instance-bump tally: a bump
+        invalidates every in-flight decode and reader task, so during a cull it matters
+        which action is spending them. Diagnostic only. */
+    void newInstance(const QString &src = QString());
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
     bool isQueueEmpty();
     bool contains(QString &path);

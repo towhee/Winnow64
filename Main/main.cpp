@@ -159,6 +159,11 @@ int main(int argc, char *argv[])
         (the scroll probe, the GUI stall watchdog, the Phase 1/2 load lines); settings,
         catalog and cache are the user's own, exactly as in a normal launch. */
     bool isPerfProbeArg = false;
+    /*  Winnow --ingestprobe -- an ordinary interactive session that starts with the
+        ingest probe already recording, for a cull that begins the moment the app opens.
+        Separate from --perfprobe: that one measures a LOAD and prints a line per scroll,
+        which is exactly the noise a cull-length session does not need. */
+    bool isIngestProbeArg = false;
     QString selfTestFolder;
     QString metaTestFile;
     QString devTestFolder;
@@ -176,6 +181,7 @@ int main(int argc, char *argv[])
         else if (arg == "--catalogprobe") isCatalogProbe = true;
         else if (arg == "--catalogload") isCatalogLoad = true;
         else if (arg == "--perfprobe") isPerfProbeArg = true;
+        else if (arg == "--ingestprobe") isIngestProbeArg = true;
         else if (isCatalogProbe && catalogProbeFilter.isEmpty()) catalogProbeFilter = arg;
         else if (isCatalogLoad && catalogLoadFilter.isEmpty()) catalogLoadFilter = arg;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
@@ -184,6 +190,7 @@ int main(int argc, char *argv[])
         else if (isSoakTest) soakFolders << arg;
     }
     if (isPerfProbeArg) G::isPerfProbe = true;
+    if (isIngestProbeArg) G::isIngestProbe.store(true, std::memory_order_relaxed);
 
     /* The probe joins these for the SINGLE-INSTANCE bypass only -- it must always start
        fresh rather than handing its arguments to a running Winnow -- and deliberately not
@@ -202,6 +209,7 @@ int main(int argc, char *argv[])
         /*  Not an argument to pass on: a running instance handed "--perfprobe" would try
             to open it as a file path. */
         if (QString::fromLocal8Bit(argv[i]) == "--perfprobe") continue;
+        if (QString::fromLocal8Bit(argv[i]) == "--ingestprobe") continue;
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }

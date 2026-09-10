@@ -157,6 +157,16 @@ public:
         the vocabulary changes and the caller decides what that means for the files. */
     QString reparentMerging(const QModelIndex &idx, const QModelIndex &newParent);
     QModelIndex insertChild(const QModelIndex &parent, const QString &name);
+
+    /*  EVERY PATH IN THE LIST, WITH THE ANCESTORS IT NAMES, IN ONE RESET AND ONE
+        TRANSACTION. insertChild resets the model per node, which is right for a hand
+        gesture and wrong for filing a branch: merging an observed branch into the
+        vocabulary can add dozens of nodes, and a reset apiece is a reset apiece for the
+        Filters marking and for the tree's expansion state to be rebuilt from. Returns
+        how many nodes were actually created; a path already present costs a lookup.
+
+        SHALLOWEST FIRST is done here, so callers need not sort. */
+    int insertPaths(const QStringList &paths);
     /*  Put a new node BETWEEN idx and its parent, adopting idx. "I should have had a
         Location branch above all these places." */
     QModelIndex insertParentAbove(const QModelIndex &idx, const QString &name);
@@ -203,6 +213,11 @@ private:
         already been moved out from under it. */
     bool deleteLeafNode(VocabNode *n);
     bool writeNode(const VocabNode *n);
+
+    /*  The child of p named leaf, created if it is not there. NO MODEL SIGNALS and no
+        sort -- the caller owns both, which is what lets insertPaths do many of these
+        inside one reset. created is set false when an existing node is returned. */
+    VocabNode *ensureChild(VocabNode *p, const QString &leaf, bool *created = nullptr);
     void sortChildren(VocabNode *n);
 
     VocabNode *root = nullptr;                  // sentinel; its children are the roots

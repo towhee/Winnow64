@@ -67,8 +67,11 @@ bool EmbelExport::loadImage(QString fPath)
     if (G::embelLog) G::log(srcFun, msg);
 
     if (!embellish->isRemote) {
-        if (icd->contains(fPath)) {
-            pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
+        /*  One locked lookup, and a null image falls through to the decode below rather
+            than exporting a blank frame.  See ImageCacheData::get. */
+        QImage cached;
+        if (icd->get(fPath, cached) && !cached.isNull()) {
+            pmItem->setPixmap(QPixmap::fromImage(cached));
             return true;
         }
         // check metadata loaded for image

@@ -18,6 +18,8 @@
 #include <QMenu>
 #include <QFileDialog>
 #include <QMessageBox>
+
+#include <functional>
 #include <QPainter>
 #include <QStyledItemDelegate>
 
@@ -124,6 +126,100 @@ KeywordTree::KeywordTree(KeywordVocab *vocab, QWidget *parent)
     });
 
     connect(vocab, &KeywordVocab::pathChanged, this, &KeywordTree::pathChanged);
+
+    /*  THE TREE MUST NOT COLLAPSE EVERY TIME THE VOCABULARY CHANGES. See
+        rememberOpenBranches. Connected to the model's own reset signals rather than
+        called from each mutator, for the same reason MW::refreshFilterVocabMarking is:
+        rename, re-parent, merge, insert, delete and reload all reset, three of them are
+        reached from the view without telling anyone, and a seventh route would forget. */
+    connect(vocab, &QAbstractItemModel::modelAboutToBeReset,
+            this, &KeywordTree::rememberOpenBranches);
+    connect(vocab, &QAbstractItemModel::modelReset,
+            this, &KeywordTree::restoreOpenBranches);
+}
+
+void KeywordTree::rememberOpenBranches()
+{
+/*
+    WHICH BRANCHES WERE OPEN, AND WHERE THE USER WAS, BEFORE A MODEL RESET.
+
+    Every vocabulary mutation resets the model -- rename, re-parent, merge, insertChild,
+    remove, reload -- and QTreeView collapses the entire tree on a reset. That is not a
+    detail on this panel: filing keywords means dragging photographs into a deep tree, and
+    MW::applyKeywordMoves inserts a node per created target while
+    KeywordVocab::removeUnusedRoots removes one per emptied root, so a single drop could
+    collapse the tree several times over. The same principle is already written down at
+    MW::ensureKeywordVocabLoaded, which declines to reload a populated vocabulary
+    precisely so that being raised as a tab does not collapse the branch someone is
+    reading.
+
+    KEYED ON THE FOLDED PATH, not on a QModelIndex or a row -- an index does not survive
+    the reset, which is the whole problem, and a row number means nothing once the tree
+    re-sorts. It is the same identity, and the same technique, that
+    Filters::updateKeywordItems uses to carry check and expansion state across its own
+    rebuild.
+
+    A PATH THAT NO LONGER EXISTS SIMPLY DOES NOT MATCH. A branch that was renamed, merged
+    away or deleted is gone, and nothing should try to reopen it; a rename reappears under
+    its new path collapsed, which is honest -- it is a different branch now.
+*/
+    openFold.clear();
+    currentFold.clear();
+
+    if (!vocab) return;
+
+    std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+        for (int i = 0; i < vocab->rowCount(parent); ++i) {
+            const QModelIndex idx = vocab->index(i, 0, parent);
+            if (!isExpanded(idx)) continue;     // a collapsed branch hides collapsed ones
+            const QString p = idx.data(KeywordVocab::PathRole).toString();
+            if (!p.isEmpty()) openFold.insert(keywordFold(p));
+            walk(idx);
+        }
+    };
+    walk(QModelIndex());
+
+    const QModelIndex cur = currentIndex();
+    if (cur.isValid())
+        currentFold = keywordFold(cur.data(KeywordVocab::PathRole).toString());
+}
+
+void KeywordTree::restoreOpenBranches()
+{
+/*
+    Put them back. Parent before child, which falls out of the walk order: expanding a
+    node whose parent is still collapsed is legal but the view has no rows to give it.
+
+    THE WALK STOPS AT A CLOSED BRANCH, so the cost is the OPEN part of the tree rather
+    than all of it -- a few dozen rows on a vocabulary of a few thousand.
+*/
+    if (!vocab || openFold.isEmpty()) {
+        if (!currentFold.isEmpty()) restoreCurrent();
+        return;
+    }
+
+    std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+        for (int i = 0; i < vocab->rowCount(parent); ++i) {
+            const QModelIndex idx = vocab->index(i, 0, parent);
+            const QString p = idx.data(KeywordVocab::PathRole).toString();
+            if (p.isEmpty() || !openFold.contains(keywordFold(p))) continue;
+            setExpanded(idx, true);
+            walk(idx);
+        }
+    };
+    walk(QModelIndex());
+
+    restoreCurrent();
+}
+
+void KeywordTree::restoreCurrent()
+{
+    if (currentFold.isEmpty() || !vocab) return;
+    const QModelIndex idx = vocab->indexForPath(currentFold);
+    if (idx.isValid()) {
+        setCurrentIndex(idx);
+        scrollTo(idx, QAbstractItemView::EnsureVisible);
+    }
 }
 
 QStringList KeywordTree::siblingNames(const QModelIndex &parent,
@@ -534,10 +630,40 @@ void KeywordTree::dropEvent(QDropEvent *event)
     setDropRow(QModelIndex());
 
     if (event->mimeData()->hasFormat(kVocabNodeMime)) {
+        /*  THE TARGET IS REMEMBERED AS A PATH, NOT AS AN INDEX, and that is the whole
+            reason this is not one line.
+
+            The tree allows ExtendedSelection, so a drag can carry several keywords, and
+            every pass of the loop below calls reparent or reparentMerging -- both of
+            which wrap their work in beginResetModel/endResetModel, and both of which call
+            reload() when a write fails. A reset invalidates every QModelIndex taken
+            before it; reload() goes further and clearTree()s, DELETING every node. The
+            target index captured above therefore held a dangling internalPointer from the
+            SECOND keyword onward, and nodeOf() dereferenced it -- as did the setExpanded
+            at the end of this block.
+
+            src was never exposed to this because it is re-derived from its path each
+            pass. The target works the same way now, which is also why it re-checks
+            validity: the node it names can legitimately have been merged away by an
+            earlier pass of this very loop, and stopping is the honest answer.
+
+            AN INVALID TARGET IS THE ROOT, not a missing one -- dropping on blank space
+            below the tree is how a node gets back to the top level -- so that case is
+            carried as a flag rather than as an empty path. */
+        const bool toRoot = !target.isValid();
+        const QString targetPath = target.data(KeywordVocab::PathRole).toString();
+
         const QByteArray data = event->mimeData()->data(kVocabNodeMime);
         for (const QByteArray &raw : data.split('\n')) {
             const QModelIndex src = vocab->indexForPath(QString::fromUtf8(raw));
             if (!src.isValid()) continue;
+
+            /*  RE-RESOLVED EVERY PASS, because the previous one reset the model. See the
+                note above the loop. */
+            const QModelIndex tgt = toRoot ? QModelIndex()
+                                           : vocab->indexForPath(targetPath);
+            if (!toRoot && !tgt.isValid()) break;       // merged away by an earlier pass
+
             /*  A NAME ALREADY TAKEN IN THE DESTINATION IS A MERGE, NOT A DEAD END. This
                 used to warn and stop, on the reasoning that merging is a bigger operation
                 than a drag -- which is true, and is why it is ASKED rather than done. It
@@ -545,9 +671,9 @@ void KeywordTree::dropEvent(QDropEvent *event)
                 same place filed twice, "Canada|BC|..." beside
                 "Location|Canada|BC|...", is exactly what a drag onto Location is trying
                 to say. */
-            if (vocab->wouldMerge(src, target)) {
+            if (vocab->wouldMerge(src, tgt)) {
                 const QString from = src.data(KeywordVocab::PathRole).toString();
-                const QString into = target.data(KeywordVocab::PathRole).toString();
+                const QString into = tgt.data(KeywordVocab::PathRole).toString();
                 const QString answer = QString(
                     "\"%1\" already exists inside \"%2\".\n\n"
                     "Merge the two? Everything under \"%1\" moves across, keeping its "
@@ -558,18 +684,23 @@ void KeywordTree::dropEvent(QDropEvent *event)
                                           QMessageBox::Yes | QMessageBox::No,
                                           QMessageBox::No) != QMessageBox::Yes) continue;
 
-                if (vocab->reparentMerging(src, target).isEmpty()) {
+                if (vocab->reparentMerging(src, tgt).isEmpty()) {
                     QMessageBox::warning(this, "Merge keywords",
                         QString("Could not merge \"%1\".").arg(from));
                 }
             }
-            else if (!vocab->reparent(src, target)) {
+            else if (!vocab->reparent(src, tgt)) {
                 QMessageBox::warning(this, "Move keyword",
                     QString("Could not move \"%1\" there.")
                         .arg(keywordLeafOf(QString::fromUtf8(raw))));
             }
         }
-        if (target.isValid()) setExpanded(target, true);
+        /*  Re-resolved for the same reason: the index this function opened with has been
+            through a model reset per dragged keyword by now. */
+        if (!toRoot) {
+            const QModelIndex tgt = vocab->indexForPath(targetPath);
+            if (tgt.isValid()) setExpanded(tgt, true);
+        }
         event->acceptProposedAction();
         return;
     }

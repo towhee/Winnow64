@@ -541,7 +541,13 @@ bool KeywordVocab::mergeNodes(VocabNode *src, VocabNode *dst)
         c->path = joinPath(dst->path, c->name);
         byPathFold.insert(keywordFold(c->path), c);
         if (!writeNode(c)) return false;
-        rewritePaths(c);
+        /*  CHECKED, LIKE EVERY OTHER CALLER. This was the one place that issued the
+            descendant writes and threw the answer away -- the exact shape rewritePaths'
+            own comment describes, and the worst place for it: reparentMerging wraps this
+            in a transaction precisely so a half-merged vocabulary cannot be read back,
+            and a discarded failure returned success and let that transaction COMMIT the
+            half-rewritten branch. */
+        if (!rewritePaths(c)) return false;
     }
 
     sortChildren(dst);
@@ -601,21 +607,22 @@ QString KeywordVocab::reparentMerging(const QModelIndex &idx, const QModelIndex 
     return newPath;
 }
 
-QModelIndex KeywordVocab::insertChild(const QModelIndex &parent, const QString &name)
+VocabNode *KeywordVocab::ensureChild(VocabNode *p, const QString &leaf, bool *created)
 {
-    const QString leaf = keywordNodes(name).join('|');
-    if (leaf.isEmpty() || leaf.contains('|')) return QModelIndex();
-
-    VocabNode *p = parent.isValid() ? const_cast<VocabNode *>(nodeOf(parent)) : root;
+/*
+    The child of p named leaf, made if it is not there. See the header: no model signals
+    and no sort, so that insertPaths can do many of these inside a single reset.
+*/
+    if (created) *created = false;
     if (!p) p = root;
 
     for (VocabNode *sib : p->children)
-        if (keywordFold(sib->name) == keywordFold(leaf)) return indexOf(sib);
+        if (keywordFold(sib->name) == keywordFold(leaf)) return sib;
 
     const QString path = joinPath(p == root ? QString() : p->path, leaf);
 
     QSqlDatabase db = CacheDb::instance().db();
-    if (!db.isOpen()) return QModelIndex();
+    if (!db.isOpen()) return nullptr;
     QSqlQuery q(db);
     q.prepare("INSERT INTO vocab (name, namefold, path, pathfold, parent)"
               " VALUES (?, ?, ?, ?, ?)"
@@ -627,26 +634,126 @@ QModelIndex KeywordVocab::insertChild(const QModelIndex &parent, const QString &
     q.addBindValue(p == root ? QVariant() : QVariant(p->id));
     if (!q.exec()) {
         G::issue("Warning", "Vocabulary insert failed: " + q.lastError().text(),
-                 "KeywordVocab::insertChild", -1, path);
-        return QModelIndex();
+                 "KeywordVocab::ensureChild", -1, path);
+        return nullptr;
+    }
+    /*  ON CONFLICT DO NOTHING IS A SUCCESSFUL exec() THAT INSERTED NOTHING, and
+        lastInsertId() does NOT report that. sqlite3_last_insert_rowid() keeps the rowid
+        of the last SUCCESSFUL insert on the connection, so after a refused row it returns
+        somebody else's id -- verified: two inserts then a conflicting one leaves it at 2
+        with changes() == 0. The old "!id" test therefore never fired, and the node built
+        from that id would alias a live row: into byId over the real node, and every later
+        writeNode updating the wrong row.
+
+        The sibling check above catches the ordinary duplicate, so reaching here means the
+        tree and the table have drifted -- which is the case this guard exists for and the
+        only case it was ever going to see. */
+    if (q.numRowsAffected() == 0) {
+        G::issue("Warning", "Vocabulary insert refused: that path already exists",
+                 "KeywordVocab::ensureChild", -1, path);
+        return nullptr;
     }
     const qint64 id = q.lastInsertId().toLongLong();
-    if (!id) return QModelIndex();       // the unique index refused it
+    if (!id) return nullptr;             // no rowid at all: nothing usable to build on
 
     VocabNode *n = new VocabNode;
     n->id = id;
     n->name = leaf;
     n->path = path;
     n->parent = p;
-
-    beginResetModel();
     p->children.append(n);
-    sortChildren(p);
     byId.insert(id, n);
     byPathFold.insert(keywordFold(path), n);
+
+    if (created) *created = true;
+    return n;
+}
+
+QModelIndex KeywordVocab::insertChild(const QModelIndex &parent, const QString &name)
+{
+    const QString leaf = keywordNodes(name).join('|');
+    if (leaf.isEmpty() || leaf.contains('|')) return QModelIndex();
+
+    VocabNode *p = parent.isValid() ? const_cast<VocabNode *>(nodeOf(parent)) : root;
+    if (!p) p = root;
+
+    /*  AN EXISTING NODE COSTS NO RESET. Callers lean on this -- MW::applyKeywordMoves and
+        the tag zone's file-it both walk a path calling insertChild per node and expect
+        the ones already there to be free. */
+    for (VocabNode *sib : p->children)
+        if (keywordFold(sib->name) == keywordFold(leaf)) return indexOf(sib);
+
+    beginResetModel();
+    VocabNode *n = ensureChild(p, leaf);
+    if (n) sortChildren(p);
     endResetModel();
 
-    return indexOf(n);
+    return n ? indexOf(n) : QModelIndex();
+}
+
+int KeywordVocab::insertPaths(const QStringList &paths)
+{
+/*
+    See the header. ONE RESET AND ONE TRANSACTION for the whole list.
+
+    SHALLOWEST FIRST, so a parent exists before its child needs its id -- the same
+    ordering reload() and buildFromCatalog use, for the same reason. Sorting here rather
+    than asking the caller for it is what makes the function safe to hand a set.
+
+    A FAILURE ROLLS THE ROWS BACK AND RELOADS, exactly as reparentMerging does: a
+    half-inserted branch is not a state the tree can be read back from, and the in-memory
+    tree must not be left describing rows that were never committed. reload() runs AFTER
+    endResetModel, because a reset cannot be nested inside another one.
+*/
+    if (paths.isEmpty()) return 0;
+
+    QSqlDatabase db = CacheDb::instance().db();
+    if (!db.isOpen()) return 0;
+
+    QStringList sorted = paths;
+    std::stable_sort(sorted.begin(), sorted.end(),
+                     [](const QString &a, const QString &b) {
+                         return a.count('|') < b.count('|');
+                     });
+
+    const bool inTransaction = db.transaction();
+
+    int added = 0;
+    bool failed = false;
+    QSet<VocabNode *> touched;          // parents whose child order may have changed
+
+    beginResetModel();
+    for (const QString &path : std::as_const(sorted)) {
+        VocabNode *p = root;
+        QString built;
+        for (const QString &leaf : keywordNodes(path)) {
+            built = built.isEmpty() ? leaf : built + '|' + leaf;
+            VocabNode *have = byPathFold.value(keywordFold(built), nullptr);
+            if (have) { p = have; continue; }
+
+            bool created = false;
+            VocabNode *n = ensureChild(p, leaf, &created);
+            if (!n) { failed = true; break; }
+            if (created) { ++added; touched.insert(p); }
+            p = n;
+        }
+        if (failed) break;
+    }
+    for (VocabNode *p : std::as_const(touched)) sortChildren(p);
+    endResetModel();
+
+    if (failed) {
+        if (inTransaction) db.rollback();
+        G::issue("Warning", "Could not add every keyword to the list",
+                 "KeywordVocab::insertPaths");
+        reload();
+        return 0;
+    }
+    if (inTransaction && !db.commit()) {
+        reload();
+        return 0;
+    }
+    return added;
 }
 
 QModelIndex KeywordVocab::insertParentAbove(const QModelIndex &idx, const QString &name)

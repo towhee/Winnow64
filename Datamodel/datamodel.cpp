@@ -3,6 +3,7 @@
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
 #include "Utilities/searchterms.h"
+#include "Utilities/ingestprobe.h"
 #include "Metadata/indexmetadata.h"
 
 /*
@@ -1161,11 +1162,13 @@ void DataModel::recountLoadFlags()
     iconUnloadableCount.store(unloadable, std::memory_order_relaxed);
 }
 
-void DataModel::newInstance()
+void DataModel::newInstance(const QString &src)
 {
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::newInstance");
     int next = ++instance;
     G::dmInstance = next;
+    if (G::isIngestProbe)
+        IngestProbe::Instance().NoteInstanceBump(src.isEmpty() ? QString("unnamed") : src);
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -5277,6 +5280,11 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     QString src = "DataModel::setCached";
     QModelIndex sfIdx = sf->index(sfRow, G::IsCachedColumn);
     if (instance != this->instance) {
+        /*  THE LOUPE IS NEVER TOLD. The image is in the cache -- ImageCache::cacheImage
+            inserted it before it got here -- but refreshViewsOnCacheChange is below this
+            return, so a selection that was waiting on this row stays blank until the
+            user does something else. Counted rather than silently dropped. */
+        if (G::isIngestProbe) IngestProbe::Instance().NoteDroppedCacheSignal();
         errMsg = "Instance clash from " + src;
         G::issueDedup("Comment", errMsg, src, sfIdx.row());
 

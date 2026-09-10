@@ -52,6 +52,13 @@ public:
 
 signals:
     void addRequested(const QString &path);
+    /*  A DROP CARRIES SEVERAL KEYWORDS AND IS ONE USER ACTION. Emitting addRequested per
+        path made it N of them: N rewrites of every selected image's sidecar, N bumps of
+        each file's ModifyDate and N rebuilds of the whole keyword tree, for one gesture.
+        MW::applyKeywordsToSelection already takes a LIST and applies it in one pass --
+        the same rule MW::applyKeywordMoves obeys by hoisting its rebuild out of the
+        loop. */
+    void addManyRequested(const QStringList &paths);
     void removeRequested(const QString &path);
     /*  An unfiled keyword the user wants in the vocabulary. The dock adds it to the tree
         rather than this widget doing it, because where it lands is a tree question. */

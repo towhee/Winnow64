@@ -36,6 +36,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     Reports status information on the status bar and in InfoView.  If keepBase = true
     then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message s.
 */
+    IngestProbe::Scope _ip("MW::updateStatus");
     if (!G::useUpdateStatus) return;
 
     QString fun = "MW::updateStatus";
@@ -419,6 +420,7 @@ QString MW::getImageCacheRunningTip(bool isAuto, quint64 maxMB)
 
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool success)
 {
+    IngestProbe::Scope _ip("MW::updateMetadataThreadRunStatus");
     // if (G::instanceClash(instance, "MW::updateMetadataThreadRunStatus")) return;
 
     if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus");
@@ -456,6 +458,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool success)
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 {
+    IngestProbe::Scope _ip("MW::updateImageCachingThreadRunStatus");
     if (G::isLogger) G::log("MW::updateImageCachingThreadRunStatus");
     if (isRunning) {
         if (G::isTest) testTime.restart();

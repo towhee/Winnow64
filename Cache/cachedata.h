@@ -11,6 +11,12 @@ public:
     explicit ImageCacheData(QObject *);
 
     bool contains(const QString &key);
+    /*  TEST AND FETCH UNDER ONE LOCK. contains() followed by imCache.value() is two
+        locks with a gap, and the ImageCache thread trims the hash in that gap: the
+        caller gets a default-constructed QImage and paints an empty pixmap believing it
+        succeeded, or -- worse -- reads the hash while a rehash is moving it. Returns
+        false when the key is absent; image is left untouched. */
+    bool get(const QString &key, QImage &image) const;
     void insert(const QString &key, const QImage &image);
     void remove(const QString &key);
     void clear();

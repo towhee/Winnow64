@@ -1,11 +1,12 @@
 #include "Main/mainwindow.h"
 #include "Dialogs/keyworddropdlg.h"
+#include "Dialogs/keywordmergedlg.h"
 #include "Dialogs/keywordretagdlg.h"
 #include "Dialogs/keywordtidydlg.h"
 #include "Metadata/keywordpaths.h"
 
 #include <QApplication>
-#include <QEventLoop>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QLocale>
 #include <QMessageBox>
@@ -54,6 +55,98 @@ void composeKeywordWrite(const QStringList &paths, QStringList &subject,
         if (p.contains('|')) hierarchical << p;
     }
 }
+
+/*
+    A STOPWATCH FOR THE KEYWORD MOVE PATH.
+
+    A drop that files keywords is the one gesture in this app that can take minutes, and
+    every attempt to reason about which part of it was slow has been wrong -- the phases
+    span a sidecar write, a synchronous rebuild of the whole keyword tree, a proxy
+    re-filter and four separate catalog queries, any of which is a plausible culprit and
+    none of which announces itself. So it is measured instead of argued about.
+
+    IT REPORTS WHENEVER THE MOVE WAS SLOW, not only under --perfprobe. A move that took a
+    minute is a bug report the user is holding, and asking them to reproduce it a second
+    time with a launch flag they were not told about is how a measurement gets lost. Under
+    a second it says nothing, which is every ordinary drop.
+
+    THE MARKS ARE PLACED WHERE THE WORK IS, including inside MW::rebuildKeywordFilters,
+    which is why the timer is a file-static rather than a local: that function is a phase
+    of the move and also has its own callers. mark() does nothing unless a move started
+    the clock, so the other callers cost a bool test.
+*/
+struct MovePhases
+{
+    QElapsedTimer clock;
+    QList<QPair<QString, qint64>> phases;
+    qint64 last = 0;
+    bool active = false;
+
+    void start()
+    {
+        phases.clear();
+        last = 0;
+        active = true;
+        clock.start();
+    }
+
+    void mark(const QString &name)
+    {
+        if (!active) return;
+        const qint64 now = clock.elapsed();
+        phases.append({name, now - last});
+        last = now;
+    }
+
+    /* Returns the total, so the caller can decide whether it was worth saying. */
+    qint64 report(const QString &what)
+    {
+        if (!active) return 0;
+        active = false;
+        const qint64 total = clock.elapsed();
+        if (!G::isPerfProbe && total < 1000) return total;
+
+        QStringList parts;
+        for (const auto &p : std::as_const(phases))
+            parts << QString("%1 %2 ms").arg(p.first).arg(p.second);
+        qDebug().noquote() << QString("[PERF] KWMOVE %1: total %2 ms | %3")
+                                  .arg(what).arg(total).arg(parts.join(" | "));
+        return total;
+    }
+};
+MovePhases movePhases;
+
+/*
+    What the per-image half of a move actually spends its time on, accumulated across
+    every row of every pass so one line can carry it. Separated from the phases above
+    because the loop is in MW::applyKeywordsToSelection, which a move calls once per
+    checked keyword -- a phase mark per call would report the number of keywords, not the
+    number of images.
+*/
+struct WritePhases
+{
+    qint64 readMeta = 0;        // dm->imMetadata: the model row into metadata->m
+    qint64 writeFile = 0;       // Metadata::writeXMP: the sidecar
+    qint64 writeModel = 0;      // three setValDm emissions
+    qint64 writeCatalog = 0;    // updateCatalogForRow: build the row and queue the commit
+    qint64 dupPair = 0;         // the hidden half of a raw+jpg pair: its sidecar and row
+    int rows = 0;
+    int written = 0;
+    int skipped = 0;            // nothing changed for that row
+
+    void reset() { *this = WritePhases(); }
+
+    QString line() const
+    {
+        return QString("rows %1 (wrote %2, unchanged %3) | read %4 ms | sidecar %5 ms | "
+                       "model %6 ms | rawjpg %7 ms | catalog %8 ms")
+            .arg(rows).arg(written).arg(skipped)
+            .arg(readMeta / 1000000).arg(writeFile / 1000000)
+            .arg(writeModel / 1000000).arg(dupPair / 1000000)
+            .arg(writeCatalog / 1000000);
+    }
+};
+WritePhases writePhases;
 
 }  // namespace
 
@@ -162,6 +255,25 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     const QString src = "MW::applyKeywordsToSelection";
     int written = 0;
 
+    /*  A STANDALONE CALL MEASURES ITSELF; A MOVE RESETS ONCE AND LETS ITS PASSES ADD UP.
+        rebuildFilters is false exactly when MW::applyKeywordMoves is driving, one pass per
+        checked keyword, and the interesting number there is images -- not passes. */
+    if (rebuildFilters) writePhases.reset();
+    writePhases.rows += rows.size();
+    QElapsedTimer stopwatch;
+    stopwatch.start();
+
+    /*  THE BAR NEEDS A MAXIMUM OR ITS VALUE MEANS NOTHING. The setProgress calls below
+        have been here from the start and had never moved anything: no caller set a
+        maximum, so the value ran against whatever a previous operation had left -- and
+        no caller made the bar VISIBLE either, so the two writes were invisible as well
+        as meaningless. Setting the range here rather than in each caller is what makes
+        that impossible to forget again; VISIBILITY stays the caller's, because it is the
+        caller that knows whether this is a long operation worth a bar or a single-image
+        tag that would only flicker one. */
+    G::popup->setProgressMax(rows.size());
+    G::popup->setProgress(0);
+
     for (int i = 0; i < rows.size(); ++i) {
         const int dmRow = rows.at(i);
         const QString fPath =
@@ -214,7 +326,9 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
             return v;
         };
         if (folded(next) == folded(have)) {
+            ++writePhases.skipped;
             G::popup->setProgress(i + 1);
+            G::popup->pulse();
             continue;
         }
 
@@ -225,14 +339,21 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
 
         /*  THE FILE FIRST. See the note at the top of this file: with no shadow column,
             updating the model before this would hide the edit from writeXMP. */
+        stopwatch.restart();
         dm->imMetadata(fPath, true);        // true = load metadata->m AND its shadows
         metadata->setKeywords(subject, hierarchical);
-        if (metadata->writeXMP(fPath, src)) ++written;
+        writePhases.readMeta += stopwatch.nsecsElapsed();
+
+        stopwatch.restart();
+        const bool wroteFile = metadata->writeXMP(fPath, src);
+        writePhases.writeFile += stopwatch.nsecsElapsed();
+        if (wroteFile) { ++written; ++writePhases.written; }
 
         /*  THEN THE MODEL, all three columns. The two source columns hold what the file
             now holds; the third is the prefix expansion the filters and the catalog read,
             and it is derived here exactly as DataModel::addMetadataForItem derives it so
             an edited row and a freshly read one cannot disagree. */
+        stopwatch.restart();
         const QStringList expanded =
             keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
         emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src, Qt::EditRole);
@@ -240,11 +361,13 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
                       Qt::EditRole);
         emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
                       Qt::EditRole);
+        writePhases.writeModel += stopwatch.nsecsElapsed();
 
         /*  A raw+jpg pair is ONE picture with two files, and the hidden half has to carry
             the same keywords or a keyword filter would hide one of them. Its sidecar is
             written too -- the hidden row is a real file the user may later see on its
             own. Mirrors what MW::setRating does for the rating. */
+        stopwatch.restart();
         if (combineRawJpg) {
             const int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
             if (rowDup >= 0) {
@@ -264,12 +387,20 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
                 updateCatalogForRow(rowDup);
             }
         }
+        writePhases.dupPair += stopwatch.nsecsElapsed();
 
         /*  And the index, so a keyword set in Catalog scope is searchable without
             reopening the folder. Scope-gated inside updateCatalogForRow: an EDIT must not
             be what puts an out-of-scope image into the catalog. */
+        stopwatch.restart();
         updateCatalogForRow(dmRow);
+        writePhases.writeCatalog += stopwatch.nsecsElapsed();
+
+        /*  THE BAR IS ACTUALLY DRAWN NOW. setProgress only writes the value, and nothing
+            in this loop turns the event loop, so on a long rewrite it sat at zero for the
+            whole operation. Popup::pulse throttles itself; see it for why that matters. */
         G::popup->setProgress(i + 1);
+        G::popup->pulse();
     }
 
     if (G::isLogger)
@@ -366,14 +497,19 @@ void MW::rebuildKeywordFilters(const QString &src)
     dm->sf->suspend(true, src);
     buildFilters->updateCategory(BuildFilters::KeywordEdit,
                                  BuildFilters::NoAfterAction, /*runSync*/ true);
+    movePhases.mark("updateCategory");
+
     filterChange(src);
+    movePhases.mark("filterChange");
 
     thumbView->refreshIcons(src);
     gridView->refreshIcons(src);
+    movePhases.mark("refreshIcons");
 
     /*  The rebuild recreated every keyword item, so the unfiled marking has to be put
         back on the new ones. Cheap: a set lookup per node. */
     refreshFilterVocabMarking();
+    movePhases.mark("vocabMarking");
 }
 
 void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
@@ -458,7 +594,12 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
     const QString oldFold = keywordFold(oldPath);
     int written = 0;
 
+    /*  setProgressMax, WHICH WAS MISSING. Without it the bar ran against whatever
+        maximum the last operation left -- QProgressBar's default 100 on a fresh session,
+        or the tidy's row count -- so on any run of more than that many images it pinned
+        at full immediately and reported nothing for the rest of the rewrite. */
     G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(rows.size());
     G::popup->setProgress(0);
 
     for (int i = 0; i < rows.size(); ++i) {
@@ -517,17 +658,19 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
         publishKeywordWrite(r, subject, hierarchical);
 
         G::popup->setProgress(i + 1);
+        G::popup->pulse();
     }
 
     G::popup->setProgressVisible(false);
 
     if (keywordVocab) keywordVocab->refreshCounts();
-    if (buildFilters && filters && filters->filtersBuilt) {
-        dm->sf->suspend(true, "MW::retagKeywordPath");
-        buildFilters->updateCategory(BuildFilters::KeywordEdit,
-                                     BuildFilters::NoAfterAction, /*runSync*/ true);
-        filterChange("MW::retagKeywordPath");
-    }
+
+    /*  rebuildKeywordFilters RATHER THAN A COPY OF IT. This was the same suspend /
+        updateCategory / filterChange sequence written out again, minus the two things
+        that function does afterwards -- and the marking was one of them, so a retag left
+        the freshly recreated keyword items unmarked until some later build happened to
+        run. One caller, one definition. */
+    rebuildKeywordFilters("MW::retagKeywordPath");
 
     G::popup->showPopup(QString("Updated %1 image%2.")
                             .arg(written).arg(written == 1 ? "" : "s"), 3000);
@@ -651,8 +794,7 @@ void MW::tidyFlatKeywords()
         return;
     }
 
-    G::popup->showPopup("Looking for flat keywords...", 0, true, 0.75);
-    qApp->processEvents();
+    G::popup->showPopupNow("Looking for flat keywords...", 0, true, 0.75);
     const QList<CatalogKeyword> flat = cat.flatKeywords();
     G::popup->reset();
 
@@ -765,18 +907,21 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
     G::popup->setProgressVisible(true);
     G::popup->setProgressMax(rows.size());
     G::popup->setProgress(0);
-    G::popup->showPopup(QString("Tidying keywords in %1 images...")
-                            .arg(QLocale().toString(rows.size())), 0, true, 0.75);
+    /*  showPopupNow, WHICH IS WHAT THE PUMP THAT USED TO FOLLOW WAS FOR. showPopup is
+        shown by a queued single-shot, so it does not appear until the event loop runs --
+        and this function then holds the GUI thread for minutes. Without the pump the
+        popup was still QUEUED when the loop finished, reset() hid a window that had never
+        been shown, and the queued show finally fired inside the completion QMessageBox's
+        own event loop: a "Tidying keywords" popup appeared AFTER the work was over, with
+        msDuration 0 (no hide timer) and nothing left to hide it. It sat on screen until
+        the app was restarted, reporting work that had finished hours before. Reported
+        from use.
 
-    /*  THE POPUP IS SHOWN BY A QUEUED SINGLE-SHOT, so it does not appear until the event
-        loop runs -- and this function then holds the GUI thread for minutes. Without this
-        pump the popup was still QUEUED when the loop finished, reset() hid a window that
-        had never been shown, and the queued show finally fired inside the completion
-        QMessageBox's own event loop: a "Tidying keywords" popup appeared AFTER the work
-        was over, with msDuration 0 (no hide timer) and nothing left to hide it. It sat on
-        screen until the app was restarted, reporting work that had finished hours before.
-        Reported from use, and the reason for both pumps in this function. */
-    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        Showing it synchronously answers that without an application pump, which on this
+        path was never a fair price: every one of those repainted the whole main window,
+        measured at 112-577 ms apiece on a keyword move. */
+    G::popup->showPopupNow(QString("Tidying keywords in %1 images...")
+                               .arg(QLocale().toString(rows.size())), 0, true, 0.75);
 
     for (int i = 0; i < rows.size(); ++i) {
         const CatalogRow &r = rows.at(i);
@@ -821,16 +966,26 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
         if (metadata->writeKeywordsToSidecar(r.path, subject, hierarchical)) ++written;
         publishKeywordWrite(r, subject, hierarchical);
 
-        G::popup->setProgress(i + 1);
-
         /*  AND THE BAR HAS TO BE ALLOWED TO PAINT. This loop owns the GUI thread for the
-            whole run -- thousands of sidecar writes -- so without a pump the progress bar
-            is a still picture and the only honest answer to "how far has it got?" is to
-            watch the file system. Every 25 rows keeps the cost negligible against a file
-            write. USER INPUT STAYS EXCLUDED: the model, the filters and the catalog are
-            all mid-rewrite, and a click that started a folder change here would reenter
-            everything this is walking. */
-        if ((i % 25) == 0) qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            whole run -- thousands of sidecar writes -- so without this the progress bar is
+            a still picture and the only honest answer to "how far has it got?" is to watch
+            the file system.
+
+            Popup::pulse, NOT AN APPLICATION PUMP. This was processEvents every 25 rows, on
+            the reasoning that one row in 25 is negligible against a file write. The pump
+            is not what is negligible: it repaints the entire main window, 112-577 ms a
+            time as measured on a keyword move, so a tidy over ten thousand images spent
+            longer painting than writing. pulse repaints the popup alone and throttles
+            itself on TIME rather than on row count, which is the honest unit -- ten a
+            second whether the rows take a microsecond or a second each.
+
+            IT ALSO CLOSES A RE-ENTRANCY HOLE rather than managing one. The old pump had to
+            exclude user input, because the model, the filters and the catalog are all
+            mid-rewrite and a click that started a folder change here would reenter
+            everything this walks. Nothing is delivered now, so there is nothing to
+            exclude. */
+        G::popup->setProgress(i + 1);
+        G::popup->pulse();
     }
 
     G::popup->setProgressVisible(false);
@@ -857,7 +1012,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
 }
 
 
-void MW::ensureKeywordVocabLoaded()
+void MW::ensureKeywordVocabLoaded(bool withCounts)
 {
 /*
     Load the vocabulary if it is not loaded yet.
@@ -877,11 +1032,18 @@ void MW::ensureKeywordVocabLoaded()
     expansion state goes with it -- and being raised as a tab is not a reason to collapse
     the branch someone was reading. Counts are refreshed instead, which is what actually
     goes stale.
+
+    withCounts = false FOR A CALLER THAT IS ABOUT TO CHANGE THE COUNTS ITSELF. Refreshing
+    them is a whole-vocabulary catalog query -- 106 ms of the 1.7 seconds a keyword move
+    spent, measured, and thrown away moments later by the move's own refresh at the end.
+    The two jobs were welded together because the routes to visibility wanted both; a
+    caller that only needs the tree POPULATED should not pay for a number it is about to
+    invalidate.
 */
     if (!keywordVocab || !keywordsDock) return;
 
     if (keywordVocab->rowCount(QModelIndex()) > 0) {
-        keywordVocab->refreshCounts();
+        if (withCounts) keywordVocab->refreshCounts();
         return;
     }
     /*  No database yet: not an error and not an empty vocabulary, just too early. */
@@ -1072,7 +1234,9 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     if (G::isLogger) G::log("MW::applyKeywordMoves");
     if (!dm || !sel || !filters) return 0;
 
-    ensureKeywordVocabLoaded();
+    /*  The counts are refreshed at the END of this function, after the move has changed
+        them. Asking for them here as well was a second whole-vocabulary query per drop. */
+    ensureKeywordVocabLoaded(/*withCounts*/ false);
     if (!keywordVocab) return 0;
 
     const QModelIndex targetIdx = keywordVocab->indexForPath(targetNodePath);
@@ -1163,6 +1327,10 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     KeywordDropDlg dlg(targetNodePath, moves, skipped, folderScope, folderName, this);
     if (dlg.exec() != QDialog::Accepted) return 0;
 
+    /*  THE CLOCK STARTS WHERE THE USER'S WAIT STARTS -- at Apply, not at the drop, since
+        everything above is resolving paths and asking. See MovePhases. */
+    movePhases.start();
+
     /*  NOW the vocabulary changes. insertChild writes the row and the tree together, and
         the parent always exists: a resolved target is either the drop node itself, one of
         its children, or a new child of it. */
@@ -1172,6 +1340,7 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
         if (!parent.isValid()) continue;
         keywordVocab->insertChild(parent, keywordLeafOf(m.to));
     }
+    movePhases.mark("vocab inserts");
 
     /*  Where the user was, restored at the end: a drop must not silently move them. Same
         contract as applyKeywordToPaths, which is why it is spelled the same way. */
@@ -1191,19 +1360,27 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
         lifts it. */
     dm->sf->suspend(true, src);
 
-    /*  A BUSY POPUP FOR THE WHOLE OPERATION, and it must be PUMPED onto the screen before
-        the loop starts. This is a synchronous rewrite of every affected sidecar followed
-        by a synchronous rebuild of the entire keyword tree; on a real library that is
-        minutes of a frozen window, which is indistinguishable from a hang and was
-        reported as one for the tidy dialog. Same rule, same fix -- see "TWO PUMPS FIX IT"
-        in the Tidying Flat Keywords notes. msDuration 0 means it stays until reset.
+    /*  A BUSY POPUP FOR THE WHOLE OPERATION, PAINTED WITHOUT PUMPING THE APPLICATION.
+        This is a synchronous rewrite of every affected sidecar followed by a synchronous
+        rebuild of the entire keyword tree; on a real library that is minutes of a frozen
+        window, which is indistinguishable from a hang and was reported as one for the
+        tidy dialog. msDuration 0 means it stays until reset.
 
-        USER INPUT STAYS EXCLUDED: the model, the filters and the catalog are all
-        mid-rewrite, and a click that started a folder change would reenter everything
-        this is walking. */
-    G::popup->showPopup("Busy updating the image file keywords and refreshing this "
-                        "filter", 0);
-    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        showPopupNow RATHER THAN showPopup + processEvents, which is what this was and
+        what made the feedback cost more than the work. The pump was needed because
+        showPopup defers through a zero timer, and it repainted the WHOLE main window to
+        deliver it: 923 ms across the three pumps in this function, against 4 ms of actual
+        sidecar writing, measured. See Popup::showPopupNow.
+
+        DROPPING THE PUMP ALSO REMOVES A RE-ENTRANCY HAZARD the old comment here was
+        managing rather than avoiding: it excluded user input because the model, the
+        filters and the catalog are all mid-rewrite and a click that started a folder
+        change would reenter everything this walks. Nothing is delivered now, so there is
+        nothing to exclude. */
+    G::popup->setProgressVisible(true);
+    G::popup->showPopupNow("Busy updating the image file keywords and refreshing this "
+                           "filter", 0);
+    movePhases.mark("popup");
 
     for (const KeywordMove &m : moves) {
         const QString fromFold = keywordFold(m.from);
@@ -1227,6 +1404,12 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
         applyKeywordsToSelection({m.to}, {m.from}, /*rebuildFilters*/ false);
         filed += m.images;
     }
+    movePhases.mark("write loop");
+
+    /*  THE BAR GOES BEFORE THE PHASE MESSAGES. What follows is a rebuild and four
+        queries, none of which counts images, and a bar still sitting at 100% under a
+        message about something else is a worse answer than no bar. */
+    G::popup->setProgressVisible(false);
 
     QItemSelection restore;
     for (const QModelIndex &idx : wasSelected) restore.select(idx, idx);
@@ -1237,18 +1420,19 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
             dm->selectionModel->setCurrentIndex(wasCurrent,
                                                 QItemSelectionModel::NoUpdate);
     }
+    movePhases.mark("restore selection");
 
     /*  THE PHASES AFTER THE WRITING ARE NOT FREE AND THE POPUP SAYS WHICH ONE IS RUNNING.
         Rebuilding the keyword tree and re-counting the vocabulary are seconds on a real
         library, and a popup still reading "updating the image file keywords" while they
-        run describes work that finished a while ago. Each pump is what actually repaints
-        it -- a message set and not pumped is a message nobody sees. */
+        run describes work that finished a while ago. showPopupNow is what puts each one
+        on the screen -- a message set and not painted is a message nobody sees. */
     auto phase = [](const QString &text) {
-        G::popup->showPopup(text, 0);
-        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        G::popup->showPopupNow(text, 0);
     };
 
     phase("Rebuilding the keyword filters");
+    movePhases.mark("pump");
 
     /*  ONE rebuild for the whole drop, then the counts and the marking. removeUnusedRoots
         must come AFTER refreshCounts, which is the condition it tests: a root is only
@@ -1258,14 +1442,29 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     rebuildKeywordFilters(src);
 
     phase("Updating the keyword list counts");
+    movePhases.mark("pump");
 
     Catalog &cat = Catalog::instance();
+
+    /*  THE QUEUE IS DRAINED UNDER ITS OWN NAME, and that is the only reason this line
+        exists. MW::updateCatalogForRow posts ONE pooled commit per written image, and
+        every catalog call below has to take the same mutex -- so without this the whole
+        wait for those commits would be charged to whichever query happened to be first
+        and would read as "pruneUnusedKeywords took four minutes". count() is one indexed
+        query; what it measures is the queue in front of it. */
+    if (cat.isAvailable()) cat.count();
+    movePhases.mark("catalog queue drain");
+
     if (cat.isAvailable()) cat.pruneUnusedKeywords();
+    movePhases.mark("pruneUnusedKeywords");
+
     keywordVocab->refreshCounts();
+    movePhases.mark("refreshCounts");
 
     QStringList movedFrom;
     for (const KeywordMove &m : moves) movedFrom << m.from;
     keywordVocab->removeUnusedRoots(movedFrom);
+    movePhases.mark("removeUnusedRoots");
 
     /*  THE FILTERS ARE REFRESHED, NOT REPOINTED, AND NOT CLEARED. Winnow does not touch
         the checks at all here, and that is the whole of it: rebuildKeywordFilters has
@@ -1288,19 +1487,187 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
 */
 
     refreshFilterVocabMarking();
+    movePhases.mark("vocabMarking");
+
     refreshKeywordsDock();
-    verifyKeywordMoveCounts(moves);
+    movePhases.mark("keywordsDock");
+
+    /*  DIAGNOSTIC SESSIONS ONLY -- one indexed catalog query per moved keyword, 111 ms
+        on the author's library, on every drop. It was written to catch the Filters-vs-dock
+        disagreement, and that is now prevented at the writer rather than detected here:
+        Catalog::writeKeywordsLocked derives the links from the text the same commit
+        stores, pinned by tst_catalog::linksFollowTheTextEvenWhenTheExpansionDisagrees. So
+        this is a second opinion worth having when a count looks wrong and worth nothing
+        the rest of the time. Either switch turns it on -- --perfprobe, or verbose issues
+        from the Help menu -- so it is reachable without a rebuild. */
+    if (G::isPerfProbe || G::isVerboseIssues) verifyKeywordMoveCounts(moves);
+    movePhases.mark("verifyCounts");
 
     /*  RESET LAST, AFTER EVERY PHASE. The popup used to close here and leave the counts,
         the marking and the verification running behind a window that looked finished --
         which is exactly the interval the user reported as "the count took several
         seconds". Feedback has to outlast the work, not the writing. */
     G::popup->reset();
+    movePhases.mark("popup reset");
+
+    const qint64 moveMs =
+        movePhases.report(QString("%1 image%2 into %3")
+                              .arg(filed).arg(filed == 1 ? "" : "s").arg(targetNodePath));
+    if (G::isPerfProbe || moveMs >= 1000)
+        qDebug().noquote() << "[PERF] KWMOVE writes:" << writePhases.line();
 
     if (G::isLogger)
         G::log("MW::applyKeywordMoves", QString("filed %1 images into %2")
                                             .arg(filed).arg(targetNodePath));
     return filed;
+}
+
+void MW::mergeUnfiledKeyword(const QString &unfiledPath)
+{
+/*
+    MERGE AN UNFILED KEYWORD BRANCH INTO THE KEYWORD LIST, from the Filters panel.
+
+    THE GAP THIS FILLS. A keyword the catalog holds and the vocabulary does not is drawn
+    unfiled in Filters, and until now neither route to fixing it could move a BRANCH.
+    Dragging its photographs onto a node (applyKeywordMoves) carries only the dropped
+    keyword's LEAF, so "New Zealand|North Island|Wellington" arrives as "Wellington" and
+    two levels of the user's own structure are gone -- keywordDropTarget says as much.
+    KeywordVocab::reparentMerging keeps tails at any depth, and needs a vocabulary node on
+    BOTH sides, which is precisely what an unfiled branch does not have. So the operation
+    the user actually wants had no gesture at all.
+
+    IT IS A RETAG, NOT A VOCABULARY MOVE, and that is what makes the tails survive.
+    Nothing is dragged: the whole thing is MW::retagKeywordPath rewriting a PREFIX --
+    newPath + p.mid(oldPath.size()) -- over every image the catalog says carries the old
+    path or anything beneath it. Depth is irrelevant to a prefix rewrite, and the images
+    need not be loaded, which is the other thing the drag could not do.
+
+    THE KEYWORD LIST GAINS THE TAILS, OR THE PROBLEM HAS ONLY MOVED. After the rewrite
+    those photographs carry Location|New Zealand|Castlepoint; if the list has no
+    Castlepoint under Location|New Zealand, Filters marks the result unfiled again and the
+    user has swapped one red branch for another. So every observed tail is rebuilt under
+    the chosen parent -- and only the ones that are missing, since insertPaths skips what
+    is already there.
+
+    NOTHING IS CREATED BEFORE THE USER AGREES, the same contract applyKeywordMoves keeps:
+    the targets and the nodes each would add are COMPUTED, shown, and only then inserted.
+    Cancelling leaves the keyword list exactly as it was, not merely the photographs.
+*/
+    if (G::isLogger) G::log("MW::mergeUnfiledKeyword", unfiledPath);
+    if (unfiledPath.isEmpty() || !filters) return;
+
+    /*  WITH THE COUNTS, unlike applyKeywordMoves. There the counts are recomputed at the
+        end and refreshing them on entry was waste; here they are an INPUT -- when two
+        branches share a name, how many photographs each already holds is usually the
+        whole basis for choosing between them, and a stale number would decide it wrong. */
+    ensureKeywordVocabLoaded();
+    if (!keywordVocab) return;
+
+    Catalog &cat = Catalog::instance();
+    if (!cat.isAvailable()) {
+        G::popup->showPopup("The catalog is not available.", 2000);
+        return;
+    }
+
+    const QString oldFold = keywordFold(unfiledPath);
+    const QString leafFold = keywordFold(keywordLeafOf(unfiledPath));
+
+    /*  EVERY VOCABULARY BRANCH OF THAT NAME. The leaf is what identifies a candidate --
+        the same rule keywordDropTarget applies when a drop target's own leaf IS the
+        keyword -- because the parents are exactly what the user is choosing between. */
+    QList<KeywordMergeTarget> targets;
+    std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+        for (int i = 0; i < keywordVocab->rowCount(parent); ++i) {
+            const QModelIndex idx = keywordVocab->index(i, 0, parent);
+            const QString p = idx.data(KeywordVocab::PathRole).toString();
+            if (!p.isEmpty() && keywordFold(keywordLeafOf(p)) == leafFold
+                && keywordFold(p) != oldFold) {
+                KeywordMergeTarget t;
+                t.path = p;
+                t.images = idx.data(KeywordVocab::CountRole).toInt();
+                targets << t;
+            }
+            walk(idx);
+        }
+    };
+    walk(QModelIndex());
+
+    if (targets.isEmpty()) {
+        /*  The panel disables the action in this case, so arriving here means the
+            vocabulary changed between the menu opening and the click. Say the same thing
+            the disabled item says rather than nothing. */
+        G::popup->showPopup(QString("Your keyword list has no branch called \"%1\". Add "
+                                    "one in the Keywords dock first.")
+                                .arg(keywordLeafOf(unfiledPath)), 4000);
+        return;
+    }
+
+    /*  WHAT IS MOVING, from the CATALOG rather than from the Filters tree. The panel
+        shows what the current scope holds; the rewrite reaches the whole library, and the
+        node list offered has to describe the same set the operation will touch. Every
+        indexed path at or beneath the unfiled one, ancestors included -- they are
+        ordinary rows in the keyword table (see keywordPrefixExpand). */
+    QStringList observed;
+    for (const CatalogKeyword &k : cat.keywords()) {
+        if (k.path.isEmpty()) continue;
+        /*  CARRIED BY SOMETHING, or it is not a branch of this library. keyword rows
+            outlive the images that made them until a prune runs, and building the keyword
+            list from stale ones would file names nothing carries -- the opposite of what
+            this operation is for. */
+        if (k.count <= 0) continue;
+        if (keywordIsDescendant(keywordFold(k.path), oldFold)) observed << k.path;
+    }
+    if (observed.isEmpty()) observed << unfiledPath;
+
+    /*  WHAT EACH CHOICE WOULD ADD TO THE LIST. Computed per target, because the answer
+        differs per target: a destination that already has Castlepoint under it adds one
+        node fewer than one that does not. */
+    for (KeywordMergeTarget &t : targets) {
+        QStringList moved;
+        for (const QString &p : std::as_const(observed))
+            moved << t.path + p.mid(unfiledPath.size());
+        for (const QString &p : keywordPrefixExpand(moved))
+            if (!keywordVocab->indexForPath(p).isValid()) t.createsNodes << p;
+        /*  THE REST OF THE BRANCH, so the dialog's numbers add up to the one in its
+            heading. createsNodes is a subset of moved -- the expansion only adds
+            ancestors of the target, which exist by definition -- so the difference is
+            exactly what this destination already holds. */
+        t.alreadyThere = observed.size() - t.createsNodes.size();
+    }
+
+    const QString folder = dm && dm->rowCount() > 0
+        ? dm->index(0, G::FolderNameColumn).data().toString() : QString();
+    const int catalogCount = cat.imagesUnderKeyword(unfiledPath);
+    const int folderCount = folder.isEmpty() ? 0
+                                             : cat.imagesUnderKeyword(unfiledPath, folder);
+    if (catalogCount == 0) {
+        G::popup->showPopup("No images carry that keyword any more.", 3000);
+        return;
+    }
+
+    KeywordMergeDlg dlg(unfiledPath, observed.size(), targets, folderCount, catalogCount,
+                        G::scope != G::Scope::Catalog, folder, this);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    const QString chosen = dlg.target();
+    if (chosen.isEmpty()) return;
+
+    /*  NOW the keyword list changes -- one reset and one transaction for the whole
+        branch, which is what insertPaths exists for: a node at a time would reset the
+        model dozens of times and rebuild the Filters marking after each. */
+    for (const KeywordMergeTarget &t : std::as_const(targets)) {
+        if (t.path != chosen) continue;
+        if (!t.createsNodes.isEmpty()) keywordVocab->insertPaths(t.createsNodes);
+        break;
+    }
+
+    /*  And the photographs. retagKeywordPath owns the popup, the progress and the
+        rebuild; it is the same call a rename or a re-parent makes, which is the point --
+        one definition of "rewrite this prefix everywhere". */
+    retagKeywordPath(unfiledPath, chosen,
+                     dlg.choice() == KeywordMergeDlg::ThisFolder ? folder : QString());
+
+    refreshKeywordsDock();
 }
 
 void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imagePaths)

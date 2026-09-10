@@ -2,6 +2,7 @@
 
 void MW::setCentralMessage(QString message)
 {
+    IngestProbe::Scope _ip("MW::setCentralMessage");
     QString fun = "MW::setCentralMessage";
     if (G::isLogger) G::log(fun, message);
     centralLayout->setCurrentIndex(MessageTab);
@@ -977,6 +978,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     If the image is the current one, then imageView is called.
 
 */
+    IngestProbe::Scope _ip("MW::refreshViewsOnCacheChange");
     QString srcFun = "MW::refreshViewsOnCacheChange";
 
     int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
@@ -1017,6 +1019,10 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
 
     if (isCached && isCurrent && !isVideo) {
         // qDebug() << "MW::refreshViewsOnCacheChange call imageView->loadImage" << fPath;
+        /*  THE OTHER END OF A LOUPE MISS. fileSelectionChange left the loupe blank
+            because the image was not cached; this is the moment it is filled in, and the
+            gap between the two is exactly how long the user looked at nothing. */
+        if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         applyDevelopPreviewIfEdited();   // overlay saved develop edits once the decode is cached
@@ -1052,6 +1058,7 @@ void MW::updateClassification()
     and then the user switches to a folder with no images or ejects the drive then make
     sure the classification label is not visible.
 */
+    IngestProbe::Scope _ip("MW::updateClassification");
     if (G::isLogger) G::log("MW::updateClassification");
     // check if still in a folder with images
     if (dm->rowCount() < 1) {
@@ -1092,6 +1099,7 @@ void MW::updateSidecarStatus(QString fPath)
     The icon refresh still goes through the proxy, because that is what a VIEW draws, and
     an invalid index there simply means there is nothing on screen to repaint.
 */
+    IngestProbe::Scope _ip("MW::updateSidecarStatus");
     QString srcFun = "MW::updateSidecarStatus";
     if (G::isLogger) G::log(srcFun, fPath);
 

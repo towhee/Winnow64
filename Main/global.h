@@ -530,6 +530,14 @@ Q_NAMESPACE
        A/B load-pipeline changes against the recursive pictures tree. Off in production. */
     extern bool isPerfProbe;
 
+    /* When true the ingest probe (Utilities/ingestprobe.h) records the selection ->
+       loupe path and the classification keys, and prints [INGEST] lines for anything
+       abnormal. Armed and read from Help > Diagnostics; off in production, where the
+       cost is one relaxed atomic load at each hook site. Separate from isPerfProbe
+       because that one measures a LOAD and this one measures a cull, and turning on
+       everything at once buries the thing being looked for. */
+    extern std::atomic<bool> isIngestProbe;
+
     /* When true, DataModel::addFolder throttles its "Searching for images…" progress
        message (emit centralMsg) to ~50 ms. Each emit drives MW::setCentralMessage, which
        does a synchronous repaint(); firing it once per folder cost ~1.3 s over a 1333-folder

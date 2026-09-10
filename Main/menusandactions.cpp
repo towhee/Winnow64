@@ -2,7 +2,7 @@
 #include "Cache/devpreviewcache.h"
 
 /* PROBE copy-path (temporary): tagged tracing for the context-menu Copy path bug. */
-static const bool probeCopyPathMenus = true;
+static const bool probeCopyPathMenus = false;
 
 void MW::createActions()
 {
@@ -2000,6 +2000,33 @@ void MW::createHelpActions()
     addAction(diagnosticsMemoryAction);
     connect(diagnosticsMemoryAction, &QAction::triggered, this, &MW::diagnosticsMemory);
 
+    /*  THE INGEST PROBE IS A TOGGLE, NOT A REPORT, and it is listed first because it has
+        to be armed BEFORE the session it measures. A report read from a probe that was
+        never armed says so (see IngestProbe::Report), rather than presenting an empty
+        run as a clean one. */
+    ingestProbeArmAction = new QAction(tr("Ingest probe (record cull session)"), this);
+    ingestProbeArmAction->setObjectName("ingestProbeArm");
+    ingestProbeArmAction->setCheckable(true);
+    /*  Winnow --ingestprobe set the flag before the window existed, so the menu has to
+        agree with it -- and the probe's clock has to be started, which only Arm does. */
+    ingestProbeArmAction->setChecked(G::isIngestProbe.load(std::memory_order_relaxed));
+    if (ingestProbeArmAction->isChecked()) {
+        IngestProbe::Instance().Arm(true);
+        armGuiStallWatchdog();
+    }
+    ingestProbeArmAction->setToolTip(
+        tr("Record every selection, loupe outcome and classification keypress. "
+           "Read the result with \"Ingest probe report\"."));
+    ingestProbeArmAction->setShortcutVisibleInContextMenu(true);
+    addAction(ingestProbeArmAction);
+    connect(ingestProbeArmAction, &QAction::triggered, this, &MW::toggleIngestProbe);
+
+    diagnosticsIngestAction = new QAction(tr("Ingest probe report"), this);
+    diagnosticsIngestAction->setObjectName("diagnosticsIngest");
+    diagnosticsIngestAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsIngestAction);
+    connect(diagnosticsIngestAction, &QAction::triggered, this, &MW::diagnosticsIngest);
+
     diagnosticsEmbellishAction = new QAction(tr("Embellish diagnostics"), this);
     diagnosticsEmbellishAction->setObjectName("diagnosticsEmbellish");
     diagnosticsEmbellishAction->setShortcutVisibleInContextMenu(true);
@@ -2553,6 +2580,9 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsMemoryAction);
     helpDiagnosticsMenu->addAction(diagnosticsFiltersAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
+    helpDiagnosticsMenu->addSeparator();
+    helpDiagnosticsMenu->addAction(ingestProbeArmAction);
+    helpDiagnosticsMenu->addAction(diagnosticsIngestAction);
 }
 
 void MW::createMainMenu()

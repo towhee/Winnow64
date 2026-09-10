@@ -600,8 +600,9 @@ void Embel::addImageToScene()
     // }
 
     // QHash<QString, QImage> imCache
-    if (icd->contains(fPath)) {
-        pm = QPixmap::fromImage(icd->imCache.value(fPath)).scaledToWidth(image.w);
+    QImage cached;                                  // one locked lookup
+    if (icd->get(fPath, cached) && !cached.isNull()) {
+        pm = QPixmap::fromImage(cached).scaledToWidth(image.w);
     }
     else {
         pm = pmItem->pixmap().scaledToWidth(image.w);
@@ -849,8 +850,9 @@ void Embel::updateImage()       // all effects bundled in style
         // }
 
         // QHash<QString, QImage> imCache
-        if (icd->contains(fPath)) {
-            pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)).scaledToWidth(image.w));
+        QImage cached;                              // one locked lookup
+        if (icd->get(fPath, cached) && !cached.isNull()) {
+            pmItem->setPixmap(QPixmap::fromImage(cached).scaledToWidth(image.w));
         }
 
         GraphicsEffect *imageEffect = new GraphicsEffect(src);

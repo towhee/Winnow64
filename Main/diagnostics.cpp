@@ -867,7 +867,41 @@ void MW::diagnosticsFSTree() {diagnosticsReport(fsTree->diagnostics(), "Winnow D
 void MW::diagnosticsBookmarks() {} // dummy for now
 void MW::diagnosticsPixmap() {} // dummy for now
 void MW::diagnosticsThumb() {} // dummy for now
-void MW::diagnosticsIngest() {} // dummy for now
+void MW::toggleIngestProbe()
+{
+/*
+    Arm or disarm the ingest probe (Utilities/ingestprobe.h).
+
+    IT ALSO ARMS THE GUI STALL WATCHDOG, because "the app froze for two seconds" and
+    "the loupe was blank" are the same complaint told from either end, and the probe's
+    report has a line for stalls that would otherwise always read zero. The watchdog is
+    one timer callback four times a second and is never disarmed once started
+    (armGuiStallWatchdog is idempotent).
+
+    ARMING CLEARS THE BUFFERS; disarming keeps them, so the report can still be read
+    afterwards. That asymmetry is deliberate: a probe is armed to measure what happens
+    NEXT, and read after the fact.
+*/
+    if (G::isLogger) G::log("MW::toggleIngestProbe");
+    const bool on = ingestProbeArmAction->isChecked();
+    G::isIngestProbe.store(on, std::memory_order_relaxed);
+    IngestProbe::Instance().Arm(on);
+    /*  The watchdog is armed once and never taken down, so arming the probe LATER has to
+        re-tighten its interval -- otherwise it keeps ticking at 250 ms and cannot resolve
+        the short pause the probe was armed to find. */
+    if (on) armGuiStallWatchdog();
+    if (guiStallTimer) guiStallTimer->setInterval(guiStallInterval());
+    G::popup->showPopup(on
+        ? "Ingest probe recording.<br>Read it at Help > Diagnostics > Ingest probe report."
+        : "Ingest probe stopped.  The recording is kept until it is armed again.", 3000);
+    updateStatus(true, on ? "Ingest probe recording" : "", "MW::toggleIngestProbe");
+}
+
+void MW::diagnosticsIngest()
+{
+    if (G::isLogger) G::log("MW::diagnosticsIngest");
+    diagnosticsReport(IngestProbe::Instance().Report(), "Winnow Diagnostics: Ingest Probe");
+}
 void MW::diagnosticsZoom() {} // dummy for now
 
 void MW::diagnosticsReport(QString reportString, QString title)
