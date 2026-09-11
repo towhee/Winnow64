@@ -19,6 +19,16 @@ TableView::TableView(QWidget *parent, DataModel *dm)
     horizontalHeader()->setSortIndicatorShown(false);
     horizontalHeader()->setSectionsMovable(true);
     horizontalHeader()->setStretchLastSection(true);
+    /*  HOW MANY ROWS A COLUMN WIDTH IS MEASURED FROM. Qt's default is 1000, and
+        resizeColumns() calls resizeColumnToContents for every one of the ~78 columns --
+        up to 78,000 delegate sizeHint() calls, each pulling a cell through the proxy, on
+        the GUI thread. Measured as the bulk of MW::folderChangeCompleted's 809 ms on a
+        3,404-row card folder.
+
+        50 is plenty for what these columns hold: dates, camera and lens names, apertures.
+        A value that only appears below row 50 and is wider than everything above it gets
+        an elided cell rather than a wider column -- and the columns are user-resizable. */
+    horizontalHeader()->setResizeContentsPrecision(50);
     verticalHeader()->setVisible(false);
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
@@ -178,7 +188,7 @@ void TableView::ensureRowVisible(int row, QString source)
     QModelIndex sfIdx = dm->sf->index(row, frozenColumns);
     if (!sfIdx.isValid()) return;
     int hPos = horizontalScrollBar()->value();
-    G::ignoreScrollSignal = true;
+    G::ScrollSignalGuard scrollGuard;   // our own scroll, not the user's
     scrollTo(sfIdx, QAbstractItemView::EnsureVisible);
     horizontalScrollBar()->setValue(hPos);
 }
@@ -193,7 +203,7 @@ void TableView::scrollToCurrent()
 
     int hPos = horizontalScrollBar()->value();
     QModelIndex sfIdx = dm->sf->index(currentIndex().row(), frozenColumns);
-    G::ignoreScrollSignal = true;
+    G::ScrollSignalGuard scrollGuard;   // our own scroll, not the user's
     scrollTo(sfIdx, ScrollHint::PositionAtCenter);
     horizontalScrollBar()->setValue(hPos);
 }

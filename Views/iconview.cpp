@@ -651,7 +651,7 @@ void IconView::setThumbSize()
     QModelIndex centerIdx = indexAt(centerPoint);
     int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
 
-    G::ignoreScrollSignal = true;
+    G::ScrollSignalGuard scrollGuard;   // the resize scrolls; that is not the user
     setThumbParameters();
 
     // Re-synchronize the visible range for metadata/caching
@@ -1278,7 +1278,7 @@ void IconView::scrollToCurrent(QString source)
            ;
     // */
 
-    G::ignoreScrollSignal = true;
+    G::ScrollSignalGuard scrollGuard;   // our own scroll, not the user's
     if (dm->currentSfIdx.isValid()) {
         scrollTo(dm->currentSfIdx, ScrollHint::PositionAtCenter);
         // updateMidVisibleCell(src);
@@ -1297,7 +1297,7 @@ void IconView::ensureRowVisible(int row, QString source)
                QVariant(row).toString() + " src = " + source);
     QModelIndex idx = dm->sf->index(row, 0);
     if (!idx.isValid()) return;
-    G::ignoreScrollSignal = true;
+    G::ScrollSignalGuard scrollGuard;   // our own scroll, not the user's
     scrollTo(idx, QAbstractItemView::EnsureVisible);
 }
 

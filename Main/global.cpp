@@ -277,7 +277,7 @@ std::atomic<int>    probeEmitSuppressed{0};
 // status
 // bool isModifyingDatamodel;
 bool isFirstImageNewInstance;
-bool ignoreScrollSignal;
+bool ignoreScrollSignal = false;   // owned by G::ScrollSignalGuard; see global.h
 bool resizingIcons;
 bool isSlideShow;
 bool isRunningColorAnalysis;

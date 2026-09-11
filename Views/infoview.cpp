@@ -553,13 +553,25 @@ void InfoView::updateInfo(const int &row)
     s = dm->sf->index(row, G::LensColumn).data().toString();
     ok->setData(ok->index(LensRow, 1, imageInfoIdx), s);
 
+    /*  GUARD THE DOUBLE, NOT THE QVARIANT.
+
+        This tested `value == 0`, which compares a QVariant against QVariant(int 0) -- and
+        an INVALID QVariant is not equal to 0. A row whose metadata has not landed yet
+        (the info panel updates on every selection, including during a load or a re-sort)
+        therefore fell into the else branch with toDouble() == 0.0, and 1 / 0.0 is +inf.
+        Qt 6.9 made qRound's conversion checked, so that is now an abort --
+        qCheckedFPConversionToInteger -> qRound -> InfoView::updateInfo, caught by the
+        --selftest stress pass. In a release build it was a garbage shutter speed instead.
+
+        An empty QString in that column reaches the same place by the same route. */
     value = dm->sf->index(row, G::ShutterspeedColumn).data();
-    if (value == 0) s = "";
+    const double shutter = value.toDouble();
+    if (shutter <= 0.0) s = "";
     else {
-        if (value.toDouble() < 1.0) {
-            double recip = 1 / value.toDouble();
+        if (shutter < 1.0) {
+            double recip = 1 / shutter;
             if (recip >= 2) s = "1/" + QString::number(qRound(recip));
-            else s = QString::number(value.toDouble(), 'g', 2);
+            else s = QString::number(shutter, 'g', 2);
         } else {
             s = QString::number(value.toInt());
         }
