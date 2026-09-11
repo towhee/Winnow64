@@ -55,7 +55,10 @@ void MW::writeSettings()
     settings->setValue("ignoreAddThumbnailsDlg", ignoreAddThumbnailsDlg);
     settings->setValue("renderVideoThumb", G::renderVideoThumb);
     settings->setValue("isLogAllToFileForDebugging", G::isLogger);
-    settings->setValue("wheelSensitivity", G::wheelSensitivity);
+    /* wheelSensitivityPct supersedes wheelSensitivity, which held 1 - 210 on the
+       opposite (larger = less sensitive) scale.  See loadSettings for the migration. */
+    settings->setValue("wheelSensitivityPct", G::wheelSensitivity);
+    settings->remove("wheelSensitivity");
 
     // datamodel
     settings->setValue("maxIconSize", G::maxIconSize);
@@ -348,7 +351,7 @@ bool MW::loadSettings()
         G::isLogger = false;
         G::isRunByExtern = false;
         G::isIssueLogger = false;
-        G::wheelSensitivity = 40;
+        G::wheelSensitivity = 50;           // percent of maximum sensitivity
         G::modifySourceFiles = false;
         G::backupBeforeModifying = false;
         G::autoAddMissingThumbnails = false;
@@ -474,10 +477,20 @@ bool MW::loadSettings()
     else
         G::renderVideoThumb = false;
 
-    if (settings->contains("wheelSensitivity"))
-        G::wheelSensitivity = settings->value("wheelSensitivity").toInt();
-    else
-        G::wheelSensitivity = 40;
+    /* Mouse wheel sensitivity is now a percent (1 - 100, larger = more sensitive).
+       The superseded wheelSensitivity key held 1 - 210 on the opposite scale, so an
+       existing setting is converted rather than read as a percent, which would
+       reverse the user's choice and clip everything above 100. */
+    if (settings->contains("wheelSensitivityPct")) {
+        G::wheelSensitivity = qBound(1, settings->value("wheelSensitivityPct").toInt(), 100);
+    }
+    else if (settings->contains("wheelSensitivity")) {
+        int prev = qBound(1, settings->value("wheelSensitivity").toInt(), 210);
+        G::wheelSensitivity = qRound(100.0 - (prev - 1) * 99.0 / 209.0);
+    }
+    else {
+        G::wheelSensitivity = 50;
+    }
 
     if (settings->contains("pickAudioVolume")) {
         pickClickvolume = settings->value("pickAudioVolume").toFloat() / 100;

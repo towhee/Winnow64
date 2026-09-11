@@ -431,7 +431,7 @@ void Preferences::itemChange(QModelIndex idx)
     }
 
     if (source == "wheelSensitivity") {
-        G::wheelSensitivity = v.toInt();
+        G::wheelSensitivity = qBound(1, v.toInt(), 100);
     }
 
     if (source == "globalFontSize") {
@@ -906,18 +906,19 @@ void Preferences::addUserInterface()
     // Mouse wheel sensitivity
     i.name = "wheelSensitivity";
     i.parentName = "UserInterfaceHeader";
-    i.captionText = "Next/prev image scroll sensitivity";
-    i.tooltip = "Fine tune the sensitivity of the mouse wheel or trackpad\n"
-                "to trigger the next or previous image in loupe view.";
+    i.captionText = "Mouse wheel / trackpad sensitivity";
+    i.tooltip = "Percent of maximum sensitivity. In the thumbnail and grid \n"
+                "views each mouse wheel click scrolls further at higher \n"
+                "sensitivity.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.defaultValue = 75;
+    i.defaultValue = 50;
     i.value = G::wheelSensitivity;
     i.key = "wheelSensitivity";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 1;
-    i.max = 210;
+    i.max = 100;
     i.fixedWidth = 50;
     addItem(i);
 

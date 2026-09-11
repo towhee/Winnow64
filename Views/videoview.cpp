@@ -203,12 +203,14 @@ void VideoView::wheelEvent(QWheelEvent *event)
                 ;
                 //*/
 
-    if (deltaSum > G::wheelSensitivity) {
+    const int threshold = G::wheelSpinThreshold();
+
+    if (deltaSum > threshold) {
         sel->prev();
         deltaSum = 0;
     }
 
-    if (deltaSum < (-G::wheelSensitivity)) {
+    if (deltaSum < -threshold) {
         sel->next();
         deltaSum = 0;
     }

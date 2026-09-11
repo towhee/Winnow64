@@ -1,4 +1,5 @@
 #include "Views/iconview.h"
+#include <cmath>
 #include "Utilities/fileops.h"
 #include "Main/mainwindow.h"
 
@@ -269,6 +270,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // connect(&wheelTimer, &QTimer::timeout, this, &IconView::wheelStopped);
 
     connect(&kineticScrollTimer, &QTimer::timeout, this, &IconView::applyKineticScroll);
+    connect(&clickScrollTimer, &QTimer::timeout, this, &IconView::applyClickScroll);
 
     // used to provide iconRect info to zoom to point clicked on thumb
     // in imageView
@@ -1328,9 +1330,26 @@ void IconView::leaveEvent(QEvent *event)
     QListView::leaveEvent(event);
 }
 
+/* WHEELPROBE: wheel instrumentation, set true to report what the pointing device
+   actually sends (source, phase, both deltas) and which scroll engine handled it.
+   This is what established that neither the delta nor the event source can identify a
+   mouse wheel -- see the gate in IconView::wheelEvent. */
+static bool wheelProbe = false;
+
 void IconView::wheelEvent(QWheelEvent *event)
 {
     if (G::isInitializing) return;
+
+    if (wheelProbe)
+        qDebug().noquote()
+            << "WHEELPROBE" << objectName()
+            << "source =" << event->source()
+            << "phase =" << event->phase()
+            << "pixelDelta =" << event->pixelDelta()
+            << "angleDelta =" << event->angleDelta()
+            << "inverted =" << event->inverted()
+            << "isWrapping =" << isWrapping()
+            << "wheelSensitivity =" << G::wheelSensitivity;
 
     if (event->source() == Qt::MouseEventSynthesizedBySystem ||
         event->source() == Qt::MouseEventNotSynthesized)
@@ -1345,9 +1364,7 @@ void IconView::wheelEvent(QWheelEvent *event)
             // TAP-TO-STOP: When you plant your fingers on the glass, macOS sends
             // a 0-delta event with the ScrollBegin phase. We must catch it here!
             if (event->phase() == Qt::ScrollBegin) {
-                kineticScrollTimer.stop();
-                kineticVelocityX = 0;
-                kineticVelocityY = 0;
+                stopScrolling();
             }
 
             event->accept();
@@ -1356,6 +1373,29 @@ void IconView::wheelEvent(QWheelEvent *event)
 
         // Hijack the event and NEVER call QListView::wheelEvent.
         event->accept();
+
+        /* MOUSE WHEEL: scroll a fixed amount per click, set by the preference
+           "Mouse wheel / trackpad sensitivity".  A wheel must never reach the kinetic
+           engine below: its flick velocity ignores the preference and keeps gliding
+           for hundreds of thumbnails after the spin stops.
+
+           The ONLY reliable test is the scroll PHASE.  A trackpad gesture always
+           carries a phase (ScrollBegin/Update/End/Momentum); a wheel always reports
+           Qt::NoScrollPhase.  Two other tests were tried and both failed on a real
+           wheel (measured with the wheelProbe below):
+
+             - pixelDelta().isNull() -- macOS sets hasPreciseScrollingDeltas for many
+               mice and Qt then fills in BOTH pixelDelta and angleDelta.  Measured:
+               pixelDelta (0,-13), angleDelta (0,-26) for one click.
+             - source() == Qt::MouseEventNotSynthesized -- a wheel can arrive as
+               Qt::MouseEventSynthesizedBySystem (as the test mouse does), so this
+               excludes the very device it was meant to catch.
+
+           Do not reinstate either test. */
+        if (event->phase() == Qt::NoScrollPhase) {
+            wheelClickScroll(event);
+            return;
+        }
 
         qreal currentDx = 0;
         qreal currentDy = 0;
@@ -1395,9 +1435,7 @@ void IconView::wheelEvent(QWheelEvent *event)
 
         // Tap-to-Stop Fallback: In case your tap registered a tiny 1-pixel micro-movement
         if (event->phase() == Qt::ScrollBegin) {
-            kineticScrollTimer.stop();
-            kineticVelocityX = 0;
-            kineticVelocityY = 0;
+            stopScrolling();
         }
 
         // Boost the raw OS input to give it massive launch speed
@@ -1421,6 +1459,11 @@ void IconView::wheelEvent(QWheelEvent *event)
             if (targetVy > 0) kineticVelocityY = qMax(kineticVelocityY, targetVy);
             else if (targetVy < 0) kineticVelocityY = qMin(kineticVelocityY, targetVy);
         }
+
+        if (wheelProbe)
+            qDebug().noquote() << "WHEELPROBE" << objectName()
+                               << "KINETIC engine: velocity ="
+                               << kineticVelocityX << kineticVelocityY;
 
         if (!kineticScrollTimer.isActive() && (qAbs(kineticVelocityX) > 0.1 || qAbs(kineticVelocityY) > 0.1)) {
             kineticScrollTimer.start(16);
@@ -1471,6 +1514,215 @@ void IconView::applyKineticScroll()
         kineticVelocityY = 0;
         scrollAccumulatorX = 0;
         scrollAccumulatorY = 0;
+    }
+}
+
+qreal IconView::wheelSensitivityT()
+/*
+    The preference "Mouse wheel / trackpad sensitivity" (G::wheelSensitivity, 1 - 100
+    percent of maximum sensitivity) as 0.0 - 1.0, where 0 is the MOST sensitive end
+    (100%) and 1 the least (1%).  The inversion is here so the mappings below read in
+    their natural direction: more of t = less of everything.
+*/
+{
+    return 1.0 - (qBound(1, G::wheelSensitivity, 100) - 1) / 99.0;
+}
+
+qreal IconView::clickScrollPixels(bool horizontal)
+/*
+    The distance to scroll for one mouse wheel click.
+
+    The unit is the thumbnail cell, so a click moves a meaningful number of thumbnails
+    whatever the thumb size: 4 cells at 100% sensitivity, 1/4 cell at 1%, a bit over
+    2 cells at the default 50%.
+*/
+{
+    const qreal cells = 4.0 - 3.75 * wheelSensitivityT();
+    const QSize cell = getCellSize();
+    const int extent = horizontal ? cell.width() : cell.height();
+    return cells * qMax(1, extent);
+}
+
+qreal IconView::clickScrollRestMs()
+/*
+    >>> THE REST TIME: how long one wheel click takes to coast to a stop. <<<
+
+    Set it here.  2000 ms at 100% sensitivity, 500 ms at 1%, interpolated between.
+    This is the damping ("friction") half of what the sensitivity preference controls;
+    clickScrollPixels is the distance half.  Both move together, which is what makes
+    the slider felt: the sensitive end scrolls further per click AND coasts, the other
+    end moves a fraction of a thumbnail and stops quickly.
+*/
+{
+    return 2000.0 - 1500.0 * wheelSensitivityT();
+}
+
+qreal IconView::clickScrollEase(qreal distance)
+/*
+    The fraction of the distance still pending that applyClickScroll moves per tick,
+    derived from the rest time above rather than set directly.
+
+    applyClickScroll decays what is pending geometrically, so after n ticks of 16 ms
+    the distance left is distance * (1 - ease)^n, and it stops when that falls below
+    the half pixel it can no longer render.  Solving for ease at n = rest / 16 gives
+    the value that lands a click of this distance on the requested rest time.
+
+    Ease therefore depends on the distance: a 4 cell click must decay more slowly than
+    a quarter cell one to take as long, which a fixed fraction could not do.  It is
+    computed once per click, not per tick.
+*/
+{
+    const qreal ticks = qMax(1.0, clickScrollRestMs() / 16.0);
+    const qreal d = qMax(2.0, qAbs(distance));
+    const qreal ease = 1.0 - std::exp(std::log(0.5 / d) / ticks);
+    return qBound(0.01, ease, 0.9);
+}
+
+qreal IconView::scrollInProgress(bool horizontal)
+/*
+    The signed speed/distance of any scroll still running, in the wheel delta sense
+    (positive = scrolling back/up).  Zero when the view is at rest.
+*/
+{
+    qreal motion = 0;
+    if (kineticScrollTimer.isActive())
+        motion += horizontal ? kineticVelocityX : kineticVelocityY;
+    if (clickScrollTimer.isActive())
+        motion += horizontal ? clickPendingX : clickPendingY;
+    return motion;
+}
+
+void IconView::stopScrolling()
+/*
+    Bring both scroll engines (kinetic glide and wheel click) to an immediate stop.
+*/
+{
+    kineticScrollTimer.stop();
+    kineticVelocityX = 0;
+    kineticVelocityY = 0;
+    scrollAccumulatorX = 0;
+    scrollAccumulatorY = 0;
+
+    clickScrollTimer.stop();
+    clickPendingX = 0;
+    clickPendingY = 0;
+    clickAccumulatorX = 0;
+    clickAccumulatorY = 0;
+}
+
+void IconView::wheelClickScroll(QWheelEvent *event)
+/*
+    Scroll a fixed distance per mouse wheel click (see clickScrollPixels), instead of
+    launching a kinetic flick.  Each click adds to the distance still to travel and
+    applyClickScroll eases the view into it, so held-down spinning scrolls smoothly and
+    continuously while a single click moves a predictable number of thumbnails.
+
+    A click in the opposite direction to a scroll already in progress stops that scroll
+    and does nothing else; the next click then scrolls in the new direction.  Without
+    this a reversing click fights a glide that is still running and the view jumps.
+
+    Axis: a wheel only reports a vertical delta, so as in wheelEvent the delta is
+    applied to the x axis when the view is a single non-wrapping row (thumbView docked
+    top or bottom).
+*/
+{
+    event->accept();
+
+    const bool horizontal = !isWrapping();
+
+    int angle = event->angleDelta().y();
+    if (angle == 0) angle = event->angleDelta().x();
+    if (angle == 0) return;
+
+    /* ONE EVENT = ONE CLICK: only the sign of the delta is used, never its size.
+
+       The delta cannot count clicks.  Measured on a real wheel, one slow click is an
+       angleDelta of 24 - 26 (not the nominal 120 per notch), and macOS scroll
+       acceleration inflates the same click to 444 when spinning fast -- a 17x spread
+       for identical physical input.  Scaling by that would make the scroll amount
+       depend on spin speed, which is the opposite of a preference that sets the
+       amount per click.  Spinning faster produces more events per second, so it
+       already scrolls faster. */
+    const qreal clicks = angle > 0 ? 1.0 : -1.0;
+
+    // first click in the other direction stops the scroll, and does no more
+    const qreal motion = scrollInProgress(horizontal);
+    if (motion != 0 && (motion > 0) != (angle > 0)) {
+        if (wheelProbe)
+            qDebug().noquote() << "WHEELPROBE" << objectName()
+                               << "reverse click: stop scrolling";
+        stopScrolling();
+        return;
+    }
+
+    // a click takes over from any glide still running
+    kineticScrollTimer.stop();
+    kineticVelocityX = 0;
+    kineticVelocityY = 0;
+    scrollAccumulatorX = 0;
+    scrollAccumulatorY = 0;
+
+    const qreal distance = clicks * clickScrollPixels(horizontal);
+    if (horizontal) clickPendingX += distance;
+    else            clickPendingY += distance;
+
+    clickEase = clickScrollEase(distance);
+
+    if (wheelProbe)
+        qDebug().noquote()
+            << "WHEELPROBE" << objectName()
+            << "angle =" << angle
+            << "pixelDelta =" << event->pixelDelta()
+            << "clicks =" << QString::number(clicks, 'f', 3)
+            << "wheelSensitivity =" << G::wheelSensitivity
+            << "cell =" << getCellSize()
+            << "perClick =" << QString::number(clickScrollPixels(horizontal), 'f', 1)
+            << "restMs =" << QString::number(clickScrollRestMs(), 'f', 0)
+            << "ease =" << QString::number(clickEase, 'f', 4)
+            << "distance =" << QString::number(distance, 'f', 1)
+            << "pending =" << QString::number(horizontal ? clickPendingX : clickPendingY,
+                                              'f', 1);
+
+    if (!clickScrollTimer.isActive()) clickScrollTimer.start(16);
+}
+
+void IconView::applyClickScroll()
+/*
+    Move a fraction of the distance still pending on each tick so a wheel click starts
+    at once and eases into a clean stop.  Consecutive clicks add to the pending
+    distance, which keeps continuous spinning smooth.
+*/
+{
+    /* No floor on the step: a sub-pixel step still accumulates in clickAccumulator
+       and emerges as a whole pixel a few ticks later.  Finishing the move early
+       whenever the step fell below a pixel cut the tail off and brought the view to
+       rest about a quarter sooner than clickScrollRestMs asked for. */
+    const qreal stepX = clickPendingX * clickEase;
+    const qreal stepY = clickPendingY * clickEase;
+
+    clickPendingX -= stepX;
+    clickPendingY -= stepY;
+
+    clickAccumulatorX += stepX;
+    clickAccumulatorY += stepY;
+
+    int dx = static_cast<int>(clickAccumulatorX);
+    int dy = static_cast<int>(clickAccumulatorY);
+
+    if (dx != 0 || dy != 0) {
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() - dx);
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - dy);
+
+        clickAccumulatorX -= dx;
+        clickAccumulatorY -= dy;
+    }
+
+    if (qAbs(clickPendingX) < 0.5 && qAbs(clickPendingY) < 0.5) {
+        clickScrollTimer.stop();
+        clickPendingX = 0;
+        clickPendingY = 0;
+        clickAccumulatorX = 0;
+        clickAccumulatorY = 0;
     }
 }
 

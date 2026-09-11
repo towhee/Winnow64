@@ -195,8 +195,21 @@ QStringList ratings, labelColors;
 double iconOpacity = 0.5;           // 0.0 - 1.0 (higher is brighter)
 
 // ui
-int wheelSensitivity = 150;
+int wheelSensitivity = 50;          // percent of maximum sensitivity, 1 - 100
 bool wheelSpinning = false;
+
+int wheelSpinThreshold()
+/*
+    The amount of wheel spinning required before the next/previous image: milliseconds
+    between advances in ImageView, accumulated angle delta in VideoView.  Larger = less
+    sensitive, so it is the INVERSE of the wheelSensitivity percent: 100% gives 1, 1%
+    gives 210.  The 1 - 210 range is the scale those two views were tuned on, before
+    the preference itself became a percent.
+*/
+{
+    const int pct = qBound(1, wheelSensitivity, 100);
+    return qRound(210.0 - (pct - 1) * 209.0 / 99.0);
+}
 
 // caching
 bool loadOnlyVisibleIcons;          // not used

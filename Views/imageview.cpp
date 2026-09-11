@@ -4527,7 +4527,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
     if (accumDelta >= 0 && delta > 0) accumDelta += delta;
     else accumDelta -= delta;
 
-    if (t.elapsed() > G::wheelSensitivity && qAbs(accumDelta) > 20) {
+    if (t.elapsed() > G::wheelSpinThreshold() && qAbs(accumDelta) > 20) {
         if (qAbs(delta) == 0) return;
         if (delta > 0) sel->prev();
         else sel->next();
