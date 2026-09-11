@@ -266,6 +266,7 @@ public:
        the bulk capture and the edit write-back so the two cannot drift. */
     bool catalogRowFor(int row, CatalogRow &r) const;
     bool isAnyPick();
+    int pickCount();
     void clearPicks();
     void remove(QString fPath);
     int insert(QString fPath);

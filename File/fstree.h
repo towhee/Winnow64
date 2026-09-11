@@ -103,6 +103,16 @@ public:
     QString selectSrc = "";
     QString currentFolderPath();
     QStringList selectedFolderPaths() const;
+    /*  MW::folderSelectionChange REFUSES a change that would discard un-ingested picks,
+        and calls this from inside the (directly connected) signal.  It puts the highlight
+        back on LOADEDFOLDERS -- what the datamodel actually holds -- and records the
+        refusal, so the emitter that is still on the stack leaves the tree alone instead of
+        moving it to a folder that was never loaded.  See MW::okToDiscardPicks. */
+    void refuseFolderChange(const QStringList &loadedFolders);
+    /*  Whether the last folderSelectionChange emitted from here was refused.  Valid until
+        the next emit, so a caller of select() can tell "the user said no" from "the folder
+        could not be selected". */
+    bool lastFolderChangeRefused() const { return folderChangeRefused; }
 
     bool combineRawJpg;
     QString hoverFolderName;
@@ -175,6 +185,18 @@ private:
     bool isItemVisible(const QModelIndex idx);
     int  countSubdirsFast(const QString& root, int hardCap) const;
     void selectRecursively(QString folderPath, bool toggle = false);
+    /*  Emit folderSelectionChange and report whether MW ACCEPTED it.  Delivery is direct,
+        so refuseFolderChange has already run by the time emit returns.  EVERY emitter goes
+        through this -- one that moved the selection before emitting, or moves it after,
+        would otherwise leave the tree disagreeing with the datamodel. */
+    bool emitFolderSelectionChange(const QString &dPath, G::FolderOp op,
+                                   bool resetDataModel, bool recurse);
+    /*  Put the tree highlight on the folders the datamodel holds, without emitting
+        anything. */
+    void syncSelectionToFolders(const QStringList &folderPaths);
+    bool folderChangeRefused = false;
+    /*  A refused mouse press must not have its selection completed on release. */
+    bool pressWasRefused = false;
     int maxExpandLimit = 100;
     QColor overLimitColor = QColor(255,165,0);   // orange
 
