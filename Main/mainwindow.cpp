@@ -1231,6 +1231,20 @@ void MW::closeEvent(QCloseEvent *event)
         G::log();
         G::log("MW::closeEvent");
     }
+
+    /*  AHEAD OF EVERY TEARDOWN STEP, including the "Closing Winnow ..." message: quitting
+        discards the datamodel exactly as a folder change does, and the picks go with it.
+        Everything below this point is one-way, so an answer taken any later could not be
+        honoured.  event->ignore() leaves the session running untouched.
+
+        The background-ingest wait just below is NOT a case this catches: MW::ingest marks
+        those rows "Ingested" as soon as the copy is commenced, so there is nothing to
+        warn about by the time the user can ask to quit. */
+    if (!okToDiscardPicks("Closing Winnow", "Close")) {
+        event->ignore();
+        return;
+    }
+
     setCentralMessage("Closing Winnow ...");
 
     // do not allow if there is a background ingest in progress
@@ -3261,6 +3275,39 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     - Remove
     - Toggle (applies if recurse = true)
 */
+    /*  BEFORE ANYTHING ELSE, including setScope and the cache resets below: resetDataModel
+        means the rows about to be discarded are the only place the picks exist.  Cancelling
+        has to leave the previous folder untouched, which it only can while nothing has been
+        torn down yet.  FSTree has already moved the tree highlight by the time it emits, so
+        put that back too. */
+    if (resetDataModel &&
+        !okToDiscardPicks("Selecting another folder", "Select another folder")) {
+        /*  THE ANSWER GOES BACK TO FSTree, not just to the caller.  Its emitters move the
+            highlight on both sides of the emit -- mousePressEvent selects before, select()
+            selects after -- so refuseFolderChange both restores what the press already
+            moved and tells the emitter still on the stack to leave it alone.  Without that
+            the tree would highlight a folder the datamodel never loaded.
+
+            Only in the Folders scope is folderList what the tree was showing.  After a
+            catalog load it holds every parent folder of the results -- a hundred of them,
+            none of them selected in the tree, which is why the panel deliberately does
+            not follow a search (see MW::loadCatalogScope).  Clear instead. */
+        fsTree->refuseFolderChange(G::scope == G::Scope::Folders ? dm->folderList
+                                                                 : QStringList());
+        /*  BOOKMARKS IS THE SAME CHOICE IN ANOTHER WIDGET, and Qt highlighted the clicked
+            item before MW::bookmarkClicked ever ran.  BookMarks::select only moves the
+            current item (and clears when the folder is not bookmarked), so it restores
+            without starting anything. */
+        bookmarks->select(G::scope == G::Scope::Folders ? dm->primaryFolderPath()
+                                                        : QString());
+        /*  MW::folderAndFileSelectionChange (Finder double-click, an external app) parks
+            the image to select here before calling fsTree->select.  The load it was
+            waiting for is not happening, and MW::folderChanged consumes this the NEXT
+            time any folder loads -- where it would resolve to row -1. */
+        folderAndFileChangePath = "";
+        return;
+    }
+
     G::t.start();
 
     /*  Choosing a folder IS choosing the Folders scope -- that is what makes the
@@ -3938,6 +3985,12 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
     what is loaded. The dock's own result header is what says where these came from.
 */
     QString fun = "MW::loadCatalogScope";
+
+    /*  A replacing result set clears the model exactly as a folder change does (see the
+        header comment), so it loses picks exactly as a folder change does.  Appending
+        keeps every loaded row, and with it every pick, so it never asks. */
+    if (!req.append &&
+        !okToDiscardPicks("Loading these search results", "Load search results")) return;
 
     /*  The stall watchdog goes on for a catalog scope, under G::isPerfProbe
         (WINNOW_PERF_PROBE=1). It is cheap -- one callback four times a second, printing
@@ -4860,6 +4913,10 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
+        /*  A refusal is the user's answer, not a failure: okToDiscardPicks asked whether to
+            discard un-ingested picks and they chose to keep them.  Only a genuine select
+            failure is worth an issue. */
+        if (fsTree->lastFolderChangeRefused()) return;
         QString msg = "fsTree failed to select folder.";
         G::issue("Warning", msg, "MW::folderAndFileSelectionChange", -1, folder);
         qWarning() << msg;
@@ -6603,7 +6660,10 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         QModelIndex idx = fsTree->fsModel->index(dPath);
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         // fsTree->setCurrentIndex(filterIdx);
-        fsTree->select(dPath, "None", "Bookmark");
+        /*  A refused change (un-ingested picks) leaves the previous folder loaded and both
+            panels pointing at it, so do not scroll the tree to a folder it is not
+            highlighting. */
+        if (!fsTree->select(dPath, "None", "Bookmark")) return;
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         // must have focus to show selection in blue instead of gray
         fsTree->setFocus();
@@ -12624,7 +12684,14 @@ void MW::ingest()
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
             if (autoEjectUsb) ejectUsb(ingestSourcePath);
+            /*  This folder change is the ingest finishing, not the user walking away from
+                an un-ingested cull: the rows still say "Picked" only because setIngested
+                below is skipped on this path (the model is about to be replaced anyway).
+                Without this, okToDiscardPicks would warn about the very picks just
+                copied. */
+            ignorePickLossWarning = true;
             fsTree->select(lastIngestLocation);
+            ignorePickLossWarning = false;
             return;
         }
 
@@ -13102,6 +13169,86 @@ void MW::updatePickDependentActions()
         a->setEnabled(isAnyPick);
         a->setProperty("disabledReason", reason);
     }
+}
+
+bool MW::okToDiscardPicks(const QString &action, const QString &proceedLabel)
+{
+/*
+    PICKS LIVE ONLY IN THE DATAMODEL.  Throwing the rows away -- a new folder, a catalog
+    result set that replaces rather than appends, or closing the app -- throws the pick
+    flags away with them, so a cull that has not been ingested is lost at that moment.
+    Ask first.
+
+    Returns true when it is safe to proceed.  Callers must ask BEFORE they touch the
+    model, the caches, the folder panel or anything else they cannot undo: a "Cancel"
+    answer has to leave the session exactly as it was, still loaded and still picked.
+
+    TWO BUTTONS, and the first one NAMES THE ACTION rather than answering a question --
+    PROCEEDLABEL is "Select another folder" / "Close" / "Load search results", so the
+    button says what clicking it does without reading back up to the text.  ACTION is the
+    same thing as a gerund, for the sentence.
+
+    Preferences > General > "Warn if picks have not been ingested" turns this off, for
+    picking that is not a prelude to an ingest.
+*/
+    if (G::isLogger) G::log("MW::okToDiscardPicks", action);
+
+    if (!pickLossWarning) return true;
+    /*  The picks have just been ingested and MW::ingest is navigating to where it put
+        them -- they are not about to be lost, they are the reason for the move. */
+    if (ignorePickLossWarning) return true;
+    /*  --selftest, --soaktest and --devtest change folders on a timer with nobody to
+        answer a modal dialog.  Same exemption the crash-recovery prompt takes. */
+    if (QStandardPaths::isTestModeEnabled()) return true;
+
+    const int picks = dm->pickCount();
+    if (picks == 0) return true;
+
+    QMessageBox msgBox(this);
+    const int msgBoxWidth = 350;
+    msgBox.setWindowTitle("Picks Not Ingested");
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(picks == 1
+                   ? QString("1 image is picked and has not been ingested.")
+                   : QString("%1 images are picked and have not been ingested.").arg(picks));
+    msgBox.setInformativeText(action + " will discard the picks.");
+    QPushButton *proceedBtn = msgBox.addButton(proceedLabel, QMessageBox::AcceptRole);
+    QPushButton *cancelBtn = msgBox.addButton(QMessageBox::Cancel);
+    /*  CANCEL IS THE DEFAULT.  Losing a cull cannot be undone -- unlike the delete warning
+        next door, which defaults to Yes because the files land in the trash. */
+    msgBox.setDefaultButton(cancelBtn);
+    msgBox.setEscapeButton(cancelBtn);
+    msgBox.setStyleSheet(G::css);
+    /*  Same width padding trick as the delete warning: QMessageBox sizes to the text,
+        and the informative text alone makes a narrow, tall box. */
+    QSpacerItem *horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum,
+                                                    QSizePolicy::Expanding);
+    QGridLayout *layout = static_cast<QGridLayout*>(msgBox.layout());
+    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    /*  WIDEN THE BUTTONS TO THEIR TEXT.  G::css gives QPushButton 5px of horizontal
+        padding and a min-width, and a min-width is not a fit -- "Select another folder" is
+        far wider than the style's own sizeHint allows for, and it clipped.  Measured after
+        setStyleSheet so the metrics are the styled font's.  Ampersands are mnemonics, not
+        glyphs, so they do not count toward the width. */
+    for (QAbstractButton *b : msgBox.buttons()) {
+        QString plain = b->text();
+        plain.remove(QChar('&'));
+        const int textWidth = b->fontMetrics().horizontalAdvance(plain);
+        b->setMinimumWidth(qMax(b->sizeHint().width(), textWidth + 40));
+    }
+    msgBox.exec();
+
+    if (msgBox.clickedButton() == proceedBtn) {
+        /*  It is going ahead and MW drives everything that follows -- the same reason the
+            delete warning resets focus after its dialog. */
+        resetFocus();
+        return true;
+    }
+
+    /*  NO resetFocus HERE.  Nothing moved, so the focus belongs where the user left it:
+        FSTree renders its selection greyed rather than highlighted once it loses focus,
+        and the folder that stayed loaded is exactly what the tree has to keep showing. */
+    return false;
 }
 
 bool MW::ownsShortcut(const QKeySequence &seq)

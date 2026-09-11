@@ -47,6 +47,7 @@ Follow the format conventions above for anything new. In particular, do not hard
 2. FOLDER LOADING PIPELINE
      Overview
      New Folder Selected (Call Sequence)
+     Un-Ingested Picks Block a Model Reset or a Quit
      Go to Folder (Path Entry)
      Concurrent Flow - New Folder Selected
      Concurrent Flow - New Image Selected
@@ -446,6 +447,47 @@ Instances and aborting
   ImageCache::nextToCache
   MetaRead::done                        // signal, all rows read
   MW::folderChangeCompleted             // filters, sort, resize cols
+
+
+⏺ Folder Loading Pipeline > Un-Ingested Picks Block a Model Reset or a Quit
+
+PICKS LIVE ONLY IN THE DATAMODEL.  The pick flag is a column (G::PickColumn), not something written to the file or the sidecar -- the settings pickLog is a crash-recovery record, not a store, and the catalog's pick column is a capture-time snapshot ("PICK IS DELIBERATELY NOT INCLUDED" under Keywords and Cataloguing).  So the moment the model's rows go away, an entire cull that has not been ingested is gone with no way back.
+
+MW::okToDiscardPicks(action, proceedLabel) (`Main/mainwindow.cpp`) is the guard.  It returns true when it is safe to proceed, and it must be asked BEFORE anything is torn down, because a "Cancel" answer has to leave the session exactly as it was -- still loaded, still cached, still picked.  Three callers, and they are the three ways the rows are thrown away:
+
+- MW::folderSelectionChange, when resetDataModel is true.  That flag is exactly "clear the model and load this folder instead": a Cmd-click that ADDS a folder, a Cmd-click that removes one, and a Shift range each pass false, and none of them lose a pick.  The call is the first statement in the function, ahead of setScope and resetDevelopCachesForNewFolder.
+- MW::loadCatalogScope, when the request is not an append.  A replacing result set clears the model as thoroughly as a folder change does (see that function's own header comment); an append keeps every loaded row and therefore every pick, so it never asks.
+- MW::closeEvent, ahead of every teardown step including the "Closing Winnow ..." message.  Everything below that point is one-way, so an answer taken any later could not be honoured; a refusal is event->ignore() and the session carries on untouched.  The background-ingest wait just below it is NOT a case this catches -- MW::ingest marks those rows "Ingested" as soon as the copy is commenced, so there is nothing left to warn about.
+
+TWO BUTTONS, AND THE FIRST ONE NAMES THE ACTION: "Select another folder" / "Load search results" / "Close", then Cancel.  A button that says what clicking it does needs no reading back up to the text, which is why proceedLabel is a separate argument from action (the same phrase as a gerund, for the sentence "Selecting another folder will discard the picks.").  CANCEL IS THE DEFAULT and the escape button -- losing a cull cannot be undone, unlike the delete warning next door, which defaults to Yes because the files land in the trash.
+
+THE BUTTONS ARE WIDENED TO THEIR TEXT after setStyleSheet(G::css).  The app stylesheet gives QPushButton 5px of horizontal padding and a min-width, and a min-width is not a fit: "Select another folder" is wider than the style's own sizeHint allows and it clipped.  Each button gets max(sizeHint, textWidth + 40) from the STYLED font's metrics, with '&' removed first (a mnemonic, not a glyph).
+
+A CANCELLED FOLDER CHANGE MUST LEAVE THE PANELS AGREEING WITH THE DATAMODEL, and that takes more than putting the highlight back, because FSTree moves it on BOTH SIDES of the emit:
+
+- FSTree::mousePressEvent chains to QTreeView::mousePressEvent -- which selects -- BEFORE emitting, so the highlight has already moved and has to be REPAIRED.
+- FSTree::select emits FIRST and then calls setCurrentIndex + selectionModel()->select, so a repair made during the signal is immediately overwritten; that path has to be STOPPED instead.  This is the one that matters in practice: Bookmarks, Go to Folder, Recent Folders, the USB entry point and MW::folderAndFileSelectionChange all go through select().
+
+So MW answers the signal rather than only returning from it.  MW::folderSelectionChange calls FSTree::refuseFolderChange(loadedFolders), which restores the selection AND sets a flag; EVERY emitter in FSTree goes through the private FSTree::emitFolderSelectionChange, which clears the flag, emits, and returns whether MW accepted.  The connection is direct -- same thread, no queue -- so the answer is in by the time emit returns.  A refused select() returns false without touching the highlight; a refused mouse press returns without advancing prevIdx (the Shift-range anchor).  Restoring is safe because FSTree::selectionChanged only reschedules the folder watch -- nothing there re-selects, re-loads or re-emits.
+
+syncSelectionToFolders is passed an EMPTY list outside the Folders scope: after a catalog load folderList holds every parent folder of the results, which is why the Folders panel deliberately does not follow a search.
+
+TWO MORE THINGS THAT WOULD UNDO THE REPAIR:
+
+- THE RELEASE.  QAbstractItemView defers a selection to mouseReleaseEvent when the press landed on an already-selected item (so a drag can start).  FSTree::mousePressEvent records pressWasRefused and mouseReleaseEvent swallows that release rather than chaining to QTreeView.
+- THE VIEW STATE.  The dialog is modal and opens from inside mousePressEvent, so the view may never see the matching release at all -- and QTreeView entered DragSelectingState on the press, where it rubber-band selects on the next mouse move.  refuseFolderChange calls setState(NoState) rather than relying on a release arriving.
+
+BOOKMARKS IS THE SAME CHOICE IN ANOTHER WIDGET and Qt highlighted the clicked item before MW::bookmarkClicked ran, so the refusal path calls bookmarks->select(dm->primaryFolderPath()) too -- that only moves the current item (and clears when the folder is not bookmarked), so it restores without starting anything.  MW::bookmarkClicked also stops scrolling the tree to a folder it is no longer highlighting, and MW::folderAndFileSelectionChange asks fsTree->lastFolderChangeRefused() so a refusal is not logged as "fsTree failed to select folder" -- it is the user's answer, not a failure.
+
+MW::folderAndFileChangePath IS CLEARED on a cancel for the same reason.  MW::folderAndFileSelectionChange (a Finder double-click, an external app) parks the image to select there and then calls fsTree->select; MW::folderChanged consumes it on the NEXT folder load, whenever that is, where a path from the folder that was never opened resolves to row -1.
+
+THREE EXEMPTIONS, all of them cases where the picks are not in fact being abandoned or where nobody can answer:
+
+- The preference.  Preferences > General > "Warn if picks have not been ingested" (MW::pickLossWarning, settings key "pickLossWarning", default on) turns it off for picking that is not a prelude to an ingest.  Same shape as deleteWarning.
+- MW::ingest navigating to the ingest destination.  On the gotoIngestFolder path MW::ingest returns before MW::setIngested runs, so the rows still say "Picked" even though the files have just been copied.  ignorePickLossWarning is set around that fsTree->select call -- the folder change IS the ingest finishing.
+- QStandardPaths::isTestModeEnabled().  --selftest, --soaktest and --devtest change folders on a timer with nothing to answer a modal dialog.  The crash-recovery prompt takes the same exemption for the same reason.
+
+DataModel::pickCount counts the UNFILTERED model, like isAnyPick: a pick hidden by the current filter is still a pick, and still lost.
 
 
 ⏺ Folder Loading Pipeline > Go to Folder (Path Entry)

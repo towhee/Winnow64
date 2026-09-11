@@ -345,6 +345,12 @@ public:
     QString updateSkipVersion;          // version the user chose to skip (suppresses startup dialog)
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
+    /*  Warn before the datamodel is cleared while picks have not been ingested.
+        See MW::okToDiscardPicks. */
+    bool pickLossWarning = true;
+    /*  Set while MW::ingest navigates to the ingest destination: those picks have
+        just been copied, so okToDiscardPicks must not ask about them. */
+    bool ignorePickLossWarning = false;
     bool isFirstImageSelected = true;
     bool isLogAllToFileForDebugging = false;
 
@@ -1144,6 +1150,11 @@ private slots:
     void collapseAllFolders();
     void updateCollapseFoldersAction();
     void updatePickDependentActions();
+    /*  Ask before an operation that clears the datamodel throws away picks that have not
+        been ingested.  True = go ahead.  ACTION is the gerund phrase naming what is about
+        to happen ("Selecting another folder"); PROCEEDLABEL is the same thing as the
+        button that does it ("Select another folder"). */
+    bool okToDiscardPicks(const QString &action, const QString &proceedLabel);
     bool ownsShortcut(const QKeySequence &seq);
     QAction *disabledActionForShortcut(const QKeySequence &seq);
     QString actionDisabledReason(QAction *a);

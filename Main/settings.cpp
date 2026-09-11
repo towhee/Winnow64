@@ -48,6 +48,7 @@ void MW::writeSettings()
     settings->setValue("autoAdvance", G::autoAdvance);
     settings->setValue("turnOffEmbellish", turnOffEmbellish);
     settings->setValue("deleteWarning", deleteWarning);
+    settings->setValue("pickLossWarning", pickLossWarning);
     settings->setValue("modifySourceFiles", G::modifySourceFiles);
     settings->setValue("backupBeforeModifying", G::backupBeforeModifying);
     settings->setValue("autoAddMissingThumbnails", G::autoAddMissingThumbnails);
@@ -390,6 +391,7 @@ bool MW::loadSettings()
         updateSkipVersion = "";
         lastDir = "";
         deleteWarning = true;
+        pickLossWarning = true;
         G::modifySourceFiles = false;
         // G::embedTifJpgThumb = false;
 
@@ -441,6 +443,11 @@ bool MW::loadSettings()
         deleteWarning = settings->value("deleteWarning").toBool();
     else
         deleteWarning = true;
+
+    if (settings->contains("pickLossWarning"))
+        pickLossWarning = settings->value("pickLossWarning").toBool();
+    else
+        pickLossWarning = true;
 
     if (settings->contains("modifySourceFiles"))
         G::modifySourceFiles = settings->value("modifySourceFiles").toBool();

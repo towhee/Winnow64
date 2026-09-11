@@ -887,10 +887,14 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     bool resetDataModel = false;
     QPersistentModelIndex index = fsFilter->mapFromSource(fsModel->index(folderPath));
 
+    /*  THE HIGHLIGHT IS SET AFTER THE EMIT on all three branches, so a refused change must
+        return before touching it -- otherwise the tree would show the folder MW declined to
+        load.  refuseFolderChange has already restored the previous selection. */
     if (modifier == "" || modifier == "None") {
         resetDataModel = true;
         recurse = false;
-        emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
+        if (!emitFolderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse))
+            return false;
         setCurrentIndex(index);
         // scrollToCurrent();
         selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
@@ -900,7 +904,8 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     if (modifier == "Recurse") {
         resetDataModel = true;
         recurse = true;
-        emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
+        if (!emitFolderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse))
+            return false;
         setCurrentIndex(index);
         // scrollToCurrent();
         selectionModel()->clearSelection();
@@ -911,7 +916,8 @@ bool FSTree::select(QString folderPath , QString modifier, QString src)
     if (modifier == "USBDrive") {
         resetDataModel = true;
         recurse = true;
-        emit folderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse);
+        if (!emitFolderSelectionChange(folderPath, G::FolderOp::Add, resetDataModel, recurse))
+            return false;
         setCurrentIndex(index);
         // scrollToCurrent();
         selectionModel()->clearSelection();
@@ -1145,6 +1151,78 @@ QStringList FSTree::selectedFolderPaths() const
     return selectedFolderPaths;
 }
 
+bool FSTree::emitFolderSelectionChange(const QString &dPath, G::FolderOp op,
+                                       bool resetDataModel, bool recurse)
+{
+/*
+    Emit folderSelectionChange and report whether MW ACCEPTED it.
+
+    MW::folderSelectionChange refuses a change that would throw away picks which have not
+    been ingested (MW::okToDiscardPicks), and answers by calling refuseFolderChange.  The
+    connection is direct -- same thread, no queue -- so that has already happened by the
+    time emit returns and the answer is simply a flag read.
+
+    EVERY EMITTER IN THIS CLASS GOES THROUGH HERE, because they move the tree highlight on
+    both sides of the emit: mousePressEvent chains to QTreeView (which selects) BEFORE
+    emitting, while select() sets the current index and selects AFTER.  A refusal has to
+    stop both, or the tree ends up highlighting a folder the datamodel never loaded.
+*/
+    folderChangeRefused = false;
+    emit folderSelectionChange(dPath, op, resetDataModel, recurse);
+    return !folderChangeRefused;
+}
+
+void FSTree::refuseFolderChange(const QStringList &loadedFolders)
+{
+/*
+    MW's answer when it will not load the folder just asked for.  Restores the highlight to
+    what the datamodel holds and records the refusal for emitFolderSelectionChange.
+*/
+    if (G::isLogger) G::log("FSTree::refuseFolderChange");
+    folderChangeRefused = true;
+    syncSelectionToFolders(loadedFolders);
+    /*  THE REFUSAL WAS DECIDED IN A MODAL DIALOG, and when that dialog opens from inside
+        mousePressEvent the view may never see the matching release.  QTreeView entered
+        DragSelectingState on the press, and left there it rubber-band selects on the next
+        mouse move over the tree.  Put it back to NoState rather than rely on a release. */
+    setState(QAbstractItemView::NoState);
+}
+
+void FSTree::syncSelectionToFolders(const QStringList &folderPaths)
+{
+/*
+    Restore the tree highlight to the folders currently in the datamodel.  Needed because
+    mousePressEvent chains to QTreeView (which moves the highlight) BEFORE it emits
+    folderSelectionChange, so a folder change that MW then refuses leaves the tree
+    pointing at a folder that was never loaded.
+
+    Selecting here is safe: FSTree::selectionChanged only reschedules the folder watch, so
+    nothing in this re-selects, re-loads or re-emits.
+*/
+    if (G::isLogger) G::log("FSTree::syncSelectionToFolders");
+
+    QItemSelectionModel *sm = selectionModel();
+    if (!sm) return;
+
+    sm->clearSelection();
+    if (folderPaths.isEmpty()) {
+        sm->setCurrentIndex(QModelIndex(), QItemSelectionModel::NoUpdate);
+        return;
+    }
+
+    QModelIndex first;
+    for (const QString &folderPath : folderPaths) {
+        const QModelIndex idx = fsFilter->mapFromSource(fsModel->index(folderPath));
+        if (!idx.isValid()) continue;
+        if (!first.isValid()) first = idx;
+        sm->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    }
+    /*  NoUpdate, and through the selection model rather than QAbstractItemView: the view's
+        setCurrentIndex applies its own selection command, which for an extended-selection
+        tree is ClearAndSelect -- it would throw away the other folders just selected. */
+    if (first.isValid()) sm->setCurrentIndex(first, QItemSelectionModel::NoUpdate);
+}
+
 void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
 {
     // prevent select next folder when a folder is moved to trash/recycle
@@ -1324,6 +1402,10 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     // if (G::isLogger) G::log("FSTree::mousePressEvent");
     // qDebug() << "FSTree::mousePressEvent" << event;
 
+    /*  Cleared for THIS press before any of the early returns below, so a stale refusal
+        can never swallow a later release.  See mouseReleaseEvent. */
+    pressWasRefused = false;
+
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
 
@@ -1346,7 +1428,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             pendingClickTimer->setSingleShot(true);
             connect(pendingClickTimer, &QTimer::timeout, this, [this]() {
                 if (!pendingClickPath.isEmpty() && !G::stop && !G::isModifyingDatamodel) {
-                    emit folderSelectionChange(pendingClickPath, G::FolderOp::Add, true, false);
+                    emitFolderSelectionChange(pendingClickPath, G::FolderOp::Add, true, false);
                 }
                 pendingClickPath.clear();
                 pendingClickTimer = nullptr;
@@ -1447,30 +1529,47 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     if (isClearAdd) {
         // qDebug() << "FSTree::mousePressEvent NEW SELECTION" << path;
         if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "No modifiers, new instance");
+        /*  QTreeView has ALREADY moved the highlight by the time MW sees the change, so a
+            refusal is repaired by refuseFolderChange rather than avoided.  prevIdx must not
+            advance either: it anchors the next Shift range, and the folder was not loaded. */
         QTreeView::mousePressEvent(event);
-        emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse);
+        if (!emitFolderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse)) {
+            pressWasRefused = true;
+            return;
+        }
         prevIdx = index;
     }
 
     // recurse load all subfolders images
     else if (isRecurse) {
+        /*  selectRecursively runs BEFORE the emit on both branches, so here too a refusal is
+            repaired rather than avoided. */
         if (isToggle) {
             // to do: deal with toggle
             if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifers: Opt + Cmd, Recurse");
             selectRecursively(dPath, isToggle);
-            emit folderSelectionChange(dPath, G::FolderOp::Toggle, resetDataModel, isRecurse);
+            if (!emitFolderSelectionChange(dPath, G::FolderOp::Toggle, resetDataModel, isRecurse)) {
+                pressWasRefused = true;
+                return;
+            }
         }
         else {
             if (G::isLogger || G::isFlowLogger) G::log("FSTree::mousePressEvent", "Modifiers: Opt, New instance and Recurse");
             selectionModel()->clearSelection();
             selectRecursively(dPath);
-            emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse);
+            if (!emitFolderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse)) {
+                pressWasRefused = true;
+                return;
+            }
         }
         prevIdx = index;
     }
 
     // toggle folder
     else if (isToggle) {
+        /*  A toggle passes resetDataModel = false and so is never refused -- it adds to or
+            removes from the loaded set rather than replacing it, and loses no picks.  Routed
+            through the helper anyway so no emitter here is the odd one out. */
         int folders = selectedFolderPaths().count();
         bool folderWasSelected = selectedFolderPaths().contains(dPath);
         // qDebug() << "FSTree::mousePressEvent  isCtrl =" << isCtrl << "folderWasSelected =" << folderWasSelected;
@@ -1480,12 +1579,18 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             if (folders < 2) return;
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Remove");
-            emit folderSelectionChange(dPath, G::FolderOp::Remove, resetDataModel, isRecurse);
+            if (!emitFolderSelectionChange(dPath, G::FolderOp::Remove, resetDataModel, isRecurse)) {
+                pressWasRefused = true;
+                return;
+            }
         }
         else {
             // if (G::isLogger)
                 G::log("FSTree::mousePressEvent", "Cmd, Toggle Add");
-            emit folderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse);
+            if (!emitFolderSelectionChange(dPath, G::FolderOp::Add, resetDataModel, isRecurse)) {
+                pressWasRefused = true;
+                return;
+            }
         }
         QModelIndex index = fsFilter->mapFromSource(fsModel->index(dPath));
         selectionModel()->select(index, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
@@ -1508,8 +1613,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
             G::log("FSTree::mousePressEvent", "Modifiers: Shift, Select All Between");
 
         foreach (QString path, foldersToAdd) {
+            /*  resetDataModel is forced false -- a Shift range ADDS folders -- so these are
+                never refused. */
             resetDataModel = false;
-            emit folderSelectionChange(path, G::FolderOp::Add, resetDataModel, isRecurse);
+            if (!emitFolderSelectionChange(path, G::FolderOp::Add, resetDataModel, isRecurse))
+                break;
             QModelIndex index = fsFilter->mapFromSource(fsModel->index(path));
             selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
@@ -1522,6 +1630,15 @@ void FSTree::mouseReleaseEvent(QMouseEvent *event)
     if (G::isLogger) G::log("FSTree::mouseReleaseEvent");
 
     if (event->button() == Qt::RightButton) {
+        return;
+    }
+
+    /*  THE PRESS WAS REFUSED, so the release must not reach QTreeView.  QAbstractItemView
+        defers a selection to the release when the press landed on an already-selected item
+        (so a drag can start), and applying it here would undo the restore refuseFolderChange
+        just made. */
+    if (pressWasRefused) {
+        pressWasRefused = false;
         return;
     }
 

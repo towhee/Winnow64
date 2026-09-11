@@ -371,6 +371,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->deleteWarning = v.toBool();
     }
 
+    if (source == "pickLossWarning") {
+        mw->pickLossWarning = v.toBool();
+    }
+
     if (source == "modifySourceFiles") {
         G::modifySourceFiles = v.toBool();
         // mw->embedThumbnailsAction->setEnabled(G::modifySourceFiles);
@@ -687,6 +691,23 @@ void Preferences::addGeneral()
     i.captionIsEditable = false;
     i.value = mw->deleteWarning;
     i.key = "deleteWarning";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Picks not ingested warning
+    i.name = "pickLossWarning";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Warn if picks have not been ingested";
+    i.tooltip = "Picks only exist while the images are loaded.  Selecting another\n"
+                "folder, loading a search result, or closing Winnow clears them.\n\n"
+                "Leave this on to be warned when that is about to throw away picks\n"
+                "that have not been ingested.  Turn it off if you use picks for\n"
+                "something other than ingesting.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->pickLossWarning;
+    i.key = "pickLossWarning";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

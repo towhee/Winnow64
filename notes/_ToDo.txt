@@ -7,7 +7,7 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- /Users/roryhill/Downloads/Thumb white line bug.png
+- /Users/roryhill/Downloads/Thumb white line bug.png (seems to be gone...)
 - When there are picks and user switches scope warn first
 - 1031 (row 1030) no full size preview cached /Volumes/Untitled/DCIM/100MSDCF/DSC03288.ARW
       Key  Decoder   Target Attempts  Caching   Cached   Status imCached  Attempt MetaLoad    Video   SizeMB   Decode   Offset   Length   File Name                                Error message

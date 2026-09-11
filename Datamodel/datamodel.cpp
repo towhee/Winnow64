@@ -5974,6 +5974,21 @@ bool DataModel::isAnyPick()
     return false;
 }
 
+int DataModel::pickCount()
+{
+/*
+    Number of picked rows.  The UNFILTERED model, like isAnyPick: a pick hidden by the
+    current filter is still a pick, and still lost when the model is cleared.
+*/
+    if (G::isLogger) G::log("DataModel::pickCount");
+    int picks = 0;
+    for (int row = 0; row < rowCount(); ++row) {
+        QModelIndex idx = index(row, G::PickColumn);
+        if (idx.data(Qt::EditRole).toString() == "Picked") ++picks;
+    }
+    return picks;
+}
+
 void DataModel::clearPicks()
 {
 /*
