@@ -7,7 +7,6 @@ WHAT'S NEW
 - Catalog
 
 BUGS / TO DO
-- If add a preference, make sure it is added to the default prefs
 - /Users/roryhill/Downloads/Thumb white line bug.png (seems to be gone...)
 - 1031 (row 1030) no full size preview cached /Volumes/Untitled/DCIM/100MSDCF/DSC03288.ARW
       Key  Decoder   Target Attempts  Caching   Cached   Status imCached  Attempt MetaLoad    Video   SizeMB   Decode   Offset   Length   File Name                                Error message
@@ -18,7 +17,6 @@ BUGS / TO DO
   disappeared except Basic,Curves,Color
 - Develop behavior when no image is selected
 - Develop Basic separator is black, should be gray, plus more space above
-- Fix scroll sensitivity and roll off in grid view
 - Add a use catalog preference.
 - When generate devPreviews?  For external media?
 - Add keyword diagnostics.

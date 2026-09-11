@@ -107,6 +107,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Load Responsiveness (Keeping the GUI Usable During a Large/Recursive Load)
      How to Test Icon Caching
      What Phase 2 Actually Costs (Icons, Not the Metadata Read)
+     Probe Switches (All in One Place)
      Measuring a Live Session (--perfprobe and the Scroll Probe)
      Ingest Probe (What a Cull Session Loses, What It Costs, and What Held the Loop)
      A Full-Sensor JPEG Encode on the GUI Thread (the Pause Every 35 Images)
@@ -2072,6 +2073,28 @@ THE A/B KNOBS, so this table can be reproduced without editing a default and reb
     WINNOW_INDEX_METADATA=0|1  force G::useIndexMetadata either way
     WINNOW_MAX_ICON_CHUNK=<n>  the icon ceiling, which is what decides how much of a
                                load is icon work
+
+
+⏺ Caching > Probe Switches (All in One Place)
+
+EVERY PROBE'S ON/OFF FLAG IS DEFINED IN Main/global.cpp, IN ONE BLOCK, and declared together in Main/global.h. A probe is diagnostic tracing left in the code after the investigation that needed it -- the tracing is kept because reproducing an intermittent symptom costs a session, but the switch must not be. The flags were previously file-statics scattered across mainwindow.cpp, menusandactions.cpp, fileoperations.cpp and iconview.cpp, which meant "is anything instrumenting this build?" had no single answer and a probe could ship on because its switch was three directories away (one had: probeCopyPath was left true).
+
+  G::isPerfProbe          [PERF] Phase 1/2 load timing and the scroll lines (--perfprobe,
+                          WINNOW_PERF_PROBE=1, --catalogload)
+  G::isIngestProbe        [INGEST] the cull path (Help > Diagnostics, --ingestprobe); an
+                          atomic, since the hook sites are on worker threads
+  G::isReportDevelopTime  [DevTime] per-stage Develop re-render timings on a slider drag
+  G::isCopyPathProbe      [COPYPATH] the context-menu Copy path tracing (event filter,
+                          action hovered/changed, the slot)
+  G::isWheelProbe         [WHEEL] IconView wheel/trackpad events (phase, both deltas, the
+                          scroll engine that handled it)
+
+ALL DEFAULT FALSE, AND THEY STAY SEPARATE FLAGS. Each probe answers a different question -- a load, a cull, a context menu, a wheel -- and arming everything at once buries the thing being looked for. The ones with no UI are armed by editing the default and rebuilding; the rest by Help > Diagnostics or a --flag (main.cpp).
+
+THE DIAGNOSTICS REPORT PRINTS THE BLOCK. MW::diagnostics has a PROBES section listing all five, so a build running with tracing on is visible in the report a user pastes rather than inferred from the noise in it.
+
+WHEN YOU ADD A PROBE: put its flag in the block in global.cpp (default false), declare it in the PROBE SWITCHES block in global.h, gate every hook site with `if (G::isXxxProbe)` so a disarmed probe costs one load, and add it to the PROBES section in diagnostics.cpp.
+
 
 ⏺ Caching > Measuring a Live Session (--perfprobe and the Scroll Probe)
 
