@@ -726,8 +726,13 @@ Q_NAMESPACE
 
     extern double iconOpacity;
 
+    /* Mouse wheel / trackpad sensitivity, 1 - 100 = percent of maximum sensitivity
+       (100 = most sensitive).  IconView uses it directly (distance and damping per
+       wheel click); ImageView and VideoView, where the preference is the amount of
+       spinning required before the next image, use wheelSpinThreshold(). */
     extern int wheelSensitivity;
     extern bool wheelSpinning;
+    int wheelSpinThreshold();
 
     extern QString mode;
     extern QString fileSelectionChangeSource;

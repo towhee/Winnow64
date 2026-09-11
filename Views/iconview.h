@@ -113,6 +113,7 @@ public slots:
 private slots:
     void wheelStopped();
     void applyKineticScroll();
+    void applyClickScroll();
 
 protected:
     void startDrag(Qt::DropActions) override;
@@ -186,6 +187,24 @@ private:
 
     qreal scrollAccumulatorX = 0;
     qreal scrollAccumulatorY = 0;
+
+    /* Discrete ("click mode") mouse wheel scrolling.  See IconView::wheelClickScroll.
+       clickPending* is the distance still to travel, in the same sense as the wheel
+       delta (positive = scroll back/up, so the scrollbar value decreases). */
+    QTimer clickScrollTimer;
+    qreal clickPendingX = 0;
+    qreal clickPendingY = 0;
+    qreal clickAccumulatorX = 0;
+    qreal clickAccumulatorY = 0;
+    qreal clickEase = 0.25;         // set per click from clickScrollRestMs
+
+    void wheelClickScroll(QWheelEvent *event);
+    qreal wheelSensitivityT();
+    qreal clickScrollPixels(bool horizontal);
+    qreal clickScrollRestMs();
+    qreal clickScrollEase(qreal distance);
+    qreal scrollInProgress(bool horizontal);
+    void stopScrolling();
 
     bool isDebug = false;     // set true/false in constructor
 };

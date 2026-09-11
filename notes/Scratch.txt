@@ -4197,4 +4197,37 @@ Not changed — your call
   during the load for 1 ms of total work — harmless, but that's one cross-thread event
   per row.
 
+Done. Both issues traced to IconView::wheelEvent (Views/iconview.cpp:1331): it never read G::wheelSensitivity at all — every wheel click was converted to a kinetic flick velocity (flickMultiplier = 3.0,
+  friction 0.99), which glides roughly 2000 px per notch regardless of the preference. That's why the slider looked dead in thumbView/gridView.
+
+  What changed
+
+  1. Click-mode wheel now bypasses the kinetic engine. A wheel reporting discrete notches (angleDelta only, no pixelDelta, source == Qt::MouseEventNotSynthesized) routes to the new
+     IconView::wheelClickScroll. Trackpads and anything reporting pixelDelta keep the existing kinetic behaviour untouched.
+  2. clickScrollPixels() maps the preference to a distance per click, in units of the thumbnail cell (getCellSize), so it scales with thumb size: 3 cells at the most sensitive end, ¼ cell at the least, ~2
+     cells at the default (75). Part notches are accumulated, so a high-resolution wheel still gets a full click's worth.
+
+     Direction assumption, worth confirming by feel: larger slider values scroll less. I matched ImageView/VideoView, where the value is the amount of spinning needed before the next image (bigger =
+     slower). If you'd rather the icon views run the other way, it's one line.
+  3. Reverse-to-stop: scrollInProgress() reports the signed motion of whichever engine is running (click glide or trackpad kinetic glide); a click opposite to it calls stopScrolling() and consumes the
+     event. The next click then scrolls in the new direction. stopScrolling() also replaced the two inline tap-to-stop blocks, so a trackpad tap now halts a click glide too.
+  4. Smoothing: applyClickScroll() moves a quarter of the pending distance per 16 ms tick and finishes the last pixels outright, so a single click lands predictably and continuous spinning stays smooth.
+     Consecutive clicks add to the pending distance rather than restarting.
+
+  kenetic friction / glide
+
+┌─────┬─────────────────┬───────────┬─────────┐
+│  %  │ Cells per click │ Ease/tick │  Rest   │
+├─────┼─────────────────┼───────────┼─────────┤
+│ 100 │ 4.00            │ 0.12      │ ~0.6 s  │
+├─────┼─────────────────┼───────────┼─────────┤
+│ 75  │ 3.05            │ 0.22      │ ~0.3 s  │
+├─────┼─────────────────┼───────────┼─────────┤
+│ 50  │ 2.11            │ 0.31      │ ~0.2 s  │
+├─────┼─────────────────┼───────────┼─────────┤
+│ 25  │ 1.16            │ 0.41      │ ~0.15 s │
+├─────┼─────────────────┼───────────┼─────────┤
+│ 1   │ 0.25            │ 0.50      │ ~0.1 s  │
+└─────┴─────────────────┴───────────┴─────────┘
+
 

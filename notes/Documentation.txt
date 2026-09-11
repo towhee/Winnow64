@@ -120,6 +120,7 @@ Follow the format conventions above for anything new. In particular, do not hard
 5. SCROLLING
      Painting Delays
      Wheel Scrolling (Kinetic Engine, and the Horizontal Row)
+     Wheel Click Mode (Scroll Amount Per Click)
      Scrollbar Change Flow
      Resizing Icons or the Icon Viewport
 
@@ -2385,6 +2386,34 @@ A mouse wheel only ever reports a vertical delta, and a thumbView docked top or 
 isWrapping() is the axis test used throughout IconView (scrollPosition, scrollUp/Down, scrollPageUp/Down), and wrapping follows the thumbDock position: false when docked top or bottom (horizontal row), true when docked left, right or floating, and always true for gridView. So gridView and a wrapping thumbView scroll vertically as before, and gestures that already carry an x component (two-finger horizontal, tilt wheel, Shift+wheel on macOS) are untouched.
 
 The remap deliberately covers a trackpad vertical two-finger swipe as well as a mouse wheel, matching how a single-row list behaves elsewhere on macOS. To limit it to a physical mouse, add event->source() == Qt::MouseEventNotSynthesized to the remap condition; a trackpad vertical swipe over a horizontal thumbView then does nothing. The comment at the remap site says the same.
+⏺ Scrolling > Wheel Click Mode (Scroll Amount Per Click)
+
+A mouse wheel does NOT feed the kinetic engine. IconView::wheelEvent routes it to IconView::wheelClickScroll, which scrolls a distance per click set by the preference "Mouse wheel / trackpad sensitivity" (G::wheelSensitivity). A kinetic flick velocity ignored the preference entirely and sent a single click gliding for hundreds of thumbnails, which is why the preference appeared to do nothing in the thumbView and gridView, and why the view kept moving after the spin stopped.
+
+The wheel test is the scroll PHASE and nothing else: phase() == Qt::NoScrollPhase. A trackpad gesture always carries a phase (ScrollBegin/Update/End/Momentum); a wheel always reports NoScrollPhase. Two other tests were tried and BOTH failed on a real wheel, each time letting every wheel event reach the kinetic engine. Do not reinstate either:
+
+- pixelDelta().isNull() -- macOS sets hasPreciseScrollingDeltas for many mice and Qt then fills in BOTH deltas. Measured: pixelDelta (0,-13), angleDelta (0,-26) for one click.
+- source() == Qt::MouseEventNotSynthesized -- a wheel can arrive as Qt::MouseEventSynthesizedBySystem (the test mouse does), so this excludes the very device it was meant to catch.
+
+ONE EVENT = ONE CLICK: only the sign of the delta is used, never its size. The delta cannot count clicks. Measured on a real wheel, one slow click is an angleDelta of 24 - 26, not the nominal 120 per notch, and macOS scroll acceleration inflates the same click to 444 when spinning fast -- a 17x spread for identical physical input. Scaling by it would make the scroll amount depend on spin speed, which is the opposite of a preference that sets the amount per click; spinning faster already scrolls faster because it produces more events per second.
+
+The wheelProbe flag at the top of IconView::wheelEvent logs what the device actually sends (source, phase, both deltas), the distance per click and which engine handled the event. It is what established the two facts above, and is the first thing to turn on if wheel behaviour is ever wrong again -- do not reason about what the device "should" report.
+
+IconView::clickScrollPixels converts the preference to a distance. The unit is the thumbnail cell (getCellSize), so a click moves a meaningful number of thumbnails whatever the thumb size: 3 cells at the most sensitive end, 1/4 cell at the least, about 2 cells at the default. Larger preference values scroll LESS, which is how the same preference behaves in loupe (ImageView::wheelEvent) and video (VideoView::wheelEvent) view, where it is the amount of spinning required before the next image advances.
+
+Each click adds to the distance still pending and IconView::applyClickScroll eases into it on a 16 ms timer, taking a fraction of the remainder per tick and finishing the last pixels outright. Continuous spinning scrolls smoothly and a single click lands on a predictable number of thumbnails.
+
+The sensitivity preference drives BOTH halves of the feel: IconView::clickScrollPixels sets the distance per click (4 cells at 100% .. 1/4 cell at 1%) and IconView::clickScrollRestMs sets the REST TIME, how long one click takes to coast to a stop (2000 ms at 100% .. 500 ms at 1%). Those two functions are where the feel is tuned; nothing else needs editing to change it.
+
+IconView::clickScrollEase derives the per tick damping from the rest time rather than taking it as a constant. applyClickScroll decays the pending distance geometrically, so after n ticks of 16 ms it has distance * (1 - ease)^n left and stops below the half pixel it cannot render; solving for ease at n = rest / 16 lands a click on the requested time. The ease therefore depends on the DISTANCE — a 4 cell click must decay more slowly than a quarter cell one to last as long — so it is computed once per click and held in clickEase, not recomputed per tick. Measured against the real decay loop at a 120 px cell: 1% = 512 ms, 50% = 1248 ms, 100% = 2016 ms, each within a tick of target.
+
+applyClickScroll puts NO floor on the step size. A sub-pixel step still accumulates in clickAccumulator and emerges as a whole pixel a few ticks later, whereas finishing the move early whenever the step fell below a pixel (the first version) cut the tail off and brought the view to rest about a quarter sooner than asked. Both mappings share IconView::wheelSensitivityT, which normalises the percent to 0.0 (most sensitive) - 1.0 (least).
+
+G::wheelSensitivity is a PERCENT of maximum sensitivity, 1 - 100, larger = more sensitive. It was 1 - 210 on the opposite scale, which read backwards in the preferences slider. Loupe and video view, where the preference is the amount of spinning required before the next image and larger must mean less sensitive, therefore go through G::wheelSpinThreshold(), which inverts the percent back onto the 1 - 210 range those two views were tuned on (ImageView ms between advances, VideoView accumulated angle delta). The QSettings key is now wheelSensitivityPct; MW::loadSettings converts a stored wheelSensitivity from the old scale and MW::saveSettings removes it, so an existing user keeps the feel they had instead of having their choice reversed and clipped.
+
+This damping applies to the wheel path only. The trackpad kinetic engine keeps its own tuned constants (kineticFriction 0.99 plus a linear drag) and is not affected by the preference. The axis follows the same isWrapping() test as the kinetic path, so a horizontal thumbView scrolls along the row.
+
+A click in the opposite direction to a scroll already in progress — a click glide or a trackpad kinetic glide — stops that scroll and does nothing else; the next click scrolls in the new direction. IconView::scrollInProgress reports the signed motion of whichever engine is running and IconView::stopScrolling halts both (it is also what tap-to-stop now calls).
 
 
 ⏺ Scrolling > Scrollbar Change Flow
