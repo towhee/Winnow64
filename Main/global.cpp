@@ -255,13 +255,21 @@ bool buildDevPreviewsInBackground = false;
 bool autoRunDenoise = true;
 
 bool useBatchedFolderInsert = true;    // batched per-folder insert (one rowsInserted + one dataChanged); cuts Phase-1 insert ~34%. Z-A reorder fixed: dynamic sort disabled during load, restored once at end (see DataModel::scheduleProcessing / restoreProxySortAfterLoad)
-bool isPerfProbe = false;               // emit [PERF] Phase 1/2 load timing lines (A/B load-pipeline changes); off in production
-std::atomic<bool> isIngestProbe{false};  // ingest probe: record selection->loupe events and classification key cost (Utilities/ingestprobe.h)
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)
 // DecodeRawEngine decodeRawEngine = DecodeRawEngine::winnowDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
 DecodeRawEngine decodeRawEngine = DecodeRawEngine::appleDecodeRawEngine;  // portable default; appleDecodeRawEngine is macOS-only (callers fall back to winnow off-mac)
-bool isReportDevelopTime = false;      // log per-stage Develop re-render timings on slider drag (latency probe; off in production)
 bool isDevelopDebounceWrite = true;     // also flush per-image develop settings to sidecar a short time after edits settle
+
+/*  PROBE SWITCHES: every probe's on/off flag, all in one place (see global.h). All
+    default false -- a probe left on ships tracing and its cost into production. The
+    counters the probes accumulate follow below.
+*/
+bool isPerfProbe = false;                // [PERF] Phase 1/2 load timing lines
+std::atomic<bool> isIngestProbe{false};  // [INGEST] cull path: selection->loupe, key cost
+bool isReportDevelopTime = false;        // [DevTime] per-stage Develop re-render timings
+bool isCopyPathProbe = false;            // [COPYPATH] context-menu Copy path tracing
+bool isWheelProbe = false;               // [WHEEL] IconView wheel/trackpad events
+
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)
 std::atomic<int> probeIndexMetaHits{0};   // rows filled from the local index (Phase-2 probe)
 std::atomic<int> probeIndexMetaMisses{0}; // rows the index could not answer (Phase-2 probe)

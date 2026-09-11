@@ -1330,17 +1330,17 @@ void IconView::leaveEvent(QEvent *event)
     QListView::leaveEvent(event);
 }
 
-/* WHEELPROBE: wheel instrumentation, set true to report what the pointing device
-   actually sends (source, phase, both deltas) and which scroll engine handled it.
-   This is what established that neither the delta nor the event source can identify a
-   mouse wheel -- see the gate in IconView::wheelEvent. */
-static bool wheelProbe = false;
+/* WHEELPROBE: wheel instrumentation (G::isWheelProbe, with the other probe switches in
+   global.cpp). Reports what the pointing device actually sends (source, phase, both
+   deltas) and which scroll engine handled it. This is what established that neither the
+   delta nor the event source can identify a mouse wheel -- see the gate in
+   IconView::wheelEvent. */
 
 void IconView::wheelEvent(QWheelEvent *event)
 {
     if (G::isInitializing) return;
 
-    if (wheelProbe)
+    if (G::isWheelProbe)
         qDebug().noquote()
             << "WHEELPROBE" << objectName()
             << "source =" << event->source()
@@ -1382,7 +1382,7 @@ void IconView::wheelEvent(QWheelEvent *event)
            The ONLY reliable test is the scroll PHASE.  A trackpad gesture always
            carries a phase (ScrollBegin/Update/End/Momentum); a wheel always reports
            Qt::NoScrollPhase.  Two other tests were tried and both failed on a real
-           wheel (measured with the wheelProbe below):
+           wheel (measured with the G::isWheelProbe tracing below):
 
              - pixelDelta().isNull() -- macOS sets hasPreciseScrollingDeltas for many
                mice and Qt then fills in BOTH pixelDelta and angleDelta.  Measured:
@@ -1460,7 +1460,7 @@ void IconView::wheelEvent(QWheelEvent *event)
             else if (targetVy < 0) kineticVelocityY = qMin(kineticVelocityY, targetVy);
         }
 
-        if (wheelProbe)
+        if (G::isWheelProbe)
             qDebug().noquote() << "WHEELPROBE" << objectName()
                                << "KINETIC engine: velocity ="
                                << kineticVelocityX << kineticVelocityY;
@@ -1648,7 +1648,7 @@ void IconView::wheelClickScroll(QWheelEvent *event)
     // first click in the other direction stops the scroll, and does no more
     const qreal motion = scrollInProgress(horizontal);
     if (motion != 0 && (motion > 0) != (angle > 0)) {
-        if (wheelProbe)
+        if (G::isWheelProbe)
             qDebug().noquote() << "WHEELPROBE" << objectName()
                                << "reverse click: stop scrolling";
         stopScrolling();
@@ -1668,7 +1668,7 @@ void IconView::wheelClickScroll(QWheelEvent *event)
 
     clickEase = clickScrollEase(distance);
 
-    if (wheelProbe)
+    if (G::isWheelProbe)
         qDebug().noquote()
             << "WHEELPROBE" << objectName()
             << "angle =" << angle

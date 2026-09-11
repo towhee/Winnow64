@@ -1,9 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
 
-/* PROBE copy-path (temporary): tagged tracing for the context-menu Copy path bug. */
-static const bool probeCopyPathMenus = false;
-
 void MW::createActions()
 {
     if (G::isLogger) G::log("MW::createActions");
@@ -185,12 +182,14 @@ void MW::createFileActions()
     /* PROBE copy-path (temporary): enabled state at hover time, ie the instant before the
        user clicks the item in the open context menu. */
     connect(copyFolderPathFromContextAction, &QAction::hovered, this, [this]() {
+        if (!G::isCopyPathProbe) return;
         qDebug().noquote() << "COPYPATH action hovered"
                            << "enabled =" << copyFolderPathFromContextAction->isEnabled()
                            << "text =" << copyFolderPathFromContextAction->text()
                            << "mouseOverFolderPath =" << mouseOverFolderPath;
     });
     connect(copyFolderPathFromContextAction, &QAction::changed, this, [this]() {
+        if (!G::isCopyPathProbe) return;
         qDebug().noquote() << "COPYPATH action changed"
                            << "enabled =" << copyFolderPathFromContextAction->isEnabled()
                            << "menuOpen ="
@@ -3004,7 +3003,7 @@ void MW::enableSelectionDependentMenus()
 
     /* PROBE copy-path (temporary): a non-null activePopupWidget means this ran while a
        context menu was open, which re-gates (and greys) the open menu's actions. */
-    if (probeCopyPathMenus) {
+    if (G::isCopyPathProbe) {
         qDebug().noquote()
             << "COPYPATH enableSelectionDependentMenus"
             << "rowCount =" << dm->rowCount()

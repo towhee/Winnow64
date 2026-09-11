@@ -484,7 +484,17 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  G::decodeRawEngine = "
         << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine ? "Winnow (in-house)"
                                                                             : "Apple (Core Image)");
+    rpt << "\n";
+
+    /* PROBES: the switches defined together in global.cpp. Reported as one block so a
+       build running with tracing on is obvious here. */
+    rpt << "\n" << "PROBES";
+    rpt << "\n" << "  G::isPerfProbe = " << G::s(G::isPerfProbe);
+    rpt << "\n" << "  G::isIngestProbe = "
+        << G::s(G::isIngestProbe.load(std::memory_order_relaxed));
     rpt << "\n" << "  G::isReportDevelopTime = " << G::s(G::isReportDevelopTime);
+    rpt << "\n" << "  G::isCopyPathProbe = " << G::s(G::isCopyPathProbe);
+    rpt << "\n" << "  G::isWheelProbe = " << G::s(G::isWheelProbe);
     rpt << "\n";
 
     const QString fPath = dm ? dm->currentFilePath : QString();

@@ -525,18 +525,50 @@ Q_NAMESPACE
        Leave false unless the reordering is fixed first. */
     extern bool useBatchedFolderInsert;
 
+    /*  PROBE SWITCHES ------------------------------------------------------------------
+        EVERY probe's on/off flag lives here, and nowhere else. A probe is diagnostic
+        tracing left in the code after the investigation that needed it: the flags are
+        defined together in global.cpp so "is anything instrumenting the build?" is one
+        place to look, and so a probe cannot be shipped on by accident because its switch
+        was a file-static three directories away. All default false.
+
+        They stay SEPARATE flags rather than one master switch because each probe answers
+        a different question -- a load, a cull, a context menu -- and arming everything at
+        once buries the thing being looked for.
+
+        Arming: Help > Diagnostics, a --flag at startup (see main.cpp), or edit the
+        default in global.cpp and rebuild for the ones with no UI. The counters these
+        probes accumulate are further down; only the switches belong in this block.
+    */
+
     /* When true, DataModel emits concise [PERF] timing lines for the Phase 1 folder
        load (enumerate+sort vs model/proxy/view insert, plus total wall time). Used to
-       A/B load-pipeline changes against the recursive pictures tree. Off in production. */
+       A/B load-pipeline changes against the recursive pictures tree. */
     extern bool isPerfProbe;
 
     /* When true the ingest probe (Utilities/ingestprobe.h) records the selection ->
        loupe path and the classification keys, and prints [INGEST] lines for anything
        abnormal. Armed and read from Help > Diagnostics; off in production, where the
-       cost is one relaxed atomic load at each hook site. Separate from isPerfProbe
-       because that one measures a LOAD and this one measures a cull, and turning on
-       everything at once buries the thing being looked for. */
+       cost is one relaxed atomic load at each hook site. */
     extern std::atomic<bool> isIngestProbe;
+
+    /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
+       timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant
+       cost can be measured before optimising. */
+    extern bool isReportDevelopTime;
+
+    /* Context-menu "Copy path" probe: MW's event filter, the action's hovered/changed
+       state and the slot itself print [COPYPATH] lines. For the intermittent dead first
+       right-click in Folders / Bookmarks -- the tell is no popup. Fix parked; the tracing
+       is left in because reproducing it takes a session. */
+    extern bool isCopyPathProbe;
+
+    /* IconView wheel probe: logs each wheel/trackpad event's phase, delta and the scroll
+       it produced. Only phase() == NoScrollPhase distinguishes a mouse wheel from a
+       trackpad, and delta size cannot count clicks, so wheel work is measured, not
+       reasoned about. */
+    extern bool isWheelProbe;
+    /*  --------------------------------------------------------------------------------- */
 
     /* When true, DataModel::addFolder throttles its "Searching for images…" progress
        message (emit centralMsg) to ~50 ms. Each emit drives MW::setCentralMessage, which
@@ -601,11 +633,6 @@ Q_NAMESPACE
        whether PMRID is baked into a default-render devPreview, so Metadata::defaultRenderKey
        must hash it, and that runs on ImageCache decoder threads which cannot reach MW. */
     extern bool autoRunDenoise;
-
-    /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
-       timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant
-       cost can be measured before optimising. Default false. */
-    extern bool isReportDevelopTime;
 
     /* Gate for the OPTIONAL debounce-while-editing write of per-image Develop settings to the XMP
        sidecar (a short time after edits settle). Navigate-away / quit / pre-op flushes always run

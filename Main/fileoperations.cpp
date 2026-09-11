@@ -163,8 +163,10 @@ void MW::copyFolderPathFromContext()
 {
     if (G::isLogger) G::log("MW::copyFolderPathFromContext");
     /* PROBE copy-path (temporary) */
-    qDebug().noquote() << "COPYPATH slot entered"
-                       << "mouseOverFolderPath =" << mouseOverFolderPath;
+    if (G::isCopyPathProbe) {
+        qDebug().noquote() << "COPYPATH slot entered"
+                           << "mouseOverFolderPath =" << mouseOverFolderPath;
+    }
     QApplication::clipboard()->setText(mouseOverFolderPath);
     QString msg = "Copied " + mouseOverFolderPath + " to the clipboard";
     G::popup->showPopup(msg, 1500);

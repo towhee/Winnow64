@@ -361,9 +361,6 @@ void MW::moveDroppedDockLast()
     });
 }
 
-/* PROBE copy-path (temporary): tagged tracing for the context-menu Copy path bug. */
-static const bool probeCopyPath = true;
-
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "START APPLICATION", true);
@@ -2272,7 +2269,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
 
             /* PROBE copy-path (temporary) */
-            if (probeCopyPath) {
+            if (G::isCopyPathProbe) {
                 qDebug().noquote()
                     << "COPYPATH eventFilter ContextMenu"
                     << "obj =" << (obj ? obj->objectName() : QString("null"))
