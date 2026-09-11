@@ -514,7 +514,7 @@ void MW::deleteFiles(QStringList paths)
         return;
     }
 
-    G::ignoreScrollSignal = true;
+    G::ScrollSignalGuard scrollGuard;   // deleting rows scrolls; that is not the user
 
     // delete file(s) in folder on disk, including any xmp sidecars
     bool fileWasLocked = false;

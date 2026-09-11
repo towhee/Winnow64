@@ -119,8 +119,22 @@ void Selection::updateCurrentIndex(QModelIndex sfIdx)
 
     // update datamodel current parameters dm->setCurrentSF(sfIdx, G::dmInstance)
     emit updateCurrent(sfIdx, G::dmInstance);
-    shiftAnchorIndex = sfIdx;
-    shiftExtendIndex = sfIdx;
+    shiftAnchorRow = sfIdx.row();
+    shiftExtendRow = sfIdx.row();
+}
+
+QModelIndex Selection::shiftIdx(int row) const
+{
+/*
+    The proxy index for a stored shift row, built against the proxy AS IT IS NOW.
+
+    See the members in selection.h: holding the QModelIndex itself did not survive a
+    filter change, and the failure was a dangling internalPointer rather than an index
+    that reports itself invalid.
+*/
+    if (row < 0 || dm == nullptr || dm->sf == nullptr) return QModelIndex();
+    if (row >= dm->sf->rowCount()) return QModelIndex();
+    return dm->sf->index(row, 0);
 }
 
 void Selection::select(const QString &fPath, Qt::KeyboardModifiers modifiers)
@@ -164,18 +178,19 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         toggleSelect(sfIdx);
         // if is selected set as new shiftAnchorIndex
         if (sm->isSelected(sfIdx)) {
-            shiftAnchorIndex = sfIdx;
-            shiftExtendIndex = sfIdx;
+            shiftAnchorRow = sfIdx.row();
+            shiftExtendRow = sfIdx.row();
         }
         return;
     }
 
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         // qDebug() << "Selection::select  ShiftModifier from" << shiftAnchorIndex.row() << "to" << sfIdx.row();
-        if (!shiftAnchorIndex.isValid()) return;
-        shiftExtendIndex = sfIdx;
+        const QModelIndex anchorIdx = shiftIdx(shiftAnchorRow);
+        if (!anchorIdx.isValid()) return;
+        shiftExtendRow = sfIdx.row();
         QItemSelection selection;
-        selection.select(shiftAnchorIndex, shiftExtendIndex);
+        selection.select(anchorIdx, sfIdx);
         sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
         /* Follow the extending selection: scroll the visible view(s) just enough to expose
@@ -183,8 +198,8 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
            keeps both the last selected item and the next item (the look-ahead) visible so
            the user can see where the selection is heading. EnsureVisible is a no-op when the
            look-ahead cell is already on screen, so the view only scrolls when needed. */
-        int extendRow = shiftExtendIndex.row();
-        int anchorRow = shiftAnchorIndex.row();
+        int extendRow = shiftExtendRow;
+        int anchorRow = shiftAnchorRow;
         if (extendRow != anchorRow) {
             int direction = (extendRow > anchorRow) ? 1 : -1;
             int lookAheadRow = extendRow + direction;
@@ -250,12 +265,11 @@ void Selection::next(Qt::KeyboardModifiers modifiers)
     G::fileSelectionChangeSource = "Key_Right";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         qDebug() << "Only shift key pressed";
-        while (sm->isSelected(shiftExtendIndex)) {
-            int row = shiftExtendIndex.row();
-            if (row == dm->sf->rowCount() - 1) break;
-            shiftExtendIndex = dm->sf->index(++row, 0);
+        while (sm->isSelected(shiftIdx(shiftExtendRow))) {
+            if (shiftExtendRow < 0 || shiftExtendRow >= dm->sf->rowCount() - 1) break;
+            ++shiftExtendRow;
         }
-        select(shiftExtendIndex, modifiers);
+        select(shiftIdx(shiftExtendRow), modifiers);
     }
     else {
         int row = dm->currentSfRow;
@@ -273,12 +287,11 @@ void Selection::prev(Qt::KeyboardModifiers modifiers)
     G::fileSelectionChangeSource = "Key_Left";
     if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) {
         // find prev unselected row
-        while (sm->isSelected(shiftExtendIndex)) {
-            int row = shiftExtendIndex.row();
-            if (row == 0) break;
-            shiftExtendIndex = dm->sf->index(--row, 0);
+        while (sm->isSelected(shiftIdx(shiftExtendRow))) {
+            if (shiftExtendRow <= 0) break;
+            --shiftExtendRow;
         }
-        select(shiftExtendIndex, modifiers);
+        select(shiftIdx(shiftExtendRow), modifiers);
     }
     else {
         if (G::isLogger || isDebug) G::log("Selection::prev");
@@ -295,7 +308,7 @@ void Selection::up(Qt::KeyboardModifiers modifiers)
     if (gridView->isVisible()) {
         int row = dm->currentSfRow;
         if (Utilities::modifiers(modifiers, Qt::ShiftModifier))
-            row = startSelectionBlock(shiftExtendIndex.row());
+            row = startSelectionBlock(shiftExtendRow);
         select(gridView->upIndex(row), modifiers);
     }
     if (tableView->isVisible()) {
@@ -310,7 +323,7 @@ void Selection::down(Qt::KeyboardModifiers modifiers)
     if (gridView->isVisible()) {
         int row = dm->currentSfRow;
         if (Utilities::modifiers(modifiers, Qt::ShiftModifier))
-            row = endSelectionBlock(shiftExtendIndex.row());
+            row = endSelectionBlock(shiftExtendRow);
         select(gridView->downIndex(row), modifiers);
         return;
     }
@@ -340,7 +353,7 @@ void Selection::prevPage(Qt::KeyboardModifiers modifiers)
     // qDebug() << "Selection::prevPage";
     G::fileSelectionChangeSource = "Key_PageDown";
     int fromRow = dm->currentSfRow;
-    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) fromRow = shiftExtendIndex.row();
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) fromRow = shiftExtendRow;
     if (gridView->isVisible()) {
         select(gridView->pageUpIndex(fromRow), modifiers);
         return;
@@ -361,7 +374,7 @@ void Selection::nextPage(Qt::KeyboardModifiers modifiers)
     // qDebug() << "Selection::nextPage";
     G::fileSelectionChangeSource = "Key_PageUp";
     int fromRow = dm->currentSfRow;
-    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) fromRow = shiftExtendIndex.row();
+    if (Utilities::modifiers(modifiers, Qt::ShiftModifier)) fromRow = shiftExtendRow;
     if (gridView->isVisible()) {
         select(gridView->pageDownIndex(fromRow), modifiers);
         return;

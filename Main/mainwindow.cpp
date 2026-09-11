@@ -3179,12 +3179,30 @@ void MW::handleStartupArgs(const QString &args)
 
     // startup not triggered by embellish winnet
     else {
-        //qDebug() << "MW::handleStartupArgs:  startup not triggered by embellish winnet";
-        QFileInfo f(argList.at(1));
-        f.dir().path();
-        fsTree->select(f.dir().path());
-        // folderSelectionChange(); // not req'd after multi-select FSTree
-        if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
+        /*  THE PATH IS arg[1] FOR A WINNET AND arg[0] FOR EVERYTHING ELSE, and this read
+            arg[1] unconditionally.
+
+            The convention documented at the top of this function -- arg[0] = srcProgram,
+            arg[1+] = paths -- is a WINNET's convention. It does not hold for the ordinary
+            ways an image reaches Winnow: `Winnow <file>`, Finder's Open With, or a drop on
+            the app icon all send ONE element, which main.cpp joins into an args string with
+            no delimiter in it. argList is then length 1, arg[0] IS the path, and arg[1] is
+            past the end: "ASSERT failure in QList::at" in a debug build and an
+            out-of-bounds read in a release one.
+
+            Every other branch guards its indexing (FocusStack tests < 3, Embellish tests
+            < 2); this one did not, and the function-wide guard above is commented out.
+
+            folderAndFileSelectionChange rather than fsTree->select, because opening an
+            image should land ON that image rather than merely on its folder -- which is
+            what that function is for, and what its own comment already says it is used by
+            handleStartupArgs to do. */
+        if (argList.isEmpty()) return;
+        const QString fPath = argList.length() > 1 ? argList.at(1) : argList.at(0);
+        if (fPath.isEmpty()) return;
+        if (G::isRunByExtern)
+            Utilities::log("MW::handleStartupArgs", "startup not triggered by embellish winnet");
+        folderAndFileSelectionChange(fPath, "handleStartupArgs");
     }
 
     if (G::isRunByExtern) Utilities::log("MW::handleStartupArgs", "done");
@@ -5799,6 +5817,28 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
        and the first image in the loupe view.  Also must check if first file is a video*/
     if (isFileSelectionChange) {
         fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::updateChange");
+
+        /*  RE-MEASURE THE VISIBLE WINDOW, because navigating by keyboard never did.
+
+            dm->firstVisibleIcon / lastVisibleIcon are written by MW::updateIconRange and
+            by nothing else, and its only navigation-reachable callers are the three
+            *HasScrolled handlers -- which are gated on G::ignoreScrollSignal being false,
+            and fileSelectionChange's own scrollToCurrent calls have just set it true. So
+            the visible range stayed wherever the last mouse scroll left it, and
+            DataModel::iconRowVisible then suppressed the dataChanged for every row
+            actually on screen. Measured over 20 s of arrow-key navigation: visRange
+            frozen at 0-10, emits(suppressed) 11,307 against emits(visible) 149.
+
+            setIconRange (called above) is a different pair -- startIconRange/endIconRange,
+            the loader's chunk -- and updating it was never the same thing as knowing what
+            the user can see.
+
+            AFTER the selection, not before: the scrolls happen inside fileSelectionChange,
+            so measuring first would measure where the view WAS. scheduleIconRangeSettle
+            coalesces to one measurement per turn of the event loop, so a held arrow key
+            pays for one, and it re-dispatches the loader only if the chunk actually
+            moved. */
+        scheduleIconRangeSettle("MW::updateChange");
     }
 }
 
@@ -6287,7 +6327,11 @@ void MW::thumbHasScrolled()
         thumbView->updateMidVisibleCell(fun);
 
         if (G::ignoreScrollSignal == false) {
-            G::ignoreScrollSignal = true;
+            /*  Re-entrancy: the sync scrolls below come back through the other views'
+                handlers, and the guard restores on scope exit rather than at the tail of
+                this function -- so a path that produces no scroll signal cannot leave the
+                flag latched. See G::ScrollSignalGuard. */
+            G::ScrollSignalGuard scrollGuard;
             /* Only a visible thumbView may drive the shared scroll/sync; a hidden thumb strip
                reports a bogus midVisibleCell (see MW::tableHasScrolled). */
             if (thumbView->isVisible()) {
@@ -6306,7 +6350,6 @@ void MW::thumbHasScrolled()
                 }
             }
         }
-        G::ignoreScrollSignal = false;
     }
 }
 
@@ -6343,7 +6386,7 @@ void MW::gridHasScrolled()
         gridView->updateMidVisibleCell(fun);
 
         if (G::ignoreScrollSignal == false) {
-            G::ignoreScrollSignal = true;
+            G::ScrollSignalGuard scrollGuard;   // re-entrancy; see MW::thumbHasScrolled
             /* Only a visible grid may drive the shared scroll/sync; a hidden grid reports a
                bogus midVisibleCell that would yank the visible views (see MW::tableHasScrolled). */
             if (gridView->isVisible()) {
@@ -6353,7 +6396,6 @@ void MW::gridHasScrolled()
                 updateChange(gridView->midVisibleCell, false, fun);
             }
         }
-        G::ignoreScrollSignal = false;
     }
 }
 
@@ -6385,7 +6427,7 @@ void MW::tableHasScrolled()
     if (G::isInitializing) return;
 
     if (G::ignoreScrollSignal == false) {
-        G::ignoreScrollSignal = true;
+        G::ScrollSignalGuard scrollGuard;   // re-entrancy; see MW::thumbHasScrolled
         /* Only a visible table may drive the shared scroll/sync. A tableHasScrolled signal
            while the table is hidden (loupe/grid mode) is a layout/sync artifact: midVisibleRow
            is a bogus 0 because the hidden viewport isn't laid out, and propagating it would
@@ -6400,7 +6442,6 @@ void MW::tableHasScrolled()
             updateChange(tableView->midVisibleRow, false, "MW::tableHasScrolled");
         }
     }
-    G::ignoreScrollSignal = false;
 }
 
 void MW::loadEntireMetadataCache(QString source)

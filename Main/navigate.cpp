@@ -215,15 +215,16 @@ void MW::scrollToCurrentRowIfNotVisible()
     if (tableView->isVisible())
         tableView->updateVisible("MW::scrollToCurrentRowIfNotVisible");
 
-    G::ignoreScrollSignal = true;
-    if (thumbView->isVisible() && !thumbView->isCellVisible(sfRow))
-        thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
-    if (gridView->isVisible() && !gridView->isCellVisible(sfRow))
-        gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
-    if (tableView->isVisible() && !tableView->isRowVisible(sfRow))
-        tableView->scrollTo(idx,
-         QAbstractItemView::ScrollHint::PositionAtCenter);
-    G::ignoreScrollSignal = false;
+    {
+        G::ScrollSignalGuard scrollGuard;   // our own scrolls, not the user's
+        if (thumbView->isVisible() && !thumbView->isCellVisible(sfRow))
+            thumbView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+        if (gridView->isVisible() && !gridView->isCellVisible(sfRow))
+            gridView->scrollToRow(dm->currentSfRow, "MW::scrollToCurrentRow");
+        if (tableView->isVisible() && !tableView->isRowVisible(sfRow))
+            tableView->scrollTo(idx,
+             QAbstractItemView::ScrollHint::PositionAtCenter);
+    }
 
     updateIconRange("MW::scrollToCurrentRow");
     scheduleIconRangeSettle("MW::scrollToCurrentRow");

@@ -941,6 +941,32 @@ Q_NAMESPACE
         const bool wasActive;
     };
 
+    /*  SUPPRESS THE SCROLL HANDLERS FOR THE LENGTH OF A SCROLL WE CAUSED OURSELVES.
+
+        ignoreScrollSignal exists so that a scrollTo made to SYNC one view with another
+        does not come back through thumbHasScrolled/gridHasScrolled/tableHasScrolled and
+        start the sync over. It was set by hand at six sites and cleared at the tail of
+        the three handlers -- so the clearing belonged to a different function from the
+        setting, and any path that set it without producing a scroll signal left it ON.
+
+        That is the ordinary case, not a corner: MW::fileSelectionChange calls
+        scrollToCurrent on all three views in turn, and in Loupe the last two are hidden,
+        so the flag was routinely left latched TRUE and swallowed the user's NEXT genuine
+        scroll (that handler cleared the flag and did nothing else).
+
+        RAII restores what it found rather than forcing false, so nesting -- a handler's
+        own sync scrolls inside an outer guard -- keeps working. */
+    class ScrollSignalGuard
+    {
+    public:
+        ScrollSignalGuard() : prev(ignoreScrollSignal) { ignoreScrollSignal = true; }
+        ~ScrollSignalGuard() { ignoreScrollSignal = prev; }
+        ScrollSignalGuard(const ScrollSignalGuard &) = delete;
+        ScrollSignalGuard &operator=(const ScrollSignalGuard &) = delete;
+    private:
+        const bool prev;
+    };
+
     extern void wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);

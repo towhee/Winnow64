@@ -37,6 +37,8 @@ Follow the format conventions above for anything new. In particular, do not hard
 
 1. INITIALIZATION
      Startup Sequence
+     Two More Aborts From Holding What the Model Threw Away
+     Two Aborts on the Way In, and a Column Resize
      Dock Window State (Versioning)
      Responsive Dock Tab Titles (Text <-> Graphic)
      Dropped Dock Lands Last (Rightmost Tab)   [WORK IN PROGRESS - DISABLED]
@@ -67,6 +69,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Second Batch (Covering the Rest, and the Set Mask)
      Compiling the Filters (Off the Tree, Once per Change)
      A Classification Key Rebuilt the Filter Tree on Another Thread (the 1-5 Crash)
+     The Visible Range the Keyboard Never Updated (and the Latch That Leaked)
      "Is A Load Running", Not "Has Every Row Been Read" (the Filter That Turns Itself Off)
      Settling Search and Ingested (and a Fact That Was Wrong)
      The Base-Class Swap (QAbstractTableModel, and the Contract Test)
@@ -262,6 +265,28 @@ Not all settings can be read immediately, as the classes that use them may not y
   • Load datamodel with QDir info on each image file
   • Add the rest of the metadata to datamodel (incl. thumbs as icons)
   • Update the image cache
+
+
+⏺ Initialization > Two More Aborts From Holding What the Model Threw Away
+
+BOTH ARE THE SAME MISTAKE IN DIFFERENT CLOTHES: keeping a value the model has since invalidated, and being told about it by an assert Qt only added in 6.9.
+
+A PROXY INDEX DOES NOT SURVIVE A FILTER CHANGE. Selection held shiftAnchorIndex and shiftExtendIndex as QModelIndex members across operations. SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits layoutChanged WITHOUT a persistent-index remapping -- its own comment says so. A stored index then keeps reporting isValid() TRUE, because row, column and model are all still set, while its internalPointer() is a freed QSortFilterProxyModelPrivate::Mapping. isValid() cannot protect against that; the next read segfaults inside proxy_to_source.
+
+Setting a colour or a rating calls MW::filterChange, so the ordinary cull sequence was a crash: press 1, then Shift+Left, and Selection::prev asks sm->isSelected(shiftExtendIndex) on the dead mapping (Winnow-2026-09-10-105705.ips, EXC_BAD_ACCESS at 0x20). It needs SHIFT, because that is the only branch that reads the stored index -- which is why it survived so long. They are ints now (shiftAnchorRow / shiftExtendRow) and Selection::shiftIdx(row) rebuilds an index against the proxy as it currently is, returning an invalid one when the row no longer exists. A row that goes out of range is a recoverable answer; a dangling pointer is not.
+
+A QVariant IS NOT EQUAL TO 0 WHEN IT IS INVALID. InfoView::updateInfo guarded its shutter-speed reciprocal with `if (value == 0)`, which compares a QVariant against QVariant(int 0). An invalid QVariant -- a row whose metadata has not landed, and the info panel updates on every selection including during a load or a re-sort -- is not equal to it, so the guard passed, toDouble() returned 0.0, and 1 / 0.0 is +inf. Qt 6.9 made qRound's conversion checked, so that is now qCheckedFPConversionToInteger asserting; before it was a garbage shutter speed in the panel. The guard tests the DOUBLE now. Caught by the --selftest stress pass (WINNOW_SELFTEST_STRESS=1), which re-sorts mid-load and so selects rows whose metadata is still in flight -- worth remembering as the pass that finds this shape of bug.
+
+
+⏺ Initialization > Two Aborts on the Way In, and a Column Resize
+
+THREE THINGS THAT HAPPEN AT OR NEAR STARTUP, all found while planning the ingest follow-ups rather than by a user report.
+
+OPENING AN IMAGE DIRECTLY CRASHED. MW::handleStartupArgs documents its argument convention as arg[0] = srcProgram, arg[1+] = paths -- and that is a WINNET's convention. It does not hold for `Winnow <file>`, for Finder's Open With, or for a drop on the app icon: those send ONE element, which main.cpp joins into an args string with no delimiter in it, so argList has length 1, arg[0] IS the path, and the final else branch's unguarded argList.at(1) reads past the end. ASSERT failure in QList::at in a debug build, an out-of-bounds read in a release one. Every other branch guards its indexing (FocusStack tests < 3, Embellish tests < 2); this one did not, and the function-wide guard above it is commented out. It now takes arg[1] when there is one and arg[0] otherwise, and hands the path to folderAndFileSelectionChange -- which is what that function is for, and what its own comment already claims handleStartupArgs uses it for, so opening an image now lands ON the image rather than merely in its folder.
+
+THE ICON DELEGATE PAINTED FROM UNINITIALISED MEMBERS. IconViewDelegate held a block of int members with no in-class initialiser -- labelFontSize, fontHt, textHeadroom, textHeight, badgeSize, iconNumberSize, ratingDiam, ratingTextSize, alignVertPad, alignHorPad, starsWidth -- assigned in exactly one place, setThumbDimensions, and read by paint(). They are non-static members, so before that first call they hold whatever was on the heap. Qt 6.9 made QRect's constructor compute x2 = x + w - 1 with CHECKED arithmetic, so a garbage starsWidth going into the rating badge's QRect is no longer a wrong rectangle, it is an abort: qt_assert_x -> QCheckedInt operator+ -> QRect -> IconViewDelegate::paint (captured 2026-09-06, debug build). All are zero now, which turns the worst case back into an empty rect. The file already carried one scar from the same class of bug -- see the setPixelSize note in setThumbDimensions.
+
+A COLUMN WIDTH WAS MEASURED FROM A THOUSAND ROWS. MW::folderChangeCompleted measured 809 ms on a 3,404-row card folder, and almost everything in its body is one-shot, queued or O(1). The outlier is tableView->resizeColumns(), which is unconditional and calls resizeColumnToContents for every one of the ~78 columns; that goes to sizeHintForColumn, which samples up to QHeaderView::resizeContentsPrecision() rows per column -- and nothing ever set it, so it was Qt's default of 1000. Up to 78,000 delegate sizeHint() calls, each pulling a cell through the proxy, on the GUI thread. TableView's constructor now sets the precision to 50. NOT VERIFIED HEADLESSLY: an offscreen --selftest run reports folderChangeCompleted at 3-4 ms with or without the change, because the table is never laid out there, so this one needs a real session with the Table view configured to confirm.
 
 
 ⏺ Initialization > Dock Window State (Versioning)
@@ -998,6 +1023,21 @@ BuildFilters::updateCategory HAS A CONTRACT AND THREE CALLERS BROKE IT. It suspe
 TWO LATER CHANGES NARROWED THE WINDOW WITHOUT CLOSING THE CONTRACT. filterAcceptsRow evaluates a compiled FilterPredicate held by shared_ptr rather than walking the tree ("Compiling the Filters", above), and BuildFilters::dispatchOps now applies every tree mutation on the GUI thread. Between them the use-after-free is gone from the current code -- which is why the crash is a 2.05 crash. What is NOT gone is the ordering: without runSync the counts are applied a turn of the event loop after the filter change that was supposed to use them, so the category shows the previous keypress's numbers. Passing runSync is the fix for both, and it is what the function documents.
 
 WHY IT ONLY SHOWS UP IN A CULL. One colour key is one rebuild and one filter change; nothing races because nothing overlaps. A cull is a key every second or two for an hour, over a folder large enough that the rebuild takes long enough to still be running when filterChange starts.
+
+AND THE OTHER HALF OF THE SAME CONTRACT: WHO LIFTS THE SUSPENSION. BuildFilters::updateCategory suspends proxy filtering unconditionally, and the only things that lift it are MW::filterChange, the G::isModifyingDatamodel branch inside updateCategory itself, DataModel::endLoad and InfoView::dataChanged -- BuildFilters::done()'s own lift is commented out. So a caller that runs updateCategory and then SKIPS filterChange leaves suspendFiltering TRUE and SortFilter::filterAcceptsRow accepting every row until something else happens to call filterChange. That is exactly the latch failure this function's own comment warns about ("filtering that works once and then stops"), and MW::togglePick, togglePickUnlessRejected and toggleReject all had it on their picks-not-filtered branch. It was masked because clicking anything in the Filters panel calls filterChange and lifts it. Each now lifts it explicitly (dm->sf->suspend(false, "<caller>: no filter change")). Anything that copies togglePick's skip-the-filter-change pattern has to copy that line with it.
+
+
+⏺ DataModel Changes > The Visible Range the Keyboard Never Updated (and the Latch That Leaked)
+
+dm->firstVisibleIcon / lastVisibleIcon / visibleIcons are written by MW::updateIconRange and by nothing else, and its only navigation-reachable callers are MW::thumbHasScrolled / gridHasScrolled / tableHasScrolled -- all three gated on G::ignoreScrollSignal being false. MW::fileSelectionChange calls scrollToCurrent on all three views, and each of those sets that flag TRUE immediately before its own scrollTo. So every handler in the sequence saw true, skipped, and ARROW-KEY NAVIGATION NEVER MEASURED THE VISIBLE WINDOW.
+
+WHAT THAT COSTS is not a stale number, it is suppressed repaints. DataModel::iconRowVisible answers "is this row on screen" from that range, and setIcon1 / setValDm / setValSf skip the dataChanged for any row it says is off screen. Measured over 20 seconds of held arrow key on a 3,404-row card folder: visRange frozen at 0-10, emits(suppressed) 11,307 against emits(visible) 149. Every icon arriving for the rows the user was actually looking at was stored without telling the views. It was largely invisible because scrolling repaints the strip anyway.
+
+dm->setIconRange(sfRow) -- which MW::updateChange does call per selection -- is a DIFFERENT PAIR: startIconRange/endIconRange, the loader's chunk. Knowing which rows to keep in memory was never the same question as knowing which rows the user can see.
+
+THE FIX IS SCHEDULED, NOT INLINE. updateChange now calls scheduleIconRangeSettle after fileSelectionChange returns -- after, because the scrolls happen inside it and measuring first would measure where the view WAS. That helper already existed for the deferred-layout case and has exactly the right shape: one pending settle, a zero timer, and a re-dispatch to MetaRead only if the chunk actually moved. A held arrow key therefore pays for one measurement per turn of the event loop rather than one per keypress. A/B over 600 selections at 45 ms: gui time per selection p50 2 ms and p90 5 ms in both, gap p50 44 ms in both, GUI stalls 6 in both -- the 3 ms updateIconRange costs lands on the settle timer rather than on the keypress.
+
+THE FLAG ITSELF LEAKED, and that is the second defect. G::ignoreScrollSignal was set by hand at six sites and cleared at the TAIL OF THE THREE HANDLERS -- so the clearing belonged to a different function from the setting, and any path that set it without producing a scroll signal left it on. That is the ordinary case rather than a corner: in Loupe, gridView and tableView are hidden, so the last two scrollToCurrent calls move no scrollbar, no handler runs, and the flag stays latched TRUE -- swallowing the user's NEXT genuine scroll, whose handler cleared the flag and did nothing else. It is now G::ScrollSignalGuard (Main/global.h), RAII beside G::A11ySuspend, restoring what it found rather than forcing false so that a handler's own sync scrolls still nest correctly inside an outer guard.
 
 
 ⏺ DataModel Changes > "Is A Load Running", Not "Has Every Row Been Read" (the Filter That Turns Itself Off)

@@ -75,8 +75,29 @@ private:
     IconView *thumbView;
     IconView *gridView;
     TableView *tableView;
-    QModelIndex shiftAnchorIndex;
-    QModelIndex shiftExtendIndex;
+    /*  ROWS, NOT QModelIndexes.
+
+        These were QModelIndex members held across model changes, and a proxy index does
+        not survive one. SortFilter::filterChange calls invalidate(), which clears the
+        proxy's mapping and emits layoutChanged WITHOUT a persistent-index remapping (see
+        its own comment) -- so a stored index keeps reporting isValid() true, because row,
+        column and model are still set, while its internalPointer() is a freed
+        QSortFilterProxyModelPrivate::Mapping. Touching it then segfaults inside
+        proxy_to_source, which isValid() cannot protect against.
+
+        Setting a colour or a rating calls MW::filterChange, so the ordinary cull sequence
+        -- press 1, then Shift+Left -- was a crash: Selection::prev asks
+        sm->isSelected(shiftExtendIndex) and dereferences the dead mapping
+        (Winnow-2026-09-10-105705.ips).
+
+        A row is just an int. It can go out of range when a filter shrinks the proxy,
+        which shiftIdx() clamps and reports, and that is a recoverable answer rather than
+        a dangling pointer. */
+    int shiftAnchorRow = -1;
+    int shiftExtendRow = -1;
+    /*  The proxy index for a stored row, rebuilt against the CURRENT proxy. Invalid when
+        the row is unset or no longer exists. */
+    QModelIndex shiftIdx(int row) const;
 
     bool ok;
 

@@ -62,6 +62,16 @@ void MW::togglePickUnlessRejected()
         filterChange("MW::togglePick");
     }
     else {
+        /*  LIFT THE PROXY SUSPENSION OURSELVES ON THIS PATH.
+
+            BuildFilters::updateCategory suspends filtering unconditionally, and the only
+            things that lift it are MW::filterChange, DataModel::endLoad and
+            InfoView::dataChanged. Skipping filterChange therefore left suspendFiltering
+            TRUE and SortFilter::filterAcceptsRow accepting every row until something else
+            happened to call filterChange -- the exact latch failure MW::filterChange's own
+            comment warns about ("filtering that works once and then stops"). It was masked
+            because clicking anything in the Filters panel lifts it. */
+        dm->sf->suspend(false, "MW::togglePickUnlessRejected: no filter change");
         thumbView->refreshIcons("MW::togglePickUnlessRejected");
         gridView->refreshIcons("MW::togglePickUnlessRejected");
     }
@@ -197,6 +207,16 @@ void MW::togglePick()
         if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
     }
     else {
+        /*  LIFT THE PROXY SUSPENSION OURSELVES ON THIS PATH.
+
+            BuildFilters::updateCategory suspends filtering unconditionally, and the only
+            things that lift it are MW::filterChange, DataModel::endLoad and
+            InfoView::dataChanged. Skipping filterChange therefore left suspendFiltering
+            TRUE and SortFilter::filterAcceptsRow accepting every row until something else
+            happened to call filterChange -- the exact latch failure MW::filterChange's own
+            comment warns about ("filtering that works once and then stops"). It was masked
+            because clicking anything in the Filters panel lifts it. */
+        dm->sf->suspend(false, "MW::togglePick: no filter change");
         thumbView->refreshIcons("MW::togglePick");
         gridView->refreshIcons("MW::togglePick");
         if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
@@ -269,6 +289,16 @@ void MW::toggleReject()
         filterChange("MW::togglePick");
     }
     else {
+        /*  LIFT THE PROXY SUSPENSION OURSELVES ON THIS PATH.
+
+            BuildFilters::updateCategory suspends filtering unconditionally, and the only
+            things that lift it are MW::filterChange, DataModel::endLoad and
+            InfoView::dataChanged. Skipping filterChange therefore left suspendFiltering
+            TRUE and SortFilter::filterAcceptsRow accepting every row until something else
+            happened to call filterChange -- the exact latch failure MW::filterChange's own
+            comment warns about ("filtering that works once and then stops"). It was masked
+            because clicking anything in the Filters panel lifts it. */
+        dm->sf->suspend(false, "MW::toggleReject: no filter change");
         thumbView->refreshIcons("MW::toggleReject");
         gridView->refreshIcons("MW::toggleReject");
     }

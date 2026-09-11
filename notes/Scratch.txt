@@ -4192,7 +4192,7 @@ Not changed — your call
   build.
 
   - Two other things the new Scope output caught on this run, both one-off rather than
-  periodic: MW::folderChangeCompleted at 809 ms, and QAction(openUsbFolder)/MetaCall at
+  periodic: MW::folderChangeCompleted at 809 ms  , and QAction(openUsbFolder)/MetaCall at
   1128 ms. Also metaRead::updateProgressInStatusbar fired 3386 queued MetaCalls into MW
   during the load for 1 ms of total work — harmless, but that's one cross-thread event
   per row.
