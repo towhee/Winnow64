@@ -215,6 +215,49 @@ struct CatalogKeyword
     int count = 0;
 };
 
+/*
+    WHAT THE KEYWORD TABLES ACTUALLY HOLD, measured rather than assumed -- the
+    catalog half of the Help > Diagnostics > Keywords report.
+
+    ITS REASON FOR EXISTING IS THE DRIFT. An image's keyword LINKS are derived from its
+    keyword TEXT (see writeKeywordsLocked), and twice now the two have disagreed on a real
+    library: schema 11 and schema 12 are both repairs of exactly that, and the schema 12
+    note says plainly that the root cause was never established and that a recurrence is
+    worth knowing about. Nothing detected it at the time -- it surfaced as two panels
+    quoting different counts for one keyword, months later. This asks the question
+    directly, over the rows themselves, whenever the user opens the report.
+
+    SAMPLED, NOT EXHAUSTIVE, because it runs on the GUI thread from a menu item and a
+    library is a quarter of a million rows. sampleLimit caps the images whose links are
+    recomputed; the summary counts (rows, links, orphans) are whole-table and cheap.
+*/
+struct KeywordAudit
+{
+    bool available = false;
+    int schemaVersion = 0;
+
+    // Whole-table counts
+    int liveImages = 0;
+    int imagesWithText = 0;         // live images carrying keyword text
+    int imagesWithLinks = 0;        // live images with at least one image_keyword row
+    int keywordRows = 0;            // rows in `keyword`, the OBSERVED vocabulary
+    int vocabRows = 0;              // rows in `vocab`, the AUTHORED vocabulary
+    int links = 0;                  // rows in image_keyword
+    int unlinkedKeywords = 0;       // keyword rows no image links to (prunable)
+    int orphanLinksNoKeyword = 0;   // links naming a keyword row that is gone
+    int orphanLinksNoImage = 0;     // links naming an image row that is gone
+    int linksWithoutText = 0;       // live images with links and no keyword text at all
+
+    // The drift check, over at most sampleLimit images carrying keyword text
+    int sampled = 0;
+    int drifted = 0;                // images whose links != expansion of their own text
+    int missingLinks = 0;           // paths the text carries that the links do not
+    int extraLinks = 0;             // paths the links carry that the text does not
+    /* Up to a handful of drifted images, spelled out: path, what the text says, what the
+       links say. A count says there is a problem; these say what it looks like. */
+    QStringList examples;
+};
+
 class Catalog
 {
 public:
@@ -368,6 +411,10 @@ public:
     /* Every keyword in the catalog with its image count, for the category list and the
        vocabulary tree's counts. */
     QList<CatalogKeyword> keywords();
+
+    /*  The keyword tables audited -- see KeywordAudit. GUI thread, on demand, never on a
+        load path. sampleLimit caps the DRIFT check only. */
+    KeywordAudit keywordAudit(int sampleLimit = 20000);
 
     /*  How many live images carry this keyword path OR anything beneath it, optionally
         restricted to one folder. What the retag confirmation reports before a rename or a

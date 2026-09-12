@@ -67,6 +67,7 @@ private slots:
     void versionNineFileRebuildsPathKeyedKeywords();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
+    void keywordAuditReportsDriftWhenTheLinksAreWrong();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
     /* Declared ahead of the migration cases deliberately: those reopen the
@@ -1150,6 +1151,69 @@ void tst_catalog::sameLeafUnderTwoParentsIsTwoKeywords()
     QCOMPARE(cat.search(q).size(), 2);
     q.keywords = {"Fauna|Bird"};
     QCOMPARE(cat.search(q), QStringList{imagePath("hn.nef")});
+}
+
+void tst_catalog::keywordAuditReportsDriftWhenTheLinksAreWrong()
+{
+/*
+    THE AUDIT BEHIND Help > Diagnostics > Keywords diagnostics, and what it has to be able
+    to see: the drift schema 11 and schema 12 both repaired, which nothing detected at the
+    time and which surfaced months later as two panels quoting different counts.
+
+    THE LINKS ARE BROKEN BY SQL RATHER THAN BY A COMMIT, deliberately. Catalog::commit now
+    derives them from the text and cannot produce a mismatch (see the test above), so the
+    only honest way to build the state the audit exists to find is to corrupt the table
+    directly -- which is also exactly what the reported libraries held: correct text,
+    correct stamps, wrong links, and a rescan that changes nothing because the stamps
+    match.
+*/
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+
+    CatalogRow a = rowFor("audit_a.jpg", {"Heron"}, {"Fauna|Bird|Heron"});
+    CatalogRow b = rowFor("audit_b.jpg", {"Vole"}, {"Fauna|Mammal|Vole"});
+    cat.commit({a, b});
+
+    KeywordAudit clean = cat.keywordAudit();
+    QVERIFY(clean.available);
+    QCOMPARE(clean.imagesWithText, 2);
+    QCOMPARE(clean.sampled, 2);
+    QCOMPARE(clean.drifted, 0);
+    QCOMPARE(clean.missingLinks, 0);
+    QCOMPARE(clean.extraLinks, 0);
+    QVERIFY(clean.examples.isEmpty());
+
+    /*  Take one image's deepest link away. Its text still says Fauna|Bird|Heron, so the
+        expansion the audit recomputes carries a path the links do not. */
+    QSqlQuery q(CacheDb::instance().db());
+    QVERIFY(q.exec("DELETE FROM image_keyword WHERE keyword_id ="
+                   " (SELECT id FROM keyword WHERE pathfold = 'fauna|bird|heron')"));
+
+    KeywordAudit drifted = cat.keywordAudit();
+    QCOMPARE(drifted.drifted, 1);
+    QCOMPARE(drifted.missingLinks, 1);
+    QCOMPARE(drifted.extraLinks, 0);
+    QCOMPARE(drifted.examples.size(), 1);
+    QVERIFY(drifted.examples.first().contains("audit_a.jpg"));
+    QVERIFY(drifted.examples.first().contains("fauna|bird|heron"));
+
+    /*  And the other direction: a link to a keyword the image's text does not carry, which
+        is the half that made one library's image claim a keyword belonging to another
+        picture entirely. */
+    QVERIFY(q.exec("INSERT INTO image_keyword (image_id, keyword_id)"
+                   " SELECT i.id, k.id FROM image i, keyword k"
+                   " WHERE i.path LIKE '%audit_b.jpg' AND k.pathfold = 'fauna|bird'"));
+
+    KeywordAudit both = cat.keywordAudit();
+    QCOMPARE(both.drifted, 2);
+    QCOMPARE(both.missingLinks, 1);
+    QCOMPARE(both.extraLinks, 1);
+
+    /*  sampleLimit caps the DRIFT check only -- the whole-table counts above it are not
+        sampled and must still be right. */
+    KeywordAudit capped = cat.keywordAudit(1);
+    QCOMPARE(capped.sampled, 1);
+    QCOMPARE(capped.imagesWithText, 2);
 }
 
 void tst_catalog::excludeKeywordSeparatesTwoPlaces()

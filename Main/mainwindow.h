@@ -1533,6 +1533,7 @@ private:
     QAction *diagnosticsDataModelAllRowsAction;
     QAction *diagnosticsEmbellishAction;
     QAction *diagnosticsFiltersAction;
+    QAction *diagnosticsKeywordsAction;
     QAction *diagnosticsFileTreeAction;
     QAction *diagnosticsBookmarksAction;
     QAction *diagnosticsPixmapAction;
@@ -2484,6 +2485,10 @@ private:
     void diagnosticsCurrent();
     QString diagnostics();
     QString developDiagnostics();
+    /*  The keyword system at all four levels -- files, datamodel, catalog links
+        and the authored vocabulary -- with the comparisons between them that
+        every keyword fault so far has been. See the implementation. */
+    QString keywordDiagnostics();
     void diagnosticsDevelop();
     void diagnosticsMain();
     void diagnosticsSelection();
@@ -2504,6 +2509,7 @@ private:
     void diagnosticsEmbellish();
     void diagnosticsErrors();
     void diagnosticsFilters();
+    void diagnosticsKeywords();
     void diagnosticsFSTree();
     void diagnosticsBookmarks();
     void diagnosticsPixmap();

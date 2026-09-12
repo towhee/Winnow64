@@ -1969,6 +1969,12 @@ void MW::createHelpActions()
     addAction(diagnosticsFiltersAction);
     connect(diagnosticsFiltersAction, &QAction::triggered, this, &MW::diagnosticsFilters);
 
+    diagnosticsKeywordsAction = new QAction(tr("Keywords diagnostics"), this);
+    diagnosticsKeywordsAction->setObjectName("diagnosticsKeywords");
+    diagnosticsKeywordsAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsKeywordsAction);
+    connect(diagnosticsKeywordsAction, &QAction::triggered, this, &MW::diagnosticsKeywords);
+
     diagnosticsDataModelAction = new QAction(tr("DataModel diagnostics"), this);
     diagnosticsDataModelAction->setObjectName("diagnosticsDataModel");
     diagnosticsDataModelAction->setShortcutVisibleInContextMenu(true);
@@ -2578,6 +2584,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsMemoryAction);
     helpDiagnosticsMenu->addAction(diagnosticsFiltersAction);
+    helpDiagnosticsMenu->addAction(diagnosticsKeywordsAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
     helpDiagnosticsMenu->addSeparator();
     helpDiagnosticsMenu->addAction(ingestProbeArmAction);

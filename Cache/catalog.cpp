@@ -1212,6 +1212,114 @@ QList<CatalogKeyword> Catalog::keywords()
     return out;
 }
 
+KeywordAudit Catalog::keywordAudit(int sampleLimit)
+{
+/*
+    See the header. Three kinds of question, in the order they get cheaper to answer
+    wrong: the whole-table counts, the integrity of the links themselves, and the drift
+    between an image's links and the text they are derived from.
+
+    THE DRIFT CHECK RECOMPUTES WHAT THE COMMIT WOULD WRITE -- keywordPrefixExpand over
+    keywordEffectivePaths over the two verbatim columns -- and compares it, folded, with
+    the paths the links actually name. That is the same pair of functions
+    writeKeywordsLocked calls, deliberately: a second expression of "what the links
+    should be" could drift from the writer and report a fault that is its own.
+
+    ONE QUERY FOR THE SAMPLE, not one per image. The links come back as a GROUP_CONCAT so
+    the whole comparison is one pass over a joined result rather than a correlated
+    subquery per row.
+*/
+    KeywordAudit a;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return a;
+    a.available = true;
+
+    QSqlQuery q(db);
+    auto scalar = [&q](const char *sql) {
+        return (q.exec(sql) && q.next()) ? q.value(0).toInt() : -1;
+    };
+
+    a.schemaVersion       = scalar("PRAGMA user_version");
+    a.liveImages          = scalar("SELECT COUNT(*) FROM image WHERE live = 1");
+    a.imagesWithText      = scalar("SELECT COUNT(*) FROM image WHERE live = 1"
+                                   " AND (keywords_literal <> '' OR keywordpaths <> '')");
+    a.imagesWithLinks     = scalar("SELECT COUNT(DISTINCT ik.image_id) FROM image_keyword ik"
+                                   " JOIN image i ON i.id = ik.image_id AND i.live = 1");
+    a.keywordRows         = scalar("SELECT COUNT(*) FROM keyword");
+    a.vocabRows           = scalar("SELECT COUNT(*) FROM vocab");
+    a.links               = scalar("SELECT COUNT(*) FROM image_keyword");
+    a.unlinkedKeywords    = scalar("SELECT COUNT(*) FROM keyword WHERE id NOT IN"
+                                   " (SELECT DISTINCT keyword_id FROM image_keyword)");
+    a.orphanLinksNoKeyword= scalar("SELECT COUNT(*) FROM image_keyword ik"
+                                   " WHERE NOT EXISTS"
+                                   " (SELECT 1 FROM keyword k WHERE k.id = ik.keyword_id)");
+    a.orphanLinksNoImage  = scalar("SELECT COUNT(*) FROM image_keyword ik"
+                                   " WHERE NOT EXISTS"
+                                   " (SELECT 1 FROM image i WHERE i.id = ik.image_id)");
+    /*  Links on an image whose text is empty. Schema 11 and 12 both had to CARRY these
+        rows across a rebuild rather than derive them, so they are not a fault on their
+        own -- but they are the population that cannot be rebuilt from the file, and the
+        report says how many there are for that reason. */
+    a.linksWithoutText    = scalar("SELECT COUNT(DISTINCT ik.image_id) FROM image_keyword ik"
+                                   " JOIN image i ON i.id = ik.image_id"
+                                   " WHERE i.live = 1 AND i.keywords_literal = ''"
+                                   " AND i.keywordpaths = ''");
+
+    if (sampleLimit <= 0) return a;
+
+    QSqlQuery s(db);
+    s.prepare("SELECT i.path, i.keywords_literal, i.keywordpaths,"
+              " GROUP_CONCAT(k.path, char(10))"
+              " FROM (SELECT id, path, keywords_literal, keywordpaths FROM image"
+              "        WHERE live = 1 AND (keywords_literal <> '' OR keywordpaths <> '')"
+              "        LIMIT ?) i"
+              " LEFT JOIN image_keyword ik ON ik.image_id = i.id"
+              " LEFT JOIN keyword k ON k.id = ik.keyword_id"
+              " GROUP BY i.id");
+    s.addBindValue(sampleLimit);
+    if (!s.exec()) return a;
+
+    const int kMaxExamples = 5;
+    while (s.next()) {
+        a.sampled++;
+        const QString fPath = s.value(0).toString();
+        const QString kl = s.value(1).toString();
+        const QString kp = s.value(2).toString();
+        const QString linked = s.value(3).toString();
+
+        const QStringList expanded = keywordPrefixExpand(keywordEffectivePaths(
+            kl.split('\n', Qt::SkipEmptyParts), kp.split('\n', Qt::SkipEmptyParts)));
+
+        QSet<QString> want;
+        for (const QString &p : expanded) want.insert(keywordFold(p));
+        QSet<QString> have;
+        const QStringList haveList = linked.split('\n', Qt::SkipEmptyParts);
+        for (const QString &p : haveList) have.insert(keywordFold(p));
+
+        const QSet<QString> missing = want - have;
+        const QSet<QString> extra = have - want;
+        if (missing.isEmpty() && extra.isEmpty()) continue;
+
+        a.drifted++;
+        a.missingLinks += missing.size();
+        a.extraLinks += extra.size();
+        if (a.examples.size() < kMaxExamples) {
+            QStringList m = QStringList(missing.constBegin(), missing.constEnd());
+            QStringList e = QStringList(extra.constBegin(), extra.constEnd());
+            m.sort();
+            e.sort();
+            a.examples << QString("%1\n      text wants: %2\n      links have: %3")
+                              .arg(fPath,
+                                   m.isEmpty() ? "(nothing missing)" : m.join(", "),
+                                   e.isEmpty() ? "(nothing extra)" : e.join(", "));
+        }
+    }
+
+    return a;
+}
+
 QMap<QString, int> Catalog::categoryItems(int dmColumn)
 {
 /*
