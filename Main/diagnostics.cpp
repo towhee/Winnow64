@@ -464,6 +464,15 @@ QString MW::developDiagnostics()
         rpt << "\n" << "  total = " << G::s(c.count()) << " previews in "
             << G::s((int)folders.count()) << " folders   (" << mb(c.totalBytes())
             << " of " << mb(c.maxBytes()) << " cap)";
+        /*  WHAT THE HOUSEKEEPING DID THIS SESSION. The three orphan layers run once, off
+            the GUI thread, after the first folder load, and until this line there was no
+            way to tell whether they had run at all -- a stray payload is not a row, so it
+            appears in none of the totals above and shows up only as a cache folder
+            larger than the cache says it is. */
+        rpt << "\n" << "  housekeeping = " << G::s(c.lastReaped())
+            << " demoted rows reaped, " << G::s(c.lastStrays())
+            << " stray files removed, " << G::s(c.lastLostRows())
+            << " rows with no file dropped";
         if (folders.isEmpty()) {
             rpt << "\n" << "  (no cached devPreviews)";
         }
@@ -472,9 +481,11 @@ QString MW::developDiagnostics()
             rpt << "\n" << "      previews = " << G::s(f.count)
                 << "   live = " << G::s(f.live)
                 << "   size = " << mb(f.bytes)
-                << (f.live < f.count
-                        ? "   (missing source images -- deleted, or on an unmounted volume)"
-                        : "");
+                << (!f.mounted
+                        ? "   (volume not mounted -- not swept, so live is unverified)"
+                        : f.live < f.count
+                              ? "   (missing source images -- deleted or replaced)"
+                              : "");
         }
         rpt << "\n";
     };

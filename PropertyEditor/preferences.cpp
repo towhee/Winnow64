@@ -1472,11 +1472,18 @@ void Preferences::addDevPreviews()
                 "Once built, a raw opens from its preview instead of being\n"
                 "demosaiced, so the folder browses as fast as JPEGs and shows\n"
                 "Winnow's rendering rather than the camera's.\n\n"
+                "ONLY IN FOLDERS UNDER CATALOG MANAGEMENT. A preview is keyed\n"
+                "on the image's file path, so building one for a camera card\n"
+                "is work thrown away: ingest copies those files to a different\n"
+                "path and the card is erased. If you have not set up catalog\n"
+                "folders yet, previews build on local drives only - never on a\n"
+                "card or a network share.\n\n"
                 "The build is slow and thorough: a 1000-image raw folder takes\n"
                 "hours of background CPU and several GB of preview cache. It\n"
                 "runs one image at a time, pauses in Develop, and is abandoned\n"
-                "when you leave the folder. With it off, use Develop > Build\n"
-                "Developed Previews on the folders you want."
+                "when you leave the folder. With it off - or for a folder it\n"
+                "skips, a card included - use Develop > Build Developed\n"
+                "Previews, which always does what you ask."
         ;
     i.hasValue = true;
     i.captionIsEditable = false;

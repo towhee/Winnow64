@@ -3351,6 +3351,20 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
             setOperationMode(G::OperationMode::Preview);
     }
 
+    /*  Whether anything can be written beside these images, decided once here so the
+        Develop panel can say so BEFORE the user edits rather than after -- a locked SD
+        card and a read-only archive mount both take develop edits happily and then lose
+        them. A hint for the UI only; the writers still test the path they are about to
+        write (see Metadata::writeDevelopSidecar), because a recursive load can span
+        volumes. resetDataModel replaces the answer, an added folder can only make it
+        worse. */
+    if (op == G::FolderOp::Add) {
+        const bool ro = QStorageInfo(folderPath).isReadOnly() ||
+                        !QFileInfo(folderPath).isWritable();
+        if (resetDataModel) G::currentFolderReadOnly = ro;
+        else if (ro) G::currentFolderReadOnly = true;
+    }
+
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
@@ -6044,16 +6058,29 @@ void MW::folderChangeCompleted()
     }
     QString fun = "MW::folderChangeCompleted";
 
-    /* One-shot develop-preview cache sweep, deferred to here so it never competes with
-       the folder load the user is waiting for, and run off the GUI thread because it
-       stats every cached entry. Deliberately NOT at shutdown: closeEvent is already
-       doing synchronous teardown, and a force-quit or crash would skip it entirely.
-       See Cache/devpreviewcache.h for why it demotes rather than deletes. */
+    /* One-shot cache housekeeping, deferred to here so it never competes with the folder
+       load the user is waiting for, and run off the GUI thread because it stats every
+       cached entry. Deliberately NOT at shutdown: closeEvent is already doing
+       synchronous teardown, and a force-quit or crash would skip it entirely.
+
+       THREE PASSES, AND THEY ARE NOT INTERCHANGEABLE. sweep() decides which rows still
+       describe an image that is there -- demoting the ones that do not, reviving any
+       that came back, and reaping the ones that have stayed demoted past the grace
+       period (see Cache/devpreviewcache.h for why demotion is not deletion).
+       reconcile() then makes the table and the folder of payload files agree, which is
+       the only thing that collects strays: they are not rows, so the byte cap cannot
+       see them and no amount of eviction reclaims them. sweep() first, because its reap
+       deletes rows AND their files together and leaves nothing for reconcile to find.
+
+       ThumbCache gets its sweep here too. It needs no reconcile -- its thumbnails are
+       BLOBs in the table, so it has no payload files to go stray. */
     if (!devPreviewSweepDone) {
         devPreviewSweepDone = true;
         QThreadPool::globalInstance()->start([]{
             DevPreviewCache::instance().sweep();
+            DevPreviewCache::instance().reconcile();
             DevPreviewCache::instance().save();
+            ThumbCache::instance().sweep();
         });
     }
 

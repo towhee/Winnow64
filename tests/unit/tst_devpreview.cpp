@@ -7,6 +7,7 @@
 #include <QtConcurrent>
 #include <QSqlDatabase>
 #include <QStandardPaths>
+#include <QDateTime>
 #include <QSqlQuery>
 #include <QTemporaryDir>
 
@@ -47,6 +48,11 @@ private slots:
     void containsAgreesWithGet();
     void sweepDemotesMissingSource();
     void sweepSkipsUnmountedVolume();
+    void demotedRowSurvivesTheGracePeriod();
+    void demotedRowIsReapedAfterTheGracePeriod();
+    void demotedRowWithNoTimestampIsDatedNotReaped();
+    void reconcileKeepsARowWhosePayloadIsThere();
+    void demotedRowIsReapedEvenOnAnUnmountedVolume();
     void indexSurvivesReload();
     void putCommitsIndexWithoutAnExplicitSave();
     void lazyLoadPreservesIdsAcrossSessions();
@@ -328,6 +334,168 @@ void tst_devpreview::sweepSkipsUnmountedVolume()
     // the source does not exist (it never did) -- but the volume is not mounted
     QCOMPARE(c.sweep(), 0);
     QVERIFY(!c.get(p, "recipe1").isEmpty());
+}
+
+/*  The three tests below drive the demoted -> reaped lifecycle. Demotion buys a deleted
+    file time to come back from the trash; the grace period is what ends that patience,
+    and without it a demoted row held its multi-MB payload until the LRU cap was breached
+    -- forever, on a cache under its cap.
+
+    The clock is moved by backdating the `demoted` column rather than by waiting, which
+    is also how a tester can reproduce the real case in seconds. */
+namespace {
+/* Set the demoted timestamp of every row, as the passage of time would. */
+void backdateDemotion(qint64 secsAgo)
+{
+    QSqlDatabase db = CacheDb::instance().db();
+    QSqlQuery q(db);
+    q.prepare("UPDATE devpreview SET demoted = ? WHERE live = 0");
+    q.addBindValue(QDateTime::currentSecsSinceEpoch() - secsAgo);
+    q.exec();
+}
+constexpr qint64 kDay = 24 * 60 * 60;
+}  // namespace
+
+void tst_devpreview::demotedRowSurvivesTheGracePeriod()
+{
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("recent.nef");
+    QFile f(p);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("x");
+    f.close();
+    c.put(p, "recipe1", jpg(0x51));
+    QVERIFY(QFile::remove(p));
+
+    QCOMPARE(c.sweep(), 1);                  // demoted, timestamped now
+    backdateDemotion(29 * kDay);             // inside the 30-day grace
+    c.sweep();
+
+    QCOMPARE(c.count(), 1);                  // still there, still serving
+    QVERIFY(!c.get(p, "recipe1").isEmpty());
+}
+
+void tst_devpreview::demotedRowIsReapedAfterTheGracePeriod()
+{
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("longgone.nef");
+    QFile f(p);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("x");
+    f.close();
+    c.put(p, "recipe1", jpg(0x52));
+    const QString payload = c.payloadPath(p);
+    QVERIFY(QFile::exists(payload));
+    QVERIFY(QFile::remove(p));
+
+    QCOMPARE(c.sweep(), 1);
+    backdateDemotion(31 * kDay);             // past the grace period
+    c.sweep();
+
+    /* The row AND its payload go: a reap is the one place a demoted entry gives its disk
+       back, which is the whole point of the column. */
+    QCOMPARE(c.count(), 0);
+    QVERIFY(!QFile::exists(payload));
+    QCOMPARE(c.totalBytes(), 0);
+}
+
+void tst_devpreview::demotedRowWithNoTimestampIsDatedNotReaped()
+{
+/*
+    A row demoted before the column existed reads 0, which means "we do not know when",
+    not "long ago". Reaping those on sight would delete previews the user has had for a
+    day; they are dated instead, and reaped a grace period from here -- the same
+    treatment the srcsize/srcmtime backfill gets.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("legacy.nef");
+    QFile f(p);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("x");
+    f.close();
+    c.put(p, "recipe1", jpg(0x53));
+    QVERIFY(QFile::remove(p));
+    QCOMPARE(c.sweep(), 1);
+
+    backdateDemotion(0);
+    {   // an upgraded row: demoted, but with no record of when
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("UPDATE devpreview SET demoted = 0 WHERE live = 0"));
+    }
+
+    c.sweep();                               // dates it
+    QCOMPARE(c.count(), 1);                  // and does NOT reap it
+
+    qint64 stamped = 0;
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("SELECT demoted FROM devpreview"));
+        QVERIFY(q.next());
+        stamped = q.value(0).toLongLong();
+    }
+    QVERIFY(stamped > 0);
+
+    backdateDemotion(31 * kDay);
+    c.sweep();
+    QCOMPARE(c.count(), 0);                  // now it goes
+}
+
+void tst_devpreview::demotedRowIsReapedEvenOnAnUnmountedVolume()
+{
+/*
+    The mount check guards the VERDICT, not the clock. Demoting a row says "the volume
+    was mounted and the file was not there", and ejecting the card afterwards does not
+    make that less true. If the reap waited for the volume to come back, a card that is
+    never reinserted would keep its previews forever -- which is exactly the population
+    the reap exists to collect: one real cache held 3,404 rows / 5 GB of them.
+
+    sweepSkipsUnmountedVolume is the other half of this pair and must keep passing: a
+    LIVE row on an unmounted volume is still left strictly alone.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("ejected.nef");
+    c.put(p, "recipe1", jpg(0x56));
+    const QString payload = c.payloadPath(p);
+    c.save();
+
+    {   // demoted long ago, and its volume is not here any more
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("UPDATE devpreview SET live = 0, vol = '/Volumes/__NoSuchVol__',"
+                       " demoted = strftime('%s','now') - 31*24*60*60"));
+        QCOMPARE(q.numRowsAffected(), 1);
+    }
+    c.setCacheDir(QString());
+    c.setCacheDir(cacheTmp.path());
+    QCOMPARE(c.count(), 1);
+
+    c.sweep();
+
+    QCOMPARE(c.count(), 0);
+    QVERIFY(!QFile::exists(payload));
+}
+
+void tst_devpreview::reconcileKeepsARowWhosePayloadIsThere()
+{
+/*
+    The other half of reconcile, and the dangerous one: it must never drop a row whose
+    file exists. The snapshots it works from are taken unlocked, so a put() straddling
+    the pass can leave the table and the listing disagreeing; every deletion is therefore
+    re-checked before it happens.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    c.put(imagePath("a.nef"), "recipe1", jpg(0x54));
+    c.put(imagePath("b.nef"), "recipe2", jpg(0x55));
+    const qint64 before = c.totalBytes();
+
+    c.reconcile();
+
+    QCOMPARE(c.count(), 2);
+    QCOMPARE(c.totalBytes(), before);
+    QVERIFY(!c.get(imagePath("a.nef"), "recipe1").isEmpty());
+    QVERIFY(!c.get(imagePath("b.nef"), "recipe2").isEmpty());
 }
 
 void tst_devpreview::indexSurvivesReload()

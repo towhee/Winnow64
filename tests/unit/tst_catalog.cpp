@@ -199,8 +199,11 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         links missing, 689 belonging to other images). It differs from 11 in ONE respect
         that matters more than the repair: it passes seedVocab = false, because seeding
         the AUTHORED vocabulary is additive and a repeat would push every observed path
-        back into the list the user curates. */
-    QCOMPARE(CacheDb::schemaVersion(), 12);
+        back into the list the user curates; version 13 added NO table either -- it is a
+        column on the PREVIEW tenant (devpreview.demoted), which is why it is guarded on
+        that table existing: a step that assumed it would move a catalog-only file aside
+        and rebuild it. */
+    QCOMPARE(CacheDb::schemaVersion(), 13);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1368,6 +1371,13 @@ void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()
         QVERIFY(q.exec("CREATE UNIQUE INDEX IF NOT EXISTS keyword_namekey"
                        " ON keyword(namefold)"));
         QVERIFY(q.exec("DROP TABLE IF EXISTS vocab"));
+        /*  Schema 13 added devpreview.demoted. The sandbox file was created at the
+            CURRENT schema, so it already has that column, and leaving it would make
+            v13's ALTER run against a table that already has it -- which fails, and a
+            failed migration is moved aside, so this test would then assert against a
+            fresh empty index and prove nothing. See the maintenance note in
+            migrationCollapsesDoubledPathSeparators. */
+        QVERIFY(q.exec("ALTER TABLE devpreview DROP COLUMN demoted"));
         QVERIFY(q.exec("PRAGMA user_version = 9"));
     }
     /*  NOT Catalog::clear() here, which deletes every image row -- the very text the
@@ -1526,6 +1536,13 @@ void tst_catalog::versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone()
         QVERIFY(q.exec("DELETE FROM vocab"));
         QVERIFY(q.exec("INSERT INTO vocab (name, namefold, path, pathfold, parent)"
                        " VALUES ('Fauna','fauna','Fauna','fauna',NULL)"));
+        /*  Schema 13 added devpreview.demoted. The sandbox file was created at the
+            CURRENT schema, so it already has that column, and leaving it would make
+            v13's ALTER run against a table that already has it -- which fails, and a
+            failed migration is moved aside, so this test would then assert against a
+            fresh empty index and prove nothing. See the maintenance note in
+            migrationCollapsesDoubledPathSeparators. */
+        QVERIFY(q.exec("ALTER TABLE devpreview DROP COLUMN demoted"));
         QVERIFY(q.exec("PRAGMA user_version = 11"));
     }
     CacheDb::instance().closeThisThread();
@@ -1799,8 +1816,11 @@ void tst_catalog::migrationCollapsesDoubledPathSeparators()
             version 7 index failed to reopen", which named the symptom and not the cause.
 
             THIS IS A MAINTENANCE POINT: every schema added above 7 has to be undone
-            here, or this test silently stops testing anything. */
+            here, or this test silently stops testing anything. It applies to a column on
+            EITHER tenant -- schema 13's devpreview.demoted is not a catalog column, but
+            it is in the same file and the same migration, so it has to come out too. */
         QVERIFY(q.exec("ALTER TABLE image DROP COLUMN unreadable"));
+        QVERIFY(q.exec("ALTER TABLE devpreview DROP COLUMN demoted"));   // schema 13
         QVERIFY(q.exec("PRAGMA user_version = 7"));
     }
 

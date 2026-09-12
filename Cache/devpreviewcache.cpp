@@ -31,6 +31,16 @@ const char *kJsonName = "index.json";    // the index this replaced; imported on
    more than a few hundred stats. */
 constexpr int kPageRows = 512;
 
+/* How long a demoted row keeps its payload before the sweep reaps it.
+
+   Demotion exists so that a source file restored from the trash finds its preview again
+   rather than paying for a re-render, and thirty days is comfortably longer than anyone
+   takes to notice a deletion they did not mean. Past that the row is holding several MB
+   for an image that is not coming back. A constant rather than a preference: the right
+   value does not vary by user, and a preview is always re-renderable, so there is
+   nothing here for anyone to tune. */
+constexpr qint64 kDemotedGraceSecs = 30LL * 24 * 60 * 60;
+
 QString defaultCacheDir()
 {
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
@@ -157,16 +167,24 @@ QList<DevPreviewCache::FolderStat> DevPreviewCache::folderStats() const
     if (!db.isOpen()) return list;
 
     QSqlQuery q(db);
-    if (!q.exec("SELECT folder, COUNT(*), SUM(live), SUM(bytes) FROM devpreview"
+    if (!q.exec("SELECT folder, COUNT(*), SUM(live), SUM(bytes), MIN(vol) FROM devpreview"
                 " GROUP BY folder ORDER BY folder")) {
         return list;
     }
+    /*  MOUNTED IS REPORTED BECAUSE live DOES NOT IMPLY IT. The sweep leaves a row on an
+        unmounted volume exactly as it found it -- we know nothing about those files, and
+        treating an ejected card as a mass deletion is the one verdict this whole design
+        avoids -- so those rows read live, and the "missing source images" note against
+        the demoted count understates them. A folder is one directory, so one volume:
+        MIN(vol) is that volume, not an arbitrary pick. */
+    const MountSnapshot mounts = MountSnapshot::take();
     while (q.next()) {
         FolderStat f;
         f.folder = q.value(0).toString();
         f.count = q.value(1).toInt();
         f.live = q.value(2).toInt();
         f.bytes = q.value(3).toLongLong();
+        f.mounted = mounts.isMounted(q.value(4).toString());
         list.append(f);
     }
     return list;
@@ -270,13 +288,13 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
     QSqlQuery q(db);
     q.prepare("INSERT INTO devpreview"
               " (id, path, pathkey, folder, hash, bytes, used, live, vol,"
-              "  srcsize, srcmtime)"
-              " VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)"
+              "  srcsize, srcmtime, demoted)"
+              " VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0)"
               " ON CONFLICT(pathkey) DO UPDATE SET"
               " id = excluded.id, path = excluded.path, folder = excluded.folder,"
               " hash = excluded.hash, bytes = excluded.bytes, used = excluded.used,"
               " live = 1, vol = excluded.vol, srcsize = excluded.srcsize,"
-              " srcmtime = excluded.srcmtime");
+              " srcmtime = excluded.srcmtime, demoted = 0");
     q.addBindValue(qulonglong(id));
     q.addBindValue(fPath);
     q.addBindValue(key);
@@ -361,7 +379,7 @@ QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return jpg;       // the pixels are good; only the touch is lost
     QSqlQuery u(db);
-    u.prepare("UPDATE devpreview SET used = ?, live = 1 WHERE id = ?");
+    u.prepare("UPDATE devpreview SET used = ?, live = 1, demoted = 0 WHERE id = ?");
     u.addBindValue(nowSecs());
     u.addBindValue(qulonglong(id));
     u.exec();
@@ -522,7 +540,7 @@ void DevPreviewCache::onMoved(const QString &srcPath, const QString &dstPath)
 
     QSqlQuery q(db);
     q.prepare("UPDATE devpreview SET path = ?, pathkey = ?, folder = ?, vol = ?,"
-              " live = 1, srcsize = ?, srcmtime = ? WHERE pathkey = ?");
+              " live = 1, demoted = 0, srcsize = ?, srcmtime = ? WHERE pathkey = ?");
     q.addBindValue(dstPath);
     q.addBindValue(dstKey);
     q.addBindValue(QFileInfo(dstPath).absolutePath());
@@ -565,7 +583,14 @@ int DevPreviewCache::sweep()
 {
 /*
     Walk every row, confirming that the image it was made from is still there and still
-    the same image.
+    the same image, and collect the ones that have been gone long enough.
+
+    DEMOTE, THEN REAP. A missing source demotes the row rather than deleting it, so a
+    file restored from the trash finds its preview again. That patience used to have no
+    end: a demoted row kept its multi-MB payload until the LRU cap was breached, which
+    on a cache well under its cap is never. One real cache was half dead camera-card
+    entries on that account. The demoted column records WHEN, and a row still missing a
+    grace period later goes for good -- row and payload together.
 
     PAGED, AND THE MUTEX IS RELEASED BETWEEN PAGES. This stats one file per row; at
     250,000 rows on a network volume, holding the lock throughout would block every get()
@@ -584,10 +609,13 @@ int DevPreviewCache::sweep()
         qint64 srcSize;
         qint64 srcMtime;
         QString key;
+        qint64 demotedAt;
     };
 
     int demoted = 0;
+    int reaped = 0;
     quint64 cursor = 0;
+    const qint64 now = nowSecs();
 
     forever {
         QList<Row> page;
@@ -596,7 +624,7 @@ int DevPreviewCache::sweep()
             QSqlDatabase db = dbLocked();
             if (!db.isOpen()) return demoted;
             QSqlQuery q(db);
-            q.prepare("SELECT id, path, vol, live, srcsize, srcmtime, pathkey"
+            q.prepare("SELECT id, path, vol, live, srcsize, srcmtime, pathkey, demoted"
                       " FROM devpreview WHERE id > ? ORDER BY id LIMIT ?");
             q.addBindValue(qulonglong(cursor));
             q.addBindValue(kPageRows);
@@ -605,7 +633,7 @@ int DevPreviewCache::sweep()
                 page.append({q.value(0).toULongLong(), q.value(1).toString(),
                              q.value(2).toString(), q.value(3).toBool(),
                              q.value(4).toLongLong(), q.value(5).toLongLong(),
-                             q.value(6).toString()});
+                             q.value(6).toString(), q.value(7).toLongLong()});
             }
         }
         if (page.isEmpty()) break;
@@ -616,15 +644,41 @@ int DevPreviewCache::sweep()
         QList<quint64> toRevive;
         QList<QString> replaced;                 // keys whose path holds another image
         QList<QPair<quint64, SrcStamp>> toStamp;
+        QList<quint64> toDate;                   // demoted before the column existed
+        QList<QString> toReap;                   // demoted longer than the grace period
+
+        /*  THE REAP CLOCK RUNS ON A ROW THAT IS ALREADY DEMOTED, MOUNTED OR NOT. Demotion
+            is a verdict already reached, back when the volume WAS mounted and the file
+            WAS missing; nothing about ejecting the card makes that less true, and
+            requiring the volume to be present again would mean a card that is never
+            reinserted keeps its previews forever -- which is precisely the population
+            this reap exists to collect (one real cache held 5 GB of exactly that). The
+            mount check below still guards the verdict itself: a LIVE row on an unmounted
+            volume is left strictly alone, because "path does not exist" there means
+            "ejected", not "deleted". */
+        auto ageDemoted = [&](const Row &r) {
+            /*  A row demoted before the column existed reads 0, which is "we do not know
+                when", not "long ago": stamp it now and reap it a grace period from here.
+                Same treatment, and the same reason, as the srcsize / srcmtime backfill
+                below. */
+            if (!r.demotedAt) toDate.append(r.id);
+            else if (r.demotedAt < now - kDemotedGraceSecs) toReap.append(r.key);
+        };
 
         for (const Row &r : page) {
-            /* Ejected card / unplugged drive: we know nothing about these files, so leave
-               the row exactly as it is. */
-            if (!mounts.isMounted(r.vol)) continue;
+            if (!mounts.isMounted(r.vol)) {
+                if (!r.live) ageDemoted(r);
+                continue;
+            }
 
             const SrcStamp stamp = SrcStamp::of(r.path);
             if (!stamp.valid) {
-                if (r.live) toDemote.append(r.id);   // demote, do not delete
+                /*  Demote, do not delete -- a file that comes back from the trash finds
+                    its preview intact. But that patience has an end: the row kept its
+                    multi-MB payload until the LRU cap was breached, which on a cache
+                    well under its cap is forever. */
+                if (r.live) { toDemote.append(r.id); continue; }
+                ageDemoted(r);
                 continue;
             }
             if (!r.live) toRevive.append(r.id);      // came back (restored from trash)
@@ -639,7 +693,7 @@ int DevPreviewCache::sweep()
         }
 
         if (toDemote.isEmpty() && toRevive.isEmpty() && replaced.isEmpty()
-            && toStamp.isEmpty()) {
+            && toStamp.isEmpty() && toDate.isEmpty() && toReap.isEmpty()) {
             continue;
         }
 
@@ -649,21 +703,36 @@ int DevPreviewCache::sweep()
         const bool inTxn = db.transaction();
 
         if (!toDemote.isEmpty()) {
+            /* live and demoted move together: the timestamp is what the reap above
+               reads, and a demoted row without one would never be collected. */
             QSqlQuery q(db);
-            q.prepare("UPDATE devpreview SET live = 0 WHERE id = ?");
+            q.prepare("UPDATE devpreview SET live = 0, demoted = ? WHERE id = ?");
             for (quint64 id : toDemote) {
+                q.addBindValue(now);
                 q.addBindValue(qulonglong(id));
                 if (q.exec()) ++demoted;
             }
         }
         if (!toRevive.isEmpty()) {
             QSqlQuery q(db);
-            q.prepare("UPDATE devpreview SET live = 1 WHERE id = ?");
+            q.prepare("UPDATE devpreview SET live = 1, demoted = 0 WHERE id = ?");
             for (quint64 id : toRevive) {
                 q.addBindValue(qulonglong(id));
                 q.exec();
             }
         }
+        if (!toDate.isEmpty()) {
+            QSqlQuery q(db);
+            q.prepare("UPDATE devpreview SET demoted = ? WHERE id = ?");
+            for (quint64 id : toDate) {
+                q.addBindValue(now);
+                q.addBindValue(qulonglong(id));
+                q.exec();
+            }
+        }
+        /* removeLocked unlinks the payload and decrements bytes, so a reap is the one
+           place a demoted entry actually gives its disk back. */
+        for (const QString &k : toReap) { removeLocked(db, k); ++reaped; }
         if (!toStamp.isEmpty()) {
             QSqlQuery q(db);
             q.prepare("UPDATE devpreview SET srcsize = ?, srcmtime = ? WHERE id = ?");
@@ -679,8 +748,10 @@ int DevPreviewCache::sweep()
         if (inTxn) db.commit();
     }
 
-    if (demoted && G::isLogger)
-        G::log("DevPreviewCache::sweep", "demoted " + QString::number(demoted));
+    lastReapedCount.storeRelaxed(reaped);
+    if ((demoted || reaped) && G::isLogger)
+        G::log("DevPreviewCache::sweep", "demoted " + QString::number(demoted) +
+                                             ", reaped " + QString::number(reaped));
     return demoted;
 }
 
@@ -689,20 +760,47 @@ void DevPreviewCache::reconcile()
 /*
     Make the table and the folder of payloads agree.
 
+    WHY IT MATTERS AT ALL. A payload with no row can never be attributed to an image
+    again -- the id in its name says nothing about which picture it came from -- and,
+    worse, it is invisible to the byte cap, which sums the TABLE. So a stray is disk the
+    cache does not know it is holding and can never reclaim. Two paths create them
+    deliberately: the schema-2 pathkey dedupe (Cache/cachedb.cpp), and CacheDb::moveAside,
+    which renames an unreadable index and starts a fresh one -- stranding the entire
+    payload folder at a stroke. A row with no file is the mirror image: it can only ever
+    miss, and it inflates the byte total so the cap evicts live entries early.
+
     ONE directory listing and ONE table scan, matched through a set of ids. The obvious
     shape -- stat the payload named by each row, then list the folder to find strays -- is
     two passes over 250,000 files and a quarter of a million stat calls; this is one pass
     over the names alone.
 
-    A cache file with no row can never be attributed to an image again (the id in its name
-    says nothing about which picture it came from), so it is dead weight. A row with no
-    file is a row that can only ever miss.
-*/
-    QMutexLocker lk(&mutex);
-    QSqlDatabase db = dbLocked();
-    if (!db.isOpen()) return;
+    THE MUTEX IS NOT HELD ACROSS THE I/O. It used to be held for the whole pass, which at
+    250,000 entries blocks every decoder thread's get() for seconds -- a frozen loupe --
+    and contradicted this class's own rule that the long passes work in pages. The
+    listing and every unlink now run unlocked, and the table is read a page at a time.
 
-    const QString d = dirLocked();
+    EVERY DELETION IS RE-CHECKED UNDER THE LOCK, and that is what makes the unlocked I/O
+    safe. put() writes its payload with the mutex DROPPED and takes it again to insert the
+    row, so a put() straddling this pass can put a file on disk that the listing missed
+    and a row in the table the scan missed -- in either order. Set arithmetic over two
+    stale snapshots would then read "payload with no row" or "row with no payload" and
+    delete something perfectly good. So the snapshots only ever nominate CANDIDATES:
+    before a row goes, its payload is stat'd again; before a file goes, the table is asked
+    again for its id. Candidates are rare, so the re-check costs a handful of queries
+    rather than a second pass. (An id watermark was tried instead and is wrong: after a
+    moveAside the fresh table starts at id 1, so every stray on disk outranks it and the
+    one case this exists for would be skipped forever.)
+*/
+    QString d;
+    {
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();       // also runs the one-time JSON import
+        if (!db.isOpen()) return;
+        d = dirLocked();
+    }
+    auto payloadFor = [&d](quint64 id) {
+        return d + "/" + QString::number(id, 16) + ".jpg";
+    };
 
     /* Ids present on disk. QDirIterator reads names only -- no stat per file. */
     QSet<quint64> onDisk;
@@ -716,29 +814,91 @@ void DevPreviewCache::reconcile()
         else unnamed.append(file);
     }
 
-    /* Rows whose payload is gone, and the ids that are legitimately claimed. */
-    QList<QString> lost;
+    /* Rows whose payload is gone, and the ids that are legitimately claimed. Paged in id
+       order like sweep(), so the cursor survives rows appearing and disappearing. */
     QSet<quint64> claimed;
-    {
-        QSqlQuery q(db);
-        if (!q.exec("SELECT id, pathkey FROM devpreview")) return;
-        while (q.next()) {
-            const quint64 id = q.value(0).toULongLong();
-            if (onDisk.contains(id)) claimed.insert(id);
-            else lost.append(q.value(1).toString());
+    int lostRows = 0;
+    quint64 cursor = 0;
+    forever {
+        struct Row { quint64 id; QString key; };
+        QList<Row> page;
+        {
+            QMutexLocker lk(&mutex);
+            QSqlDatabase db = dbLocked();
+            if (!db.isOpen()) return;
+            QSqlQuery q(db);
+            q.prepare("SELECT id, pathkey FROM devpreview WHERE id > ? ORDER BY id"
+                      " LIMIT ?");
+            q.addBindValue(qulonglong(cursor));
+            q.addBindValue(kPageRows);
+            if (!q.exec()) return;
+            while (q.next())
+                page.append({q.value(0).toULongLong(), q.value(1).toString()});
         }
+        if (page.isEmpty()) break;
+        cursor = page.last().id;
+
+        QList<QString> lost;
+        for (const Row &r : page) {
+            if (onDisk.contains(r.id)) { claimed.insert(r.id); continue; }
+            /* Candidate only. Unlocked stat: the listing may predate a put() that has
+               since written this very file. */
+            if (!QFileInfo::exists(payloadFor(r.id))) lost.append(r.key);
+            else claimed.insert(r.id);
+        }
+        if (lost.isEmpty()) continue;
+
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return;
+        const bool inTxn = db.transaction();
+        for (const QString &k : lost) { removeLocked(db, k); ++lostRows; }
+        if (inTxn) db.commit();
     }
 
-    const bool inTxn = db.transaction();
-    for (const QString &p : lost) removeLocked(db, p);
-    if (inTxn) db.commit();
+    /* The files nothing claims. Asked of the table again, under the lock, because a row
+       inserted after this pass read its page is not in `claimed` and its payload is not a
+       stray. */
+    QList<quint64> candidates;
+    for (quint64 id : onDisk)
+        if (!claimed.contains(id)) candidates.append(id);
 
-    for (quint64 id : onDisk) {
-        if (claimed.contains(id)) continue;
-        QFile::remove(filePathLocked(id));
+    int strays = 0;
+    for (int i = 0; i < candidates.count(); i += kPageRows) {
+        const int n = qMin(kPageRows, candidates.count() - i);
+        QList<quint64> confirmed;
+        {
+            QMutexLocker lk(&mutex);
+            QSqlDatabase db = dbLocked();
+            if (!db.isOpen()) break;
+            QSqlQuery q(db);
+            q.prepare("SELECT 1 FROM devpreview WHERE id = ?");
+            for (int j = i; j < i + n; ++j) {
+                q.addBindValue(qulonglong(candidates.at(j)));
+                if (q.exec() && q.next()) continue;   // claimed after all
+                confirmed.append(candidates.at(j));
+            }
+        }
+        for (quint64 id : confirmed)
+            if (QFile::remove(payloadFor(id))) ++strays;
     }
-    for (const QString &f : unnamed) QFile::remove(f);
+
+    /* A name that is not a hex id was not written by this cache and no row can ever
+       name it. The folder is browsable and every write path refuses it (isCachePath), so
+       anything here arrived by hand, against that policy. */
+    for (const QString &f : unnamed)
+        if (QFile::remove(f)) ++strays;
+
+    lastStrayCount.storeRelaxed(strays);
+    lastLostRowCount.storeRelaxed(lostRows);
+    if ((strays || lostRows) && G::isLogger)
+        G::log("DevPreviewCache::reconcile", "strays " + QString::number(strays) +
+                                                 ", lost rows " + QString::number(lostRows));
 }
+
+int DevPreviewCache::lastReaped() const   { return lastReapedCount.loadRelaxed(); }
+int DevPreviewCache::lastStrays() const   { return lastStrayCount.loadRelaxed(); }
+int DevPreviewCache::lastLostRows() const { return lastLostRowCount.loadRelaxed(); }
 
 /* ---------------------------------------------------------------------------------
    Opening and housekeeping
