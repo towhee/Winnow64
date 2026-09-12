@@ -4,6 +4,7 @@
 #include <QString>
 #include <QByteArray>
 #include <QList>
+#include <QAtomicInt>
 #include <QMutex>
 #include <QSqlDatabase>
 
@@ -75,7 +76,7 @@
     ORPHANS
 
     Previews are generated only as a byproduct of editing, so the cache is disposable:
-    every failure mode costs a re-render, never data. Three layers keep it bounded:
+    every failure mode costs a re-render, never data. Four layers keep it bounded:
 
       1. maxBytes LRU cap. The load-bearing one -- the dominant growth case is thousands
          of images that all still exist, which no orphan sweep would ever reclaim.
@@ -83,10 +84,22 @@
          Not at shutdown: a force-quit or crash skips that, and closeEvent is already
          doing synchronous work. An entry whose source file is gone is DEMOTED (live =
          false) rather than deleted, so it evicts first but survives a file that comes
-         back from the trash. Crucially the sweep skips any entry whose volume is not
+         back from the trash -- and, once it has stayed demoted past kDemotedGraceSecs,
+         is REAPED, row and payload together. Demotion without an end to it was the hole
+         here: a demoted row held its multi-MB payload until the cap was breached, so on
+         a cache under its cap it held it forever, and one real cache was half dead
+         camera-card entries. Crucially the sweep DEMOTES nothing whose volume is not
          currently mounted -- Winnow browses memory cards and external drives constantly,
-         and an unmounted drive must not look like a mass deletion.
-      3. FileOps hooks, for the operations Winnow performs itself.
+         and an unmounted drive must not look like a mass deletion. The reap is not
+         gated that way: a row already demoted had that verdict reached while its volume
+         WAS mounted, and waiting for a card to be reinserted would mean one that never
+         is keeps its previews for good.
+      3. reconcile(), immediately after sweep() in the same pass, for the orphans that
+         are NOT rows: payload files the table does not name. They matter because the
+         cap sums the table, so a stray is disk the cache cannot see and can never
+         reclaim -- and CacheDb::moveAside, which renames an unreadable index and starts
+         a fresh one, turns the entire payload folder into strays at a stroke.
+      4. FileOps hooks, for the operations Winnow performs itself.
 
     THREADING
 
@@ -107,6 +120,8 @@
     The long-running passes -- sweep(), reconcile() -- do not hold it across their I/O
     either. At 250,000 entries that would be a multi-second stall on every get(), which is
     a visible freeze in the loupe. They work in pages, taking the lock per page.
+    reconcile() did hold it throughout; it now nominates candidates from unlocked
+    snapshots and re-checks each one under the lock before deleting anything.
 */
 class DevPreviewCache
 {
@@ -169,9 +184,21 @@ public:
        off the GUI thread. Returns the number of entries demoted. */
     int sweep();
 
-    /* Delete cache files with no index entry, and drop index entries with no file. Called
-       after load(); also the repair path when the index is unreadable. */
+    /*  Delete cache files with no index entry, and drop index entries with no file.
+
+        Run ONCE PER SESSION off the GUI thread, immediately after sweep(), from the
+        latched block in MW::folderChangeCompleted. It is the only collector of strays,
+        and strays are invisible to the byte cap because that sums the table -- so
+        without this pass a corrupt index (CacheDb::moveAside starts a fresh one) strands
+        the whole payload folder on disk permanently. Safe to call concurrently with
+        put()/get(): every deletion is re-checked under the lock. */
     void reconcile();
+
+    /*  What the last sweep() and reconcile() of this session did, for the diagnostics
+        report. Zero before they have run. */
+    int lastReaped() const;       // demoted rows collected after the grace period
+    int lastStrays() const;       // payload files with no row
+    int lastLostRows() const;     // rows with no payload
 
     /* Open the index (normally lazy, on first use). */
     void load();
@@ -191,6 +218,10 @@ public:
         int count = 0;
         int live = 0;
         qint64 bytes = 0;
+        /* Is the volume this folder is on mounted right now? A row on an ejected card is
+           left untouched by the sweep, so it still reads live -- this is the only thing
+           that tells the two apart. */
+        bool mounted = true;
     };
     QList<FolderStat> folderStats() const;
 
@@ -246,6 +277,15 @@ private:
     qint64 bytes = 0;
     qint64 capBytes = 20LL * 1024 * 1024 * 1024;  // 20 GB; see G::devPreviewCacheMaxBytes
     bool loaded = false;
+
+    /*  What the last housekeeping pass of this session actually did, for the diagnostics
+        report -- the only place a user can see that the orphan layers are working.
+        Atomic rather than mutex-guarded: they are written by the sweep on a pool thread
+        and read by the report on the GUI thread, and neither is worth taking the cache
+        mutex for. */
+    QAtomicInt lastReapedCount = 0;
+    QAtomicInt lastStrayCount = 0;
+    QAtomicInt lastLostRowCount = 0;
 };
 
 #endif // DEVPREVIEWCACHE_H

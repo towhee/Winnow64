@@ -1,6 +1,7 @@
 #include "Metadata/metadata.h"
 #include <QDebug>
 #include <QCryptographicHash>
+#include <QStorageInfo>
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
@@ -671,6 +672,26 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
         G::issue("Warning", msg, "Metadata::writeDevelopSidecar", -1, sidecarPath);
         return;
     }
+
+    /*  A READ-ONLY VOLUME IS DECLINED ONCE, NOT PER IMAGE. Editing a folder on a locked
+        SD card or a read-only archive mount used to fall through to the open() below and
+        report a failed write for every image touched, which buries the one fact the user
+        needs -- nothing here can be saved -- under a warning per file. Tested per path
+        rather than read off the folder-selection hint because a recursive load can span
+        volumes, and the writable half must still be written. The hint is SET here as
+        well: this runs on a QtConcurrent thread, and it may be reached for a volume the
+        selection test never saw.
+
+        This is not data loss deferred. The recipe stays in the live EditStack for the
+        session and the Develop panel says the volume is read-only (G::currentFolderReadOnly),
+        so the user can copy the images somewhere writable and keep their work. */
+    if (QStorageInfo(info.absoluteDir().path()).isReadOnly()) {
+        G::currentFolderReadOnly = true;
+        if (G::isLogger)
+            G::log("Metadata::writeDevelopSidecar", "read-only volume, declined " + sidecarPath);
+        return;
+    }
+
     QFile sidecarFile(sidecarPath);
     if (!sidecarFile.open(QIODevice::ReadWrite)) {
         QString msg = "Failed to open sidecar to write develop settings.";

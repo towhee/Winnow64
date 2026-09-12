@@ -793,6 +793,18 @@ Q_NAMESPACE
     extern bool colorManage;
     extern bool modifySourceFiles;
     extern bool backupBeforeModifying;
+    /*  The volume holding the selected folder refuses writes -- a locked SD card, a
+        read-only archive mount, a share exported without write access.
+
+        A UI HINT, NOT A WRITE GUARD. It is set once, on folder selection, so the Develop
+        panel can say up front that edits here cannot be saved instead of letting the user
+        work and then reporting a failed sidecar write per image. The writers test the
+        actual path they are about to write, because a recursive load can span volumes and
+        a global verdict would wrongly refuse the writable half.
+
+        Atomic because the writers run on QtConcurrent threads and set it when they find a
+        volume the folder-selection test did not cover. */
+    extern std::atomic<bool> currentFolderReadOnly;
     extern bool autoAddMissingThumbnails;
     extern bool renderVideoThumb;
     extern bool combineRawJpg;

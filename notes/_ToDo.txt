@@ -8,10 +8,7 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- Develop after start with no folder selected clicked on Effects header and Edits headers
-  disappeared except Basic,Curves,Color
 - Develop behavior when no image is selected
-- Develop Basic separator is black, should be gray, plus more space above
 - Add a use catalog preference.
 - When generate devPreviews?  For external media?
 - When quit dock widths are not persistent with next session

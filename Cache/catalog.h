@@ -41,10 +41,13 @@
 
     Two ways, and both go through commit():
 
-      1. OPPORTUNISTICALLY, from MW::folderChangeCompleted: every folder the user opens is
-         committed once its metadata has finished loading. This is deferred to there, and
-         run off the GUI thread, for the same reasons the devPreview sweep is -- the load
-         the user is waiting on must not carry it.
+      1. OPPORTUNISTICALLY, from MW::folderChangeCompleted: a folder the user opens is
+         committed once its metadata has finished loading -- but only if the scope table
+         admits it (MW::isCatalogScopeFolder), which is the ONLY door in. Browsing used
+         to catalogue unconditionally; that filled the index with folders the user never
+         asked for and could not see listed anywhere. Deferred to there, and run off the
+         GUI thread, for the same reasons the devPreview sweep is -- the load the user is
+         waiting on must not carry it.
       2. From the background scanner over the user's designated roots.
 
     Commit is NOT called per image from addMetadataForItem. That fires once per image on a

@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 12;
+constexpr int kSchemaVersion = 13;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1151,6 +1151,42 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
             db.rollback();
             return false;
+        }
+    }
+
+    if (version < 13) {
+        /* demoted: WHEN a devpreview row was demoted (epoch seconds), 0 for a live row
+           and for any row demoted before this column existed.
+
+           Demotion says the source image was missing the last time its volume was
+           mounted; it is not deletion, deliberately, so a file restored from the trash
+           finds its preview again (DevPreviewCache::sweep revives it). What was missing
+           is an end to that patience: a demoted row kept its multi-MB payload until the
+           LRU cap was breached, which on a cache well under its cap is forever. The
+           timestamp is what lets sweep() reap a row that has stayed demoted past the
+           grace period. A row demoted before the upgrade reads 0 -- "we do not know
+           when" -- and sweep() stamps it with now rather than reaping it blind, exactly
+           as it backfills srcsize/srcmtime. */
+        /*  ONLY IF THIS FILE HAS THAT TENANT. The devpreview table is created by the
+            version < 1 block, so a database that has been through every step from
+            scratch always has it -- but a step must not DEPEND on that. This is a
+            shared file with more than one tenant (Cache/cachedb.h), a failed migration
+            returns false and gets the whole database moved aside and rebuilt, and
+            "ALTER TABLE on a table that is not there" is the cheapest possible way to
+            throw away a user's catalog over a column their preview cache wanted. Ask
+            first; the migration is a no-op for a file without the table. */
+        QSqlQuery t(db);
+        bool hasDevPreview = false;
+        if (t.exec("SELECT 1 FROM sqlite_master WHERE type = 'table'"
+                   " AND name = 'devpreview'") && t.next()) {
+            hasDevPreview = true;
+        }
+        if (hasDevPreview) {
+            if (!q.exec("ALTER TABLE devpreview"
+                        " ADD COLUMN demoted INTEGER NOT NULL DEFAULT 0")) {
+                db.rollback();
+                return false;
+            }
         }
     }
 

@@ -4231,3 +4231,26 @@ Done. Both issues traced to IconView::wheelEvent (Views/iconview.cpp:1331): it n
 └─────┴─────────────────┴───────────┴─────────┘
 
 After start Winnow, but before a folder or catalog selected, if switch to develop mode and click on the Effects header, then Effects, Detail, Color Grade and Calibrate sections all disappear.
+
+================= devPreviews ====================
+
+1. Card is skipped. Preference on, scope = ~/Pictures recursive. Insert a
+   card, select its DCIM folder in Folders. Expected: no devPreview progress
+   row, nothing in the status bar, no cache growth (Develop > Clear Developed Preview
+   Cache reports an unchanged count). G::isLogger shows the skip.
+2. New subfolder works without a scan. Create ~/Pictures/ScopeTest, drop a few raws
+   in, select it. Expected: the build runs immediately — the prefix test does
+   not wait for a catalog scan — and the images are catalogued by the same
+   folder load.
+3. Escape hatch. With the card folder still selected, Develop > Build Developed
+   Previews. Expected: it runs and reports normally.
+4. Empty-scope fallback. Clear the scope table. Select a local folder of raws
+   → builds. Select the card → skipped.
+5. Read-only. Lock the card (physical write-protect switch) and edit an image in
+   Develop. Expected: one inline notice in the Develop panel, not one warning per image.
+6. No regression to the byproduct path. Edit an image on a normal in-scope folder,
+   leave Develop, confirm the grid thumbnail and the loupe devPreview both update.
+7. ctest --test-dir build/<preset> --output-on-failure — tst_devpreview and
+   tst_catalog cover the cache keying and scope predicates and must stay green. Add a
+   case to tst_devpreview.cpp for the eligibility rule (in-scope / out-of-scope /
+   empty-scope), which is pure logic and needs no media.

@@ -1,6 +1,8 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
 #include "ImageFormats/Raw/rawformat.h"
+#include "Utilities/volumeinfo.h"
+#include "Main/devpreviewpolicy.h"
 #include <QtConcurrent>
 #include <QFutureWatcher>
 
@@ -16,7 +18,9 @@
     Closing that gap means DECODING AND RENDERING an image purely to cache it, which is
     exactly what the byproduct rule exists to avoid. So it never happens unasked: either
     the user runs Develop > Build Developed Previews, or they turn on "Build developed
-    previews in background" and accept the cost.
+    previews in background" and accept the cost. The background half is further confined
+    to folders under catalog management -- see queueBackgroundDevPreviewBuild -- because a
+    preview is keyed on the image's path, and a camera card's paths do not survive ingest.
 
     TWO POPULATIONS ARE BUILT, and the second is much the larger:
 
@@ -493,21 +497,69 @@ void MW::queueBackgroundDevPreviewBuild()
 
     Rows already holding a current preview are filtered out downstream by buildDevPreviews
     (off the GUI thread), so re-opening a folder that finished building queues nothing.
+
+    ONLY WHERE THE USER SAID THEIR LIBRARY IS. A devPreview is keyed on the image's PATH
+    and stored outside the image, so building one for a folder the user is passing through
+    is work thrown away. The case that makes this a bug rather than an inefficiency is a
+    camera card: selecting one would queue a full sensor decode of every raw on it -- hours
+    -- and then ingest copies those files to a different path and the card is erased, so
+    every preview built is orphaned at the moment it could first have been used, having
+    evicted real library entries from the LRU cap on the way out. A network share is the
+    same read cost without the orphaning.
+
+    THE SCOPE TABLE ALREADY ANSWERS THIS. The rule is DevPreviewPolicy::folderEligible
+    (Main/devpreviewpolicy.h -- its own header so it can be tested without a MainWindow),
+    and with a scope table it reduces to the same test isCatalogScopeFolder makes: "the
+    user nominated this folder for cataloguing", which is the same statement as "this is
+    part of my library". It is a PREFIX test -- a subfolder created five minutes ago under
+    a recursive include row is in scope immediately, with no catalog scan needed first,
+    which is why SCOPE MEMBERSHIP is tested rather than whether the catalog already holds
+    rows for the folder. A card is never under it.
+
+    WITH NO SCOPE TABLE AT ALL the question has not been asked yet (promptForCatalogScope
+    asks it once and can be dismissed), so fall back to the volume itself: build on fixed
+    local drives, skip removable and network. That keeps the preference working out of the
+    box without touching a card.
+
+    Neither test applies to Develop > Build Developed Previews. Asking for it explicitly,
+    on a card, means it -- see buildDevPreviewsForSelection.
 */
     if (G::isLogger) G::log("MW::queueBackgroundDevPreviewBuild");
     if (!G::buildDevPreviewsInBackground) return;
     if (!dm || dm->rowCount() == 0) return;
+
+    /*  Per FOLDER, not per volume: a recursive load routinely spans folders that are in
+        scope and folders that are not. Memoised for this pass only -- a verdict about
+        removable media is true only while the media is still mounted. */
+    const bool scopeDefined = !catalogScope.isEmpty();
+    QHash<QString, bool> eligible;
+    auto folderAllowed = [&](const QString &folder) {
+        auto it = eligible.find(folder);
+        if (it == eligible.end()) {
+            const bool ok = DevPreviewPolicy::folderEligible(catalogScope, folder);
+            if (!ok && G::isLogger)
+                G::log("MW::queueBackgroundDevPreviewBuild", "skipped " + folder + " (" +
+                       (scopeDefined ? "not in catalog scope"
+                                     : VolumeInfo::kindName(VolumeInfo::kindOf(folder)) +
+                                           " volume, no catalog scope defined") + ")");
+            it = eligible.insert(folder, ok);
+        }
+        return it.value();
+    };
 
     QStringList paths;
     for (int row = 0; row < dm->rowCount(); ++row) {
         const QString fPath =
             dm->index(row, G::PathColumn).data(G::PathRole).toString();
         if (fPath.isEmpty()) continue;
+        const QFileInfo info(fPath);
+        /* absoluteDir().path() is the spelling the catalog's folder column uses
+           (DataModel::catalogRows), so the two cannot disagree about the same folder. */
+        if (!folderAllowed(info.absoluteDir().path())) continue;
         const bool edited = dm->index(row, G::DevelopColumn).data().toBool();
         /* Extension test only -- no file is opened here. buildDevPreviews makes the real
            (and more expensive) per-path decision, on a worker thread. */
-        if (!edited &&
-            !RawFormat::HasSensorDecoder(QFileInfo(fPath).suffix().toLower()))
+        if (!edited && !RawFormat::HasSensorDecoder(info.suffix().toLower()))
             continue;
         paths << fPath;
     }

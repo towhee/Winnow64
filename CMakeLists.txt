@@ -389,6 +389,7 @@ set(WINNOW_SOURCES
     Utilities/stresstest.cpp
     Utilities/tokenfilename.cpp
     Utilities/usbutil.cpp
+    Utilities/volumeinfo.cpp
     Utilities/fileops.cpp
     Utilities/utilities.cpp
     Utilities/winnets.cpp
@@ -595,6 +596,7 @@ set(WINNOW_HEADERS
     Main/global.h
     Main/catalogscanner.h
     Main/catalogscope.h
+    Main/devpreviewpolicy.h
     Main/mainwindow.h
     Main/qtlocalpeer.h
     Main/qtlockedfile.h
@@ -654,6 +656,7 @@ set(WINNOW_HEADERS
     Utilities/stresstest.h
     Utilities/tokenfilename.h
     Utilities/usbutil.h
+    Utilities/volumeinfo.h
     Utilities/fileops.h
     Utilities/searchterms.h
     Utilities/utilities.h

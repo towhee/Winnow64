@@ -3586,6 +3586,15 @@ void MW::updateDevelopSelectionWarning()
 
     QList<QPair<DevelopAlert, QString>> alerts;
 
+    /*  WARNING, NOT A SHOW STOPPER, for a read-only volume -- a locked SD card, a
+        read-only archive mount. Develop runs and the render is real; what fails is the
+        sidecar write that would make it outlast the session, and the user may well be
+        looking rather than keeping. Said HERE, before they edit, because the alternative
+        is Metadata::writeDevelopSidecar declining quietly image after image. */
+    if (G::currentFolderReadOnly)
+        alerts << qMakePair(AlertWarning,
+                            QString("Read-only volume - edits cannot be saved."));
+
     /* SHOW STOPPER: the panel is greyed for a video (syncDevelopPanelEnabled) and
        nothing can be edited -- Develop does not apply at all. */
     if (currentIsVideo()) {

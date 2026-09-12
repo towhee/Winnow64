@@ -138,6 +138,12 @@ endif()
 # tst_devpreview tests Cache/devpreviewcache.cpp, the on-disk cache of develop
 # previews (already in the shared closure above).
 winnow_add_unit_test(tst_devpreview unit/tst_devpreview.cpp)
+# tst_devpreviewpolicy tests Main/devpreviewpolicy.h -- where the BACKGROUND devPreview
+# build is allowed to run. Header-only apart from the volume classifier it composes, so
+# volumeinfo.cpp is the only extra source (it is not in the shared closure: nothing else
+# under test reaches it).
+winnow_add_unit_test(tst_devpreviewpolicy unit/tst_devpreviewpolicy.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/volumeinfo.cpp)
 # tst_fileops tests Utilities/fileops.cpp, the choke point every image file operation goes
 # through (already in the shared closure above).
 winnow_add_unit_test(tst_fileops unit/tst_fileops.cpp)
