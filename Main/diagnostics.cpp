@@ -1,6 +1,9 @@
 #include "Main/mainwindow.h"
 #include "Develop/workingimagecache.h"
 #include "Cache/devpreviewcache.h"
+#include "Cache/catalog.h"
+#include "Cache/cachedb.h"
+#include "Metadata/keywordpaths.h"
 #include "ui_metadatareport.h"
 
 #if defined(Q_OS_WIN)
@@ -913,6 +916,399 @@ void MW::diagnosticsIngest()
     diagnosticsReport(IngestProbe::Instance().Report(), "Winnow Diagnostics: Ingest Probe");
 }
 void MW::diagnosticsZoom() {} // dummy for now
+
+QString MW::keywordDiagnostics()
+{
+/*
+    EVERYTHING THE KEYWORD SYSTEM KNOWS, FROM ITS FOUR STORES AT ONCE, and the point of
+    the report is that there ARE four and they are supposed to agree:
+
+      the FILES      dc:subject and lr:hierarchicalSubject, as written
+      the DATAMODEL  G::KeywordsColumn / KeywordPathsColumn / KeywordsAllColumn, which is
+                     what the Filters panel counts
+      the CATALOG    `keyword` + `image_keyword`, the OBSERVED vocabulary, which is what
+                     the Keywords dock and every cross-folder search count
+      the VOCAB      the `vocab` tree the user curates, which is what decides whether a
+                     keyword reads as filed or unfiled
+
+    EVERY KEYWORD BUG SO FAR HAS BEEN A DISAGREEMENT BETWEEN TWO OF THEM, and each was
+    found late and by accident -- a keyword reading 574 images in one panel and 1 in the
+    other (schema 12), links that had drifted from the text they are derived from (schema
+    11 and 12 both), a rename that never persisted because synonyms bound as null. None of
+    them announced itself. So the report leads with the comparisons rather than with the
+    inventory: the drift audit, the two counts of the same keyword side by side, and what
+    the current image carries at each of the four levels.
+
+    READ-ONLY AND ON DEMAND. It queries the catalog and walks the vocabulary on the GUI
+    thread, which is why it is a menu item and not something a load path calls. The drift
+    audit is sampled (see Catalog::keywordAudit) so the cost stays bounded on a library.
+*/
+    if (G::isLogger) G::log("MW::keywordDiagnostics");
+
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+
+    rpt << Utilities::centeredRptHdr('=', "Keyword Diagnostics");
+    rpt << "\n";
+
+    Catalog &cat = Catalog::instance();
+    const bool haveCat = cat.isAvailable();
+
+    /* ---------------------------------------------------------------------------
+       Context
+       --------------------------------------------------------------------------- */
+    rpt << "\n" << "Context";
+    rpt << "\n" << "  Database                = " << CacheDb::instance().path();
+    rpt << "\n" << "  Catalog available       = " << G::s(haveCat);
+    rpt << "\n" << "  Scope                   = "
+        << (G::scope == G::Scope::Catalog ? "Catalog" : "Folders");
+    rpt << "\n" << "  Current folder          = "
+        << (dm ? dm->primaryFolderPath() : QString());
+    rpt << "\n" << "  Datamodel rows          = " << G::s(dm ? dm->rowCount() : 0);
+    rpt << "\n" << "  Keywords dock           = "
+        << (keywordsDock ? (keywordsDock->isVisible() ? "visible" : "hidden")
+                         : "not constructed");
+    rpt << "\n" << "  Dock refresh pending    = " << G::s(keywordsDockRefreshPending);
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       The catalog tables, and the drift audit that is the reason for this report
+       --------------------------------------------------------------------------- */
+    const KeywordAudit a = cat.keywordAudit();
+
+    rpt << "\n" << "Catalog keyword tables (the OBSERVED vocabulary)";
+    if (!a.available) {
+        rpt << "\n" << "  (database not open -- nothing to report)";
+    }
+    else {
+        rpt << "\n" << "  Schema version          = " << G::s(a.schemaVersion)
+            << "   (code expects " << G::s(CacheDb::schemaVersion()) << ")";
+        rpt << "\n" << "  Live images             = " << G::s(a.liveImages);
+        rpt << "\n" << "  ... carrying keyword text = " << G::s(a.imagesWithText);
+        rpt << "\n" << "  ... carrying links        = " << G::s(a.imagesWithLinks);
+        rpt << "\n" << "  keyword rows            = " << G::s(a.keywordRows);
+        rpt << "\n" << "  vocab rows              = " << G::s(a.vocabRows);
+        rpt << "\n" << "  image_keyword links     = " << G::s(a.links);
+        rpt << "\n" << "  Keywords nothing links to = " << G::s(a.unlinkedKeywords)
+            << "   (prunable)";
+        rpt << "\n" << "  Links to a missing keyword = " << G::s(a.orphanLinksNoKeyword);
+        rpt << "\n" << "  Links to a missing image   = " << G::s(a.orphanLinksNoImage);
+        rpt << "\n" << "  Images with links and no text = " << G::s(a.linksWithoutText)
+            << "   (not rebuildable from the file)";
+    }
+    rpt << "\n";
+
+    rpt << "\n" << "Link drift: do an image's links match the text they are derived from?";
+    if (!a.available) {
+        rpt << "\n" << "  (not checked)";
+    }
+    else if (a.sampled == 0) {
+        rpt << "\n" << "  No image carries keyword text -- nothing to compare.";
+    }
+    else {
+        rpt << "\n" << "  Images sampled          = " << G::s(a.sampled)
+            << " of " << G::s(a.imagesWithText);
+        rpt << "\n" << "  Images that disagree    = " << G::s(a.drifted);
+        rpt << "\n" << "  Links missing           = " << G::s(a.missingLinks);
+        rpt << "\n" << "  Links the text does not carry = " << G::s(a.extraLinks);
+        if (a.drifted == 0) {
+            rpt << "\n" << "  CLEAN -- every sampled image's links are the prefix";
+            rpt << "\n" << "  expansion of its own keywords_literal + keywordpaths.";
+        }
+        else {
+            rpt << "\n";
+            rpt << "\n" << "  THIS IS THE FAULT SCHEMA 11 AND 12 REPAIRED. A rescan cannot fix it:";
+            rpt << "\n" << "  the text and the freshness stamps are correct, so commit() skips";
+            rpt << "\n" << "  the row. Examples:";
+            for (const QString &e : a.examples) rpt << "\n" << "    " << e;
+        }
+    }
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       The authored vocabulary, walked
+       --------------------------------------------------------------------------- */
+    rpt << "\n" << "Authored vocabulary (the `vocab` tree, what the user curates)";
+    if (!keywordVocab) {
+        rpt << "\n" << "  (not constructed)";
+    }
+    else if (keywordVocab->rowCount(QModelIndex()) == 0) {
+        rpt << "\n" << "  NOT LOADED (or empty). It loads lazily -- opening the Keywords";
+        rpt << "\n" << "  panel or a filter build fills it.";
+    }
+    else {
+        int nodes = 0, roots = 0, leaves = 0, deepest = 0;
+        int withSynonyms = 0, notExportable = 0, zeroCount = 0;
+        /*  Folded leaf -> the paths using it, so a name living under two parents can be
+            named rather than only counted. That ambiguity is the whole reason keyword
+            identity is the path, and 59 of one library's 3,975 names had it. */
+        QMap<QString, QStringList> leafUse;
+        QSet<QString> vocabFold;
+
+        std::function<void(const QModelIndex &, int)> walk =
+            [&](const QModelIndex &parent, int depth) {
+            const int n = keywordVocab->rowCount(parent);
+            for (int i = 0; i < n; ++i) {
+                const QModelIndex idx = keywordVocab->index(i, 0, parent);
+                const QString path = idx.data(KeywordVocab::PathRole).toString();
+                nodes++;
+                if (depth == 1) roots++;
+                if (depth > deepest) deepest = depth;
+                if (keywordVocab->rowCount(idx) == 0) leaves++;
+                if (!idx.data(KeywordVocab::SynonymsRole).toStringList().isEmpty())
+                    withSynonyms++;
+                if (!idx.data(KeywordVocab::ExportableRole).toBool()) notExportable++;
+                if (idx.data(KeywordVocab::CountRole).toInt() == 0) zeroCount++;
+                if (!path.isEmpty()) {
+                    vocabFold.insert(keywordFold(path));
+                    leafUse[keywordFold(keywordLeafOf(path))] << path;
+                }
+                walk(idx, depth + 1);
+            }
+        };
+        walk(QModelIndex(), 1);
+
+        rpt << "\n" << "  Nodes                   = " << G::s(nodes);
+        rpt << "\n" << "  Roots                   = " << G::s(roots);
+        rpt << "\n" << "  Leaves                  = " << G::s(leaves);
+        rpt << "\n" << "  Deepest branch          = " << G::s(deepest);
+        rpt << "\n" << "  With synonyms           = " << G::s(withSynonyms);
+        rpt << "\n" << "  Not exportable          = " << G::s(notExportable);
+        rpt << "\n" << "  No images (empty branch) = " << G::s(zeroCount)
+            << "   (legitimate here, impossible in `keyword`)";
+
+        int ambiguous = 0;
+        QStringList ambiguousLines;
+        for (auto it = leafUse.constBegin(); it != leafUse.constEnd(); ++it) {
+            if (it.value().size() < 2) continue;
+            ambiguous++;
+            if (ambiguousLines.size() < 10)
+                ambiguousLines << QString("    %1").arg(it.value().join("   |   "));
+        }
+        rpt << "\n" << "  Names under >1 parent   = " << G::s(ambiguous)
+            << "   (why identity is the PATH)";
+        for (const QString &l : ambiguousLines) rpt << "\n" << l;
+
+        /*  THE TWO VOCABULARIES COMPARED. An observed path with no authored node is an
+            UNFILED keyword -- the thing the Filters panel draws in italic and the
+            Keywords dock offers to merge. An authored node the catalog has never seen is
+            the opposite and is not a fault: an empty branch made room for. */
+        if (haveCat) {
+            const QList<CatalogKeyword> observed = cat.keywords();
+            QList<CatalogKeyword> unfiled;
+            QSet<QString> observedFold;
+            for (const CatalogKeyword &k : observed) {
+                observedFold.insert(keywordFold(k.path));
+                if (!vocabFold.contains(keywordFold(k.path))) unfiled << k;
+            }
+            int authoredOnly = 0;
+            for (const QString &f : vocabFold)
+                if (!observedFold.contains(f)) authoredOnly++;
+
+            std::sort(unfiled.begin(), unfiled.end(),
+                      [](const CatalogKeyword &x, const CatalogKeyword &y) {
+                          return x.count > y.count;
+                      });
+
+            rpt << "\n";
+            rpt << "\n" << "  Observed paths            = " << G::s(observed.size());
+            rpt << "\n" << "  ... unfiled (no vocab node) = " << G::s(unfiled.size());
+            rpt << "\n" << "  Authored nodes never observed = " << G::s(authoredOnly)
+                << "   (empty branches -- not a fault)";
+            rpt << "\n" << "  Filters panel unfiled count = "
+                << G::s(filters ? filters->unfiledKeywordCount() : -1);
+            if (!unfiled.isEmpty()) {
+                rpt << "\n" << "  Biggest unfiled keywords:";
+                for (int i = 0; i < unfiled.size() && i < 15; ++i)
+                    rpt << "\n" << QString("    %1  %2")
+                               .arg(unfiled.at(i).count, 7).arg(unfiled.at(i).path);
+            }
+        }
+    }
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       Flat keywords -- what the tidy operation would see
+       --------------------------------------------------------------------------- */
+    rpt << "\n" << "Flat keywords (carried as a ROOT after leaf consumption)";
+    if (!haveCat) {
+        rpt << "\n" << "  (no catalog)";
+    }
+    else {
+        const QList<CatalogKeyword> flat = cat.flatKeywords();
+        rpt << "\n" << "  Distinct flat keywords  = " << G::s(flat.size());
+        rpt << "\n" << "  (Tidy flat keywords... files these into the tree)";
+        for (int i = 0; i < flat.size() && i < 15; ++i)
+            rpt << "\n" << QString("    %1  %2")
+                       .arg(flat.at(i).count, 7).arg(flat.at(i).path);
+        if (flat.size() > 15)
+            rpt << "\n" << QString("    ... and %1 more").arg(flat.size() - 15);
+    }
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       The two counts of one keyword, side by side -- the disagreement that started it
+       --------------------------------------------------------------------------- */
+    rpt << "\n" << "Counts compared: Filters (datamodel) vs catalog (links)";
+    if (!haveCat || !filters) {
+        rpt << "\n" << "  (needs the catalog and the Filters panel)";
+    }
+    else if (G::scope != G::Scope::Catalog) {
+        rpt << "\n" << "  Folders scope: the two SHOULD differ -- the catalog counts the";
+        rpt << "\n" << "  whole library and the datamodel holds one folder. Not compared.";
+    }
+    else {
+        const QList<CatalogKeyword> observed = cat.keywords();
+        int compared = 0, disagree = 0;
+        QStringList lines;
+        for (const CatalogKeyword &k : observed) {
+            const int inFilters = filters->keywordItemCount(k.path, /*filtered*/ false);
+            if (inFilters < 0) continue;        // no item: nothing was claimed
+            compared++;
+            if (inFilters == k.count) continue;
+            disagree++;
+            if (lines.size() < 20)
+                lines << QString("    %1  filters %2   catalog %3")
+                             .arg(k.path, -60).arg(inFilters, 7).arg(k.count, 7);
+        }
+        rpt << "\n" << "  Keywords compared       = " << G::s(compared);
+        rpt << "\n" << "  Keywords that disagree  = " << G::s(disagree);
+        for (const QString &l : lines) rpt << "\n" << l;
+        if (disagree > lines.size())
+            rpt << "\n" << QString("    ... and %1 more").arg(disagree - lines.size());
+    }
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       The current image at all four levels
+       --------------------------------------------------------------------------- */
+    rpt << "\n" << "Current image";
+    const int dmRow = (dm && dm->currentSfRow >= 0)
+                          ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
+    if (dmRow < 0) {
+        rpt << "\n" << "  (no current image)";
+    }
+    else {
+        const QString fPath = dm->currentFilePath;
+        const QStringList literal =
+            dm->index(dmRow, G::KeywordsColumn).data().toStringList();
+        const QStringList paths =
+            dm->index(dmRow, G::KeywordPathsColumn).data().toStringList();
+        const QStringList all =
+            dm->index(dmRow, G::KeywordsAllColumn).data().toStringList();
+        const QStringList effective = keywordEffectivePaths(literal, paths);
+        const QStringList expanded = keywordPrefixExpand(effective);
+
+        rpt << "\n" << "  Path                    = " << fPath;
+        rpt << "\n" << "  dc:subject (literal)    = " << literal.join(", ");
+        rpt << "\n" << "  lr:hierarchicalSubject  = " << paths.join(", ");
+        rpt << "\n" << "  Effective paths         = " << effective.join(", ");
+        rpt << "\n" << "  Prefix expansion        = " << expanded.join(", ");
+        rpt << "\n" << "  KeywordsAllColumn       = " << all.join(", ");
+        /*  The expansion is what the commit derives the links from, so a column
+            that differs from it is the datamodel-side half of the same drift the
+            audit above measures in the database. */
+        rpt << "\n" << "  Column matches expansion = "
+            << G::s(QSet<QString>(all.constBegin(), all.constEnd())
+                    == QSet<QString>(expanded.constBegin(), expanded.constEnd()));
+        if (keywordVocab) {
+            QStringList unfiledHere;
+            for (const QString &p : effective)
+                if (!keywordVocab->indexForPath(p).isValid()) unfiledHere << p;
+            rpt << "\n" << "  Not in the vocabulary   = "
+                << (unfiledHere.isEmpty() ? "(none)" : unfiledHere.join(", "));
+        }
+    }
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       The selection -- what the dock's tag zone is showing
+       --------------------------------------------------------------------------- */
+    const QMap<QString, int> inSel = keywordsInSelection();
+    const int selCount = dm ? dm->selectionModel->selectedRows().size() : 0;
+    rpt << "\n" << "Selection (" << G::s(selCount) << " images, "
+        << G::s(inSel.size()) << " distinct keywords)";
+    if (inSel.isEmpty()) {
+        rpt << "\n" << "  (no keywords on the selection)";
+    }
+    else {
+        for (auto it = inSel.constBegin(); it != inSel.constEnd(); ++it)
+            rpt << "\n" << QString("    %1  %2%3")
+                       .arg(it.value(), 7).arg(it.key())
+                       .arg(it.value() < selCount ? "   (on some)" : "");
+    }
+    rpt << "\n";
+
+    /* ---------------------------------------------------------------------------
+       The keyword list itself, indented -- last, because it is the long one
+       --------------------------------------------------------------------------- */
+    rpt << "\n" << "Keyword list (indented, as the Keywords dock draws it)";
+    rpt << "\n" << "  Columns: node, images carrying it (subtree total -- every image is";
+    rpt << "\n" << "  linked to every ancestor), then markers:";
+    rpt << "\n" << "    ~  has synonyms      x  not exportable      ?  not in the catalog";
+    if (keywordVocab && keywordVocab->rowCount(QModelIndex()) > 0) {
+        /*  THE MODEL IS WALKED, NOT THE CATALOG, so the order and the shape are the
+            dock's own -- a report that re-derived the tree from paths could differ from
+            the panel the user is looking at, which is the one thing it must not do. */
+        std::function<void(const QModelIndex &, int)> draw =
+            [&](const QModelIndex &parent, int depth) {
+            const int n = keywordVocab->rowCount(parent);
+            for (int i = 0; i < n; ++i) {
+                const QModelIndex idx = keywordVocab->index(i, 0, parent);
+                const QString name = idx.data(Qt::DisplayRole).toString();
+                const int count = idx.data(KeywordVocab::CountRole).toInt();
+                QString marks;
+                if (!idx.data(KeywordVocab::SynonymsRole).toStringList().isEmpty())
+                    marks += " ~";
+                if (!idx.data(KeywordVocab::ExportableRole).toBool()) marks += " x";
+                if (count == 0) marks += " ?";
+                const QString indented = QString(4 + depth * 2, ' ') + name;
+                rpt << "\n" << indented.leftJustified(70, ' ')
+                    << QString("%1").arg(count, 7) << marks;
+                draw(idx, depth + 1);
+            }
+        };
+        draw(QModelIndex(), 0);
+    }
+    else if (haveCat) {
+        /*  NO AUTHORED VOCABULARY TO DRAW, so the OBSERVED one stands in -- which is the
+            state a user who has never opened the Keywords dock is actually in, and the
+            one where "show me the keyword list" is least likely to be answered by
+            anything else on screen. Catalog::keywords() comes back ordered by pathfold,
+            and that IS depth-first order for a tree: a parent's path is its children's
+            prefix, so it sorts immediately before them and the indent needs no sort of
+            its own. */
+        rpt << "\n" << "  (the authored vocabulary is not loaded -- showing the OBSERVED";
+        rpt << "\n" << "  keywords from the catalog instead)";
+        for (const CatalogKeyword &k : cat.keywords()) {
+            const int depth = keywordNodes(k.path).size() - 1;
+            const QString indented = QString(4 + depth * 2, ' ') + k.name;
+            rpt << "\n" << indented.leftJustified(70, ' ')
+                << QString("%1").arg(k.count, 7);
+        }
+    }
+    else {
+        rpt << "\n" << "  (no vocabulary loaded and no catalog -- nothing to list)";
+    }
+    rpt << "\n";
+
+    return reportString;
+}
+
+void MW::diagnosticsKeywords()
+{
+/*
+    THE BUSY CURSOR IS NOT DECORATION. The report runs a drift audit over as many as
+    20,000 images and two whole-vocabulary queries, which on a library is seconds of a
+    window that is otherwise doing nothing visible.
+*/
+    if (G::isLogger) G::log("MW::diagnosticsKeywords");
+    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    const QString rpt = this->keywordDiagnostics();
+    QGuiApplication::restoreOverrideCursor();
+    diagnosticsReport(rpt, "Winnow Diagnostics: Keywords");
+}
 
 void MW::diagnosticsReport(QString reportString, QString title)
 {

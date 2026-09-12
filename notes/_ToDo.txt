@@ -5,6 +5,7 @@ WHAT'S NEW
 - Go to folder
 - Original/Developed previews
 - Catalog
+- Keywords
 
 BUGS / TO DO
 - /Users/roryhill/Downloads/Thumb white line bug.png (seems to be gone...)
@@ -19,7 +20,6 @@ BUGS / TO DO
 - Develop Basic separator is black, should be gray, plus more space above
 - Add a use catalog preference.
 - When generate devPreviews?  For external media?
-- Add keyword diagnostics.
 - When quit dock widths are not persistent with next session
 - In loupe mode, 'Esc' switch to grid mode (gridView)
 - Test search in filter
