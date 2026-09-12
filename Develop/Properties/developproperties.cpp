@@ -57,6 +57,19 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        Global plus one row per mask (per-image EditStack), not app-global QSettings
        presets. Seed one name so it is valid before any image. */
     scopeList = QStringList() << "Global";
+
+    /* Divider metrics BEFORE the first buildTree, not after. addDivider stamps the row's
+       height from dividerHeight at build time, so building with it still unset gave every
+       divider a ZERO height -- and a zero-height LAST row makes QTreeView::viewportSizeHint
+       fall back to its generic 4-line default (QRect::isValid() is false for a 0-height
+       rect), which in fit mode collapsed the whole block to ~3 rows. That is what made the
+       Calibrate / Color Grade / Detail / Effects headers vanish when Effects (the last
+       section, ending in a divider) was expanded before any folder was loaded: every later
+       rebuild ran with the metrics set, so it only ever bit the as-started tree. */
+    dividerHeight = 5;
+    const int c = G::backgroundShade + 20;
+    divColor = QColor(c,c,c);
+
     buildTree();        // active scope's top items + Basic / Color / Effects
 
     updateHiddenRows(QModelIndex());
@@ -73,10 +86,6 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        CURRENT index is unaffected -- QAbstractItemView still sets it on click (with
        NoUpdate), so currentChanged / onMaskSelectionChanged behave as before. */
     setSelectionMode(QAbstractItemView::NoSelection);
-
-    dividerHeight = 5;
-    const int c = G::backgroundShade + 20;
-    divColor = QColor(c,c,c);
 
     /* Optional debounce write: flush the in-memory stack to the sidecar a short time after edits
        settle, so a crash loses less. Gated by G::isDevelopDebounceWrite; navigate-away / quit /

@@ -1027,7 +1027,7 @@ private:
     bool scopeItemsCollapsed = false;   // the '>' arrow: hide the scope's top items
     bool isBulkExpandCollapse = false;  // guard: Expand/Collapse all vs Solo handler
 
-    int dividerHeight;
+    int dividerHeight = 5;      // seeded here too: buildTree runs before the ctor sets it
     QColor divColor;
 
 
