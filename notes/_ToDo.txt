@@ -8,12 +8,6 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- /Users/roryhill/Downloads/Thumb white line bug.png (seems to be gone...)
-- 1031 (row 1030) no full size preview cached /Volumes/Untitled/DCIM/100MSDCF/DSC03288.ARW
-      Key  Decoder   Target Attempts  Caching   Cached   Status imCached  Attempt MetaLoad    Video   SizeMB   Decode   Offset   Length   File Name                                Error message
-     1030        0     true        1    false    false   Failed    false     true     true    false   189.84      480   315392  3131865   DSC03288.ARW                             Proxy suspended.
-  also 1073, 1082, 1146, 1171, 1186, 1190
-  build devPreviews is on
 - Develop after start with no folder selected clicked on Effects header and Edits headers
   disappeared except Basic,Curves,Color
 - Develop behavior when no image is selected

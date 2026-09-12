@@ -164,8 +164,13 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
        column and uses the tallest, so the value column must report the divider height too
        or it wins with the normal height. Early return skips the caption-wrap grow. */
     const QModelIndex capIndex = index.sibling(index.row(), CapColumn);
-    if (capIndex.data(UR_isDivider).toBool())
-        return QSize(option.rect.width(), capIndex.data(UR_DividerHeight).toInt());
+    if (capIndex.data(UR_isDivider).toBool()) {
+        /* Never 0: a zero-height row makes its visualRect invalid, and QTreeView::
+           viewportSizeHint (which measures the LAST row) then falls back to a generic
+           4-line default -- which truncates any view sized to its content. */
+        return QSize(option.rect.width(),
+                     qMax(1, capIndex.data(UR_DividerHeight).toInt()));
+    }
 
     /* Grow the row to fit wrapped caption text. Only the caption column wraps
     (headers stay single-line); the tree row uses the tallest column's hint. */

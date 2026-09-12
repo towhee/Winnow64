@@ -4230,4 +4230,4 @@ Done. Both issues traced to IconView::wheelEvent (Views/iconview.cpp:1331): it n
 │ 1   │ 0.25            │ 0.50      │ ~0.1 s  │
 └─────┴─────────────────┴───────────┴─────────┘
 
-
+After start Winnow, but before a folder or catalog selected, if switch to develop mode and click on the Effects header, then Effects, Detail, Color Grade and Calibrate sections all disappear.
