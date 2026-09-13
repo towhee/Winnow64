@@ -8,6 +8,8 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- Develop disabled sometimes at start (Bookmarks / Develop only docks)
+- Not saving / restoring workspace properly between sessions.
 - Develop history start with no edits
 - Change workspaces to make saving/recovering the Winnow window size and location optional.
 - Develop behavior when no image is selected

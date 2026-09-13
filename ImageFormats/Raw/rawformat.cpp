@@ -237,12 +237,12 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        image matches the interactive preview (MW::ensureRawDenoise). */
     OutputTransform output;
     /* The view transform is part of the recipe, so it has to travel with it here too:
-       ToImage defaults to Filmic, which would render an AgX (or None) image as Filmic
-       whenever it came through this decode instead of the interactive path. No recipe
-       (edit == nullptr) keeps the default. */
+       without it a Filmic (or AgX) image would render untone-mapped whenever it came
+       through this decode instead of the interactive path. No recipe (edit == nullptr)
+       means no tone mapping, the same as an untouched image. */
     const OutputTransform::ViewTransform view =
         edit ? OutputTransform::ViewFromInt(edit->viewTransform)
-             : OutputTransform::ViewTransform::Filmic;
+             : OutputTransform::ViewTransform::None;
     if (edit && !edit->isIdentity()) {
         WorkingImage developed = denoisedBase ? *denoisedBase : *work;
         Develop develop;
