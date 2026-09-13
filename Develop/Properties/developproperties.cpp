@@ -3842,6 +3842,35 @@ void DevelopProperties::addCurves()
         setIndexWidget(modeIdx, rw);
     }
 
+    /* Says, before the user touches the plot, WHERE a band drag lands. Parametric mode
+       owns no params: it writes Basic's tone sliders, so a drag moves a control in
+       another panel. Standing text rather than a tooltip -- the surprise is the point
+       being explained, and a tooltip only arrives after the user has already wondered. */
+    clearItemInfo(i);
+    i.name = "curveNote";
+    i.parIdx = parIdx;
+    i.parentName = "CurvesHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex noteIdx = capIdx;
+    setFirstColumnSpanned(noteIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
+        hb->setSpacing(0);
+        QLabel *note = new QLabel("Bands edit the Basic tone sliders.");
+        note->setEnabled(false);                     // dim: it is a caption, not a control
+        note->setAttribute(Qt::WA_TransparentForMouseEvents);
+        hb->addWidget(note);
+        hb->addStretch(1);
+        setIndexWidget(noteIdx, rw);
+    }
+
     /* The plot: a tall full-width spanned row, like the colour wheels. */
     clearItemInfo(i);
     i.name = "curvePlot";
@@ -3921,6 +3950,10 @@ void DevelopProperties::applyCurveMode()
     const QModelIndex splitIdx = findCaptionIndex("curveSplits");
     if (splitIdx.isValid())
         setRowHidden(splitIdx.row(), splitIdx.parent(), point);
+    /* The note describes the parametric bands, so it goes with them. */
+    const QModelIndex noteIdx = findCaptionIndex("curveNote");
+    if (noteIdx.isValid())
+        setRowHidden(noteIdx.row(), noteIdx.parent(), point);
     scheduleContentFit();        // setRowHidden emits nothing: re-fit the block ourselves
 }
 
@@ -3962,7 +3995,7 @@ void DevelopProperties::onParametricChanged(int band, double value, bool commit)
     if (G::isLogger) G::log("DevelopProperties::onParametricChanged");
     if (isPopulating) return;
     if (currentImagePath.isEmpty()) return;
-    if (commit || band < 0) return;                  // release: nothing further to write
+    if (commit || band < 0) { lastFlashBand = -1; return; }   // release: re-arm the flash
     if (maskOverlayActive()) emit maskTintHideRequested();
 
     EditParams &p = activeParams();
@@ -3978,6 +4011,16 @@ void DevelopProperties::onParametricChanged(int band, double value, bool commit)
     isPopulating = true;                             // setSliderReal must not echo back
     setSliderReal(curveBandKey(band), value);
     isPopulating = wasPopulating;
+
+    /* Point at the control the drag is actually editing: flash the Basic caption the way
+       clicking that caption does. ONCE per drag (see lastFlashBand) -- restarting the
+       animation on every mouse-move would both stutter it and storm the model. Invisible
+       when Basic is collapsed or scrolled away, which is why the plot's own band readout
+       carries the message and this only reinforces it. */
+    if (band != lastFlashBand) {
+        lastFlashBand = band;
+        flashCaption(findCaptionIndex(curveBandKey(band)));
+    }
 
     static const char *bandCaption[] = {"Blacks", "Shadows", "Highlights", "Whites"};
     noteEdit(bandCaption[qBound(0, band, 3)], QString::number(qRound(value)),

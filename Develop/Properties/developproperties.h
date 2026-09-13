@@ -702,6 +702,10 @@ private:
     QPointer<QWidget> curveChannelRow;      // hidden in Parametric mode
     /* 0 = Parametric, 1 = Point. UI state, not a param. */
     int  curveModeIndex = 0;
+    /* The band whose Basic caption was last flashed, so a drag flashes ONCE rather than
+       on every mouse-move (which would restart a 450ms animation, and storm the model
+       with setData, dozens of times a second). -1 = no drag in progress. */
+    int  lastFlashBand = -1;
     void onCurveChanged(bool commit);       // point drag -> active-scope curve params
     void onParametricChanged(int band, double value, bool commit);
     void refreshCurveRow();                 // push stored params + splits into the editor

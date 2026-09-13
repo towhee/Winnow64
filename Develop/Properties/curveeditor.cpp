@@ -3,6 +3,7 @@
 #include "Main/global.h"
 #include <QPainter>
 #include <QPainterPath>
+#include <QFontMetrics>
 #include <QMouseEvent>
 #include <QtMath>
 #include <algorithm>
@@ -151,6 +152,17 @@ float *CurveEditor::bandParam(int band)
     case 2:  return &prm.highlights;
     case 3:  return &prm.whites;
     default: return nullptr;
+    }
+}
+
+float CurveEditor::bandValue(int band) const
+{
+    switch (band) {
+    case 0:  return prm.blacks;
+    case 1:  return prm.shadows;
+    case 2:  return prm.highlights;
+    case 3:  return prm.whites;
+    default: return 0.0f;
     }
 }
 
@@ -418,6 +430,46 @@ void CurveEditor::paintEvent(QPaintEvent *)
     p.setBrush(Qt::NoBrush);
     p.setPen(QPen(curveColor(curMode == Parametric ? 0 : curChannel), 1.6));
     p.drawPolyline(curvePolyline());
+
+    /* The hovered / dragged band NAMES ITSELF and shows the Basic value it is writing.
+       The bands have no params of their own -- they edit Basic's tone sliders -- so
+       without this a slider in another panel appears to move on its own. Drawn last so
+       the grid and the curve cannot run through the text. */
+    if (curMode == Parametric) {
+        const int b = (dragBand >= 0) ? dragBand : hoverBand;
+        if (b >= 0) {
+            double s[3];
+            bandSplits(s);
+            const double edge[5] = {0.0, s[0], s[1], s[2], 1.0};
+            const int v = qRound(bandValue(b));
+            const QString txt = QString("%1  %2%3").arg(bandName(b),
+                                                        v > 0 ? "+" : "",
+                                                        QString::number(v));
+            const QString tag = "  Basic";          // WHICH panel the value lives in
+            const QFontMetrics fm(p.font());
+            const int wMain = fm.horizontalAdvance(txt);
+            const int wTag  = fm.horizontalAdvance(tag);
+            const int w = wMain + wTag + 8;         // 4px padding each side
+            const int h = fm.height() + 4;
+            /* Centred on the band, then clamped inside the plot -- the outer two bands
+               are often narrower than the label. Left clamp wins so it never runs off. */
+            int lx = (qRound(toPlot(edge[b], 0).x())
+                      + qRound(toPlot(edge[b + 1], 0).x())) / 2 - w / 2;
+            if (lx + w > r.right() - 2) lx = r.right() - 2 - w;
+            if (lx < r.left() + 2)      lx = r.left() + 2;
+
+            const QRect box(lx, r.top() + 3, w, h);
+            p.setRenderHint(QPainter::Antialiasing, true);
+            p.setPen(Qt::NoPen);
+            p.setBrush(QColor(20, 20, 20, 200));    // legible over the histogram
+            p.drawRoundedRect(box, 3, 3);
+            const int ty = box.top() + 2 + fm.ascent();
+            p.setPen(QColor(235, 235, 235));
+            p.drawText(box.left() + 4, ty, txt);
+            p.setPen(QColor(150, 150, 150));
+            p.drawText(box.left() + 4 + wMain, ty, tag);
+        }
+    }
 
     if (curMode != Point) return;
 

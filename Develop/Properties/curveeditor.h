@@ -24,7 +24,9 @@
                   Dragging inside one of the four tonal bands writes that band's EXISTING
                   Basic slider (blacks | shadows | highlights | whites, in x order). There
                   are no separate parametric params: the Curves panel is a second view of
-                  Basic's tone controls, not a second tone system. The three band
+                  Basic's tone controls, not a second tone system -- which is why the
+                  hovered band names itself and shows the Basic value it writes. The three
+                  band
                   splits are the tone-split params, edited by the ToneRegionSlider the
                   panel places
                   directly beneath this widget (and mirrored under the histogram scope).
@@ -113,6 +115,7 @@ private:
     int  bandAt(const QPoint &pos) const;          // tonal band under the cursor, else -1
     void bandSplits(double s[3]) const;            // the three split positions, ordered
     float *bandParam(int band);                    // the EditParams field a band writes
+    float  bandValue(int band) const;              // that field's value, for the readout
     static QString bandName(int band);
 
     /* Sample the curve currently being edited (Point mode) or the parametric shape
