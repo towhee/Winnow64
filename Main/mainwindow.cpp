@@ -3255,6 +3255,32 @@ void MW::resetDevelopCachesForNewFolder()
     developStackCache.clear();         // its entries are sized to the old proxy
     maskFoldCacheClear();              // ditto, and its refs belong to the old folder
     developWorkTriedPath.clear();
+    folderWritableCache.clear();       // a new set can span different volumes
+}
+
+bool MW::currentImageFolderIsWritable()
+{
+/*
+    Can the develop sidecar be written beside the CURRENT image?
+
+    Asked per image rather than per folder selection because a Catalog result set spans
+    any number of folders on any number of volumes -- there is no one folder to test, and
+    a single flag taken from the last folder click is simply wrong for the row now
+    selected.
+
+    Memoised per folder: this runs on every selection change, and the answer cannot vary
+    within a folder. The cache is dropped with the develop caches when a new set loads,
+    which is also when a volume could have changed under us.
+*/
+    const QString fPath = dm ? dm->currentFilePath : QString();
+    if (fPath.isEmpty()) return true;           // nothing selected: say nothing
+    const QString dir = QFileInfo(fPath).absolutePath();
+    if (dir.isEmpty()) return true;
+    auto it = folderWritableCache.constFind(dir);
+    if (it != folderWritableCache.constEnd()) return it.value();
+    const bool writable = Utilities::folderIsWritable(dir);
+    folderWritableCache.insert(dir, writable);
+    return writable;
 }
 
 void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDataModel, bool recurse)
@@ -3349,20 +3375,6 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
            user may already be in it from the previous folder. */
         if (G::operationMode == G::OperationMode::Develop)
             setOperationMode(G::OperationMode::Preview);
-    }
-
-    /*  Whether anything can be written beside these images, decided once here so the
-        Develop panel can say so BEFORE the user edits rather than after -- a locked SD
-        card and a read-only archive mount both take develop edits happily and then lose
-        them. A hint for the UI only; the writers still test the path they are about to
-        write (see Metadata::writeDevelopSidecar), because a recursive load can span
-        volumes. resetDataModel replaces the answer, an added folder can only make it
-        worse. */
-    if (op == G::FolderOp::Add) {
-        const bool ro = QStorageInfo(folderPath).isReadOnly() ||
-                        !QFileInfo(folderPath).isWritable();
-        if (resetDataModel) G::currentFolderReadOnly = ro;
-        else if (ro) G::currentFolderReadOnly = true;
     }
 
     G::allMetadataAttempted = false;
@@ -7284,8 +7296,30 @@ void MW::setDisplayResolution()
     //if (devicePixelRatioChanged && !G::isInitializing) {
         // refresh loupe / compare views to new scale
         if (G::mode == "Loupe") {
-            // reload to force complete refresh
-            imageView->loadImage(dm->currentFilePath, true, "DevicePixelRatioChange");
+            /*  DO NOT RELOAD FROM THE IMAGE CACHE IN DEVELOP.
+
+                The loupe is showing a RENDERED develop frame
+                (ImageView::setDevelopPreview) that the image cache knows nothing about,
+                so a reload here was wrong twice over: at best it replaced the developed
+                image with the undeveloped decode, and on a cache miss -- routine in
+                Develop, where read-ahead is suspended and a raw is re-decoded to scene-
+                linear -- loadImage sets a NULL pixmap, which clears ScaledPixmapItem's
+                logical size and empties the scene. The loupe went blank and stayed blank
+                (dragging back re-missed, and nothing else repairs it until the next
+                selection change). Re-render the develop frame instead, via the usual
+                coalesced proxy + settle path, which keeps the geometry pairing and the
+                captured zoom/pan.
+
+                Outside Develop, or with no edits to show, the reload still runs -- but
+                only when the image is actually cached, for the same blanking reason. */
+            if (currentDevelopEditsVisible()) {
+                developParamsChange();
+            }
+            else {
+                QImage cached;
+                if (icd->get(dm->currentFilePath, cached) && !cached.isNull())
+                    imageView->loadImage(dm->currentFilePath, true, "DevicePixelRatioChange");
+            }
         }
         if (G::mode == "Compare") compareImages->zoomTo(imageView->zoom/* / G::actDevicePixelRatio*/);
     }

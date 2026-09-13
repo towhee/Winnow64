@@ -47,6 +47,22 @@
     </size>
    </property>
   </widget>
+  <widget class="QCheckBox" name="geometryCB">
+   <property name="geometry">
+    <rect>
+     <x>29</x>
+     <y>86</y>
+     <width>431</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>When checked the workspace also restores the Winnow window position and size, and such a workspace is flagged with an asterisk in the Workspace menu.  When unchecked only the panel layout and view settings are restored and the window is left where it is.</string>
+   </property>
+   <property name="text">
+    <string>Restore window position and size  (shown as &quot;name *&quot; in the Workspace menu)</string>
+   </property>
+  </widget>
   <widget class="QLabel" name="workspaceLbl">
    <property name="geometry">
     <rect>

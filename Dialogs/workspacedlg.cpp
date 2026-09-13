@@ -47,12 +47,19 @@ public:
     }
 };
 
-WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList, QWidget *parent) :
+WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
+                           const QList<bool> &isGeometryIncluded,
+                           bool isDefaultGeometryIncluded,
+                           bool isCustomDefaultWorkspace,
+                           QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Workspacedlg)
 {
     ui->setupUi(this);
     this->mainWindow = parent;
+    isGeometry = isGeometryIncluded;
+    isDefaultGeometry = isDefaultGeometryIncluded;
+    isCustomDefault = isCustomDefaultWorkspace;
 
     // get height for dropdown items from combobox height
     int h = ui->workspaceCB->height() - 8;
@@ -115,6 +122,11 @@ void WorkspaceDlg::updateForSelection()
 /*
     The Winnow default workspace can be updated to the current layout, but it cannot be
     deleted or renamed.
+
+    The window position/size checkbox shows the selected workspace's choice.  It is
+    disabled, with the reason shown in the status line, when the Winnow default workspace
+    has not been defined yet -- the built-in layout is used then, and it always sizes the
+    window itself.
 */
     bool isDefault = isDefaultSelected();
     ui->deleteBtn->setEnabled(!isDefault);
@@ -123,6 +135,48 @@ void WorkspaceDlg::updateForSelection()
         : "");
     if (ui->workspaceCB->lineEdit())
         ui->workspaceCB->lineEdit()->setReadOnly(isDefault);
+
+    int n = workspaceIndex();
+    bool isChecked;
+    bool isEnabled = true;
+    QString reason;
+    if (isDefault) {
+        isChecked = isDefaultGeometry;
+        if (!isCustomDefault) {
+            isEnabled = false;
+            reason = "The " + WorkspaceDlg::defaultWorkspaceName + " has not been defined "
+                     "yet, so the built-in layout, which sets its own window size, is used.";
+        }
+    }
+    else if (n >= 0 && n < isGeometry.count()) {
+        isChecked = isGeometry.at(n);
+    }
+    else {
+        // separator selected (should not happen)
+        isChecked = false;
+        isEnabled = false;
+    }
+    /* setChecked would emit toggled and write the choice back to the workspace the user
+       has just moved away from. */
+    ui->geometryCB->blockSignals(true);
+    ui->geometryCB->setChecked(isChecked);
+    ui->geometryCB->blockSignals(false);
+    ui->geometryCB->setEnabled(isEnabled);
+    ui->status->setText(reason);
+}
+
+void WorkspaceDlg::on_geometryCB_toggled(bool isChecked)
+{
+    if (G::isLogger) G::log("WorkspaceDlg::on_geometryCB_toggled");
+    if (isDefaultSelected()) {
+        isDefaultGeometry = isChecked;
+        emit setWorkspaceGeometryIncluded(-1, isChecked);
+        return;
+    }
+    int n = workspaceIndex();
+    if (n < 0 || n >= isGeometry.count()) return;
+    isGeometry[n] = isChecked;
+    emit setWorkspaceGeometryIncluded(n, isChecked);
 }
 
 void WorkspaceDlg::on_deleteBtn_clicked()
@@ -131,6 +185,7 @@ void WorkspaceDlg::on_deleteBtn_clicked()
     int n = workspaceIndex();
     if (n < 0) return;
     emit deleteWorkspace(n);
+    if (n < isGeometry.count()) isGeometry.removeAt(n);
     ui->workspaceCB->removeItem(ui->workspaceCB->currentIndex());
     // last workspace deleted: remove the now trailing separator
     if (firstWorkspaceIndex && ui->workspaceCB->count() == firstWorkspaceIndex)
@@ -144,6 +199,9 @@ void WorkspaceDlg::on_reassignBtn_clicked()
     if (G::isLogger) G::log("WorkspaceDlg::on_reassignBtn_clicked");
     if (isDefaultSelected()) {
         emit updateDefaultWorkspace();
+        // the default workspace now exists, so its window position/size choice applies
+        isCustomDefault = true;
+        ui->geometryCB->setEnabled(true);
         ui->status->setText(WorkspaceDlg::defaultWorkspaceName + " has been updated");
         QTimer::singleShot(2000, this, SLOT(clearStatus()));
         return;
@@ -157,7 +215,9 @@ void WorkspaceDlg::on_reassignBtn_clicked()
 
 void WorkspaceDlg::clearStatus()
 {
-    ui->status->setText("");
+    /* updateForSelection, not setText(""), so a reason for a disabled control is put
+       back rather than wiped by a transient message timing out. */
+    updateForSelection();
 }
 
 void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)

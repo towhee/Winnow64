@@ -54,8 +54,11 @@ void MW::newWorkspace()
     if (ok && !workspaceName.isEmpty() && n < 10) {
         workspaces->append(ws);
         populateWorkspace(n, workspaceName);
+        /* A new workspace owns the window position and size, the behaviour before it was
+           optional.  Manage Workspaces turns it off. */
+        (*workspaces)[n].isGeometryIncluded = true;
         // sync menu items
-        workspaceActions.at(n)->setText(workspaceName);
+        workspaceActions.at(n)->setText(workspaceMenuName(workspaces->at(n)));
         workspaceActions.at(n)->setObjectName("workspace" + QString::number(n));
         workspaceActions.at(n)->setToolTip("workspace" + QString::number(n));
         workspaceActions.at(n)->setShortcutVisibleInContextMenu(true);
@@ -93,17 +96,24 @@ void MW::invokeCurrentWorkspace()
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
 /*
-    This is called from a workspace action. Since the workspace actions
-    are a list of actions, the workspaceMenu triggered signal is captured, and the
-    workspace with a matching name to the action is used.
+    This is called from a workspace action. Since the workspace actions are a list of
+    actions, the workspaceMenu triggered signal is captured, and the workspace at the
+    same position in the list as the action is used.  The action text is NOT the
+    workspace name -- see MW::workspaceMenuName -- so it cannot be matched on.
 */
     if (G::isLogger) G::log("MW::invokeWorkspaceFromAction");
-    for (int i = 0; i < workspaces->count(); i++) {
-        if (workspaces->at(i).name == workAction->text()) {
-            invokeWorkspace(workspaces->at(i));
-            return;
-        }
-    }
+    int i = workspaceActions.indexOf(workAction);
+    if (i < 0 || i >= workspaces->count()) return;
+    invokeWorkspace(workspaces->at(i));
+}
+
+QString MW::workspaceMenuName(const WorkspaceData &w) const
+{
+/*
+    The Workspace menu text for a workspace.  A trailing " *" flags a workspace that
+    restores the window position and size as well as the layout.
+*/
+    return w.isGeometryIncluded ? w.name + " *" : w.name;
 }
 
 void MW::invokeWorkspace(const WorkspaceData &w)
@@ -142,7 +152,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        In the QEvent::WindowStateChange override (MW::eventFilter) invokeWorkspace will be called
        again after the normal window has been completed,*/
     int screenNumber = QGuiApplication::screens().indexOf(screen());
-    if (isFullScreen() && screenNumber != w.screenNumber) {
+    if (w.isGeometryIncluded && isFullScreen() && screenNumber != w.screenNumber) {
         wasFullSpaceOnDiffScreen = true;
         showNormal();
         return;
@@ -213,7 +223,16 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 
     // qDebug() << "ws.isMaximised =" << w.isMaximised;
 
-    if (!w.isMaximised) {
+    /* Window position and size are optional.  When the workspace does not own them the
+       dock layout is still restored (w.state), so the panels rearrange inside whatever
+       window the user currently has, and the window itself is left alone -- including
+       its maximised / fullscreen state. */
+    if (!w.isGeometryIncluded) {
+        restoreState(w.state);
+        // second restoreState req'd for going from docked to floating docks
+        restoreState(w.state);
+    }
+    else if (!w.isMaximised) {
         restoreGeometry(w.geometry);
         restoreState(w.state);
         // second restoreState req'd for going from docked to floating docks
@@ -273,6 +292,9 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.geometryRect = geometry();
     wsd.isFullScreen = isFullScreen();
     wsd.isMaximised = isMaximized();
+    /* wsd.isGeometryIncluded is deliberately NOT set here: it is the user's choice for
+       this workspace, not part of the layout being snapshotted, so it survives a
+       reassign (Manage Workspaces > Update to current layout). */
 
     // Visibility
     //wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
@@ -329,15 +351,21 @@ void MW::manageWorkspaces()
     if (G::isLogger) G::log("MW::manageWorkspaces");
     // Update a list of workspace names for the manager dialog
     QList<QString> wsList;
-    for (int i=0; i<workspaces->count(); i++)
+    QList<bool> wsGeometry;
+    for (int i=0; i<workspaces->count(); i++) {
         wsList.append(workspaces->at(i).name);
-    workspaceDlg = new WorkspaceDlg(&wsList, this);
+        wsGeometry.append(workspaces->at(i).isGeometryIncluded);
+    }
+    workspaceDlg = new WorkspaceDlg(&wsList, wsGeometry, defaultWs.isGeometryIncluded,
+                                    isCustomDefaultWorkspace, this);
     connect(workspaceDlg, &WorkspaceDlg::deleteWorkspace, this, &MW::deleteWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reassignWorkspace, this, &MW::reassignWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::renameWorkspace, this, &MW::renameWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::updateDefaultWorkspace,
             this, &MW::updateDefaultWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reportWorkspaceNum, this, &MW::reportWorkspaceNum);
+    connect(workspaceDlg, &WorkspaceDlg::setWorkspaceGeometryIncluded,
+            this, &MW::setWorkspaceGeometryIncluded);
 
     // connect(workspaceDlg, SIGNAL(deleteWorkspace(int)),
     //         this, SLOT(deleteWorkspace(int)));
@@ -367,13 +395,28 @@ void MW::deleteWorkspace(int n)
     syncWorkspaceMenu();
 }
 
+void MW::syncDefaultWorkspaceAction()
+{
+/*
+    The Default Workspace menu item (Ctrl+Shift+W) carries the same " *" flag as the saved
+    workspaces.  Until the user defines a default workspace the built-in layout is used,
+    and it always sizes the window -- defaultWs.isGeometryIncluded starts true, so the flag
+    is shown.
+*/
+    if (defaultWorkspaceAction == nullptr) return;
+    QString name = tr("Default Workspace");
+    if (defaultWs.isGeometryIncluded) name += " *";
+    defaultWorkspaceAction->setText(name);
+}
+
 void MW::syncWorkspaceMenu()
 {
     if (G::isLogger) G::log("MW::syncWorkspaceMenu");
+    syncDefaultWorkspaceAction();
     int count = workspaces->count();
     for (int i = 0; i < 10; i++) {
         if (i < count) {
-            workspaceActions.at(i)->setText(workspaces->at(i).name);
+            workspaceActions.at(i)->setText(workspaceMenuName(workspaces->at(i)));
             workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
             workspaceActions.at(i)->setVisible(true);
         }
@@ -391,6 +434,30 @@ void MW::reassignWorkspace(int n)
     populateWorkspace(n, name);
     saveWorkspaces();
     // reportWorkspaceNum(n);
+}
+
+void MW::setWorkspaceGeometryIncluded(int n, bool isIncluded)
+{
+/*
+    Turn the window position and size on or off for a workspace.  Called from the Manage
+    Workspaces dialog checkbox.  n is the index into workspaces, or -1 for the Winnow
+    default workspace.
+*/
+    if (G::isLogger) G::log("MW::setWorkspaceGeometryIncluded");
+
+    if (n < 0) {
+        defaultWs.isGeometryIncluded = isIncluded;
+        syncDefaultWorkspaceAction();
+        /* Nothing to save unless the user has already defined a custom default
+           workspace -- otherwise the built-in layout is used and there is no
+           DefaultWorkspace group to write to. */
+        if (isCustomDefaultWorkspace) saveDefaultWorkspace();
+        return;
+    }
+    if (n >= workspaces->count()) return;
+    (*workspaces)[n].isGeometryIncluded = isIncluded;
+    saveWorkspaces();
+    syncWorkspaceMenu();
 }
 
 void MW::defaultWorkspace()
@@ -631,6 +698,7 @@ QString MW::reportWorkspaces()
             << "\n  screenNumber              " << G::s(ws.screenNumber)
             << "\n  isFullScreen              " << G::s(ws.isFullScreen)
             << "\n  isMaximised               " << G::s(ws.isMaximised)
+            << "\n  isGeometryIncluded        " << G::s(ws.isGeometryIncluded)
             << "\nVisibility:"
             << "\n  isWindowTitleBarVisible   " << G::s(ws.isWindowTitleBarVisible)
             //<< "\nisMenuBarVisible" << ws.isMenuBarVisible
@@ -766,6 +834,9 @@ void MW::readWorkspaceSettings(WorkspaceData &wsd)
     wsd.geometryRect = settings->value("geometryRect").toRect();
     wsd.isFullScreen = settings->value("isFullScreen").toBool();
     wsd.isMaximised = settings->value("isMaximised").toBool();
+    /*  Absent from a workspace saved before the window position/size became optional,
+        which defaults to true -- the original behaviour. */
+    wsd.isGeometryIncluded = settings->value("isGeometryIncluded", true).toBool();
 
     // Visibility
     wsd.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
@@ -839,6 +910,7 @@ void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
     settings->setValue("geometryRect", wsd.geometryRect);                        // need?
     settings->setValue("isFullScreen", wsd.isFullScreen);                        // need?
     settings->setValue("isMaximised", wsd.isMaximised);                          // need?
+    settings->setValue("isGeometryIncluded", wsd.isGeometryIncluded);
 
     // Visibility
     settings->setValue("isWindowTitleBarVisible", wsd.isWindowTitleBarVisible);  // need? Not used.
