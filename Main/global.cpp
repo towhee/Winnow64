@@ -309,7 +309,6 @@ bool includeSidecars;
 bool colorManage;
 bool modifySourceFiles;
 bool backupBeforeModifying;
-std::atomic<bool> currentFolderReadOnly{false};
 bool autoAddMissingThumbnails;
 bool renderVideoThumb;
 bool combineRawJpg;

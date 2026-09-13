@@ -344,6 +344,27 @@ bool Utilities::isLocked(const QString& fPath)
 }
 
 
+bool Utilities::folderIsWritable(const QString &dirPath)
+{
+/*
+    Whether a sidecar can be written beside the images in dirPath.
+
+    NOT QStorageInfo::isReadOnly().  On macOS the system volume is a sealed read-only
+    APFS snapshot and /Users is a firmlink into the writable Data volume; QStorageInfo
+    resolves a path to a mount point by longest path prefix, knows nothing about
+    firmlinks, and so answers "/" -- read-only -- for every folder in the user's home.
+    That is the whole internal drive reported as read-only.
+
+    QFileInfo::isWritable() is access(W_OK), which the kernel answers from the directory
+    permissions AND the mount flags, so a locked SD card and a read-only disk image
+    (the cases the read-only warning exists for) are still caught.
+*/
+    if (dirPath.isEmpty()) return false;
+    QFileInfo info(dirPath);
+    return info.isDir() && info.isWritable();
+}
+
+
 void Utilities::uniqueFolderPath(QString &path, QString delimiter)
 {
 /*

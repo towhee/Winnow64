@@ -676,17 +676,19 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     /*  A READ-ONLY VOLUME IS DECLINED ONCE, NOT PER IMAGE. Editing a folder on a locked
         SD card or a read-only archive mount used to fall through to the open() below and
         report a failed write for every image touched, which buries the one fact the user
-        needs -- nothing here can be saved -- under a warning per file. Tested per path
-        rather than read off the folder-selection hint because a recursive load can span
-        volumes, and the writable half must still be written. The hint is SET here as
-        well: this runs on a QtConcurrent thread, and it may be reached for a volume the
-        selection test never saw.
+        needs -- nothing here can be saved -- under a warning per file. Tested per path,
+        because a recursive load and a catalog result set both span volumes and the
+        writable half must still be written.
+
+        Utilities::folderIsWritable, NOT QStorageInfo::isReadOnly: on macOS the latter
+        resolves every path under /Users to the sealed system volume and declines the
+        whole internal drive.
 
         This is not data loss deferred. The recipe stays in the live EditStack for the
-        session and the Develop panel says the volume is read-only (G::currentFolderReadOnly),
-        so the user can copy the images somewhere writable and keep their work. */
-    if (QStorageInfo(info.absoluteDir().path()).isReadOnly()) {
-        G::currentFolderReadOnly = true;
+        session and the Develop panel says the volume is read-only (MW::
+        currentImageFolderIsWritable), so the user can copy the images somewhere writable
+        and keep their work. */
+    if (!Utilities::folderIsWritable(info.absoluteDir().path())) {
         if (G::isLogger)
             G::log("Metadata::writeDevelopSidecar", "read-only volume, declined " + sidecarPath);
         return;

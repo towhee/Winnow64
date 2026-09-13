@@ -3590,8 +3590,12 @@ void MW::updateDevelopSelectionWarning()
         read-only archive mount. Develop runs and the render is real; what fails is the
         sidecar write that would make it outlast the session, and the user may well be
         looking rather than keeping. Said HERE, before they edit, because the alternative
-        is Metadata::writeDevelopSidecar declining quietly image after image. */
-    if (G::currentFolderReadOnly)
+        is Metadata::writeDevelopSidecar declining quietly image after image.
+
+        Asked of the CURRENT IMAGE'S FOLDER, not of the folder last clicked: a Catalog
+        result set spans many folders on many volumes, so a per-selection flag would
+        describe the wrong one. */
+    if (!currentImageFolderIsWritable())
         alerts << qMakePair(AlertWarning,
                             QString("Read-only volume - edits cannot be saved."));
 

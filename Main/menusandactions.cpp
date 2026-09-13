@@ -1785,7 +1785,7 @@ void MW::createWindowActions()
         QString name;
         QString objName = "";
         if (i < n) {
-            name = workspaces->at(i).name;
+            name = workspaceMenuName(workspaces->at(i));
             objName = "workspace" + QString::number(i);
         }
         else name = "Future Workspace" + QString::number(i);
@@ -1803,6 +1803,8 @@ void MW::createWindowActions()
         workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
     }
     addActions(workspaceActions);
+    // flag the Default Workspace action if it restores the window position and size
+    syncDefaultWorkspaceAction();
 }
 
 void MW::createHelpActions()

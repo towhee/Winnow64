@@ -37,6 +37,15 @@ public:
     // File status
     static bool isLocked(const QString& fPath);
 
+    /* Can Winnow write beside the images in this folder?  Use this INSTEAD of
+       QStorageInfo::isReadOnly(), which cannot answer the question on macOS: the
+       system volume is a sealed read-only snapshot and /Users is a firmlink into
+       the writable Data volume, but QStorageInfo matches mount points by path
+       prefix, so every path under /Users resolves to "/" and reports read-only.
+       access(W_OK) honours both the directory permissions and the mount flags, so
+       a locked SD card and a read-only archive mount still answer correctly. */
+    static bool folderIsWritable(const QString &dirPath);
+
     // Get unique
     static void uniqueFolderPath(QString &path, QString delimiter = "_");
     static void uniqueFilePath(QString &path, QString delimiter = "_");

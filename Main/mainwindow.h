@@ -245,6 +245,12 @@ public:
         QRect geometryRect;
         bool isFullScreen;
         bool isMaximised;
+        /* Does this workspace own the window position/size (and maximised/fullscreen)?
+           When false only the dock layout and the view settings are restored and the
+           window is left exactly where the user put it.  A workspace saved before this
+           flag existed reads as true, ie the original behaviour.  The Workspace menu
+           appends " *" to the name of a workspace with it on. */
+        bool isGeometryIncluded = true;
         // Visibility
         bool isWindowTitleBarVisible;
         bool isMenuBarVisible;
@@ -594,6 +600,9 @@ public slots:
     /* Drop the develop caches that belong to the images being replaced. Shared by
        folderSelectionChange and loadCatalogResults. */
     void resetDevelopCachesForNewFolder();
+    /* Whether the current image's folder will take a sidecar write (memoised per
+       folder in folderWritableCache). Drives the Develop read-only warning. */
+    bool currentImageFolderIsWritable();
 
     void folderSelectionChange(QString folderPath = "",
                                G::FolderOp op = G::FolderOp::Add,
@@ -641,6 +650,9 @@ public slots:
     void deleteWorkspace(int n);
     void renameWorkspace(int n, QString name);
     void reassignWorkspace(int n);
+    /* Turn the window position/size on or off for a workspace.  n is the index into
+       workspaces, or -1 for the Winnow default workspace. */
+    void setWorkspaceGeometryIncluded(int n, bool isIncluded);
     void defaultWorkspace();
     /* Restore the main window dock layout, migrating a state saved by a build with fewer
        docks instead of throwing it away.  See MW::winnowStateVersion. */
@@ -2024,6 +2036,7 @@ private:
     bool    developPmridResHadNP = false;
     QString developWorkInFlight;                  // path whose scene-linear decode is running (ensureDevelopWork coalesce)
     QString developWorkTriedPath;                 // path already async-decoded but with no scene-linear result
+    QHash<QString,bool> folderWritableCache;       // per-folder sidecar writability (currentImageFolderIsWritable)
                                                   // (display-referred format) -> render the fallback, don't loop
     /* Content-range mask (Luminance/Color Range) reference: a display-referred RGB map of the
        developed GLOBAL scope, registered by path (RangeMask::putRef) and sampled identically by
@@ -2462,6 +2475,10 @@ private:
     void addBookmark(QString path);
     void populateWorkspace(int n, QString name);
     void syncWorkspaceMenu();
+    /* The Workspace menu text for a workspace: the name, plus " *" when the workspace
+       restores the window position and size (WorkspaceData::isGeometryIncluded). */
+    QString workspaceMenuName(const WorkspaceData &w) const;
+    void syncDefaultWorkspaceAction();
     void syncEmbellishMenu();
     void getSubfolders(QString fPath);
     QString getPosition();
