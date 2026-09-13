@@ -66,16 +66,16 @@ public:
     */
     /*
         THE NUMBERING IS A PUBLISHED FORMAT. These values are what EditParams stores and
-        what lands in the sidecar, so they may be ADDED TO but never renumbered. Filmic
-        is 0 deliberately: it is the default, and a default that is not zero means every
-        default-constructed EditParams has to remember to say so -- which is exactly the
-        bug this ordering was written to fix (0 previously resolved to None, so an
-        untouched raw would have rendered with no tone mapping at all).
+        what lands in the sidecar, so they may be ADDED TO but never renumbered. None is
+        0 deliberately: it is the IDENTITY, and the identity has to be zero, because a
+        default-constructed EditParams is what "no edits" means -- what an untouched raw
+        renders as, and what Reset Basic restores. A non-zero identity makes every reset
+        and every isIdentity() test carry a special case for this one field.
     */
     enum class ViewTransform {
-        Filmic = 0, // the default: +0.68 EV then an ACES/Narkowicz shoulder
-        AgX    = 1, // log2 window + inset/outset gamut compression (see the .cpp)
-        None   = 2  // no tone mapping -- scene-linear straight to the transfer function
+        None   = 0, // the default: no tone mapping -- scene-linear to the transfer fn
+        Filmic = 1, // +0.68 EV then an ACES/Narkowicz shoulder
+        AgX    = 2  // log2 window + inset/outset gamut compression (see the .cpp)
     };
 
     /* EditParams::viewTransform (an int, so it rides the existing int machinery) -> the
@@ -85,27 +85,27 @@ public:
     static ViewTransform ViewFromInt(int v)
     {
         switch (v) {
-        case int(ViewTransform::AgX):  return ViewTransform::AgX;
-        case int(ViewTransform::None): return ViewTransform::None;
+        case int(ViewTransform::AgX):    return ViewTransform::AgX;
+        case int(ViewTransform::Filmic): return ViewTransform::Filmic;
         default: break;
         }
-        return ViewTransform::Filmic;
+        return ViewTransform::None;
     }
 
     /* The QColorSpace to TAG output produced for space with. */
     static QColorSpace ColorSpaceOf(Space space);
 
     /* Scene-linear float -> 8-bit QImage (Format_RGB888) in space.
-       view defaults to Filmic, which is what every render used before the transform
-       became selectable, so an un-updated caller renders exactly as it always did. */
+       view defaults to None: the identity, so a caller that does not carry a recipe
+       renders the pixels as they are rather than imposing a look of its own. */
     bool ToImage(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
-                 ViewTransform view = ViewTransform::Filmic);
+                 ViewTransform view = ViewTransform::None);
 
     /* Scene-linear float -> 16-bit QImage (Format_RGBX64), for export. Same view
        transform, primaries and transfer function as ToImage, quantised to 16 bits
        instead of 8 -- one shared code path, so export cannot drift from the loupe. */
     bool ToImage16(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
-                   ViewTransform view = ViewTransform::Filmic);
+                   ViewTransform view = ViewTransform::None);
 };
 
 #endif // OUTPUTTRANSFORM_H

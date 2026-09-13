@@ -4150,10 +4150,10 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     i.captionText = "Tone mapping";
     i.tooltip = raw
         ? "How scene brightness is mapped for display.\n"
-          "Filmic: the default look.\n"
+          "None: the default -- no tone mapping (scene-linear).\n"
+          "Filmic: a filmic contrast curve.\n"
           "Soft roll-off: longer, wider roll-off -- saturated highlights desaturate "
-          "toward white instead of shifting hue.\n"
-          "None: no tone mapping (scene-linear)."
+          "toward white instead of shifting hue."
         : "Only raw files need a view transform. This file already carries the tone "
           "mapping its camera applied.";
     i.isIndent = true;
@@ -4193,13 +4193,16 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
 
     QComboBox *combo = new QComboBox;
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    /* None FIRST: it is the identity, what Reset Basic restores and what an untouched
+       image renders as, so it heads the list the way every other adjustment's identity
+       sits at the start of its range. */
+    combo->addItem("None", int(OutputTransform::ViewTransform::None));
     combo->addItem("Filmic", int(OutputTransform::ViewTransform::Filmic));
     /* LABELS, not identifiers. The enum, the sidecar key and the constants all stay
        "AgX" -- it is the published name of the transform and what the maths implements.
        The USER-FACING label says what it does instead, because "AgX" ("silver halide")
        is guessable by nobody. The help page names AgX so the term stays searchable. */
     combo->addItem("Soft roll-off", int(OutputTransform::ViewTransform::AgX));
-    combo->addItem("None",   int(OutputTransform::ViewTransform::None));
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
             [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
     viewTransformCombo = combo;
@@ -4224,11 +4227,11 @@ void DevelopProperties::setViewTransform(int vt)
 QString DevelopProperties::viewTransformName(int vt)
 {
     switch (static_cast<OutputTransform::ViewTransform>(vt)) {
-    case OutputTransform::ViewTransform::AgX:  return "Soft roll-off";
-    case OutputTransform::ViewTransform::None: return "None";
+    case OutputTransform::ViewTransform::AgX:    return "Soft roll-off";
+    case OutputTransform::ViewTransform::Filmic: return "Filmic";
     default: break;
     }
-    return "Filmic";
+    return "None";
 }
 
 /* Push the stored value back into the combo. Blocked so re-populating on image change

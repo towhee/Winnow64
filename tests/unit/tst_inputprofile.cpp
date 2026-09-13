@@ -111,37 +111,45 @@ private slots:
     void foldEqualsSequenceWithCalibrate();
     void denoisePathAgreesWithFoldedPath();
     void nonRawIsUntouched();
-    void defaultViewTransformIsFilmic();
+    void defaultViewTransformIsNone();
 };
 
 /*
-    THE STORED DEFAULT MUST RESOLVE TO FILMIC.
+    THE STORED DEFAULT MUST RESOLVE TO NONE.
 
     EditParams::viewTransform is an int (so it rides the existing int machinery) and
     default-constructs to 0. OutputTransform::ViewFromInt maps that back to an enum, and
-    the two have to agree about which value zero is. They did NOT: the enum originally
-    listed None first, so a default-constructed EditParams asked for NO TONE MAPPING and
-    every untouched raw would have rendered dark and flat.
+    the two have to agree about which value zero is. Zero is the IDENTITY -- no tone
+    mapping -- because a default-constructed EditParams is what "no edits" means: what an
+    untouched image renders as, what isIdentity() tests for and what Reset Basic restores.
+    A non-zero identity would put a special case for this one field in all three.
 
     Pinned here rather than left to the enum's declaration order, because the numbering is
     also the sidecar format: it may be added to, never renumbered.
 */
-void TestInputProfile::defaultViewTransformIsFilmic()
+void TestInputProfile::defaultViewTransformIsNone()
 {
     const EditParams def;
     QCOMPARE(def.viewTransform, 0);
     QCOMPARE(OutputTransform::ViewFromInt(def.viewTransform),
-             OutputTransform::ViewTransform::Filmic);
+             OutputTransform::ViewTransform::None);
+
+    /* Reset Basic restores the identity, i.e. no tone mapping. */
+    EditParams p;
+    p.viewTransform = int(OutputTransform::ViewTransform::AgX);
+    EditParams::resetGroup(p, EditParams::Group::Basic);
+    QCOMPARE(OutputTransform::ViewFromInt(p.viewTransform),
+             OutputTransform::ViewTransform::None);
 
     /* The published numbering itself. */
-    QCOMPARE(int(OutputTransform::ViewTransform::Filmic), 0);
-    QCOMPARE(int(OutputTransform::ViewTransform::AgX),    1);
-    QCOMPARE(int(OutputTransform::ViewTransform::None),   2);
+    QCOMPARE(int(OutputTransform::ViewTransform::None),   0);
+    QCOMPARE(int(OutputTransform::ViewTransform::Filmic), 1);
+    QCOMPARE(int(OutputTransform::ViewTransform::AgX),    2);
 
     /* An unknown value (a sidecar from a later build) falls back to the default rather
        than to whatever the cast happens to land on. */
-    QCOMPARE(OutputTransform::ViewFromInt(99), OutputTransform::ViewTransform::Filmic);
-    QCOMPARE(OutputTransform::ViewFromInt(-1), OutputTransform::ViewTransform::Filmic);
+    QCOMPARE(OutputTransform::ViewFromInt(99), OutputTransform::ViewTransform::None);
+    QCOMPARE(OutputTransform::ViewFromInt(-1), OutputTransform::ViewTransform::None);
 }
 
 /* The standalone pass must reproduce asShotMul then camToWorking, and re-tag. */

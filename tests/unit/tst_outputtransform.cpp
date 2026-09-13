@@ -129,7 +129,10 @@ int TestOutputTransform::compare(const WorkingImage &img, qint64 &offBy, qint64 
 {
     QImage out;
     OutputTransform t;
-    if (!t.ToImage(img, out)) return -1;
+    /* Filmic EXPLICITLY: the reference above applies BaselineToneRef to scene-referred
+       input, and the parameter's default is the identity (None), not this curve. */
+    if (!t.ToImage(img, out, OutputTransform::Space::sRGB,
+                   OutputTransform::ViewTransform::Filmic)) return -1;
 
     int worst = 0;
     offBy = 0;
@@ -195,7 +198,8 @@ void TestOutputTransform::blackAndWhiteAreExact()
                 1e30f, 1e30f, 1e30f };   // far past it
     QImage out;
     OutputTransform t;
-    QVERIFY(t.ToImage(img, out));
+    QVERIFY(t.ToImage(img, out, OutputTransform::Space::sRGB,
+                      OutputTransform::ViewTransform::Filmic));
     const uchar *line = out.constScanLine(0);
     QCOMPARE(int(line[0]), 0);
     QCOMPARE(int(line[3]), 0);
@@ -237,7 +241,8 @@ void TestOutputTransform::wideGamutSplitPathMatchesExactWithinOne()
                                           sceneReferred);
         QImage out;
         OutputTransform t;
-        QVERIFY(t.ToImage(img, out, OutputTransform::Space::DisplayP3));
+        QVERIFY(t.ToImage(img, out, OutputTransform::Space::DisplayP3,
+                          OutputTransform::ViewTransform::Filmic));
 
         int worst = 0;
         qint64 offBy = 0, total = 0;

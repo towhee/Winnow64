@@ -136,8 +136,8 @@ struct EditParams {
        "THE VIEW TRANSFORM" in notes/Documentation.txt.
 
        Values are a PUBLISHED FORMAT once written to a sidecar -- add freely, never
-       renumber. Identity is Filmic (0), which is what every render did before the
-       transform became selectable. */
+       renumber. Identity is None (0): no tone mapping, which is what an untouched image
+       renders as and what Reset Basic restores. */
     int   viewTransform = 0;
 
     /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
