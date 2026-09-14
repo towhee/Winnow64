@@ -3,6 +3,7 @@
 #include "ImageFormats/Raw/tiffwalk.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "ImageFormats/Raw/cameramatrix.h"
+#include "ImageFormats/Raw/cameramodel.h"
 #include <vector>
 
 /*
@@ -255,7 +256,11 @@ bool Olympus::parse(MetadataParameters &p,
 
     // pull data reqd from IFD0
     m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
-    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
+    /* Olympus tag 272 is the bare body ("E-M1", "OM-1MarkII"), which matches neither the
+       matrix table nor a DCP. canonicalCameraModel supplies the maker and the spacing. */
+    m.model = canonicalCameraModel(m.make,
+                  u.getString(p.file, ifd->ifdDataHash.value(272).tagValue,
+                              ifd->ifdDataHash.value(272).tagCount));
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
@@ -572,7 +577,9 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     raw.white = 4095;
     for (int i = 0; i < 4; ++i) raw.black[i] = 255;
     QString model;
-    if (haveIfd0 && ifd0.contains(272)) model = "Olympus " + r.ascii(ifd0[272]);
+    if (haveIfd0 && ifd0.contains(272))
+        model = canonicalCameraModel(ifd0.contains(271) ? r.ascii(ifd0[271]) : QString(),
+                                     r.ascii(ifd0[272]));
     xyzToCamForModel(model, raw.xyzToCam);
 
     /* CFA phase. Olympus bodies differ (the older E-M1 is BGGR, the OM-1 is RGGB), so the BGGR

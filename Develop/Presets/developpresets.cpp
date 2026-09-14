@@ -226,7 +226,6 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     /* By NAME, not by path -- see kBasicLeaves. A preset applied to a camera the profile
        was not made for simply does not resolve, and the panel says so. */
     else if (key == "cameraProfile")       p.cameraProfile       = v.toString();
-    else if (key == "cameraProfileLook")   p.cameraProfileLook   = v.toInt();
     else if (key == "exposure")            p.exposure            = f;
     else if (key == "contrast")            p.contrast            = f;
     else if (key == "highlights")          p.highlights          = f;

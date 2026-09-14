@@ -4,6 +4,7 @@
 #include "ImageFormats/Raw/tiffwalk.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "ImageFormats/Raw/cameramatrix.h"
+#include "ImageFormats/Raw/cameramodel.h"
 #include <vector>
 
 Panasonic::Panasonic()
@@ -152,7 +153,10 @@ bool Panasonic::parse(MetadataParameters &p,
 
     // pull data reqd from main file IFD0
     m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
-    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
+    /* Panasonic tag 272 is the bare body ("DC-GX9"); the tables are maker-prefixed. */
+    m.model = canonicalCameraModel(m.make,
+                  u.getString(p.file, ifd->ifdDataHash.value(272).tagValue,
+                              ifd->ifdDataHash.value(272).tagCount));
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
@@ -437,7 +441,9 @@ bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         raw.camMul[3] = r.scalar(t[0x25]);
     }
     QString model;
-    if (t.contains(272)) model = "Panasonic " + r.ascii(t[272]);
+    if (t.contains(272))
+        model = canonicalCameraModel(t.contains(271) ? r.ascii(t[271]) : QString(),
+                                     r.ascii(t[272]));
     xyzToCamForModel(model, raw.xyzToCam);
 
     return true;

@@ -106,6 +106,22 @@ struct WorkingImage {
        assuming Rec.709 while running on Rec.2020 data quietly stops preserving luma. */
     ColorSpaceMath::ColorSpace space = ColorSpaceMath::ColorSpace::LinearSRGB;
 
+    /*
+        TRUE ONCE A CAMERA PROFILE'S TONE CURVE HAS BEEN APPLIED to these pixels.
+
+        A ProfileToneCurve is not a contrast tweak, it is a whole scene-linear -> display
+        mapping: a real one takes 0.18 to 0.478 with an end slope of 0.03, and 211 of 217
+        measured lift mid grey by more than 1.5x. So it does the same job as the view
+        transform, and running both compresses the highlights twice -- measured, a full
+        stop above white collapsed to nothing (1.0 and 2.0 both rendering 242).
+
+        OutputTransform::EffectiveView reads this and forces the view transform to None,
+        which is the SAME rule it already applies to display-referred input: a view
+        transform tone-maps, so data that already carries a tone curve does not get a
+        second one. One rule, one place.
+    */
+    bool profileToneMapped = false;
+
     /* True for sensor data (RAW): scene-referred linear with highlight headroom (values
        may exceed white), so the output stage applies a view transform (tone mapping) to
        render a pleasing default. False for display-referred input (a JPEG un-gamma'd by
@@ -216,6 +232,7 @@ inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)
     dst.white         = src.white;
     dst.space         = src.space;
     dst.sceneReferred = src.sceneReferred;
+    dst.profileToneMapped = src.profileToneMapped;
     dst.renderScale   = src.renderScale;
 }
 

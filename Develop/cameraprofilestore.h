@@ -44,10 +44,17 @@ class CameraProfileStore : public QObject
     Q_OBJECT
 
 public:
-    /* One profile file, as the menu needs it: what to show, and what to open. */
+    /* One menu row: what to show, and what to open. */
     struct Entry {
         QString name;       // ProfileName -- "Adobe Standard", "Camera Vivid", ...
-        QString path;
+        QString path;       // the file; for a BASE, the file it is derived FROM
+        /*
+            A SYNTHESISED "Camera Base" -- the profile at `path` with its look stripped
+            (no LookTable, no tone curve, no exposure offset), leaving only the sensor
+            characterisation. See deriveBases() for why this is one entry and not
+            a per-profile switch.
+        */
+        bool isBase = false;
     };
 
     static CameraProfileStore &instance();
@@ -58,9 +65,18 @@ public:
 
     bool indexReady() const;
 
-    /* Every profile that names this camera, sorted by name. Empty while the index is
-       still building, and empty for a camera nobody has made a profile for. */
-    QList<Entry> forModel(const QString &cameraModel) const;
+    /*
+        Every profile that names this camera, plus the synthesised "Camera Base"
+        entries, sorted by name. Empty while the index is still building, and empty for
+        a camera nobody has made a profile for.
+
+        NOT const, and not free the first time: deriving the bases needs the MATRICES,
+        so it fully parses this camera's curve-bearing profiles (~9-18 of them, ~10 ms)
+        rather than the two strings the index sweep reads. That cost is per camera per
+        session and is cached; it deliberately does NOT ride the index sweep, which has
+        to stay a ~0.5 s peek over ~4400 files.
+    */
+    QList<Entry> forModel(const QString &cameraModel);
 
     /* The parsed profile a (camera, profile name) pair selects, or nullptr when the name
        no longer matches anything -- a profile the user has since uninstalled, or a sidecar
@@ -87,14 +103,40 @@ private:
 
     /* Longest-prefix lookup against the index, mirroring xyzToCamForModel: a profile for
        "Sony ILCE-9" also serves "Sony ILCE-9M2" when nothing matches the longer name
-       exactly. Caller holds the mutex. */
-    const QList<Entry> *lookupLocked(const QString &model) const;
+       exactly. Caller holds the mutex. matchedKey, when given, receives the index key
+       that answered -- which is what the derived bases must be cached under, since a
+       prefix match means it is not the key that was asked for. */
+    const QList<Entry> *lookupLocked(const QString &model, QString *matchedKey = nullptr) const;
+
+    /*
+        Derive the "Camera Base" entries for one camera's profiles. Parses, so the caller
+        must NOT hold the mutex.
+
+        WHY A BASE IS ONE ENTRY AND NOT A SWITCH. Adobe ships ONE colorimetric base per
+        camera generation with a different look bolted on top of each of its "Camera *"
+        profiles: measured over the whole installed set, 2935 such profiles, of which only
+        42 carry a HueSatMap, and every one of a generation is byte-identical once the look
+        is removed. So "this profile without its look" is not a property of the profile at
+        all -- it is one shared rendering that nine dropdown rows collapse onto.
+
+        SELECTED BY CONTENT, NOT BY NAME OR FOLDER: a profile contributes a base when its
+        look carries a TONE CURVE. That picks out exactly the "Camera *" family (Adobe
+        Standard has a LookTable but no curve), keeps working for third-party profiles, and
+        is the distinction that matters -- a curve is a whole tone mapping, so removing it
+        is what makes the base a materially different rendering rather than a nuance.
+    */
+    static QList<Entry> deriveBases(const QList<Entry> &real);
+
+    /* By name, so a synthesised base sits where the user expects to find it rather than
+       tacked on after the real profiles. */
+    static QList<Entry> sorted(QList<Entry> list);
 
     void scan();                            // runs on the worker thread
 
     mutable QMutex mutex;
     QHash<QString, QList<Entry>> index;     // normalised model -> its profiles
-    QHash<QString, std::shared_ptr<const Dcp::Profile>> parsed;   // path -> profile
+    QHash<QString, QList<Entry>> bases;     // index key -> its derived base entries
+    QHash<QString, std::shared_ptr<const Dcp::Profile>> parsed;   // cache key -> profile
     bool started = false;
     bool ready = false;
 };

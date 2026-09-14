@@ -2,6 +2,7 @@
 #include "Main/global.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "ImageFormats/Raw/cameramatrix.h"
+#include "ImageFormats/Raw/cameramodel.h"
 #include "ImageFormats/Fuji/fujicompressed.h"
 #include <vector>
 #include <algorithm>
@@ -178,8 +179,11 @@ bool Fuji::parse(MetadataParameters &p,
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
-    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
-                      ifd->ifdDataHash.value(272).tagCount);
+    /* Fujifilm tag 272 is the bare body ("X-T2", "GFX50S II"); the tables are maker-
+       prefixed and space "GFX" off its number. */
+    m.model = canonicalCameraModel(m.make,
+                  u.getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
+                              ifd->ifdDataHash.value(272).tagCount));
     m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                           ifd->ifdDataHash.value(33432).tagCount);
 
@@ -495,10 +499,11 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    /* Colour matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not here, so use
-       the camera id text in the RAF header (bytes 0x1C..) -> "Fujifilm " + model. */
-    QString model = QString::fromLatin1(all.mid(0x1C, 32)).trimmed();
-    if (!model.isEmpty()) model = "Fujifilm " + model;
+    /* Colour matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not here,
+       so use the camera id text in the RAF header (bytes 0x1C..). The Make is not in the
+       header either, but a RAF is a Fujifilm by definition. */
+    QString model = canonicalCameraModel("FUJIFILM",
+                                         QString::fromLatin1(all.mid(0x1C, 32)));
     xyzToCamForModel(model, raw.xyzToCam);
 
     return true;

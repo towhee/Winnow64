@@ -220,7 +220,7 @@ HueSatMap::Table toHsmTable(const Dcp::Table3D &t)
 
 } // namespace
 
-bool tables(const Dcp::Profile &p, float kelvin, bool applyLook, Tables &out)
+bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
 {
     out = Tables();
 
@@ -243,14 +243,12 @@ bool tables(const Dcp::Profile &p, float kelvin, bool applyLook, Tables &out)
     /*
         THE LOOK. Unlike the HueSatMap the LookTable is a SINGLE tag, not one per
         illuminant -- a creative grade is not a function of the light -- so there is
-        nothing to blend.
+        nothing to blend. Empty on a profile that carries no look.
     */
-    if (applyLook) {
-        out.lookTable = toHsmTable(p.lookTable);
-        ProfileTone::Build(p.toneCurve, out.toneCurve);
-        if (p.baselineExposureOffset != 0.0f)
-            out.exposureScale = std::exp2(p.baselineExposureOffset);
-    }
+    out.lookTable = toHsmTable(p.lookTable);
+    ProfileTone::Build(p.toneCurve, out.toneCurve);
+    if (p.baselineExposureOffset != 0.0f)
+        out.exposureScale = std::exp2(p.baselineExposureOffset);
 
     if (out.hueSatMap.isEmpty() && out.lookTable.isEmpty() &&
         out.toneCurve.isEmpty() && out.exposureScale == 1.0f)
