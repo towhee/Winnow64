@@ -232,6 +232,7 @@ set(WINNOW_SOURCES
     ImageFormats/Canon/canon.cpp
     ImageFormats/Canon/canoncr3.cpp
     ImageFormats/Canon/crx.cpp
+    ImageFormats/Dcp/dcp.cpp
     ImageFormats/Dng/dng.cpp
     ImageFormats/Fuji/fuji.cpp
     ImageFormats/Fuji/fujicompressed.cpp
@@ -551,6 +552,7 @@ set(WINNOW_HEADERS
 
     ImageFormats/Canon/canon.h
     ImageFormats/Canon/canoncr3.h
+    ImageFormats/Dcp/dcp.h
     ImageFormats/Dng/dng.h
     ImageFormats/Fuji/fuji.h
     ImageFormats/Fuji/fujicompressed.h

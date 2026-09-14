@@ -209,6 +209,13 @@ winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Met
 # integer default: that is how DNG NoiseProfile (DOUBLE) reached PMRID as ~1e9.
 winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+# tst_dcp compiles the DNG camera profile reader plus the TIFF walk it is built on (Qt
+# Core only). A DCP is a bag of optional tags and every way of misreading one is silent --
+# a table read with the wrong dims shears the hue axis, a swapped matrix family renders a
+# plausible cast -- so the parse is pinned against a synthetic profile built byte by byte.
+winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 # tst_heicboxes compiles the HEIC container walk plus the closure it reads Exif with
 # (ifd + exif + gps + metareport). It pins the two box-header defects that made every
 # iPhone HEIC look unreadable: a largesize (size == 1) mdat treated as "rest of file",
