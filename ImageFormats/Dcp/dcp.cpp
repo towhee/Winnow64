@@ -256,11 +256,12 @@ bool parseIfd(TiffWalk::Reader &r, const TiffWalk::Ifd &tags, Profile &out, QStr
     return true;
 }
 
-bool parseFile(const QString &path, Profile &out, QString *err)
-{
-    out = Profile();
+namespace {
 
-    QFile f(path);
+/* Shared by peek() and parseFile(): open, validate the header, read the one IFD. */
+bool openIfd(QFile &f, const QString &path, TiffWalk::Reader &r, TiffWalk::Ifd &tags,
+             QString *err)
+{
     if (!f.open(QIODevice::ReadOnly)) return fail(err, "DCP: cannot open " + path);
 
     /* A .dcp is a TIFF whose magic word is 0x4352 rather than 42. TiffWalk::Reader accepts
@@ -276,13 +277,41 @@ bool parseFile(const QString &path, Profile &out, QString *err)
     const quint16 magic = be ? quint16((h[2] << 8) | h[3]) : quint16((h[3] << 8) | h[2]);
     if (magic != 0x4352 && magic != 42) return fail(err, "DCP: wrong magic (not a camera profile).");
 
-    TiffWalk::Reader r;
     if (!r.init(&f)) return fail(err, "DCP: unreadable TIFF header.");
 
-    TiffWalk::Ifd tags;
     QList<quint32> subs;
     quint32 next = 0;
     if (!r.readIfd(r.firstIfd(), tags, subs, next)) return fail(err, "DCP: unreadable IFD.");
+    return true;
+}
+
+} // namespace
+
+bool peek(const QString &path, QString &uniqueCameraModel, QString &name)
+{
+    uniqueCameraModel.clear();
+    name.clear();
+
+    QFile f(path);
+    TiffWalk::Reader r;
+    TiffWalk::Ifd tags;
+    if (!openIfd(f, path, r, tags, nullptr)) return false;
+
+    uniqueCameraModel = ascii(r, tags, UniqueCameraModel);
+    name = ascii(r, tags, ProfileName);
+    /* A profile with no ColorMatrix1 is not a camera profile, and the menu must not offer
+       it -- checked here rather than left to the full parse, which the menu never runs. */
+    return !uniqueCameraModel.isEmpty() && tags.contains(ColorMatrix1);
+}
+
+bool parseFile(const QString &path, Profile &out, QString *err)
+{
+    out = Profile();
+
+    QFile f(path);
+    TiffWalk::Reader r;
+    TiffWalk::Ifd tags;
+    if (!openIfd(f, path, r, tags, err)) return false;
 
     return parseIfd(r, tags, out, err);
 }

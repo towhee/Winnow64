@@ -2,7 +2,15 @@
 #define WORKINGIMAGE_H
 
 #include <vector>
+#include <memory>
+#include <QString>
 #include "Develop/colorspace.h"
+
+/* Forward declared rather than included: a WorkingImage carries a camera profile but does
+   not read one, and ImageFormats/Dcp/dcp.h drags in QFile and the TIFF walk. shared_ptr
+   is happy with an incomplete type -- its deleter is type-erased where the profile is
+   actually built (CameraProfileStore). */
+namespace Dcp { struct Profile; }
 
 /*
     The shared, high-precision representation that both decode paths converge on and the
@@ -55,6 +63,28 @@ struct CameraColor {
     float camToWorking[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};
     float asShotK    = 0.0f;    // 0 = not solved
     float asShotTint = 0.0f;
+
+    /* Which camera this is, as the file reports it -- the key a camera profile is found
+       by (CameraProfileStore). Carried on the image rather than looked up per render site
+       so that a WorkingImage is self-describing: the cache hands one back with no path
+       attached, and every render site would otherwise need the datamodel row to say what
+       took the picture. */
+    QString cameraModel;
+
+    /*
+        The DNG camera profile to render with, or null for Winnow's own matrix (the
+        default, and what every image rendered with before profiles existed).
+
+        IT IS NOT PART OF THE DECODE. The profile is an EDIT -- EditParams::cameraProfile
+        names it -- so it is resolved and attached at RENDER time, by
+        WorkingImageCache::render/renderStack, off pixels already in the cache. Baking a
+        profile into the cached camera-native buffer would make changing it a re-decode,
+        which is the whole thing the camera-native cache boundary exists to avoid.
+
+        Shared, immutable and session-lived: one parsed profile serves every render of
+        every image that selected it.
+    */
+    std::shared_ptr<const Dcp::Profile> profile;
 };
 
 struct WorkingImage {

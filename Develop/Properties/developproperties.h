@@ -632,6 +632,19 @@ private:
        adjustment. Consumed by OutputTransform, not by Develop::Apply. The identifiers
        keep the name `viewTransform` because that is the published sidecar key; only the
        LABEL is "Tone mapping". See EditParams::viewTransform. */
+    /* THE CAMERA PROFILE -- the first row of Basic, Lightroom's Profile slot. It
+       characterises the SENSOR and feeds white balance, which is why it heads the panel
+       rather than sitting beside Tone mapping: each control sits with what it governs.
+       Always written to scope 0 (a profile describes the camera; one part of a picture
+       cannot have been taken by a different one). See EditParams::cameraProfile. */
+    void addCameraProfileRow(const QModelIndex &parIdx);
+    void setCameraProfile(const QString &name);
+    void refreshCameraProfileRow();
+    /* Fill the combo with the built-in entry plus every profile installed for THIS
+       camera, and select the stored one. Separate from refresh because the list itself
+       changes -- on an image change (a different camera) and when the background index
+       lands. */
+    void repopulateCameraProfileCombo();
     void addViewTransformRow(const QModelIndex &parIdx);
     void setViewTransform(int vt);
     void refreshViewTransformRow();
@@ -652,6 +665,7 @@ private:
     static QIcon dropperIcon(bool armed);   // drawn, not a resource
     QPointer<QComboBox> wbCombo;
     QPointer<QComboBox> viewTransformCombo;
+    QPointer<QComboBox> cameraProfileCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
     /* Detail 1:1 preview. detailPt is normalized over the ORIENTED full-res frame (the

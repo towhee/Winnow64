@@ -771,6 +771,10 @@ private slots:
     /* True if fPath is a raw file (a format that carries an embedded jpg preview). Used by the
        Develop panel to show the raw-only rows (Edit source, Demosaic, Denoise raw). */
     bool isFileRaw(const QString &fPath) const;
+    /* The camera model recorded for an image, as the metadata reports it -- the key a
+       camera profile is looked up by (CameraProfileStore). Empty when the row is unknown
+       or the file carries no model. */
+    QString cameraModelFor(const QString &fPath) const;
     /* True when the current selection is a video. The Develop module operates on decoded still
        frames, so every Develop entry point (dock load + preview/full-res render) is gated on this to
        avoid trying to develop a video. */

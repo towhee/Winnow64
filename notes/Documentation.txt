@@ -187,7 +187,7 @@ Follow the format conventions above for anything new. In particular, do not hard
 
 14. DEVELOP / IMAGE EDIT (PARAMETRIC ADJUSTMENTS)
      Architecture
-       Where Camera Profiles Will Go (planned)
+       Where Camera Profiles Live in the Panel
        Camera Profiles (DCP) -- Phase 4 Plan
      Panel Focus & Slider Arrow-Nudge
      Scope & Mask Model (Global + Masks)
@@ -3318,11 +3318,11 @@ WHY BASIC AND NOT CALIBRATE (it was briefly in Calibrate, per notes/_ToDo.txt). 
 
 MOVING IT COST the group bookkeeping the checklist warns about: EditParams::resetGroup's case (Calibrate -> Basic, so Reset Basic and the Basic preview eye cover it) and the preset leaf table (kCalibrateLeaves -> kBasicLeaves). Neither fails to compile if missed.
 
-⏺⏺ Develop / Image Edit (Parametric Adjustments) > Architecture > Where Camera Profiles Will Go (planned)
+⏺⏺ Develop / Image Edit (Parametric Adjustments) > Architecture > Where Camera Profiles Live in the Panel
 
-Not built. Recorded so the decision is not re-litigated when Phase 4 (DCP camera profiles) starts.
+BUILT (2026-09-13, slice 2 of the Phase 4 plan below). Recorded first as a decision so it would not be re-litigated during the build; kept here because the reasoning is what a later change has to argue against.
 
-Profile goes at the TOP of Basic -- Lightroom's slot. It is NOT paired there with Tone mapping: an earlier draft of this plan put the two together, but Tone mapping moved to the head of the tone group, and each control now sits with what it actually governs. Profile characterises the camera and feeds white balance; Tone mapping governs the tone sliders:
+Profile is at the TOP of Basic -- Lightroom's slot. It is NOT paired there with Tone mapping: an earlier draft of this plan put the two together, but Tone mapping moved to the head of the tone group, and each control now sits with what it actually governs. Profile characterises the camera and feeds white balance; Tone mapping governs the tone sliders:
 
   Profile        [ Adobe Standard  v ]   stage 0: camera characterisation
   ------------------------------------
@@ -3340,7 +3340,7 @@ GATED LIKE Tone mapping, BUT WITH TWO DISTINCT REASONS, and they are not interch
   - non-raw                    no camera characterisation at all (cam.valid is false) -> "raw only"
   - Apple Core Image engine    applerawdecode.mm bypasses RawColor entirely; Core Image has already applied its own profile and returns linear sRGB, so a camera profile is meaningless and must not silently do nothing -> "not available with the Apple decoder"
 
-DECIDE BEFORE BUILDING, not after a bug report: changing the profile changes the camera matrix, so resolveAsShot lands somewhere different and the Temp/Tint reading shifts. Whether the stored numbers are held (and the rendering moves, as Lightroom does) or the appearance is held (and the numbers move) is a deliberate choice.
+DECIDED BEFORE BUILDING, not after a bug report: changing the profile changes the camera matrix, so resolveAsShot lands somewhere different and the Temp/Tint reading shifts. THE STORED NUMBERS ARE HELD and the rendering moves, as Lightroom does. Holding the appearance instead would mean re-solving and silently rewriting numbers the user chose, which is the worse surprise.
 
 
 RAW ONLY, AND IT SAYS SO. OutputTransform forces the transform to None for display-referred input, so on a JPEG the control would be live and silently do nothing. Instead the row is disabled and the value cell reads "raw only" -- greyed control plus a brief inline reason, never a popup after the fact. currentIsRaw() gates it at build time, the same way the WB row gates its named illuminants.
@@ -3376,7 +3376,7 @@ Phasing: 1 WorkingImage + split RawColor at linear + InputTransform/OutputTransf
 
 ⏺⏺ Develop / Image Edit (Parametric Adjustments) > Architecture > Camera Profiles (DCP) -- Phase 4 Plan
 
-Not built. This is the plan for Phase 4 of the colour restructure (see "Where Camera Profiles Will Go" above for the UI placement, which is already decided and is not re-opened here). It records what a Lightroom camera profile actually IS, so the implementation is read off the DNG spec rather than guessed, and it splits the work into four slices each of which is shippable on its own.
+Slices 1 and 2 are BUILT (2026-09-13); slices 3 and 4 are not. See "Where Camera Profiles Live in the Panel" above for the UI placement. This section records what a Lightroom camera profile actually IS, so the implementation is read off the DNG spec rather than guessed, and it splits the work into four slices each of which is shippable on its own.
 
 WHAT A LIGHTROOM PROFILE IS. A DCP -- DNG Camera Profile -- a small TIFF-structured file built out of DNG tag numbers, or the same tags embedded directly in a DNG. It is NOT an ICC profile: an ICC input profile characterises a camera under ONE illuminant, whereas a DCP carries TWO calibrations and interpolates between them at render time using the shot's own white balance. That single difference is why a DCP tracks mixed and unusual lighting better, and it is why Lightroom's Profile control and its Temp slider are coupled.
 
@@ -3404,7 +3404,60 @@ THE TWO PROFILE FAMILIES CARRY DIFFERENT TABLES, which matters for slice 3's sco
 
 NOT READ, deliberately: the DNG 1.6 third illuminant (52529 / 52531 / 52532 / 52537) and its spectral IlluminantData. Its presence is REPORTED (Profile::hasThirdIlluminant) so the renderer can say a profile exceeds what is supported rather than quietly use two thirds of it. Also not read: ExtraCameraProfiles (50933), the pointer array to further profile IFDs inside a DNG -- parseIfd() is all a caller needs to walk those when it wants them.
 
-SLICE 2 -- THE MATRIX PATH ONLY. This is the whole visible win and it is the small half of the work. Add the selected profile to CameraColor (an id, plus a pointer to the parsed profile); at render time do the mired interpolation keyed on the WB Kelvin, build ForwardMatrix -> XYZ D50 -> Bradford to D65 -> kWorking, and write that into cam.camToWorking. It folds straight into PointCoeffs::preMat and closes most of the gap to Lightroom's colour. SHIP THIS AND STOP FOR A WHILE -- it is the highest ratio of result to risk in the phase.
+SLICE 2 -- THE MATRIX PATH ONLY. This is the whole visible win and it is the small half of the work. THE MATHS IS DONE (Develop/cameraprofile.h/.cpp, 2026-09-13, tests/unit/tst_cameraprofile.cpp); THE WIRING IS NOT -- see "What Slice 2 Still Needs" below, and the decision it forces. CameraProfile::camToWorking(profile, kelvin, tint) returns the one 3x3 that fills CameraColor::camToWorking, so it folds into PointCoeffs::preMat exactly as the existing matrix does and costs NO extra per-pixel work -- only a matrix build per render.
+
+THE CHAIN, and why each step is there:
+
+  camera RGB
+    -> inv(AnalogBalance . CameraCalibration)      undo the per-INDIVIDUAL-camera correction (usually identity)
+    -> diag(1 / referenceNeutral)                   the WHITE BALANCE
+    -> ForwardMatrix                                camera -> XYZ, landing on D50
+    -> Bradford D50 -> the working space's white    the one adaptation in the pipeline
+    -> XYZ -> working primaries
+  = working RGB
+
+THE WHITE BALANCE IS INSIDE THE MATRIX. That is the substantive difference from the dcraw-style path Winnow runs today, which is a FIXED matrix with per-channel gains in front of it. Under DNG the chosen white picks the interpolation weight AND sets diag(1/referenceNeutral), so the matrix is re-derived per temperature. That is what makes a camera profile track mixed lighting, and it is the mechanism behind the coupling noted above -- the same Kelvin means a different rendering under a different profile.
+
+EXPOSURE IS PRESERVED, WHICH IS WHY THE CONTROL CAN BE OFFERED AT ALL. The as-shot camera neutral is normalised to GREEN == 1 (CameraColor::asShotMul's own convention) and the chain maps it to exactly (1,1,1) in the working space. With a ForwardMatrix that is because a well-formed one has rows summing to the D50 white; without one it is because the adaptation is BUILT to carry the white the neutral lands on exactly onto D50. rawcolor.cpp anchors the same point the same way today (it row-normalises so camera (1,1,1) -> working (1,1,1)), so switching a raw onto a profile re-points its colour WITHOUT moving its brightness. A user trying profiles is comparing colour renderings; a control that also nudged exposure would be read as one of them being "better" for the wrong reason. Pinned by tst_cameraprofile::neutralRendersNeutral (both paths, 1e-6) and ::profileChangeDoesNotMoveExposure.
+
+MEASURED ON REAL DATA, because that anchor leans on a property of shipped files: over 416 ForwardMatrix rows from installed Adobe profiles the worst deviation of a row sum from the D50 white is 3.0e-4, and the worst neutral error over 627 profile/temperature pairs is 3.9e-4 -- about 2% of a 16-bit level, and entirely the rounding of rationals over 10000. The exact assertions therefore run on matrices row-normalised to D50 first (that pins THIS CODE), and a separate case runs on the published numbers bounded by their own deviation (that pins the real-data behaviour). A test that hid the difference behind one loose tolerance would stop detecting either.
+
+INTERPOLATION DETAILS THAT ARE EASY TO GET WRONG, all pinned:
+  - IN MIRED (1/T), not in kelvin, as the specification requires. Halfway between 2856 K and 6504 K is 4680 K by kelvin but 3969 K by mired, and the second is the one that looks halfway; a kelvin lerp is ~13 points of weight out in the middle of the range.
+  - WARM FIRST, by temperature, NOT in the order the file lists them. Adobe writes illuminant 1 = Standard A and illuminant 2 = D65, but nothing in the format requires it, and a cool-first profile read in file order interpolates backwards -- worst exactly at the ends, where it returns the wrong calibration outright.
+  - CLAMPED OUTSIDE THE TWO CALIBRATION TEMPERATURES. Extrapolating a fitted matrix past the point it was fitted at is not meaningful.
+  - ForwardMatrix is used ONLY WHEN BOTH calibrations have one. Mixing a fitted forward matrix with one derived from the inverse of a colour matrix would put a seam in the middle of the temperature range; deriving both is consistent, if slightly less accurate.
+  - A SINGLE-ILLUMINANT profile is legal and resolves at every temperature with weight 0.
+
+TWO SHARED PIECES CAME OUT OF THIS. ColorSpaceMath::adapt() (Bradford) and kWhiteD50 are new in Develop/colorspace.h: every space in that header is D65 deliberately, so that no chromatic adaptation hides in the ordinary pipeline, and this is the ONE place a second white point is unavoidable. Nothing else should call it -- a second adaptation appearing in the pipeline means something has drifted. The destination white is taken from the working space's own primaries (its RGB->XYZ row sums) rather than from a published D65 triple, which is what makes a neutral land on exactly (1,1,1). And WhiteBalance::illuminantXYZ() is now public: the profile path keys its interpolation on the same illuminant definition the Temp slider uses -- two loci, crossfaded, tint perpendicular -- because two definitions of "6500 K" in one pipeline would disagree by a few hundred kelvin.
+
+SLICE 2 IS WIRED UP (2026-09-13). Selecting a profile in the Basic panel now re-renders the image through it, and the choice persists, travels in a preset and propagates across a multi-image selection like any other Basic control. The pieces, in dependency order:
+
+  ImageFormats/Dcp           Dcp::peek()               read ONLY the two identifying strings
+  Develop/cameraprofilestore which profiles exist, and handing out a parsed one
+  Develop/workingimage.h     CameraColor::cameraModel + ::profile
+  Develop/editparams.h       EditParams::cameraProfile (a NAME, not a path)
+  Develop/develop.cpp        Develop::InputMatrix -- one definition of stage 0
+  Develop/workingimagecache  attachProfile() -- the call site the whole feature hangs off
+  developproperties.cpp      the Profile row, its two greyed reasons, preset + multi-image
+
+THE CALL SITE IS IN WorkingImageCache, NOT IN THE DECODE. attachProfile() resolves the name against pixels ALREADY IN THE CACHE, every render. That is the camera-native cache boundary paying off exactly as intended: changing profile is a re-render, never a re-decode. It clears the profile before resolving, so the "no profile" case cannot inherit the last one, and a name that no longer resolves leaves it null -- the image then renders with the built-in matrix, which is not silent because the panel resolves the same name and marks it "(not installed)".
+
+ONE DEFINITION OF STAGE 0 (Develop::InputMatrix), shared by ToWorkingSpace and by buildPointCoeffs's preMat fold, because the two must never disagree about which matrix an image went through. It returns the matrix AND whether that matrix already carries the white balance.
+
+THE WHITE BALANCE IS APPLIED EXACTLY ONCE, and the way that is arranged is the least obvious rule in the feature. On the built-in path the white balance is a per-channel gain in front of a fixed matrix; on the profile path it is diag(1/referenceNeutral) INSIDE the matrix, so buildPointCoeffs drops the gains. It decides that by testing img.cam.profile -- NOT the image's space tag -- because with an active local Denoise the conversion has already happened as its own pass and the tag no longer says where the pixels came from. THEREFORE ToWorkingSpace DELIBERATELY LEAVES cam.profile SET after converting. Clearing it there is the tidy-looking thing to do and it white-balances the image twice: the early route would apply the gains, the folded route would not, and the two would silently disagree. Pinned by tst_inputprofile::cameraProfileSurvivesTheDenoiseRoute, which was mutation-checked -- adding the reset makes it fail.
+
+STORED BY NAME, NOT BY PATH. A profile lives in the Adobe install or in Winnow's own folder, and the path differs per machine and per Adobe version; the name plus the image's own camera model resolves it wherever it is. It also means a profile travels honestly in a preset and across a selection: it is resolved PER IMAGE against that image's own model, so applying one camera's profile to another camera's raw simply does not resolve and is marked, rather than rendering something wrong.
+
+PROFILES ARE READ, NEVER SHIPPED. Adobe's .dcp files are licensed for use with Adobe products, so the store reads them where the user already has them installed. Roots, in order: the machine-wide Adobe CameraProfiles folder, the per-user one, and Winnow's own CameraProfiles folder under AppDataLocation -- last, so a user-supplied profile of the same name does not displace an installed one in the menu; both appear, and the duplicate is visible rather than silent.
+
+THE INDEX IS BUILT ON A BACKGROUND THREAD, ONCE PER SESSION. Measured on this machine: 4373 installed profiles, 497 ms to read the two identifying strings from every one of them, against ~2.4 s to parse them fully -- hence Dcp::peek, which touches no lookup table. Half a second is under the one-second bar that would demand a progress indicator but well over the bar for a dropdown that must not stall the GUI when a raw is opened, so the combo is filled with the built-in entry immediately and refilled when the sweep lands (CameraProfileStore::indexChanged). A stored-but-unresolved name is NOT marked "(not installed)" while the index is still building -- that would be a lie for the half second before it lands.
+
+THE TWO GREYED REASONS ARE NOT INTERCHANGEABLE, and both are inline in the value cell where the control would have been, never a popup after the fact: a non-raw file reads "raw only" (no sensor to characterise), and the Apple Core Image engine reads "Apple decoder" (Core Image has already applied a profile of its own before Winnow sees the pixels -- and unlike the first, this one names something the user can change).
+
+A PROFILE COUNTS AS AN EDIT. cameraProfile is part of EditParams::isIdentity(), so choosing one makes the image non-identity and it renders, persists and shows the edited marker; the empty default keeps an untouched raw identity, writing no sidecar and leaving its devPreview key where it has always been. paramsToJson OMITS the key when empty for the same reason.
+
+STILL OPEN: a preferences page for the profile folders (the roots are code today, and CameraProfileStore::roots() is public so a page can list them); profiles embedded in a DNG (parseIfd is ready, nothing calls it); and slices 3 and 4 below, which are the lookup tables. Note what that means today -- the matrix half of a profile is applied and the tables are not, so an "Adobe Standard" rendering is its colorimetry WITHOUT its HueSatMap correction, and a "Camera Vivid" is NOT yet the camera's look. That is a real gap, not a rounding error, and it is why the built-in entry stays the default.
 
 SLICE 3 -- HueSatMap. The first genuinely per-pixel stage: RGB -> HSV, trilinear interpolation in the 3-D table, HSV -> RGB. Per the spec it must run in ProPhoto LINEAR, so bracket it with two folded 3x3s rather than inventing a variant that runs in kWorking -- the table's numbers only mean what the spec says they mean in the space the spec names. Interpolate the two illuminants' tables into ONE table per render, not per pixel, and parallelFor the pixel loop (see "Develop performance" -- every per-pixel loop is parallel).
 
@@ -4065,7 +4118,7 @@ Sections (built via PropertyEditor::addItem):
 
 - Scope — the band above the tree (scopeheader.cpp / scopeheaderlab.cpp): Global plus one row per mask, with -/+ and the per-row [v] menu. Selecting a row only chooses which scope the sliders EDIT -- every enabled scope is composited, per the "Scope & mask model" subsection above, and the whole stack persists per-image in the XMP sidecar. HISTORY: an early SCAFFOLD stored "scopes as ALTERNATIVES" per-machine under QSettings "Develop/Layers/<name>/..." (only the selected one active). Its helpers (readLayerList / setCurrentLayer / layerRootPath / layerValue) were deleted in the 2026-07-30 rename.
 
-- Basic — WB (dropper + preset dropdown), Temp, Tint, Exposure, Contrast, Highlights, Shadows, Whites, Blacks, Texture, Clarity, Dehaze. Integer -100..100 except Exposure (EV, -5.00..5.00), Temp (KELVIN, 2000..50000, log ramp) and Tint (-150..150). All default to 0 (identity). See "White balance (absolute, Kelvin)" below for the WB row.
+- Basic — Profile (a combo: the built-in "Winnow Standard" plus every DNG camera profile installed for THIS camera), WB (dropper + preset dropdown), Temp, Tint, Tone mapping (a combo), Exposure, Contrast, Highlights, Shadows, Whites, Blacks, Texture, Clarity, Dehaze. Integer -100..100 except Exposure (EV, -5.00..5.00), Temp (KELVIN, 2000..50000, log ramp) and Tint (-150..150). All default to 0 (identity). See "White balance (absolute, Kelvin)" below for the WB row.
 
 - Color — Red, Green, Blue (per-channel gain); Hue, Saturation, Vibrance, Luminance (global HSL). Integer -100..100 sliders, all default 0 (identity).
 

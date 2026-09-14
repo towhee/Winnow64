@@ -129,6 +129,8 @@ set(WINNOW_SOURCES
     Datamodel/selection.cpp
 
     # Develop
+    Develop/cameraprofile.cpp
+    Develop/cameraprofilestore.cpp
     Develop/develop.cpp
     Develop/inputtransform.cpp
     Develop/outputtransform.cpp
@@ -443,6 +445,8 @@ set(WINNOW_HEADERS
     Views/catalogscopetree.h
     Datamodel/selection.h
 
+    Develop/cameraprofile.h
+    Develop/cameraprofilestore.h
     Develop/develop.h
     Develop/calibrate.h
     Develop/colorgrade.h

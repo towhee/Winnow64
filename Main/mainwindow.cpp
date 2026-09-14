@@ -10376,6 +10376,14 @@ bool MW::isFileRaw(const QString &fPath) const
     return metadata->hasJpg.contains(ext);
 }
 
+QString MW::cameraModelFor(const QString &fPath) const
+{
+    if (!dm || fPath.isEmpty()) return QString();
+    const int row = dm->rowFromPath(fPath);
+    if (row < 0) return QString();
+    return dm->index(row, G::CameraModelColumn).data().toString();
+}
+
 void MW::applyDevelopPreviewIfEdited()
 {
 /*

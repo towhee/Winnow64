@@ -13,6 +13,36 @@ rendered at, the <b>tone</b> of it &mdash; exposure, contrast and the four tonal
 &mdash; and two <b>presence</b> controls, Texture and Dehaze.  Get Basic right and the
 rest of the module is refinement.</p>
 
+<h2>Profile</h2>
+<p><b>Profile</b> is the first row because it is the first decision: it says how this
+camera&rsquo;s <i>sensor</i> is characterised, and everything below it is an adjustment made
+on top of that characterisation.</p>
+
+<p><b>Winnow Standard</b> is the built-in matrix &mdash; the colour Winnow has always
+rendered, and the default.  The other entries are <b>DNG camera profiles</b> (<tt>.dcp</tt>
+files) already installed on this computer <i>for this camera</i>: Adobe Standard, and the
+camera-matching looks such as Camera Vivid or Camera Neutral if you have Adobe&rsquo;s
+profiles installed.  Winnow does not ship profiles &mdash; they belong to whoever made
+them &mdash; it reads the ones you already have, and any you put in Winnow&rsquo;s own
+<tt>CameraProfiles</tt> folder.</p>
+
+<p>A profile carries two calibrations, one under tungsten light and one under daylight, and
+Winnow blends between them according to the temperature you have dialled.  That is why
+<b>changing the profile changes what a given Temp value means</b>: white balance is solved
+against the camera matrix, and the profile <i>is</i> the camera matrix.  It does <b>not</b>
+change the brightness of the picture, so switching between profiles compares colour and
+nothing else.</p>
+
+<p>Profiles are per camera, so a profile chosen on one body will not resolve on another and
+the row reads <i>(not installed)</i> &mdash; the picture then renders with the built-in
+matrix.  The same happens if you open an image on a computer where that profile is missing;
+installing it restores the picture, with nothing to re-choose.</p>
+
+<p>The row is greyed on non-raw files (<i>raw only</i> &mdash; a JPEG has no sensor to
+characterise) and when <b>Demosaic</b> is set to Apple (<i>Apple decoder</i> &mdash; Core
+Image applies its own profile before Winnow sees the image; switch Demosaic to Winnow to
+choose one here).</p>
+
 <h2>White balance</h2>
 <p>Temp and Tint are <b>absolute</b>, not relative nudges.  <b>Temp</b> is a real Kelvin
 value (2000&ndash;50000) on a logarithmic track, because a linear one would bury every

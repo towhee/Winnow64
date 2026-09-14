@@ -78,6 +78,14 @@ Preset     presetFromName(const QString &name);
    Custom, which are not fixed illuminants and must be resolved by the caller. */
 bool       presetValues(Preset p, float &kelvin, float &tint);
 
+/* The CIE XYZ of the illuminant at (kelvin, tint), Y normalised to 1 -- the head of the
+   chain everything here walks: the two loci, crossfaded, with the tint displacing the
+   chromaticity perpendicular to the locus. Public because the CAMERA PROFILE path needs
+   the same illuminant definition to key its dual-illuminant interpolation on; two
+   definitions of "6500 K" in one pipeline would disagree by a few hundred kelvin. False
+   when the chromaticity is degenerate. */
+bool       illuminantXYZ(float kelvin, float tint, double xyz[3]);
+
 /* Per-channel scene-linear gains for an absolute (kelvin, tint), normalised so
    green == 1. Falls back to no-op gains when cam is not valid. */
 void       gains(const CameraColor &cam, float kelvin, float tint, float out[3]);

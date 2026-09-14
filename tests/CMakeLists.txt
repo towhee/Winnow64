@@ -99,9 +99,14 @@ winnow_add_unit_test(tst_detailroi unit/tst_detailroi.cpp)
 # what Texture and Dehaze rendered before they were extracted onto the shared kernel, so
 # it compiles develop.cpp (and therefore needs OpenCV) like tst_renderstack does. It also
 # unit-tests the header-only Develop/localcontrast.h kernel.
+# develop.cpp now reaches CameraProfile (stage 0 is replaced by a camera profile when one
+# is selected), so every test that compiles it carries the profile + DCP closure.
 winnow_add_unit_test(tst_localcontrast unit/tst_localcontrast.cpp
     ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 if(APPLE)
     target_include_directories(tst_localcontrast PRIVATE
         ${WINNOW_OPENCV_PREFIX}/include/opencv4)
@@ -154,11 +159,17 @@ winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
 # compiles the real render closure (workingimagecache + develop + whitebalance +
 # outputtransform). That closure needs OpenCV (develop.cpp's blurs) -- the only unit test
 # that does, hence the extra link/include below rather than widening the shared closure.
+# The camera-profile closure (store + matrix + DCP reader + TIFF walk) rides along because
+# the render path resolves a profile per render -- see attachProfile in workingimagecache.cpp.
 winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
     ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp
     ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 if(APPLE)
     # Same prefix the app resolved (keg-only opencv@4 when present) -- see the OpenCV
     # block in the top-level CMakeLists; a test linking a DIFFERENT OpenCV than the code
@@ -182,7 +193,10 @@ endif()
 winnow_add_unit_test(tst_inputprofile unit/tst_inputprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 if(APPLE)
     target_include_directories(tst_inputprofile PRIVATE
         ${WINNOW_OPENCV_PREFIX}/include/opencv4)
@@ -214,6 +228,16 @@ winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp
 # a table read with the wrong dims shears the hue axis, a swapped matrix family renders a
 # plausible cast -- so the parse is pinned against a synthetic profile built byte by byte.
 winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+# tst_cameraprofile compiles the profile -> matrix step plus the DCP reader it consumes
+# and the white balance it shares an illuminant definition with. It pins the mired (not
+# kelvin) interpolation, the warm-first ordering, and the exposure anchor -- a camera
+# neutral must render to exactly (1,1,1), or selecting a profile moves every raw's
+# brightness as well as its colour.
+winnow_add_unit_test(tst_cameraprofile  unit/tst_cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 # tst_heicboxes compiles the HEIC container walk plus the closure it reads Exif with
