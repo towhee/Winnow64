@@ -4254,3 +4254,5 @@ After start Winnow, but before a folder or catalog selected, if switch to develo
    tst_catalog cover the cache keying and scope predicates and must stay green. Add a
    case to tst_devpreview.cpp for the eligibility rule (in-scope / out-of-scope /
    empty-scope), which is pure logic and needs no media.
+
+make the profile's  curve win and grey out Tone mapping.

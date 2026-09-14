@@ -105,15 +105,14 @@ struct Tables {
        selected. Carried per illuminant and blended here. */
     HueSatMap::Table hueSatMap;
 
-    /* THE LOOK: a creative grade, and only present when the caller asked for it. Same
-       table structure as the HueSatMap -- it reuses that code exactly -- but a different
-       thing at a different point in the stage, and separately switchable. */
+    /* THE LOOK: the author's creative grade. Same table structure as the HueSatMap -- it
+       reuses that code exactly -- but a different thing at a different point in the stage.
+       Absent on a profile that carries none, including the synthesised "Camera Base". */
     HueSatMap::Table lookTable;
     ProfileTone::Lut toneCurve;
-    /* 2^BaselineExposureOffset -- the exposure the LOOK assumes it is applied at. 1.0
-       when the look is off, which is what keeps "a profile changes colour, not
-       brightness" true of the characterisation half. 224 of 436 sampled profiles carry a
-       non-zero offset, so omitting it would render most looks at the wrong brightness. */
+    /* 2^BaselineExposureOffset -- the exposure the LOOK assumes it is applied at. 1.0 on
+       a profile with no look. 224 of 436 sampled profiles carry a non-zero offset, so
+       omitting it would render most looks at the wrong brightness. */
     float exposureScale = 1.0f;
 
     float toTable[3][3]   = {{1,0,0}, {0,1,0}, {0,0,1}};   // working -> linear ProPhoto(D50)
@@ -121,15 +120,14 @@ struct Tables {
 };
 
 /*
-    Resolve everything the profile stage needs at this temperature. applyLook adds the
-    creative half -- the LookTable, the tone curve and the exposure offset the look
-    assumes; without it only the colorimetric baseline is returned.
+    Resolve everything the profile stage needs at this temperature.
 
-    False when there is nothing to apply at all: a profile that is only a matrix (every
-    creative "Camera *" profile has no HueSatMap) with the look switched off does no
-    per-pixel work, and the matrix stays folded into PointCoeffs::preMat.
+    False when there is nothing per-pixel to apply at all -- a profile that is only a
+    matrix, which is what a synthesised "Camera Base" is for most cameras (the "Camera *"
+    family carries no HueSatMap). The matrix then stays folded into PointCoeffs::preMat
+    and this stage costs nothing.
 */
-bool tables(const Dcp::Profile &p, float kelvin, bool applyLook, Tables &out);
+bool tables(const Dcp::Profile &p, float kelvin, Tables &out);
 
 } // namespace CameraProfile
 

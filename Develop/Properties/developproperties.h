@@ -576,6 +576,12 @@ signals:
        drag, or the drag ended) -> MW builds or drops the grayscale mask image. */
     void sharpenMaskPreviewChanged(bool active);
 
+protected:
+    /* The Profile dropdown's popup closing. QComboBox reports a SELECTION but not a
+       dismissal, and a hover preview left standing after the user pressed Esc would show
+       a profile the image does not have. */
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
     void initialize();
 
@@ -627,32 +633,52 @@ private:
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
 
-    /* Tone mapping -- the view transform, at the head of Basic's tone group. Always
+    /* Tone mapping -- the view transform, the second row of Basic, directly under the
+       camera profile: both say what rendering the sliders below sit on. Always
        written to scope 0: it maps the WHOLE image for display, so it is not a per-mask
        adjustment. Consumed by OutputTransform, not by Develop::Apply. The identifiers
        keep the name `viewTransform` because that is the published sidecar key; only the
        LABEL is "Tone mapping". See EditParams::viewTransform. */
     /* THE CAMERA PROFILE -- the first row of Basic, Lightroom's Profile slot. It
-       characterises the SENSOR and feeds white balance, which is why it heads the panel
-       rather than sitting beside Tone mapping: each control sits with what it governs.
+       characterises the SENSOR and feeds white balance, which is why it heads the panel,
+       with Tone mapping immediately below it in the same group.
        Always written to scope 0 (a profile describes the camera; one part of a picture
        cannot have been taken by a different one). See EditParams::cameraProfile. */
     void addCameraProfileRow(const QModelIndex &parIdx);
     void setCameraProfile(const QString &name);
-    /* The look half of the selected profile -- its LookTable, tone curve and the exposure
-       offset it assumes. Separately switchable because a profile file holds two different
-       things: how the sensor sees (always applied) and an artistic grade (optional). */
-    void setCameraProfileLook(bool on);
+
+    /*
+        HOVERING AN ITEM IN THE OPEN PROFILE DROPDOWN PREVIEWS IT ON THE LOUPE.
+
+        A profile is the one Basic control whose effect cannot be guessed from its name --
+        "Camera VV2 v2" means nothing until you see it -- and the list is long, so trying
+        them one click at a time is the wrong interaction. Uses the SAME preview override
+        the Presets list and History use (previewStack / previewActive /
+        historyPreviewChanged): the stored stack, the sliders and the history are never
+        touched, and the render is proxy-only with no full-res settle.
+
+        DEBOUNCED at the same 120 ms the Presets list uses, so sweeping the cursor down
+        the list does not queue one develop render per row -- a look profile costs ~13 ms
+        of pixel work per tick on top of the rest of the pipeline.
+    */
+    void previewCameraProfile(const QString &name);
+    void endCameraProfilePreview();
+    QPointer<QTimer> cameraProfileHoverTimer;
+    QString cameraProfileHoverName;
+    /* Whether WE started the live preview, so closing the popup restores only what this
+       row put up -- and costs no render when nothing was previewed. */
+    bool cameraProfileHoverActive = false;
+    static constexpr int kProfileHoverDelayMs = 120;
     void refreshCameraProfileRow();
     /* Fill the combo with the built-in entry plus every profile installed for THIS
        camera, and select the stored one. Separate from refresh because the list itself
        changes -- on an image change (a different camera) and when the background index
        lands. */
     void repopulateCameraProfileCombo();
-    void refreshCameraProfileLookCheck();
     void addViewTransformRow(const QModelIndex &parIdx);
     void setViewTransform(int vt);
     void refreshViewTransformRow();
+    bool profileSuppliesToneMapping() const;
     static QString viewTransformName(int vt);
     void setWbDropperActive(bool on);
     void setDetailPickActive(bool on);
@@ -670,8 +696,12 @@ private:
     static QIcon dropperIcon(bool armed);   // drawn, not a resource
     QPointer<QComboBox> wbCombo;
     QPointer<QComboBox> viewTransformCombo;
+    /* Shown IN PLACE of the combo when the selected camera profile brings its own tone
+       curve: greyed control plus a brief inline reason, never a popup after the fact. It
+       has to be a widget rather than a build-time choice because the reason appears and
+       disappears with the PROFILE, without the tree being rebuilt. */
+    QPointer<QLabel> viewTransformReason;
     QPointer<QComboBox> cameraProfileCombo;
-    QPointer<QCheckBox> cameraProfileLookCheck;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
     /* Detail 1:1 preview. detailPt is normalized over the ORIENTED full-res frame (the

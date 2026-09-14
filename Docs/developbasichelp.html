@@ -26,36 +26,39 @@ profiles installed.  Winnow does not ship profiles &mdash; they belong to whoeve
 them &mdash; it reads the ones you already have, and any you put in Winnow&rsquo;s own
 <tt>CameraProfiles</tt> folder.</p>
 
+<p><b>Open the list and move down it</b> &mdash; with the mouse or the arrow keys &mdash;
+and each profile is shown on the image as you pass over it.  Nothing is committed until you
+click, and pressing Esc puts the picture back.  Profile names say very little about what
+they do, so this is usually faster than choosing one and undoing it.</p>
+
 <p>A profile is a matrix plus a correction table.  The matrix is the bulk of it; the table
 fixes what a matrix cannot, because a sensor&rsquo;s error is not linear.  Winnow applies
 both, so an <b>Adobe Standard</b> profile renders in full.</p>
 
 <p>The <b>Camera&nbsp;&hellip;</b> profiles add a second thing on top: a <i>look</i> &mdash;
 a colour grade, a contrast curve, and the exposure that grade assumes.  That is what makes
-Camera Vivid vivid.  The <b>Look</b> checkbox beside the dropdown switches it, and it is on
-by default, so choosing a profile gives you the whole of it.</p>
+Camera Vivid vivid.  A profile is always applied whole, as Lightroom applies it; there is
+no switch for the look half.</p>
 
-<p>Turn <b>Look</b> off to take a profile&rsquo;s <i>colour science</i> without its grade
-&mdash; useful when you want the camera maker&rsquo;s idea of colour but your own idea of
-contrast.  It is greyed when the selected profile has no look to switch, which is the case
-for <b>Winnow Standard</b> and for most <b>Adobe Standard</b> profiles.</p>
+<p><b>Camera Base</b> is that family with the look taken away: the camera maker&rsquo;s
+colour science and nothing else.  It is one entry rather than nine because every
+<b>Camera&nbsp;&hellip;</b> profile for a camera is built on the <i>same</i> starting
+point &mdash; strip their looks and Camera Vivid, Camera Neutral and even Camera BW become
+the identical rendering.  Choose it when you want the maker&rsquo;s colour with your own
+contrast.  Some cameras have had their colour science revised, and then you will see both
+<b>Camera Base</b> and <b>Camera Base v2</b>.</p>
 
-<p>Note that the look is the one part of a profile that changes <i>brightness</i>: most looks
-are built at an exposure offset and Winnow applies it with them.  The characterisation half
-never does &mdash; see below.</p>
-
-<p>Winnow&rsquo;s rendering of a look will be close to Adobe&rsquo;s but not identical.  The
-whole profile &mdash; characterisation and look together &mdash; is applied <i>before</i>
-Exposure and the other Basic sliders, so that Profile means &ldquo;the starting colour&rdquo;
-and everything below it is an adjustment on top.  Lightroom threads parts of it through its
-own tone controls instead.</p>
+<p>Because a look carries a full tone mapping, a profile that has one <b>takes over the
+Tone mapping row</b>: it reads <i>set by the profile</i> and the dropdown is put away,
+since applying a second mapping on top compresses the highlights twice.  Your setting is
+remembered and comes back when you choose a profile without a look &mdash; Winnow
+Standard, Camera Base, or Adobe Standard.</p>
 
 <p>A profile carries two calibrations, one under tungsten light and one under daylight, and
 Winnow blends between them according to the temperature you have dialled.  That is why
 <b>changing the profile changes what a given Temp value means</b>: white balance is solved
-against the camera matrix, and the profile <i>is</i> the camera matrix.  With <b>Look</b> off it does <b>not</b>
-change the brightness of the picture, so switching between profiles compares colour and
-nothing else.</p>
+against the camera matrix, and the profile <i>is</i> the camera matrix.  A profile without a look does <b>not</b> change the
+brightness of the picture, so comparing those compares colour and nothing else.</p>
 
 <p>Profiles are per camera, so a profile chosen on one body will not resolve on another and
 the row reads <i>(not installed)</i> &mdash; the picture then renders with the built-in
@@ -67,37 +70,17 @@ characterise) and when <b>Demosaic</b> is set to Apple (<i>Apple decoder</i> &md
 Image applies its own profile before Winnow sees the image; switch Demosaic to Winnow to
 choose one here).</p>
 
-<h2>White balance</h2>
-<p>Temp and Tint are <b>absolute</b>, not relative nudges.  <b>Temp</b> is a real Kelvin
-value (2000&ndash;50000) on a logarithmic track, because a linear one would bury every
-useful daylight temperature in the first sixth of the slider.  A <i>higher</i> Kelvin says
-the light was bluer, so the picture renders warmer.  <b>Tint</b> runs green to magenta,
-&plusmn;150.</p>
-
-<p>Temp&nbsp;=&nbsp;0 is a state of its own: <b>as shot</b>, the temperature the camera
-recorded.  The <b>WB</b> row above the sliders carries the two ways in:</p>
-
-<ul>
-<li>The <b>dropper</b> (or the <b>W</b> key).  It stays armed until you click a pixel,
-press it again, or press Esc.  Click something that ought to be neutral grey &mdash; not a
-specular highlight, which carries no colour information.  <b>Opt/Alt-click</b> a lit area
-of skin instead and Winnow solves for plausible skin rather than for neutral.</li>
-<li>The <b>preset dropdown</b>: As Shot and Auto on any file, plus the named illuminants
-&mdash; Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash &mdash; on <b>raw files
-only</b>, since a display-referred file has no camera-neutral reference for them to mean
-anything against.  Custom is what the dropper and the sliders leave you in.  Double-click
-the row to go back to As Shot.</li>
-</ul>
-
 <h2>Tone mapping</h2>
 <p><b>Tone mapping</b> chooses how the huge brightness range a raw file records is
 squeezed into the much smaller range a screen or a print can show.  Every photograph needs
 this step &mdash; the choice is only ever <i>which</i> one.</p>
 
-<p>It sits at the head of the tone controls because that is the relationship: it sets the
-overall mapping, and the sliders below it &mdash; Exposure, Contrast, Highlights and the
-rest &mdash; adjust <i>within</i> that mapping.  The same Exposure value does not mean quite
-the same thing under each setting, which is why it is worth choosing first.</p>
+<p>It sits directly under <b>Profile</b> because the two answer the same question: what
+rendering is everything below made on top of.  The profile characterises the camera; this
+sets the overall mapping, and every slider further down &mdash; Exposure, Contrast,
+Highlights and the rest &mdash; adjusts <i>within</i> that mapping.  The same Exposure value
+does not mean quite the same thing under each setting, which is why it is worth choosing
+first.</p>
 
 <ul>
 <li><b>None</b> is the default and applies no mapping at all: the image is shown as the
@@ -122,6 +105,28 @@ it twice would wreck them.</p>
 <p>Changing <b>Tone mapping</b> changes what the Basic sliders feel like &mdash; AgX has much more
 room in the highlights before anything clips &mdash; so an image set up under one is worth
 a second look under the other.</p>
+
+<h2>White balance</h2>
+<p>Temp and Tint are <b>absolute</b>, not relative nudges.  <b>Temp</b> is a real Kelvin
+value (2000&ndash;50000) on a logarithmic track, because a linear one would bury every
+useful daylight temperature in the first sixth of the slider.  A <i>higher</i> Kelvin says
+the light was bluer, so the picture renders warmer.  <b>Tint</b> runs green to magenta,
+&plusmn;150.</p>
+
+<p>Temp&nbsp;=&nbsp;0 is a state of its own: <b>as shot</b>, the temperature the camera
+recorded.  The <b>WB</b> row above the sliders carries the two ways in:</p>
+
+<ul>
+<li>The <b>dropper</b> (or the <b>W</b> key).  It stays armed until you click a pixel,
+press it again, or press Esc.  Click something that ought to be neutral grey &mdash; not a
+specular highlight, which carries no colour information.  <b>Opt/Alt-click</b> a lit area
+of skin instead and Winnow solves for plausible skin rather than for neutral.</li>
+<li>The <b>preset dropdown</b>: As Shot and Auto on any file, plus the named illuminants
+&mdash; Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash &mdash; on <b>raw files
+only</b>, since a display-referred file has no camera-neutral reference for them to mean
+anything against.  Custom is what the dropper and the sliders leave you in.  Double-click
+the row to go back to As Shot.</li>
+</ul>
 
 <h2>Tone</h2>
 <ul>

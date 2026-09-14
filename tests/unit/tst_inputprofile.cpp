@@ -33,6 +33,7 @@
 
 #include "Develop/develop.h"
 #include "Develop/cameraprofile.h"
+#include <QImage>
 #include "Develop/workingimage.h"
 #include "Develop/editparams.h"
 #include "Develop/colorspace.h"
@@ -117,7 +118,9 @@ private slots:
     void cameraProfileWhiteBalancesExactlyOnce();
     void cameraProfileSurvivesTheDenoiseRoute();
     void stageZeroRunsOnlyOnce();
-    void cameraProfileLookIsOptional();
+    void cameraBaseRendersWithoutTheLook();
+    void profileToneCurveSuppressesTheViewTransform();
+    void profileToneMappedSurvivesACopy();
 };
 
 /*
@@ -504,80 +507,154 @@ void TestInputProfile::stageZeroRunsOnlyOnce()
              "the scope's own white balance was dropped");
 }
 
-/*
-    THE LOOK IS OPTIONAL, AND IT IS THE PART THAT CHANGES BRIGHTNESS.
-
-    A .dcp holds two different things: the matrix and HueSatMap that characterise the
-    sensor, and a LookTable + tone curve + BaselineExposureOffset that are the author's
-    grade. The Profile row's Look checkbox switches only the second. This pins the split at
-    the pipeline level, where it matters:
-
-      look OFF  the render must be bit-identical to the same profile with no look data at
-                all -- including the exposure offset, since "a profile changes colour, not
-                brightness" is only true of the characterisation half
-      look ON   the offset applies exactly, so a look renders at the exposure it was built
-                at rather than a stop or so off it (224 of 436 installed profiles carry a
-                non-zero offset, so this is the common case, not an edge one)
-*/
-void TestInputProfile::cameraProfileLookIsOptional()
+/* The look tags, added to a copy of the shared test profile. */
+static Dcp::Profile withLook(const Dcp::Profile &base, float offsetEv)
 {
-    auto base = makeProfile();
-
-    /* A look whose table and curve are both the IDENTITY, leaving the exposure offset as
-       the only thing it does -- so the expected result is an exact number rather than
-       "something different". */
-    Dcp::Profile withLook = *base;
-    withLook.baselineExposureOffset = 1.0f;             // one stop
-    withLook.lookTable.hueDivs = 4;
-    withLook.lookTable.satDivs = 2;
-    withLook.lookTable.valDivs = 1;
-    withLook.lookTable.v.assign(4 * 2 * 1 * 3, 0.0f);
-    for (size_t i = 0; i < withLook.lookTable.v.size(); i += 3) {
-        withLook.lookTable.v[i + 1] = 1.0f;
-        withLook.lookTable.v[i + 2] = 1.0f;
+    Dcp::Profile p = base;
+    p.baselineExposureOffset = offsetEv;
+    p.lookTable.hueDivs = 4;
+    p.lookTable.satDivs = 2;
+    p.lookTable.valDivs = 1;
+    p.lookTable.v.assign(4 * 2 * 1 * 3, 0.0f);
+    for (size_t i = 0; i < p.lookTable.v.size(); i += 3) {
+        p.lookTable.v[i + 1] = 1.0f;        // identity table, so the offset is the only
+        p.lookTable.v[i + 2] = 1.0f;        // thing whose effect is an exact number
     }
-    withLook.toneCurve = {0.0f, 0.0f, 1.0f, 1.0f};      // the diagonal
-    const auto lookProfile = std::make_shared<const Dcp::Profile>(withLook);
+    p.toneCurve = {0.0f, 0.0f, 1.0f, 1.0f};                 // the diagonal
+    return p;
+}
+
+/*
+    A "CAMERA BASE" IS THE PROFILE WITH ITS LOOK STRIPPED, and must render exactly as a
+    profile that never had one.
+
+    There is no "apply the look?" flag in the pipeline any more: the store hands back a
+    synthesised profile whose look tags are cleared, and the render path cannot tell the
+    difference. This pins that -- including the BaselineExposureOffset, which is the piece
+    that would move the picture's brightness if it were left behind (224 of 436 installed
+    profiles carry one).
+*/
+void TestInputProfile::cameraBaseRendersWithoutTheLook()
+{
+    const auto plain = makeProfile();                       // no look tags at all
+    const auto full  = std::make_shared<const Dcp::Profile>(withLook(*plain, 1.0f));
+
+    /* What CameraProfileStore::profile() does for a base name. */
+    Dcp::Profile stripped = *full;
+    stripped.lookTable = Dcp::Table3D();
+    stripped.toneCurve.clear();
+    stripped.baselineExposureOffset = 0.0f;
+    const auto base = std::make_shared<const Dcp::Profile>(stripped);
 
     EditParams p;
-    p.cameraProfile = "Adobe Standard";
+    p.cameraProfile = "Camera Base";
 
-    /* Look OFF must match the profile that has no look data at all. */
-    WorkingImage off = makeCameraNative(12, 9);
-    off.cam.profile = lookProfile;
-    EditParams pOff = p;
-    pOff.cameraProfileLook = 0;
+    WorkingImage viaBase = makeCameraNative(12, 9);
+    viaBase.cam.profile = base;
     Develop d1;
-    QVERIFY(d1.Apply(off, pOff));
+    QVERIFY(d1.Apply(viaBase, p));
 
-    WorkingImage plain = makeCameraNative(12, 9);
-    plain.cam.profile = base;               // no look table, no curve, no offset
+    WorkingImage viaPlain = makeCameraNative(12, 9);
+    viaPlain.cam.profile = plain;
     Develop d2;
-    QVERIFY(d2.Apply(plain, pOff));
+    QVERIFY(d2.Apply(viaPlain, p));
 
-    const float worst = worstDiff(off, plain);
-    QVERIFY2(worst < 1e-6f,
-             qPrintable(QString("look data leaked through with the look off: %1").arg(worst)));
+    QVERIFY2(worstDiff(viaBase, viaPlain) < 1e-6f,
+             qPrintable(QString("a stripped profile is not the bare characterisation: %1")
+                            .arg(double(worstDiff(viaBase, viaPlain)))));
 
-    /* Look ON applies the one-stop offset exactly -- identity table, identity curve. */
-    WorkingImage on = makeCameraNative(12, 9);
-    on.cam.profile = lookProfile;
-    EditParams pOn = p;
-    pOn.cameraProfileLook = 1;
+    /* And the un-stripped profile is NOT the same -- one stop brighter, from its offset.
+       Without this the comparison above would pass with both sides equally inert. */
+    WorkingImage viaFull = makeCameraNative(12, 9);
+    viaFull.cam.profile = full;
     Develop d3;
-    QVERIFY(d3.Apply(on, pOn));
-
-    QCOMPARE(on.rgb.size(), off.rgb.size());
-    for (size_t i = 0; i < on.rgb.size(); ++i) {
-        if (off.rgb[i] <= 0.0f) continue;
-        const float ratio = on.rgb[i] / off.rgb[i];
-        QVERIFY2(qAbs(ratio - 2.0f) < 2e-3f,
-                 qPrintable(QString("sample %1 ratio %2, expected 2.0 (one stop)")
-                                .arg(i).arg(double(ratio))));
+    QVERIFY(d3.Apply(viaFull, p));
+    for (size_t i = 0; i < viaFull.rgb.size(); ++i) {
+        if (viaBase.rgb[i] <= 0.0f) continue;
+        QVERIFY2(qAbs(viaFull.rgb[i] / viaBase.rgb[i] - 2.0f) < 2e-3f,
+                 "the look profile did not apply its one-stop offset");
     }
+}
 
-    /* And the default is ON -- a freshly chosen profile renders complete. */
-    QCOMPARE(EditParams().cameraProfileLook, 1);
+/*
+    EXACTLY ONE TONE MAPPING IS EVER IN PLAY.
+
+    A ProfileToneCurve is a whole scene-linear -> display mapping, so a view transform on
+    top of it compresses the highlights twice. Measured before this guard existed: mid grey
+    rendered 220 instead of 176, and a full stop above white collapsed to nothing (1.0 and
+    2.0 both 242). OutputTransform::EffectiveView now forces None when the profile has
+    already mapped the data -- the same rule it applies to display-referred input.
+*/
+void TestInputProfile::profileToneCurveSuppressesTheViewTransform()
+{
+    const auto plain = makeProfile();
+    Dcp::Profile curved = withLook(*plain, 0.0f);
+    /* A real, pronounced curve rather than the diagonal, so "suppressed" and "applied"
+       cannot look alike. */
+    curved.toneCurve = {0.0f, 0.0f, 0.25f, 0.55f, 0.5f, 0.78f, 1.0f, 1.0f};
+    const auto profile = std::make_shared<const Dcp::Profile>(curved);
+
+    auto render = [&](int viewTransform, QImage &out) {
+        WorkingImage img = makeCameraNative(8, 6);
+        img.cam.profile = profile;
+        EditParams p;
+        p.cameraProfile = "Camera NT";
+        p.viewTransform = viewTransform;
+        Develop d;
+        QVERIFY(d.Apply(img, p));
+        QVERIFY2(img.profileToneMapped,
+                 "applying a ProfileToneCurve must mark the image tone mapped");
+        OutputTransform ot;
+        QVERIFY(ot.ToImage(img, out));
+    };
+
+    QImage none, filmic, agx;
+    render(int(OutputTransform::ViewTransform::None), none);
+    render(int(OutputTransform::ViewTransform::Filmic), filmic);
+    render(int(OutputTransform::ViewTransform::AgX), agx);
+
+    QCOMPARE(filmic, none);
+    QCOMPARE(agx, none);
+
+    /* The guard must be conditional, not a blanket disable: with no profile curve the
+       view transform still does its job. */
+    WorkingImage bare = makeCameraNative(8, 6);
+    bare.cam.profile = plain;
+    EditParams p;
+    p.cameraProfile = "Camera Base";
+    p.viewTransform = int(OutputTransform::ViewTransform::Filmic);
+    Develop d;
+    QVERIFY(d.Apply(bare, p));
+    QVERIFY(!bare.profileToneMapped);
+    QImage bareFilmic, bareNone;
+    OutputTransform ot;
+    QVERIFY(ot.ToImage(bare, bareFilmic, OutputTransform::Space::sRGB,
+                       OutputTransform::ViewTransform::Filmic));
+    QVERIFY(ot.ToImage(bare, bareNone, OutputTransform::Space::sRGB,
+                       OutputTransform::ViewTransform::None));
+    QVERIFY2(bareFilmic != bareNone, "the view transform was disabled unconditionally");
+}
+
+/*
+    THE FLAG MUST SURVIVE copyMetadata.
+
+    A WorkingImage field that is not copied there does not fail to compile and does not
+    fail loudly: the scope compositor copies the developed accumulator into every mask
+    layer, and WorkingImageCache::downscaled builds the interactive proxy the same way. A
+    missed field there once cost a whole-image green cast on every proxy render.
+*/
+void TestInputProfile::profileToneMappedSurvivesACopy()
+{
+    WorkingImage src = makeCameraNative(4, 4);
+    src.profileToneMapped = true;
+
+    WorkingImage viaMetadata;
+    copyMetadata(viaMetadata, src);
+    QVERIFY2(viaMetadata.profileToneMapped, "copyMetadata dropped profileToneMapped");
+
+    WorkingImage viaAssign = makeCameraNative(4, 4);
+    assignReusing(viaAssign, src);
+    QVERIFY2(viaAssign.profileToneMapped, "assignReusing dropped profileToneMapped");
 }
 
 QTEST_APPLESS_MAIN(TestInputProfile)

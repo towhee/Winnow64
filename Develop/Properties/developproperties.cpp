@@ -1603,6 +1603,8 @@ void DevelopProperties::resetAllEdits()
     maskLatched = false;
     previewActive = false;
     previewStack = EditStack();
+    cameraProfileHoverActive = false;
+    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
 
     isRestoringHistory = true;          // suppress recording while the panel repopulates
     resetImageEdits(currentImagePath);
@@ -3724,10 +3726,31 @@ void DevelopProperties::addBasic()
         by DEPENDENCY: white balance is solved against the camera matrix, so changing the
         profile changes what a given Kelvin means (see Develop/cameraprofile.h).
 
-        Deliberately NOT paired with Tone mapping, which sits at the head of the tone group
-        further down. Profile governs the camera; Tone mapping governs the tone sliders.
+        Paired with Tone mapping, which follows it in the same group: together they say
+        what rendering the adjustments below are made on top of.
     */
     addCameraProfileRow(parIdx);
+
+    /*
+        TONE MAPPING SITS DIRECTLY UNDER THE PROFILE, inside the same top group.
+
+        Both describe the RENDERING the adjustments below are made on top of: the profile
+        characterises the camera, this decides the overall mapping from scene brightness to
+        display, and every slider further down adjusts WITHIN that mapping. General to
+        specific, which is a real dependency (AgX leaves far more highlight room before
+        anything clips, so the same Exposure value does not mean the same thing under both)
+        rather than a visual grouping.
+
+        NOT called "View": Winnow already spends that word on the central widget modes
+        (loupe / grid / table / compare, the View menu), and a second meaning for it in
+        the Develop dock would be a collision. The stored key stays `viewTransform` -- it
+        is a published sidecar format, and a label is free to change without it.
+
+        A combo in the value cell, modelled on the WB preset row -- addItem(name, enum),
+        activated (not currentIndexChanged, which would also fire on programmatic
+        repopulation), and re-synced by findData under a QSignalBlocker.
+    */
+    addViewTransformRow(parIdx);
     addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ProfileDivider");
 
     addWhiteBalanceRow(parIdx);
@@ -3737,30 +3760,6 @@ void DevelopProperties::addBasic()
               G::lightblue, G::lightyellow, 0, /*logScale*/ true);
     addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -150, 150, 0,   G::lightgreen, G::lightmagenta);
     addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "WBDevider");
-
-    /*
-        TONE MAPPING heads the tone group -- above Exposure, below white balance.
-
-        The name and the position say the same thing: this control decides the overall
-        mapping from scene brightness to display, and the sliders under it adjust WITHIN
-        that mapping. General to specific, which is a real dependency (AgX leaves far more
-        highlight room before anything clips, so the same Exposure value does not mean the
-        same thing under both) rather than a visual grouping.
-
-        NOT called "View": Winnow already spends that word on the central widget modes
-        (loupe / grid / table / compare, the View menu), and a second meaning for it in
-        the Develop dock would be a collision. The stored key stays `viewTransform` -- it
-        is a published sidecar format, and a label is free to change without it.
-
-        Deliberately NOT next to Lightroom's Profile slot at the top of the panel: when
-        camera profiles land they go there, because a profile characterises the CAMERA and
-        feeds white balance. This governs the tone sliders, so it lives with them.
-
-        A combo in the value cell, modelled on the WB preset row -- addItem(name, enum),
-        activated (not currentIndexChanged, which would also fire on programmatic
-        repopulation), and re-synced by findData under a QSignalBlocker.
-    */
-    addViewTransformRow(parIdx);
 
     addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, G::darkgray, G::lightgray);
     addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
@@ -4221,8 +4220,10 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
         ? "How this camera's sensor is characterised -- the starting colour the "
           "adjustments below are made on top of.\n"
           "Winnow Standard: the built-in matrix.\n"
+          "Camera Base: the maker's colour science with no look -- the shared starting "
+          "point every Camera profile is built on.\n"
           "Other entries are DNG camera profiles (.dcp) installed on this computer for "
-          "this camera.\n"
+          "this camera, applied whole.\n"
           "Changing the profile changes what a given Temp value means, because white "
           "balance is solved against the camera matrix."
         : (raw ? "The Apple decoder applies its own camera profile before Winnow sees the "
@@ -4269,29 +4270,42 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     cameraProfileCombo = combo;
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
-            [this, combo](int ix){ setCameraProfile(combo->itemData(ix).toString()); });
+            [this, combo](int ix){
+                /* The click ends the hover: the selection becomes the real state, and
+                   leaving the override up would make the next render fight it. */
+                endCameraProfilePreview();
+                setCameraProfile(combo->itemData(ix).toString());
+            });
     vhb->addWidget(combo);
 
     /*
-        THE LOOK TOGGLE, beside the profile it belongs to rather than on a row of its own.
+        HOVER PREVIEW. `highlighted` is the right signal rather than a mouse handler on the
+        popup view: it fires for the KEYBOARD too, so arrowing through the list previews
+        exactly as hovering does, and it reports the index the combo itself considers
+        current.
 
-        A .dcp holds two different things: the MATRIX and HueSatMap that characterise the
-        sensor, and a LookTable + tone curve + exposure offset that are an artistic grade.
-        The first is what a profile IS and is always applied; the second is what makes
-        "Camera Vivid" vivid, and is optional -- so a camera-matching profile can be taken
-        for its colour science without its contrast and saturation coming along.
-
-        This is NOT the creative-look control the architecture notes reserve a separate row
-        for. It switches a part of the profile already chosen above; a look from somewhere
-        else (a .cube, a look supplied on its own) would still be its own thing.
+        The popup view is watched for Hide because QComboBox reports a selection and never
+        a dismissal -- without it, pressing Esc or clicking away would leave the loupe
+        showing a profile the image does not have.
     */
-    QCheckBox *look = new QCheckBox("Look");
-    look->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    cameraProfileLookCheck = look;
-    connect(look, &QCheckBox::toggled, this,
-            [this](bool on){ setCameraProfileLook(on); });
-    vhb->addSpacing(6);
-    vhb->addWidget(look);
+    /* ONE timer for the life of the panel, not one per tree rebuild: this row is rebuilt
+       whenever the tree is, and a new QTimer each time would accumulate as children of
+       `this`, each still connected and each able to fire a preview for a combo that no
+       longer exists. */
+    if (!cameraProfileHoverTimer) {
+        cameraProfileHoverTimer = new QTimer(this);
+        cameraProfileHoverTimer->setSingleShot(true);
+        connect(cameraProfileHoverTimer, &QTimer::timeout, this, [this]{
+            previewCameraProfile(cameraProfileHoverName);
+        });
+    }
+    connect(combo, &QComboBox::highlighted, this, [this, combo](int ix){
+        if (ix < 0) return;
+        cameraProfileHoverName = combo->itemData(ix).toString();
+        cameraProfileHoverTimer->start(kProfileHoverDelayMs);
+    });
+    if (combo->view()) combo->view()->installEventFilter(this);
+
     setIndexWidget(valIdx, cell);
 
     /*
@@ -4324,7 +4338,8 @@ void DevelopProperties::repopulateCameraProfileCombo()
     QSignalBlocker block(cameraProfileCombo);
     cameraProfileCombo->clear();
     /* The built-in FIRST: it is the identity, so it heads the list the way every other
-       adjustment's identity sits at the start of its range. */
+       adjustment's identity sits at the start of its range. The rest arrive sorted, with
+       any synthesised "Camera Base" among them rather than tacked on the end. */
     cameraProfileCombo->addItem(kBuiltInProfileLabel, QString());
     for (const CameraProfileStore::Entry &e : found)
         cameraProfileCombo->addItem(e.name, e.name);
@@ -4353,58 +4368,62 @@ void DevelopProperties::repopulateCameraProfileCombo()
 }
 
 /*
-    Sync the Look checkbox to the selected profile: its state from the stack, and whether
-    it can be used at all from whether that profile actually carries a look. A profile with
-    no LookTable, no tone curve and no exposure offset has nothing to switch, so the box is
-    greyed WITH ITS REASON rather than left live and inert -- the built-in entry and most
-    "Adobe Standard" profiles are exactly that case.
+    Show a profile on the loupe without committing to it.
+
+    The stored stack, the sliders and the history are untouched -- this is the same
+    previewStack override the Presets list and History put up, so there is ONE preview
+    state and one way to end it however it was started.
 */
-void DevelopProperties::refreshCameraProfileLookCheck()
-{
-    if (!cameraProfileLookCheck) return;
-
-    QString stored;
-    int on = 1;
-    if (!currentImagePath.isEmpty()) {
-        const EditStack &s = stackCache[currentImagePath];
-        if (!s.scopes.isEmpty()) {
-            stored = s.scopes[0].params.cameraProfile;
-            on = s.scopes[0].params.cameraProfileLook;
-        }
-    }
-
-    bool hasLook = false;
-    if (!stored.isEmpty()) {
-        const QString model = mw ? mw->cameraModelFor(currentImagePath) : QString();
-        const auto prof = CameraProfileStore::instance().profile(model, stored);
-        if (prof) hasLook = !prof->lookTable.isEmpty() || !prof->toneCurve.empty() ||
-                            prof->baselineExposureOffset != 0.0f;
-    }
-
-    cameraProfileLookCheck->setEnabled(hasLook);
-    cameraProfileLookCheck->setToolTip(
-        hasLook ? "Apply this profile's look -- its colour grade, contrast curve and the "
-                  "exposure it assumes -- as well as its sensor characterisation.\n"
-                  "Turn it off to take the profile's colour science only."
-                : (stored.isEmpty()
-                       ? "The built-in profile is a sensor characterisation only -- there "
-                         "is no look to apply."
-                       : "This profile carries no look, only a sensor characterisation."));
-
-    QSignalBlocker block(cameraProfileLookCheck);
-    cameraProfileLookCheck->setChecked(on != 0);
-}
-
-void DevelopProperties::setCameraProfileLook(bool on)
+void DevelopProperties::previewCameraProfile(const QString &name)
 {
     if (currentImagePath.isEmpty()) return;
-    EditStack &s = stackCache[currentImagePath];
-    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
-    const int v = on ? 1 : 0;
-    if (s.scopes[0].params.cameraProfileLook == v) return;
-    s.scopes[0].params.cameraProfileLook = v;   // always scope 0, whichever is active
-    noteScopeEdit("Global", "Profile look", on ? "On" : "Off", "global/cameraProfileLook");
-    emit paramsChanged();
+    /* The crop overlay and an open mask tool own the canvas; a hover preview underneath
+       them would fight for it (the same guard previewPreset and previewHistoryEntry use). */
+    if (maskPanelOpen || spotMode) return;
+
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.scopes.isEmpty()) return;
+    /* Back on the profile already in effect: take the override down rather than putting up
+       an identical one. Hovering it with nothing previewed costs nothing at all -- the
+       loupe is already showing it, and a render producing the same picture is still a
+       whole develop pass. */
+    if (s.scopes[0].params.cameraProfile == name) { endCameraProfilePreview(); return; }
+
+    EditStack preview = s;
+    /* Scope 0, whatever scope is active: a profile characterises the CAMERA, exactly as
+       setCameraProfile writes it. */
+    preview.scopes[0].params.cameraProfile = name;
+    previewStack = preview;
+    previewActive = true;
+    cameraProfileHoverActive = true;
+    emit historyPreviewChanged();       // proxy render only, no full-res settle
+}
+
+void DevelopProperties::endCameraProfilePreview()
+{
+    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+    if (!cameraProfileHoverActive) return;
+    cameraProfileHoverActive = false;
+    endHistoryPreview();                // one preview override, one way to end it
+}
+
+bool DevelopProperties::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::Hide && cameraProfileCombo &&
+        watched == cameraProfileCombo->view()) {
+        /* Stopped SYNCHRONOUSLY so a hover that has not fired yet cannot put a preview up
+           after the popup has already gone. */
+        if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+        /* Deferred: on a CLICK the view hides before activated() is delivered, so ending
+           the preview inline here would restore the old profile and then immediately be
+           overwritten -- one wasted full render, and a visible flash of the previous
+           rendering on the way past. By the time this runs, activated() has been handled
+           and has already ended the preview itself, so this is a no-op on that path and
+           only does work on a dismissal. */
+        QMetaObject::invokeMethod(this, [this]{ endCameraProfilePreview(); },
+                                  Qt::QueuedConnection);
+    }
+    return PropertyEditor::eventFilter(watched, event);
 }
 
 void DevelopProperties::setCameraProfile(const QString &name)
@@ -4417,7 +4436,8 @@ void DevelopProperties::setCameraProfile(const QString &name)
     noteScopeEdit("Global", "Profile",
                   name.isEmpty() ? QString(kBuiltInProfileLabel) : name,
                   "global/cameraProfile");
-    refreshCameraProfileLookCheck();     // a different profile may have no look to switch
+    /* A different profile may or may not bring its own tone mapping with it. */
+    refreshViewTransformRow();
     emit paramsChanged();
 }
 
@@ -4428,7 +4448,6 @@ void DevelopProperties::setCameraProfile(const QString &name)
 void DevelopProperties::refreshCameraProfileRow()
 {
     repopulateCameraProfileCombo();
-    refreshCameraProfileLookCheck();
 }
 
 void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
@@ -4499,7 +4518,44 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
             [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
     viewTransformCombo = combo;
     vhb->addWidget(combo);
+
+    /* The second reason this row can be dead, and unlike "raw only" it comes and goes with
+       the PROFILE rather than with the file -- so the label is built here and shown by
+       refreshViewTransformRow, instead of being chosen once at build time. */
+    QLabel *why = new QLabel("set by the profile");
+    why->setEnabled(false);
+    why->setAttribute(Qt::WA_TransparentForMouseEvents);
+    why->hide();
+    viewTransformReason = why;
+    /* NO trailing stretch: the combo is Expanding, and a stretch item would take the
+       spare width and leave the dropdown at its sizeHint -- narrower than Profile's,
+       directly above it, which reads as a mistake. The reason label takes the cell
+       instead when it is the visible one (left-aligned, so it looks the same). */
+    vhb->addWidget(why, 1, Qt::AlignLeft | Qt::AlignVCenter);
+
     setIndexWidget(valIdx, cell);
+    refreshViewTransformRow();
+}
+
+/*
+    Does the selected camera profile bring its own tone mapping?
+
+    A ProfileToneCurve is a whole scene-linear -> display mapping, not a contrast tweak, so
+    when a profile carries one it OWNS the tone mapping and the combo must not add a second
+    (see OutputTransform::EffectiveView, which enforces the same thing at render time).
+    False for Winnow Standard, for a synthesised "Camera Base", and for Adobe Standard --
+    none of which carry a curve -- so for those the combo stays live.
+*/
+bool DevelopProperties::profileSuppliesToneMapping() const
+{
+    if (currentImagePath.isEmpty()) return false;
+    const EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) return false;
+    const QString name = s.scopes[0].params.cameraProfile;
+    if (name.isEmpty()) return false;
+    const QString model = mw ? mw->cameraModelFor(currentImagePath) : QString();
+    const auto prof = CameraProfileStore::instance().profile(model, name);
+    return prof && !prof->toneCurve.empty();
 }
 
 void DevelopProperties::setViewTransform(int vt)
@@ -4531,6 +4587,16 @@ QString DevelopProperties::viewTransformName(int vt)
 void DevelopProperties::refreshViewTransformRow()
 {
     if (!viewTransformCombo) return;
+
+    /* Swap the control for its reason when a profile owns the tone mapping. The stored
+       value is left ALONE -- the user's choice is not rewritten behind their back, it is
+       simply not in effect while this profile is selected, and comes back when it is
+       not. EffectiveView applies the same rule to the render. */
+    const bool byProfile = profileSuppliesToneMapping();
+    if (viewTransformReason) viewTransformReason->setVisible(byProfile);
+    viewTransformCombo->setVisible(!byProfile);
+    setItemEnabled("viewTransform", !byProfile);
+
     int stored = 0;
     if (!currentImagePath.isEmpty()) {
         const EditStack &s = stackCache[currentImagePath];
@@ -5550,6 +5616,11 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     maskLatched = false;         // a fresh image starts with no latched mask overlay
     previewActive = false;       // a History hover does not follow the image
     previewStack = EditStack();
+    /* ...and neither does a Profile-dropdown hover. Cleared alongside, so the flag cannot
+       outlive the override it describes and leave endCameraProfilePreview() firing a
+       render for a preview that is already gone. */
+    cameraProfileHoverActive = false;
+    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
     /* A queued multi-image batch belongs to the image being left; land it before the
        diff base moves to the new image. */
     flushPropagation();
@@ -5878,9 +5949,6 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "calBlue")      return p.calBlueHue  != def.calBlueHue ||
                                       p.calBlueSat  != def.calBlueSat;
     if (key == "viewTransform") return p.viewTransform != def.viewTransform;
-    /* One leaf, two params -- the panel treats them as one control, the same way Grain
-       folds amount + size + roughness. The toggle alone is not a change worth capturing:
-       it does nothing without a profile to switch. */
     if (key == "cameraProfile") return p.cameraProfile != def.cameraProfile;
     if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
                                       p.gradeShadowLum != def.gradeShadowLum;
@@ -5970,10 +6038,7 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("calBlueSat", p.calBlueSat);
     }
     if (lk.contains("viewTransform")) out.insert("viewTransform", p.viewTransform);
-    if (lk.contains("cameraProfile")) {
-        out.insert("cameraProfile", p.cameraProfile);
-        out.insert("cameraProfileLook", p.cameraProfileLook);
-    }
+    if (lk.contains("cameraProfile")) out.insert("cameraProfile", p.cameraProfile);
     if (lk.contains("gradeShadow")) {
         out.insert("gradeShadowHue", p.gradeShadowHue);
         out.insert("gradeShadowSat", p.gradeShadowSat);
@@ -6781,7 +6846,6 @@ struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
     {"viewTransform", &EditParams::viewTransform},
-    {"cameraProfileLook", &EditParams::cameraProfileLook},
     {"denoiseRaw", &EditParams::denoiseRaw},
 };
 

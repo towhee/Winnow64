@@ -245,6 +245,7 @@ set(WINNOW_SOURCES
     ImageFormats/Panasonic/panasonic.cpp
     ImageFormats/Png/png.cpp
     ImageFormats/Raw/cameramatrix.cpp
+    ImageFormats/Raw/cameramodel.cpp
     ImageFormats/Raw/demosaic.cpp
     ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
@@ -571,6 +572,7 @@ set(WINNOW_HEADERS
     ImageFormats/Png/png.h
     ImageFormats/Raw/applerawdecode.h
     ImageFormats/Raw/cameramatrix.h
+    ImageFormats/Raw/cameramodel.h
     ImageFormats/Raw/demosaic.h
     ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h

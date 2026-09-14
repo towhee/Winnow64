@@ -248,12 +248,24 @@ inline bool ViewClampsToWhite(OutputTransform::ViewTransform vt)
         || vt == OutputTransform::ViewTransform::AgX;
 }
 
-/* The transform actually applied: a view transform tone-maps, so display-referred input
-   (which already carries a camera tone curve) is forced to None. One rule, one place. */
+/*
+    The transform actually applied: a view transform tone-maps, so data that ALREADY
+    carries a tone curve is forced to None. One rule, one place, and now two ways to
+    already carry one:
+
+      display-referred input   the camera baked its own curve in before Winnow saw it
+      profileToneMapped        a camera profile's ProfileToneCurve was applied at stage 0
+
+    The second is not a nuance. A ProfileToneCurve is a whole scene-linear -> display
+    mapping, so letting a view transform run on top compresses the highlights twice:
+    measured on a real look profile, a full stop above white collapsed to nothing (1.0 and
+    2.0 both rendering 242) and mid grey landed at 220 instead of 176.
+*/
 inline OutputTransform::ViewTransform EffectiveView(OutputTransform::ViewTransform vt,
-                                                    bool sceneReferred)
+                                                    bool sceneReferred,
+                                                    bool profileToneMapped)
 {
-    return sceneReferred ? vt : OutputTransform::ViewTransform::None;
+    return (sceneReferred && !profileToneMapped) ? vt : OutputTransform::ViewTransform::None;
 }
 
 /*
@@ -597,7 +609,8 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
     out = QImage(W, H, QImage::Format_RGB888);
     if (out.isNull()) return false;
 
-    const OutputTransform::ViewTransform vt = EffectiveView(view, img.sceneReferred);
+    const OutputTransform::ViewTransform vt =
+        EffectiveView(view, img.sceneReferred, img.profileToneMapped);
     const bool clampsToWhite = ViewClampsToWhite(vt);
     Encoding enc = EncodingFor(space, img.space);
     const float *rgb = img.rgb.data();
@@ -720,7 +733,8 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
     out = QImage(W, H, QImage::Format_RGBX64);
     if (out.isNull()) return false;
 
-    const OutputTransform::ViewTransform vt = EffectiveView(view, img.sceneReferred);
+    const OutputTransform::ViewTransform vt =
+        EffectiveView(view, img.sceneReferred, img.profileToneMapped);
     Encoding enc = EncodingFor(space, img.space);
     const float *rgb = img.rgb.data();
     uchar *bits = out.bits();

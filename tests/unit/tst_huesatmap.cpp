@@ -41,7 +41,7 @@ private slots:
     void toneCurveHoldsHueAndSaturation();
     void toneCurveExtendsAboveWhiteInsteadOfClamping();
     void toneCurveRejectsUnusableData();
-    void lookIsSeparableFromTheCharacterisation();
+    void lookStripsCleanlyFromTheCharacterisation();
 
 private:
     /* A table of the given shape, every entry the identity (no shift, unit scales). */
@@ -267,8 +267,8 @@ void TstHueSatMap::neutralSurvivesARealProfile()
         if (!Dcp::parseFile(paths[i], p)) continue;
 
         CameraProfile::Tables t;
-        /* Colorimetry only: this test is about the BASELINE table, so the look is off. */
-        if (!CameraProfile::tables(p, 5000.0f, false, t) || !t.active) continue;
+                if (!CameraProfile::tables(p, 5000.0f, t) || !t.active) continue;
+        /* This test is about the BASELINE table, so skip the profiles that have none. */
         if (t.hueSatMap.isEmpty()) continue;
         ++withTable;
 
@@ -452,12 +452,17 @@ void TstHueSatMap::toneCurveRejectsUnusableData()
 }
 
 /*
-    THE TWO HALVES OF A PROFILE ARE SEPARABLE, which is the whole point of the Look switch:
-    the characterisation (matrix + HueSatMap) is what the camera sees and is always
-    applied; the look (LookTable + tone curve + the exposure it assumes) is the author's
-    grade and is optional.
+    A "CAMERA BASE" IS A PROFILE WITH ITS LOOK REMOVED, and the two halves have to come
+    apart cleanly at the point the store strips them.
+
+    There is no longer a switch in the pipeline -- a profile is applied whole, and the base
+    is a synthesised profile that simply has no look. So what is pinned here is the
+    equivalence that makes that substitution valid: stripping the look tags must leave the
+    characterisation (matrix + HueSatMap) untouched, and must remove ALL THREE creative
+    pieces -- the table, the curve, and the exposure offset. Leaving the offset behind is
+    the easy one to miss, and it is the one that would move the picture's brightness.
 */
-void TstHueSatMap::lookIsSeparableFromTheCharacterisation()
+void TstHueSatMap::lookStripsCleanlyFromTheCharacterisation()
 {
 #ifdef Q_OS_MAC
     const QString root = "/Library/Application Support/Adobe/CameraRaw/CameraProfiles";
@@ -478,32 +483,39 @@ void TstHueSatMap::lookIsSeparableFromTheCharacterisation()
         Dcp::Profile p;
         if (!Dcp::parseFile(paths[i], p)) continue;
 
-        CameraProfile::Tables off, on;
-        const bool haveOff = CameraProfile::tables(p, 5000.0f, false, off);
-        const bool haveOn  = CameraProfile::tables(p, 5000.0f, true,  on);
+        CameraProfile::Tables whole;
+        if (!CameraProfile::tables(p, 5000.0f, whole)) continue;
+        if (!whole.lookTable.isEmpty()) ++withLook;
+        if (!whole.toneCurve.isEmpty()) ++withCurve;
+        if (!qFuzzyCompare(whole.exposureScale, 1.0f)) ++withOffset;
 
-        /* WITH THE LOOK OFF, nothing creative survives -- not the table, not the curve,
-           and not the exposure offset. That last one is what keeps "a profile changes
-           colour, not brightness" true of the characterisation half. */
-        if (haveOff) {
-            QVERIFY2(off.lookTable.isEmpty(), "a look table leaked through with look off");
-            QVERIFY2(off.toneCurve.isEmpty(), "a tone curve leaked through with look off");
-            QVERIFY2(qFuzzyCompare(off.exposureScale, 1.0f),
-                     "an exposure offset leaked through with look off");
+        /* The strip the store performs for a "Camera Base". */
+        Dcp::Profile base = p;
+        base.lookTable = Dcp::Table3D();
+        base.toneCurve.clear();
+        base.baselineExposureOffset = 0.0f;
+
+        CameraProfile::Tables stripped;
+        const bool any = CameraProfile::tables(base, 5000.0f, stripped);
+
+        QVERIFY2(stripped.lookTable.isEmpty(), "a look table survived the strip");
+        QVERIFY2(stripped.toneCurve.isEmpty(), "a tone curve survived the strip");
+        QVERIFY2(qFuzzyCompare(stripped.exposureScale, 1.0f),
+                 "an exposure offset survived the strip -- the base would change brightness");
+
+        /* ...and the characterisation is the SAME table, not merely present. */
+        if (any && !whole.hueSatMap.isEmpty()) {
+            QCOMPARE(stripped.hueSatMap.v.size(), whole.hueSatMap.v.size());
+            for (size_t k = 0; k < stripped.hueSatMap.v.size(); ++k)
+                QVERIFY(qAbs(stripped.hueSatMap.v[k] - whole.hueSatMap.v[k]) < 1e-6f);
         }
-        /* The characterisation is identical either way. */
-        if (haveOff && haveOn)
-            QCOMPARE(on.hueSatMap.isEmpty(), off.hueSatMap.isEmpty());
-
-        if (!haveOn) continue;
-        if (!on.lookTable.isEmpty()) ++withLook;
-        if (!on.toneCurve.isEmpty()) ++withCurve;
-        if (!qFuzzyCompare(on.exposureScale, 1.0f)) ++withOffset;
+        /* A profile whose only per-pixel content was its look has nothing left, which is
+           exactly the common "Camera *" case: matrix only, and the stage is skipped. */
+        if (whole.hueSatMap.isEmpty()) QVERIFY(!any);
     }
 
-    qInfo() << "with look on --" << withLook << "look tables," << withCurve
+    qInfo() << "applied whole --" << withLook << "look tables," << withCurve
             << "tone curves," << withOffset << "exposure offsets";
-    /* If none of the three ever appeared the switch would be trivially passing above. */
     QVERIFY(withLook > 0);
     QVERIFY(withCurve > 0);
     QVERIFY(withOffset > 0);

@@ -384,12 +384,12 @@ bool Develop::ProfileTablesActive(const WorkingImage &img, const EditParams &p)
     /* A cheap STRUCTURAL test -- does the profile carry anything per-pixel at all -- rather
        than building the tables, because this is asked on every render to choose the route.
        A creative profile has no HueSatMap and a camera-matching one usually has no look,
-       so one of the two halves is normally absent. */
-    if (!d.cal[0].hueSatMap.isEmpty() || !d.cal[1].hueSatMap.isEmpty()) return true;
-    if (p.cameraProfileLook != 0 &&
-        (!d.lookTable.isEmpty() || !d.toneCurve.empty() || d.baselineExposureOffset != 0.0f))
-        return true;
-    return false;
+       so one of the two halves is normally absent; a synthesised "Camera Base" for the
+       common camera has neither, and skips this stage entirely. */
+    Q_UNUSED(p)
+    return !d.cal[0].hueSatMap.isEmpty() || !d.cal[1].hueSatMap.isEmpty() ||
+           !d.lookTable.isEmpty() || !d.toneCurve.empty() ||
+           d.baselineExposureOffset != 0.0f;
 }
 
 void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
@@ -406,13 +406,16 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
     WhiteBalance::resolve(img.cam, p.temp, p.tint, kelvin, tint);
 
     CameraProfile::Tables t;
-    if (!CameraProfile::tables(*img.cam.profile, kelvin, p.cameraProfileLook != 0, t) ||
-        !t.active) return;
+    if (!CameraProfile::tables(*img.cam.profile, kelvin, t) || !t.active) return;
 
     /* Everything constant for the render is resolved HERE, once: the two illuminants'
        HueSatMaps are blended into one (so the lookup is eight taps, not sixteen), the tone
        curve is sampled into a 1-D table, and the two bracketing matrices are folded 3x3s.
        ONE ProPhoto round trip covers all four stages below, whichever of them are live. */
+    /* Tell the output stage the data is already tone mapped, BEFORE the pass runs -- the
+       flag describes this render, not the loop. See WorkingImage::profileToneMapped. */
+    if (!t.toneCurve.isEmpty()) img.profileToneMapped = true;
+
     const HueSatMap::Table &hsm  = t.hueSatMap;
     const HueSatMap::Table &look = t.lookTable;
     const ProfileTone::Lut &tone = t.toneCurve;

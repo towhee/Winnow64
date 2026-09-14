@@ -168,6 +168,7 @@ winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
     ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
 if(APPLE)
@@ -240,6 +241,32 @@ winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp
 # construction), that the value axis is indexed clamped but scaled UNCLAMPED so
 # scene-referred highlight headroom survives, and that a real profile still leaves a
 # neutral neutral once the ProPhoto round trip is wrapped around it.
+# tst_cameraprofilestore pins the synthesised "Camera Base": that every curve-bearing
+# profile of a camera generation really does share one colorimetric base (the claim the
+# whole entry rests on), that a base carries none of the three creative pieces, and that
+# two generations get two distinctly-named rows. Opportunistic -- it asserts against the
+# profiles actually installed and skips when there are none.
+winnow_add_unit_test(tst_cameraprofilestore  unit/tst_cameraprofilestore.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+
+# tst_cameramodel pins canonicalCameraModel -- the ONE model string both the generated
+# matrix table and a DCP's UniqueCameraModel are keyed on. Olympus, Fujifilm and
+# Panasonic put neither the maker nor the spacing in EXIF tag 272, so those makers used
+# to miss BOTH lookups in silence (an unmatched matrix falls back to identity; an
+# unmatched profile shows an empty dropdown). Beyond the string cases it RESOLVES each
+# sample body end to end: against the compiled-in matrix table always, and against the
+# installed profiles when there are any -- which is the only form the original defect
+# would have shown up in. Hence the profile-store + DCP closure.
+winnow_add_unit_test(tst_cameramodel  unit/tst_cameramodel.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramatrix.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+
 winnow_add_unit_test(tst_huesatmap  unit/tst_huesatmap.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
