@@ -10564,7 +10564,8 @@ void MW::renderDevelopFullResAsync()
                                    << " outFree" << rt.outFreeMs
                                    << " toImage" << rt.toImageMs
                                    << " orient+scale" << rt.orientScaleMs << ")ms"
-                                   << " develop=[denoise" << rt.denoiseMs << " point" << rt.pointMs
+                                   << " develop=[profile" << rt.profileMs
+                                   << " denoise" << rt.denoiseMs << " point" << rt.pointMs
                                    << " texture" << rt.textureMs << " clarity" << rt.clarityMs
                                    << " dehaze" << rt.dehazeMs
                                    << " vignette" << rt.vignetteMs

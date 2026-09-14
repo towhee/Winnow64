@@ -1,5 +1,6 @@
 #include "Develop/develop.h"
 #include "Develop/cameraprofile.h"
+#include "Develop/huesatmap.h"
 #include "Develop/colorspace.h"
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
@@ -375,6 +376,61 @@ bool Develop::InputMatrix(const WorkingImage &img, const EditParams *p,
     return true;
 }
 
+bool Develop::ProfileTablesActive(const WorkingImage &img, const EditParams &p)
+{
+    if (!img.cam.valid || !img.cam.profile) return false;
+    /* Cheap structural test -- does either calibration carry a HueSatMap at all -- rather
+       than building the blended table, because this is asked on every render to choose the
+       route and most profiles (every creative "Camera *" one) have no HueSatMap. */
+    Q_UNUSED(p)
+    return !img.cam.profile->cal[0].hueSatMap.isEmpty() ||
+           !img.cam.profile->cal[1].hueSatMap.isEmpty();
+}
+
+void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
+{
+    if (!ProfileTablesActive(img, p)) return;
+    if (!img.isValid()) return;
+    /* The table is defined in a space reached FROM the working space; camera-native pixels
+       have not got there yet. Apply() guarantees this by forcing the early conversion when
+       a table is active, so reaching here untagged is a caller error, not a state to
+       handle silently. */
+    if (img.space != ColorSpaceMath::kWorking) return;
+
+    float kelvin = 0.0f, tint = 0.0f;
+    WhiteBalance::resolve(img.cam, p.temp, p.tint, kelvin, tint);
+
+    CameraProfile::Tables t;
+    if (!CameraProfile::tables(*img.cam.profile, kelvin, t) || !t.active) return;
+
+    /* Everything constant for the render is resolved HERE, once: the two illuminants'
+       tables are blended into one (so the lookup is eight taps, not sixteen) and the two
+       bracketing matrices are folded 3x3s. The per-pixel work is two matrix multiplies,
+       an HSV round trip and one trilinear lookup. */
+    const HueSatMap::Table &tbl = t.hueSatMap;
+    float to[3][3], fr[3][3];
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) { to[i][j] = t.toTable[i][j]; fr[i][j] = t.fromTable[i][j]; }
+
+    float *rgb = img.rgb.data();
+    const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
+    parallelFor(n, [=, &tbl](size_t i0, size_t i1) {
+        for (size_t i = i0; i < i1; ++i) {
+            float *px = rgb + i * 3;
+            const float r = px[0], g = px[1], b = px[2];
+            float pr = to[0][0] * r + to[0][1] * g + to[0][2] * b;
+            float pg = to[1][0] * r + to[1][1] * g + to[1][2] * b;
+            float pb = to[2][0] * r + to[2][1] * g + to[2][2] * b;
+
+            HueSatMap::Apply(tbl, pr, pg, pb);
+
+            px[0] = fr[0][0] * pr + fr[0][1] * pg + fr[0][2] * pb;
+            px[1] = fr[1][0] * pr + fr[1][1] * pg + fr[1][2] * pb;
+            px[2] = fr[2][0] * pr + fr[2][1] * pg + fr[2][2] * pb;
+        }
+    });
+}
+
 void Develop::ToWorkingSpace(WorkingImage &img, const EditParams *p)
 {
     if (img.space != ColorSpaceMath::ColorSpace::CameraNative) return;
@@ -411,12 +467,20 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
        conversion has to happen here as its own pass; otherwise it is left to
        buildPointCoeffs, which folds it into preMat for free. */
     const bool denoiseActive = (p.localDenoiseLuma > 0.0f || p.localDenoiseChroma > 0.0f);
-    if (p.isIdentity() || denoiseActive) ToWorkingSpace(img, &p);
+    /* A HueSatMap is a TABLE, so it cannot be folded into preMat the way the matrix half
+       of a profile is: the conversion has to happen as its own pass first, exactly as an
+       active Denoise forces it to. */
+    const bool tablesActive = ProfileTablesActive(img, p);
+    if (p.isIdentity() || denoiseActive || tablesActive) ToWorkingSpace(img, &p);
 
-    if (p.isIdentity()) return true;    // nothing to do; serve image as-is
+    if (p.isIdentity()) { img.cam.profile.reset(); return true; }   // see the note below
 
     QElapsedTimer probe;
     if (t) probe.start();
+
+    /* Stage 0.5: finish the input profile before anything is adjusted on top of it. */
+    ApplyProfileTables(img, p);
+    if (t) t->profileMs = probe.restart();
 
     /* Fixed pipeline order: spatial ops own a pass, point ops share the fused pass.
        See notes/Documentation.txt "DEVELOP / IMAGE EDIT". Denoise (#1) -> fused point
@@ -452,6 +516,23 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 
     Grain(img, p);
     if (t) t->grainMs = probe.restart();
+
+    /*
+        STAGE 0 IS SPENT -- drop the profile.
+
+        This image has now been through the profile's matrix AND its HueSatMap, and the
+        scope compositor develops each MASK LAYER by copying this result and calling
+        Apply again with that scope's params (WorkingImageCache::renderStack). A layer
+        inherits `cam` wholesale, so a profile left here would be applied a second time
+        per scope: the HueSatMap re-run on top of itself, and -- worse, because it is
+        invisible rather than merely wrong -- the scope's OWN white balance dropped, since
+        buildPointCoeffs reads cam.profile to mean "the white balance is already in the
+        matrix". It is, for the base. It is not for an adjustment layered on top of it.
+
+        Cleared HERE rather than by the caller because this is the layer that knows stage 0
+        just ran; leaving it to every render site is how one of them forgets.
+    */
+    img.cam.profile.reset();
     return true;
 }
 

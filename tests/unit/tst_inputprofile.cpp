@@ -116,6 +116,7 @@ private slots:
     void cameraProfileReplacesTheInputMatrix();
     void cameraProfileWhiteBalancesExactlyOnce();
     void cameraProfileSurvivesTheDenoiseRoute();
+    void stageZeroRunsOnlyOnce();
 };
 
 /*
@@ -441,6 +442,65 @@ void TestInputProfile::cameraProfileSurvivesTheDenoiseRoute()
 
     const float worst = worstDiff(folded, early);
     QVERIFY2(worst < 1e-5f, qPrintable(QString("profile route worst %1").arg(worst)));
+}
+
+/*
+    STAGE 0 RUNS ONCE PER IMAGE, NOT ONCE PER SCOPE.
+
+    The scope compositor develops each mask layer by COPYING the base result and calling
+    Apply again with that scope's params. A WorkingImage copy carries `cam` wholesale, so
+    a profile left on it after the base develop would be spent a second time on every
+    scope: the HueSatMap re-applied on top of itself, and the scope's own white balance
+    silently dropped (buildPointCoeffs reads cam.profile to mean "already balanced", which
+    is true of the base and false of a layer above it).
+
+    Apply therefore clears the profile when it is done. This is what that looks like from
+    outside: develop once, then develop the result again exactly as a scope layer would,
+    and the second pass must behave as though there were no profile at all.
+*/
+void TestInputProfile::stageZeroRunsOnlyOnce()
+{
+    const auto profile = makeProfile();
+
+    EditParams base;
+    base.cameraProfile = "Adobe Standard";
+    base.temp = 4200.0f;
+
+    WorkingImage img = makeCameraNative(16, 12);
+    img.cam.profile = profile;
+    Develop d1;
+    QVERIFY(d1.Apply(img, base));
+    QVERIFY2(img.cam.profile == nullptr,
+             "Apply must drop the profile once stage 0 has been spent");
+
+    /* Now a scope layer: the developed image, re-developed with the scope's own params.
+       Its result must equal the same params applied to an image that never had a profile,
+       because stage 0 is behind it either way. */
+    EditParams scope;
+    scope.exposure = 0.4f;
+    scope.temp = 7000.0f;               // a per-mask white balance
+
+    WorkingImage layer = img;           // exactly what renderStack copies
+    Develop d2;
+    QVERIFY(d2.Apply(layer, scope));
+
+    WorkingImage reference = img;
+    reference.cam.profile = nullptr;    // already null; stated so the intent is explicit
+    Develop d3;
+    QVERIFY(d3.Apply(reference, scope));
+
+    const float worst = worstDiff(layer, reference);
+    QVERIFY2(worst < 1e-6f, qPrintable(QString("scope layer worst %1").arg(worst)));
+
+    /* And the scope's white balance actually did something -- otherwise the comparison
+       above would pass with both sides equally broken. */
+    WorkingImage noWb = img;
+    EditParams scopeNoWb = scope;
+    scopeNoWb.temp = 0.0f;
+    Develop d4;
+    QVERIFY(d4.Apply(noWb, scopeNoWb));
+    QVERIFY2(worstDiff(layer, noWb) > 1e-3f,
+             "the scope's own white balance was dropped");
 }
 
 QTEST_APPLESS_MAIN(TestInputProfile)

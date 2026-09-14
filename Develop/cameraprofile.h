@@ -2,6 +2,7 @@
 #define CAMERAPROFILE_H
 
 #include "Develop/colorspace.h"
+#include "Develop/huesatmap.h"
 #include "ImageFormats/Dcp/dcp.h"
 
 /*
@@ -77,6 +78,34 @@ bool neutralCam(const Dcp::Profile &p, float kelvin, float tint, double n[3]);
 /* The full camera-native -> working-space matrix for a chosen white balance. False when
    the profile is unusable (no ColorMatrix, or a singular matrix in the chain). */
 bool camToWorking(const Dcp::Profile &p, float kelvin, float tint, float out[3][3]);
+
+/*
+    The profile's baseline HueSatMap resolved for a temperature -- the two illuminants'
+    tables blended ONCE, with the same weight the matrices used -- plus the two matrices
+    that bracket it.
+
+    WHY THE MATRICES. The table's numbers only mean what the specification says they mean
+    in the space the specification names: LINEAR ProPhoto RGB at D50. Applying it in the
+    working space instead would be a different transform wearing the same numbers, so the
+    pixel is carried there and back around the lookup. Both matrices are folded 3x3s, and
+    both are constant for the render, so the per-pixel cost is two matrix multiplies on
+    top of the HSV round trip.
+
+    ProPhoto is deliberately NOT added to ColorSpaceMath::ColorSpace: every space in that
+    enum is D65 by design, so that no chromatic adaptation can hide inside the ordinary
+    pipeline, and ProPhoto is a D50 space. It lives here, where the one adaptation the
+    pipeline allows already lives.
+*/
+struct Tables {
+    bool active = false;                // false = this profile has no HueSatMap
+    HueSatMap::Table hueSatMap;
+    float toTable[3][3]   = {{1,0,0}, {0,1,0}, {0,0,1}};   // working -> linear ProPhoto(D50)
+    float fromTable[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};   // and back
+};
+
+/* False when the profile carries no HueSatMap at all -- which is the common case for a
+   creative "Camera *" profile, whose table is a LookTable and is not applied yet. */
+bool tables(const Dcp::Profile &p, float kelvin, Tables &out);
 
 } // namespace CameraProfile
 

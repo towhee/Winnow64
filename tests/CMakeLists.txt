@@ -235,6 +235,17 @@ winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp
 # kelvin) interpolation, the warm-first ordering, and the exposure anchor -- a camera
 # neutral must render to exactly (1,1,1), or selecting a profile moves every raw's
 # brightness as well as its colour.
+# tst_huesatmap pins the profile's 3-D HSV table: its STORAGE ORDER (value, hue,
+# saturation -- established empirically against 279 installed tables, pinned here by
+# construction), that the value axis is indexed clamped but scaled UNCLAMPED so
+# scene-referred highlight headroom survives, and that a real profile still leaves a
+# neutral neutral once the ProPhoto round trip is wrapped around it.
+winnow_add_unit_test(tst_huesatmap  unit/tst_huesatmap.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+
 winnow_add_unit_test(tst_cameraprofile  unit/tst_cameraprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp

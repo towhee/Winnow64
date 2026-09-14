@@ -31,7 +31,8 @@ public:
 
     /* Per-stage wall-clock timings for one Apply(), filled when a non-null pointer is passed.
        A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use. */
-    struct StageTimings { qint64 denoiseMs = 0; qint64 pointMs = 0; qint64 textureMs = 0;
+    struct StageTimings { qint64 profileMs = 0; qint64 denoiseMs = 0;
+                          qint64 pointMs = 0; qint64 textureMs = 0;
                           qint64 clarityMs = 0; qint64 dehazeMs = 0;
                           qint64 vignetteMs = 0; qint64 sharpenMs = 0;
                           qint64 grainMs = 0; };
@@ -75,6 +76,23 @@ public:
     */
     static bool InputMatrix(const WorkingImage &img, const EditParams *p,
                             float m[3][3], bool &wbIncluded);
+
+    /*
+        STAGE 0.5 -- the camera profile's HueSatMap, the part of a profile a 3x3 cannot
+        carry. Runs immediately after stage 0 and BEFORE everything else, because it
+        finishes the input profile: it is a correction to the camera characterisation,
+        not an adjustment made on top of one. In particular it precedes Exposure, whose
+        uniform scale does not commute with a table indexed by value.
+
+        A no-op unless the image has a profile carrying a HueSatMap, which is why an
+        active one forces the early conversion (a table cannot be folded into a matrix).
+        Creative "Camera *" profiles carry a LookTable instead and are NOT affected: that
+        table runs at a different point in the pipeline and is not applied yet.
+    */
+    static void ApplyProfileTables(WorkingImage &img, const EditParams &p);
+
+    /* Whether the above would do anything -- asked before stage 0, to choose the route. */
+    static bool ProfileTablesActive(const WorkingImage &img, const EditParams &p);
 
     /* Blend a full-strength raw-denoised image toward the clean one, per the Global "Denoise raw"
        amounts (the interactive slider blend for the PMRID pre-demosaic denoiser -- see
