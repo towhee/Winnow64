@@ -20,6 +20,7 @@
 
 #include "Develop/huesatmap.h"
 #include "Develop/cameraprofile.h"
+#include "Develop/profiletone.h"
 
 class TstHueSatMap : public QObject
 {
@@ -34,7 +35,13 @@ private slots:
     void blendEndpointsAndMidpoint();
     void blendTakesTheOtherWhenOneIsEmpty();
     void srgbEncodedTableRoundTrips();
+    void srgbTransferTableMatchesTheExactCurve();
     void neutralSurvivesARealProfile();
+    void toneCurveIdentityIsIdentity();
+    void toneCurveHoldsHueAndSaturation();
+    void toneCurveExtendsAboveWhiteInsteadOfClamping();
+    void toneCurveRejectsUnusableData();
+    void lookIsSeparableFromTheCharacterisation();
 
 private:
     /* A table of the given shape, every entry the identity (no shift, unit scales). */
@@ -260,7 +267,9 @@ void TstHueSatMap::neutralSurvivesARealProfile()
         if (!Dcp::parseFile(paths[i], p)) continue;
 
         CameraProfile::Tables t;
-        if (!CameraProfile::tables(p, 5000.0f, t) || !t.active) continue;
+        /* Colorimetry only: this test is about the BASELINE table, so the look is off. */
+        if (!CameraProfile::tables(p, 5000.0f, false, t) || !t.active) continue;
+        if (t.hueSatMap.isEmpty()) continue;
         ++withTable;
 
         auto through = [&t](float in[3], float out[3]) {
@@ -298,6 +307,206 @@ void TstHueSatMap::neutralSurvivesARealProfile()
     QVERIFY2(movedAColour > withTable / 2,
              qPrintable(QString("only %1 of %2 profiles changed a saturated colour")
                             .arg(movedAColour).arg(withTable)));
+}
+
+/*
+    THE TABLED sRGB TRANSFER MUST BE THE CURVE IT REPLACED.
+
+    The exact formula was swapped for a 4096-entry table because the round trip was six
+    pow() calls per pixel and measured as HALF the cost of the whole profile stage. A
+    table is only a valid substitute while it agrees with the function, and it is the toe
+    -- where the curve is steep and a 16-bit level is small -- that a coarse table would
+    get wrong first.
+*/
+void TstHueSatMap::srgbTransferTableMatchesTheExactCurve()
+{
+    double worstEnc = 0.0, worstDec = 0.0;
+    for (int i = 0; i <= 20000; ++i) {
+        const float v = float(i) / 20000.0f;
+        worstEnc = qMax(worstEnc, qAbs(double(HueSatMap::SrgbEncode(v))
+                                     - double(HueSatMap::SrgbEncodeExact(v))));
+        worstDec = qMax(worstDec, qAbs(double(HueSatMap::SrgbDecode(v))
+                                     - double(HueSatMap::SrgbDecodeExact(v))));
+    }
+    /* THE BAR IS ONE 16-BIT LEVEL (1.53e-5) -- the accuracy the rest of Develop's colour
+       invariants are asserted at -- not a number chosen to fit the result. Measured at the
+       table's current size: 2.4e-6 encoding, and less decoding. At 4096 samples encoding
+       measured 1.6e-5 and would fail this, which is how the size was chosen. */
+    QVERIFY2(worstEnc < 1.0e-5, qPrintable(QString("encode worst %1").arg(worstEnc)));
+    QVERIFY2(worstDec < 1.0e-5, qPrintable(QString("decode worst %1").arg(worstDec)));
+
+    /* Above white the table does not apply at all -- the exact formula is used, so the
+       headroom the rest of this file preserves is not quietly clamped by a lookup. */
+    for (float v : {1.0f, 1.5f, 4.0f, 9.0f}) {
+        QCOMPARE(HueSatMap::SrgbEncode(v), HueSatMap::SrgbEncodeExact(v));
+        QCOMPARE(HueSatMap::SrgbDecode(v), HueSatMap::SrgbDecodeExact(v));
+    }
+    /* ...and over-white really does stay over white. Tested ABOVE 1.0, not at it: the
+       formula evaluates to 1.0 there only to within a float ULP (1.055f - 0.055f is
+       0.99999994), and asserting exactness on that would be testing the arithmetic, not
+       the headroom. */
+    for (float v : {1.001f, 1.5f, 4.0f, 9.0f}) {
+        QVERIFY2(HueSatMap::SrgbEncode(v) > 1.0f,
+                 qPrintable(QString("%1 encoded to %2").arg(double(v))
+                                .arg(double(HueSatMap::SrgbEncode(v)))));
+        QVERIFY(HueSatMap::SrgbDecode(v) > 1.0f);
+    }
+}
+
+/* ------------------------------------------------------------------------------------
+   The look half: ProfileToneCurve, and the switch that separates it from the
+   characterisation
+   ------------------------------------------------------------------------------------ */
+
+void TstHueSatMap::toneCurveIdentityIsIdentity()
+{
+    ProfileTone::Lut l;
+    QVERIFY(ProfileTone::Build({0.0f, 0.0f, 1.0f, 1.0f}, l));
+    for (float v : {0.0f, 0.05f, 0.18f, 0.5f, 0.9f, 1.0f})
+        QVERIFY2(qAbs(l.eval(v) - v) < 1e-5f,
+                 qPrintable(QString("diagonal moved %1 to %2").arg(double(v)).arg(double(l.eval(v)))));
+    QVERIFY(qAbs(l.endSlope - 1.0f) < 1e-3f);
+}
+
+/*
+    A curve run independently on R, G and B pulls colour toward the primaries as it
+    steepens -- the familiar per-channel-curve hue shift, and a real defect in a control
+    whose whole job is tone. Winnow applies it to the VALUE and scales the triple, so hue
+    and saturation come through untouched.
+*/
+void TstHueSatMap::toneCurveHoldsHueAndSaturation()
+{
+    /* A pronounced S-curve: darkens the low end, lifts the high end. */
+    ProfileTone::Lut l;
+    QVERIFY(ProfileTone::Build({0.0f, 0.0f, 0.25f, 0.15f, 0.5f, 0.5f,
+                                0.75f, 0.87f, 1.0f, 1.0f}, l));
+
+    const float probes[][3] = {{0.60f, 0.22f, 0.18f}, {0.20f, 0.55f, 0.30f},
+                               {0.15f, 0.30f, 0.80f}, {0.40f, 0.40f, 0.40f}};
+    for (const auto &probe : probes) {
+        float r = probe[0], g = probe[1], b = probe[2];
+        float h0, s0, v0;
+        HueSatMap::ToHsv(r, g, b, h0, s0, v0);
+
+        ProfileTone::ApplyToValue(l, r, g, b);
+
+        float h1, s1, v1;
+        HueSatMap::ToHsv(r, g, b, h1, s1, v1);
+        QVERIFY2(qAbs(h1 - h0) < 1e-3f,
+                 qPrintable(QString("hue moved %1 -> %2").arg(double(h0)).arg(double(h1))));
+        QVERIFY2(qAbs(s1 - s0) < 1e-4f,
+                 qPrintable(QString("saturation moved %1 -> %2").arg(double(s0)).arg(double(s1))));
+        QVERIFY2(qAbs(v1 - l.eval(v0)) < 1e-4f, "value did not follow the curve");
+    }
+
+    /* ...and it really is a curve, not a no-op. */
+    QVERIFY(l.eval(0.25f) < 0.20f);
+    QVERIFY(l.eval(0.75f) > 0.80f);
+}
+
+/*
+    ABOVE WHITE THE CURVE CONTINUES, it does not stop. A ProfileToneCurve is defined over
+    0..1 because DNG describes a display-referred pipeline; Winnow's data is scene-referred
+    and carries the headroom the view transform exists to roll off. Clamping at the top
+    would flatten every specular highlight the moment a look was switched on -- and it
+    would read as a property of the profile rather than as a bug.
+*/
+void TstHueSatMap::toneCurveExtendsAboveWhiteInsteadOfClamping()
+{
+    ProfileTone::Lut l;
+    QVERIFY(ProfileTone::Build({0.0f, 0.0f, 0.5f, 0.42f, 1.0f, 1.0f}, l));
+
+    const float atWhite = l.eval(1.0f);
+    QVERIFY(qAbs(atWhite - 1.0f) < 1e-4f);
+
+    /* Strictly increasing well past white, and by the slope the curve ended with. */
+    float prev = atWhite;
+    for (float v : {1.5f, 2.0f, 4.0f, 8.0f}) {
+        const float y = l.eval(v);
+        QVERIFY2(y > prev, qPrintable(QString("curve stopped rising at %1").arg(double(v))));
+        QVERIFY2(qAbs(y - (atWhite + (v - 1.0f) * l.endSlope)) < 1e-3f,
+                 "the extension is not the end slope");
+        prev = y;
+    }
+
+    /* And a pixel 2.5 stops over white keeps its headroom through the whole apply. */
+    float r = 6.0f, g = 5.0f, b = 4.0f;
+    ProfileTone::ApplyToValue(l, r, g, b);
+    QVERIFY2(r > 4.0f, qPrintable(QString("over-white red collapsed to %1").arg(double(r))));
+}
+
+void TstHueSatMap::toneCurveRejectsUnusableData()
+{
+    ProfileTone::Lut l;
+    QVERIFY(!ProfileTone::Build({}, l));                            // absent
+    QVERIFY(!ProfileTone::Build({0.0f, 0.0f}, l));                  // one point
+    QVERIFY(!ProfileTone::Build({0.0f, 0.0f, 1.0f}, l));            // odd count
+    QVERIFY(!ProfileTone::Build({0.0f, 0.0f, 0.7f, 0.5f, 0.3f, 0.9f}, l));   // x goes back
+
+    /* A rejected curve must leave the Lut empty and inert, not half-built: the render
+       applies no curve rather than a broken one. */
+    QVERIFY(l.isEmpty());
+    float r = 0.4f, g = 0.3f, b = 0.2f;
+    ProfileTone::ApplyToValue(l, r, g, b);
+    QVERIFY(qAbs(r - 0.4f) < 1e-6f && qAbs(g - 0.3f) < 1e-6f && qAbs(b - 0.2f) < 1e-6f);
+}
+
+/*
+    THE TWO HALVES OF A PROFILE ARE SEPARABLE, which is the whole point of the Look switch:
+    the characterisation (matrix + HueSatMap) is what the camera sees and is always
+    applied; the look (LookTable + tone curve + the exposure it assumes) is the author's
+    grade and is optional.
+*/
+void TstHueSatMap::lookIsSeparableFromTheCharacterisation()
+{
+#ifdef Q_OS_MAC
+    const QString root = "/Library/Application Support/Adobe/CameraRaw/CameraProfiles";
+#else
+    const QString root = "C:/ProgramData/Adobe/CameraRaw/CameraProfiles";
+#endif
+    if (!QDir(root).exists()) QSKIP("no camera profiles installed on this machine");
+
+    QStringList paths;
+    QDirIterator it(root, QStringList() << "*.dcp", QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) paths << it.next();
+    if (paths.isEmpty()) QSKIP("no camera profiles installed on this machine");
+    paths.sort();
+
+    int withLook = 0, withCurve = 0, withOffset = 0;
+    const int stride = qMax(1, paths.size() / 120);
+    for (int i = 0; i < paths.size(); i += stride) {
+        Dcp::Profile p;
+        if (!Dcp::parseFile(paths[i], p)) continue;
+
+        CameraProfile::Tables off, on;
+        const bool haveOff = CameraProfile::tables(p, 5000.0f, false, off);
+        const bool haveOn  = CameraProfile::tables(p, 5000.0f, true,  on);
+
+        /* WITH THE LOOK OFF, nothing creative survives -- not the table, not the curve,
+           and not the exposure offset. That last one is what keeps "a profile changes
+           colour, not brightness" true of the characterisation half. */
+        if (haveOff) {
+            QVERIFY2(off.lookTable.isEmpty(), "a look table leaked through with look off");
+            QVERIFY2(off.toneCurve.isEmpty(), "a tone curve leaked through with look off");
+            QVERIFY2(qFuzzyCompare(off.exposureScale, 1.0f),
+                     "an exposure offset leaked through with look off");
+        }
+        /* The characterisation is identical either way. */
+        if (haveOff && haveOn)
+            QCOMPARE(on.hueSatMap.isEmpty(), off.hueSatMap.isEmpty());
+
+        if (!haveOn) continue;
+        if (!on.lookTable.isEmpty()) ++withLook;
+        if (!on.toneCurve.isEmpty()) ++withCurve;
+        if (!qFuzzyCompare(on.exposureScale, 1.0f)) ++withOffset;
+    }
+
+    qInfo() << "with look on --" << withLook << "look tables," << withCurve
+            << "tone curves," << withOffset << "exposure offsets";
+    /* If none of the three ever appeared the switch would be trivially passing above. */
+    QVERIFY(withLook > 0);
+    QVERIFY(withCurve > 0);
+    QVERIFY(withOffset > 0);
 }
 
 QTEST_MAIN(TstHueSatMap)

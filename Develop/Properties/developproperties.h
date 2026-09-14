@@ -639,12 +639,17 @@ private:
        cannot have been taken by a different one). See EditParams::cameraProfile. */
     void addCameraProfileRow(const QModelIndex &parIdx);
     void setCameraProfile(const QString &name);
+    /* The look half of the selected profile -- its LookTable, tone curve and the exposure
+       offset it assumes. Separately switchable because a profile file holds two different
+       things: how the sensor sees (always applied) and an artistic grade (optional). */
+    void setCameraProfileLook(bool on);
     void refreshCameraProfileRow();
     /* Fill the combo with the built-in entry plus every profile installed for THIS
        camera, and select the stored one. Separate from refresh because the list itself
        changes -- on an image change (a different camera) and when the background index
        lands. */
     void repopulateCameraProfileCombo();
+    void refreshCameraProfileLookCheck();
     void addViewTransformRow(const QModelIndex &parIdx);
     void setViewTransform(int vt);
     void refreshViewTransformRow();
@@ -666,6 +671,7 @@ private:
     QPointer<QComboBox> wbCombo;
     QPointer<QComboBox> viewTransformCombo;
     QPointer<QComboBox> cameraProfileCombo;
+    QPointer<QCheckBox> cameraProfileLookCheck;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;
     /* Detail 1:1 preview. detailPt is normalized over the ORIENTED full-res frame (the

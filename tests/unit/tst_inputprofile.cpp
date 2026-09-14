@@ -117,6 +117,7 @@ private slots:
     void cameraProfileWhiteBalancesExactlyOnce();
     void cameraProfileSurvivesTheDenoiseRoute();
     void stageZeroRunsOnlyOnce();
+    void cameraProfileLookIsOptional();
 };
 
 /*
@@ -501,6 +502,82 @@ void TestInputProfile::stageZeroRunsOnlyOnce()
     QVERIFY(d4.Apply(noWb, scopeNoWb));
     QVERIFY2(worstDiff(layer, noWb) > 1e-3f,
              "the scope's own white balance was dropped");
+}
+
+/*
+    THE LOOK IS OPTIONAL, AND IT IS THE PART THAT CHANGES BRIGHTNESS.
+
+    A .dcp holds two different things: the matrix and HueSatMap that characterise the
+    sensor, and a LookTable + tone curve + BaselineExposureOffset that are the author's
+    grade. The Profile row's Look checkbox switches only the second. This pins the split at
+    the pipeline level, where it matters:
+
+      look OFF  the render must be bit-identical to the same profile with no look data at
+                all -- including the exposure offset, since "a profile changes colour, not
+                brightness" is only true of the characterisation half
+      look ON   the offset applies exactly, so a look renders at the exposure it was built
+                at rather than a stop or so off it (224 of 436 installed profiles carry a
+                non-zero offset, so this is the common case, not an edge one)
+*/
+void TestInputProfile::cameraProfileLookIsOptional()
+{
+    auto base = makeProfile();
+
+    /* A look whose table and curve are both the IDENTITY, leaving the exposure offset as
+       the only thing it does -- so the expected result is an exact number rather than
+       "something different". */
+    Dcp::Profile withLook = *base;
+    withLook.baselineExposureOffset = 1.0f;             // one stop
+    withLook.lookTable.hueDivs = 4;
+    withLook.lookTable.satDivs = 2;
+    withLook.lookTable.valDivs = 1;
+    withLook.lookTable.v.assign(4 * 2 * 1 * 3, 0.0f);
+    for (size_t i = 0; i < withLook.lookTable.v.size(); i += 3) {
+        withLook.lookTable.v[i + 1] = 1.0f;
+        withLook.lookTable.v[i + 2] = 1.0f;
+    }
+    withLook.toneCurve = {0.0f, 0.0f, 1.0f, 1.0f};      // the diagonal
+    const auto lookProfile = std::make_shared<const Dcp::Profile>(withLook);
+
+    EditParams p;
+    p.cameraProfile = "Adobe Standard";
+
+    /* Look OFF must match the profile that has no look data at all. */
+    WorkingImage off = makeCameraNative(12, 9);
+    off.cam.profile = lookProfile;
+    EditParams pOff = p;
+    pOff.cameraProfileLook = 0;
+    Develop d1;
+    QVERIFY(d1.Apply(off, pOff));
+
+    WorkingImage plain = makeCameraNative(12, 9);
+    plain.cam.profile = base;               // no look table, no curve, no offset
+    Develop d2;
+    QVERIFY(d2.Apply(plain, pOff));
+
+    const float worst = worstDiff(off, plain);
+    QVERIFY2(worst < 1e-6f,
+             qPrintable(QString("look data leaked through with the look off: %1").arg(worst)));
+
+    /* Look ON applies the one-stop offset exactly -- identity table, identity curve. */
+    WorkingImage on = makeCameraNative(12, 9);
+    on.cam.profile = lookProfile;
+    EditParams pOn = p;
+    pOn.cameraProfileLook = 1;
+    Develop d3;
+    QVERIFY(d3.Apply(on, pOn));
+
+    QCOMPARE(on.rgb.size(), off.rgb.size());
+    for (size_t i = 0; i < on.rgb.size(); ++i) {
+        if (off.rgb[i] <= 0.0f) continue;
+        const float ratio = on.rgb[i] / off.rgb[i];
+        QVERIFY2(qAbs(ratio - 2.0f) < 2e-3f,
+                 qPrintable(QString("sample %1 ratio %2, expected 2.0 (one stop)")
+                                .arg(i).arg(double(ratio))));
+    }
+
+    /* And the default is ON -- a freshly chosen profile renders complete. */
+    QCOMPARE(EditParams().cameraProfileLook, 1);
 }
 
 QTEST_APPLESS_MAIN(TestInputProfile)
