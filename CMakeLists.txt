@@ -449,6 +449,7 @@ set(WINNOW_HEADERS
     Develop/cameraprofilestore.h
     Develop/develop.h
     Develop/huesatmap.h
+    Develop/profiletone.h
     Develop/calibrate.h
     Develop/colorgrade.h
     Develop/colorspace.h

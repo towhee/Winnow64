@@ -30,15 +30,30 @@ them &mdash; it reads the ones you already have, and any you put in Winnow&rsquo
 fixes what a matrix cannot, because a sensor&rsquo;s error is not linear.  Winnow applies
 both, so an <b>Adobe Standard</b> profile renders in full.</p>
 
-<p>The <b>Camera&nbsp;&hellip;</b> profiles are a different thing: their look lives in a
-second table that Winnow does not apply yet, so choosing <b>Camera Vivid</b> today gives you
-that profile&rsquo;s <i>colour science</i> but not its <i>look</i> &mdash; it will not match
-the camera&rsquo;s own JPEG.  That is why <b>Winnow Standard</b> is still the default.</p>
+<p>The <b>Camera&nbsp;&hellip;</b> profiles add a second thing on top: a <i>look</i> &mdash;
+a colour grade, a contrast curve, and the exposure that grade assumes.  That is what makes
+Camera Vivid vivid.  The <b>Look</b> checkbox beside the dropdown switches it, and it is on
+by default, so choosing a profile gives you the whole of it.</p>
+
+<p>Turn <b>Look</b> off to take a profile&rsquo;s <i>colour science</i> without its grade
+&mdash; useful when you want the camera maker&rsquo;s idea of colour but your own idea of
+contrast.  It is greyed when the selected profile has no look to switch, which is the case
+for <b>Winnow Standard</b> and for most <b>Adobe Standard</b> profiles.</p>
+
+<p>Note that the look is the one part of a profile that changes <i>brightness</i>: most looks
+are built at an exposure offset and Winnow applies it with them.  The characterisation half
+never does &mdash; see below.</p>
+
+<p>Winnow&rsquo;s rendering of a look will be close to Adobe&rsquo;s but not identical.  The
+whole profile &mdash; characterisation and look together &mdash; is applied <i>before</i>
+Exposure and the other Basic sliders, so that Profile means &ldquo;the starting colour&rdquo;
+and everything below it is an adjustment on top.  Lightroom threads parts of it through its
+own tone controls instead.</p>
 
 <p>A profile carries two calibrations, one under tungsten light and one under daylight, and
 Winnow blends between them according to the temperature you have dialled.  That is why
 <b>changing the profile changes what a given Temp value means</b>: white balance is solved
-against the camera matrix, and the profile <i>is</i> the camera matrix.  It does <b>not</b>
+against the camera matrix, and the profile <i>is</i> the camera matrix.  With <b>Look</b> off it does <b>not</b>
 change the brightness of the picture, so switching between profiles compares colour and
 nothing else.</p>
 

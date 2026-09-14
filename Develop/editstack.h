@@ -259,6 +259,9 @@ struct EditStack {
         /* Omitted when empty -- the default -- so an untouched raw writes exactly the
            sidecar it always did and its devPreview key does not move. */
         if (!p.cameraProfile.isEmpty()) o["cameraProfile"] = p.cameraProfile;
+        /* Omitted at its default for the same reason: an untouched raw's sidecar, and so
+           its devPreview key, must not move because a field was added. */
+        if (p.cameraProfileLook != 1) o["cameraProfileLook"] = p.cameraProfileLook;
         o["gradeShadowHue"]  = p.gradeShadowHue;
         o["gradeShadowSat"]  = p.gradeShadowSat;
         o["gradeShadowLum"]  = p.gradeShadowLum;
@@ -330,6 +333,7 @@ struct EditStack {
         p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
         p.viewTransform   = o.value("viewTransform").toInt(p.viewTransform);
         p.cameraProfile   = o.value("cameraProfile").toString(p.cameraProfile);
+        p.cameraProfileLook = o.value("cameraProfileLook").toInt(p.cameraProfileLook);
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
         p.gradeShadowSat  = static_cast<float>(o.value("gradeShadowSat").toDouble(p.gradeShadowSat));
         p.gradeShadowLum  = static_cast<float>(o.value("gradeShadowLum").toDouble(p.gradeShadowLum));
@@ -625,6 +629,10 @@ struct EditStack {
         if (p.cameraProfile.size() > kMaxProfileNameLen ||
             p.cameraProfile.contains(QChar(u'\0'))) {
             p.cameraProfile = def.cameraProfile;
+            ++fixed;
+        }
+        if (p.cameraProfileLook < 0 || p.cameraProfileLook > 1) {
+            p.cameraProfileLook = def.cameraProfileLook;
             ++fixed;
         }
 

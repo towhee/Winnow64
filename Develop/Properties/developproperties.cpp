@@ -4271,6 +4271,27 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
             [this, combo](int ix){ setCameraProfile(combo->itemData(ix).toString()); });
     vhb->addWidget(combo);
+
+    /*
+        THE LOOK TOGGLE, beside the profile it belongs to rather than on a row of its own.
+
+        A .dcp holds two different things: the MATRIX and HueSatMap that characterise the
+        sensor, and a LookTable + tone curve + exposure offset that are an artistic grade.
+        The first is what a profile IS and is always applied; the second is what makes
+        "Camera Vivid" vivid, and is optional -- so a camera-matching profile can be taken
+        for its colour science without its contrast and saturation coming along.
+
+        This is NOT the creative-look control the architecture notes reserve a separate row
+        for. It switches a part of the profile already chosen above; a look from somewhere
+        else (a .cube, a look supplied on its own) would still be its own thing.
+    */
+    QCheckBox *look = new QCheckBox("Look");
+    look->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    cameraProfileLookCheck = look;
+    connect(look, &QCheckBox::toggled, this,
+            [this](bool on){ setCameraProfileLook(on); });
+    vhb->addSpacing(6);
+    vhb->addWidget(look);
     setIndexWidget(valIdx, cell);
 
     /*
@@ -4281,9 +4302,9 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     */
     CameraProfileStore::instance().ensureIndex();
     connect(&CameraProfileStore::instance(), &CameraProfileStore::indexChanged,
-            this, &DevelopProperties::repopulateCameraProfileCombo,
+            this, &DevelopProperties::refreshCameraProfileRow,
             Qt::UniqueConnection);
-    repopulateCameraProfileCombo();
+    refreshCameraProfileRow();
 }
 
 void DevelopProperties::repopulateCameraProfileCombo()
@@ -4331,6 +4352,61 @@ void DevelopProperties::repopulateCameraProfileCombo()
     cameraProfileCombo->setCurrentIndex(ix);
 }
 
+/*
+    Sync the Look checkbox to the selected profile: its state from the stack, and whether
+    it can be used at all from whether that profile actually carries a look. A profile with
+    no LookTable, no tone curve and no exposure offset has nothing to switch, so the box is
+    greyed WITH ITS REASON rather than left live and inert -- the built-in entry and most
+    "Adobe Standard" profiles are exactly that case.
+*/
+void DevelopProperties::refreshCameraProfileLookCheck()
+{
+    if (!cameraProfileLookCheck) return;
+
+    QString stored;
+    int on = 1;
+    if (!currentImagePath.isEmpty()) {
+        const EditStack &s = stackCache[currentImagePath];
+        if (!s.scopes.isEmpty()) {
+            stored = s.scopes[0].params.cameraProfile;
+            on = s.scopes[0].params.cameraProfileLook;
+        }
+    }
+
+    bool hasLook = false;
+    if (!stored.isEmpty()) {
+        const QString model = mw ? mw->cameraModelFor(currentImagePath) : QString();
+        const auto prof = CameraProfileStore::instance().profile(model, stored);
+        if (prof) hasLook = !prof->lookTable.isEmpty() || !prof->toneCurve.empty() ||
+                            prof->baselineExposureOffset != 0.0f;
+    }
+
+    cameraProfileLookCheck->setEnabled(hasLook);
+    cameraProfileLookCheck->setToolTip(
+        hasLook ? "Apply this profile's look -- its colour grade, contrast curve and the "
+                  "exposure it assumes -- as well as its sensor characterisation.\n"
+                  "Turn it off to take the profile's colour science only."
+                : (stored.isEmpty()
+                       ? "The built-in profile is a sensor characterisation only -- there "
+                         "is no look to apply."
+                       : "This profile carries no look, only a sensor characterisation."));
+
+    QSignalBlocker block(cameraProfileLookCheck);
+    cameraProfileLookCheck->setChecked(on != 0);
+}
+
+void DevelopProperties::setCameraProfileLook(bool on)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    const int v = on ? 1 : 0;
+    if (s.scopes[0].params.cameraProfileLook == v) return;
+    s.scopes[0].params.cameraProfileLook = v;   // always scope 0, whichever is active
+    noteScopeEdit("Global", "Profile look", on ? "On" : "Off", "global/cameraProfileLook");
+    emit paramsChanged();
+}
+
 void DevelopProperties::setCameraProfile(const QString &name)
 {
     if (currentImagePath.isEmpty()) return;
@@ -4341,6 +4417,7 @@ void DevelopProperties::setCameraProfile(const QString &name)
     noteScopeEdit("Global", "Profile",
                   name.isEmpty() ? QString(kBuiltInProfileLabel) : name,
                   "global/cameraProfile");
+    refreshCameraProfileLookCheck();     // a different profile may have no look to switch
     emit paramsChanged();
 }
 
@@ -4351,6 +4428,7 @@ void DevelopProperties::setCameraProfile(const QString &name)
 void DevelopProperties::refreshCameraProfileRow()
 {
     repopulateCameraProfileCombo();
+    refreshCameraProfileLookCheck();
 }
 
 void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
@@ -5800,6 +5878,9 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "calBlue")      return p.calBlueHue  != def.calBlueHue ||
                                       p.calBlueSat  != def.calBlueSat;
     if (key == "viewTransform") return p.viewTransform != def.viewTransform;
+    /* One leaf, two params -- the panel treats them as one control, the same way Grain
+       folds amount + size + roughness. The toggle alone is not a change worth capturing:
+       it does nothing without a profile to switch. */
     if (key == "cameraProfile") return p.cameraProfile != def.cameraProfile;
     if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
                                       p.gradeShadowLum != def.gradeShadowLum;
@@ -5889,7 +5970,10 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("calBlueSat", p.calBlueSat);
     }
     if (lk.contains("viewTransform")) out.insert("viewTransform", p.viewTransform);
-    if (lk.contains("cameraProfile")) out.insert("cameraProfile", p.cameraProfile);
+    if (lk.contains("cameraProfile")) {
+        out.insert("cameraProfile", p.cameraProfile);
+        out.insert("cameraProfileLook", p.cameraProfileLook);
+    }
     if (lk.contains("gradeShadow")) {
         out.insert("gradeShadowHue", p.gradeShadowHue);
         out.insert("gradeShadowSat", p.gradeShadowSat);
@@ -6697,6 +6781,7 @@ struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
     {"viewTransform", &EditParams::viewTransform},
+    {"cameraProfileLook", &EditParams::cameraProfileLook},
     {"denoiseRaw", &EditParams::denoiseRaw},
 };
 

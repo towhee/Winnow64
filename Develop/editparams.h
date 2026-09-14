@@ -172,6 +172,30 @@ struct EditParams {
     */
     QString cameraProfile;
 
+    /*
+        WHETHER THE PROFILE'S LOOK IS APPLIED as well as its colorimetry. 1 = yes (the
+        default), 0 = no. An int rather than a bool so it rides the existing int machinery
+        (kIntFields, the preset round trip, sanitizeParams) instead of being the only bool
+        in the struct.
+
+        A profile file holds two different things. Its MATRIX and HueSatMap characterise
+        the sensor -- how this camera sees -- and are applied whenever the profile is
+        selected. Its LookTable, tone curve and BaselineExposureOffset are an artistic
+        grade the profile's author chose, which is what makes "Camera Vivid" vivid. The
+        toggle separates them, so a camera-matching profile can be taken for its colour
+        science without its contrast and saturation coming along.
+
+        A SUB-MODIFIER, so NOT part of isIdentity(): it is inert while cameraProfile is
+        empty, and counting it would make every untouched image non-identity and write a
+        sidecar. Same rule as vignetteFeather and grainSize.
+
+        IT IS THE ONE PART OF A PROFILE THAT CHANGES BRIGHTNESS. The characterisation half
+        deliberately does not (a camera neutral renders to exactly (1,1,1) either way), but
+        a look assumes the exposure offset it was built at -- most profiles carry one -- so
+        turning this on is expected to move the image, not just re-point its colour.
+    */
+    int cameraProfileLook = 1;
+
     /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
        each ADDS a chroma tint of the given hue at the given saturation and NUDGES that
@@ -334,6 +358,7 @@ struct EditParams {
             p.toneHighlightCenter = def.toneHighlightCenter;
             p.viewTransform = def.viewTransform;
             p.cameraProfile = def.cameraProfile;
+            p.cameraProfileLook = def.cameraProfileLook;
             break;
         case Group::Curves:
             /* Every channel back to the diagonal. The tone splits are NOT reset here:

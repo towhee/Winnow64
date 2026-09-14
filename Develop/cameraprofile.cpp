@@ -220,7 +220,7 @@ HueSatMap::Table toHsmTable(const Dcp::Table3D &t)
 
 } // namespace
 
-bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
+bool tables(const Dcp::Profile &p, float kelvin, bool applyLook, Tables &out)
 {
     out = Tables();
 
@@ -235,9 +235,26 @@ bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
     const int warm = warmIsZero ? 0 : 1;
     const int cool = 1 - warm;
 
-    if (!HueSatMap::Blend(toHsmTable(p.cal[warm].hueSatMap),
-                          toHsmTable(p.cal[cool].hueSatMap), r.weight, out.hueSatMap))
-        return false;                           // no HueSatMap on either calibration
+    /* The baseline correction. Absent on every creative profile, which is fine -- the look
+       below may still give this stage something to do. */
+    HueSatMap::Blend(toHsmTable(p.cal[warm].hueSatMap),
+                     toHsmTable(p.cal[cool].hueSatMap), r.weight, out.hueSatMap);
+
+    /*
+        THE LOOK. Unlike the HueSatMap the LookTable is a SINGLE tag, not one per
+        illuminant -- a creative grade is not a function of the light -- so there is
+        nothing to blend.
+    */
+    if (applyLook) {
+        out.lookTable = toHsmTable(p.lookTable);
+        ProfileTone::Build(p.toneCurve, out.toneCurve);
+        if (p.baselineExposureOffset != 0.0f)
+            out.exposureScale = std::exp2(p.baselineExposureOffset);
+    }
+
+    if (out.hueSatMap.isEmpty() && out.lookTable.isEmpty() &&
+        out.toneCurve.isEmpty() && out.exposureScale == 1.0f)
+        return false;                           // nothing per-pixel to do
 
     double workWhite[3];
     ColorSpaceMath::whiteOf(ColorSpaceMath::kWorking, workWhite);

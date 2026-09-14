@@ -3376,7 +3376,7 @@ Phasing: 1 WorkingImage + split RawColor at linear + InputTransform/OutputTransf
 
 ⏺⏺ Develop / Image Edit (Parametric Adjustments) > Architecture > Camera Profiles (DCP) -- Phase 4 Plan
 
-Slices 1 and 2 are BUILT (2026-09-13); slices 3 and 4 are not. See "Where Camera Profiles Live in the Panel" above for the UI placement. This section records what a Lightroom camera profile actually IS, so the implementation is read off the DNG spec rather than guessed, and it splits the work into four slices each of which is shippable on its own.
+ALL FOUR SLICES ARE BUILT (2026-09-13). See "Where Camera Profiles Live in the Panel" above for the UI placement. This section records what a Lightroom camera profile actually IS, so the implementation is read off the DNG spec rather than guessed, and it splits the work into four slices each of which is shippable on its own.
 
 WHAT A LIGHTROOM PROFILE IS. A DCP -- DNG Camera Profile -- a small TIFF-structured file built out of DNG tag numbers, or the same tags embedded directly in a DNG. It is NOT an ICC profile: an ICC input profile characterises a camera under ONE illuminant, whereas a DCP carries TWO calibrations and interpolates between them at render time using the shot's own white balance. That single difference is why a DCP tracks mixed and unusual lighting better, and it is why Lightroom's Profile control and its Temp slider are coupled.
 
@@ -3457,7 +3457,7 @@ THE TWO GREYED REASONS ARE NOT INTERCHANGEABLE, and both are inline in the value
 
 A PROFILE COUNTS AS AN EDIT. cameraProfile is part of EditParams::isIdentity(), so choosing one makes the image non-identity and it renders, persists and shows the edited marker; the empty default keeps an untouched raw identity, writing no sidecar and leaving its devPreview key where it has always been. paramsToJson OMITS the key when empty for the same reason.
 
-STILL OPEN: a preferences page for the profile folders (the roots are code today, and CameraProfileStore::roots() is public so a page can list them); profiles embedded in a DNG (parseIfd is ready, nothing calls it); and slices 3 and 4 below, which are the lookup tables. Note what that means today -- the matrix half of a profile is applied and the tables are not, so an "Adobe Standard" rendering is its colorimetry WITHOUT its HueSatMap correction, and a "Camera Vivid" is NOT yet the camera's look. That is a real gap, not a rounding error, and it is why the built-in entry stays the default.
+STILL OPEN: a preferences page for the profile folders (the roots are code today, and CameraProfileStore::roots() is public so a page can list them), and profiles embedded in a DNG (parseIfd is ready, nothing calls it).
 
 SLICE 3 -- HueSatMap. DONE 2026-09-13 (Develop/huesatmap.h, the table resolution in Develop/cameraprofile.cpp, the pass in Develop::ApplyProfileTables; tests/unit/tst_huesatmap.cpp). This is the part a 3x3 cannot carry -- the residual metameric error Adobe bakes into a 3-D HSV table -- and it is what makes "Adobe Standard" look like Adobe Standard rather than like a bare matrix.
 
@@ -3477,9 +3477,37 @@ STAGE 0 IS SPENT AFTER ONE Apply, AND THAT HAD TO BE MADE EXPLICIT. The scope co
 
 MEASURED (M4, 24 MP synthetic, Canon EOS 77D Adobe Standard, 90 x 30 x 1): the pass costs 38-45 ms at full resolution and 5-6 ms at the 2.8 MP proxy an interactive drag actually renders. The proxy number is the one that matters for interactivity and it is well inside a frame. A profile with NO HueSatMap pays nothing -- ProfileTablesActive is a structural test, not a table build, and the matrix stays folded into preMat.
 
-WHAT IS ACTUALLY INSTALLED, measured over the sampled profiles: 33 of ~120 carry a HueSatMap, and all of those are the "Adobe Standard" family; every creative "Camera *" profile carries a LookTable and no HueSatMap. Dimensions seen: 8x2x1, 36x10x1, 90x25x1, 90x30x1 -- valDivs is 1 on every installed HueSatMap, so they are all effectively 2-D, while LookTables run to 90x16x16. The practical consequence is that an Adobe Standard rendering is NOW complete (matrix plus its colorimetric correction) while a "Camera Vivid" is still only its colorimetry -- its look lives entirely in the LookTable, which is slice 4.
+WHAT IS ACTUALLY INSTALLED, measured over the sampled profiles: 33 of ~120 carry a HueSatMap, and all of those are the "Adobe Standard" family; every creative "Camera *" profile carries a LookTable and no HueSatMap. Dimensions seen: 8x2x1, 36x10x1, 90x25x1, 90x30x1 -- valDivs is 1 on every installed HueSatMap, so they are all effectively 2-D, while LookTables run to 90x16x16. The practical consequence is that the two profile families are completed by DIFFERENT slices: an Adobe Standard rendering is finished by this one (matrix plus its colorimetric correction), while a "Camera Vivid" has no HueSatMap at all and is finished by slice 4, whose LookTable is where its entire look lives.
 
-SLICE 4 -- LookTable and ProfileToneCurve, ONLY IF camera-matching looks are wanted. This collides with the Tone mapping combo and with the Curves panel, so the default position is to load the colorimetric base and IGNORE the look stage, honouring the TWO ROWS, NOT ONE decision above: a look is a third thing, later in the pipeline, and it gets its own control or none. Revisit only after slices 1-3 are in the app and judged.
+SLICE 4 -- LookTable + ProfileToneCurve. DONE 2026-09-13, WITH A TOGGLE (Develop/profiletone.h, the look half of CameraProfile::tables, the "Look" checkbox on the Profile row; EditParams::cameraProfileLook).
+
+WHY A TOGGLE RATHER THAN EITHER EXTREME. A .dcp holds two different things. Its MATRIX and HueSatMap characterise the sensor -- how this camera sees -- and are applied whenever the profile is selected. Its LookTable, ProfileToneCurve and BaselineExposureOffset are an artistic grade its author chose, which is what makes "Camera Vivid" vivid. Applying the look unconditionally would mean a camera profile's colour science could not be taken without its contrast and saturation; never applying it means the Profile dropdown OFFERS "Camera Vivid" and renders something that is not Camera Vivid, which is a trap. The checkbox separates them, defaults ON so a chosen profile renders complete, and is greyed with its reason on a profile that has no look to switch (the built-in entry, and most "Adobe Standard" profiles).
+
+THIS IS NOT THE CREATIVE-LOOK CONTROL the TWO ROWS, NOT ONE decision above reserves a separate row for. It switches part of the profile already chosen. A look from somewhere else -- a .cube, a look shipped on its own -- is still a third thing and would still get its own control.
+
+WHAT THE LOOK COSTS IN BRIGHTNESS, deliberately. 224 of 436 sampled profiles carry a non-zero BaselineExposureOffset -- the exposure the look assumes it is applied at -- so omitting it would render most looks a fraction of a stop off. It is therefore applied WITH the look and only with it, which is what keeps "a profile changes colour, not brightness" true of the characterisation half while the look half is openly expected to move the image. BaselineExposure (tag 50730, a per-CAMERA value rather than a per-look one) is parsed and deliberately NOT applied: it would move exposure for the colorimetry-only case and break that invariant.
+
+THE ORDER WITHIN THE PROFILE STAGE, and it is not interchangeable:
+
+  1 HueSatMap    the colorimetric correction -- part of the characterisation
+  2 exposure     2^BaselineExposureOffset, the offset the look was built at
+  3 tone curve   the look's contrast, applied to VALUE with hue and saturation held
+  4 LookTable    the look's grade
+
+THE LOOK TABLE RUNS LAST, AFTER THE TONE CURVE, because a LookTable has a REAL VALUE AXIS -- 90x16x16 is typical, against valDivs == 1 on every installed HueSatMap -- and was fitted against post-curve data. Run it on scene-linear values instead and most pixels sit at the bottom of that axis, so the value-dependent half of the grade is read from the wrong place. All four steps share ONE ProPhoto round trip, so the bracketing matrices cost the same whichever of them are live.
+
+THE TONE CURVE IS APPLIED TO VALUE, NOT PER CHANNEL. A curve run independently on R, G and B pulls colour toward the primaries as it steepens -- the familiar per-channel-curve hue shift, and a real defect in a control whose whole job is tone. Winnow applies it to V (the max channel) and scales the triple by the ratio, so hue and saturation come through untouched and it composes with the LookTable, which scales value in the same HSV frame. Above white the curve CONTINUES at the slope it ended with rather than stopping -- the same headroom decision as the HueSatMap's value axis, and for the same reason: a ProfileToneCurve is defined over 0..1 because DNG is display-referred, and clamping there would flatten every specular highlight the moment a look was switched on.
+
+WINNOW'S LOOK RENDERING IS NOT BIT-IDENTICAL TO ADOBE'S, and that is a stated divergence rather than an aspiration abandoned. The whole profile stage -- matrix, HueSatMap, exposure offset, curve, look -- runs BEFORE Exposure and the rest of Develop, so that Profile means "the starting colour" and every Winnow adjustment is something applied on top of it. Placing the look after Winnow's own tone controls instead would put a profile's grade on top of the user's edits and collide with the Tone mapping combo and the Curves panel, which is the collision this plan flagged from the start.
+
+MEASURED (M4, 2.8 MP proxy -- the resolution an interactive drag actually renders; a real Sony "Camera VV", LookTable 90x16x16 sRGB-encoded, 128-point curve):
+
+  look OFF, no HueSatMap      0.0 ms   the structural test skips the stage entirely
+  HueSatMap only (Adobe Std)  5-6 ms
+  look ON, as first written   21.4 ms
+  look ON, after the fix      13.4 ms
+
+THE FIX WAS THE sRGB TRANSFER, and it was found by splitting the number rather than guessing at it. 247 of the 434 installed LookTables declare the sRGB encoding, and the round trip is SIX pow() calls per pixel. Forcing the transfer linear dropped 21.4 ms to 10.5, so the transfer was HALF the cost of the whole stage while the tone curve and the value axis measured as free. Tabling it (16384 samples, linear reads) brought the real case to 13.4 ms. Note what happened next: with pow gone the tone curve then measured at ~3 ms, having been invisible behind it -- the same lesson as "split a number before optimising anything behind it". The table SIZE was measured too: 4096 samples give a worst error of 1.6e-5, just OVER one 16-bit level, and 16384 gives 2.4e-6 for 131 KB and no measurable time.
 
 DECISIONS SETTLED BEFORE BUILDING, not after a bug report:
 

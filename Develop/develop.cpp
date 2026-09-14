@@ -1,6 +1,7 @@
 #include "Develop/develop.h"
 #include "Develop/cameraprofile.h"
 #include "Develop/huesatmap.h"
+#include "Develop/profiletone.h"
 #include "Develop/colorspace.h"
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
@@ -379,12 +380,16 @@ bool Develop::InputMatrix(const WorkingImage &img, const EditParams *p,
 bool Develop::ProfileTablesActive(const WorkingImage &img, const EditParams &p)
 {
     if (!img.cam.valid || !img.cam.profile) return false;
-    /* Cheap structural test -- does either calibration carry a HueSatMap at all -- rather
-       than building the blended table, because this is asked on every render to choose the
-       route and most profiles (every creative "Camera *" one) have no HueSatMap. */
-    Q_UNUSED(p)
-    return !img.cam.profile->cal[0].hueSatMap.isEmpty() ||
-           !img.cam.profile->cal[1].hueSatMap.isEmpty();
+    const Dcp::Profile &d = *img.cam.profile;
+    /* A cheap STRUCTURAL test -- does the profile carry anything per-pixel at all -- rather
+       than building the tables, because this is asked on every render to choose the route.
+       A creative profile has no HueSatMap and a camera-matching one usually has no look,
+       so one of the two halves is normally absent. */
+    if (!d.cal[0].hueSatMap.isEmpty() || !d.cal[1].hueSatMap.isEmpty()) return true;
+    if (p.cameraProfileLook != 0 &&
+        (!d.lookTable.isEmpty() || !d.toneCurve.empty() || d.baselineExposureOffset != 0.0f))
+        return true;
+    return false;
 }
 
 void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
@@ -401,20 +406,24 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
     WhiteBalance::resolve(img.cam, p.temp, p.tint, kelvin, tint);
 
     CameraProfile::Tables t;
-    if (!CameraProfile::tables(*img.cam.profile, kelvin, t) || !t.active) return;
+    if (!CameraProfile::tables(*img.cam.profile, kelvin, p.cameraProfileLook != 0, t) ||
+        !t.active) return;
 
     /* Everything constant for the render is resolved HERE, once: the two illuminants'
-       tables are blended into one (so the lookup is eight taps, not sixteen) and the two
-       bracketing matrices are folded 3x3s. The per-pixel work is two matrix multiplies,
-       an HSV round trip and one trilinear lookup. */
-    const HueSatMap::Table &tbl = t.hueSatMap;
+       HueSatMaps are blended into one (so the lookup is eight taps, not sixteen), the tone
+       curve is sampled into a 1-D table, and the two bracketing matrices are folded 3x3s.
+       ONE ProPhoto round trip covers all four stages below, whichever of them are live. */
+    const HueSatMap::Table &hsm  = t.hueSatMap;
+    const HueSatMap::Table &look = t.lookTable;
+    const ProfileTone::Lut &tone = t.toneCurve;
+    const float gain = t.exposureScale;
     float to[3][3], fr[3][3];
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) { to[i][j] = t.toTable[i][j]; fr[i][j] = t.fromTable[i][j]; }
 
     float *rgb = img.rgb.data();
     const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
-    parallelFor(n, [=, &tbl](size_t i0, size_t i1) {
+    parallelFor(n, [=, &hsm, &look, &tone](size_t i0, size_t i1) {
         for (size_t i = i0; i < i1; ++i) {
             float *px = rgb + i * 3;
             const float r = px[0], g = px[1], b = px[2];
@@ -422,7 +431,25 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
             float pg = to[1][0] * r + to[1][1] * g + to[1][2] * b;
             float pb = to[2][0] * r + to[2][1] * g + to[2][2] * b;
 
-            HueSatMap::Apply(tbl, pr, pg, pb);
+            /*
+                THE ORDER WITHIN THE PROFILE STAGE, and each step depends on the one
+                before it:
+                  1 HueSatMap  the colorimetric correction -- part of the characterisation
+                  2 exposure   the offset the look was built at
+                  3 tone curve the look's contrast, on value, hue and saturation held
+                  4 LookTable  the look's grade
+
+                THE LOOK TABLE RUNS LAST, AFTER THE TONE CURVE, and that is not
+                interchangeable: a LookTable has a real value axis (90x16x16 is typical,
+                against valDivs == 1 on every installed HueSatMap) and it was fitted
+                against post-curve data. Run it on scene-linear values instead and most
+                pixels sit at the bottom of that axis, so the value-dependent half of the
+                grade is read from the wrong place.
+            */
+            HueSatMap::Apply(hsm, pr, pg, pb);
+            if (gain != 1.0f) { pr *= gain; pg *= gain; pb *= gain; }
+            ProfileTone::ApplyToValue(tone, pr, pg, pb);
+            HueSatMap::Apply(look, pr, pg, pb);
 
             px[0] = fr[0][0] * pr + fr[0][1] * pg + fr[0][2] * pb;
             px[1] = fr[1][0] * pr + fr[1][1] * pg + fr[1][2] * pb;
