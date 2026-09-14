@@ -192,4 +192,91 @@ bool camToWorking(const Dcp::Profile &p, float kelvin, float tint, float out[3][
     return true;
 }
 
+/*
+    LINEAR ProPhoto RGB (ROMM), whose white IS D50 -- the space the DNG specification
+    applies both profile lookup tables in. Written out here rather than added to
+    ColorSpaceMath::ColorSpace because every space in that enum is D65 by design; see the
+    note on Tables in the header.
+*/
+namespace {
+
+constexpr Matrix3 kProPhotoToXyzD50 = {{
+    {0.7976749, 0.1351917, 0.0313534},
+    {0.2880402, 0.7118741, 0.0000857},
+    {0.0000000, 0.0000000, 0.8252100}
+}};
+
+HueSatMap::Table toHsmTable(const Dcp::Table3D &t)
+{
+    HueSatMap::Table out;
+    if (t.isEmpty()) return out;
+    out.hueDivs = t.hueDivs;
+    out.satDivs = t.satDivs;
+    out.valDivs = t.valDivs;
+    out.encoding = t.encoding;
+    out.v = t.v;
+    return out;
+}
+
+} // namespace
+
+bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
+{
+    out = Tables();
+
+    Resolved r;
+    if (!resolve(p, kelvin, r)) return false;
+
+    /* The tables are interpolated with the SAME weight the matrices were, and the warm /
+       cool ordering has to match too -- resolve() reports which calibration is which by
+       temperature, not by the order the file lists them in. */
+    const bool warmIsZero =
+        Dcp::illuminantKelvin(p.cal[0].illuminant) <= Dcp::illuminantKelvin(p.cal[1].illuminant);
+    const int warm = warmIsZero ? 0 : 1;
+    const int cool = 1 - warm;
+
+    if (!HueSatMap::Blend(toHsmTable(p.cal[warm].hueSatMap),
+                          toHsmTable(p.cal[cool].hueSatMap), r.weight, out.hueSatMap))
+        return false;                           // no HueSatMap on either calibration
+
+    double workWhite[3];
+    ColorSpaceMath::whiteOf(ColorSpaceMath::kWorking, workWhite);
+
+    /*
+        THE DESTINATION WHITE COMES FROM ProPhoto's OWN MATRIX -- its RGB->XYZ row sums --
+        NOT from the published D50 triple, for exactly the reason the working-space hop
+        takes its white the same way: only then does a neutral land on EXACTLY neutral.
+
+        The two differ in the fourth decimal (ProPhoto's rows sum to 0.96422 / 1 / 0.82521
+        against D50's 0.9642 / 1 / 0.8249), which sounds ignorable and is not. A neutral
+        that arrives 3e-4 off neutral has a small but non-zero SATURATION, and the table's
+        saturation == 0 slice -- the one that is exactly identity, and the reason a profile
+        cannot tint greys -- is then no longer the slice being read. Measured before this
+        was fixed: real profiles moved a neutral by 1.5e-4, fifteen times the tolerance
+        this is asserted at.
+    */
+    double proPhotoWhite[3];
+    for (int i = 0; i < 3; ++i)
+        proPhotoWhite[i] = kProPhotoToXyzD50.m[i][0] + kProPhotoToXyzD50.m[i][1]
+                         + kProPhotoToXyzD50.m[i][2];
+
+    Matrix3 proPhotoFromXyz;
+    if (!inverse(kProPhotoToXyzD50, proPhotoFromXyz)) return false;
+
+    /* working -> XYZ(working white) -> XYZ(ProPhoto's white) -> linear ProPhoto. */
+    const Matrix3 to = multiply(proPhotoFromXyz,
+                          multiply(ColorSpaceMath::adapt(workWhite, proPhotoWhite),
+                                   ColorSpaceMath::rgbToXyz(ColorSpaceMath::kWorking)));
+    Matrix3 from;
+    if (!inverse(to, from)) return false;
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) {
+            out.toTable[i][j]   = float(to.m[i][j]);
+            out.fromTable[i][j] = float(from.m[i][j]);
+        }
+    out.active = true;
+    return true;
+}
+
 } // namespace CameraProfile

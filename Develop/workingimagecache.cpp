@@ -237,6 +237,7 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     develop.Apply(developed, edit, timings ? &stage : nullptr);
     if (timings) {
         timings->developMs = t.restart();
+        timings->profileMs = stage.profileMs;
         timings->denoiseMs = stage.denoiseMs;
         timings->pointMs   = stage.pointMs;
         timings->textureMs = stage.textureMs;
@@ -327,7 +328,10 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
                          && size_t(resume->prefix->width) * size_t(resume->prefix->height) == n;
     if (resumed) {
         assignReusing(acc, *resume->prefix);
-        attachProfile(acc, base);
+        /* NO attachProfile here. The prefix is the accumulator as it stood AFTER the base
+           develop, so stage 0 -- the profile's matrix and its HueSatMap -- is already in
+           these pixels. Attaching the profile again would hand it to the scope layers
+           below, which re-apply it. See the note at the end of Develop::Apply. */
         if (timings) timings->stackCopyMs += sub.restart();
         first = resume->start;
     }

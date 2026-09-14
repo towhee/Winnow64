@@ -26,6 +26,15 @@ profiles installed.  Winnow does not ship profiles &mdash; they belong to whoeve
 them &mdash; it reads the ones you already have, and any you put in Winnow&rsquo;s own
 <tt>CameraProfiles</tt> folder.</p>
 
+<p>A profile is a matrix plus a correction table.  The matrix is the bulk of it; the table
+fixes what a matrix cannot, because a sensor&rsquo;s error is not linear.  Winnow applies
+both, so an <b>Adobe Standard</b> profile renders in full.</p>
+
+<p>The <b>Camera&nbsp;&hellip;</b> profiles are a different thing: their look lives in a
+second table that Winnow does not apply yet, so choosing <b>Camera Vivid</b> today gives you
+that profile&rsquo;s <i>colour science</i> but not its <i>look</i> &mdash; it will not match
+the camera&rsquo;s own JPEG.  That is why <b>Winnow Standard</b> is still the default.</p>
+
 <p>A profile carries two calibrations, one under tungsten light and one under daylight, and
 Winnow blends between them according to the temperature you have dialled.  That is why
 <b>changing the profile changes what a given Temp value means</b>: white balance is solved
