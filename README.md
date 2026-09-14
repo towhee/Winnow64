@@ -6,8 +6,11 @@ Winnow is a image viewer that runs on both a Mac or PC.  The primary objective o
 Winnow has grown a bit.
 
   •  Library with keywording (in development)
+  
   •  Develop module (in development)
+  
   •  Focus stack module
+  
   •  Framing module
   
 The Winnow site is here: http://winnow.ca
