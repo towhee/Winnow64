@@ -1,6 +1,7 @@
 #ifndef EDITPARAMS_H
 #define EDITPARAMS_H
 
+#include <QString>
 #include "Develop/tonecurve.h"
 
 /*
@@ -56,9 +57,10 @@ struct EditParams {
        (x, y) in the PERCEPTUAL 0..1 domain, ordered by x with both endpoints pinned at
        x = 0 and x = 1 (y free, which is what gives the black-/white-point moves).
 
-       Fixed-size arrays rather than a container so operator== stays defaulted, the struct
-       stays trivially copyable for the per-render / per-history-snapshot copies, and
-       EditStack::sanitizeParams stays purely numeric. curveN[c] == 2 with the diagonal
+       Fixed-size arrays rather than a container so operator== stays defaulted, the copies
+       this struct takes per render and per history snapshot stay cheap, and
+       EditStack::sanitizeParams stays purely numeric. (cameraProfile below is the one
+       non-scalar member; a QString copy is a refcount, so the cost argument holds.) curveN[c] == 2 with the diagonal
        is identity, and the defaults below are exactly that -- so an untouched image
        writes no sidecar. UNLIKE the tone splits above, the curve IS a primary control
        and so DOES count towards isIdentity(). Maths, repair and the shared string
@@ -139,6 +141,36 @@ struct EditParams {
        renumber. Identity is None (0): no tone mapping, which is what an untouched image
        renders as and what Reset Basic restores. */
     int   viewTransform = 0;
+
+    /*
+        THE CAMERA PROFILE (the first row of the Basic panel) -- which characterisation of
+        the SENSOR the raw is rendered through. Lightroom's Profile control: "Adobe
+        Standard", "Camera Vivid", and so on. Empty is the default and means Winnow's
+        own built-in matrix, which is what every image rendered with before profiles
+        existed -- so an untouched image is identity and writes no sidecar.
+
+        STORED BY NAME, NOT BY PATH. A profile lives in the Adobe install, or in Winnow's
+        own folder, and the path to it differs per machine and per Adobe version; the name
+        plus the image's own camera model resolves it wherever it is. A name that no longer
+        resolves (a profile uninstalled, or a sidecar carried from another machine) renders
+        with the built-in matrix and SAYS SO in the panel -- see the greyed-reason rule --
+        rather than silently rendering as though nothing had been chosen.
+
+        RAW ONLY. A rendered JPEG has no sensor to characterise (cam.valid is false), and
+        the Apple Core Image decoder has already applied a profile of its own, so the row
+        is disabled with its reason in both cases.
+
+        NOT A DEVELOP OP in the usual sense: it replaces stage 0, the camera-native ->
+        working matrix, and it CARRIES THE WHITE BALANCE with it -- under DNG the chosen
+        white sets the matrix rather than a gain in front of it. buildPointCoeffs therefore
+        drops the per-channel WB gains on this path; applying both would white-balance
+        twice. See Develop/cameraprofile.h.
+
+        Like viewTransform it is a WHOLE-IMAGE property: only scope 0 is read, and the
+        panel always writes scope 0 whatever scope is active. A profile characterises the
+        camera, and one part of a picture cannot have been taken by a different one.
+    */
+    QString cameraProfile;
 
     /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
@@ -301,6 +333,7 @@ struct EditParams {
             p.toneCrossover = def.toneCrossover;
             p.toneHighlightCenter = def.toneHighlightCenter;
             p.viewTransform = def.viewTransform;
+            p.cameraProfile = def.cameraProfile;
             break;
         case Group::Curves:
             /* Every channel back to the diagonal. The tone splits are NOT reset here:
@@ -375,7 +408,7 @@ struct EditParams {
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&
                calBlueHue == 0.0f && calBlueSat == 0.0f &&
-               viewTransform == 0 &&
+               viewTransform == 0 && cameraProfile.isEmpty() &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
                gradeShadowSat == 0.0f && gradeShadowLum == 0.0f &&
                gradeMidSat == 0.0f && gradeMidLum == 0.0f &&

@@ -161,6 +161,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 auto cleanProg = [&stage](int d, int t) { stage(0, 250, d, t); };
                 if (cleanDemosaic.Run(raw, rgbClean, Demosaic::Bilinear, abort, cleanProg) &&
                     cleanColor.ToCameraNative(raw, rgbClean, *cleanWork)) {
+                    cleanWork->cam.cameraModel = m.model;
                     *outClean = cleanWork;
                 }
                 if (aborted()) { errMsg = "Aborted"; return false; }
@@ -189,6 +190,11 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             errMsg = "Colour conversion failed.";
             return false;
         }
+        /* The camera profile a render may later select is found by MODEL, and nothing
+           downstream of here knows the file -- WorkingImageCache hands back an image with
+           no path attached. RawColor cannot fill it: it is handed the RawImage, not the
+           metadata. See CameraColor::cameraModel. */
+        work->cam.cameraModel = m.model;
 
         /* Developed display/export base for a saved "Denoise raw" edit (the normal cache decode,
            denoiseRaw == false; the denoiseRaw path already put the full-strength result in *work).
@@ -213,6 +219,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 WorkingImage pmridWork;
                 if (demosaic.Run(rawDen, rgbDen, Demosaic::Bilinear, abort) &&
                     color.ToCameraNative(rawDen, rgbDen, pmridWork)) {
+                    pmridWork.cam.cameraModel = m.model;
                     denoisedBase = std::make_shared<WorkingImage>();
                     Develop::BlendRawDenoise(*work, pmridWork, edit->denoiseLuma,
                                              edit->denoiseChroma, *denoisedBase);

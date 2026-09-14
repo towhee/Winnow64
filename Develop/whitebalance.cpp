@@ -111,12 +111,8 @@ void applyTint(double &x, double &y, double tint)
    carried through the same chain the decode used. */
 bool renderIlluminant(const CameraColor &cam, double kelvin, double tint, double s[3])
 {
-    double x, y;
-    locusXY(kelvin, x, y);
-    applyTint(x, y, tint);
-    if (y < 1e-9) return false;
-
-    const double XYZ[3] = {x / y, 1.0, (1.0 - x - y) / y};
+    double XYZ[3];
+    if (!WhiteBalance::illuminantXYZ(float(kelvin), float(tint), XYZ)) return false;
 
     double camRaw[3];
     for (int i = 0; i < 3; ++i)
@@ -148,6 +144,18 @@ double greenOf (const double c[3]) { return std::log(c[1] / std::sqrt(c[0] * c[2
 } // namespace
 
 namespace WhiteBalance {
+
+bool illuminantXYZ(float kelvin, float tint, double xyz[3])
+{
+    double x, y;
+    locusXY(kelvin, x, y);
+    applyTint(x, y, tint);
+    if (y < 1e-9) return false;
+    xyz[0] = x / y;
+    xyz[1] = 1.0;
+    xyz[2] = (1.0 - x - y) / y;
+    return true;
+}
 
 QString presetName(Preset p)
 {

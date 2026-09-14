@@ -211,6 +211,60 @@ constexpr float luma(float r, float g, float b, ColorSpace s = kWorking)
     return w.r * r + w.g * g + w.b * b;
 }
 
+/*
+    CHROMATIC ADAPTATION (Bradford).
+
+    Every space named above is D65, deliberately, so that no adaptation hides inside the
+    ordinary pipeline -- see the note at the head of this file. This exists for the ONE
+    place a second white point is unavoidable: a DNG camera profile's ForwardMatrix lands
+    in XYZ at D50, because D50 is the DNG reference white, and that has to be carried to
+    the working space's own white before the primaries matrix can be applied. Nothing else
+    should call it; if a second adaptation appears in the pipeline, something has drifted.
+
+    Bradford rather than von Kries or XYZ scaling because it is what the DNG specification
+    uses, so a profile adapted here matches the renderer the profile was fitted against.
+*/
+constexpr Matrix3 kBradford = {{
+    { 0.8951,  0.2664, -0.1614},
+    {-0.7502,  1.7135,  0.0367},
+    { 0.0389, -0.0685,  1.0296}
+}};
+
+/* The DNG reference white, and the white of a space's own primaries (its RGB->XYZ row
+   sums, i.e. the XYZ of RGB (1,1,1)). Taking the destination white from the matrix rather
+   than from a published D65 triple is what makes a neutral land on EXACTLY (1,1,1). */
+constexpr double kWhiteD50[3] = {0.9642, 1.0, 0.8249};
+
+constexpr void whiteOf(ColorSpace s, double out[3])
+{
+    const Matrix3 m = rgbToXyz(s);
+    for (int i = 0; i < 3; ++i) out[i] = m.m[i][0] + m.m[i][1] + m.m[i][2];
+}
+
+/* The 3x3 adapting XYZ from one white point to another. */
+constexpr Matrix3 adapt(const double srcWhite[3], const double dstWhite[3])
+{
+    double inv[3][3];
+    if (!invert3x3(kBradford.m, inv)) return kIdentity3;
+
+    double s[3] = {0, 0, 0}, d[3] = {0, 0, 0};
+    for (int i = 0; i < 3; ++i)
+        for (int k = 0; k < 3; ++k) {
+            s[i] += kBradford.m[i][k] * srcWhite[k];
+            d[i] += kBradford.m[i][k] * dstWhite[k];
+        }
+
+    Matrix3 scale = kIdentity3;
+    for (int i = 0; i < 3; ++i)
+        scale.m[i][i] = (absd(s[i]) < 1e-12) ? 1.0 : d[i] / s[i];
+
+    Matrix3 invM{};
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) invM.m[i][j] = inv[i][j];
+
+    return multiply(invM, multiply(scale, kBradford));
+}
+
 /* Apply a row-major 3x3 in place. */
 inline void apply(const float m[3][3], float &r, float &g, float &b)
 {

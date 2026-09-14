@@ -1,4 +1,5 @@
 #include "Develop/Properties/developproperties.h"
+#include "Develop/cameraprofilestore.h"
 #include "Cache/devpreviewcache.h"
 #include "Develop/Properties/scopeheader.h"
 #include "Develop/Properties/rawpanel.h"
@@ -3716,6 +3717,19 @@ void DevelopProperties::addBasic()
        temperature in the first sixth of the track. Its gradient runs blue -> yellow with
        the value, which is right: a HIGHER Kelvin says the light was bluer, so the image
        renders warmer. Tint is +/-150, green -> magenta. See Develop/whitebalance.h. */
+    /*
+        THE CAMERA PROFILE heads the panel -- Lightroom's Profile slot, and for the same
+        reason: it characterises the CAMERA, and everything below it is an adjustment made
+        on top of that characterisation. It is not merely first by convention, it is first
+        by DEPENDENCY: white balance is solved against the camera matrix, so changing the
+        profile changes what a given Kelvin means (see Develop/cameraprofile.h).
+
+        Deliberately NOT paired with Tone mapping, which sits at the head of the tone group
+        further down. Profile governs the camera; Tone mapping governs the tone sliders.
+    */
+    addCameraProfileRow(parIdx);
+    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ProfileDivider");
+
     addWhiteBalanceRow(parIdx);
     addSlider("temp",       "Temp",       "Colour temperature of the light, in Kelvin.",
               parIdx, "BasicHeader",
@@ -4182,6 +4196,163 @@ void DevelopProperties::addCalibrate()
     DISABLED with the reason shown in place of the value, rather than left live and
     silently doing nothing.
 */
+/* ----------------------------------------------------------------------------------------
+   Camera profile (the first row of Basic)
+   ---------------------------------------------------------------------------------------- */
+
+/* The built-in entry: no DCP at all, the matrix Winnow has always used. Its DATA is the
+   empty string, which is EditParams::cameraProfile's identity -- so selecting it is a
+   reset, not a choice, and an untouched image writes no sidecar. */
+static const char *kBuiltInProfileLabel = "Winnow Standard";
+
+void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
+{
+    const bool raw = currentIsRaw();
+    const bool usingApple =
+        G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+    const bool available = raw && !usingApple;
+
+    clearItemInfo(i);
+    i.name = "cameraProfile";
+    i.parIdx = parIdx;
+    i.parentName = "BasicHeader";
+    i.captionText = "Profile";
+    i.tooltip = available
+        ? "How this camera's sensor is characterised -- the starting colour the "
+          "adjustments below are made on top of.\n"
+          "Winnow Standard: the built-in matrix.\n"
+          "Other entries are DNG camera profiles (.dcp) installed on this computer for "
+          "this camera.\n"
+          "Changing the profile changes what a given Temp value means, because white "
+          "balance is solved against the camera matrix."
+        : (raw ? "The Apple decoder applies its own camera profile before Winnow sees the "
+                 "image, so this control would do nothing. Switch Demosaic to Winnow to "
+                 "choose a profile."
+               : "Only raw files have a sensor to characterise. This file already carries "
+                 "the colour its camera rendered.");
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "cameraProfile";
+    i.delegateType = DT_None;       // we own the value cell
+    addItem(i);
+    setItemEnabled("cameraProfile", available);
+
+    const QModelIndex valIdx = findValueIndex("cameraProfile");
+    if (!valIdx.isValid()) return;
+
+    QWidget *cell = new QWidget;
+    cell->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *vhb = new QHBoxLayout(cell);
+    vhb->setContentsMargins(0, 0, 10, 0);
+    vhb->setSpacing(0);
+
+    if (!available) {
+        /*
+            THE REASON, IN THE VALUE CELL, and the two reasons are NOT interchangeable --
+            greyed control plus a brief inline reason, never a popup after the fact. A
+            JPEG has no sensor to characterise; the Apple decoder HAS a sensor but has
+            already applied a profile of its own before Winnow sees the pixels, and the
+            fix for that one is a setting the user can change.
+        */
+        QLabel *why = new QLabel(raw ? "Apple decoder" : "raw only");
+        why->setEnabled(false);
+        why->setAttribute(Qt::WA_TransparentForMouseEvents);
+        vhb->addWidget(why);
+        vhb->addStretch(1);
+        cameraProfileCombo = nullptr;
+        setIndexWidget(valIdx, cell);
+        return;
+    }
+
+    QComboBox *combo = new QComboBox;
+    combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    cameraProfileCombo = combo;
+    connect(combo, QOverload<int>::of(&QComboBox::activated), this,
+            [this, combo](int ix){ setCameraProfile(combo->itemData(ix).toString()); });
+    vhb->addWidget(combo);
+    setIndexWidget(valIdx, cell);
+
+    /*
+        The index is built on a background thread the first time anything asks for it
+        (~0.5 s over ~4400 installed profiles), so the combo is filled now with whatever
+        is known -- the built-in entry at least -- and refilled when the sweep lands. A
+        UniqueConnection because this row is rebuilt every time the tree is.
+    */
+    CameraProfileStore::instance().ensureIndex();
+    connect(&CameraProfileStore::instance(), &CameraProfileStore::indexChanged,
+            this, &DevelopProperties::repopulateCameraProfileCombo,
+            Qt::UniqueConnection);
+    repopulateCameraProfileCombo();
+}
+
+void DevelopProperties::repopulateCameraProfileCombo()
+{
+    if (!cameraProfileCombo) return;
+
+    QString stored;
+    if (!currentImagePath.isEmpty()) {
+        const EditStack &s = stackCache[currentImagePath];
+        if (!s.scopes.isEmpty()) stored = s.scopes[0].params.cameraProfile;
+    }
+
+    const QString model = mw ? mw->cameraModelFor(currentImagePath) : QString();
+    const QList<CameraProfileStore::Entry> found =
+        CameraProfileStore::instance().forModel(model);
+
+    QSignalBlocker block(cameraProfileCombo);
+    cameraProfileCombo->clear();
+    /* The built-in FIRST: it is the identity, so it heads the list the way every other
+       adjustment's identity sits at the start of its range. */
+    cameraProfileCombo->addItem(kBuiltInProfileLabel, QString());
+    for (const CameraProfileStore::Entry &e : found)
+        cameraProfileCombo->addItem(e.name, e.name);
+
+    if (stored.isEmpty()) { cameraProfileCombo->setCurrentIndex(0); return; }
+
+    int ix = cameraProfileCombo->findData(stored);
+    if (ix < 0) {
+        /*
+            A STORED PROFILE THAT NO LONGER RESOLVES -- uninstalled, or a sidecar carried
+            from another machine. It is shown, marked, and SELECTED rather than quietly
+            replaced by the built-in: the render falls back to the built-in matrix either
+            way, and the user is entitled to know which of those two things happened. The
+            stored name is kept intact (the item's DATA is still the bare name), so
+            re-installing the profile restores the picture rather than needing it
+            re-chosen.
+
+            Not added while the index is still building: "not installed" would be a lie
+            for the half-second before the sweep lands.
+        */
+        if (!CameraProfileStore::instance().indexReady()) return;
+        cameraProfileCombo->addItem(stored + "  (not installed)", stored);
+        ix = cameraProfileCombo->count() - 1;
+    }
+    cameraProfileCombo->setCurrentIndex(ix);
+}
+
+void DevelopProperties::setCameraProfile(const QString &name)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    if (s.scopes[0].params.cameraProfile == name) return;
+    s.scopes[0].params.cameraProfile = name;    // always scope 0, whichever is active
+    noteScopeEdit("Global", "Profile",
+                  name.isEmpty() ? QString(kBuiltInProfileLabel) : name,
+                  "global/cameraProfile");
+    emit paramsChanged();
+}
+
+/* Push the stored value back into the combo. The LIST can change with the image (a
+   different camera has different profiles), so this repopulates rather than just
+   re-selecting. Blocked throughout, so re-populating on an image change cannot look like
+   a user edit and write a history entry. */
+void DevelopProperties::refreshCameraProfileRow()
+{
+    repopulateCameraProfileCombo();
+}
+
 void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
 {
     const bool raw = currentIsRaw();
@@ -5520,7 +5691,13 @@ struct PresetLeafDef { const char *key; const char *label; };
    A leaf that folds several params in (white balance, a grade range, denoise, vignette,
    grain) is ONE tick -- the panel treats them as one control. */
 const PresetLeafDef kBasicLeaves[] = {
-    /* First, matching its position in the panel: it re-scopes everything below it. */
+    /* First, matching its position in the panel. A profile TRAVELS BY NAME, so a preset
+       carrying one only reproduces the look on a machine where that profile is installed
+       -- and on a DIFFERENT CAMERA it will not resolve at all. That is the honest
+       behaviour for a per-sensor characterisation: the alternative, silently dropping it,
+       would make the preset claim a colour rendering it did not deliver. */
+    {"cameraProfile", "Camera profile"},
+    /* Then Tone mapping: it re-scopes everything below it. */
     {"viewTransform", "Tone mapping"},
     {"whiteBalance", "White balance (Temp + Tint)"},
     {"exposure",     "Exposure"},
@@ -5623,6 +5800,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "calBlue")      return p.calBlueHue  != def.calBlueHue ||
                                       p.calBlueSat  != def.calBlueSat;
     if (key == "viewTransform") return p.viewTransform != def.viewTransform;
+    if (key == "cameraProfile") return p.cameraProfile != def.cameraProfile;
     if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
                                       p.gradeShadowLum != def.gradeShadowLum;
     if (key == "gradeMid")     return p.gradeMidSat != def.gradeMidSat ||
@@ -5711,6 +5889,7 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("calBlueSat", p.calBlueSat);
     }
     if (lk.contains("viewTransform")) out.insert("viewTransform", p.viewTransform);
+    if (lk.contains("cameraProfile")) out.insert("cameraProfile", p.cameraProfile);
     if (lk.contains("gradeShadow")) {
         out.insert("gradeShadowHue", p.gradeShadowHue);
         out.insert("gradeShadowSat", p.gradeShadowSat);
@@ -6528,6 +6707,17 @@ const IntField kIntFields[] = {
    the table does for the scalars. */
 constexpr const char *kCurvesField = "curves";
 
+/* The camera profile cannot go in kIntFields either -- it is a QString, and both tables
+   are built on scalar member pointers. Same treatment as the curve: one named
+   pseudo-field plus the differs/copy pair, wired into BOTH diffParamFields and
+   copyParamFields so the diff and the copy cannot drift apart.
+
+   It propagates across a multi-image selection like any other Basic control. Applying one
+   camera's profile to another camera's raw is not a hazard here: the name is resolved
+   per image against that image's OWN model, so it simply does not resolve, and the panel
+   marks it "(not installed)" rather than rendering something wrong. */
+constexpr const char *kProfileField = "cameraProfile";
+
 bool curvesDiffer(const EditParams &a, const EditParams &b)
 {
     for (int c = 0; c < ToneCurve::kChannels; ++c) {
@@ -6560,6 +6750,8 @@ QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const Edit
     for (const IntField &f : kIntFields)
         if (a.*(f.m) != b.*(f.m)) changed.insert(QString::fromLatin1(f.name));
     if (curvesDiffer(a, b)) changed.insert(QString::fromLatin1(kCurvesField));
+    if (a.cameraProfile != b.cameraProfile)
+        changed.insert(QString::fromLatin1(kProfileField));
     return changed;
 }
 
@@ -6571,6 +6763,7 @@ void DevelopProperties::copyParamFields(const EditParams &src, EditParams &dst,
     for (const IntField &f : kIntFields)
         if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
     if (fields.contains(QString::fromLatin1(kCurvesField))) copyCurves(src, dst);
+    if (fields.contains(QString::fromLatin1(kProfileField))) dst.cameraProfile = src.cameraProfile;
 }
 
 EditStack &DevelopProperties::stackFor(const QString &fPath)
@@ -6788,6 +6981,7 @@ void DevelopProperties::populateSlidersFromStack()
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
     refreshViewTransformRow();      // the Calibrate view-transform combo
+    refreshCameraProfileRow();      // the Profile combo (its LIST is per-camera)
     refreshPreviewButtons();        // sync the eye icons to this scope's Preview flags
     updateSectionHeaderCaptions();  // " *" on sections holding non-default values
 }

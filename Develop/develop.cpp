@@ -1,4 +1,5 @@
 #include "Develop/develop.h"
+#include "Develop/cameraprofile.h"
 #include "Develop/colorspace.h"
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
@@ -339,19 +340,51 @@ inline void shapeAndFoldLuma(WorkingImage &img, const float *yp, const float *yl
 }
 }
 
-void Develop::ToWorkingSpace(WorkingImage &img)
+bool Develop::InputMatrix(const WorkingImage &img, const EditParams *p,
+                         float m[3][3], bool &wbIncluded)
+{
+    wbIncluded = false;
+    if (!img.cam.valid) return false;
+
+    /*
+        A CAMERA PROFILE replaces this whole stage. Under DNG the chosen white picks the
+        interpolation weight between the profile's two calibrations AND sets the white
+        balance inside the matrix, so the matrix is re-derived per temperature -- which is
+        why the caller is told the white balance is already in it. See
+        Develop/cameraprofile.h.
+
+        A profile that fails to build (a corrupt file, a singular matrix) falls through to
+        the built-in path rather than failing the render: the picture is then rendered the
+        way it was before a profile was chosen, which is wrong-but-recognisable rather
+        than absent. The panel is what tells the user, from the same resolve.
+    */
+    if (img.cam.profile) {
+        float kelvin = 0.0f, tint = 0.0f;
+        WhiteBalance::resolve(img.cam, p ? p->temp : 0.0f, p ? p->tint : 0.0f, kelvin, tint);
+        if (CameraProfile::camToWorking(*img.cam.profile, kelvin, tint, m)) {
+            wbIncluded = true;
+            return true;
+        }
+    }
+
+    /* The built-in path: camToWorking . diag(asShotMul). Scaling a matrix's COLUMN j by
+       asShotMul[j] is what right-multiplying by a diagonal does. */
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            m[i][j] = img.cam.camToWorking[i][j] * img.cam.asShotMul[j];
+    return true;
+}
+
+void Develop::ToWorkingSpace(WorkingImage &img, const EditParams *p)
 {
     if (img.space != ColorSpaceMath::ColorSpace::CameraNative) return;
     if (!img.isValid()) return;
 
-    /* camToWorking . diag(asShotMul), the same product buildPointCoeffs folds into
-       preMat. An invalid characterisation leaves the pixels alone and just re-tags:
-       an unknown camera renders approximately rather than not at all. */
+    /* An invalid characterisation leaves the pixels alone and just re-tags: an unknown
+       camera renders approximately rather than not at all. */
     float m[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};
-    if (img.cam.valid) {
-        for (int i = 0; i < 3; ++i)
-            for (int j = 0; j < 3; ++j)
-                m[i][j] = img.cam.camToWorking[i][j] * img.cam.asShotMul[j];
+    bool wbIncluded = false;
+    if (InputMatrix(img, p, m, wbIncluded)) {
 
         float *rgb = img.rgb.data();
         const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
@@ -378,7 +411,7 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
        conversion has to happen here as its own pass; otherwise it is left to
        buildPointCoeffs, which folds it into preMat for free. */
     const bool denoiseActive = (p.localDenoiseLuma > 0.0f || p.localDenoiseChroma > 0.0f);
-    if (p.isIdentity() || denoiseActive) ToWorkingSpace(img);
+    if (p.isIdentity() || denoiseActive) ToWorkingSpace(img, &p);
 
     if (p.isIdentity()) return true;    // nothing to do; serve image as-is
 
@@ -927,7 +960,20 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
        are linear multiplies, so they commute and the fused pass applies one multiply
        per channel. */
     float wbGain[3] = {1.0f, 1.0f, 1.0f};
-    if (p.temp > 0.0f || p.tint != 0.0f) {
+    /*
+        A CAMERA PROFILE CARRIES THE WHITE BALANCE, so there are no gains to apply here:
+        under DNG the chosen white sets diag(1/referenceNeutral) INSIDE the input matrix
+        (see Develop/cameraprofile.h). Applying the gains as well would white-balance
+        twice -- which looks like a plausible, slightly-too-warm picture rather than like
+        a bug.
+
+        Tested on cam.profile rather than on the image's space tag, because by the time an
+        active local Denoise has run ToWorkingSpace the pixels are already converted and
+        the tag no longer says where they came from -- but the profile is still on `cam`,
+        which is exactly why ToWorkingSpace leaves it there.
+    */
+    const bool profileHasWb = img.cam.valid && img.cam.profile != nullptr;
+    if (!profileHasWb && (p.temp > 0.0f || p.tint != 0.0f)) {
         float kelvin, tint;
         WhiteBalance::resolve(img.cam, p.temp, p.tint, kelvin, tint);
         WhiteBalance::relativeGains(img.cam, kelvin, tint, wbGain);
@@ -1049,22 +1095,26 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
         For camera-native input (a raw that RawColor deliberately left unconverted) the
         first three stages are all linear:
 
-            camToWorking . diag(asShotMul)   the input profile -- what the decoder used
+            InputMatrix                      the input profile -- what the decoder used
                                              to bake in, moved here so a profile change
-                                             is a re-render, not a re-decode
+                                             is a re-render, not a re-decode. With a
+                                             camera profile selected this is the profile's
+                                             matrix and the white balance is INSIDE it
             diag(channelGain)                white balance x exposure x RGB sliders
             calMat                           the Calibrate primaries rotation
 
         so they multiply out to a single 3x3. channelGain and calMat are then cleared:
         they are IN preMat, and applying them twice is the obvious bug here.
     */
-    if (img.space == ColorSpaceMath::ColorSpace::CameraNative && img.cam.valid) {
-        /* camToWorking . diag(asShotMul) -- scaling a matrix's COLUMN j by asShotMul[j]
-           is what right-multiplying by a diagonal does. */
+    float inMat[3][3];
+    bool inWbIncluded = false;
+    if (img.space == ColorSpaceMath::ColorSpace::CameraNative &&
+        InputMatrix(img, &p, inMat, inWbIncluded)) {
+        /* The input profile -- a camera profile when one is selected, otherwise
+           camToWorking . diag(asShotMul). ONE definition, shared with ToWorkingSpace. */
         float m[3][3];
         for (int i = 0; i < 3; ++i)
-            for (int j = 0; j < 3; ++j)
-                m[i][j] = img.cam.camToWorking[i][j] * img.cam.asShotMul[j];
+            for (int j = 0; j < 3; ++j) m[i][j] = inMat[i][j];
 
         /* diag(channelGain) . m -- a diagonal on the LEFT scales ROW i. */
         for (int i = 0; i < 3; ++i)

@@ -56,8 +56,25 @@ public:
         working-space pixels so its results do not depend on the sensor's primaries).
 
         A no-op unless img.space is CameraNative, so calling it twice is safe.
+
+        THE PARAMS ARE OPTIONAL, and are needed for exactly one thing: a CAMERA PROFILE
+        carries the white balance inside its matrix, so the matrix depends on the chosen
+        temperature. Passing nullptr (or params naming no profile) uses the built-in
+        cam.camToWorking . diag(asShotMul), which is what every caller did before profiles
+        existed. img.cam.profile is deliberately LEFT SET afterwards -- it is how
+        buildPointCoeffs knows the white balance has already been applied and must not be
+        applied a second time as a per-channel gain.
     */
-    static void ToWorkingSpace(WorkingImage &img);
+    static void ToWorkingSpace(WorkingImage &img, const EditParams *p = nullptr);
+
+    /*
+        The camera-native -> working matrix this render should use, and whether it already
+        carries the white balance. ONE definition, shared by ToWorkingSpace and by
+        buildPointCoeffs's preMat fold, because the two must never disagree about which
+        matrix an image went through. False when there is nothing to convert.
+    */
+    static bool InputMatrix(const WorkingImage &img, const EditParams *p,
+                            float m[3][3], bool &wbIncluded);
 
     /* Blend a full-strength raw-denoised image toward the clean one, per the Global "Denoise raw"
        amounts (the interactive slider blend for the PMRID pre-demosaic denoiser -- see

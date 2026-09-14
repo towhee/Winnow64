@@ -110,6 +110,16 @@ float illuminantKelvin(int lightSourceCode);
    out.valid mirrors the return. */
 bool parseFile(const QString &path, Profile &out, QString *err = nullptr);
 
+/*
+    INDEX SCAN: read ONLY the two identifying strings -- which camera the profile is for
+    and what it is called -- without touching the lookup tables. Building a menu means
+    reading every profile in the folder, and a full parse of the ~4400 installed on a
+    typical machine costs ~2.4 s against ~0.5 s for this; the tables are megabytes that
+    the menu has no use for. parseFile() is what the renderer then calls, for the one
+    profile that was chosen.
+*/
+bool peek(const QString &path, QString &uniqueCameraModel, QString &name);
+
 /* Read profile tags out of an already-walked IFD -- IFD0 of a DNG, or the single IFD of a
    .dcp. r must be positioned on the same file the IFD came from and must stay open, since
    TiffWalk re-reads out-of-line values on demand. */

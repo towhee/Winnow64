@@ -32,6 +32,7 @@
 #include <cmath>
 
 #include "Develop/develop.h"
+#include "Develop/cameraprofile.h"
 #include "Develop/workingimage.h"
 #include "Develop/editparams.h"
 #include "Develop/colorspace.h"
@@ -112,6 +113,9 @@ private slots:
     void denoisePathAgreesWithFoldedPath();
     void nonRawIsUntouched();
     void defaultViewTransformIsNone();
+    void cameraProfileReplacesTheInputMatrix();
+    void cameraProfileWhiteBalancesExactlyOnce();
+    void cameraProfileSurvivesTheDenoiseRoute();
 };
 
 /*
@@ -283,6 +287,160 @@ void TestInputProfile::nonRawIsUntouched()
     const WorkingImage before = img;
     Develop::ToWorkingSpace(img);
     QCOMPARE(worstDiff(img, before), 0.0f);
+}
+
+/* ------------------------------------------------------------------------------------
+   Camera profiles -- stage 0 replaced, and the white balance that comes with it
+   ------------------------------------------------------------------------------------ */
+
+namespace {
+
+/* A real Adobe Standard profile's numbers (Canon EOS 77D), attached directly rather than
+   read from a file: these tests are about what the RENDER does with a profile, not about
+   parsing one. */
+std::shared_ptr<const Dcp::Profile> makeProfile()
+{
+    static const double color1[9] = { 0.7952, -0.1689, -0.0575,
+                                     -0.3746,  1.0825,  0.3378,
+                                     -0.0405,  0.1362,  0.6120 };
+    static const double color2[9] = { 0.7377, -0.0742, -0.0998,
+                                     -0.4235,  1.1981,  0.2549,
+                                     -0.0673,  0.1918,  0.5538 };
+    static const double fwd1[9]   = { 0.5407,  0.2506,  0.1730,
+                                      0.3306,  0.6136,  0.0558,
+                                      0.1852,  0.0007,  0.6392 };
+    static const double fwd2[9]   = { 0.5388,  0.1799,  0.2457,
+                                      0.3091,  0.6107,  0.0802,
+                                      0.1438,  0.0001,  0.6812 };
+    Dcp::Profile p;
+    p.valid = true;
+    p.uniqueCameraModel = "Canon EOS 77D";
+    p.name = "Adobe Standard";
+    const double *src[4] = {color1, color2, fwd1, fwd2};
+    for (int c = 0; c < 2; ++c) {
+        p.cal[c].illuminant = c ? 21 : 17;          // D65 / Standard light A
+        p.cal[c].haveColor = true;
+        p.cal[c].haveForward = true;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) {
+                p.cal[c].color.m[i][j]   = float(src[c][i * 3 + j]);
+                p.cal[c].forward.m[i][j] = float(src[2 + c][i * 3 + j]);
+            }
+    }
+    return std::make_shared<const Dcp::Profile>(std::move(p));
+}
+
+} // namespace
+
+/*
+    A CAMERA PROFILE REPLACES STAGE 0 and reports that it carries the white balance.
+
+    The second half is the part that cannot be left to inspection: InputMatrix's caller
+    uses wbIncluded to decide whether to ALSO apply per-channel gains, and a matrix that
+    quietly claimed not to contain a white balance would be balanced twice -- which looks
+    like a slightly-too-warm picture, not like a bug.
+*/
+void TestInputProfile::cameraProfileReplacesTheInputMatrix()
+{
+    WorkingImage img = makeCameraNative(4, 4);
+    EditParams p;
+
+    float builtIn[3][3];
+    bool wbIncluded = true;
+    QVERIFY(Develop::InputMatrix(img, &p, builtIn, wbIncluded));
+    QVERIFY2(!wbIncluded, "the built-in path does NOT contain the white balance");
+    /* It is camToWorking . diag(asShotMul) -- the product the fold has always used. */
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            QVERIFY(qAbs(builtIn[i][j] - kCamToWorking[i][j] * kAsShot[j]) < 1e-6f);
+
+    img.cam.profile = makeProfile();
+    p.cameraProfile = "Adobe Standard";
+    float withProfile[3][3];
+    QVERIFY(Develop::InputMatrix(img, &p, withProfile, wbIncluded));
+    QVERIFY2(wbIncluded, "a camera profile DOES contain the white balance");
+
+    /* And it is a different matrix -- otherwise the test proves nothing. */
+    float worst = 0.0f;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            worst = std::max(worst, std::fabs(withProfile[i][j] - builtIn[i][j]));
+    QVERIFY(worst > 1e-3f);
+}
+
+/*
+    THE WHITE BALANCE IS APPLIED EXACTLY ONCE.
+
+    Under DNG the chosen temperature sets diag(1/referenceNeutral) INSIDE the profile's
+    matrix, so buildPointCoeffs must drop the per-channel gains it applies on the built-in
+    path. The test feeds the camera the exact colour a neutral surface under the chosen
+    illuminant produces: if the white balance runs once it renders neutral, and if it runs
+    twice the correction is squared and the pixel comes out visibly tinted.
+*/
+void TestInputProfile::cameraProfileWhiteBalancesExactlyOnce()
+{
+    const auto profile = makeProfile();
+
+    for (float kelvin : {3000.0f, 5000.0f, 6504.0f}) {
+        double n[3];
+        QVERIFY(CameraProfile::neutralCam(*profile, kelvin, 0.0f, n));
+
+        WorkingImage img = makeCameraNative(2, 2);
+        img.cam.profile = profile;
+        for (size_t i = 0; i < img.rgb.size(); i += 3)
+            for (int c = 0; c < 3; ++c) img.rgb[i + c] = float(n[c]);
+
+        EditParams p;
+        p.cameraProfile = "Adobe Standard";
+        p.temp = kelvin;
+        p.tint = 0.0f;
+
+        Develop d;
+        QVERIFY(d.Apply(img, p));
+
+        for (int c = 0; c < 3; ++c)
+            QVERIFY2(qAbs(img.rgb[c] - 1.0f) < 1e-3f,
+                     qPrintable(QString("channel %1 = %2 at %3 K -- white balanced twice?")
+                                    .arg(c).arg(double(img.rgb[c])).arg(double(kelvin))));
+    }
+}
+
+/*
+    THE TWO ROUTES STILL AGREE WITH A PROFILE, which is what pins the least obvious rule
+    in this feature: ToWorkingSpace LEAVES img.cam.profile set after converting.
+
+    With an active local Denoise the conversion happens early, as its own pass, and the
+    pixels are re-tagged as working-space; buildPointCoeffs then cannot tell from the tag
+    that a profile already did the white balance. It tests cam.profile instead. Clear the
+    profile after converting -- the tidy-looking thing to do -- and this test fails,
+    because the early route would white-balance a second time while the folded route
+    would not.
+*/
+void TestInputProfile::cameraProfileSurvivesTheDenoiseRoute()
+{
+    const auto profile = makeProfile();
+
+    EditParams p;
+    p.cameraProfile = "Adobe Standard";
+    p.temp = 4200.0f;
+    p.exposure = 0.3f;
+
+    WorkingImage folded = makeCameraNative(24, 18);
+    folded.cam.profile = profile;
+    Develop d1;
+    QVERIFY(d1.Apply(folded, p));
+
+    WorkingImage early = makeCameraNative(24, 18);
+    early.cam.profile = profile;
+    Develop::ToWorkingSpace(early, &p);          // force the early-convert route
+    QVERIFY2(early.cam.profile != nullptr,
+             "ToWorkingSpace must LEAVE the profile on cam -- it is how buildPointCoeffs "
+             "knows the white balance is already applied");
+    Develop d2;
+    QVERIFY(d2.Apply(early, p));
+
+    const float worst = worstDiff(folded, early);
+    QVERIFY2(worst < 1e-5f, qPrintable(QString("profile route worst %1").arg(worst)));
 }
 
 QTEST_APPLESS_MAIN(TestInputProfile)

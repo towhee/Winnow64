@@ -1,6 +1,7 @@
 #include "Develop/workingimagecache.h"
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
+#include "Develop/cameraprofilestore.h"
 #include <QImage>
 #include <QElapsedTimer>
 #include <QtConcurrent>
@@ -10,6 +11,35 @@
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <cmath>
+
+namespace {
+
+/*
+    Attach the camera profile the params name, so the render uses it.
+
+    THIS IS THE CALL SITE the whole profile feature hangs off. A profile is an EDIT, not
+    part of the decode, so it is resolved HERE -- against pixels already in the cache --
+    rather than baked in by RawColor. That is the point of the camera-native cache
+    boundary: changing profile is a re-render, never a re-decode.
+
+    Resolved every render rather than cached on the image: the lookup is a hash hit on a
+    profile parsed once per session, and the alternative is a stale profile surviving on a
+    WorkingImage after the user picked a different one. Cleared FIRST for the same reason,
+    so the "no profile" case cannot inherit the last one.
+
+    A name that no longer resolves leaves the profile null and the image renders with the
+    built-in matrix. That is deliberate and it is not silent: the panel resolves the same
+    name and shows the reason.
+*/
+void attachProfile(WorkingImage &img, const EditParams &p)
+{
+    img.cam.profile.reset();
+    if (!img.cam.valid || p.cameraProfile.isEmpty()) return;
+    img.cam.profile = CameraProfileStore::instance().profile(img.cam.cameraModel,
+                                                             p.cameraProfile);
+}
+
+} // namespace
 
 WorkingImageCache &WorkingImageCache::instance()
 {
@@ -200,6 +230,7 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     WorkingImage devLocal;
     WorkingImage &developed = scratch ? *scratch : devLocal;
     assignReusing(developed, work);
+    attachProfile(developed, edit);
     if (timings) timings->copyMs = t.restart();
     Develop develop;
     Develop::StageTimings stage;
@@ -296,11 +327,13 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
                          && size_t(resume->prefix->width) * size_t(resume->prefix->height) == n;
     if (resumed) {
         assignReusing(acc, *resume->prefix);
+        attachProfile(acc, base);
         if (timings) timings->stackCopyMs += sub.restart();
         first = resume->start;
     }
     else {
         assignReusing(acc, work);
+        attachProfile(acc, base);
         if (timings) timings->stackCopyMs += sub.restart();
         /* Unconditional: Apply's OWN identity early-out still runs stage 0 (the input
            profile), which is not an edit -- camera-native pixels have to reach the

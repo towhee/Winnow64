@@ -256,6 +256,9 @@ struct EditStack {
            (MW::developCompositeStack). A field the pipeline reads but this omits renders
            stale from cache and never persists. */
         o["viewTransform"]   = p.viewTransform;
+        /* Omitted when empty -- the default -- so an untouched raw writes exactly the
+           sidecar it always did and its devPreview key does not move. */
+        if (!p.cameraProfile.isEmpty()) o["cameraProfile"] = p.cameraProfile;
         o["gradeShadowHue"]  = p.gradeShadowHue;
         o["gradeShadowSat"]  = p.gradeShadowSat;
         o["gradeShadowLum"]  = p.gradeShadowLum;
@@ -326,6 +329,7 @@ struct EditStack {
         p.calBlueHue      = static_cast<float>(o.value("calBlueHue").toDouble(p.calBlueHue));
         p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
         p.viewTransform   = o.value("viewTransform").toInt(p.viewTransform);
+        p.cameraProfile   = o.value("cameraProfile").toString(p.cameraProfile);
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
         p.gradeShadowSat  = static_cast<float>(o.value("gradeShadowSat").toDouble(p.gradeShadowSat));
         p.gradeShadowLum  = static_cast<float>(o.value("gradeShadowLum").toDouble(p.gradeShadowLum));
@@ -544,6 +548,11 @@ struct EditStack {
         return false;
     }
 
+    /* Longest camera-profile name accepted from a sidecar. Real names are short ("Adobe
+       Standard", "Camera Neutral"); this is a bound on hand-edited or corrupt input, not a
+       format limit. */
+    static constexpr int kMaxProfileNameLen = 128;
+
     /* Force one EditParams into its documented ranges (the same limits the panel sliders
        enforce, so a repaired value is always one the user could have dialled in). Appends
        a short description of anything it had to change. */
@@ -605,6 +614,17 @@ struct EditStack {
            the default look, not refuse to load. */
         if (p.viewTransform < 0 || p.viewTransform > 2) {
             p.viewTransform = def.viewTransform;
+            ++fixed;
+        }
+
+        /* A profile NAME cannot be range-checked -- whether it resolves depends on what is
+           installed, which is a render-time question, not a sanitising one, and a name that
+           resolves on the machine the sidecar came from must survive a round trip here.
+           What CAN be checked is that it is a plausible name rather than a hand-edited
+           sidecar's worth of text arriving in a QComboBox and a QHash key. */
+        if (p.cameraProfile.size() > kMaxProfileNameLen ||
+            p.cameraProfile.contains(QChar(u'\0'))) {
+            p.cameraProfile = def.cameraProfile;
             ++fixed;
         }
 
