@@ -844,3 +844,80 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
     //    qDebug() << "MW::embelDockActivated" << dockWidget->objectName() << widgetTabBar->currentIndex();
 
 }
+
+/*  PER-WORKSPACE TAB SELECTION ***************************************************************
+
+    A workspace state blob carries the front tab of every tab group as it was when the
+    layout was CAPTURED, so applying a workspace re-raises that panel -- Keywords in the
+    shipped Library layout -- and throws away whatever panel the user was actually working
+    in.  Leaving Library on Bookmarks, pressing D and pressing E came back to Keywords.
+
+    Instead the front tab of each group is remembered per workspace when a workspace is
+    left (MW::invokeWorkspace calls rememberDockTabSelection before it applies the new
+    layout) and re-raised when that workspace is applied again.  A workspace not visited
+    yet this session has nothing remembered, so it keeps the layout's own choice -- that
+    is what makes the first D still open on the Develop panel and the first K on Keywords.
+
+    Session only, and keyed on the workspace name and the dock objectNames, so a renamed
+    workspace or a dock that has since left the group simply falls back to the layout.
+*/
+
+QStringList MW::frontDockTabs()
+{
+    QStringList front;
+    QSet<QDockWidget*> seen;
+    const QList<QDockWidget*> docks = findChildren<QDockWidget*>();
+    for (QDockWidget *dock : docks) {
+        if (seen.contains(dock)) continue;
+        seen.insert(dock);
+        QList<QDockWidget*> group = tabifiedDockWidgets(dock);
+        if (group.isEmpty()) continue;          // not tabbed: nothing to choose
+        for (QDockWidget *d : group) seen.insert(d);
+        group.prepend(dock);
+        for (QDockWidget *d : group) {
+            if (isSelectedDockTab(d)) {
+                front << d->objectName();
+                break;
+            }
+        }
+    }
+    return front;
+}
+
+void MW::rememberDockTabSelection(const QString &wsName)
+{
+    if (G::isLogger) G::log("MW::rememberDockTabSelection", wsName);
+    if (wsName.isEmpty()) return;
+    const QStringList front = frontDockTabs();
+    if (front.isEmpty()) return;
+    frontDockTabsByWorkspace.insert(wsName, front);
+}
+
+void MW::restoreDockTabSelection(const QString &wsName)
+{
+/*
+    Raise the panel last used in each tab group in this workspace.  Called after
+    restoreState, which has already rebuilt the groups.
+*/
+    if (G::isLogger) G::log("MW::restoreDockTabSelection", wsName);
+    if (wsName.isEmpty()) return;
+    if (!frontDockTabsByWorkspace.contains(wsName)) return;
+    const QStringList front = frontDockTabsByWorkspace.value(wsName);
+
+    QSet<QDockWidget*> seen;
+    const QList<QDockWidget*> docks = findChildren<QDockWidget*>();
+    for (QDockWidget *dock : docks) {
+        if (seen.contains(dock)) continue;
+        seen.insert(dock);
+        QList<QDockWidget*> group = tabifiedDockWidgets(dock);
+        if (group.isEmpty()) continue;
+        for (QDockWidget *d : group) seen.insert(d);
+        group.prepend(dock);
+        for (QDockWidget *d : group) {
+            if (!d->isVisible()) continue;      // a hidden dock has no tab
+            if (!front.contains(d->objectName())) continue;
+            d->raise();
+            break;
+        }
+    }
+}

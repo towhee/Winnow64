@@ -141,6 +141,14 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 */
     if (G::isLogger) G::log("MW::invokeWorkspace");
 
+    /*  Which panel was front in each tab group in the workspace being LEFT, so coming
+        back to it comes back to the panel last used there and not to whatever was front
+        when the layout was captured (see MW::restoreDockTabSelection).  Before ws is
+        replaced below -- ws is the outgoing workspace until then.  An unnamed current
+        workspace is the layout restored at startup, which is the Library one. */
+    const QString leaving = ws.name.isEmpty() ? workflowNames().at(WfLibrary) : ws.name;
+    rememberDockTabSelection(leaving);
+
     ws = w;     // current workspace ws
 
     /* Save current selection.  Since multiple saves occur in view mode and sortChange,
@@ -264,6 +272,12 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        UNVERSIONED so an old one still restores; w.stateVersion is what says which docks
        it predates. */
     if (w.stateVersion < winnowStateVersion) placeDocksAddedSince(w.stateVersion);
+
+    /*  Re-raise the panel last used in each tab group in this workspace, overriding the
+        front tab the state blob carries.  Done here, synchronously, so a caller that
+        raises a panel of its own afterwards (D raising the Develop panel as it enters
+        Develop mode) still wins. */
+    restoreDockTabSelection(w.name);
 
     /*  A workspace switch is the other route to a panel the wrong size, and it uses the
         same restoreState the startup path does -- so it is marked the same way, and
