@@ -1174,6 +1174,29 @@ void MW::showEvent(QShowEvent *event)
             if (G::isPanelProbe)
                 PanelProbe::Instance().Mark("after WfLibrary fallback (state unreadable)");
         }
+        /*  A session LEFT in Develop cannot be the layout the next one comes up in:
+            Winnow always starts in Preview and closeDevelopDock (below) hides the three
+            Develop panels, which leaves the rest of the layout at the DEVELOP widths --
+            a left dock narrow enough that its tab bar falls back to icons.  Reassert the
+            Library workspace, exactly as E / G / C do (see MW::asLoupeAction), so the
+            first session layout is the one the workflow owns.  Any other workflow's
+            layout is a Preview layout and is restored as saved.
+
+            currentWorkflow is absent in a state written before it was persisted, so fall
+            back to the tell in the restored layout itself: the Develop panel visible. */
+        const int lastWf = settings->value("currentWorkflow", -1).toInt();
+        const bool leftInDevelop = settings->contains("currentWorkflow")
+                                       ? lastWf == WfDevelop
+                                       : developDock->isVisible();
+        if (restored && leftInDevelop) {
+            invokeWorkflowWorkspace(WfLibrary);
+            if (G::isPanelProbe)
+                PanelProbe::Instance().Mark("after WfLibrary (session left in Develop)");
+        }
+        /*  Any other restored layout IS the one the last session was in, so the session
+            resumes in that workflow -- otherwise quitting from it would be recorded as
+            Library and the workflow the user was in would be lost a launch later. */
+        else if (restored && lastWf >= 0) currentWorkflow = lastWf;
     }
     else {
         centreWindowOnPrimaryScreen();

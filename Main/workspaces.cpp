@@ -141,6 +141,10 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 */
     if (G::isLogger) G::log("MW::invokeWorkspace");
 
+    /*  A named workspace is not a workflow.  invokeWorkflowWorkspace re-stamps this
+        after the layout is applied, so the workflow routes still record themselves. */
+    currentWorkflow = -1;
+
     /*  Which panel was front in each tab group in the workspace being LEFT, so coming
         back to it comes back to the panel last used there and not to whatever was front
         when the layout was captured (see MW::restoreDockTabSelection).  Before ws is
@@ -1255,9 +1259,11 @@ void MW::invokeWorkflowWorkspace(int wf)
 
     if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf) && hasWorkflowOverride(wf)) {
         invokeWorkspace(workflowUserWs.at(wf));
+        currentWorkflow = wf;
         return;
     }
     invokeWorkflowDefault(wf);
+    currentWorkflow = wf;
 }
 
 void MW::invokeWorkflowDefault(int wf)

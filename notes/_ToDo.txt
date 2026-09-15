@@ -10,9 +10,8 @@ WHAT'S NEW
 BUGS / TO DO
 - Develop disabled sometimes at start (Bookmarks / Develop only docks)
 - Not saving / restoring workspace properly between sessions.
-- Change workspaces to make saving/recovering the Winnow window size and location optional.
 - Develop behavior when no image is selected
-- Add a use catalog preference.
+- Add a use catalog preference?
 - When quit dock widths are not persistent with next session
 - In loupe mode, 'Esc' switch to grid mode (gridView)
 - Test search in filter
