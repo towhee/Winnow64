@@ -76,6 +76,9 @@ public:
     QString toolButton();
     QString tabWidget();
     QString stackedWidget();
+    /*  The shared check-indicator rules for a checkable item view; `view` is the
+        selector (QTreeView / QListView / QTableView). See the .cpp. */
+    QString itemViewIndicator(const QString &view);
     QString listView();
     QString listWidget();
     QString toolTip();

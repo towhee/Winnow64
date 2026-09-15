@@ -44,6 +44,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Dropped Dock Lands Last (Rightmost Tab)   [WORK IN PROGRESS - DISABLED]
      Workspaces (and the Workflow Workspaces)
      Panel Probe (Why a Panel Comes Up the Wrong Size)
+     Check Indicators in Item Views (the Stylesheet Draws Them, Not the Platform)
 
 2. FOLDER LOADING PIPELINE
      Overview
@@ -417,6 +418,15 @@ HOW TO RUN IT.  Help > Diagnostics > "Panel probe (record panel sizing)" arms it
 THE TICK IS PERSISTED (QSettings "PanelProbe"), UNLIKE THE INGEST PROBE'S, and that is the point rather than an inconsistency.  The startup sizing happens in showEvent, before any menu can be reached, so a toggle that applied only to the current session could never record the thing it was ticked for.  Ticking it arms the NEXT launch as well.  MW::setupPanelProbe reads the flag and registers the docks from the MW CONSTRUCTOR -- not from createActions, and not from showEvent -- because everything worth recording is still ahead of that point.  Arming CLEARS the buffers, disarming KEEPS them, so a report is read after the fact; a report from a probe that was never armed says so rather than presenting an empty run as a clean one.  The report also goes to the console on the way out (MW::closeEvent), so a --panelprobe session leaves its timeline in console.txt.
 
 THE COST WHEN DISARMED IS ONE RELAXED ATOMIC LOAD per hook site, each written `if (G::isPanelProbe) ...`, and NO EVENT FILTER IS INSTALLED until it is armed -- PanelProbe::Watch only remembers the widget.  GUI thread only: every hook is a layout event or a call from MW.
+
+
+⏺ Initialization > Check Indicators in Item Views (the Stylesheet Draws Them, Not the Platform)
+
+EVERY CHECKABLE ITEM IN AN ITEM VIEW DRAWS ITS INDICATOR FROM G::css, on both platforms.  WidgetCSS::itemViewIndicator emits the ::indicator rules -- unchecked, checked, indeterminate and disabled, each an image from winnow.qrc -- and treeView(), listView() and tableView() each append it for their own selector.  One helper rather than three copies, because the three views hold the same kind of item: the Filters tree and the Catalog keyword tree, the Save Develop Preset tree, the recurse column in Manage Catalog, and the Find Duplicates list.
+
+WINDOWS NEEDED THIS BECAUSE THE NATIVE INDICATOR DID NOT MATCH the G::css QCheckBox style; the rules were Windows-only for that reason.  macOS NEEDS IT BECAUSE AS OF macOS 27 THE macOS STYLE DRAWS NOTHING AT ALL for an item-view check indicator -- the checkboxes vanished from the Filters panel outright.  Standalone QCheckBox widgets were untouched, and so was the Preferences tree, which paints its own indicator in PropertyDelegate, which is what made it look like a Filters bug rather than a platform one.  It was settled by reproducing it outside Winnow: a bare QTreeWidget with checkable items, grabbed on screen, draws no indicator under BOTH Qt 6.9.2 and Qt 6.11.0, with and without a stylesheet, while three QCheckBoxes in the same run draw normally.  So it is the OS and not a Qt build, and a Qt update will not bring the boxes back.
+
+THE INDETERMINATE RULE IS NOT DECORATION.  Qt::PartiallyChecked is how Filters and the Catalog tree show an EXCLUDED item (see "Filter Exclusion") and how the preset tree shows a part-selected group; with no rule for that state it falls back to the same missing native indicator.  images/checkbox_indeterminate_blue.png was generated from checkbox_checked_blue.png so the box, its rounded corners and its blue match exactly -- the tick replaced by a white bar.
 
 
 *** FOLDER LOADING PIPELINE ***
