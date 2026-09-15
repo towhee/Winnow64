@@ -401,7 +401,7 @@ void IconView::setThumbParameters()
     changed this function is called from:
 
         MW::invokeWorkspace
-        MW::defaultWorkspace
+        MW::invokeWorkflowWorkspace
         MW::loupeDisplay
         MW::gridDisplay
         MW::tableDisplay

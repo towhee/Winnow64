@@ -18,25 +18,21 @@ class WorkspaceDlg : public QDialog
 public:
     inline static const QString defaultWorkspaceName = "Winnow default workspace";
     /*  isGeometryIncluded holds, for each workspace in wsList, whether it restores the
-        Winnow window position and size.  isDefaultGeometryIncluded is the same for the
-        Winnow default workspace, and isCustomDefaultWorkspace says whether that default
-        has been defined yet (if not, the built-in layout is used and the choice does not
-        apply). */
+        Winnow window position and size.  The per-workflow default and override layouts
+        are NOT managed here -- they live in Window > Workspace (see the Workflow enum in
+        MW) -- so the dropdown lists only the user's saved workspaces. */
     explicit WorkspaceDlg(QList<QString> *wsList,
                           const QList<bool> &isGeometryIncluded,
-                          bool isDefaultGeometryIncluded,
-                          bool isCustomDefaultWorkspace,
                           QWidget *parent = 0) ;
     ~WorkspaceDlg();
     Ui::Workspacedlg *ui;
 
 signals:
     void deleteWorkspace(int);
-    void updateDefaultWorkspace();
     void reassignWorkspace(int);
     void renameWorkspace(int, QString);
     void reportWorkspaceNum(int n);
-    /*  n is the index into MW::workspaces, or -1 for the Winnow default workspace. */
+    /*  n is the index into MW::workspaces. */
     void setWorkspaceGeometryIncluded(int n, bool isIncluded);
 
 private slots:
@@ -53,19 +49,9 @@ private:
     QWidget *mainWindow;
     bool editMode;
     void report(QString signalName);
-    /* When G::isRory the dropdown lists the Winnow default workspace, a separator, and
-       then the saved workspaces, so the combo index of saved workspace n is
-       n + firstWorkspaceIndex.  Otherwise only the saved workspaces are listed and
-       firstWorkspaceIndex is 0.  Both are set in the constructor. */
-    int defaultIndex;
-    int firstWorkspaceIndex;
-    /*  Window position/size choice per workspace, indexed as MW::workspaces, plus the
-        same for the Winnow default workspace.  Held here so the checkbox can be set
-        without a round trip to MW. */
+    /*  Window position/size choice per workspace, indexed as MW::workspaces.  Held here
+        so the checkbox can be set without a round trip to MW. */
     QList<bool> isGeometry;
-    bool isDefaultGeometry;
-    bool isCustomDefault;
-    bool isDefaultSelected() const;
     int workspaceIndex() const;
     void updateForSelection();
 };

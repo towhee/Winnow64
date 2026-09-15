@@ -402,6 +402,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // test if new user
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
+    /* The shipped per-workflow layouts size the workflow lists, so they are read before
+       loadSettings -> loadWorkspaces -> loadWorkflowOverrides fills in the user's
+       overrides.  Unconditional: there is a resource to read even with no QSettings. */
+    loadWorkflowDefaults();
     loadSettings();     // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
@@ -1139,11 +1143,19 @@ void MW::showEvent(QShowEvent *event)
         restoreGeometry(settings->value("Geometry").toByteArray());
         bool restored = restoreWindowState(settings->value("WindowState").toByteArray());
         restoreGeometry(settings->value("Geometry").toByteArray());
-        // unreadable state (or none): the initialize() layout is not a usable one
-        if (!restored) defaultWorkspace();
+        /* Unreadable state (or none): the initialize() layout is not a usable one, so
+           fall back to the Library workflow workspace -- the layout the app starts a
+           session in.  A workflow workspace does not own the window position and size,
+           so on a first run (nothing to restoreGeometry) the window is sized first. */
+        if (!restored) {
+            if (settings->value("Geometry").toByteArray().isEmpty())
+                centreWindowOnPrimaryScreen();
+            invokeWorkflowWorkspace(WfLibrary);
+        }
     }
     else {
-        defaultWorkspace();
+        centreWindowOnPrimaryScreen();
+        invokeWorkflowWorkspace(WfLibrary);
     }
 
     // Apply persisted per-dock collapsed flag. Deferred so the just-restored
@@ -13687,6 +13699,9 @@ void MW::toggleRory()   // shortcut = "Shift+Ctrl+Alt+."
 void MW::rory()
 {
     if (pref != nullptr) pref->rory();
+    /* The Workspace menu's Default branch is Rory only, so it appears and disappears
+       with the flag rather than only at startup. */
+    syncWorkflowWorkspaceMenus();
     if (G::isRory) {
         G::showCacheProgress = true;
         setCacheProgressEnabled(true);
