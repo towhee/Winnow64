@@ -226,6 +226,11 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     /* By NAME, not by path -- see kBasicLeaves. A preset applied to a camera the profile
        was not made for simply does not resolve, and the panel says so. */
     else if (key == "cameraProfile")       p.cameraProfile       = v.toString();
+    /* By KEY, and NOT camera-specific: a look is a grade, so a preset carrying one
+       reproduces on any body that has the same LUT file installed. A STRING, so it must
+       be read here and not fall through to the `f` tail below, which would silently store
+       0 for every look. */
+    else if (key == "lookLut")             p.lookLut             = v.toString();
     else if (key == "exposure")            p.exposure            = f;
     else if (key == "contrast")            p.contrast            = f;
     else if (key == "highlights")          p.highlights          = f;

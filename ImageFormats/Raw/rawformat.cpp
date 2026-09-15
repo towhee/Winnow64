@@ -1,4 +1,5 @@
 #include "ImageFormats/Raw/rawformat.h"
+#include "Develop/lutstore.h"
 #include "ImageFormats/Raw/demosaic.h"
 #include "ImageFormats/Raw/rawcolor.h"
 #include "ImageFormats/Raw/pmrid.h"
@@ -250,12 +251,23 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     const OutputTransform::ViewTransform view =
         edit ? OutputTransform::ViewFromInt(edit->viewTransform)
              : OutputTransform::ViewTransform::None;
+    /* THE CREATIVE LOOK travels with the recipe for exactly the same reason, and this is
+       the call site that most needs saying out loud: it is the EXPORT and non-interactive
+       decode path, running on a worker with no Develop panel behind it, so nothing here
+       has asked LutStore to build its index. LutStore::lut() therefore builds it inline
+       rather than answering "not ready" -- otherwise an export would silently drop the
+       look the sidecar plainly asks for. Held in a shared_ptr for the whole function so
+       the table outlives every ToImage call below. */
+    const std::shared_ptr<const Lut3d::Table> look =
+        (edit && !edit->lookLut.isEmpty()) ? LutStore::instance().lut(edit->lookLut)
+                                           : nullptr;
+    const Lut3d::Table *lookPtr = look.get();
     if (edit && !edit->isIdentity()) {
         WorkingImage developed = denoisedBase ? *denoisedBase : *work;
         Develop develop;
         develop.Apply(developed, *edit);
         if (aborted()) { errMsg = "Aborted"; return false; }
-        if (!output.ToImage(developed, out, OutputTransform::Space::sRGB, view)) {
+        if (!output.ToImage(developed, out, OutputTransform::Space::sRGB, view, lookPtr)) {
             errMsg = "Output transform failed.";
             return false;
         }
@@ -272,14 +284,14 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     if (work->space == ColorSpaceMath::ColorSpace::CameraNative) {
         WorkingImage converted = *work;
         Develop::ToWorkingSpace(converted);
-        if (!output.ToImage(converted, out, OutputTransform::Space::sRGB, view)) {
+        if (!output.ToImage(converted, out, OutputTransform::Space::sRGB, view, lookPtr)) {
             errMsg = "Output transform failed.";
             return false;
         }
         return true;
     }
 
-    if (!output.ToImage(*work, out, OutputTransform::Space::sRGB, view)) {
+    if (!output.ToImage(*work, out, OutputTransform::Space::sRGB, view, lookPtr)) {
         errMsg = "Output transform failed.";
         return false;
     }

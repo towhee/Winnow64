@@ -3,6 +3,7 @@
 
 #include <QImage>
 #include <QColorSpace>
+#include "Develop/lut3d.h"
 #include "Develop/workingimage.h"
 
 /*
@@ -95,17 +96,45 @@ public:
     /* The QColorSpace to TAG output produced for space with. */
     static QColorSpace ColorSpaceOf(Space space);
 
+    /*
+        THE CREATIVE LOOK -- a film-simulation LUT, and the one stage here that is not
+        colour management.
+
+        WHY IT LIVES IN THE OUTPUT STAGE AT ALL. A .cube or HaldCLUT is authored against
+        DISPLAY-REFERRED sRGB: that is the encoding its author was looking at. This is
+        the only place in the pipeline where pixels are in that state, so it is the only
+        place the look means what it says. Everything in Develop happens before it, which
+        is the right reading anyway -- the adjustments are the exposure, the look is the
+        film stock they are printed on.
+
+        IT IS APPLIED IN sRGB WHATEVER THE OUTPUT SPACE IS. The look is sandwiched
+        between a conversion to linear sRGB and back, so a P3 or Adobe RGB export gets
+        the SAME look as the loupe rather than the table misread through the wrong
+        primaries. See ApplyLook in the .cpp.
+
+        nullptr -- the default -- is no look, and that path is byte-for-byte what this
+        transform produced before looks existed (pinned by
+        tst_outputtransform::noLookOutputIsUnchanged). The pointee must outlive the call
+        and is read from every worker thread, so it must be immutable: LutStore hands out
+        shared_ptr<const Lut3d::Table> and never mutates one after construction.
+
+        A caller that forgets this argument silently renders without the look, so every
+        call site is listed in notes/Documentation.txt, "Film-Look LUTs".
+    */
+
     /* Scene-linear float -> 8-bit QImage (Format_RGB888) in space.
        view defaults to None: the identity, so a caller that does not carry a recipe
        renders the pixels as they are rather than imposing a look of its own. */
     bool ToImage(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
-                 ViewTransform view = ViewTransform::None);
+                 ViewTransform view = ViewTransform::None,
+                 const Lut3d::Table *look = nullptr);
 
     /* Scene-linear float -> 16-bit QImage (Format_RGBX64), for export. Same view
        transform, primaries and transfer function as ToImage, quantised to 16 bits
        instead of 8 -- one shared code path, so export cannot drift from the loupe. */
     bool ToImage16(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
-                   ViewTransform view = ViewTransform::None);
+                   ViewTransform view = ViewTransform::None,
+                   const Lut3d::Table *look = nullptr);
 };
 
 #endif // OUTPUTTRANSFORM_H

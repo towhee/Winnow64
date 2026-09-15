@@ -259,6 +259,11 @@ struct EditStack {
         /* Omitted when empty -- the default -- so an untouched raw writes exactly the
            sidecar it always did and its devPreview key does not move. */
         if (!p.cameraProfile.isEmpty()) o["cameraProfile"] = p.cameraProfile;
+        /* The creative look, on the same terms and for the same two reasons: it is read
+           by OutputTransform rather than by Develop::Apply, so this function is the ONLY
+           thing that makes a look change invalidate the render cache, and it is omitted
+           when empty so an image without one writes the sidecar it always did. */
+        if (!p.lookLut.isEmpty()) o["lookLut"] = p.lookLut;
         o["gradeShadowHue"]  = p.gradeShadowHue;
         o["gradeShadowSat"]  = p.gradeShadowSat;
         o["gradeShadowLum"]  = p.gradeShadowLum;
@@ -330,6 +335,7 @@ struct EditStack {
         p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
         p.viewTransform   = o.value("viewTransform").toInt(p.viewTransform);
         p.cameraProfile   = o.value("cameraProfile").toString(p.cameraProfile);
+        p.lookLut         = o.value("lookLut").toString(p.lookLut);
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
         p.gradeShadowSat  = static_cast<float>(o.value("gradeShadowSat").toDouble(p.gradeShadowSat));
         p.gradeShadowLum  = static_cast<float>(o.value("gradeShadowLum").toDouble(p.gradeShadowLum));
@@ -553,6 +559,11 @@ struct EditStack {
        format limit. */
     static constexpr int kMaxProfileNameLen = 128;
 
+    /* Longest look key accepted from a sidecar. Longer than a profile name because a look
+       is keyed by its path under the Looks folder ("Fuji/Classic Chrome"), not by a bare
+       name. Same purpose: a bound on hand-edited input, not a format limit. */
+    static constexpr int kMaxLookNameLen = 256;
+
     /* Force one EditParams into its documented ranges (the same limits the panel sliders
        enforce, so a repaired value is always one the user could have dialled in). Appends
        a short description of anything it had to change. */
@@ -625,6 +636,32 @@ struct EditStack {
         if (p.cameraProfile.size() > kMaxProfileNameLen ||
             p.cameraProfile.contains(QChar(u'\0'))) {
             p.cameraProfile = def.cameraProfile;
+            ++fixed;
+        }
+
+        /* The look key, on the same reasoning, plus a control-character check: unlike a
+           profile name this string is a PATH, so it reaches a QComboBox, a QHash key and
+           a tooltip, and a stray control character in any of those is a display defect
+           nobody would trace back to a sidecar. */
+        bool lookCtrl = false;
+        for (const QChar &c : p.lookLut)
+            if (!c.isPrint()) { lookCtrl = true; break; }
+        if (p.lookLut.size() > kMaxLookNameLen || lookCtrl) {
+            p.lookLut = def.lookLut;
+            ++fixed;
+        }
+
+        /*
+            THE EXCLUSIVITY INVARIANT. The Profile row offers camera profiles and looks in
+            ONE list and writes one or the other, so both being set is not a state the app
+            can produce -- only a hand-edited or hand-merged sidecar can. Repair rather
+            than render it: a profile replaces stage 0 and a look is applied at the very
+            end, so honouring both would silently produce a rendering no UI could show or
+            undo. The LOOK wins, because it is the more specific choice and the one the
+            user sees named in the row.
+        */
+        if (!p.cameraProfile.isEmpty() && !p.lookLut.isEmpty()) {
+            p.cameraProfile.clear();
             ++fixed;
         }
 

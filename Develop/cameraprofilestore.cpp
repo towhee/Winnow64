@@ -32,6 +32,27 @@ QStringList CameraProfileStore::roots()
     out << programData + "/Adobe/CameraRaw/CameraProfiles";
     if (!appData.isEmpty()) out << appData + "/Adobe/CameraRaw/CameraProfiles";
 #endif
+    /*
+        RAWTHERAPEE'S BUNDLE. RawTherapee ships its own dual-illuminant DCPs, and dcamprof
+        (the open-source profiling tool behind many of them) emits standard DCPs too --
+        both are ordinary .dcp files, so the existing reader takes them with no change at
+        all. This is the cheapest way to widen coverage for the makers Adobe serves
+        thinly, and it costs nothing when RawTherapee is not installed. ~100 files against
+        a sweep already doing ~4400.
+    */
+#ifdef Q_OS_MAC
+    out << "/Applications/RawTherapee.app/Contents/Resources/dcpprofiles"
+        << QDir::homePath() + "/Library/Application Support/RawTherapee/dcpprofiles";
+#endif
+#ifdef Q_OS_WIN
+    const QString programFiles = qEnvironmentVariable("ProgramFiles", "C:/Program Files");
+    const QString localAppData = qEnvironmentVariable("LOCALAPPDATA");
+    /* The install folder is version-suffixed ("RawTherapee 5.10"), so the PARENT is swept
+       and the recursive *.dcp filter finds whatever is under it. */
+    out << programFiles + "/RawTherapee";
+    if (!localAppData.isEmpty()) out << localAppData + "/RawTherapee/dcpprofiles";
+#endif
+
     /* Winnow's own folder, for profiles the user made or was given. Listed LAST so a
        user-supplied profile of the same name as an installed one does not displace it in
        the menu -- both appear, and the duplicate is visible rather than silent. */
@@ -69,8 +90,14 @@ void CameraProfileStore::scan()
 {
     QHash<QString, QList<Entry>> built;
 
-    for (const QString &root : roots()) {
-        if (!QDir(root).exists()) continue;
+    const QStringList allRoots = roots();
+    for (const QString &root : allRoots) {
+        QDir dir(root);
+        /* Winnow's OWN folder is created rather than merely checked: a folder the user is
+           told to drop profiles into has to exist before they can find it. The others are
+           other applications' and are never created. */
+        if (!dir.exists() && root == allRoots.last()) dir.mkpath(".");
+        if (!dir.exists()) continue;
         QDirIterator it(root, QStringList() << "*.dcp", QDir::Files,
                         QDirIterator::Subdirectories);
         while (it.hasNext()) {

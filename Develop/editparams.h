@@ -179,6 +179,38 @@ struct EditParams {
     */
     QString cameraProfile;
 
+    /*
+        THE CREATIVE LOOK -- a film-simulation LUT, chosen from the same Profile row as
+        the camera profile above and MUTUALLY EXCLUSIVE with it: at most one of the two is
+        ever non-empty. Empty is the default and means no look.
+
+        WHY ONE ROW AND ONE CHOICE. Lightroom does exactly this -- an Artistic profile
+        replaces the Camera Matching one -- because an Adobe creative profile carries its
+        own base. A .cube does not, so a look renders on the maker's "Camera Base" when
+        one is installed for the body and on Winnow's built-in matrix otherwise; see
+        attachProfile in workingimagecache.cpp. One combo, one selection, no hidden state.
+
+        NOT A CAMERA PROFILE, and the distinction drives everything. A DCP characterises
+        the SENSOR and replaces stage 0 at the very front of the pipeline. A look is a
+        GRADE, authored against display-referred sRGB, and is applied LAST -- inside
+        OutputTransform, after the transfer -- because that is the encoding its author
+        saw. So every adjustment happens before it, the way an exposure happens before
+        the film stock it is printed on.
+
+        NOT RAW-ONLY, unlike cameraProfile. There is no sensor being characterised, so a
+        JPEG and the Apple decoder can both take a look perfectly well.
+
+        THE VALUE IS AN INDEX KEY, NOT A PATH: the look's location under its root, minus
+        the extension ("Fuji/Provia"). LutStore resolves it by LOOKUP, never by joining it
+        onto a root, so a hand-edited sidecar cannot walk the filesystem.
+
+        Like viewTransform and cameraProfile this is a WHOLE-IMAGE property: only scope 0
+        is read, and the panel always writes scope 0 whatever scope is active. The look is
+        applied after the scopes have already been composited, so a per-scope value could
+        not mean anything.
+    */
+    QString lookLut;
+
 
     /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
@@ -342,6 +374,7 @@ struct EditParams {
             p.toneHighlightCenter = def.toneHighlightCenter;
             p.viewTransform = def.viewTransform;
             p.cameraProfile = def.cameraProfile;
+            p.lookLut = def.lookLut;
             break;
         case Group::Curves:
             /* Every channel back to the diagonal. The tone splits are NOT reset here:
@@ -416,7 +449,7 @@ struct EditParams {
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&
                calBlueHue == 0.0f && calBlueSat == 0.0f &&
-               viewTransform == 0 && cameraProfile.isEmpty() &&
+               viewTransform == 0 && cameraProfile.isEmpty() && lookLut.isEmpty() &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
                gradeShadowSat == 0.0f && gradeShadowLum == 0.0f &&
                gradeMidSat == 0.0f && gradeMidLum == 0.0f &&
