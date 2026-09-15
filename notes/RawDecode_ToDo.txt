@@ -320,10 +320,20 @@ REMAINING DEVELOP-MODULE WORK (beyond raw decode; verified vs tree 2026-07-11)
                  generated content from a prompt. Inference-layer op; shares mask plumbing
                  with the mask tools and the #36 generative fill.
 
-38   [todo]      Color profiles. Camera / creative rendering profiles (Adobe-style camera
-                 profiles, film-look LUTs) selectable per image, applied early in Develop.
-                 Distinct from #27 colour management (working/output ICC); this is the
-                 look/rendering profile. Persist the choice in the EditStack.
+38   [done]      Color profiles. Camera / creative rendering profiles (Adobe-style camera
+                 profiles, film-look LUTs) selectable per image. Distinct from #27 colour
+                 management (working/output ICC); this is the look/rendering profile.
+                 Persist the choice in the EditStack.
+                 DONE 2026-09-14, in two halves that landed a day apart. CAMERA PROFILES
+                 (DCP) 2026-09-13: four slices, see Documentation "Camera Profiles (DCP)
+                 -- Phase 4 Plan". FILM-LOOK LUTS 2026-09-14: .cube + HaldCLUT, in the
+                 SAME Profile row and mutually exclusive with a camera profile; see
+                 Documentation "Film-Look LUTs (.cube / HaldCLUT)".
+                 ONE CORRECTION TO THE ITEM AS WRITTEN: "applied early in Develop" is
+                 right for a camera profile (it replaces stage 0) and WRONG for a look.
+                 A look is authored against display-referred sRGB, so it is applied LAST,
+                 inside OutputTransform after the transfer -- the only point in the
+                 pipeline where the pixels are in the encoding the file assumes.
 
 39   [dropped]   Color mixer. Per-hue HSL mixer (8 colour bands: red/orange/yellow/green/
                  aqua/blue/purple/magenta, each with hue/saturation/luminance) beyond

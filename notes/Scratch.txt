@@ -4256,3 +4256,25 @@ After start Winnow, but before a folder or catalog selected, if switch to develo
    empty-scope), which is pure logic and needs no media.
 
 make the profile's  curve win and grey out Tone mapping.
+
+
+=================== Workspaces =================
+
+New
+Manage
+---
+Default
+  Library       E, G, C
+  Develop       D
+  Keywords      K
+  Embellish
+  Focus Stack
+User override
+  Library
+  Develop
+  Keywords
+  Embellish
+  Focus Stack
+Other
+  User defined
+

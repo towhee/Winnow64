@@ -133,6 +133,7 @@ set(WINNOW_SOURCES
     Develop/cameraprofilestore.cpp
     Develop/develop.cpp
     Develop/inputtransform.cpp
+    Develop/lutstore.cpp
     Develop/outputtransform.cpp
     Develop/whitebalance.cpp
     Develop/workingimagecache.cpp
@@ -458,6 +459,9 @@ set(WINNOW_HEADERS
     Develop/editparams.h
     Develop/inputtransform.h
     Develop/maskfalloff.h
+    Develop/lut3d.h
+    Develop/lutstore.h
+    Develop/lutparse.h
     Develop/outputtransform.h
     Develop/rangemask.h
     Develop/whitebalance.h

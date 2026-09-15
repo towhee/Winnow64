@@ -15,6 +15,7 @@
 #include <QtTest>
 #include <cmath>
 #include <vector>
+#include "Develop/lut3d.h"
 #include "Develop/outputtransform.h"
 #include "Develop/workingimage.h"
 #include "Develop/colorspace.h"
@@ -118,6 +119,12 @@ private slots:
     void agxKeepsNeutralsNeutral();
     void agxIsMonotonic();
     void agxDesaturatesHighlightsWithoutHueMarch();
+    void noLookOutputIsUnchanged();
+    void identityLookIsANoOp();
+    void channelSwapLookSwapsChannels();
+    void lookOverOneSaturatesAndDoesNotWrap();
+    void lookIsAppliedInSrgbNotTheOutputSpace();
+    void lookAgreesBetweenEightAndSixteenBit();
 
 private:
     /* Renders `img` and compares every byte with the reference. Returns the worst
@@ -467,6 +474,280 @@ void TestOutputTransform::agxDesaturatesHighlightsWithoutHueMarch()
     renderOne(hot, OutputTransform::ViewTransform::Filmic, filmic);
     QVERIFY2(agx[1] > filmic[1] + 20,
              qPrintable(QString("AgX G=%1 vs Filmic G=%2").arg(agx[1]).arg(filmic[1])));
+}
+
+/*
+    THE REGRESSION GATE for adding a look LUT to this file.
+
+    A creative look is applied after the transfer, and the no-look path must come out
+    BYTE-IDENTICAL to what it produced before that code existed -- this is the whole
+    output stage for every image in the app, so "near enough" is not a bound anyone would
+    accept. The hashes below were captured from the build immediately BEFORE the look was
+    added, per the rule in notes/Documentation.txt ("Changing an existing op's math").
+
+    Covers both paths deliberately: sRGB is the fused 1-D-table path, P3 and Adobe RGB
+    take the split matrix path, and the 16-bit twin is packed separately.
+*/
+static quint64 hashImage(const QImage &q, int bytesPerPixel)
+{
+    quint64 h = 1469598103934665603ULL;             // FNV-1a
+    for (int y = 0; y < q.height(); ++y) {
+        const uchar *p = q.constScanLine(y);
+        const int n = q.width() * bytesPerPixel;
+        for (int i = 0; i < n; ++i) { h ^= p[i]; h *= 1099511628211ULL; }
+    }
+    return h;
+}
+
+void TestOutputTransform::noLookOutputIsUnchanged()
+{
+    struct Case {
+        const char *name;
+        OutputTransform::Space space;
+        OutputTransform::ViewTransform view;
+        bool scene;
+        float vMax;
+        bool deep;
+        quint64 want;
+    };
+    const Case cases[] = {
+        {"sRGB/None/display",  OutputTransform::Space::sRGB,
+         OutputTransform::ViewTransform::None,   false, 1.0f, false,
+         0xdd34c2eff5da0abfULL},
+        {"sRGB/Filmic/scene",  OutputTransform::Space::sRGB,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
+         0x386a902b481f96abULL},
+        {"sRGB/AgX/scene",     OutputTransform::Space::sRGB,
+         OutputTransform::ViewTransform::AgX,    true,  4.0f, false,
+         0x1fc31ce2190d435dULL},
+        {"P3/Filmic/scene",    OutputTransform::Space::DisplayP3,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
+         0x5b0994ad7a7c933fULL},
+        {"Adobe/Filmic/scene", OutputTransform::Space::AdobeRGB,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
+         0xb9c0d468885c7d68ULL},
+        {"sRGB16/Filmic/scene",OutputTransform::Space::sRGB,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f, true,
+         0x87f8c01447ecf34bULL},
+    };
+    for (const Case &c : cases) {
+        const WorkingImage img = makeRamp(97, 53, c.vMax, c.scene);
+        OutputTransform t;
+        QImage q;
+        const bool ok = c.deep ? t.ToImage16(img, q, c.space, c.view)
+                               : t.ToImage(img, q, c.space, c.view);
+        QVERIFY2(ok, c.name);
+        const quint64 got = hashImage(q, c.deep ? 8 : 3);
+        QVERIFY2(got == c.want,
+                 qPrintable(QString("%1: output moved (0x%2, expected 0x%3)")
+                                .arg(c.name)
+                                .arg(got, 16, 16, QLatin1Char('0'))
+                                .arg(c.want, 16, 16, QLatin1Char('0'))));
+    }
+}
+
+/* ---------------------------------------------------------------------------------------
+   Look LUTs. Each is built so the TABLE introduces no interpolation error of its own --
+   every one is linear or a permutation, exactly representable by a 2-cube -- so a failure
+   here is the pipeline, never the sampler (which tst_lut3d covers).
+   ------------------------------------------------------------------------------------ */
+namespace {
+
+Lut3d::Table lookFrom(int n, float (*fn)(int, float, float, float))
+{
+    Lut3d::Table t;
+    t.size = n;
+    t.v.resize(size_t(n) * n * n * 3);
+    const float d = float(n - 1);
+    for (int b = 0; b < n; ++b)
+        for (int g = 0; g < n; ++g)
+            for (int r = 0; r < n; ++r) {
+                const float x = float(r) / d, y = float(g) / d, z = float(b) / d;
+                float *e = &t.v[(size_t((b * n + g) * n + r)) * 3];
+                for (int c = 0; c < 3; ++c) e[c] = fn(c, x, y, z);
+            }
+    return t;
+}
+
+float fnIdentity(int c, float r, float g, float b)
+{ return c == 0 ? r : (c == 1 ? g : b); }
+
+float fnSwapRB(int c, float r, float g, float b)
+{ return c == 0 ? b : (c == 1 ? g : r); }
+
+float fnInvert(int c, float r, float g, float b)
+{ return 1.0f - (c == 0 ? r : (c == 1 ? g : b)); }
+
+float fnOverOne(int, float, float, float) { return 2.0f; }
+
+} // namespace
+
+void TestOutputTransform::identityLookIsANoOp()
+{
+    /* An identity look must change nothing the eye could see. Not byte-identical: an
+       identity LUT forces the SPLIT path where the no-look render took the fused one, and
+       those two tables differ in the last count -- which is the bound the whole file is
+       written to. */
+    const Lut3d::Table look = lookFrom(33, fnIdentity);
+    for (auto space : {OutputTransform::Space::sRGB, OutputTransform::Space::DisplayP3}) {
+        const WorkingImage img = makeRamp(128, 96, 4.0f, true);
+        OutputTransform t;
+        QImage bare, looked;
+        QVERIFY(t.ToImage(img, bare, space, OutputTransform::ViewTransform::Filmic));
+        QVERIFY(t.ToImage(img, looked, space, OutputTransform::ViewTransform::Filmic,
+                          &look));
+        int worst = 0;
+        for (int y = 0; y < img.height; ++y) {
+            const uchar *a = bare.constScanLine(y);
+            const uchar *c = looked.constScanLine(y);
+            for (int i = 0; i < img.width * 3; ++i)
+                worst = std::max(worst, std::abs(int(a[i]) - int(c[i])));
+        }
+        QVERIFY2(worst <= 1, qPrintable(QString("identity look moved a byte by %1")
+                                            .arg(worst)));
+    }
+}
+
+void TestOutputTransform::channelSwapLookSwapsChannels()
+{
+    /*
+        A red/blue swap commutes with every per-channel stage around it, so the result
+        must be the no-look render with its R and B bytes exchanged. This is the case that
+        catches the look being fed the wrong channel order -- the failure that renders a
+        perfectly plausible picture.
+    */
+    const Lut3d::Table look = lookFrom(2, fnSwapRB);
+    const WorkingImage img = makeRamp(128, 96, 4.0f, true);
+    OutputTransform t;
+    QImage bare, looked;
+    QVERIFY(t.ToImage(img, bare, OutputTransform::Space::sRGB,
+                      OutputTransform::ViewTransform::Filmic));
+    QVERIFY(t.ToImage(img, looked, OutputTransform::Space::sRGB,
+                      OutputTransform::ViewTransform::Filmic, &look));
+    int worst = 0;
+    for (int y = 0; y < img.height; ++y) {
+        const uchar *a = bare.constScanLine(y);
+        const uchar *c = looked.constScanLine(y);
+        for (int x = 0; x < img.width; ++x) {
+            worst = std::max(worst, std::abs(int(c[x * 3 + 0]) - int(a[x * 3 + 2])));
+            worst = std::max(worst, std::abs(int(c[x * 3 + 1]) - int(a[x * 3 + 1])));
+            worst = std::max(worst, std::abs(int(c[x * 3 + 2]) - int(a[x * 3 + 0])));
+        }
+    }
+    QVERIFY2(worst <= 2, qPrintable(QString("swap look was off by %1").arg(worst)));
+}
+
+void TestOutputTransform::lookOverOneSaturatesAndDoesNotWrap()
+{
+    /*
+        THE OVERFLOW CASE. A LUT may legitimately hold values above 1; lround(2.0*255)
+        is 510, which does not fit a uchar. Before looks existed nothing in this stage
+        could exceed 1.0, so the packer had never needed the clamp.
+    */
+    const Lut3d::Table look = lookFrom(2, fnOverOne);
+    const WorkingImage img = makeRamp(64, 48, 4.0f, true);
+    OutputTransform t;
+
+    QImage q8;
+    QVERIFY(t.ToImage(img, q8, OutputTransform::Space::sRGB,
+                      OutputTransform::ViewTransform::Filmic, &look));
+    for (int y = 0; y < img.height; ++y) {
+        const uchar *p = q8.constScanLine(y);
+        for (int i = 0; i < img.width * 3; ++i)
+            QVERIFY2(p[i] == 255, "an over-range look did not saturate to white");
+    }
+
+    QImage q16;
+    QVERIFY(t.ToImage16(img, q16, OutputTransform::Space::sRGB,
+                        OutputTransform::ViewTransform::Filmic, &look));
+    for (int y = 0; y < img.height; ++y) {
+        const quint16 *p = reinterpret_cast<const quint16 *>(q16.constScanLine(y));
+        for (int x = 0; x < img.width; ++x)
+            for (int c = 0; c < 3; ++c)
+                QVERIFY2(p[x * 4 + c] == 65535,
+                         "an over-range look did not saturate in 16-bit");
+    }
+}
+
+void TestOutputTransform::lookIsAppliedInSrgbNotTheOutputSpace()
+{
+    /*
+        THE SANDWICH, and the only test that proves it exists.
+
+        A .cube is authored against display-referred sRGB. Rendering to P3 must therefore
+        apply the look to the sRGB-ENCODED value and only then convert primaries -- not to
+        the P3-encoded value it happens to be sitting in by that point. For a desaturated
+        pixel the two agree; for a saturated one they do not, which is why the ramp is
+        used rather than a grey.
+
+        The expectation below is computed from this file's own independent reference
+        chain, so the implementation and the test would both have to be wrong in the same
+        way to pass. An implementation that applied the look after the P3 matrix is off by
+        tens of counts here, not by one.
+    */
+    const Lut3d::Table look = lookFrom(2, fnInvert);   // exactly linear: no table error
+    const WorkingImage img = makeRamp(200, 150, 5.0f, true);
+    OutputTransform t;
+    QImage out;
+    QVERIFY(t.ToImage(img, out, OutputTransform::Space::DisplayP3,
+                      OutputTransform::ViewTransform::Filmic, &look));
+
+    int worst = 0;
+    for (int y = 0; y < img.height; ++y) {
+        const uchar *line = out.constScanLine(y);
+        for (int x = 0; x < img.width; ++x) {
+            const size_t o = (size_t(y) * size_t(img.width) + size_t(x)) * 3;
+            float v[3];
+            /* view curve -> display-linear, still sRGB primaries (the image's space) */
+            for (int c = 0; c < 3; ++c) v[c] = BaselineToneRef(img.rgb[o + c]);
+            /* into the look's domain, invert, and back out */
+            for (int c = 0; c < 3; ++c) {
+                const float enc = SrgbGammaRef(v[c]);
+                const float looked = Clamp01Ref(1.0f - enc);
+                v[c] = looked <= 0.04045f
+                           ? looked / 12.92f
+                           : std::pow((looked + 0.055f) / 1.055f, 2.4f);
+            }
+            /* only now the output primaries, the rolloff and the transfer */
+            const float r = v[0], g = v[1], b = v[2];
+            v[0] = kSrgbToP3Ref[0]*r + kSrgbToP3Ref[1]*g + kSrgbToP3Ref[2]*b;
+            v[1] = kSrgbToP3Ref[3]*r + kSrgbToP3Ref[4]*g + kSrgbToP3Ref[5]*b;
+            v[2] = kSrgbToP3Ref[6]*r + kSrgbToP3Ref[7]*g + kSrgbToP3Ref[8]*b;
+            RolloffRef(v[0], v[1], v[2]);
+            for (int c = 0; c < 3; ++c) {
+                const int want = int(std::lround(SrgbGammaRef(v[c]) * 255.0f));
+                worst = std::max(worst, std::abs(int(line[x * 3 + c]) - want));
+            }
+        }
+    }
+    QVERIFY2(worst <= 2,
+             qPrintable(QString("P3 render with a look is off by %1 counts -- the look "
+                                "is not being applied in sRGB").arg(worst)));
+}
+
+void TestOutputTransform::lookAgreesBetweenEightAndSixteenBit()
+{
+    /* Export must not drift from the loupe: the same look, the same maths, one extra
+       byte of precision. */
+    const Lut3d::Table look = lookFrom(33, fnInvert);
+    const WorkingImage img = makeRamp(96, 64, 4.0f, true);
+    OutputTransform t;
+    QImage q8, q16;
+    QVERIFY(t.ToImage(img, q8, OutputTransform::Space::sRGB,
+                      OutputTransform::ViewTransform::Filmic, &look));
+    QVERIFY(t.ToImage16(img, q16, OutputTransform::Space::sRGB,
+                        OutputTransform::ViewTransform::Filmic, &look));
+    int worst = 0;
+    for (int y = 0; y < img.height; ++y) {
+        const uchar *a = q8.constScanLine(y);
+        const quint16 *d = reinterpret_cast<const quint16 *>(q16.constScanLine(y));
+        for (int x = 0; x < img.width; ++x)
+            for (int c = 0; c < 3; ++c)
+                worst = std::max(worst,
+                                 std::abs(int(a[x * 3 + c]) - int(d[x * 4 + c] >> 8)));
+    }
+    QVERIFY2(worst <= 2, qPrintable(QString("8- and 16-bit looks differ by %1")
+                                        .arg(worst)));
 }
 
 QTEST_MAIN(TestOutputTransform)
