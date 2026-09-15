@@ -552,6 +552,14 @@ Q_NAMESPACE
        cost is one relaxed atomic load at each hook site. */
     extern std::atomic<bool> isIngestProbe;
 
+    /* When true the panel probe (Utilities/panelprobe.h) records the dock-geometry
+       negotiation -- marks, resizes, sizing requests and min/max pins -- so a panel
+       that comes up narrow, or a thumbDock shorter than one icon cell, can be traced to
+       the step that wrote the bad number. Armed from Help > Diagnostics (persisted, so
+       it also arms the NEXT launch) or with --panelprobe; off in production, where the
+       cost is one relaxed atomic load at each hook site. */
+    extern std::atomic<bool> isPanelProbe;
+
     /* Develop slider-drag latency probe. When true, MW::developParamsChange logs per-stage
        timings (copy / Apply / ToImage / rotate / preview) for each re-render so the dominant
        cost can be measured before optimising. */

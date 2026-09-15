@@ -43,6 +43,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Responsive Dock Tab Titles (Text <-> Graphic)
      Dropped Dock Lands Last (Rightmost Tab)   [WORK IN PROGRESS - DISABLED]
      Workspaces (and the Workflow Workspaces)
+     Panel Probe (Why a Panel Comes Up the Wrong Size)
 
 2. FOLDER LOADING PIPELINE
      Overview
@@ -145,6 +146,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Menu vs Shortcut Pitfall
      Return and Enter
        Known Gap, Deliberately Not Fixed
+     Escape (the Cancel Chain, and the Way Back to the Grid)
      Disabled Shortcut Feedback
        Modeless Dialog Shortcut Guard
      Develop Mode Local Shortcuts
@@ -382,6 +384,33 @@ WINDOW POSITION AND SIZE ARE OPTIONAL (WorkspaceData::isGeometryIncluded, QSetti
 THE WORKSPACE MENU FLAGS IT WITH " *": MW::workspaceMenuName appends the asterisk to the name of a workspace that restores the window position and size.  Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text -- name matching there would silently do nothing.  That positional match is also what makes the workflow branches safe: QMenu::triggered fires for submenu items too, so every Default and User override action reaches invokeWorkspaceFromAction, is not found in workspaceActions, and is ignored there.  The choice is made in Manage Workspaces: a "Restore window position and size" checkbox under the dropdown, showing the selected workspace's setting and writing it through WorkspaceDlg::setWorkspaceGeometryIncluded(n, isIncluded) to MW::setWorkspaceGeometryIncluded, which saves and re-syncs the menu immediately.  With no workspaces saved the checkbox, Delete and Reassign are all disabled and the status line says why.  WorkspaceDlg keeps its own copy of the flags (isGeometry) so the checkbox can be set without a round trip to MW, and setChecked is done with signals blocked, otherwise moving the dropdown would write the new selection's value back onto the workspace just left.
 
 The stylesheet also matters here: WidgetCSS::comboBox styles the popup ("QComboBox QAbstractItemView::item"), so QStyleSheetStyle paints Qt's separator item as a blank row and the line vanishes.  ComboSeparatorDelegate (workspacedlg.cpp) draws it.  Any other styled combo needing a separator has the same problem.
+
+
+⏺ Initialization > Panel Probe (Why a Panel Comes Up the Wrong Size)
+
+TWO INTERMITTENT COMPLAINTS ABOUT GEOMETRY WINNOW NEVER ASKED FOR.  Panels that open NARROW at startup -- the left dock group a fraction of its saved width, so the folder tree is a sliver -- and a thumbView HALF HIDDEN after the window is resized or a dock is dragged, the strip shorter than one icon cell so the thumbnails are cut through the middle.
+
+NEITHER CAN BE READ OFF THE CODE, which is why this exists rather than another qDebug.  The final geometry is not set in one place; it is NEGOTIATED, within the first few event-loop turns after MW::showEvent, between restoreGeometry, MW::restoreWindowState, MW::placeDocksAddedSince, MW::applyDockCollapseState, MW::invokeWorkflowWorkspace, the resizeDocks calls in MW::setThumbDockFeatures and MW::builtInDefaultWorkspace, the min/max pin in DockWidget::setCollapsed, and QDockAreaLayout's own redistribution -- all writing to the same numbers.  A trace in any one of them shows a plausible value that something later overwrites, which is why "it looks right when I print it" and "it is wrong on screen" have both been true.
+
+SO Utilities/panelprobe.h RECORDS THE NEGOTIATION RATHER THAN ANY ONE STEP.
+
+  MARK        a labelled milestone in the startup or workspace sequence, with a snapshot of every watched panel at that instant.  MW::showEvent marks every step above by name, and adds two LATE marks -- the first idle after show, and 1.5 s after -- because the size the user sees is not the size at the end of showEvent.
+  SNAP        one panel's geometry AND its constraints: min/max, sizeHint, minimumSizeHint, the body widget's size, the area, floating and visible.  Constraints are recorded with the geometry because a panel PINNED narrow and a panel merely ALLOCATED narrow look identical on screen and are different bugs.
+  RESIZE      every resize / move / show / hide the layout actually delivers, old -> new, from an event filter on each dock.  This is the only record of WHICH step overwrote a good value.
+  REQUEST     an explicit sizing call Winnow made (resizeDocks, setMinimumHeight, the collapse/expand pins).  resizeDocks is a REQUEST, not a result -- QDockAreaLayout can refuse it outright when the area has no room -- so a request with no matching resize after it is a refused request, and that is visible only because both are recorded.
+  AUDIT       a verdict line MW supplies (MW::panelProbeThumbAudit): does the thumbView viewport still hold a whole icon cell?  Re-evaluated at every mark and after every settled resize, and recorded only when it CHANGES, so the timeline carries the answer at every step without filling up.
+
+SETTLED MARKS, NOT IMMEDIATE ONES, for every gesture.  A drop, a float, a window resize and a resizeDocks all return before the dock area has redistributed, so those hooks schedule the snapshot on the next event-loop turn (PanelProbe::MarkSettled) and coalesce the burst a single gesture produces into one.  Marking immediately would record the value that is about to be overwritten -- which is the mistake the qDebug approach kept making.
+
+SUSPECTS ARE FLAGGED AS THEY ARE RECORDED and listed FIRST in the report, so the timeline below them is read for the cause rather than searched for the symptom.  Two tests: a docked, visible panel allocated less than its own minimumSizeHint width (minimumSizeHint rather than sizeHint, because sizeHint is a preference the layout may fairly ignore and minimumSizeHint is not -- falling below it means the allocation came from somewhere that never consulted the widget), and a thumb cell more than 2 px taller than the thumbView viewport.  Two pixels of rounding nobody can see is not the complaint; a cell cut through the middle is.
+
+WHAT IS WATCHED: every dock (Folders, Bookmarks, Filters, Catalog, Keywords, Metadata, Thumb, Embellish, Develop, History, Presets), plus thumbView, centralWidget and MW itself.  thumbView is watched ALONGSIDE thumbDock because they are not the same measurement -- the dock can be exactly the height it was asked for while the view inside it is short by a scroll bar, which is precisely the "thumbnails cut in half" report.
+
+HOW TO RUN IT.  Help > Diagnostics > "Panel probe (record panel sizing)" arms it; Help > Diagnostics > "Panel probe report" reads it.  `Winnow --panelprobe` arms exactly one run.
+
+THE TICK IS PERSISTED (QSettings "PanelProbe"), UNLIKE THE INGEST PROBE'S, and that is the point rather than an inconsistency.  The startup sizing happens in showEvent, before any menu can be reached, so a toggle that applied only to the current session could never record the thing it was ticked for.  Ticking it arms the NEXT launch as well.  MW::setupPanelProbe reads the flag and registers the docks from the MW CONSTRUCTOR -- not from createActions, and not from showEvent -- because everything worth recording is still ahead of that point.  Arming CLEARS the buffers, disarming KEEPS them, so a report is read after the fact; a report from a probe that was never armed says so rather than presenting an empty run as a clean one.  The report also goes to the console on the way out (MW::closeEvent), so a --panelprobe session leaves its timeline in console.txt.
+
+THE COST WHEN DISARMED IS ONE RELAXED ATOMIC LOAD per hook site, each written `if (G::isPanelProbe) ...`, and NO EVENT FILTER IS INSTALLED until it is armed -- PanelProbe::Watch only remembers the widget.  GUI thread only: every hook is a layout event or a call from MW.
 
 
 *** FOLDER LOADING PIPELINE ***
@@ -2103,6 +2132,9 @@ EVERY PROBE'S ON/OFF FLAG IS DEFINED IN Main/global.cpp, IN ONE BLOCK, and decla
                           WINNOW_PERF_PROBE=1, --catalogload)
   G::isIngestProbe        [INGEST] the cull path (Help > Diagnostics, --ingestprobe); an
                           atomic, since the hook sites are on worker threads
+  G::isPanelProbe         the dock geometry negotiation -- panels that open narrow, a
+                          thumbDock cut through an icon (Help > Diagnostics, PERSISTED;
+                          --panelprobe).  See "Initialization > Panel Probe"
   G::isReportDevelopTime  [DevTime] per-stage Develop re-render timings on a slider drag
   G::isCopyPathProbe      [COPYPATH] the context-menu Copy path tracing (event filter,
                           action hovered/changed, the slot)
@@ -2111,7 +2143,7 @@ EVERY PROBE'S ON/OFF FLAG IS DEFINED IN Main/global.cpp, IN ONE BLOCK, and decla
 
 ALL DEFAULT FALSE, AND THEY STAY SEPARATE FLAGS. Each probe answers a different question -- a load, a cull, a context menu, a wheel -- and arming everything at once buries the thing being looked for. The ones with no UI are armed by editing the default and rebuilding; the rest by Help > Diagnostics or a --flag (main.cpp).
 
-THE DIAGNOSTICS REPORT PRINTS THE BLOCK. MW::diagnostics has a PROBES section listing all five, so a build running with tracing on is visible in the report a user pastes rather than inferred from the noise in it.
+THE DIAGNOSTICS REPORT PRINTS THE BLOCK. MW::diagnostics has a PROBES section listing all six, so a build running with tracing on is visible in the report a user pastes rather than inferred from the noise in it.
 
 WHEN YOU ADD A PROBE: put its flag in the block in global.cpp (default false), declare it in the PROBE SWITCHES block in global.h, gate every hook site with `if (G::isXxxProbe)` so a disarmed probe costs one load, and add it to the PROBES section in diagnostics.cpp.
 
@@ -2830,6 +2862,17 @@ Qt already treats the two keys identically in QLineEdit (returnPressed), QDialog
 Qt::KeypadModifier is handled NOWHERE else in Winnow.  MW::ownsShortcut and MW::disabledActionForShortcut both build a QKeySequence from e->keyCombination(), which keeps the modifier, so no keypad key can ever match a stored sequence.  The numeric keypad is therefore inert for every other shortcut.
 
 This is left as-is on purpose: stripping the modifier there would newly make keypad 1-5 set ratings and keypad 6-0 set colour labels, which they do not do today.  It is recorded here so it stays a decision rather than a rediscovery.
+
+
+⏺ Action Enable/Disable Rules > Escape (the Cancel Chain, and the Way Back to the Grid)
+
+Escape owns no QAction, so it is handled directly in MW::keyReleaseEvent (`Main/mainwindow.cpp`) as ONE else-if chain, and the ORDER is the whole design: Esc cancels the most specific thing that is running, and only the LAST branch changes the view.  Reading down: reset the popup (always, before the chain), end a stress test, stop a folder load, stop a file copy, cancel the slideshow, abort an Embellish export / colour analysis / focus stack, exit full screen, re-enable a disabled FSTree or Bookmarks -- and then, with nothing left to cancel, FALL BACK TO THE GRID FROM WHICHEVER OTHER VIEW IS UP -- loupe, table or compare.
+
+The grid branch is the same destination as G, and it calls MW::gridDisplay directly rather than triggering asGridAction: gridDisplay ticks asGridAction itself, so the exclusive view group stays in sync, and going through the action would also reassert the Library workflow workspace -- Esc is a way out of the image, not a request to rebuild the user's panel layout.  Three guards: PREVIEW MODE ONLY (in Develop, Esc belongs to the active tool -- see Develop Mode Local Shortcuts -- and a bare Esc must not throw the user out of the image), G::mode is "Loupe", "Table" or "Compare" (in the grid itself there is nowhere to go), and asGridAction->isEnabled(), which already carries the "a folder with rows is loaded" gate so the branch does not have to restate it.
+
+A PLAYING VIDEO IS PAUSED FIRST.  The video's own Esc handler sits AFTER the chain and is keyed off the central view being the video tab, so once gridDisplay has run it no longer fires -- the branch pauses the player itself before switching, or the audio would keep playing over the grid.
+
+Full screen is tested BEFORE the grid branch, so in full screen the first Esc restores the window and a second one goes to the grid.
 
 
 ⏺ Action Enable/Disable Rules > Disabled Shortcut Feedback

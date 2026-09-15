@@ -266,6 +266,7 @@ bool isDevelopDebounceWrite = true;     // also flush per-image develop settings
 */
 bool isPerfProbe = false;                // [PERF] Phase 1/2 load timing lines
 std::atomic<bool> isIngestProbe{false};  // [INGEST] cull path: selection->loupe, key cost
+std::atomic<bool> isPanelProbe{false};   // dock geometry negotiation (panel sizing glitches)
 bool isReportDevelopTime = false;        // [DevTime] per-stage Develop re-render timings
 bool isCopyPathProbe = false;            // [COPYPATH] context-menu Copy path tracing
 bool isWheelProbe = false;               // [WHEEL] IconView wheel/trackpad events

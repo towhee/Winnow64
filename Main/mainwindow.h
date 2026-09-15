@@ -1610,6 +1610,11 @@ private:
         the state matters: the probe records nothing until it is on, and a report read
         without it having been armed says so rather than showing zeros. */
     QAction *ingestProbeArmAction;
+    QAction *diagnosticsPanelAction;
+    /*  Arms / disarms the panel probe (Utilities/panelprobe.h). Checkable AND PERSISTED:
+        the glitch it exists for -- panels that open narrow -- happens before the menu
+        can be reached, so ticking it here arms the NEXT launch as well as this one. */
+    QAction *panelProbeArmAction;
     QAction *diagnosticsZoomAction;
 
     // Testing Menu (under Help Diagnostics Menu)
@@ -2587,6 +2592,15 @@ private:
     void diagnosticsThumb();
     void diagnosticsIngest();
     void toggleIngestProbe();
+    void diagnosticsPanel();
+    void togglePanelProbe();
+    /*  Register every dock with the panel probe and arm it if the persisted flag or
+        --panelprobe says so.  Called from the constructor, before the first show, which
+        is the only place early enough to catch the startup sizing sequence. */
+    void setupPanelProbe();
+    /*  The panel probe's auditor: does the thumbView viewport still hold a whole icon
+        cell?  Only MW can ask the delegate for the cell height. */
+    QString panelProbeThumbAudit();
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString, QString title = "Winnow Diagnostics");
     void allIssuesReport();
