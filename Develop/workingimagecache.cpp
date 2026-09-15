@@ -2,7 +2,6 @@
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
 #include "Develop/cameraprofilestore.h"
-#include "Develop/lutstore.h"
 #include <QImage>
 #include <QElapsedTimer>
 #include <QtConcurrent>
@@ -35,58 +34,9 @@ namespace {
 void attachProfile(WorkingImage &img, const EditParams &p)
 {
     img.cam.profile.reset();
-    if (!img.cam.valid) return;
-
-    if (!p.cameraProfile.isEmpty()) {
-        img.cam.profile = CameraProfileStore::instance().profile(img.cam.cameraModel,
-                                                                 p.cameraProfile);
-        return;
-    }
-
-    /*
-        A LOOK RENDERS ON "CAMERA BASE" WHEN ONE EXISTS.
-
-        The Profile row offers camera profiles and looks as ONE exclusive choice, so
-        picking a look leaves no profile selected -- but a look is a grade, not a
-        characterisation, and it still has to be printed on something. The maker's own
-        colorimetric base is a better something than Winnow's generic matrix, it is
-        already derived and cached by the profile store, and it costs one lookup.
-
-        The UNSUFFIXED "Camera Base" wins where a camera ships two generations
-        ("Camera Base" and "Camera Base v2"); the first base found is the fallback. A
-        camera with no profiles installed gets no base and renders on the built-in
-        matrix, which is exactly what it did before looks existed.
-    */
-    if (p.lookLut.isEmpty()) return;
-    const QList<CameraProfileStore::Entry> all =
-        CameraProfileStore::instance().forModel(img.cam.cameraModel);
-    QString baseName;
-    for (const CameraProfileStore::Entry &e : all) {
-        if (!e.isBase) continue;
-        if (e.name == QLatin1String("Camera Base")) { baseName = e.name; break; }
-        if (baseName.isEmpty()) baseName = e.name;
-    }
-    if (baseName.isEmpty()) return;
+    if (!img.cam.valid || p.cameraProfile.isEmpty()) return;
     img.cam.profile = CameraProfileStore::instance().profile(img.cam.cameraModel,
-                                                             baseName);
-}
-
-/*
-    The look the params name, resolved for the output stage.
-
-    Returned by value as a shared_ptr the caller holds for the duration of the render:
-    OutputTransform takes a bare pointer and reads it from every worker thread, so the
-    table has to stay alive and immutable for the whole call. Resolved per render for the
-    same reason attachProfile is -- a hash hit, against a stale table surviving a change
-    of look.
-
-    A key that no longer resolves gives nullptr and the image renders WITHOUT a look.
-    That is deliberate and not silent: the panel resolves the same key and marks it.
-*/
-std::shared_ptr<const Lut3d::Table> resolveLook(const EditParams &p)
-{
-    if (p.lookLut.isEmpty()) return nullptr;
-    return LutStore::instance().lut(p.lookLut);
+                                                             p.cameraProfile);
 }
 
 } // namespace
@@ -237,14 +187,9 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
        params being rendered rather than from any per-mask scope. */
     const OutputTransform::ViewTransform view =
         OutputTransform::ViewFromInt(edit.viewTransform);
-    /* Held for the whole render: OutputTransform reads the table from every worker. */
-    const std::shared_ptr<const Lut3d::Table> look = resolveLook(edit);
-    const Lut3d::Table *lookPtr = look.get();
-    auto toImage = [&output, depth, space, view, lookPtr](const WorkingImage &src,
-                                                          QImage &dst) {
-        return depth == OutDepth::Sixteen
-                   ? output.ToImage16(src, dst, space, view, lookPtr)
-                   : output.ToImage(src, dst, space, view, lookPtr);
+    auto toImage = [&output, depth, space, view](const WorkingImage &src, QImage &dst) {
+        return depth == OutDepth::Sixteen ? output.ToImage16(src, dst, space, view)
+                                          : output.ToImage(src, dst, space, view);
     };
 
     /* Identity edit: no Develop, no copy -- transform the cached image straight to
@@ -543,12 +488,8 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
        per-scope value would mean different looks in different parts of one picture. */
     const OutputTransform::ViewTransform view =
         OutputTransform::ViewFromInt(base.viewTransform);
-    /* Same reasoning for the look, which is applied after the scopes are composited and
-       so could not be per-scope even in principle. */
-    const std::shared_ptr<const Lut3d::Table> look = resolveLook(base);
-    const bool ok = depth == OutDepth::Sixteen
-                        ? output.ToImage16(acc, out, space, view, look.get())
-                        : output.ToImage(acc, out, space, view, look.get());
+    const bool ok = depth == OutDepth::Sixteen ? output.ToImage16(acc, out, space, view)
+                                               : output.ToImage(acc, out, space, view);
     if (timings) timings->toImageMs = t.restart();
 
     /* Same reason: a locally-allocated accumulator is ~w*h*12 bytes and dies on return,

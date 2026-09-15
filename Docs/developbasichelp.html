@@ -14,12 +14,9 @@ rendered at, the <b>tone</b> of it &mdash; exposure, contrast and the four tonal
 rest of the module is refinement.</p>
 
 <h2>Profile</h2>
-<p><b>Profile</b> is the first row because it is the first decision: it says what rendering
-this picture is, and everything below it is an adjustment made on top of that.  The list
-holds two kinds of thing &mdash; <b>camera profiles</b>, which characterise the
-<i>sensor</i>, and <b>looks</b>, which are film simulations applied at the very end.  They
-are separated in the list, and you choose <i>one</i>: picking a look clears the camera
-profile and the other way round, exactly as Lightroom does.</p>
+<p><b>Profile</b> is the first row because it is the first decision: it says how this
+camera&rsquo;s <i>sensor</i> is characterised, and everything below it is an adjustment made
+on top of that characterisation.</p>
 
 <p><b>Winnow Standard</b> is the built-in matrix &mdash; the colour Winnow has always
 rendered, and the default.  The other entries are <b>DNG camera profiles</b> (<tt>.dcp</tt>
@@ -56,29 +53,6 @@ Tone mapping row</b>: it reads <i>set by the profile</i> and the dropdown is put
 since applying a second mapping on top compresses the highlights twice.  Your setting is
 remembered and comes back when you choose a profile without a look &mdash; Winnow
 Standard, Camera Base, or Adobe Standard.</p>
-
-<h3>Looks</h3>
-<p>A <b>look</b> is a film simulation &mdash; a colour lookup table of the kind sold and
-given away as <tt>.cube</tt> files, or as RawTherapee&rsquo;s HaldCLUT images.  Where a
-camera profile says what the sensor saw, a look says what stock the picture is printed
-on, so it is applied <i>after</i> every adjustment below.</p>
-
-<p><b>To install looks</b>, put <tt>.cube</tt> or HaldCLUT <tt>.png</tt> files into
-Winnow&rsquo;s <tt>Looks</tt> folder, beside the <tt>CameraProfiles</tt> folder.  Winnow
-makes the folder for you the first time it runs.  Subfolders become groups, so a folder
-called <tt>Fuji</tt> gives you entries like <tt>Fuji/Classic&nbsp;Chrome</tt>.  Winnow does
-not ship looks.</p>
-
-<p>Looks work on <i>every</i> picture, including JPEGs, and they work whichever demosaic
-engine you use &mdash; unlike camera profiles, which need a raw file and the Winnow
-engine.  When camera profiles are not available the list simply shows the looks, and says
-why.</p>
-
-<p><b>One caution about free LUT packs.</b>  Many are made for <i>log</i> video footage
-(S&#8209;Log, LogC and the like) rather than for ordinary photographs, and nothing in the
-file says which is which.  A log LUT applied to a photograph looks badly wrong &mdash; flat,
-or wildly contrasty &mdash; and that is the LUT, not Winnow.  Packs described as film
-simulations for photographers are the ones to want.</p>
 
 <p>A profile carries two calibrations, one under tungsten light and one under daylight, and
 Winnow blends between them according to the temperature you have dialled.  That is why

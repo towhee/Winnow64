@@ -4260,13 +4260,17 @@ make the profile's  curve win and grey out Tone mapping.
 
 =================== Workspaces =================
 
+I want to insure there is a default layout for Winnow for each workflow. When G::isRory
+is true I can set the default workspaces to apply. Library workspace will be run when the
+user presses E, G, C.  Develop workspace will be run when the user presses
+
 New
 Manage
 ---
-Default
-  Library       E, G, C
-  Develop       D
-  Keywords      K
+Default (only visible when G:isRory == true)
+  Library       (E, G, C execute workspace)
+  Develop       (D execute workspace)
+  Keywords      (K execute workspace)
   Embellish
   Focus Stack
 User override
@@ -4276,5 +4280,7 @@ User override
   Embellish
   Focus Stack
 Other
-  User defined
+  User defined workspace 1
+  User defined workspace 2
+  ...
 

@@ -118,43 +118,13 @@ elseif(WIN32)
     target_link_libraries(tst_localcontrast PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
-# tst_lut3d tests Develop/lut3d.h -- the RGB colour lookup table a film-look LUT renders
-# through (header-only scalar math, like maskfalloff/colorgrade, so no extra sources).
-# The case that matters is the INTERPOLATOR: tetrahedral keeps the grey axis exactly
-# neutral where trilinear tints every neutral, and the test asserts BOTH halves so
-# swapping the sampler back for the obvious one cannot pass silently.
-winnow_add_unit_test(tst_lut3d unit/tst_lut3d.cpp)
-
-# tst_lutparse tests Develop/lutparse.h -- the .cube and HaldCLUT readers. Header-only
-# and filesystem-free (they take bytes and a QImage), so the fixtures are built in the
-# test source and no extra sources are needed. The index convention is proved TWICE: an
-# eight-corner cube, and a cross-format agreement test that one transposed reader cannot
-# pass.
-winnow_add_unit_test(tst_lutparse unit/tst_lutparse.cpp)
-
-# tst_lookparams pins EditParams::lookLut -- the film look's place in the recipe, and
-# the first parameter the RENDER does not read (Develop::Apply never sees it;
-# OutputTransform does). That puts two guarantees on paramsToJson alone: the sidecar, and
-# the per-scope render-cache key that is the only thing making a look change re-render.
-# Both are asserted as properties. Header-only (editstack.h/editparams.h), like
-# tst_denoiseraw.
-winnow_add_unit_test(tst_lookparams unit/tst_lookparams.cpp)
-
-# tst_lookpreset is the FIRST test of DevelopPresets::assignParam, which the docs call
+# tst_presetparams is the FIRST test of DevelopPresets::assignParam, which the docs call
 # "the easiest thing in Develop to get wrong" and which had no coverage at all. The hazard
 # it pins is specific to string fields: assignParam computes v.toFloat() up front and runs
 # one if/else-if chain with no final else, so a string key without its own branch does not
 # fail -- it silently stores nothing.
-winnow_add_unit_test(tst_lookpreset unit/tst_lookpreset.cpp
+winnow_add_unit_test(tst_presetparams unit/tst_presetparams.cpp
     ${CMAKE_SOURCE_DIR}/Develop/Presets/developpresets.cpp)
-
-# tst_lutstore covers the half of the look feature that touches the filesystem: the
-# INDEX KEY (a look is stored by its path under the Looks folder, so getting the
-# derivation wrong strands every saved look) and the fact that the key CANNOT ESCAPE that
-# folder -- it arrives from a sidecar, which is user-editable text. Runs under
-# QStandardPaths test mode so it never touches the real application folder.
-winnow_add_unit_test(tst_lutstore unit/tst_lutstore.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/lutstore.cpp)
 
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
@@ -201,10 +171,6 @@ winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
 # the render path resolves a profile per render -- see attachProfile in workingimagecache.cpp.
 winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
     ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp
-    # The render path now resolves a LOOK per render as well as a profile (resolveLook in
-    # workingimagecache.cpp), so the look store rides along the same way the profile store
-    # does. lut3d.h / lutparse.h are header-only and need no entry.
-    ${CMAKE_SOURCE_DIR}/Develop/lutstore.cpp
     ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
