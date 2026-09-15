@@ -24,6 +24,9 @@ void MW::writeSettings()
        (see MW::winnowStateVersion and MW::showEvent). */
     settings->setValue("WindowState", saveState(winnowStateVersion));
     settings->setValue("isFullScreen", isFullScreen());
+    /* The workflow the session is being left in.  The next session starts in Preview,
+       so a Develop layout must not be the one it comes up in (see MW::showEvent). */
+    settings->setValue("currentWorkflow", currentWorkflow);
 
     // full screen
     settings->setValue("isFullScreenFolders", fullScreenDocks.isFolders);

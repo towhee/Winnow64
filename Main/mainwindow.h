@@ -325,6 +325,10 @@ public:
     QList<bool> isWorkflowDefault;            // a shipped layout was found
     QList<WorkspaceData> workflowUserWs;      // the user's captured layout
     QList<bool> isWorkflowOverride;           // use the user's layout, not the default
+    /*  The workflow the session is in, or -1 when a named workspace was invoked instead.
+        Persisted ("currentWorkflow") because the layout a session is LEFT in is not
+        always a layout the next session can start in -- see MW::showEvent. */
+    int currentWorkflow = WfLibrary;
 
     // recoverGeometry info
     struct RecoverGeometry {
