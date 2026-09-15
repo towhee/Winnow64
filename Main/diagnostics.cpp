@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/panelprobe.h"
 #include "Develop/workingimagecache.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/catalog.h"
@@ -506,6 +507,8 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  G::isPerfProbe = " << G::s(G::isPerfProbe);
     rpt << "\n" << "  G::isIngestProbe = "
         << G::s(G::isIngestProbe.load(std::memory_order_relaxed));
+    rpt << "\n" << "  G::isPanelProbe = "
+        << G::s(G::isPanelProbe.load(std::memory_order_relaxed));
     rpt << "\n" << "  G::isReportDevelopTime = " << G::s(G::isReportDevelopTime);
     rpt << "\n" << "  G::isCopyPathProbe = " << G::s(G::isCopyPathProbe);
     rpt << "\n" << "  G::isWheelProbe = " << G::s(G::isWheelProbe);
@@ -925,6 +928,131 @@ void MW::diagnosticsIngest()
 {
     if (G::isLogger) G::log("MW::diagnosticsIngest");
     diagnosticsReport(IngestProbe::Instance().Report(), "Winnow Diagnostics: Ingest Probe");
+}
+
+/* ------------------------------------------------------------------ PANEL PROBE ---- */
+
+void MW::setupPanelProbe()
+{
+/*
+    Register every dock with the panel probe (Utilities/panelprobe.h) and arm it if the
+    persisted flag or --panelprobe says so.
+
+    CALLED FROM THE CONSTRUCTOR, not from createActions, because the sequence the probe
+    exists to explain -- restoreGeometry, restoreWindowState, placeDocksAddedSince,
+    applyDockCollapseState, the workflow workspace -- all runs in MW::showEvent. A probe
+    armed any later starts recording after the panels are already the wrong size.
+
+    THE ARMED STATE IS PERSISTED for the same reason.  A menu toggle alone can only ever
+    describe the session AFTER the glitch.
+
+    thumbView is watched alongside thumbDock because they are not the same measurement:
+    the dock can be the height it was asked for while the view inside it is short by a
+    scroll bar, which is exactly the "thumbnails cut in half" report.
+*/
+    if (G::isLogger) G::log("MW::setupPanelProbe");
+
+    PanelProbe &probe = PanelProbe::Instance();
+
+    struct { QWidget *w; const char *name; } panels[] = {
+        {folderDock,        "FolderDock"},
+        {favDock,           "BookmarkDock"},
+        {filterDock,        "FilterDock"},
+        {catalogDock,       "CatalogDock"},
+        {keywordsDock,      "KeywordsDock"},
+        {metadataDock,      "MetadataDock"},
+        {thumbDock,         "ThumbDock"},
+        {embelDock,         "EmbelDock"},
+        {developDock,       "DevelopDock"},
+        {historyDock,       "HistoryDock"},
+        {presetsDock,       "PresetsDock"},
+        {thumbView,         "thumbView"},
+        {centralWidget,     "centralWidget"},
+        {this,              "MW"},
+    };
+    for (const auto &p : panels)
+        if (p.w) probe.Watch(p.w, QString::fromLatin1(p.name));
+
+    probe.SetAuditor([this]() { return panelProbeThumbAudit(); });
+
+    /*  --panelprobe (already in the global) OR the persisted tick.  Read directly rather
+        than through loadSettings: this is the only consumer, and it has to be true before
+        the first showEvent. */
+    bool on = G::isPanelProbe.load(std::memory_order_relaxed);
+    if (!on && settings) on = settings->value("PanelProbe", false).toBool();
+    if (on) {
+        G::isPanelProbe.store(true, std::memory_order_relaxed);
+        probe.Arm(true);
+        probe.Mark("MW constructor (docks created, before first show)");
+    }
+}
+
+QString MW::panelProbeThumbAudit()
+{
+/*
+    The panel probe's auditor: does the thumbView viewport still hold a whole icon cell?
+
+    A "!" prefix marks a verdict the probe should flag as a suspect (see
+    PanelProbe::RunAuditor).  Only a CHANGED verdict is recorded, so this can be called
+    on every settled layout without filling the timeline.
+
+    Only meaningful docked top or bottom, where thumbView is a SINGLE row and the dock
+    height is the whole budget.  Floating or docked left/right it wraps and scrolls
+    vertically, so a part-row is normal rather than a glitch.
+*/
+    if (!thumbView || !thumbDock || !thumbView->iconViewDelegate) return QString();
+    if (thumbDock->isFloating()) return "thumbDock floating -- fit not applicable";
+    const Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
+    if (area != Qt::BottomDockWidgetArea && area != Qt::TopDockWidgetArea)
+        return "thumbDock docked " + QString(area == Qt::LeftDockWidgetArea ? "left" : "right")
+               + " (wrapping) -- fit not applicable";
+
+    const int cellH = thumbView->iconViewDelegate->
+                      getCellHeightFromThumbHeight(thumbView->iconHeight);
+    const int viewportH = thumbView->viewport()->height();
+    const int shortBy = cellH - viewportH;
+
+    QString verdict = QString("thumb fit: cell %1  viewport %2  dock %3  "
+                              "thumbView minmax %4..%5")
+                          .arg(cellH).arg(viewportH).arg(thumbDock->height())
+                          .arg(thumbView->minimumHeight()).arg(thumbView->maximumHeight());
+    /*  Two pixels of rounding nobody can see is not the complaint; a cell cut through
+        the middle is. */
+    if (shortBy > 2)
+        return "!CLIPPED: thumb cell " + QString::number(cellH) + " is " +
+               QString::number(shortBy) + " px taller than the viewport (" +
+               QString::number(viewportH) + ").  " + verdict;
+    return verdict;
+}
+
+void MW::togglePanelProbe()
+{
+/*
+    Arm or disarm the panel probe (Utilities/panelprobe.h).
+
+    THE TICK IS PERSISTED, unlike the ingest probe's.  The panel glitches are startup and
+    layout-restore glitches, so the useful session is the NEXT one; a toggle that only
+    applied to the current session could never record the thing it was ticked for.
+
+    ARMING CLEARS THE BUFFERS; disarming keeps them so the report can still be read.
+*/
+    if (G::isLogger) G::log("MW::togglePanelProbe");
+    const bool on = panelProbeArmAction->isChecked();
+    G::isPanelProbe.store(on, std::memory_order_relaxed);
+    PanelProbe::Instance().Arm(on);
+    if (settings) settings->setValue("PanelProbe", on);
+    if (on) PanelProbe::Instance().Mark("armed from Help > Diagnostics");
+    G::popup->showPopup(on
+        ? "Panel probe recording, and armed for the next launch.<br>"
+          "Read it at Help > Diagnostics > Panel probe report."
+        : "Panel probe stopped.  The recording is kept until it is armed again.", 4000);
+    updateStatus(true, on ? "Panel probe recording" : "", "MW::togglePanelProbe");
+}
+
+void MW::diagnosticsPanel()
+{
+    if (G::isLogger) G::log("MW::diagnosticsPanel");
+    diagnosticsReport(PanelProbe::Instance().Report(), "Winnow Diagnostics: Panel Probe");
 }
 void MW::diagnosticsZoom() {} // dummy for now
 

@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/panelprobe.h"
 
 /*  *******************************************************************************************
 
@@ -264,6 +265,14 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        it predates. */
     if (w.stateVersion < winnowStateVersion) placeDocksAddedSince(w.stateVersion);
 
+    /*  A workspace switch is the other route to a panel the wrong size, and it uses the
+        same restoreState the startup path does -- so it is marked the same way, and
+        SETTLED as well as immediately: the dock area redistributes after this returns. */
+    if (G::isPanelProbe) {
+        PanelProbe::Instance().Mark("invokeWorkspace \"" + w.name + "\" restored");
+        PanelProbe::Instance().MarkSettled("invokeWorkspace \"" + w.name + "\"");
+    }
+
     // recover selection
     QItemSelection selection;
     foreach (QModelIndex dmIdx, selectedRows) {
@@ -457,6 +466,13 @@ bool MW::restoreWindowState(const QByteArray &state)
         // second restoreState req'd for going from docked to floating docks
         restoreState(state, v);
         if (v < winnowStateVersion) placeDocksAddedSince(v);
+        /*  WHICH VERSION the saved layout came back at.  A state restored at an older
+            version has had placeDocksAddedSince write dock positions that the user never
+            chose, which is a candidate explanation for a panel opening narrow. */
+        if (G::isPanelProbe)
+            PanelProbe::Instance().Mark(
+                QString("restoreWindowState succeeded at version %1 (current %2)")
+                    .arg(v).arg(winnowStateVersion));
         return true;
     }
     return false;
@@ -588,6 +604,8 @@ void MW::builtInDefaultWorkspace()
 
     folderDock->show();
     folderDock->raise();
+    if (G::isPanelProbe)
+        PanelProbe::Instance().NoteRequest("FolderDock", "resizeDocks horizontal", 350);
     resizeDocks({folderDock}, {350}, Qt::Horizontal);
 
     // enable the folder dock (first one in tab)
@@ -595,9 +613,16 @@ void MW::builtInDefaultWorkspace()
     QTabBar* widgetTabBar = tabList.at(0);
     widgetTabBar->setCurrentIndex(0);
 
+    if (G::isPanelProbe)
+        PanelProbe::Instance().NoteRequest("ThumbDock", "resizeDocks vertical", 100);
     resizeDocks({thumbDock}, {100}, Qt::Vertical);
 
     setThumbDockFeatures(dockWidgetArea(thumbDock));
+
+    if (G::isPanelProbe) {
+        PanelProbe::Instance().Mark("builtInDefaultWorkspace applied");
+        PanelProbe::Instance().MarkSettled("builtInDefaultWorkspace");
+    }
 
     asLoupeAction->setChecked(true);
     infoVisibleAction->setChecked(true);
@@ -1211,6 +1236,8 @@ void MW::invokeWorkflowWorkspace(int wf)
 */
     if (G::isLogger) G::log("MW::invokeWorkflowWorkspace");
     if (wf < 0 || wf >= WfCount) return;
+    if (G::isPanelProbe)
+        PanelProbe::Instance().Mark(QString("invokeWorkflowWorkspace(%1) enter").arg(wf));
 
     if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf) && hasWorkflowOverride(wf)) {
         invokeWorkspace(workflowUserWs.at(wf));

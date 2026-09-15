@@ -164,6 +164,12 @@ int main(int argc, char *argv[])
         Separate from --perfprobe: that one measures a LOAD and prints a line per scroll,
         which is exactly the noise a cull-length session does not need. */
     bool isIngestProbeArg = false;
+    /*  Winnow --panelprobe -- an ordinary interactive session recording the dock
+        geometry negotiation from the first show (see Utilities/panelprobe.h).  It has to
+        be an ARGUMENT as well as a menu toggle because the glitch it was written for --
+        panels that open narrow -- is over before any menu can be reached.  The menu
+        toggle persists instead, arming the next launch; this arms exactly one run. */
+    bool isPanelProbeArg = false;
     QString selfTestFolder;
     QString metaTestFile;
     QString devTestFolder;
@@ -182,6 +188,7 @@ int main(int argc, char *argv[])
         else if (arg == "--catalogload") isCatalogLoad = true;
         else if (arg == "--perfprobe") isPerfProbeArg = true;
         else if (arg == "--ingestprobe") isIngestProbeArg = true;
+        else if (arg == "--panelprobe") isPanelProbeArg = true;
         else if (isCatalogProbe && catalogProbeFilter.isEmpty()) catalogProbeFilter = arg;
         else if (isCatalogLoad && catalogLoadFilter.isEmpty()) catalogLoadFilter = arg;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
@@ -191,6 +198,7 @@ int main(int argc, char *argv[])
     }
     if (isPerfProbeArg) G::isPerfProbe = true;
     if (isIngestProbeArg) G::isIngestProbe.store(true, std::memory_order_relaxed);
+    if (isPanelProbeArg) G::isPanelProbe.store(true, std::memory_order_relaxed);
 
     /* The probe joins these for the SINGLE-INSTANCE bypass only -- it must always start
        fresh rather than handing its arguments to a running Winnow -- and deliberately not
@@ -210,6 +218,7 @@ int main(int argc, char *argv[])
             to open it as a file path. */
         if (QString::fromLocal8Bit(argv[i]) == "--perfprobe") continue;
         if (QString::fromLocal8Bit(argv[i]) == "--ingestprobe") continue;
+        if (QString::fromLocal8Bit(argv[i]) == "--panelprobe") continue;
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }

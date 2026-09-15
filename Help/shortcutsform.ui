@@ -816,6 +816,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Grid View (from Loupe / Table / Compare)</string>
+        </property>
+        <property name="text">
+         <string>Esc</string>
+        </property>
+        <property name="text">
+         <string>Preview mode only, and only when Esc has nothing else to cancel (loading, slideshow, full screen ...)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>No Embellishment</string>
         </property>
         <property name="text">

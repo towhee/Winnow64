@@ -1,5 +1,6 @@
 #include "dockwidget.h"
 #include "Main/mainwindow.h"
+#include "Utilities/panelprobe.h"
 
 /*
     Try to create your own font that contains the graphic you want at the corresponding
@@ -375,6 +376,13 @@ void DockWidget::setCollapsed(bool collapse)
         body's sizeHint contribution is 0. */
         setMinimumHeight(0);
         setMaximumHeight(titleH);
+        /*  A collapse is a min/max PIN, which is the other way a panel ends up a size
+            nobody asked for -- and the pin outlives the call, so it is recorded where it
+            is applied rather than inferred later from a geometry.  See
+            Utilities/panelprobe.h. */
+        if (G::isPanelProbe)
+            PanelProbe::Instance().NoteConstraint(objectName(), "collapse pin height",
+                                                  0, titleH);
         m_isCollapsed = true;
         if (isFloating()) resize(m_uncollapsedSize.width(), titleH);
     } else {
@@ -398,6 +406,9 @@ void DockWidget::setCollapsed(bool collapse)
             if (targetH <= titleH) targetH = titleH + 1;
             setMinimumHeight(targetH);
             setMaximumHeight(targetH);
+            if (G::isPanelProbe)
+                PanelProbe::Instance().NoteConstraint(objectName(), "expand pin height",
+                                                      targetH, targetH);
 
             int restoreMin = m_uncollapsedMinH;
             int restoreMax = m_uncollapsedMaxH;
@@ -406,6 +417,12 @@ void DockWidget::setCollapsed(bool collapse)
                 if (!self) return;
                 self->setMinimumHeight(restoreMin);
                 self->setMaximumHeight(restoreMax);
+                /*  The pin is released a tick later, so the height the dock KEEPS is
+                    decided after this, not by targetH above. */
+                if (G::isPanelProbe)
+                    PanelProbe::Instance().NoteConstraint(self->objectName(),
+                                                          "release pin height",
+                                                          restoreMin, restoreMax);
             });
         }
     }

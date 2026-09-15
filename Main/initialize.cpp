@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/panelprobe.h"
 #include "Metadata/keywordpaths.h"
 #include "Views/catalogscopetree.h"
 #include "Develop/workingimagecache.h"
@@ -2080,6 +2081,20 @@ void MW::createThumbDock()
     connect(thumbDock, &DockWidget::focus, this, &MW::focusOnDock);
     connect(thumbDock, &DockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
     connect(thumbDock, &DockWidget::topLevelChanged, this, &MW::setThumbDockFloatFeatures);
+    /*  thumbDock is not in the scheduleDockTabUpdate loop below (it has no tab), so it
+        gets its own panel-probe marks -- and it is the dock the "thumbnails cut in half"
+        report is about, so it is the one that most needs them. */
+    connect(thumbDock, &DockWidget::dockLocationChanged, this,
+            [](Qt::DockWidgetArea area) {
+                if (!G::isPanelProbe) return;
+                PanelProbe::Instance().MarkSettled(
+                    "ThumbDock dropped in area " + QString::number(area));
+            });
+    connect(thumbDock, &DockWidget::topLevelChanged, this, [](bool floating) {
+        if (!G::isPanelProbe) return;
+        PanelProbe::Instance().MarkSettled(
+            QString("ThumbDock ") + (floating ? "floated" : "re-docked"));
+    });
     connect(thumbDock, &DockWidget::closeFloatingDock, this, &MW::closeThumbDock);
 
     // connect(thumbDock, &QDockWidget::dockLocationChanged, this, &MW::setThumbDockFeatures);
@@ -3813,6 +3828,20 @@ void MW::createDocks()
         if (!d) continue;       // catalogDock is null with G::useFilterPanel
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
+        /*  "after ... panel moving" -- the gesture the probe has to bracket.  Both are
+            SETTLED marks: the drop is not the end of the layout, the redistribution over
+            the next turn is (see Utilities/panelprobe.h). */
+        connect(d, &QDockWidget::dockLocationChanged, this,
+                [d](Qt::DockWidgetArea area) {
+                    if (!G::isPanelProbe) return;
+                    PanelProbe::Instance().MarkSettled(
+                        d->objectName() + " dropped in area " + QString::number(area));
+                });
+        connect(d, &QDockWidget::topLevelChanged, this, [d](bool floating) {
+            if (!G::isPanelProbe) return;
+            PanelProbe::Instance().MarkSettled(
+                d->objectName() + (floating ? " floated" : " re-docked"));
+        });
         /* WORK IN PROGRESS - DISABLED.
            Intended: a dock dropped into an existing tab group lands last (rightmost),
            not at the drop position. Disabled because it broke dock-tab selection

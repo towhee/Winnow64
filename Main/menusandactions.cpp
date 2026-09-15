@@ -2083,6 +2083,30 @@ void MW::createHelpActions()
     addAction(diagnosticsIngestAction);
     connect(diagnosticsIngestAction, &QAction::triggered, this, &MW::diagnosticsIngest);
 
+    /*  THE PANEL PROBE IS ALSO A TOGGLE, and its tick is PERSISTED (see
+        MW::togglePanelProbe): the sizing it records happens in showEvent, before this
+        menu can be reached, so ticking it here is really arming the NEXT launch.
+        setupPanelProbe has already armed the probe by the time the actions are built --
+        this only has to agree with it. */
+    panelProbeArmAction = new QAction(tr("Panel probe (record panel sizing)"), this);
+    panelProbeArmAction->setObjectName("panelProbeArm");
+    panelProbeArmAction->setCheckable(true);
+    panelProbeArmAction->setChecked(G::isPanelProbe.load(std::memory_order_relaxed));
+    panelProbeArmAction->setToolTip(
+        tr("Record every dock resize, sizing request and min/max pin, so a panel that "
+           "opens narrow or a thumbnail strip cut in half can be traced to the step "
+           "that did it.  Stays armed for the next launch, which is when the startup "
+           "sizing happens.  Read the result with \"Panel probe report\"."));
+    panelProbeArmAction->setShortcutVisibleInContextMenu(true);
+    addAction(panelProbeArmAction);
+    connect(panelProbeArmAction, &QAction::triggered, this, &MW::togglePanelProbe);
+
+    diagnosticsPanelAction = new QAction(tr("Panel probe report"), this);
+    diagnosticsPanelAction->setObjectName("diagnosticsPanel");
+    diagnosticsPanelAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsPanelAction);
+    connect(diagnosticsPanelAction, &QAction::triggered, this, &MW::diagnosticsPanel);
+
     diagnosticsEmbellishAction = new QAction(tr("Embellish diagnostics"), this);
     diagnosticsEmbellishAction->setObjectName("diagnosticsEmbellish");
     diagnosticsEmbellishAction->setShortcutVisibleInContextMenu(true);
@@ -2631,6 +2655,9 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addSeparator();
     helpDiagnosticsMenu->addAction(ingestProbeArmAction);
     helpDiagnosticsMenu->addAction(diagnosticsIngestAction);
+    helpDiagnosticsMenu->addSeparator();
+    helpDiagnosticsMenu->addAction(panelProbeArmAction);
+    helpDiagnosticsMenu->addAction(diagnosticsPanelAction);
 }
 
 void MW::createMainMenu()

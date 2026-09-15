@@ -383,6 +383,7 @@ set(WINNOW_SOURCES
     Utilities/htmlwindow.cpp
     Utilities/icc.cpp
     Utilities/ingestprobe.cpp
+    Utilities/panelprobe.cpp
     Utilities/inputdlg.cpp
     Utilities/performance.cpp
     Utilities/popup.cpp
@@ -655,6 +656,7 @@ set(WINNOW_HEADERS
     Utilities/htmlwindow.h
     Utilities/icc.h
     Utilities/ingestprobe.h
+    Utilities/panelprobe.h
     Utilities/inputdlg.h
     Utilities/movingavg.h
     Utilities/performance.h

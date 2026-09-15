@@ -4,6 +4,7 @@
 #include <QFutureWatcher>
 #include <QLocale>
 #include "Utilities/fileops.h"
+#include "Utilities/panelprobe.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
@@ -466,6 +467,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
+    /*  Register the docks with the panel probe and arm it if it was left armed (or
+        --panelprobe).  MUST be here rather than in createActions: everything it exists to
+        record runs in showEvent, which is still ahead of us.  See MW::setupPanelProbe. */
+    setupPanelProbe();
+
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
 
@@ -526,7 +532,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
             // show start message
             else {
-                QString msg = "Select a folder or bookmark to get started.";
+                QString msg = "Select from the Source or Bookmarks panels.";
                 setCentralMessage(msg);
                 prevMode = "Loupe";
             }
@@ -858,6 +864,10 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             only way to read it from a headless sweep (--ingestprobe --selftest), which
             is what makes the probe testable without a person driving the keyboard. */
         IngestProbe::Instance().DumpReport();
+
+    /*  Same bargain for the panel probe: a --panelprobe session leaves its timeline in
+        console.txt without the user having to remember to open the report. */
+    PanelProbe::Instance().DumpReport();
         fflush(stderr);
         // Exit immediately, skipping Qt/C++ teardown. We've measured health at the
         // loaded steady state; forcing the event loop to unwind here delivers
@@ -1122,6 +1132,11 @@ void MW::showEvent(QShowEvent *event)
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
 
+    /*  The panel sizing sequence starts here.  Every step below is marked, because the
+        final geometry is negotiated between them and no single one of them owns it --
+        see Utilities/panelprobe.h. */
+    if (G::isPanelProbe) PanelProbe::Instance().Mark("showEvent enter");
+
     // exit if already initialized (ie when moving window)
     if (!G::isInitializing) {
         QMainWindow::showEvent(event);
@@ -1141,8 +1156,13 @@ void MW::showEvent(QShowEvent *event)
            to, quietly reset the user's entire layout -- thumbDock included, which fell
            back to the left area under the folder group -- every time a dock was added. */
         restoreGeometry(settings->value("Geometry").toByteArray());
+        if (G::isPanelProbe) PanelProbe::Instance().Mark("after restoreGeometry");
         bool restored = restoreWindowState(settings->value("WindowState").toByteArray());
+        if (G::isPanelProbe)
+            PanelProbe::Instance().Mark(QString("after restoreWindowState (restored = %1)")
+                                            .arg(restored ? "true" : "false"));
         restoreGeometry(settings->value("Geometry").toByteArray());
+        if (G::isPanelProbe) PanelProbe::Instance().Mark("after second restoreGeometry");
         /* Unreadable state (or none): the initialize() layout is not a usable one, so
            fall back to the Library workflow workspace -- the layout the app starts a
            session in.  A workflow workspace does not own the window position and size,
@@ -1151,16 +1171,23 @@ void MW::showEvent(QShowEvent *event)
             if (settings->value("Geometry").toByteArray().isEmpty())
                 centreWindowOnPrimaryScreen();
             invokeWorkflowWorkspace(WfLibrary);
+            if (G::isPanelProbe)
+                PanelProbe::Instance().Mark("after WfLibrary fallback (state unreadable)");
         }
     }
     else {
         centreWindowOnPrimaryScreen();
         invokeWorkflowWorkspace(WfLibrary);
+        if (G::isPanelProbe)
+            PanelProbe::Instance().Mark("after WfLibrary (no settings)");
     }
 
     // Apply persisted per-dock collapsed flag. Deferred so the just-restored
     // dock geometries have settled before setCollapsed() snapshots them.
-    QTimer::singleShot(0, this, &MW::applyDockCollapseState);
+    QTimer::singleShot(0, this, [this]() {
+        applyDockCollapseState();
+        if (G::isPanelProbe) PanelProbe::Instance().Mark("after applyDockCollapseState");
+    });
 
     if (G::mode == "Loupe" && !thumbDock->isVisible()) {
         thumbDock->setVisible(true);
@@ -1192,6 +1219,7 @@ void MW::showEvent(QShowEvent *event)
        session had visible, and hiding Develop alone left them on screen, visible but
        disabled. All three actions are unchecked so the View menu agrees. */
     closeDevelopDock();     // hides develop + history + presets, unchecks their actions
+    if (G::isPanelProbe) PanelProbe::Instance().Mark("after closeDevelopDock");
 
     QMainWindow::showEvent(event);
 
@@ -1232,6 +1260,21 @@ void MW::showEvent(QShowEvent *event)
        the user preference is on and not in an automated test run. */
     if (checkIfUpdate && !G::isTest)
         QTimer::singleShot(4000, this, [this]{ checkForUpdate(/*silent*/true); });
+
+    /*  The size the user actually SEES is not the size at the end of showEvent: the dock
+        area redistributes over the next few turns, and applyDockCollapseState has not run
+        yet.  Two late marks bracket that -- one on the next idle, one after the layout
+        has had time to converge -- so "narrow at startup" can be told from "narrow only
+        at this instant". */
+    if (G::isPanelProbe) {
+        PanelProbe::Instance().Mark("showEvent exit");
+        QTimer::singleShot(0, this, []() {
+            PanelProbe::Instance().Mark("first idle after show");
+        });
+        QTimer::singleShot(1500, this, []() {
+            PanelProbe::Instance().Mark("1.5 s after show (what the user sees)");
+        });
+    }
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -1393,6 +1436,13 @@ void MW::resizeEvent(QResizeEvent *event)
 
     // update current workspace
     ws.isMaximised = isMaximized();
+
+    /*  "thumbView half hidden after resizing" -- the window resize is the gesture, and
+        the dock redistribution that follows it is what the probe has to catch, so this
+        is a SETTLED mark (next event-loop turn), not an immediate one. */
+    if (G::isPanelProbe)
+        PanelProbe::Instance().MarkSettled(
+            QString("MW resize to %1x%2").arg(width()).arg(height()));
 }
 
 void MW::changeEvent(QEvent *event) {
@@ -1459,6 +1509,21 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // FSTree or Bookmarks disabled
         else if (!fsTree->isEnabled()) fsTree->setEnabled(true);
         else if (!bookmarks->isEnabled()) bookmarks->setEnabled(true);
+        /* Nothing left to cancel: Esc falls back to the grid from every other view, the
+           same destination as G. Preview mode only -- in Develop, Esc belongs to the
+           active tool (see MW::developShortcutIntercept) and a bare Esc there must not
+           throw the user out of the image. asGridAction carries the "a folder with rows
+           is loaded" gate, so it also answers whether the grid is available. */
+        else if (G::operationMode == G::OperationMode::Preview
+                 && (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Table")
+                 && asGridAction->isEnabled()) {
+            /* A playing video is not stopped by the view change, and the Esc/pause
+               branch below is skipped once the central view is the grid, so pause it
+               here before leaving. */
+            if (centralLayout->currentIndex() == VideoTab && G::useMultimedia)
+                videoView->pause();
+            gridDisplay();
+        }
         // stop building filters
         // else if (filters->buildingFilters) buildFilters->stop();
     }

@@ -9,7 +9,7 @@ void MW::setCentralView()
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
     if (dm->folderList.count() == 0) {
-        QString msg = "Select a folder or bookmark to get started.";
+        QString msg = "Select from the Source or Bookmarks panels.";
         setCentralMessage(msg);
         prevMode = "Loupe";
     }

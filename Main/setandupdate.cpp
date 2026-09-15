@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/panelprobe.h"
 
 void MW::setCentralMessage(QString message)
 {
@@ -102,6 +103,17 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        /*  THE ONE PLACE THAT DECIDES THE THUMB STRIP HEIGHT.  Recorded as a request
+            rather than a result, because resizeDocks is a request: QDockAreaLayout may
+            refuse it outright when the area has no room, and the probe's settled snapshot
+            on the next turn is what says whether it took.  See Utilities/panelprobe.h. */
+        if (G::isPanelProbe) {
+            PanelProbe &probe = PanelProbe::Instance();
+            probe.NoteConstraint("thumbView", "setMin/MaximumHeight", minHt, maxHt);
+            probe.NoteThumbFit(cellHt, thumbView->viewport()->height(), thumbDock->height(),
+                               minHt, maxHt, "setThumbDockFeatures before resizeDocks");
+            probe.NoteRequest("ThumbDock", "resizeDocks vertical", newThumbDockHeight);
+        }
         resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
         /*
         qDebug()
