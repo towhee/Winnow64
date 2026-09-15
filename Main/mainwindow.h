@@ -3,6 +3,9 @@
 
 #include <QtWidgets>
 #include <QtConcurrent>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonDocument>
 // #include <QThread>
 //#include <QDesktopWidget>         // qt6.2
 #include "sstream"
@@ -299,11 +302,29 @@ public:
     WorkspaceData *w;
     QList<WorkspaceData> *workspaces;
 
-    /* The default workspace (Ctrl+Shift+W).  If the user has updated it to the current
-       layout (Manage Workspaces) then isCustomDefaultWorkspace is true and defaultWs
-       holds the saved layout, otherwise the built-in Winnow layout is used. */
-    WorkspaceData defaultWs;
-    bool isCustomDefaultWorkspace = false;
+    /*  WORKFLOW WORKSPACES
+
+        A layout per workflow, invoked by the workflow's key: E / G / C (Library),
+        D (Develop) and K (Keywords).  Embellish and Focus Stack have no key yet.
+
+        Each workflow has a DEFAULT layout that ships with Winnow, read from the
+        resource ":/Workspaces/defaults.json" (MW::loadWorkflowDefaults), and an
+        optional USER OVERRIDE the user captures from the current layout
+        (Window > Workspace > User override), saved in the QSettings group
+        "WorkflowWorkspaces/<key>".  MW::invokeWorkflowWorkspace picks the override
+        when it is ticked, else the shipped default, else MW::builtInDefaultWorkspace.
+
+        To add a workflow: append to the enum before WfCount, add a row to
+        MW::workflowKeys / MW::workflowNames, and capture a default layout. */
+    enum Workflow {WfLibrary, WfDevelop, WfKeywords, WfEmbellish, WfFocusStack, WfCount};
+    /* Stable keys for JSON and QSettings (never translated, never renamed) and the
+       menu names (translated).  Both are indexed by Workflow. */
+    static const QStringList &workflowKeys();
+    static QStringList workflowNames();
+    QList<WorkspaceData> workflowDefaultWs;   // shipped layout, indexed by Workflow
+    QList<bool> isWorkflowDefault;            // a shipped layout was found
+    QList<WorkspaceData> workflowUserWs;      // the user's captured layout
+    QList<bool> isWorkflowOverride;           // use the user's layout, not the default
 
     // recoverGeometry info
     struct RecoverGeometry {
@@ -653,15 +674,34 @@ public slots:
     /* Turn the window position/size on or off for a workspace.  n is the index into
        workspaces, or -1 for the Winnow default workspace. */
     void setWorkspaceGeometryIncluded(int n, bool isIncluded);
-    void defaultWorkspace();
     /* Restore the main window dock layout, migrating a state saved by a build with fewer
        docks instead of throwing it away.  See MW::winnowStateVersion. */
     bool restoreWindowState(const QByteArray &state);
     void placeDocksAddedSince(int stateVersion);
     void builtInDefaultWorkspace();
-    void updateDefaultWorkspace();
-    void loadDefaultWorkspace();
-    void saveDefaultWorkspace();
+    /* Size and centre the window on the primary screen.  Used by the built-in layout and
+       on a first run, where a workflow workspace (which does not own the window position
+       and size) has nothing to restore. */
+    void centreWindowOnPrimaryScreen();
+
+    /*  Workflow workspaces.  See the Workflow enum above. */
+    void invokeWorkflowWorkspace(int wf);
+    void invokeWorkflowDefault(int wf);
+    void toggleWorkflowOverride(int wf, bool isOverride);
+    void captureWorkflowDefault();
+    void captureWorkflowOverride();
+    void loadWorkflowDefaults();
+    void loadWorkflowOverrides();
+    void saveWorkflowOverride(int wf);
+    bool hasWorkflowOverride(int wf) const;
+    void syncWorkflowWorkspaceMenus();
+    bool writeWorkflowDefaultsJson(QString &path, QString &err) const;
+    /* One field list for every workspace serialisation (QSettings and JSON).  Add a new
+       WorkspaceData field HERE, plus MW::snapshotWorkspace and MW::invokeWorkspace. */
+    QVariantMap workspaceToMap(const WorkspaceData &wsd) const;
+    void workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const;
+    QJsonObject workspaceToJson(const WorkspaceData &wsd) const;
+    void workspaceFromJson(const QJsonObject &o, WorkspaceData &wsd) const;
     QString reportWorkspaces();
     void reportWorkspaceNum(int n);
     void reportWorkspace(WorkspaceData &ws, QString src = "");
@@ -1483,10 +1523,21 @@ private:
     QAction *colorManageToggeAction;
 
     // Window Menu
-    QAction *defaultWorkspaceAction;
     QAction *newWorkspaceAction;
     QAction *manageWorkspaceAction;
     QList<QAction *> workspaceActions;
+    /*  Workflow workspaces (see the Workflow enum).  The Default branch is Rory only --
+        its submenu action is hidden unless G::isRory -- while User override is always
+        shown.  Both list the same five workflows. */
+    QMenu *workspaceDefaultMenu = nullptr;
+    QMenu *workspaceOverrideMenu = nullptr;
+    QAction *workspaceDefaultMenuAction = nullptr;
+    QAction *workspaceOverrideMenuAction = nullptr;
+    QList<QAction *> workflowDefaultActions;
+    QList<QAction *> workflowOverrideActions;
+    QAction *captureWorkflowDefaultAction = nullptr;
+    QAction *captureWorkflowOverrideAction = nullptr;
+    QAction *keywordsWorkspaceAction = nullptr;     // "K"
 
     QAction *folderDockVisibleAction;
     QAction *favDockVisibleAction;
@@ -2431,7 +2482,7 @@ private:
     void initialize();
     void migrateOldSettings();
     void setupPlatform();
-    void recoverGeometry(const QByteArray &geometry, RecoverGeometry &r);
+    void recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const;
     void checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,
                                int frameHeight);
     void setfsModelFlags();
@@ -2482,7 +2533,6 @@ private:
     /* The Workspace menu text for a workspace: the name, plus " *" when the workspace
        restores the window position and size (WorkspaceData::isGeometryIncluded). */
     QString workspaceMenuName(const WorkspaceData &w) const;
-    void syncDefaultWorkspaceAction();
     void syncEmbellishMenu();
     void getSubfolders(QString fPath);
     QString getPosition();

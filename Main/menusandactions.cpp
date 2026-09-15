@@ -1125,6 +1125,7 @@ void MW::createUtilActions()
     operationModeAction->setShortcutVisibleInContextMenu(true);
     addAction(operationModeAction);
     connect(operationModeAction, &QAction::triggered, this, [this]() {
+        invokeWorkflowWorkspace(WfDevelop);        // the Develop workflow layout
         setOperationMode(G::OperationMode::Develop);
     });
 
@@ -1502,6 +1503,10 @@ void MW::createViewActions()
        the Develop panel before the view is shown. A no-op when already in Preview. */
     connect(asLoupeAction, &QAction::triggered, this, [this]() {
         setOperationMode(G::OperationMode::Preview);
+        /* E / G / C are the Library workflow, so they reassert the Library layout every
+           time -- the view key is how a layout that has got away from the user (a panel
+           left open, a dock stranded on a monitor that is gone) is recovered. */
+        invokeWorkflowWorkspace(WfLibrary);
         loupeDisplay("asLoupeAction");
     });
 
@@ -1514,6 +1519,7 @@ void MW::createViewActions()
     // G leaves Develop into the grid, the same way E leaves it into the loupe (above).
     connect(asGridAction, &QAction::triggered, this, [this]() {
         setOperationMode(G::OperationMode::Preview);
+        invokeWorkflowWorkspace(WfLibrary);        // see asLoupeAction
         gridDisplay();
     });
 
@@ -1529,12 +1535,28 @@ void MW::createViewActions()
         tableDisplay();
     });
 
+    /* K applies the Keywords workspace, the way E / G / T apply the Library one and D
+       applies Develop.  Like them it leaves Develop first (setOperationMode restores the
+       Preview decode and read-ahead); a no-op when already in Preview.  K is NOT in
+       developShortcuts, so it has the same meaning in both modes. */
+    keywordsWorkspaceAction = new QAction(tr("Keywords Mode"), this);
+    keywordsWorkspaceAction->setObjectName("keywordsWorkspace");
+    keywordsWorkspaceAction->setShortcutVisibleInContextMenu(true);
+    addAction(keywordsWorkspaceAction);
+    connect(keywordsWorkspaceAction, &QAction::triggered, this, [this]() {
+        setOperationMode(G::OperationMode::Preview);
+        invokeWorkflowWorkspace(WfKeywords);
+    });
+
     asCompareAction = new QAction(tr("Compare Mode"), this);
     asCompareAction->setShortcutVisibleInContextMenu(true);
     asCompareAction->setCheckable(true);
     asCompareAction->setChecked(false); // never start with compare set true
     addAction(asCompareAction);
-    connect(asCompareAction, &QAction::triggered, this, &MW::compareDisplay);
+    connect(asCompareAction, &QAction::triggered, this, [this]() {
+        invokeWorkflowWorkspace(WfLibrary);        // see asLoupeAction
+        compareDisplay();
+    });
 
     centralGroupAction = new QActionGroup(this);
     centralGroupAction->setExclusive(true);
@@ -1759,12 +1781,6 @@ void MW::createWindowActions()
     connect(metadataFixedSizeAction, &QAction::triggered, this, &MW::setMetadataDockFixedSize);
 
     // Workspace submenu of Window menu
-    defaultWorkspaceAction = new QAction(tr("Default Workspace"), this);
-    defaultWorkspaceAction->setObjectName("defaultWorkspace");
-    defaultWorkspaceAction->setShortcutVisibleInContextMenu(true);
-    addAction(defaultWorkspaceAction);
-    connect(defaultWorkspaceAction, &QAction::triggered, this, &MW::defaultWorkspace);
-
     newWorkspaceAction = new QAction(tr("New Workspace"), this);
     newWorkspaceAction->setObjectName("newWorkspace");
     newWorkspaceAction->setShortcutVisibleInContextMenu(true);
@@ -1803,8 +1819,41 @@ void MW::createWindowActions()
         workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
     }
     addActions(workspaceActions);
-    // flag the Default Workspace action if it restores the window position and size
-    syncDefaultWorkspaceAction();
+
+    /*  WORKFLOW WORKSPACES (see MW::invokeWorkflowWorkspace).  Two parallel lists of
+        actions, one per workflow: Default applies the layout Winnow ships with and is
+        Rory only, User override ticks the user's own layout in place of it.  Both are
+        built here and kept in step by MW::syncWorkflowWorkspaceMenus. */
+    const QStringList wfNames = workflowNames();
+    for (int wf = 0; wf < WfCount; ++wf) {
+        QAction *d = new QAction(wfNames.at(wf), this);
+        d->setObjectName("workflowDefault" + workflowKeys().at(wf));
+        d->setShortcutVisibleInContextMenu(true);
+        connect(d, &QAction::triggered, this, [this, wf]() { invokeWorkflowDefault(wf); });
+        workflowDefaultActions.append(d);
+
+        QAction *o = new QAction(wfNames.at(wf), this);
+        o->setObjectName("workflowOverride" + workflowKeys().at(wf));
+        o->setCheckable(true);
+        o->setShortcutVisibleInContextMenu(true);
+        connect(o, &QAction::triggered, this, [this, wf](bool checked) {
+            toggleWorkflowOverride(wf, checked);
+        });
+        workflowOverrideActions.append(o);
+    }
+
+    captureWorkflowDefaultAction = new QAction(tr("Set Default from Current Layout ..."), this);
+    captureWorkflowDefaultAction->setObjectName("captureWorkflowDefault");
+    captureWorkflowDefaultAction->setShortcutVisibleInContextMenu(true);
+    connect(captureWorkflowDefaultAction, &QAction::triggered,
+            this, &MW::captureWorkflowDefault);
+
+    captureWorkflowOverrideAction =
+        new QAction(tr("Update Override from Current Layout ..."), this);
+    captureWorkflowOverrideAction->setObjectName("captureWorkflowOverride");
+    captureWorkflowOverrideAction->setShortcutVisibleInContextMenu(true);
+    connect(captureWorkflowOverrideAction, &QAction::triggered,
+            this, &MW::captureWorkflowOverride);
 }
 
 void MW::createHelpActions()
@@ -2442,16 +2491,41 @@ void MW::createViewMenu()
     windowGroupAct = new QAction("Window", this);
     windowGroupAct->setMenu(viewMenu);
     workspaceMenu = viewMenu->addMenu(tr("&Workspace"));
-    workspaceMenu->addAction(defaultWorkspaceAction);
     workspaceMenu->addAction(newWorkspaceAction);
     workspaceMenu->addAction(manageWorkspaceAction);
+    workspaceMenu->addSeparator();
+
+    /*  The two workflow branches.  Default is hidden unless G::isRory (see
+        MW::syncWorkflowWorkspaceMenus, which also runs from MW::rory when it is toggled
+        at runtime); User override is always shown and lists the same five workflows. */
+    workspaceDefaultMenu = workspaceMenu->addMenu(tr("Default"));
+    workspaceDefaultMenuAction = workspaceDefaultMenu->menuAction();
+    for (QAction *a : workflowDefaultActions) workspaceDefaultMenu->addAction(a);
+    workspaceDefaultMenu->addSeparator();
+    workspaceDefaultMenu->addAction(captureWorkflowDefaultAction);
+
+    workspaceOverrideMenu = workspaceMenu->addMenu(tr("User override"));
+    workspaceOverrideMenuAction = workspaceOverrideMenu->menuAction();
+    for (QAction *a : workflowOverrideActions) workspaceOverrideMenu->addAction(a);
+    workspaceOverrideMenu->addSeparator();
+    workspaceOverrideMenu->addAction(captureWorkflowOverrideAction);
+
+    /*  Tooltips say why a Default item is greyed and whether an override has been
+        captured, so the menus have to show them. */
+    workspaceDefaultMenu->setToolTipsVisible(true);
+    workspaceOverrideMenu->setToolTipsVisible(true);
+
     workspaceMenu->addSeparator();
     // add 10 dummy menu items for custom workspaces
     for (int i=0; i<10; i++) {
         workspaceMenu->addAction(workspaceActions.at(i));
     }
+    /*  QMenu::triggered fires for submenu items too, but MW::invokeWorkspaceFromAction
+        matches on POSITION in workspaceActions, so a workflow action (not in that list)
+        is ignored there and only runs its own connection. */
     connect(workspaceMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeWorkspaceFromAction(QAction*)));
+    syncWorkflowWorkspaceMenus();
 
     viewMenu->addSeparator();
     viewMenu->addAction(folderDockVisibleAction);
@@ -2475,6 +2549,7 @@ void MW::createViewMenu()
     viewGroupAct = new QAction("View", this);
     viewGroupAct->setMenu(viewMenu);
     viewMenu->addActions(centralGroupAction->actions());
+    viewMenu->addAction(keywordsWorkspaceAction);   // K: the Keywords workflow layout
     viewMenu->addSeparator();
     viewMenu->addAction(slideShowAction);
     viewMenu->addSeparator();
@@ -2501,41 +2576,6 @@ void MW::createViewMenu()
 
 }
 
-/*
-void MW::createWindowMenu()
-{
-    windowMenu = new QMenu(this);
-    windowGroupAct = new QAction("Window", this);
-    windowGroupAct->setMenu(windowMenu);
-    workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
-    workspaceMenu->addAction(defaultWorkspaceAction);
-    workspaceMenu->addAction(newWorkspaceAction);
-    workspaceMenu->addAction(manageWorkspaceAction);
-    workspaceMenu->addSeparator();
-    // add 10 dummy menu items for custom workspaces
-    for (int i=0; i<10; i++) {
-        workspaceMenu->addAction(workspaceActions.at(i));
-    }
-    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
-            SLOT(invokeWorkspaceFromAction(QAction*)));
-    windowMenu->addSeparator();
-    windowMenu->addAction(folderDockVisibleAction);
-    windowMenu->addAction(favDockVisibleAction);
-    windowMenu->addAction(filterDockVisibleAction);
-    windowMenu->addAction(catalogDockVisibleAction);
-    windowMenu->addAction(keywordsDockVisibleAction);
-    windowMenu->addAction(metadataDockVisibleAction);
-    windowMenu->addAction(thumbDockVisibleAction);
-    if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
-    windowMenu->addAction(developDockVisibleAction);
-    windowMenu->addSeparator();
-//    windowMenu->addAction(windowTitleBarVisibleAction);
-    #ifdef Q_OS_WIN
-    //windowMenu->addAction(menuBarVisibleAction);
-    #endif
-    windowMenu->addAction(statusBarVisibleAction);  // crash
-}
-*/
 
 void MW::createHelpMenu()
 {
@@ -3454,6 +3494,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         asGridAction->setShortcut(QKeySequence("G"));
         asTableAction->setShortcut(QKeySequence("T"));
         asCompareAction->setShortcut(QKeySequence("C"));
+        keywordsWorkspaceAction->setShortcut(QKeySequence("K"));
 
         slideShowAction->setShortcut(QKeySequence("S"));
         fullScreenAction->setShortcut(QKeySequence("F"));
@@ -3479,7 +3520,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         // Window
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
-        defaultWorkspaceAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
 
         folderDockVisibleAction->setShortcut(QKeySequence("F3"));
         favDockVisibleAction->setShortcut(QKeySequence("F4"));

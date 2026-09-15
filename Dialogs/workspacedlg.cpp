@@ -49,8 +49,6 @@ public:
 
 WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
                            const QList<bool> &isGeometryIncluded,
-                           bool isDefaultGeometryIncluded,
-                           bool isCustomDefaultWorkspace,
                            QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Workspacedlg)
@@ -58,23 +56,14 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
     ui->setupUi(this);
     this->mainWindow = parent;
     isGeometry = isGeometryIncluded;
-    isDefaultGeometry = isDefaultGeometryIncluded;
-    isCustomDefault = isCustomDefaultWorkspace;
 
     // get height for dropdown items from combobox height
     int h = ui->workspaceCB->height() - 8;
 
-    /* The Winnow default workspace (Ctrl+Shift+W) heads the list, followed by a
-       separator and then the saved workspaces.  Rory only: without G::isRory the
-       dropdown holds just the saved workspaces. */
-    defaultIndex = G::isRory ? 0 : -1;
-    firstWorkspaceIndex = 0;
-    if (G::isRory) {
-        ui->workspaceCB->view()->setItemDelegate(new ComboSeparatorDelegate(ui->workspaceCB));
-        ui->workspaceCB->addItem(WorkspaceDlg::defaultWorkspaceName);
-        if (wsList->count()) ui->workspaceCB->insertSeparator(1);
-        firstWorkspaceIndex = 2;
-    }
+    /* The dropdown lists the user's saved workspaces only.  The per-workflow default and
+       override layouts (Library, Develop, Keywords, Embellish, Focus Stack) are managed
+       from Window > Workspace, not here. */
+    ui->workspaceCB->view()->setItemDelegate(new ComboSeparatorDelegate(ui->workspaceCB));
 
     // populate the dropdown list
     for (int i=0; i < wsList->count(); i++) {
@@ -100,61 +89,35 @@ WorkspaceDlg::~WorkspaceDlg()
     delete ui;
 }
 
-bool WorkspaceDlg::isDefaultSelected() const
-{
-    return defaultIndex >= 0 && ui->workspaceCB->currentIndex() == defaultIndex;
-}
-
 int WorkspaceDlg::workspaceIndex() const
 {
 /*
-    The index into MW::workspaces for the selected item, or -1 if the Winnow default
-    workspace (or the separator) is selected.  Without the default item (see the
-    constructor) firstWorkspaceIndex is 0 and the combo index is the workspace index.
+    The index into MW::workspaces for the selected item.  The dropdown holds nothing but
+    the saved workspaces, so the combo index IS the workspace index.
 */
-    int i = ui->workspaceCB->currentIndex();
-    if (i < firstWorkspaceIndex) return -1;
-    return i - firstWorkspaceIndex;
+    return ui->workspaceCB->currentIndex();
 }
 
 void WorkspaceDlg::updateForSelection()
 {
 /*
-    The Winnow default workspace can be updated to the current layout, but it cannot be
-    deleted or renamed.
-
-    The window position/size checkbox shows the selected workspace's choice.  It is
-    disabled, with the reason shown in the status line, when the Winnow default workspace
-    has not been defined yet -- the built-in layout is used then, and it always sizes the
-    window itself.
+    The window position/size checkbox shows the selected workspace's choice.  With no
+    workspaces saved there is nothing to show, and the reason goes in the status line.
 */
-    bool isDefault = isDefaultSelected();
-    ui->deleteBtn->setEnabled(!isDefault);
-    ui->deleteBtn->setToolTip(isDefault
-        ? "The Winnow default workspace cannot be deleted"
-        : "");
-    if (ui->workspaceCB->lineEdit())
-        ui->workspaceCB->lineEdit()->setReadOnly(isDefault);
-
     int n = workspaceIndex();
-    bool isChecked;
+    bool isChecked = false;
     bool isEnabled = true;
     QString reason;
-    if (isDefault) {
-        isChecked = isDefaultGeometry;
-        if (!isCustomDefault) {
-            isEnabled = false;
-            reason = "The " + WorkspaceDlg::defaultWorkspaceName + " has not been defined "
-                     "yet, so the built-in layout, which sets its own window size, is used.";
-        }
-    }
-    else if (n >= 0 && n < isGeometry.count()) {
+    const bool isWorkspace = n >= 0 && n < isGeometry.count();
+    ui->deleteBtn->setEnabled(isWorkspace);
+    ui->reassignBtn->setEnabled(isWorkspace);
+    if (isWorkspace) {
         isChecked = isGeometry.at(n);
     }
     else {
-        // separator selected (should not happen)
-        isChecked = false;
         isEnabled = false;
+        reason = "There are no saved workspaces yet.  Window > Workspace > New "
+                 "Workspace saves the current layout.";
     }
     /* setChecked would emit toggled and write the choice back to the workspace the user
        has just moved away from. */
@@ -168,11 +131,6 @@ void WorkspaceDlg::updateForSelection()
 void WorkspaceDlg::on_geometryCB_toggled(bool isChecked)
 {
     if (G::isLogger) G::log("WorkspaceDlg::on_geometryCB_toggled");
-    if (isDefaultSelected()) {
-        isDefaultGeometry = isChecked;
-        emit setWorkspaceGeometryIncluded(-1, isChecked);
-        return;
-    }
     int n = workspaceIndex();
     if (n < 0 || n >= isGeometry.count()) return;
     isGeometry[n] = isChecked;
@@ -187,9 +145,6 @@ void WorkspaceDlg::on_deleteBtn_clicked()
     emit deleteWorkspace(n);
     if (n < isGeometry.count()) isGeometry.removeAt(n);
     ui->workspaceCB->removeItem(ui->workspaceCB->currentIndex());
-    // last workspace deleted: remove the now trailing separator
-    if (firstWorkspaceIndex && ui->workspaceCB->count() == firstWorkspaceIndex)
-        ui->workspaceCB->removeItem(1);
     ui->workspaceCB->setCurrentIndex(0);
     updateForSelection();
 }
@@ -197,15 +152,6 @@ void WorkspaceDlg::on_deleteBtn_clicked()
 void WorkspaceDlg::on_reassignBtn_clicked()
 {
     if (G::isLogger) G::log("WorkspaceDlg::on_reassignBtn_clicked");
-    if (isDefaultSelected()) {
-        emit updateDefaultWorkspace();
-        // the default workspace now exists, so its window position/size choice applies
-        isCustomDefault = true;
-        ui->geometryCB->setEnabled(true);
-        ui->status->setText(WorkspaceDlg::defaultWorkspaceName + " has been updated");
-        QTimer::singleShot(2000, this, SLOT(clearStatus()));
-        return;
-    }
     int n = workspaceIndex();
     if (n < 0) return;
     emit reassignWorkspace(n);
@@ -223,14 +169,9 @@ void WorkspaceDlg::clearStatus()
 void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
 {
     if (G::isLogger) G::log("WorkspaceDlg::on_workspaceCB_editTextChanged");
-    if (isDefaultSelected()) {
-        editMode = true;
-        return;
-    }
     if (editMode) {
         bool isOkay = true;
         int n = workspaceIndex();
-        // separator selected (should not happen)
         if (n < 0) {
             editMode = true;
             return;
@@ -240,8 +181,6 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
         for (int i=0; i<ui->workspaceCB->count(); i++) {
             // ignore current item
             if (i == ui->workspaceCB->currentIndex()) continue;
-            // ignore the default workspace and the separator
-            if (i < firstWorkspaceIndex) continue;
             // different, try next item
             if (name != ui->workspaceCB->itemText(i)) continue;
             // oh, oh.  Duplicate of another workspace name

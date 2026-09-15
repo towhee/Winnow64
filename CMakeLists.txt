@@ -799,6 +799,9 @@ qt_add_executable(Winnow
 
 target_compile_definitions(Winnow PRIVATE
     QT_DISABLE_DEPRECATED_BEFORE=0x051500
+    # Rory only: "Set Default from Current Layout" writes Workspaces/defaults.json back
+    # into the source tree so the captured layout ships (see MW::captureWorkflowDefault).
+    WINNOW_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 target_include_directories(Winnow PRIVATE

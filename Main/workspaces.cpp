@@ -345,8 +345,8 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
 void MW::manageWorkspaces()
 {
 /*
-    Delete, rename and reassign workspaces, and update the Winnow default workspace
-    (the layout invoked by Ctrl+Shift+W) to the current layout.
+    Delete, rename and reassign the user's saved workspaces.  The per-workflow default
+    and override layouts are managed from Window > Workspace, not here.
 */
     if (G::isLogger) G::log("MW::manageWorkspaces");
     // Update a list of workspace names for the manager dialog
@@ -356,13 +356,10 @@ void MW::manageWorkspaces()
         wsList.append(workspaces->at(i).name);
         wsGeometry.append(workspaces->at(i).isGeometryIncluded);
     }
-    workspaceDlg = new WorkspaceDlg(&wsList, wsGeometry, defaultWs.isGeometryIncluded,
-                                    isCustomDefaultWorkspace, this);
+    workspaceDlg = new WorkspaceDlg(&wsList, wsGeometry, this);
     connect(workspaceDlg, &WorkspaceDlg::deleteWorkspace, this, &MW::deleteWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reassignWorkspace, this, &MW::reassignWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::renameWorkspace, this, &MW::renameWorkspace);
-    connect(workspaceDlg, &WorkspaceDlg::updateDefaultWorkspace,
-            this, &MW::updateDefaultWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reportWorkspaceNum, this, &MW::reportWorkspaceNum);
     connect(workspaceDlg, &WorkspaceDlg::setWorkspaceGeometryIncluded,
             this, &MW::setWorkspaceGeometryIncluded);
@@ -395,24 +392,10 @@ void MW::deleteWorkspace(int n)
     syncWorkspaceMenu();
 }
 
-void MW::syncDefaultWorkspaceAction()
-{
-/*
-    The Default Workspace menu item (Ctrl+Shift+W) carries the same " *" flag as the saved
-    workspaces.  Until the user defines a default workspace the built-in layout is used,
-    and it always sizes the window -- defaultWs.isGeometryIncluded starts true, so the flag
-    is shown.
-*/
-    if (defaultWorkspaceAction == nullptr) return;
-    QString name = tr("Default Workspace");
-    if (defaultWs.isGeometryIncluded) name += " *";
-    defaultWorkspaceAction->setText(name);
-}
-
 void MW::syncWorkspaceMenu()
 {
     if (G::isLogger) G::log("MW::syncWorkspaceMenu");
-    syncDefaultWorkspaceAction();
+    syncWorkflowWorkspaceMenus();
     int count = workspaces->count();
     for (int i = 0; i < 10; i++) {
         if (i < count) {
@@ -440,44 +423,14 @@ void MW::setWorkspaceGeometryIncluded(int n, bool isIncluded)
 {
 /*
     Turn the window position and size on or off for a workspace.  Called from the Manage
-    Workspaces dialog checkbox.  n is the index into workspaces, or -1 for the Winnow
-    default workspace.
+    Workspaces dialog checkbox.  n is the index into workspaces.
 */
     if (G::isLogger) G::log("MW::setWorkspaceGeometryIncluded");
 
-    if (n < 0) {
-        defaultWs.isGeometryIncluded = isIncluded;
-        syncDefaultWorkspaceAction();
-        /* Nothing to save unless the user has already defined a custom default
-           workspace -- otherwise the built-in layout is used and there is no
-           DefaultWorkspace group to write to. */
-        if (isCustomDefaultWorkspace) saveDefaultWorkspace();
-        return;
-    }
-    if (n >= workspaces->count()) return;
+    if (n < 0 || n >= workspaces->count()) return;
     (*workspaces)[n].isGeometryIncluded = isIncluded;
     saveWorkspaces();
     syncWorkspaceMenu();
-}
-
-void MW::defaultWorkspace()
-{
-/*
-    The defaultWorkspace is used the first time the app is run on a new machine and
-    there are not any QSettings to read.  It is also useful if part or all of the
-    app is "stranded" on secondary monitors that are not attached.
-
-    If the user has redefined the default workspace (Manage Workspaces > "Winnow default
-    workspace" > Update to current layout) then that layout is used, otherwise the
-    built-in Winnow layout is used.
-*/
-    if (G::isLogger) G::log("MW::defaultWorkspace");
-
-    if (isCustomDefaultWorkspace) {
-        invokeWorkspace(defaultWs);
-        return;
-    }
-    builtInDefaultWorkspace();
 }
 
 bool MW::restoreWindowState(const QByteArray &state)
@@ -551,19 +504,29 @@ void MW::placeDocksAddedSince(int stateVersion)
     }
 }
 
+void MW::centreWindowOnPrimaryScreen()
+{
+/*
+    Three quarters of the primary screen, centred.  Split out of
+    MW::builtInDefaultWorkspace because a workflow workspace deliberately does not own
+    the window position and size, so a first run (no saved Geometry) has to size the
+    window before the Library layout is applied.  See MW::showEvent.
+*/
+    if (G::isLogger) G::log("MW::centreWindowOnPrimaryScreen");
+    QRect desktop = QGuiApplication::screens().first()->geometry();
+    resize(static_cast<int>(0.75 * desktop.width()),
+           static_cast<int>(0.75 * desktop.height()));
+    setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), desktop));
+}
+
 void MW::builtInDefaultWorkspace()
 {
 /*
-    The layout Winnow ships with.  See MW::defaultWorkspace.
+    The layout Winnow ships with: the last-resort fallback when a workflow has no
+    shipped default.  See MW::invokeWorkflowWorkspace.
 */
     if (G::isLogger) G::log("MW::builtInDefaultWorkspace");
-    QRect desktop = QGuiApplication::screens().first()->geometry();
-//    QRect desktop = qApp->desktop()->availableGeometry();
-//    qDebug() << "MW::defaultWorkspace" << desktop << desktop1;
-    resize(static_cast<int>(0.75 * desktop.width()),
-           static_cast<int>(0.75 * desktop.height()));
-    setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
-        size(), desktop));
+    centreWindowOnPrimaryScreen();
 //    menuBarVisibleAction->setChecked(true);
     statusBarVisibleAction->setChecked(true);
 
@@ -674,6 +637,19 @@ QString MW::reportWorkspaces()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "Workspaces Diagnostics");
     rpt << "\n\n";
+
+    // Workflow workspaces (see MW::invokeWorkflowWorkspace)
+    rpt << "Workflow workspaces:";
+    for (int wf = 0; wf < WfCount; ++wf) {
+        const bool isDef = wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf);
+        const bool isOvr = wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf);
+        rpt << "\n  " << workflowNames().at(wf).leftJustified(14)
+            << " shipped default: " << G::s(isDef)
+            << "   user layout captured: " << G::s(hasWorkflowOverride(wf))
+            << "   override in use: " << G::s(isOvr);
+    }
+    rpt << "\n\n";
+
     int n = workspaces->count();
     rpt << "Workspaces count = " << n;
     rpt << "\n";
@@ -814,151 +790,217 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         ;
 }
 
-void MW::readWorkspaceSettings(WorkspaceData &wsd)
-{
-/*
-    Read one workspace from the current QSettings position (array index or group).
-    Used by MW::loadWorkspaces and MW::loadDefaultWorkspace.
+/*  *******************************************************************************************
+
+    WORKSPACE SERIALISATION
+
+    ONE field list, in MW::workspaceToMap / MW::workspaceFromMap, serves every place a
+    workspace is written out: the QSettings array of user workspaces, the QSettings group
+    of a workflow override, and the JSON resource of shipped workflow defaults.  Add a
+    new WorkspaceData field there -- plus MW::snapshotWorkspace and MW::invokeWorkspace,
+    which move it to and from the live app -- and all three follow.
+
+    JSON is not as rich as QVariant, so the two QByteArray fields are base64 encoded and
+    the one QRect is written as [x, y, w, h].  Those are the only keys that need special
+    handling; everything else is bool, int or QString and survives the round trip.
 */
+
+static const QStringList kByteArrayKeys{"geometry", "state"};
+static const QStringList kRectKeys{"geometryRect"};
+
+QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
+{
+    QVariantMap m;
     // Workspace
-    wsd.name = settings->value("name").toString();
+    m["name"] = wsd.name;
+    // State
+    m["geometry"] = wsd.geometry;
+    m["state"] = wsd.state;
+    m["stateVersion"] = wsd.stateVersion;
+    m["screenNumber"] = wsd.screenNumber;
+    m["geometryRect"] = wsd.geometryRect;
+    m["isFullScreen"] = wsd.isFullScreen;
+    m["isMaximised"] = wsd.isMaximised;
+    m["isGeometryIncluded"] = wsd.isGeometryIncluded;
+    // Visibility
+    m["isWindowTitleBarVisible"] = wsd.isWindowTitleBarVisible;
+    m["isStatusBarVisible"] = wsd.isStatusBarVisible;
+    m["isFolderDockVisible"] = wsd.isFolderDockVisible;
+    m["isFavDockVisible"] = wsd.isFavDockVisible;
+    m["isFilterDockVisible"] = wsd.isFilterDockVisible;
+    m["isCatalogDockVisible"] = wsd.isCatalogDockVisible;
+    m["isKeywordsDockVisible"] = wsd.isKeywordsDockVisible;
+    m["isMetadataDockVisible"] = wsd.isMetadataDockVisible;
+    m["isEmbelDockVisible"] = wsd.isEmbelDockVisible;
+    m["isDevelopDockVisible"] = wsd.isDevelopDockVisible;
+    m["isHistoryDockVisible"] = wsd.isHistoryDockVisible;
+    m["isPresetsDockVisible"] = wsd.isPresetsDockVisible;
+    m["isThumbDockVisible"] = wsd.isThumbDockVisible;
+    // View
+    m["isLoupeDisplay"] = wsd.isLoupeDisplay;
+    m["isGridDisplay"] = wsd.isGridDisplay;
+    m["isTableDisplay"] = wsd.isTableDisplay;
+    m["isCompareDisplay"] = wsd.isCompareDisplay;
+    // ThumbView
+    m["thumbSpacing"] = wsd.thumbSpacing;
+    m["thumbPadding"] = wsd.thumbPadding;
+    m["thumbWidth"] = wsd.thumbWidth;
+    m["thumbHeight"] = wsd.thumbHeight;
+    m["labelFontSize"] = wsd.labelFontSize;
+    m["showThumbLabels"] = wsd.showThumbLabels;
+    // GridView
+    m["thumbSpacingGrid"] = wsd.thumbSpacingGrid;
+    m["thumbPaddingGrid"] = wsd.thumbPaddingGrid;
+    m["thumbWidthGrid"] = wsd.thumbWidthGrid;
+    m["thumbHeightGrid"] = wsd.thumbHeightGrid;
+    m["labelFontSizeGrid"] = wsd.labelFontSizeGrid;
+    m["showThumbLabelsGrid"] = wsd.showThumbLabelsGrid;
+    m["labelChoice"] = wsd.labelChoice;
+    // ImageView
+    m["isImageInfoVisible"] = wsd.isImageInfoVisible;
+    // Processes
+    m["isColorManage"] = wsd.isColorManage;
+    m["sortColumn"] = wsd.sortColumn;
+    m["isReverseSort"] = wsd.isReverseSort;
+    return m;
+}
+
+void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
+{
+    // Workspace
+    wsd.name = m.value("name").toString();
 
     // State
-    wsd.geometry = settings->value("geometry").toByteArray();
-    wsd.state = settings->value("state").toByteArray();
+    wsd.geometry = m.value("geometry").toByteArray();
+    wsd.state = m.value("state").toByteArray();
     // absent = saved before the key existed, ie predates every versioned dock
-    wsd.stateVersion = settings->value("stateVersion", 0).toInt();
+    wsd.stateVersion = m.value("stateVersion", 0).toInt();
+    /* screenNumber is derived from the geometry blob, not read back: the saved value is
+       written for diagnostics only. */
     RecoverGeometry r;
     recoverGeometry(wsd.geometry, r);
     wsd.screenNumber = r.screenNumber;
-    wsd.geometryRect = settings->value("geometryRect").toRect();
-    wsd.isFullScreen = settings->value("isFullScreen").toBool();
-    wsd.isMaximised = settings->value("isMaximised").toBool();
+    wsd.geometryRect = m.value("geometryRect").toRect();
+    wsd.isFullScreen = m.value("isFullScreen").toBool();
+    wsd.isMaximised = m.value("isMaximised").toBool();
     /*  Absent from a workspace saved before the window position/size became optional,
         which defaults to true -- the original behaviour. */
-    wsd.isGeometryIncluded = settings->value("isGeometryIncluded", true).toBool();
+    wsd.isGeometryIncluded = m.value("isGeometryIncluded", true).toBool();
 
     // Visibility
-    wsd.isWindowTitleBarVisible = settings->value("isWindowTitleBarVisible").toBool();
-    //wsd.isMenuBarVisible = settings->value("isMenuBarVisible").toBool();
-    wsd.isStatusBarVisible = settings->value("isStatusBarVisible").toBool();
-    wsd.isFolderDockVisible = settings->value("isFolderDockVisible").toBool();
-    wsd.isFavDockVisible = settings->value("isFavDockVisible").toBool();
-    wsd.isFilterDockVisible = settings->value("isFilterDockVisible").toBool();
-    wsd.isCatalogDockVisible = settings->value("isCatalogDockVisible").toBool();
+    wsd.isWindowTitleBarVisible = m.value("isWindowTitleBarVisible").toBool();
+    wsd.isStatusBarVisible = m.value("isStatusBarVisible").toBool();
+    wsd.isFolderDockVisible = m.value("isFolderDockVisible").toBool();
+    wsd.isFavDockVisible = m.value("isFavDockVisible").toBool();
+    wsd.isFilterDockVisible = m.value("isFilterDockVisible").toBool();
+    wsd.isCatalogDockVisible = m.value("isCatalogDockVisible").toBool();
     /*  Absent from a workspace saved before the Keywords dock existed, which reads as
         false -- the same as its default, so an old workspace needs no migration. */
-    wsd.isKeywordsDockVisible = settings->value("isKeywordsDockVisible").toBool();
-    wsd.isMetadataDockVisible = settings->value("isMetadataDockVisible").toBool();
-    wsd.isEmbelDockVisible = settings->value("isEmbelDockVisible").toBool();
-    wsd.isDevelopDockVisible = settings->value("isDevelopDockVisible").toBool();
-    wsd.isHistoryDockVisible = settings->value("isHistoryDockVisible").toBool();
-    wsd.isPresetsDockVisible = settings->value("isPresetsDockVisible").toBool();
-    wsd.isThumbDockVisible = settings->value("isThumbDockVisible").toBool();
+    wsd.isKeywordsDockVisible = m.value("isKeywordsDockVisible").toBool();
+    wsd.isMetadataDockVisible = m.value("isMetadataDockVisible").toBool();
+    wsd.isEmbelDockVisible = m.value("isEmbelDockVisible").toBool();
+    wsd.isDevelopDockVisible = m.value("isDevelopDockVisible").toBool();
+    wsd.isHistoryDockVisible = m.value("isHistoryDockVisible").toBool();
+    wsd.isPresetsDockVisible = m.value("isPresetsDockVisible").toBool();
+    wsd.isThumbDockVisible = m.value("isThumbDockVisible").toBool();
 
     // View
-    wsd.isLoupeDisplay = settings->value("isLoupeDisplay").toBool();
-    wsd.isGridDisplay = settings->value("isGridDisplay").toBool();
-    wsd.isTableDisplay = settings->value("isTableDisplay").toBool();
-    wsd.isCompareDisplay = settings->value("isCompareDisplay").toBool();
+    wsd.isLoupeDisplay = m.value("isLoupeDisplay").toBool();
+    wsd.isGridDisplay = m.value("isGridDisplay").toBool();
+    wsd.isTableDisplay = m.value("isTableDisplay").toBool();
+    wsd.isCompareDisplay = m.value("isCompareDisplay").toBool();
 
     // ThumbView
-    wsd.thumbSpacing = settings->value("thumbSpacing").toInt();
-    wsd.thumbPadding = settings->value("thumbPadding").toInt();
-    wsd.thumbWidth = settings->value("thumbWidth").toInt();
-    wsd.thumbHeight = settings->value("thumbHeight").toInt();
-    wsd.labelFontSize = settings->value("labelFontSize").toInt();
-    wsd.showThumbLabels = settings->value("showThumbLabels").toBool();
+    wsd.thumbSpacing = m.value("thumbSpacing").toInt();
+    wsd.thumbPadding = m.value("thumbPadding").toInt();
+    wsd.thumbWidth = m.value("thumbWidth").toInt();
+    wsd.thumbHeight = m.value("thumbHeight").toInt();
+    wsd.labelFontSize = m.value("labelFontSize").toInt();
+    wsd.showThumbLabels = m.value("showThumbLabels").toBool();
 
     // GridView
-    wsd.thumbSpacingGrid = settings->value("thumbSpacingGrid").toInt();
-    wsd.thumbPaddingGrid = settings->value("thumbPaddingGrid").toInt();
-    wsd.thumbWidthGrid = settings->value("thumbWidthGrid").toInt();
-    wsd.thumbHeightGrid = settings->value("thumbHeightGrid").toInt();
-    wsd.labelFontSizeGrid = settings->value("labelFontSizeGrid").toInt();
-    wsd.showThumbLabelsGrid = settings->value("showThumbLabelsGrid").toBool();
-    wsd.labelChoice = settings->value("labelChoice").toString();
+    wsd.thumbSpacingGrid = m.value("thumbSpacingGrid").toInt();
+    wsd.thumbPaddingGrid = m.value("thumbPaddingGrid").toInt();
+    wsd.thumbWidthGrid = m.value("thumbWidthGrid").toInt();
+    wsd.thumbHeightGrid = m.value("thumbHeightGrid").toInt();
+    wsd.labelFontSizeGrid = m.value("labelFontSizeGrid").toInt();
+    wsd.showThumbLabelsGrid = m.value("showThumbLabelsGrid").toBool();
+    wsd.labelChoice = m.value("labelChoice").toString();
 
     // ImageView
-    wsd.isImageInfoVisible = settings->value("isImageInfoVisible").toBool();
-    // wsd.isEmbelDisplay = settings->value("isEmbelDisplay").toBool();
+    wsd.isImageInfoVisible = m.value("isImageInfoVisible").toBool();
 
     // Processes
-    wsd.isColorManage = settings->value("isColorManage").toBool();
-    wsd.sortColumn = settings->value("sortColumn").toInt();
+    wsd.isColorManage = m.value("isColorManage").toBool();
+    wsd.sortColumn = m.value("sortColumn").toInt();
     /* Sanitize a persisted sortColumn that is out of range (e.g. saved by a build with a
        different column layout; G::TotalColumns is one past the last real column). Left
        unchecked it reaches dm->sf->sort() as a phantom column — see IconView::sortThumbs. */
     if (wsd.sortColumn < 0 || wsd.sortColumn >= G::TotalColumns) wsd.sortColumn = G::NameColumn;
-    wsd.isReverseSort = settings->value("isReverseSort").toBool();
+    wsd.isReverseSort = m.value("isReverseSort").toBool();
+}
+
+QJsonObject MW::workspaceToJson(const WorkspaceData &wsd) const
+{
+    QJsonObject o;
+    const QVariantMap m = workspaceToMap(wsd);
+    for (auto it = m.cbegin(); it != m.cend(); ++it) {
+        const QString &key = it.key();
+        if (kByteArrayKeys.contains(key)) {
+            o.insert(key, QString::fromLatin1(it.value().toByteArray().toBase64()));
+        }
+        else if (kRectKeys.contains(key)) {
+            const QRect r = it.value().toRect();
+            o.insert(key, QJsonArray{r.x(), r.y(), r.width(), r.height()});
+        }
+        else {
+            o.insert(key, QJsonValue::fromVariant(it.value()));
+        }
+    }
+    return o;
+}
+
+void MW::workspaceFromJson(const QJsonObject &o, WorkspaceData &wsd) const
+{
+    QVariantMap m;
+    for (auto it = o.constBegin(); it != o.constEnd(); ++it) {
+        const QString &key = it.key();
+        if (kByteArrayKeys.contains(key)) {
+            m.insert(key, QByteArray::fromBase64(it.value().toString().toLatin1()));
+        }
+        else if (kRectKeys.contains(key)) {
+            const QJsonArray a = it.value().toArray();
+            if (a.size() == 4)
+                m.insert(key, QRect(a.at(0).toInt(), a.at(1).toInt(),
+                                    a.at(2).toInt(), a.at(3).toInt()));
+        }
+        else {
+            m.insert(key, it.value().toVariant());
+        }
+    }
+    workspaceFromMap(m, wsd);
+}
+
+void MW::readWorkspaceSettings(WorkspaceData &wsd)
+{
+/*
+    Read one workspace from the current QSettings position (array index or group).
+    Used by MW::loadWorkspaces and MW::loadWorkflowOverrides.
+*/
+    QVariantMap m;
+    const QStringList keys = settings->childKeys();
+    for (const QString &key : keys) m.insert(key, settings->value(key));
+    workspaceFromMap(m, wsd);
 }
 
 void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
 {
 /*
     Write one workspace to the current QSettings position (array index or group).
-    Used by MW::saveWorkspaces and MW::saveDefaultWorkspace.
+    Used by MW::saveWorkspaces and MW::saveWorkflowOverride.
 */
-    // Workspace
-    settings->setValue("name", wsd.name);
-
-    // State
-    settings->setValue("geometry", wsd.geometry);
-    settings->setValue("state", wsd.state);
-    settings->setValue("stateVersion", wsd.stateVersion);
-    settings->setValue("screenNumber", wsd.screenNumber);
-    settings->setValue("geometryRect", wsd.geometryRect);                        // need?
-    settings->setValue("isFullScreen", wsd.isFullScreen);                        // need?
-    settings->setValue("isMaximised", wsd.isMaximised);                          // need?
-    settings->setValue("isGeometryIncluded", wsd.isGeometryIncluded);
-
-    // Visibility
-    settings->setValue("isWindowTitleBarVisible", wsd.isWindowTitleBarVisible);  // need? Not used.
-    //settings->setValue("isMenuBarVisible", wsd.isMenuBarVisible);
-    settings->setValue("isStatusBarVisible", wsd.isStatusBarVisible);
-    settings->setValue("isFolderDockVisible", wsd.isFolderDockVisible);
-    settings->setValue("isFavDockVisible", wsd.isFavDockVisible);
-    settings->setValue("isFilterDockVisible", wsd.isFilterDockVisible);
-    settings->setValue("isCatalogDockVisible", wsd.isCatalogDockVisible);
-    settings->setValue("isKeywordsDockVisible", wsd.isKeywordsDockVisible);
-    settings->setValue("isMetadataDockVisible", wsd.isMetadataDockVisible);
-    settings->setValue("isEmbelDockVisible", wsd.isEmbelDockVisible);
-    settings->setValue("isDevelopDockVisible", wsd.isDevelopDockVisible);
-    settings->setValue("isHistoryDockVisible", wsd.isHistoryDockVisible);
-    settings->setValue("isPresetsDockVisible", wsd.isPresetsDockVisible);
-    settings->setValue("isThumbDockVisible", wsd.isThumbDockVisible);
-
-    // View
-    settings->setValue("isLoupeDisplay", wsd.isLoupeDisplay);
-    settings->setValue("isGridDisplay", wsd.isGridDisplay);
-    settings->setValue("isTableDisplay", wsd.isTableDisplay);
-    settings->setValue("isCompareDisplay", wsd.isCompareDisplay);
-
-    // ThumbView
-    settings->setValue("thumbSpacing", wsd.thumbSpacing);                        // need?
-    settings->setValue("thumbPadding", wsd.thumbPadding);
-    settings->setValue("thumbWidth", wsd.thumbWidth);
-    settings->setValue("thumbHeight", wsd.thumbHeight);
-    settings->setValue("labelFontSize", wsd.labelFontSize);
-    settings->setValue("showThumbLabels", wsd.showThumbLabels);
-
-    // GridView
-    settings->setValue("thumbSpacingGrid", wsd.thumbSpacingGrid);
-    settings->setValue("thumbPaddingGrid", wsd.thumbPaddingGrid);
-    settings->setValue("thumbWidthGrid", wsd.thumbWidthGrid);
-    settings->setValue("thumbHeightGrid", wsd.thumbHeightGrid);
-    settings->setValue("labelFontSizeGrid", wsd.labelFontSizeGrid);
-    settings->setValue("showThumbLabelsGrid", wsd.showThumbLabelsGrid);
-    settings->setValue("labelChoice", wsd.labelChoice);
-
-    // ImageView
-    settings->setValue("isImageInfoVisible", wsd.isImageInfoVisible);
-    // settings->setValue("isEmbelDisplay", wsd.isEmbelDisplay);                 // need?
-
-    // Processes
-    settings->setValue("isColorManage", wsd.isColorManage);
-    settings->setValue("sortColumn", wsd.sortColumn);
-    settings->setValue("isReverseSort", wsd.isReverseSort);
+    const QVariantMap m = workspaceToMap(wsd);
+    for (auto it = m.cbegin(); it != m.cend(); ++it) settings->setValue(it.key(), it.value());
 }
 
 void MW::loadWorkspaces()
@@ -975,7 +1017,7 @@ void MW::loadWorkspaces()
     }
     settings->endArray();
 
-    loadDefaultWorkspace();
+    loadWorkflowOverrides();
 }
 
 void MW::saveWorkspaces()
@@ -994,48 +1036,7 @@ void MW::saveWorkspaces()
     settings->endArray();
 }
 
-void MW::loadDefaultWorkspace()
-{
-/*
-    Read the user defined default workspace (see MW::updateDefaultWorkspace).  If it has
-    never been defined then the built-in Winnow layout is used instead.
-*/
-    if (G::isLogger) G::log("MW::loadDefaultWorkspace");
-    if (!isSettings) return;
-
-    settings->beginGroup("DefaultWorkspace");
-    isCustomDefaultWorkspace = settings->contains("state");
-    if (isCustomDefaultWorkspace) readWorkspaceSettings(defaultWs);
-    settings->endGroup();
-    defaultWs.name = WorkspaceDlg::defaultWorkspaceName;
-}
-
-void MW::saveDefaultWorkspace()
-{
-    if (G::isLogger) G::log("MW::saveDefaultWorkspace");
-
-    settings->remove("DefaultWorkspace");
-    settings->beginGroup("DefaultWorkspace");
-    writeWorkspaceSettings(defaultWs);
-    settings->endGroup();
-}
-
-void MW::updateDefaultWorkspace()
-{
-/*
-    Save the current layout as the default workspace (Ctrl+Shift+W).  Called from the
-    Manage Workspaces dialog when "Winnow default workspace" is selected and the
-    "Update to current layout" button is pressed.
-*/
-    if (G::isLogger) G::log("MW::updateDefaultWorkspace");
-
-    snapshotWorkspace(defaultWs);
-    defaultWs.name = WorkspaceDlg::defaultWorkspaceName;
-    isCustomDefaultWorkspace = true;
-    saveDefaultWorkspace();
-}
-
-void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r)
+void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const
 /*
     From Qwidget::restoreGeometry(const QByteArray &geometry)
 
@@ -1067,4 +1068,332 @@ void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r)
              << "\n\tfullScreen          =" << r.fullScreen
         ;
         //*/
+}
+
+/*  *******************************************************************************************
+
+    WORKFLOW WORKSPACES
+
+    A layout per workflow rather than one "default workspace" for the whole app.  The
+    workflow's key applies it: E / G / C (Library), D (Develop) and K (Keywords).
+    Embellish and Focus Stack are defined but have no key yet -- they are reached from
+    Window > Workspace.
+
+    Each workflow has TWO possible layouts:
+
+    - THE SHIPPED DEFAULT, read from the resource ":/Workspaces/defaults.json".  Rory
+      captures these (Window > Workspace > Default > "Set Default from Current
+      Layout ...", a branch hidden unless G::isRory) and the write goes back into the
+      SOURCE TREE, so the layout ships with the next build rather than living in one
+      machine's QSettings.  A workflow with no entry in the resource falls back to
+      MW::builtInDefaultWorkspace, so an empty defaults.json is a working state.
+
+    - THE USER OVERRIDE, captured from the current layout when the user ticks the
+      workflow in Window > Workspace > User override, and saved in the QSettings group
+      "WorkflowWorkspaces/<key>".  Unticking goes back to the shipped default and KEEPS
+      the user's copy, so re-ticking restores it; "Update Override from Current
+      Layout ..." re-captures it.
+
+    A workflow workspace deliberately does NOT own the window position and size
+    (isGeometryIncluded false): switching workflow is about the panels, and pulling the
+    window somewhere else on every E / G / C / D / K would be intolerable.  That is why
+    a first run has to size the window itself -- see MW::centreWindowOnPrimaryScreen.
+*/
+
+const QStringList &MW::workflowKeys()
+{
+/*
+    Stable identifiers for QSettings groups and the JSON resource.  NEVER renamed: an
+    existing profile and every committed defaults.json are keyed on them.
+*/
+    static const QStringList keys{"Library", "Develop", "Keywords", "Embellish", "FocusStack"};
+    return keys;
+}
+
+QStringList MW::workflowNames()
+{
+    return {tr("Library"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Focus Stack")};
+}
+
+void MW::loadWorkflowDefaults()
+{
+/*
+    Read the shipped per-workflow layouts from the resource.  A workflow the resource
+    does not mention keeps isWorkflowDefault false and falls back to the built-in
+    layout, which is the state a freshly cloned repo is in.
+*/
+    if (G::isLogger) G::log("MW::loadWorkflowDefaults");
+
+    workflowDefaultWs.clear();
+    isWorkflowDefault.clear();
+    workflowUserWs.clear();
+    isWorkflowOverride.clear();
+    for (int wf = 0; wf < WfCount; ++wf) {
+        workflowDefaultWs.append(WorkspaceData());
+        isWorkflowDefault.append(false);
+        workflowUserWs.append(WorkspaceData());
+        isWorkflowOverride.append(false);
+    }
+
+    QFile f(":/Workspaces/defaults.json");
+    if (!f.open(QIODevice::ReadOnly)) return;
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+    f.close();
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+        G::issue("Warning", "Could not parse " + err.errorString(), "MW::loadWorkflowDefaults");
+        return;
+    }
+
+    const QJsonObject root = doc.object();
+    for (int wf = 0; wf < WfCount; ++wf) {
+        const QString key = workflowKeys().at(wf);
+        if (!root.contains(key) || !root.value(key).isObject()) continue;
+        workspaceFromJson(root.value(key).toObject(), workflowDefaultWs[wf]);
+        workflowDefaultWs[wf].name = workflowNames().at(wf);
+        /* A workflow workspace never moves the window, whatever was captured. */
+        workflowDefaultWs[wf].isGeometryIncluded = false;
+        isWorkflowDefault[wf] = true;
+    }
+}
+
+void MW::loadWorkflowOverrides()
+{
+/*
+    Read the user's per-workflow layouts.  Called from MW::loadWorkspaces, ie after
+    MW::loadWorkflowDefaults has sized the lists.
+*/
+    if (G::isLogger) G::log("MW::loadWorkflowOverrides");
+    if (!isSettings) return;
+    if (workflowUserWs.count() < WfCount) return;
+
+    for (int wf = 0; wf < WfCount; ++wf) {
+        settings->beginGroup("WorkflowWorkspaces/" + workflowKeys().at(wf));
+        const bool isCaptured = settings->contains("state");
+        if (isCaptured) {
+            readWorkspaceSettings(workflowUserWs[wf]);
+            workflowUserWs[wf].name = workflowNames().at(wf);
+            workflowUserWs[wf].isGeometryIncluded = false;
+            isWorkflowOverride[wf] = settings->value("isOverride", true).toBool();
+        }
+        settings->endGroup();
+    }
+}
+
+void MW::saveWorkflowOverride(int wf)
+{
+    if (G::isLogger) G::log("MW::saveWorkflowOverride");
+    if (wf < 0 || wf >= WfCount) return;
+
+    const QString group = "WorkflowWorkspaces/" + workflowKeys().at(wf);
+    settings->remove(group);
+    settings->beginGroup(group);
+    writeWorkspaceSettings(workflowUserWs.at(wf));
+    settings->setValue("isOverride", isWorkflowOverride.at(wf));
+    settings->endGroup();
+}
+
+bool MW::hasWorkflowOverride(int wf) const
+{
+/*
+    Has the user ever captured a layout for this workflow?  The captured state blob is
+    the tell -- a workspace that has one has been snapshotted.
+*/
+    if (wf < 0 || wf >= workflowUserWs.count()) return false;
+    return !workflowUserWs.at(wf).state.isEmpty();
+}
+
+void MW::invokeWorkflowWorkspace(int wf)
+{
+/*
+    Apply the layout for a workflow: the user's override when it is ticked, else the
+    layout Winnow ships with, else the built-in layout.
+*/
+    if (G::isLogger) G::log("MW::invokeWorkflowWorkspace");
+    if (wf < 0 || wf >= WfCount) return;
+
+    if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf) && hasWorkflowOverride(wf)) {
+        invokeWorkspace(workflowUserWs.at(wf));
+        return;
+    }
+    invokeWorkflowDefault(wf);
+}
+
+void MW::invokeWorkflowDefault(int wf)
+{
+/*
+    Apply the layout Winnow ships with for a workflow, ignoring any user override.  This
+    is what the Rory-only Default branch invokes, and the fallback for a workflow the
+    resource does not define is the built-in layout.
+*/
+    if (G::isLogger) G::log("MW::invokeWorkflowDefault");
+    if (wf < 0 || wf >= WfCount) return;
+
+    if (wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf)) {
+        invokeWorkspace(workflowDefaultWs.at(wf));
+        return;
+    }
+    builtInDefaultWorkspace();
+}
+
+void MW::toggleWorkflowOverride(int wf, bool isOverride)
+{
+/*
+    Tick / untick a workflow in Window > Workspace > User override.
+
+    Ticking a workflow that has never been captured SNAPSHOTS THE CURRENT LAYOUT -- the
+    common case is "I have the panels how I want them for culling, make that my Library
+    layout", and making that one click rather than two is the point.  Ticking one that
+    has already been captured restores the kept copy instead, so unticking is not
+    destructive.  "Update Override from Current Layout ..." is how a kept copy is
+    replaced.
+*/
+    if (G::isLogger) G::log("MW::toggleWorkflowOverride");
+    if (wf < 0 || wf >= WfCount) return;
+
+    if (isOverride && !hasWorkflowOverride(wf)) {
+        snapshotWorkspace(workflowUserWs[wf]);
+        workflowUserWs[wf].name = workflowNames().at(wf);
+        workflowUserWs[wf].isGeometryIncluded = false;
+    }
+    isWorkflowOverride[wf] = isOverride;
+    saveWorkflowOverride(wf);
+    syncWorkflowWorkspaceMenus();
+}
+
+void MW::captureWorkflowOverride()
+{
+/*
+    Replace the user's layout for a workflow with the current one, and tick it.  The
+    workflow is chosen in a list dialog rather than getting five more menu items.
+*/
+    if (G::isLogger) G::log("MW::captureWorkflowOverride");
+
+    bool ok;
+    const QStringList names = workflowNames();
+    const QString name = QInputDialog::getItem(this, tr("Update Override"),
+        tr("Save the current layout as the workspace for:"), names, 0, false, &ok);
+    if (!ok) return;
+    const int wf = names.indexOf(name);
+    if (wf < 0) return;
+
+    snapshotWorkspace(workflowUserWs[wf]);
+    workflowUserWs[wf].name = names.at(wf);
+    workflowUserWs[wf].isGeometryIncluded = false;
+    isWorkflowOverride[wf] = true;
+    saveWorkflowOverride(wf);
+    syncWorkflowWorkspaceMenus();
+}
+
+void MW::captureWorkflowDefault()
+{
+/*
+    Rory only.  Replace the SHIPPED layout for a workflow with the current one and write
+    the whole resource back to the source tree, so the next build carries it.  Falling
+    back to the desktop when the source tree is not there keeps the capture from being
+    silently lost in a deployed build.
+*/
+    if (G::isLogger) G::log("MW::captureWorkflowDefault");
+
+    bool ok;
+    const QStringList names = workflowNames();
+    const QString name = QInputDialog::getItem(this, tr("Set Workflow Default"),
+        tr("Save the current layout as the shipped default for:"), names, 0, false, &ok);
+    if (!ok) return;
+    const int wf = names.indexOf(name);
+    if (wf < 0) return;
+
+    snapshotWorkspace(workflowDefaultWs[wf]);
+    workflowDefaultWs[wf].name = names.at(wf);
+    workflowDefaultWs[wf].isGeometryIncluded = false;
+    isWorkflowDefault[wf] = true;
+
+    QString path;
+    QString err;
+    if (writeWorkflowDefaultsJson(path, err)) {
+        QMessageBox::information(this, tr("Workflow Default Saved"),
+            tr("The %1 layout was written to\n\n%2\n\nRebuild to ship it.").arg(name, path));
+    }
+    else {
+        QMessageBox::warning(this, tr("Workflow Default Not Saved"),
+            tr("Could not write the workflow defaults:\n\n%1").arg(err));
+    }
+    syncWorkflowWorkspaceMenus();
+}
+
+bool MW::writeWorkflowDefaultsJson(QString &path, QString &err) const
+{
+/*
+    Write every captured workflow default to Workspaces/defaults.json in the source tree
+    (WINNOW_SOURCE_DIR, defined by CMake), so the file that is compiled into the resource
+    is the file that is updated.  Without a source tree -- a deployed build, or a build
+    system that does not define it -- the file goes to the desktop and the caller says
+    where.
+*/
+    QString dir;
+    #ifdef WINNOW_SOURCE_DIR
+    const QString sourceDir = QString(WINNOW_SOURCE_DIR) + "/Workspaces";
+    if (QFileInfo::exists(QString(WINNOW_SOURCE_DIR) + "/winnow.qrc")) {
+        QDir().mkpath(sourceDir);
+        dir = sourceDir;
+    }
+    #endif
+    if (dir.isEmpty())
+        dir = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+    path = dir + "/defaults.json";
+
+    QJsonObject root;
+    for (int wf = 0; wf < WfCount; ++wf) {
+        if (wf >= isWorkflowDefault.count() || !isWorkflowDefault.at(wf)) continue;
+        root.insert(workflowKeys().at(wf), workspaceToJson(workflowDefaultWs.at(wf)));
+    }
+
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        err = f.errorString() + " (" + path + ")";
+        return false;
+    }
+    f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    f.close();
+    return true;
+}
+
+void MW::syncWorkflowWorkspaceMenus()
+{
+/*
+    Keep the two workflow branches of the Workspace menu in step with the data:
+
+    - The Default branch exists only for Rory (G::isRory is false in a release build),
+      and MW::rory re-runs this when it is toggled at runtime.
+    - A Default item is greyed, with the reason in its tooltip, when the resource has no
+      layout for that workflow -- it would apply the generic built-in layout instead, so
+      saying so beats silently doing something else.
+    - An override item shows ticked when the override is in use, and its tooltip says
+      whether a layout has been captured for it.
+*/
+    if (G::isLogger) G::log("MW::syncWorkflowWorkspaceMenus");
+    if (workspaceDefaultMenuAction == nullptr) return;
+
+    workspaceDefaultMenuAction->setVisible(G::isRory);
+
+    for (int wf = 0; wf < workflowDefaultActions.count(); ++wf) {
+        QAction *a = workflowDefaultActions.at(wf);
+        const bool isDefined = wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf);
+        a->setEnabled(isDefined);
+        a->setToolTip(isDefined
+            ? tr("Apply the %1 layout Winnow ships with").arg(workflowNames().at(wf))
+            : tr("No %1 layout has been captured yet — Winnow's built-in layout is used")
+                  .arg(workflowNames().at(wf)));
+    }
+
+    for (int wf = 0; wf < workflowOverrideActions.count(); ++wf) {
+        QAction *a = workflowOverrideActions.at(wf);
+        QSignalBlocker blocker(a);
+        a->setChecked(wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf));
+        a->setToolTip(hasWorkflowOverride(wf)
+            ? tr("Use your own %1 layout instead of the one Winnow ships with")
+                  .arg(workflowNames().at(wf))
+            : tr("Tick to save the current layout as your %1 workspace")
+                  .arg(workflowNames().at(wf)));
+    }
 }

@@ -1492,10 +1492,35 @@
        </item>
        <item>
         <property name="text">
-         <string>Default Workspace</string>
+         <string>Library Workspace</string>
         </property>
         <property name="text">
-         <string>Cmd/Ctrl + Shift +W</string>
+         <string>E, G, C</string>
+        </property>
+        <property name="text">
+         <string>The view keys also apply the Library workflow layout</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Develop Workspace</string>
+        </property>
+        <property name="text">
+         <string>D</string>
+        </property>
+        <property name="text">
+         <string>Applies the Develop workflow layout and enters Develop mode</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Keywords Workspace</string>
+        </property>
+        <property name="text">
+         <string>K</string>
+        </property>
+        <property name="text">
+         <string>Applies the Keywords workflow layout</string>
         </property>
        </item>
       </item>
