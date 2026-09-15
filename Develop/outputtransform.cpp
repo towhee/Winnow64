@@ -97,7 +97,6 @@ inline float Transfer(float v, float gammaInv)
     return gammaInv > 0.0f ? std::pow(Clamp01(v), gammaInv) : SrgbGamma(v);
 }
 
-
 /*
     THE FILMIC VIEW TRANSFORM: a fixed exposure lift followed by the ACES (Narkowicz)
     shoulder, applied in linear before the transfer function. A raw render is scene-linear
@@ -544,144 +543,6 @@ inline float LutValue(const TransferLut &t, float v)
     return t.v[i] + (t.v[i + 1] - t.v[i]) * fr;
 }
 
-/*
-    THE sRGB ENCODE AND ITS INVERSE, AS TABLES -- the look's way into and out of its own
-    domain.
-
-    THIS IS NOT A MICRO-OPTIMISATION, it is the difference between usable and not. The
-    obvious spelling of ApplyLook calls SrgbGamma and its inverse per channel, which is
-    SIX std::pow per pixel, in the one file whose entire design is "no transcendental in
-    the loop" (see the TRANSFER LUT note above, where tabulating the same curve bought
-    4.8x). MEASURED, because the first version shipped the pow: a 5.9 MP proxy went from
-    2.4 ms to 40 ms -- 17x, and identical for a 33^3 and a 64^3 table, which is what
-    proved the cost was the transcendentals and not the lookup. Tabulated it is ~4 ms.
-
-    The encode is the existing transfer table (the view transform is None because the
-    look sits AFTER the view curve, on display-referred values). The inverse needs its
-    own table: same size, same linear axis over 0..1, built once for the process.
-*/
-/*
-    THE sRGB ENCODE AND ITS INVERSE, AS TABLES -- the look's way into and out of its own
-    domain, and the single biggest cost in the whole look path.
-
-    THE TABLES ARE NOT AN OPTIMISATION, THEY ARE THE DIFFERENCE BETWEEN USABLE AND NOT.
-    The obvious spelling of ApplyLook calls SrgbGamma and its inverse per channel, which
-    is SIX std::pow per pixel, in the one file whose entire design is "no transcendental
-    in the loop" (see the TRANSFER LUT note above, where tabulating the same curve bought
-    4.8x). That version was written and MEASURED before this one: a 5.9 MP proxy went
-    from 2.6 ms to 40 ms.
-
-    THE ENCODE REUSES THE EXISTING TRANSFER TABLE. The view transform is None because the
-    look sits AFTER the view curve, on display-referred values, so LutFor gives exactly
-    the sRGB curve over a 0..1 domain. The inverse needs its own table, built once.
-
-    RESOLVED ONCE PER RENDER, NEVER PER PIXEL -- LookStage holds the pointers. LutFor()
-    takes a QMutex and linear-searches a cache; calling it inside the loop (which the
-    first tabulated version did) cost 431 ms on the same proxy, ten times worse than the
-    pow it was replacing.
-
-    MEASURED AND REJECTED: giving these two their own smaller 4096-entry tables, on the
-    theory that two 64 KB tables were evicting the 3-D LUT. No measurable difference
-    (15.6 ms vs 15.6 ms), so the extra type went away again. The cost is not cache
-    pressure -- see the attribution in notes/Documentation.txt, "Film-Look LUTs".
-*/
-const TransferLut &SrgbEncodeLut()
-{
-    return LutFor(OutputTransform::ViewTransform::None, 0.0f);
-}
-
-const TransferLut &SrgbDecodeLut()
-{
-    static TransferLut t = [] {
-        TransferLut d;
-        d.logIndexed = false;
-        d.domainMax  = 1.0f;                       // sRGB-encoded input is 0..1
-        d.scale      = float(kLutSize) / d.domainMax;
-        for (int i = 0; i <= kLutSize; ++i) {
-            const float x = float(i) / float(kLutSize);
-            d.v[i] = x <= 0.04045f ? x / 12.92f
-                                   : std::pow((x + 0.055f) / 1.055f, 2.4f);
-        }
-        return d;
-    }();
-    return t;
-}
-
-/*
-    THE CREATIVE LOOK, prepared once per render.
-
-    A .cube or HaldCLUT is authored against DISPLAY-REFERRED sRGB, so the table has to be
-    fed exactly that -- not the working space (Rec.2020 linear), and not the output space
-    when that is P3 or Adobe RGB. The look therefore runs inside a sandwich:
-
-        display-linear, working primaries
-          -> 3x3 to linear sRGB -> sRGB transfer -> THE LUT
-          -> inverse sRGB transfer -> 3x3 back to working primaries
-        display-linear, working primaries
-
-    Sandwiching rather than applying the look wherever the pixel happens to be encoded is
-    what makes a P3 export match the loupe: the look means one thing, independent of what
-    the image is being written into. The two matrices are the identity while the working
-    space IS sRGB, so nothing is paid for a detour that goes nowhere.
-*/
-struct LookStage {
-    const Lut3d::Table *t = nullptr;
-    float toSrgb[9]   = {1,0,0, 0,1,0, 0,0,1};
-    float fromSrgb[9] = {1,0,0, 0,1,0, 0,0,1};
-    bool  primIdentity = true;
-    bool  active = false;
-    /* The transfer tables, resolved ONCE per render -- see SrgbEncodeLut above for what
-       resolving them per pixel cost. */
-    const TransferLut *enc = nullptr;       // display-linear -> sRGB encoded
-    const TransferLut *dec = nullptr;       // sRGB encoded -> display-linear
-};
-
-LookStage LookStageFor(const Lut3d::Table *look, ColorSpaceMath::ColorSpace working)
-{
-    LookStage s;
-    /* An invalid table is not an error here: a look that failed to parse was refused at
-       load, and a render is not the place to rediscover it. */
-    if (!look || !look->isValid()) return s;
-    s.t = look;
-    s.active = true;
-    s.enc = &SrgbEncodeLut();
-    s.dec = &SrgbDecodeLut();
-
-    using CS = ColorSpaceMath::ColorSpace;
-    s.primIdentity = (working == CS::LinearSRGB);
-    if (!s.primIdentity) {
-        float m[3][3];
-        ColorSpaceMath::matrixF(working, CS::LinearSRGB, m);
-        for (int i = 0; i < 3; ++i)
-            for (int j = 0; j < 3; ++j) s.toSrgb[i * 3 + j] = m[i][j];
-        ColorSpaceMath::matrixF(CS::LinearSRGB, working, m);
-        for (int i = 0; i < 3; ++i)
-            for (int j = 0; j < 3; ++j) s.fromSrgb[i * 3 + j] = m[i][j];
-    }
-    return s;
-}
-
-/*
-    Apply the look: into linear sRGB, encode, sample the table, decode, back out.
-
-    THE OUTPUT IS CLAMPED TO 0..1 by the decode table's own domain. A look is
-    display-referred by definition -- there is no meaning to a film stock emitting above
-    white -- and the inverse curve has nothing to say about it either. The cost is real
-    and worth naming: under ViewTransform::None a scene-referred image can still carry
-    values above 1 here, and a look will clip them where the no-look path would have
-    rolled them off.
-*/
-inline void ApplyLook(const LookStage &s, float &r, float &g, float &b)
-{
-    if (!s.primIdentity) ToPrimaries(s.toSrgb, r, g, b);
-    float v0 = LutValue(*s.enc, r), v1 = LutValue(*s.enc, g), v2 = LutValue(*s.enc, b);
-    Lut3d::Apply(*s.t, v0, v1, v2);
-    r = LutValue(*s.dec, v0);
-    g = LutValue(*s.dec, v1);
-    b = LutValue(*s.dec, v2);
-    if (!s.primIdentity) ToPrimaries(s.fromSrgb, r, g, b);
-}
-
 inline uchar LutSample(const TransferLut &t, float v)
 {
     const float fi = LutIndex(t, v);
@@ -737,7 +598,7 @@ QColorSpace OutputTransform::ColorSpaceOf(Space space)
 }
 
 bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
-                              ViewTransform view, const Lut3d::Table *look)
+                              ViewTransform view)
 {
     if (!img.isValid()) return false;
 
@@ -767,8 +628,6 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
         enc.identity = false;
     }
 
-    const LookStage lk = LookStageFor(look, img.space);
-
     /* FUSED fast path -- taken when the primaries matrix is the identity, so the whole
        per-channel chain (view curve then transfer) is 1-D and one table replaces it. See
        the TRANSFER LUT note above for what it costs in accuracy and why it is not exact.
@@ -781,15 +640,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
     /* vm.preIdentity is part of the condition: an inset matrix ahead of the curve breaks
        the 1-D chain just as surely as a primaries matrix behind it. (enc.identity has
        already absorbed the outset above.) */
-    /* A LOOK ALSO BREAKS THE FUSION, and deliberately takes the split path rather than
-       getting a fused table of its own. The fused table bakes the view curve and the
-       transfer into ONE lookup, and the look has to sit BETWEEN them -- it is applied to
-       transfer-encoded values, not to display-linear ones. Building a second fused table
-       per look would buy back some speed at the cost of a second code path through the
-       whole stage; the split path is already table-driven, so it is not worth it until a
-       measurement says so. The no-look condition is unchanged, which is what keeps every
-       existing render byte-identical. */
-    if (enc.identity && vm.preIdentity && !lk.active) {
+    if (enc.identity && vm.preIdentity) {
         const TransferLut &lut = LutFor(vt, enc.gammaInv);
         auto processRowsLut = [=, &lut](int y0, int y1) {
             for (int y = y0; y < y1; ++y) {
@@ -837,7 +688,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
     const bool applyView = (vt != OutputTransform::ViewTransform::None);
     const TransferLut &viewLut = ViewOnlyLut(vt);
     const TransferLut &encLut  = LutFor(OutputTransform::ViewTransform::None, enc.gammaInv);
-    auto processRows = [=, &viewLut, &encLut, &lk](int y0, int y1) {
+    auto processRows = [=, &viewLut, &encLut](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             uchar *line = bits + static_cast<qsizetype>(y) * bpl;
             const size_t base = static_cast<size_t>(y) * W * 3;
@@ -849,9 +700,6 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
                 if (!vm.preIdentity) ToPrimaries(vm.pre, v[0], v[1], v[2]);
                 if (applyView)
                     for (int c = 0; c < 3; ++c) v[c] = LutValue(viewLut, v[c]);
-                /* Display-linear in the working primaries: the one point in the chain
-                   where the look's sandwich is meaningful. */
-                if (lk.active) ApplyLook(lk, v[0], v[1], v[2]);
                 ToPrimaries(enc.m, v[0], v[1], v[2]);
                 HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)
@@ -866,7 +714,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
 }
 
 bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space space,
-                                ViewTransform view, const Lut3d::Table *look)
+                                ViewTransform view)
 {
 /*
     16-bit twin of ToImage, for the export path. Identical maths -- the same baseline tone
@@ -902,9 +750,7 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
         enc.identity = false;
     }
 
-    const LookStage lk = LookStageFor(look, img.space);
-
-    auto processRows = [=, &lk](int y0, int y1) {
+    auto processRows = [=](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             quint16 *line = reinterpret_cast<quint16*>(bits + static_cast<qsizetype>(y) * bpl);
             const size_t base = static_cast<size_t>(y) * W * 3;
@@ -914,7 +760,6 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
                 for (int c = 0; c < 3; ++c) v[c] = rgb[o + c] * scale;
                 if (!vm.preIdentity) ToPrimaries(vm.pre, v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c) v[c] = ViewCurve(vt, v[c]);
-                if (lk.active) ApplyLook(lk, v[0], v[1], v[2]);
                 if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
                 HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)

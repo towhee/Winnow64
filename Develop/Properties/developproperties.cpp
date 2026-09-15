@@ -1,6 +1,5 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/cameraprofilestore.h"
-#include "Develop/lutstore.h"
 #include "Cache/devpreviewcache.h"
 #include "Develop/Properties/scopeheader.h"
 #include "Develop/Properties/rawpanel.h"
@@ -4205,67 +4204,40 @@ void DevelopProperties::addCalibrate()
    reset, not a choice, and an untouched image writes no sidecar. */
 static const char *kBuiltInProfileLabel = "Winnow Standard";
 
-/* The combo's item-data kind prefixes -- see repopulateCameraProfileCombo. They never
-   reach a sidecar, a preset or a QSettings key: they live entirely inside the widget. */
-static const char *kProfileItemPrefix = "p:";
-static const char *kLookItemPrefix    = "l:";
-
 void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
 {
-    /*
-        ONE ROW, TWO KINDS OF ENTRY. Camera profiles characterise the SENSOR; film looks
-        are a grade applied at the very end. They are offered together because that is the
-        one question the user is actually asking -- "what rendering is this?" -- and
-        because Adobe groups its own Camera / Artistic / B&W / Modern sets in one Profile
-        browser for the same reason. (This REVERSES an earlier decision recorded in
-        notes/Documentation.txt to keep them in two rows; see "Film-Look LUTs".)
-
-        They are MUTUALLY EXCLUSIVE, exactly as Lightroom's are: one combo shows one
-        selection, so picking a look clears the profile and vice versa. A look then
-        renders on the maker's "Camera Base" where one is installed -- see attachProfile
-        in workingimagecache.cpp.
-
-        THE ROW IS NEVER DISABLED NOW. Camera profiles are still raw-only (a JPEG has no
-        sensor to characterise) and still absent under the Apple decoder (which has
-        applied its own), but a LOOK works on anything: it is a creative grade on
-        display-referred pixels, which is what a JPEG already is. So the reason moves from
-        replacing the control to sitting beside it, and the profiles group is simply
-        absent from the list.
-    */
     const bool raw = currentIsRaw();
     const bool usingApple =
         G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
-    const bool profilesAvailable = raw && !usingApple;
+    const bool available = raw && !usingApple;
 
     clearItemInfo(i);
     i.name = "cameraProfile";
     i.parIdx = parIdx;
     i.parentName = "BasicHeader";
     i.captionText = "Profile";
-    i.tooltip = QString(
-        "What rendering this picture is made on top of.\n"
-        "Winnow Standard: the built-in matrix, no look.\n"
-        "Camera profiles characterise the SENSOR (.dcp files installed on this "
-        "computer for this camera, applied whole). Camera Base is the maker's colour "
-        "science with no look. Changing one changes what a given Temp value means, "
-        "because white balance is solved against the camera matrix.\n"
-        "Looks are film-simulation LUTs (.cube or HaldCLUT) from your Looks folder, "
-        "applied last, after every adjustment below.\n"
-        "Choosing a look clears the camera profile and the other way round.")
-        + (profilesAvailable ? QString()
-           : (raw ? QString("\n\nNo camera profiles: the Apple decoder applies its own "
-                            "before Winnow sees the image. Switch Demosaic to Winnow to "
-                            "choose one.")
-                  : QString("\n\nNo camera profiles: only raw files have a sensor to "
-                            "characterise. This file already carries the colour its "
-                            "camera rendered.")));
+    i.tooltip = available
+        ? "How this camera's sensor is characterised -- the starting colour the "
+          "adjustments below are made on top of.\n"
+          "Winnow Standard: the built-in matrix.\n"
+          "Camera Base: the maker's colour science with no look -- the shared starting "
+          "point every Camera profile is built on.\n"
+          "Other entries are DNG camera profiles (.dcp) installed on this computer for "
+          "this camera, applied whole.\n"
+          "Changing the profile changes what a given Temp value means, because white "
+          "balance is solved against the camera matrix."
+        : (raw ? "The Apple decoder applies its own camera profile before Winnow sees the "
+                 "image, so this control would do nothing. Switch Demosaic to Winnow to "
+                 "choose a profile."
+               : "Only raw files have a sensor to characterise. This file already carries "
+                 "the colour its camera rendered.");
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "cameraProfile";
     i.delegateType = DT_None;       // we own the value cell
     addItem(i);
-    setItemEnabled("cameraProfile", true);
+    setItemEnabled("cameraProfile", available);
 
     const QModelIndex valIdx = findValueIndex("cameraProfile");
     if (!valIdx.isValid()) return;
@@ -4275,6 +4247,24 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     QHBoxLayout *vhb = new QHBoxLayout(cell);
     vhb->setContentsMargins(0, 0, 10, 0);
     vhb->setSpacing(0);
+
+    if (!available) {
+        /*
+            THE REASON, IN THE VALUE CELL, and the two reasons are NOT interchangeable --
+            greyed control plus a brief inline reason, never a popup after the fact. A
+            JPEG has no sensor to characterise; the Apple decoder HAS a sensor but has
+            already applied a profile of its own before Winnow sees the pixels, and the
+            fix for that one is a setting the user can change.
+        */
+        QLabel *why = new QLabel(raw ? "Apple decoder" : "raw only");
+        why->setEnabled(false);
+        why->setAttribute(Qt::WA_TransparentForMouseEvents);
+        vhb->addWidget(why);
+        vhb->addStretch(1);
+        cameraProfileCombo = nullptr;
+        setIndexWidget(valIdx, cell);
+        return;
+    }
 
     QComboBox *combo = new QComboBox;
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -4287,15 +4277,6 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
                 setCameraProfile(combo->itemData(ix).toString());
             });
     vhb->addWidget(combo);
-
-    /* The reason the profiles group is missing, BESIDE the live control rather than in
-       place of it -- the row still works, it just offers less. */
-    if (!profilesAvailable) {
-        QLabel *why = new QLabel(raw ? "  looks only (Apple decoder)" : "  looks only");
-        why->setEnabled(false);
-        why->setAttribute(Qt::WA_TransparentForMouseEvents);
-        vhb->addWidget(why);
-    }
 
     /*
         HOVER PREVIEW. `highlighted` is the right signal rather than a mouse handler on the
@@ -4337,12 +4318,6 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     connect(&CameraProfileStore::instance(), &CameraProfileStore::indexChanged,
             this, &DevelopProperties::refreshCameraProfileRow,
             Qt::UniqueConnection);
-    /* The looks sweep is the same story on a much smaller folder, and the row has to be
-       refilled by whichever of the two lands last. */
-    LutStore::instance().ensureIndex();
-    connect(&LutStore::instance(), &LutStore::indexChanged,
-            this, &DevelopProperties::refreshCameraProfileRow,
-            Qt::UniqueConnection);
     refreshCameraProfileRow();
 }
 
@@ -4350,113 +4325,58 @@ void DevelopProperties::repopulateCameraProfileCombo()
 {
     if (!cameraProfileCombo) return;
 
-    /*
-        THE ITEM DATA CARRIES A ONE-CHARACTER KIND PREFIX -- "p:" for a camera profile,
-        "l:" for a look -- which is what lets ONE combo drive TWO parameters without the
-        stored values growing a namespace of their own. The sidecar keeps two clean
-        strings (cameraProfile, lookLut); only the widget needs to tell them apart, and it
-        needs to because a profile and a look could legitimately share a name.
-
-        The built-in entry's data stays the EMPTY STRING: it is the identity for both
-        parameters at once, so selecting it clears the pair and writes no sidecar.
-    */
-    QString storedProfile, storedLook;
+    QString stored;
     if (!currentImagePath.isEmpty()) {
         const EditStack &s = stackCache[currentImagePath];
-        if (!s.scopes.isEmpty()) {
-            storedProfile = s.scopes[0].params.cameraProfile;
-            storedLook    = s.scopes[0].params.lookLut;
-        }
+        if (!s.scopes.isEmpty()) stored = s.scopes[0].params.cameraProfile;
     }
 
     const QString model = mw ? mw->cameraModelFor(currentImagePath) : QString();
-    const bool profilesAvailable =
-        currentIsRaw() && G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine;
     const QList<CameraProfileStore::Entry> found =
-        profilesAvailable ? CameraProfileStore::instance().forModel(model)
-                          : QList<CameraProfileStore::Entry>();
-    const QList<LutStore::Entry> looks = LutStore::instance().entries();
+        CameraProfileStore::instance().forModel(model);
 
     QSignalBlocker block(cameraProfileCombo);
     cameraProfileCombo->clear();
     /* The built-in FIRST: it is the identity, so it heads the list the way every other
-       adjustment's identity sits at the start of its range. */
+       adjustment's identity sits at the start of its range. The rest arrive sorted, with
+       any synthesised "Camera Base" among them rather than tacked on the end. */
     cameraProfileCombo->addItem(kBuiltInProfileLabel, QString());
-
-    /* Then the camera's own profiles, sorted, with any synthesised "Camera Base" among
-       them rather than tacked on the end. The separators are inserted only when the group
-       below them is non-empty, so a machine with no looks sees exactly the list it saw
-       before looks existed. */
+    /* A RULE UNDER THE BUILT-IN, and only when there is something below it. Winnow
+       Standard is the identity -- choosing it is a reset, not a choice -- so it is a
+       different kind of thing from the installed profiles and reads better set apart
+       from them. An empty group would draw a rule with nothing under it, hence the
+       guard. */
     if (!found.isEmpty()) {
         cameraProfileCombo->insertSeparator(cameraProfileCombo->count());
         for (const CameraProfileStore::Entry &e : found)
-            cameraProfileCombo->addItem(e.name, QString(kProfileItemPrefix) + e.name);
-    }
-    if (!looks.isEmpty()) {
-        cameraProfileCombo->insertSeparator(cameraProfileCombo->count());
-        for (const LutStore::Entry &e : looks) {
-            cameraProfileCombo->addItem(e.key, QString(kLookItemPrefix) + e.key);
-            if (!e.title.isEmpty())
-                cameraProfileCombo->setItemData(cameraProfileCombo->count() - 1,
-                                                e.title, Qt::ToolTipRole);
-        }
+            cameraProfileCombo->addItem(e.name, e.name);
     }
 
-    if (storedProfile.isEmpty() && storedLook.isEmpty()) {
-        cameraProfileCombo->setCurrentIndex(0);
-        return;
-    }
+    if (stored.isEmpty()) { cameraProfileCombo->setCurrentIndex(0); return; }
 
-    const bool wantLook = !storedLook.isEmpty();
-    const QString wanted = wantLook ? QString(kLookItemPrefix) + storedLook
-                                    : QString(kProfileItemPrefix) + storedProfile;
-    int ix = cameraProfileCombo->findData(wanted);
+    int ix = cameraProfileCombo->findData(stored);
     if (ix < 0) {
         /*
-            A STORED CHOICE THAT NO LONGER RESOLVES -- uninstalled, deleted, or a sidecar
-            carried from another machine. It is shown, marked, and SELECTED rather than
-            quietly replaced by the built-in: the render falls back to the built-in matrix
-            either way, and the user is entitled to know which of those two things
-            happened. The item's DATA is still the real key, so re-installing the file
-            restores the picture rather than needing it re-chosen.
+            A STORED PROFILE THAT NO LONGER RESOLVES -- uninstalled, or a sidecar carried
+            from another machine. It is shown, marked, and SELECTED rather than quietly
+            replaced by the built-in: the render falls back to the built-in matrix either
+            way, and the user is entitled to know which of those two things happened. The
+            stored name is kept intact (the item's DATA is still the bare name), so
+            re-installing the profile restores the picture rather than needing it
+            re-chosen.
 
-            Not added while EITHER index is still building: "not installed" would be a lie
-            for the half-second before the sweep lands, and the row is refilled when it
-            does.
+            Not added while the index is still building: "not installed" would be a lie
+            for the half-second before the sweep lands.
         */
         if (!CameraProfileStore::instance().indexReady()) return;
-        if (!LutStore::instance().indexReady()) return;
-        const QString shown = wantLook ? storedLook : storedProfile;
-        cameraProfileCombo->addItem(shown + "  (not installed)", wanted);
+        cameraProfileCombo->addItem(stored + "  (not installed)", stored);
         ix = cameraProfileCombo->count() - 1;
     }
     cameraProfileCombo->setCurrentIndex(ix);
 }
 
 /*
-    Split a combo item's data into the pair of parameters it names.
-
-    "p:Adobe Standard" -> (profile "Adobe Standard", look "")
-    "l:Fuji/Provia"    -> (profile "",               look "Fuji/Provia")
-    ""                 -> (profile "",               look "")            the built-in
-
-    THE EXCLUSIVITY IS ENFORCED HERE, by construction: there is one selection, so exactly
-    one of the two comes back non-empty and the other is cleared. That is what stops a
-    profile surviving underneath a look as invisible state, and it is why both writers
-    below go through this rather than assigning a field directly.
-*/
-static void splitProfileItemData(const QString &data, QString &profile, QString &look)
-{
-    profile.clear();
-    look.clear();
-    if (data.startsWith(QLatin1String(kProfileItemPrefix)))
-        profile = data.mid(QLatin1String(kProfileItemPrefix).size());
-    else if (data.startsWith(QLatin1String(kLookItemPrefix)))
-        look = data.mid(QLatin1String(kLookItemPrefix).size());
-}
-
-/*
-    Show a profile or look on the loupe without committing to it.
+    Show a profile on the loupe without committing to it.
 
     The stored stack, the sliders and the history are untouched -- this is the same
     previewStack override the Presets list and History put up, so there is ONE preview
@@ -4471,21 +4391,16 @@ void DevelopProperties::previewCameraProfile(const QString &name)
 
     const EditStack s = stackCache.value(currentImagePath);
     if (s.scopes.isEmpty()) return;
-    QString profile, look;
-    splitProfileItemData(name, profile, look);
-
-    /* Back on the choice already in effect: take the override down rather than putting up
+    /* Back on the profile already in effect: take the override down rather than putting up
        an identical one. Hovering it with nothing previewed costs nothing at all -- the
        loupe is already showing it, and a render producing the same picture is still a
        whole develop pass. */
-    if (s.scopes[0].params.cameraProfile == profile &&
-        s.scopes[0].params.lookLut == look) { endCameraProfilePreview(); return; }
+    if (s.scopes[0].params.cameraProfile == name) { endCameraProfilePreview(); return; }
 
     EditStack preview = s;
-    /* Scope 0, whatever scope is active: both are whole-image properties, exactly as
-       setCameraProfile writes them. */
-    preview.scopes[0].params.cameraProfile = profile;
-    preview.scopes[0].params.lookLut = look;
+    /* Scope 0, whatever scope is active: a profile characterises the CAMERA, exactly as
+       setCameraProfile writes it. */
+    preview.scopes[0].params.cameraProfile = name;
     previewStack = preview;
     previewActive = true;
     cameraProfileHoverActive = true;
@@ -4524,25 +4439,12 @@ void DevelopProperties::setCameraProfile(const QString &name)
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());
-
-    QString profile, look;
-    splitProfileItemData(name, profile, look);
-    if (s.scopes[0].params.cameraProfile == profile &&
-        s.scopes[0].params.lookLut == look) return;
-
-    /* Both written together, always to scope 0 whichever scope is active: one selection
-       sets one and clears the other, so the pair can never disagree with the combo. */
-    s.scopes[0].params.cameraProfile = profile;
-    s.scopes[0].params.lookLut = look;
-
-    const QString shown = !look.isEmpty() ? look
-                        : !profile.isEmpty() ? profile
-                                             : QString(kBuiltInProfileLabel);
-    /* One merge key for the row, so choosing three profiles in a row collapses to one
-       history entry rather than three. */
-    noteScopeEdit("Global", "Profile", shown, "global/cameraProfile");
-    /* A different profile may or may not bring its own tone mapping with it; a look never
-       does, and clearing a profile hands tone mapping back to the user. */
+    if (s.scopes[0].params.cameraProfile == name) return;
+    s.scopes[0].params.cameraProfile = name;    // always scope 0, whichever is active
+    noteScopeEdit("Global", "Profile",
+                  name.isEmpty() ? QString(kBuiltInProfileLabel) : name,
+                  "global/cameraProfile");
+    /* A different profile may or may not bring its own tone mapping with it. */
     refreshViewTransformRow();
     emit paramsChanged();
 }
@@ -5952,11 +5854,6 @@ const PresetLeafDef kBasicLeaves[] = {
        behaviour for a per-sensor characterisation: the alternative, silently dropping it,
        would make the preset claim a colour rendering it did not deliver. */
     {"cameraProfile", "Camera profile"},
-    /* The look shares the Profile row and is its own leaf, because the two are separate
-       parameters even though only one can be set at a time. It travels by KEY and is NOT
-       camera-specific, so unlike the profile above it reproduces on any body -- it only
-       needs the same LUT file installed. */
-    {"lookLut", "Look"},
     /* Then Tone mapping: it re-scopes everything below it. */
     {"viewTransform", "Tone mapping"},
     {"whiteBalance", "White balance (Temp + Tint)"},
@@ -6061,7 +5958,6 @@ bool leafChanged(const QString &key, const EditParams &p)
                                       p.calBlueSat  != def.calBlueSat;
     if (key == "viewTransform") return p.viewTransform != def.viewTransform;
     if (key == "cameraProfile") return p.cameraProfile != def.cameraProfile;
-    if (key == "lookLut")       return p.lookLut != def.lookLut;
     if (key == "gradeShadow")  return p.gradeShadowSat != def.gradeShadowSat ||
                                       p.gradeShadowLum != def.gradeShadowLum;
     if (key == "gradeMid")     return p.gradeMidSat != def.gradeMidSat ||
@@ -6151,7 +6047,6 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
     }
     if (lk.contains("viewTransform")) out.insert("viewTransform", p.viewTransform);
     if (lk.contains("cameraProfile")) out.insert("cameraProfile", p.cameraProfile);
-    if (lk.contains("lookLut")) out.insert("lookLut", p.lookLut);
     if (lk.contains("gradeShadow")) {
         out.insert("gradeShadowHue", p.gradeShadowHue);
         out.insert("gradeShadowSat", p.gradeShadowSat);
@@ -6348,18 +6243,18 @@ EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack 
     /*
         The adjustments land on the target scope -- EXCEPT the whole-image ones.
 
-        WAS A REAL BUG (found 2026-09-14 while adding the look): cameraProfile and
-        viewTransform are read from scopes[0] and ONLY scopes[0] (they characterise the
-        camera and map the whole image, so a per-scope value could not mean anything).
-        Written to scopes[target] they landed somewhere nothing reads, so applying a
-        preset while a mask scope was active silently dropped them -- no error, just a
-        preset that did not do what it said. lookLut would have inherited it.
+        WAS A REAL BUG (found 2026-09-14): cameraProfile and viewTransform are read from
+        scopes[0] and ONLY scopes[0] (they characterise the camera and map the whole
+        image, so a per-scope value could not mean anything). Written to scopes[target]
+        they landed somewhere nothing reads, so applying a preset while a mask scope was
+        active silently dropped them -- no error, just a preset that did not do what it
+        said.
 
         Keep this list in step with the whole-image fields in EditParams: a field that
         belongs here and is missing fails exactly this silently.
     */
     static const QSet<QString> kWholeImageParamKeys = {
-        "cameraProfile", "lookLut", "viewTransform"
+        "cameraProfile", "viewTransform"
     };
     for (auto it = preset.params.constBegin(); it != preset.params.constEnd(); ++it) {
         const int scope = kWholeImageParamKeys.contains(it.key()) ? 0 : target;
@@ -6997,12 +6892,6 @@ constexpr const char *kCurvesField = "curves";
    marks it "(not installed)" rather than rendering something wrong. */
 constexpr const char *kProfileField = "cameraProfile";
 
-/* The look, on the same terms and for the same reason (a QString cannot ride a member
-   pointer). Unlike the profile it is NOT camera-specific -- a film LUT is a grade, not a
-   characterisation -- so it propagates across a mixed-camera selection and resolves on
-   every one of them. */
-constexpr const char *kLookField = "lookLut";
-
 bool curvesDiffer(const EditParams &a, const EditParams &b)
 {
     for (int c = 0; c < ToneCurve::kChannels; ++c) {
@@ -7037,8 +6926,6 @@ QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const Edit
     if (curvesDiffer(a, b)) changed.insert(QString::fromLatin1(kCurvesField));
     if (a.cameraProfile != b.cameraProfile)
         changed.insert(QString::fromLatin1(kProfileField));
-    if (a.lookLut != b.lookLut)
-        changed.insert(QString::fromLatin1(kLookField));
     return changed;
 }
 
@@ -7050,14 +6937,7 @@ void DevelopProperties::copyParamFields(const EditParams &src, EditParams &dst,
     for (const IntField &f : kIntFields)
         if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
     if (fields.contains(QString::fromLatin1(kCurvesField))) copyCurves(src, dst);
-    /* THE PAIR MOVES TOGETHER. They are mutually exclusive, so copying one without the
-       other could leave the destination with both set -- the state sanitizeParams exists
-       to repair. If either differs, both are taken from the source. */
-    if (fields.contains(QString::fromLatin1(kProfileField)) ||
-        fields.contains(QString::fromLatin1(kLookField))) {
-        dst.cameraProfile = src.cameraProfile;
-        dst.lookLut = src.lookLut;
-    }
+    if (fields.contains(QString::fromLatin1(kProfileField))) dst.cameraProfile = src.cameraProfile;
 }
 
 EditStack &DevelopProperties::stackFor(const QString &fPath)
