@@ -434,13 +434,59 @@ QString WidgetCSS::stackedWidget()
     "}";
 }
 
+QString WidgetCSS::itemViewIndicator(const QString &view)
+{
+/*
+    CHECKABLE ITEMS IN AN ITEM VIEW DRAW THEIR OWN INDICATOR, ON BOTH PLATFORMS.
+
+    Windows needed this because the native indicator did not match the G::css QCheckBox
+    style.  macOS needs it because as of macOS 27 the macOS style draws NOTHING for an
+    item-view check indicator: the boxes vanished from the Filters panel altogether,
+    while standalone QCheckBox widgets (and the Preferences tree, which paints its own)
+    were untouched.  Reproduced against both Qt 6.9.2 and Qt 6.11.0, so it is the OS and
+    not a Qt build -- a Qt update will not bring the boxes back.
+
+    Applied to QTreeView, QListView and QTableView because all three carry checkable
+    items: Filters and the Catalog keyword tree, the Save Develop Preset tree, the
+    recurse column in Manage Catalog, and the Find Duplicates list.
+
+    THE INDETERMINATE RULE IS NOT DECORATION.  PartiallyChecked is how Filters and the
+    Catalog tree show an EXCLUDED item, and how the preset tree shows a part-selected
+    group; without a rule for it that state falls back to the same missing native
+    indicator.
+*/
+    return
+    view + "::indicator {"
+        "width: 15px;"
+        "height: 15px;"
+    "}"
+
+    + view + "::indicator:unchecked {"
+        "image: url(:/images/checkbox_unchecked_blue.png);"
+    "}"
+
+    + view + "::indicator:checked {"
+        "image: url(:/images/checkbox_checked_blue.png);"
+    "}"
+
+    + view + "::indicator:indeterminate {"
+        "image: url(:/images/checkbox_indeterminate_blue.png);"
+    "}"
+
+    + view + "::indicator:disabled {"
+        "image: url(:/images/checkbox_disabled.png);"
+    "}"
+    ;
+}
+
 QString WidgetCSS::listView()
 {
     return
     "QListView {"
         "border: 1px solid " + QColor(bg,bg,bg).name() + ";"
-    "}";
-
+    "}"
+    + itemViewIndicator("QListView")
+    ;
 }
 
 QString WidgetCSS::listWidget()
@@ -550,26 +596,7 @@ QString WidgetCSS::treeView()
         "background: " + selectionColor.name() + ";"
     "}"
 
-#ifdef Q_OS_WIN
-    // Match the G::css QCheckBox style for checkable tree items (eg Filters panel).
-    // Without these the indicators fall back to the native Windows checkbox.
-    "QTreeView::indicator {"
-        "width: 15px;"
-        "height: 15px;"
-    "}"
-
-    "QTreeView::indicator:unchecked {"
-        "image: url(:/images/checkbox_unchecked_blue.png);"
-    "}"
-
-    "QTreeView::indicator:checked {"
-        "image: url(:/images/checkbox_checked_blue.png);"
-    "}"
-
-    "QTreeView::indicator:disabled {"
-        "image: url(:/images/checkbox_disabled.png);"
-    "}"
-#endif
+    + itemViewIndicator("QTreeView")
     ;
 }
 
@@ -583,7 +610,9 @@ QString WidgetCSS::tableView()
         "selection-color: " + textColor.name() + ";"
         "selection-background-color: " + selectionColor.name() + ";"
         "border: none;"
-    "}";
+    "}"
+    + itemViewIndicator("QTableView")
+    ;
 }
 
 QString WidgetCSS::headerView()
