@@ -2385,6 +2385,13 @@ private:
     void tabBarAssignRichText(QTabBar *richTextTabBar);
     bool tabBarContainsDocks(QTabBar *tabBar);
     bool isSelectedDockTab(QDockWidget *dock);
+    /*  Which panel is the front tab in each tab group, per workspace, so returning to a
+        workspace comes back to the panel last used there rather than the one that
+        happened to be front when the layout was captured (see MW::frontDockTabs). */
+    QStringList frontDockTabs();
+    void rememberDockTabSelection(const QString &wsName);
+    void restoreDockTabSelection(const QString &wsName);
+    QHash<QString, QStringList> frontDockTabsByWorkspace;
     void updateDockTabGraphics(QTabBar *tabBar);   // responsive text/graphic dock tab titles
     void scheduleDockTabUpdate();                  // deferred re-eval of all dock tab bars
     void moveDroppedDockLast();  // a dock dropped into a tab group lands last
