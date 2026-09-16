@@ -457,7 +457,6 @@ bool Olympus::parse(MetadataParameters &p,
 
 bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
-    Q_UNUSED(m)
     using namespace TiffWalk;
 
     Reader r;
@@ -576,11 +575,6 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     raw.pattern = CfaPattern::BGGR;
     raw.white = 4095;
     for (int i = 0; i < 4; ++i) raw.black[i] = 255;
-    QString model;
-    if (haveIfd0 && ifd0.contains(272))
-        model = canonicalCameraModel(ifd0.contains(271) ? r.ascii(ifd0[271]) : QString(),
-                                     r.ascii(ifd0[272]));
-    xyzToCamForModel(model, raw.xyzToCam);
 
     /* CFA phase. Olympus bodies differ (the older E-M1 is BGGR, the OM-1 is RGGB), so the BGGR
        default above is not safe to assume. Read the EXIF CFAPattern (0xA302): a 2x2 repeat-dim
@@ -599,36 +593,70 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    /* As-shot white balance from the Olympus MakerNote (essential -- matrix-neutral renders
-       badly green for Olympus): IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). The MakerNote is
-       "OLYMPUS\0II\3\0" (12-byte header, embedded IFD at +12, offsets relative to its start),
-       then ImageProcessing (0x2040) -> WB_RBLevels (0x0100, 2 SHORTs R,B, with green == 256). */
-    if (haveIfd0 && ifd0.contains(0x8769)) {
-        Ifd exif; QList<quint32> es; quint32 en = 0;
-        if (r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) && exif.contains(0x927C)) {
-            const quint32 mnAbs = r.ifdPointer(exif[0x927C]);
-            if (file.seek(mnAbs)) {
-                const QByteArray h = file.read(12);
-                if (h.size() == 12 && h.startsWith("OLYMPUS")) {
-                    const bool mbig = (uchar(h[8]) == 'M');
-                    Reader mr;
-                    mr.initEmbedded(&file, mnAbs, 12, mbig);
-                    Ifd mn; QList<quint32> ms; quint32 mnn = 0;
-                    if (mr.readIfd(mr.firstIfd(), mn, ms, mnn) && mn.contains(0x2040)) {
-                        Ifd ip; QList<quint32> is2; quint32 in2 = 0;
-                        if (mr.readIfd(mr.ifdPointer(mn[0x2040]), ip, is2, in2) &&
-                            ip.contains(0x0100)) {
-                            const QVector<quint32> wb = mr.u32s(ip[0x0100]);   // R, B
-                            if (wb.size() >= 2 && wb[0] && wb[1]) {
-                                raw.camMul[0] = wb[0];  raw.camMul[1] = 256;   // R, G(=256)
-                                raw.camMul[2] = wb[1];  raw.camMul[3] = 256;   // B, G2
-                            }
-                        }
-                    }
-                }
-            }
+    /* As-shot white balance and the model matrix. One definition, shared with the Apple
+       Core Image engine -- see RawFormat::ReadAsShotColor. */
+    {
+        RawSensorInfo ci;
+        if (ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
         }
     }
 
+    return true;
+}
+
+/*
+    ORF colour without a decode. Olympus is the vendor where this matters most: the
+    matrix-derived neutral renders badly GREEN, so an ORF with no as-shot WB looks broken
+    rather than merely a little warm. Split out of UnpackCfa for the Apple Core Image
+    engine -- see RawFormat::ReadAsShotColor.
+*/
+bool OlympusRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) return false;
+
+    Ifd ifd0; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), ifd0, subs, next)) return false;
+
+    const QString model = ifd0.contains(272)
+        ? canonicalCameraModel(ifd0.contains(271) ? r.ascii(ifd0[271]) : QString(),
+                               r.ascii(ifd0[272]))
+        : QString();
+    info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
+
+    /* IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). The MakerNote is a 12-byte
+       "OLYMPUS" header with the embedded IFD at +12 and offsets relative to its start,
+       then ImageProcessing (0x2040) -> WB_RBLevels (0x0100, 2 SHORTs R,B, G == 256). */
+    if (!ifd0.contains(0x8769)) return info.hasColorMatrix;
+    Ifd exif; QList<quint32> es; quint32 en = 0;
+    if (!r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) || !exif.contains(0x927C))
+        return info.hasColorMatrix;
+
+    const quint32 mnAbs = r.ifdPointer(exif[0x927C]);
+    if (!file.seek(mnAbs)) return info.hasColorMatrix;
+    const QByteArray h = file.read(12);
+    if (h.size() != 12 || !h.startsWith("OLYMPUS")) return info.hasColorMatrix;
+
+    Reader mr;
+    mr.initEmbedded(&file, mnAbs, 12, uchar(h[8]) == 'M');
+    Ifd mn; QList<quint32> ms; quint32 mnn = 0;
+    if (!mr.readIfd(mr.firstIfd(), mn, ms, mnn) || !mn.contains(0x2040))
+        return info.hasColorMatrix;
+    Ifd ip; QList<quint32> is2; quint32 in2 = 0;
+    if (!mr.readIfd(mr.ifdPointer(mn[0x2040]), ip, is2, in2) || !ip.contains(0x0100))
+        return info.hasColorMatrix;
+
+    const QVector<quint32> wb = mr.u32s(ip[0x0100]);       // R, B
+    if (wb.size() >= 2 && wb[0] && wb[1]) {
+        info.camMul[0] = float(wb[0]);  info.camMul[1] = 256.0f;   // R, G(=256)
+        info.camMul[2] = float(wb[1]);  info.camMul[3] = 256.0f;   // B, G2
+    }
     return true;
 }

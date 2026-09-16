@@ -193,6 +193,66 @@ bool camToWorking(const Dcp::Profile &p, float kelvin, float tint, float out[3][
 }
 
 /*
+    Re-solve the AS-SHOT Kelvin/tint against the SELECTED PROFILE's matrices.
+
+    WHY IT IS NEEDED. WhiteBalance::resolveAsShot runs once, at decode, against the
+    built-in per-model matrix -- and it has to, because a profile is an edit and is not
+    attached until render time. But the profile REPLACES that matrix: the camera neutral
+    a given illuminant produces under a DCP's ColorMatrix is not the one the built-in
+    matrix produces, so the temperature the file was balanced for reads differently. Left
+    unsolved, picking a profile silently moves what "as shot" means without moving the
+    number in the Temp box.
+
+    THE METHOD is the DNG specification's NeutralToXY, and it is a fixed-point iteration
+    for one reason: the matrix to invert depends on the temperature, and the temperature
+    is what we are solving for. So start at D50, invert the ColorMatrix resolved THERE
+    onto the camera neutral, read the temperature off the chromaticity that comes back,
+    resolve the matrix again at that temperature, and repeat. It converges in a handful
+    of passes; the loop is capped because a pathological profile could otherwise cycle.
+
+    The camera neutral is the RECIPROCAL of CameraColor::asShotMul: asShotMul are the
+    GAINS that make the scene white neutral, so the camera's response to that white --
+    which is what the DNG matrices map to -- is 1/gain.
+*/
+bool resolveAsShot(const Dcp::Profile &p, CameraColor &cam)
+{
+    if (!cam.valid || !p.valid) return false;
+    if (!(cam.asShotMul[0] > 1e-9f) || !(cam.asShotMul[1] > 1e-9f) ||
+        !(cam.asShotMul[2] > 1e-9f)) return false;
+
+    const double neutral[3] = { 1.0 / cam.asShotMul[0],
+                                1.0 / cam.asShotMul[1],
+                                1.0 / cam.asShotMul[2] };
+
+    /* D50, the DNG specification's starting point. */
+    double x = 0.34567, y = 0.35850;
+    float kelvin = 5000.0f, tint = 0.0f;
+
+    for (int it = 0; it < 30; ++it) {
+        Resolved r;
+        if (!resolve(p, kelvin, r)) return false;
+
+        Matrix3 xyzFromCam;
+        if (!inverse(r.color, xyzFromCam)) return false;
+
+        double xyz[3];
+        applyM(xyzFromCam, neutral, xyz);
+        const double sum = xyz[0] + xyz[1] + xyz[2];
+        if (!(std::fabs(sum) > 1e-12)) return false;
+
+        const double nx = xyz[0] / sum, ny = xyz[1] / sum;
+        const bool settled = std::fabs(nx - x) < 1e-8 && std::fabs(ny - y) < 1e-8;
+        x = nx; y = ny;
+        WhiteBalance::tempTintFromXY(x, y, kelvin, tint);
+        if (settled) break;
+    }
+
+    cam.asShotK = kelvin;
+    cam.asShotTint = tint;
+    return true;
+}
+
+/*
     LINEAR ProPhoto RGB (ROMM), whose white IS D50 -- the space the DNG specification
     applies both profile lookup tables in. Written out here rather than added to
     ColorSpaceMath::ColorSpace because every space in that enum is D65 by design; see the

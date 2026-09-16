@@ -350,31 +350,59 @@ bool CanonCR3Raw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     raw.white = uint16_t(maxv);
     for (int i = 0; i < 4; ++i) raw.black[i] = black[i];
 
-    /* As-shot white balance from the CMT3 (Canon makernote) ColorData tag 0x4001. */
+    /* As-shot white balance and the model matrix. One definition, shared with the Apple
+       Core Image engine -- see RawFormat::ReadAsShotColor. */
     {
-        int t = all.indexOf(QByteArray("CMT3", 4));
-        if (t >= 4) {
-            using namespace TiffWalk;
-            Reader r;
-            if (r.init(&file, quint32(t + 4))) {              // TIFF embedded at the box payload
-                Ifd mn; QList<quint32> subs; quint32 next = 0;
-                if (r.readIfd(r.firstIfd(), mn, subs, next) && mn.contains(0x4001)) {
-                    const QVector<quint32> cd = r.u32s(mn[0x4001]);
-                    const int n = cd.size();
-                    const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
-                    if (o + 3 < n && cd[o] > 0 && cd[o + 1] > 0 && cd[o + 3] > 0) {
-                        raw.camMul[0] = cd[o];       raw.camMul[1] = cd[o + 1];   // R, G1
-                        raw.camMul[2] = cd[o + 3];   raw.camMul[3] = cd[o + 2];   // B, G2
-                    }
-                }
-            }
+        RawSensorInfo ci;
+        if (ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
         }
     }
-
-    xyzToCamForModel(m.model, raw.xyzToCam);                  // identity fallback if unknown
 
     /* Refine the clip level from the per-model saturation table when it has one. */
     { int tb = 0, tmax = 0; if (cameraLevelsForModel(m.model, tb, tmax) && tmax > 0) raw.white = uint16_t(tmax); }
 
+    return true;
+}
+
+/*
+    CR3 colour without a decode: the Canon makernote lives in the CMT3 box, whose payload
+    is a plain embedded TIFF, so ColorData (0x4001) is read exactly as it is from a CR2.
+    Split out of UnpackCfa for the Apple Core Image engine -- see
+    RawFormat::ReadAsShotColor.
+*/
+bool CanonCR3Raw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    info.hasColorMatrix = xyzToCamForModel(m.model, info.xyzToCam);
+
+    if (!file.isOpen() && !file.open(QIODevice::ReadOnly)) return info.hasColorMatrix;
+    if (!file.seek(0)) return info.hasColorMatrix;
+
+    /* The makernote sits near the front of the file (moov/uuid), so a bounded read finds
+       CMT3 without pulling a 50 MB CR3 into memory the way UnpackCfa's readAll does. */
+    const QByteArray head = file.read(1 << 20);
+    const int t = head.indexOf(QByteArray("CMT3", 4));
+    if (t < 4) return info.hasColorMatrix;
+
+    using namespace TiffWalk;
+    Reader r;
+    /* TIFF embedded at the box payload. */
+    if (!r.init(&file, quint32(t + 4))) return info.hasColorMatrix;
+    Ifd mn; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), mn, subs, next) || !mn.contains(0x4001))
+        return info.hasColorMatrix;
+
+    /* ColorData -> WB_RGGBLevelsAsShot; the record length selects the layout version.
+       File order R, G1, G2, B; RawSensorInfo::camMul is (R, G1, B, G2). */
+    const QVector<quint32> cd = r.u32s(mn[0x4001]);
+    const int n = cd.size();
+    const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
+    if (o + 3 < n && cd[o] > 0 && cd[o + 1] > 0 && cd[o + 3] > 0) {
+        info.camMul[0] = float(cd[o]);      info.camMul[1] = float(cd[o + 1]);
+        info.camMul[2] = float(cd[o + 3]);  info.camMul[3] = float(cd[o + 2]);
+    }
     return true;
 }

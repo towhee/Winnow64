@@ -3246,15 +3246,21 @@ void MW::enableSelectionDependentMenus()
     gate(embelSaveTemplateAction, dmHasRows, needFolder);
 
     // View menu
-    /* View modes require a loaded folder; Compare needs at least two selected images.
-       Loupe (E), Grid (G) and Table (T) stay ENABLED in Develop: they are the way back
-       out of it, switching to Preview and showing that view. Only Compare is disabled
-       (which also disables its C shortcut) until the user returns to Preview. */
+    /* Compare needs at least two selected images.  Loupe (E), Grid (G) and Table (T)
+       stay ENABLED in Develop: they are the way back out of it, switching to Preview and
+       showing that view. Only Compare is disabled (which also disables its C shortcut)
+       until the user returns to Preview.
+
+       E / G / T are NOT gated on a loaded folder, unlike the rest of this function.  They
+       are the Library WORKSPACE keys as well as view keys (see asLoupeAction), and D
+       enters the Develop layout with no folder loaded, so gating them on dmHasRows left
+       the user stuck in the Develop layout with no way back.  With nothing to show the
+       view functions reinstate the central message (MW::showCentralMessageIfNoImages). */
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QString needPreview = "not available in Develop mode";
-    gate(asLoupeAction, dmHasRows, needFolder);
-    gate(asGridAction, dmHasRows, needFolder);
-    gate(asTableAction, dmHasRows, needFolder);
+    gate(asLoupeAction, true, "");
+    gate(asGridAction, true, "");
+    gate(asTableAction, true, "");
     gate(asCompareAction, has2Selected && !inDevelop, inDevelop ? needPreview : need2Sel);
     gate(copyInfoTextToClipboardAction, dmHasRows, needFolder);
 

@@ -1104,7 +1104,6 @@ struct NBits {
 
 bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
-    Q_UNUSED(m)
     using namespace TiffWalk;
 
     Reader r;
@@ -1250,18 +1249,19 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 
     const QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
 
-    /* Active-area crop. Most NEFs store exactly the active area, but a number of bodies pad the
-       frame with non-image columns that, demosaiced, fringe the left/right edges magenta (the pad
-       sits at or below black, so after black subtraction the red/blue white-balance gains amplify
-       what is left into magenta noise). libraw crops these to a per-model active area; mirror its
-       margins here. Margins are even, so the CFA phase at the cropped origin is unchanged (the
-       CFAPattern read above still holds). Add a row per affected model as encountered.
+    /* Active-area crop. Most NEFs store exactly the active area, but a number of bodies
+    pad the frame with non-image columns that, demosaiced, fringe the left/right edges
+    magenta (the pad sits at or below black, so after black subtraction the red/blue
+    white-balance gains amplify what is left into magenta noise). libraw crops these to a
+    per-model active area; mirror its margins here. Margins are even, so the CFA phase at
+    the cropped origin is unchanged (the CFAPattern read above still holds). Add a row
+    per affected model as encountered.
 
-       The pad is not always optical black: the D800/D800E store 7424 columns for a 7378-column
-       active area, and the 46-column tail is 14 columns of a constant 600, then 2 saturated
-       (16382) columns, then 30 columns of literal 1. Only the right edge is padded on that body
-       (the left column and every row carry image data), which is why it showed a single magenta
-       stripe down the right side. */
+   The pad is not always optical black: the D800/D800E store 7424 columns for a
+   7378-column active area, and the 46-column tail is 14 columns of a constant 600, then
+   2 saturated (16382) columns, then 30 columns of literal 1. Only the right edge is
+   padded on that body (the left column and every row carry image data), which is why it
+   showed a single magenta stripe down the right side. */
     {
         int left = 0, top = 0, cw = W, ch = H;
         if (model == "NIKON D2H" && W == 2496 && H == 1648) { left = 6; cw = 2482; }  // libraw margins
@@ -1311,27 +1311,82 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     if (!haveBlack)
         for (int i = 0; i < 4; ++i) raw.black[i] = lo;   // self-calibrated fallback (no 0x3d)
 
-    xyzToCamForModel(model, raw.xyzToCam);               // identity fallback if unknown
+    /* As-shot white balance and the model matrix. One definition, shared with the
+       Apple Core Image engine, which has no unpack of its own -- see
+       NikonRaw::ReadAsShotColor and RawFormat::ReadAsShotColor. */
+    {
+        RawSensorInfo ci;
+        if (ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
+        }
+    }
 
-    /* As-shot white balance.
-       Modern bodies store green-normalised multipliers UNENCRYPTED in MakerNote tag 0x0C
-       (WhiteBalanceRBLevels, 4 RATIONALs in order R, B, G1, G2) -- the values libraw reports as
-       cam_mul, no decryption needed. Older bodies (D2H, D100) have no 0x0C and carry WB in the
-       ColorBalance block 0x97 instead; its early pre-encryption versions ("0100".."0103") hold
-       the same RGGB levels as 16-bit ints at a fixed offset (layout ported from dcraw's
-       parse_makernote). Without this the matrix-derived neutral WB is used, giving a warm cast. */
+    return true;
+}
+
+/*
+    NEF colour without a decode: MakerNote tag 0x0C (or the older 0x97 ColorBalance
+    block) for the as-shot multipliers, plus the per-model XYZ->camera matrix.
+
+    Split out of UnpackCfa so the Apple Core Image engine -- which never calls UnpackCfa
+    -- can still tell Develop what the camera metered. Before this, every NEF opened
+    under that engine showed WhiteBalance::resolve's 6500 K / 0 fallback instead of its
+    real balance. See RawFormat::ReadAsShotColor.
+*/
+bool NikonRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) return false;
+
+    Ifd ifd0; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), ifd0, subs, next)) return false;
+
+    const QString model = ifd0.contains(272) ? r.ascii(ifd0[272]) : QString();
+    info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
+
+    /* IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). The Nikon type-3 MakerNote is
+       "Nikon\0" + 2 version bytes + "\0\0" + an embedded TIFF whose offsets are relative
+       to that embedded header (base = makerNote + 10). */
+    if (!ifd0.contains(0x8769)) return info.hasColorMatrix;
+    Ifd exif; QList<quint32> es; quint32 en = 0;
+    if (!r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) || !exif.contains(0x927C))
+        return info.hasColorMatrix;
+
+    Reader mr;
+    if (!mr.init(&file, r.ifdPointer(exif[0x927C]) + 10)) return info.hasColorMatrix;
+    Ifd mn; QList<quint32> ms; quint32 mnn = 0;
+    if (!mr.readIfd(mr.firstIfd(), mn, ms, mnn)) return info.hasColorMatrix;
+
+    /*
+        Modern bodies store green-normalised multipliers UNENCRYPTED in MakerNote tag 0x0C
+        (WhiteBalanceRBLevels, 4 RATIONALs in order R, B, G1, G2) -- the values libraw
+        reports as cam_mul, no decryption needed. Older bodies (D2H, D100) have no 0x0C
+        and carry WB in the ColorBalance block 0x97 instead; its early pre-encryption
+        versions ("0100".."0103") hold the same RGGB levels as 16-bit ints at a fixed
+        offset (layout ported from dcraw's parse_makernote). Without this the
+        matrix-derived neutral WB is used, giving a warm cast.
+    */
     if (mn.contains(0x0C)) {
         const QVector<double> wb = mr.reals(mn[0x0C]);
-        /* Order R, B, G1, G2. Some bodies (D100) store only R/B and leave the green entries 0,
-           meaning "green-normalised to 1"; substitute 1.0 rather than rejecting the tag (a zero
-           green multiplier would otherwise drop the WB and leave a heavy green cast). */
+
+        /* Order R, B, G1, G2. Some bodies (D100) store only R/B and leave the green
+        entries 0, meaning "green-normalised to 1"; substitute 1.0 rather than rejecting
+        the tag (a zero green multiplier would otherwise drop the WB and leave a heavy
+        green cast). */
+
         if (wb.size() >= 2 && wb[0] > 0 && wb[1] > 0) {
             const double g1 = (wb.size() >= 3 && wb[2] > 0) ? wb[2] : 1.0;
             const double g2 = (wb.size() >= 4 && wb[3] > 0) ? wb[3] : g1;
-            raw.camMul[0] = float(wb[0]);                // R
-            raw.camMul[1] = float(g1);                   // G1
-            raw.camMul[2] = float(wb[1]);                // B
-            raw.camMul[3] = float(g2);                   // G2
+            info.camMul[0] = float(wb[0]);               // R
+            info.camMul[1] = float(g1);                  // G1
+            info.camMul[2] = float(wb[1]);               // B
+            info.camMul[3] = float(g2);                  // G2
         }
     } else if (mn.contains(0x97)) {
         const QByteArray cb = mr.bytes(mn[0x97]);
@@ -1353,11 +1408,10 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
             const int R = s16(off + 2*iR), G1 = s16(off + 2*iG1),
                       B = s16(off + 2*iB), G2 = s16(off + 2*iG2);
             if (R > 0 && G1 > 0 && B > 0) {
-                raw.camMul[0] = float(R);  raw.camMul[1] = float(G1);
-                raw.camMul[2] = float(B);  raw.camMul[3] = float(G2 > 0 ? G2 : G1);
+                info.camMul[0] = float(R);  info.camMul[1] = float(G1);
+                info.camMul[2] = float(B);  info.camMul[3] = float(G2 > 0 ? G2 : G1);
             }
         }
     }
-
     return true;
 }

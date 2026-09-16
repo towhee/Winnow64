@@ -143,6 +143,21 @@ void TstCameraModel::spacesOutGluedNames_data()
     QTest::newRow("E-M5MarkII")
         << "OLYMPUS IMAGING CORP." << "E-M5MarkII" << "Olympus E-M5 Mark II";
     QTest::newRow("GFX100S") << "FUJIFILM" << "GFX100S" << "Fujifilm GFX 100S";
+    /*
+        Canon's "mN" suffix. Without this the model falls to the LONGEST-PREFIX match on
+        the base body -- "Canon EOS R6" -- and an R6 Mark II renders through the R6's
+        colour matrix, which is a different sensor. Silent: the image looks plausible,
+        just wrong, and the white balance solved from that matrix is wrong with it.
+    */
+    QTest::newRow("EOS R6m2") << "Canon" << "Canon EOS R6m2"
+                              << "Canon EOS R6 Mark II";
+    QTest::newRow("EOS R5m2") << "Canon" << "Canon EOS R5m2"
+                              << "Canon EOS R5 Mark II";
+    QTest::newRow("EOS R1m3") << "Canon" << "Canon EOS R1m3"
+                              << "Canon EOS R1 Mark III";
+    /* IDEMPOTENT here too. */
+    QTest::newRow("already spaced mN")
+        << "Canon" << "Canon EOS R6 Mark II" << "Canon EOS R6 Mark II";
     /* IDEMPOTENT: a name that is already spaced must survive unchanged, or the second
        pass undoes the first. */
     QTest::newRow("already spaced mark")
@@ -174,6 +189,13 @@ void TstCameraModel::leavesUnrelatedNamesAlone_data()
     QTest::newRow("non-fuji GFX") << "Acme" << "GFX100" << "Acme GFX100";
     /* "Mark" not followed by a version is a word, not a gluing. */
     QTest::newRow("E-M1X") << "OLYMPUS CORPORATION" << "E-M1X" << "Olympus E-M1X";
+    /* The mN rule is Canon-only and anchored at the END, so it cannot fire mid-name or
+       on another maker's body that happens to contain the same letters. */
+    QTest::newRow("non-canon m2") << "SONY" << "ILCE-9M2" << "Sony ILCE-9M2";
+    QTest::newRow("canon m2 mid-name")
+        << "Canon" << "Canon EOS m2 Kit" << "Canon EOS m2 Kit";
+    QTest::newRow("canon m1 not a mark")
+        << "Canon" << "Canon EOS M100" << "Canon EOS M100";
     QTest::newRow("PEN-F") << "OLYMPUS IMAGING CORP." << "PEN-F" << "Olympus PEN-F";
 }
 

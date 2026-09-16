@@ -35,6 +35,24 @@ public:
     bool ToCameraNative(const RawImage &raw,
                    const std::vector<float> &rgb,
                    WorkingImage &out);
+
+    /*
+        Just the CHARACTERISATION half of ToCameraNative: given a model's XYZ->camera
+        matrix and the file's as-shot multipliers (R, G, B, G2 -- G2 unused), fill a
+        CameraColor and solve its as-shot Kelvin/tint. No pixels involved.
+
+        Split out because the APPLE CORE IMAGE engine needs it too. That engine hands
+        back linear-sRGB pixels with the as-shot balance already applied and no camera
+        characterisation at all, which used to leave cam invalid and the Temp/Tint row
+        reading WhiteBalance::resolve's 6500/0 default on every raw file. The matrix and
+        the multipliers come off ImageMetadata::rawInfo there, not off a decoded
+        RawImage, so this takes the two arrays rather than a RawImage.
+
+        camMul all-equal (or all 1) means "the file gave us none": the matrix-derived
+        neutral is used instead, exactly as in the full path.
+    */
+    static void Characterise(const float xyzToCam[3][3], const float camMul[4],
+                             CameraColor &out);
 };
 
 #endif // RAWCOLOR_H

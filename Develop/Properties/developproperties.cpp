@@ -3671,6 +3671,17 @@ void DevelopProperties::resetWbAxisToAsShot(bool isTemp)
     emit paramsChanged();
 }
 
+void DevelopProperties::onWorkingImageReady(const QString &fPath)
+{
+    if (fPath.isEmpty() || fPath != currentImagePath) return;
+    const CameraColor cam = currentCam();
+    if (!cam.valid) return;                      // decode has not landed yet
+    if (cam.asShotK == wbRowAsShotK) return;     // already showing this characterisation
+    wbRowAsShotK = cam.asShotK;
+    refreshWbRow();             // Temp/Tint, now against the camera's own data
+    refreshCameraProfileRow();  // the profile LIST is per-camera, and keys off cam too
+}
+
 void DevelopProperties::refreshWbRow()
 {
     /* Push the active scope's white balance back into the row: the resolved absolute
@@ -5638,6 +5649,10 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        previews now, while the frame still exists. */
     topUpDevPreviews(currentImagePath);
     cancelWbDropper();                  // an armed dropper does not follow the image
+    /* The new image's characterisation has not arrived yet (the raw decode is async and
+       starts after this), so the WB row is about to resolve against an invalid cam.
+       onWorkingImageReady re-resolves it when the decode lands. */
+    wbRowAsShotK = -1.0f;
     currentImagePath = fPath;
     if (fPath.isEmpty()) {
         if (historyView) historyView->setImage(QString());

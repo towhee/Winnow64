@@ -43,6 +43,11 @@ private:
 */
 class SonyRaw : public RawFormat
 {
+public:
+    /* Matrix + as-shot multipliers with no sensor unpack -- see RawFormat. For an ARW
+       that means DECRYPTING SR2Private, which is the only place the as-shot WB lives. */
+    bool ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info) override;
+
 protected:
     bool UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw) override;
 };

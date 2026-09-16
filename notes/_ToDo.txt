@@ -8,6 +8,10 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- Lightroom has different white balance for some files
+- /Users/roryhill/Pictures/_test2/2020-04-25_2013.JPG thumb not rotated
+- /Users/roryhill/Pictures/Test/copy/IMG_5853.heic image and thumb not rotated
+- Differentiate workspaces that have size/position
 - Develop disabled sometimes at start (Bookmarks / Develop only docks)
 - Not saving / restoring workspace properly between sessions.
 - Develop behavior when no image is selected

@@ -8,11 +8,9 @@ void MW::setCentralView()
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
-    if (dm->folderList.count() == 0) {
-        QString msg = "Select from the Source or Bookmarks panels.";
-        setCentralMessage(msg);
-        prevMode = "Loupe";
-    }
+    /* The display functions above do this for themselves now, but prevMode must also be
+       reset when there is nothing loaded. */
+    if (showCentralMessageIfNoImages()) prevMode = "Loupe";
     enableSelectionDependentMenus();
 }
 
@@ -112,6 +110,10 @@ void MW::loupeDisplay(const QString src)
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
 
     prevMode = "Loupe";
+
+    /* Nothing to show (no folder, or none surviving the filter): put the message back,
+       as the loupe tab has just replaced it with an empty view. */
+    showCentralMessageIfNoImages();
 
     enableSelectionDependentMenus();
 }
@@ -217,6 +219,8 @@ void MW::gridDisplay()
     prevMode = "Grid";
     gridDisplayFirstOpen = false;
 
+    showCentralMessageIfNoImages();     // see MW::loupeDisplay
+
     enableSelectionDependentMenus();
 //    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
 }
@@ -316,6 +320,9 @@ void MW::tableDisplay()
 
     tableView->setFocus();
     prevMode = "Table";
+
+    showCentralMessageIfNoImages();     // see MW::loupeDisplay
+
     enableSelectionDependentMenus();
 }
 

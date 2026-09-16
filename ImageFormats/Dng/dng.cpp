@@ -387,7 +387,6 @@ void placeLjpeg(const LosslessJpeg::Image &im, int gx, int gy,
 
 bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
-    Q_UNUSED(m)
     using namespace TiffWalk;
 
     Reader r;
@@ -542,27 +541,80 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    /* Colour: DNG carries its own. xyzToCam = ColorMatrix2 (D65) when present, else
-       ColorMatrix1. WB from AsShotNeutral (camMul = 1 / neutral). These tags live in IFD0. */
-    const Ifd &col = haveIfd0 ? ifd0 : cfaIfd;
-    const quint16 cmTag = col.contains(ColorMatrix2) ? quint16(ColorMatrix2)
-                        : col.contains(ColorMatrix1) ? quint16(ColorMatrix1) : 0;
-    if (cmTag) {
-        const QVector<double> cm = r.reals(col[cmTag]);
-        if (cm.size() >= 9)
-            for (int i = 0; i < 3; ++i)
-                for (int j = 0; j < 3; ++j)
-                    raw.xyzToCam[i][j] = float(cm[i * 3 + j]);
-    }
-    if (col.contains(AsShotNeutral)) {
-        const QVector<double> n = r.reals(col[AsShotNeutral]);
-        if (n.size() >= 3 && n[0] > 0 && n[1] > 0 && n[2] > 0) {
-            raw.camMul[0] = float(1.0 / n[0]);
-            raw.camMul[1] = float(1.0 / n[1]);
-            raw.camMul[2] = float(1.0 / n[2]);
-            raw.camMul[3] = float(1.0 / n[1]);
+    /* Colour: DNG carries its own (ColorMatrix + AsShotNeutral, both in IFD0). One
+       definition, shared with the Apple Core Image engine -- see
+       RawFormat::ReadAsShotColor. The rare DNG with no IFD0 falls back to the CFA IFD's
+       own copy of the tags. */
+    {
+        RawSensorInfo ci;
+        if (haveIfd0 && ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
+        }
+        else {
+            const quint16 cmTag = cfaIfd.contains(ColorMatrix2) ? quint16(ColorMatrix2)
+                                : cfaIfd.contains(ColorMatrix1) ? quint16(ColorMatrix1) : 0;
+            if (cmTag) {
+                const QVector<double> cm = r.reals(cfaIfd[cmTag]);
+                if (cm.size() >= 9)
+                    for (int i = 0; i < 3; ++i)
+                        for (int j = 0; j < 3; ++j)
+                            raw.xyzToCam[i][j] = float(cm[i * 3 + j]);
+            }
+            if (cfaIfd.contains(AsShotNeutral)) {
+                const QVector<double> n = r.reals(cfaIfd[AsShotNeutral]);
+                if (n.size() >= 3 && n[0] > 0 && n[1] > 0 && n[2] > 0) {
+                    raw.camMul[0] = float(1.0 / n[0]);
+                    raw.camMul[1] = float(1.0 / n[1]);
+                    raw.camMul[2] = float(1.0 / n[2]);
+                    raw.camMul[3] = float(1.0 / n[1]);
+                }
+            }
         }
     }
 
+    return true;
+}
+
+/*
+    DNG colour without a decode. A DNG carries its own characterisation, so this needs no
+    model lookup at all: ColorMatrix2 (D65) when present, else ColorMatrix1, and the WB
+    from AsShotNeutral (camMul = 1 / neutral). Both live in IFD0.
+
+    Split out of UnpackCfa for the Apple Core Image engine, which never calls it -- see
+    RawFormat::ReadAsShotColor.
+*/
+bool DngRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) return false;
+    Ifd ifd0; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), ifd0, subs, next)) return false;
+
+    const quint16 cmTag = ifd0.contains(ColorMatrix2) ? quint16(ColorMatrix2)
+                        : ifd0.contains(ColorMatrix1) ? quint16(ColorMatrix1) : 0;
+    if (cmTag) {
+        const QVector<double> cm = r.reals(ifd0[cmTag]);
+        if (cm.size() >= 9) {
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j)
+                    info.xyzToCam[i][j] = float(cm[i * 3 + j]);
+            info.hasColorMatrix = true;
+        }
+    }
+    if (ifd0.contains(AsShotNeutral)) {
+        const QVector<double> n = r.reals(ifd0[AsShotNeutral]);
+        if (n.size() >= 3 && n[0] > 0 && n[1] > 0 && n[2] > 0) {
+            info.camMul[0] = float(1.0 / n[0]);
+            info.camMul[1] = float(1.0 / n[1]);
+            info.camMul[2] = float(1.0 / n[2]);
+            info.camMul[3] = float(1.0 / n[1]);
+        }
+    }
     return true;
 }

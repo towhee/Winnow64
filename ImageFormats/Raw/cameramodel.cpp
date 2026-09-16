@@ -75,12 +75,28 @@ bool startsWithAMaker(const QString &model, QString *maker = nullptr)
     "GFX": Fujifilm writes "GFX50S II" and "GFX100S"; both tables carry "GFX 50S II" and
     "GFX 100S". Anchored at the start and Fujifilm-only, because the same rule applied
     generally would break the X100 family ("X100V" is not "X 100V").
+
+    "mN": Canon writes "EOS R6m2" and "EOS R5m2" where both tables carry "EOS R6 Mark II"
+    and "EOS R5 Mark II". Without this the model falls to the LONGEST-PREFIX match on the
+    base body -- "Canon EOS R6" -- and silently renders an R6 Mark II through the R6's
+    colour matrix, which is a different sensor. Canon-only and anchored at the END of the
+    string so it cannot fire inside a lens or body name that happens to contain "m2", and
+    limited to 2..4 because that is the range Canon ships.
 */
 QString spaceOutModel(const QString &model, const QString &maker)
 {
     static const QRegularExpression mark("\\s*Mark\\s*(?=[IVX0-9])");
     QString out = model;
     out.replace(mark, " Mark ");
+    if (maker == QLatin1String("Canon")) {
+        static const QRegularExpression mN("m([234])$");
+        const QRegularExpressionMatch mm = mN.match(out);
+        if (mm.hasMatch()) {
+            static const char *const roman[] = { "II", "III", "IV" };
+            out = out.left(mm.capturedStart()) + " Mark "
+                + QLatin1String(roman[mm.captured(1).toInt() - 2]);
+        }
+    }
     if (maker == QLatin1String("Fujifilm")) {
         static const QRegularExpression gfx("^GFX(?=\\d)");
         out.replace(gfx, "GFX ");

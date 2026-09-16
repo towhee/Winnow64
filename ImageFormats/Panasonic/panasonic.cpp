@@ -354,7 +354,6 @@ bool Panasonic::parse(MetadataParameters &p,
 
 bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
-    Q_UNUSED(m)
     using namespace TiffWalk;
 
     Reader r;
@@ -434,17 +433,48 @@ bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     /* Panasonic stores BlackLevelRed/Green/Blue (0x1C..0x1E) 15 below the true black. */
     const int blk = (t.contains(0x1C) ? int(r.scalar(t[0x1C])) : 128) + 15;
     for (int i = 0; i < 4; ++i) raw.black[i] = uint16_t(blk);
-    if (t.contains(0x24) && t.contains(0x25) && t.contains(0x26)) {
-        raw.camMul[0] = r.scalar(t[0x24]);              // R
-        raw.camMul[1] = r.scalar(t[0x25]);              // G (== 256)
-        raw.camMul[2] = r.scalar(t[0x26]);              // B
-        raw.camMul[3] = r.scalar(t[0x25]);
+    /* As-shot white balance and the model matrix. One definition, shared with the Apple
+       Core Image engine -- see RawFormat::ReadAsShotColor. */
+    {
+        RawSensorInfo ci;
+        if (ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
+        }
     }
-    QString model;
-    if (t.contains(272))
-        model = canonicalCameraModel(t.contains(271) ? r.ascii(t[271]) : QString(),
-                                     r.ascii(t[272]));
-    xyzToCamForModel(model, raw.xyzToCam);
 
+    return true;
+}
+
+/*
+    RW2 colour without a decode: Panasonic keeps everything in IFD0, so the as-shot WB
+    levels (0x24 R / 0x25 G / 0x26 B, green == 256) and the model are one IFD read away.
+    Split out of UnpackCfa for the Apple Core Image engine -- see
+    RawFormat::ReadAsShotColor.
+*/
+bool PanasonicRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) return false;
+    Ifd t; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), t, subs, next)) return false;
+
+    const QString model = t.contains(272)
+        ? canonicalCameraModel(t.contains(271) ? r.ascii(t[271]) : QString(),
+                               r.ascii(t[272]))
+        : QString();
+    info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
+
+    if (t.contains(0x24) && t.contains(0x25) && t.contains(0x26)) {
+        info.camMul[0] = float(r.scalar(t[0x24]));      // R
+        info.camMul[1] = float(r.scalar(t[0x25]));      // G (== 256)
+        info.camMul[2] = float(r.scalar(t[0x26]));      // B
+        info.camMul[3] = float(r.scalar(t[0x25]));
+    }
     return true;
 }

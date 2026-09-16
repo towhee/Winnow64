@@ -6,6 +6,11 @@
 #include "Develop/profiletone.h"
 #include "ImageFormats/Dcp/dcp.h"
 
+/* Declared, not included: CameraColor lives in Develop/workingimage.h, which already
+   depends on the profile types -- including it back here would close the loop. Only a
+   reference is needed. */
+struct CameraColor;
+
 /*
     Turning a parsed DNG camera profile into the ONE 3x3 the pipeline needs -- slice 2 of
     Phase 4 (see notes/Documentation.txt, "Camera Profiles (DCP) -- Phase 4 Plan").
@@ -79,6 +84,18 @@ bool neutralCam(const Dcp::Profile &p, float kelvin, float tint, double n[3]);
 /* The full camera-native -> working-space matrix for a chosen white balance. False when
    the profile is unusable (no ColorMatrix, or a singular matrix in the chain). */
 bool camToWorking(const Dcp::Profile &p, float kelvin, float tint, float out[3][3]);
+
+/*
+    Re-solve cam.asShotK / cam.asShotTint against THIS profile's matrices (the DNG
+    specification's NeutralToXY), replacing the values WhiteBalance::resolveAsShot derived
+    at decode from the built-in per-model matrix.
+
+    Needed because a profile replaces that matrix: the same file balanced under a
+    different ColorMatrix was balanced for a measurably different temperature, and the
+    Temp box should say so. False (cam untouched) when the profile has no usable
+    ColorMatrix or the iteration cannot be started.
+*/
+bool resolveAsShot(const Dcp::Profile &p, CameraColor &cam);
 
 /*
     The profile's baseline HueSatMap resolved for a temperature -- the two illuminants'

@@ -2,6 +2,7 @@
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
 #include "Develop/cameraprofilestore.h"
+#include "Develop/cameraprofile.h"
 #include <QImage>
 #include <QElapsedTimer>
 #include <QtConcurrent>
@@ -35,8 +36,26 @@ void attachProfile(WorkingImage &img, const EditParams &p)
 {
     img.cam.profile.reset();
     if (!img.cam.valid || p.cameraProfile.isEmpty()) return;
+
+    /* CameraNative only. The Apple Core Image engine now carries a valid cam too (for the
+       white balance readout), but its pixels arrive with Core Image's own profile already
+       applied and tagged kWorking -- attaching a DCP there would layer a second input
+       profile on an image that has one. cam.valid alone no longer distinguishes the two.
+       Reachable without the (disabled) profile row: a pasted preset, or a sidecar written
+       while the Winnow engine was selected. */
+    if (img.space != ColorSpaceMath::ColorSpace::CameraNative) return;
     img.cam.profile = CameraProfileStore::instance().profile(img.cam.cameraModel,
                                                              p.cameraProfile);
+
+    /* AS SHOT IS PROFILE-DEPENDENT. asShotK/asShotTint were solved at decode against the
+       built-in per-model matrix (WhiteBalance::resolveAsShot); this profile replaces that
+       matrix, so the temperature the file was balanced for is a different number
+       under it.
+       Re-solve, or picking a profile would move the rendering without moving the reading
+       -- and relativeGains anchors on these two values, so a stale pair would also stop
+       "as shot" being an exact no-op. A profile with no usable ColorMatrix leaves them as
+       they were, which is the built-in answer and the right fallback. */
+    if (img.cam.profile) CameraProfile::resolveAsShot(*img.cam.profile, img.cam);
 }
 
 } // namespace
