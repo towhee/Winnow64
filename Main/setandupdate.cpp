@@ -11,6 +11,37 @@ void MW::setCentralMessage(QString message)
     centralLayout->currentWidget()->repaint();
 }
 
+bool MW::showCentralMessageIfNoImages()
+{
+/*
+    Reinstate the central message when there is nothing to show.
+
+    The view keys (E / G / T) are also the Library workspace keys, so they work with no
+    folder loaded -- that is the only way back out of the Develop layout when the user
+    presses D before selecting a folder (see MW::enableSelectionDependentMenus).  Each
+    view switch points centralLayout at its own tab though, which would replace the
+    "select a folder" message with an empty view, so the message is put back here.
+    Returns true when a message was shown.
+*/
+    if (G::isLogger) G::log("MW::showCentralMessageIfNoImages");
+    if (dm->sf->rowCount() > 0) return false;
+
+    /* Same wording as MW::nullFiltration, which reports the empty cases when the
+       filtration changes. */
+    QString text;
+    if (dm->folderList.count() == 0)
+        text = "Select from the Source or Bookmarks panels.";
+    else if (dm->rowCount())
+        text = "No images match the filtration.";
+    else if (dm->folderList.count() == 1)
+        text = "No images in the folder.";
+    else
+        text = "No images in the folders.";
+
+    setCentralMessage(text);
+    return true;
+}
+
 /**********************************************************************************************
  * HIDE/SHOW UI ELEMENTS
 */

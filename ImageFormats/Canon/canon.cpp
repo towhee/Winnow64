@@ -311,7 +311,6 @@ bool Canon::parse(MetadataParameters &p,
 
 bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
-    Q_UNUSED(m)
     using namespace TiffWalk;
 
     Reader r;
@@ -383,10 +382,11 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         if (row < H && col < W) full[size_t(row) * W + col] = im.samples[jidx];
     }
 
-    /* Canon makernote: IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). Read SensorInfo (0xE0)
-       for the active-area crop and ColorData (0x4001) for the as-shot white balance. */
+    /* Canon makernote: IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). SensorInfo (0xE0)
+       gives the active-area crop. The as-shot white balance and the model matrix
+       come from ReadAsShotColor, shared with the Apple Core Image engine (see
+       RawFormat). */
     int left = 0, top = 0, right = W - 1, bottom = H - 1;
-    QVector<quint32> wb;
     if (haveIfd0 && ifd0.contains(0x8769)) {
         Ifd exif; QList<quint32> es; quint32 en = 0;
         if (r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) && exif.contains(0x927C)) {
@@ -396,12 +396,6 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
                     const QVector<quint32> si = r.u32s(mn[0xE0]);
                     if (si.size() >= 9) { left = int(si[5]); top = int(si[6]);
                                           right = int(si[7]); bottom = int(si[8]); }
-                }
-                if (mn.contains(0x4001)) {                  // ColorData -> WB_RGGBLevelsAsShot
-                    const QVector<quint32> cd = r.u32s(mn[0x4001]);
-                    const int n = cd.size();
-                    const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
-                    if (o + 3 < n) wb = { cd[o], cd[o + 1], cd[o + 2], cd[o + 3] };
                 }
             }
         }
@@ -440,13 +434,17 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     raw.white = uint16_t((1u << im.precision) - 1);
     for (int i = 0; i < 4; ++i) raw.black[i] = black;
 
-    if (wb.size() == 4 && wb[0] > 0 && wb[1] > 0 && wb[3] > 0) {
-        raw.camMul[0] = wb[0]; raw.camMul[1] = wb[1];       // R, G1
-        raw.camMul[2] = wb[3]; raw.camMul[3] = wb[2];       // B, G2
+    {
+        RawSensorInfo ci;
+        if (ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
+        }
     }
 
     QString model = (haveIfd0 && ifd0.contains(272)) ? r.ascii(ifd0[272]) : QString();
-    xyzToCamForModel(model, raw.xyzToCam);                  // identity fallback if unknown
 
     /* Canon sensors saturate BELOW the bit-depth maximum (e.g. the 7D Mark II clips at 13584,
        not 16383), so the bit-depth white above is too high and washes the highlights. Use the
@@ -457,5 +455,47 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
             raw.white = uint16_t(tmax);
     }
 
+    return true;
+}
+
+/*
+    CR2 colour without a decode: Canon ColorData (MakerNote 0x4001) for the as-shot
+    WB_RGGBLevels, plus the per-model XYZ->camera matrix. Split out of UnpackCfa so the
+    Apple Core Image engine can characterise the image too -- see
+    RawFormat::ReadAsShotColor.
+*/
+bool CanonRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    Q_UNUSED(m)
+    using namespace TiffWalk;
+
+    Reader r;
+    if (!r.init(&file)) return false;
+
+    Ifd ifd0; QList<quint32> subs; quint32 next = 0;
+    if (!r.readIfd(r.firstIfd(), ifd0, subs, next)) return false;
+
+    const QString model = ifd0.contains(272) ? r.ascii(ifd0[272]) : QString();
+    info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
+
+    if (!ifd0.contains(0x8769)) return info.hasColorMatrix;
+    Ifd exif; QList<quint32> es; quint32 en = 0;
+    if (!r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) || !exif.contains(0x927C))
+        return info.hasColorMatrix;
+    Ifd mn; QList<quint32> ms; quint32 mnn = 0;
+    if (!r.readIfd(r.ifdPointer(exif[0x927C]), mn, ms, mnn)) return info.hasColorMatrix;
+
+    /* ColorData -> WB_RGGBLevelsAsShot. The record's LENGTH selects the layout version,
+       and with it the offset of the as-shot quad (dcraw's table). File order is
+       R, G1, G2, B; RawSensorInfo::camMul is (R, G1, B, G2). */
+    if (mn.contains(0x4001)) {
+        const QVector<quint32> cd = r.u32s(mn[0x4001]);
+        const int n = cd.size();
+        const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
+        if (o + 3 < n && cd[o] > 0 && cd[o + 1] > 0 && cd[o + 3] > 0) {
+            info.camMul[0] = float(cd[o]);      info.camMul[1] = float(cd[o + 1]);
+            info.camMul[2] = float(cd[o + 3]);  info.camMul[3] = float(cd[o + 2]);
+        }
+    }
     return true;
 }

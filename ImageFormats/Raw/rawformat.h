@@ -81,6 +81,27 @@ public:
 
     QString lastError() const { return errMsg; }
 
+    /*
+        The COLOUR half of a decode on its own: the model's XYZ->camera matrix and the
+        file's as-shot white-balance multipliers, with no sensor unpack and no pixels.
+
+        Exists for the APPLE CORE IMAGE engine. That engine never calls UnpackCfa, so
+        the makernote white balance -- which every vendor reads inside UnpackCfa -- never
+        reached Develop, and the Temp/Tint row fell back to WhiteBalance::resolve's
+        literal 6500 K / 0 on every raw file. Decode() calls this after a successful Core
+        Image decode and hands the result to RawColor::Characterise.
+
+        Each vendor's UnpackCfa calls the SAME function for its own camMul, so there is
+        one definition of "where this format keeps its white balance" per format rather
+        than two that can drift. It re-walks the file header, which is nothing next to a
+        Core Image decode.
+
+        Default: false, leaving info untouched -- a format with no override renders as it
+        did before (matrix-derived neutral WB).
+    */
+    virtual bool ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+    { Q_UNUSED(file) Q_UNUSED(m) Q_UNUSED(info) return false; }
+
 protected:
     /* THE override point. Read the vendor bitstream described by m and produce a
        normalised CFA mosaic in raw (width/height/pattern/levels/matrix). */

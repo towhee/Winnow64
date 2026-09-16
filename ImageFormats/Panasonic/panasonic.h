@@ -37,6 +37,10 @@ private:
 */
 class PanasonicRaw : public RawFormat
 {
+public:
+    /* Matrix + as-shot multipliers with no sensor unpack -- see RawFormat. */
+    bool ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info) override;
+
 protected:
     bool UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw) override;
 };

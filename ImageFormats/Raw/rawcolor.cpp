@@ -44,6 +44,40 @@ bool RawColor::ToCameraNative(const RawImage &raw,
     if (W <= 0 || H <= 0) return false;
     if (rgb.size() != static_cast<size_t>(W) * static_cast<size_t>(H) * 3) return false;
 
+    /* Colour characterisation -- the matrix, the as-shot white balance and the Kelvin
+       it resolves to. Shared with the Apple Core Image engine, which has no RawImage
+       to hand; see RawColor::Characterise. */
+    Characterise(raw.xyzToCam, raw.camMul, out.cam);
+
+    out.width = W;
+    out.height = H;
+    out.white = 1.0f;       // rgb was scaled to 0..1 by Demosaic using raw.white
+    out.sceneReferred = true;   // sensor data -> output stage applies a view transform
+    out.space = ColorSpaceMath::ColorSpace::CameraNative;
+
+    /*
+        THE PIXELS PASS THROUGH UNCHANGED.
+
+        The white balance and the colour matrix used to be applied right here. They are
+        now Develop's stage 0 (Develop::ToWorkingSpace, normally folded into
+        PointCoeffs::preMat), for one reason: this buffer is what WorkingImageCache
+        stores, so anything baked in here can only be changed by DECODING THE RAW AGAIN.
+        With the conversion downstream of the cache, changing a camera profile or the
+        white balance is a re-render off pixels we already have.
+
+        Nothing is clamped either. The old code clamped negatives to zero, which threw
+        away every colour outside the working gamut before the user had touched the
+        image -- irrecoverably, since a later stage cannot invent data that was zeroed.
+        Out-of-gamut values now survive to the output stage, which is the only place that
+        knows what gamut it is rendering into.
+    */
+    out.rgb = rgb;
+    return true;
+}
+
+void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
+                            CameraColor &out)
+{
     /*
         Build the camera-RGB -> linear-sRGB matrix and a neutral white balance from the model's
         XYZ->camera matrix, following dcraw's cam_xyz_coeff:
@@ -51,7 +85,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
           row-normalise camRgb so camRgb.(1,1,1) = (1,1,1); preMul[i] = 1 / rowSum[i]
           rgbCam  = inverse(camRgb)          (camera -> linear sRGB)
         preMul is the white balance that makes a neutral scene map to neutral; it is used when
-        the file's as-shot WB (raw.camMul) is not available. With the default identity xyzToCam
+        the file's as-shot WB (camMul) is not available. With a default identity xyzToCam
         this reduces to an sRGB-assumed pass-through, so unknown cameras still render (approx).
     */
     double camRgb[3][3];
@@ -59,7 +93,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
         for (int j = 0; j < 3; ++j) {
             double s = 0.0;
             for (int k = 0; k < 3; ++k)
-                s += static_cast<double>(raw.xyzToCam[i][k]) * kRgbToXyz[k][j];
+                s += static_cast<double>(xyzToCam[i][k]) * kRgbToXyz[k][j];
             camRgb[i][j] = s;
         }
 
@@ -82,10 +116,10 @@ bool RawColor::ToCameraNative(const RawImage &raw,
     /* White balance: as-shot multipliers when the file provided them (not all equal), else the
        matrix-derived neutral preMul. Normalised so green is unity to keep exposure stable. */
     const bool haveAsShot =
-        !(raw.camMul[0] == raw.camMul[1] && raw.camMul[1] == raw.camMul[2]);
+        !(camMul[0] == camMul[1] && camMul[1] == camMul[2]);
     double mul[3];
     if (haveAsShot) {
-        mul[0] = raw.camMul[0]; mul[1] = raw.camMul[1]; mul[2] = raw.camMul[2];
+        mul[0] = camMul[0]; mul[1] = camMul[1]; mul[2] = camMul[2];
     } else {
         mul[0] = preMul[0]; mul[1] = preMul[1]; mul[2] = preMul[2];
     }
@@ -115,38 +149,13 @@ bool RawColor::ToCameraNative(const RawImage &raw,
        matrix. resolveAsShot back-solves the temperature the shot was balanced for,
        which is what the Temp slider reads before the user touches it. See
        Develop/whitebalance.h. */
-    out.cam.valid = true;
+    out.valid = true;
     for (int i = 0; i < 3; ++i) {
-        out.cam.asShotMul[i] = wb[i];
+        out.asShotMul[i] = wb[i];
         for (int j = 0; j < 3; ++j) {
-            out.cam.xyzToCam[i][j] = raw.xyzToCam[i][j];
-            out.cam.camToWorking[i][j] = m[i][j];
+            out.xyzToCam[i][j] = xyzToCam[i][j];
+            out.camToWorking[i][j] = m[i][j];
         }
     }
-    WhiteBalance::resolveAsShot(out.cam);
-
-    out.width = W;
-    out.height = H;
-    out.white = 1.0f;       // rgb was scaled to 0..1 by Demosaic using raw.white
-    out.sceneReferred = true;   // sensor data -> output stage applies a view transform
-    out.space = ColorSpaceMath::ColorSpace::CameraNative;
-
-    /*
-        THE PIXELS PASS THROUGH UNCHANGED.
-
-        The white balance and the colour matrix used to be applied right here. They are
-        now Develop's stage 0 (Develop::ToWorkingSpace, normally folded into
-        PointCoeffs::preMat), for one reason: this buffer is what WorkingImageCache
-        stores, so anything baked in here can only be changed by DECODING THE RAW AGAIN.
-        With the conversion downstream of the cache, changing a camera profile or the
-        white balance is a re-render off pixels we already have.
-
-        Nothing is clamped either. The old code clamped negatives to zero, which threw
-        away every colour outside the working gamut before the user had touched the
-        image -- irrecoverably, since a later stage cannot invent data that was zeroed.
-        Out-of-gamut values now survive to the output stage, which is the only place that
-        knows what gamut it is rendering into.
-    */
-    out.rgb = rgb;
-    return true;
+    WhiteBalance::resolveAsShot(out);
 }

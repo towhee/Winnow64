@@ -660,6 +660,7 @@ public slots:
     void setThumbDockFloatFeatures(bool isFloat);
     void resortImageCache();
     void setCentralMessage(QString message);
+    bool showCentralMessageIfNoImages();
     void slideShow();
     void slideShowResetDelay();
     void slideShowResetSequence();

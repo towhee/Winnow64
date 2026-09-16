@@ -304,8 +304,6 @@ bool Fuji::parse(MetadataParameters &p,
 
 bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
-    Q_UNUSED(m)
-
     const QByteArray all = (file.seek(0), file.readAll());
     const uchar *d = reinterpret_cast<const uchar *>(all.constData());
     const qint64 n = all.size();
@@ -328,8 +326,6 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     int cropTop = -1, cropLeft = -1, cropW = 0, cropH = 0;   // active-area crop (0x0110 / 0x0111)
     bool haveXtrans = false;
     uint8_t xt[6][6] = {{0}};
-    quint32 c000Off = 0, c000Len = 0;
-    quint32 wbR = 0, wbG = 0, wbB = 0;              // from the older 0x2FF0 tag, if present
     {
         quint32 p = cfaHdr;
         const quint32 entries = be(p, 4); p += 4;
@@ -349,10 +345,6 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
                     xt[idx / 6][idx % 6] = uint8_t(d[s + c] & 3);
                 }
             }
-            else if (tag == 0x2FF0 && len >= 8) {   // older Fuji WB (G,R,B,G ^1 order)
-                wbG = be(s, 2); wbR = be(s + 2, 2); wbB = be(s + 6, 2);
-            }
-            else if (tag == 0xC000) { c000Off = s; c000Len = len; }
             p = s + len;
         }
     }
@@ -471,40 +463,110 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         raw.height = ch;
     }
 
-    /* White balance. Prefer the explicit 0x2FF0 tag; otherwise locate the as-shot WB_GRBLevels
-       [G,R,B] in the 0xC000 RAFData block. The block also holds WB presets (daylight, tungsten,
-       ...) that look just like a WB triple, so a plain first-match scan can land on, say, the
-       tungsten preset and over-saturate. The as-shot WB is instead written as a short run of
-       IDENTICAL [G,R,B] triples, so require the triple to repeat -- robust across bodies (matches
-       libraw within ~1% on GFX/X-T2/X-T50 without the per-model offset table libraw carries).
-       libraw refines this with two-record CCT averaging; the unaveraged triple is within a few
-       percent, which is visually negligible for the develop/preview path. G is the green
-       reference (smallest of the three; ~128..1024). */
-    if (wbR && wbG && wbB) {
-        raw.camMul[0] = wbR; raw.camMul[1] = wbG; raw.camMul[2] = wbB; raw.camMul[3] = wbG;
-    } else if (c000Off && c000Len >= 18) {
-        const qint64 lo = c000Off, hi = qMin<qint64>(c000Off + c000Len, n) - 18;
-        auto le = [&](qint64 o) { return d[o] | (d[o + 1] << 8); };
-        for (qint64 o = lo; o <= hi; o += 2) {
-            const int g = le(o), rr = le(o + 2), bb = le(o + 4);
-            /* The as-shot WB is written as three identical consecutive triples; a preset (e.g. a
-               daylight one near the block start) may repeat only twice, so require three to skip
-               it -- this uniquely selects the as-shot WB on GFX/X-T2/X-T50. */
-            const bool rep3 = g == le(o + 6) && rr == le(o + 8) && bb == le(o + 10) &&
-                              g == le(o + 12) && rr == le(o + 14) && bb == le(o + 16);
-            if (g >= 128 && g <= 1024 && rr > g && rr < 4 * g && bb > g && bb < 4 * g && rep3) {
-                raw.camMul[0] = rr; raw.camMul[1] = g; raw.camMul[2] = bb; raw.camMul[3] = g;
-                break;
-            }
+    /* As-shot white balance and the model matrix. One definition, shared with the Apple
+       Core Image engine -- see RawFormat::ReadAsShotColor. */
+    {
+        RawSensorInfo ci;
+        if (ReadAsShotColor(file, m, ci)) {
+            for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            if (ci.hasColorMatrix)
+                for (int i = 0; i < 3; ++i)
+                    for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
         }
     }
 
-    /* Colour matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not here,
-       so use the camera id text in the RAF header (bytes 0x1C..). The Make is not in the
-       header either, but a RAF is a Fujifilm by definition. */
-    QString model = canonicalCameraModel("FUJIFILM",
-                                         QString::fromLatin1(all.mid(0x1C, 32)));
-    xyzToCamForModel(model, raw.xyzToCam);
+    return true;
+}
 
+/*
+    RAF colour without a decode: the as-shot white balance out of the CFA metadata
+    directory, plus the per-model XYZ->camera matrix.
+
+    Only the metadata is read -- everything before cfaOff, which is exactly where the RAF
+    header says the sensor data starts -- so this does not pull a 100 MB RAF into memory
+    the way UnpackCfa's readAll does.
+
+    Split out of UnpackCfa for the Apple Core Image engine, which never calls it. See
+    RawFormat::ReadAsShotColor.
+*/
+bool FujiRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    Q_UNUSED(m)
+
+    if (!file.seek(0)) return false;
+    const QByteArray head = file.read(128);
+    if (head.size() < 128 || head.left(16) != QByteArray("FUJIFILMCCD-RAW ")) return false;
+    {
+        const uchar *h = reinterpret_cast<const uchar *>(head.constData());
+        auto beh = [&](int o) {
+            return (quint32(h[o]) << 24) | (quint32(h[o+1]) << 16) |
+                   (quint32(h[o+2]) << 8) | quint32(h[o+3]); };
+        const quint32 cfaHdr = beh(92);             // CFA metadata directory offset
+        const quint32 cfaOff = beh(100);            // raw CFA data -- end of metadata
+
+        /* Colour matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not in
+           the RAF header, so use the camera id text at 0x1C. The Make is not in the
+           header either, but a RAF is a Fujifilm by definition. */
+        const QString model = canonicalCameraModel("FUJIFILM",
+                                                   QString::fromLatin1(head.mid(0x1C, 32)));
+        info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
+
+        if (cfaOff <= cfaHdr || cfaHdr < 128) return info.hasColorMatrix;
+        if (!file.seek(0)) return info.hasColorMatrix;
+        const QByteArray meta = file.read(qint64(cfaOff));
+        const qint64 n = meta.size();
+        if (n <= qint64(cfaHdr) + 4) return info.hasColorMatrix;
+        const uchar *d = reinterpret_cast<const uchar *>(meta.constData());
+        auto be = [&](qint64 o, int k) -> quint32 {  // RAF header values are big-endian
+            quint32 v = 0;
+            for (int i = 0; i < k; ++i) v = (v << 8) | (o + i < n ? d[o + i] : 0);
+            return v;
+        };
+
+        /* Walk the Fuji CFA directory (big-endian tag/len records) for the two places a
+           RAF can keep its white balance. */
+        quint32 c000Off = 0, c000Len = 0;
+        quint32 wbR = 0, wbG = 0, wbB = 0;          // the older 0x2FF0 tag, if present
+        quint32 p = cfaHdr;
+        const quint32 entries = be(p, 4); p += 4;
+        for (quint32 e = 0; e < entries && p + 4 <= quint32(n); ++e) {
+            const quint32 tag = be(p, 2), len = be(p + 2, 2); const quint32 s = p + 4;
+            if (tag == 0x2FF0 && len >= 8) {        // older Fuji WB (G,R,B,G ^1 order)
+                wbG = be(s, 2); wbR = be(s + 2, 2); wbB = be(s + 6, 2);
+            }
+            else if (tag == 0xC000) { c000Off = s; c000Len = len; }
+            p = s + len;
+        }
+
+        /* Newer bodies drop 0x2FF0 and bury the WB in the 0xC000 blob, which also
+           holds the canned presets (daylight, tungsten, ...) that look just like a WB
+           triple, so a plain first-match scan can land on, say, the tungsten preset
+           and over-saturate. The as-shot WB is instead written as a short run of
+           IDENTICAL [G,R,B] triples, so require the triple to repeat -- robust across
+           bodies (matches libraw within ~1% on GFX/X-T2/X-T50 without the per-model
+           offset table libraw carries). G is the green reference (smallest of the
+           three; ~128..1024). */
+        if (wbR && wbG && wbB) {
+            info.camMul[0] = float(wbR); info.camMul[1] = float(wbG);
+            info.camMul[2] = float(wbB); info.camMul[3] = float(wbG);
+        } else if (c000Off && c000Len >= 18) {
+            const qint64 lo = c000Off, hi = qMin<qint64>(c000Off + c000Len, n) - 18;
+            auto le = [&](qint64 o) { return d[o] | (d[o + 1] << 8); };
+            for (qint64 o = lo; o <= hi; o += 2) {
+                const int g = le(o), rr = le(o + 2), bb = le(o + 4);
+                /* Three identical consecutive triples: a preset (e.g. a daylight one near
+                   the block start) may repeat only twice, so require three to skip it --
+                   this uniquely selects the as-shot WB on GFX/X-T2/X-T50. */
+                const bool rep3 = g == le(o + 6) && rr == le(o + 8) && bb == le(o + 10) &&
+                                  g == le(o + 12) && rr == le(o + 14) && bb == le(o + 16);
+                if (g >= 128 && g <= 1024 && rr > g && rr < 4 * g &&
+                    bb > g && bb < 4 * g && rep3) {
+                    info.camMul[0] = float(rr); info.camMul[1] = float(g);
+                    info.camMul[2] = float(bb); info.camMul[3] = float(g);
+                    break;
+                }
+            }
+        }
+    }
     return true;
 }

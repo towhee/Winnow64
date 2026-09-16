@@ -114,6 +114,30 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         QString aerr;
         if (AppleRawDecode::Decode(file.fileName(), *work, aerr) && work->isValid()) {
             decoded = true;
+
+            /*
+                CHARACTERISE what Core Image handed back. It applies its own profile and
+                returns linear sRGB, so it leaves cam invalid -- and an invalid cam makes
+                WhiteBalance::resolve return its literal 6500 K / 0 default, which is what
+                the Temp/Tint row showed on EVERY raw file under this engine regardless of
+                what the camera actually metered.
+
+                ReadAsShotColor re-walks only the file HEADER for the matrix and the
+                multipliers -- the same read the vendor's UnpackCfa does, shared so the
+                two cannot drift. Nothing is decoded. The model is what a camera profile
+                would later be looked up by.
+
+                SAFE FOR THE RENDER: the pixels stay tagged kWorking, and Develop's
+                stage-0 preMat fold is gated on CameraNative, so the input matrix is
+                still not applied twice. cam is used for the WB READOUT and for
+                relativeGains -- and relativeGains is exactly right here, because Core
+                Image's output already carries the as-shot balance this cam describes.
+            */
+            RawSensorInfo ci = m.rawInfo;       // seeded: Sony fills some at parse
+            if (ReadAsShotColor(file, m, ci) || ci.hasColorMatrix) {
+                RawColor::Characterise(ci.xyzToCam, ci.camMul, work->cam);
+                work->cam.cameraModel = m.model;
+            }
         }
         /* else: aerr is a soft failure -- fall through to the in-house engine. */
     }

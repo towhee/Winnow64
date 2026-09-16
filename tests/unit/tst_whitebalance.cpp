@@ -6,9 +6,10 @@
     White balance colour science (Develop/whitebalance.h).
 
     These guard the parts that are easy to get subtly wrong and hard to spot by eye:
-    the locus choice (which sets what an untouched file READS as), the sign of both
-    controls (a flipped tint feels wrong immediately but is invisible in code review),
-    and the solver's round-trip accuracy (the dropper and Auto both depend on it).
+    the TEMPERATURE CONVENTION (which sets what an untouched file READS as, and whether
+    the number means the same thing as Lightroom's), the sign of both controls (a flipped
+    tint feels wrong immediately but is invisible in code review), and the solver's
+    round-trip accuracy (the dropper and Auto both depend on it).
 
     Every case runs against a synthetic camera, so no image fixtures are needed.
 */
@@ -39,6 +40,64 @@ private:
         return c;
     }
 
+    /*
+        A REAL camera: the Nikon D850's libraw adobe_coeff matrix plus the as-shot
+        multipliers from a real NEF. Built the way RawColor::Characterise builds it --
+        camRgb = xyzToCam . rgbToXyz, row-normalised so a neutral scene maps to (1,1,1),
+        then inverted -- because the solve walks that exact chain and a shortcut here
+        would test a camera the pipeline never produces. Written out rather than linked
+        in: this test compiles whitebalance.cpp alone (see tests/CMakeLists.txt).
+    */
+    static CameraColor d850Cam()
+    {
+        const double xyzToCam[3][3] = {
+            { 1.0405, -0.3755, -0.1270},
+            {-0.5461,  1.3787,  0.1793},
+            {-0.1040,  0.2015,  0.6785}
+        };
+        const double rgbToXyz[3][3] = {
+            {0.412453, 0.357580, 0.180423},
+            {0.212671, 0.715160, 0.072169},
+            {0.019334, 0.119193, 0.950227}
+        };
+        double camRgb[3][3];
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) {
+                double v = 0.0;
+                for (int k = 0; k < 3; ++k) v += xyzToCam[i][k] * rgbToXyz[k][j];
+                camRgb[i][j] = v;
+            }
+        for (int i = 0; i < 3; ++i) {
+            const double n = camRgb[i][0] + camRgb[i][1] + camRgb[i][2];
+            for (int j = 0; j < 3; ++j) camRgb[i][j] /= n;
+        }
+        double inv[3][3];
+        const double det =
+            camRgb[0][0] * (camRgb[1][1] * camRgb[2][2] - camRgb[1][2] * camRgb[2][1]) -
+            camRgb[0][1] * (camRgb[1][0] * camRgb[2][2] - camRgb[1][2] * camRgb[2][0]) +
+            camRgb[0][2] * (camRgb[1][0] * camRgb[2][1] - camRgb[1][1] * camRgb[2][0]);
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) {
+                const int a0 = (j + 1) % 3, a1 = (j + 2) % 3;
+                const int b0 = (i + 1) % 3, b1 = (i + 2) % 3;
+                inv[i][j] = (camRgb[a0][b0] * camRgb[a1][b1] -
+                             camRgb[a0][b1] * camRgb[a1][b0]) / det;
+            }
+
+        CameraColor c;
+        c.valid = true;
+        const float mul[3] = {2.126953f, 1.0f, 1.246582f};   // 0x0C, green-normalised
+        for (int i = 0; i < 3; ++i) {
+            c.asShotMul[i] = mul[i];
+            for (int j = 0; j < 3; ++j) {
+                c.xyzToCam[i][j] = float(xyzToCam[i][j]);
+                c.camToWorking[i][j] = float(inv[i][j]);
+            }
+        }
+        WhiteBalance::resolveAsShot(c);
+        return c;
+    }
+
     /* A body balanced for warm light: as-shot multipliers well away from unity. */
     static CameraColor warmShotCam()
     {
@@ -52,16 +111,95 @@ private:
 
 private slots:
 
-    /* An sRGB file is balanced to D65, which lives on the CIE DAYLIGHT locus. Solving
-       it against the Planckian locus instead lands ~550 K and ~22 tint units out, so an
-       untouched JPEG would open reading "7050 K, -22" rather than "6500, 0". */
+    /*
+        An sRGB file is balanced to D65, and in ADOBE'S convention -- the DNG SDK's
+        dng_temperature, Robertson on the PLANCKIAN locus -- D65 reads 6503 K / +9.8, NOT
+        6500 / 0. Daylight genuinely sits about 0.003 Duv above the Planckian locus and
+        Lightroom reports it the same way; a tint of 0 here would mean the old
+        daylight-locus convention had come back, and with it a ~20-unit disagreement with
+        every other raw developer.
+    */
     void asShotResolvesToD65()
     {
         const CameraColor c = srgbCam();
-        QVERIFY2(std::fabs(c.asShotK - 6504.0f) < 250.0f,
+        QVERIFY2(std::fabs(c.asShotK - 6503.0f) < 60.0f,
                  qPrintable(QString("as-shot K = %1").arg(c.asShotK)));
-        QVERIFY2(std::fabs(c.asShotTint) < 6.0f,
+        QVERIFY2(std::fabs(c.asShotTint - 9.8f) < 1.5f,
                  qPrintable(QString("as-shot tint = %1").arg(c.asShotTint)));
+    }
+
+    /*
+        The convention itself, against illuminants whose CCT and tint are known
+        independently. These three numbers are what make Winnow's Temp/Tint comparable to
+        Lightroom's; drifting off them is the whole bug this suite exists to catch.
+    */
+    void knownIlluminantsReadCorrectly_data()
+    {
+        QTest::addColumn<double>("x");
+        QTest::addColumn<double>("y");
+        QTest::addColumn<float>("kelvin");
+        QTest::addColumn<float>("tint");
+        QTest::newRow("D65")   << 0.31271 << 0.32902 << 6503.0f << 9.79f;
+        QTest::newRow("D50")   << 0.34567 << 0.35850 << 5001.8f << 9.60f;
+        QTest::newRow("Std A") << 0.44757 << 0.40745 << 2855.8f << 0.01f;
+    }
+
+    void knownIlluminantsReadCorrectly()
+    {
+        QFETCH(double, x); QFETCH(double, y);
+        QFETCH(float, kelvin); QFETCH(float, tint);
+        float k = 0, t = 0;
+        WhiteBalance::tempTintFromXY(x, y, k, t);
+        QVERIFY2(std::fabs(k - kelvin) / kelvin < 0.005,
+                 qPrintable(QString("K %1, want %2").arg(k).arg(kelvin)));
+        QVERIFY2(std::fabs(t - tint) < 0.5f,
+                 qPrintable(QString("tint %1, want %2").arg(t).arg(tint)));
+    }
+
+    /* illuminantXYZ and tempTintFromXY are exact inverses, so the Temp/Tint the panel
+       shows and the illuminant the render uses cannot drift apart. */
+    void locusRoundTrips_data()
+    {
+        QTest::addColumn<float>("kelvin");
+        QTest::addColumn<float>("tint");
+        for (float k : {2000.f, 2850.f, 4000.f, 5500.f, 6500.f, 12000.f, 50000.f})
+            for (float t : {-100.f, -50.f, 0.f, 10.f, 50.f, 100.f})
+                QTest::newRow(qPrintable(QString("%1K/%2").arg(k).arg(t))) << k << t;
+    }
+
+    void locusRoundTrips()
+    {
+        QFETCH(float, kelvin);
+        QFETCH(float, tint);
+        double xyz[3];
+        QVERIFY(WhiteBalance::illuminantXYZ(kelvin, tint, xyz));
+        const double sum = xyz[0] + xyz[1] + xyz[2];
+        float k = 0, t = 0;
+        WhiteBalance::tempTintFromXY(xyz[0] / sum, xyz[1] / sum, k, t);
+        QVERIFY2(std::fabs(k - kelvin) / kelvin < 1e-3,
+                 qPrintable(QString("K %1 -> %2").arg(kelvin).arg(k)));
+        QVERIFY2(std::fabs(t - tint) < 0.05f,
+                 qPrintable(QString("tint %1 -> %2").arg(tint).arg(t)));
+    }
+
+    /*
+        THE REGRESSION THIS SUITE WAS REWRITTEN FOR.
+
+        A real Nikon D850 frame (2018-01-14_0001.NEF): MakerNote 0x0C gives as-shot
+        multipliers R 2.126953 / G 1 / B 1.246582, and the model matrix is the libraw
+        adobe_coeff row for the body. Lightroom reads that file as 6300 K / +3.
+
+        Under the old daylight-locus convention Winnow solved it to 5959 K / -18 -- and,
+        because the Apple Core Image engine left cam invalid, actually DISPLAYED
+        6500 K / 0, the "no characterisation" fallback. Both are now gone.
+    */
+    void nikonD850AsShotMatchesLightroom()
+    {
+        const CameraColor c = d850Cam();
+        QVERIFY2(std::fabs(c.asShotK - 6315.0f) < 25.0f,
+                 qPrintable(QString("as-shot K = %1, want ~6315").arg(c.asShotK)));
+        QVERIFY2(std::fabs(c.asShotTint - 1.9f) < 2.0f,
+                 qPrintable(QString("as-shot tint = %1, want ~+1.9").arg(c.asShotTint)));
     }
 
     void warmBalancedBodyResolvesCool()
@@ -132,6 +270,32 @@ private slots:
         float g[3];
         WhiteBalance::gains(c, kelvin, tint, g);
         float k2 = 0, t2 = 0;
+
+        /*
+            OUT-OF-GAMUT ILLUMINANT. Adobe's tint scale is 3000 units per Duv, so the
+            slider ends reach a lot further off the locus than the old 4000-per-Duv one
+            did: 3400 K at +150 is off the chromaticity triangle entirely (z < 0), and
+            20000 K at +150 is a cyan-green well outside the SYNTHETIC sRGB camera used
+            here (a real camera matrix is wider). renderIlluminant clamps the dead
+            channel to 1e-9, and inverting a gain that large gives back a colour with a
+            channel at or below solve()'s own 1e-9 floor -- which it is documented to
+            refuse, because the clamp destroyed the information.
+
+            Keyed on that floor rather than on "the gain looks big": a clamp in one
+            channel does NOT always ruin the round trip (2000 K carries a legitimately
+            huge blue gain and still solves), so anything coarser fails the wrong cases.
+
+            Nothing is lost for the user: gains() still returns finite gains and the
+            render is well behaved at the slider end. It is the ROUND TRIP that is not
+            defined. Assert the refusal rather than skipping, so this staying true is
+            still checked.
+        */
+        const float back[3] = {1.0f / g[0], 1.0f / g[1], 1.0f / g[2]};
+        if (back[0] <= 1e-9f || back[1] <= 1e-9f || back[2] <= 1e-9f) {
+            QVERIFY(!WhiteBalance::solve(c, back[0], back[1], back[2], k2, t2));
+            return;
+        }
+
         QVERIFY(WhiteBalance::solve(c, 1.0f / g[0], 1.0f / g[1], 1.0f / g[2], k2, t2));
         QVERIFY2(std::fabs(k2 - kelvin) / kelvin < 0.01,
                  qPrintable(QString("K %1 -> %2").arg(kelvin).arg(k2)));
@@ -176,8 +340,11 @@ private slots:
         QCOMPARE(g[2], 1.0f);
     }
 
-    /* The Temp slider crossfades the Planckian and daylight loci between 4000 and
-       5000 K. A discontinuity there would show as a colour jump mid-drag.
+    /* The locus is a 31-row TABLE interpolated between rows, so every row boundary is a
+       potential seam -- and a seam shows as a colour jump mid-drag. The old code had a
+       crossfade between two loci across 4000-5000 K to watch here; the DNG table has row
+       boundaries at 200 and 250 mired (5000 K and 4000 K), which is the same stretch of
+       slider, so the case still lands where it is needed.
 
        Tested as an OUTLIER check, not a fixed threshold: the gain curve is legitimately
        steep at low Kelvin (a 100 K step near 3800 K moves blue more than a fixed

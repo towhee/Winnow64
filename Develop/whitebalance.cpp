@@ -20,91 +20,164 @@ const float kXyzToSrgb[3][3] = {
 };
 
 /*
-    Kelvin -> CIE 1931 xy. TWO loci, because no single one is right across the range:
+    Kelvin + tint <-> CIE 1931 xy, using ADOBE'S DEFINITION -- the DNG SDK's
+    dng_temperature, which is Robertson's isotemperature-line method over the PLANCKIAN
+    locus in CIE 1960 (u,v).
 
-      < 4000 K   the PLANCKIAN (blackbody) locus. Tungsten and candlelight really are
-                 incandescent, so a blackbody is what they sit on. (Kim et al., 1999.)
-      > 5000 K   the CIE DAYLIGHT locus. Daylight is emphatically NOT a blackbody -- it
-                 sits measurably above the Planckian locus -- and the standard D
-                 illuminants are defined on it. Using Planckian here puts D65 about
-                 550 K and 22 tint units off, so an untouched sRGB file would open
-                 reading "7050 K, -22" instead of "6500, 0".
+    WHY ADOBE'S AND NOT OUR OWN. The number in the Temp box is only useful if it means
+    the same thing as the number in everyone else's Temp box. The previous code measured
+    Kelvin on a crossfade of the Planckian and CIE daylight loci and scaled tint at 4000
+    units per Duv; Adobe measures Kelvin on the Planckian locus alone and scales tint at
+    3000 units per Duv (kTintScale). Those are not small differences: a D850 frame whose
+    as-shot neutral Lightroom reads as 6300 K / +3 came out of the old chain as
+    5959 K / -18. The same chromaticity read through this table gives 6315 K / +1.9.
 
-    Between them the two are crossfaded, because a step change part-way along the Temp
-    slider would show up as a colour jump while dragging through 4000 K.
+    The cost, accepted deliberately: a stored tint now means a different displacement
+    than it did, so images edited before this change shift green/magenta. Kelvin barely
+    moves; tint moves by roughly 10-20 units at daylight temperatures. There is no
+    sidecar version key to migrate against -- see notes/Documentation.txt.
 
-    Nominally valid to 25000 K; above that the daylight branch is extrapolated, which is
-    well behaved (every term decays as 1/T, so x tends to a constant ~0.237) -- the
-    25000..50000 K end of the slider keeps moving the right way even though no real
-    illuminant lives there.
+    CONSEQUENCE WORTH KNOWING: D65 is not 6500/0 in this convention, it is 6503 / +9.8.
+    Daylight genuinely sits about 0.003 Duv ABOVE the Planckian locus, and Adobe reports
+    it that way too. So a display-referred file (InputTransform's synthetic D65 camera)
+    now opens reading a tint near +10 rather than 0. Rendering is unaffected:
+    relativeGains divides by the as-shot reference, so as-shot is still an exact no-op.
+
+    The table is 31 (mired, u, v, slope) rows, mired 0 (infinite K) to 600 (1667 K).
+    Winnow's slider range, 2000 K (500 mired) to 50000 K (20 mired), sits inside it.
 */
-void planckianXY(double T, double &x, double &y)
-{
-    const double t1 = 1.0 / T, t2 = t1 * t1, t3 = t2 * t1;
-    if (T < 4000.0)
-        x = -0.2661239e9 * t3 - 0.2343589e6 * t2 + 0.8776956e3 * t1 + 0.179910;
-    else
-        x = -3.0258469e9 * t3 + 2.1070379e6 * t2 + 0.2226347e3 * t1 + 0.240390;
+struct TempTableEntry { double r, u, v, t; };
 
-    const double x2 = x * x, x3 = x2 * x;
-    if (T < 2222.0)
-        y = -1.1063814 * x3 - 1.34811020 * x2 + 2.18555832 * x - 0.20219683;
-    else if (T < 4000.0)
-        y = -0.9549476 * x3 - 1.37418593 * x2 + 2.09137015 * x - 0.16748867;
-    else
-        y =  3.0817580 * x3 - 5.87338670 * x2 + 3.75112997 * x - 0.37001483;
-}
+const TempTableEntry kTempTable[31] = {
+    {   0, 0.18006, 0.26352,   -0.24341 },
+    {  10, 0.18066, 0.26589,   -0.25479 },
+    {  20, 0.18133, 0.26846,   -0.26876 },
+    {  30, 0.18208, 0.27119,   -0.28539 },
+    {  40, 0.18293, 0.27407,   -0.30470 },
+    {  50, 0.18388, 0.27709,   -0.32675 },
+    {  60, 0.18494, 0.28021,   -0.35156 },
+    {  70, 0.18611, 0.28342,   -0.37915 },
+    {  80, 0.18740, 0.28668,   -0.40955 },
+    {  90, 0.18880, 0.28997,   -0.44278 },
+    { 100, 0.19032, 0.29326,   -0.47888 },
+    { 125, 0.19462, 0.30141,   -0.58204 },
+    { 150, 0.19962, 0.30921,   -0.70471 },
+    { 175, 0.20525, 0.31647,   -0.84901 },
+    { 200, 0.21142, 0.32312,   -1.01820 },
+    { 225, 0.21807, 0.32909,   -1.21680 },
+    { 250, 0.22511, 0.33439,   -1.45120 },
+    { 275, 0.23247, 0.33904,   -1.72980 },
+    { 300, 0.24010, 0.34308,   -2.06370 },
+    { 325, 0.24792, 0.34655,   -2.46810 },
+    { 350, 0.25591, 0.34951,   -2.96410 },
+    { 375, 0.26400, 0.35200,   -3.58140 },
+    { 400, 0.27218, 0.35407,   -4.36330 },
+    { 425, 0.28039, 0.35577,   -5.37620 },
+    { 450, 0.28863, 0.35714,   -6.72620 },
+    { 475, 0.29685, 0.35823,   -8.59550 },
+    { 500, 0.30505, 0.35907,  -11.32400 },
+    { 525, 0.31320, 0.35968,  -15.62800 },
+    { 550, 0.32129, 0.36011,  -23.32500 },
+    { 575, 0.32931, 0.36038,  -40.77000 },
+    { 600, 0.33724, 0.36051, -116.45000 }
+};
 
-void daylightXY(double T, double &x, double &y)
-{
-    const double t1 = 1.0 / T, t2 = t1 * t1, t3 = t2 * t1;
-    if (T <= 7000.0)
-        x = -4.6070e9 * t3 + 2.9678e6 * t2 + 0.09911e3 * t1 + 0.244063;
-    else
-        x = -2.0064e9 * t3 + 1.9018e6 * t2 + 0.24748e3 * t1 + 0.237040;
-    y = -3.000 * x * x + 2.870 * x - 0.275;
-}
+/*
+    Tint units per unit of displacement along the isotemperature line. Adobe's constant,
+    and NEGATIVE: a positive tint moves the chromaticity in the -offset direction, which
+    is ABOVE the locus in v. That is the same sign the old code had, and the same sign
+    Lightroom's slider has under the hand -- a positive tint assumes a GREENER
+    illuminant, so the correction renders the image more MAGENTA.
+*/
+constexpr double kTintScale = -3000.0;
 
-void locusXY(double T, double &x, double &y)
+/* (K, tint) -> xy. The DNG SDK's dng_temperature::Get_xy_coord. */
+void locusXY(double T, double tint, double &x, double &y)
 {
     T = std::clamp(T, 1667.0, 100000.0);
-    if (T <= 4000.0) { planckianXY(T, x, y); return; }
-    if (T >= 5000.0) { daylightXY(T, x, y);  return; }
+    const double r = 1.0e6 / T;
+    const double offset = tint * (1.0 / kTintScale);
 
-    double px, py, dx, dy;
-    planckianXY(T, px, py);
-    daylightXY(T, dx, dy);
-    const double u = (T - 4000.0) / 1000.0;
-    const double w = u * u * (3.0 - 2.0 * u);       // smoothstep: no kink at either end
-    x = px + (dx - px) * w;
-    y = py + (dy - py) * w;
+    for (int i = 0; i <= 29; ++i) {
+        if (r >= kTempTable[i + 1].r && i != 29) continue;
+
+        /* Where r falls between the two bracketing mired rows. */
+        const double f = (kTempTable[i + 1].r - r)
+                       / (kTempTable[i + 1].r - kTempTable[i].r);
+        double u = kTempTable[i].u * f + kTempTable[i + 1].u * (1.0 - f);
+        double v = kTempTable[i].v * f + kTempTable[i + 1].v * (1.0 - f);
+
+        /* The isotemperature line's direction at each end, normalised, then blended --
+           blending the NORMALISED ends rather than the raw slopes is what keeps the
+           tint displacement continuous across a row boundary. */
+        double u1 = 1.0, v1 = kTempTable[i].t;
+        double u2 = 1.0, v2 = kTempTable[i + 1].t;
+        const double l1 = std::sqrt(1.0 + v1 * v1);
+        const double l2 = std::sqrt(1.0 + v2 * v2);
+        u1 /= l1; v1 /= l1;
+        u2 /= l2; v2 /= l2;
+        double u3 = u1 * f + u2 * (1.0 - f);
+        double v3 = v1 * f + v2 * (1.0 - f);
+        const double l3 = std::sqrt(u3 * u3 + v3 * v3);
+        u3 /= l3; v3 /= l3;
+
+        u += u3 * offset;
+        v += v3 * offset;
+
+        const double d = u - 4.0 * v + 2.0;
+        if (std::fabs(d) < 1e-12) { x = 0.3127; y = 0.3290; return; }
+        x = 1.5 * u / d;
+        y = v / d;
+        return;
+    }
+    x = 0.3127; y = 0.3290;         // unreachable; D65 rather than an uninitialised pair
 }
 
 /*
-    Tint displaces the chromaticity perpendicular to the locus, which is what the CIE
-    1960 (u,v) v axis is: the classic Duv.
+    xy -> (K, tint). The DNG SDK's dng_temperature::Set_xy_coord: walk the table until
+    the point falls on the far side of an isotemperature line, then interpolate both the
+    mired value and the perpendicular offset between that row and the last.
 
-    SIGN: these controls describe the LIGHT, and the correction is its opposite -- the
-    same logic as temperature, where a higher Kelvin says "the light was bluer" and so
-    renders the image warmer. Positive tint therefore assumes a GREENER illuminant
-    (+v, above the locus), which renders the image more MAGENTA -- matching what the
-    Lightroom slider does under the hand. kTintDuv scales the +/-150 slider to a Duv of
-    about +/-0.037, a full-strength correction.
+    This is the EXACT inverse of locusXY, so it is also the exact answer solve()'s
+    bisection converges to for the neutral case; it is kept separate because solve() has
+    to work on an arbitrary rendered colour, not just a chromaticity.
 */
-constexpr double kTintDuv = 0.00025;
-
-void applyTint(double &x, double &y, double tint)
+void xyToTempTint(double x, double y, double &kelvin, double &tint)
 {
-    if (tint == 0.0) return;
-    const double d = -2.0 * x + 12.0 * y + 3.0;
-    if (std::fabs(d) < 1e-12) return;
-    double u = 4.0 * x / d;
-    double v = 6.0 * y / d;
-    v += tint * kTintDuv;
-    const double d2 = 2.0 * u - 8.0 * v + 4.0;
-    if (std::fabs(d2) < 1e-12) return;
-    x = 3.0 * u / d2;
-    y = 2.0 * v / d2;
+    const double den = 1.5 - x + 6.0 * y;
+    if (std::fabs(den) < 1e-12) { kelvin = 6500.0; tint = 0.0; return; }
+    const double u = 2.0 * x / den;
+    const double v = 3.0 * y / den;
+
+    double lastDt = 0.0, lastDu = 0.0, lastDv = 0.0;
+    for (int i = 1; i <= 30; ++i) {
+        double du = 1.0, dv = kTempTable[i].t;
+        const double len = std::sqrt(1.0 + dv * dv);
+        du /= len; dv /= len;
+
+        double uu = u - kTempTable[i].u;
+        double vv = v - kTempTable[i].v;
+        double dt = -uu * dv + vv * du;
+
+        if (dt <= 0.0 || i == 30) {
+            if (dt > 0.0) dt = 0.0;
+            dt = -dt;
+            const double f = (i == 1) ? 0.0 : dt / (lastDt + dt);
+            kelvin = 1.0e6 / (kTempTable[i - 1].r * f + kTempTable[i].r * (1.0 - f));
+
+            uu = u - (kTempTable[i - 1].u * f + kTempTable[i].u * (1.0 - f));
+            vv = v - (kTempTable[i - 1].v * f + kTempTable[i].v * (1.0 - f));
+            du = du * (1.0 - f) + lastDu * f;
+            dv = dv * (1.0 - f) + lastDv * f;
+            const double l = std::sqrt(du * du + dv * dv);
+            du /= l; dv /= l;
+
+            tint = (uu * du + vv * dv) * kTintScale;
+            return;
+        }
+        lastDt = dt; lastDu = du; lastDv = dv;
+    }
+    kelvin = 6500.0; tint = 0.0;    // unreachable
 }
 
 /* The rendered linear-sRGB colour of a neutral surface under illuminant (K, tint),
@@ -148,13 +221,26 @@ namespace WhiteBalance {
 bool illuminantXYZ(float kelvin, float tint, double xyz[3])
 {
     double x, y;
-    locusXY(kelvin, x, y);
-    applyTint(x, y, tint);
+    locusXY(kelvin, tint, x, y);
     if (y < 1e-9) return false;
     xyz[0] = x / y;
     xyz[1] = 1.0;
     xyz[2] = (1.0 - x - y) / y;
     return true;
+}
+
+/*
+    The ANALYTIC inverse of illuminantXYZ: the (kelvin, tint) whose illuminant sits at
+    chromaticity (x, y). Exact, where solve() bisects -- but solve() is given a RENDERED
+    colour and has to walk the camera chain backwards, so the two are not
+    interchangeable. Used by the profile-aware as-shot solve and by the tests.
+*/
+void tempTintFromXY(double x, double y, float &kelvin, float &tint)
+{
+    double k = 6500.0, t = 0.0;
+    xyToTempTint(x, y, k, t);
+    kelvin = float(std::clamp(k, double(kMinKelvin), double(kMaxKelvin)));
+    tint   = float(std::clamp(t, double(kMinTint), double(kMaxTint)));
 }
 
 QString presetName(Preset p)

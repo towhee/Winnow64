@@ -1104,6 +1104,40 @@ int decodeSonyArw2(QFile &file, RawImage &raw, QString &err)
 
 } // namespace
 
+/*
+    ARW colour without a decode.
+
+    Sony is the awkward one: an ARW's as-shot WB_RGGBLevels (0x7313) are NOT in any
+    plaintext IFD -- they live in the encrypted SR2Private block, which is why
+    readSr2Levels exists and why reading the tag number straight out of an IFD silently
+    finds nothing. So this decrypts that block, exactly as the two unpack paths do
+    (applySr2Levels), rather than re-reading tags.
+
+    The plaintext SubIFD copy that Sony::parse picks up (m.rawInfo) is used only as a
+    seed: a real ARW does not carry it, so without the SR2 read every Sony file would
+    still have shown the 6500 K / 0 fallback under the Apple Core Image engine. See
+    RawFormat::ReadAsShotColor.
+*/
+bool SonyRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
+{
+    QString model = m.model;
+    if (model.isEmpty()) {
+        using namespace TiffWalk;
+        Reader r;
+        Ifd ifd0; QList<quint32> subs; quint32 next = 0;
+        if (r.init(&file) && r.readIfd(r.firstIfd(), ifd0, subs, next) && ifd0.contains(272))
+            model = "Sony " + r.ascii(ifd0[272]);
+    }
+    info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
+
+    Sr2Levels lv;
+    if (readSr2Levels(file, lv) &&
+        lv.camMul[0] > 0.0f && lv.camMul[1] > 0.0f && lv.camMul[2] > 0.0f) {
+        for (int i = 0; i < 4; ++i) info.camMul[i] = lv.camMul[i];
+    }
+    return true;
+}
+
 bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 {
 /*

@@ -10143,6 +10143,14 @@ void MW::renderDevelopPreview(bool fullRes)
         work = built;
     }
 
+    /* The dock pointed itself at this image at SELECTION (fileSelectionChange), a second
+       or so before the decode above finished -- so its Temp/Tint row resolved against an
+       empty cache and showed WhiteBalance::resolve's 6500 K / 0 fallback. The
+       characterisation exists NOW, so let the dock re-resolve. Edge-triggered inside
+       onWorkingImageReady, so calling it on every render costs nothing and cannot fight a
+       slider drag. */
+    if (developProperties) developProperties->onWorkingImageReady(fPath);
+
     /* Global image for the render: the raw-DENOISED WorkingImage when the Global scope's "Denoise raw"
        is set and ready, else the clean cached image. The heavy denoise runs on settle (see
        renderDevelopFullResAsync -> ensureRawDenoise), so a slider tick never blocks on it. */

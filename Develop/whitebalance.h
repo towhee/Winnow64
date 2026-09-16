@@ -18,8 +18,9 @@
 
     For a target (kelvin, tint) the forward chain is:
 
-        (K, tint) -> xy chromaticity on the Planckian / daylight locus, tint
-                     displacing it perpendicular to that locus  (locusXY)
+        (K, tint) -> xy chromaticity on the PLANCKIAN locus, tint displacing it
+                     perpendicular to that locus  (locusXY -- Adobe's DNG
+                     dng_temperature mapping, so the numbers match Lightroom's)
                   -> XYZ
                   -> camera RGB              (cam.xyzToCam)
                   -> the as-shot WB the decode already baked in  (cam.asShotMul)
@@ -85,6 +86,12 @@ bool       presetValues(Preset p, float &kelvin, float &tint);
    definitions of "6500 K" in one pipeline would disagree by a few hundred kelvin. False
    when the chromaticity is degenerate. */
 bool       illuminantXYZ(float kelvin, float tint, double xyz[3]);
+
+/* The analytic inverse of illuminantXYZ: the (kelvin, tint) of the illuminant sitting at
+   chromaticity (x, y), clamped to the slider range. Exact -- this is the Adobe/DNG
+   Robertson mapping run backwards, not a fit. solve() is the one to use when the input is
+   a RENDERED colour rather than a chromaticity. */
+void       tempTintFromXY(double x, double y, float &kelvin, float &tint);
 
 /* Per-channel scene-linear gains for an absolute (kelvin, tint), normalised so
    green == 1. Falls back to no-op gains when cam is not valid. */

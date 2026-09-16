@@ -360,6 +360,22 @@ protected:
 
 public slots:
     void itemChange(QModelIndex idx) override;
+    /*
+        The image's scene-linear WorkingImage (and with it its colour characterisation,
+        WorkingImage::cam) has landed in WorkingImageCache.
+
+        WHY THIS EXISTS. The Temp/Tint row resolves through cam, but the dock is pointed
+        at a new image from MW::fileSelectionChange -- at SELECTION, a second or so before
+        the raw decode finishes. currentCam() is a cache PEEK, so at that moment it
+        returns a default (invalid) CameraColor and WhiteBalance::resolve falls back to
+        its literal 6500 K / 0. Nothing re-read it when the decode landed, so the row then
+        stayed at 6500/0 for that image no matter what the camera had metered.
+
+        EDGE-TRIGGERED on cam becoming valid, and a no-op for any other path, because
+        MW::renderDevelopPreview calls this on EVERY render -- including mid-drag, where
+        re-pushing slider values would fight the user's hand.
+    */
+    void onWorkingImageReady(const QString &fPath);
     /* ImageView reports new mask geometry (dragged overlay) as the active tool's paramsJson. */
     void setActiveMaskParams(const QString &paramsJson);
     /* Re-assert the overlay for the active tool (e.g. when the Develop dock becomes visible). */
@@ -632,6 +648,13 @@ private:
     void addWhiteBalanceRow(QModelIndex parIdx);
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
+    /* The as-shot Kelvin the row was last resolved against, or -1 for "no valid cam yet".
+       Keyed on the VALUE rather than a seen/not-seen flag so that a re-characterisation
+       of the same image also refreshes -- switching the Demosaic combo clears
+       WorkingImageCache and re-decodes, and the two engines need not agree to the kelvin.
+       Never changes during a slider drag, so it cannot fight the user's hand. See
+       onWorkingImageReady; reset per image in setCurrentImage. */
+    float wbRowAsShotK = -1.0f;
 
     /* Tone mapping -- the view transform, the second row of Basic, directly under the
        camera profile: both say what rendering the sliders below sit on. Always
