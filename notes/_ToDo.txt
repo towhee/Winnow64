@@ -8,9 +8,11 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- Does Winnow zoom account for the display setting in macos properly?
 - Lightroom has different white balance for some files
 - /Users/roryhill/Pictures/_test2/2020-04-25_2013.JPG thumb not rotated
 - /Users/roryhill/Pictures/Test/copy/IMG_5853.heic image and thumb not rotated
+- When drag/copy file to bookmark refresh bookmark folder
 - Differentiate workspaces that have size/position
 - Develop disabled sometimes at start (Bookmarks / Develop only docks)
 - Not saving / restoring workspace properly between sessions.

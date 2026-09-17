@@ -36,6 +36,7 @@
 #include <QImage>
 #include "Develop/workingimage.h"
 #include "Develop/editparams.h"
+#include "Develop/editstack.h"
 #include "Develop/colorspace.h"
 #include "Develop/outputtransform.h"
 
@@ -113,7 +114,8 @@ private slots:
     void foldEqualsSequenceWithCalibrate();
     void denoisePathAgreesWithFoldedPath();
     void nonRawIsUntouched();
-    void defaultViewTransformIsNone();
+    void defaultViewTransformIsFilmic();
+    void viewTransformSanitisesToTheDefault();
     void cameraProfileReplacesTheInputMatrix();
     void cameraProfileWhiteBalancesExactlyOnce();
     void cameraProfileSurvivesTheDenoiseRoute();
@@ -124,41 +126,95 @@ private slots:
 };
 
 /*
-    THE STORED DEFAULT MUST RESOLVE TO NONE.
+    THE DEFAULT IS FILMIC, AND IT IS NOT THE IDENTITY.
 
-    EditParams::viewTransform is an int (so it rides the existing int machinery) and
-    default-constructs to 0. OutputTransform::ViewFromInt maps that back to an enum, and
-    the two have to agree about which value zero is. Zero is the IDENTITY -- no tone
-    mapping -- because a default-constructed EditParams is what "no edits" means: what an
-    untouched image renders as, what isIdentity() tests for and what Reset Basic restores.
-    A non-zero identity would put a special case for this one field in all three.
+    This test used to assert the opposite -- that the default was None -- on the reasoning
+    that a default-constructed EditParams is what "no edits" means, so the default had to
+    be the identity or every reset and isIdentity() would carry a special case. The
+    reasoning was sound and the result was wrong: with no view transform a scene-referred
+    raw renders radiometrically linear, which is dark and flat, and "no edits" was
+    therefore a look nobody would choose rather than a neutral starting point. Filmic
+    matches Lightroom's rendering of the same raw to within about one level of 255 across
+    the luminance histogram; None is off by six.
 
-    Pinned here rather than left to the enum's declaration order, because the numbering is
-    also the sidecar format: it may be added to, never renumbered.
+    So the special case is real and this is where it is pinned. Three things have to stay
+    true together, and getting any two right is the trap:
+
+      - the PUBLISHED NUMBERING, which is the sidecar format: added to, never renumbered.
+      - the IDENTITY is still None == 0, because zero is what an absent field means.
+      - the DEFAULT is Filmic, and everything that asks "is this untouched?" compares
+        against EditParams::kDefaultViewTransform, never against a literal 0.
 */
-void TestInputProfile::defaultViewTransformIsNone()
+void TestInputProfile::defaultViewTransformIsFilmic()
 {
     const EditParams def;
-    QCOMPARE(def.viewTransform, 0);
+    QCOMPARE(def.viewTransform, EditParams::kDefaultViewTransform);
     QCOMPARE(OutputTransform::ViewFromInt(def.viewTransform),
-             OutputTransform::ViewTransform::None);
+             OutputTransform::ViewTransform::Filmic);
 
-    /* Reset Basic restores the identity, i.e. no tone mapping. */
+    /* THE POINT OF THE CHANGE: an untouched raw is tone mapped. */
+    QVERIFY(OutputTransform::ViewFromInt(def.viewTransform)
+            != OutputTransform::ViewTransform::None);
+
+    /* isIdentity() tracks the DEFAULT, not zero. Both directions, because a literal 0
+       gets exactly these two backwards: the untouched image reads as edited, and the one
+       deliberately set to None reads as untouched. */
+    QVERIFY2(def.isIdentity(), "a default-constructed EditParams must be identity");
+    EditParams none;
+    none.viewTransform = int(OutputTransform::ViewTransform::None);
+    QVERIFY2(!none.isIdentity(), "choosing None is an edit -- it is not the default");
+
+    /* Reset Basic restores the default, i.e. Filmic, not the identity. */
     EditParams p;
     p.viewTransform = int(OutputTransform::ViewTransform::AgX);
     EditParams::resetGroup(p, EditParams::Group::Basic);
     QCOMPARE(OutputTransform::ViewFromInt(p.viewTransform),
-             OutputTransform::ViewTransform::None);
+             OutputTransform::ViewTransform::Filmic);
 
     /* The published numbering itself. */
     QCOMPARE(int(OutputTransform::ViewTransform::None),   0);
     QCOMPARE(int(OutputTransform::ViewTransform::Filmic), 1);
     QCOMPARE(int(OutputTransform::ViewTransform::AgX),    2);
 
-    /* An unknown value (a sidecar from a later build) falls back to the default rather
-       than to whatever the cast happens to land on. */
+    /* An unknown value (a sidecar from a later build) resolves to the IDENTITY rather
+       than to whatever the cast happens to land on -- the output stage does not invent a
+       look when it cannot tell what was asked for. Restoring the DEFAULT is the
+       sanitiser's job, one layer up; see viewTransformSanitisesToTheDefault. */
     QCOMPARE(OutputTransform::ViewFromInt(99), OutputTransform::ViewTransform::None);
     QCOMPARE(OutputTransform::ViewFromInt(-1), OutputTransform::ViewTransform::None);
+}
+
+/*
+    A SIDECAR WITHOUT THE FIELD MUST NOT SILENTLY GO FLAT.
+
+    Every sidecar Winnow has ever written carries viewTransform explicitly, so an older
+    one restores the look it was saved with -- including None, which is what those files
+    were rendered as and must keep rendering as. But a hand-edited or truncated sidecar
+    that omits the key falls back to the value already in the struct, which is the
+    default. That fallback is the reason the JSON reader must read INTO a
+    default-constructed EditParams rather than a zeroed one.
+*/
+void TestInputProfile::viewTransformSanitisesToTheDefault()
+{
+    const EditParams def;
+
+    /* Absent -> the default, via the reader's own fallback argument. */
+    QJsonObject o;
+    EditParams p;
+    p.viewTransform = EditStack::paramsFromJson(o).viewTransform;
+    QCOMPARE(p.viewTransform, def.viewTransform);
+
+    /* Present -> honoured exactly, None included: an already-edited image does not move. */
+    o["viewTransform"] = int(OutputTransform::ViewTransform::None);
+    QCOMPARE(EditStack::paramsFromJson(o).viewTransform,
+             int(OutputTransform::ViewTransform::None));
+
+    /* Out of range -> repaired to the DEFAULT (not to the identity), which is where the
+       "show the default look rather than refuse to load" contract lives. */
+    EditParams bad;
+    bad.viewTransform = 99;
+    EditStack::sanitizeParams(bad, QStringLiteral("Global"), nullptr);
+    QCOMPARE(bad.viewTransform, def.viewTransform);
 }
 
 /* The standalone pass must reproduce asShotMul then camToWorking, and re-tag. */

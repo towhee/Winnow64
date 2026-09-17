@@ -67,10 +67,15 @@ public:
     /*
         THE NUMBERING IS A PUBLISHED FORMAT. These values are what EditParams stores and
         what lands in the sidecar, so they may be ADDED TO but never renumbered. None is
-        0 deliberately: it is the IDENTITY, and the identity has to be zero, because a
-        default-constructed EditParams is what "no edits" means -- what an untouched raw
-        renders as, and what Reset Basic restores. A non-zero identity makes every reset
-        and every isIdentity() test carry a special case for this one field.
+        0 deliberately: it is the IDENTITY, and the identity has to be zero, because zero
+        is what a sidecar field means when it is absent or unreadable.
+
+        THE IDENTITY IS NOT THE DEFAULT. An untouched raw opens on Filmic -- scene-linear
+        data with no view transform renders dark and flat, which is a broken starting
+        point rather than a neutral one. See EditParams::kDefaultViewTransform, which
+        carries the measurements and is the ONE place the default is stated; a reset or an
+        isIdentity() test that compares against a literal 0 instead of that constant is a
+        bug, not a shortcut.
     */
     enum class ViewTransform {
         None   = 0, // the default: no tone mapping -- scene-linear to the transfer fn
@@ -79,9 +84,17 @@ public:
     };
 
     /* EditParams::viewTransform (an int, so it rides the existing int machinery) -> the
-       enum. An unrecognised value resolves to the DEFAULT rather than asserting: a
+       enum. An unrecognised value resolves to the IDENTITY rather than asserting: a
        sidecar written by a later build that added a transform must still open here and
-       render, showing the default look. */
+       render rather than refuse.
+
+       NOT to EditParams::kDefaultViewTransform, and the difference is deliberate twice
+       over. Colour management does not get to invent a look, so when this stage cannot
+       tell what was asked for it does nothing; and reaching for that constant would make
+       the output stage depend on EditParams, which is the dependency backwards. The
+       repair that DOES restore the default happens a layer up, at load, where the
+       document is owned: EditStack::sanitizeParams clamps an out-of-range value to
+       def.viewTransform, so in practice nothing unrecognised ever arrives here. */
     static ViewTransform ViewFromInt(int v)
     {
         switch (v) {

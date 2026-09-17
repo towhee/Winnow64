@@ -98,18 +98,47 @@ inline float Transfer(float v, float gammaInv)
 }
 
 /*
-    THE FILMIC VIEW TRANSFORM: a fixed exposure lift followed by the ACES (Narkowicz)
-    shoulder, applied in linear before the transfer function. A raw render is scene-linear
-    and otherwise lands dark and flat next to the camera's JPEG; this lifts the midtones
-    (~+0.7 EV) and rolls highlights off smoothly instead of hard-clipping. Validated
-    against the A9 II embedded preview.
+    THE FILMIC VIEW TRANSFORM (labelled "Standard roll-off"): a fixed exposure lift
+    followed by the ACES (Narkowicz) shoulder, applied in linear before the transfer
+    function. A raw render is scene-linear and otherwise lands dark and flat; this lifts
+    the midtones and rolls highlights off smoothly instead of hard-clipping.
+
+    THE LIFT IS THE ONE FITTED NUMBER IN THIS FILE, so it is worth saying exactly what it
+    was fitted to. It was 1.6 (+0.68 EV), validated against the A9 II embedded preview.
+    RE-MEASURED 2026-09-17 on a different raw against TWO independent references -- that
+    file's own embedded preview, and Lightroom's Adobe Standard rendering of it -- and 1.6
+    was about 0.43 EV too bright against both:
+
+        target            best offset     implied lift    residual
+        embedded preview    -0.42 EV          1.196       1.5 / 255
+        Lightroom           -0.43 EV          1.188       1.1 / 255
+        joint                                 1.191       1.3 / 255
+
+    Two references that were derived independently agreeing to within 0.01 EV is what
+    makes this a measurement rather than a preference, so the joint value is the constant.
+    The method was a histogram fit (99 luminance percentiles) rather than a pixel diff,
+    because the exports were framed slightly differently and a pixel diff would have been
+    measuring the crop.
+
+    WHY THE OLD NUMBER IS NOT EXPLAINED HERE: it is not known. The 1.6 note recorded mean
+    luma 0.434 vs 0.445, i.e. 111 vs 113 of 255, and neither value is near this file's
+    preview (100.9) or its 1.6 render (118.8), so that validation was done on a frame
+    whose behaviour cannot be recovered from here. It is recorded as unexplained rather
+    than given a plausible story -- the first attempt at one (that the preview is a
+    brighter target than Lightroom) was wrong, and measurably so: the two agree to
+    2.1 / 255.
+
+    AFTER the lift is right, what remains against Lightroom is 2-4 levels of 255 at p1/p5
+    and p99 and about 1 level through the midtones -- the ACES shoulder being slightly
+    more contrasty at both extremes than Adobe's curve. Below what a print or a screen
+    shows, and NOT worth replacing the shoulder over.
 
     This WAS the pipeline's only look, applied unconditionally to scene-referred data. It
-    is now one value of OutputTransform::ViewTransform and stays the default, so every
-    existing render is unchanged. Display-referred input still skips it -- see the header:
-    a JPEG already carries its camera's tone curve.
+    is now one value of OutputTransform::ViewTransform, and it is the default.
+    Display-referred input still skips it -- see the header: a JPEG already carries its
+    camera's tone curve.
 */
-constexpr float kBaselineExposure = 1.6f;       // ~ +0.68 EV
+constexpr float kBaselineExposure = 1.191f;     // ~ +0.25 EV; see the fit above
 
 inline float FilmicTone(float v)
 {
@@ -405,12 +434,22 @@ inline void HighlightRolloff(float &r, float &g, float &b)
     and 8-bit export so the two always agree; ToImage16 keeps the exact maths, since 16-bit
     output is where precision is the point.
 
-    kToneDomainMax is where BaselineTone saturates: solving f(u)=1 for u=1.6v gives
-    u=7.2416, i.e. v=4.53. Past the table's end the function is flat at white, so a clamp
-    to the last entry is exact there.
+    kToneDomainMax is where FilmicTone saturates, and it is DERIVED FROM
+    kBaselineExposure -- the two constants move together and the clamp below is only
+    correct because of it. Solving f(u)=1 for the Narkowicz curve gives u=7.2416, so with
+    u = kBaselineExposure * v the curve reaches white at v = 7.2416 / 1.191 = 6.081. Past
+    the table's end the function is flat at white, so clamping to the last entry is exact
+    THERE AND ONLY THERE.
+
+    SO A LIFT CHANGE MUST MOVE THIS TOO. It was 4.6, for the old lift of 1.6 (saturation
+    at v=4.53); leaving it there while the lift dropped to 1.191 would have put the
+    table's end at a value the curve has NOT yet carried to white, and every scene value
+    between 4.6 and 6.08 -- real specular highlights, with the headroom a raw carries --
+    would have clamped flat a stop and a half early. tst_outputtransform::
+    filmicDomainCoversSaturation is the guard.
 */
 constexpr int   kLutSize       = 16384;
-constexpr float kToneDomainMax = 4.6f;      // covers FilmicTone's saturation at v=4.53
+constexpr float kToneDomainMax = 6.1f;      // covers FilmicTone's saturation at v=6.081
 
 /*
     INDEXING. Most curves are sampled on a LINEAR axis (scale = index per unit value).
