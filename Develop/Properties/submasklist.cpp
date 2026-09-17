@@ -32,13 +32,16 @@ void SubmaskList::buildUi()
     outer->setSpacing(0);
 
     /* Header band: collapse arrow + "Submasks" + [+]. Translucent so paintEvent draws the
-       property-header gradient behind it (same idiom as RawPanel / ScopeHeader). */
+       property-header gradient behind it (same idiom as RawPanel / ScopeHeader). Its
+       arrow and title are offset G::subHeaderIndent, like the Mask band and the tree's
+       sections: the Edits bar above folds all of them away, so they read as its
+       children. */
     headerBand = new QWidget(this);
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);
     headerBand->installEventFilter(this);        // a header click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
+    hb->setContentsMargins(G::subHeaderIndent, 3, G::headerBtnRightInset, 3);
     hb->setSpacing(0);
 
     collapseBtn = new BarBtn();

@@ -352,6 +352,13 @@ int decorationTitleGap = 3;
    every line. */
 int headerBtnGap = 6;
 int headerBtnRightInset = 6;
+/* Develop SUB-HEADER OFFSET: the Edits header (ScopeHeader) collapses everything below
+   it, so the headers it hides -- the Mask and Submasks bands and the tree's Basic /
+   Color / ... sections -- are offset this far right of it, arrow AND title, to read as
+   its children. Only the header content shifts: the rows under each sub-header keep
+   their own indentation, so the sliders keep their full width. 0 lines them all up flush
+   again. */
+int subHeaderIndent = 10;
 /* Develop PANEL SEPARATOR: every Develop dock panel (Raw, Edits, Mask,
    Transform, Fill Replace) draws a rule this high across its bottom edge in
    G::tabWidgetBorderColor, so stacked panels read as distinct blocks. Each panel
