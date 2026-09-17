@@ -67,7 +67,14 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     scopeBar = new QWidget(this);
     scopeBar->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *hb = new QHBoxLayout(scopeBar);
-    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
+    /* Vertical padding ALL AT THE BOTTOM (0 / 6, where every other band in the dock uses
+       3 / 3). The combo is ~6px taller than a bare caption, so this band is taller than
+       the Raw, Mask, Submasks and section bands -- and with the padding split evenly the
+       whole row rides the combo's centreline, sitting the arrow and "Edits" a few pixels
+       lower than every caption above and below them. Hanging the extra height below the
+       contents instead puts this arrow and caption the same distance from their band's
+       top as Raw's and Basic's are from theirs, which is what the eye lines up on. */
+    hb->setContentsMargins(0, 0, G::headerBtnRightInset, 6);
     hb->setSpacing(0);
 
     /* Collapse arrow, 9px in the tree's gutter like RawPanel's and the Mask bands' --
@@ -129,17 +136,25 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     barMenuBtn->setIconSize(QSize(16, 16));
     connect(barMenuBtn, &BarBtn::clicked, this, [this]{ showScopeMenu(); });
 
-    hb->addWidget(barCollapseBtn);
+    /* Every item is centred on the bar's ONE centreline. The combo is the tallest thing
+       here, so without this the shorter items (the 9px arrow, the caption, the 16px
+       buttons) each sit wherever their own size policy leaves them -- a plain QWidget
+       stretches to the full row, a fixed one is placed by the layout's own rounding -- and
+       they drift a pixel or two apart down the bar. AlignVCenter pins them all, and it
+       costs the combo nothing: it keeps its stretch (a vertical flag does not touch the
+       width) and its own policy already fixes its height. */
+    const Qt::Alignment vc = Qt::AlignVCenter;
+    hb->addWidget(barCollapseBtn, 0, vc);
     hb->addSpacing(G::decorationTitleGap);
-    hb->addWidget(barLabel);
+    hb->addWidget(barLabel, 0, vc);
     hb->addSpacing(G::headerBtnGap);
-    hb->addWidget(scopeCombo, 1);
+    hb->addWidget(scopeCombo, 1, vc);
     hb->addSpacing(G::headerBtnGap);
-    hb->addWidget(barAddBtn);
+    hb->addWidget(barAddBtn, 0, vc);
     hb->addSpacing(G::headerBtnGap);
-    hb->addWidget(barEyeBtn);
+    hb->addWidget(barEyeBtn, 0, vc);
     hb->addSpacing(G::headerBtnGap);
-    hb->addWidget(barMenuBtn);
+    hb->addWidget(barMenuBtn, 0, vc);
     outer->addWidget(scopeBar);
     updateEditsCollapseIcon();
 }
