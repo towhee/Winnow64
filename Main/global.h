@@ -830,6 +830,7 @@ Q_NAMESPACE
     extern int decorationTitleGap;
     extern int headerBtnGap;            // Develop headers: gap between [eye] and [:]
     extern int headerBtnRightInset;     // ditto: inset from the panel's right edge
+    extern int subHeaderIndent;         // ditto: sub-header offset under the Edits header
     extern int panelBorderHeight;       // Develop panel bottom separator rule height
 
     /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,

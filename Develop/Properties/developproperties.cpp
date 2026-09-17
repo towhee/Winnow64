@@ -3032,12 +3032,12 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         i.delegateType = DT_None;
     }
     addItem(i);
-    /* No extra indent: the tree is its own region under the scope bar, with no row above
-       to line up beneath, so the section headers start at the panel edge like the bar
-       heading them (the delegate reads UR_ExtraIndent on the header caption; 0 = flush).
-       Only the header content would shift in any case -- its child rows keep their own
-       indentation, so the sliders always keep their full width. */
-    model->setData(capIdx, QVariant(0), UR_ExtraIndent);
+    /* Offset under the Edits bar: the bar's arrow folds these sections away, so they are
+       its children and sit G::subHeaderIndent right of it, arrow and title (the delegate
+       reads UR_ExtraIndent on the header caption and shifts both; 0 = flush). Only the
+       header content shifts -- its child rows keep their own indentation, so the sliders
+       always keep their full width. */
+    model->setData(capIdx, QVariant(G::subHeaderIndent), UR_ExtraIndent);
 }
 
 void DevelopProperties::addSlider(const QString &key, const QString &caption,

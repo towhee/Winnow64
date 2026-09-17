@@ -16,10 +16,13 @@ class BarBtn;
     ScopeHeader -- the Develop dock's scope control: ONE gradient-headed line naming the
     scope everything below it edits.
 
-        | Edits  [Global v] [+] [eye] [:] |   <- the whole scope control
+        | v Edits  [Global v] [+] [eye] [:] |   <- the whole scope control
         |   MaskPanel                     |   <- detail, slot MaskDetail
         |   Basic / Color / ...           |   <- detail, slot EditsDetail (the tree)
 
+    The leading arrow hides/shows everything below the bar -- the MaskPanel and the
+    adjustment tree, so the sub-headers it folds away (Mask, Submasks, Basic, Color, ...)
+    are offset G::subHeaderIndent right of it, arrow and title, to read as its children.
     The combo carries every scope on the image (index 0 is always Global); [+] adds a
     mask; the trailing [eye] [:] pair -- eye then menu, the order every band and row in
     this dock uses -- acts on whichever scope the combo has selected. There is NO scope
@@ -35,15 +38,16 @@ class BarBtn;
 
     Interaction (emissions that loop back into setScopeRows are DEFERRED a tick, so a
     widget is never deleted inside its own signal handler):
+      - Arrow / label click -> editsCollapseToggled(on)  (folds the details away)
       - Combo pick   -> scopeSelected(name)          (makes it the active scope)
       - [+]          -> addScopeRequested            (new mask)
       - [eye]        -> scopeEnabledToggled(i, on)   (EditScope::enabled)
       - [:]          -> the active scope's actions, plus the panel-wide "Reset all edits"
                         and "Edits help" (this bar's menu is the only menu in the panel)
 
-    The whole-mask preview eye, the collapse arrow and the mask-overlay menu rows of the
-    original dropdown header are gone: show/hide is the bar's eye, and the mask-overlay
-    controls live in the Mask panel. Their setters are kept as inert state-holders so
+    The whole-mask preview eye and the mask-overlay menu rows of the original dropdown
+    header are gone: show/hide is the bar's eye, and the mask-overlay controls live in the
+    Mask panel. Their setters are kept as inert state-holders so
     DevelopProperties' existing calls still compile and behave.
 */
 class ScopeHeader : public QWidget
@@ -80,6 +84,10 @@ public:
     void setMaskOverlayShown(bool shown) { maskOverlayShown = shown; }
     void setCollapsed(bool collapsed);      // state only -- the bar never hides
     bool isCollapsed() const { return collapsed; }
+    /* The bar's own arrow: hide/show the details below it (the bar itself always stays
+       visible). Silent -- editsCollapseToggled is a USER click only. */
+    void setEditsCollapsed(bool collapsed);
+    bool isEditsCollapsed() const { return editsCollapsed; }
     QString currentScopeName() const;
 
 signals:
@@ -93,6 +101,8 @@ signals:
     void maskOverlayToggled();                   // show/hide the mask overlay
     void previewToggled(bool shown);             // show/ignore the whole scope
     void collapseToggled(bool collapsed);        // hide/show the scope's tree items
+    /* The bar's arrow was clicked: the details below are now hidden (true) or shown. */
+    void editsCollapseToggled(bool collapsed);
     /* A scope's show/hide eye was toggled (index into the scope stack, 0 = Global). */
     void scopeEnabledToggled(int index, bool on);
     /* Menu: "Edits help" -- the owner opens Docs/developeditshelp.html (this header knows
@@ -101,9 +111,12 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent *) override;         // gradient behind the scope bar
+    bool eventFilter(QObject *obj, QEvent *event) override;   // "Edits" click -> toggle
 
 private:
     void buildScopeBar(QVBoxLayout *outer);   // the one-line scope selector
+    void toggleEditsCollapsed();              // the bar's arrow (emits)
+    void updateEditsCollapseIcon();           // arrow glyph <-> editsCollapsed
     void updateScopeBar();                    // refill the combo + eye (emits nothing)
     void showScopeMenu();                     // the bar's [:]
     void addHelpAction(QMenu *menu);          // trailing "Edits help"
@@ -115,6 +128,8 @@ private:
        in for a panel header band, so paintEvent draws the property-header gradient
        behind it. */
     QWidget     *scopeBar        = nullptr;
+    BarBtn      *barCollapseBtn  = nullptr;   // leading arrow: fold the details away
+    QLabel      *barLabel        = nullptr;   // "Edits" -- a click toggles the arrow
     QComboBox   *scopeCombo      = nullptr;
     BarBtn      *barAddBtn       = nullptr;   // [+] new mask
     BarBtn      *barEyeBtn       = nullptr;
@@ -136,6 +151,7 @@ private:
     int  activeIndex  = 0;
     bool previewShown = true;
     bool collapsed    = false;             // setCollapsed state (inert)
+    bool editsCollapsed = false;           // the bar's arrow: details below hidden
     bool globalActive = true;
     bool maskOverlayAvailable = false;
     bool maskOverlayShown     = true;

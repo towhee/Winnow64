@@ -140,13 +140,15 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     lw->setSpacing(0);
 
     /* Header band: collapse arrow + "Mask" + [:], the same idiom as the Submasks band
-       below it (SubmaskList::buildUi), so the two read as sibling sections. */
+       below it (SubmaskList::buildUi), so the two read as sibling sections. Both are
+       folded away by the Edits bar's own arrow, so both start G::subHeaderIndent in from
+       the panel edge -- arrow and title -- reading as its children. */
     levelBand = new QWidget(levelWrap);
     levelBand->setAttribute(Qt::WA_TranslucentBackground);
     levelBand->setCursor(Qt::PointingHandCursor);
     levelBand->installEventFilter(this);       // a band click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(levelBand);
-    hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
+    hb->setContentsMargins(G::subHeaderIndent, 3, G::headerBtnRightInset, 3);
     hb->setSpacing(0);
 
     levelCollapseBtn = new BarBtn();

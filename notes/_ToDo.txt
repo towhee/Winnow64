@@ -8,6 +8,8 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- Does it make sense to be able to select R and G and B rather than R or G or B?
+- Clear the develop copy/paste between sessions.
 - Info (I) is not persistent.
 - Does Winnow zoom account for the display setting in macos properly?
 - Lightroom has different white balance for some files

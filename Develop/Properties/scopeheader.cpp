@@ -10,6 +10,9 @@
 #include <QVBoxLayout>
 #include <QPainter>
 #include <QPixmap>
+#include <QIcon>
+#include <QEvent>
+#include <QMouseEvent>
 #include <QLinearGradient>
 #include <QTimer>
 
@@ -52,21 +55,37 @@ ScopeHeader::ScopeHeader(QWidget *parent) : QWidget(parent)
 
 void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
 {
-    /* "Edits [Global v] [+] [eye] [:]" -- the whole scope control on one line. It stands
+    /* "v Edits [Global v] [+] [eye] [:]" -- the whole scope control on one line. It stands
        in for a panel header band, so it carries the band's gradient (painted in
        paintEvent) and the trailing [eye] [:] pair, plus a [+] that promotes New mask out
        of the menu it would otherwise be buried in. The combo lists every scope; the pair
        acts on whichever it has selected.
-       NO collapse arrow: there is no scope list to hide, and the panel headers below
-       (Submasks, Basic, Color, ...) are always visible. */
+       The LEADING arrow folds the details below away -- the Mask panel and the whole
+       adjustment tree, headers and all -- the same 9px glyph every band in this dock
+       uses, sitting in the same gutter so the sub-headers it hides line up offset right
+       of it. */
     scopeBar = new QWidget(this);
     scopeBar->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *hb = new QHBoxLayout(scopeBar);
     hb->setContentsMargins(0, 3, G::headerBtnRightInset, 3);
     hb->setSpacing(0);
 
-    QLabel *barLabel = new QLabel(tr("Edits"), scopeBar);
+    /* Collapse arrow, 9px in the tree's gutter like RawPanel's and the Mask bands' --
+       the ONE control here that acts on the panel rather than on a scope, so it leads. */
+    barCollapseBtn = new BarBtn();
+    barCollapseBtn->setToolTip("Hide or show the edits below");
+    barCollapseBtn->setIconSize(QSize(9, 9));
+    barCollapseBtn->setFixedSize(9, 16);
+    barCollapseBtn->setStyleSheet("QToolButton { border: none; padding: 0;"
+                                  " background: transparent; }");
+    connect(barCollapseBtn, &BarBtn::clicked, this, [this]{ toggleEditsCollapsed(); });
+
+    barLabel = new QLabel(tr("Edits"), scopeBar);
     barLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
+    /* The caption toggles too, as a band click does everywhere else in this dock. Only
+       the caption: the rest of the bar is combo and buttons with their own jobs. */
+    barLabel->setCursor(Qt::PointingHandCursor);
+    barLabel->installEventFilter(this);
 
     scopeCombo = new QComboBox(scopeBar);
     scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -110,6 +129,8 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     barMenuBtn->setIconSize(QSize(16, 16));
     connect(barMenuBtn, &BarBtn::clicked, this, [this]{ showScopeMenu(); });
 
+    hb->addWidget(barCollapseBtn);
+    hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(barLabel);
     hb->addSpacing(G::headerBtnGap);
     hb->addWidget(scopeCombo, 1);
@@ -120,6 +141,46 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     hb->addSpacing(G::headerBtnGap);
     hb->addWidget(barMenuBtn);
     outer->addWidget(scopeBar);
+    updateEditsCollapseIcon();
+}
+
+void ScopeHeader::toggleEditsCollapsed()
+{
+    setEditsCollapsed(!editsCollapsed);
+    /* A USER fold only: setEditsCollapsed stays silent so a programmatic sync cannot loop
+       back through the owner. Deferred like every other emission here. */
+    const bool c = editsCollapsed;
+    QTimer::singleShot(0, this, [this, c]{ emit editsCollapseToggled(c); });
+}
+
+void ScopeHeader::setEditsCollapsed(bool c)
+{
+    /* Hide the DETAILS (the Mask panel and the adjustment tree), never the bar: the scope
+       combo and its actions have to stay reachable to unfold them again. */
+    editsCollapsed = c;
+    if (rowsContainer) rowsContainer->setVisible(!editsCollapsed);
+    updateEditsCollapseIcon();
+}
+
+void ScopeHeader::updateEditsCollapseIcon()
+{
+    if (!barCollapseBtn) return;
+    /* The tree's own branch arrows: open (down) when the details show, closed (right)
+       when they are hidden. */
+    const QString path = editsCollapsed ? ":/images/branch-closed-winnow.png"
+                                        : ":/images/branch-open-winnow.png";
+    barCollapseBtn->setIcon(QIcon(QPixmap(path)));
+}
+
+bool ScopeHeader::eventFilter(QObject *obj, QEvent *event)
+{
+    /* A click on the "Edits" caption folds the details, like a band click in every other
+       Develop panel. */
+    if (obj == barLabel && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *me = static_cast<QMouseEvent*>(event);
+        if (me->button() == Qt::LeftButton) { toggleEditsCollapsed(); return true; }
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 void ScopeHeader::updateScopeBar()
