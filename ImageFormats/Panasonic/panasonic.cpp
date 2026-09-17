@@ -398,9 +398,8 @@ bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         return (b >> (vbits & 7)) & ((1 << nbits) - 1);
     };
 
-    raw.width = W;
-    raw.height = H;
-    raw.cfa.assign(size_t(W) * size_t(H), 0);
+    /* Decode the whole sensor frame; the active-area crop follows below. */
+    std::vector<uint16_t> full(size_t(W) * size_t(H), 0);
     for (int row = 0; row < H; ++row) {
         int pred[2] = {0, 0}, nonz[2] = {0, 0}, sh = 0;
         for (int col = 0; col < W; ++col) {
@@ -417,9 +416,36 @@ bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
             } else if ((nonz[i & 1] = pana(8)) || i > 11) {
                 pred[i & 1] = (nonz[i & 1] << 4) | pana(4);
             }
-            raw.cfa[size_t(row) * W + col] = uint16_t(pred[i & 1] & 0xffff);
+            full[size_t(row) * W + col] = uint16_t(pred[i & 1] & 0xffff);
         }
     }
+
+    /* Crop to the active area (tags 0x04 SensorTopBorder, 0x05 SensorLeftBorder,
+       0x06 SensorBottomBorder, 0x07 SensorRightBorder; bottom/right are exclusive, as in
+       dcraw). The sensor frame is larger than the image -- the LX3 stores 3836x2538 for a
+       3776x2520 frame -- and the unused 52 columns on the right carry no image data, so
+       demosaicing and white-balancing them produced a bright noise stripe down the right
+       edge (and a thinner one along the bottom). */
+    int left   = t.contains(0x05) ? int(r.scalar(t[0x05])) : 0;
+    int top    = t.contains(0x04) ? int(r.scalar(t[0x04])) : 0;
+    int right  = t.contains(0x07) ? int(r.scalar(t[0x07])) : W;
+    int bottom = t.contains(0x06) ? int(r.scalar(t[0x06])) : H;
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    if (right > W) right = W;
+    if (bottom > H) bottom = H;
+    int cw = right - left, ch = bottom - top;
+    if (cw <= 0 || ch <= 0) { left = top = 0; cw = W; ch = H; }
+    /* Keep the crop origin even so the CFA phase from tag 0x09 (read below) still holds. */
+    if (left & 1) { ++left; --cw; }
+    if (top & 1)  { ++top;  --ch; }
+
+    raw.width = cw;
+    raw.height = ch;
+    raw.cfa.assign(size_t(cw) * size_t(ch), 0);
+    for (int y = 0; y < ch; ++y)
+        for (int x = 0; x < cw; ++x)
+            raw.cfa[size_t(y) * size_t(cw) + x] = full[size_t(top + y) * size_t(W) + (left + x)];
 
     /* Pattern (tag 0x09: 1=RGGB 2=GRBG 3=GBRG 4=BGGR), levels, WB, matrix. */
     switch (t.contains(0x09) ? int(r.scalar(t[0x09])) : 4) {

@@ -123,9 +123,8 @@ struct EditParams {
     float calBlueHue  = 0.0f, calBlueSat  = 0.0f;
 
     /* The VIEW TRANSFORM (the first row of the Basic panel) -- how scene-linear data is
-       mapped to a
-       displayable range. An OutputTransform::ViewTransform cast to int: 0 = Filmic (the
-       default look), 1 = AgX, 2 = None. Stored as an int for the same reason wbPreset
+       mapped to a displayable range. An OutputTransform::ViewTransform cast to int:
+       0 = None, 1 = Filmic, 2 = AgX. Stored as an int for the same reason wbPreset
        is: it rides the existing int machinery (sanitizeParams clamp, kIntFields, the
        preset round trip) instead of being the first non-scalar field in EditParams.
 
@@ -138,9 +137,35 @@ struct EditParams {
        "THE VIEW TRANSFORM" in notes/Documentation.txt.
 
        Values are a PUBLISHED FORMAT once written to a sidecar -- add freely, never
-       renumber. Identity is None (0): no tone mapping, which is what an untouched image
-       renders as and what Reset Basic restores. */
-    int   viewTransform = 0;
+       renumber. The IDENTITY is still None (0), and it has to be: a value of zero is
+       what "no tone mapping" means to every sidecar ever written.
+
+       THE DEFAULT IS NOT THE IDENTITY, which is the one place this field differs from
+       every other. A scene-referred raw is radiometrically linear and renders dark and
+       flat with no view transform -- measurably so: against Lightroom's Adobe Standard
+       rendering of the same file, an untransformed render's luminance spread is about
+       two thirds as wide (std 24 vs 36 of 255) and its midtone sits ~0.7 EV low. That
+       is not a neutral starting point, it is a broken one, and it is what an untouched
+       raw looked like while this defaulted to None.
+
+       Filmic is the default because it MATCHES: fitted against Lightroom's luminance
+       histogram on the same raw it lands within ~1 level of 255 across every percentile
+       (None is off by 6, AgX by 5). A raw therefore opens looking like the raw the rest
+       of the world renders, and None remains one click away for anyone who wants the
+       linear data.
+
+       WHY A PROFILE DOES NOT MAKE THIS REDUNDANT. A ProfileToneCurve would own the tone
+       mapping and suppress this (see DevelopProperties::profileSuppliesToneMapping and
+       OutputTransform::EffectiveView), but almost nothing carries one: every Adobe
+       Standard profile sampled on this machine has a HueSatMap and a LookTable and NO
+       tone curve, as does Winnow Standard. Lightroom supplies its own baseline curve in
+       exactly that case. This is Winnow's.
+
+       A JPEG IS UNAFFECTED whatever this says: OutputTransform forces None when
+       img.sceneReferred is false, since a display-referred file already carries its
+       camera's tone curve and mapping it again would tone-map twice. */
+    static constexpr int kDefaultViewTransform = 1;     // OutputTransform::ViewTransform::Filmic
+    int   viewTransform = kDefaultViewTransform;
 
     /*
         THE CAMERA PROFILE (the first row of the Basic panel) -- which characterisation of
@@ -416,7 +441,11 @@ struct EditParams {
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&
                calBlueHue == 0.0f && calBlueSat == 0.0f &&
-               viewTransform == 0 && cameraProfile.isEmpty() &&
+               /* Against the DEFAULT, not against zero: the default view transform is
+                  Filmic, not the identity None, so a literal 0 here would read every
+                  untouched raw as edited (and every raw explicitly set to None as
+                  untouched). Same rule as denoiseLuma/denoiseChroma below. */
+               viewTransform == kDefaultViewTransform && cameraProfile.isEmpty() &&
                hue == 0.0f && saturation == 0.0f && vibrance == 0.0f && luminance == 0.0f &&
                gradeShadowSat == 0.0f && gradeShadowLum == 0.0f &&
                gradeMidSat == 0.0f && gradeMidLum == 0.0f &&

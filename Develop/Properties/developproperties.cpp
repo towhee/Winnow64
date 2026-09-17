@@ -4523,16 +4523,33 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
 
     QComboBox *combo = new QComboBox;
     combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    /* None FIRST: it is the identity, what Reset Basic restores and what an untouched
-       image renders as, so it heads the list the way every other adjustment's identity
-       sits at the start of its range. */
-    combo->addItem("None", int(OutputTransform::ViewTransform::None));
-    combo->addItem("Filmic", int(OutputTransform::ViewTransform::Filmic));
-    /* LABELS, not identifiers. The enum, the sidecar key and the constants all stay
-       "AgX" -- it is the published name of the transform and what the maths implements.
-       The USER-FACING label says what it does instead, because "AgX" ("silver halide")
-       is guessable by nobody. The help page names AgX so the term stays searchable. */
+    /*
+        THE TWO RENDERINGS FIRST, THEN A SEPARATOR, THEN None.
+
+        This does NOT follow the usual "identity heads the range" rule, and the exception
+        is the point. Every other adjustment's identity is a neutral starting position; this
+        one's is unrendered scene-linear data, which is dark and flat (see
+        EditParams::kDefaultViewTransform). Heading the list with it put the one entry
+        nobody wants where the eye lands first and buried the default below it.
+
+        So the list is ordered by what a user is actually choosing between -- two ways of
+        rolling highlights off, differing by one word because that is their real
+        relationship -- with None set apart by the separator as what it is: not a third
+        rendering but the absence of one, for building a look from scratch.
+    */
+    /* LABELS, not identifiers. The enum, the sidecar key and every constant stay "Filmic"
+       and "AgX" -- those are the published names of the transforms and what the maths
+       implements. The USER-FACING labels say what the options DO.
+
+       "Filmic" had to go once it became the default: it reads as a creative choice, a film
+       emulation to opt into, when it is the plain rendering that lands where every other
+       raw developer lands. Someone looking for the ordinary picture would not have picked
+       it. "AgX" is short for silver halide and is guessable by nobody. The help page names
+       both so the terms stay searchable for anyone who has read about them elsewhere. */
+    combo->addItem("Standard roll-off", int(OutputTransform::ViewTransform::Filmic));
     combo->addItem("Soft roll-off", int(OutputTransform::ViewTransform::AgX));
+    combo->insertSeparator(combo->count());
+    combo->addItem("None", int(OutputTransform::ViewTransform::None));
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
             [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
     viewTransformCombo = combo;
@@ -4590,12 +4607,14 @@ void DevelopProperties::setViewTransform(int vt)
 }
 
 /* The label for a stored value, shared by the combo and the history entry so the two can
-   never disagree. An unknown value reads as the default rather than as a number. */
+   never disagree. An unknown value reads as the IDENTITY rather than as a number, which is
+   also what OutputTransform::ViewFromInt renders it as -- so the history says what the
+   image actually shows. */
 QString DevelopProperties::viewTransformName(int vt)
 {
     switch (static_cast<OutputTransform::ViewTransform>(vt)) {
     case OutputTransform::ViewTransform::AgX:    return "Soft roll-off";
-    case OutputTransform::ViewTransform::Filmic: return "Filmic";
+    case OutputTransform::ViewTransform::Filmic: return "Standard roll-off";
     default: break;
     }
     return "None";
