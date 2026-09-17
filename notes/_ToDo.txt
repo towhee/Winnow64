@@ -8,6 +8,9 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- When Winnow first opens, and a folder is selected in Library workspace, from bookmarks,
+  the first image is not always shown in imageView. Clicking on the thumbnail shows the
+  image.
 - Does it make sense to be able to select R and G and B rather than R or G or B?
 - Clear the develop copy/paste between sessions.
 - Info (I) is not persistent.
