@@ -3998,9 +3998,12 @@ void DevelopProperties::addCurves()
         QWidget *rw = new QWidget;
         rw->setAttribute(Qt::WA_TranslucentBackground);
         QHBoxLayout *hb = new QHBoxLayout(rw);
-        /* Inset by the plot's own margin so the handles sit under the curve's x-axis. */
-        hb->setContentsMargins(QTreeView::indentation() + 4 + CurveEditor::kPlotMargin, 0,
-                               CurveEditor::kPlotMargin, 0);
+        /* Inset by the plot's own margin, and by NOTHING else, so the handles sit under
+           the curve's x-axis: this row and the plot are spanned rows at the same tree
+           level, so they get the same cell and are centred together in the panel
+           (updateEditorGeometries). The caption indent the other Curves rows carry was
+           here too and pushed the handles 19px right of the axis they belong to. */
+        hb->setContentsMargins(CurveEditor::kPlotMargin, 0, CurveEditor::kPlotMargin, 0);
         hb->setSpacing(0);
         ToneRegionSlider *ts = new ToneRegionSlider(rw);
         ts->setToolTip("Split the tonal range into blacks | shadows | highlights | "
@@ -4010,6 +4013,7 @@ void DevelopProperties::addCurves()
         connect(ts, &ToneRegionSlider::valueChanged,
                 this, &DevelopProperties::onToneSplitsChanged);
         hb->addWidget(ts);
+        curveSplitsRow = rw;         // centred with the plot above it
         setIndexWidget(splitIdx, rw);
     }
 
@@ -4039,6 +4043,36 @@ void DevelopProperties::applyCurveMode()
 /* Point-curve drag -> the active scope's curve params, then preview. commit marks the
    drag-release, when the debounced sidecar write is scheduled (live moves only render;
    dirty is set every move so navigating away still persists). */
+void DevelopProperties::updateEditorGeometries()
+{
+/*
+    Centre the Curves plot, and the split handles under it, in the PANEL rather than in
+    their tree cell.
+
+    A spanned row's index widget starts AFTER the tree indentation -- two levels' worth
+    (2 x 15px) for a row one level under a section header -- so the plot sat with a 30px
+    gap down its left side and none at all on its right. On a row of sliders that is
+    invisible; on the one full-width GRAPHIC in the panel it reads as off-centre. The
+    widget cannot just be given a negative left margin: it would be clipped to its cell.
+    So the geometry the base class computes is nudged here instead -- the WIDTH the view
+    handed it is kept and only the x moves, which is why the plot does not shrink.
+
+    This is the right hook rather than resizeEvent: it is where the base class re-lays out
+    every persistent index widget, so it covers a resize, a scroll and an expand alike,
+    and nothing can move the widgets back behind us afterwards.
+*/
+    PropertyEditor::updateEditorGeometries();
+    /* Same cell, so both get the same width and land on the same x -- which is what keeps
+       the handles under the curve's x-axis. */
+    const auto centre = [this](QWidget *w) {
+        if (!w || !w->isVisible()) return;
+        const int x = (viewport()->width() - w->width()) / 2;
+        if (x > 0 && x != w->x()) w->move(x, w->y());
+    };
+    centre(curveEditor);
+    centre(curveSplitsRow);
+}
+
 /* ---- Curves pointer sample ---------------------------------------------------------
    See the header for the contract. The marker is driven by MW from the hover sample it
    already takes for the scopes readout, so there is no mode to arm on the canvas and
