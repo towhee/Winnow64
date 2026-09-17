@@ -357,6 +357,9 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     /* A width change can re-wrap delegate rows, changing the content height. */
     void resizeEvent(QResizeEvent *event) override;
+    /* Centre the Curves plot (and the split handles under it) in the PANEL rather than in
+       their tree cell -- see the definition. */
+    void updateEditorGeometries() override;
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -795,6 +798,9 @@ private:
     QPointer<ToneRegionSlider> curveToneSlider;
     QPointer<QComboBox> curveChannelCombo;
     QPointer<QWidget> curveChannelRow;      // hidden in Parametric mode
+    /* The row widget holding curveToneSlider, centred in the panel alongside the plot
+       (updateEditorGeometries) so the handles stay under the curve's x-axis. */
+    QPointer<QWidget> curveSplitsRow;
     /* The pointer-sample toggle (see toggleCurveSampler). The BUTTON is rebuilt with the
        tree, the armed STATE outlives it -- addCurves restores the new button from it. */
     QPointer<BarBtn> curveSamplerBtn;

@@ -8,6 +8,7 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- Info (I) is not persistent.
 - Does Winnow zoom account for the display setting in macos properly?
 - Lightroom has different white balance for some files
 - /Users/roryhill/Pictures/_test2/2020-04-25_2013.JPG thumb not rotated
