@@ -69,6 +69,18 @@ public:
     void setScopeData(const ScopeData &d);
     void clearScopeData();
 
+    /* Pointer sample: the pixel under the cursor on the image, marked on the plot while
+       the Curves panel's pointer toggle is armed (DevelopProperties::toggleCurveSampler).
+       r/g/b are the DISPLAYED 0..255 components -- the same pixels the histogram behind
+       the plot is built from (both come from MW's developShownImage), so the marker lands
+       exactly where that pixel sits in that histogram. Which component is read follows the
+       channel being edited: R / G / B in Point mode, luma otherwise.
+
+       clearSample() when the pointer leaves the image or the toggle is turned off; a null
+       sentinel is not available because (0,0,0) is a legitimate pixel. */
+    void setSample(int r, int g, int b);
+    void clearSample();
+
     QSize sizeHint() const override;
 
 signals:
@@ -96,6 +108,11 @@ private:
     ScopeData hist;
     bool hasHist = false;
 
+    /* The pointer sample (see setSample), held as the raw components so the marker
+       follows a channel change without the sample having to be re-sent. */
+    int  sampleRgb[3] = {0, 0, 0};
+    bool hasSample = false;
+
     /* Point mode drag state. */
     int dragPt   = -1;
     int hoverPt  = -1;
@@ -121,6 +138,9 @@ private:
     /* Sample the curve currently being edited (Point mode) or the parametric shape
        (Parametric mode) into a polyline across the plot. */
     QPolygonF curvePolyline() const;
+    double curveAt(double x) const;                // the live curve's y at x (0..1)
+    double sampleTone() const;                     // the sample as a 0..1 plot x
+    void drawSampleMarker(QPainter &p);            // the pointer sample on the plot
     void insertPointAt(double x);                  // add a point on the live curve
     void resetChannel();                           // back to the diagonal
 

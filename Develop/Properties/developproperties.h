@@ -482,6 +482,24 @@ public slots:
     void toggleWbDropper();         // "W" in Develop mode, and the row's dropper button
     bool isWbDropperActive() const { return wbDropperActive; }
 
+    /* ---- Curves panel pointer sample ---------------------------------------------
+       The Curves counterpart of the WB dropper: a toggle in the Curves panel that, while
+       armed, marks the pixel under the mouse pointer on the tone curve. Unlike the
+       dropper it takes nothing and changes nothing -- it is a readout, so it does NOT
+       arm a mode in ImageView, does not own the click, and stays armed until it is
+       turned off. MW already reports the hovered pixel for the scopes' readout marker
+       (MW::onImageCursorPos, from ImageView::cursorImagePos); setCurveSample is fed from
+       that same sample, and clearCurveSample from cursorLeftImage.
+
+       wantsCurveSample gates it: armed AND the plot actually on screen (the panel can be
+       collapsed or the Edits tree scrolled elsewhere), so a hover costs nothing when
+       there is nothing to mark. */
+    void toggleCurveSampler();      // the Curves panel's pointer button
+    bool isCurveSamplerActive() const { return curveSamplerActive; }
+    bool wantsCurveSample() const;
+    void setCurveSample(int r, int g, int b);
+    void clearCurveSample();
+
     /* ---- Detail panel 1:1 preview -------------------------------------------------
        The square window at the head of the Detail section showing one patch of the image
        at full resolution, so sharpening and noise reduction can be judged without zooming
@@ -717,6 +735,10 @@ private:
        ready in this call -- a raw decode is asynchronous. */
     std::shared_ptr<const WorkingImage> ensureWorkingImage();
     static QIcon dropperIcon(bool armed);   // drawn, not a resource
+    /* The Curves pointer toggle's glyph, drawn for the same reasons dropperIcon is: a
+       curve with a crosshair sitting on it. */
+    static QIcon curveSamplerIcon(bool armed);
+    void setCurveSamplerActive(bool on);
     QPointer<QComboBox> wbCombo;
     QPointer<QComboBox> viewTransformCombo;
     /* Shown IN PLACE of the combo when the selected camera profile brings its own tone
@@ -773,6 +795,10 @@ private:
     QPointer<ToneRegionSlider> curveToneSlider;
     QPointer<QComboBox> curveChannelCombo;
     QPointer<QWidget> curveChannelRow;      // hidden in Parametric mode
+    /* The pointer-sample toggle (see toggleCurveSampler). The BUTTON is rebuilt with the
+       tree, the armed STATE outlives it -- addCurves restores the new button from it. */
+    QPointer<BarBtn> curveSamplerBtn;
+    bool curveSamplerActive = false;
     /* 0 = Parametric, 1 = Point. UI state, not a param. */
     int  curveModeIndex = 0;
     /* The band whose Basic caption was last flashed, so a drag flashes ONCE rather than

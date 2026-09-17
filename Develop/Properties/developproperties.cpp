@@ -17,6 +17,7 @@
 #include "Develop/workingimagecache.h"
 #include "Dialogs/savedeveloppresetdlg.h"
 #include <QFileInfo>
+#include <QPainterPath>
 #include <QRegularExpression>
 #include <QVariantAnimation>
 #include <algorithm>
@@ -3217,6 +3218,44 @@ QIcon DevelopProperties::detailTargetIcon(bool armed)
     return QIcon(pm);
 }
 
+QIcon DevelopProperties::curveSamplerIcon(bool armed)
+{
+/*
+    The Curves panel's pointer toggle, drawn rather than shipped for the same reasons
+    dropperIcon is (see its note, including the LOGICAL-coordinates warning): a rising
+    curve with a crosshair sitting on it -- "where the pointer is, on the curve", which is
+    exactly the marker CurveEditor::drawSampleMarker puts on the plot.
+
+    ARMED goes SOLID in the accent colour rather than to a ghost outline. The dropper
+    hollows out because the tool leaves the button and becomes the cursor; this one does
+    not -- the pointer is the ordinary pointer and the button keeps standing for a readout
+    that is switched on.
+*/
+    const qreal dpr = 2.0;
+    const int S = 16;
+    QPixmap pm(int(S * dpr), int(S * dpr));
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    if (!armed) p.setOpacity(G::iconOpacity);
+    const QColor c = armed ? QColor(G::appleBlue.red(), G::appleBlue.green(),
+                                    G::appleBlue.blue(), 230)
+                           : QColor(225, 225, 225);
+    p.setPen(QPen(c, 1.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.setBrush(Qt::NoBrush);
+    QPainterPath curve;                                 // a gentle S, bottom-left to top-right
+    curve.moveTo(1.6, 14.4);
+    curve.cubicTo(6.0, 13.6, 7.0, 3.2, 14.4, 1.6);
+    p.drawPath(curve);
+    const QPointF hit(8.2, 8.0);                        // the sample, sitting on the curve
+    p.drawLine(QPointF(hit.x(), 3.2), QPointF(hit.x(), 14.4));
+    p.setBrush(c);
+    p.drawEllipse(hit, 1.9, 1.9);
+    p.end();
+    return QIcon(pm);
+}
+
 void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
 {
 /*
@@ -3859,6 +3898,22 @@ void DevelopProperties::addCurves()
         connect(chan, &QComboBox::currentIndexChanged, this, [this](int idx){
             if (curveEditor) curveEditor->setChannel(idx);
         });
+        /* The pointer toggle, ahead of the combos: it applies to the plot as a whole,
+           whichever mode and channel are showing. A BarBtn like the WB dropper, so the
+           armed chrome (the accent border setActive draws) is the same cue in both
+           places. Not checkable -- BarBtn is not -- so the click routes through
+           toggleCurveSampler, which owns the state. */
+        BarBtn *samp = new BarBtn();
+        samp->setIcon(curveSamplerIcon(curveSamplerActive));
+        samp->setIconSize(QSize(16, 16));
+        samp->setToolTip("Show the pixel under the mouse pointer on the curve.\n"
+                         "While this is on, hovering the image marks that pixel's tone "
+                         "on the plot.");
+        samp->setActive(curveSamplerActive);    // the tree rebuilds; the armed state does not
+        connect(samp, &BarBtn::clicked, this, &DevelopProperties::toggleCurveSampler);
+        curveSamplerBtn = samp;
+
+        hb->addWidget(samp);
         hb->addWidget(mode);
         hb->addWidget(chan);
         hb->addStretch(1);
@@ -3984,6 +4039,44 @@ void DevelopProperties::applyCurveMode()
 /* Point-curve drag -> the active scope's curve params, then preview. commit marks the
    drag-release, when the debounced sidecar write is scheduled (live moves only render;
    dirty is set every move so navigating away still persists). */
+/* ---- Curves pointer sample ---------------------------------------------------------
+   See the header for the contract. The marker is driven by MW from the hover sample it
+   already takes for the scopes readout, so there is no mode to arm on the canvas and
+   nothing here to cancel on an image change -- a new image simply reports new pixels. */
+
+bool DevelopProperties::wantsCurveSample() const
+{
+    return curveSamplerActive && curveEditor && curveEditor->isVisible();
+}
+
+void DevelopProperties::setCurveSamplerActive(bool on)
+{
+    if (curveSamplerActive == on) return;
+    curveSamplerActive = on;
+    if (curveSamplerBtn) {
+        curveSamplerBtn->setActive(on);
+        curveSamplerBtn->setIcon(curveSamplerIcon(on));
+    }
+    /* Switching off leaves no stale marker sitting on the plot. */
+    if (!on && curveEditor) curveEditor->clearSample();
+}
+
+void DevelopProperties::toggleCurveSampler()
+{
+    setCurveSamplerActive(!curveSamplerActive);
+}
+
+void DevelopProperties::setCurveSample(int r, int g, int b)
+{
+    if (!wantsCurveSample()) return;
+    curveEditor->setSample(r, g, b);
+}
+
+void DevelopProperties::clearCurveSample()
+{
+    if (curveEditor) curveEditor->clearSample();
+}
+
 void DevelopProperties::onCurveChanged(bool commit)
 {
     if (G::isLogger) G::log("DevelopProperties::onCurveChanged");
@@ -5668,6 +5761,10 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        previews now, while the frame still exists. */
     topUpDevPreviews(currentImagePath);
     cancelWbDropper();                  // an armed dropper does not follow the image
+    /* The pointer marker DOES follow the image -- the toggle is a view preference, like
+       the curve mode -- but the pixel it is marking does not: drop the stale sample and
+       wait for the next hover. */
+    clearCurveSample();
     /* The new image's characterisation has not arrived yet (the raw decode is async and
        starts after this), so the WB row is about to resolve against an invalid cam.
        onWorkingImageReady re-resolves it when the decode lands. */

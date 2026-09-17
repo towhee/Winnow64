@@ -2780,8 +2780,11 @@ void MW::createDevelopDock()
 
     /* Loupe cursor readout: hovering the image marks the pixel's value on the scopes. */
     connect(imageView, &ImageView::cursorImagePos, this, &MW::onImageCursorPos);
-    connect(imageView, &ImageView::cursorLeftImage, this,
-            [this]{ if (scopesView) scopesView->clearMarker(); });
+    connect(imageView, &ImageView::cursorLeftImage, this, [this]{
+        if (scopesView) scopesView->clearMarker();
+        /* The Curves panel's pointer marker rides on the same hover sample. */
+        if (developProperties) developProperties->clearCurveSample();
+    });
 
     /* Vectorscope zoom + skin-tone line (right-click menu): restore saved choices and persist. */
     scopesView->setVectorscopeZoom(settings->value("Develop/vectorscopeZoom", 1.0).toDouble());

@@ -4305,3 +4305,5 @@ None (no change)
 
 Standard roll-off should be the default.  Lable change only.
 
+In develop, add a pointer toggle (similar to WB) that when on  and the Curves panel is open and the mouse pointer is over the image, shows the pixel sample location on the
+  curve.

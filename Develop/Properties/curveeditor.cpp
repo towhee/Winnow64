@@ -90,6 +90,25 @@ void CurveEditor::clearScopeData()
     update();
 }
 
+void CurveEditor::setSample(int r, int g, int b)
+{
+    const int c[3] = {qBound(0, r, 255), qBound(0, g, 255), qBound(0, b, 255)};
+    /* Clamp BEFORE comparing: an out-of-range component would otherwise never equal what
+       was stored, and every hover over the same pixel would repaint. */
+    if (hasSample && sampleRgb[0] == c[0] && sampleRgb[1] == c[1] && sampleRgb[2] == c[2])
+        return;
+    std::copy(std::begin(c), std::end(c), std::begin(sampleRgb));
+    hasSample = true;
+    update();
+}
+
+void CurveEditor::clearSample()
+{
+    if (!hasSample) return;
+    hasSample = false;
+    update();
+}
+
 /* ---- geometry ---------------------------------------------------------------------- */
 
 QRect CurveEditor::plotRect() const
@@ -196,6 +215,82 @@ QPolygonF CurveEditor::curvePolyline() const
         poly << toPlot(x, qBound(0.0f, sp.eval(static_cast<float>(x)), 1.0f));
     }
     return poly;
+}
+
+double CurveEditor::curveAt(double x) const
+{
+    x = qBound(0.0, x, 1.0);
+    if (curMode == Parametric) {
+        /* The same table curvePolyline draws, interpolated -- so the marker sits ON the
+           drawn line rather than near it. */
+        float ys[kSamples];
+        Develop::ParametricCurve(prm, ys, kSamples);
+        const double t = x * (kSamples - 1);
+        const int i = qBound(0, static_cast<int>(t), kSamples - 2);
+        const double f = t - i;
+        return qBound(0.0, ys[i] * (1.0 - f) + ys[i + 1] * f, 1.0);
+    }
+    ToneCurve::Spline sp;
+    sp.build(px(), py(), pointCount());
+    return qBound(0.0f, sp.eval(static_cast<float>(x)), 1.0f);
+}
+
+double CurveEditor::sampleTone() const
+{
+/*
+    Which component of the sampled pixel the marker stands for. In Point mode on a single
+    channel that channel IS the curve's input, so read it directly; otherwise (the RGB
+    composite, and Parametric, which has no channels) use Rec.709 luma -- the same
+    quantity the tone sliders move.
+*/
+    if (curMode == Point && curChannel >= 1 && curChannel <= 3)
+        return sampleRgb[curChannel - 1] / 255.0;
+    return qBound(0.0, (0.2126 * sampleRgb[0] + 0.7152 * sampleRgb[1]
+                        + 0.0722 * sampleRgb[2]) / 255.0, 1.0);
+}
+
+void CurveEditor::drawSampleMarker(QPainter &p)
+{
+/*
+    Where the pixel under the pointer lands on the plot: a vertical line at its tone, a dot
+    where that line meets the curve, and the tone as a percentage.
+
+    The x is the tone of the DISPLAYED pixel, which is the axis the histogram behind the
+    plot is also drawn on -- so the line falls exactly on that pixel's bin in the backdrop.
+    It is therefore "this tone is here", not "this pixel entered the curve here": on a
+    curve that is far from the diagonal the input that PRODUCED this pixel sits elsewhere.
+    Reading it off the shared display-referred axis is the only version that matches what
+    is drawn behind it, and it is what the user is pointing at.
+*/
+    const QRect r = plotRect();
+    const double x = sampleTone();
+    const QPointF onCurve = toPlot(x, curveAt(x));
+    const int lx = qRound(toPlot(x, 0.0).x());
+
+    p.setRenderHint(QPainter::Antialiasing, false);
+    p.setPen(QPen(QColor(120, 200, 195, 170), 1, Qt::SolidLine));
+    p.drawLine(lx, r.top(), lx, r.bottom());
+
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(QPen(QColor(20, 20, 20), 1));
+    p.setBrush(QColor(120, 200, 195));
+    p.drawEllipse(onCurve, kPtR - 1, kPtR - 1);
+
+    /* Readout along the BOTTOM: the parametric band label owns the top of the plot, and
+       the two are shown together whenever the pointer is over the image mid-drag. */
+    const QString txt = QString::number(qRound(x * 100.0)) + "%";
+    const QFontMetrics fm(p.font());
+    const int w = fm.horizontalAdvance(txt) + 8;
+    const int h = fm.height() + 2;
+    int bx = lx + 4;
+    if (bx + w > r.right() - 2) bx = lx - 4 - w;     // flip at the right edge
+    bx = qBound(r.left() + 2, bx, qMax(r.left() + 2, r.right() - 2 - w));
+    const QRect box(bx, r.bottom() - 2 - h, w, h);
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(20, 20, 20, 200));             // legible over the histogram
+    p.drawRoundedRect(box, 3, 3);
+    p.setPen(QColor(200, 235, 232));
+    p.drawText(box, Qt::AlignCenter, txt);
 }
 
 void CurveEditor::insertPointAt(double x)
@@ -470,6 +565,10 @@ void CurveEditor::paintEvent(QPaintEvent *)
             p.drawText(box.left() + 4 + wMain, ty, tag);
         }
     }
+
+    /* The pointer sample, over everything but the control points (which are draggable, so
+       they stay on top of a passive marker). */
+    if (hasSample) drawSampleMarker(p);
 
     if (curMode != Point) return;
 

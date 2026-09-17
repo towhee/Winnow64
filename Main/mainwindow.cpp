@@ -12437,16 +12437,30 @@ void MW::onImageCursorPos(double xFraction, double yFraction)
     The loupe cursor is at (xFraction, yFraction) of the displayed image. Sample that one pixel
     from the cached shown QImage (O(1)) and drive the scopes' readout marker. Cheap no-op while
     the scopes are hidden or no image is shown.
+
+    TWO consumers of the one sample, gated separately: the scopes strip, and the Curves
+    panel's plot when its pointer toggle is armed (DevelopProperties::wantsCurveSample).
+    Separately because either can be on with the other hidden -- the strip cycles away
+    with "G", and the Curves panel is a section of the Edits tree. Both read the same
+    developShownImage the curve plot's backdrop histogram is built from, which is what
+    makes the marker land on that pixel's bin in it.
 */
-    if (!scopesView || !developScopesVisible) return;
-    if (developShownImage.isNull()) { scopesView->clearMarker(); return; }
+    const bool wantStrip = scopesView && developScopesVisible;
+    const bool wantCurve = developProperties && developProperties->wantsCurveSample();
+    if (!wantStrip && !wantCurve) return;
+    if (developShownImage.isNull()) {
+        if (wantStrip) scopesView->clearMarker();
+        if (wantCurve) developProperties->clearCurveSample();
+        return;
+    }
 
     const int x = qBound(0, static_cast<int>(xFraction * developShownImage.width()),
                          developShownImage.width() - 1);
     const int y = qBound(0, static_cast<int>(yFraction * developShownImage.height()),
                          developShownImage.height() - 1);
     const QRgb p = developShownImage.pixel(x, y);
-    scopesView->setMarker(qRed(p), qGreen(p), qBlue(p));
+    if (wantStrip) scopesView->setMarker(qRed(p), qGreen(p), qBlue(p));
+    if (wantCurve) developProperties->setCurveSample(qRed(p), qGreen(p), qBlue(p));
 }
 
 bool MW::isValidPath(QString &path)
