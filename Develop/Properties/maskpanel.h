@@ -122,8 +122,9 @@ private:
     void buildUi();
     void buildMaskLevel(QVBoxLayout *outer);   // the "Mask" band + its Edge/Halo rows
     void refreshCommitBtn();               // label + cancel visibility for the state
-    void syncAttrVisible();                // attrShown AND the list is not collapsed
+    void syncAttrVisible();                // attrShown, list not collapsed, mask not folded
     void syncLevelVisible();               // levelShown, and the band's own collapse
+    bool maskFolded() const;               // the "Mask" band is on screen and closed
     void toggleLevelCollapsed();
     void updateLevelCollapseIcon();
     void showLevelMenu();                  // Mask band [:]: reset, help
