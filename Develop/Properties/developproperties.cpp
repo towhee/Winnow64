@@ -71,8 +71,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        section, ending in a divider) was expanded before any folder was loaded: every later
        rebuild ran with the metrics set, so it only ever bit the as-started tree. */
     dividerHeight = 5;
-    const int c = G::backgroundShade + 20;
-    divColor = QColor(c,c,c);
+    divColor = G::groupSeparatorColor();
 
     buildTree();        // active scope's top items + Basic / Color / Effects
 
@@ -138,6 +137,13 @@ void DevelopProperties::initialize()
     setSolo(setting->value("Develop/isSolo", false).toBool());
     setIndentation(10);
     setAlternatingRowColors(false);
+    /* Fill every NON-header row with the subpanel content background (the delegate's
+       valueRowBackground = G::panelContentBg), so the Edits contents read as a lifted
+       surface under the header bands -- the same lift the Raw, Transform and scopes
+       panels paint. The base class leaves this true, which skips the fill and leaves the
+       rows on the plain dock background. Headers are unaffected: they paint their own
+       gradient band. */
+    propertyDelegate->isAlternatingRows = false;
     setMouseTracking(false);
     setHeaderHidden(true);
     ignoreFontSizeChangeSignals = false;
@@ -2971,7 +2977,7 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
     QPainter p(viewport());
     const int ruleY = bottom + kBlockCloseGap;
     /* Close the block: the same separator every Develop panel carries along its bottom
-       edge (G::panelBorderHeight in G::tabWidgetBorderColor), just under the last row --
+       edge (G::panelBorderHeight in G::panelSeparatorColor), just under the last row --
        Effects is the last section, so this is the Effects panel's bottom border. Only
        when there is empty dock below it -- if the rows fill or overflow the viewport,
        the panel edge already ends the block and a rule pinned to the last visible row
@@ -2979,7 +2985,7 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        band sizeHint reserves for this rule, so it always draws. */
     if (fitToContents || ruleY < viewport()->height() - G::panelBorderHeight) {
         p.fillRect(0, ruleY, viewport()->width(), G::panelBorderHeight,
-                   G::tabWidgetBorderColor);
+                   G::panelSeparatorColor());
     }
 }
 
@@ -3035,11 +3041,12 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
     }
     addItem(i);
     /* Offset under the Edits bar: the bar's arrow folds these sections away, so they are
-       its children and sit G::subHeaderIndent right of it, arrow and title (the delegate
+       its children and sit G::subHeaderIndent right of it, arrow and title, on top of the
+       G::headerLeftInset every header in the dock clears the panel edge by (the delegate
        reads UR_ExtraIndent on the header caption and shifts both; 0 = flush). Only the
        header content shifts -- its child rows keep their own indentation, so the sliders
        always keep their full width. */
-    model->setData(capIdx, QVariant(G::subHeaderIndent), UR_ExtraIndent);
+    model->setData(capIdx, QVariant(G::headerLeftInset + G::subHeaderIndent), UR_ExtraIndent);
 
     /* A plain spacer (no rule) as the section's FIRST child, so the first row does not
        butt up against the header band -- the same height as the group dividers inside the
@@ -3300,6 +3307,7 @@ void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
         chb->setContentsMargins(0, 0, 0, 0);
         chb->setSpacing(6);
         QLabel *lbl = new QLabel("1:1");
+        lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));  // no opaque slab
         lbl->setAttribute(Qt::WA_TransparentForMouseEvents);   // clicks reach the tree
         BarBtn *tgt = new BarBtn();
         tgt->setIcon(detailTargetIcon(false));
@@ -3455,6 +3463,10 @@ void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
         chb->setContentsMargins(0, 0, 0, 0);
         chb->setSpacing(6);
         QLabel *lbl = new QLabel("WB");
+        /* Transparent, like every caption the delegate draws: under the app stylesheet a
+           bare QLabel fills its background opaquely, which paints a dark slab over the
+           row's lifted background (G::panelContentBg). */
+        lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
         /* Let clicks fall through to the tree so mouseDoubleClickEvent sees them (double
            click on the row = back to As shot). Set on the LABEL only: the attribute also
            covers a widget's children, so on the cell it would kill the dropper too. */
@@ -3953,6 +3965,7 @@ void DevelopProperties::addCurves()
         hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
         hb->setSpacing(0);
         QLabel *note = new QLabel("Bands edit the Basic tone sliders.");
+        note->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
         note->setEnabled(false);                     // dim: it is a caption, not a control
         note->setAttribute(Qt::WA_TransparentForMouseEvents);
         hb->addWidget(note);
@@ -4081,6 +4094,10 @@ void DevelopProperties::updateEditorGeometries()
     };
     centre(curveEditor);
     centre(curveSplitsRow);
+    /* The Detail 1:1 preview is the same shape of row -- a full-width spanned graphic --
+       and was left hard against the panel's right edge with the tree indentation all on
+       its left. Centring gives it the same clear margin on both sides as the curve plot. */
+    centre(detailPreview);
 }
 
 /* ---- Curves pointer sample ---------------------------------------------------------
@@ -4452,6 +4469,7 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
             fix for that one is a setting the user can change.
         */
         QLabel *why = new QLabel(raw ? "Apple decoder" : "raw only");
+        why->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
         why->setEnabled(false);
         why->setAttribute(Qt::WA_TransparentForMouseEvents);
         vhb->addWidget(why);
@@ -4718,6 +4736,7 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
         /* The REASON, in the value cell where the control would have been -- the rule is
            greyed control + brief inline reason, never a popup after the fact. */
         QLabel *why = new QLabel("raw only");
+        why->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
         why->setEnabled(false);
         why->setAttribute(Qt::WA_TransparentForMouseEvents);
         vhb->addWidget(why);
@@ -4765,6 +4784,7 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
        the PROFILE rather than with the file -- so the label is built here and shown by
        refreshViewTransformRow, instead of being chosen once at build time. */
     QLabel *why = new QLabel("set by the profile");
+    why->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
     why->setEnabled(false);
     why->setAttribute(Qt::WA_TransparentForMouseEvents);
     why->hide();
@@ -5308,6 +5328,11 @@ void DevelopProperties::addDetail()
     /* The 1:1 preview FIRST, as Lightroom has it: everything below is judged in it, and
        both halves of the panel (sharpening and noise reduction) need it. */
     addDetailPreviewRow(parIdx);
+    /* A plain spacer (no rule) between the preview and the first slider: the graphic
+       otherwise butts straight up against the Sharpening row. Same idiom as the spacer
+       under every section header (addHeader). */
+    addDivider(dividerHeight, 0, Qt::transparent, parIdx, "DetailHeader",
+               "DetailPreviewSpacer");
 
     /* Sharpening: capture sharpening, an unsharp mask on luminance (see Develop::Sharpen
        and Develop/sharpen.h). Amount is the strength (0..150 -> 0..1.5); Radius, Detail

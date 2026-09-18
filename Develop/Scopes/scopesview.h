@@ -74,7 +74,7 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
     /* Keep the floating [X] pinned to the top right corner. */
     void resizeEvent(QResizeEvent *event) override;
-    /* Separator rule (G::panelBorderHeight in G::tabWidgetBorderColor) across the bottom
+    /* Separator rule (G::panelBorderHeight in G::panelSeparatorColor) across the bottom
        edge, like every other Develop panel. */
     void paintEvent(QPaintEvent *event) override;
 

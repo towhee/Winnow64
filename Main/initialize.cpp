@@ -2556,11 +2556,11 @@ void MW::createDevelopDock()
     developActionRow = new QWidget(developContainer);
     developActionRow->setObjectName("developActionRow");
     /* The same bottom separator every Develop panel carries (G::panelBorderHeight in
-       G::tabWidgetBorderColor); the ID selector keeps it off the child buttons and the
+       G::panelSeparatorColor); the ID selector keeps it off the child buttons and the
        extra bottom margin reserves the rule's space. */
     developActionRow->setStyleSheet(
         QString("QWidget#developActionRow { border-bottom: %1px solid %2; }")
-            .arg(G::panelBorderHeight).arg(G::tabWidgetBorderColor.name()));
+            .arg(G::panelBorderHeight).arg(G::panelSeparatorColor().name()));
     QHBoxLayout *developActionLayout = new QHBoxLayout(developActionRow);
     developActionLayout->setContentsMargins(0, 0, 0, 8 + G::panelBorderHeight);
     developActionLayout->setSpacing(0);

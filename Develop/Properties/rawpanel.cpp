@@ -50,7 +50,7 @@ void RawPanel::buildUi()
     headerBand->setCursor(Qt::PointingHandCursor);
     headerBand->installEventFilter(this);        // a header click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(0, 3, 6, 3);
+    hb->setContentsMargins(G::headerLeftInset, 3, 6, 3);
     hb->setSpacing(0);
     collapseBtn = new BarBtn();
     collapseBtn->setToolTip("Hide or show the raw decode controls");
@@ -75,6 +75,11 @@ void RawPanel::buildUi()
        so the embedded denoise editor spans full width and aligns with the property tree;
        the custom rows below re-add the 10px inset so their captions stay indented. */
     body = new QWidget(this);
+    /* Translucent, like every other container in the Develop panels: under the app
+       stylesheet a plain QWidget fills its background opaquely, which would cover the
+       panel's content background (G::panelContentBg, painted in paintEvent). The rows
+       built below are parented to it and get the same treatment. */
+    body->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *bl = new QVBoxLayout(body);
     /* The 9px top margin is the panel's own 4px inset plus the 5px spacer the property
        tree puts under every section header (DevelopProperties::addHeader), so the first
@@ -85,6 +90,7 @@ void RawPanel::buildUi()
 
     /* Edit source: Raw / Embedded Preview (always shown while the panel is visible). */
     QWidget *editRow = new QWidget(body);
+    editRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *el = new QHBoxLayout(editRow);
     el->setContentsMargins(10, 0, 10, 0);
     el->setSpacing(12);
@@ -92,6 +98,10 @@ void RawPanel::buildUi()
     editLbl->setStyleSheet(capCss);
     rawRadio  = new QRadioButton(tr("Raw"), editRow);
     prevRadio = new QRadioButton(tr("Embedded Preview"), editRow);
+    /* Transparent like the captions beside them: an opaque control would slab the panel's
+       lifted background. */
+    for (QRadioButton *r : {rawRadio, prevRadio})
+        r->setStyleSheet("QRadioButton { background: transparent; }");
     QButtonGroup *grp = new QButtonGroup(editRow);
     grp->setExclusive(true);
     grp->addButton(rawRadio);
@@ -108,6 +118,7 @@ void RawPanel::buildUi()
 
     /* Demosaic + Denoise block (hidden when editing the Embedded Preview). */
     rawBlock = new QWidget(body);
+    rawBlock->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *rb = new QVBoxLayout(rawBlock);
     rb->setContentsMargins(0, 0, 0, 0);
     rb->setSpacing(4);
@@ -115,6 +126,7 @@ void RawPanel::buildUi()
 
     /* Demosaic engine. */
     QWidget *demRow = new QWidget(rawBlock);
+    demRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *dl = new QHBoxLayout(demRow);
     dl->setContentsMargins(10, 0, 10, 0);
     dl->setSpacing(6);
@@ -132,6 +144,7 @@ void RawPanel::buildUi()
 
     /* Denoise block (hidden on the Apple engine -- PMRID needs the CFA mosaic). */
     denoiseBlock = new QWidget(rawBlock);
+    denoiseBlock->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *nb = new QVBoxLayout(denoiseBlock);
     nb->setContentsMargins(0, 0, 0, 0);
     nb->setSpacing(4);
@@ -139,7 +152,7 @@ void RawPanel::buildUi()
 
     /* Divider below the "Render using" row, matching the rules the property tree draws
        between the Basic / Color / Effects groups: a centred 1px line, inset 6px, in
-       G::backgroundShade + 20 (see DevelopProperties::addDivider), with an extra 3px of
+       G::groupSeparatorColor (see DevelopProperties::addDivider), with an extra 3px of
        breathing room above it. It lives in denoiseBlock so it hides with the denoise
        group on the Apple engine rather than dangling under the last visible row. */
     QWidget *demDivider = new QWidget(denoiseBlock);
@@ -149,14 +162,14 @@ void RawPanel::buildUi()
     ddl->setSpacing(0);
     QFrame *demRule = new QFrame(demDivider);
     demRule->setFixedHeight(1);
-    const int divShade = G::backgroundShade + 20;
     demRule->setStyleSheet(QString("background: %1; border: none;")
-                               .arg(QColor(divShade, divShade, divShade).name()));
+                               .arg(G::groupSeparatorColor().name()));
     ddl->addWidget(demRule);
     nb->addWidget(demDivider);
 
     /* Group caption for the raw denoise controls that follow. */
     QWidget *nrRow = new QWidget(denoiseBlock);
+    nrRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *nrl = new QHBoxLayout(nrRow);
     nrl->setContentsMargins(10, 0, 10, 0);
     nrl->setSpacing(0);
@@ -168,6 +181,7 @@ void RawPanel::buildUi()
 
     /* Run row: "Denoise"/"Denoised" + "Auto run". */
     QWidget *runRow = new QWidget(denoiseBlock);
+    runRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *nl = new QHBoxLayout(runRow);
     nl->setContentsMargins(10, 0, 10, 0);
     nl->setSpacing(6);
@@ -179,6 +193,8 @@ void RawPanel::buildUi()
     autoRunCheck->setToolTip("On: denoise runs automatically. Off: use the Denoise box.");
     connect(autoRunCheck, &QCheckBox::toggled, this,
             [this](bool on){ emit autoRunToggled(on); });
+    for (QCheckBox *c : {denoiseCheck, autoRunCheck})
+        c->setStyleSheet("QCheckBox { background: transparent; }");
     nl->addWidget(denoiseCheck);
     nl->addStretch(1);
     nl->addWidget(autoRunCheck);
@@ -262,6 +278,10 @@ void RawPanel::paintEvent(QPaintEvent *)
 {
     if (!headerBand) return;
     QPainter p(this);
+    /* Subpanel content background (G::panelContentBg): everything BELOW the header band,
+       which keeps the gradient painted just after this. */
+    p.fillRect(0, headerBand->geometry().bottom() + 1, width(),
+               height() - headerBand->geometry().bottom() - 1, G::panelContentBg());
     const int a = G::backgroundShade + 5;
     const int b = G::backgroundShade - 15;
     const QRect r = headerBand->geometry();
@@ -271,7 +291,7 @@ void RawPanel::paintEvent(QPaintEvent *)
     p.fillRect(r, g);
     /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::tabWidgetBorderColor);
+               G::panelSeparatorColor());
 }
 
 void RawPanel::setEditSource(bool raw)

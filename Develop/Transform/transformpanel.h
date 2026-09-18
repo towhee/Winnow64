@@ -86,7 +86,7 @@ public slots:
     bool handleTransformShortcut(int key);
 
 protected:
-    /* Separator rule (G::panelBorderHeight in G::tabWidgetBorderColor) across the bottom
+    /* Separator rule (G::panelBorderHeight in G::panelSeparatorColor) across the bottom
        edge, so stacked Develop panels read as distinct blocks. */
     void paintEvent(QPaintEvent *event) override;
     /* Re-render the inline-html mode captions when the panel is enabled/disabled: an

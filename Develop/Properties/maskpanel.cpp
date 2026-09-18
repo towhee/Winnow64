@@ -54,6 +54,10 @@ void MaskPanel::buildUi()
     /* Settings + commit for the SELECTED submask. Wrapped so the whole block hides when
        nothing is selected (the list alone is then the panel). */
     attrWrap = new QWidget(this);
+    /* Translucent, like levelWrap above: under the app stylesheet a plain QWidget fills
+       its background opaquely, which would cover the panel's content background
+       (G::panelContentBg, painted in paintEvent) with a dark slab. */
+    attrWrap->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *bl = new QVBoxLayout(attrWrap);
     bl->setContentsMargins(0, 2, 10, 6);
     bl->setSpacing(4);
@@ -80,6 +84,7 @@ void MaskPanel::buildUi()
 
     /* Commit buttons live under the settings, inset like a normal control row. */
     QWidget *btnWrap = new QWidget(attrWrap);
+    btnWrap->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *bw = new QVBoxLayout(btnWrap);
     bw->setContentsMargins(10, 4, 0, 0);
     bw->setSpacing(4);
@@ -95,6 +100,7 @@ void MaskPanel::buildUi()
        [x] beside it discards a submask that is still being built; a re-opened submask has
        nothing to discard, so it is hidden there (see refreshCommitBtn). */
     QWidget *commitRow = new QWidget(btnWrap);
+    commitRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *cl = new QHBoxLayout(commitRow);
     cl->setContentsMargins(0, 0, 0, 0);
     cl->setSpacing(6);
@@ -142,13 +148,14 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     /* Header band: collapse arrow + "Mask" + [:], the same idiom as the Submasks band
        below it (SubmaskList::buildUi), so the two read as sibling sections. Both are
        folded away by the Edits bar's own arrow, so both start G::subHeaderIndent in from
-       the panel edge -- arrow and title -- reading as its children. */
+       that bar's own arrow -- arrow and title -- reading as its children. The bar itself
+       clears the panel edge by G::headerLeftInset, which every header here adds. */
     levelBand = new QWidget(levelWrap);
     levelBand->setAttribute(Qt::WA_TranslucentBackground);
     levelBand->setCursor(Qt::PointingHandCursor);
     levelBand->installEventFilter(this);       // a band click toggles collapse
     QHBoxLayout *hb = new QHBoxLayout(levelBand);
-    hb->setContentsMargins(G::subHeaderIndent, 3, G::headerBtnRightInset, 3);
+    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 3, G::headerBtnRightInset, 3);
     hb->setSpacing(0);
 
     levelCollapseBtn = new BarBtn();
@@ -202,8 +209,12 @@ void MaskPanel::paintEvent(QPaintEvent *)
        translucent) -- the same two shades SubmaskList paints behind its own band, so the
        two sections cannot drift apart. mapTo, not geometry(): the band is a grandchild
        here, where SubmaskList's is a direct child. */
-    if (!levelBand || !levelWrap || !levelWrap->isVisible()) return;
     QPainter p(this);
+    /* Subpanel content background (G::panelContentBg), the lift every Develop subpanel's
+       contents carry. Painted before the early return below: the panel has content --
+       the scope row and its buttons -- even when the Mask band is hidden. */
+    p.fillRect(rect(), G::panelContentBg());
+    if (!levelBand || !levelWrap || !levelWrap->isVisible()) return;
     const int a = G::backgroundShade + 5;
     const int b = G::backgroundShade - 15;
     const QRect r(levelBand->mapTo(this, QPoint(0, 0)), levelBand->size());

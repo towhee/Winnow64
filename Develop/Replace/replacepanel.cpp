@@ -89,6 +89,9 @@ void ReplacePanel::buildUi()
     auto addRow = [&](int row, QRadioButton *&radio, const QString &letter,
                       const QString &rest, const QString &hint, const QString &tip) {
         radio = new QRadioButton(this);
+        /* Transparent: under the app stylesheet a control fills its background opaquely,
+           which would paint a dark slab over the panel's lifted background. */
+        radio->setStyleSheet("QRadioButton { background: transparent; }");
         radio->setToolTip(tip);
         radio->setFocusPolicy(Qt::StrongFocus);   // so S/F/O reach the eventFilter
         modeGroup->addButton(radio, row);
@@ -98,6 +101,10 @@ void ReplacePanel::buildUi()
            filter). setAccentCaption keeps the two halves on the label so changeEvent can
            re-render them greyed when the panel is disabled. */
         QLabel *caption = new QLabel(this);
+        /* Background only: the caption's COLOURS come from the inline html
+           setAccentCaption writes (accent letter + rest), so a stylesheet colour here
+           would be ignored anyway -- this just stops the opaque slab. */
+        caption->setStyleSheet("QLabel { background: transparent; }");
         G::setAccentCaption(caption, letter, rest, G::header2Color);
         caption->setToolTip(tip);
         /* Clicking the caption selects its radio (rich text keeps QLabel, not the
@@ -183,10 +190,14 @@ void ReplacePanel::updatePreviewButton()
 void ReplacePanel::paintEvent(QPaintEvent *event)
 {
     QWidget::paintEvent(event);
-    /* Separator rule across the bottom edge (space reserved by the layout margin). */
     QPainter p(this);
+    /* Subpanel content background (G::panelContentBg). The whole panel lifts: the
+       GradientHeader is a CHILD, and children paint after their parent, so its band
+       covers this fill with the header gradient. */
+    p.fillRect(rect(), G::panelContentBg());
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::tabWidgetBorderColor);
+               G::panelSeparatorColor());
 }
 
 void ReplacePanel::changeEvent(QEvent *event)

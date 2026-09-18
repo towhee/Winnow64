@@ -81,10 +81,11 @@ bool useDWCollapse = false;         // master switch for dock collapse/expand/so
 bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
 bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -> MI-GAN
-/* Fill/Object replace modes SHELVED 2026-07-17 (Winnow scope = spot cleanup only; see
-   Documentation.txt "WHAT WAS TRIED"). The ReplacePanel + engines are kept; this flag
-   re-enables the panel and the Fill/Object modes if the feature is revisited. */
-bool useReplaceFillModes = false;
+/* Fill/Object replace modes. Shelved 2026-07-17 (Winnow scope = spot cleanup only; see
+   Documentation.txt "WHAT WAS TRIED") and re-enabled 2026-09-18: true shows the
+   ReplacePanel whenever the replace tool is armed and offers its Fill/Object modes;
+   false hides the panel and arms Spot mode only. */
+bool useReplaceFillModes = true;
 bool useFilterPanel = true;
 /* Brush/Object "erase from this stroke" (Opt while painting removes from the stroke)
    CANCELLED 2026-08-08. It existed because the developed effect only appeared on stroke
@@ -359,11 +360,19 @@ int headerBtnRightInset = 6;
    their own indentation, so the sliders keep their full width. 0 lines them all up flush
    again. */
 int subHeaderIndent = 10;
+/* Develop HEADER LEFT INSET: clear space from the panel's left edge to the expand/
+   collapse arrow of EVERY header in the dock -- the Raw band, the Edits (scope) band and
+   the sub-headers it folds away (Mask, Submasks and the tree's Basic / Color / ...
+   sections). The arrows otherwise start hard against the edge. Applied on top of
+   subHeaderIndent for the sub-headers, so they keep their offset under the Edits arrow,
+   and only to the header content: the rows under each header are untouched. 0 puts the
+   arrows back against the edge. */
+int headerLeftInset = 5;
 /* Develop PANEL SEPARATOR: every Develop dock panel (Raw, Edits, Mask,
    Transform, Fill Replace) draws a rule this high across its bottom edge in
-   G::tabWidgetBorderColor, so stacked panels read as distinct blocks. Each panel
+   G::panelSeparatorColor, so stacked panels read as distinct blocks. Each panel
    reserves the space as its layout's bottom margin. 0 removes the rule everywhere. */
-int panelBorderHeight = 2;
+int panelBorderHeight = 1;
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 

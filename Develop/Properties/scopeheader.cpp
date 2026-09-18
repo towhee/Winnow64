@@ -74,7 +74,7 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
        lower than every caption above and below them. Hanging the extra height below the
        contents instead puts this arrow and caption the same distance from their band's
        top as Raw's and Basic's are from theirs, which is what the eye lines up on. */
-    hb->setContentsMargins(0, 0, G::headerBtnRightInset, 6);
+    hb->setContentsMargins(G::headerLeftInset, 0, G::headerBtnRightInset, 6);
     hb->setSpacing(0);
 
     /* Collapse arrow, 9px in the tree's gutter like RawPanel's and the Mask bands' --

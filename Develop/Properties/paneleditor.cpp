@@ -20,10 +20,16 @@ PanelEditor::PanelEditor(QWidget *parent) : PropertyEditor(parent)
     setFrameShape(QFrame::NoFrame);
     /* setFrameShape alone leaves a 1px gray frame once the app QSS styles QTreeView; a
        widget-level rule removes it so the editor blends into the panel. */
-    setStyleSheet("QTreeView { border: none; }");
+    /* Transparent, not the app stylesheet's opaque QTreeView background: these editors
+       sit on a Develop subpanel that paints its own content background
+       (G::panelContentBg), and an opaque viewport would punch a dark hole in it. */
+    setStyleSheet("QTreeView { border: none; background: transparent; }");
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     viewport()->setAutoFillBackground(false);
+    /* Fill every non-header row with the subpanel content background, as the Develop tree
+       does -- these rows ARE that panel's contents (see DevelopProperties::initialize). */
+    propertyDelegate->isAlternatingRows = false;
 
     /* Column split identical to DevelopProperties (owners align via setCaptionWidth). */
     stringToFitCaptions = "=captions column=";
