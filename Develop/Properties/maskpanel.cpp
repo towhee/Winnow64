@@ -159,7 +159,8 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     hb->setSpacing(0);
 
     levelCollapseBtn = new BarBtn();
-    levelCollapseBtn->setToolTip("Hide or show the mask's Edge and Halo");
+    levelCollapseBtn->setToolTip("Hide or show this mask: its Edge and Halo, its "
+                                "submasks and their settings");
     levelCollapseBtn->setIconSize(QSize(9, 9));
     levelCollapseBtn->setFixedSize(9, 16);
     levelCollapseBtn->setStyleSheet("QToolButton { border: none; padding: 0;"
@@ -345,14 +346,28 @@ void MaskPanel::showMaskLevel(bool show)
 
 void MaskPanel::syncLevelVisible()
 {
-    /* NOT gated on the Submasks collapse, unlike the settings block: this section sits
-       ABOVE that section's header, so it is not part of what the header collapses. Two
-       things decide it: does the mask have anything to grow or shrink (the band goes
-       entirely), and is this band collapsed (only its rows go). */
+    /* The "Mask" band is the panel's TOP band, so its arrow folds the WHOLE mask away:
+       its own Edge/Halo rows, the Submasks section below them and the selected submask's
+       settings. Anything left behind would read as belonging to the Edits bar rather than
+       to the closed mask.
+
+       Whether the band shows at all is a separate question: a mask with nothing to grow
+       or shrink has no band (levelShown). With no band there is no arrow on screen, so
+       nothing may stay folded either -- the Submasks section is then the only way to
+       build the first submask. */
     if (!levelWrap) return;
     levelWrap->setVisible(levelShown);
     if (levelBody) levelBody->setVisible(!levelCollapsed);
+    if (submaskList) submaskList->setVisible(!maskFolded());
+    syncAttrVisible();              // the settings block folds with everything else
     update();                       // the band moved: repaint its gradient
+}
+
+/* True while the "Mask" band's arrow is closed AND that band is on screen to show it:
+   everything below the band is folded away. */
+bool MaskPanel::maskFolded() const
+{
+    return levelShown && levelCollapsed;
 }
 
 void MaskPanel::syncAttrVisible()
@@ -362,7 +377,7 @@ void MaskPanel::syncAttrVisible()
        submask's settings (and the commit row) floating under a closed header. */
     if (!attrWrap) return;
     const bool collapsed = submaskList && submaskList->isCollapsed();
-    attrWrap->setVisible(attrShown && !collapsed);
+    attrWrap->setVisible(attrShown && !collapsed && !maskFolded());
 }
 
 void MaskPanel::setAttributeScope(const QString &text)
