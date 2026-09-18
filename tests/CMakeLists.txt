@@ -103,6 +103,9 @@ winnow_add_unit_test(tst_detailroi unit/tst_detailroi.cpp)
 # is selected), so every test that compiles it carries the profile + DCP closure.
 winnow_add_unit_test(tst_localcontrast unit/tst_localcontrast.cpp
     ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    # develop.cpp reaches OutputTransform::DisplayPosition: the tone regions are placed
+    # by handles drawn on the histogram, so their weights are evaluated on the display axis.
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
@@ -224,6 +227,50 @@ endif()
 # depends only on Qt, so no OpenCV closure is needed.
 winnow_add_unit_test(tst_outputtransform unit/tst_outputtransform.cpp
     ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+
+# tonecurvedump is a CALIBRATION TOOL, not a test -- it asserts nothing and is deliberately
+# NOT registered with ctest (winnow_add_unit_test only builds the target; add_test is
+# separate). It dumps Winnow's tone operators as display-level curves so they can be fitted
+# against Lightroom's without a manual export per iteration. tst_toneregions is what
+# actually guards this behaviour.
+winnow_add_unit_test(tonecurvedump unit/tonecurvedump.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+if(APPLE)
+    target_include_directories(tonecurvedump PRIVATE ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tonecurvedump PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tonecurvedump PRIVATE opencv_core opencv_imgproc)
+endif()
+
+# tst_toneregions is the characterization gate for the Basic panel's four tone controls
+# (blacks | shadows | highlights | whites). It pins the KIND of operator each one is --
+# endpoint moves for whites/blacks, disjoint regions for shadows/highlights, a monotone
+# composed curve, and a region that does not slide when contrast changes -- not the
+# constants those are tuned to, which are measured against Lightroom separately.
+# It renders through Develop::Apply + OutputTransform::ToImage, so it carries the same
+# develop.cpp + OpenCV closure as tst_inputprofile.
+winnow_add_unit_test(tst_toneregions unit/tst_toneregions.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+if(APPLE)
+    target_include_directories(tst_toneregions PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_toneregions PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_toneregions PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_toneregions PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_toneregions PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
 
 # tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
 winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)

@@ -812,3 +812,36 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
     RunRows(H, processRows);
     return true;
 }
+
+/*
+    See the header. Perceptual (gamma 2.2) -> scene-linear -> view transform -> transfer
+    function, which is exactly the chain ToImage runs, so the answer is the axis the
+    histogram is actually drawn on rather than an approximation of it.
+*/
+float OutputTransform::DisplayPosition(float perceptual, ViewTransform view)
+{
+    if (perceptual <= 0.0f) return 0.0f;
+    const float lin = std::pow(perceptual, 2.2f);       // Develop's kGamma
+    float v = ViewCurve(view, lin);
+    if (v < 0.0f) v = 0.0f;
+    if (v > 1.0f) v = 1.0f;
+    /* sRGB's transfer: the histogram is drawn on an sRGB-encoded image, and the
+       output primaries do not change where a TONE lands, only its colour. */
+    return Transfer(v, 0.0f);
+}
+
+/* See the header. 40 bisection steps takes the bracket below one part in 10^12 of the
+   domain, far under the 8-bit quantisation the result is eventually rounded into, and it
+   is a fixed cost so the LUT build has no data-dependent timing. */
+float OutputTransform::PerceptualFromDisplay(float display, ViewTransform view,
+                                             float maxPerceptual)
+{
+    if (display <= 0.0f) return 0.0f;
+    float lo = 0.0f, hi = maxPerceptual > 0.0f ? maxPerceptual : 1.0f;
+    if (DisplayPosition(hi, view) <= display) return hi;
+    for (int i = 0; i < 40; ++i) {
+        const float mid = 0.5f * (lo + hi);
+        if (DisplayPosition(mid, view) < display) lo = mid; else hi = mid;
+    }
+    return 0.5f * (lo + hi);
+}

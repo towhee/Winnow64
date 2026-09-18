@@ -7,6 +7,9 @@
 #include "Develop/calibrate.h"
 #include "Develop/colorgrade.h"
 #include "Develop/tonecurve.h"
+/* DisplayPosition: the tone regions are placed by handles drawn on the histogram, so
+   their weights are evaluated on the display axis rather than on the working value. */
+#include "Develop/outputtransform.h"
 #include "Develop/sharpen.h"
 #include "Develop/localcontrast.h"
 #include <QtConcurrent>
@@ -79,46 +82,131 @@ constexpr float kGradeBalanceRange = 0.20f;
 constexpr float kGradeSplitMin     = 0.05f;   // keep both strictly inside (0,1): the
 constexpr float kGradeSplitMax     = 0.95f;   // weights divide by them
 
-/* Tone-region controls (highlights/shadows/whites/blacks). Each is a smooth, region-weighted
-   shift of the PERCEPTUAL (gamma) value, applied after contrast (pipeline order #5). The
-   weight is a Gaussian centred on the region's perceptual position; the four overlap gently so
-   the curve stays smooth. Blacks/whites are pinned at 0/1; the shadows and highlights centres
-   (and each one's reach, via sigma) come from the per-image tone-split params set by the
-   histogram region slider (see buildToneLut). Sliders are integer -100..100 (normalised to
-   +/-1 by kToneFullScale); positive always brightens (lifts) the region, negative darkens
-   (recovers), like Lightroom. kToneShift is the max perceptual lift at full slider. The table
-   is built over up to ~3 stops above white (kToneLutMaxN) so highlight headroom is shaped. */
+/* Tone controls (highlights/shadows/whites/blacks), applied after contrast (pipeline order
+   #5), all in the PERCEPTUAL (gamma) domain. Sliders are integer -100..100 (normalised to
+   +/-1 by kToneFullScale); positive always brightens, negative darkens, like Lightroom. The
+   table is built over up to ~3 stops above white (kToneLutMaxN) so highlight headroom is
+   shaped rather than clipped.
+
+   THEY ARE TWO DIFFERENT KINDS OF CONTROL, and conflating them is what made Winnow's tone
+   sliders behave unlike Lightroom's. Whites and Blacks are ENDPOINT MOVES -- they rescale
+   where the curve reaches white and black, so everything between moves with them. Shadows
+   and Highlights are REGION LIFTS -- weighted shifts of a band, which leave the endpoints
+   alone. All four used to be additive Gaussian lifts, two of them pinned at s=0 and s=1,
+   which is a bump rather than an endpoint move: a bump brightens a BAND near the end and
+   can never move the end itself. That is why Lightroom's Whites pushed the histogram's
+   right edge and Winnow's only brightened, and why Whites moved mid-grey by 0 levels of
+   255 where an endpoint move moves it by tens. See tst_toneregions, which pins the KIND of
+   operator each control is, and the tone-region note in notes/Documentation.txt. */
 constexpr float kToneFullScale    = 100.0f;
-constexpr float kToneShift        = 0.20f;
-constexpr float kToneSigma        = 0.18f;
-/* Blacks and whites stay pinned at the ends; shadows/highlights centres are per-image now
-   (EditParams tone splits, set by the histogram region slider). */
-constexpr float kBlacksCenter     = 0.00f;
-constexpr float kWhitesCenter     = 1.00f;
 constexpr float kToneLutMaxN      = 8.0f;   // build the curve over linear n in [0, 8] (~3 stops)
 
-inline float toneWeight(float s, float center, float sigma)
+/*
+    THE FOUR TONE OPERATORS, FITTED TO LIGHTROOM (2026-09-17).
+
+    MEASURED, NOT CHOSEN. A single raw was exported from Lightroom at 17 settings -- each
+    of blacks / shadows / highlights / whites at -100, -50, +50, +100, plus an all-zero
+    control -- and from Winnow at the same 17. Histogram-matching the two zero renders
+    recovers the baseline difference (a different camera profile and view transform) as a
+    per-pixel curve and divides it out; the two renders agree to 0.70 levels of 255 after
+    it. Histogram-matching each slider render against its own zero render then recovers
+    THAT SLIDER'S OPERATOR as an explicit curve, with no model assumed. The constants below
+    are fitted to those curves and the fit is 2.56 levels of 255 RMS overall, worst
+    operator 3.85. Method and harness: notes/Documentation.txt, the tone-region note.
+
+    THEY ARE APPLIED ON THE DISPLAY AXIS, which is why the amplitudes read as fractions of
+    the visible range rather than of anything internal. That is the axis Lightroom's curves
+    were measured on and the axis the ToneRegionSlider handles are drawn on; see
+    applyToneShape.
+
+    THE MODEL FAMILIES ARE NOT UNIFORM, AND THAT IS THE FINDING. Lightroom's endpoint
+    controls are endpoint moves in the direction that CLIPS and gentle band lifts in the
+    direction that cannot:
+
+        Blacks -    black point raise   crushes; clips at 0
+        Blacks +    band lift           opens the shadows; nothing to clip against
+        Whites +    white point lower   brightens; clips at white
+        Whites -    band pull           recovers; nothing to clip against
+        Shadows +/- band
+        Highlights +/- band
+
+    Modelling all four as one kind of operator is what the first attempt did -- all four as
+    Gaussian bumps, then all four as affine endpoint moves -- and both were measurably
+    wrong in the same way: an operator that is symmetric in sign cannot reproduce a control
+    whose two directions do different things. Blacks +100 lifts by at most 26 levels while
+    Blacks -100 crushes everything below level 48 to black.
+
+    THE EXPONENTS ARE NOT COSMETIC. Lightroom's response is not linear in the slider: the
+    ratio between the +100 and +50 curves runs from 1.8 (highlights) to 3.2 (whites) where
+    linear would be 2.0. Fitting amplitude alone left several operators right at one end of
+    their travel and wrong at the other.
+*/
+struct ToneOp {
+    float amp;          // full-slider strength, as a fraction of the display range
+    float expo;         // response exponent: shift scales with amount^expo
+    float lo, peak, hi; // band support and peak, on the display axis (endpoint ops: unused)
+};
+
+/* Bands. */
+constexpr ToneOp kShadowsUp   = {0.14f, 1.3f, 0.00f, 0.02f, 0.70f};
+constexpr ToneOp kShadowsDown = {0.08f, 1.0f, 0.00f, 0.10f, 0.75f};
+constexpr ToneOp kBlacksUp    = {0.12f, 1.3f, 0.00f, 0.10f, 1.00f};
+constexpr ToneOp kHighsUp     = {0.20f, 0.8f, 0.10f, 0.78f, 1.00f};
+constexpr ToneOp kHighsDown   = {0.22f, 1.0f, 0.10f, 0.90f, 1.00f};
+constexpr ToneOp kWhitesDown  = {0.10f, 0.9f, 0.15f, 0.94f, 1.00f};
+
+/* Endpoint moves. R is how far full slider drags the point, on the display axis. */
+constexpr float kBlackPointRange = 0.220f, kBlackPointExpo = 1.6f;
+constexpr float kWhitePointRange = 0.310f, kWhitePointExpo = 1.8f;
+
+/* The endpoint move divides by (1 - point), so the point cannot reach 1. Only a
+   hand-edited sidecar can get near it; full slider stops at 0.31. */
+constexpr float kPointMax = 0.90f;
+
+/* Smoothstep, the same Hermite shape ColorGrade::gradeTonalWeights uses for its tonal
+   partition (Develop/colorgrade.h) -- C1 at both ends, so a band's edge cannot show as a
+   crease in a smooth ramp the way a clamped linear ramp does. */
+inline float toneSmooth(float x)
 {
-    const float d = s - center;
-    return std::exp(-(d * d) / (2.0f * sigma * sigma));
+    if (x <= 0.0f) return 0.0f;
+    if (x >= 1.0f) return 1.0f;
+    return x * x * (3.0f - 2.0f * x);
 }
 
-/* The region slider's crossover sets each movable region's reach: half-width = gap to the
-   crossover, scaled so the default gap (0.25) reproduces kToneSigma (0.18). kToneSigmaMin keeps
-   a very narrow region from spiking. */
-constexpr float kToneSigmaSpan = kToneSigma / 0.25f;   // 0.72
-constexpr float kToneSigmaMin  = 0.05f;
+/* A band's weight at display position d: rises from 0 at lo to 1 at peak, back to 0 at hi,
+   and is zero outside [lo, hi] entirely. shift slides the whole band along the axis, which
+   is how the ToneRegionSlider handles move a region without changing its shape. */
+inline float toneBand(float d, const ToneOp &op, float shift, float reach)
+{
+    const float lo = op.lo + shift, pk = op.peak + shift, hi = op.hi + shift + reach;
+    if (d <= lo || d >= hi || pk <= lo || hi <= pk) return 0.0f;
+    return (d <= pk) ? toneSmooth((d - lo) / (pk - lo))
+                     : toneSmooth((hi - d) / (hi - pk));
+}
 
-/* The PARAMETRIC tone shape -- the contrast slope plus the four Gaussian region lifts --
-   resolved from the params once. Shared by Develop::buildPointCoeffs (which bakes it into
-   the tone LUT) and Develop::ParametricCurve (which the Curves panel's Parametric view
-   draws), so the curve the user sees and the curve that actually renders cannot diverge.
-   Everything here is in the PERCEPTUAL (gamma) domain. */
+/* One signed control -> its display-space shift at d. */
+inline float toneOpShift(float amount, const ToneOp &up, const ToneOp &down,
+                         float d, float shift, float reach)
+{
+    if (amount == 0.0f) return 0.0f;
+    const float mag = std::fabs(amount);
+    const ToneOp &op = (amount > 0.0f) ? up : down;
+    const float w = toneBand(d, op, shift, reach);
+    if (w == 0.0f) return 0.0f;
+    return (amount > 0.0f ? 1.0f : -1.0f) * op.amp * std::pow(mag, op.expo) * w;
+}
+
+/* The PARAMETRIC tone shape -- the contrast slope, the two endpoint moves and the two
+   region lifts -- resolved from the params once. Shared by Develop::buildPointCoeffs (which
+   bakes it into the tone LUT) and Develop::ParametricCurve (which the Curves panel's
+   Parametric view draws), so the curve the user sees and the curve that actually renders
+   cannot diverge. Everything here is in the PERCEPTUAL (gamma) domain. */
 struct ToneShape {
     float pivot = 0.0f, slope = 1.0f;
-    float hi = 0.0f, sh = 0.0f, wh = 0.0f, bk = 0.0f;
-    float shC = 0.25f, hiC = 0.75f;
-    float shSig = kToneSigma, hiSig = kToneSigma;
+    float bk = 0.0f, sh = 0.0f, hi = 0.0f, wh = 0.0f;   // slider amounts, -1..1
+    float blackPoint = 0.0f, whitePoint = 1.0f;         // display-axis endpoint moves
+    float shShift = 0.0f, hiShift = 0.0f, reach = 0.0f; // from the region handles
+    OutputTransform::ViewTransform view = OutputTransform::ViewTransform::None;
     bool  active = false;
 };
 
@@ -129,35 +217,87 @@ inline ToneShape buildToneShape(const EditParams &p)
     t.slope = (p.contrast != 0.0f)
                   ? 1.0f + kContrastSlopeRange * (p.contrast / kContrastFullScale)
                   : 1.0f;
-    t.hi = p.highlights / kToneFullScale;     // -1..1, + brightens
+    t.bk = p.blacks     / kToneFullScale;     // -1..1, + brightens
     t.sh = p.shadows    / kToneFullScale;
+    t.hi = p.highlights / kToneFullScale;
     t.wh = p.whites     / kToneFullScale;
-    t.bk = p.blacks     / kToneFullScale;
-    /* Region slider: shadows/highlights centres move with the handles; blacks (0) and
-       whites (1) stay pinned. The crossover sets each movable region's reach (sigma).
-       Defaults 0.25/0.50/0.75 give the old fixed centres and kToneSigma, so this is a
-       no-op until moved. Clamped defensively so a hand-edited / corrupt sidecar can never
-       invert the order (qBound requires min <= max): shC <= 0.94 leaves room for hiC,
-       which sits at least 0.04 above it, and the crossover stays strictly between. */
-    t.shC = qBound(0.02f, p.toneShadowCenter, 0.94f);
-    t.hiC = qBound(t.shC + 0.04f, p.toneHighlightCenter, 0.98f);
-    const float crX = qBound(t.shC + 0.01f, p.toneCrossover, t.hiC - 0.01f);
-    t.shSig = std::max(kToneSigmaMin, (crX - t.shC) * kToneSigmaSpan);
-    t.hiSig = std::max(kToneSigmaMin, (t.hiC - crX) * kToneSigmaSpan);
-    t.active = (t.slope != 1.0f) || (t.hi != 0.0f) || (t.sh != 0.0f) ||
-               (t.wh != 0.0f) || (t.bk != 0.0f);
+
+    /* The two endpoint moves, each in the ONE direction that clips (see the operator note
+       above). The other direction of each is a band and is handled with the rest. */
+    if (t.bk < 0.0f)
+        t.blackPoint = qMin(kPointMax,
+                            kBlackPointRange * std::pow(-t.bk, kBlackPointExpo));
+    if (t.wh > 0.0f)
+        t.whitePoint = qMax(1.0f - kPointMax,
+                            1.0f - kWhitePointRange * std::pow(t.wh, kWhitePointExpo));
+
+    /* THE REGION HANDLES SLIDE THE BANDS, they no longer set their peaks. The band shapes
+       are fitted to Lightroom, so a handle that overwrote a peak would throw the fit away
+       the moment it was touched; a shift moves where a region acts while keeping the shape
+       that was measured. The DEFAULTS (0.25 / 0.50 / 0.75) are an exact no-op, which is
+       the property the handles have always had and which the sidecar format depends on --
+       an image saved before this change still renders from the same three numbers.
+       Clamped so a hand-edited sidecar cannot invert a band. */
+    const float shC = qBound(0.02f, p.toneShadowCenter,    0.94f);
+    const float hiC = qBound(shC + 0.04f, p.toneHighlightCenter, 0.98f);
+    const float crX = qBound(shC + 0.01f, p.toneCrossover,  hiC - 0.01f);
+    t.shShift = shC - 0.25f;
+    t.hiShift = hiC - 0.75f;
+    t.reach   = crX - 0.50f;
+
+    t.view = OutputTransform::ViewFromInt(p.viewTransform);
+    t.active = (t.slope != 1.0f) || (t.bk != 0.0f) || (t.sh != 0.0f) ||
+               (t.hi != 0.0f) || (t.wh != 0.0f);
     return t;
 }
 
-/* Contrast slope about mid-grey, then the four region shifts. */
+/*
+    Contrast, then the tone controls.
+
+    THE CONTROLS RUN ON THE DISPLAY AXIS and contrast does not, which is a real distinction
+    rather than an inconsistency. Contrast is a slope about mid-grey in the working domain,
+    where "about mid-grey" means something physical. The four tone controls are placed by
+    handles drawn under the histogram of the FINISHED render and were fitted to Lightroom's
+    operators measured in levels of that render, so both their placement and their strength
+    are quantities on that axis. Applying them anywhere else was the bug: evaluated on the
+    working value, the three handles at 0.25 / 0.50 / 0.75 acted at display 67 / 170 / 236,
+    which put the whole Highlights region above level 170 and left it reaching a quarter of
+    Lightroom's range.
+
+    So the value goes out to the display axis, is moved there, and comes back. Converting
+    the shift the other way instead -- into a working-value shift via the local slope of
+    the view transform -- fails near the shoulder, where that slope is small enough that
+    the conversion explodes.
+
+    THE BANDS ARE EVALUATED ON THE PRE-ENDPOINT POSITION, for the same reason the weights
+    are evaluated pre-contrast: a handle names a place on the histogram the user is looking
+    at, and the endpoint moves would otherwise slide that place out from under it.
+*/
 inline float applyToneShape(const ToneShape &t, float s)
 {
+    /* d0 -- where this tone sits on the histogram the handles are drawn under -- is taken
+       BEFORE the contrast slope, so raising Contrast cannot slide the region a handle
+       selects out from under it. d is the value actually being moved, so it is taken
+       after. Two positions, deliberately, and collapsing them into one reintroduces the
+       contrast bug. */
+    const float d0 = OutputTransform::DisplayPosition(s, t.view);
     s = t.pivot + (s - t.pivot) * t.slope;
-    const float lift = t.hi * toneWeight(s, t.hiC, t.hiSig)
-                     + t.sh * toneWeight(s, t.shC, t.shSig)
-                     + t.wh * toneWeight(s, kWhitesCenter, kToneSigma)
-                     + t.bk * toneWeight(s, kBlacksCenter, kToneSigma);
-    return s + kToneShift * lift;
+    float d = OutputTransform::DisplayPosition(s, t.view);
+
+    if (t.blackPoint > 0.0f) d = qMax(0.0f, (d - t.blackPoint) / (1.0f - t.blackPoint));
+    if (t.whitePoint < 1.0f) d = qMin(1.0f, d / t.whitePoint);
+
+    d += toneOpShift(t.sh, kShadowsUp, kShadowsDown, d0, t.shShift, t.reach)
+       + toneOpShift(t.hi, kHighsUp,   kHighsDown,   d0, t.hiShift, t.reach);
+    /* Blacks + and Whites - are the non-clipping directions, so they are bands. Their
+       opposite directions were consumed by the endpoint moves above. */
+    if (t.bk > 0.0f) d += kBlacksUp.amp  * std::pow(t.bk,  kBlacksUp.expo)
+                          * toneBand(d0, kBlacksUp,  t.shShift, t.reach);
+    if (t.wh < 0.0f) d -= kWhitesDown.amp * std::pow(-t.wh, kWhitesDown.expo)
+                          * toneBand(d0, kWhitesDown, t.hiShift, t.reach);
+
+    if (d <= 0.0f) return 0.0f;
+    return OutputTransform::PerceptualFromDisplay(d, t.view, kToneLutMaxN);
 }
 
 /* Texture (spatial op): mid-frequency luminance local contrast. The base-blur radius is a
@@ -1137,6 +1277,29 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
                 /* decode -> white-normalised linear */
                 c.toneLut[ch][j] = std::pow(sc, kGamma);
             }
+        }
+        /* MONOTONICITY, enforced once over the finished table. A brighter input must never
+           render darker than a dimmer one: a locally inverted tone shows as a bright halo
+           inside a smooth ramp, and it is the same failure Develop/tonecurve.h picks
+           Fritsch-Carlson over a plain cubic to avoid on the point curve. The parametric
+           side had no equivalent guard, and opposing sliders could invert it -- Blacks +100
+           with Shadows -100 did, 20 samples into a 256-step ramp.
+
+           HERE RATHER THAN INSIDE applyToneShape, because this is the one place the WHOLE
+           composed curve exists: the parametric shape, the RGB composite curve and the
+           per-channel curve, in the order they render. Clamping any one of them alone would
+           still let the composition invert. It costs one pass over 1024 entries per render
+           and nothing per pixel.
+
+           Develop::ParametricCurve does NOT see this clamp -- it draws the parametric shape
+           only, which is what the Curves panel's Parametric view is a view of. Where the
+           clamp fires, the plot therefore shows a dip the render does not have. Left that
+           way deliberately: the alternative is a plot that stops responding to a slider the
+           user is still dragging, which reads as a broken control rather than a limit. */
+        for (int ch = 0; ch < 3; ++ch) {
+            float *lut = c.toneLut[ch];
+            for (int j = 1; j < PointCoeffs::kLutSize; ++j)
+                if (lut[j] < lut[j - 1]) lut[j] = lut[j - 1];
         }
     }
 

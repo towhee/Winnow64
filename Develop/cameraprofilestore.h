@@ -89,6 +89,18 @@ public:
        show the user where profiles are looked for. */
     static QStringList roots();
 
+    /*
+        Winnow's OWN profile folder -- the one root of the several that belongs to this
+        application, where a user drops profiles they made or were given. It is the only
+        one the sweep CREATES, and the only one a UI may tell the user to put files in,
+        so it is named rather than inferred from roots()' ordering: every other root
+        belongs to Adobe or to RawTherapee and must be left exactly as found.
+
+        EMPTY when the platform gives no writable app-data location, in which case it is
+        not swept and there is nothing to offer the user. A caller must check.
+    */
+    static QString ownRoot();
+
 signals:
     /* The index finished building. Emitted on the GUI thread. */
     void indexChanged();
