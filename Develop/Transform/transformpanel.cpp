@@ -246,6 +246,7 @@ void TransformPanel::buildUi()
 
     /* -------- Crop row controls: aspect combo + aspect-lock padlock -------- */
     QLabel *aspectLbl = new QLabel(tr("Aspect"), this);
+    aspectLbl->setStyleSheet(G::labelCss(G::textColor));   // transparent: no slab on the panel fill
     aspectCombo = new QComboBox(this);
     aspectCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     populateAspectCombo();
@@ -269,6 +270,7 @@ void TransformPanel::buildUi()
 
     /* -------- Level row controls: straighten-angle field -------- */
     QLabel *angleLbl = new QLabel(tr("Angle"), this);
+    angleLbl->setStyleSheet(G::labelCss(G::textColor));
     angleEdit = new QLineEdit(this);
     angleEdit->setToolTip(tr("Straighten angle in degrees (-45 to 45)"));
     angleEdit->setPlaceholderText("0.0");
@@ -282,6 +284,7 @@ void TransformPanel::buildUi()
 
     /* -------- Warp row: a hint (no control yet) -------- */
     QLabel *warpHint = new QLabel(tr("Drag corners"), this);
+    warpHint->setStyleSheet(G::labelCss(G::textColor));
     // warpHint->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
 
     /* -------- Per-row reset buttons (all in the last column so they align) -------- */
@@ -553,10 +556,14 @@ void TransformPanel::updateLockButton()
 void TransformPanel::paintEvent(QPaintEvent *event)
 {
     QWidget::paintEvent(event);
-    /* Separator rule across the bottom edge (space reserved by the layout margin). */
     QPainter p(this);
+    /* Subpanel content background (G::panelContentBg). The whole panel lifts: the
+       GradientHeader is a CHILD, and children paint after their parent, so its band
+       covers this fill with the header gradient. */
+    p.fillRect(rect(), G::panelContentBg());
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::tabWidgetBorderColor);
+               G::panelSeparatorColor());
 }
 
 void TransformPanel::changeEvent(QEvent *event)

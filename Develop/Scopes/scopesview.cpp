@@ -9,6 +9,17 @@
 #include <QResizeEvent>
 #include <QPainter>
 
+/* Inset for the strip on ALL FOUR edges, matching the CURVES PLOT below it: that plot is
+   a spanned row two indent levels in (2 x the tree's 10px indentation) whose widget is
+   re-centred in the panel (see DevelopProperties::updateEditorGeometries), so it clears
+   each edge by 10px. The scopes are the other full-width graphic in this dock and sat 2px
+   off the edges, which read as a different panel. The [X] pinned in resizeEvent uses it
+   too, so it stays in the right scope's corner rather than floating outside it.
+
+   setFixedHeight below is raised by the extra top + bottom margin, so the scopes keep the
+   160px of drawing height they had -- the strip grows, the graphs do not shrink. */
+static const int kScopeMargin = 10;
+
 ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
 {
     if (G::isLogger) G::log("ScopesView::ScopesView");
@@ -27,7 +38,8 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
 
     rowLay = new QHBoxLayout(this);
     /* The extra bottom margin reserves the panel separator drawn in paintEvent. */
-    rowLay->setContentsMargins(2, 2, 2, 2 + G::panelBorderHeight);
+    rowLay->setContentsMargins(kScopeMargin, kScopeMargin, kScopeMargin,
+                               kScopeMargin + G::panelBorderHeight);
     rowLay->setSpacing(2);
     rowLay->addLayout(leftCol, 3);      // histogram column left, wider
     rowLay->addWidget(vectorscope, 2);  // vectorscope right
@@ -52,8 +64,9 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     connect(closeBtn, &BarBtn::clicked, this, &ScopesView::closeRequested);
 
     /* Fixed strip at the top of the dock; the property tree below takes the stretch. The
-       separator rule is added on top of the 160px of scopes, not taken out of them. */
-    setFixedHeight(160 + G::panelBorderHeight);
+       margins and the separator rule are added on top of the 160px of scopes, not taken
+       out of them. */
+    setFixedHeight(160 + 2 * kScopeMargin + G::panelBorderHeight);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 }
 
@@ -84,17 +97,21 @@ void ScopesView::resizeEvent(QResizeEvent *event)
 */
     QWidget::resizeEvent(event);
     const QSize s = closeBtn->sizeHint();
-    closeBtn->setGeometry(width() - s.width() - 2, 2, s.width(), s.height());
+    closeBtn->setGeometry(width() - s.width() - kScopeMargin, kScopeMargin,
+                          s.width(), s.height());
     closeBtn->raise();
 }
 
 void ScopesView::paintEvent(QPaintEvent *event)
 {
     QWidget::paintEvent(event);
-    /* Separator rule across the bottom edge (space reserved by the layout margin). */
     QPainter p(this);
+    /* Subpanel content background (G::panelContentBg): the strip is all content, no
+       header band, so the whole widget lifts. The scopes themselves paint over it. */
+    p.fillRect(rect(), G::panelContentBg());
+    /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::tabWidgetBorderColor);
+               G::panelSeparatorColor());
 }
 
 void ScopesView::setData(const ScopeData &d)

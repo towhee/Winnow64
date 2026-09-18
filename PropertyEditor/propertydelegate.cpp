@@ -437,6 +437,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // set divider height in sizeHint()
         // newRowHeight = index.data(UR_DividerHeight).toInt();
         // painter->fillRect(r0, QColor(G::lightblue));
+        /* Band behind the rule: a divider sits INSIDE a section, between rows, so it
+           takes the same content background as the rows around it. Gated like those rows
+           (see isAlternatingRows) so the trees that leave their rows unfilled -- the
+           Preferences and Embellish ones -- keep showing the viewport through. */
+        if (!isAlternatingRows) painter->fillRect(r0, G::panelContentBg());
         const int lineH = index.data(UR_DividerLineHeight).toInt();
         const QColor lineColor = index.data(UR_DividerColor).value<QColor>();
         if (lineH > 0 && lineColor.alpha() > 0) {

@@ -8,7 +8,6 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- Adode Standard profile?  Other profiles duplicated.  NEF only.
 - Crop aspect is not working.
 - Does it make sense to be able to select R and G and B rather than R or G or B?
 - Clear the develop copy/paste between sessions.

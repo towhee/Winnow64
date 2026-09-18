@@ -394,7 +394,7 @@ Q_NAMESPACE
     extern bool useDockTitleGraphic;   // master switch: show a graphic instead of text on dock tabs
     extern bool useMultimedia;
     extern bool useLamaSpotFill;   // spot tool heals with LaMa (GPU) instead of MI-GAN
-    extern bool useReplaceFillModes;   // Fill/Object modes shelved; false = spots only
+    extern bool useReplaceFillModes;   // true = ReplacePanel + Fill/Object; false = spots only
     /* The unified Filter dock: one panel with a Folders/Catalog scope switch over one
        category vocabulary, replacing the separate Filters and Catalog panels. False
        restores both panels exactly as they were -- an escape hatch while this proves out,
@@ -831,6 +831,7 @@ Q_NAMESPACE
     extern int headerBtnGap;            // Develop headers: gap between [eye] and [:]
     extern int headerBtnRightInset;     // ditto: inset from the panel's right edge
     extern int subHeaderIndent;         // ditto: sub-header offset under the Edits header
+    extern int headerLeftInset;         // ditto: panel edge -> header collapse arrow
     extern int panelBorderHeight;       // Develop panel bottom separator rule height
 
     /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,
@@ -847,6 +848,37 @@ Q_NAMESPACE
         if (ptSize > 0) css += " font-size: " + QString::number(ptSize) + "pt;";
         css += " } QLabel:disabled { color: " + disabledColor.name() + "; }";
         return css;
+    }
+
+    /* Develop SUBPANEL CONTENT background: ten shades above the dock's own background, so
+       each subpanel's contents (the scopes strip, the Raw and Transform bodies, the Edits
+       tree's non-header rows) read as a surface distinct from the header bands over them
+       -- those keep the backgroundShade +5 -> -15 gradient -- and from the action row
+       under the dock title bar, which stays on the plain background. Tracks
+       backgroundShade, so it follows the Preferences brightness slider. */
+    inline QColor panelContentBg() {
+        const int s = backgroundShade + 10;
+        return QColor(s, s, s);
+    }
+
+    /* CONTROL-GROUP separator: the thin rule drawn BETWEEN groups of controls inside a
+       subpanel -- the dividers between the Basic tone/WB/presence groups in the Edits
+       tree (PropertyEditor::addDivider) and the Raw panel's rule under "Render using".
+       Brighter than the lifted content it sits on (panelContentBg + 20), so a group break
+       reads inside a panel without competing with the panel separator below. */
+    inline QColor groupSeparatorColor() {
+        const int s = backgroundShade + 30;
+        return QColor(s, s, s);
+    }
+
+    /* PANEL separator: the rule along the bottom edge of each Develop subpanel, and under
+       the dock's action row. tabWidgetBorderColor dimmed ten shades: the panel boundaries
+       are structural and constant, so they sit quieter than the group rules inside a
+       panel, which mark something the eye is meant to follow. */
+    inline QColor panelSeparatorColor() {
+        const QColor &c = tabWidgetBorderColor;
+        return QColor(qMax(0, c.red() - 10), qMax(0, c.green() - 10),
+                      qMax(0, c.blue() - 10));
     }
 
     /* A colour blended halfway into the panel background: the DISABLED form of anything
