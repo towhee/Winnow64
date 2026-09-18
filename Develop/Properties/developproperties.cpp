@@ -3040,6 +3040,14 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
        header content shifts -- its child rows keep their own indentation, so the sliders
        always keep their full width. */
     model->setData(capIdx, QVariant(G::subHeaderIndent), UR_ExtraIndent);
+
+    /* A plain spacer (no rule) as the section's FIRST child, so the first row does not
+       butt up against the header band -- the same height as the group dividers inside the
+       sections, with lineHeight 0 so nothing is drawn. addDivider leaves capIdx on the
+       divider, so restore the header index: every caller takes parIdx = capIdx on return. */
+    const QModelIndex hdrIdx = capIdx;
+    addDivider(dividerHeight, 0, Qt::transparent, hdrIdx, name, name + "TopSpacer");
+    capIdx = hdrIdx;
 }
 
 void DevelopProperties::addSlider(const QString &key, const QString &caption,

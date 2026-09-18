@@ -76,7 +76,10 @@ void RawPanel::buildUi()
        the custom rows below re-add the 10px inset so their captions stay indented. */
     body = new QWidget(this);
     QVBoxLayout *bl = new QVBoxLayout(body);
-    bl->setContentsMargins(0, 4, 0, 6);
+    /* The 9px top margin is the panel's own 4px inset plus the 5px spacer the property
+       tree puts under every section header (DevelopProperties::addHeader), so the first
+       row here clears the "Raw" band by the same amount as Basic/Color/Effects. */
+    bl->setContentsMargins(0, 9, 0, 6);
     bl->setSpacing(4);
     outer->addWidget(body);
 
