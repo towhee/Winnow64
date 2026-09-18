@@ -114,6 +114,44 @@ public:
     bool ToImage(const WorkingImage &img, QImage &out, Space space = Space::sRGB,
                  ViewTransform view = ViewTransform::None);
 
+    /*
+        WHERE A PERCEPTUAL TONE LANDS ON THE DISPLAY, as a 0..1 position on the axis the
+        histogram scope is drawn on. Takes a value in Develop's perceptual (gamma) working
+        domain and returns where the finished render puts it, view transform and transfer
+        function included.
+
+        IT EXISTS FOR THE TONE REGIONS. Develop's blacks/shadows/highlights/whites weights
+        are placed by handles the user drags underneath that histogram, so a handle at 0.5
+        has to mean the middle of the picture they are looking at. The weights are computed
+        three stages upstream, before any of this has been applied, where 0.5 means
+        something else entirely: under Filmic, perceptual 0.5 lands at display level 170,
+        not 128. Without this the handles do not sit where they are drawn.
+
+        The primaries are deliberately NOT applied: this is a position on a tone axis, and
+        the histogram's x-axis is likewise tone, not colour. Cheap enough to call per LUT
+        entry (1024 of them per render), never per pixel.
+    */
+    static float DisplayPosition(float perceptual, ViewTransform view);
+
+    /*
+        The inverse of DisplayPosition: given a place on the display axis, the perceptual
+        working value that lands there.
+
+        IT EXISTS BECAUSE THE TONE CONTROLS NOW WORK IN DISPLAY SPACE. Lightroom's
+        operators were measured as shifts in levels of 255, and the only way to apply a
+        shift in those units is to go out to that axis, move, and come back. Doing it the
+        other way -- converting the target shift into a working-value shift -- needs the
+        local slope of the view transform, which near the shoulder is small enough that
+        the conversion blows up.
+
+        BISECTION rather than a closed form, because the view transforms have no tractable
+        inverse (AgX especially) and this runs 1024 times per render, not per pixel. Above
+        the display range the transform saturates and no inverse exists; the caller is
+        responsible for not asking, which the tone bands guarantee by tapering to zero
+        before white. Monotonic by construction, so bisection cannot pick a wrong branch.
+    */
+    static float PerceptualFromDisplay(float display, ViewTransform view, float maxPerceptual);
+
     /* Scene-linear float -> 16-bit QImage (Format_RGBX64), for export. Same view
        transform, primaries and transfer function as ToImage, quantised to 16 bits
        instead of 8 -- one shared code path, so export cannot drift from the loupe. */

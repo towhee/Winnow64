@@ -142,10 +142,17 @@ the extremes: they are the gentle controls.</li>
 clips.  These are the blunt ones, and the histogram scope is the place to watch them.</li>
 </ul>
 
-<p>The four tonal sliders act on <b>regions of the tone range</b>, and where those regions
-begin and end is adjustable: the handles under the histogram scope (and under the
-parametric curve in the Curves panel) split the range into blacks | shadows | highlights |
-whites.  Move a split and the same slider value covers more or less of the image.</p>
+<p>Those are <b>two different kinds of control</b>, and it is worth knowing which is
+which.  Highlights and Shadows act on a <b>region of the tone range</b> and fade out
+before they reach either extreme, so they shape the picture without touching where it
+clips.  Whites and Blacks move the end points, which rescales everything in between &mdash;
+so they reach all the way to the midtones, and they are the two that can clip.</p>
+
+<p>Where the two regions sit is adjustable: the handles under the histogram scope (and
+under the parametric curve in the Curves panel) place the shadows and highlights peaks,
+with the middle handle marking where one hands over to the other.  Move a handle and the
+same slider value covers a different part of the image.  The two regions overlap through
+the midtones, where a tone takes a share of each &mdash; the same way Lightroom's do.</p>
 
 <p>The Curves panel's <b>Parametric</b> mode is another face of these same four sliders
 &mdash; drag a band of the curve and the slider here moves with it.  There is no hidden

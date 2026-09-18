@@ -226,6 +226,28 @@ private:
     int redoMax = 5;
     bool imageCacheTriggered;
 
+    /*  THE FIRST IMAGE OF A NEW FOLDER IS SELECTED FROM HERE, and this is what keeps
+        that promise.
+
+        MW::folderChanged does not select anything itself: it calls setStartRow with
+        fileSelectionChanged = true and relies on the reader for that row returning to
+        emit selectRow, which is what eventually reaches MW::fileSelectionChange and
+        paints the loupe. Every other setStartRow caller is a scroll
+        (MW::thumbHasScrolled and friends), which passes false -- and the thumb strip
+        scrolls while the folder is still loading, because icons are arriving into it.
+        A scroll landing before the start row's reader returned used to overwrite
+        startRow and clear fileSelectionChanged, so the trigger never fired and the
+        loupe kept showing nothing until the user clicked a thumbnail.
+
+        pendingSelectionRow is the PROXY row still owed a selection. A scroll does not
+        touch it, so the bootstrap survives one. firstSelectionPending is the same
+        question asked once per folder load (reset in initialize alongside
+        allFinishedFired): it arms the backstop in allFinished for the case where the
+        start row's reader never returns at all -- a failed or aborted read, or a row
+        the dispatcher skipped. */
+    int pendingSelectionRow = -1;
+    bool firstSelectionPending = false;
+
     // cache progress color
     int mBrightness = 100;
     int mr = mBrightness * 0.87;

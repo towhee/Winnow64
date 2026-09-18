@@ -286,6 +286,10 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     sfRowCount = rowCountSf();
     lastRow = sfRowCount - 1;
     imageCacheTriggered = false;
+    /* Arm on a selection call, but NEVER disarm on a scroll: a scroll's setStartRow
+       arrives with fileSelectionChanged = false while the folder's own start row is
+       still being read, and clearing here is what left the loupe blank. */
+    if (fileSelectionChanged) pendingSelectionRow = sfRow;
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
@@ -580,6 +584,9 @@ void MetaRead::initialize(QString src)
     bIsDone = false;
     isDone = false;
     allFinishedFired = false;
+    /* A new folder owes one selection; see the members in metaread.h. */
+    firstSelectionPending = true;
+    pendingSelectionRow = -1;
     success = false;
     quitAfterTimeoutInitiated = false;
     if (quitTimer->isActive()) quitTimer->stop();
@@ -690,6 +697,8 @@ QString MetaRead::diagnostics()
     kv("fileSelectionChanged",       QVariant(fileSelectionChanged).toString());
     kv("isNewStartRowWhileDisp.",    QVariant(isNewStartRowWhileDispatching).toString());
     kv("imageCacheTriggered",        QVariant(imageCacheTriggered).toString());
+    kv("pendingSelectionRow",        QVariant(pendingSelectionRow).toString());
+    kv("firstSelectionPending",      QVariant(firstSelectionPending).toString());
     kv("success",                    QVariant(success).toString());
     kv("quitAfterTimeoutInitiated",  QVariant(quitAfterTimeoutInitiated).toString());
     kv("readSuccessThisCycle (size)",QString::number(readSuccessThisCycle.size()));
@@ -1312,12 +1321,13 @@ void MetaRead::processReturningReader(int id, Reader *r)
        would let dispatch re-pick the same video before its frame is decoded,
        spawning concurrent QMediaPlayers on the same file (AVFoundation
        corruption). */
+    /* metaRead works in proxy rows and the reader reports a datamodel row.
+       The snapshot carries the reverse map, so this is O(1) -- it runs once
+       per returning reader, which is once per image. */
+    int sfRow = -1;
     {
-        /* metaRead works in proxy rows and the reader reports a datamodel row.
-           The snapshot carries the reverse map, so this is O(1) -- it runs once
-           per returning reader, which is once per image. */
         auto snap = dm->proxySnapshot();
-        const int sfRow = snap ? snap->sfRowFromDmRow(dmRow) : -1;
+        sfRow = snap ? snap->sfRowFromDmRow(dmRow) : -1;
         if (sfRow >= 0) {
             readSuccessThisCycle.insert(sfRow);
             if (!isVideoAt(sfRow)) rowsReading.remove(sfRow);
@@ -1360,11 +1370,18 @@ void MetaRead::processReturningReader(int id, Reader *r)
         }
     }
 
-    // trigger MW::fileSelectionChange which starts ImageCache
-    if (fileSelectionChanged &&
+    /*  trigger MW::fileSelectionChange which starts ImageCache
+
+        Compared in PROXY rows. This was dmRow == startRow, which mixes the two row
+        spaces: startRow is the proxy row setStartRow was given, dmRow is the
+        datamodel row the reader was dispatched on. They agree only while the proxy
+        is unsorted and unfiltered, so any other ordering either selected the wrong
+        image or -- when no reader ever returned on a dm row equal to the proxy
+        start row -- selected nothing at all. */
+    if (pendingSelectionRow >= 0 &&
         !imageCacheTriggered &&
         instance == dm->instance &&
-        dmRow == startRow
+        sfRow == pendingSelectionRow
         )
     {
         imageCacheTriggered = true;
@@ -1374,13 +1391,13 @@ void MetaRead::processReturningReader(int id, Reader *r)
             may have changed before it is delivered -- an index is only ever
             valid in the thread and the moment that made it. Selection::
             setCurrentIndex is given a fresh one built on the GUI thread. */
-        auto selSnap = dm->proxySnapshot();
-        const int sfRowToSelect = selSnap ? selSnap->sfRowFromDmRow(r->dmRow) : -1;
+        pendingSelectionRow = -1;
+        firstSelectionPending = false;
         bool clearSelection = true;
         // Selection::setCurrentIndex routes through MW::updateChange which
         // in turn invokes MW::fileSelectionChange, so do not emit
         // fileSelectionChange here as well.
-        if (sfRowToSelect >= 0) emit selectRow(sfRowToSelect, clearSelection);
+        emit selectRow(sfRow, clearSelection);
     }
 
     if (isDebug)  // returning reader, row has been processed by reader
@@ -1957,6 +1974,24 @@ void MetaRead::allFinished(QString src)
                  QString("MetaRead finished with %1 image(s) that failed to load").arg(failed),
                  fun);
     }
+    /*  THE BACKSTOP FOR THE FIRST IMAGE. Every row has now been read, so if the
+        folder is still owed its opening selection the reader that was supposed to
+        trigger it is never coming: it failed, was aborted, or the dispatcher skipped
+        the row because it was already read. Without this the loupe stays blank until
+        the user clicks a thumbnail. Ahead of done() so the selection is in place
+        before MW::folderChangeCompleted sets the image cache position. */
+    if (firstSelectionPending && instance == dm->instance) {
+        firstSelectionPending = false;
+        int sfRow = pendingSelectionRow >= 0 ? pendingSelectionRow : startRow;
+        pendingSelectionRow = -1;
+        if (sfRow >= 0 && sfRow < rowCountSf()) {
+            if (G::isLogger || G::isFlowLogger)
+                G::log(fun, "No reader triggered the first selection; selecting row " +
+                            QString::number(sfRow));
+            emit selectRow(sfRow, true);
+        }
+    }
+
     emit runStatus(false, true, true, fun); // running, show, success, src
     emit done();                            // signal MW::folderChangeCompleted
 

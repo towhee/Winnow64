@@ -16,8 +16,10 @@
 #include "Develop/rangemask.h"
 #include "Develop/workingimagecache.h"
 #include "Dialogs/savedeveloppresetdlg.h"
+#include <QDir>
 #include <QFileInfo>
 #include <QPainterPath>
+#include <QStandardItemModel>
 #include <QRegularExpression>
 #include <QVariantAnimation>
 #include <algorithm>
@@ -4342,6 +4344,48 @@ void DevelopProperties::addCalibrate()
    reset, not a choice, and an untouched image writes no sidecar. */
 static const char *kBuiltInProfileLabel = "Winnow Standard";
 
+/* Shown when the combo has nothing but the built-in entry in it. A user with no Adobe
+   application installed sees exactly that, and without this the row reads as "this camera
+   has no profiles" when the truth is "no profiles are installed on this computer" -- a
+   different statement, and the only one of the two the user can act on. */
+static const char *kNoProfilesLabel = "No profiles installed for this camera";
+
+/*
+    The folders swept, for the tooltip. CameraProfileStore::roots() is public for exactly
+    this -- the list is built in one place, so a root added there cannot go unmentioned
+    here, and the platform branching lives there rather than being duplicated here.
+
+    THE HOME PREFIX IS ABBREVIATED ON UNIX ONLY. "~" is what a macOS or Linux user reads
+    a home path as, and it keeps the tooltip from wrapping to an unreadable width. On
+    Windows it is not a convention the user knows -- "~\AppData\Roaming\..." would read
+    as a typo -- so the path is shown whole.
+*/
+static QString profileRootsText()
+{
+    QString out;
+    const QStringList roots = CameraProfileStore::roots();
+    for (const QString &r : roots) {
+        QString shown = r;
+#ifndef Q_OS_WIN
+        const QString home = QDir::homePath();
+        if (!home.isEmpty() && shown.startsWith(home))
+            shown = QLatin1Char('~') + shown.mid(home.size());
+#endif
+        out += "\n\u2022 " + QDir::toNativeSeparators(shown);
+    }
+    return out;
+}
+
+/* The invitation to drop profiles in Winnow's own folder -- and NOTHING when there is no
+   such folder, because on a platform that gives no writable app-data location it is not
+   swept either (CameraProfileStore::ownRoot). Telling the user to put files somewhere
+   nothing reads would be worse than staying quiet. */
+static QString ownRootText()
+{
+    if (CameraProfileStore::ownRoot().isEmpty()) return QString();
+    return " The last is Winnow's own: drop .dcp files there and they appear here.";
+}
+
 void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
 {
     const bool raw = currentIsRaw();
@@ -4363,7 +4407,12 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
           "Other entries are DNG camera profiles (.dcp) installed on this computer for "
           "this camera, applied whole.\n"
           "Changing the profile changes what a given Temp value means, because white "
-          "balance is solved against the camera matrix."
+          "balance is solved against the camera matrix.\n\n"
+          "Winnow does not ship profiles -- Adobe's are licensed for use with Adobe "
+          "products -- it reads whatever is already installed in:"
+          + profileRootsText() +
+          "\n\nAdobe's free DNG Converter fills the first of those."
+          + ownRootText()
         : (raw ? "The Apple decoder applies its own camera profile before Winnow sees the "
                  "image, so this control would do nothing. Switch Demosaic to Winnow to "
                  "choose a profile."
@@ -4489,6 +4538,24 @@ void DevelopProperties::repopulateCameraProfileCombo()
         for (const CameraProfileStore::Entry &e : found)
             cameraProfileCombo->addItem(e.name, e.name);
     }
+    else if (CameraProfileStore::instance().indexReady()) {
+        /*
+            NOTHING FOUND, AND THE SWEEP IS FINISHED -- so this is the answer, not the
+            half-second before the answer, which is why it waits on indexReady() exactly
+            as the "(not installed)" row below does.
+
+            It is a DISABLED ROW IN THE LIST rather than a label in the value cell: the
+            value cell's greyed-reason pattern is for a control that cannot be used, and
+            this one can -- Winnow Standard is a real choice and stays selectable. The
+            explanation belongs where the user goes looking for the missing profiles,
+            which is inside the dropdown. The tooltip names the folders.
+        */
+        cameraProfileCombo->insertSeparator(cameraProfileCombo->count());
+        cameraProfileCombo->addItem(kNoProfilesLabel);
+        if (auto *m = qobject_cast<QStandardItemModel *>(cameraProfileCombo->model()))
+            if (QStandardItem *it = m->item(cameraProfileCombo->count() - 1))
+                it->setFlags(it->flags() & ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable));
+    }
 
     if (stored.isEmpty()) { cameraProfileCombo->setCurrentIndex(0); return; }
 
@@ -4607,10 +4674,14 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     i.captionText = "Tone mapping";
     i.tooltip = raw
         ? "How scene brightness is mapped for display.\n"
-          "None: the default -- no tone mapping (scene-linear).\n"
-          "Filmic: a filmic contrast curve.\n"
+          "Standard roll-off: the default -- the ordinary rendering, where every other "
+          "raw developer lands.\n"
           "Soft roll-off: longer, wider roll-off -- saturated highlights desaturate "
-          "toward white instead of shifting hue."
+          "toward white instead of shifting hue.\n"
+          "None: no tone mapping at all. Scene-linear data, which looks dark and flat -- "
+          "a starting point for building a look from scratch, not a finished picture.\n"
+          "A camera profile carrying its own tone curve owns the mapping, and this row "
+          "then shows that instead of a choice."
         : "Only raw files need a view transform. This file already carries the tone "
           "mapping its camera applied.";
     i.isIndent = true;

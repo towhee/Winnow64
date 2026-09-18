@@ -53,12 +53,18 @@ QStringList CameraProfileStore::roots()
     if (!localAppData.isEmpty()) out << localAppData + "/RawTherapee/dcpprofiles";
 #endif
 
-    /* Winnow's own folder, for profiles the user made or was given. Listed LAST so a
-       user-supplied profile of the same name as an installed one does not displace it in
-       the menu -- both appear, and the duplicate is visible rather than silent. */
-    const QString app = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (!app.isEmpty()) out << app + "/CameraProfiles";
+    /* Winnow's own folder, for profiles the user made or was given. Listed LAST because
+       the sweep keeps the FIRST profile of a given name for a camera (see scan()): a
+       user-supplied profile does not displace an installed one of the same name. */
+    const QString own = ownRoot();
+    if (!own.isEmpty()) out << own;
     return out;
+}
+
+QString CameraProfileStore::ownRoot()
+{
+    const QString app = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    return app.isEmpty() ? QString() : app + "/CameraProfiles";
 }
 
 QString CameraProfileStore::key(const QString &model)
@@ -89,14 +95,30 @@ bool CameraProfileStore::indexReady() const
 void CameraProfileStore::scan()
 {
     QHash<QString, QList<Entry>> built;
+    /*
+        ONE MENU ROW PER PROFILE NAME PER CAMERA. The roots overlap in practice -- Adobe's
+        installer puts the same "Camera *" profiles in the machine-wide folder AND in the
+        user's, so a D850 offered every "Camera ..." entry twice -- and two rows that name
+        the same profile are not a choice: a profile is stored and resolved BY NAME, so
+        both rows render identically and only one of them can ever be the one found again.
+        The FIRST wins, which is why the roots are ordered as they are.
+    */
+    QSet<QString> seen;                     // model key + '\n' + profile name
 
     const QStringList allRoots = roots();
+    /* BY NAME, NOT BY POSITION. Winnow's own root is last in roots() today, but "last"
+       is an ordering decision made for a different reason (name collisions), and it
+       stops being Winnow's root the moment the platform hands back no writable app-data
+       location -- ownRoot() is then empty, it is never appended, and the last entry
+       becomes RawTherapee's. Creating a folder inside ANOTHER application's install is
+       not a cosmetic slip, so the one root this sweep may create says so itself. */
+    const QString own = ownRoot();
     for (const QString &root : allRoots) {
         QDir dir(root);
         /* Winnow's OWN folder is created rather than merely checked: a folder the user is
            told to drop profiles into has to exist before they can find it. The others are
            other applications' and are never created. */
-        if (!dir.exists() && root == allRoots.last()) dir.mkpath(".");
+        if (!dir.exists() && !own.isEmpty() && root == own) dir.mkpath(".");
         if (!dir.exists()) continue;
         QDirIterator it(root, QStringList() << "*.dcp", QDir::Files,
                         QDirIterator::Subdirectories);
@@ -107,7 +129,11 @@ void CameraProfileStore::scan()
             /* A profile with no ProfileName is legal; fall back to the file's base name so
                it is still selectable rather than showing an empty menu row. */
             if (name.isEmpty()) name = QFileInfo(path).completeBaseName();
-            built[key(model)] << Entry{name, path};
+            const QString k = key(model);
+            const QString seenKey = k + QLatin1Char('\n') + name;
+            if (seen.contains(seenKey)) continue;
+            seen.insert(seenKey);
+            built[k] << Entry{name, path};
         }
     }
 
