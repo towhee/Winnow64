@@ -12403,9 +12403,10 @@ void MW::resetDevelopTransformMode(int mode)
     Geometry g = developProperties->currentGeometry();
     switch (mode) {
     case TransformPanel::CropMode:
-        /* Reset the aspect to "As shot" (free) first, else beginCropEdit below re-fits
-           the full frame to the locked aspect and the reset appears to do nothing. */
-        transformPanel->setAspectAsShot();
+        /* Clear the aspect, the lock AND the flip first, else beginCropEdit below re-fits
+           the full frame to whatever constraint is left standing and the reset appears to
+           do nothing (or returns a portrait box when the flip was on). */
+        transformPanel->resetCropState();
         g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
         break;
     case TransformPanel::LevelMode:

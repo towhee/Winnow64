@@ -853,8 +853,13 @@ private:
        "As shot" (cropAspect == 0) resolves to the image's native w/h so the frame
        keeps the original proportions. */
     qreal   cropLockedAspect() const;
+    /* The aspect a RESHAPE honours: the chosen ratio whether or not the padlock is on
+       (picking "16 x 9" must reshape the crop; the lock only governs dragging), flip-aware.
+       0 for "As shot" unless locked, where it resolves to the image's native w/h. */
+    qreal   cropTargetAspect() const;
     void    cropClampN();                           // clamp cropN's edges into [0,1]
-    void    cropRefitToLockedAspect();              // reshape cropN to the locked aspect
+    void    cropRefitToAspect();                    // reshape cropN to cropTargetAspect()
+    void    cropFitLargestToAspect();               // grow cropN to the largest fit at that aspect
     void    cropDrawNewFrom(QPoint vp);             // rubber-band a new crop, anchor -> vp
     void    cropDrawOverlay(QPainter *p, const QRectF &br);
     bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }

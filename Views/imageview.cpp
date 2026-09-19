@@ -1613,15 +1613,7 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
        the aspect-constrained largest inscribed rect). */
     cropN = (initialCrop.isValid() && !initialCrop.isNull()) ? initialCrop
                                                              : QRectF(0.0, 0.0, 1.0, 1.0);
-    const double lockedA = cropLockedAspect();           // flip-aware; 0 when free
-    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0) && lockedA > 0.0) {
-        const QRectF br = pmItem->boundingRect();
-        const double imgA = br.width() / br.height();
-        double w = 1.0, h = 1.0;
-        if (lockedA > imgA) h = imgA / lockedA;   // wider than image -> limit height
-        else                w = lockedA / imgA;   // taller -> limit width
-        cropN = QRectF((1.0 - w) / 2.0, (1.0 - h) / 2.0, w, h);
-    }
+    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0)) cropFitLargestToAspect();
 
     cropEditMode = true;
     cropWarp = false;                 // always start as a plain rectangle crop
@@ -1688,11 +1680,29 @@ void ImageView::cropClampN()
     if (cropN.bottom() > 1.0) cropN.moveBottom(1.0);
 }
 
-void ImageView::cropRefitToLockedAspect()
+void ImageView::cropFitLargestToAspect()
 {
-    /* Re-fit the current crop centre to the (flip-aware) locked aspect, shrinking to
-       stay inside the image. No-op when the aspect is free/unlocked. */
-    const double a = cropLockedAspect();
+    /* Grow the crop to the LARGEST rect of the (flip-aware) target aspect that fits the
+       image, keeping the current centre. For "As shot" unflipped that is the whole frame,
+       which is what picking it has to give back. */
+    const double a = cropTargetAspect();
+    if (a <= 0.0 || !pmItem) return;
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0.0 || br.height() <= 0.0) return;
+    const double imgA = br.width() / br.height();
+    const QPointF c = cropN.center();
+    double w = 1.0, h = 1.0;
+    if (a > imgA) h = imgA / a;   // wider than the image -> limit height
+    else          w = a / imgA;   // taller -> limit width
+    cropN = QRectF(c.x() - w / 2.0, c.y() - h / 2.0, w, h);
+    cropClampN();
+}
+
+void ImageView::cropRefitToAspect()
+{
+    /* Re-fit the current crop centre to the (flip-aware) chosen aspect, shrinking to
+       stay inside the image. No-op when the aspect is free ("As shot", unlocked). */
+    const double a = cropTargetAspect();
     if (a <= 0.0 || !pmItem) return;
     const QRectF br = pmItem->boundingRect();
     const QPointF c = cropN.center();
@@ -1713,7 +1723,12 @@ void ImageView::setCropAspect(double aspect, bool locked, bool flipped)
     if (!cropEditMode) return;
     cropWarp = false;                 // choosing an aspect implies a rectangle: leave warp mode
     cropFlipPrevN = cropFlipResultN = QRectF();   // aspect/lock change breaks the pairing
-    cropRefitToLockedAspect();
+    /* "As shot" means the frame as shot: grow back to the whole image (or the largest
+       native-ratio rect, when flipped to portrait). A CHOSEN ratio instead reshapes the
+       crop where it stands -- keeping its width -- so picking 16 x 9 for a tight crop
+       does not blow it back up to full size. */
+    if (cropAspect <= 0.0) cropFitLargestToAspect();
+    else                   cropRefitToAspect();
     cropSyncFrameFromN();
     viewport()->update();
     cropEmitChanged();
@@ -1888,10 +1903,17 @@ int ImageView::cropHitTest(QPoint vp) const
 qreal ImageView::cropLockedAspect() const
 {
     if (!cropAspectLocked) return 0.0;
+    return cropTargetAspect();
+}
+
+qreal ImageView::cropTargetAspect() const
+{
     qreal base = cropAspect;
     if (base <= 0.0) {
-        /* "As shot": lock to the displayed image's native aspect. Its on-screen w/h
-           is the uniformly-scaled image, so it equals the image-pixel aspect. */
+        /* "As shot" is a RATIO like any other -- the displayed image's native w/h -- not
+           an absence of one. (Its on-screen w/h is the uniformly-scaled image, so it
+           equals the image-pixel aspect.) The padlock decides whether DRAGGING is free;
+           it must not decide whether picking "As shot" reshapes the crop. */
         if (!pmItem) return 0.0;
         const QRectF br = pmItem->boundingRect();
         base = (br.height() > 0.0) ? br.width() / br.height() : 0.0;

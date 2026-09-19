@@ -59,10 +59,12 @@ public:
     void setLevelAngle(double degrees);
     /* Select a mode programmatically (no modeChanged emitted). */
     void setMode(int mode);
-    /* Select the "As shot" (free) aspect programmatically (no aspectChanged emitted).
-       Used by the crop reset so the full-frame reset is not re-inscribed by a locked
-       aspect. */
-    void setAspectAsShot();
+    /* Put the crop controls back to their neutral state -- "As shot", unlocked, unflipped
+       -- with no signal emitted. Used by the crop reset: a reset means the WHOLE image, so
+       every constraint has to go. Leaving the lock or the flip set would re-inscribe the
+       full frame to that ratio and the reset would appear to do nothing (or, with the flip
+       on, hand back a portrait box). */
+    void resetCropState();
 
 signals:
     void aspectChanged(const QString &key, double ratio);  // ratio = w/h, 0.0 = As shot / free
@@ -106,7 +108,17 @@ private:
     void selectMode(int mode);             // user-driven mode change (emits modeChanged + persists)
     void populateAspectCombo();            // (re)fill presets + persisted custom aspects
     void addAspectItem(const QString &caption, const QString &key, double ratio);
+    void addActionItem(const QString &caption, int action);   // "Add..." / "Edit..." tail items
     void promptAddCustomAspect();          // dialog -> append + persist a custom ratio
+    void manageCustomAspects();            // dialog -> rename / delete the persisted customs
+    /* Both prompt, so both take the widget to parent that prompt to: the manage dialog
+       when called from it, so the prompt is not left behind its own modal parent. */
+    bool renameCustomAspect(int i, QWidget *parent);
+    bool deleteCustomAspect(int i, QWidget *parent);
+    /* Point the combo at the entry with this key (falling back to "As shot" when it has
+       gone), with no aspectChanged emitted. Needed after every populateAspectCombo, which
+       clears the combo and with it the selection. */
+    void selectAspectKey(const QString &key);
     void updateLockButton();               // swap the padlock glyph + tooltip for aspectLocked
     void updateFlipButton();               // reflect aspectFlipped in the flip button
     void updatePreviewButton();            // set the eye glyph/tooltip from previewShown
@@ -140,7 +152,7 @@ private:
 
     /* UserRole payloads on each combo item. */
     enum AspectRole { KeyRole = Qt::UserRole + 1, RatioRole, ActionRole };
-    enum AspectAction { NoAction = 0, AddCustomAction = 1 };
+    enum AspectAction { NoAction = 0, AddCustomAction = 1, ManageCustomAction = 2 };
 };
 
 #endif // TRANSFORMPANEL_H

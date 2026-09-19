@@ -2662,7 +2662,7 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
         if (!developProperties) return;
         developProperties->setCurrentGeometry(Geometry());      // identity
-        transformPanel->setAspectAsShot();      // free aspect, else full frame re-fits it
+        transformPanel->resetCropState();       // free aspect + no lock/flip, else the full frame re-fits to them
         transformPanel->setLevelAngle(0.0);     // clear the straighten field
         developCropShowResult = false;
         transformPanel->setPreviewShown(false);
