@@ -2800,8 +2800,16 @@ void MW::createDevelopDock()
     connect(scopesView, &ScopesView::menuRequested, this, &MW::showDevelopScopesMenu);
     developDock->setFloating(false);
     developDock->setVisible(true);
-    // prevent MW splitter resizing developDock so the header - and + buttons stay visible
-    developDock->setMinimumWidth(275);
+    /* Floor the dock so the MW splitter cannot squeeze the Edits bar's trailing buttons
+       ([+] [eye] [:]) out of sight. The scope block lives in a QScrollArea that scrolls
+       VERTICALLY only, so a too-narrow dock CLIPS the bar rather than refusing to shrink
+       -- the dock is the only place the limit can be enforced. barMinimumWidth is the
+       bar's own layout minimum (arrow, "Edits", "Scope:", combo, gaps, three buttons), so
+       it tracks the font and any control added to the bar instead of going stale like the
+       hand-picked 275 it replaces; the scrollbar's width is reserved on top, because the
+       bar loses that much whenever the block below it is tall enough to need one. */
+    const int developDockMinW = developScopeHeader->barMinimumWidth() + G::scrollBarThickness;
+    developDock->setMinimumWidth(qMax(275, developDockMinW));
     connect(developDock, &DockWidget::focus, this, &MW::focusOnDock);
     connect(developDock, &QDockWidget::visibilityChanged, this, &MW::developDockVisibilityChange);
 
