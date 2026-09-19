@@ -9,12 +9,11 @@ WHAT'S NEW
 
 BUGS / TO DO
 - When select Library in the Source panel, all selections in the Folders tree should be cleared.
-- Context menu in all Develop panels
-- Crop aspect is not working.
+- When select Library do auto scan for new folders and orphans?
+- In Library, should we date stamp sidecars and then check for non-Winnow sidecar changes?
 - Does it make sense to be able to select R and G and B rather than R or G or B?
 - Clear the develop copy/paste between sessions.
 - Customize Info (I) location/size.
-- Does Winnow zoom account for the display setting in macos properly?
 - Lightroom has different white balance for some files
 - /Users/roryhill/Pictures/_test2/2020-04-25_2013.JPG thumb not rotated
 - /Users/roryhill/Pictures/Test/copy/IMG_5853.heic image and thumb not rotated

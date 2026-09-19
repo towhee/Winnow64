@@ -1850,6 +1850,16 @@ void MW::createFilterDock()
         setScope(sc == FilterPanel::CatalogScope ? G::Scope::Catalog
                                                : G::Scope::Folders,
                  "FilterPanel::scopeChanged");
+        /*  COMING BACK TO Here PUTS THE FOLDER HIGHLIGHT BACK. MW::setScope clears the
+            Folders tree selection when the catalog becomes the scope, and this selector
+            is the one way back to Folders that does NOT go through a folder click -- so
+            without this the tree would show no selection while its folders are exactly
+            what is loaded. Re-selecting from dm->folderList only here, and not in
+            setScope itself, because MW::folderSelectionChange calls setScope(Folders)
+            BEFORE folderList has the folder just clicked: doing it there would undo the
+            click. syncSelectionToFolders does not re-emit (see its comment). */
+        if (sc == FilterPanel::FolderScope && fsTree)
+            fsTree->syncSelectionToFolders(dm->folderList);
     });
 
         connect(filterPanel, &FilterPanel::rebuildFolderCategoriesRequested, this, [this]{

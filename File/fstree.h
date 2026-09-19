@@ -109,6 +109,11 @@ public:
         refusal, so the emitter that is still on the stack leaves the tree alone instead of
         moving it to a folder that was never loaded.  See MW::okToDiscardPicks. */
     void refuseFolderChange(const QStringList &loadedFolders);
+    /*  Put the tree highlight on the folders the datamodel holds, without emitting
+        anything.  Public because MW clears the selection when the catalog becomes the
+        scope (MW::setScope) and has to put it back when the Filters panel's scope
+        selector returns to Folders. */
+    void syncSelectionToFolders(const QStringList &folderPaths);
     /*  Whether the last folderSelectionChange emitted from here was refused.  Valid until
         the next emit, so a caller of select() can tell "the user said no" from "the folder
         could not be selected". */
@@ -191,9 +196,6 @@ private:
         would otherwise leave the tree disagreeing with the datamodel. */
     bool emitFolderSelectionChange(const QString &dPath, G::FolderOp op,
                                    bool resetDataModel, bool recurse);
-    /*  Put the tree highlight on the folders the datamodel holds, without emitting
-        anything. */
-    void syncSelectionToFolders(const QStringList &folderPaths);
     bool folderChangeRefused = false;
     /*  A refused mouse press must not have its selection completed on release. */
     bool pressWasRefused = false;
