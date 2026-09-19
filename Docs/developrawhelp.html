@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Raw</h1>
+
+<h2>What it does</h2>
+<p>The <b>Raw</b> panel sits at the top of the Develop dock and holds the decisions made
+<i>before</i> any adjustment: which data Winnow develops, how that data is turned into
+pixels, and whether noise is removed while it still can be removed cleanly.  It appears
+for raw files only &mdash; a JPEG or a TIFF already is pixels, so there is nothing here to
+decide.</p>
+
+<p>Everything in this panel feeds the base image.  Change one of these and the whole
+recipe is re-rendered on the new base, which is why a change here can take a moment where
+a slider does not.</p>
+
+<h2>Edit: Raw or Embedded Preview</h2>
+<p>Every camera stores a finished JPEG inside the raw file &mdash; the picture you saw on
+the back of the camera.  <b>Raw</b> develops the sensor data itself: the full tonal range,
+the real white balance, and everything below.  <b>Embedded Preview</b> develops that
+camera JPEG instead.</p>
+
+<p>The preview is quicker and it is the camera maker's own rendering, so it is a
+reasonable choice for a fast pass or a first look.  It has been demosaiced, white
+balanced and contrast-mapped already, though, so the highlight and shadow headroom is
+gone and the raw-only controls below are hidden while it is selected.</p>
+
+<h2>Render using</h2>
+<p><b>Demosaic</b> is the step that turns the sensor's one-colour-per-photosite grid into
+full-colour pixels.  There are two engines:</p>
+
+<ul>
+<li><b>Apple</b> &mdash; Core Image's raw pipeline.  Fast, and a known quantity.</li>
+<li><b>Winnow</b> &mdash; the in-house decoder.  Slower, and the only route to the raw
+noise reduction below, which is the reason to choose it.</li>
+</ul>
+
+<h2>Noise Reduction</h2>
+<p>This is raw denoise: it runs on the sensor data before demosaic, while the noise is
+still the noise the sensor made.  Later noise reduction works on pixels that have already
+been interpolated and tone-mapped, and the grain has been baked into them by then &mdash;
+which is why the result here is better than anything the pipeline can do downstream.  It
+is offered with the <b>Winnow</b> engine only.</p>
+
+<ul>
+<li><b>Denoise</b> runs it.  The box reads <b>Denoised</b> once a denoised base is ready,
+and the amounts below become live.</li>
+<li><b>Auto run</b> does it for you: on, every raw file is denoised as you come to it;
+off, nothing happens until you tick <b>Denoise</b>.  It costs time on every image, so
+leave it off if you are moving quickly through a folder.</li>
+<li><b>Lum</b> and <b>Color</b> set how much of each is removed &mdash; luminance grain
+and colour speckle are separate problems, and colour usually tolerates a much heavier
+hand than luminance, which is where detail lives.</li>
+</ul>
+
+<p>When denoise cannot run, the group is greyed and the panel says why in its place,
+rather than accepting a click and quietly doing nothing.</p>
+
+<h2>What is saved</h2>
+<p>These are part of the develop recipe, stored on the Global scope in the image's
+sidecar: the edit source, the engine, the explicit denoise on/off and the two amounts.
+They are per image, so a folder can hold raws developed from the sensor data alongside
+raws developed from their previews.</p>
+
+</body>
+</html>

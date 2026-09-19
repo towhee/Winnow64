@@ -5,6 +5,8 @@
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
+#include "Develop/Transform/transformpanel.h"
+#include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
 #include "Develop/Presets/presetsview.h"
 #include "Develop/fillspot.h"
@@ -500,7 +502,7 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
     });
     connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setGlobalDenoise(true,  v); });
     connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setGlobalDenoise(false, v); });
-    connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::howThisWorks);
+    connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::rawHelp);
     /* Solo: the Raw panel is a peer of the Scope row and the adjustment sections, so
        expanding it folds them away. */
     connect(rawPanel, &RawPanel::collapseToggled, this, [this](bool collapsed){
@@ -2161,7 +2163,7 @@ BarBtn *DevelopProperties::makeSectionMenuBtn(int group)
 {
     BarBtn *b = new BarBtn();
     b->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
-    b->setToolTip("Section actions (show/hide, reset)");
+    b->setToolTip("Section actions (reset, help)");
     connect(b, &BarBtn::clicked, this, [this, group]{ showSectionMenu(group); });
     return b;
 }
@@ -2170,14 +2172,10 @@ void DevelopProperties::showSectionMenu(int group)
 {
     if (G::isLogger) G::log("DevelopProperties::showSectionMenu");
     const QString label = groupLabel(group);
-    EditScope *l = activeScope();
-    const bool shown = l ? *previewFlag(l, group) : true;
 
+    /* No show/hide item here: the eye button beside this menu already toggles the
+       section's changes. */
     QMenu menu(this);
-    QAction *aPreview = menu.addAction(tr("Show %1 changes").arg(label));
-    aPreview->setCheckable(true);
-    aPreview->setChecked(shown);
-    aPreview->setEnabled(l != nullptr);
     QAction *aReset = menu.addAction(tr("Reset %1").arg(label));
     aReset->setEnabled(!currentImagePath.isEmpty());
     /* Every section carries its own help page (Docs/develop<section>help.html), always
@@ -2187,11 +2185,9 @@ void DevelopProperties::showSectionMenu(int group)
 
     QAction *chosen = menu.exec(QCursor::pos());
     if (!chosen) return;
-    /* Both actions repopulate the tree, which destroys the button this click is being
+    /* Reset repopulates the tree, which destroys the button this click is being
        handled in, so fire on the next tick (same rule as the scope + submask rows). */
-    if (chosen == aPreview)
-        QTimer::singleShot(0, this, [this, group]{ togglePreviewSection(group); });
-    else if (chosen == aReset)
+    if (chosen == aReset)
         QTimer::singleShot(0, this, [this, group]{ resetSection(group); });
     else if (chosen == aHelp)
         sectionHelp(group);
@@ -2248,84 +2244,195 @@ void DevelopProperties::resetSection(int group)
     emit paramsChanged();
 }
 
+void DevelopProperties::bindPanelContextMenu(QWidget *container, TransformPanel *transform,
+                                             ReplacePanel *replace)
+{
+    if (G::isLogger) G::log("DevelopProperties::bindPanelContextMenu");
+    panelContainer = container;
+    transformPanel = transform;
+    replacePanel = replace;
+    if (panelContainer) panelContainer->installEventFilter(this);
+    /* The Transform panel's [?] had no handler; it opens the same page its context menu
+       does. (The Raw panel's [?] is wired in bindRawPanel, the Replace panel's in MW.) */
+    if (transformPanel)
+        connect(transformPanel, &TransformPanel::tipsRequested,
+                this, &DevelopProperties::transformHelp, Qt::UniqueConnection);
+}
+
+/*
+    Which band of the dock was right-clicked. Walks UP the widget tree from the widget
+    under the cursor: a click lands on a label, a slider or a button, and what matters is
+    which panel that control belongs to. The mask panel and this tree are both children of
+    the scope bar (setRowDetail), so they are tested before it -- the innermost band down
+    the chain is the one that answers.
+*/
+DevelopProperties::PanelSection DevelopProperties::sectionAt(QWidget *w)
+{
+    for (; w; w = w->parentWidget()) {
+        if (w == this)                             return SectionEdits;
+        if (maskPanel && w == maskPanel)           return SectionMask;
+        if (scopeHeader && w == scopeHeader)       return SectionScopeBar;
+        if (rawPanel && w == rawPanel)             return SectionRaw;
+        if (transformPanel && w == transformPanel) return SectionTransform;
+        if (replacePanel && w == replacePanel)     return SectionReplace;
+        if (w == panelContainer) break;      // reached the dock: the action row or a gap
+    }
+    return SectionOther;
+}
+
+/*
+    The Develop dock's context menu, for a right-click ANYWHERE in the dock (the scopes
+    strip is the one exception: it answers with its own layout menu).
+
+    The menu carries only what the clicked band can actually do -- its reset, its help --
+    followed by the panel-wide items (the settings clipboard, presets, help), which make
+    sense from anywhere. No show/hide item anywhere: every band that can be bypassed
+    carries an eye button, and a menu duplicate of it only made the menus longer.
+*/
+void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint &globalPos,
+                                             const QModelIndex &treeIdx)
+{
+    if (G::isLogger) G::log("DevelopProperties::showPanelContextMenu");
+    const bool haveImage = !currentImagePath.isEmpty();
+
+    QMenu menu(this);
+
+    /* -------- Edits: the clicked section header's own Reset ("Reset Basic") -------- */
+    int group = -1;
+    QAction *aResetSection = nullptr;
+    if (section == SectionEdits && treeIdx.isValid()) {
+        const QString name = treeIdx.data(UR_Name).toString();
+        if      (name == "BasicHeader")      group = PV_Basic;
+        else if (name == "CurvesHeader")     group = PV_Curves;
+        else if (name == "ColorHeader")      group = PV_Color;
+        else if (name == "CalibrateHeader")  group = PV_Calibrate;
+        else if (name == "ColorGradeHeader") group = PV_ColorGrade;
+        else if (name == "DetailHeader")     group = PV_Detail;
+        else if (name == "EffectsHeader")    group = PV_Effects;
+        if (group >= 0) {
+            aResetSection = menu.addAction(tr("Reset %1").arg(groupLabel(group)));
+            aResetSection->setEnabled(haveImage);
+            menu.addSeparator();
+        }
+    }
+
+    /* -------- The scope bands: the mask band's reset, the scope's, the panel's -------- */
+    QAction *aResetScope = nullptr, *aResetMask = nullptr, *aResetAll = nullptr;
+    if (section == SectionScopeBar || section == SectionMask) {
+        EditScope *l = activeScope();
+        const QString scopeName = l ? l->name : tr("scope");
+        if (section == SectionMask) {
+            aResetMask = menu.addAction(tr("Reset mask Edge and Halo"));
+            aResetMask->setEnabled(haveImage && l != nullptr);
+        }
+        aResetScope = menu.addAction(tr("Reset %1").arg(scopeName));
+        aResetScope->setEnabled(haveImage && l != nullptr);
+        aResetAll = menu.addAction(tr("Reset all edits"));
+        aResetAll->setEnabled(haveImage);
+        menu.addSeparator();
+    }
+
+    /* -------- Transform / Replace: their header buttons, reachable by right-click -------- */
+    QAction *aResetTransform = nullptr, *aReplaceTips = nullptr;
+    if (section == SectionTransform && transformPanel) {
+        aResetTransform = menu.addAction(tr("Reset crop, straighten and perspective"));
+        aResetTransform->setEnabled(haveImage);
+        menu.addSeparator();
+    }
+    if (section == SectionReplace && replacePanel) {
+        aReplaceTips = menu.addAction(tr("Fill Replace tips"));
+        menu.addSeparator();
+    }
+
+    /* -------- Tree shape: only where there is a tree to expand -------- */
+    QAction *aExpandAll = nullptr, *aCollapseAll = nullptr, *aSolo = nullptr;
+    if (section == SectionEdits || section == SectionScopeBar || section == SectionMask) {
+        aExpandAll = menu.addAction(tr("Expand all"));
+        aCollapseAll = menu.addAction(tr("Collapse all"));
+        aSolo = menu.addAction(tr("Solo mode"));
+        aSolo->setCheckable(true);
+        aSolo->setChecked(setting->value("Develop/isSolo", false).toBool());
+    }
+
+    /* Jump to the raw decode rows. They are Core rows on the Global scope (addCoreItems),
+       so this activates Global and un-collapses it. Raw files only, and only while editing
+       raw (applyCoreVisibility hides them when editing the embedded preview). The Winnow
+       engine adds the raw-denoise rows alongside Demosaic, hence the longer caption. It is
+       offered from the tree, where the rows live -- the Raw panel does not need it, being
+       the controls themselves. */
+    QAction *aRawDemosaic = nullptr;
+    if (section == SectionEdits && currentIsRaw() && G::useRaw) {
+        const bool winnow = G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine;
+        if (!menu.isEmpty()) menu.addSeparator();
+        aRawDemosaic = menu.addAction(winnow ? tr("Raw demosaic and denoise")
+                                             : tr("Raw demosaic"));
+    }
+
+    /* -------- Panel-wide: the settings clipboard and presets, from anywhere -------- */
+    /* Copy / paste the ticked settings between images (also Cmd+Opt+C / Cmd+Opt+V), and
+       save them as a reusable preset (also Cmd+Shift+N). Paste names its source, so the
+       menu itself says what is on the clipboard. */
+    if (!menu.isEmpty()) menu.addSeparator();
+    QAction *aCopySettings = menu.addAction(tr("Copy Develop Settings…"));
+    aCopySettings->setEnabled(haveImage && !currentIsIdentity());
+    const QString from = copiedSettingsSource();
+    QAction *aPasteSettings = menu.addAction(
+        from.isEmpty() ? tr("Paste Develop Settings")
+                       : tr("Paste Develop Settings from ") + from);
+    aPasteSettings->setEnabled(haveImage && hasCopiedSettings());
+    QAction *aSavePreset = menu.addAction(tr("Save Develop Preset…"));
+    aSavePreset->setEnabled(haveImage && !currentIsIdentity());
+
+    /* Help goes to the page for the band that was clicked: the Raw and Transform panels
+       document themselves, everything else lands on the module page. */
+    menu.addSeparator();
+    QAction *aHelp = menu.addAction(section == SectionRaw       ? tr("Raw help")
+                                  : section == SectionTransform ? tr("Transform help")
+                                                                : tr("Develop help"));
+
+    QAction *chosen = menu.exec(globalPos);
+    if (chosen == nullptr) return;
+    /* A reset repopulates the tree, which can destroy the widget this click is being
+       handled in, so the resets fire on the next tick (the same rule the scope, submask
+       and section [:] menus follow). */
+    else if (chosen == aResetSection)
+        QTimer::singleShot(0, this, [this, group]{ resetSection(group); });
+    else if (chosen == aResetMask)
+        QTimer::singleShot(0, this, [this]{ resetMaskLevel(); });
+    else if (chosen == aResetScope)
+        QTimer::singleShot(0, this, [this]{ resetActiveScope(); });
+    else if (chosen == aResetAll)
+        QTimer::singleShot(0, this, [this]{ resetAllEdits(); });
+    /* The Transform reset and the Replace tips belong to those panels: emit their own
+       signals so the handler MW already wires up does the work -- identical to clicking
+       the panel's [R] / [?] button. */
+    else if (chosen == aResetTransform)
+        QTimer::singleShot(0, transformPanel, [this]{ emit transformPanel->resetRequested(); });
+    else if (chosen == aReplaceTips)
+        QTimer::singleShot(0, replacePanel, [this]{ emit replacePanel->tipsRequested(); });
+    else if (chosen == aExpandAll)     setAllSectionsExpanded(true);
+    else if (chosen == aCollapseAll)   setAllSectionsExpanded(false);
+    else if (chosen == aCopySettings)  copyDevelopSettings();
+    else if (chosen == aPasteSettings) pasteDevelopSettings();
+    else if (chosen == aSavePreset)    saveDevelopPreset();
+    else if (chosen == aRawDemosaic)   showRawDemosaic();
+    else if (chosen == aHelp) {
+        if      (section == SectionRaw)       rawHelp();
+        else if (section == SectionTransform) transformHelp();
+        else                                  howThisWorks();
+    }
+    else if (chosen == aSolo) {
+        setSolo(aSolo->isChecked());
+        setting->setValue("Develop/isSolo", aSolo->isChecked());
+    }
+}
+
 void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)
 {
     if (G::isLogger) G::log("DevelopProperties::contextMenuEvent");
     QModelIndex idx = indexAt(event->pos());
     if (idx.isValid()) idx = model->index(idx.row(), CapColumn, idx.parent());
-    const QString name = idx.isValid() ? idx.data(UR_Name).toString() : QString();
-
-    /* Map a header row to its Preview/Reset group; other rows only get tree items. */
-    int group = -1;
-    QString label;
-    if      (name == "BasicHeader")    { group = PV_Basic;    label = "Basic"; }
-    else if (name == "ColorHeader")    { group = PV_Color;    label = "Color"; }
-    else if (name == "CalibrateHeader") { group = PV_Calibrate; label = "Calibrate"; }
-    else if (name == "ColorGradeHeader") { group = PV_ColorGrade; label = "Color Grade"; }
-    else if (name == "EffectsHeader")  { group = PV_Effects;  label = "Effects"; }
-
-    QMenu menu(this);
-
-    /* Section-specific Preview/Reset (only when the click landed on a section header). */
-    QAction *aPreview = nullptr;
-    QAction *aReset = nullptr;
-    if (group >= 0) {
-        EditScope *l = activeScope();
-        const bool shown = l ? *previewFlag(l, group) : true;
-        aPreview = menu.addAction("Preview");
-        aPreview->setCheckable(true);
-        aPreview->setChecked(shown);
-        aPreview->setEnabled(l != nullptr);
-        aReset = menu.addAction("Reset " + label);
-        aReset->setEnabled(!currentImagePath.isEmpty());
-        menu.addSeparator();
-    }
-
-    /* Tree-wide items, available anywhere in the dock (mirrors the Embellish dock). */
-    QAction *aExpandAll = menu.addAction("Expand all");
-    QAction *aCollapseAll = menu.addAction("Collapse all");
-    QAction *aSolo = menu.addAction("Solo mode");
-    aSolo->setCheckable(true);
-    aSolo->setChecked(setting->value("Develop/isSolo", false).toBool());
-
-    /* Jump to the raw decode rows. They are Core rows on the Global scope (addCoreItems),
-       so this activates Global and un-collapses it. Raw files only, and only while editing
-       raw (applyCoreVisibility hides them when editing the embedded preview). The Winnow
-       engine adds the raw-denoise rows alongside Demosaic, hence the longer caption. */
-    QAction *aRawDemosaic = nullptr;
-    if (currentIsRaw() && G::useRaw) {
-        const bool winnow = G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine;
-        menu.addSeparator();
-        aRawDemosaic = menu.addAction(winnow ? "Raw demosaic and denoise" : "Raw demosaic");
-    }
-
-    /* Copy / paste the ticked settings between images (also Cmd+Opt+C / Cmd+Opt+V), and
-       save them as a reusable preset (also Cmd+Shift+N). Paste names its source, so the
-       menu itself says what is on the clipboard. */
-    menu.addSeparator();
-    QAction *aCopySettings = menu.addAction("Copy Develop Settings…");
-    aCopySettings->setEnabled(!currentImagePath.isEmpty() && !currentIsIdentity());
-    const QString from = copiedSettingsSource();
-    QAction *aPasteSettings = menu.addAction(
-        from.isEmpty() ? "Paste Develop Settings" : "Paste Develop Settings from " + from);
-    aPasteSettings->setEnabled(!currentImagePath.isEmpty() && hasCopiedSettings());
-    QAction *aSavePreset = menu.addAction("Save Develop Preset…");
-    aSavePreset->setEnabled(!currentImagePath.isEmpty() && !currentIsIdentity());
-
-    QAction *chosen = menu.exec(event->globalPos());
-    if      (chosen == nullptr)      return;
-    else if (chosen == aPreview)     togglePreviewSection(group);
-    else if (chosen == aReset)       resetSection(group);
-    else if (chosen == aExpandAll)   setAllSectionsExpanded(true);
-    else if (chosen == aCollapseAll) setAllSectionsExpanded(false);
-    else if (chosen == aCopySettings)  copyDevelopSettings();
-    else if (chosen == aPasteSettings) pasteDevelopSettings();
-    else if (chosen == aSavePreset)  saveDevelopPreset();
-    else if (chosen == aRawDemosaic) showRawDemosaic();
-    else if (chosen == aSolo) {
-        setSolo(aSolo->isChecked());
-        setting->setValue("Develop/isSolo", aSolo->isChecked());
-    }
+    showPanelContextMenu(SectionEdits, event->globalPos(), idx);
 }
 
 void DevelopProperties::showRawDemosaic()
@@ -4648,6 +4755,15 @@ void DevelopProperties::endCameraProfilePreview()
 
 bool DevelopProperties::eventFilter(QObject *watched, QEvent *event)
 {
+    /* A right-click anywhere in the Develop dock that no child answered bubbles up to the
+       dock container (this tree and the scopes strip are the only children with a menu of
+       their own), where it arrives with the position translated into container
+       coordinates. childAt names the control under the cursor -> the band it belongs to. */
+    if (event->type() == QEvent::ContextMenu && watched == panelContainer && panelContainer) {
+        QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
+        showPanelContextMenu(sectionAt(panelContainer->childAt(e->pos())), e->globalPos());
+        return true;
+    }
     if (event->type() == QEvent::Hide && cameraProfileCombo &&
         watched == cameraProfileCombo->view()) {
         /* Stopped SYNCHRONOUSLY so a hover that has not fired yet cannot put a preview up
@@ -7496,6 +7612,24 @@ void DevelopProperties::submasksHelp()
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - Submasks",
                    ":/Docs/developsubmaskshelp.html",
+                   QSize(700, 600), r, window());
+}
+
+void DevelopProperties::rawHelp()
+{
+    if (G::isLogger) G::log("DevelopProperties::rawHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Raw",
+                   ":/Docs/developrawhelp.html",
+                   QSize(700, 600), r, window());
+}
+
+void DevelopProperties::transformHelp()
+{
+    if (G::isLogger) G::log("DevelopProperties::transformHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Transform",
+                   ":/Docs/developtransformhelp.html",
                    QSize(700, 600), r, window());
 }
 

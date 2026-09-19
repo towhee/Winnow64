@@ -238,6 +238,8 @@
         <file>Docs/developeffectshelp.html</file>
         <file>Docs/developeditshelp.html</file>
         <file>Docs/developsubmaskshelp.html</file>
+        <file>Docs/developrawhelp.html</file>
+        <file>Docs/developtransformhelp.html</file>
         <file>images/icon16/ellipsis_vertical.png</file>
         <file>Workspaces/defaults.json</file>
     </qresource>

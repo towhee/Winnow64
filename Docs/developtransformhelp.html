@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Transform</h1>
+
+<h2>What it does</h2>
+<p>The <b>Transform</b> panel holds the three edits that change the <i>shape</i> of the
+picture rather than its tones: the <b>crop</b>, the <b>straighten</b> and the
+<b>perspective</b> correction.  Press <b>R</b> (or the rectangle button in the Develop
+action row) to open it; opening it arms the crop overlay on the image, and the panel is
+only shown while that session is live.</p>
+
+<p>All three are applied last in the develop pipeline and none of them touches a pixel of
+the original: like every other develop edit they are a recipe entry, reversible at any
+time and only made real on export.</p>
+
+<h2>The three modes</h2>
+<p>The <b>C</b>rop / <b>L</b>evel / <b>W</b>arp buttons down the left choose which one you
+are working on &mdash; one at a time, and the letters C, L and W switch between them
+whether the panel or the image has the focus.  Each row carries that mode's own controls
+and its own reset.</p>
+
+<h3>Crop (C)</h3>
+<p>Drag the handles on the image to set the frame.  The <b>Aspect</b> list constrains it:
+<b>As shot</b> leaves it free, and the usual ratios (1 x 1, 3 x 2, 4 x 3, 5 x 7, 4 x 5,
+8.5 x 11, 16 x 9, 16 x 10) are there, along with any you add yourself with <b>Add custom
+aspect...</b> &mdash; a custom ratio is remembered and appears in the list from then on,
+and <b>Edit custom aspects...</b> renames or removes them.</p>
+
+<ul>
+<li>The <b>padlock</b> (or <b>A</b>) holds the current ratio while you drag, so the frame
+can only change size, not shape.</li>
+<li>The <b>flip</b> button (or <b>F</b>) swaps the ratio between landscape and portrait
+&mdash; 4 x 5 becomes 5 x 4 &mdash; without your having to find a second entry for it.</li>
+</ul>
+
+<h3>Level (L)</h3>
+<p>Two ways to straighten, and they are the same value: draw a line on the image along
+something that ought to be horizontal or vertical &mdash; a horizon, a door frame &mdash;
+and Winnow rotates the picture to match, or type the <b>Angle</b> directly, from -45 to 45
+degrees.  Drawing adds to the current angle; a typed angle replaces it.</p>
+
+<h3>Warp (W)</h3>
+<p>Perspective correction for the converging verticals a camera tilted up or down
+produces.  Drag the four corners onto something that is rectangular in the real world
+&mdash; the face of a building, a window, a painting &mdash; then press <b>Return</b> or
+double-click inside the shape, and that quadrilateral is squared up, taking the rest of
+the picture with it.</p>
+
+<h2>The header buttons</h2>
+<ul>
+<li><b>[?]</b> &mdash; this page.</li>
+<li><b>[E]</b> &mdash; the result toggle.  On, the crop is committed and you see the
+cropped, straightened, rectified picture; off, you are back to the whole frame with the
+overlay on top of it.  It is the quickest way to check a crop without giving up the
+ability to keep adjusting it.</li>
+<li><b>[R]</b> &mdash; reset: crop, straighten and perspective all back to the full
+frame, and the aspect, lock and flip back to neutral with them.  The small reset on each
+mode's row clears just that mode's contribution.</li>
+<li><b>[X]</b> &mdash; close the panel, committing the crop on the way out (the same
+thing <b>R</b> and the action-row button do).</li>
+</ul>
+
+<h2>What is saved</h2>
+<p>The crop rectangle, the straighten angle and the perspective correction are stored with
+the image in its sidecar, as part of the develop recipe.  They describe <i>these</i>
+pixels, so an adjustment applied across a selection never carries them &mdash; but Paste
+Develop Settings and applying a preset do, because there you asked for that exact recipe.
+The aspect list, the last aspect used, the lock, the flip and the selected mode are
+preferences rather than edits, and they persist between sessions.</p>
+
+</body>
+</html>
