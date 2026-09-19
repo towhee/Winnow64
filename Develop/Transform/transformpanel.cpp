@@ -521,10 +521,25 @@ void TransformPanel::onAspectActivated(int index)
         return;
     }
 
+    applyAspect(index, /*refit*/ true);
+}
+
+void TransformPanel::applyAspect(int index, bool refit)
+{
+    if (index < 0 || index >= aspectCombo->count()) return;
     lastAspectIndex = index;
     const QString key = aspectCombo->itemData(index, KeyRole).toString();
     const double ratio = aspectCombo->itemData(index, RatioRole).toDouble();
     if (setting) setting->setValue("Develop/Transform/aspectKey", key);
+
+    /* A released ratio takes the padlock with it: the lock was holding the aspect that has
+       just been deleted, and "As shot" would silently re-point it at the native ratio --
+       so the next drag would re-shape a crop the user never asked to change. */
+    if (!refit && aspectLocked) {
+        aspectLocked = false;
+        updateLockButton();
+        if (setting) setting->setValue("Develop/Transform/aspectLocked", false);
+    }
 
     /* "As shot" carries the capture's ORIENTATION as well as its ratio, so a flip left over
        from a previous aspect must not turn it portrait. Clear it (the button follows) before
@@ -536,7 +551,7 @@ void TransformPanel::onAspectActivated(int index)
         if (setting) setting->setValue("Develop/Transform/aspectFlipped", false);
     }
 
-    emit aspectChanged(key, ratio);
+    emit aspectChanged(key, ratio, refit);
 }
 
 void TransformPanel::promptAddCustomAspect()
@@ -695,11 +710,13 @@ bool TransformPanel::deleteCustomAspect(int i, QWidget *parent)
 
     populateAspectCombo();
     if (wasSelected) {
-        /* The selected ratio just ceased to exist, so fall back to "As shot" -- and go
-           through onAspectActivated so the crop actually follows, rather than leaving the
-           combo saying one thing and the overlay showing another. */
+        /* The selected ratio just ceased to exist, so fall back to "As shot" -- announced
+           as a RELEASE (refit == false), so the constraint is dropped without the crop
+           being re-fitted. Deleting an entry from a list is housekeeping: it must not
+           enlarge the frame the user has composed, which a plain "As shot" selection
+           would do (it grows the crop back to the full image). */
         selectAspectKey("asShot");
-        onAspectActivated(aspectCombo->currentIndex());
+        applyAspect(aspectCombo->currentIndex(), /*refit*/ false);
     }
     else selectAspectKey(keepKey);
     return true;

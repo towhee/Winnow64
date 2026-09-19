@@ -310,7 +310,11 @@ public slots:
     void endCropEdit();
     void beginLevel();                  // arm the "draw a level line" tool (crop must be active)
     void beginWarp();                   // enter 4-point perspective mode (seed the quad, drag corners)
-    void setCropAspect(double aspect, bool locked, bool flipped);  // aspect = w/h, 0 = free
+    /* aspect = w/h, 0 = free ("As shot"). refit == false RELEASES a ratio instead of
+       choosing one (the selected custom aspect was deleted): the constraint goes, but the
+       crop frame is left exactly where it is -- a deletion in a combo must not re-shape
+       the picture. */
+    void setCropAspect(double aspect, bool locked, bool flipped, bool refit = true);
     /* Toggle the crop between landscape and portrait: inverts the enforced aspect and
        rotates the current crop box 90 degrees (locked -> refit to the inverted ratio;
        free -> swap w/h). */

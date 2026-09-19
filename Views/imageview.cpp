@@ -1715,20 +1715,25 @@ void ImageView::cropRefitToAspect()
     cropClampN();
 }
 
-void ImageView::setCropAspect(double aspect, bool locked, bool flipped)
+void ImageView::setCropAspect(double aspect, bool locked, bool flipped, bool refit)
 {
     cropAspect = aspect;
     cropAspectLocked = locked;
     cropAspectFlipped = flipped;
     if (!cropEditMode) return;
-    cropWarp = false;                 // choosing an aspect implies a rectangle: leave warp mode
     cropFlipPrevN = cropFlipResultN = QRectF();   // aspect/lock change breaks the pairing
-    /* "As shot" means the frame as shot: grow back to the whole image (or the largest
-       native-ratio rect, when flipped to portrait). A CHOSEN ratio instead reshapes the
-       crop where it stands -- keeping its width -- so picking 16 x 9 for a tight crop
-       does not blow it back up to full size. */
-    if (cropAspect <= 0.0) cropFitLargestToAspect();
-    else                   cropRefitToAspect();
+    /* Releasing a ratio (refit == false) is not the same as choosing one: the constraint
+       is gone, so dragging is free from here on, but the frame itself is left untouched --
+       it is still the crop the user composed under the ratio that has just been deleted. */
+    if (refit) {
+        cropWarp = false;             // choosing an aspect implies a rectangle: leave warp mode
+        /* "As shot" means the frame as shot: grow back to the whole image (or the largest
+           native-ratio rect, when flipped to portrait). A CHOSEN ratio instead reshapes the
+           crop where it stands -- keeping its width -- so picking 16 x 9 for a tight crop
+           does not blow it back up to full size. */
+        if (cropAspect <= 0.0) cropFitLargestToAspect();
+        else                   cropRefitToAspect();
+    }
     cropSyncFrameFromN();
     viewport()->update();
     cropEmitChanged();

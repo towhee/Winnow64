@@ -67,7 +67,10 @@ public:
     void resetCropState();
 
 signals:
-    void aspectChanged(const QString &key, double ratio);  // ratio = w/h, 0.0 = As shot / free
+    /* ratio = w/h, 0.0 = As shot / free. refit == false means the ratio was RELEASED
+       rather than chosen -- the selected custom aspect was deleted out from under the
+       crop -- so the constraint goes but the crop frame must be left where it is. */
+    void aspectChanged(const QString &key, double ratio, bool refit = true);
     void aspectLockToggled(bool locked);
     void aspectFlipToggled(bool flipped);  // flip crop between landscape and portrait
     void modeChanged(int mode);            // Crop / Level / Warp selected (see Mode)
@@ -102,6 +105,11 @@ protected:
 
 private slots:
     void onAspectActivated(int index);     // combo choice (intercepts "Add custom aspect...")
+
+private:
+    /* The bookkeeping behind a combo selection: remember it, persist it, and announce it.
+       refit == false is the deletion path (see the aspectChanged signal). */
+    void applyAspect(int index, bool refit);
 
 private:
     void buildUi();

@@ -2601,9 +2601,9 @@ void MW::createDevelopDock()
     /* Drive the ImageView crop overlay from the Transform panel: aspect changes + the lock toggle
        re-fit the live crop frame. */
     connect(transformPanel, &TransformPanel::aspectChanged, this,
-            [this](const QString &, double ratio){
+            [this](const QString &, double ratio, bool refit){
                 if (imageView) imageView->setCropAspect(ratio, transformPanel->isAspectLocked(),
-                                                        transformPanel->isAspectFlipped());
+                                                        transformPanel->isAspectFlipped(), refit);
             });
     connect(transformPanel, &TransformPanel::aspectLockToggled, this,
             [this](bool locked){
