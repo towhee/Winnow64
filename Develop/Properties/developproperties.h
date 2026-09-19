@@ -22,6 +22,8 @@ class ToneRegionSlider;
 class ScopeHeader;
 class RawPanel;
 class MaskPanel;
+class TransformPanel;
+class ReplacePanel;
 class HistoryView;
 class PresetsView;
 class QVariantAnimation;
@@ -245,6 +247,14 @@ public:
        and owns the mask model. */
     void bindMaskPanel(MaskPanel *panel);
 
+    /* Right-click ANYWHERE in the Develop dock, not just in this tree. The dock container
+       is watched for the ContextMenu events its children let through (only the scopes
+       strip and this tree answer their own), and the menu is built for the section the
+       click landed in -- see showPanelContextMenu. Transform and Replace are bound here
+       because their reset/tips live on those panels; both may be null. */
+    void bindPanelContextMenu(QWidget *container, TransformPanel *transform,
+                              ReplacePanel *replace);
+
     /* Size the tree to its CONTENT instead of scrolling internally: it is a detail of the
        scope bar (ScopeHeader::EditsDetail) and the dock's own QScrollArea does the
        scrolling. Off (the default) leaves it a stretch widget with its own scrollbars. */
@@ -436,6 +446,8 @@ public slots:
     void sectionHelp(int group);                  // Basic / Curves / ... section help
     void editsHelp();                             // Edits (scope list) band help
     void submasksHelp();                          // Submasks band help
+    void rawHelp();                               // Raw panel help ([?] and its context menu)
+    void transformHelp();                         // Transform panel help ([?] and its context menu)
 
     /* ---- Develop presets (the Presets dock) --------------------------------------
        saveDevelopPreset snapshots the current image's develop state into a named preset:
@@ -911,6 +923,19 @@ private:
            *detailEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
+
+    /* Which Develop dock section a right-click came from. The menu carries only what that
+       section can do (its reset, its help), plus the panel-wide copy/paste/preset items. */
+    enum PanelSection { SectionEdits, SectionScopeBar, SectionMask, SectionRaw,
+                        SectionTransform, SectionReplace, SectionOther };
+    PanelSection sectionAt(QWidget *w);         // walk up from the clicked widget
+    /* Build + run the dock's context menu. treeIdx is valid only for SectionEdits (the
+       row the click landed on, so a section header can offer its own Reset). */
+    void showPanelContextMenu(PanelSection section, const QPoint &globalPos,
+                              const QModelIndex &treeIdx = QModelIndex());
+    QWidget *panelContainer = nullptr;      // the dock's container, watched for right-clicks
+    TransformPanel *transformPanel = nullptr;
+    ReplacePanel *replacePanel = nullptr;
 
     /* Expand all / Collapse all, extended to drive the Scope row (its collapse arrow
        lives in the ScopeHeader band, not the tree). onSectionExpanded folds the Scope

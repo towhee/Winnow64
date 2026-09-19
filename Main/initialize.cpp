@@ -2775,6 +2775,12 @@ void MW::createDevelopDock()
     developScroll->setWidget(developScrollBody);
     developContainerLayout->addWidget(developScroll, 1);
     developDock->setWidget(developContainer);
+    /* Right-click menu for the WHOLE dock, not just the property tree: the container sees
+       every context-menu click its children let through (only the tree and the scopes
+       strip answer their own) and DevelopProperties builds the menu for the band the click
+       landed in. Transform and Replace are passed so their reset / tips can be offered
+       from their own panels. */
+    developProperties->bindPanelContextMenu(developContainer, transformPanel, replacePanel);
     /* The tone-region slider under the histogram drives the active scope's tone-split params. */
     developProperties->bindToneSlider(scopesView->toneRegionSlider());
 
