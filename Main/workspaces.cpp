@@ -184,7 +184,15 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     historyDockVisibleAction->setChecked(w.isHistoryDockVisible);
     presetsDockVisibleAction->setChecked(w.isPresetsDockVisible);
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
-    infoVisibleAction->setChecked(w.isImageInfoVisible);
+    /*  The Info overlay is NOT applied from the workspace.  It is a per-user display
+        preference (the I key, View > Show Info Overlay), kept in QSettings
+        "isImageInfoVisible" alongside the rating badge and icon number toggles -- see
+        MW::writeSettings.  Applying it here made the toggle transient: every workspace
+        bakes a value, the shipped defaults all bake TRUE, and E / G / C / K / D apply a
+        workspace every time, so an overlay switched off came straight back on -- and
+        showEvent's Library reassertion after a session left in Develop lost the choice
+        across a restart as well.  The field is still snapshotted and serialised so the
+        QSettings and defaults.json layout is unchanged; it is simply never applied. */
     // View
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
@@ -209,8 +217,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     gridView->assignedIconWidth = gridView->iconWidth;
     gridView->rejustify();
     gridView->setThumbParameters();
-    // ImageView
-    infoVisibleAction->setChecked(w.isImageInfoVisible);
+    // ImageView: see the Info overlay note above -- w.isImageInfoVisible is not applied.
     // Processes
     if (w.isColorManage != G::colorManage) {
         if (w.isColorManage) toggleColorManage(Tog::on);
@@ -643,7 +650,8 @@ void MW::builtInDefaultWorkspace()
     }
 
     asLoupeAction->setChecked(true);
-    infoVisibleAction->setChecked(true);
+    /* The Info overlay is the user's preference, not part of a layout (see the note in
+       MW::invokeWorkspace), so the built-in layout leaves it as the user set it. */
     sortReverseAction->setChecked(false);
     sortColumn = 0;
     sortChange("MW::builtInDefaultWorkspace");

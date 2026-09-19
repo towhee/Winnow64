@@ -13,7 +13,7 @@ BUGS / TO DO
 - Crop aspect is not working.
 - Does it make sense to be able to select R and G and B rather than R or G or B?
 - Clear the develop copy/paste between sessions.
-- Info (I) is not persistent.
+- Customize Info (I) location/size.
 - Does Winnow zoom account for the display setting in macos properly?
 - Lightroom has different white balance for some files
 - /Users/roryhill/Pictures/_test2/2020-04-25_2013.JPG thumb not rotated
