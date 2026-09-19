@@ -1068,6 +1068,26 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
+        /*  DON'T FLASH THE UNDEVELOPED IMAGE. loadImage above paints the decode -- the
+            picture WITHOUT the saved recipe. In Develop that is the one thing the user
+            has already decided to change, and applyDevelopPreviewIfEdited below only
+            SCHEDULES the render that fixes it, so the naked decode owned the loupe for
+            the seconds that render took. A cropped recipe made it obvious: the frame
+            jumped back to the original aspect and then snapped to the crop again.
+
+            The cached develop preview is that render's result from last time and is
+            already on disk, so paint it over the decode as an interim and let the render
+            replace it. Repainting rather than skipping loadImage keeps its bookkeeping
+            (isLoaded, currentImagePath, the captured zoom/pan) intact, and both paints
+            happen in this one slot call, so the decode never reaches the screen.
+
+            Same substitution, and the same reasoning, as the Develop entry hook in
+            MW::setOperationMode and the cache-miss branch in MW::fileSelectionChange. */
+        if (currentDevelopEditsVisible()) {
+            const QImage cachedPreview = devPreview(fPath);
+            if (!cachedPreview.isNull() && imageView->loadImageInterim(fPath, cachedPreview))
+                developInterimIsDevPreview = true;
+        }
         applyDevelopPreviewIfEdited();   // overlay saved develop edits once the decode is cached
         updateClassification();
         /* Hide Info until first image shown.  If Winnow is interrupted by an OS

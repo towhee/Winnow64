@@ -20,6 +20,11 @@
 #include <QImage>
 #include <QLinearGradient>
 #include <QInputDialog>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QListWidget>
+#include <QPushButton>
+#include <QMessageBox>
 #include <QSignalBlocker>
 #include <QRegularExpression>
 #include <QKeyEvent>
@@ -65,6 +70,35 @@ QIcon padlockIcon(bool closed, const QColor &color)
     p.setCompositionMode(QPainter::CompositionMode_Clear);
     p.setPen(QPen(Qt::black, 1.8, Qt::SolidLine, Qt::RoundCap));
     p.drawLine(QPointF(8.0, 9.5), QPointF(8.0, 12.0));
+    p.end();
+
+    return QIcon(QPixmap::fromImage(img));
+}
+
+/* Orientation icon for the aspect-flip toggle, painted for the same reasons as the padlock.
+   Unlike the lock, flip has no "off" state -- both settings are real orientations -- so
+   brightness cannot carry the state and the SHAPE has to: one frame, drawn wide for
+   landscape and tall for portrait, filling a nominal 16x16 box.
+
+   A second, dimmer frame showing the orientation a click WOULD give was tried and dropped:
+   at 16px the two outlines crowd into a blob and neither reads. One frame is unmistakable
+   at a glance, and the tooltip names the click's effect. */
+QIcon flipIcon(bool portrait, const QColor &color)
+{
+    const int px = 16;
+    const qreal dpr = 2.0;              // paint at 2x and tag it, so it downsamples
+    QImage img(QSize(px * dpr, px * dpr), QImage::Format_ARGB32_Premultiplied);
+    img.fill(Qt::transparent);
+    img.setDevicePixelRatio(dpr);
+
+    const QRectF landscape(1.2, 4.0, 13.6, 8.0);
+    const QRectF portraitR(4.0, 1.2,  8.0, 13.6);
+
+    QPainter p(&img);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setBrush(Qt::NoBrush);
+    p.setPen(QPen(color, 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.drawRoundedRect(portrait ? portraitR : landscape, 1.2, 1.2);
     p.end();
 
     return QIcon(QPixmap::fromImage(img));
@@ -260,12 +294,12 @@ void TransformPanel::buildUi()
     lockBtn->setIconSize(QSize(16, 16));
     connect(lockBtn, &QToolButton::clicked, this, &TransformPanel::toggleAspectLock);
 
-    /* Flip the aspect between landscape and portrait (swap w/h). Checkable so the
-       pressed state shows the current orientation; also driven by the "F" key. */
+    /* Flip the aspect between landscape and portrait (swap w/h); also driven by the "F"
+       key. Chrome-free and NOT checkable, like the padlock: the painted frames carry the
+       orientation, so a checked QToolButton's pressed background would only add noise.
+       updateFlipButton() sets the icon (called from the restore block below). */
     flipBtn = new BarBtn();
-    flipBtn->setCheckable(true);
-    flipBtn->setIcon(":/images/icon16/swap.png", G::iconOpacity);
-    flipBtn->setToolTip(tr("Flip the aspect ratio between landscape and portrait (F)"));
+    flipBtn->setIconSize(QSize(16, 16));
     connect(flipBtn, &BarBtn::clicked, this, &TransformPanel::toggleAspectFlip);
 
     /* -------- Level row controls: straighten-angle field -------- */
@@ -395,7 +429,7 @@ void TransformPanel::selectMode(int mode)
     emit modeChanged(mode);
 }
 
-void TransformPanel::setAspectAsShot()
+void TransformPanel::resetCropState()
 {
     if (!aspectCombo) return;
     /* "As shot" is the first entry, but find it by key so a reorder cannot break this. */
@@ -406,7 +440,17 @@ void TransformPanel::setAspectAsShot()
     const QSignalBlocker block(aspectCombo);
     aspectCombo->setCurrentIndex(idx);
     lastAspectIndex = idx;
-    if (setting) setting->setValue("Develop/Transform/aspectKey", "asShot");
+
+    aspectLocked = false;
+    aspectFlipped = false;
+    updateLockButton();
+    updateFlipButton();
+
+    if (setting) {
+        setting->setValue("Develop/Transform/aspectKey", "asShot");
+        setting->setValue("Develop/Transform/aspectLocked", false);
+        setting->setValue("Develop/Transform/aspectFlipped", false);
+    }
 }
 
 void TransformPanel::populateAspectCombo()
@@ -424,17 +468,34 @@ void TransformPanel::populateAspectCombo()
     addAspectItem("16 x 9",       "16:9",   16.0 / 9.0);
     addAspectItem("16 x 10",      "16:10",  16.0 / 10.0);
 
-    /* Persisted custom aspects (if any) live between the presets and the action item. */
-    for (const auto &c : customAspects)
-        addAspectItem(c.first, "custom:" + c.first, c.second);
+    /* The user's own ratios, in their own block below a separator: the built-in list is
+       fixed and the customs are the only entries Edit can touch, so the break says which
+       is which. Only drawn when there are customs -- an empty block would stack two
+       separators. A renamed entry ("Cinemascope") no longer states its ratio, so each
+       carries it as a tooltip. */
+    if (!customAspects.isEmpty()) {
+        aspectCombo->insertSeparator(aspectCombo->count());
+        for (const auto &c : customAspects) {
+            addAspectItem(c.first, "custom:" + c.first, c.second);
+            aspectCombo->setItemData(aspectCombo->count() - 1,
+                                     tr("Ratio %1 : 1").arg(QString::number(c.second, 'g', 5)),
+                                     Qt::ToolTipRole);
+        }
+    }
 
     aspectCombo->insertSeparator(aspectCombo->count());
 
-    /* The "Add custom aspect..." action item is tagged so onAspectActivated intercepts it
-       instead of treating it as a ratio. */
-    aspectCombo->addItem(tr("Add custom aspect..."));
-    const int last = aspectCombo->count() - 1;
-    aspectCombo->setItemData(last, AddCustomAction, ActionRole);
+    /* Action items are tagged so onAspectActivated intercepts them instead of treating
+       them as ratios. Edit appears only when there is something to edit. */
+    addActionItem(tr("Add custom aspect..."), AddCustomAction);
+    if (!customAspects.isEmpty())
+        addActionItem(tr("Edit custom aspects..."), ManageCustomAction);
+}
+
+void TransformPanel::addActionItem(const QString &caption, int action)
+{
+    aspectCombo->addItem(caption);
+    aspectCombo->setItemData(aspectCombo->count() - 1, action, ActionRole);
 }
 
 void TransformPanel::addAspectItem(const QString &caption, const QString &key, double ratio)
@@ -448,11 +509,15 @@ void TransformPanel::addAspectItem(const QString &caption, const QString &key, d
 
 void TransformPanel::onAspectActivated(int index)
 {
-    if (aspectCombo->itemData(index, ActionRole).toInt() == AddCustomAction) {
-        /* Don't leave "Add custom aspect..." selected: restore the prior choice, then prompt. */
-        QSignalBlocker block(aspectCombo);
-        aspectCombo->setCurrentIndex(lastAspectIndex);
-        promptAddCustomAspect();
+    const int action = aspectCombo->itemData(index, ActionRole).toInt();
+    if (action != NoAction) {
+        /* Don't leave an action item selected: restore the prior choice, then act. */
+        {
+            QSignalBlocker block(aspectCombo);
+            aspectCombo->setCurrentIndex(lastAspectIndex);
+        }
+        if (action == AddCustomAction)         promptAddCustomAspect();
+        else if (action == ManageCustomAction) manageCustomAspects();
         return;
     }
 
@@ -460,6 +525,17 @@ void TransformPanel::onAspectActivated(int index)
     const QString key = aspectCombo->itemData(index, KeyRole).toString();
     const double ratio = aspectCombo->itemData(index, RatioRole).toDouble();
     if (setting) setting->setValue("Develop/Transform/aspectKey", key);
+
+    /* "As shot" carries the capture's ORIENTATION as well as its ratio, so a flip left over
+       from a previous aspect must not turn it portrait. Clear it (the button follows) before
+       the signal, so the handler reads the new state. The user can still press F afterwards
+       to deliberately stand the native ratio on end. */
+    if (key == "asShot" && aspectFlipped) {
+        aspectFlipped = false;
+        updateFlipButton();
+        if (setting) setting->setValue("Develop/Transform/aspectFlipped", false);
+    }
+
     emit aspectChanged(key, ratio);
 }
 
@@ -496,6 +572,139 @@ void TransformPanel::promptAddCustomAspect()
     }
 }
 
+void TransformPanel::selectAspectKey(const QString &key)
+{
+    if (!aspectCombo) return;
+    int idx = 0;                            // "As shot" is the fallback when key has gone
+    for (int i = 0; i < aspectCombo->count(); ++i) {
+        if (aspectCombo->itemData(i, KeyRole).toString() == key) { idx = i; break; }
+    }
+    const QSignalBlocker block(aspectCombo);
+    aspectCombo->setCurrentIndex(idx);
+    lastAspectIndex = idx;
+}
+
+void TransformPanel::manageCustomAspects()
+{
+/*
+    Rename or delete the user's own aspect entries. The presets are fixed, so the list
+    holds only the customs -- which is also why the combo item that opens this is hidden
+    until there is at least one.
+
+    The dialog edits customAspects in place and rebuilds both itself and the combo from
+    it after every change, so the two can never drift apart, and Close needs to undo
+    nothing: each change was already persisted when it was made.
+*/
+    if (customAspects.isEmpty()) return;
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Edit custom aspects"));
+    QVBoxLayout *lay = new QVBoxLayout(&dlg);
+    lay->addWidget(new QLabel(tr("Custom aspect ratios:"), &dlg));
+
+    QListWidget *list = new QListWidget(&dlg);
+    lay->addWidget(list);
+
+    QDialogButtonBox *box = new QDialogButtonBox(QDialogButtonBox::Close, &dlg);
+    QPushButton *renameBtn = box->addButton(tr("Rename..."), QDialogButtonBox::ActionRole);
+    QPushButton *deleteBtn = box->addButton(tr("Delete"),    QDialogButtonBox::ActionRole);
+    lay->addWidget(box);
+    connect(box, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    auto fill = [&]{
+        list->clear();
+        for (const auto &c : customAspects) {
+            QListWidgetItem *it = new QListWidgetItem(c.first, list);
+            it->setToolTip(tr("Ratio %1 : 1").arg(QString::number(c.second, 'g', 5)));
+        }
+        if (list->count()) list->setCurrentRow(0);
+        renameBtn->setEnabled(list->count() > 0);
+        deleteBtn->setEnabled(list->count() > 0);
+    };
+    fill();
+
+    /* Double-click is the conventional shortcut for the primary action on a list row. */
+    connect(list, &QListWidget::itemDoubleClicked, &dlg, [&](QListWidgetItem *){
+        if (renameCustomAspect(list->currentRow(), &dlg)) fill();
+    });
+    connect(renameBtn, &QPushButton::clicked, &dlg, [&]{
+        if (renameCustomAspect(list->currentRow(), &dlg)) fill();
+    });
+    connect(deleteBtn, &QPushButton::clicked, &dlg, [&]{
+        if (!deleteCustomAspect(list->currentRow(), &dlg)) return;
+        if (customAspects.isEmpty()) dlg.accept();   // nothing left to manage
+        else fill();
+    });
+
+    dlg.exec();
+}
+
+bool TransformPanel::renameCustomAspect(int i, QWidget *parent)
+{
+    if (i < 0 || i >= customAspects.size()) return false;
+    const QString was = customAspects.at(i).first;
+
+    bool ok = false;
+    const QString name = QInputDialog::getText(
+        parent, tr("Rename custom aspect"), tr("Name for this aspect ratio:"),
+        QLineEdit::Normal, was, &ok).trimmed();
+    if (!ok || name.isEmpty() || name == was) return false;
+
+    /* The caption IS the entry's identity -- the combo key is "custom:" + caption and that
+       key is what the selection is persisted as -- so two entries may not share one. */
+    for (int k = 0; k < customAspects.size(); ++k) {
+        if (k != i && customAspects.at(k).first == name) {
+            QMessageBox::warning(parent, tr("Rename custom aspect"),
+                                 tr("There is already a custom aspect named \"%1\".").arg(name));
+            return false;
+        }
+    }
+
+    const QString oldKey = "custom:" + was;
+    const QString newKey = "custom:" + name;
+    const bool wasSelected = (aspectKey() == oldKey);
+    const QString keepKey = wasSelected ? newKey : aspectKey();
+
+    customAspects[i].first = name;
+    saveCustomAspects();
+    /* The key moved with the caption, so move the persisted selection with it -- else the
+       renamed entry would not be the one restored next launch. */
+    if (setting && setting->value("Develop/Transform/aspectKey").toString() == oldKey)
+        setting->setValue("Develop/Transform/aspectKey", newKey);
+
+    populateAspectCombo();
+    selectAspectKey(keepKey);
+    return true;   // the ratio did not change: nothing to re-render
+}
+
+bool TransformPanel::deleteCustomAspect(int i, QWidget *parent)
+{
+    if (i < 0 || i >= customAspects.size()) return false;
+    const QString caption = customAspects.at(i).first;
+
+    if (QMessageBox::question(parent, tr("Delete custom aspect"),
+                              tr("Delete the custom aspect \"%1\"?").arg(caption),
+                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+        != QMessageBox::Yes) return false;
+
+    const bool wasSelected = (aspectKey() == "custom:" + caption);
+    const QString keepKey = aspectKey();
+
+    customAspects.removeAt(i);
+    saveCustomAspects();
+
+    populateAspectCombo();
+    if (wasSelected) {
+        /* The selected ratio just ceased to exist, so fall back to "As shot" -- and go
+           through onAspectActivated so the crop actually follows, rather than leaving the
+           combo saying one thing and the overlay showing another. */
+        selectAspectKey("asShot");
+        onAspectActivated(aspectCombo->currentIndex());
+    }
+    else selectAspectKey(keepKey);
+    return true;
+}
+
 void TransformPanel::toggleAspectLock()
 {
     aspectLocked = !aspectLocked;
@@ -515,8 +724,12 @@ void TransformPanel::toggleAspectFlip()
 void TransformPanel::updateFlipButton()
 {
     if (!flipBtn) return;
-    const QSignalBlocker block(flipBtn);
-    flipBtn->setChecked(aspectFlipped);
+    /* A wide frame for landscape, a tall one for portrait. White in both states: unlike the
+       padlock, neither orientation is an "off", so dimming one would misread as disabled. */
+    flipBtn->setIcon(flipIcon(aspectFlipped, QColor(Qt::white)));
+    flipBtn->setToolTip(aspectFlipped
+        ? tr("Aspect is PORTRAIT: click to flip it back to landscape (F)")
+        : tr("Aspect is LANDSCAPE: click to flip it to portrait (F)"));
 }
 
 void TransformPanel::updatePreviewButton()

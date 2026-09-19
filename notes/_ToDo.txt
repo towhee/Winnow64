@@ -8,6 +8,8 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- When select Library in the Source panel, all selections in the Folders tree should be cleared.
+- Context menu in all Develop panels
 - Crop aspect is not working.
 - Does it make sense to be able to select R and G and B rather than R or G or B?
 - Clear the develop copy/paste between sessions.
