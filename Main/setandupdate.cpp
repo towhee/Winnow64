@@ -477,6 +477,18 @@ void MW::setScope(G::Scope s, QString src)
         back cannot loop. */
     if (folderCatalogTree) folderCatalogTree->setScopeIsCatalog(s == G::Scope::Catalog);
 
+    /*  THE FOLDERS TREE SHOWS NO SELECTION WHILE THE CATALOG IS THE SCOPE. Two lit rows
+        in the one panel -- the Catalog row above and a folder below it -- read as two
+        scopes at once, which is the confusion the single scope was introduced to end.
+        Clearing here rather than in the "changed" branch below so that clicking Catalog
+        while it is ALREADY the scope clears a folder the user selected in between.
+
+        Clearing the selection does not unload the folder: FSTree::selectionChanged only
+        reschedules the folder watch, and the datamodel keeps what it has (dm->folderList
+        is what a return to Folders scope re-selects from). */
+    if (s == G::Scope::Catalog && fsTree && fsTree->selectionModel())
+        fsTree->selectionModel()->clearSelection();
+
     /*  WHICH SET THE PANEL IS FILTERING, said where it stays visible. The Search category
         can be collapsed and the query is typed into a tree row, so there is no
         placeholder to carry it; the dock title is the one part of the panel that is
@@ -487,11 +499,6 @@ void MW::setScope(G::Scope s, QString src)
                                                         : "Filters (Folders)");
 
     if (!changed) return;
-
-    /*  A folder stays SELECTED in the tree while the catalog is the scope. It is still
-        the folder that is loaded, and clearing the selection would leave the user with no
-        way back to it except by finding it again. The Catalog row being lit is what says
-        which of the two is current. */
 
     if (s == G::Scope::Catalog) {
         // the panel is where a catalog scope is actually used, so bring it up
