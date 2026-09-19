@@ -94,6 +94,13 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     barLabel->setCursor(Qt::PointingHandCursor);
     barLabel->installEventFilter(this);
 
+    /* "Scope:" in the panel's plain text colour (not the header2 caption colour "Edits"
+       uses, and not the combo's yellow): it labels the combo beside it rather than
+       heading the band, so it has to read as neither. It is inert -- no click toggle --
+       because only the caption folds the panel. */
+    scopeLabel = new QLabel(tr("Scope:"), scopeBar);
+    scopeLabel->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
+
     scopeCombo = new QComboBox(scopeBar);
     scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     scopeCombo->setToolTip("The scope the settings below belong to:\n"
@@ -105,6 +112,13 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
        own stylesheet outranks the application one. */
     scopeCombo->setStyleSheet("QComboBox { color: " + kScopeTextColor.name() + "; }"
                               "QComboBox:disabled { color: " + G::disabledColor.name() + "; }");
+    /* A floor wide enough for the longest scope name the combo realistically shows
+       ("Subject" / "Mask 10") plus its arrow: the combo has the bar's only stretch, so
+       without this it is the part that gives when the dock narrows, and it would shrink
+       to nothing before the layout defended anything else. With it, the bar has an honest
+       minimum width for barMinimumWidth to report. */
+    scopeCombo->setMinimumWidth(scopeCombo->fontMetrics().horizontalAdvance("Subject ") + 34);
+
     /* activated (not currentIndexChanged): only a USER pick selects a scope. The refill
        in updateScopeBar is blocked as well, but activated never fires for it anyway. */
     connect(scopeCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
@@ -147,9 +161,20 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     hb->addWidget(barCollapseBtn, 0, vc);
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(barLabel, 0, vc);
+    /* Two characters of clear space between the caption and "Scope:", so the band's own
+       title reads apart from the label belonging to the combo. Measured from barLabel's
+       font rather than hard-coded, so the gap still looks like two spaces when the font
+       size changes with Preferences. */
+    hb->addSpacing(barLabel->fontMetrics().averageCharWidth() * 2);
+    hb->addWidget(scopeLabel, 0, vc);
     hb->addSpacing(G::headerBtnGap);
     hb->addWidget(scopeCombo, 1, vc);
     hb->addSpacing(G::headerBtnGap);
+    /* One bar-button width of clear space between the combo and the [+] [eye] [:] run, so
+       the buttons read as a group acting on the scope rather than as a fourth item in the
+       combo's own row. 16 is BarBtn::sizeHint's width -- the gap is literally one button
+       wide, which is what keeps it looking deliberate as the bar resizes. */
+    hb->addSpacing(16);
     hb->addWidget(barAddBtn, 0, vc);
     hb->addSpacing(G::headerBtnGap);
     hb->addWidget(barEyeBtn, 0, vc);
@@ -157,6 +182,12 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     hb->addWidget(barMenuBtn, 0, vc);
     outer->addWidget(scopeBar);
     updateEditsCollapseIcon();
+}
+
+int ScopeHeader::barMinimumWidth() const
+{
+    if (!scopeBar || !scopeBar->layout()) return 0;
+    return scopeBar->layout()->minimumSize().width();
 }
 
 void ScopeHeader::toggleEditsCollapsed()
