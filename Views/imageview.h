@@ -201,6 +201,15 @@ public slots:
     void beginDetailPick();
     void endDetailPick();
     bool detailPickArmed() const { return detailPickMode; }
+    /* Curves panel point picker: arm/disarm "click a pixel to add a point to the tone
+       curve". Unlike the dropper and the Detail picker this is NOT one-shot -- the dock
+       holds it armed while its toggle is on, the Curves panel is expanded and the mode is
+       Point, and disarms it when any of those goes (DevelopProperties::wantsCurvePointPick).
+       While armed the cursor is a selector and the loupe's click-to-toggle-zoom is
+       suspended; a click emits curvePointPicked with the normalized image point and the
+       tool stays armed, so points can be placed one after another. */
+    void beginCurvePick();
+    void endCurvePick();
     /* The sample point currently shown by the Detail preview (normalized), so the loupe
        can mark it while Detail is open, and clearing it when nothing is picked. Separate
        calls rather than a null-point sentinel: (0,0) is a legitimate pick. */
@@ -392,6 +401,8 @@ signals:
     /* The Detail 1:1 preview's location picker was clicked at this normalized point. */
     void detailPointPicked(double nx, double ny);
     void detailPickExited();        // dismissed with Esc
+    /* The Curves point picker was clicked at this normalized image point. */
+    void curvePointPicked(double nx, double ny);
     /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
     void spotRemoveRequested(int index);
     void spotToolExited();
@@ -534,6 +545,10 @@ private:
        small marker whenever it is set so the user can see WHERE the preview is looking --
        without it the preview is a patch of pixels with no context. */
     bool    detailPickMode = false;
+    /* The Curves panel's point picker is armed (see beginCurvePick). It is a passive
+       toggle that stays armed, so it yields the canvas to any explicit tool -- see
+       curvePickOwnsMouse. */
+    bool    curvePickMode = false;
     QPointF detailPoint;
     bool    detailPointOn = false;
     /* White-balance loupe: the "pick a target neutral" panel that follows the cursor
@@ -578,6 +593,20 @@ private:
     /* True while a Develop tool (crop / mask / spot) owns the canvas: the default loupe
        click-to-zoom / pan / pick is suppressed so a tool click can't leak to it. */
     bool    developToolActive() const;
+    /* The Curves point picker actually owns this gesture: armed, and no explicit Develop
+       tool (crop / mask / spot / dropper / Detail picker) is holding the canvas. Those
+       are deliberate one-thing-at-a-time modes the user just picked up; the Curves
+       sampler is a toggle that may have been left on, so it must not swallow their
+       clicks. */
+    bool    curvePickOwnsMouse() const;
+    /* The viewport point as a fraction of the DISPLAYED pixmap (pmItem), false when it is
+       off the image. This is the space MW samples developShownImage in, and it is NOT
+       maskViewportToNorm's space: mask / spot coordinates are normalized in the develop
+       geometry stage's INPUT (the uncropped oriented frame), while the loupe shows its
+       OUTPUT -- under a crop or straighten the two disagree. Both the scopes-readout
+       hover (cursorImagePos) and the Curves point picker go through here so they can
+       never sample different pixels for the same cursor position. */
+    bool    displayedNormAt(QPoint vp, QPointF &n) const;
     /* Space held: the loupe zoom/pan gesture temporarily overrides the active tool (the
        tool's mouse branches are skipped so the base pan/zoom path runs). See
        setSpacePanOverride. spacePanDeferred holds a state change requested mid-gesture,

@@ -882,12 +882,13 @@ Q_NAMESPACE
     }
 
     /* PANEL separator: the rule along the bottom edge of each Develop subpanel, and under
-       the dock's action row. The frame shade the rest of the app draws its borders in
-       (WidgetCSS::fm, backgroundShade + 35): the panel boundaries are structural and
-       constant, so they sit quieter than the group rules inside a panel, which mark
-       something the eye is meant to follow. */
+       the dock's action row. The same shade the dock frames use (WidgetCSS::l5,
+       backgroundShade + 5, drawn by the QMainWindow::separator rule in
+       WidgetCSS::mainWindow) so a panel boundary inside a dock reads as the same kind of
+       structural division as the boundary between docks -- quieter than the group rules
+       inside a panel, which mark something the eye is meant to follow. */
     inline QColor panelSeparatorColor() {
-        const int s = backgroundShade + 35;
+        const int s = backgroundShade + 5;
         return QColor(s, s, s);
     }
 

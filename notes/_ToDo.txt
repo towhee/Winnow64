@@ -8,17 +8,17 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- Load missing onnx models
+- Curves point additions by mouse clicking
 - Redo Develop help
 - Edit Winnow shortcuts
 - Customize Info (I) location/size.
 - Develop behavior when no image is selected
-- When quit dock widths are not persistent with next session
 - Test search in filter
 - Tweak welcome screen re to get started incl Catalog ??
 - Tweak develop basic tone sliders
 - Tweak main menu (Library, Develop...)
 - Tweak preferences
-- Tweak develop help
 - Tweak workspaces - more sophicated default
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords

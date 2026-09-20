@@ -18,6 +18,9 @@ that are a picture of the Basic panel's tone sliders.</li>
 composite RGB and for each channel separately.</li>
 </ul>
 
+<p>The panel opens in <b>Point</b> mode, and then stays in whichever mode you last used
+for the rest of the session.</p>
+
 <h2>Parametric mode</h2>
 <p>Drag a region of the curve up or down and the matching <b>Basic slider moves with
 it</b>: the parametric bands do not have values of their own.  That is deliberate &mdash;
@@ -56,6 +59,16 @@ faded-shadow look; pulling red down in the highlights cools them.</li>
 
 <p>All four curves and the parametric values are folded into <b>one lookup table per
 channel</b> before rendering, so a heavy curve costs the same as a light one.</p>
+
+<p>The <b>pointer button</b> at the left of the mode row turns the panel into a targeted
+adjustment tool.  While it is on, hovering the image marks the pixel under the pointer on
+the plot &mdash; a line at its tone and a dot where that line meets the curve &mdash; and
+in Point mode <b>clicking the image adds a point at that tone</b>, so you can anchor the
+curve on the part of the photo you actually care about rather than guessing at the x
+axis.  The cursor becomes a crosshair and the loupe's click&ndash;to&ndash;zoom is
+suspended while the tool is armed; hold <b>Space</b> if you need to zoom or pan without
+turning it off.  Switching to Parametric mode, collapsing the Curves panel, or turning
+the button off gives the mouse straight back to the loupe.</p>
 
 <h2>The two modes together</h2>
 <p>Parametric and Point both contribute &mdash; switching the dropdown changes which one

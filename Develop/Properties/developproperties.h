@@ -370,6 +370,11 @@ protected:
     /* Centre the Curves plot (and the split handles under it) in the PANEL rather than in
        their tree cell -- see the definition. */
     void updateEditorGeometries() override;
+    /* The Curves plot's visibility is one of the conditions gating the canvas point
+       picker, and hiding/showing the dock moves it without touching any of our own
+       state -- so re-evaluate it here (see updateCurvePickState). */
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 
 public slots:
     void itemChange(QModelIndex idx) override;
@@ -515,6 +520,22 @@ public slots:
     void setCurveSample(int r, int g, int b);
     void clearCurveSample();
 
+    /* ---- Curves panel point picking (the canvas half of the sampler) ---------------
+       While the sampler is armed AND the plot is on screen AND the mode is Point, a
+       click on the image adds a control point at the clicked pixel's tone. That makes
+       the toggle a Lightroom targeted-adjustment tool rather than a readout, so unlike
+       setCurveSample it DOES own the canvas click: curvePickBegin/End arm ImageView's
+       pick mode, which shows a selector cursor and suspends the loupe's
+       click-to-toggle-zoom for as long as it is armed.
+
+       The three conditions are all live -- the sampler is toggled, the mode combo
+       switches Point/Parametric, and the panel collapses or the dock hides -- so
+       updateCurvePickState() re-evaluates them and emits only on a CHANGE. It is called
+       from every place any of the three can move (see the definition). */
+    bool wantsCurvePointPick() const;
+    void updateCurvePickState();
+    void addCurvePointFromPixel(int r, int g, int b);
+
     /* ---- Detail panel 1:1 preview -------------------------------------------------
        The square window at the head of the Detail section showing one patch of the image
        at full resolution, so sharpening and noise reduction can be judged without zooming
@@ -586,6 +607,11 @@ signals:
     void detailPickBegin();
     void detailPickEnd();
     void detailRoiNeeded();
+    /* Curves point picking: arm/disarm ImageView's "click the image to add a curve
+       point" mode (see wantsCurvePointPick). Unlike the dropper and the Detail picker
+       this mode is NOT one-shot -- it stays armed until one of its conditions goes. */
+    void curvePickBegin();
+    void curvePickEnd();
     /* The user dragged inside the preview: move the sample point by this many image
        pixels. Resolved by MW, which owns the image's orientation. */
     void detailPointNudged(int dx, int dy);
@@ -817,8 +843,15 @@ private:
        tree, the armed STATE outlives it -- addCurves restores the new button from it. */
     QPointer<BarBtn> curveSamplerBtn;
     bool curveSamplerActive = false;
-    /* 0 = Parametric, 1 = Point. UI state, not a param. */
-    int  curveModeIndex = 0;
+    /* Last state pushed to ImageView through curvePickBegin/End, so the signals fire
+       only on a transition (updateCurvePickState is called from hot paths). */
+    bool curvePickArmed = false;
+    /* 0 = Parametric, 1 = Point. UI state, not a param -- it is not persisted, so this
+       initial value IS what the panel shows the first time Curves is expanded in a
+       session; after that it holds whatever the user last picked (it outlives a tree
+       rebuild, like curveSamplerActive). POINT is the default: it is the mode with
+       controls of its own, and the one the canvas point picker needs. */
+    int  curveModeIndex = 1;
     /* The band whose Basic caption was last flashed, so a drag flashes ONCE rather than
        on every mouse-move (which would restart a 450ms animation, and storm the model
        with setData, dozens of times a second). -1 = no drag in progress. */

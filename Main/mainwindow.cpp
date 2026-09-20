@@ -12563,6 +12563,29 @@ void MW::onImageCursorPos(double xFraction, double yFraction)
     if (wantCurve) developProperties->setCurveSample(qRed(p), qGreen(p), qBlue(p));
 }
 
+void MW::onCurvePointPicked(double xFraction, double yFraction)
+{
+/*
+    The click half of the Curves sampler (ImageView::curvePointPicked, armed only while
+    DevelopProperties::wantsCurvePointPick). Read the clicked pixel out of the SAME
+    developShownImage the hover marker and the plot's backdrop histogram come from, so the
+    point lands on exactly the tone the marker was showing, and let the dock add it.
+
+    Sampled from the click's own point rather than reusing the last hover: a click with no
+    move before it (tab back to the window, a trackpad tap) would otherwise place the
+    point at a stale tone.
+*/
+    if (G::isLogger) G::log("MW::onCurvePointPicked");
+    if (!developProperties || developShownImage.isNull()) return;
+
+    const int x = qBound(0, static_cast<int>(xFraction * developShownImage.width()),
+                         developShownImage.width() - 1);
+    const int y = qBound(0, static_cast<int>(yFraction * developShownImage.height()),
+                         developShownImage.height() - 1);
+    const QRgb p = developShownImage.pixel(x, y);
+    developProperties->addCurvePointFromPixel(qRed(p), qGreen(p), qBlue(p));
+}
+
 bool MW::isValidPath(QString &path)
 {
     if (G::isLogger) G::log("MW::isValidPath");
