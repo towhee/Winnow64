@@ -202,8 +202,17 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         back into the list the user curates; version 13 added NO table either -- it is a
         column on the PREVIEW tenant (devpreview.demoted), which is why it is guarded on
         that table existing: a step that assumed it would move a catalog-only file aside
-        and rebuild it. */
-    QCOMPARE(CacheDb::schemaVersion(), 13);
+        and rebuild it; version 14 added NO table either -- it is the fourth data
+        repair, and the first whose cause was a WRITER rather than the schema. Schema 6
+        added the row-display columns (orientation among them) and cleared every
+        freshness stamp so they would be filled on the next read, but only
+        DataModel::catalogRows was taught to fill them -- CatalogScanner::parseInto,
+        which is what indexes a library in bulk, wrote the defaults back over the
+        cleared rows. So 14 clears the stamps again, now that both writers agree, and
+        drops the thumbnail index with them: a thumbnail cached against orientation 0
+        is unrotated, and ThumbCache validates against the source file, which did not
+        change. */
+    QCOMPARE(CacheDb::schemaVersion(), 14);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

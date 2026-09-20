@@ -348,7 +348,6 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isMetadata = " << G::s(fullScreenDocks.isMetadata);
     rpt << "\n" << "fullScreenDocks.isDevelop = " << G::s(fullScreenDocks.isDevelop);
     rpt << "\n" << "fullScreenDocks.isHistory = " << G::s(fullScreenDocks.isHistory);
-    rpt << "\n" << "fullScreenDocks.isPresets = " << G::s(fullScreenDocks.isPresets);
     rpt << "\n" << "fullScreenDocks.isEmbellish = " << G::s(fullScreenDocks.isEmbellish);
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
@@ -965,7 +964,6 @@ void MW::setupPanelProbe()
         {embelDock,         "EmbelDock"},
         {developDock,       "DevelopDock"},
         {historyDock,       "HistoryDock"},
-        {presetsDock,       "PresetsDock"},
         {thumbView,         "thumbView"},
         {centralWidget,     "centralWidget"},
         {this,              "MW"},

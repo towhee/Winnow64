@@ -36,7 +36,6 @@ void MW::writeSettings()
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
     settings->setValue("isFullScreenHistory", fullScreenDocks.isHistory);
-    settings->setValue("isFullScreenPresets", fullScreenDocks.isPresets);
     settings->setValue("isFullScreenEmbellish", fullScreenDocks.isEmbellish);
     settings->setValue("isFullScreenThumbs", fullScreenDocks.isThumbs);
     settings->setValue("isFullScreenStatusBar", fullScreenDocks.isStatusBar);
@@ -94,6 +93,8 @@ void MW::writeSettings()
     settings->setValue("maxSearchResults", G::maxSearchResults);
     settings->setValue("useIndexMetadata", G::useIndexMetadata);
     settings->setValue("useScrollInVerify", G::useScrollInVerify);
+    settings->setValue("autoScanCatalog", G::autoScanCatalog);
+    settings->setValue("autoScanCatalogMinutes", G::autoScanCatalogMinutes);
     settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
 
@@ -181,6 +182,10 @@ void MW::writeSettings()
     settings->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     settings->setValue("isDevelopDockVisible", developDockVisibleAction->isChecked());
     settings->setValue("isHistoryDockVisible", historyDockVisibleAction->isChecked());
+    /* Presets is a SECTION of the History panel now, so this key carries whether that
+       section is expanded. The section itself also persists under
+       Develop/SectionExpanded/PresetsSection, which is the source of truth; this one is
+       what the workspace record reads. */
     settings->setValue("isPresetsDockVisible", presetsDockVisibleAction->isChecked());
     settings->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
 
@@ -314,7 +319,6 @@ void MW::writeSettings()
     if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
     if (developDock)  settings->setValue("DevelopDock", developDock->isCollapsed());
     if (historyDock)  settings->setValue("HistoryDock", historyDock->isCollapsed());
-    if (presetsDock)  settings->setValue("PresetsDock", presetsDock->isCollapsed());
     settings->endGroup();
 
     settings->beginGroup("DockSoloMode");
@@ -390,6 +394,8 @@ bool MW::loadSettings()
         G::maxSearchResults = 0;      // no limit; see global.cpp
         G::useIndexMetadata = false;
         G::useScrollInVerify = true;
+        G::autoScanCatalog = true;
+        G::autoScanCatalogMinutes = 60;
         G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
@@ -624,6 +630,15 @@ bool MW::loadSettings()
         G::useIndexMetadata = settings->value("useIndexMetadata").toBool();
     if (settings->contains("useScrollInVerify"))
         G::useScrollInVerify = settings->value("useScrollInVerify").toBool();
+    if (settings->contains("autoScanCatalog"))
+        G::autoScanCatalog = settings->value("autoScanCatalog").toBool();
+    if (settings->contains("autoScanCatalogMinutes")) {
+        /*  Clamped on the way in, not just in the spinbox: a settings file edited by hand
+            (or written by an older build) could hold 0, which would make every selection
+            of the Library start a scope walk. */
+        const int m = settings->value("autoScanCatalogMinutes").toInt();
+        if (m > 0) G::autoScanCatalogMinutes = qBound(1, m, 1440);
+    }
 
     /*  A/B KNOBS FOR THE HEADLESS RUNS, and only for those. The load-pipeline work is
         verified by running the same folder twice with one thing changed, so the two
@@ -706,7 +721,6 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
     if (settings->contains("isFullScreenDevelop")) fullScreenDocks.isDevelop = settings->value("isFullScreenDevelop").toBool();
     if (settings->contains("isFullScreenHistory")) fullScreenDocks.isHistory = settings->value("isFullScreenHistory").toBool();
-    if (settings->contains("isFullScreenPresets")) fullScreenDocks.isPresets = settings->value("isFullScreenPresets").toBool();
     if (settings->contains("isFullScreenEmbellish")) fullScreenDocks.isEmbellish = settings->value("isFullScreenEmbellish").toBool();
     if (settings->contains("isFullScreenThumbs")) fullScreenDocks.isThumbs = settings->value("isFullScreenThumbs").toBool();
     if (settings->contains("isFullScreenStatusBar")) fullScreenDocks.isStatusBar = settings->value("isFullScreenStatusBar").toBool();

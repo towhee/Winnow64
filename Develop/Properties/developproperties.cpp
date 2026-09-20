@@ -14,6 +14,7 @@
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
 #include "Develop/whitebalance.h"
+#include "Develop/calibrate.h"
 #include "Develop/outputtransform.h"
 #include "Develop/rangemask.h"
 #include "Develop/workingimagecache.h"
@@ -4335,9 +4336,11 @@ void DevelopProperties::addColor()
 
     /* All integer sliders -100..100 (div 0), default 0 (identity), matching EditParams.
        RGB = per-channel gain; HSL = global hue rotation / saturation / luminance. */
-    addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, G::darkred,   G::lightred);
-    addSlider("green",      "Green",      "Per-channel green gain.",               parIdx, "ColorHeader", -100, 100, 0, G::darkgreen, G::lightgreen);
-    addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, G::darkblue,  G::lightblue);
+    /* RGB grooves ramp black -> the channel's own primary, so each slider names its
+       channel at a glance (black->red, black->green, black->blue). */
+    addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, "#000000", "#ff0000");
+    addSlider("green",      "Green",      "Per-channel green gain.",               parIdx, "ColorHeader", -100, 100, 0, "#000000", "#00ff00");
+    addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, "#000000", "#0000ff");
     addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "RGBDevider");
     addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("saturation", "Saturation", "Global saturation (grey at -100).",     parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
@@ -4354,7 +4357,9 @@ void DevelopProperties::addColor()
    PRIMARIES of the working space, built into one 3x3 matrix and applied in linear light
    before the tone curve. Same select-then-adjust grammar as Color Grade -- R / G / B
    checkboxes pick which primaries the wheel writes (calActiveMask), then one shared wheel
-   whose dots are DELTAS from each primary's home angle (see primarywheel.h).
+   whose dots are DELTAS from each primary's home angle (see primarywheel.h). With one
+   primary checked a drag places its dot; with several it nudges them all by the same
+   amount, so a drag cannot flatten a calibration that already had them set apart.
 
    Distinct from the Color panel's Red/Green/Blue, which are per-channel linear GAINS
    folded into the white-balance vector -- a cruder second white balance. Both exist; the
@@ -4439,8 +4444,9 @@ void DevelopProperties::addCalibrate()
 
     /* The wheel's two axes as sliders, so the primaries can be NUDGED (arrow keys step
        one unit, PageUp/Dn ten) and read as numbers -- the wheel alone shows neither.
-       They write whichever primaries are checked, exactly as a wheel drag does, which is
-       the Color Grade Luminance slider's relationship to ITS wheel (see setGradeLum). */
+       They nudge whichever primaries are checked -- by a DELTA, so several checked
+       primaries keep their differences (see setCalAxis), which is what the wheel does
+       too once more than one primary is checked. */
     addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateWheelDivider");
     addSlider("calHue", "Hue",
               "Hue shift of the checked primaries (+/-30 degrees at full scale).",
@@ -4999,16 +5005,40 @@ int DevelopProperties::firstActivePrimary() const
     return 0;                            // nothing checked: default to red
 }
 
-/* One axis of the Hue / Saturation sliders -> every CHECKED primary, the same absolute
-   write a wheel drag makes (a drag also lands one value on every checked primary), so
-   the two controls are two faces of one adjustment. Mirrors setGradeLum. */
+/* One axis of the Hue / Saturation sliders -> every CHECKED primary, applied as a DELTA
+   rather than an absolute: each checked primary moves by the same amount, so primaries
+   that were set to different values keep their difference.
+
+   It is tempting to write v straight into all of them (that is what a wheel drag does
+   with ONE primary checked -- the dot lands under the pointer). But a slider nudge is an
+   INCREMENT, not a placement: check Red and Green
+   after setting them to +20 and -10, press the arrow key once, and an absolute write
+   collapses green onto red. One keystroke would silently destroy a setting the user could
+   not see, because the slider only ever shows the first checked primary. Relative is also
+   what the wheel does whenever it is nudging rather than placing -- under Shift, or with
+   more than one primary checked (see PrimaryWheel::applyPos) -- so every incremental path
+   through this panel agrees.
+
+   The delta is measured against the value the slider was SHOWING, which refreshCalibrate-
+   Row guarantees is the first checked primary's (firstActivePrimary). Each primary is
+   clamped on its own, so one of the others hitting the rail does not stop the rest; the
+   group does stop when the REFERENCE rails, because the readout can no longer move and
+   the delta reads as zero -- the same thing a grouped slider does anywhere else. */
 void DevelopProperties::setCalAxis(bool isHue, float v)
 {
     if (currentImagePath.isEmpty()) return;
     EditParams &p = activeParams();
-    if (calActiveMask & 0x1) { if (isHue) p.calRedHue   = v; else p.calRedSat   = v; }
-    if (calActiveMask & 0x2) { if (isHue) p.calGreenHue = v; else p.calGreenSat = v; }
-    if (calActiveMask & 0x4) { if (isHue) p.calBlueHue  = v; else p.calBlueSat  = v; }
+    const int c = firstActivePrimary();
+    float *hue[3] = {&p.calRedHue, &p.calGreenHue, &p.calBlueHue};
+    float *sat[3] = {&p.calRedSat, &p.calGreenSat, &p.calBlueSat};
+    float **axis = isHue ? hue : sat;
+    const float d = v - *axis[c];               // what the user asked the readout to move
+    if (d == 0.0f) return;
+    const float lim = Calibrate::kFullScale;
+    for (int i = 0; i < 3; ++i) {
+        if (!(calActiveMask & (1 << i))) continue;
+        *axis[i] = qBound(-lim, *axis[i] + d, lim);
+    }
 }
 
 /* Wheel drag -> the active scope's cal params for every checked primary, then preview.
@@ -5056,9 +5086,10 @@ void DevelopProperties::refreshCalibrateRow()
         primaryWheel->setPrimary(2, p.calBlueHue,  p.calBlueSat);
         primaryWheel->setActiveMask(calActiveMask);
     }
-    /* The sliders show the LOWEST checked primary (they write all of them), the same
-       compromise the Color Grade Luminance slider makes. Guarded, or setValue echoes
-       back through itemChange as a fresh edit. */
+    /* The sliders show the LOWEST checked primary, the same compromise the Color Grade
+       Luminance slider makes -- and it is also the baseline setCalAxis measures its delta
+       against, so this readout must be written on every change. Guarded, or setValue
+       echoes back through itemChange as a fresh edit. */
     const int c = firstActivePrimary();
     const float hue = (c == 0) ? p.calRedHue : (c == 1) ? p.calGreenHue : p.calBlueHue;
     const float sat = (c == 0) ? p.calRedSat : (c == 1) ? p.calGreenSat : p.calBlueSat;
@@ -5712,7 +5743,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
-    /* Calibrate Hue / Saturation sliders: write every primary the R/G/B checkboxes
+    /* Calibrate Hue / Saturation sliders: nudge every primary the R/G/B checkboxes
        select (not plain applyKeyToParams keys -- they need calActiveMask context). The
        history key carries the mask, so nudging red then green reads as two steps. */
     if (source == "calHue" || source == "calSat") {

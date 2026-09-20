@@ -41,6 +41,14 @@ class Metadata;
     Catalog::staleOf, so a rescan of an unchanged root costs one stat per file and no
     parsing at all. That is what makes "Scan now" cheap enough to offer as a button.
 
+    IT RECONCILES WHAT IT WALKS, both ways. Indexing alone only ever grows the catalog,
+    so a scan of a library the user had been deleting from left every removed image
+    findable. Each folder's listing is complete by the time it has been read, which is
+    precisely Catalog::reconcileFolder's precondition -- so the walk answers "what is
+    gone" for free, with no second pass and no stat. Folders that have gone from disk
+    entirely are handled after the walk, because a folder that no longer exists is never
+    walked and so would otherwise never be reconciled at all.
+
     NOTHING HERE IS AUTHORITATIVE. Like the rest of the catalog it only builds an index;
     it never writes to an image or a sidecar.
 */
@@ -79,7 +87,17 @@ signals:
         and absent from the index for good, so without this number the editor can only
         say "N images not catalogued yet -- press Scan" about a gap that pressing Scan
         will never close. A count nobody can act on has to be labelled as such. */
-    void finished(int scanned, int indexed, int unreadable, bool aborted);
+    /*  newFolders = folders walked that the catalog had never held a row for and that
+        this pass indexed at least one image from. It is the count a user recognises --
+        "you added three folders" -- where indexed is a number of files they never
+        counted themselves.
+
+        demoted = live rows whose file the walk did NOT find, set live = 0. DEMOTED, NOT
+        DELETED, exactly as sweep() does: the row comes back on its own the next time a
+        commit sees the file, so a folder that was briefly unreachable costs a rescan
+        rather than its catalogued keywords. */
+    void finished(int scanned, int indexed, int unreadable,
+                  int newFolders, int demoted, bool aborted);
     void status(const QString &msg);
 
 private:

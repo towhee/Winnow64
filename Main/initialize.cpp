@@ -457,7 +457,8 @@ void MW::createCatalogScanner()
             }, Qt::QueuedConnection);
 
     connect(catalogScanner, &CatalogScanner::finished, this,
-            [this](int scanned, int indexed, int unreadable, bool aborted) {
+            [this](int scanned, int indexed, int unreadable,
+                   int newFolders, int demoted, bool aborted) {
                 Q_UNUSED(scanned)
                 /* The figure itself now lives in the catalog (a stub row per file); this
                    is only for the log, where a scan that indexed nothing and skipped
@@ -474,10 +475,55 @@ void MW::createCatalogScanner()
                     catalogRootsDlg->setCatalogStatus(catalogStatusText());
                     updateCatalogCounts();
                 }
-                /* The row already said it was happening and the panel shows the result,
-                   so a background scan finishes silently -- the same rule the devPreview
-                   build follows. Only the counts the user can act on are surfaced, and
-                   those are in the Catalog panel. */
+                /*  A SCAN THE USER PRESSED A BUTTON FOR FINISHES SILENTLY -- the row
+                    already said it was happening and the panel shows the result, which is
+                    the same rule the devPreview build follows.
+
+                    A SCAN NOBODY ASKED FOR HAS TO ACCOUNT FOR ITSELF. The automatic run
+                    (MW::maybeAutoScanCatalog) starts a second after a click that meant
+                    "show me the Library", and its result is the LIBRARY CHANGING UNDER THE
+                    USER: images appearing, images vanishing. Unexplained, that reads as a
+                    bug. So it reports -- but only when it actually found something, and
+                    never for a run that was stopped, which has proved nothing.
+
+                    COUNTS, NOT NAMES. The interesting fact is the shape of the change, and
+                    a popup listing folders is one the user has to read rather than
+                    glance at. What changed is on screen behind it.
+
+                    ONLY THE NON-ZERO PARTS. A fixed sentence with a slot per count reads
+                    "1 new folder, 0 images added, 0 no longer on disk" for the ordinary
+                    case, which makes the user parse two zeros to find the one fact; and a
+                    run whose only effect was the scope reconcile would be three of them,
+                    announcing a change and then naming none. Each clause earns its place
+                    by being non-zero, and the popup does not appear when none does. */
+                QStringList changes;
+                if (newFolders)
+                    changes << QString("%1 new folder%2").arg(newFolders)
+                                   .arg(newFolders == 1 ? "" : "s");
+                if (indexed)
+                    changes << QString("%1 image%2 added").arg(indexed)
+                                   .arg(indexed == 1 ? "" : "s");
+                if (demoted)
+                    changes << QString("%1 no longer on disk").arg(demoted);
+                /*  Said in the scope's words, not the disk's. These rows went because the
+                    scope table no longer admits their folder -- nothing happened to the
+                    files -- and filing them under "no longer on disk" would send the user
+                    looking for a deletion that never happened. */
+                if (catalogScanForgotten)
+                    changes << QString("%1 outside the catalog scope")
+                                   .arg(catalogScanForgotten);
+                if (catalogScanIsAuto && !aborted && !changes.isEmpty() && G::popup) {
+                    G::popup->showPopup("Catalog updated: " + changes.join(", ") + ".",
+                                        5000);
+                }
+                catalogScanIsAuto = false;
+                catalogScanForgotten = 0;
+
+                /*  THE LIBRARY REDRAWS ITSELF FROM HERE. FilterPanel::refresh re-runs the
+                    query and reloads only when the result actually moved (see
+                    FilterPanel::runSearch), so a scan that found nothing costs one query
+                    and no reload -- and one that did found it shows without a second
+                    click, which is the whole point of scanning on selection. */
                 if (catalogView && catalogDock && catalogDock->isVisible())
                     catalogView->refresh();
                 if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
@@ -486,6 +532,8 @@ void MW::createCatalogScanner()
                     G::log("MW::createCatalogScanner",
                            "catalog scan finished, indexed = " +
                            QString::number(indexed) +
+                           ", new folders = " + QString::number(newFolders) +
+                           ", demoted = " + QString::number(demoted) +
                            ", unreadable = " + QString::number(unreadable) +
                            (aborted ? " (stopped early)" : ""));
             }, Qt::QueuedConnection);
@@ -1196,8 +1244,12 @@ void MW::createBookmarks()
     connect(bookmarks, &BookMarks::deleteFiles, this, &MW::deleteFiles,
             Qt::BlockingQueuedConnection);
 
-    // refresh FSTree count after drag and drop to BookMarks
-    connect(bookmarks, &BookMarks::updateCounts, this, &MW::updateImageCount);
+    /* Refresh after drag and drop to BookMarks. MW::refresh updates the FSTree and
+       BookMarks counts AND rebuilds the datamodel, so files dropped onto a bookmark
+       that is a currently selected folder appear immediately. Previously this only
+       called MW::updateImageCount, leaving the dropped files missing from the views
+       until the folder was reloaded. Mirrors the FSTree::updateCounts connection. */
+    connect(bookmarks, &BookMarks::updateCounts, this, &MW::refresh);
 
     // reselect folder after external program drop onto BookMarks
     connect(bookmarks, &BookMarks::folderSelection, fsTree, &FSTree::select);
@@ -2908,7 +2960,7 @@ void MW::createDevelopDock()
        Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title
        bar. The colour-wheel glyph matches the Scope / Transform action-row button style,
        and like them it carries the blue active border while its panel is the front tab
-       (driven from presetsDockVisibilityChange). */
+       (driven from the History panel's presetsExpandedChanged). */
     developPresetBtn = new BarBtn();
     developPresetBtn->setIcon(":/images/icon16/colorwheel.png", G::iconOpacity);
     developPresetBtn->setToolTip("Develop presets: apply a saved preset  (P)");
@@ -2966,14 +3018,26 @@ void MW::createDevelopDock()
 void MW::createHistoryDock()
 {
 /*
-    The Develop edit history (Lightroom's History panel): every committed develop action,
-    newest first. Hovering a row previews that state in the loupe; clicking it reverts the
-    image to it. The timeline lives in DevelopProperties (which owns the per-image
-    EditStack it snapshots), so this dock is a pure view -- created AFTER
-    createDevelopDock so developProperties exists to bind to.
+    THE HISTORY PANEL: the develop edit HISTORY and the saved develop PRESETS, each under
+    its own collapsible section band inside one dock.
 
-    Session scoped: the sidecar stores only the current EditStack, so history is rebuilt
-    as the user edits and discarded on quit.
+        History                        X
+        > History                     [:]
+        > Presets                 [+] [:]
+
+    History (Lightroom's History panel) is every committed develop action, newest first:
+    hovering a row previews that state in the loupe, clicking it reverts the image to it.
+    It is SESSION scoped -- the sidecar stores only the current EditStack, so history is
+    rebuilt as the user edits and discarded on quit.
+
+    Presets (Lightroom's Presets panel) are user-defined, named develop recipes: hovering
+    previews, clicking applies to the ACTIVE scope. Unlike History they are PERSISTENT --
+    they outlive the session and belong to no one image.
+
+    Both were docks of their own until three tabs for one tool proved one tab too many;
+    they are read together, so they now share one. Both timelines/stores live in
+    DevelopProperties, so this dock is a pure view -- created AFTER createDevelopDock so
+    developProperties exists to bind to.
 */
     if (G::isLogger) G::log("MW::createHistoryDock");
 
@@ -2982,41 +3046,46 @@ void MW::createHistoryDock()
     historyDock = new DockWidget(historyDockTabText, "HistoryDock", this);
     historyDock->setObjectName("HistoryDock");
 
-    historyView = new HistoryView(historyDock);
-    historyDock->setWidget(historyView);
-    if (developProperties) developProperties->bindHistoryView(historyView);
+    historyPanel = new HistoryPanel(historyDock, settings);
+    historyView = historyPanel->historyView();
+    presetsView = historyPanel->presetsView();
+    historyDock->setWidget(historyPanel);
+    if (developProperties) {
+        developProperties->bindHistoryView(historyView);
+        developProperties->bindPresetsView(presetsView);
+    }
+    connect(historyPanel, &HistoryPanel::newPresetRequested,
+            this, &MW::developSavePreset);
 
     historyDock->setFloating(false);
     historyDock->setVisible(false);          // shown with the Develop dock
     connect(historyDock, &DockWidget::focus, this, &MW::focusOnDock);
     connect(historyDock, &QDockWidget::visibilityChanged,
             this, &MW::historyDockVisibilityChange);
+    /* Clicking a sibling TAB does not change any dock's isVisible(), so the Develop
+       action row's Preset button has to learn about tab switches from here. */
+    connect(this, &QMainWindow::tabifiedDockWidgetActivated,
+            this, [this](QDockWidget *){ updateDevelopPresetBtn(); });
+    /* "P" / the View menu's Presets item track the SECTION, which is what they now open. */
+    connect(historyPanel, &HistoryPanel::presetsExpandedChanged, this, [this](bool on){
+        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(on);
+        updateDevelopPresetBtn();
+    });
 
     // customize the historyDock titlebar
     QHBoxLayout *historyTitleLayout = new QHBoxLayout();
     historyTitleLayout->setContentsMargins(0, 0, 0, 0);
     historyTitleLayout->setSpacing(0);
-    historyTitleBar = new DockTitleBar("Develop History", historyTitleLayout);
+    /*  "Develop", not "History": the panel is the develop tool's, and its two sections
+        name themselves. The TAB still reads "History" (historyDockTabText) because the
+        Develop dock's tab already claims "Develop" -- same split as that dock, whose title
+        bar reads "Develop Editor". */
+    historyTitleBar = new DockTitleBar("Develop", historyTitleLayout);
     historyDock->setTitleBarWidget(historyTitleBar);
     historyTitleBar->setToolTip(dockTabToolTip(historyDockTabText));
 
-    // question mark button
-    BarBtn *historyQuestionBtn = new BarBtn();
-    historyQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    historyQuestionBtn->setToolTip("How this works: develop history tips");
-    connect(historyQuestionBtn, &BarBtn::clicked, this, [this]{
-        if (G::popup) G::popup->showPopup(
-            "<b>Develop History</b><br>"
-            "Every develop action for this image, newest first.<br>"
-            "Hover an entry to preview that state; click it to go back to it.<br>"
-            "Editing from an earlier entry discards the entries after it.<br><br>"
-            "History is per image and lasts for this session -- the sidecar keeps the "
-            "current state, not the steps.", 6000);
-    });
-    historyTitleLayout->addWidget(historyQuestionBtn);
-
-    // Spacer
-    historyTitleLayout->addSpacing(10);
+    /* NO [?] here: each section band carries its own [:] menu with the help for that
+       section, so a panel-wide help button would have nothing of its own to say. */
 
     // collapse/expand body button
     if (G::useDWCollapse) {
@@ -3235,109 +3304,6 @@ void MW::createKeywordsDock()
     keywordsTitleLayout->addSpacing(5);
 }
 
-void MW::createPresetsDock()
-{
-/*
-    The saved develop presets (Lightroom's Presets panel): user-defined, named develop
-    recipes. Hovering a row previews that preset applied to the current image; clicking it
-    applies it to the ACTIVE scope. The store lives in DevelopProperties (QSettings under
-    "Develop Presets"), so this dock is a pure view -- created AFTER createDevelopDock so
-    developProperties exists to bind to.
-
-    Unlike History, presets are PERSISTENT: they outlive the session and are not tied to
-    any one image.
-*/
-    if (G::isLogger) G::log("MW::createPresetsDock");
-
-    presetsDockTabText = "Presets";
-    dockTextNames << presetsDockTabText;
-    presetsDock = new DockWidget(presetsDockTabText, "PresetsDock", this);
-    presetsDock->setObjectName("PresetsDock");
-
-    presetsView = new PresetsView(presetsDock);
-    presetsDock->setWidget(presetsView);
-    if (developProperties) developProperties->bindPresetsView(presetsView);
-
-    presetsDock->setFloating(false);
-    presetsDock->setVisible(false);          // shown with the Develop dock
-    connect(presetsDock, &DockWidget::focus, this, &MW::focusOnDock);
-    connect(presetsDock, &QDockWidget::visibilityChanged,
-            this, &MW::presetsDockVisibilityChange);
-    /* Clicking a sibling TAB does not change any dock's isVisible(), so the title-bar
-       button's border has to learn about tab switches from here. */
-    connect(this, &QMainWindow::tabifiedDockWidgetActivated,
-            this, [this](QDockWidget *){ updateDevelopPresetBtn(); });
-
-    // customize the presetsDock titlebar
-    QHBoxLayout *presetsTitleLayout = new QHBoxLayout();
-    presetsTitleLayout->setContentsMargins(0, 0, 0, 0);
-    presetsTitleLayout->setSpacing(0);
-    presetsTitleBar = new DockTitleBar("Develop Presets", presetsTitleLayout);
-    presetsDock->setTitleBarWidget(presetsTitleBar);
-    presetsTitleBar->setToolTip(dockTabToolTip(presetsDockTabText));
-
-    /* New preset. The same flow as Cmd+Shift+N, put where the presets are so it can be
-       found without knowing the shortcut. */
-    BarBtn *presetsNewBtn = new BarBtn();
-    presetsNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
-    presetsNewBtn->setToolTip("Create a develop preset from this image  (Cmd+Shift+N)");
-    connect(presetsNewBtn, &BarBtn::clicked, this, &MW::developSavePreset);
-    presetsTitleLayout->addWidget(presetsNewBtn);
-
-    // Spacer
-    presetsTitleLayout->addSpacing(10);
-
-    // question mark button
-    BarBtn *presetsQuestionBtn = new BarBtn();
-    presetsQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    presetsQuestionBtn->setToolTip("How this works: develop preset tips");
-    connect(presetsQuestionBtn, &BarBtn::clicked, this, [this]{
-        if (G::popup) G::popup->showPopup(
-            "<b>Develop Presets</b><br>"
-            "Your saved develop recipes. Hover one to preview it on this image; "
-            "click it to apply it.<br>"
-            "A preset holds only the settings you ticked when you saved it, so "
-            "applying it leaves everything else alone.<br>"
-            "It is applied to the scope selected in the Develop panel.<br><br>"
-            "Click + (or Cmd+Shift+N) to make one from the current image. "
-            "Right-click a preset to update, rename or delete it.<br><br>"
-            "For a one-off, skip the preset: Cmd+Opt+C copies the settings you tick "
-            "and Cmd+Opt+V pastes them onto another image.", 7000);
-    });
-    presetsTitleLayout->addWidget(presetsQuestionBtn);
-
-    // Spacer
-    presetsTitleLayout->addSpacing(10);
-
-    // collapse/expand body button
-    if (G::useDWCollapse) {
-        BarBtn *presetsCollapseBtn = new BarBtn();
-        presetsCollapseBtn->setIcon(":/images/icon16/collapse.png", G::iconOpacity);
-        presetsCollapseBtn->setToolTip("Collapse panel.");
-        connect(presetsCollapseBtn, &BarBtn::clicked, presetsDock, &DockWidget::toggleCollapsed);
-        connect(presetsDock, &DockWidget::collapsedChanged, presetsCollapseBtn,
-                [presetsCollapseBtn](bool c){
-            presetsCollapseBtn->setIcon(c ? ":/images/icon16/expand.png"
-                                          : ":/images/icon16/collapse.png", G::iconOpacity);
-            presetsCollapseBtn->setToolTip(c ? "Expand panel." : "Collapse panel.");
-        });
-        presetsTitleLayout->addWidget(presetsCollapseBtn);
-
-        // Spacer
-        presetsTitleLayout->addSpacing(10);
-    }
-
-    // close button
-    BarBtn *presetsCloseBtn = new BarBtn();
-    presetsCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    presetsCloseBtn->setToolTip("Hide the Presets Panel");
-    connect(presetsCloseBtn, &BarBtn::clicked, this, &MW::closePresetsDock);
-    presetsTitleLayout->addWidget(presetsCloseBtn);
-
-    // Spacer
-    presetsTitleLayout->addSpacing(5);
-}
-
 void MW::setDevelopPanelEnabled(bool visible, bool usable)
 {
     if (G::isLogger) G::log("MW::setDevelopPanelEnabled");
@@ -3359,7 +3325,14 @@ void MW::setDevelopPanelEnabled(bool visible, bool usable)
     developDock->setFeatures(visible ? developDockFeatures
                                      : QDockWidget::NoDockWidgetFeatures);
     const bool live = visible && usable;
-    if (developProperties) developProperties->setPanelEnabled(live);
+    /* An open Transform session owns the loupe: the crop overlay is showing the FULL
+       frame with the stored geometry suppressed, so an edit made from the Raw strip or
+       the Edits tree would be applied against a preview the user is not looking at. Grey
+       the property panel (RawPanel + the Edits bar and everything below it) for the
+       duration -- the Transform strip itself stays live, and R / Esc / [X] re-enables
+       them through syncDevelopPanelEnabled(). */
+    const bool editsLive = live && !developTransformVisible;
+    if (developProperties) developProperties->setPanelEnabled(editsLive);
     if (developActionRow) developActionRow->setEnabled(live);
     /* Transform and Fill Replace are SIBLINGS of the property panel inside the dock (they
        are pinned strips, not part of the tree), so setPanelEnabled does not reach them --
@@ -3370,14 +3343,9 @@ void MW::setDevelopPanelEnabled(bool visible, bool usable)
        readable precisely when the rest is disabled -- it says why. */
     if (transformPanel) transformPanel->setEnabled(live);
     if (replacePanel) replacePanel->setEnabled(live);
-    /* History and Presets are part of the Develop tool: they come and go with it. Show
-       them FIRST -- showing a tabified dock makes it the front tab, so Develop must be
-       shown last (and raised) or the group would open on one of their tabs. */
-    if (presetsDock) {
-        presetsDock->setEnabled(live);
-        presetsDock->setVisible(visible);
-        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(visible);
-    }
+    /* The History panel is part of the Develop tool: it comes and goes with it. Show it
+       FIRST -- showing a tabified dock makes it the front tab, so Develop must be shown
+       last (and raised) or the group would open on the History tab. */
     if (historyDock) {
         historyDock->setEnabled(live);
         historyDock->setVisible(visible);
@@ -3430,10 +3398,9 @@ void MW::setOperationMode(G::OperationMode mode)
         return;
     }
 
-    /* Only show develop (and its History / Presets panels) in Develop Mode. Those two
-       first, so Develop ends up the front tab (see setDevelopPanelEnabled). */
+    /* Only show develop (and its History panel) in Develop Mode. History first, so
+       Develop ends up the front tab (see setDevelopPanelEnabled). */
     const bool inDevelop = (mode == G::OperationMode::Develop);
-    if (presetsDock) presetsDock->setVisible(inDevelop);
     if (historyDock) historyDock->setVisible(inDevelop);
     developDock->setVisible(inDevelop);
     if (inDevelop) developDock->raise();
@@ -3764,22 +3731,9 @@ void MW::historyDockVisibilityChange()
     }
     else {
         /* Tabbed away or hidden mid-hover: never leave the loupe showing a previewed
-           history state the user can no longer see the row for. */
+           history state or preset the user can no longer see the row for. Both lists
+           live in this one dock now, so both previews end here. */
         developProperties->endHistoryPreview();
-    }
-}
-
-void MW::presetsDockVisibilityChange()
-{
-    if (G::isLogger) G::log("MW::presetsDockVisibilityChange");
-    /* createDocks runs BEFORE createActions, so the action can still be null here. */
-    if (!presetsDock || !developProperties) return;
-    if (presetsDock->isVisible()) {
-        if (presetsDockVisibleAction) presetsDockVisibleAction->setChecked(true);
-    }
-    else {
-        /* Tabbed away or hidden mid-hover: never leave the loupe showing a previewed
-           preset the user can no longer see the row for. */
         developProperties->endPresetPreview();
     }
     updateDevelopPresetBtn();
@@ -3788,8 +3742,11 @@ void MW::presetsDockVisibilityChange()
 void MW::updateDevelopPresetBtn()
 {
     if (!developPresetBtn) return;
-    developPresetBtn->setActive(presetsDock && presetsDock->isVisible()
-                                && isSelectedDockTab(presetsDock));
+    /* The button is "on" when a click on it would be a no-op: the panel is the front tab
+       AND its Presets section is already open. */
+    developPresetBtn->setActive(historyDock && historyDock->isVisible()
+                                && isSelectedDockTab(historyDock)
+                                && historyPanel && historyPanel->presetsExpanded());
 }
 
 void MW::createDocks()
@@ -3805,7 +3762,6 @@ void MW::createDocks()
     createEmbelDock();
     createDevelopDock();
     createHistoryDock();   // after Develop: it binds to developProperties
-    createPresetsDock();   // ditto
 
     // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -3819,7 +3775,6 @@ void MW::createDocks()
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::RightDockWidgetArea, developDock);
     addDockWidget(Qt::RightDockWidgetArea, historyDock);
-    addDockWidget(Qt::RightDockWidgetArea, presetsDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
@@ -3840,18 +3795,15 @@ void MW::createDocks()
        (tab-bar flicker). embel + develop tab together on the RIGHT via the line below. This
        default normally only shows when no saved WindowState is restored. */
     if (!hideEmbellish) MW::tabifyDockWidget(embelDock, developDock);
-    /* History and Presets join the same RIGHT group, immediately after Develop -- the
-       three are one tool and are shown/hidden together (see setHistoryDockVisibility /
-       setPresetsDockVisibility). */
+    /* History joins the same RIGHT group, immediately after Develop -- the two are one
+       tool and are shown/hidden together (see setHistoryDockVisibility). */
     MW::tabifyDockWidget(developDock, historyDock);
-    MW::tabifyDockWidget(historyDock, presetsDock);
 
     // Re-evaluate responsive dock tab titles when a dock is dragged between
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
     for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, keywordsDock,
-                          metadataDock, embelDock, developDock, historyDock,
-                          presetsDock}) {
+                          metadataDock, embelDock, developDock, historyDock}) {
         if (!d) continue;       // catalogDock is null with G::useFilterPanel
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
@@ -3894,7 +3846,6 @@ void MW::createDocks()
     wireSolo(embelDock);
     wireSolo(developDock);
     wireSolo(historyDock);
-    wireSolo(presetsDock);
 }
 
 void MW::createMessageView()

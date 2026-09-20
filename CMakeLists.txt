@@ -156,6 +156,7 @@ set(WINNOW_SOURCES
     Develop/Transform/transformpanel.cpp
     Develop/Transform/croptransform.cpp
     Develop/Replace/replacepanel.cpp
+    Develop/History/historypanel.cpp
     Develop/History/historyview.cpp
     Develop/Presets/developpresets.cpp
     Develop/Presets/presetsview.cpp
@@ -326,6 +327,7 @@ set(WINNOW_SOURCES
     Utilities/flowlayout.cpp
     Utilities/flowlayout.h
     Utilities/gradientheader.h
+    Utilities/panelbuttonbar.h
     Datamodel/keywordvocab.cpp
     Datamodel/keywordvocab.h
     Views/keywordtree.cpp
@@ -485,6 +487,7 @@ set(WINNOW_HEADERS
     Develop/Transform/croptransform.h
     Develop/Replace/replacepanel.h
     Develop/History/develophistory.h
+    Develop/History/historypanel.h
     Develop/History/historyview.h
     Develop/Presets/developpresets.h
     Develop/Presets/presetsview.h

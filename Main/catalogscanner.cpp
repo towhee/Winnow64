@@ -4,8 +4,11 @@
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
 
+#include "Cache/mountsnapshot.h"
+
 #include <QDir>
 #include <QFileInfo>
+#include <QSet>
 #include <QThread>
 
 namespace {
@@ -128,6 +131,35 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     row.width = m.width;
     row.height = m.height;
     row.gpsCoord = m.gpsCoord;
+    /*  schema 6/7: the fields a datamodel ROW displays that a search index never
+        needed. The scanner was copying NONE of them, so a folder catalogued here and
+        the same folder captured by DataModel::catalogRows produced different rows --
+        the very thing the comment below forbids.
+
+        orientation is the one that bit. A row served from the index carried 0,
+        Thumb::checkOrientation switched on it and matched no case, and every rotated
+        image showed its thumbnail on its side -- exactly the failure Cache/catalog.h
+        predicts where the field is declared. The unrotated icon was then written to
+        the thumbnail index, so it survived until the source file changed.
+
+        pick is NOT here: it is app state the datamodel owns, not something the
+        metadata read ever sets, so the scanner must leave it at its default. */
+    row.orientation = m.orientation;
+    row.exposureComp = m.exposureCompensation;
+    row.focusX = m.focusX;
+    row.focusY = m.focusY;
+    row.email = m.email;
+    row.url = m.url;
+    row._rating = m._rating;
+    row._label = m._label;
+    row._creator = m._creator;
+    row._title = m._title;
+    row._copyright = m._copyright;
+    row._email = m._email;
+    row._url = m._url;
+    row.developed = m.developEdited;
+    row.devPreviewKey = m.devPreviewKey;
+    row.shootingInfo = m.shootingInfo;
     /* The prefix-expanded PATHS, exactly as DataModel::catalogRows supplies them -- the
        scanner and the opportunistic capture must index the same image the same way, or a
        folder would be catalogued differently depending on which of them saw it first. */
@@ -165,7 +197,20 @@ void CatalogScanner::scan(const CatalogScope &scope)
     int scanned = 0;
     int indexed = 0;
     int unreadable = 0;
+    int newFolders = 0;
+    int demoted = 0;
     bool aborted = false;
+
+    /*  THE FOLDERS THE CATALOG ALREADY HELD, read ONCE before anything is written --
+        after the first commit of a folder it is no longer new, so a per-folder query
+        could not answer this question. One GROUP BY, reused for both halves of the
+        reconcile: what is here and was not, and what was here and is not. */
+    QSet<QString> known;
+    {
+        const QMap<QString, int> counts = Catalog::instance().folderCounts();
+        for (auto it = counts.constBegin(); it != counts.constEnd(); ++it)
+            known.insert(it.key());
+    }
 
     /* Expand the include rows to the folders actually to be walked.
        Utilities::subFolderTree is the same multi-threaded walk the recursive folder load
@@ -220,6 +265,29 @@ void CatalogScanner::scan(const CatalogScope &scope)
         const QDir dir(folder);
         const QStringList names = dir.entryList(QDir::Files, QDir::NoSort);
 
+        /*  WHAT IS GONE, answered from the listing we already have. dir.exists() is the
+            load-bearing guard: an unmounted volume and an empty folder both enumerate to
+            nothing, and reconciling against the first would demote a whole drive.
+
+            EVERY FILE GOES IN, ahead of the extension and size filters below. present is
+            "what the folder holds", not "what this scan would index" -- a file truncated
+            to zero bytes, or one whose format support has since been dropped, is still
+            on disk, and leaving it out would demote a row that should stand. */
+        if (dir.exists()) {
+            QSet<QString> present;
+            present.reserve(names.size());
+            for (const QString &name : names) present.insert(dir.filePath(name));
+            demoted += Catalog::instance().reconcileFolder(folder, present);
+        }
+
+        const bool folderIsNew = !known.contains(folder);
+        /*  ROWS THIS FOLDER CONTRIBUTED, counted here rather than from the running
+            indexed total. indexed only moves when a 200-row batch FLUSHES, and a batch
+            spans folders -- so a new folder of five images would leave indexed exactly
+            where it found it and never be counted, while whichever folder happened to
+            trip the flush would be credited with it. */
+        int addedThisFolder = 0;
+
         /* Stat everything first, then ask the catalog which of them actually need
            reading. On a rescan this is the entire cost of the folder. */
         QList<CatalogRow> candidates;
@@ -261,11 +329,18 @@ void CatalogScanner::scan(const CatalogScope &scope)
                 continue;
             }
             batch.append(row);
+            ++addedThisFolder;
             if (batch.size() >= kCommitRows) {
                 indexed += Catalog::instance().commit(batch);
                 batch.clear();
             }
         }
+
+        /*  A folder the catalog had never seen that yielded nothing -- no supported
+            files, or every one of them unreadable -- is not something the user added, so
+            it does not count. (The no-supported-files case never reaches here: it
+            continues out of the loop above.) */
+        if (folderIsNew && addedThisFolder > 0) ++newFolders;
 
         emit progress(folderNo, totalFolders);
         emit status("Cataloguing " + dir.dirName());
@@ -275,7 +350,35 @@ void CatalogScanner::scan(const CatalogScope &scope)
     if (!unreadableBatch.isEmpty())
         Catalog::instance().commitUnreadable(unreadableBatch);
 
+    /*  FOLDERS THAT HAVE GONE FROM DISK ENTIRELY. The loop above reconciles what it
+        walks, and a folder that no longer exists is never walked -- so without this its
+        rows would stay live forever and its images would keep coming back from a search
+        that cannot open one of them.
+
+        ONLY AFTER A COMPLETE PASS. A scan the user stopped has not proved anything about
+        the folders it did not reach, and demoting on the strength of a half-finished walk
+        is how a library quietly loses half of itself.
+
+        ONLY WHAT THE SCOPE STILL CLAIMS. A folder the scope no longer admits is
+        MW::reconcileCatalogToScope's business, and it forgets rather than demotes -- two
+        answers to one folder would race.
+
+        ONLY ON A MOUNTED VOLUME, the same guard sweep() takes and for the same reason: an
+        ejected card is not a deletion. The snapshot is taken here, after the walk, so its
+        window is as short as possible (see Cache/mountsnapshot.h). */
+    if (!aborted && !abort.load(std::memory_order_relaxed)) {
+        const MountSnapshot mounts = MountSnapshot::take();
+        for (const QString &f : std::as_const(known)) {
+            if (!waitWhilePaused()) { aborted = true; break; }
+            if (!catalogScopeIncludes(scope, f)) continue;
+            if (catalogScopeExcludes(scope, f)) continue;
+            if (mounts.rootOf(f).isEmpty()) continue;
+            if (QDir(f).exists()) continue;
+            demoted += Catalog::instance().reconcileFolder(f, QSet<QString>());
+        }
+    }
+
     running.store(false, std::memory_order_relaxed);
-    emit finished(scanned, indexed, unreadable,
+    emit finished(scanned, indexed, unreadable, newFolders, demoted,
                   aborted || abort.load(std::memory_order_relaxed));
 }

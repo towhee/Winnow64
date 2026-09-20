@@ -5,6 +5,7 @@
 #include <QLocale>
 #include "Utilities/fileops.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
@@ -106,7 +107,6 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
         {historyDockTabText,  ":/images/icon16/history_white.png"},
-        {presetsDockTabText,  ":/images/icon16/presets_white.png"},
     };
     const QHash<QString, QDockWidget*> dockFor = {
         {folderDockTabText,   folderDock},
@@ -118,7 +118,6 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
         {historyDockTabText,  historyDock},
-        {presetsDockTabText,  presetsDock},
     };
 
     busy = true;
@@ -306,7 +305,6 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
     if (tabText == historyDockTabText)  return historyDock;
-    if (tabText == presetsDockTabText)  return presetsDock;
     return nullptr;
 }
 
@@ -3836,6 +3834,13 @@ int MW::reconcileCatalogToScope(bool confirm)
 
 namespace {
 
+/*  How long MW::maybeAutoScanCatalog waits before starting an automatic scan. Long enough
+    for the catalog load the selection kicked off to be under way (so the scan's own
+    reconcile does not queue in front of it), short enough that a user who sits looking at
+    the Library sees the result rather than wondering whether anything happened. It is also
+    the coalescing window: Library, a year, Library again is one run, not three. */
+constexpr int kAutoScanDelayMs = 1500;
+
 /*  How many images the FOLDER holds -- the filesystem's answer, not the index's. The
     scanner's own rule for what counts, so the two numbers are comparable: a supported
     extension, and .photoslibrary skipped (it holds thousands of derivative masters per
@@ -3939,7 +3944,7 @@ void MW::updateCatalogCounts()
     }));
 }
 
-void MW::startCatalogScan()
+void MW::startCatalogScan(bool automatic)
 {
 /*
     Kick off the background scan over the folders the user nominated. Queued onto the
@@ -3949,6 +3954,12 @@ void MW::startCatalogScan()
     if (!catalogScanner) return;
     if (catalogScanner->isRunning()) return;
     if (catalogScope.isEmpty()) return;
+
+    /*  Read by the finished handler, which is the only place that can know what the run
+        actually found. Set before the reconcile below, so its count is attributed to
+        this run rather than left over from the last one. */
+    catalogScanIsAuto = automatic;
+    catalogScanForgotten = 0;
 
     if (progress) {
         progress->setRowText(progressCatalogRow, "Catalog");
@@ -3963,13 +3974,89 @@ void MW::startCatalogScan()
         SILENTLY, WITHOUT A CONFIRMATION. The scope that authorises the deletion was
         confirmed when it was edited, and a dialog in front of a button the user pressed
         to start a long background job is a dialog they will dismiss unread. */
-    reconcileCatalogToScope(false);
+    const int forgotten = reconcileCatalogToScope(false);
+    if (forgotten > 0) catalogScanForgotten = forgotten;
 
     if (catalogView) catalogView->setScanning(true);
     if (filterPanel) filterPanel->setScanning(true);
     if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
                               Q_ARG(CatalogScope, catalogScope));
+}
+
+void MW::maybeAutoScanCatalog(const QString &src)
+{
+/*
+    THE LIBRARY CHECKS ITSELF WHEN IT IS OPENED.
+
+    The catalog is an index of a filesystem that goes on changing without it: folders are
+    added in Finder, images are deleted, and neither reaches the index until the user
+    remembers to press Scan. Selecting Library is the one gesture that says "show me all
+    of it", so it is the right moment to make sure all of it is what is there.
+
+    IT IS A THROTTLE, NOT A SCHEDULE. Selecting Library costs a click and a scope walk
+    costs minutes, so a run is allowed only once per G::autoScanCatalogMinutes; every
+    selection in between is silently dropped. Timed from the START of the last automatic
+    run, because a scan that outlasts its own interval must not earn the next one an
+    immediate retry.
+
+    THE BUTTON IS UNAFFECTED. MW::startCatalogScan is still immediate and still reports
+    through the progress row -- this only adds a caller, and one that declines far more
+    often than it acts.
+
+    DEFERRED, NOT IMMEDIATE. startCatalogScan reconciles the scope on the GUI thread, and
+    the selection that brought us here has just started an asynchronous catalog load; put
+    in front of it, that query is a stall the user sees as the panel hesitating. The
+    delay also collapses a flurry of scope changes -- Library, a year, Library again --
+    into the one run they deserve.
+*/
+    if (G::isLogger) G::log("MW::maybeAutoScanCatalog", src);
+    if (G::isInitializing) return;
+    if (!G::autoScanCatalog) return;
+    if (!catalogScanner || catalogScanner->isRunning()) return;
+    if (catalogScope.isEmpty()) return;
+    if (!Catalog::instance().isAvailable()) return;
+
+    /*  isValid() is what says "never run", and it must be asked rather than assumed: a
+        default-constructed QElapsedTimer returns a meaningless elapsed(), so the first
+        selection of Library in a session would be compared against a number that means
+        nothing. */
+    const qint64 floorMs = qint64(qMax(1, G::autoScanCatalogMinutes)) * 60000;
+    if (catalogAutoScanRan && catalogAutoScanElapsed.isValid()
+        && catalogAutoScanElapsed.elapsed() < floorMs) return;
+
+    catalogAutoScanRan = true;
+    catalogAutoScanElapsed.start();
+
+    QPointer<MW> self(this);
+    QTimer::singleShot(kAutoScanDelayMs, this, [self]{
+        if (!self) return;
+        /*  RE-ASKED, not remembered. Everything the guards above tested can have changed
+            in the delay -- the user may have picked a folder, pressed Scan themselves, or
+            closed the catalog -- and acting on an answer that is a second and a half old
+            is how a background job starts after the reason for it has gone. */
+        if (G::isInitializing || G::stop) return;
+        if (G::scope != G::Scope::Catalog) return;
+        if (!G::autoScanCatalog) return;
+        if (!self->catalogScanner || self->catalogScanner->isRunning()) return;
+        if (self->catalogScope.isEmpty()) return;
+        if (!Catalog::instance().isAvailable()) return;
+        /*  The load the selection started is still replacing the datamodel, and
+            startCatalogScan's reconcile is a synchronous query. The scan itself would
+            give way (CatalogScanner::waitWhilePaused), but the reconcile in front of it
+            would not, so wait for the model rather than stall it. The scanner's own
+            pause handles anything that starts AFTER this point. */
+        if (G::isModifyingDatamodel) {
+            QTimer::singleShot(kAutoScanDelayMs, self, [self]{
+                if (!self || G::isModifyingDatamodel || G::stop) return;
+                if (G::scope != G::Scope::Catalog) return;
+                if (!self->catalogScanner || self->catalogScanner->isRunning()) return;
+                self->startCatalogScan(true);
+            });
+            return;
+        }
+        self->startCatalogScan(true);
+    });
 }
 
 void MW::manageCatalogRoots()
@@ -4009,8 +4096,12 @@ void MW::manageCatalogRoots()
                     }
                     updateCatalogCounts();
                 });
+        /*  A LAMBDA, NOT THE METHOD: startCatalogScan's automatic flag is a default
+            argument, and a default argument is a property of the call rather than of the
+            function's type -- a PMF connection to a signal with no arguments does not
+            compile. It is also the place that says this scan is the user's. */
         connect(catalogRootsDlg, &CatalogRootsDlg::scanRequested,
-                this, &MW::startCatalogScan);
+                this, [this]{ startCatalogScan(false); });
         connect(catalogRootsDlg, &CatalogRootsDlg::stopScanRequested,
                 this, &MW::stopCatalogScan);
     }
@@ -7156,6 +7247,10 @@ void MW::setFontSize(int fontPixelSize)
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
     embelTitleBar->setStyle();
+    /* Panel button rows carry the panel separator in G::panelSeparatorColor(), which is
+       derived from backgroundShade. A per-widget stylesheet is not regenerated by the app
+       sheet rebuild above, so the rule would otherwise keep the old shade. */
+    PanelButtonBar::Restyle(this);
     setCacheRunningLightsWidth();
     embelProperties->fontSizeChanged(fontPixelSize);
     pref->fontSizeChanged(fontPixelSize);
@@ -7205,6 +7300,10 @@ void MW::setBackgroundShade(int shade)
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
     embelTitleBar->setStyle();
+    /* Panel button rows carry the panel separator in G::panelSeparatorColor(), which is
+       derived from backgroundShade. A per-widget stylesheet is not regenerated by the app
+       sheet rebuild above, so the rule would otherwise keep the old shade. */
+    PanelButtonBar::Restyle(this);
     statusBar()->setStyleSheet(G::css);
     #ifdef Q_OS_WIN
     Win::setTitleBarColor(winId(), G::backgroundColor);
@@ -7616,12 +7715,8 @@ void MW::toggleFullScreen()
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
         }
-        /* History and Presets are tabbed with Develop, so show them before Develop and
-           then raise Develop, otherwise one of them becomes the front tab. */
-        if (presetsDock && presetsDockVisibleAction) {
-            presetsDockVisibleAction->setChecked(fullScreenDocks.isPresets);
-            presetsDock->setVisible(fullScreenDocks.isPresets);
-        }
+        /* History is tabbed with Develop, so show it before Develop and then raise
+           Develop, otherwise History becomes the front tab. */
         if (historyDock && historyDockVisibleAction) {
             historyDockVisibleAction->setChecked(fullScreenDocks.isHistory);
             historyDock->setVisible(fullScreenDocks.isHistory);
@@ -11617,6 +11712,9 @@ void MW::toggleDevelopTransform()
         if (developTransformVisible) enterDevelopCrop();
         else                         exitDevelopCrop();
     }
+    /* The Raw strip and the Edits tree are greyed while a Transform session is open (see
+       setDevelopPanelEnabled) -- re-evaluate now that the session has opened or closed. */
+    syncDevelopPanelEnabled();
 }
 
 void MW::toggleDevelopReplace()
@@ -12278,6 +12376,7 @@ void MW::cancelDevelopTransform()
     if (developTransformAction) developTransformAction->setChecked(false);
     if (developTransformBtn) developTransformBtn->setActive(false);
     settings->setValue("Develop/transformVisible", false);
+    syncDevelopPanelEnabled();       // un-grey the Raw strip and the Edits tree
 
     renderDevelopPreview(false);     // restored geometry applied -> pre-session result
 }
@@ -12519,7 +12618,6 @@ void MW::updateState()
     setEmbelDockVisibility();
     setDevelopDockVisibility();
     setHistoryDockVisibility();     // follows Develop (set just above)
-    setPresetsDockVisibility();     // ditto
     setThumbDockVisibity();
     // setShootingInfoVisibility();
     updateStatusBar();

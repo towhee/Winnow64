@@ -66,6 +66,11 @@ public:
     void bindPresets(DevelopPresets *p);
     void refresh();
 
+    /* The Presets section band's [:] menu: the SAME menu the list's right-click raises,
+       acting on the selected preset (only "New Preset..." when nothing is selected), plus
+       a trailing help item. One set of preset actions, not two that can drift. */
+    void showSectionMenu(const QPoint &globalPos);
+
 signals:
     void presetHovered(const QString &name);
     void hoverEnded();
@@ -74,6 +79,7 @@ signals:
     void updateRequested(const QString &name);
     void renameRequested(const QString &from, const QString &to);
     void deleteRequested(const QString &name);
+    void helpRequested();           // the section menu's trailing help item
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -87,6 +93,9 @@ private:
     void setHover(int row);                 // ends the preview off a preset row
     void endHoverPreview();                 // emits hoverEnded() if a preview is live
     void showMenu(const QPoint &pos);
+    /* The one menu both entry points build. name empty = no preset to act on;
+       includeHelp appends the trailing help item (the section band only). */
+    void runMenu(const QPoint &globalPos, const QString &name, bool includeHelp);
 
     DevelopPresets *presets = nullptr;
     PresetDelegate *delegate = nullptr;

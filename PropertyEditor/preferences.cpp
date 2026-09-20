@@ -252,6 +252,14 @@ void Preferences::itemChange(QModelIndex idx)
         G::useScrollInVerify = v.toBool();
         mw->settings->setValue("useScrollInVerify", G::useScrollInVerify);
     }
+    if (source == "autoScanCatalog") {
+        G::autoScanCatalog = v.toBool();
+        mw->settings->setValue("autoScanCatalog", G::autoScanCatalog);
+    }
+    if (source == "autoScanCatalogMinutes") {
+        G::autoScanCatalogMinutes = qBound(1, v.toInt(), 1440);
+        mw->settings->setValue("autoScanCatalogMinutes", G::autoScanCatalogMinutes);
+    }
 
     if (source == "useIndexMetadata") {
         G::useIndexMetadata = v.toBool();
@@ -492,10 +500,6 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "fullScreenShowHistory") {
         mw->fullScreenDocks.isHistory = v.toBool();
-    }
-
-    if (source == "fullScreenShowPresets") {
-        mw->fullScreenDocks.isPresets = v.toBool();
     }
 
     if (source == "fullScreenShowEmbellish") {
@@ -1715,6 +1719,49 @@ void Preferences::addCatalog()
     }
     addItem(i);
     btns.clear();
+
+    i.name = "autoScanCatalog";
+    i.parentName = "CatalogHeader";
+    i.captionText = "Scan for changes when the Library is selected";
+    i.tooltip = "Check the catalogued folders for changes each time you select the\n"
+                "Library, and bring the index up to date in the background.\n\n"
+                "Folders added outside Winnow are indexed, and images that are no\n"
+                "longer on disk stop appearing in searches. Nothing is deleted --\n"
+                "an image that comes back is catalogued again, with its rating,\n"
+                "label and keywords intact.\n\n"
+                "Unchanged folders cost one quick check per file, the scan gives\n"
+                "way while you are browsing, and you are only told about it when\n"
+                "something was actually found."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoScanCatalog;
+    i.key = "autoScanCatalog";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "autoScanCatalogMinutes";
+    i.parentName = "CatalogHeader";
+    i.captionText = "Minutes between automatic scans";
+    i.tooltip = "How long an automatic scan waits before it may run again.\n\n"
+                "Selecting the Library more often than this does nothing, so a\n"
+                "session spent switching between folders and the Library costs one\n"
+                "scan rather than one per click. The Scan button in Catalogued\n"
+                "folders ignores this and always runs at once.\n\n"
+                "Has no effect unless the setting above is ticked."
+        ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 60;
+    i.value = G::autoScanCatalogMinutes;
+    i.key = "autoScanCatalogMinutes";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 1;
+    i.max = 1440;
+    i.fixedWidth = 50;
+    addItem(i);
 }
 
 void Preferences::addSlideShow()
@@ -1872,25 +1919,13 @@ void Preferences::addFullScreen()
     // Full screen - show develop history
     i.name = "fullScreenShowHistory";
     i.parentName = "FullScreenHeader";
-    i.captionText = "Show develop history";
-    i.tooltip = "When you switch to full screen show the develop history dock.";
+    i.captionText = "Show history panel";
+    i.tooltip = "When you switch to full screen show the History panel (develop history "
+                "and presets)."; 
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isHistory;
     i.key = "fullScreenShowHistory";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    // Full screen - show develop presets
-    i.name = "fullScreenShowPresets";
-    i.parentName = "FullScreenHeader";
-    i.captionText = "Show develop presets";
-    i.tooltip = "When you switch to full screen show the develop presets dock.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = mw->fullScreenDocks.isPresets;
-    i.key = "fullScreenShowPresets";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

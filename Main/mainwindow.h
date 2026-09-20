@@ -60,6 +60,7 @@
 #include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
 #include "Develop/Presets/presetsview.h"
+#include "Develop/History/historypanel.h"
 #include "Develop/Properties/scopeheader.h"
 #include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
 #include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
@@ -203,8 +204,12 @@ public:
        bars). MW::restoreWindowState restores the state at its own version and then places
        the newer docks, so a dock addition MIGRATES the user's layout rather than discarding
        it. v1: added developDock. v2: added historyDock. v3: added presetsDock.
-       v4: added catalogDock. v5: added keywordsDock. */
-    static constexpr int winnowStateVersion = 5;
+       v4: added catalogDock. v5: added keywordsDock.
+       v6: presetsDock retired -- the History panel hosts the History and Presets
+       sections. Nothing is ADDED at v6, so placeDocksAddedSince has no row for it; the
+       bump is what stops a v5 restore hunting for a "PresetsDock" that no longer
+       exists. */
+    static constexpr int winnowStateVersion = 6;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -348,7 +353,6 @@ public:
         bool isMetadata = false;
         bool isDevelop = false;
         bool isHistory = false;
-        bool isPresets = false;
         bool isEmbellish = false;
         bool isThumbs = true;
         bool isStatusBar = true;
@@ -576,8 +580,19 @@ public slots:
         can reproduce a stall without setting an environment variable first. */
     void armGuiStallWatchdog();
     int  guiStallInterval() const;
-    /* Start / stop the background scan over catalogScope. */
-    void startCatalogScan();
+    /*  Start / stop the background scan over catalogScope. automatic says the user did
+        not press anything -- see maybeAutoScanCatalog -- which is what earns the run a
+        popup at the end, since nothing else accounts for it. */
+    void startCatalogScan(bool automatic = false);
+    /*  SELECTING THE LIBRARY IS ASKING WHETHER IT IS STILL TRUE. A catalog is an index of
+        a filesystem that keeps changing underneath it, and the moment the user asks to
+        look at the whole library is the moment a stale one matters most -- so the scan
+        they would otherwise have to remember to press runs itself.
+
+        THROTTLED, because selecting Library is a cheap gesture and a scope walk is not.
+        G::autoScanCatalogMinutes is the floor between automatic runs; the Scan button is
+        unaffected and always runs at once. */
+    void maybeAutoScanCatalog(const QString &src);
     /*  IS THIS FOLDER INSIDE THE CATALOG SCOPE? The scope table is definitive: browsing
         a folder catalogues it only when the table says that folder belongs in the index.
         Empty table = nothing is in scope, which is why the first-run prompt exists. */
@@ -1150,7 +1165,6 @@ private slots:
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
     void setHistoryDockVisibility();
-    void setPresetsDockVisibility();
     void setMetadataDockFixedSize();    // rgh finish or remove
 
     void focusOnDock(DockWidget *dockWidget);
@@ -1158,7 +1172,6 @@ private slots:
     void closeEmbelDock();
     void closeDevelopDock();
     void closeHistoryDock();
-    void closePresetsDock();
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();
@@ -1554,6 +1567,8 @@ private:
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
     QAction *historyDockVisibleAction = nullptr;   // "H": develop-mode local (arbiter)
+    /* "P": opens the History panel with its Presets SECTION expanded. Checked mirrors
+       that section, not a dock of its own (there is no Presets dock any more). */
     QAction *presetsDockVisibleAction = nullptr;   // "P": develop-mode local (arbiter)
     QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
     QAction *toggleMaskOverlayAction;   // "O": hide/show the scope's mask overlay tint
@@ -1727,11 +1742,10 @@ private:
     DockWidget *embelDock;
     DockWidget *developDock;
     /* Develop edit history. Tabbed with developDock and shown/hidden with it (the two are
-       one tool), so every developDock visibility change mirrors onto this. */
+       one tool), so every developDock visibility change mirrors onto this. Its body is
+       historyPanel: the History list AND the Presets list, each under its own section
+       band (Presets was a third tab until it was folded in here). */
     DockWidget *historyDock = nullptr;
-    /* Develop presets. Also tabbed with developDock and shown/hidden with it -- Develop,
-       History and Presets are one tool. */
-    DockWidget *presetsDock = nullptr;
     /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
        strip them (lock float/move) while disabled and restore them when re-enabled. */
     QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;
@@ -1819,7 +1833,6 @@ private:
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
     DockTitleBar *historyTitleBar = nullptr;
-    DockTitleBar *presetsTitleBar = nullptr;
     BarBtn *embelRunBtn;
     FSTree *fsTree;
     BookMarks *bookmarks;
@@ -1847,6 +1860,20 @@ private:
     /* Bumped on every recount so a walk whose table has since been edited is dropped
        rather than shown. */
     int catalogCountGen = 0;
+    /*  THE AUTOMATIC SCAN'S THROTTLE. Measured from the last automatic run STARTING, not
+        finishing: a scan of a big library can outlast the interval, and timing from the
+        end would make the gap depend on how long the work took. catalogAutoScanRan is
+        what distinguishes "no automatic scan yet this session" from a zero elapsed time,
+        which is the first selection of Library and must not be skipped. */
+    QElapsedTimer catalogAutoScanElapsed;
+    bool catalogAutoScanRan = false;
+    /*  Whether the scan now running was asked for by the user or by maybeAutoScanCatalog.
+        Only the second reports itself: a scan the user pressed a button for is already
+        accounted for by the progress row they are watching. Same rule as the devPreview
+        builder's fromMenu. */
+    bool catalogScanIsAuto = false;
+    /* Rows the pre-scan reconcile forgot, carried to the report at the end of the run. */
+    int catalogScanForgotten = 0;
     /* Set once the first-run "define a catalog scope" prompt has been offered, so it is
        offered once and not on every folder. Persisted. */
     bool catalogScopePrompted = false;
@@ -1901,9 +1928,12 @@ private:
     /* The History dock's list of develop actions (hover previews a state, a click reverts
        to it). DevelopProperties owns the timeline it views. */
     HistoryView *historyView = nullptr;
-    /* The Presets dock's list of saved develop presets (hover previews it applied, a
+    /* The Presets section's list of saved develop presets (hover previews it applied, a
        click applies it). DevelopProperties owns the store it views. */
     PresetsView *presetsView = nullptr;
+    /* The History dock's BODY: the two lists above under their collapsible section
+       bands. It creates and owns both views; MW only binds them. */
+    HistoryPanel *historyPanel = nullptr;
     /* Alert rows, directly below the Develop action row: coloured text on the panel
        background, one row per live condition, refreshed from the selection by
        updateDevelopSelectionWarning. Conditions stack, each in its own row; the container
@@ -2317,7 +2347,6 @@ private:
     QString embelDockTabText;
     QString developDockTabText;
     QString historyDockTabText;
-    QString presetsDockTabText;
     QString thumbDockTabText;
 
     QStringList dockTextNames;
@@ -2383,7 +2412,6 @@ private:
     void createEmbelDock();
     void createDevelopDock();
     void createHistoryDock();
-    void createPresetsDock();
     QTabBar* tabifiedBar();
     bool isDockTabified(QDockWidget *dock);
     QString dockTabToolTip(const QString &tabText);
@@ -2408,12 +2436,11 @@ private:
     void embelDockVisibilityChange();
     void developDockVisibilityChange();
     void historyDockVisibilityChange();
-    void presetsDockVisibilityChange();
     /* The Develop action-row Preset button reads as a checked toolbutton while the
-       Presets dock is the front tab. A TABIFIED dock keeps isVisible() == true when a
-       sibling tab is selected, so visibilityChanged alone cannot see a tab switch --
-       this is called from there AND from tabifiedDockWidgetActivated /
-       showPresetsDock. */
+       Presets SECTION is open in the front tab. A TABIFIED dock keeps isVisible() == true
+       when a sibling tab is selected, so visibilityChanged alone cannot see a tab switch
+       -- this is called from there AND from tabifiedDockWidgetActivated /
+       showPresetsDock / the panel's presetsExpandedChanged. */
     void updateDevelopPresetBtn();
 
 public:

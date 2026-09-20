@@ -20,14 +20,14 @@ image or shifting the white balance.</p>
 
 <h2>The controls</h2>
 <p>The <b>Red</b>, <b>Green</b> and <b>Blue</b> checkboxes do not adjust anything: they
-choose which primaries the wheel below them writes to.  Red is checked to start with.
-Check two or three and one drag moves them all by the same amount.</p>
+choose which primaries the wheel and sliders below them write to.  Red is checked to
+start with.  Check two or three and one gesture moves them all.</p>
 
 <p>The <b>wheel</b> is the adjustment (with the Hue and Saturation sliders under it as
 its numeric twin &mdash; see <i>Small adjustments</i> below).  Each primary has a lettered dot (R, G, B) that
 starts on its own spoke at mid radius &mdash; red at 3 o'clock, green and blue 120&deg;
 and 240&deg; round.  The faint dotted lines are those home positions, so a dot's distance
-from its spoke <i>is</i> the shift you have made.  Drag a dot and:</p>
+from its spoke <i>is</i> the shift you have made.  Drag and:</p>
 
 <ul>
 <li><b>Around the wheel</b> shifts that primary's <b>hue</b>, up to &plusmn;30&deg; at
@@ -37,6 +37,12 @@ wander into a neighbouring primary.</li>
 chroma; the centre desaturates it completely.  Brightness is held steady, so this is a
 colour control, not a second exposure.</li>
 </ul>
+
+<p>With <b>one</b> primary checked the dot simply follows the pointer.  With <b>two or
+three</b> checked they instead all move by the same amount as the pointer does, which is
+why the dots no longer sit under it &mdash; three dots cannot.  This is deliberate: it
+means primaries you had already set to different values keep their difference, and one
+stray drag cannot flatten a calibration you had built up.</p>
 
 <p><b>Double-click</b> the wheel to return the checked primaries to their home position.
 The section's <b>[&#8942;]</b> menu has <b>Show Calibrate changes</b> (a before/after
@@ -58,7 +64,9 @@ Click one and the <b>arrow keys</b> nudge it a single unit at a time; <b>Page Up
 
 <p>The two are one control seen two ways: drag the wheel and the numbers follow, nudge a
 slider and the dot moves.  With more than one primary checked the sliders read the first
-of them and write all of them &mdash; exactly what a wheel drag does.</p>
+of them and <i>nudge</i> them all by the same amount, so primaries you had set to
+different values keep their difference &mdash; the same thing the wheel does when more
+than one is checked.</p>
 
 <h2>Why the sliders interact</h2>
 <p>Move red toward green and you will see green's own response drop.  That is correct,

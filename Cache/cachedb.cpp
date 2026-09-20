@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 13;
+constexpr int kSchemaVersion = 14;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1184,6 +1184,52 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (hasDevPreview) {
             if (!q.exec("ALTER TABLE devpreview"
                         " ADD COLUMN demoted INTEGER NOT NULL DEFAULT 0")) {
+                db.rollback();
+                return false;
+            }
+        }
+    }
+
+    if (version < 14) {
+        /*  SCHEMA 6 ADDED THE COLUMNS AND ONLY ONE OF THE TWO WRITERS FILLED THEM.
+            DataModel::catalogRows copies the schema 6/7 block across;
+            CatalogScanner::parseInto did not, and the scanner is what indexes a library
+            in bulk. So schema 6's stamp clear worked exactly as intended, the scanner
+            re-read every row it had cleared, and wrote the defaults straight back --
+            41,000 rows claiming orientation 0 with a freshness stamp that says current.
+
+            orientation 0 is not a legal Exif orientation. Thumb::checkOrientation
+            switches on it, matches no case, and leaves the icon unrotated, so every
+            catalogued portrait image showed its thumbnail on its side. parseInto now
+            copies the block; this clears the stamps so the rows it already wrote are
+            re-read rather than trusted.
+
+            THE THUMBNAIL INDEX GOES WITH THEM. A row re-read from its file gets the
+            right orientation, but ThumbCache::getImage validates against the FILE's
+            size and mtime -- neither of which changed -- so it would keep serving the
+            unrotated icon it cached under the old row and the re-index would be
+            invisible. The thumbnail index is a pure cache and rebuilds on demand, so it
+            is dropped rather than picked through: the rows that need dropping are the
+            ones whose orientation was unknown, which is nearly all of them. Guarded on
+            the table existing for the same reason as schema 13 -- this is a shared file
+            and a failed migration costs the user their catalog. */
+        const char *ddl[] = {
+            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+        QSqlQuery t(db);
+        bool hasThumb = false;
+        if (t.exec("SELECT 1 FROM sqlite_master WHERE type = 'table'"
+                   " AND name = 'thumb'") && t.next()) {
+            hasThumb = true;
+        }
+        if (hasThumb) {
+            if (!q.exec("DELETE FROM thumb")) {
                 db.rollback();
                 return false;
             }

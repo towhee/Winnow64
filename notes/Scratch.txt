@@ -1845,6 +1845,8 @@ Where [Global              ] is a dropdown menu that includes all masks
 and [eye] applies to the currently selected scope
 Eliminate rail
 
+[⋮] = vertical elipsis
+
 ------------------------------------------------------------------------
 
 AgX?
@@ -4311,3 +4313,35 @@ Users/roryhill/Temp/Misc/LRexports/zero_standard.lr.jpg
 
 
 Edits   Scope: [              ] [+][eye]...
+
+
+1. Baseline — Manage Catalog, confirm the scope has at least one root. Press Scan and
+   let it finish so the index is current. Note the Catalog row's count in the Source panel.
+2. New folder — copy a folder of images into a scoped root from Finder. Select a
+   normal folder, then select Library. Expect: the progress row runs, then a popup
+   Catalog updated: 1 new folders, N images added, 0 no longer on disk., the Catalog
+   row's count rises by N, and the new images appear in the grid without another click.
+3. Orphan — delete a subfolder of images from a scoped root in Finder. Select Library
+   again (past the throttle, or with the minutes preference set to 1). Expect the popup to
+   report them under "no longer on disk", the count to drop, and the grid to lose them.
+   Confirm they were demoted, not deleted: restore the folder, scan, and check the
+   images come back with their catalogued rating/label/keywords intact.
+4. Silence when clean — select Library twice more past the throttle with nothing
+   changed on disk. Expect no popup at all, and no grid reload.
+5. Throttle — with the default 60, select Library, switch to a folder, select Library
+   again immediately. Expect no second scan (the progress row does not reappear).
+6. Preference off — untick "Auto scan catalog when Library is selected" in
+   Preferences > Catalog, restart, select Library. Expect no scan. Confirm the setting
+   survived the restart.
+7. Ejected volume — if a scope root lives on an external drive, eject it and select
+   Library. Expect that drive's folders to be left alone: its images must not be
+   reported as missing. (This is the highest-risk path in the change.)
+8. Yielding — start a scan of a large root, then browse folders while it runs. Expect
+   browsing to stay responsive and the scan to pause, per the existing
+   waitWhilePaused() contract. Stop from Manage Catalog and confirm no popup fires for
+   an aborted run.
+
+
+  History                        X
+  > History                    ? X
+  > Presets                  + ? X

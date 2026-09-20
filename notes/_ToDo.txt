@@ -8,26 +8,12 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- When select Library in the Source panel, all selections in the Folders tree should be cleared.
-- When select Library do auto scan for new folders and orphans?
-- In Library, should we date stamp sidecars and then check for non-Winnow sidecar changes?
-- Does it make sense to be able to select R and G and B rather than R or G or B?
-- Clear the develop copy/paste between sessions.
+- Redo Develop help
+- Edit Winnow shortcuts
 - Customize Info (I) location/size.
-- Lightroom has different white balance for some files
-- /Users/roryhill/Pictures/_test2/2020-04-25_2013.JPG thumb not rotated
-- /Users/roryhill/Pictures/Test/copy/IMG_5853.heic image and thumb not rotated
-- When drag/copy file to bookmark refresh bookmark folder
-- Differentiate workspaces that have size/position
-- Develop disabled sometimes at start (Bookmarks / Develop only docks)
-- Not saving / restoring workspace properly between sessions.
 - Develop behavior when no image is selected
-- Add a use catalog preference?
 - When quit dock widths are not persistent with next session
-- In loupe mode, 'Esc' switch to grid mode (gridView)
 - Test search in filter
-- Add Defaults section to Workspaces menu (Ingest, View, Develop, Keywords, Embellish)
-- Develop panels management needs a tweak
 - Tweak welcome screen re to get started incl Catalog ??
 - Tweak develop basic tone sliders
 - Tweak main menu (Library, Develop...)

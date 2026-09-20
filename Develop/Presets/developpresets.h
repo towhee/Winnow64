@@ -84,11 +84,19 @@ public:
        Copy captures exactly what a preset captures -- the same checklist, the same
        partial recipe -- it just has no name, so it goes to a single slot that every Copy
        overwrites, and Paste merges it with the same mergePreset(). It lives under its own
-       QSettings root: it therefore inherits the version / migrate path, survives a
-       restart (Lightroom's copy buffer does too) and can never turn up in names(). */
+       QSettings root, so it inherits the version / migrate path and can never turn up in
+       names().
+
+       SESSION SCOPED. QSettings is the container, not a promise of persistence: the
+       constructor calls clearClipboard(), so the buffer starts every run empty and Paste
+       is unavailable until this session's first Copy. (Lightroom's buffer does survive a
+       restart; Winnow's deliberately does not -- pasting adjustments copied in an
+       earlier session, from an image long out of view, is far more often a slip than
+       an intent.) */
     DevelopPreset readClipboard() const;
     void          writeClipboard(const DevelopPreset &p);
     bool          hasClipboard() const;
+    void          clearClipboard();     // empty the slot; called on construction
 
     /* Assign one RAW preset value onto an EditParams, keyed by its EditStack JSON field
        name. Unknown keys are ignored, so a preset written by a later build loads here

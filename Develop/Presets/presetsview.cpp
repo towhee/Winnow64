@@ -182,12 +182,27 @@ void PresetsView::showMenu(const QPoint &pos)
 {
 /*
     Manage presets (Lightroom's preset context menu). The row actions appear only over a
-    real preset. The prompts live here so the caller receives a decided action, never a
-    "maybe" -- the same division of labour as SaveDevelopPresetDlg, which owns its own
-    overwrite confirmation.
+    real preset.
 */
-    const QString name = nameForRow(indexAt(pos).row());
+    runMenu(mapToGlobal(pos), nameForRow(indexAt(pos).row()), false);
+}
 
+void PresetsView::showSectionMenu(const QPoint &globalPos)
+{
+/*
+    The same menu, raised from the Presets band's [:] rather than from a row, so it acts
+    on the SELECTED preset -- there is no row under the cursor to name one.
+*/
+    runMenu(globalPos, nameForRow(currentRow()), true);
+}
+
+void PresetsView::runMenu(const QPoint &globalPos, const QString &name, bool includeHelp)
+{
+/*
+    The prompts live here so the caller receives a decided action, never a "maybe" -- the
+    same division of labour as SaveDevelopPresetDlg, which owns its own overwrite
+    confirmation.
+*/
     /* Hovering the row that opened the menu left a preview on the loupe; the menu grabs
        the mouse, so no leaveEvent will arrive to undo it. */
     setHover(-1);
@@ -204,8 +219,20 @@ void PresetsView::showMenu(const QPoint &pos)
         aDelete = menu.addAction(tr("Delete"));
     }
 
-    QAction *chosen = menu.exec(mapToGlobal(pos));
+    /* Help is always the last item, as it is on every section band in the Develop dock. */
+    QAction *aHelp = nullptr;
+    if (includeHelp) {
+        menu.addSeparator();
+        aHelp = menu.addAction(tr("Presets help"));
+    }
+
+    QAction *chosen = menu.exec(globalPos);
     if (!chosen) return;
+
+    if (chosen == aHelp) {
+        emit helpRequested();
+        return;
+    }
 
     if (chosen == aNew) {
         emit newPresetRequested();
