@@ -243,14 +243,9 @@ void MW::setDevelopDockVisibility()
 {
     if (G::isLogger) G::log("MW::setDevelopDockVisibility");
     const bool on = developDockVisibleAction->isChecked();
-    /* History and Presets are part of the Develop tool -- they follow the Develop dock,
-       actions and all, so a later setHistoryDockVisibility() / setPresetsDockVisibility()
-       agrees rather than fighting it. Shown before Develop so Develop, not one of them,
-       is the front tab of the group. */
-    if (presetsDock && presetsDockVisibleAction) {
-        presetsDockVisibleAction->setChecked(on);
-        presetsDock->setVisible(on);
-    }
+    /* The History panel is part of the Develop tool -- it follows the Develop dock,
+       action and all, so a later setHistoryDockVisibility() agrees rather than fighting
+       it. Shown before Develop so Develop, not History, is the front tab of the group. */
     if (historyDock && historyDockVisibleAction) {
         historyDockVisibleAction->setChecked(on);
         historyDock->setVisible(on);
@@ -264,13 +259,6 @@ void MW::setHistoryDockVisibility()
     if (G::isLogger) G::log("MW::setHistoryDockVisibility");
     if (!historyDock || !historyDockVisibleAction) return;
     historyDock->setVisible(historyDockVisibleAction->isChecked());
-}
-
-void MW::setPresetsDockVisibility()
-{
-    if (G::isLogger) G::log("MW::setPresetsDockVisibility");
-    if (!presetsDock || !presetsDockVisibleAction) return;
-    presetsDock->setVisible(presetsDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockFixedSize()
@@ -317,20 +305,13 @@ void MW::closeDevelopDock()
 {
     developDock->setVisible(false);
     developDockVisibleAction->setChecked(false);
-    closeHistoryDock();             // the three are one tool
-    closePresetsDock();
+    closeHistoryDock();             // the two are one tool
 }
 void MW::closeHistoryDock()
 {
     if (!historyDock || !historyDockVisibleAction) return;
     historyDock->setVisible(false);
     historyDockVisibleAction->setChecked(false);
-}
-void MW::closePresetsDock()
-{
-    if (!presetsDock || !presetsDockVisibleAction) return;
-    presetsDock->setVisible(false);
-    presetsDockVisibleAction->setChecked(false);
 }
 void MW::closeFolderDock()
 {
@@ -488,6 +469,18 @@ void MW::setScope(G::Scope s, QString src)
         is what a return to Folders scope re-selects from). */
     if (s == G::Scope::Catalog && fsTree && fsTree->selectionModel())
         fsTree->selectionModel()->clearSelection();
+
+    /*  ASKING TO SEE THE LIBRARY IS ASKING WHETHER IT IS STILL TRUE. Folders appear and
+        images are deleted outside Winnow, and the index only learns of it when somebody
+        presses Scan. Here, where the user has just said "show me all of it", is the one
+        place that is worth checking without being asked -- so the scan runs itself,
+        throttled. See MW::maybeAutoScanCatalog, which declines far more often than it
+        acts, and which defers the work so this selection does not wait on it.
+
+        AHEAD OF THE "not changed" RETURN BELOW, deliberately: selecting Library again
+        after browsing is exactly when a user wants it rechecked, and the throttle -- not
+        whether the scope moved -- is what decides. */
+    if (s == G::Scope::Catalog) maybeAutoScanCatalog("MW::setScope");
 
     /*  WHICH SET THE PANEL IS FILTERING, said where it stays visible. The Search category
         can be collapsed and the query is typed into a tree row, so there is no
@@ -797,12 +790,8 @@ void MW::showDevelopDock() {
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
     else dockOption = SetVisible;
 
-    /* Bring History + Presets up with Develop, BEFORE it: showing a tabified dock makes
-       it the front tab, so they must be shown first and Develop raised last. */
-    if (presetsDock && !presetsDock->isVisible()) {
-        presetsDock->setVisible(true);
-        presetsDockVisibleAction->setChecked(true);
-    }
+    /* Bring History up with Develop, BEFORE it: showing a tabified dock makes it the
+       front tab, so it must be shown first and Develop raised last. */
     if (historyDock && !historyDock->isVisible()) {
         historyDock->setVisible(true);
         historyDockVisibleAction->setChecked(true);
@@ -837,25 +826,34 @@ void MW::showHistoryDock() {
         historyDock->raise();
         historyDockVisibleAction->setChecked(true);
     }
+    /* "H" means "show me the history", so open the section if it was folded away. */
+    if (historyPanel) historyPanel->expandHistory();
 }
 
 void MW::showPresetsDock() {
+/*
+    "P", the View menu's Presets item and the Develop action row's colour-wheel button.
+    Presets is a SECTION of the History panel, not a dock of its own, so this raises that
+    panel and opens the section.
+*/
     if (G::isLogger) G::log("MW::showPresetsDock");
     if (G::isInitializing) return;
-    QDockWidget *dock = presetsDock;
+    QDockWidget *dock = historyDock;
+    if (!dock) return;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
     else dockOption = SetVisible;
 
     switch (dockOption) {
     case SetFocus:
-        presetsDock->raise();
-        presetsDockVisibleAction->setChecked(true);
+        historyDock->raise();
+        historyDockVisibleAction->setChecked(true);
         break;
     case SetVisible:
-        presetsDock->setVisible(true);
-        presetsDock->raise();
-        presetsDockVisibleAction->setChecked(true);
+        historyDock->setVisible(true);
+        historyDock->raise();
+        historyDockVisibleAction->setChecked(true);
     }
+    if (historyPanel) historyPanel->expandPresets();
     /* raise() may not emit visibilityChanged (a tabified dock was already "visible"). */
     updateDevelopPresetBtn();
 }

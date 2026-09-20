@@ -8,7 +8,14 @@
 */
 
 DevelopPresets::DevelopPresets(QSettings *setting, QObject *parent)
-    : QObject(parent), setting(setting) {}
+    : QObject(parent), setting(setting)
+{
+    /* The copy buffer is SESSION SCOPED: wipe whatever the previous run left behind, so
+       Paste stays unavailable until this session's first Copy. It lives in QSettings only
+       because that is where the preset store already reads and writes -- persistence is a
+       side effect of sharing the store, not a feature of the clipboard. */
+    clearClipboard();
+}
 
 QStringList DevelopPresets::names() const
 {
@@ -166,6 +173,19 @@ bool DevelopPresets::hasClipboard() const
     /* A slot holding nothing (everything unticked) is "nothing copied": pasting it would
        do nothing, and Paste should read as unavailable rather than silently no-op. */
     return has && !readClipboard().isEmpty();
+}
+
+void DevelopPresets::clearClipboard()
+{
+    if (!setting) return;
+    if (G::isLogger) G::log("DevelopPresets::clearClipboard");
+    /* remove("") inside the group drops the group itself, so hasClipboard() finds no slot
+       at all rather than an empty one. No changed() signal -- the Presets list never
+       showed the buffer, so there is nothing to reload. */
+    setting->beginGroup(kClipRoot);
+    setting->remove("");
+    setting->endGroup();
+    setting->sync();
 }
 
 bool DevelopPresets::rename(const QString &from, const QString &to)

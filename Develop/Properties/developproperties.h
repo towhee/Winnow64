@@ -793,8 +793,8 @@ private:
     int  calActiveMask = 0x1;                 // red checked by default
     void onPrimaryWheelChanged(bool commit);  // wheel drag -> active-scope cal params
     void refreshCalibrateRow();               // push stored primaries to wheel + sliders
-    void setCalAxis(bool isHue, float v);     // write one axis to every checked primary
-    int  firstActivePrimary() const;          // lowest checked primary (drives the sliders)
+    void setCalAxis(bool isHue, float v);     // nudge one axis of every checked primary
+    int  firstActivePrimary() const;          // lowest checked primary (the sliders' reference)
 
     /* ---- Curves (tone curve) ----------------------------------------------------------
        An embedded index widget like the wheels, re-created on every tree rebuild. The

@@ -529,7 +529,6 @@ void MW::placeDocksAddedSince(int stateVersion)
     const QVector<AddedDock> added {
         {1, developDock, hideEmbellish ? nullptr : embelDock, developDockVisibleAction},
         {2, historyDock, developDock, historyDockVisibleAction},
-        {3, presetsDock, developDock, presetsDockVisibleAction},
         {4, catalogDock, filterDock, catalogDockVisibleAction},
         {5, keywordsDock, filterDock, keywordsDockVisibleAction},
     };

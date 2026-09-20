@@ -91,36 +91,56 @@ void PrimaryWheel::takeFineAnchor(float ang, float s)
     }
 }
 
-/* Cursor -> hue/sat for every checked primary.
+/* How many primaries a drag will move. One is a placement; several is a nudge. */
+int PrimaryWheel::activeCount() const
+{
+    return ((activeMask & 0x1) ? 1 : 0) + ((activeMask & 0x2) ? 1 : 0) +
+           ((activeMask & 0x4) ? 1 : 0);
+}
 
-   NORMAL drag: absolute. The angle is taken RELATIVE to that primary's home spoke and
-   wrapped into (-180,180] before scaling, so dragging near red's home never reads as a
-   +350 deg swing, and the dot sits under the pointer.
+/* Cursor -> hue/sat for every checked primary, in one of two modes.
 
-   FINE drag (Shift): relative. Each primary moves by kFineGain of the cursor's movement
-   since the anchor, which is what makes a one-or-two unit change reachable with a mouse
-   -- the whole disc is only +/-30 degrees of hue. Because the movement is measured as a
-   DIFFERENCE of cursor angles, the same delta applies to every checked primary whatever
-   its home angle. */
+   PLACEMENT (absolute): one primary checked, no Shift. The angle is taken RELATIVE to
+   that primary's home spoke and wrapped into (-180,180] before scaling, so dragging near
+   red's home never reads as a +350 deg swing, and the dot sits under the pointer. This
+   is what a wheel should do when there is one thing to point at.
+
+   NUDGE (relative): Shift, or MORE THAN ONE primary checked. Each primary moves by the
+   cursor's movement since the anchor -- all of it normally, kFineGain of it under Shift.
+   Because the movement is a DIFFERENCE of cursor angles, the same delta reaches every
+   checked primary whatever its home angle, so primaries set to different values KEEP
+   their difference. Absolute placement cannot: it would put every checked primary on the
+   one value the pointer names, so a single drag on an image that already carried a
+   calibration would flatten it. That is why multi-select forces this mode, and it is the
+   same reasoning that makes the Hue / Saturation sliders relative (see setCalAxis).
+
+   The scale is identical in both modes -- full slider range is 30 deg of arc either way
+   -- so switching modes does not change how far a given drag travels; only Shift does.
+   The cost is that the dots no longer sit under the pointer in a multi drag, which is
+   unavoidable: three dots cannot all be under one cursor. */
 void PrimaryWheel::applyPos(const QPointF &pos, bool fine)
 {
     float ang, s;
     hueSatAt(pos, ang, s);
-    /* Shift just went down (at press or mid-drag): anchor here and move nothing, so the
-       dots stay where they are instead of snapping under the pointer. Releasing Shift
-       needs no anchor -- absolute tracking simply resumes. */
-    if (fineStateChanged(fine) && fine) {
+    const bool relative = fine || dragRelative;
+    /* The Shift state flipped (at press or mid-drag). Re-anchor here and move nothing, so
+       the dots carry on from where they are instead of jumping: entering fine always
+       needs it, and so does LEAVING fine while relative, where there is no absolute
+       tracking to resume. A single-primary drag leaving fine resumes placement and needs
+       no anchor. */
+    if (fineStateChanged(fine) && relative) {
         takeFineAnchor(ang, s);
         return;
     }
+    const float gain = fine ? kFineGain : 1.0f;
     const float dHue = wrapDeg(ang - fineAnchorHue) / Calibrate::kMaxHueDeg * kFull;
     const float dSat = (s - fineAnchorSat) / kMidRadius * kFull;
     bool any = false;
     for (int i = 0; i < 3; ++i) {
         if (!(activeMask & (1 << i))) continue;
-        if (fine) {
-            hueVal[i] = qBound(-kFull, anchorHueVal[i] + kFineGain * dHue, kFull);
-            satVal[i] = qBound(-kFull, anchorSatVal[i] + kFineGain * dSat, kFull);
+        if (relative) {
+            hueVal[i] = qBound(-kFull, anchorHueVal[i] + gain * dHue, kFull);
+            satVal[i] = qBound(-kFull, anchorSatVal[i] + gain * dSat, kFull);
         }
         else {
             const float d = wrapDeg(ang - homeAngle(i));
@@ -139,10 +159,22 @@ void PrimaryWheel::mousePressEvent(QMouseEvent *e)
 {
     if (e->button() != Qt::LeftButton || activeMask == 0) return;
     dragging = true;
-    /* Every drag begins in absolute mode, so a press with Shift already down reads as
-       the flip that anchors it (and therefore does not jump the dots to the cursor). */
+    /* Placement or nudge is decided HERE and held for the whole drag, so a checkbox
+       toggled between drags cannot leave a drag half in one mode with a stale anchor. */
+    dragRelative = activeCount() > 1;
+    const bool fine = e->modifiers() & Qt::ShiftModifier;
+    if (dragRelative || fine) {
+        /* A nudge starts from an anchor and moves nothing: the dots stay put rather than
+           snapping to the pointer. Setting fineDrag first means a mid-drag Shift change
+           still reads as a flip and re-anchors. */
+        fineDrag = fine;
+        float ang, s;
+        hueSatAt(e->position(), ang, s);
+        takeFineAnchor(ang, s);
+        return;
+    }
     fineDrag = false;
-    applyPos(e->position(), e->modifiers() & Qt::ShiftModifier);
+    applyPos(e->position(), false);
 }
 
 void PrimaryWheel::mouseMoveEvent(QMouseEvent *e)
@@ -154,7 +186,8 @@ void PrimaryWheel::mouseReleaseEvent(QMouseEvent *e)
 {
     if (e->button() != Qt::LeftButton || !dragging) return;
     dragging = false;
-    fineDrag = false;               // the next drag starts in absolute mode
+    fineDrag = false;               // the next drag re-decides its own mode at press
+    dragRelative = false;
     emit primaryCommitted();
 }
 
@@ -165,6 +198,7 @@ void PrimaryWheel::mouseDoubleClickEvent(QMouseEvent *e)
     if (e->button() != Qt::LeftButton || activeMask == 0) return;
     dragging = false;
     fineDrag = false;
+    dragRelative = false;
     bool any = false;
     for (int i = 0; i < 3; ++i) {
         if (!(activeMask & (1 << i))) continue;

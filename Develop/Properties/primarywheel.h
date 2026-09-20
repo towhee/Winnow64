@@ -21,12 +21,15 @@
       * sat  = the RADIUS relative to the neutral mid point, -100..100 (centre = -100
                = fully desaturated primary, rim = +100 = doubled chroma).
 
-    A drag moves every ACTIVE primary (setActiveMask, bit0 red / bit1 green / bit2 blue)
-    by the SAME delta, so checking all three nudges the whole set together. Double-click
-    resets the checked primaries to 0/0. Hold SHIFT for a fine drag -- a quarter of the
-    cursor's movement, for the small adjustments this panel is mostly about (see the
-    fine-drag note in huesatwheel.h). The Calibrate section's Hue / Saturation sliders
-    are the other way to nudge, and can be stepped from the keyboard.
+    A drag moves every ACTIVE primary (setActiveMask, bit0 red / bit1 green / bit2 blue),
+    and HOW depends on how many are checked. One: a placement -- the dot goes where the
+    pointer is. Several: a nudge -- each moves by the same delta, so primaries holding
+    different values keep their difference instead of collapsing onto the one value the
+    pointer names. Double-click resets the checked primaries to 0/0. Hold SHIFT for a
+    fine drag -- a quarter of the cursor's movement, for the small adjustments this panel
+    is mostly about (see the fine-drag note in huesatwheel.h); Shift nudges whether one
+    primary is checked or three. The Calibrate section's Hue / Saturation sliders are the
+    other way to nudge, and can be stepped from the keyboard.
 
     Emits primaryChanged live during a drag and primaryCommitted on release, matching
     ColorGradeWheel so the panel wires them the same way.
@@ -60,7 +63,8 @@ private:
     /* Cursor -> hue/sat for every active primary. fine (Shift) applies a fraction of the
        cursor's movement since the anchor instead of jumping the dots to it. */
     void    applyPos(const QPointF &pos, bool fine);
-    void    takeFineAnchor(float ang, float s);   // start (or restart) a fine drag here
+    void    takeFineAnchor(float ang, float s);   // start (or restart) a relative drag
+    int     activeCount() const;                  // checked primaries: 1 = placement
 
     float hueVal[3] = {0.0f, 0.0f, 0.0f};   // -100..100, delta from the home angle
     float satVal[3] = {0.0f, 0.0f, 0.0f};   // -100..100, delta from mid radius
@@ -68,6 +72,7 @@ private:
     float anchorSatVal[3] = {0.0f, 0.0f, 0.0f};   // taken; the fine drag adds to these
     int   activeMask = 0x1;                 // red by default
     bool  dragging   = false;
+    bool  dragRelative = false;             // this drag nudges rather than places
 };
 
 #endif // PRIMARYWHEEL_H

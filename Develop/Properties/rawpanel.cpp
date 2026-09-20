@@ -156,6 +156,10 @@ void RawPanel::buildUi()
        breathing room above it. It lives in denoiseBlock so it hides with the denoise
        group on the Apple engine rather than dangling under the last visible row. */
     QWidget *demDivider = new QWidget(denoiseBlock);
+    /* Translucent like every other container here: a plain QWidget takes the app
+       stylesheet's opaque background, which slabs a dark band across the panel's
+       lifted content background instead of just showing the 1px rule. */
+    demDivider->setAttribute(Qt::WA_TranslucentBackground);
     demDivider->setFixedHeight(8);
     QVBoxLayout *ddl = new QVBoxLayout(demDivider);
     ddl->setContentsMargins(6, 5, 6, 2);

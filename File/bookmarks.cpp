@@ -650,8 +650,10 @@ void BookMarks::dropEvent(QDropEvent *event)
     G::isCopyingFiles = false;
     G::stopCopyingFiles = false;
 
-    /* Refresh folder counts for ANY drop. Gating this on CopyAction left the counts
-       stale after a move drop, which also adds files to the destination. */
+    /* Refresh for ANY drop. Gating this on CopyAction left the counts stale after a
+       move drop, which also adds files to the destination. MW::refresh updates the
+       FSTree/BookMarks counts and the datamodel, so files dropped onto a bookmark
+       that is a currently selected folder show up right away. */
     emit updateCounts();
 
     event->acceptProposedAction();

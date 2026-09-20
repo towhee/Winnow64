@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
+#include "Utilities/panelbuttonbar.h"
 
 void MW::createActions()
 {
@@ -1264,6 +1265,22 @@ void MW::createUtilActions()
     addAction(developPasteSettingsAction);
     connect(developPasteSettingsAction, &QAction::triggered, this, &MW::developPasteSettings);
 
+    /* Copy / Paste as a button row pinned to the bottom of the Develop panel (the History
+       + Presets dock): the two actions most used while carrying a look from one image to
+       the next, put where the History and Presets lists they work with already are, and
+       reachable without the menu or the modified combo. Built HERE rather than in
+       createHistoryDock() because createDocks() runs before createActions() -- the panel
+       exists by now, the actions do not exist any earlier. Short literal labels: the Paste
+       action's own text is rewritten at runtime to "Paste Develop Settings from <image>"
+       (syncDevelopMenuEnabled), which no button should grow to fit. The buttons take their
+       enabled state from the actions, so they grey with the menu items outside Develop. */
+    if (historyPanel) {
+        PanelButtonBar::Add(historyPanel, QList<QAbstractButton*>{
+                PanelButtonBar::MakeButton(developCopySettingsAction,  tr("Copy")),
+                PanelButtonBar::MakeButton(developPasteSettingsAction, tr("Paste"))
+            }, PanelButtonBar::Bottom);
+    }
+
     /* Scopes strip: one exclusive checkable action per state, shown BOTH in the Develop
        menu's Scopes submenu and in the strip's own right-click menu (ScopesView emits
        menuRequested). There is no shortcut: the state is picked, not cycled, so a key
@@ -1727,11 +1744,12 @@ void MW::createWindowActions()
     addAction(developDockVisibleAction);
     connect(developDockVisibleAction, &QAction::triggered, this, &MW::showDevelopDock);
 
-    /* "H" (Develop mode only) shows/raises the Develop History panel. The dock only
+    /* "H" (Develop mode only) shows/raises the History panel (develop history AND the
+       saved presets, each in its own section). The dock only
        exists alongside the Develop dock, so the key is Develop mode local: it carries no
        QKeySequence and loadDevelopShortcuts owns it, with the tab in the text rendering
        the hint. The other panel toggles are global F-keys (F3-F9). */
-    historyDockVisibleAction = new QAction(tr("Develop History Panel\tH"), this);
+    historyDockVisibleAction = new QAction(tr("History Panel\tH"), this);
     historyDockVisibleAction->setObjectName("toggleHistoryDock");
     historyDockVisibleAction->setShortcutVisibleInContextMenu(true);
     historyDockVisibleAction->setCheckable(true);
@@ -1740,10 +1758,11 @@ void MW::createWindowActions()
     addAction(historyDockVisibleAction);
     connect(historyDockVisibleAction, &QAction::triggered, this, &MW::showHistoryDock);
 
-    /* "P" (Develop mode only) shows/raises the Develop Presets panel, the same deal as
-       "H" above -- and P is globally Pick, so a real QKeySequence("P") would clash with
-       it; loadDevelopShortcuts owns the key. */
-    presetsDockVisibleAction = new QAction(tr("Develop Presets Panel\tP"), this);
+    /* "P" (Develop mode only) shows/raises the History panel with its PRESETS section
+       expanded -- the same deal as "H" above, and P is globally Pick, so a real
+       QKeySequence("P") would clash with it; loadDevelopShortcuts owns the key. The
+       checked state mirrors that section, not a dock of its own. */
+    presetsDockVisibleAction = new QAction(tr("Develop Presets\tP"), this);
     presetsDockVisibleAction->setObjectName("togglePresetsDock");
     presetsDockVisibleAction->setShortcutVisibleInContextMenu(true);
     presetsDockVisibleAction->setCheckable(true);
@@ -3616,6 +3635,8 @@ void MW::loadDevelopShortcuts()
        Develop menu's Scopes submenu, so G keeps its global meaning -- and in Develop that
        meaning is the way out: Preview mode, Grid view (see asGridAction). */
     developShortcuts[Qt::Key_H] = historyDockVisibleAction; // global: unbound
+    /* "P" opens the History panel with its Presets section expanded (there is no
+       Presets panel of its own any more). */
     developShortcuts[Qt::Key_P] = presetsDockVisibleAction; // global: Pick
 }
 

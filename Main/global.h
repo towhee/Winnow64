@@ -618,6 +618,16 @@ Q_NAMESPACE
         cost was measured before it was written -- a stat is ~137x cheaper than a read,
         and only the visible window is asked. */
     extern bool useScrollInVerify;
+    /*  RESCAN THE CATALOG SCOPE WHEN THE USER SELECTS THE LIBRARY. The index goes stale
+        the moment somebody adds or deletes a folder outside Winnow, and the only cure
+        today is remembering to press Scan. Selecting the Library says "show me all of
+        it", so it is where the check belongs. DEFAULT ON, because the scan skips
+        unchanged folders for one stat per file, yields to browsing, and reports only when
+        it found something. See MW::maybeAutoScanCatalog. */
+    extern bool autoScanCatalog;
+    /*  The floor between two AUTOMATIC scans, in minutes -- selecting the Library more
+        often than this does nothing. The Scan button ignores it. */
+    extern int autoScanCatalogMinutes;
     extern bool cacheThumbnails;
     extern qint64 thumbCacheMaxBytes;
     extern PreviewSource previewSource;     // Original (as shot) vs Developed (devPreview)
@@ -872,13 +882,13 @@ Q_NAMESPACE
     }
 
     /* PANEL separator: the rule along the bottom edge of each Develop subpanel, and under
-       the dock's action row. tabWidgetBorderColor dimmed ten shades: the panel boundaries
-       are structural and constant, so they sit quieter than the group rules inside a
-       panel, which mark something the eye is meant to follow. */
+       the dock's action row. The frame shade the rest of the app draws its borders in
+       (WidgetCSS::fm, backgroundShade + 35): the panel boundaries are structural and
+       constant, so they sit quieter than the group rules inside a panel, which mark
+       something the eye is meant to follow. */
     inline QColor panelSeparatorColor() {
-        const QColor &c = tabWidgetBorderColor;
-        return QColor(qMax(0, c.red() - 10), qMax(0, c.green() - 10),
-                      qMax(0, c.blue() - 10));
+        const int s = backgroundShade + 35;
+        return QColor(s, s, s);
     }
 
     /* A colour blended halfway into the panel background: the DISABLED form of anything
