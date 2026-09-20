@@ -4239,6 +4239,14 @@ void DevelopProperties::showEvent(QShowEvent *event)
 void DevelopProperties::hideEvent(QHideEvent *event)
 {
     PropertyEditor::hideEvent(event);
+    /* The panel is going away -- leaving Develop mode (closeDevelopDock hides the dock,
+       and Qt sends the Hide down to us), the dock tabbed behind a sibling, a workspace
+       switch. Disarm the pointer sampler for the same reason collapsing the Curves
+       section does: it is armed chrome that owns the canvas click, and the loupe must
+       not still be swallowing clicks into a panel that is no longer on screen. Cheap and
+       safe to call unconditionally -- setCurveSamplerActive returns at once when it is
+       already off, which is the startup case (MW::showEvent closes the dock). */
+    setCurveSamplerActive(false);
     updateCurvePickState();
 }
 
