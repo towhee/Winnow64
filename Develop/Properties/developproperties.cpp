@@ -118,6 +118,15 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     });
     connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){
         persistSectionExpanded(idx, false);
+        /* Collapsing Curves DISARMS the pointer sampler rather than merely gating it
+           (wantsCurveSample already hides the marker). It is armed chrome that owns the
+           canvas click, so leaving it silently on behind a closed panel means a click on
+           the image keeps adding curve points with nothing on screen to say why -- and
+           the button would come back armed the next time the panel is opened. This is the
+           COLLAPSED signal on purpose, not curveEditor->isVisible(): the plot is also
+           momentarily invisible during a buildTree and while the dock is hidden, neither
+           of which is the user putting the panel away. */
+        if (idx.data(UR_Name).toString() == "CurvesHeader") setCurveSamplerActive(false);
         scheduleContentFit();
     });
 
