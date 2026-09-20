@@ -4013,7 +4013,14 @@ void DevelopProperties::addCurves()
         hb->setSpacing(8);
         QComboBox *mode = new QComboBox(rw);
         mode->addItems({"Parametric", "Point"});
-        mode->setCurrentIndex(curveModeIndex);
+        /* Programmatic sync of a REBUILT combo to the state it had before: blocked, like
+           every other populate in this panel, so it cannot re-enter applyCurveMode while
+           addCurves is still adding the rows applyCurveMode shows and hides. The call at
+           the end of addCurves applies the mode once everything exists. */
+        {
+            QSignalBlocker b(mode);
+            mode->setCurrentIndex(curveModeIndex);
+        }
         mode->setToolTip("Parametric edits the Basic tone sliders through their tonal "
                          "bands; Point edits a free-form curve.");
         QComboBox *chan = new QComboBox(rw);
@@ -4038,7 +4045,9 @@ void DevelopProperties::addCurves()
         samp->setIconSize(QSize(16, 16));
         samp->setToolTip("Show the pixel under the mouse pointer on the curve.\n"
                          "While this is on, hovering the image marks that pixel's tone "
-                         "on the plot.");
+                         "on the plot.\n"
+                         "In Point mode, clicking the image adds a point at that tone "
+                         "(click-to-zoom is suspended while this is on).");
         samp->setActive(curveSamplerActive);    // the tree rebuilds; the armed state does not
         connect(samp, &BarBtn::clicked, this, &DevelopProperties::toggleCurveSampler);
         curveSamplerBtn = samp;
@@ -4169,6 +4178,7 @@ void DevelopProperties::applyCurveMode()
     if (noteIdx.isValid())
         setRowHidden(noteIdx.row(), noteIdx.parent(), point);
     scheduleContentFit();        // setRowHidden emits nothing: re-fit the block ourselves
+    updateCurvePickState();      // Parametric has no points to add: the picker goes with it
 }
 
 /* Point-curve drag -> the active scope's curve params, then preview. commit marks the
@@ -4206,6 +4216,21 @@ void DevelopProperties::updateEditorGeometries()
        and was left hard against the panel's right edge with the tree indentation all on
        its left. Centring gives it the same clear margin on both sides as the curve plot. */
     centre(detailPreview);
+    /* This is also where an expand / collapse / scroll of the Edits tree lands, which is
+       exactly what moves the plot on and off screen. */
+    updateCurvePickState();
+}
+
+void DevelopProperties::showEvent(QShowEvent *event)
+{
+    PropertyEditor::showEvent(event);
+    updateCurvePickState();
+}
+
+void DevelopProperties::hideEvent(QHideEvent *event)
+{
+    PropertyEditor::hideEvent(event);
+    updateCurvePickState();
 }
 
 /* ---- Curves pointer sample ---------------------------------------------------------
@@ -4228,6 +4253,7 @@ void DevelopProperties::setCurveSamplerActive(bool on)
     }
     /* Switching off leaves no stale marker sitting on the plot. */
     if (!on && curveEditor) curveEditor->clearSample();
+    updateCurvePickState();
 }
 
 void DevelopProperties::toggleCurveSampler()
@@ -4244,6 +4270,39 @@ void DevelopProperties::setCurveSample(int r, int g, int b)
 void DevelopProperties::clearCurveSample()
 {
     if (curveEditor) curveEditor->clearSample();
+}
+
+/* ---- Curves canvas point picking ---------------------------------------------------
+   See the header for the contract. The picker is armed by the SAME toggle as the marker,
+   with two further conditions: the plot has to be on screen (wantsCurveSample already
+   requires that) and the mode has to be Point -- in Parametric mode there are no control
+   points to add, so the canvas click must stay the loupe's.
+*/
+
+bool DevelopProperties::wantsCurvePointPick() const
+{
+    return wantsCurveSample() && curveEditor->mode() == CurveEditor::Point;
+}
+
+void DevelopProperties::updateCurvePickState()
+{
+    const bool want = wantsCurvePointPick();
+    if (want == curvePickArmed) return;
+    curvePickArmed = want;
+    if (want) emit curvePickBegin();
+    else      emit curvePickEnd();
+}
+
+/* A click on the image landed on this pixel (MW read it out of the same developShownImage
+   the hover marker uses). Push it as the sample so the marker and the new point agree,
+   then add the point -- CurveEditor emits curveChanged + curveCommitted, which run the
+   normal render + sidecar path through onCurveChanged. */
+void DevelopProperties::addCurvePointFromPixel(int r, int g, int b)
+{
+    if (G::isLogger) G::log("DevelopProperties::addCurvePointFromPixel");
+    if (!wantsCurvePointPick()) return;
+    curveEditor->setSample(r, g, b);
+    curveEditor->addPointAtSample();
 }
 
 void DevelopProperties::onCurveChanged(bool commit)

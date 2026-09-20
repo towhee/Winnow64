@@ -317,6 +317,23 @@ void CurveEditor::insertPointAt(double x)
     dragPt = at;
 }
 
+bool CurveEditor::addPointAtSample()
+{
+    /* Point mode only: the parametric shape has no control points to add one to. */
+    if (curMode != Point || !hasSample) return false;
+    const int before = prm.curveN[curChannel];
+    insertPointAt(sampleTone());
+    /* insertPointAt refuses a full channel and a tone already occupied, and leaves the
+       new point grabbed for the drag that follows a PLOT click. There is no drag here --
+       the gesture happened on the image -- so let it go. */
+    dragPt = -1;
+    if (prm.curveN[curChannel] == before) return false;
+    update();
+    emit curveChanged();
+    emit curveCommitted();
+    return true;
+}
+
 void CurveEditor::resetChannel()
 {
     ToneCurve::setIdentity(prm.curveN[curChannel], px(), py());

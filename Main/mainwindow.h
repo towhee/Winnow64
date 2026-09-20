@@ -984,6 +984,9 @@ private slots:
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
        drive the scopes' readout marker (no-op while the scopes are hidden). */
     void onImageCursorPos(double xFraction, double yFraction);
+    /* A click on the image while the Curves panel's point picker is armed: sample that
+       pixel and hand it to the dock, which adds a control point at its tone. */
+    void onCurvePointPicked(double xFraction, double yFraction);
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();

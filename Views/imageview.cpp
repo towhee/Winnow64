@@ -888,6 +888,32 @@ void ImageView::endDetailPick()
     viewport()->update();
 }
 
+void ImageView::beginCurvePick()
+{
+    if (curvePickMode) return;
+    if (G::isLogger) G::log("ImageView::beginCurvePick");
+    curvePickMode = true;
+    /* Only take the cursor if nothing else is holding the canvas -- an armed crop / mask /
+       spot / dropper keeps its own glyph, and mouseMoveEvent re-asserts ours as soon as
+       that tool lets go. */
+    if (curvePickOwnsMouse()) setCursor(Qt::CrossCursor);
+    viewport()->update();
+}
+
+void ImageView::endCurvePick()
+{
+    if (!curvePickMode) return;
+    if (G::isLogger) G::log("ImageView::endCurvePick");
+    curvePickMode = false;
+    /* Back to the loupe's own cursor for the current zoom state, not a bare unset: the
+       picker can be disarmed with the pointer sitting over the image (the panel is
+       collapsed, the mode combo moves), and nothing else would repaint it until the next
+       hover. */
+    if (!developToolActive())
+        setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    viewport()->update();
+}
+
 void ImageView::setDetailPoint(QPointF n)
 {
     if (detailPointOn && n == detailPoint) return;
@@ -1250,7 +1276,28 @@ double ImageView::spotSizeMin() const
 bool ImageView::developToolActive() const
 {
     return cropActive() || maskToolUsesMouse() || spotEditMode || wbPickMode
-           || detailPickMode;
+           || detailPickMode || curvePickMode;
+}
+
+/* See the header: the Curves picker is a toggle, not a one-shot tool, so it defers to
+   anything the user picked up deliberately. */
+bool ImageView::curvePickOwnsMouse() const
+{
+    return curvePickMode && !cropActive() && !maskToolUsesMouse() && !spotEditMode
+           && !wbPickMode && !detailPickMode;
+}
+
+/* See the header: DISPLAYED (post-geometry) normalized coords, the space
+   developShownImage is indexed in. */
+bool ImageView::displayedNormAt(QPoint vp, QPointF &n) const
+{
+    if (!pmItem->isVisible()) return false;
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return false;
+    const QPointF itemPt = pmItem->mapFromScene(mapToScene(vp));
+    if (!br.contains(itemPt)) return false;
+    n = QPointF(itemPt.x() / br.width(), itemPt.y() / br.height());
+    return true;
 }
 
 /* Hold Space in Develop mode to temporarily borrow the loupe zoom/pan gesture over the
@@ -5057,6 +5104,22 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         }
     }
 
+    /* Curves point picker: report the normalized point and consume the click so the
+       loupe neither pans nor toggles zoom. Checked LAST of the Develop tools because it
+       is a toggle rather than a mode the user just picked up -- every branch above has
+       already had its chance at the gesture (curvePickOwnsMouse says the same thing).
+       No suppressClickZoom here: the picker does NOT auto-dismiss, so curvePickMode is
+       still set when the release arrives and developToolActive() gates the zoom. */
+    if (!spacePanOverride && curvePickOwnsMouse() && event->button() == Qt::LeftButton) {
+        /* DISPLAYED coords (displayedNormAt), NOT maskViewportToNorm: the point is about
+           to index developShownImage, which is the geometry stage's OUTPUT, while the
+           mask helper normalizes in its INPUT. Under a crop or straighten those are
+           different pixels -- which is exactly the tone the marker was NOT showing. */
+        QPointF n;
+        if (displayedNormAt(event->pos(), n)) emit curvePointPicked(n.x(), n.y());
+        return;
+    }
+
     if (event->button() == Qt::LeftButton) {
         /* A Develop tool owns the canvas: don't start a pan or let the click reach the
            base view -- the tool's own branches above handled the gesture. EXCEPTION: a
@@ -5417,16 +5480,22 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
         }
     }
 
+    /* Curves point picker: re-assert the selector cursor for the same reason the dropper
+       and the Detail picker re-assert theirs (the base view resets it as the pointer
+       moves over the canvas). Done HERE, after every other cursor decision above, and
+       WITHOUT consuming the move: the pixel the click adds a point at is the one MW
+       samples from the cursorImagePos emitted just below, so the hover must run to the
+       end. Nothing between here and there can pan -- the press branch consumed the
+       button, so isLeftMouseBtnPressed is false. */
+    if (!spacePanOverride && curvePickOwnsMouse()) setCursor(Qt::CrossCursor);
+
     /* Develop scopes readout: map the cursor to the displayed pixmap and emit its normalized
        position (or "left the image" when outside). One pixmap-coordinate transform; the actual
        pixel sample + scope overlay happen on the receiving side (MW::onImageCursorPos). */
     if (pmItem->isVisible()) {
-        const QPointF itemPt = pmItem->mapFromScene(mapToScene(event->pos()));
-        const QRectF br = pmItem->boundingRect();
-        if (br.width() > 0 && br.height() > 0 && br.contains(itemPt))
-            emit cursorImagePos(itemPt.x() / br.width(), itemPt.y() / br.height());
-        else
-            emit cursorLeftImage();
+        QPointF n;
+        if (displayedNormAt(event->pos(), n)) emit cursorImagePos(n.x(), n.y());
+        else                                  emit cursorLeftImage();
     }
 
     prevPos = event->pos();

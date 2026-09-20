@@ -376,7 +376,7 @@ int headerLeftInset = 5;
    Transform, Fill Replace) draws a rule this high across its bottom edge in
    G::panelSeparatorColor, so stacked panels read as distinct blocks. Each panel
    reserves the space as its layout's bottom margin. 0 removes the rule everywhere. */
-int panelBorderHeight = 1;
+int panelBorderHeight = 3;
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 

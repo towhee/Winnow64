@@ -2497,6 +2497,16 @@ void MW::createDevelopDock()
             this, &MW::onDetailPointPicked);
     connect(imageView, &ImageView::detailPickExited,
             developProperties, &DevelopProperties::cancelDetailPick);
+    /* Curves point picker: the dock arms ImageView while its sampler toggle is on, the
+       Curves panel is expanded and the mode is Point; a click comes back as a normalized
+       point that MW turns into a pixel and the dock adds to the curve. Unlike the two
+       pickers above it does not auto-dismiss -- it stays armed for the next click. */
+    connect(developProperties, &DevelopProperties::curvePickBegin,
+            imageView, &ImageView::beginCurvePick);
+    connect(developProperties, &DevelopProperties::curvePickEnd,
+            imageView, &ImageView::endCurvePick);
+    connect(imageView, &ImageView::curvePointPicked,
+            this, &MW::onCurvePointPicked);
     connect(developProperties, &DevelopProperties::detailRoiNeeded,
             this, &MW::onDetailRoiNeeded);
     connect(developProperties, &DevelopProperties::detailPointNudged,

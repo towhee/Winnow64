@@ -81,6 +81,18 @@ public:
     void setSample(int r, int g, int b);
     void clearSample();
 
+    /* Add a control point on the live curve at the tone of the CURRENT pointer sample --
+       the canvas counterpart of clicking empty space on the plot. Driven by a click on
+       the image while the sampler is armed in Point mode (MW::onCurvePointPicked), which
+       pushes the clicked pixel through setSample first, so "where the marker is" and
+       "where the point lands" are the same x by construction.
+
+       Returns false when there is nothing to add: not in Point mode, no sample, the
+       channel is already at kMaxPts, or a point already sits on that tone. Emits
+       curveChanged + curveCommitted on success -- the click is a complete gesture, unlike
+       a plot drag, so the caller renders AND schedules the sidecar write in one step. */
+    bool addPointAtSample();
+
     QSize sizeHint() const override;
 
 signals:
