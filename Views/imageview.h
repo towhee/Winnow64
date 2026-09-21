@@ -368,7 +368,7 @@ signals:
     void maskTintVisibilityChanged(bool shown);
     /* There is now (or is no longer) a mask overlay to show/hide -- a tool was expanded
        or collapsed, or a committed-mask composite appeared/vanished. Drives the enabled
-       look of the action-row tint button. */
+       look of the Mask band's tint swatch. */
     void maskTintAvailabilityChanged(bool available);
     /* The user began SHAPING the pending submask -- a brush/object stroke, or a mask
        handle drag. The dock latches the combine op held at this instant

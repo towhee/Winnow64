@@ -2969,8 +2969,11 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested, this,
             &MW::refreshDevelopMaskTintBtn);
     refreshDevelopMaskTintBtn();
-    developActionLayout->addWidget(developMaskTintBtn);
-    developActionLayout->addSpacing(10);
+    /* It does NOT go in this action row. The swatch acts on one thing -- the mask --
+       and up here it sat among the Scope / Transform / Spot buttons with nothing around
+       it to say so. The MaskPanel takes it onto the "Mask" band instead; MW keeps the
+       button and all its behaviour. */
+    developProperties->placeMaskTintButton(developMaskTintBtn);
 
     /* Preset: show / raise the Presets dock, where a click applies a saved preset (P).
        Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title

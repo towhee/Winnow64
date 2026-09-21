@@ -944,7 +944,7 @@ private slots:
        Transform session is up. */
     void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
-    /* Repaint the action-row tint button: its swatch is filled with the current overlay
+    /* Repaint the tint swatch (it lives on the Mask band): it is filled with the overlay
        colour and it carries the blue active border while the tint is shown. */
     void refreshDevelopMaskTintBtn();
     /* Right-click on that button: pick the overlay colour / toggle the grayscale

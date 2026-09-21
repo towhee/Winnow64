@@ -11959,7 +11959,7 @@ void MW::toggleMaskOverlay()
 void MW::refreshDevelopMaskTintBtn()
 {
 /*
-    The action-row tint button is a colour swatch rather than a glyph: it is filled with
+    The tint button is a colour swatch rather than a glyph: it is filled with
     the overlay colour in force (G::maskOverlayColor, picked from the Mask panel swatches)
     so the row always shows which colour the veil speaks. Called on launch and whenever
     the tint is toggled ("O", the scope menu, a slider auto-hide) or recoloured.

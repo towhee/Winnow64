@@ -112,6 +112,30 @@ void MaskPanel::buildUi()
     if (qApp) qApp->installEventFilter(this);
 }
 
+void MaskPanel::setTintButton(QWidget *btn)
+{
+/*
+    Adopt the mask-overlay tint swatch onto the "Mask" band, at its right-hand end
+    beside the band's [:].
+
+    MW still owns it -- it builds it, wires "O" and the right-click colour/grayscale
+    menu, and repaints the swatch -- because the veil's visibility and colour are
+    application state, not the panel's. This only decides WHERE it sits, which is the
+    panel's business: the swatch tints THIS mask, and it used to sit in the Develop
+    action row at the top of the dock, among the Scope / Transform / Spot buttons, with
+    nothing around it to say what it acted on.
+
+    Consequence worth knowing: the band hides when the mask has no submasks
+    (showMaskLevel), so on the Global scope -- where there is no mask and the swatch's
+    own answer was a popup saying so -- the swatch is simply not there.
+*/
+    if (!btn || !levelBandLayout || levelTintSlot < 0) return;
+    levelBandLayout->insertWidget(levelTintSlot, btn);
+    levelBandLayout->insertSpacing(levelTintSlot + 1, G::headerBtnGap);
+    /* The band toggles collapse on a click, but its eventFilter only watches levelBand
+       itself, so a click on this child reaches the button. */
+}
+
 void MaskPanel::syncHovered()
 {
     const bool now = isVisible()
@@ -196,7 +220,11 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(levelTitle);
     hb->addStretch(1);
+    /* The overlay tint swatch is inserted HERE by setTintButton, ahead of the band's
+       [:]. See setTintButton for why it lives on this band. */
+    levelTintSlot = hb->count();
     hb->addWidget(levelMenuBtn);
+    levelBandLayout = hb;
     lw->addWidget(levelBand);
 
     /* The rows themselves, indented under the band like the submask rows are. */
@@ -316,7 +344,7 @@ const QVector<QColor> &MaskPanel::overlayColours()
 {
     /* The overlay speaks ONE colour and this is the choice: red first (the default),
        then colours far enough apart in hue to survive most subjects, ending in white
-       for dark ones. Shared with the Develop action-row tint button's context menu. */
+       for dark ones. Shared with the Mask band tint swatch's context menu. */
     static const QVector<QColor> colours = {
         QColor(220, 40, 40),   QColor(70, 200, 90),  QColor(60, 150, 255),
         QColor(240, 200, 40),  QColor(225, 70, 210), QColor(240, 240, 240)};
