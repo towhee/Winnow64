@@ -3,6 +3,7 @@
 
 #include "PropertyEditor/propertyeditor.h"
 #include <QString>
+#include <QColor>
 #include <QPersistentModelIndex>
 #include <QPointer>
 
@@ -36,6 +37,10 @@ public:
     void setRowEnabled(const QString &key, bool on);   // grey / enable a row
     int  sliderInt(const QString &key) const;          // current int value of a row
     void setCaptionWidth(int w);   // align the value column to the main tree
+    /* Surface the rows are painted on. Default (invalid colour) is the subpanel content
+       shade every Develop panel uses; MaskPanel's mask-level rows set G::backgroundColor
+       so they read as the dock's background instead. */
+    void setRowBackground(const QColor &c);
     void fitHeight();              // size the view to its rows (call after building)
 
 signals:

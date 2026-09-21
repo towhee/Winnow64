@@ -8,7 +8,7 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- Load missing onnx models
+- /Users/roryhill/Pictures/_TestDevelop/2021-01-28_0064.cr3 profiles not working
 - Curves point additions by mouse clicking
 - Redo Develop help
 - Edit Winnow shortcuts

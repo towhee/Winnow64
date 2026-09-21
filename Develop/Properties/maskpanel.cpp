@@ -18,9 +18,9 @@
 
 /*
     MaskPanel (see maskpanel.h): the active mask's editor, nested under its scope row --
-    the submask list, the selected submask's settings, the overlay-colour row and ONE
-    commit button whose label follows the held modifier (or reads "Done" when the submask
-    being edited is already committed).
+    the submask list and the selected submask's settings. There is no commit button: a
+    submask folds itself into the mask once its edits settle (see
+    DevelopProperties::armMaskAutoCommit), so the panel is settings only.
 */
 
 MaskPanel::MaskPanel(QWidget *parent) : QWidget(parent)
@@ -70,7 +70,9 @@ void MaskPanel::buildUi()
        reads as broken. DevelopProperties keeps the text current, Shift included. */
     scopeLabel = new QLabel(attrWrap);
     scopeLabel->setWordWrap(true);
-    scopeLabel->setContentsMargins(10, 2, 0, 2);
+    /* Lined up with the submask settings' captions below it (see maskEditor). */
+    scopeLabel->setContentsMargins(G::headerLeftInset + 2 * G::subHeaderIndent
+                                       + G::subHeaderIndent / 2, 2, 0, 2);
     scopeLabel->setStyleSheet(G::labelCss(G::disabledColor,
                                           qMax(7, G::strFontSize.toInt() - 1)));
     scopeLabel->setVisible(false);
@@ -80,47 +82,26 @@ void MaskPanel::buildUi()
        DevelopProperties populates + wires it. Full left margin (0) so its own caption
        column lines up with the tree below. */
     maskEditor = new MaskEditor(attrWrap);
+    /* One step deeper than the mask-level rows (see buildMaskLevel): these settings
+       belong to the SELECTED submask, whose row sits at G::headerLeftInset +
+       2 * G::subHeaderIndent, so they start half a step in from that row's arrow.
+       Indentation moves the caption column only -- the sliders stay put. */
+    maskEditor->setIndentation(G::headerLeftInset + 2 * G::subHeaderIndent
+                               + G::subHeaderIndent / 2);
     bl->addWidget(maskEditor);
 
-    /* Commit buttons live under the settings, inset like a normal control row. */
-    QWidget *btnWrap = new QWidget(attrWrap);
-    btnWrap->setAttribute(Qt::WA_TranslucentBackground);
-    QVBoxLayout *bw = new QVBoxLayout(btnWrap);
-    bw->setContentsMargins(10, 4, 0, 0);
-    bw->setSpacing(4);
-    bl->addWidget(btnWrap);
+    /* No button row under the settings. A submask used to need one to fold it into the
+       mask, but nothing was ever buffered for it to flush -- every edit is written into
+       the component and rendered as it is made -- so the submask now lands by itself a
+       couple of seconds after the last edit (DevelopProperties::armMaskAutoCommit).
+       Return finishes it early, Esc discards one that has not landed yet, and a landed
+       submask is removed from its row's [:] menu.
 
-    /* The overlay's APPEARANCE (colour + grayscale background) is not edited here: it
-       belongs to the veil, not to a submask, and it now lives on the Develop action row's
-       tint button (left-click toggles the veil, right-click picks the colour / flips
-       grayscale). The palette itself still lives with this class -- overlayColours(). */
-
-    /* ONE commit button. Its label follows the op the overlay is previewing, so the words
-       Subtract/Intersect stay visible instead of hiding behind undocumented keys. The
-       [x] beside it discards a submask that is still being built; a re-opened submask has
-       nothing to discard, so it is hidden there (see refreshCommitBtn). */
-    QWidget *commitRow = new QWidget(btnWrap);
-    commitRow->setAttribute(Qt::WA_TranslucentBackground);
-    QHBoxLayout *cl = new QHBoxLayout(commitRow);
-    cl->setContentsMargins(0, 0, 0, 0);
-    cl->setSpacing(6);
-    commitBtn = new QPushButton(tr("Add and Commit"), commitRow);
-    commitBtn->setToolTip("Commit this submask into the mask (Return)\n"
-                          "Opt: subtract    Shift+Opt: intersect");
-    connect(commitBtn, &QPushButton::clicked, this, [this]{ emit committed(); });
-    /* The global stylesheet (widgetcss.cpp) sets "QPushButton { min-width: 100px }",
-       which Qt applies as an EXPLICIT minimum width (~112px at this DPI) and which floors
-       the whole develop dock's width (a size policy alone can't undo an explicit
-       minimum). Override it here so the panel never widens the dock. */
-    commitBtn->setStyleSheet("QPushButton { min-width: 0; }");
-    commitBtn->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
-    cancelBtn = new BarBtn();
-    cancelBtn->setToolTip("Cancel (Esc): discard this submask");
-    cancelBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    connect(cancelBtn, &BarBtn::clicked, this, [this]{ emit cancelled(); });
-    cl->addWidget(commitBtn);
-    cl->addWidget(cancelBtn);
-    bw->addWidget(commitRow);
+       The overlay's APPEARANCE (colour + grayscale background) is not edited here
+       either: it belongs to the veil, not to a submask, and lives on the Develop action
+       row's tint button (left-click toggles the veil, right-click picks the colour /
+       flips grayscale). The palette itself still lives with this class --
+       overlayColours(). */
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 }
@@ -154,8 +135,14 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     levelBand->setAttribute(Qt::WA_TranslucentBackground);
     levelBand->setCursor(Qt::PointingHandCursor);
     levelBand->installEventFilter(this);       // a band click toggles collapse
+    /* Height and caption placement of a property-tree section header (see RawPanel):
+       the band is one tree row high and its content centres on the band less
+       G::headerCaptionTrim at the bottom, matching PropertyDelegate's r4, so "Mask"
+       lines up with the "Basic" / "Color" headers under it. */
+    levelBand->setFixedHeight(G::propertyRowHeight());
     QHBoxLayout *hb = new QHBoxLayout(levelBand);
-    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 3, G::headerBtnRightInset, 3);
+    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 0,
+                           G::headerBtnRightInset, G::headerCaptionTrim);
     hb->setSpacing(0);
 
     levelCollapseBtn = new BarBtn();
@@ -170,7 +157,7 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     levelTitle = new QLabel(tr("Mask"), levelBand);
     levelTitle->setToolTip("Settings for the FOLDED mask -- every submask combined.\n"
                            "The rows inside Submasks below act on one submask each.");
-    levelTitle->setStyleSheet(G::labelCss(G::header3Color, G::strFontSize.toInt()));
+    levelTitle->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
 
     /* No band eye here, unlike Submasks: there is nothing to show or hide -- Edge and
        Halo reshape the mask rather than contributing to it, and both already have a
@@ -195,6 +182,19 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     bl->setContentsMargins(0, 2, 10, 2);
     bl->setSpacing(0);
     maskLevelEditor = new MaskEditor(levelBody);
+    /* Caption indent: the rows belong to the "Mask" band above them, so they start half
+       an indent step in from that band's arrow (G::headerLeftInset + G::subHeaderIndent)
+       -- under the middle of it -- the way the tree's rows sit under their section
+       header. Set as the tree's indentation, which moves the CAPTION column only: the
+       value column starts at the caption column's width, so the sliders and amounts do
+       not move (they stay aligned with the tree's). */
+    maskLevelEditor->setIndentation(G::headerLeftInset + G::subHeaderIndent
+                                    + G::subHeaderIndent / 2);
+    /* On the dock's own background, not the lighter subpanel surface: the mask-level
+       block and the Submasks band under it are the frame around the SELECTED submask's
+       details, and those details keep G::panelContentBg so they read as the thing being
+       edited (see paintEvent and SubmaskList::paintEvent). */
+    maskLevelEditor->setRowBackground(G::backgroundColor);
     bl->addWidget(maskLevelEditor);
     levelBody->setVisible(!levelCollapsed);
     lw->addWidget(levelBody);
@@ -216,6 +216,12 @@ void MaskPanel::paintEvent(QPaintEvent *)
        the scope row and its buttons -- even when the Mask band is hidden. */
     p.fillRect(rect(), G::panelContentBg());
     if (!levelBand || !levelWrap || !levelWrap->isVisible()) return;
+    /* The mask-level block (its band, its Edge/Halo rows and the gaps around them) sits
+       on the dock background instead, continued behind the Submasks band by
+       SubmaskList::paintEvent: everything above the selected submask's details frames
+       them rather than belonging to them. */
+    p.fillRect(QRect(levelWrap->mapTo(this, QPoint(0, 0)), levelWrap->size()),
+               G::backgroundColor);
     const int a = G::backgroundShade + 5;
     const int b = G::backgroundShade - 15;
     const QRect r(levelBand->mapTo(this, QPoint(0, 0)), levelBand->size());
@@ -291,45 +297,21 @@ const QStringList &MaskPanel::overlayColourNames()
     return names;
 }
 
-void MaskPanel::refreshCommitBtn()
-{
-    if (!commitBtn) return;
-    if (editingExisting) {
-        /* Already folded into the mask: there is nothing to commit and nothing to throw
-           away -- the button just closes the editing session. */
-        commitBtn->setText(tr("Done"));
-        commitBtn->setToolTip("Finish editing this submask (Return).\n"
-                              "Its edits are already part of the mask.");
-    }
-    else {
-        /* The label names the OPERATION and the ACT: with the render already live, a bare
-           "Update" read as "refresh the view" rather than "fold this submask in". */
-        commitBtn->setText(pendingOp == 1 ? tr("Subtract and Commit")
-                         : pendingOp == 2 ? tr("Intersect and Commit")
-                                          : tr("Add and Commit"));
-        commitBtn->setToolTip("Commit this submask into the mask (Return)\n"
-                              "Opt: subtract    Shift+Opt: intersect");
-    }
-    if (cancelBtn) cancelBtn->setVisible(!editingExisting);
-}
-
 void MaskPanel::setPendingOp(int op)
 {
     /* Modifiers are inert on the first submask -- there is nothing to subtract from or
-       intersect with an empty mask -- and on a submask that is already committed, whose
-       op is changed on its own row in the list. */
+       intersect with an empty mask -- and on a submask that has already landed, whose op
+       is changed on its own row in the list. */
     if (editingExisting) return;
     if (firstMask) op = 0;
     if (op == pendingOp) return;
     pendingOp = op;
-    refreshCommitBtn();
 }
 
 void MaskPanel::setEditingExisting(bool existing)
 {
     editingExisting = existing;
     if (existing) pendingOp = 0;
-    refreshCommitBtn();
 }
 
 void MaskPanel::showAttributes(bool show)
@@ -392,10 +374,9 @@ void MaskPanel::beginPending(bool first)
 {
     firstMask = first;
     editingExisting = false;
-    pendingOp = 0;                  // every submask opens as Add ("Add and Commit")
-    refreshCommitBtn();
-    /* A new submask is being built: re-open the section, or its settings and the
-       commit button would be invisible (the [+] that starts one is on the header). */
+    pendingOp = 0;                  // every submask opens as Add
+    /* A new submask is being built: re-open the section, or its settings would be
+       invisible (the [+] that starts one is on the header). */
     if (submaskList) submaskList->setCollapsed(false);
     showAttributes(true);
     setVisible(true);

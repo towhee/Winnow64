@@ -3,6 +3,51 @@ and http://165.227.46.158/winnow_mac/
 
 For windows PuTTY Key generator and winscp.exe for file transfers.
 
+
+====================================================================================
+ON-DEMAND AI MODELS  (read before any release that touches a .onnx)
+====================================================================================
+
+Winnow ships only TWO models inside the app: focus_point_model.onnx (loads eagerly in
+ImageView's constructor) and pmrid.onnx (4 MB). The other seven -- u2net, skyseg, midas,
+migan, lama, sam2_encoder, sam2_decoder, ~771 MB together -- are downloaded on demand from
+
+    https://winnow.ca/winnow/models/<stem>-<version>.onnx
+
+the first time a user runs a feature that needs one. They land in
+<AppData>/Winnow/Models. See Utilities/modelstore.h for the design.
+
+*** THE ONE RULE: THAT SERVER DIRECTORY IS APPEND-ONLY. ***
+
+    NEVER overwrite or delete a published <stem>-<n>.onnx.
+
+Every Winnow already installed fetches the exact bytes whose SHA-256 it was compiled
+with, and verifies them. Overwrite lama-1.onnx and every copy of Winnow in the wild
+loses spot heal the moment its user clears the model cache. To change a model, upload
+<stem>-<n+1>.onnx ALONGSIDE the old one.
+
+Release step whenever a model has been re-exported:
+
+    1.  tools/gen_model_catalog.sh
+        It hashes ReleaseExtras/*.onnx, diffs against the catalog in
+        Utilities/modelstore.cpp, auto-increments the version of anything whose bytes
+        changed, and FAILS if bytes changed without a version bump.
+    2.  Paste the rows it prints into the catalog table in Utilities/modelstore.cpp.
+    3.  Upload the new versioned file(s) it names, plus manifest.json:
+            sftp root@165.227.46.158
+            cd /var/www/html/winnow/models
+            put ReleaseExtras/<stem>.onnx <stem>-<n>.onnx
+            put tools/_model_catalog_out/manifest.json manifest.json
+    4.  Rebuild. A user on the old build sees "Update available" in
+        Help > Manage AI models and is prompted the next time the feature is used.
+
+Adding a model: add an enum value + catalog row, upload <stem>-1.onnx. Older builds
+never ask for it.
+
+Removing a model: drop the catalog row, LEAVE the server file in place. Users' copies
+become orphans, listed under "Unused - safe to delete" in Help > Manage AI models;
+they are never deleted automatically, so a downgrade still works.
+
 NORMAL DEPLOYMENT
 
 	For Mac:

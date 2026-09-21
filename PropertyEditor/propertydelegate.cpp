@@ -156,8 +156,9 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
                  << "option.rect.height =" << option.rect.height()
             ;
 
-    // row height = 1.7 * text height
-    int height = static_cast<int>(G::strFontSize.toInt() * 1.7 * G::ptToPx);
+    // row height = 1.7 * text height (shared with the Develop dock's widget-built
+    // header bands, which fix their height to it so they match the tree's headers)
+    int height = G::propertyRowHeight();
 
     /* Divider/spacer rows carry their own fixed height (see addDivider). The role lives
        on the CAPTION cell only, so read it via the sibling -- QTreeView size-hints every
@@ -441,7 +442,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            takes the same content background as the rows around it. Gated like those rows
            (see isAlternatingRows) so the trees that leave their rows unfilled -- the
            Preferences and Embellish ones -- keep showing the viewport through. */
-        if (!isAlternatingRows) painter->fillRect(r0, G::panelContentBg());
+        if (!isAlternatingRows)
+            painter->fillRect(r0, rowBackground.isValid() ? rowBackground
+                                                          : G::panelContentBg());
         const int lineH = index.data(UR_DividerLineHeight).toInt();
         const QColor lineColor = index.data(UR_DividerColor).value<QColor>();
         if (lineH > 0 && lineColor.alpha() > 0) {
@@ -457,8 +460,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QRect r2 = QRect(5, r.y(), r.x() + r.width() - 5, r.height()-1);
     // r3 = r but leaves a few pixels at the bottom margin to draw text
     QRect r3 = QRect(r.x(), r.y(), r.width(), r.height()-3);
-    // r4 = entire row width
-    QRect r4 = QRect(r.x(), r.y(), w0 + w1, r.height()-3);
+    /* r4 = entire row width, less G::headerCaptionTrim at the bottom: the section
+       header's arrow and caption centre on THIS, not the full row, so they sit
+       fractionally high. The Develop dock's widget header bands use the same trim as
+       their layout's bottom margin (RawPanel, MaskPanel, SubmaskList). */
+    QRect r4 = QRect(r.x(), r.y(), w0 + w1, r.height() - G::headerCaptionTrim);
     // r5 = entire col width less 50px for barbtns
     QRect r5 = QRect(r.x() + w1 - 50, r.y(), 50, r.height()-3);
 
@@ -494,7 +500,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     rootCategoryBackground.setColorAt(1, QColor(b,b,b));
 
     QColor categoryRowBackground(QColor(d,d,d));
-    QColor valueRowBackground(QColor(e,e,e));
+    /* rowBackground overrides the subpanel content shade where an owner wants its rows on
+       a different surface (MaskPanel's Edge/Halo rows, on G::backgroundColor). */
+    QColor valueRowBackground = rowBackground.isValid() ? rowBackground : QColor(e,e,e);
 
     QFont font;
     font = painter->font();

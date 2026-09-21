@@ -29,6 +29,8 @@
 #include "ImageFormats/Raw/pmrid.h"
 #include "Utilities/inference/miganfill.h"
 #include "Utilities/inference/lamafill.h"
+#include "Utilities/modelstore.h"
+#include "Dialogs/managemodelsdlg.h"
 #include "Cache/imagedecoder.h"
 #include "Utilities/subjectpredictor.h"
 #include "Utilities/skypredictor.h"
@@ -397,6 +399,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
     settings = new QSettings(iniPath, QSettings::IniFormat);
+    /* Discard any .part left behind by a download interrupted by a crash or a force
+       quit; ModelDownloadDlg cleans up its own aborts. */
+    ModelStore::sweepPartials();
     G::settings = settings;
     // test if new user
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
@@ -2040,15 +2045,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* DEVELOP MODE: mask combine modifiers + commit, while a submask is OPEN.
        Opt previews Subtract and Shift+Opt previews Intersect -- momentary, so the veil
        must follow the key with the mouse stationary, and the panel usually holds focus
-       (the same reason Space and Esc are driven from this filter). Return commits with
-       whatever is held, like the Transform panel's Enter-commit. Auto-repeat is ignored.
-       The Alt KeyPress is accepted so Windows does not open the menu bar under us.
+       (the same reason Space and Esc are driven from this filter). Return finishes the
+       submask -- landing it now instead of waiting out its settle window -- like the
+       Transform panel's Enter-commit. Auto-repeat is ignored. The Alt KeyPress is
+       accepted so Windows does not open the menu bar under us.
 
-       The gate is isSubmaskOpen(), not isMaskPanelOpen(): a submask RE-OPENED from the
-       submask list is not "pending", but Return still closes it ("Done") and Shift still
-       retargets its brush attributes at the last stroke, so the panel's scope header has
-       to follow the key there too. The op preview itself stays pending-only --
-       syncPendingMaskOp guards that for us. */
+       The gate is isSubmaskOpen(), not isMaskPanelOpen(): a submask that has already
+       settled is not "pending", but Return still closes it and Shift still retargets its
+       brush attributes at the last stroke, so the panel's scope header has to follow the
+       key there too. The op preview itself stays pending-only -- syncPendingMaskOp
+       guards that for us. */
     {
         if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
             && developProperties && developProperties->isSubmaskOpen()
@@ -2076,14 +2082,14 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             /* No value-editor bail here, unlike the rest of this filter: while a
                submask is being defined the focus is almost always on one of the
                panel's own sliders (Size/Feather/Flow), which is exactly when Return
-               must still commit. Same reasoning as the Esc-collapses-a-mask rule in
+               must still finish it. Same reasoning as the Esc-collapses-a-mask rule in
                developShortcutIntercept, likewise checked BEFORE the editor bail.
                Only a text field keeps Return. */
             else if (G::isEnterKey(k) && !e->isAutoRepeat()
                      && !qobject_cast<QLineEdit *>(QApplication::focusWidget())) {
                 event->accept();       // frees the key on the override pass
                 if (event->type() == QEvent::KeyPress)
-                    developProperties->commitPendingMask();   // resolves the op itself
+                    developProperties->finishSubmaskEditing();  // resolves the op itself
                 return true;
             }
         }
@@ -2850,6 +2856,18 @@ void MW::appStateChange(Qt::ApplicationState state)
     else {
         zoomDlg->setVisible(false);
     }
+}
+
+void MW::manageModels()
+{
+/*
+    Help > Manage AI models. Lets the user fetch the on-demand models ahead of going
+    offline, pull an update when a newer Winnow wants different weights, or reclaim the
+    space they occupy.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("MW::manageModels");
+    ManageModelsDlg dlg(this);
+    dlg.exec();
 }
 
 void MW::checkForUpdate(bool silent)
@@ -9453,13 +9471,18 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     if (G::isLogger) G::log("MW::ensureSubjectMask");
     if (fPath == developSubjectRefPath && SubjectMask::getRef(fPath)) return;   // already current
 
-    /* Lazily load u2net.onnx (from the executable dir, next to focus_point_model.onnx). */
+    /* Lazily load u2net.onnx. It is DOWNLOADED ON DEMAND, so it may legitimately be
+       absent here: this is also reached from the render paths, which must stay silent.
+       The download is offered from the user's gesture instead (onAiMaskEditBegin), so by
+       the time a mask is actually being built the bytes are either there or the user
+       declined. Gating before construction also means no failed predictor object is ever
+       cached, so nothing needs resetting after a download. */
     if (!subjectPredictor) {
-        const QString modelPath =
-            QDir(QCoreApplication::applicationDirPath()).filePath("u2net.onnx");
+        const QString modelPath = ModelStore::path(ModelStore::Model::U2Net);
+        if (modelPath.isEmpty()) return;
         subjectPredictor = new SubjectPredictor(modelPath, 320);
         if (!subjectPredictor->isLoaded())
-            qWarning("Select Subject: u2net.onnx not found or failed to load at %s",
+            qWarning("Select Subject: u2net.onnx failed to load at %s",
                      modelPath.toUtf8().constData());
     }
     if (!subjectPredictor->isLoaded()) return;
@@ -9492,12 +9515,12 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     if (G::isLogger) G::log("MW::ensureSkyMask");
     if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) return;      // already current
 
-    if (!skyPredictor) {
-        const QString modelPath =
-            QDir(QCoreApplication::applicationDirPath()).filePath("skyseg.onnx");
+    if (!skyPredictor) {                    // downloaded on demand -- see ensureSubjectMask
+        const QString modelPath = ModelStore::path(ModelStore::Model::SkySeg);
+        if (modelPath.isEmpty()) return;
         skyPredictor = new SkyPredictor(modelPath, 320);
         if (!skyPredictor->isLoaded())
-            qWarning("Select Sky: skyseg.onnx not found or failed to load at %s",
+            qWarning("Select Sky: skyseg.onnx failed to load at %s",
                      modelPath.toUtf8().constData());
     }
     if (!skyPredictor->isLoaded()) return;
@@ -9529,12 +9552,12 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     if (G::isLogger) G::log("MW::ensureDepthMask");
     if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) return;      // already current
 
-    if (!depthPredictor) {
-        const QString modelPath =
-            QDir(QCoreApplication::applicationDirPath()).filePath("midas.onnx");
+    if (!depthPredictor) {                  // downloaded on demand -- see ensureSubjectMask
+        const QString modelPath = ModelStore::path(ModelStore::Model::Midas);
+        if (modelPath.isEmpty()) return;
         depthPredictor = new DepthPredictor(modelPath, 256);
         if (!depthPredictor->isLoaded())
-            qWarning("Depth Range: midas.onnx not found or failed to load at %s",
+            qWarning("Depth Range: midas.onnx failed to load at %s",
                      modelPath.toUtf8().constData());
     }
     if (!depthPredictor->isLoaded()) return;
@@ -9728,13 +9751,14 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     user erased back to a much tighter trace and is now paying for resolution they no longer need).
     objectBrushRoi's outward quantization is what makes a growing trace keep hitting this path.
 */
-    if (!objectMaskPredictor) {
-        const QDir dir(QCoreApplication::applicationDirPath());
-        objectMaskPredictor = new ObjectMaskPredictor(dir.filePath("sam2_encoder.onnx"),
-                                                      dir.filePath("sam2_decoder.onnx"), 1024);
+    if (!objectMaskPredictor) {             // downloaded on demand -- see ensureSubjectMask
+        const QString encPath = ModelStore::path(ModelStore::Model::Sam2Encoder);
+        const QString decPath = ModelStore::path(ModelStore::Model::Sam2Decoder);
+        if (encPath.isEmpty() || decPath.isEmpty()) return false;
+        objectMaskPredictor = new ObjectMaskPredictor(encPath, decPath, 1024);
         if (!objectMaskPredictor->isLoaded())
-            qWarning("Object Mask: sam2_encoder/decoder.onnx not found or failed to load in %s",
-                     dir.absolutePath().toUtf8().constData());
+            qWarning("Object Mask: sam2 encoder/decoder failed to load (%s)",
+                     ModelStore::dir().toUtf8().constData());
     }
     if (!objectMaskPredictor->isLoaded()) return false;
 
@@ -9791,6 +9815,26 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     return true;
 }
 
+void MW::onSpotEditBegin()
+{
+/*
+    The spot tool was armed in the dock. This is the GESTURE that gates the heal model
+    download -- applySpots() itself runs on a render worker and cannot prompt, and a saved
+    recipe's spots reach it without the tool ever being armed (which is why
+    LamaFill/MiganFill::SharedSession retry rather than latch a first miss).
+
+    Which model is needed depends on G::useLamaSpotFill, so ask for the one that will
+    actually run. Declining still arms the tool: the spots are recorded and simply go
+    unhealed until the model is downloaded, which matches how the feature behaves today
+    with the model absent.
+*/
+    if (G::isLogger) G::log("MW::onSpotEditBegin");
+    ModelStore::ensure(QVector<ModelStore::Model>()
+                       << (G::useLamaSpotFill ? ModelStore::Model::Lama
+                                              : ModelStore::Model::Migan), this);
+    if (imageView) imageView->beginSpotEdit();
+}
+
 void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
                            const QString &paramsJson, double /*feather*/)
 {
@@ -9807,6 +9851,22 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     if (!needsSubject && !isSky && !isDepth && !isObject) return;
     const QString fPath = dm->currentFilePath;
     if (fPath.isEmpty()) return;
+
+    /* THE DOWNLOAD GATE. The AI masks run on models that are downloaded on demand, and
+       this slot is the user's GESTURE -- the one place a prompt belongs. The ensure*
+       builders below are also reached from the render paths (a slider drag re-entering
+       through developParamsChange), which must never put a dialog on screen, so they
+       just no-op on a missing model.
+
+       ensure() is modal: when it returns true the bytes really are on disk and we carry
+       straight on, so the mask appears on this click rather than the next one. */
+    QVector<ModelStore::Model> need;
+    if (needsSubject)  need << ModelStore::Model::U2Net;        // Background = inverted subject
+    else if (isSky)    need << ModelStore::Model::SkySeg;
+    else if (isDepth)  need << ModelStore::Model::Midas;
+    else if (isObject) need << ModelStore::Model::Sam2Encoder << ModelStore::Model::Sam2Decoder;
+    if (!ModelStore::ensure(need, this)) return;
+
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;
     const auto mj = developProperties->stackJob();
@@ -9882,8 +9942,7 @@ void MW::updateMaskOverlayTint()
        The in-progress (uncommitted) submask is a real component in `components`, but its
        op is still momentary -- it lives in DevelopProperties::pendingMaskOp() (driven by
        the held modifier) and is only written into the component on commit. Substitute it
-       here so the veil composites the OUTCOME of what Return / the commit button would
-       do. Its index is against `components`, so it is remapped onto the filtered vector
+       here so the veil composites the OUTCOME the submask will have when it lands. Its index is against `components`, so it is remapped onto the filtered vector
        (and drops out entirely if the pending submask is itself unchecked -- it then
        contributes nothing, so there is no footprint ring or op chip to show for it). */
     const int pendSrcIdx = developProperties->pendingMaskIndex();

@@ -2,6 +2,9 @@
 #include "Utilities/inference/inferencesession.h"
 #include "Develop/fillspot.h"
 #include "Main/global.h"
+#include "Utilities/modelstore.h"
+#include <QMutex>
+#include <QMutexLocker>
 
 #include <QDir>
 #include <QCoreApplication>
@@ -28,17 +31,26 @@ constexpr int kNet = 512;              // MI-GAN fixed square input
 
 InferenceSession *SharedSession()
 {
-    static std::once_flag once;
+/*
+    RETRYABLE for the same reason as LamaFill::SharedSession -- migan.onnx is downloaded on
+    demand and this runs on a render worker, so a first miss must not be latched for the
+    life of the process. See the comment there.
+*/
+    static QMutex mutex;
     static std::unique_ptr<InferenceSession> session;
-    std::call_once(once, [] {
-        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath(kModelFile);
-        session = std::make_unique<InferenceSession>(path, InferenceDevice::Auto);
-        if (!session->IsLoaded())
-            qWarning("MiganFill: %s not found or failed to load at %s (spot fill disabled)",
-                     kModelFile, path.toUtf8().constData());
-        else if (G::isLogger)
-            G::log("MiganFill::SharedSession loaded", session->BackendName());
-    });
+    QMutexLocker lock(&mutex);
+    if (session && session->IsLoaded()) return session.get();
+
+    const QString path = ModelStore::path(ModelStore::Model::Migan);
+    if (path.isEmpty()) return nullptr;         // absent/stale -- try again next spot
+
+    session = std::make_unique<InferenceSession>(path, InferenceDevice::Auto);
+    if (!session->IsLoaded()) {
+        qWarning("MiganFill: %s failed to load at %s (spot fill disabled)",
+                 kModelFile, path.toUtf8().constData());
+        return nullptr;
+    }
+    if (G::isLogger) G::log("MiganFill::SharedSession loaded", session->BackendName());
     return session.get();
 }
 

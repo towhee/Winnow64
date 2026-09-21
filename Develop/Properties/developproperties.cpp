@@ -103,6 +103,12 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        more of them than it loses of the image being edited. */
     connect(debounceWriteTimer, &QTimer::timeout, this, [this]{ flushAll(); });
 
+    /* The pending submask commits itself once the user's hand stops (see
+       armMaskAutoCommit). No commit button: nothing is buffered for one to flush. */
+    maskCommitTimer = new QTimer(this);
+    maskCommitTimer->setSingleShot(true);
+    connect(maskCommitTimer, &QTimer::timeout, this, [this]{ autoCommitPendingMask(); });
+
     /* Multi-image editing: a slider drag commits continuously, so the copy to the other
        selected images is batched and applied once the edits settle. */
     propagateTimer = new QTimer(this);
@@ -597,8 +603,6 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
     if (G::isLogger) G::log("DevelopProperties::bindMaskPanel");
     maskPanel = panel;
     if (!maskPanel) return;
-    connect(maskPanel, &MaskPanel::committed, this, &DevelopProperties::commitPendingMask);
-    connect(maskPanel, &MaskPanel::cancelled, this, &DevelopProperties::cancelMaskTool);
     /* The overlay's colour / grayscale controls are NOT in this panel (they are on the
        action-row tint button's context menu, which calls setMaskOverlayColour /
        setMaskOverlayGrayscale directly), so there is nothing to connect for them. */
@@ -694,7 +698,7 @@ void DevelopProperties::syncMaskPanel()
         ed->showMaskLevel(scope->maskEdge, scope->maskHalo, maskHasRealEdge(*scope));
     }
     maskPanel->showMaskLevel(!scope->components.isEmpty());
-    /* Settings + commit only make sense with a submask open; an empty mask shows nothing
+    /* The settings only make sense with a submask open; an empty mask shows nothing
        but its [+]. */
     const bool open = (selectedMaskIndex >= 0 &&
                        selectedMaskIndex < scope->components.size());
@@ -710,25 +714,19 @@ void DevelopProperties::reopenSubmask(int index)
     EditScope *scope = activeScope();
     if (!scope || index < 0 || index >= scope->components.size()) return;
     /* Clicking the OPEN submask closes it: the row is the list's only disclosure, so it
-       has to work both ways. Not while it is pending -- that would hide the commit
-       button the submask still needs (and Esc/[x] is how a pending one is dropped) --
-       and a click that simply does nothing reads as a broken row, so SAY WHY. */
+       has to work both ways. A still-pending one lands first rather than refusing --
+       closing is the user saying they are finished with it. */
     if (index == selectedMaskIndex) {
-        if (pendingIdx < 0) { closeSubmaskEditing(); return; }
-        if (G::popup) {
-            const QString tool = maskToolName(scope->components.at(index).tool);
-            G::popup->showPopup(tool + " has not been committed yet, so its settings "
-                                "have to stay open.\n\nReturn (or the button below) "
-                                "folds it into the mask; Esc discards it.", 3000);
-        }
+        flushMaskAutoCommit();
+        closeSubmaskEditing();
         return;
     }
-    /* Switching away from a submask that is still PENDING would discard it silently, the
-       same trap as leaving the scope -- ask with the same dialog. */
-    if (!confirmPendingMask()) { syncMaskPanel(); return; }
+    /* Switching away from a submask still inside its settle window: land it now rather
+       than let the timer fire into a submask the user has already left. */
+    flushMaskAutoCommit();
 
-    /* confirmPendingMask may have removed the pending submask (Discard), which shifts
-       everything after it down one. */
+    /* The flush may have DROPPED an untouched pending submask, which shifts everything
+       after it down one. */
     scope = activeScope();
     if (!scope || index >= scope->components.size()) return;
 
@@ -794,6 +792,7 @@ void DevelopProperties::toggleSubmaskInverted(int index)
         maskPanel->editor()->setCheckboxValue("maskInvert", m.inverted);
     buildTree();
     emit paramsChanged();
+    if (index == pendingIdx) armMaskAutoCommit();
 }
 
 void DevelopProperties::moveSubmask(int from, int to)
@@ -981,6 +980,7 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
     else return;
     noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v),
              "mask/" + key);
+    armMaskAutoCommit();       // the submask lands once this drag/typing settles
 }
 
 /* MASK level: reshape the folded mask (Edge, Halo). Edits the SCOPE, so unlike every
@@ -1054,9 +1054,9 @@ void DevelopProperties::beginMaskTool(int tool)
     if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
 
     /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
-       submask is pending until the commit button / Return folds it in -- the first one
-       too, which
-       costs nothing visually (the mask IS that submask) and keeps one commit path. */
+       submask is pending until its edits settle (or Return lands it early) -- the first
+       one too, which costs nothing visually (the mask IS that submask) and keeps one
+       commit path. */
     scope->components.append(m);
     selectedMaskIndex = scope->components.size() - 1;
     pendingIdx = selectedMaskIndex;
@@ -1140,8 +1140,8 @@ void DevelopProperties::setPendingMaskOp(int op)
     /* The held modifier changed (MW arbitrates: Opt = Subtract, Shift+Opt = Intersect).
        The op is NOT written into the component -- it stays pending until commit -- but
        the overlay AND the render composite the pending submask with it, so both preview
-       the outcome, and the panel button renames itself to match. The FIRST submask has
-       nothing to combine with, so it is pinned to Add. */
+       the outcome. The FIRST submask has nothing to combine with, so it is pinned to
+       Add. */
     /* Only a PENDING submask takes its op from the modifiers. A re-opened submask's op is
        already real and is changed on its own row in the submask list -- letting a stray
        Opt press rewrite it would be an invisible edit. */
@@ -1150,7 +1150,7 @@ void DevelopProperties::setPendingMaskOp(int op)
     /* Nothing held now: fall back to the LATCHED op rather than to Add. Releasing Opt
        must not undo the subtract the user just painted (see latchMaskOp) -- the whole
        point of the modifier is to say what the submask does, not to hold a preview open
-       with a spare finger while reaching for the commit button. */
+       with a spare finger while the submask settles. */
     if (op == int(MaskOp::Add)) op = latchedMaskOp;
     if (op == pendingOp) return;
     pendingOp = op;
@@ -1160,6 +1160,9 @@ void DevelopProperties::setPendingMaskOp(int op)
        modifier changes the IMAGE, not just the veil: re-render as well as re-composite
        (paramsChanged is wired to updateMaskOverlayTint, so the veil comes along). */
     emit paramsChanged();
+    /* Changing what the submask DOES is an edit like any other: the user gets the full
+       settle window to look at the new op before it lands. */
+    armMaskAutoCommit();
 }
 
 void DevelopProperties::latchMaskOp()
@@ -1168,11 +1171,12 @@ void DevelopProperties::latchMaskOp()
     A shaping action started on the pending submask -- a brush/object stroke, or a mask
     handle drag (ImageView::maskOpActionStarted). Whatever modifier is held AT THAT
     INSTANT is what this submask does, and it now STICKS: the veil, the render and the
-    commit button all keep showing Subtract (or Intersect) after the key is released.
+    on-canvas op chip all keep showing Subtract (or Intersect) after the key is
+    released.
 
     Before this the op was purely momentary. Painting a subtract stroke and letting go of
     Opt silently turned it back into an add, the image stopped showing the subtraction,
-    and clicking the commit button committed the ADD -- "the subtract brush does nothing".
+    and the ADD is what got committed -- "the subtract brush does nothing".
 
     Reversible by the same gesture that set it: paint (or drag) again with nothing held
     and the latch re-reads the modifiers as Add. A modifier PRESS alone still previews
@@ -1201,19 +1205,20 @@ void DevelopProperties::closeSubmaskEditing()
     emit maskTintHideRequested();
 }
 
-void DevelopProperties::commitPendingMask()
+void DevelopProperties::commitPendingMask(bool keepVeil)
 {
     if (G::isLogger) G::log("DevelopProperties::commitPendingMask");
+    maskCommitTimer->stop();                 // whoever got here beat the settle timer
     EditScope *scope = activeScope();
-    /* Re-editing an already committed submask: the button reads "Done" and there is
-       nothing to fold in -- its edits went into the mask as they were made. Just close
-       the editing session, leaving the submask (and the mask) exactly as it is. */
+    /* Nothing pending -- an already committed submask being re-edited. Its edits went
+       into the mask as they were made, so there is nothing to fold in: just close the
+       editing session, leaving the submask (and the mask) exactly as it is. */
     if (pendingIdx < 0) { closeSubmaskEditing(); return; }
     if (!scope || pendingIdx >= scope->components.size()) return;
-    /* Commit what the user is LOOKING AT: pendingOp is what the veil, the render and the
-       button label have all been previewing (the held modifier, else the latched op).
-       Re-reading the live modifiers here instead -- as this used to -- meant releasing
-       Opt to reach for the commit button committed an Add. */
+    /* Commit what the user is LOOKING AT: pendingOp is what the veil and the render have
+       been previewing (the held modifier, else the latched op). Re-reading the live
+       modifiers here instead -- as this used to -- meant a released Opt committed an
+       Add. */
     int op = (pendingIdx == 0) ? int(MaskOp::Add)   // nothing to combine the first with
                                : pendingOp;
     scope->components[pendingIdx].op = op;        // fold the submask in (sequential)
@@ -1226,17 +1231,93 @@ void DevelopProperties::commitPendingMask()
        can come straight back to it (or keep tuning it) instead of having to delete and
        redraw. Only its PENDING status ends here. */
     maskLatched = true;                    // overlay stays AVAILABLE ("O" re-shows it)
-    maskPanelOpen = false;                 // nothing outstanding to confirm any more
+    maskPanelOpen = false;                 // nothing outstanding any more
     const QString verb = op == int(MaskOp::Subtract)  ? "Subtract "
                        : op == int(MaskOp::Intersect) ? "Intersect "
                                                       : "Add ";
+    /* Recorded even though every edit that built the submask was recorded as it was
+       made: the op is only written into the component HERE, and History snapshots the
+       EditStack without pendingIdx, so an undo past this point would otherwise restore
+       the submask with the wrong op. */
     noteEdit(verb + toolName);
     buildTree();
     emit paramsChanged();
     /* The submask is folded in: get the coverage tint off the image so the user sees the
        developed result. The overlay is still latched, so "O" (or the header menu row)
-       brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint. */
-    emit maskTintHideRequested();
+       brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint.
+
+       keepVeil skips it. The automatic commit fires WHILE the user is still working on
+       the submask -- the editing session has not ended, only its pending status -- and a
+       veil that vanished by itself two seconds into an edit would be the most startling
+       thing about settling. closeSubmaskEditing() drops it when the session really
+       ends. */
+    if (!keepVeil) emit maskTintHideRequested();
+}
+
+void DevelopProperties::armMaskAutoCommit()
+{
+/*
+    An edit touched the pending submask: restart its settle window.
+
+    There is no commit button because there is nothing for one to flush -- every mask
+    edit (shape drag, feather, edge, invert, brush size/flow, the range sliders) is
+    written straight into the MaskComponent and rendered live as it is made. The only
+    thing a commit decides is the combine op, and a committed submask's op can still be
+    changed from its row in the list. So the commit is not a decision worth interrupting
+    the user for: it just happens once their hand stops.
+
+    Same shape as debounceWriteTimer and MW's developFullResTimer -- restarted by every
+    tick of a drag, fires once on the quiet after it.
+*/
+    if (pendingIdx < 0 || !maskPanelOpen) return;   // nothing pending to land
+    /* Mid-stroke the timer must not fire under the user's hand: a brush stroke is one
+       edit, however long they hold the button down. The stroke's end re-arms it. */
+    if (maskStrokeActive) { maskCommitTimer->stop(); return; }
+    maskCommitTimer->start(kMaskAutoCommitMs);
+}
+
+void DevelopProperties::setMaskStrokeActive(bool painting)
+{
+    maskStrokeActive = painting;
+    armMaskAutoCommit();          // painting -> stop; released -> start the window
+}
+
+void DevelopProperties::autoCommitPendingMask()
+{
+    if (G::isLogger) G::log("DevelopProperties::autoCommitPendingMask");
+    EditScope *scope = activeScope();
+    if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) return;
+    /* Picked a tool and never used it: committing would leave a submask that covers no
+       pixels sitting in the list. Leave it pending -- the next edit re-arms the timer,
+       and leaving drops it (flushMaskAutoCommit). */
+    if (pendingMaskIsUntouched(scope->components.at(pendingIdx))) return;
+    commitPendingMask(/*keepVeil=*/true);
+}
+
+void DevelopProperties::flushMaskAutoCommit()
+{
+/*
+    Something is leaving the scope or the image the pending submask belongs to. Land it
+    now rather than let the settle timer fire into a context that has moved on.
+
+    This replaces the old "Commit submask?" dialog. That dialog existed because a pending
+    submask was invisible state about to be thrown away, and only the user could say
+    whether it mattered. With the commit automatic there is no third answer to ask for:
+    anything the user built is kept, anything they never touched was never a submask.
+*/
+    maskCommitTimer->stop();
+    EditScope *scope = activeScope();
+    if (pendingIdx < 0) return;
+    if (!scope || pendingIdx >= scope->components.size()) { cancelMaskTool(); return; }
+    if (pendingMaskIsUntouched(scope->components.at(pendingIdx))) { cancelMaskTool(); return; }
+    commitPendingMask(/*keepVeil=*/true);
+}
+
+void DevelopProperties::finishSubmaskEditing()
+{
+    if (G::isLogger) G::log("DevelopProperties::finishSubmaskEditing");
+    flushMaskAutoCommit();       // do not make the user wait out the settle window
+    closeSubmaskEditing();
 }
 
 bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
@@ -1268,99 +1349,9 @@ bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
         && m.paramsJson == pendingPristine.paramsJson;
 }
 
-bool DevelopProperties::confirmPendingMask()
-{
-/*
-    A submask is PENDING from the moment its tool is picked until the commit button /
-    Return folds it in -- it exists in scope->components but is discarded on cancel or on
-    leaving the image. Anything that leaves the scope it belongs to therefore throws work
-    away, and the only cue that work is outstanding is the MaskPanel being up. Ask
-    instead, naming the tool and the op the user has been previewing so the dialog reads
-    like the button they didn't press.
-
-    Returns true if the caller may proceed (the submask was committed or discarded),
-    false for "stay on this scope".
-*/
-    if (G::isLogger) G::log("DevelopProperties::confirmPendingMask");
-    if (!maskPanelOpen) return true;
-
-    EditScope *scope = activeScope();
-    if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) {
-        cancelMaskTool();          // nothing coherent to commit: just close the panel
-        return true;
-    }
-
-    /* Picked a tool but never made a mask with it: nothing to commit, so don't ask --
-       drop it exactly as leaving used to, silently. */
-    const MaskComponent &pending = scope->components.at(pendingIdx);
-    if (pendingMaskIsUntouched(pending)) { cancelMaskTool(); return true; }
-
-    const QString tool = maskToolName(pending.tool);
-    /* Same resolution as commitPendingMask: the first submask has nothing to combine
-       with, otherwise it is the op the veil and the button have been previewing. */
-    const int op = (pendingIdx == 0) ? int(MaskOp::Add) : pendingOp;
-    /* The op reads as what it DOES to the mask, so the Commit line is a sentence. */
-    const QString what = op == int(MaskOp::Subtract)  ? tr("subtract it from the mask")
-                       : op == int(MaskOp::Intersect) ? tr("intersect it with the mask")
-                                                      : tr("add it to the mask");
-
-    /* Built by hand rather than as a QMessageBox: that lays its buttons out by ROLE, in
-       a platform-specific order, and pads them unevenly (mac pushes the destructive one
-       to the far left). The order here is fixed -- Cancel, Commit, Discard -- with equal
-       widths and one spacing between them on both platforms. */
-    QDialog dlg(this);
-    dlg.setWindowTitle(tr("Commit submask?"));
-    QVBoxLayout *v = new QVBoxLayout(&dlg);
-    v->setContentsMargins(20, 18, 20, 16);
-    v->setSpacing(10);
-
-    QLabel *heading = new QLabel(tr("The %1 submask on \"%2\" has not been committed.")
-                                     .arg(tool, scope->name), &dlg);
-    QFont hf = heading->font();
-    hf.setBold(true);
-    heading->setFont(hf);
-    heading->setWordWrap(true);
-    v->addWidget(heading);
-
-    /* Spell out all three outcomes: the buttons are one word each, and "Discard" vs
-       "Cancel" is exactly the pair a user can read backwards and lose the work. */
-    QLabel *detail = new QLabel(tr("Commit — %1, then continue.\n"
-                                   "Discard — throw the submask away and continue.\n"
-                                   "Cancel — stay on \"%2\" and keep building it.")
-                                    .arg(what, scope->name), &dlg);
-    detail->setWordWrap(true);
-    v->addWidget(detail);
-    v->addSpacing(6);
-
-    QHBoxLayout *h = new QHBoxLayout;
-    h->setSpacing(12);
-    QPushButton *cancelBtn  = new QPushButton(tr("Cancel"),  &dlg);
-    QPushButton *commitBtn  = new QPushButton(tr("Commit"),  &dlg);
-    QPushButton *discardBtn = new QPushButton(tr("Discard"), &dlg);
-    int choice = 0;                                  // 0 = Cancel (also Esc / close box)
-    for (QPushButton *b : {cancelBtn, commitBtn, discardBtn}) {
-        b->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);  // equal widths
-        b->setAutoDefault(false);
-        h->addWidget(b);
-    }
-    v->addLayout(h);
-    connect(cancelBtn,  &QPushButton::clicked, &dlg, [&]{ choice = 0; dlg.accept(); });
-    connect(commitBtn,  &QPushButton::clicked, &dlg, [&]{ choice = 1; dlg.accept(); });
-    connect(discardBtn, &QPushButton::clicked, &dlg, [&]{ choice = 2; dlg.accept(); });
-    /* Discard is the default (Return); Esc rejects the dialog, which leaves choice at
-       Cancel. autoDefault is off on the other two so neither steals Return. */
-    discardBtn->setAutoDefault(true);
-    discardBtn->setDefault(true);
-    discardBtn->setFocus();
-    dlg.exec();
-
-    if (choice == 1) { commitPendingMask(); return true; }
-    if (choice == 2) { cancelMaskTool();    return true; }
-    return false;
-}
-
 void DevelopProperties::cancelMaskTool()
 {
+    maskCommitTimer->stop();               // nothing left to land
     EditScope *scope = activeScope();
     /* Remove the pending submask being defined (on an empty scope that is its only
        submask -> the scope goes back to global). ONLY a pending submask is discarded: a
@@ -1437,10 +1428,9 @@ void DevelopProperties::onScopeSelected(const QString &name)
     if (currentImagePath.isEmpty()) return;
     const int idx = currentScopeNames().indexOf(name);
     if (idx < 0 || idx == activeScopeIndex) return;
-    /* A submask still being built on the scope being LEFT used to be discarded silently.
-       Ask instead; "Cancel" abandons the switch, so put the header selection back (the
-       row/dropdown has already moved to the clicked scope). */
-    if (!confirmPendingMask()) { refreshScopeList(); return; }
+    /* A submask still inside its settle window on the scope being LEFT: land it before
+       the switch, so the timer cannot fire into a scope the user has moved on from. */
+    flushMaskAutoCommit();
     activeScopeIndex = idx;
 
     EditScope *l = activeScope();
@@ -1611,6 +1601,7 @@ void DevelopProperties::resetAllEdits()
        first (the same teardown applyHistoryEntry does). No prompt to commit it: the
        scope it would be committed into is being deleted anyway. */
     if (maskPanelOpen) {
+        maskCommitTimer->stop();           // it must not land in a scope that is going
         EditScope *l = activeScope();
         if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
             l->components.removeAt(pendingIdx);
@@ -1836,8 +1827,8 @@ void DevelopProperties::newScope()
     if (G::isLogger) G::log("DevelopProperties::newScope");
     if (currentImagePath.isEmpty()) return;
     /* Adding a scope switches to it, so it leaves any pending submask behind on the
-       current scope just as picking one does -- same prompt. */
-    if (!confirmPendingMask()) return;
+       current scope just as picking one does -- land it first. */
+    flushMaskAutoCommit();
 
     EditStack &s = stackCache[currentImagePath];
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());     // ensure a base scope exists
@@ -2578,6 +2569,10 @@ void DevelopProperties::deleteMask(int index)
     scope->components.removeAt(index);
     if      (selectedMaskIndex == index) selectedMaskIndex = -1;   // its settings close
     else if (selectedMaskIndex >  index) selectedMaskIndex--;      // follow the tool
+    /* Deleting the submask that has not settled yet is the "changed my mind" path now
+       that there is no Cancel button: retire the settle timer with it. */
+    if      (pendingIdx == index) { maskCommitTimer->stop(); pendingIdx = -1; maskPanelOpen = false; }
+    else if (pendingIdx >  index) pendingIdx--;
     noteEdit("Delete " + goneTool);
 
     buildTree();
@@ -2592,13 +2587,13 @@ void DevelopProperties::setSelectedMask(int index)
 
 bool DevelopProperties::escapeMaskTool()
 {
-    /* Esc while a submask is still PENDING discards it (the blue preview, or the
-       just-created first tool). */
+    /* Esc while a submask has not settled yet discards it. The window is short, but it
+       is the one moment where "that is not what I wanted" costs nothing -- after it, the
+       submask's row [:] > Delete (or History) is the way back. */
     if (maskPanelOpen) { cancelMaskTool(); return true; }
-    /* A re-opened submask has nothing to discard: Esc just closes it, the same as the
-       panel's "Done" button. */
+    /* A committed submask has nothing to discard: Esc just closes its editing session. */
     if (selectedMaskIndex >= 0) {
-        commitPendingMask();                  // pendingIdx < 0 -> the "Done" path
+        closeSubmaskEditing();
         return true;
     }
     if (activeMaskTool() < 0) return false;   // no mask tool expanded
@@ -2915,6 +2910,9 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
         if (maskPanel && maskPanel->editor()) maskPanel->editor()->setWheelSamples(hs);
     }
     emit paramsChanged();       // new mask geometry -> re-composite the masked scope
+    /* Every shape edit -- handle drag, brush stroke, pipette pick -- arrives here, so
+       this is the one place the settle timer needs arming for geometry. */
+    armMaskAutoCommit();
 }
 
 void DevelopProperties::onMaskSelectionChanged()
@@ -5916,9 +5914,8 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
        or the sliders (see previewHistoryEntry). */
     EditStack s = previewActive ? previewStack : stackCache.value(currentImagePath);
     /* PREVIEW THE PENDING OP. The submask being defined carries op = Add in the stack
-       until the commit button / Return commits it -- the real op is MOMENTARY, held in
-       pendingOp by
-       the modifier the user is pressing. The veil already composites with it
+       until it settles (or Return lands it) -- the real op is MOMENTARY, held in
+       pendingOp by the modifier the user is pressing. The veil already composites with it
        (MW::updateMaskOverlayTint); the RENDER has to as well, or an Opt (Subtract) or
        Shift+Opt (Intersect) submask leaves the image showing that submask being ADDED --
        which over an already-masked area is no visible change at all. Substituted into a
@@ -6091,16 +6088,13 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     if (G::isLogger) G::log("DevelopProperties::setCurrentImage", fPath);
     if (fPath == currentImagePath) return;
 
-    /* Leaving the image: drop an uncommitted (blue) mask preview so it is NOT saved (it's
-       a real component in scope->components; a committed first tool stays). Must run BEFORE
-       flushImage. Then hide the panel. */
-    if (maskPanelOpen) {
-        EditScope *l = activeScope();
-        if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
-            l->components.removeAt(pendingIdx);
-        pendingIdx = -1;
-        maskPanelOpen = false;
-    }
+    /* Leaving the image: land a submask still inside its settle window rather than drop
+       it. This used to discard it silently -- defensible when committing was an explicit
+       act the user had visibly not performed, but not now that committing is what
+       happens on its own two seconds later: navigating away a moment early is not a
+       decision to throw the work out. An untouched tool is still dropped (that branch is
+       inside flushMaskAutoCommit). Must run BEFORE flushImage so the sidecar gets it. */
+    flushMaskAutoCommit();
     /* Nothing is open on the new image, and the panel belongs to whatever scope turns out
        to be active there (buildTree -> syncMaskPanel decides). */
     selectedMaskIndex = -1;
@@ -6278,6 +6272,7 @@ void DevelopProperties::applyHistoryEntry(int index)
     /* A half-built mask tool indexes into the scope we are about to replace, so retire it
        first (same teardown setCurrentImage does when leaving an image). */
     if (maskPanelOpen) {
+        maskCommitTimer->stop();           // it must not land in a scope that is going
         EditScope *l = activeScope();
         if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
             l->components.removeAt(pendingIdx);
@@ -6878,6 +6873,7 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
     /* A half-built mask tool indexes into the scope we are about to rewrite, so retire it
        first (the same teardown applyHistoryEntry does). */
     if (maskPanelOpen) {
+        maskCommitTimer->stop();           // it must not land in a scope that is going
         EditScope *l = activeScope();
         if (l && pendingIdx >= 0 && pendingIdx < l->components.size())
             l->components.removeAt(pendingIdx);

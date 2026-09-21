@@ -2467,7 +2467,9 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::onAiMaskEditBegin);
     connect(developProperties, &DevelopProperties::maskEditEnd,   imageView, &ImageView::endMaskEdit);
     /* Regenerative spot fill: arm/disarm the ImageView brush; stroke -> FillSpot. */
-    connect(developProperties, &DevelopProperties::spotEditBegin, imageView, &ImageView::beginSpotEdit);
+    /* Routed through MW so the heal model can be offered before the tool is armed
+       (MW::onSpotEditBegin), then forwarded to ImageView::beginSpotEdit as before. */
+    connect(developProperties, &DevelopProperties::spotEditBegin, this, &MW::onSpotEditBegin);
     connect(developProperties, &DevelopProperties::spotEditEnd,   imageView, &ImageView::endSpotEdit);
     connect(imageView, &ImageView::spotStrokeCommitted,
             developProperties, &DevelopProperties::onSpotStrokeCommitted);
@@ -2557,9 +2559,13 @@ void MW::createDevelopDock()
     connect(imageView, &ImageView::maskTintVisibilityChanged, this,
             [this](bool visible){ if (visible) updateMaskOverlayTint(); });
     /* A stroke starting/finishing flips what Opt means (erase vs subtract), so
-       re-read the combine modifiers on each edge. */
+       re-read the combine modifiers on each edge. The same edges gate the submask
+       settle timer: it must not fire mid-stroke, however long the button is held. */
     connect(imageView, &ImageView::maskStrokeStateChanged, this,
-            [this](bool){ syncPendingMaskOp(); });
+            [this](bool painting){
+                syncPendingMaskOp();
+                developProperties->setMaskStrokeActive(painting);
+            });
     /* Opt held during a Detail-panel Masking drag -> show the sharpening gate in grayscale
        over the photo (and drop it when the key or the handle is released). */
     connect(developProperties, &DevelopProperties::sharpenMaskPreviewChanged,

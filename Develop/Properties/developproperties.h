@@ -289,14 +289,14 @@ public:
        commit. */
     int pendingMaskOp() const { return pendingOp; }
     /* Set by MW's modifier arbiter (Opt = Subtract, Shift+Opt = Intersect) while a
-       submask is being defined: relabels the commit button and re-previews the veil.
-       Releasing it falls back to the LATCHED op, not to Add (see latchMaskOp). */
+       submask is being defined: re-previews the veil, the render and the on-canvas op
+       chip. Releasing it falls back to the LATCHED op, not to Add (see latchMaskOp). */
     void setPendingMaskOp(int op);
     /* The user began SHAPING the submask (brush/object stroke, handle drag): the modifier
        held at that instant becomes what this submask DOES, and it survives the key
        being released. Without this, letting go of Opt turned the subtract just painted
-       back into an add -- and the commit button committed the add, changing nothing
-       on screen. */
+       back into an add -- and the add is what got committed, changing nothing on
+       screen. */
     void latchMaskOp();
     /* The combine op the LIVE keyboard state means: Opt = Subtract, Shift+Opt =
        Intersect, neither = Add. The ONE place that mapping exists -- the button label,
@@ -322,17 +322,29 @@ public:
        calls it on every Shift press/release, since Shift retargets those at the last
        stroke and the header has to say so while it is held. */
     void syncAttributeScopeLabel();
-    /* Commit button / Return: fold the pending submask in with the op held now. */
-    void commitPendingMask();
-    /* Guard for anything that LEAVES the scope a submask is still pending on (picking
-       another scope, adding one). A pending submask is invisible state -- it would be
-       silently discarded -- so ask: commit it, discard it, or stay put. Returns false
-       only for "stay put", in which case the caller must abandon the transition (and
-       re-assert the header selection with refreshScopeList). No panel open -> true. */
-    bool confirmPendingMask();
+    /* Fold the pending submask into the mask with the op currently being previewed.
+       keepVeil leaves the red coverage overlay up, which is what the automatic commit
+       wants: the submask stays open and the user is still editing it, so the veil must
+       not vanish under them. The veil drops when the editing SESSION ends, in
+       closeSubmaskEditing(). Reached from Return and from the settle timer. */
+    void commitPendingMask(bool keepVeil = false);
+    /* Land the pending submask NOW instead of waiting out the settle timer: called by
+       anything that leaves the scope or the image it belongs to. Commits it if there is
+       anything worth keeping, drops it silently if not (pendingMaskIsUntouched). No
+       prompt -- committing is automatic, so there is no third answer to ask for. */
+    void flushMaskAutoCommit();
+    /* Return: the user says they are done with the open submask. Lands it if it is still
+       inside its settle window, then ends the editing session (handles off the canvas,
+       veil down). Nothing open -> nothing to do. */
+    void finishSubmaskEditing();
+    /* A brush/object stroke started (true) or finished (false). The settle timer must
+       not fire under the user's hand mid-stroke, so a stroke stops it and the stroke's
+       end re-arms it. Driven by ImageView::maskStrokeStateChanged via MW. */
+    void setMaskStrokeActive(bool painting);
     /* True when committing the pending submask would achieve nothing -- it covers no
        pixels (an unpainted Brush/Object, an unsampled Color Range) or is still exactly
-       what beginMaskTool built. confirmPendingMask drops those without asking. */
+       what beginMaskTool built. The settle timer and flushMaskAutoCommit drop those
+       instead of committing them, so a tool picked and then ignored leaves nothing. */
     bool pendingMaskIsUntouched(const MaskComponent &m) const;
 
     /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
@@ -1208,11 +1220,15 @@ private:
     /* ---- Mask build-up (lab UI): append-only "flatten" via the MaskPanel ----------
        A picked submask is APPENDED to the scope's mask and edited in the panel's embedded
        MaskEditor. EVERY submask (including the first) is PENDING -- pendingIdx = its
-       index -- until the single commit button (or Return) folds it in with the op held
-       at that moment, or Cancel/Esc removes it. The overlay composites the pending
-       submask with pendingOp, so the veil shows the OUTCOME rather than colouring the
-       operand. maskPanelOpen tracks whether the strip is up, so Esc cancels the panel
-       edit rather than collapsing a legacy tree tool. */
+       index -- until it SETTLES: kMaskAutoCommitMs after the last edit the commit
+       happens by itself and folds it in with the op being previewed. There is no commit
+       button, because there was never anything buffered for one to flush -- every edit
+       is already written into the component and rendered live, and the only thing commit
+       decides is the combine op, which the submask's row can still change afterwards.
+       Return commits and closes early, Esc discards while still pending. The overlay
+       composites the pending submask with pendingOp, so the veil shows the OUTCOME
+       rather than colouring the operand. maskPanelOpen tracks whether the strip is up,
+       so Esc cancels the panel edit rather than collapsing a legacy tree tool. */
     MaskPanel *maskPanel = nullptr;
     int  pendingIdx = -1;                     // uncommitted submask's index, else -1
     int  pendingOp = 0;                       // op the overlay + render preview
@@ -1244,8 +1260,8 @@ private:
        every mask mutator already writes through selectedMaskIndex. Clicking the row of
        the submask that is ALREADY open closes it instead (closeSubmaskEditing) -- the
        row is the only affordance the list has, so if it opens it must also close, the
-       way every other disclosure in the dock does. A PENDING submask is exempt: closing
-       it would take away the commit button it still needs. */
+       way every other disclosure in the dock does. One that has not settled yet lands
+       first rather than refusing: closing it IS the user saying they are done. */
     void reopenSubmask(int index);
     /* End the editing session on a COMMITTED submask: deselect it, take its handles off
        the canvas and hide its settings, leaving the submask and the mask untouched. What
@@ -1284,6 +1300,17 @@ private:
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;
     static constexpr int kDebounceWriteMs = 2000;  // flush this long after edits settle (gated)
+
+    /* ---- Pending submask settle timer -----------------------------------------------
+       Every mask edit (shape drag, feather, edge, invert, brush settings) restarts this;
+       when it expires the pending submask commits itself. Same shape as
+       debounceWriteTimer above and MW's developFullResTimer: the work is coalesced to
+       the moment the user's hand stops, not asked for with a button. */
+    QTimer *maskCommitTimer = nullptr;
+    static constexpr int kMaskAutoCommitMs = 2000;   // quiet time before a submask lands
+    bool maskStrokeActive = false;           // a brush/object stroke is in progress
+    void armMaskAutoCommit();                // (re)start the settle timer for an edit
+    void autoCommitPendingMask();            // the timer expired: land it
 
     /* Whole-panel enable state (Develop menu action). When false the tree is disabled and
        every caption is greyed; buildTree() re-applies it so a rebuild can't un-grey it. */

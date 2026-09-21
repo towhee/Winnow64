@@ -40,8 +40,12 @@ void SubmaskList::buildUi()
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);
     headerBand->installEventFilter(this);        // a header click toggles collapse
+    /* Height and caption placement of a property-tree section header (see RawPanel), the
+       same the Mask band uses, so the two sibling bands cannot drift apart. */
+    headerBand->setFixedHeight(G::propertyRowHeight());
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 3, G::headerBtnRightInset, 3);
+    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 0,
+                           G::headerBtnRightInset, G::headerCaptionTrim);
     hb->setSpacing(0);
 
     collapseBtn = new BarBtn();
@@ -115,6 +119,12 @@ void SubmaskList::paintEvent(QPaintEvent *)
        second panel. The band still carries its arrow, caption and buttons; only the fill
        behind it changed. */
     p.fillRect(rect(), G::panelContentBg());
+    /* The BAND, though, continues the mask-level block's dock background above it
+       (MaskPanel::paintEvent): the lighter surface starts at the submask rows, which are
+       what the details below them belong to. */
+    if (headerBand)
+        p.fillRect(QRect(headerBand->mapTo(this, QPoint(0, 0)), headerBand->size()),
+                   G::backgroundColor);
 }
 
 QString SubmaskList::opName(int op)
@@ -236,7 +246,8 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
                                     : r.enabled ? G::textColor
                                                 : G::disabledColor,
                                     G::strFontSize.toInt()));
-    name->setToolTip(r.pending  ? tr("Being built -- commit or cancel it")
+    name->setToolTip(r.pending  ? tr("Being built -- it joins the mask once your edits "
+                                     "settle (Return lands it now, Esc discards it)")
                      : selected ? tr("Open -- click to close its settings")
                                 : tr("Click to edit this submask again"));
     hb->addWidget(name);

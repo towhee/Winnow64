@@ -1200,7 +1200,7 @@
          <string>Return</string>
         </property>
         <property name="text">
-         <string>Folds the submask being defined into the mask; same as the panel's &quot;Add and Commit&quot; button. Esc discards it instead. On a submask re-opened from the Submasks list, Return / Esc simply close it (&quot;Done&quot;) - its edits are already part of the mask</string>
+         <string>Finishes the submask being defined: folds it into the mask now rather than waiting the two seconds it would take to land on its own, and closes its settings. Esc discards it instead. On a submask that has already landed, Return / Esc simply close it - its edits are already part of the mask</string>
         </property>
        </item>
        <item>

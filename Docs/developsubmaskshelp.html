@@ -31,30 +31,32 @@ want and refines the result to its edge.</li>
 
 <h2>Adding one</h2>
 <p><b>[+]</b> on the band (or <b>M</b>, or <b>Add submask</b> in the band's
-<b>[&#8942;]</b> menu) offers the tool list.  The new submask is <b>pending</b>: it exists,
-and you can see it, but it is discarded if you press Esc or leave the image.  Define it on
-the picture, then commit it with the button below the settings &mdash; and the button's
-label is where the combine happens:</p>
+<b>[&#8942;]</b> menu) offers the tool list.  Define the new submask on the picture.
+<b>There is nothing to press afterwards</b>: two seconds after your last edit it folds
+itself into the mask and the chip top-left of the photo stops saying what it is about
+to do.  Until then it is <b>pending</b> &mdash; Esc discards it &mdash; and the modifier
+you hold decides how it combines:</p>
 
 <ul>
-<li>no modifier &mdash; <b>Add and Commit</b>: the new area joins the mask.</li>
-<li><b>Opt/Alt</b> &mdash; <b>Subtract and Commit</b>: the new area is cut out of it.</li>
-<li><b>Shift+Opt/Alt</b> &mdash; <b>Intersect and Commit</b>: only where the two overlap
+<li>no modifier &mdash; <b>Add</b>: the new area joins the mask.</li>
+<li><b>Opt/Alt</b> &mdash; <b>Subtract</b>: the new area is cut out of it.</li>
+<li><b>Shift+Opt/Alt</b> &mdash; <b>Intersect</b>: only where the two overlap
 survives.</li>
 </ul>
 
-<p>Hold the modifier before you commit and the overlay previews the outcome, so you see
-the resulting mask rather than having to imagine it.  The first submask in an empty mask
-has nothing to combine with, so the modifiers are inert there.  Return commits as well.
-Re-open an existing submask from the list and the button just reads <b>Done</b>: its edits
-are already real, and its op is changed on its own row instead.</p>
+<p>Hold the modifier while you shape the submask and the overlay previews the outcome, so
+you see the resulting mask rather than having to imagine it; the op sticks once you paint
+or drag with it held, so you can let the key go.  The first submask in an empty mask has
+nothing to combine with, so the modifiers are inert there.  <b>Return</b> lands the
+submask straight away and closes its settings.  Once it has landed its op is changed on
+its own row instead, and changing your mind about the whole thing is
+<b>[&#8942;]</b> &rarr; <b>Delete</b> on the row (or Cmd+Z / the History panel).</p>
 
 <h2>The list</h2>
 <p>Each row shows the tool, its combine op and whether it is inverted.  Click the row to
 re-open that submask for editing, and click the open row again to close its settings and
-put its handles away.  A submask you are still building cannot be closed that way &mdash;
-click its row and Winnow says so &mdash; because its commit button would go with it:
-commit it with <b>Return</b> or discard it with <b>Esc</b> first.  Then:</p>
+put its handles away.  A submask that has not landed yet lands first &mdash; closing it
+is you saying you are done with it.  Then:</p>
 
 <ul>
 <li>The <b>eye</b> shows or hides that submask's contribution &mdash; a one-click A / B of

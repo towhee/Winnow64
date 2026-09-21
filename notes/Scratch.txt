@@ -4345,3 +4345,50 @@ Edits   Scope: [              ] [+][eye]...
   History                        X
   > History                    ? X
   > Presets                  + ? X
+
+sftp://root@165.227.46.158/var/www/html/winnow/models/u2net.onnx
+
+winnow.ca/
+
+---------------------- Test as a second user ------------------------------
+
+Yes, and it's a clean fit — everything Winnow persists is per-user, all of it under
+~/Library/Application Support/Winnow: settings.ini, PreviewCache, Log, Winnets,
+CameraProfiles, Looks, and now Models. A second account gets a genuinely virgin Winnow
+with no special handling.
+
+  I checked the thing I expected to bite you, and it doesn't:
+
+  rpath → /Users/roryhill/Qt/6.11.0/macos/lib     drwxr-xr-x   ✓ world-traversable
+         → /opt/homebrew/opt/opencv@4/lib          drwxr-xr-x   ✓
+  /Users/roryhill                                  drwxr-xr-x+  ✓
+
+  Your mac-debug build doesn't embed Qt — it links it from your dev tree via rpath — so I
+  half expected a second account to fail at launch. But your home, ~/Qt, ~/Projects and
+  Homebrew are all world-readable, so a second user can run build/mac-debug/Winnow.app in
+  place. The app also isn't quarantined, so no Gatekeeper prompt.
+
+  Setup: System Settings ▸ Users & Groups ▸ Add User, type Standard, call it something
+  like winnowtest. Then turn on "Show fast user switching menu" in Control Centre
+  settings so you can flip between accounts with ⌥⌘Q-free switching instead of logging
+  out. Point the test account at
+  /Users/roryhill/Projects/Winnow64/build/mac-debug/Winnow.app directly, or copy a bundle
+  to /Users/Shared if you'd rather not expose the tree.
+
+  Two caveats worth knowing:
+
+  - A Standard user can't write to your build tree, which is good — it can't corrupt your
+  dev state — but it also means log files or anything Winnow tries to write beside the
+  binary will fail. Everything it actually writes goes to its own home, so this shouldn't
+  matter; if you see odd permission errors, that's the cause.
+
+- The debug build is not a faithful first-run. A real new user gets the notarized DMG
+with Qt embedded. For testing this feature the difference is irrelevant, but for a
+genuine first-run rehearsal (Gatekeeper, the quarantine prompt, Photos/Files permission
+dialogs) use a built DMG from packaging/macos/deploy.command. Testing as a second user is
+actually the best way to see those permission prompts, since your dev account has long
+since granted them.
+
+=================== MASKS =======================================
+
+
