@@ -3,6 +3,7 @@
 #include "ImageFormats/Raw/rawimage.h"
 #include "Utilities/inference/inferencesession.h"
 #include "Main/global.h"
+#include "Utilities/modelstore.h"
 
 #include <QDir>
 #include <QFile>
@@ -265,7 +266,9 @@ static InferenceSession *SharedSession()
     static std::once_flag once;
     static std::unique_ptr<InferenceSession> session;
     std::call_once(once, [] {
-        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath(kModelFile);
+        /* pmrid.onnx stays BUNDLED inside the app (4 MB), so it can never be
+           absent-then-present and call_once is still correct here. */
+        const QString path = ModelStore::path(ModelStore::Model::Pmrid);
         /* CoreML/ANE is safe for PMRID (the graph partitions cleanly -- unlike TreeNet), so let
            the backend pick the best device. */
         session = std::make_unique<InferenceSession>(path, InferenceDevice::Auto);
@@ -281,7 +284,7 @@ static InferenceSession *SharedSession()
 bool IsSupportedBuild()
 {
     if (!InferenceSession::BackendCompiledIn()) return false;
-    return QFile::exists(QDir(QCoreApplication::applicationDirPath()).filePath(kModelFile));
+    return ModelStore::isAvailable(ModelStore::Model::Pmrid);
 }
 
 bool IsAvailable()

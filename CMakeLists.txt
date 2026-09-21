@@ -235,6 +235,7 @@ set(WINNOW_SOURCES
     ImageFormats/Canon/canon.cpp
     ImageFormats/Canon/canoncr3.cpp
     ImageFormats/Canon/crx.cpp
+    ImageFormats/Canon/crxcodec.cpp
     ImageFormats/Dcp/dcp.cpp
     ImageFormats/Dng/dng.cpp
     ImageFormats/Fuji/fuji.cpp
@@ -336,6 +337,12 @@ set(WINNOW_SOURCES
     Views/keywordtags.h
     Dialogs/keywordretagdlg.cpp
     Dialogs/keywordretagdlg.h
+    Utilities/modelstore.cpp
+    Utilities/modelstore.h
+    Dialogs/modeldownloaddlg.cpp
+    Dialogs/modeldownloaddlg.h
+    Dialogs/managemodelsdlg.cpp
+    Dialogs/managemodelsdlg.h
     Dialogs/keyworddropdlg.cpp
     Dialogs/keyworddropdlg.h
     Dialogs/keywordmergedlg.cpp
@@ -562,6 +569,7 @@ set(WINNOW_HEADERS
     Image/thumb.h
 
     ImageFormats/Canon/canon.h
+    ImageFormats/Canon/crxcodec.h
     ImageFormats/Canon/canoncr3.h
     ImageFormats/Dcp/dcp.h
     ImageFormats/Dng/dng.h
@@ -1025,80 +1033,14 @@ if(APPLE)
     # droplet + a version-correct QtCore are staged fresh into the bundle by the
     # Winnet target's POST_BUILD step below (search "Winnet — the Embellish").
 
-    # ONNX models bundled into the .app (Contents/MacOS): focus point (tracked in git) + U^2-Net
-    # subject saliency. u2net.onnx (~176 MB) is large; if it is absent, warn rather than fail so the
-    # project still builds -- the Select Subject mask then simply no-ops until the file is added.
-    target_sources(Winnow PRIVATE ReleaseExtras/focus_point_model.onnx)
-    set_source_files_properties(ReleaseExtras/focus_point_model.onnx PROPERTIES
-        MACOSX_PACKAGE_LOCATION "MacOS"
-        HEADER_FILE_ONLY TRUE
-        SKIP_AUTOGEN TRUE)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/u2net.onnx)
-        set_source_files_properties(ReleaseExtras/u2net.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
-                        "Download u2net.onnx into ReleaseExtras/ to enable it.")
-    endif()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/migan.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/migan.onnx)
-        set_source_files_properties(ReleaseExtras/migan.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/migan.onnx not found -- spot fill will no-op. "
-                        "Export migan.onnx into ReleaseExtras/ to enable it.")
-    endif()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/lama.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/lama.onnx)
-        set_source_files_properties(ReleaseExtras/lama.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/lama.onnx not found -- LaMa spot fill falls back "
-                        "to MI-GAN. Export lama.onnx into ReleaseExtras/ to enable it.")
-    endif()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/skyseg.onnx)
-        set_source_files_properties(ReleaseExtras/skyseg.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
-                        "Add skyseg.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/midas.onnx)
-        set_source_files_properties(ReleaseExtras/midas.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
-                        "Add midas.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0) for the Base "Denoise raw"
-    # control on the in-house decode path. Warn-if-absent; without it, PMRID no-ops.
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
-        target_sources(Winnow PRIVATE ReleaseExtras/pmrid.onnx)
-        set_source_files_properties(ReleaseExtras/pmrid.onnx PROPERTIES
-            MACOSX_PACKAGE_LOCATION "MacOS"
-            HEADER_FILE_ONLY TRUE
-            SKIP_AUTOGEN TRUE)
-    else()
-        message(WARNING "ReleaseExtras/pmrid.onnx not found -- pre-demosaic raw denoise will no-op. "
-                        "Add pmrid.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder). Produced by
-    # ReleaseExtras/tools/export_sam2.sh; the decoder MUST be the pinned/onnxsim'd export or
-    # OpenCV DNN cannot load it (see Utilities/objectmaskpredictor.h). Warn-if-absent like the rest.
-    foreach(_m sam2_encoder sam2_decoder)
+    # ONNX models bundled into the .app (Contents/MacOS). ONLY the two small ones ship
+    # inside the app: focus_point_model.onnx loads eagerly in ImageView's constructor
+    # (an on-demand model there would mean a download prompt at launch) and pmrid.onnx is
+    # 4 MB. The other seven -- u2net, skyseg, midas, migan, lama, sam2_encoder,
+    # sam2_decoder, ~771 MB together -- are DOWNLOADED ON DEMAND from
+    # https://winnow.ca/winnow/models/ the first time a feature needs one. See
+    # Utilities/modelstore.h, and tools/gen_model_catalog.sh for the release step.
+    foreach(_m focus_point_model pmrid)
         if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
             target_sources(Winnow PRIVATE ReleaseExtras/${_m}.onnx)
             set_source_files_properties(ReleaseExtras/${_m}.onnx PROPERTIES
@@ -1106,8 +1048,8 @@ if(APPLE)
                 HEADER_FILE_ONLY TRUE
                 SKIP_AUTOGEN TRUE)
         else()
-            message(WARNING "ReleaseExtras/${_m}.onnx not found -- 'Object Mask' will no-op. "
-                            "Run ReleaseExtras/tools/export_sam2.sh to produce it.")
+            message(FATAL_ERROR "ReleaseExtras/${_m}.onnx is missing -- it is a BUNDLED "
+                                "model and must ship inside the app.")
         endif()
     endforeach()
 endif()
@@ -1324,56 +1266,11 @@ if(WIN32)
             VERBATIM)
     endif()
 
-    # ONNX models (tracked in git): focus point + U^2-Net subject saliency.
-    add_custom_command(TARGET Winnow POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/focus_point_model.onnx" "${_winnow_out}"
-        COMMENT "Deploying focus_point_model.onnx"
-        VERBATIM)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx")
-        add_custom_command(TARGET Winnow POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/u2net.onnx" "${_winnow_out}"
-            COMMENT "Deploying u2net.onnx"
-            VERBATIM)
-    else()
-        message(WARNING "ReleaseExtras/u2net.onnx not found -- 'Select Subject' mask will no-op. "
-                        "Download u2net.onnx into ReleaseExtras/ to enable it.")
-    endif()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx")
-        add_custom_command(TARGET Winnow POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/skyseg.onnx" "${_winnow_out}"
-            COMMENT "Deploying skyseg.onnx"
-            VERBATIM)
-    else()
-        message(WARNING "ReleaseExtras/skyseg.onnx not found -- 'Select Sky' mask will no-op. "
-                        "Add skyseg.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx")
-        add_custom_command(TARGET Winnow POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/midas.onnx" "${_winnow_out}"
-            COMMENT "Deploying midas.onnx"
-            VERBATIM)
-    else()
-        message(WARNING "ReleaseExtras/midas.onnx not found -- 'Depth Range' mask will no-op. "
-                        "Add midas.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    # PMRID pre-demosaic raw denoiser (MegVii, Apache-2.0). Warn-if-absent; without it,
-    # PMRID no-ops.
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx")
-        add_custom_command(TARGET Winnow POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/pmrid.onnx" "${_winnow_out}"
-            COMMENT "Deploying pmrid.onnx"
-            VERBATIM)
-    else()
-        message(WARNING "ReleaseExtras/pmrid.onnx not found -- pre-demosaic raw denoise will no-op. "
-                        "Add pmrid.onnx to ReleaseExtras/ to enable it.")
-    endif()
-    # SAM 2 object-mask pair (encoder + FIXED-SHAPE decoder; see ReleaseExtras/tools/export_sam2.sh).
-    foreach(_m sam2_encoder sam2_decoder)
+    # ONNX models: only the two BUNDLED ones are deployed next to Winnow.exe. The other
+    # seven are downloaded on demand at runtime -- see the macOS block above and
+    # Utilities/modelstore.h. (This also fixes a long-standing gap: migan/lama were never
+    # deployed on Windows at all, so spot heal could not work there.)
+    foreach(_m focus_point_model pmrid)
         if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
             add_custom_command(TARGET Winnow POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -1381,8 +1278,8 @@ if(WIN32)
                 COMMENT "Deploying ${_m}.onnx"
                 VERBATIM)
         else()
-            message(WARNING "ReleaseExtras/${_m}.onnx not found -- 'Object Mask' will no-op. "
-                            "Run ReleaseExtras/tools/export_sam2.sh to produce it.")
+            message(FATAL_ERROR "ReleaseExtras/${_m}.onnx is missing -- it is a BUNDLED "
+                                "model and must ship beside Winnow.exe.")
         endif()
     endforeach()
 

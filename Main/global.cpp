@@ -377,6 +377,13 @@ int headerLeftInset = 5;
    G::panelSeparatorColor, so stacked panels read as distinct blocks. Each panel
    reserves the space as its layout's bottom margin. 0 removes the rule everywhere. */
 int panelBorderHeight = 3;
+/* Develop HEADER CAPTION TRIM: PropertyDelegate::paint centres a section header's
+   arrow and caption on the row LESS this many pixels at the bottom (its r4), which
+   sits them fractionally high in the band -- the tree's own look. The widget-built
+   header bands (RawPanel, MaskPanel, SubmaskList) reproduce it as their layout's
+   bottom margin, with no top margin, so "Raw" and "Mask" sit at the same height in
+   their bands as "Basic" and "Color" do in theirs. 0 centres everything instead. */
+int headerCaptionTrim = 3;
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 

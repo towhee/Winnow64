@@ -49,8 +49,14 @@ void RawPanel::buildUi()
     headerBand->setAttribute(Qt::WA_TranslucentBackground);
     headerBand->setCursor(Qt::PointingHandCursor);
     headerBand->installEventFilter(this);        // a header click toggles collapse
+    /* Same height as a property-tree row, and the caption centred on the band LESS
+       G::headerCaptionTrim at the bottom -- exactly what PropertyDelegate does with a
+       section header (its r4) -- so "Raw" sits at the same height in its band as
+       "Basic" and "Color" do in theirs. Without the fixed height the band also grows
+       with any spare space its parent layout hands it, dropping the caption further. */
+    headerBand->setFixedHeight(G::propertyRowHeight());
     QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(G::headerLeftInset, 3, 6, 3);
+    hb->setContentsMargins(G::headerLeftInset, 0, 6, G::headerCaptionTrim);
     hb->setSpacing(0);
     collapseBtn = new BarBtn();
     collapseBtn->setToolTip("Hide or show the raw decode controls");

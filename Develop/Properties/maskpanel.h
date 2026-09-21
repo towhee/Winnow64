@@ -10,7 +10,6 @@
 #include "Develop/Properties/submasklist.h"
 
 class QLabel;
-class QPushButton;
 class BarBtn;
 class MaskEditor;
 
@@ -28,7 +27,6 @@ class MaskEditor;
         | |    Feather   -----o-----              |   <- embedded MaskEditor (submask)
         | |    Invert    [ ]                      |
         | |    Edge      -----o-----              |
-        | |    [    Add and Commit    ]           |   <- pending; existing reads "Done"
 
     The overlay's APPEARANCE (colour, grayscale background) is NOT here: it describes the
     veil rather than any submask, and is edited from the Develop action row's tint button
@@ -38,17 +36,20 @@ class MaskEditor;
     into it, in list order. The submask's SETTINGS render in the embedded MaskEditor so
     they look identical to the property tree's other rows.
 
-    Two states, because a submask is only fragile while it is NEW:
-      - PENDING (just picked): it exists in the model but is discarded on Cancel/Esc or
-        on leaving the image. ONE commit button, whose label names the op the overlay is
-        previewing AND the act -- no modifier "Add and Commit", Opt "Subtract and
-        Commit", Shift+Opt "Intersect and Commit" (a bare "Update" read as "refresh"
-        once the render went live). MW arbitrates the modifiers
-        (developShortcutIntercept) and calls DevelopProperties::setPendingMaskOp, which
-        relabels the button. Return commits too.
-      - EXISTING (re-opened from the list): its edits are already real, so the button is
-        just "Done" (deselect) and there is nothing to cancel. Modifiers are inert -- the
-        op is changed on the submask's own row.
+    There is no commit button, because there was never anything buffered for one to
+    flush: every edit -- shape drag, feather, edge, invert, brush settings -- is written
+    into the submask and rendered as it is made. The only thing a commit decides is the
+    combine op, and that stays changeable on the submask's row afterwards, so it is not
+    a decision worth interrupting the user for. Two states remain:
+      - PENDING (just picked, still settling): it exists in the model but is discarded by
+        Esc or by deleting its row, and it folds itself into the mask a couple of seconds
+        after the last edit (DevelopProperties::armMaskAutoCommit). Until then MW
+        arbitrates the modifiers (developShortcutIntercept) and calls
+        DevelopProperties::setPendingMaskOp, so the veil, the render and the on-canvas op
+        chip preview what the submask will do. Return lands it early.
+      - EXISTING (settled, or re-opened from the list): its edits are already real, Esc
+        and Return just close it, and modifiers are inert -- the op is changed on the
+        submask's own row.
 
     DevelopProperties owns the mask model and drives the panel.
 */
@@ -61,14 +62,14 @@ public:
     /* Open the panel on a NEWLY picked submask. first == true: the mask was empty, so
        there is nothing to combine with and the op modifiers are inert. */
     void beginPending(bool first);
-    /* Relabel the commit button as the previewed op changes (MaskOp Add/Subtract/
-       Intersect). Ignored while first, where only Add is possible, and while editing an
-       existing submask, whose op is set on its row. */
+    /* Track the op the veil is previewing (MaskOp Add/Subtract/Intersect). Ignored while
+       first, where only Add is possible, and while editing a submask that has already
+       landed, whose op is set on its row. */
     void setPendingOp(int op);
-    /* Which of the two states above the panel is in: an existing submask cannot be
-       cancelled, and its button reads "Done". */
+    /* Which of the two states above the panel is in: a submask that has already landed
+       takes no op from the modifiers. */
     void setEditingExisting(bool existing);
-    /* Show or hide the settings + commit block. Hidden when no submask is selected, so
+    /* Show or hide the settings block. Hidden when no submask is selected, so
        the panel shows just the list (and the mask's overlay controls). Also hidden while
        the Submasks section is COLLAPSED: the settings belong to a submask in that list,
        so leaving them on screen made a collapsed section look half-open. */
@@ -101,12 +102,6 @@ public:
     static const QStringList &overlayColourNames();
 
 signals:
-    /* The commit button was clicked. No op is carried: the op is resolved from the LIVE
-       modifier state at the instant of the commit (DevelopProperties::
-       maskOpFromModifiers), the same source that drives this button's label, so the two
-       can never disagree. On an existing submask this means "Done" -- deselect. */
-    void committed();
-    void cancelled();                      // [x] / Cancel (discard the pending submask)
     /* Mask band [:]: put the folded mask back to Edge 0 / Halo 0. The panel holds no
        model state, so DevelopProperties does the zeroing and pushes the rows back. */
     void resetMaskLevelRequested();
@@ -121,7 +116,6 @@ protected:
 private:
     void buildUi();
     void buildMaskLevel(QVBoxLayout *outer);   // the "Mask" band + its Edge/Halo rows
-    void refreshCommitBtn();               // label + cancel visibility for the state
     void syncAttrVisible();                // attrShown, list not collapsed, mask not folded
     void syncLevelVisible();               // levelShown, and the band's own collapse
     bool maskFolded() const;               // the "Mask" band is on screen and closed
@@ -139,12 +133,10 @@ private:
     SubmaskList *submaskList = nullptr;    // the mask's contents, above the settings
     QLabel      *scopeLabel  = nullptr;    // "changes apply to ..." above the settings
     MaskEditor  *maskEditor  = nullptr;    // tree-rendered settings of the selected one
-    QWidget     *attrWrap    = nullptr;    // maskEditor + commit row (hidden when none)
-    QPushButton *commitBtn   = nullptr;    // Add / Subtract / Intersect "and Commit"
-    BarBtn      *cancelBtn   = nullptr;    // discard a pending submask (hidden if not)
-    int          pendingOp  = 0;           // MaskOp the button/label currently shows
+    QWidget     *attrWrap    = nullptr;    // the maskEditor's wrapper (hidden when none)
+    int          pendingOp  = 0;           // MaskOp the veil is currently previewing
     bool         firstMask  = true;        // only Add is possible on an empty mask
-    bool         editingExisting = false;  // re-opened submask: "Done", no cancel
+    bool         editingExisting = false;  // the open submask has already landed
     bool         attrShown  = false;       // a submask is selected (collapse aside)
     bool         levelShown = false;       // the mask has at least one submask
     /* Open by default, unlike the Submasks list: these two sliders ARE the section, so a

@@ -42,6 +42,12 @@ void PanelEditor::setCaptionWidth(int w)
     if (w > 0) setColumnWidth(CapColumn, w);
 }
 
+void PanelEditor::setRowBackground(const QColor &c)
+{
+    propertyDelegate->rowBackground = c;
+    viewport()->update();
+}
+
 void PanelEditor::clearRows()
 {
     if (model->rowCount() > 0) {

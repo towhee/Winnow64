@@ -5,6 +5,7 @@
 #include "Views/imageview.h"
 #include "Develop/Transform/croptransform.h"
 #include "Utilities/ingestprobe.h"
+#include "Utilities/modelstore.h"
 
 namespace {
 /* The crop cursor: an arrow pointer with a corner-bracket crop glyph to its lower-right (drawn at
@@ -271,9 +272,12 @@ ImageView::ImageView(QWidget *parent,
     rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
     isRubberBand = false;
 
-    // focus predictor
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString focusPointModelPath = QDir(appDir).filePath("focus_point_model.onnx");
+    /* Focus predictor. focus_point_model.onnx is one of the two models still BUNDLED
+       inside the app (it loads here, eagerly, before any user action -- an on-demand
+       model would mean a download prompt at launch), so ModelStore::path always
+       resolves it. Routed through ModelStore anyway so there is one answer to
+       "where is model X?" rather than nine inlined applicationDirPath() calls. */
+    QString focusPointModelPath = ModelStore::path(ModelStore::Model::FocusPoint);
     int imageSize = 512;
     focusPredictor = new FocusPredictor(focusPointModelPath, imageSize);
 
@@ -1512,10 +1516,10 @@ void ImageView::drawMaskLegend(QPainter *painter)
 /*
     A compact chip, top-left of the view, naming the operation the overlay is CURRENTLY
     previewing -- "Add: Brush Mask" with no modifier held, "Subtract: ..." while Opt is
-    held, "Intersect: ..." while Shift+Opt is. The op names match the panel's commit
-    button ("Add and Commit" etc). The veil itself shows the outcome (one colour,
-    G::maskOverlayColor), so there is no colour key to give; this chip only names what
-    pressing Return / the commit button will do. A dim second line reminds the user of
+    held, "Intersect: ..." while Shift+Opt is. The veil itself shows the outcome (one
+    colour, G::maskOverlayColor), so there is no colour key to give; with the commit
+    button gone this chip is the ONLY place the op is named in words, which is why it
+    also carries the modifier reminder below. A dim second line reminds the user of
     the two modifiers, suppressed on the first submask (nothing to combine with). Drawn in
     viewport coords, over the overlay, only while a submask is being defined.
 */

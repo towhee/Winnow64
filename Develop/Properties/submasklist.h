@@ -63,7 +63,7 @@ public:
     bool isCollapsed() const { return collapsed; }
     void setCollapsed(bool collapse);
 
-    /* Display name of a MaskOp, shared with the panel's commit button wording. */
+    /* Display name of a MaskOp, shared with the on-canvas op chip's wording. */
     static QString opName(int op);
 
 signals:

@@ -1,28 +1,35 @@
 /*
     crx.cpp  --  Canon CR3 (CRX) full-sensor decode: the RawFormat override for .cr3.
 
-    Clean-room reimplementation of Canon's CRX lossless codec (level 0), re-derived from the
-    documented format (T.87 JPEG-LS run/MED core + the canon_cr3 reverse-engineering) and
-    validated byte-for-byte against the libraw/rawpy oracle on EOS R5 and R6 II samples
-    (all four planes, zero-diff). See notes/Documentation.txt "RAW DECODING / CR3".
+    The container walk and the LEVEL-0 (Canon "RAW", lossless) codec here are a clean-room
+    reimplementation, re-derived from the documented format (T.87 JPEG-LS run/MED core + the
+    canon_cr3 reverse-engineering) and validated byte-for-byte against the libraw/rawpy
+    oracle on EOS R5 and R6 II samples (all four planes, zero-diff).
+
+    THE WAVELET LEVELS (Canon "C-RAW", lossy) ARE NOT CLEAN-ROOM: they are a faithful port of
+    LibRaw's crx.cpp and live in crxcodec.cpp, which carries the LGPL 2.1 / CDDL attribution.
+    Keep that distinction when editing -- this file's clean-room claim covers level 0 only.
+    See notes/Documentation.txt "RAW DECODING / CR3".
 
     Pipeline for CR3:
       1. Walk the ISO-BMFF box tree, pick the full-resolution CRAW track, read its CMP1
          geometry, IAD1 active-area crop, and the CRX bitstream location (stbl co64 + stsz).
-      2. Decode the CRX entropy stream: the tile's 4 Bayer planes share ONE continuous
-         bitstream (do NOT re-seek per plane) -- adaptive Golomb-Rice + MED prediction + T.87
-         run mode, with the non-top-line K adapted from a look-ahead-adjusted code.
+      2. Decode the CRX stream to the full sensor mosaic -- level 0 below, levels 1-3 via
+         CrxCodec. Level 0: the tile's 4 Bayer planes share ONE continuous bitstream (do NOT
+         re-seek per plane) -- adaptive Golomb-Rice + MED prediction + T.87 run mode, with the
+         non-top-line K adapted from a look-ahead-adjusted code.
       3. Interleave the 4 planes row-major into the RGGB mosaic, crop to the active area.
       4. Self-calibrate per-channel black from the masked border; white/matrix/WB from the
          bit depth, the per-model table, and the CMT3 makernote ColorData.
 
-    Only level-0 (no wavelet) single-tile CRAW is handled -- true for current full-frame
-    bodies. Anything else returns false and the caller falls back to the embedded preview.
+    Single-tile only (tileW/tileH == fW/fH), which is what current full-frame bodies write;
+    a multi-tile CRAW returns false and the caller falls back to the embedded preview.
 */
 
 #include "ImageFormats/Canon/canon.h"
 #include "ImageFormats/Raw/cameramatrix.h"
 #include "ImageFormats/Raw/tiffwalk.h"
+#include "ImageFormats/Canon/crxcodec.h"
 
 #include <cstdint>
 #include <cstring>
@@ -184,6 +191,8 @@ struct CrxLoc {
     bool ok = false;
     uint32_t fW = 0, fH = 0, tileW = 0, tileH = 0;
     uint8_t nBits = 0, nPlanes = 0, cfaLayout = 0;
+    uint8_t encType = 0, levels = 0;                  // CMP1 byte 26: wavelet levels, 0 => flat
+    size_t cmp1 = 0, cmp1End = 0;                     // CMP1 payload (past the fourCC), for CrxCodec
     uint64_t mdatOff = 0, streamLen = 0;
     int cropL = 0, cropT = 0, cropR = 0, cropB = 0;   // right/bottom EXCLUSIVE; 0 => none
 };
@@ -196,6 +205,8 @@ void parseCraw(const Bytes &d, size_t seBody, size_t seEnd, CrxLoc &c) {
             c.fW = u32(&d[p + 8]);  c.fH = u32(&d[p + 12]);
             c.tileW = u32(&d[p + 16]); c.tileH = u32(&d[p + 20]);
             c.nBits = d[p + 24]; c.nPlanes = d[p + 25] >> 4; c.cfaLayout = d[p + 25] & 0x0f;
+            c.encType = d[p + 26] >> 4; c.levels = d[p + 26] & 0x0f;
+            c.cmp1 = p; c.cmp1End = seEnd;
         } else if (tagEq(&d[o], "IAD1")) {
             const size_t p = o + 4;                    // u16[2,3]=fullWH, u16[8..11]=crop l,t,rExcl,bExcl
             const int fw = u16(&d[p + 4]), fh = u16(&d[p + 6]);
@@ -286,36 +297,64 @@ bool CanonCR3Raw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         errMsg = "CR3: bad CRX bitstream location."; return false;
     }
 
-    size_t headerBytes = 0; int nPlanes = 0;
-    if (!crxHeaderInfo(d, loc.mdatOff, loc.streamLen, headerBytes, nPlanes) || nPlanes != 4) {
-        errMsg = "CR3: unsupported CRX (levels>0 or plane count)."; return false;
-    }
-
-    /* Continuous entropy stream: all planes decode from one reader starting after the header. */
     const int pw = int(loc.tileW / 2), ph = int(loc.tileH / 2);
     const int fW = int(loc.tileW), fH = int(loc.tileH);
     if (pw <= 0 || ph <= 0) { errMsg = "CR3: bad plane geometry."; return false; }
-    const uint8_t *stream = &d[loc.mdatOff + headerBytes];
-    const size_t streamBytes = (size_t)loc.streamLen - headerBytes;
     const int32_t median = 1 << (loc.nBits - 1);
     const int32_t maxv = (1 << loc.nBits) - 1;
 
-    /* Decode 4 planes and interleave row-major into the full RGGB mosaic. */
-    std::vector<uint16_t> full((size_t)fW * fH, 0);
-    Band band(stream, streamBytes, pw);
-    for (int pl = 0; pl < 4; ++pl) {
-        std::fill(band.buf0.begin(), band.buf0.end(), 0);
-        std::fill(band.buf1.begin(), band.buf1.end(), 0);
-        band.k = 0; band.s_param = 0;
-        const int dy = pl >> 1, dx = pl & 1;                  // plane 0/1/2/3 -> quad (0,0)(0,1)(1,0)(1,1)
-        for (int y = 0; y < ph; ++y) {
-            if (y == 0) band.topLine(); else { std::swap(band.buf0, band.buf1); band.nonTopLine(); }
-            uint16_t *row = &full[(size_t)(2 * y + dy) * fW + dx];
-            for (int x = 0; x < pw; ++x) {
-                int32_t v = median + band.buf1[x + 1];
-                row[(size_t)2 * x] = (uint16_t)std::max(0, std::min(maxv, v));
+    /*
+        TWO BITSTREAMS BEHIND ONE EXTENSION. Canon's "RAW" is level-0 -- a flat
+        Golomb-Rice/MED stream, decoded below by this file's clean-room Band. Canon's
+        "C-RAW" (the DEFAULT on current bodies) wavelet-transforms each plane first, so the
+        stream carries 3*levels+1 quantised subbands behind a different marker set; that is
+        a codec of its own and lives in crxcodec.cpp, ported from LibRaw.
+
+        Both produce the SAME full-sensor mosaic, so everything below this point -- crop,
+        black calibration, white level, white balance, matrix -- is shared.
+    */
+    std::vector<uint16_t> full;
+
+    if (loc.levels == 0) {
+        size_t headerBytes = 0; int nPlanes = 0;
+        if (!crxHeaderInfo(d, loc.mdatOff, loc.streamLen, headerBytes, nPlanes) || nPlanes != 4) {
+            errMsg = "CR3: unsupported level-0 CRX (plane count)."; return false;
+        }
+
+        /* Continuous entropy stream: all planes decode from one reader starting after the header. */
+        const uint8_t *stream = &d[loc.mdatOff + headerBytes];
+        const size_t streamBytes = (size_t)loc.streamLen - headerBytes;
+
+        /* Decode 4 planes and interleave row-major into the full RGGB mosaic. */
+        full.assign((size_t)fW * fH, 0);
+        Band band(stream, streamBytes, pw);
+        for (int pl = 0; pl < 4; ++pl) {
+            std::fill(band.buf0.begin(), band.buf0.end(), 0);
+            std::fill(band.buf1.begin(), band.buf1.end(), 0);
+            band.k = 0; band.s_param = 0;
+            const int dy = pl >> 1, dx = pl & 1;                  // plane 0/1/2/3 -> quad (0,0)(0,1)(1,0)(1,1)
+            for (int y = 0; y < ph; ++y) {
+                if (y == 0) band.topLine(); else { std::swap(band.buf0, band.buf1); band.nonTopLine(); }
+                uint16_t *row = &full[(size_t)(2 * y + dy) * fW + dx];
+                for (int x = 0; x < pw; ++x) {
+                    int32_t v = median + band.buf1[x + 1];
+                    row[(size_t)2 * x] = (uint16_t)std::max(0, std::min(maxv, v));
+                }
             }
         }
+    }
+    else {
+        /* Wavelet C-RAW. CrxCodec does its own container-independent header walk from the
+           CMP1 payload and the bitstream extent this function already located. */
+        int cw = 0, ch = 0, cbits = 0;
+        const char *cerr = "CR3: CRX decode failed.";
+        if (!CrxCodec::Decode(d.data(), (int64_t)d.size(),
+                              &d[loc.cmp1], (int64_t)(loc.cmp1End - loc.cmp1),
+                              (int64_t)loc.mdatOff, (int64_t)loc.streamLen,
+                              full, cw, ch, cbits, &cerr)) {
+            errMsg = QString::fromLatin1(cerr); return false;
+        }
+        if (cw != fW || ch != fH) { errMsg = "CR3: CRX geometry mismatch."; return false; }
     }
 
     /* Active-area crop (IAD1). Fall back to the full sensor if absent/implausible. Keep the

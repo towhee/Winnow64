@@ -90,6 +90,17 @@ winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)
 # tst_denoiseraw pins the tri-state EditParams::denoiseRaw ("is the raw denoise wanted?")
 # through editparams.h + editstack.h -- both header-only, so Qt Core (JSON) is enough.
 winnow_add_unit_test(tst_denoiseraw unit/tst_denoiseraw.cpp)
+# tst_crx decodes real Canon CR3 files -- BOTH bitstreams: level-0 "RAW" and wavelet
+# "C-RAW" (the default on current bodies), which CrxCodec handles alike. Pinned by a CRC32
+# over the sensor mosaic taken from the rawpy/libraw oracle, so it cross-checks the decoder
+# instead of recording it. crxcodec.cpp is the WHOLE closure -- it has no Qt or project
+# dependencies -- which is why the test drives the codec rather than CanonCR3Raw::UnpackCfa,
+# whose base class in rawformat.cpp would drag in Develop, OpenCV, PMRID and every vendor
+# decoder. Skips unless WINNOW_TEST_CR3_DIR points at a directory of .cr3 files (the
+# samples are far too large to commit).
+winnow_add_unit_test(tst_crx unit/tst_crx.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Canon/crxcodec.cpp
+)
 # tst_sharpen tests Develop/sharpen.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_sharpen unit/tst_sharpen.cpp)
 # tst_detailroi tests Develop/detailroi.h -- the Detail 1:1 preview's ROI mapping
@@ -378,6 +389,20 @@ winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
 # raise it once per keyword in the branch.
 winnow_add_unit_test(tst_keywordvocab unit/tst_keywordvocab.cpp
     ${CMAKE_SOURCE_DIR}/Datamodel/keywordvocab.cpp)
+
+# tst_modelstore pins the on-demand ONNX download store (Utilities/modelstore.h). The
+# property under test is the NEGATIVE one: a model file that is not exactly the bytes this
+# build was compiled against must never be handed to a predictor -- a superseded SAM 2
+# decoder fails OpenCV DNN's parser outright, and silently running wrong weights would be
+# worse. The catalog's hashes belong to real 130-210 MB models, so the Ready case cannot be
+# fabricated here; everything around it (Missing / Stale / Corrupt / orphans / removal, and
+# that ensure() never reaches the network from a test) is pinned. QStandardPaths test mode
+# keeps it out of the user's real Models folder. Pulls in the download dialog because
+# ensure() links against it, hence Qt6::Network.
+winnow_add_unit_test(tst_modelstore unit/tst_modelstore.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/modelstore.cpp
+    ${CMAKE_SOURCE_DIR}/Dialogs/modeldownloaddlg.cpp)
+target_link_libraries(tst_modelstore PRIVATE Qt6::Network)
 
 # tst_lrkeywords pins the Lightroom keyword file against TWO real exports, trimmed into
 # tests/fixtures/lightroom_keywords.csv and .txt -- Lightroom writes both a five-column

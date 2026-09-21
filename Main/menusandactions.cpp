@@ -1887,6 +1887,12 @@ void MW::createHelpActions()
        the silent parameter — a manual check is always loud. */
     connect(checkForUpdateAction, &QAction::triggered, this, [this]{ checkForUpdate(false); });
 
+    manageModelsAction = new QAction(tr("Manage AI models"), this);
+    manageModelsAction->setObjectName("ManageAIModels");
+    manageModelsAction->setShortcutVisibleInContextMenu(true);
+    addAction(manageModelsAction);
+    connect(manageModelsAction, &QAction::triggered, this, &MW::manageModels);
+
     aboutAction = new QAction(tr("About"), this);
     aboutAction->setObjectName("about");
     aboutAction->setShortcutVisibleInContextMenu(true);
@@ -2628,6 +2634,7 @@ void MW::createHelpMenu()
     helpGroupAct->setMenu(helpMenu);
 
     helpMenu->addAction(checkForUpdateAction);
+    helpMenu->addAction(manageModelsAction);
     helpMenu->addSeparator();
 
     helpMenu->addAction(aboutAction);

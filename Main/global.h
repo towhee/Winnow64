@@ -843,6 +843,16 @@ Q_NAMESPACE
     extern int subHeaderIndent;         // ditto: sub-header offset under the Edits header
     extern int headerLeftInset;         // ditto: panel edge -> header collapse arrow
     extern int panelBorderHeight;       // Develop panel bottom separator rule height
+    extern int headerCaptionTrim;       // ditto: bottom trim the header caption centres on
+
+    /* PROPERTY ROW HEIGHT: the height PropertyDelegate::sizeHint gives every row in a
+       property tree (1.7 * the text height). Widget-built header bands in the Develop
+       dock (RawPanel's "Raw", MaskPanel's "Mask", SubmaskList's "Submasks") fix their
+       band to it so they are the same height as the tree's own section headers (Basic,
+       Color, Effects ...) sitting right below them. */
+    inline int propertyRowHeight() {
+        return static_cast<int>(strFontSize.toInt() * 1.7 * ptToPx);
+    }
 
     /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,
        hints ...). Use this instead of a bare "color: x" string: a per-widget stylesheet

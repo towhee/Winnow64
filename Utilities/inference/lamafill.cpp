@@ -2,6 +2,9 @@
 #include "Utilities/inference/inferencesession.h"
 #include "Develop/fillspot.h"
 #include "Main/global.h"
+#include "Utilities/modelstore.h"
+#include <QMutex>
+#include <QMutexLocker>
 
 #include <QDir>
 #include <QCoreApplication>
@@ -112,17 +115,30 @@ void pinOffset(const QString &key, const QPoint &d)
 
 InferenceSession *SharedSession()
 {
-    static std::once_flag once;
+/*
+    RETRYABLE, deliberately. lama.onnx is downloaded on demand, and this runs on a render
+    worker: an image whose saved recipe already carries spots reaches applySpots() without
+    the user ever arming the spot tool, so the model can legitimately be absent here BEFORE
+    any download gate has run. std::call_once would latch that first miss for the life of
+    the process and the model would stay "missing" even after the user downloaded it.
+    A retry costs one QFile::exists (ModelStore caches the verified state), and spots are
+    rare, so the lock is uncontended.
+*/
+    static QMutex mutex;
     static std::unique_ptr<InferenceSession> session;
-    std::call_once(once, [] {
-        const QString path = QDir(QCoreApplication::applicationDirPath()).filePath(kModelFile);
-        session = std::make_unique<InferenceSession>(path, InferenceDevice::GPU);
-        if (!session->IsLoaded())
-            qWarning("LamaFill: %s not found or failed to load at %s (LaMa spot fill disabled)",
-                     kModelFile, path.toUtf8().constData());
-        else if (G::isLogger)
-            G::log("LamaFill::SharedSession loaded", session->BackendName());
-    });
+    QMutexLocker lock(&mutex);
+    if (session && session->IsLoaded()) return session.get();
+
+    const QString path = ModelStore::path(ModelStore::Model::Lama);
+    if (path.isEmpty()) return nullptr;         // absent/stale -- try again next spot
+
+    session = std::make_unique<InferenceSession>(path, InferenceDevice::GPU);
+    if (!session->IsLoaded()) {
+        qWarning("LamaFill: %s failed to load at %s (LaMa spot fill disabled)",
+                 kModelFile, path.toUtf8().constData());
+        return nullptr;
+    }
+    if (G::isLogger) G::log("LamaFill::SharedSession loaded", session->BackendName());
     return session.get();
 }
 

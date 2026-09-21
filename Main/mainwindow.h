@@ -734,6 +734,8 @@ public slots:
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
     void resetFocus();
+    void onSpotEditBegin();
+    void manageModels();
     void checkForUpdate(bool silent = false);
     void onUpdateCheckReply(QNetworkReply *reply);
     void downloadAndOpenUpdate(const QString &dmgUrl);
@@ -1585,6 +1587,7 @@ private:
 
     // Help Menu
     QAction *checkForUpdateAction;
+    QAction *manageModelsAction;
     QAction *aboutAction;
     QAction *helpAction;
     QAction *helpShortcutsAction;
