@@ -125,6 +125,10 @@ public:
 
     /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
        show the composited mask), plus the active scope's ordered mask tools to composite. */
+    /* Hand the mask-overlay tint swatch to the MaskPanel, which places it on the "Mask"
+       band beside that band's [:]. MW owns the button (it is "O", the colour menu and
+       the swatch repaint); this only gets it there, maskPanel being private here. */
+    void placeMaskTintButton(QWidget *btn);
     bool maskOverlayActive() const;
     /* ---- Veil ENGAGEMENT -------------------------------------------------------------
        Whether the mask coverage veil should be on its own account: the mask panel has
@@ -142,7 +146,7 @@ public:
     void setMaskPanelHovered(bool hovered);   // MaskPanel::hoverChanged
     void noteMaskInteraction();               // a mask edit: engage
     void noteNonMaskInteraction();            // anything else: disengage
-    /* "O" / the action-row tint button override the rule. The override stands until the
+    /* "O" / the Mask band's tint swatch override the rule. The override stands until the
        user's attention actually moves, so it covers the moment it was asked for without
        becoming a sticky mode they have to remember they are in. MW calls it after
        toggling, with the veil's resulting state. */
@@ -452,7 +456,7 @@ public slots:
     void syncSharpenMaskPreview();
     /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
     void setMaskOverlayShown(bool shown);
-    /* Set the overlay colour / grayscale-under-the-veil flag (the action-row tint
+    /* Set the overlay colour / grayscale-under-the-veil flag (the Mask band tint
        button's context menu): updates G::, persists and asks for the matching redraw --
        a colour needs the veil rebuilt, grayscale is view-only. */
     void setMaskOverlayColour(const QColor &c);

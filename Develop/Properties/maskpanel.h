@@ -9,6 +9,7 @@
 
 #include "Develop/Properties/submasklist.h"
 
+class QHBoxLayout;
 class QLabel;
 class BarBtn;
 class MaskEditor;
@@ -29,7 +30,7 @@ class MaskEditor;
         | |    Edge      -----o-----              |
 
     The overlay's APPEARANCE (colour, grayscale background) is NOT here: it describes the
-    veil rather than any submask, and is edited from the Develop action row's tint button
+    veil rather than any submask, and is edited from the tint swatch on the Mask band
     (right-click). Only the palette still lives with this class -- overlayColours().
 
     Terms: the MASK is what the scope applies; each SUBMASK is a building block folded
@@ -88,13 +89,16 @@ public:
        editor rather than rows inside `editor()`, because that one is rebuilt per selected
        submask and hides when none is. */
     MaskEditor *levelEditor() const { return maskLevelEditor; }
+    /* Place the mask-overlay tint swatch on the "Mask" band, beside its [:]. MW keeps
+       ownership and all the behaviour; the panel only decides where it sits. */
+    void setTintButton(QWidget *btn);
     /* Show the mask-level block (its header row and, unless collapsed, its sliders).
        Hidden when the mask has no submasks: there is no mask to grow or shrink, so the
        controls would be no-ops with nothing to explain them. */
     void showMaskLevel(bool show);
     /* The mask's submasks. DevelopProperties pushes rows in and binds its signals. */
     SubmaskList *list() const { return submaskList; }
-    /* THE overlay-colour palette. Static because the Develop action-row tint button's
+    /* THE overlay-colour palette. Static because the Mask band's tint swatch
        context menu offers the same colours: one list, so the two pickers cannot drift. */
     static const QVector<QColor> &overlayColours();
     /* Display names for overlayColours(), same order (a menu needs words, chips do
@@ -143,6 +147,8 @@ private:
     BarBtn      *levelCollapseBtn = nullptr;
     QLabel      *levelTitle  = nullptr;
     BarBtn      *levelMenuBtn = nullptr;   // band [:]: reset / help
+    QHBoxLayout *levelBandLayout = nullptr;   // so setTintButton can insert into it
+    int          levelTintSlot   = -1;        // where the tint swatch goes
     QWidget     *levelBody   = nullptr;    // maskLevelEditor's wrapper (collapses)
     SubmaskList *submaskList = nullptr;    // the mask's contents, above the settings
     QLabel      *scopeLabel  = nullptr;    // "changes apply to ..." above the settings

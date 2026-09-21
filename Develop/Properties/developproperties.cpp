@@ -607,7 +607,7 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
        (the other half is having just edited one) -- see maskVeilEngaged. */
     connect(maskPanel, &MaskPanel::hoverChanged, this, &DevelopProperties::setMaskPanelHovered);
     /* The overlay's colour / grayscale controls are NOT in this panel (they are on the
-       action-row tint button's context menu, which calls setMaskOverlayColour /
+       Mask band tint swatch's context menu, which calls setMaskOverlayColour /
        setMaskOverlayGrayscale directly), so there is nothing to connect for them. */
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
@@ -2100,6 +2100,11 @@ bool DevelopProperties::selfTestAddMaskScope(int submasks)
     return true;
 }
 
+void DevelopProperties::placeMaskTintButton(QWidget *btn)
+{
+    if (maskPanel) maskPanel->setTintButton(btn);
+}
+
 bool DevelopProperties::maskOverlayActive() const
 {
     /* Show the mask overlay on a mask while a tool is being edited
@@ -2156,7 +2161,7 @@ void DevelopProperties::noteNonMaskInteraction()
 void DevelopProperties::setMaskVeilOverride(bool shown)
 {
 /*
-    "O" (or the action-row tint button) just toggled the veil behind our back. Record the
+    "O" (or the Mask band's tint swatch) just toggled the veil behind our back. Record the
     veil's REAL state as the one engagement is measured against, and the override falls
     out for free: engagement no longer disagrees with the screen, so nothing is emitted
     until the user's attention actually moves -- and that first genuine transition is
@@ -2903,7 +2908,7 @@ void DevelopProperties::setMaskOverlayShown(bool shown)
 
 void DevelopProperties::setMaskOverlayColour(const QColor &c)
 {
-    /* The overlay colour, set from the action-row tint button's context menu: persist it
+    /* The overlay colour, set from the Mask band tint swatch's context menu: persist it
        and rebuild the veil so it repaints in the new colour. The image is untouched. */
     if (G::isLogger) G::log("DevelopProperties::setMaskOverlayColour");
     if (!c.isValid()) return;
