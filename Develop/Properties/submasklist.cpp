@@ -211,8 +211,9 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     hb->addWidget(openBtn);
     hb->addSpacing(G::decorationTitleGap);
 
-    /* Op chip. The FIRST submask has nothing to combine with, so its op is inert and the
-       chip is shown flat and disabled rather than hidden (the column stays aligned). */
+    /* Op chip. The FIRST submask has nothing to combine with, so its op is inert -- but
+       the chip is still shown, so the column stays aligned and the "+" still says what
+       that submask does. */
     QPushButton *opBtn = new QPushButton(opGlyph(r.op), row);
     opBtn->setFixedSize(18, 18);
     opBtn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -226,8 +227,16 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
                      " background: transparent; }"
         "QPushButton:hover:enabled { background: " + G::groupSeparatorColor().name() + "; }");
     if (index == 0) {
-        opBtn->setEnabled(false);
-        opBtn->setToolTip("The first submask starts the mask, so it always adds");
+        /* Inert, but NOT setEnabled(false): that greys the glyph, and a dim "+" beside
+           the crisp ones below it reads as "this submask is disabled" or as a fault,
+           when all it means is that the first submask cannot combine with anything. The
+           chip is made transparent to the mouse instead -- it cannot be clicked or
+           hovered, it keeps the same ink as every other row, and the click falls through
+           to the row, which opens the submask like a click anywhere else on it. */
+        opBtn->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        opBtn->setFocusPolicy(Qt::NoFocus);
+        /* Its own tooltip would never show -- the chip sees no mouse events now -- so the
+           explanation moves onto the row's name below. */
     }
     else {
         opBtn->setToolTip(QString("%1 -- click to cycle Add / Subtract / Intersect")
@@ -246,10 +255,15 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
                                     : r.enabled ? G::textColor
                                                 : G::disabledColor,
                                     G::strFontSize.toInt()));
-    name->setToolTip(r.pending  ? tr("Being built -- it joins the mask once your edits "
-                                     "settle (Return lands it now, Esc discards it)")
-                     : selected ? tr("Open -- click to close its settings")
-                                : tr("Click to edit this submask again"));
+    QString nameTip = r.pending  ? tr("Being built -- it joins the mask once your edits "
+                                      "settle (Return lands it now, Esc discards it)")
+                      : selected ? tr("Open -- click to close its settings")
+                                 : tr("Click to edit this submask again");
+    /* The first submask's op chip is inert (see above) and carries no tooltip of its
+       own, so say why here rather than nowhere. */
+    if (index == 0)
+        nameTip += tr("\n\nThe first submask starts the mask, so it always adds.");
+    name->setToolTip(nameTip);
     hb->addWidget(name);
     hb->addStretch(1);
 

@@ -126,6 +126,27 @@ public:
     /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
        show the composited mask), plus the active scope's ordered mask tools to composite. */
     bool maskOverlayActive() const;
+    /* ---- Veil ENGAGEMENT -------------------------------------------------------------
+       Whether the mask coverage veil should be on its own account: the mask panel has
+       the user's attention, either because the cursor is in it or because the last
+       thing they did was a mask edit (a canvas stroke or handle drag counts -- that is
+       what lets them move off the panel onto the photo to paint without the veil
+       dropping). Anything else they touch -- an Exposure slider, Transform, History --
+       disengages, and the veil gets out of the way so the edit can be seen.
+
+       This replaced ten hand-written `if (maskOverlayActive()) emit
+       maskTintHideRequested()` calls scattered through the adjustment handlers, which
+       could only ever hide it: nothing brought the veil back except "O", a scope switch
+       or adding a submask. */
+    bool maskVeilEngaged() const;
+    void setMaskPanelHovered(bool hovered);   // MaskPanel::hoverChanged
+    void noteMaskInteraction();               // a mask edit: engage
+    void noteNonMaskInteraction();            // anything else: disengage
+    /* "O" / the action-row tint button override the rule. The override stands until the
+       user's attention actually moves, so it covers the moment it was asked for without
+       becoming a sticky mode they have to remember they are in. MW calls it after
+       toggling, with the veil's resulting state. */
+    void setMaskVeilOverride(bool shown);
     /* Esc from the Develop arbiter: if a mask tool is expanded, collapse it (hide its
        settings, like clicking its caption again) and return true; else false. */
     bool escapeMaskTool();
@@ -284,6 +305,13 @@ public:
        MW composites it into the veil with the PREVIEWED op (pendingMaskOp), so the
        overlay shows the outcome. -1 when nothing is being defined. */
     int pendingMaskIndex() const { return pendingIdx; }
+    /* Index (into activeScopeComponents()) of the submask the user is WORKING ON -- the
+       pending one if there is one, else the one re-opened from the list. The veil
+       distinguishes it from the rest of the mask (denser where the two overlap, a ghost
+       where the submask falls outside the mask, a contour along its boundary), which is
+       the only way a Subtract submask -- contributing nothing to the folded mask -- can
+       be seen at all. -1 when nothing is open. */
+    int focusSubmaskIndex() const { return pendingIdx >= 0 ? pendingIdx : selectedMaskIndex; }
     /* The op the overlay AND the render are currently previewing for the pending submask
        (MaskOp: 0 Add, 1 Subtract, 2 Intersect). Not written into the component until
        commit. */
@@ -452,7 +480,7 @@ public slots:
     void resetAllEdits();
     void newScope();                              // [+] add a scope (name dialog, default "Scope n")
     void deleteScope();                           // [-] remove the selected scope (not Global)
-    void showMaskMenu();                          // pop the Add/Subtract mask-tool menu (on new scope)
+    void showMaskMenu();                          // pop SubmaskDialog (op + type) and begin one
     void onScopePreviewToggled(bool shown);       // [E] show/ignore the whole scope
     void onScopeEnabledToggled(int index, bool on); // the scope bar's show/hide eye
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the scope's items)
@@ -927,12 +955,10 @@ private:
        another tool via showMaskMenu), and clicking a tool reveals its settings (Feather, Invert)
        below the list (click the tool again to collapse). Spatial editing (drag/rotate the gradient on the image)
        composites the mask into the render; see notes/Documentation.txt. */
-    void newMask();                            // QAction handler: append the chosen Add/Subtract tool
     void deleteMask(int index);
     void setSelectedMask(int index);           // make a tool active (-1 = none, e.g. Done)
     void onMaskSelectionChanged();             // (programmatic selection only; clicks go via mousePressEvent)
     EditScope *activeScope();                  // active scope of image, or nullptr
-    static int maskToolFromName(const QString &name);
     static QString opName(int op);             // "Add" / "Subtract"
 
     /* ---- Preview (show/ignore) + Reset per group ----------------------------------------------
@@ -1212,7 +1238,7 @@ private:
 
     /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =
        none). isRebuildingMasks guards the tree-selection handler while we add/remove mask rows.
-       maskMenu is the "+ add mask" type chooser (popped by the header's [M]). UR_MaskIndex tags a
+       Adding one pops SubmaskDialog (op + type) rather than a menu. UR_MaskIndex tags a
        mask row's caption with its component index so selection can find it. */
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
@@ -1234,6 +1260,10 @@ private:
     int  pendingOp = 0;                       // op the overlay + render preview
     int  latchedMaskOp = 0;                   // op the last shaping action set (survives
                                               // the key release; see latchMaskOp)
+    /* What the user picked in SubmaskDialog when this submask was added. The RESTING op:
+       a held modifier overrides it while shaping, and releasing the modifier comes back
+       here rather than to Add, because the dialog is where the op was decided. */
+    int  chosenMaskOp = 0;
     /* The pending submask AS BUILT by beginMaskTool, before the user touched it. The
        baseline pendingMaskIsUntouched compares against, so leaving a scope with a tool
        that was picked and then ignored asks nothing. */
@@ -1243,8 +1273,22 @@ private:
        (the panel closes but the result stays visible + 'O'-toggleable). Cleared on scope/
        image switch or cancel. */
     bool maskLatched = false;
-    void beginMaskTool(int tool);            // pick -> append as the pending submask
-    void onMaskToolChosen(int tool);         // a submask type was chosen -> beginMaskTool
+    /* ---- Veil engagement state (see maskVeilEngaged) -------------------------------- */
+    bool maskPanelHovered = false;
+    bool lastInteractionWasMask = false;
+    /* The veil's state as far as engagement is concerned -- what was last pushed at it,
+       or what "O" last made it. Only a DISAGREEMENT with maskVeilEngaged() emits, which
+       is both what keeps a drag from re-asserting the veil on every tick and what lets
+       an "O" override stand until the user's attention actually moves. */
+    bool maskVeilEngagedNow = false;
+    void syncMaskVeilEngagement();       // emit show/hide iff engagement flipped
+    /* Append a new pending submask of this tool, combining with the mask by `op`. The
+       op arrives from SubmaskDialog rather than from a held modifier, and is forced to
+       Add on an empty mask. It is NOT written into the component here -- the component
+       carries Add until the submask lands -- it seeds pendingOp/latchedMaskOp/
+       chosenMaskOp, which the veil, the render and the canvas chip preview. */
+    void beginMaskTool(int tool, int op = int(MaskOp::Add));
+    void onMaskToolChosen(int tool, int op = int(MaskOp::Add));  // -> beginMaskTool
     void cancelMaskTool();                   // [x]/Esc: discard the pending submask
     MaskComponent *editingMaskComp();        // the tool being built, or null
 
@@ -1263,6 +1307,9 @@ private:
        way every other disclosure in the dock does. One that has not settled yet lands
        first rather than refusing: closing it IS the user saying they are done. */
     void reopenSubmask(int index);
+    /* The Submasks section collapsed: close the open submask with it (handles off the
+       canvas, settings gone), so expanding is pure disclosure with nothing selected. */
+    void onSubmasksCollapsed(bool collapsed);
     /* End the editing session on a COMMITTED submask: deselect it, take its handles off
        the canvas and hide its settings, leaving the submask and the mask untouched. What
        the panel's "Done" button does, and what a click on the open row does. */
@@ -1295,7 +1342,6 @@ private:
     bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed
     QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
     void emitSpotPins();                       // push spotPinCenters() to ImageView
-    QMenu *maskMenu = nullptr;
     ScopeHeader *scopeHeader = nullptr;     // scope combo + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;

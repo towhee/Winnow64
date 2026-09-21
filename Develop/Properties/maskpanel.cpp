@@ -12,6 +12,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
+#include <QApplication>
+#include <QCursor>
 #include <QHBoxLayout>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -104,6 +106,28 @@ void MaskPanel::buildUi()
        overlayColours(). */
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    /* See syncHovered / eventFilter for why this is application-wide rather than this
+       widget's own enterEvent/leaveEvent. */
+    if (qApp) qApp->installEventFilter(this);
+}
+
+void MaskPanel::syncHovered()
+{
+    const bool now = isVisible()
+                  && rect().contains(mapFromGlobal(QCursor::pos()));
+    if (now == hovered) return;
+    hovered = now;
+    emit hoverChanged(hovered);
+}
+
+void MaskPanel::hideEvent(QHideEvent *e)
+{
+    /* The panel going away is a Leave that never arrives: the scope switched, the image
+       changed, or the mask was deleted out from under the cursor. Without this the veil
+       would stay engaged on a panel that is no longer on screen. */
+    QWidget::hideEvent(e);
+    syncHovered();
 }
 
 /*
@@ -233,6 +257,15 @@ void MaskPanel::paintEvent(QPaintEvent *)
 
 bool MaskPanel::eventFilter(QObject *watched, QEvent *event)
 {
+    /* HOVER, from the application-wide filter installed in buildUi: any Enter or Leave
+       anywhere is a chance for the cursor to have crossed this panel's boundary,
+       children included. Answered from the cursor position rather than from the event's
+       receiver, so a rebuilt submask row cannot leave the state stale. Checked first and
+       cheaply -- this filter sees every Enter/Leave in the app -- and never consumed. */
+    if (event->type() == QEvent::Enter || event->type() == QEvent::Leave) {
+        syncHovered();
+        return QWidget::eventFilter(watched, event);
+    }
     /* A click anywhere on the band (arrow or caption) toggles collapse. DblClick is
        included because Qt sends it INSTEAD of the second press, which would otherwise
        leave the section in the opposite state (same reason SubmaskList does). */

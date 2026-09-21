@@ -31,26 +31,33 @@ want and refines the result to its edge.</li>
 
 <h2>Adding one</h2>
 <p><b>[+]</b> on the band (or <b>M</b>, or <b>Add submask</b> in the band's
-<b>[&#8942;]</b> menu) offers the tool list.  Define the new submask on the picture.
-<b>There is nothing to press afterwards</b>: two seconds after your last edit it folds
-itself into the mask and the chip top-left of the photo stops saying what it is about
-to do.  Until then it is <b>pending</b> &mdash; Esc discards it &mdash; and the modifier
-you hold decides how it combines:</p>
+<b>[&#8942;]</b> menu) opens the <b>Add submask</b> dialog, which asks the two questions
+together &mdash; what the submask does to the mask, and what kind of submask it is.</p>
 
 <ul>
-<li>no modifier &mdash; <b>Add</b>: the new area joins the mask.</li>
-<li><b>Opt/Alt</b> &mdash; <b>Subtract</b>: the new area is cut out of it.</li>
-<li><b>Shift+Opt/Alt</b> &mdash; <b>Intersect</b>: only where the two overlap
-survives.</li>
+<li><b>+ Add</b>: the new area joins the mask.</li>
+<li><b>- Subtract</b>: the new area is cut out of it.</li>
+<li><b>&#8745; Intersect</b>: only where the new area and the mask overlap survives.</li>
 </ul>
 
-<p>Hold the modifier while you shape the submask and the overlay previews the outcome, so
-you see the resulting mask rather than having to imagine it; the op sticks once you paint
-or drag with it held, so you can let the key go.  The first submask in an empty mask has
-nothing to combine with, so the modifiers are inert there.  <b>Return</b> lands the
-submask straight away and closes its settings.  Once it has landed its op is changed on
-its own row instead, and changing your mind about the whole thing is
-<b>[&#8942;]</b> &rarr; <b>Delete</b> on the row (or Cmd+Z / the History panel).</p>
+<p>The first submask in an empty mask has nothing to combine with, so only Add is offered
+there.  Below that, pick the type: <b>Drawn</b> (gradients and the brush), <b>Content</b>
+(colour and luminance ranges) or <b>Automatic</b> (subject, sky, background, depth,
+object).  Double-click a type to add it in one gesture.</p>
+
+<p>Then define the submask on the picture.  <b>There is nothing to press afterwards</b>:
+two seconds after your last edit it folds itself into the mask and the chip top-left of
+the photo stops saying what it is about to do.  Until then it is <b>pending</b> &mdash;
+Esc discards it, <b>Return</b> lands it straight away and closes its settings.  The
+overlay previews the outcome throughout, so you see the resulting mask rather than having
+to imagine it.</p>
+
+<p>The old keyboard shortcut still works if you prefer it: hold <b>Opt/Alt</b> while you
+paint or drag to override the chosen op with Subtract, <b>Shift+Opt/Alt</b> for Intersect.
+The override sticks once you shape with it held, and letting the key go returns to the op
+you picked in the dialog.  Once the submask has landed its op is changed on its own row
+instead, and changing your mind about the whole thing is <b>[&#8942;]</b> &rarr;
+<b>Delete</b> on the row (or Cmd+Z / the History panel).</p>
 
 <h2>The list</h2>
 <p>Each row shows the tool, its combine op and whether it is inverted.  Click the row to
@@ -108,10 +115,32 @@ trade. A mask made only of Linear or Radial Gradients has no edge in the picture
 from, and there the control is greyed out.</p>
 
 <h2>Seeing the mask</h2>
-<p>Press <b>O</b> to show or hide the mask overlay on the image.  The tint colour and the
-grayscale backdrop are set from the Develop action row's tint button (right-click it)
-&mdash; they describe the veil, not any one submask, which is why they are not in this
-panel.</p>
+<p>The overlay appears by itself while the mask has your attention &mdash; whenever the
+cursor is in this panel, or the last thing you did was a mask edit (painting or dragging
+a handle on the photo counts, so moving out there to work does not chase it away).  Touch
+an adjustment instead &mdash; Exposure, a curve, Transform &mdash; and it gets out of the
+way so you can see the edit.  Press <b>O</b> at any point to override it either way; the
+override lasts until your attention moves again.</p>
+
+<p>With a submask open, the overlay also shows <b>which part of the mask is that
+submask</b>, using three densities of the one tint colour plus a white outline:</p>
+
+<ul>
+<li><b>Normal</b> &mdash; mask, but not the open submask.</li>
+<li><b>Denser</b> &mdash; where the open submask contributes to the mask.</li>
+<li><b>Faint</b> &mdash; the open submask where it falls <i>outside</i> the mask.</li>
+<li><b>White outline</b> &mdash; the open submask's edge, drawn over all of it.</li>
+</ul>
+
+<p>The outline is what finds a <b>Subtract</b> submask: it takes area away, so it
+contributes nothing to the mask and has no denser region at all &mdash; it is entirely
+faint, inside its outline.  On a Colour or Luminance Range submask, whose edges are
+scattered over the whole frame rather than being a boundary, the outline is left off and
+the densities tell the story on their own.</p>
+
+<p>The tint colour and the grayscale backdrop are set from the Develop action row's tint
+button (right-click it) &mdash; they describe the veil, not any one submask, which is why
+they are not in this panel.</p>
 
 <h2>What is saved</h2>
 <p>The submask list &mdash; each tool, its op, its inverted and enabled flags, its feather
