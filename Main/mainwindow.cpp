@@ -37,6 +37,7 @@
 #include "Utilities/depthpredictor.h"
 #include "Utilities/objectmaskpredictor.h"
 #include "Develop/Transform/croptransform.h"
+#include <atomic>
 #include <QMutex>
 #include <QScopeGuard>      // updateMaskOverlayTint probe (it has many early returns)
 #include <QtMath>          // qSin (runDevelopStressTest's synthetic stroke)
@@ -9945,17 +9946,23 @@ void MW::updateMaskOverlayTint()
        here so the veil composites the OUTCOME the submask will have when it lands. Its index is against `components`, so it is remapped onto the filtered vector
        (and drops out entirely if the pending submask is itself unchecked -- it then
        contributes nothing, so there is no footprint ring or op chip to show for it). */
-    const int pendSrcIdx = developProperties->pendingMaskIndex();
+    const int pendSrcIdx  = developProperties->pendingMaskIndex();
+    /* The submask being WORKED ON -- pending, or re-opened from the list. Everything the
+       veil does to distinguish one submask from the mask keys off this, so a committed
+       submask reopened for editing gets the same treatment a pending one does. */
+    const int focusSrcIdx = developProperties->focusSubmaskIndex();
     QVector<MaskComponent> masks;
     masks.reserve(components.size());
-    int pendIdx = -1;
+    int pendIdx = -1, focusIdx = -1;
     for (int i = 0; i < components.size(); ++i) {
         if (!components.at(i).enabled) continue;
-        if (i == pendSrcIdx) pendIdx = masks.size();
+        if (i == pendSrcIdx)  pendIdx  = masks.size();
+        if (i == focusSrcIdx) focusIdx = masks.size();
         masks.append(components.at(i));
     }
     if (masks.isEmpty()) { imageView->clearScopeMaskTint(); return; }
     const bool hasPending = (pendIdx >= 0);
+    const bool hasFocus   = (focusIdx >= 0);
     if (hasPending) masks[pendIdx].op = developProperties->pendingMaskOp();
 
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
@@ -10031,12 +10038,42 @@ void MW::updateMaskOverlayTint()
                         edgeScale, developProperties->activeScopeMaskEdge(),
                         veilHalo, veilGuide.empty() ? nullptr : &veilGuide);
 
-    /* RESULT VEIL: the whole-mask composite as a flat coverage tint in the one overlay
+    /* THE FOCUS SUBMASK'S OWN COVERAGE, if one is open. Its own footprint, not its
+       signed contribution: op forced to Add so a Subtract submask still rasterizes as
+       the area it occupies, and the mask-level Edge deliberately not passed -- this must
+       track the submask being edited, not the assembled mask. */
+    std::vector<float> cov;
+    if (hasFocus) {
+        MaskComponent c = masks[focusIdx];
+        c.op = int(MaskOp::Add);
+        cov = buildMaskBuffer({c}, bw, bh, degrees, fPath, nullptr,
+                              G::isReportDevelopTime ? &tintStats : nullptr,
+                              edgeScale, 0.0f);
+    }
+
+    /* RESULT VEIL: the whole-mask composite as a coverage tint in the one overlay
        colour, alpha by coverage. This is the TRUE resulting mask -- Subtract holes stay
        holes -- so the veil alone answers both "what does this scope affect?" and (with a
-       modifier held) "what would this op do?". */
+       modifier held) "what would this op do?".
+
+       WITH A SUBMASK OPEN it answers a third question -- "which part of this is the one
+       I am editing?" -- by varying the DENSITY of that same colour rather than
+       introducing a second hue. One hue is what lets this survive all six configurable
+       overlay colours (including white) and the grayscale-backdrop mode; a fixed
+       contrast colour would collide with at least two of them.
+
+         mask only      kAlphaMask   the rest of the mask, exactly as before
+         overlap        kAlphaOver   denser: the submask contributes here
+         submask only   kAlphaSub    a ghost: the submask falls outside the result
+
+       Written as a blend, not as three branches, because coverage is FEATHERED: m and s
+       are weights in 0..1, not memberships, and a gradient's ramp has to stay a ramp.
+       With s == 0 the first term is all that survives and this reduces exactly to the
+       no-selection veil. */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
-    const int maxA = 150;             // full-coverage alpha
+    const float kAlphaMask = 150.0f;         // full-coverage alpha (unchanged)
+    const float kAlphaOver = 215.0f;
+    const float kAlphaSub  =  55.0f;
     const QColor ovc = G::maskOverlayColor;
     const int ovR = ovc.red(), ovG = ovc.green(), ovB = ovc.blue();
     /* Row-parallel, and the scanline base is taken ONCE: this runs at the proxy's full
@@ -10046,61 +10083,119 @@ void MW::updateMaskOverlayTint()
        from several threads, hence bits()/bytesPerLine() hoisted out. */
     uchar *const tintBits0 = tint.bits();
     const qsizetype tintBpl0 = tint.bytesPerLine();
+    const float *const covData = cov.empty() ? nullptr : cov.data();
     developParallelRows(bw, bh, [&](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             QRgb *row = reinterpret_cast<QRgb*>(tintBits0 + qsizetype(y) * tintBpl0);
             const float *mrow = buf.data() + size_t(y) * bw;
+            const float *srow = covData ? covData + size_t(y) * bw : nullptr;
             for (int x = 0; x < bw; ++x) {
-                const int a = int(qBound(0.0f, mrow[x], 1.0f) * maxA + 0.5f);
+                const float m = qBound(0.0f, mrow[x], 1.0f);
+                const float sv = srow ? qBound(0.0f, srow[x], 1.0f) : 0.0f;
+                const float af = kAlphaMask * m * (1.0f - sv)
+                               + kAlphaOver * m * sv
+                               + kAlphaSub  * (1.0f - m) * sv;
+                const int a = int(af + 0.5f);
                 row[x] = a ? qRgba(ovR * a / 255, ovG * a / 255, ovB * a / 255, a) : 0;
             }
         }
     });
 
-    /* PENDING FOOTPRINT: a thin ring around the submask being defined, painted only where
-       the result is ABSENT. Without it a Subtract (or an Intersect) whose footprint lies
-       outside the mask would change nothing on screen, leaving the user unable to see
-       where the submask actually is. The veil WINS everywhere it covers, so coverage that
-       survives into the result reads as veil, not as an edge -- which also keeps a noisy
-       content submask (Color/Luminance Range), whose per-pixel "edges" are everywhere,
-       from fogging the subject. */
-    if (hasPending) {
-        const float gateT = 0.12f;   // result present -> the veil wins, skip the ring
+    /* THE FOCUS SUBMASK'S BOUNDARY: a white line with a dark halo along its s = 0.5
+       iso-line, over everything including the overlap.
+
+       It replaces a ring that was painted only where the RESULT was absent. That gate
+       existed so a Subtract submask lying outside the mask could be seen at all -- but
+       it also meant the boundary vanished the moment the submask overlapped the mask,
+       which is the common case and exactly where "how much of this is mine?" is hardest
+       to answer. The density step above now carries the overlap, so the line is free to
+       be drawn everywhere. White-on-dark rather than the overlay colour, so it reads
+       over the veil, over the photo, over every configurable overlay colour and over the
+       grayscale backdrop.
+
+       TWO SAFEGUARDS against the case the old gate also protected: a content submask
+       (Colour/Luminance Range) has per-pixel "edges" everywhere and would fog the
+       subject with speckle. The boundary is taken from a 3x3 box average of the coverage
+       rather than the raw buffer, which removes isolated pixels; and if the line still
+       comes out covering more than kContourMaxFrac of the buffer then it is not a
+       boundary, so it is dropped and the density step carries the distinction alone. */
+    if (hasFocus && cov.size() == size_t(bw) * size_t(bh)) {
         const float T = 0.5f;
-        MaskComponent c = masks[pendIdx];
-        c.op = int(MaskOp::Add);                 // ring the footprint, not the sign
-        /* The submask's OWN footprint, so the mask-level Edge is deliberately NOT passed:
-           the ring must track the submask being dragged, not the assembled mask. The
-           submask's own Edge travels inside `c` and does apply. */
-        const std::vector<float> cov =
-            buildMaskBuffer({c}, bw, bh, degrees, fPath, nullptr,
-                            G::isReportDevelopTime ? &tintStats : nullptr,
-                            edgeScale, 0.0f);
-        const int a = 235, thick = 1;
-        /* Row-parallel: each band writes only its own scanlines and reads cov (const),
-           so the y+-thick neighbour lookups cross band boundaries safely. The scanline
-           base is taken ONCE here: QImage::scanLine() is the detaching (non-const)
-           accessor, and calling it from several threads races on detach_no. */
-        uchar *const tintBits = tint.bits();
-        const qsizetype tintBpl = tint.bytesPerLine();
+        const double kContourMaxFrac = 0.08;
+        /* Smoothed membership, computed once: the 3x3 average is read up to nine times
+           per pixel by the neighbour test below, so averaging on the fly would cost 9x.
+           Clamped at the edges (nearest-pixel), so the frame border is not itself an
+           edge. */
+        std::vector<uchar> in(size_t(bw) * bh, 0);
         developParallelRows(bw, bh, [&](int y0, int y1) {
             for (int y = y0; y < y1; ++y) {
-                QRgb *row = reinterpret_cast<QRgb*>(tintBits + qsizetype(y) * tintBpl);
                 for (int x = 0; x < bw; ++x) {
-                    const size_t idx = size_t(y) * bw + x;
-                    if (cov[idx] < T || buf[idx] > gateT) continue;   // absent/in result
-                    bool edge = false;
-                    for (int dy = -thick; dy <= thick && !edge; ++dy)
-                        for (int dx = -thick; dx <= thick; ++dx) {
-                            const int nx = x + dx, ny = y + dy;
-                            if (nx < 0 || ny < 0 || nx >= bw || ny >= bh ||
-                                cov[size_t(ny) * bw + nx] < T) { edge = true; break; }
+                    float acc = 0.0f;
+                    for (int dy = -1; dy <= 1; ++dy) {
+                        const int ny = qBound(0, y + dy, bh - 1);
+                        for (int dx = -1; dx <= 1; ++dx) {
+                            const int nx = qBound(0, x + dx, bw - 1);
+                            acc += cov[size_t(ny) * bw + nx];
                         }
-                    if (!edge) continue;
-                    row[x] = qRgba(ovR * a / 255, ovG * a / 255, ovB * a / 255, a);
+                    }
+                    in[size_t(y) * bw + x] = (acc * (1.0f / 9.0f) >= T) ? 1 : 0;
                 }
             }
         });
+        /* The boundary is the morphological gradient of `in`: inside, with at least one
+           neighbour outside (the frame edge counts as outside, so a submask running off
+           the picture is still closed on screen). Counted first, drawn second -- the
+           count is what decides whether drawing it is worth doing at all. */
+        std::vector<uchar> edge(size_t(bw) * bh, 0);
+        std::atomic<qint64> edgeCount{0};
+        developParallelRows(bw, bh, [&](int y0, int y1) {
+            qint64 local = 0;
+            for (int y = y0; y < y1; ++y) {
+                for (int x = 0; x < bw; ++x) {
+                    const size_t idx = size_t(y) * bw + x;
+                    if (!in[idx]) continue;
+                    bool isEdge = false;
+                    for (int dy = -1; dy <= 1 && !isEdge; ++dy)
+                        for (int dx = -1; dx <= 1; ++dx) {
+                            const int nx = x + dx, ny = y + dy;
+                            if (nx < 0 || ny < 0 || nx >= bw || ny >= bh ||
+                                !in[size_t(ny) * bw + nx]) { isEdge = true; break; }
+                        }
+                    if (!isEdge) continue;
+                    edge[idx] = 1;
+                    ++local;
+                }
+            }
+            edgeCount.fetch_add(local, std::memory_order_relaxed);
+        });
+        if (double(edgeCount.load()) <= kContourMaxFrac * double(bw) * double(bh)) {
+            /* Halo first, line second, both from the same one-pixel boundary: the halo
+               is the boundary dilated by one, so the white core keeps its full weight
+               and only the outside of the line is darkened. */
+            uchar *const tintBits = tint.bits();
+            const qsizetype tintBpl = tint.bytesPerLine();
+            const int haloA = 150, lineA = 235;
+            developParallelRows(bw, bh, [&](int y0, int y1) {
+                for (int y = y0; y < y1; ++y) {
+                    QRgb *row = reinterpret_cast<QRgb*>(tintBits + qsizetype(y) * tintBpl);
+                    for (int x = 0; x < bw; ++x) {
+                        const size_t idx = size_t(y) * bw + x;
+                        if (edge[idx]) {
+                            row[x] = qRgba(lineA, lineA, lineA, lineA);   // premultiplied white
+                            continue;
+                        }
+                        bool near = false;
+                        for (int dy = -1; dy <= 1 && !near; ++dy)
+                            for (int dx = -1; dx <= 1; ++dx) {
+                                const int nx = x + dx, ny = y + dy;
+                                if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
+                                if (edge[size_t(ny) * bw + nx]) { near = true; break; }
+                            }
+                        if (near) row[x] = qRgba(0, 0, 0, haloA);
+                    }
+                }
+            });
+        }
     }
     if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
     imageView->setScopeMaskTint(tint);
@@ -10116,9 +10211,15 @@ void MW::updateMaskOverlayTint()
                            << " fold" << tintStats.foldMs << tintStats.comps << "comps"
                            << " morph" << tintStats.morphMs << tintStats.morphs;
 
-    if (hasPending)
-        imageView->setMaskLegend(DevelopProperties::maskToolName(masks[pendIdx].tool),
-                                 developProperties->pendingMaskOp(), pendIdx > 0);
+    /* A submask that has already landed gets the chip too, naming its committed op --
+       the veil is drawing its boundary and density either way, so the chip has to say
+       whose boundary it is. Only a PENDING one shows the modifier hint: the modifiers
+       are inert on a landed submask (its op is changed on its row). */
+    if (hasFocus)
+        imageView->setMaskLegend(DevelopProperties::maskToolName(masks[focusIdx].tool),
+                                 hasPending ? developProperties->pendingMaskOp()
+                                            : masks[focusIdx].op,
+                                 hasPending && pendIdx > 0);
     else
         imageView->setMaskLegend(QString(), -1, false);
 }
@@ -11833,6 +11934,11 @@ void MW::toggleMaskOverlay()
     visualisation) so the user can see the developed image without it while still editing.
     The visibility state lives in ImageView (per mask-edit session); this just flips it.
 
+    The veil otherwise follows ENGAGEMENT -- it comes up while the mask panel has the
+    user's attention and leaves when it does not (DevelopProperties::maskVeilEngaged) --
+    so the flip has to be recorded there too, or the next sync would undo it. It stands
+    until the user's attention actually moves; see setMaskVeilOverride.
+
     There is nothing to hide or show when no mask is on display -- the Global scope has no
     mask -- so say so rather than let the click (or "O") appear to do nothing.
 */
@@ -11846,6 +11952,8 @@ void MW::toggleMaskOverlay()
         return;
     }
     imageView->toggleMaskTint();
+    if (developProperties)
+        developProperties->setMaskVeilOverride(imageView->maskTintVisible());
 }
 
 void MW::refreshDevelopMaskTintBtn()

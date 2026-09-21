@@ -108,12 +108,26 @@ signals:
     /* Mask band [:] last item, as on every band in the dock: the mask help page (the
        same one the Submasks band opens -- Edge and Halo are documented there). */
     void helpRequested();
+    /* The cursor entered or left the panel, CHILDREN INCLUDED. DevelopProperties reads
+       it as "the mask has the user's attention" and brings the coverage veil up (see
+       DevelopProperties::maskVeilEngaged). */
+    void hoverChanged(bool hovered);
 
 protected:
     void paintEvent(QPaintEvent *) override;      // gradient behind the "Mask" band
     bool eventFilter(QObject *watched, QEvent *event) override;   // band click=collapse
+    void hideEvent(QHideEvent *e) override;                       // a Leave that never comes
 
 private:
+    /* Recompute hovered from the global cursor position and emit on a change. Driven
+       from the application-wide Enter/Leave filter rather than this widget's own
+       enterEvent/leaveEvent: moving onto a CHILD sends the panel a Leave, and
+       SubmaskList rebuilds its rows wholesale, so there is no stable set of children to
+       watch. Two comparisons on each enter/leave anywhere in the app is cheaper than
+       keeping that bookkeeping correct. */
+    void syncHovered();
+    bool hovered = false;
+
     void buildUi();
     void buildMaskLevel(QVBoxLayout *outer);   // the "Mask" band + its Edge/Halo rows
     void syncAttrVisible();                // attrShown, list not collapsed, mask not folded

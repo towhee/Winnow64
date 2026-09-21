@@ -5,6 +5,7 @@
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
+#include "Develop/Properties/submaskdialog.h"
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
@@ -59,7 +60,6 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        persistent -- they live in QSettings under "Develop Presets". */
     presets = new DevelopPresets(setting, this);
     /* The mask-tool chooser, popped when a new mask is created (newScope). */
-    maskMenu = new QMenu(this);
     /* The Scope list (in the ScopeHeader widget) shows the CURRENT IMAGE's scopes --
        Global plus one row per mask (per-image EditStack), not app-global QSettings
        presets. Seed one name so it is valid before any image. */
@@ -603,6 +603,9 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
     if (G::isLogger) G::log("DevelopProperties::bindMaskPanel");
     maskPanel = panel;
     if (!maskPanel) return;
+    /* The cursor being in the mask panel is half of "the mask has the user's attention"
+       (the other half is having just edited one) -- see maskVeilEngaged. */
+    connect(maskPanel, &MaskPanel::hoverChanged, this, &DevelopProperties::setMaskPanelHovered);
     /* The overlay's colour / grayscale controls are NOT in this panel (they are on the
        action-row tint button's context menu, which calls setMaskOverlayColour /
        setMaskOverlayGrayscale directly), so there is nothing to connect for them. */
@@ -630,6 +633,7 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(sl, &SubmaskList::duplicateRequested, this, &DevelopProperties::duplicateSubmask);
         connect(sl, &SubmaskList::deleteRequested,   this, &DevelopProperties::deleteMask);
         connect(sl, &SubmaskList::helpRequested,     this, &DevelopProperties::submasksHelp);
+        connect(sl, &SubmaskList::collapsedChanged,  this, &DevelopProperties::onSubmasksCollapsed);
     }
 
     /* The Mask band's [:] menu. Its help opens the same page as the Submasks band: Edge
@@ -708,6 +712,28 @@ void DevelopProperties::syncMaskPanel()
     maskPanel->setVisible(true);
 }
 
+void DevelopProperties::onSubmasksCollapsed(bool collapsed)
+{
+/*
+    The Submasks section closed, so anything open inside it closes with it.
+
+    Collapsing used to hide the ROWS and nothing else: selectedMaskIndex survived, so the
+    open submask's handles stayed live on the canvas (a submask being edited with no row
+    on screen to say which), and MaskPanel::syncAttrVisible merely hid its settings --
+    which re-appeared on the next expand, reading as though expanding the header had
+    SELECTED a submask. Closing what is open here fixes both: the handles go with the
+    rows, and expanding is then pure disclosure, with nothing selected.
+
+    A submask still inside its settle window lands rather than being stranded -- closing
+    the section is the user finishing with it, the same as clicking its row.
+*/
+    if (G::isLogger) G::log("DevelopProperties::onSubmasksCollapsed");
+    if (!collapsed) return;                 // expanding selects nothing: nothing to do
+    if (selectedMaskIndex < 0) return;
+    flushMaskAutoCommit();
+    closeSubmaskEditing();
+}
+
 void DevelopProperties::reopenSubmask(int index)
 {
     if (G::isLogger) G::log("DevelopProperties::reopenSubmask");
@@ -747,6 +773,7 @@ void DevelopProperties::reopenSubmask(int index)
        component -- that is what puts the tool's handles back on the canvas. */
     buildTree();
     emit paramsChanged();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::setSubmaskEnabled(int index, bool on)
@@ -758,6 +785,7 @@ void DevelopProperties::setSubmaskEnabled(int index, bool on)
     noteEdit((on ? "Show " : "Hide ") + maskToolName(scope->components.at(index).tool));
     buildTree();
     emit paramsChanged();       // the fold skips a disabled component -> re-composite
+    noteMaskInteraction();
 }
 
 void DevelopProperties::setSubmaskOp(int index, int op)
@@ -777,6 +805,7 @@ void DevelopProperties::setSubmaskOp(int index, int op)
              + maskToolName(scope->components.at(index).tool));
     buildTree();
     emit paramsChanged();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::toggleSubmaskInverted(int index)
@@ -793,6 +822,7 @@ void DevelopProperties::toggleSubmaskInverted(int index)
     buildTree();
     emit paramsChanged();
     if (index == pendingIdx) armMaskAutoCommit();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::moveSubmask(int from, int to)
@@ -813,6 +843,7 @@ void DevelopProperties::moveSubmask(int from, int to)
     noteEdit("Reorder " + maskToolName(scope->components.at(to).tool));
     buildTree();
     emit paramsChanged();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::duplicateSubmask(int index)
@@ -828,6 +859,7 @@ void DevelopProperties::duplicateSubmask(int index)
     noteEdit("Duplicate " + maskToolName(copy.tool));
     buildTree();
     emit paramsChanged();
+    noteMaskInteraction();
 }
 
 /* History caption for a mask-tool setting key (the tree/panel row's own wording). */
@@ -981,6 +1013,7 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
     noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v),
              "mask/" + key);
     armMaskAutoCommit();       // the submask lands once this drag/typing settles
+    noteMaskInteraction();     // ... and the veil stays up while the mask is the subject
 }
 
 /* MASK level: reshape the folded mask (Edge, Halo). Edits the SCOPE, so unlike every
@@ -995,6 +1028,7 @@ void DevelopProperties::onMaskLevelSetting(const QString &key, const QVariant &v
     else return;
     noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v), "mask/" + key);
     emit paramsChanged();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::resetMaskLevel()
@@ -1033,22 +1067,24 @@ MaskComponent *DevelopProperties::editingMaskComp()
     return nullptr;
 }
 
-void DevelopProperties::onMaskToolChosen(int tool)
+void DevelopProperties::onMaskToolChosen(int tool, int op)
 {
     /* Every tool builds up through the MaskPanel (blue/red flow); its settings render in
        the panel's embedded MaskEditor. */
-    beginMaskTool(tool);
+    beginMaskTool(tool, op);
 }
 
-void DevelopProperties::beginMaskTool(int tool)
+void DevelopProperties::beginMaskTool(int tool, int op)
 {
     if (G::isLogger) G::log("DevelopProperties::beginMaskTool");
     EditScope *scope = activeScope();
     if (!scope || activeScopeIndex == 0) return;
 
     const bool first = scope->components.isEmpty();
+    /* An empty mask has nothing to combine with, whatever was asked for. */
+    if (first) op = int(MaskOp::Add);
     MaskComponent m;
-    m.op   = int(MaskOp::Add);
+    m.op   = int(MaskOp::Add);   // the real op is written on commit, from pendingOp
     m.tool = tool;
     m.paramsJson = defaultMaskParams(tool);
     if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
@@ -1061,8 +1097,12 @@ void DevelopProperties::beginMaskTool(int tool)
     selectedMaskIndex = scope->components.size() - 1;
     pendingIdx = selectedMaskIndex;
     pendingPristine = m;                 // baseline for pendingMaskIsUntouched
-    pendingOp = int(MaskOp::Add);        // every submask opens Add ...
-    latchedMaskOp = int(MaskOp::Add);    // ... with nothing latched from the last one
+    /* The op the user picked in the dialog is what the veil, the render and the canvas
+       chip preview from the first instant -- and what a modifier, once released, falls
+       back to (chosenMaskOp, read by latchMaskOp and setPendingMaskOp). */
+    chosenMaskOp = op;
+    pendingOp = op;
+    latchedMaskOp = op;
     maskPanelOpen = true;
     if (maskPanel) {
         maskPanel->beginPending(first);
@@ -1078,16 +1118,16 @@ void DevelopProperties::beginMaskTool(int tool)
 
     noteEdit("Add " + maskToolName(tool));
     buildTree();                 // emits maskEditBegin for the on-canvas overlay
-    /* The whole-mask veil is a full-resolution overlay rebuilt on every drag tick, so it
-       is shown only where it is the ONLY feedback there is: the scope's FIRST submask,
-       when nothing on screen yet says the mask exists. A second or later submask starts
-       hidden -- the tool's own live preview (brush coverage, gradient handles, range
-       swatches) already shows what is being added -- and "O" brings the veil back on
-       demand. Must follow buildTree(), whose maskEditBegin drives the overlay, and
-       precede paramsChanged(), whose tick reads the visibility to decide whether to
-       build at all. */
-    if (first) emit maskTintShowRequested();
-    else       emit maskTintHideRequested();
+    /* Adding a submask engages the mask panel, so the veil comes up (maskVeilEngaged).
+       A second or later submask used to start HIDDEN, on the grounds that the tool's own
+       live preview already showed what was being added and the whole-mask veil was just
+       cost -- but the veil now distinguishes the submask being built from the rest of
+       the mask and their overlap, which is precisely what a second submask needs and
+       what its local preview cannot say. Must follow buildTree(), whose maskEditBegin
+       drives the overlay, and precede paramsChanged(), whose tick reads the visibility
+       to decide whether to build at all. */
+    Q_UNUSED(first)
+    noteMaskInteraction();
     emit paramsChanged();        // overlay/tint (red committed, blue pending)
 }
 
@@ -1163,6 +1203,7 @@ void DevelopProperties::setPendingMaskOp(int op)
     /* Changing what the submask DOES is an edit like any other: the user gets the full
        settle window to look at the new op before it lands. */
     armMaskAutoCommit();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::latchMaskOp()
@@ -1179,12 +1220,17 @@ void DevelopProperties::latchMaskOp()
     and the ADD is what got committed -- "the subtract brush does nothing".
 
     Reversible by the same gesture that set it: paint (or drag) again with nothing held
-    and the latch re-reads the modifiers as Add. A modifier PRESS alone still previews
-    momentarily, so peeking at the outcome without committing to it works as before.
+    and the latch falls back to chosenMaskOp -- what the user picked in SubmaskDialog,
+    NOT to Add. The dialog is where the op is decided now; a modifier is the shortcut
+    that overrides it, so letting go of the shortcut has to return to the decision, not
+    overwrite it. A modifier PRESS alone still previews momentarily, so peeking at the
+    outcome without committing to it works as before.
 */
     if (!maskPanelOpen) return;
-    latchedMaskOp = (pendingIdx <= 0) ? int(MaskOp::Add)   // first submask: nothing to
-                                      : maskOpFromModifiers();   // combine with
+    const int held = maskOpFromModifiers();
+    latchedMaskOp = (pendingIdx <= 0) ? int(MaskOp::Add)    // first submask: nothing to
+                  : (held == int(MaskOp::Add)) ? chosenMaskOp    // combine with
+                                               : held;
     setPendingMaskOp(latchedMaskOp);
 }
 
@@ -1202,7 +1248,11 @@ void DevelopProperties::closeSubmaskEditing()
     maskLatched = true;              // the combined mask stays "O"-toggleable
     buildTree();                     // updateMaskEdit -> take the handles off canvas
     emit paramsChanged();
-    emit maskTintHideRequested();
+    /* Closing a submask is itself a mask interaction, so the veil follows engagement
+       rather than being forced down here: still in the mask panel -> the mask stays
+       visible (now without a submask contour, since nothing is selected); touch an
+       adjustment slider and it gets out of the way on its own. */
+    noteMaskInteraction();
 }
 
 void DevelopProperties::commitPendingMask(bool keepVeil)
@@ -1242,16 +1292,16 @@ void DevelopProperties::commitPendingMask(bool keepVeil)
     noteEdit(verb + toolName);
     buildTree();
     emit paramsChanged();
-    /* The submask is folded in: get the coverage tint off the image so the user sees the
-       developed result. The overlay is still latched, so "O" (or the header menu row)
-       brings it back. Must follow paramsChanged() -- that rebuilds/re-sets the tint.
+    /* The submask is folded in. The veil follows engagement from here (the commit is a
+       mask interaction), so it stays up while the user is still in the mask panel and
+       leaves of its own accord when they move to an adjustment. Must follow
+       paramsChanged() -- that rebuilds/re-sets the tint.
 
-       keepVeil skips it. The automatic commit fires WHILE the user is still working on
-       the submask -- the editing session has not ended, only its pending status -- and a
-       veil that vanished by itself two seconds into an edit would be the most startling
-       thing about settling. closeSubmaskEditing() drops it when the session really
-       ends. */
-    if (!keepVeil) emit maskTintHideRequested();
+       keepVeil is now only about not DISTURBING it: the automatic commit fires while the
+       user is still working on the submask -- the editing session has not ended, only
+       its pending status -- so it must not even re-assert visibility mid-edit. */
+    Q_UNUSED(keepVeil)
+    noteMaskInteraction();
 }
 
 void DevelopProperties::armMaskAutoCommit()
@@ -1372,6 +1422,10 @@ void DevelopProperties::cancelMaskTool()
     noteEdit("Cancel submask");
     buildTree();
     emit paramsChanged();
+    /* Cancelling can clear maskLatched (an empty scope has no mask left), which changes
+       maskOverlayActive() and so the engagement answer -- but it is not an edit, so
+       re-evaluate rather than engage. */
+    syncMaskVeilEngagement();
 }
 
 void DevelopProperties::setPanelEnabled(bool enabled)
@@ -1453,9 +1507,10 @@ void DevelopProperties::onScopeSelected(const QString &name)
     if (scopeHeader) scopeHeader->setCollapsed(false);
 
     emit paramsChanged();         // the renderer shows the active scope
-    /* Selecting a scope is an explicit "show me this mask", so clear any sticky hidden
-       flag left by finishing a tool or moving an adjustment slider. */
-    if (hasMask) emit maskTintShowRequested();
+    /* Selecting a scope is an explicit "show me this mask", so it engages the panel and
+       clears any hidden state left by an adjustment slider. */
+    if (hasMask) noteMaskInteraction();
+    else         noteNonMaskInteraction();      // Global: there is no mask to show
 }
 
 void DevelopProperties::onSpotToolToggled(bool active)
@@ -1938,13 +1993,6 @@ QString DevelopProperties::maskToolName(int tool)
     return "Mask";
 }
 
-int DevelopProperties::maskToolFromName(const QString &name)
-{
-    for (int t = 0; t <= int(MaskTool::Object); ++t)
-        if (maskToolName(t) == name) return t;
-    return int(MaskTool::LinearGradient);
-}
-
 QString DevelopProperties::opName(int op)
 {
     if (op == int(MaskOp::Subtract))  return "(-)";
@@ -2058,6 +2106,63 @@ bool DevelopProperties::maskOverlayActive() const
        (selectedMaskIndex) OR after a commit/finish latched it on (the combined result
        stays visible + 'O'-toggleable until the scope/image changes). */
     return activeScopeIndex > 0 && (selectedMaskIndex >= 0 || maskLatched);
+}
+
+/* ----------------------------------------------------------------------------------------
+   Veil engagement (see maskVeilEngaged in the header for WHY)
+   ---------------------------------------------------------------------------------------- */
+
+bool DevelopProperties::maskVeilEngaged() const
+{
+    if (!maskOverlayActive()) return false;
+    return maskPanelHovered || lastInteractionWasMask;
+}
+
+void DevelopProperties::syncMaskVeilEngagement()
+{
+/*
+    Push the rule at the veil, but only when the answer CHANGED. Every mask mutator and
+    every adjustment handler calls in here, so an unconditional emit would re-assert the
+    veil's visibility dozens of times a drag -- and worse, would stamp on the user's "O"
+    override on every tick instead of letting it stand.
+*/
+    const bool engaged = maskVeilEngaged();
+    if (engaged == maskVeilEngagedNow) return;
+    maskVeilEngagedNow = engaged;
+    if (engaged) emit maskTintShowRequested();
+    else         emit maskTintHideRequested();
+}
+
+void DevelopProperties::setMaskPanelHovered(bool hovered)
+{
+    if (hovered == maskPanelHovered) return;
+    maskPanelHovered = hovered;
+    syncMaskVeilEngagement();
+}
+
+void DevelopProperties::noteMaskInteraction()
+{
+    lastInteractionWasMask = true;
+    syncMaskVeilEngagement();
+}
+
+void DevelopProperties::noteNonMaskInteraction()
+{
+    if (!lastInteractionWasMask) return;
+    lastInteractionWasMask = false;
+    syncMaskVeilEngagement();
+}
+
+void DevelopProperties::setMaskVeilOverride(bool shown)
+{
+/*
+    "O" (or the action-row tint button) just toggled the veil behind our back. Record the
+    veil's REAL state as the one engagement is measured against, and the override falls
+    out for free: engagement no longer disagrees with the screen, so nothing is emitted
+    until the user's attention actually moves -- and that first genuine transition is
+    what retires the override. No separate override flag to keep in step.
+*/
+    maskVeilEngagedNow = shown;
 }
 
 QVector<MaskComponent> DevelopProperties::activeScopeComponents() const
@@ -2484,6 +2589,18 @@ void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
     soloCollapseOthers(SoloOwner::Section, name);
 }
 
+/*
+    Adding a submask asks TWO questions, and this asks them together: what the submask
+    does to the mask (Add / Subtract / Intersect) and what kind of submask it is.
+
+    It used to be a bare pop-up menu of tool names, with the op left to a modifier held
+    at some later instant -- undiscoverable (nothing said Opt subtracts until you were
+    already painting) and easy to lose (release the key at the wrong moment and the
+    subtract you drew became an add). SubmaskDialog puts the op in words beside the type,
+    and the modifiers stay as the shortcut: holding one still overrides the chosen op
+    while shaping (latchMaskOp), and releasing it falls back to what was chosen here
+    rather than to Add.
+*/
 void DevelopProperties::showMaskMenu()
 {
     if (G::isLogger) G::log("DevelopProperties::showMaskMenu");
@@ -2495,70 +2612,9 @@ void DevelopProperties::showMaskMenu()
         return;
     }
 
-    /* A plain tool list -- the Add/Subtract/Intersect choice is made later on the
-       MaskPanel, once the tool is defined (build-up model). */
-    {
-        maskMenu->clear();
-        for (int t = 0; t <= int(MaskTool::Object); ++t) {
-            QAction *a = maskMenu->addAction(maskToolName(t));
-            a->setData(t);
-            connect(a, &QAction::triggered, this, [this, t]{ onMaskToolChosen(t); });
-            if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
-                maskMenu->addSeparator();       // group geometric / range / AI tools
-        }
-        maskMenu->exec(QCursor::pos());
-        return;
-    }
-
-    /* Built fresh each click: Subtract is offered only once at least one tool exists (the
-       first tool must Add -- there is nothing to subtract from an empty mask). */
-    maskMenu->clear();
-    for (int t = 0; t <= int(MaskTool::Object); ++t) {
-        QAction *a = maskMenu->addAction("Add " + maskToolName(t));
-        connect(a, &QAction::triggered, this, &DevelopProperties::newMask);
-        if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
-            maskMenu->addSeparator();           // group geometric / range / AI tools
-    }
-    if (!scope->components.isEmpty()) {
-        maskMenu->addSeparator();
-        for (int t = 0; t <= int(MaskTool::Object); ++t) {
-            QAction *a = maskMenu->addAction("Subtract " + maskToolName(t));
-            connect(a, &QAction::triggered, this, &DevelopProperties::newMask);
-            if (t == int(MaskTool::Brush) || t == int(MaskTool::LuminanceRange))
-                maskMenu->addSeparator();           // group geometric / range / AI tools
-        }
-    }
-    maskMenu->exec(QCursor::pos());
-}
-
-void DevelopProperties::newMask()
-{
-    if (G::isLogger) G::log("DevelopProperties::newMask");
-    EditScope *scope = activeScope();
-    if (!scope || activeScopeIndex == 0) return;            // Global scope has no mask
-    QAction *a = qobject_cast<QAction*>(sender());
-    if (!a) return;
-
-    /* Action text is "Add <tool>" / "Subtract <tool>"; the first word is the op, the rest the
-       tool name (handles multi-word names like "Subject Mask"). */
-    const QString txt = a->text();
-    MaskComponent m;
-    m.op   = txt.startsWith("Subtract")  ? int(MaskOp::Subtract)
-           : txt.startsWith("Intersect") ? int(MaskOp::Intersect)
-                                         : int(MaskOp::Add);
-    m.tool = maskToolFromName(txt.section(' ', 1));
-    m.paramsJson = defaultMaskParams(m.tool);
-    if (m.tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush defaults to a crisp edge
-    const bool first = scope->components.isEmpty();
-    scope->components.append(m);
-    selectedMaskIndex = scope->components.size() - 1;      // start editing the new tool
-    noteEdit(txt);              // "Add Subject Mask" / "Subtract Brush Mask" / ...
-
-    buildTree();
-    /* Veil on the scope's first submask only -- see addMaskTool for why. */
-    if (first) emit maskTintShowRequested();
-    else       emit maskTintHideRequested();
-    emit paramsChanged();       // a mask confines the scope's adjustment -> re-composite
+    int op = int(MaskOp::Add), tool = -1;
+    if (!SubmaskDialog::choose(this, scope->components.isEmpty(), op, tool)) return;
+    onMaskToolChosen(tool, op);
 }
 
 void DevelopProperties::deleteMask(int index)
@@ -2577,6 +2633,7 @@ void DevelopProperties::deleteMask(int index)
 
     buildTree();
     emit paramsChanged();       // less mask coverage on the scope -> re-composite
+    noteMaskInteraction();
 }
 
 void DevelopProperties::setSelectedMask(int index)
@@ -2911,8 +2968,11 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
     }
     emit paramsChanged();       // new mask geometry -> re-composite the masked scope
     /* Every shape edit -- handle drag, brush stroke, pipette pick -- arrives here, so
-       this is the one place the settle timer needs arming for geometry. */
+       this is the one place the settle timer needs arming for geometry -- and the one
+       place canvas mask editing registers as engagement, which is what lets the user
+       move off the panel onto the photo without the veil dropping. */
     armMaskAutoCommit();
+    noteMaskInteraction();
 }
 
 void DevelopProperties::onMaskSelectionChanged()
@@ -2982,7 +3042,7 @@ void DevelopProperties::mousePressEvent(QMouseEvent *event)
                             valIdx.data(UR_Editor).value<void*>()))
                         se->focusSlider();
                     const bool isMaskSlider = idx.parent().data(UR_MaskIndex).isValid();
-                    if (!isMaskSlider && maskOverlayActive()) emit maskTintHideRequested();
+                    if (!isMaskSlider) noteNonMaskInteraction();
                     flashCaption(idx);
                     return;
                 }
@@ -3819,7 +3879,7 @@ void DevelopProperties::resetWbAxisToAsShot(bool isTemp)
     reads as unedited -- the same state the WB row's double-click gives.
 */
     if (currentImagePath.isEmpty()) return;
-    if (maskOverlayActive()) emit maskTintHideRequested();
+    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
 
     const CameraColor cam = currentCam();
     EditParams &p = activeParams();
@@ -4325,7 +4385,7 @@ void DevelopProperties::onCurveChanged(bool commit)
     if (G::isLogger) G::log("DevelopProperties::onCurveChanged");
     if (isPopulating) return;
     if (currentImagePath.isEmpty() || !curveEditor) return;
-    if (maskOverlayActive()) emit maskTintHideRequested();
+    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
 
     EditParams &p = activeParams();
     const EditParams &e = curveEditor->params();
@@ -4356,7 +4416,7 @@ void DevelopProperties::onParametricChanged(int band, double value, bool commit)
     if (isPopulating) return;
     if (currentImagePath.isEmpty()) return;
     if (commit || band < 0) { lastFlashBand = -1; return; }   // release: re-arm the flash
-    if (maskOverlayActive()) emit maskTintHideRequested();
+    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
 
     EditParams &p = activeParams();
     const float v = static_cast<float>(value);
@@ -5121,7 +5181,7 @@ void DevelopProperties::setCalAxis(bool isHue, float v)
 void DevelopProperties::onPrimaryWheelChanged(bool commit)
 {
     if (currentImagePath.isEmpty() || !primaryWheel) return;
-    if (maskOverlayActive()) emit maskTintHideRequested();
+    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
     EditParams &p = activeParams();
     if (calActiveMask & 0x1) {
         p.calRedHue = primaryWheel->hue(0);
@@ -5321,7 +5381,7 @@ void DevelopProperties::setGradeLum(float lum)
 void DevelopProperties::onGradeWheelChanged(bool commit)
 {
     if (currentImagePath.isEmpty() || !colorGradeWheel) return;
-    if (maskOverlayActive()) emit maskTintHideRequested();
+    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
     EditParams &p = activeParams();
     if (gradeActiveMask & 0x1) {
         p.gradeShadowHue = colorGradeWheel->hue(0);
@@ -5785,7 +5845,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
        Custom. */
     if (source == "temp" || source == "tint") {
         if (currentImagePath.isEmpty()) return;
-        if (maskOverlayActive()) emit maskTintHideRequested();
+        noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
         EditParams &p = activeParams();
         float k, t;
         WhiteBalance::resolve(currentCam(), p.temp, p.tint, k, t);
@@ -5810,7 +5870,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
        select (not a plain applyKeyToParams key -- it needs gradeActiveMask context). */
     if (source == "gradeLum") {
         if (currentImagePath.isEmpty()) return;
-        if (maskOverlayActive()) emit maskTintHideRequested();
+        noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
         setGradeLum(v.toFloat());
         noteEdit("Color grade luminance", historyValueText(idx, v), "grade/lum");
         emit paramsChanged();
@@ -5822,7 +5882,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
        history key carries the mask, so nudging red then green reads as two steps. */
     if (source == "calHue" || source == "calSat") {
         if (currentImagePath.isEmpty()) return;
-        if (maskOverlayActive()) emit maskTintHideRequested();
+        noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
         setCalAxis(source == "calHue", v.toFloat());
         noteEdit("Calibrate", historyValueText(idx, v),
                  QString("cal/%1/%2").arg(source).arg(calActiveMask));
@@ -5839,7 +5899,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
         /* This slider modifies the masked pixels (not the mask itself). If a mask overlay
            is shown, hide its red coverage so the user sees the effect. Covers all Basic/
            Color/Effects sliders and any future adjustment key via applyKeyToParams. */
-        if (maskOverlayActive()) emit maskTintHideRequested();
+        noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
         applyKeyToParams(source, v, activeParams());
         /* The Curves panel's Parametric view DRAWS Basic's tone sliders, so any of them
            moving has to redraw the plot. Cheap (a copy + an update), and it keeps the two
@@ -6098,6 +6158,10 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     /* Nothing is open on the new image, and the panel belongs to whatever scope turns out
        to be active there (buildTree -> syncMaskPanel decides). */
     selectedMaskIndex = -1;
+    /* A fresh image is not a mask edit in progress: engagement starts over, or the veil
+       would come up on an image the user only navigated to. */
+    lastInteractionWasMask = false;
+    maskVeilEngagedNow = false;
     if (maskPanel) maskPanel->hide();
     maskLatched = false;         // a fresh image starts with no latched mask overlay
     previewActive = false;       // a History hover does not follow the image

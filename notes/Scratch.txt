@@ -4389,6 +4389,6 @@ dialogs) use a built DMG from packaging/macos/deploy.command. Testing as a secon
 actually the best way to see those permission prompts, since your dev account has long
 since granted them.
 
-=================== MASKS =======================================
+=============================== MASKS =======================================
 
 

@@ -65,6 +65,10 @@ public:
 
     /* Display name of a MaskOp, shared with the on-canvas op chip's wording. */
     static QString opName(int op);
+    /* The one character a row's op chip shows (+ / - / n). Public because SubmaskDialog
+       labels its op choices with it: the glyph picked there is the glyph the submask's
+       row wears afterwards, so the two cannot drift. */
+    static QString opGlyph(int op);
 
 signals:
     void addRequested();                          // [+] / "Add submask"
@@ -95,7 +99,6 @@ private:
     void updateCollapseIcon();
     /* Fire on the next tick: the handler rebuilds these rows (see the class comment). */
     void emitDeferred(std::function<void()> fn);
-    static QString opGlyph(int op);
 
     QWidget     *headerBand    = nullptr;
     BarBtn      *collapseBtn   = nullptr;
