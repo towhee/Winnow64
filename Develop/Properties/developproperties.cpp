@@ -6357,14 +6357,30 @@ void DevelopProperties::clearBeforeAfterLatch()
     emit beforeAfterChanged(false);
 }
 
+EditStack DevelopProperties::originalStack() const
+{
+/*
+    The Before image: this image with NO develop edits. A default EditStack with one
+    Global scope renders exactly as a never-edited image does -- default params, empty
+    (= default) camera profile, identity geometry, no spots -- so the crop and the spot
+    heals are dropped along with the sliders. Synthesized rather than taken from history;
+    see the header for why entry 0 is not the original.
+*/
+    EditStack s;
+    s.scopes.append(EditScope());       // name defaults to "Global"
+    return s;
+}
+
 void DevelopProperties::toggleBeforeAfter()
 {
 /*
-    "\" -- flip the loupe between Before (history entry 0, the state this session started
-    from) and After (the state the image is actually in).  See the header for why this
-    latches and renders the full path where a History hover does neither.
+    "\" -- flip the loupe between Before (the image with no develop edits at all) and
+    After (the state the image is actually in).  See the header for why this latches and
+    renders the full path where a History hover does neither.
 */
     if (G::isLogger) G::log("DevelopProperties::toggleBeforeAfter");
+
+    int delay = 500;
 
     if (beforeAfterActive) {            // back to After
         previewActive = false;
@@ -6373,11 +6389,15 @@ void DevelopProperties::toggleBeforeAfter()
         /* NOT endHistoryPreview(): that renders the proxy only, and coming back to After
            has to end as crisp as the Before it replaces. */
         emit paramsChanged();
-        if (G::popup) G::popup->showPopup("After", 1200);
+        /* Bottom right of the central widget, not the middle of it: this message names
+           which of two pictures is up, and the picture is the thing being looked at. */
+        if (G::popup)
+            G::popup->showPopup("After", delay, true, 0.75, Qt::AlignHCenter,
+                                Qt::AlignBottom | Qt::AlignRight);
         return;
     }
 
-    if (!history || currentImagePath.isEmpty()) return;
+    if (currentImagePath.isEmpty()) return;
     /* The crop overlay and an open mask tool own the canvas; swapping the picture out
        from under them would fight for it (the same guard previewHistoryEntry uses). */
     if (maskPanelOpen || spotMode) {
@@ -6385,11 +6405,11 @@ void DevelopProperties::toggleBeforeAfter()
             G::popup->showPopup("Close the tool to compare Before and After.", 2500);
         return;
     }
-    const HistoryEntry *before = history->at(currentImagePath, 0);
-    if (!before) return;
-    /* Sitting on the baseline already: Before IS After, so there is nothing to show and a
-       silent no-op would read as a dead key. */
-    if (history->pos(currentImagePath) <= 0) {
+    /* Nothing to compare only when the image itself is unedited: Before IS After, and a
+       silent no-op would read as a dead key. NOT keyed on the history position -- an
+       image opened in a later session carrying saved edits sits at position 0 and still
+       has a Before worth seeing. */
+    if (currentIsIdentity()) {
         if (G::popup)
             G::popup->showPopup("No develop edits yet -- Before and After are the same.",
                                 2500);
@@ -6401,12 +6421,14 @@ void DevelopProperties::toggleBeforeAfter()
     cameraProfileHoverActive = false;
     if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
 
-    previewStack = before->stack;
+    previewStack = originalStack();
     previewActive = true;
     beforeAfterActive = true;
     emit beforeAfterChanged(true);
     emit paramsChanged();               // proxy now, crisp full-res on settle
-    if (G::popup) G::popup->showPopup("Before  (" + before->action + ")", 1800);
+    if (G::popup)
+        G::popup->showPopup("Before  (Original)", delay, true, 0.75, Qt::AlignHCenter,
+                            Qt::AlignBottom | Qt::AlignRight);
 }
 
 void DevelopProperties::applyHistoryEntry(int index)

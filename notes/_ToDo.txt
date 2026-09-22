@@ -8,7 +8,6 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- F Keywords not hidden
 - AI keywording
 - Redo Develop help
 - Edit Winnow shortcuts

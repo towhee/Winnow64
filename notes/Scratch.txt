@@ -4389,6 +4389,328 @@ dialogs) use a built DMG from packaging/macos/deploy.command. Testing as a secon
 actually the best way to see those permission prompts, since your dev account has long
 since granted them.
 
-=============================== MASKS =======================================
+Winnow is supposed to open with the Library default workspace.  It does, except the width of the left dock is sometimes less than defined in the Library workspace. Before a
+  folder is loaded, pressing E for the Library workspace resets to the correct width.
+
+==================== WINNOW ARCHITECTURE ===================
+
+Modules
+- Library
+- Develop
+- Embellish
+- Focus stack
+- Keywords
+
+Review the current main menu structure and contents.  All functions in Winnow that have a
+shortcut should also have a menu item to document the shortcuts for the users.  Make a
+recommendation if you can think of a better menu structure.  Do not make any changes yet.
+
+Here is the full moderate reshape. Changes from today are marked NEW (item that exists only as an invisible shortcut today), MOVED, FIX, or SPLIT.
+
+  Menu bar
+
+  File   Edit   Pick   Go   Filter   Sort   Develop   Tools   View   Window   Help
+
+  Today: File Ingest Edit [blank] Go Filter Sort Utilities View Help.
+  Net: the blank entry goes, Develop and Window arrive, Utilities → Tools, Ingest → Pick, Edit moves ahead of Pick.
+
+  ---
+
+File
+
+  Open Folder...                        O
+  Open Memory Card...                   Ctrl+O
+  Open with...                        > Manage External Applications
+                                        ---
+                                        <app 1..10>        Alt+1 .. Alt+0
+  Recent folders                      > <10 folders>
+  Reveal in Finder                      Ctrl+R
+  ---
+  Open Catalog                          Shift+O
+  Manage Catalog...
+  ---
+  Refresh Folders                       Ctrl+F5
+  Refresh Current Folder                Alt+F5      NEW
+  Collapse All Folders                  Alt+C       NEW  (FSTree context menu only today)
+  ---
+  Color manage                        [x]
+  Combine Raw+Jpg                     [x] Alt+J
+  Include sidecars                    [x]
+  ---
+  Move to Trash                         Delete, Backspace   FIX
+  Move Folder to Trash
+  ---
+  Rename images                         Ctrl+F2
+  Save Preview as...
+  ---
+  Diagnostics Metadata                  Ctrl+Shift+Alt+M
+  ---
+  Exit                                  Ctrl+Q
+
+  Move to Trash gets both keys via setShortcuts(), and the hidden deleteAction1 (menusandactions.cpp:313) is deleted — that is cleaner than giving the Backspace twin its own menu
+  row.
+
+Edit
+
+  Select All                            Ctrl+A
+  Invert Selection                      Shift+Ctrl+A
+  ---
+  Share...                                          (Mac/Win only)
+  Copy files                            Ctrl+C
+  Copy images                           Ctrl+Shift+C
+  Copy path(s)
+  Paste files                           Ctrl+V
+  ---
+  Ratings                             > Clear rating
+                                        Set rating to 1 .. 5      1 .. 5
+  Color labels                        > Clear colour
+                                        Red 6  Yellow 7  Green 8  Blue 9  Purple 0
+  ---
+  Rotate CW                             Ctrl+]
+  Rotate CCW                            Ctrl+[
+  ---
+  Token template editor...
+  ---
+  Preferences                           Ctrl+,
+
+  Edit > Utilities (menusandactions.cpp:2387) is removed — it duplicated four of the six Tools items.
+
+Pick
+
+  Toggle Pick                           `  ,  P
+  Toggle Reject                         X
+  Toggle Pick unless rejected           Shift+Ctrl+`
+  Recover prior pick state              Alt+Ctrl+Z
+  ---
+  Filter picks only                   [x] Shift+`          (same QAction as in Filter)
+  ---
+  Ingest picks                          Q
+  Ingest History                      > <recent ingest folders>
+
+  Renaming Ingest → Pick is optional; the menu is four-fifths picking. Say the word and I'll keep Ingest.
+
+Go
+
+  Go to Folder...                       Ctrl+Shift+G
+  Jump to Row                           J , =
+  ---
+  Next                                  Right Arrow
+  Previous                              Left Arrow
+  Up                                    Up
+  Down                                  Down
+  Next Page                             PgDown
+  Prev Page                             PgUp
+  First                                 Home
+  Last                                  End
+  ---
+  Extend Selection                    > Add Next             Shift+Right      SPLIT
+                                        Add Previous         Shift+Left
+                                        Add Up               Shift+Up
+                                        Add Down             Shift+Down
+                                        Add Prev Page        Shift+PgUp
+                                        Add Next Page        Shift+PgDown
+                                        Add all to First     Shift+Home
+                                        Add all to Last      Shift+End
+  Scroll                              > Left                 Alt+Left         SPLIT
+                                        Right                Alt+Right
+                                        Up                   Alt+Up
+                                        Down                 Alt+Down
+                                        Prev Page            Alt+PgUp
+                                        Next Page            Alt+PgDown
+                                        Home                 Alt+Home
+                                        End                  Alt+End
+                                        Current              .
+  ---
+  Next Pick                             Ctrl+Shift+Alt+Right
+  Previous Pick                         Ctrl+Shift+Alt+Left
+  Random                                Shift+Ctrl+Right
+
+  33 items become 14 plus two submenus. Next/Previous keep the existing "Next\tRight Arrow" text trick — they are handled in MW::eventFilter for speed and carry no QKeySequence.
+
+Filter
+
+  Force update
+  Invert Filter
+  Clear all filters                     Shift+C
+  ---
+  Filter picks only                   [x] Shift+`
+  ---
+  Filter by search text               [x] F2
+  ---
+  Filter by rating 1 .. 5             [x] Shift+1 .. Shift+5
+  ---
+  Filter by Red / Yellow / Green / Blue / Purple   [x] Shift+6 .. Shift+0
+  ---
+  Most recent day                     [x] Shift+D          FIX (listed twice today)
+
+Sort
+
+  Unchanged — 18 exclusive sort fields, separator, Reverse sort order  Alt+S.
+
+  Develop  — MOVED up from Utilities > Develop
+
+  Develop                             [x]                     (enable the panel)
+  Develop Mode                          D
+  ---
+  Build Developed Previews
+  Clear Developed Preview Cache
+  ---
+  New Mask                              N
+  Tweak Mask                            M
+  Mask Overlay                          O
+  ---
+  Crop / Transform Panel              [x] R
+  Spot Removal Tool                     S
+  White Balance Sampler                 W
+  Before / After                      [x] \
+  ---
+  Scopes                              > Histogram and Vectorscope
+                                        Histogram only
+                                        Vectorscope only
+                                        ---
+                                        Hide scopes
+  ---
+  Export Developed Image                X
+  Export with preset                  > <saved export presets>
+  ---
+  Copy Develop Settings...              Ctrl+Alt+C
+  Paste Develop Settings                Ctrl+Alt+V
+  Save Develop Preset...                Ctrl+Shift+N
+
+  Everything below the second separator stays Develop-mode-local: no real QKeySequence, key shown after a \t, greyed outside Develop by the existing syncDevelopMenuEnabled
+  (menusandactions.cpp:3667). That machinery is unchanged — the submenu just moves to the menu bar.
+
+Tools  — was Utilities
+
+  Embellish                           > Export embellished images... > <30 templates>
+                                        ---
+                                        New template
+                                        Read template from file
+                                        Save current template to file
+                                        ---
+                                        Manage tiles
+                                        Manage graphics
+                                        ---
+                                        Reveal Winnets
+  Focus Stack                         > Run focus stack       Alt+F
+                                        Copy focus stack winnet path
+  ---
+  Mean stack
+  Find duplicates
+  Media read speed
+  ---
+  Run Droplet                           A               NEW
+  Manage External Applications
+
+View  — SPLIT
+
+  Loupe Mode                          [x] E
+  Grid Mode                           [x] G
+  Table Mode                          [x] T
+  Compare Mode                        [x] C
+  Keywords Mode                         K
+  ---
+  Slide Show                          > Start / Stop          S
+                                        ---
+                                        Next Slide            X
+                                        Previous Random Slide Backspace
+                                        Pause / Continue      Space
+                                        Wrap at End of Folder W
+                                        Random / Sequential   R
+                                        Interval            > 1s 2s 3s 5s 10s 30s 60s 3m 10m   1..9
+                                        Show Slideshow Keys   H
+  ---
+  Full Screen                         [x] F
+  Escape Full Screen                    Esc
+  ---
+  Show Original                       [x]
+  Show Developed                      [x]
+  Original / Developed                  Y
+  ---
+  Show Rating Badge                   [x] Ctrl+I
+  Show Image Number                   [x] Ctrl+Shift+I
+  Show Info Overlay                   [x] I
+  Change Info Overlay...
+  Show Image Count                    [x] \               NEW
+  ---
+  Zoom                                > Zoom                  Z
+                                        Zoom In               +
+                                        Zoom Out              -
+                                        Zoom fit <-> 100%     Space
+                                        Pan to Predicted Focus [x] B
+  Thumbnails                          > Enlarge thumbs        ]
+                                        Shrink thumbs         [
+
+  The Slide Show submenu is the one genuinely new mechanism: the nine in-slideshow keys currently live only in MW::keyReleaseEvent (mainwindow.cpp:1577-1636) and the H overlay.
+  They would use the same "text\tKEY" + aboutToShow pattern the Develop menu already proves, enabled only while G::isSlideShow.
+
+Window  — restored
+
+  Workspace                           > New Workspace         W
+                                        Manage Workspaces...  Ctrl+W
+                                        ---
+                                        Default             > Library / Develop / Keywords /
+                                                              Embellish / Slide Show
+                                                              ---
+                                                              Set Default from Current Layout...
+                                        User override       > (same five, checkable)
+                                                              ---
+                                                              Update Override from Current Layout...
+                                        ---
+                                        <10 workspaces>       Ctrl+0 .. Ctrl+9
+  ---
+  Source Panel                        [x] F3
+  Bookmarks Panel                     [x] F4
+  Filters Panel                       [x] F5
+  Catalog Panel                       [x]
+  Keywords Panel                      [x]
+  Metadata Panel                      [x] F6
+  Thumbnails Panel                    [x] F7
+  Embellish Editor Panel              [x] F8
+  Develop Editor Panel                [x] F9
+  History Panel                       [x] H
+  Develop Presets                     [x] P
+  ---
+  Status Bar                          [x] F10
+  Menubar                             [x]                 (Windows only)
+
+  windowGroupAct already exists at menusandactions.cpp:2552 pointing at viewMenu; it gets its own QMenu and the commented-out menuBar()->addAction(windowGroupAct) at :2714 is
+  restored.
+
+Help
+
+  Winnow Help                           ?               NEW (restored; commented out at :2653)
+  Winnow Shortcuts
+  Show welcome screen
+  Performance tips
+  Focus Stacking tips
+  ---
+  Check for updates
+  Manage AI models
+  ---
+  Logs                                > View activity log
+                                        Clear activity log
+                                        ---
+                                        View all issues
+                                        View session issues
+                                        ---
+                                        Mail logs to Winnow for review
+  ---
+  Diagnostics                         > Tests            > Traverse folder stress test
+                                                           Bounce bookmarks stress test
+                                                           ---
+                                                           Test                Shift+Ctrl+Alt+T   NEW
+                                                           Test1               /                  NEW
+                                                           Test Metadata       Shift+Ctrl+Alt+F   NEW
+                                                           Rory                Shift+Ctrl+Alt+.   NEW
+                                        All Diagnostics
+                                        Current Row Diagnostics   Ctrl+Shift+Alt+D
+                                        <18 further diagnostics, unchanged>
+                                        ---
+                                        Ingest probe / report
+                                        ---
+                                        Panel probe / report
 
 
+
+  The four developer keys would be added but hidden unless G::isRory, the way workspaceDefaultMenu already hides itself (menusandactions.cpp:2559).
