@@ -34,7 +34,8 @@ public:
                       int msDuration = 1500,
                       bool isAutoSize = true,
                       float opacity = 0.75,
-                      Qt::Alignment alignment = Qt::AlignHCenter);
+                      Qt::Alignment alignment = Qt::AlignHCenter,
+                      Qt::Alignment corner = Qt::AlignCenter);
     void pulse(int minIntervalMs = 100);
     QLabel label;
     QProgressBar progressBar;
@@ -44,16 +45,23 @@ protected:
     void paintEvent(QPaintEvent *event) override;    // The background will be drawn through the redraw method
 
 public slots:
+    /*  `alignment` is the TEXT's alignment inside the box; `corner` is where the box
+        itself sits over the central widget -- AlignCenter (the default, and what every
+        caller got before there was a choice) or an edge/corner combination such as
+        Qt::AlignBottom | Qt::AlignRight. Passed per call rather than held as state, so a
+        corner request cannot leak onto the next message through showPopup's deferral. */
     void showPopup(const QString &text,
                    int msDuration = 1500,
                    bool isAutoSize = true,
                    float opacity = 0.75,
-                   Qt::Alignment alignment = Qt::AlignHCenter);
+                   Qt::Alignment alignment = Qt::AlignHCenter,
+                   Qt::Alignment corner = Qt::AlignCenter);
     void showPopup1(const QString &text,
               int msDuration = 1500,
               bool isAutoSize = true,
               float opacity = 0.75,
-              Qt::Alignment alignment = Qt::AlignHCenter);
+              Qt::Alignment alignment = Qt::AlignHCenter,
+              Qt::Alignment corner = Qt::AlignCenter);
     void reset();
 
 private slots:

@@ -91,12 +91,14 @@ void Popup::showPopup(const QString &text,
                       int msDuration,
                       bool isAutoSize,
                       float opacity,
-                      Qt::Alignment alignment)
+                      Qt::Alignment alignment,
+                      Qt::Alignment corner)
 {
     QPointer<Popup> self(this);
-    QTimer::singleShot(0, this, [self, text, msDuration, isAutoSize, opacity, alignment] {
+    QTimer::singleShot(0, this, [self, text, msDuration, isAutoSize, opacity, alignment,
+                                 corner] {
         if (!self) return;
-        self->showPopup1(text, msDuration, isAutoSize, opacity, alignment);
+        self->showPopup1(text, msDuration, isAutoSize, opacity, alignment, corner);
         self->raise();
         self->update();
     });
@@ -106,7 +108,8 @@ void Popup::showPopupNow(const QString &text,
                          int msDuration,
                          bool isAutoSize,
                          float opacity,
-                         Qt::Alignment alignment)
+                         Qt::Alignment alignment,
+                         Qt::Alignment corner)
 {
 /*
     THE SAME MESSAGE, ON THE SCREEN NOW, WITHOUT PUMPING THE APPLICATION.
@@ -124,7 +127,7 @@ void Popup::showPopupNow(const QString &text,
     crash; the deferred path is correct everywhere, just later.
 */
     if (QThread::currentThread() != thread()) {
-        showPopup(text, msDuration, isAutoSize, opacity, alignment);
+        showPopup(text, msDuration, isAutoSize, opacity, alignment, corner);
         return;
     }
 
@@ -136,7 +139,7 @@ void Popup::showPopupNow(const QString &text,
         those are the 112-577 ms this exists to stop paying. */
     QCoreApplication::sendPostedEvents(this, 0);
 
-    showPopup1(text, msDuration, isAutoSize, opacity, alignment);
+    showPopup1(text, msDuration, isAutoSize, opacity, alignment, corner);
     raise();
     repaint();
     pulseClock.restart();
@@ -171,7 +174,8 @@ void Popup::showPopup1(const QString &text,
                  int msDuration,
                  bool isAutoSize,
                  float opacity,
-                 Qt::Alignment alignment)
+                 Qt::Alignment alignment,
+                 Qt::Alignment corner)
 {
     // qDebug() << "PopUp::showPopup" << text << msDuration;
     hideTimer->stop();
@@ -192,15 +196,21 @@ void Popup::showPopup1(const QString &text,
     if (isAutoSize) adjustSize();               // With the recalculation notice sizes
     setWindowOpacity(static_cast<double>(popupOpacity));
 
-    // popup geometry
-    QRect cwRect = centralWidget->geometry();
+    /*  Popup geometry, in GLOBAL coordinates (this is a top-level window), over the
+        central widget. AlignCenter -- the default -- is the middle of that widget; an
+        edge bit in `corner` pins that axis to the edge instead, so bottom right is
+        Qt::AlignBottom | Qt::AlignRight. kEdgeGap is the gap the user SEES, so the 5 px
+        transparent border paintEvent leaves around the frame is added back. */
+    const QRect cwRect(centralWidget->mapToGlobal(QPoint(0, 0)), centralWidget->size());
+    const int kEdgeGap = 20 - 5;
     int w = width();
     int h = height();
-    // int x = source->geometry().x() + cwRect.x() + cwRect.width() / 2 - w / 2;
-    // int y = source->geometry().y() + cwRect.y() + cwRect.height() / 2 - h / 2;
-    QPoint center = centralWidget->mapToGlobal(centralWidget->rect().center());
-    int x = center.x() - w / 2;
-    int y = center.y() - h / 2;
+    int x = cwRect.center().x() - w / 2;
+    int y = cwRect.center().y() - h / 2;
+    if (corner & Qt::AlignLeft)   x = cwRect.left() + kEdgeGap;
+    if (corner & Qt::AlignRight)  x = cwRect.right() - w - kEdgeGap + 1;
+    if (corner & Qt::AlignTop)    y = cwRect.top() + kEdgeGap;
+    if (corner & Qt::AlignBottom) y = cwRect.bottom() - h - kEdgeGap + 1;
     setGeometry(x, y, w, h);
 
 #ifdef Q_OS_MAC

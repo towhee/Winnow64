@@ -309,10 +309,10 @@ public:
     /*
         BEFORE / AFTER ("\" in Develop mode, Develop > Before / After).
 
-        Before is the FIRST history entry -- the image as this session found it
-        ("Original", or "Saved settings" when the sidecar already carried edits). After is
-        the entry currently applied, which is just the stored stack. The key flips between
-        the two and the popup names which one is up.
+        Before is the image with NO develop edits -- a SYNTHESIZED identity stack
+        (originalStack), not a history entry. After is the state currently applied, which
+        is just the stored stack. The key flips between the two and the popup names which
+        one is up.
 
         It rides the SAME previewStack override the History hover uses, so the stored
         stack, the sliders and the history itself are never touched, and
@@ -330,6 +330,15 @@ public:
     */
     void toggleBeforeAfter();
     bool isShowingBefore() const { return beforeAfterActive; }
+    /* The Before image: this image with no develop edits at all. SYNTHESIZED rather than
+       read from history entry 0, because history is session scoped -- on a second visit
+       entry 0 is "Saved settings" (the PRIOR session's result, already edited), and the
+       kMaxEntries cap advances the baseline even within one session. A default EditStack
+       carrying one Global scope IS the unedited render by construction: default params,
+       empty (= default) camera profile, identity geometry and no spots -- so the crop and
+       the spot heals come off for the comparison too, and Before is the whole original
+       frame, unhealed. */
+    EditStack originalStack() const;
     /* Index (into the active scope's submasks) of the in-progress, uncommitted submask.
        MW composites it into the veil with the PREVIEWED op (pendingMaskOp), so the
        overlay shows the outcome. -1 when nothing is being defined. */
@@ -1265,8 +1274,9 @@ private:
     PresetsView *presetsView = nullptr;
     EditStack previewStack;
     bool previewActive = false;
-    /* The Before / After latch ("\"): previewStack is holding history entry 0 and only a
-       deliberate act takes it down. Always implies previewActive. */
+    /* The Before / After latch ("\"): previewStack is holding the unedited original
+       (originalStack) and only a deliberate act takes it down. Always implies
+       previewActive. */
     bool beforeAfterActive = false;
     bool isRestoringHistory = false;
     int activeScopeIndex = 0;
