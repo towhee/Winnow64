@@ -78,8 +78,11 @@ void MW::loupeDisplay(const QString src)
     prevCentralView = LoupeTab;
 
     /* recover thumbdock if it was visible before as gridView and full screen can
-       hide the thumbdock */
-    if (!isFullScreen() && wasThumbDockVisible) {
+       hide the thumbdock. NOT while the bottom show/hide bar is holding that area
+       collapsed: the user put the thumbnails away deliberately, and a mode change is
+       not them asking for them back. */
+    if (!isFullScreen() && wasThumbDockVisible
+        && !isDockAreaCollapsed(Qt::BottomDockWidgetArea)) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(true);
     }
@@ -277,7 +280,7 @@ void MW::tableDisplay()
 
     // recover thumbdock if it was visible before as gridView and full screen can
     // hide the thumbdock
-    if (!isFullScreen()){
+    if (!isFullScreen() && !isDockAreaCollapsed(Qt::BottomDockWidgetArea)) {
         if (wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -373,8 +376,10 @@ void MW::compareDisplay()
        entered compare mode avoids this.  After enter compare mode revert
        thumbdocK to prior visibility (wasThumbDockVisible).
     */
-    thumbDock->setVisible(true);
-    thumbDock->raise();
+    if (!isDockAreaCollapsed(Qt::BottomDockWidgetArea)) {
+        thumbDock->setVisible(true);
+        thumbDock->raise();
+    }
 //    thumbView->selectThumb(currentRow);
 
     G::mode = "Compare";
@@ -385,9 +390,11 @@ void MW::compareDisplay()
     prevCentralView = CompareTab;
     compareImages->load(centralWidget->size(), isRatingBadgeVisible, dm->selectionModel);
 
-    // restore thumbdock to previous state
-    thumbDock->setVisible(wasThumbDockVisible);
-    thumbDockVisibleAction->setChecked(wasThumbDockVisible);
+    // restore thumbdock to previous state (unless the show/hide bar has it collapsed)
+    if (!isDockAreaCollapsed(Qt::BottomDockWidgetArea)) {
+        thumbDock->setVisible(wasThumbDockVisible);
+        thumbDockVisibleAction->setChecked(wasThumbDockVisible);
+    }
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);

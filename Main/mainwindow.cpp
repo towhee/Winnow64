@@ -1248,6 +1248,20 @@ void MW::showEvent(QShowEvent *event)
     closeDevelopDock();     // hides develop + history + presets, unchecks their actions
     if (G::isPanelProbe) PanelProbe::Instance().Mark("after closeDevelopDock");
 
+    /* Re-collapse the sides the user left folded away. LAST, after every path that
+       restores or asserts dock visibility (restoreWindowState, the workspace fallback,
+       closeDevelopDock above), or one of them would re-show the panels a moment after
+       the collapse hid them. */
+    if (isSettings) {
+        if (settings->value("isLeftAreaCollapsed").toBool())
+            toggleDockArea(Qt::LeftDockWidgetArea);
+        if (settings->value("isRightAreaCollapsed").toBool())
+            toggleDockArea(Qt::RightDockWidgetArea);
+        if (settings->value("isBottomAreaCollapsed").toBool())
+            toggleDockArea(Qt::BottomDockWidgetArea);
+    }
+    syncShowHideBars();
+
     QMainWindow::showEvent(event);
 
     qApp->setStyleSheet(G::css);
@@ -7730,6 +7744,8 @@ void MW::toggleFullScreen()
         filterDock->setVisible(fullScreenDocks.isFilters);
         catalogDockVisibleAction->setChecked(fullScreenDocks.isCatalog);
         if (catalogDock) catalogDock->setVisible(fullScreenDocks.isCatalog);
+        keywordsDockVisibleAction->setChecked(fullScreenDocks.isKeywords);
+        if (keywordsDock) keywordsDock->setVisible(fullScreenDocks.isKeywords);
         if (G::useInfoView) {
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
@@ -7749,6 +7765,13 @@ void MW::toggleFullScreen()
         thumbDock->setVisible(fullScreenDocks.isThumbs);
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
+        /* Full screen sets every panel from fullScreenDocks, so whatever the bars had
+           collapsed is settled by that; drop the map so the bars do not go on claiming
+           a collapse they no longer own. syncShowHideBars also takes the bars themselves
+           off screen here -- full screen is for the photo. */
+        areaCollapsed.clear();
+        areaCollapsedExtent.clear();
+        syncShowHideBars();
     }
     // show normal screen
     else

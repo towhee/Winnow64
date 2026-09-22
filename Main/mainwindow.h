@@ -51,6 +51,9 @@
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
+#include "Main/showhidebar.h"
+
+class QToolBar;
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
 #include "Develop/workingimage.h"
@@ -208,8 +211,14 @@ public:
        v6: presetsDock retired -- the History panel hosts the History and Presets
        sections. Nothing is ADDED at v6, so placeDocksAddedSince has no row for it; the
        bump is what stops a v5 restore hunting for a "PresetsDock" that no longer
-       exists. */
-    static constexpr int winnowStateVersion = 6;
+       exists.
+       v7: the three show/hide bars. They are TOOLBARS, not docks (see leftBarDock), so
+       they add no rows to placeDocksAddedSince -- and would not want any in any case,
+       since MW::placeShowHideBars() re-asserts their positions after EVERY layout path,
+       restored or not, because they are not user-movable and so there is never a user
+       choice to preserve. The bump is still needed: saveState covers toolbars as well as
+       docks, so a v6 blob has no record of them and Qt hides anything it cannot find. */
+    static constexpr int winnowStateVersion = 7;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -310,7 +319,7 @@ public:
     /*  WORKFLOW WORKSPACES
 
         A layout per workflow, invoked by the workflow's key: E / G / C (Library),
-        D (Develop) and K (Keywords).  Embellish and Focus Stack have no key yet.
+        D (Develop) and K (Keywords).  Embellish and Slide Show have no key yet.
 
         Each workflow has a DEFAULT layout that ships with Winnow, read from the
         resource ":/Workspaces/defaults.json" (MW::loadWorkflowDefaults), and an
@@ -321,7 +330,7 @@ public:
 
         To add a workflow: append to the enum before WfCount, add a row to
         MW::workflowKeys / MW::workflowNames, and capture a default layout. */
-    enum Workflow {WfLibrary, WfDevelop, WfKeywords, WfEmbellish, WfFocusStack, WfCount};
+    enum Workflow {WfLibrary, WfDevelop, WfKeywords, WfEmbellish, WfSlideShow, WfCount};
     /* Stable keys for JSON and QSettings (never translated, never renamed) and the
        menu names (translated).  Both are indexed by Workflow. */
     static const QStringList &workflowKeys();
@@ -350,6 +359,7 @@ public:
         bool isFavs = false;
         bool isFilters = false;
         bool isCatalog = false;
+        bool isKeywords = false;
         bool isMetadata = false;
         bool isDevelop = false;
         bool isHistory = false;
@@ -1752,6 +1762,58 @@ private:
        historyPanel: the History list AND the Presets list, each under its own section
        band (Presets was a third tab until it was folded in here). */
     DockWidget *historyDock = nullptr;
+
+    /* ---- Show/hide bars (Lightroom's panel bars) -------------------------------------
+       A thin strip on the left, right and bottom window rim, each carrying one solid
+       triangle that collapses or restores every panel on that side. See showhidebar.h.
+
+       THEY ARE TOOLBARS, NOT DOCKS. QMainWindow lays its toolbar areas out as a ring
+       OUTSIDE the dock areas, which is exactly the window rim the bars want -- and it is
+       the only way to get there, because a dock area can only be APPENDED to (no prepend
+       in the public API), so a dock on the left lands between the panels and the photo
+       rather than outboard of them. Being toolbars also keeps them clear of
+       MW::docksInArea() and everything built on it (collapse, solo mode, dock tabs) with
+       no exclusion lists to maintain. Not movable, not floatable, no handle and no
+       context menu, so the user cannot take one apart. */
+    QToolBar *leftBarDock   = nullptr;
+    QToolBar *rightBarDock  = nullptr;
+    QToolBar *bottomBarDock = nullptr;
+    ShowHideBar *leftBar   = nullptr;
+    ShowHideBar *rightBar  = nullptr;
+    ShowHideBar *bottomBar = nullptr;
+    /* For a COLLAPSED area, the docks that were showing when the bar collapsed it AND
+       the size each one had. Restoring re-shows exactly these at exactly those sizes: a
+       panel the user had already closed stays closed, and one that was 300px wide comes
+       back 300px wide rather than at whatever width the dock area feels like handing a
+       widget it has just been told to show again. An area absent from the map is
+       expanded. Deliberately not expressed through the ...DockVisibleAction checked
+       states: those are the user's own preference and the bar must not overwrite them. */
+    struct CollapsedDock {
+        QPointer<QDockWidget> dock;
+        bool wasCurrentTab;      // it was the raised tab of its group, so raise it again
+    };
+    QHash<Qt::DockWidgetArea, QList<CollapsedDock>> areaCollapsed;
+    /* The area's extent (width for left/right, height for the bottom) when it was
+       collapsed, re-applied with resizeDocks on the way back. */
+    QHash<Qt::DockWidgetArea, int> areaCollapsedExtent;
+    /* The checkable action that says whether the user wants this panel at all -- the
+       F3-F9 / View menu state. It is what distinguishes a panel the user CLOSED from one
+       that is merely the back tab of a group: both are isHidden(), and collapsing has to
+       bring back the second and leave the first alone. */
+    QAction *dockVisibleAction(QDockWidget *dock) const;
+    void createShowHideBars();               // build the three bars + their host docks
+    void placeShowHideBars();                // re-assert them on the rim after a layout
+    void toggleDockArea(Qt::DockWidgetArea area);   // a bar was clicked
+    void syncShowHideBars();                 // triangles + which bars are on screen
+public:
+    /* True while a bar is holding this area collapsed. The paths that push dock
+       visibility back from the actions (setThumbDockVisibity, the Grid/Compare view-mode
+       transitions, the workspace apply loop) ask this first: a collapsed area must stay
+       collapsed, or the bar's click is undone a moment later by something unrelated. */
+    bool isDockAreaCollapsed(Qt::DockWidgetArea area) const {
+        return areaCollapsed.contains(area);
+    }
+private:
     /* The dock's normal features, captured at creation so setDevelopPanelEnabled() can
        strip them (lock float/move) while disabled and restore them when re-enabled. */
     QDockWidget::DockWidgetFeatures developDockFeatures = QDockWidget::NoDockWidgetFeatures;

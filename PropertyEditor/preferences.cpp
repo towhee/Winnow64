@@ -490,6 +490,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->fullScreenDocks.isCatalog = v.toBool();
     }
 
+    if (source == "fullScreenShowKeywords") {
+        mw->fullScreenDocks.isKeywords = v.toBool();
+    }
+
     if (source == "fullScreenShowMetadata") {
         mw->fullScreenDocks.isMetadata = v.toBool();
     }
@@ -1886,6 +1890,19 @@ void Preferences::addFullScreen()
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isCatalog;
     i.key = "fullScreenShowCatalog";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show keywords
+    i.name = "fullScreenShowKeywords";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show keywords";
+    i.tooltip = "When you switch to full screen show the keywords dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isKeywords;
+    i.key = "fullScreenShowKeywords";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

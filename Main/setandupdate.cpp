@@ -279,7 +279,12 @@ void MW::setMetadataDockFixedSize()
 void MW::setThumbDockVisibity()
 {
     if (G::isLogger) G::log("MW::setThumbDockVisibity");
-    thumbDock->setVisible(thumbDockVisibleAction->isChecked());
+    /* The bottom show/hide bar outranks the action here: while it has the area
+       collapsed the thumbnails stay down, or every caller of this (a workspace change,
+       a view-mode change) would silently undo the bar's click. Clicking the bar again
+       re-shows whatever the action then says. */
+    if (!isDockAreaCollapsed(Qt::BottomDockWidgetArea))
+        thumbDock->setVisible(thumbDockVisibleAction->isChecked());
     sel->setCurrentRow(dm->currentSfRow);
 }
 

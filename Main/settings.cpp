@@ -33,6 +33,7 @@ void MW::writeSettings()
     settings->setValue("isFullScreenFavs", fullScreenDocks.isFavs);
     settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
     settings->setValue("isFullScreenCatalog", fullScreenDocks.isCatalog);
+    settings->setValue("isFullScreenKeywords", fullScreenDocks.isKeywords);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
     settings->setValue("isFullScreenHistory", fullScreenDocks.isHistory);
@@ -156,6 +157,16 @@ void MW::writeSettings()
                        catalogDockVisibleAction->isChecked());
     settings->setValue("isKeywordsDockVisible",
                        keywordsDockVisibleAction->isChecked());
+
+    /* The show/hide bars: which sides the user left collapsed. Separate from the per-dock
+       flags above on purpose -- those record which panels the user WANTS, these record
+       that a whole side is folded away with those preferences intact underneath. */
+    settings->setValue("isLeftAreaCollapsed",
+                       isDockAreaCollapsed(Qt::LeftDockWidgetArea));
+    settings->setValue("isRightAreaCollapsed",
+                       isDockAreaCollapsed(Qt::RightDockWidgetArea));
+    settings->setValue("isBottomAreaCollapsed",
+                       isDockAreaCollapsed(Qt::BottomDockWidgetArea));
 
     /* The scope table the user nominated for background cataloguing. It lives HERE and
        not in the index database: CacheDb::moveAside discards that file without asking
@@ -718,6 +729,8 @@ bool MW::loadSettings()
     if (settings->contains("isFullScreenFilters")) fullScreenDocks.isFilters = settings->value("isFullScreenFilters").toBool();
     if (settings->contains("isFullScreenCatalog"))
         fullScreenDocks.isCatalog = settings->value("isFullScreenCatalog").toBool();
+    if (settings->contains("isFullScreenKeywords"))
+        fullScreenDocks.isKeywords = settings->value("isFullScreenKeywords").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
     if (settings->contains("isFullScreenDevelop")) fullScreenDocks.isDevelop = settings->value("isFullScreenDevelop").toBool();
     if (settings->contains("isFullScreenHistory")) fullScreenDocks.isHistory = settings->value("isFullScreenHistory").toBool();

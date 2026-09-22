@@ -283,6 +283,12 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        UNVERSIONED so an old one still restores; w.stateVersion is what says which docks
        it predates. */
     if (w.stateVersion < winnowStateVersion) placeDocksAddedSince(w.stateVersion);
+    /* Unconditional, at every version -- see MW::placeShowHideBars. A workspace carries
+       each panel's visibility, so any area the bars had collapsed is now expanded; the
+       collapse map is dropped to match rather than left claiming otherwise. */
+    areaCollapsed.clear();
+    areaCollapsedExtent.clear();
+    placeShowHideBars();
 
     /*  Re-raise the panel last used in each tab group in this workspace, overriding the
         front tab the state blob carries.  Done here, synchronously, so a caller that
@@ -491,6 +497,9 @@ bool MW::restoreWindowState(const QByteArray &state)
         // second restoreState req'd for going from docked to floating docks
         restoreState(state, v);
         if (v < winnowStateVersion) placeDocksAddedSince(v);
+        /* Unconditional, at every version: the bars are not user-movable, so the
+           restored state has no placement of theirs worth honouring. */
+        placeShowHideBars();
         /*  WHICH VERSION the saved layout came back at.  A state restored at an older
             version has had placeDocksAddedSince write dock positions that the user never
             chose, which is a candidate explanation for a panel opening narrow. */
@@ -640,6 +649,11 @@ void MW::builtInDefaultWorkspace()
     if (G::isPanelProbe)
         PanelProbe::Instance().NoteRequest("ThumbDock", "resizeDocks vertical", 100);
     resizeDocks({thumbDock}, {100}, Qt::Vertical);
+
+    /* The default layout puts every panel back, so nothing is collapsed any more. */
+    areaCollapsed.clear();
+    areaCollapsedExtent.clear();
+    placeShowHideBars();
 
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 
@@ -1126,7 +1140,7 @@ void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const
 
     A layout per workflow rather than one "default workspace" for the whole app.  The
     workflow's key applies it: E / G / C (Library), D (Develop) and K (Keywords).
-    Embellish and Focus Stack are defined but have no key yet -- they are reached from
+    Embellish and Slide Show are defined but have no key yet -- they are reached from
     Window > Workspace.
 
     Each workflow has TWO possible layouts:
@@ -1156,13 +1170,13 @@ const QStringList &MW::workflowKeys()
     Stable identifiers for QSettings groups and the JSON resource.  NEVER renamed: an
     existing profile and every committed defaults.json are keyed on them.
 */
-    static const QStringList keys{"Library", "Develop", "Keywords", "Embellish", "FocusStack"};
+    static const QStringList keys{"Library", "Develop", "Keywords", "Embellish", "SlideShow"};
     return keys;
 }
 
 QStringList MW::workflowNames()
 {
-    return {tr("Library"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Focus Stack")};
+    return {tr("Library"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show")};
 }
 
 void MW::loadWorkflowDefaults()
