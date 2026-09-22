@@ -3795,6 +3795,11 @@ void MW::createDocks()
     addDockWidget(Qt::RightDockWidgetArea, developDock);
     addDockWidget(Qt::RightDockWidgetArea, historyDock);
 
+    /* The rim strips that collapse each side. After the panels, so createShowHideBars'
+       addDockWidget lands them outboard; placeShowHideBars pins that down properly once
+       a layout has been restored or built. */
+    createShowHideBars();
+
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::setTabPosition(Qt::RightDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);

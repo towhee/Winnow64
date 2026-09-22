@@ -1,6 +1,8 @@
 #include "dockwidget.h"
 #include "Main/mainwindow.h"
 #include "Utilities/panelprobe.h"
+#include <QTimer>
+#include <QToolBar>
 
 /*
     Try to create your own font that contains the graphic you want at the corresponding
@@ -753,6 +755,251 @@ void MW::embelDockVisibilityChange()
 
     // loupeDisplay("MW::embelDockVisibilityChange");
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
+}
+
+/* ----------------------------------------------------------------------------------------
+   Show/hide bars -- one strip per window rim, each collapsing its whole side
+   (see Main/showhidebar.h for the widget and the reasoning behind the triangle)
+   ---------------------------------------------------------------------------------------- */
+
+void MW::createShowHideBars()
+{
+/*
+    Build the three bars and the toolbars that put them on the window rim.
+
+    TOOLBARS, NOT DOCKS. QMainWindow lays its toolbar areas out as a ring OUTSIDE the
+    dock areas, so a left toolbar is outboard of the left panels -- which is the rim, and
+    is the only way to reach it: a dock area can only be APPENDED to (Qt has no prepend),
+    so a dock added to the left area lands between the panels and the photo. The first
+    attempt at this was a dock and sat in exactly that wrong place.
+
+    Being toolbars also keeps them out of MW::docksInArea(), which filters with
+    qobject_cast<DockWidget*>, and so out of the collapse / solo-mode / dock-tab
+    machinery every real panel is inside. Nothing has to remember to skip them.
+*/
+    if (G::isLogger) G::log("MW::createShowHideBars");
+
+    struct Spec { ShowHideBar::Edge edge; Qt::DockWidgetArea area; Qt::ToolBarArea tbArea;
+                  const char *objName; ShowHideBar **bar; QToolBar **tb; const char *tip; };
+    const Spec specs[] = {
+        {ShowHideBar::Left,   Qt::LeftDockWidgetArea,   Qt::LeftToolBarArea,
+         "LeftShowHideBar",   &leftBar,   &leftBarDock,   "Hide or show the panels on the left"},
+        {ShowHideBar::Right,  Qt::RightDockWidgetArea,  Qt::RightToolBarArea,
+         "RightShowHideBar",  &rightBar,  &rightBarDock,  "Hide or show the panels on the right"},
+        {ShowHideBar::Bottom, Qt::BottomDockWidgetArea, Qt::BottomToolBarArea,
+         "BottomShowHideBar", &bottomBar, &bottomBarDock, "Hide or show the thumbnails"},
+    };
+
+    for (const Spec &sp : specs) {
+        ShowHideBar *bar = new ShowHideBar(sp.edge, this);
+        bar->setToolTip(sp.tip);
+        QToolBar *tb = new QToolBar(this);
+        tb->setObjectName(sp.objName);
+        /* Everything that makes a toolbar look and behave like a toolbar, off: no drag
+           handle, no float, no right-click "hide this toolbar" menu (which would leave
+           the user with a bar they could not get back), no frame, no padding. What is
+           left is a strip holding one widget. */
+        tb->setMovable(false);
+        tb->setFloatable(false);
+        tb->setAllowedAreas(sp.tbArea);
+        tb->setContextMenuPolicy(Qt::PreventContextMenu);
+        tb->setStyleSheet("QToolBar { border: none; padding: 0; margin: 0;"
+                          " spacing: 0; background: transparent; }");
+        tb->layout()->setContentsMargins(0, 0, 0, 0);
+        tb->addWidget(bar);
+        if (sp.edge == ShowHideBar::Bottom) tb->setFixedHeight(ShowHideBar::thickness());
+        else                                tb->setFixedWidth(ShowHideBar::thickness());
+        const Qt::DockWidgetArea area = sp.area;
+        connect(bar, &ShowHideBar::clicked, this, [this, area]{ toggleDockArea(area); });
+        addToolBar(sp.tbArea, tb);
+        *sp.bar = bar;
+        *sp.tb = tb;
+    }
+
+    /* A panel opening or closing by any other route -- F3-F9, the View menu, a workspace
+       -- changes whether its side has anything to hide, so the bars re-evaluate. Wired
+       to the real panels only; the bars' own docks would recurse. */
+    for (QDockWidget *d : findChildren<QDockWidget*>()) {
+        if (!qobject_cast<DockWidget*>(d)) continue;      // skips the bars themselves
+        connect(d, &QDockWidget::visibilityChanged, this, [this]{ syncShowHideBars(); });
+    }
+}
+
+void MW::placeShowHideBars()
+{
+/*
+    Put each bar back on its edge of the window.
+
+    Called after every path that lays docks out -- restoreWindowState,
+    builtInDefaultWorkspace, invokeWorkspace -- and unconditionally, not only when a
+    saved state predates them. The bars cannot be moved, floated or closed by the user,
+    so there is never a position of theirs worth preserving; re-asserting is always
+    right, and it means the feature does not depend on any saved state being correct.
+    That is also why they have no placeDocksAddedSince rows (see winnowStateVersion).
+
+    addToolBar on an area that already holds the bar is a move, not a duplicate, so this
+    is safe to re-issue. Toolbar areas ring the dock areas, so each bar lands outboard of
+    the panels it acts on however those panels are arranged -- nothing here has to know
+    the layout, which is what two earlier dock-based attempts did have to and got wrong
+    (see createShowHideBars).
+*/
+    if (G::isLogger) G::log("MW::placeShowHideBars");
+    if (!leftBarDock || !rightBarDock || !bottomBarDock) return;
+
+    addToolBar(Qt::LeftToolBarArea,   leftBarDock);
+    addToolBar(Qt::RightToolBarArea,  rightBarDock);
+    addToolBar(Qt::BottomToolBarArea, bottomBarDock);
+
+    syncShowHideBars();
+}
+
+QAction *MW::dockVisibleAction(QDockWidget *dock) const
+{
+    if (!dock) return nullptr;
+    if (dock == folderDock)   return folderDockVisibleAction;
+    if (dock == favDock)      return favDockVisibleAction;
+    if (dock == filterDock)   return filterDockVisibleAction;
+    if (dock == catalogDock)  return catalogDockVisibleAction;
+    if (dock == keywordsDock) return keywordsDockVisibleAction;
+    if (dock == metadataDock) return metadataDockVisibleAction;
+    if (dock == thumbDock)    return thumbDockVisibleAction;
+    if (dock == embelDock)    return embelDockVisibleAction;
+    if (dock == developDock)  return developDockVisibleAction;
+    if (dock == historyDock)  return historyDockVisibleAction;
+    return nullptr;
+}
+
+void MW::toggleDockArea(Qt::DockWidgetArea area)
+{
+/*
+    A bar was clicked: collapse its side, or restore exactly what was there.
+
+    The ...DockVisibleAction checked states are deliberately NOT touched. They are the
+    user's own per-panel preference, set from the View menu and F3-F9, and a bar that
+    rewrote them could not tell a panel the user closed on purpose from one it hid
+    itself -- reopening would resurrect the lot. Instead the visible set is remembered in
+    areaCollapsed and put back verbatim.
+
+    SIZES ARE REMEMBERED TOO, and re-applied with resizeDocks on the way back. Showing a
+    dock again does not restore the extent it had: the dock area redistributes what it
+    has among whatever is now visible, so a panel the user had dragged to a particular
+    width came back at some other width, which reads as the bar having damaged the
+    layout rather than merely hidden it.
+
+    TAB GROUPS ARE THE SUBTLE PART, and the first version got it wrong in a way that was
+    visible immediately. In a tabified group only the CURRENT tab is un-hidden; the ones
+    behind it are isHidden() exactly as a panel the user closed with F3 is. Collapsing on
+    "not hidden" therefore hid only the front tab -- Qt promoted one of its siblings to
+    the front, the group shrank to what those siblings wanted, and expanding brought the
+    original back as a BACK tab at the wrong width. So:
+
+      . what the user WANTS is the visible-action's checked state, not isHidden(). That
+        is what tells a back tab (still wanted) from a closed panel (not wanted), and it
+        is read here, never written -- see above.
+      . which tab was FRONT is recorded separately and raised again on the way back.
+*/
+    if (G::isLogger) G::log("MW::toggleDockArea");
+
+    /* The map is updated BEFORE the docks are, both ways round. Each setVisible fires
+       visibilityChanged, which runs syncShowHideBars -- and a sync that ran while the
+       map still disagreed with the docks would judge the area empty and take the bar
+       off screen, then put it back a moment later. */
+    /* Which way a dock's extent runs in this area: left and right panels are sized by
+       width, the filmstrip by height. */
+    const bool horizontal = (area == Qt::LeftDockWidgetArea || area == Qt::RightDockWidgetArea);
+    const Qt::Orientation orient = horizontal ? Qt::Horizontal : Qt::Vertical;
+
+    if (areaCollapsed.contains(area)) {
+        const QList<CollapsedDock> restore = areaCollapsed.take(area);
+        const int extent = areaCollapsedExtent.take(area);
+        QPointer<QDockWidget> front;
+        for (const CollapsedDock &c : restore) {
+            if (!c.dock) continue;
+            c.dock->setVisible(true);
+            if (c.wasCurrentTab && !front) front = c.dock;   // FIRST, not last
+        }
+        /* Both the size and the tab go back DEFERRED, after the layout has taken the
+           re-shown docks into account. Issued inline they do not survive: resizeDocks is
+           overwritten by the settling pass, and raise() is overwritten by whatever Qt
+           and MW's own tab bookkeeping (scheduleDockTabUpdate, restoreDockTabSelection)
+           decide while the group is being rebuilt -- showing the members in list order
+           otherwise leaves the LAST one raised, which is how re-opening the Source group
+           came back on Bookmarks. One representative dock is enough for resizeDocks and
+           is what a tab group wants: it applies a tabbed group's size through any
+           member. */
+        if (front)
+            QTimer::singleShot(0, this, [this, front, extent, orient]{
+                if (!front || front->isHidden()) return;
+                if (extent > 0) resizeDocks({front}, {extent}, orient);
+                front->raise();          // last: the tab the user was looking at
+            });
+    }
+    else {
+        QList<CollapsedDock> wanted;
+        int extent = 0;
+        for (DockWidget *d : docksInArea(area)) {
+            /* The ACTION, not isHidden(): a back tab is hidden too, and it has to come
+               back. A panel the user closed has its action unchecked and is left alone.
+               Falling back to !isHidden() covers a dock with no action of its own. */
+            const QAction *a = dockVisibleAction(d);
+            if (a ? !a->isChecked() : d->isHidden()) continue;
+            /* isSelectedDockTab, NOT !isHidden(): a back tab is only hidden once Qt has
+               actually built the tab bar, so on a freshly restored layout every member
+               of a group still reports not-hidden and "the front tab" came out as
+               whichever happened to be last in findChildren order -- which is why
+               re-opening a group the user had never clicked in came back on Bookmarks.
+               isSelectedDockTab asks whether the dock has a non-empty visible region,
+               which is true of exactly the one on top, and is what frontDockTabs()
+               already uses for the per-workspace tab memory. */
+            const bool current = isSelectedDockTab(d);
+            if (current) extent = qMax(extent, horizontal ? d->width() : d->height());
+            wanted << CollapsedDock{d, current};
+        }
+        /* Nothing the user wants here: do not record an empty collapse, or the bar
+           would flip to "restore" with nothing to restore. */
+        if (wanted.isEmpty()) return;
+        areaCollapsed.insert(area, wanted);
+        areaCollapsedExtent.insert(area, extent);
+        for (const CollapsedDock &c : wanted)
+            if (c.dock) c.dock->setVisible(false);
+    }
+    syncShowHideBars();
+}
+
+void MW::syncShowHideBars()
+{
+/*
+    The single place that decides each bar's triangle and whether the bar is on screen:
+
+        shown = this bar is holding the area collapsed          (it is the only way back)
+             || the area holds a panel the user has enabled     (there is something to hide)
+
+    The first clause is what keeps a collapsed side recoverable. Without it, collapsing
+    would empty the area, the bar would judge itself pointless and vanish, and the only
+    route back would be the F-keys -- the bar could hide panels but never show them.
+*/
+    if (!leftBarDock || !rightBarDock || !bottomBarDock) return;
+
+    struct Entry { Qt::DockWidgetArea area; ShowHideBar *bar; QToolBar *tb; };
+    const Entry entries[] = {
+        {Qt::LeftDockWidgetArea,   leftBar,   leftBarDock},
+        {Qt::RightDockWidgetArea,  rightBar,  rightBarDock},
+        {Qt::BottomDockWidgetArea, bottomBar, bottomBarDock},
+    };
+
+    for (const Entry &e : entries) {
+        const bool collapsed = areaCollapsed.contains(e.area);
+        bool hasPanel = collapsed;
+        /* !isHidden() for the same reason as in toggleDockArea: this runs during the
+           startup workspace, before the main window is shown, and isVisible() there is
+           false for every dock -- which read as "no panels anywhere" and took all three
+           bars off screen for the rest of the session. */
+        if (!hasPanel)
+            for (DockWidget *d : docksInArea(e.area))
+                if (!d->isHidden()) { hasPanel = true; break; }
+        e.bar->setExpanded(!collapsed);
+        e.tb->setVisible(hasPanel && !isFullScreen());
+    }
 }
 
 QList<DockWidget*> MW::docksInArea(Qt::DockWidgetArea area) const

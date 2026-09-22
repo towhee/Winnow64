@@ -308,6 +308,7 @@ set(WINNOW_SOURCES
     Main/devpreviewbuilder.cpp
     Main/diagnostics.cpp
     Main/dockwidget.cpp
+    Main/showhidebar.cpp
     Main/draganddrop.cpp
     Main/externalapp.cpp
     Main/fileoperations.cpp
@@ -617,6 +618,7 @@ set(WINNOW_HEADERS
     Log/log.h
 
     Main/dockwidget.h
+    Main/showhidebar.h
     Main/global.h
     Main/catalogscanner.h
     Main/catalogscope.h
