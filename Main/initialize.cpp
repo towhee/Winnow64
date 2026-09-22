@@ -2418,6 +2418,14 @@ void MW::createDevelopDock()
        one heavy render per row -- the click (applyHistoryEntry) does the full path. */
     connect(developProperties, &DevelopProperties::historyPreviewChanged, this,
             [this]{ renderDevelopPreview(false); });
+    /* Before / After ("\"): the latch can come down without the user pressing the key
+       (an edit, a navigation, a mask or spot tool taking the canvas), so the menu item
+       follows the signal rather than only being synced as the menu opens. */
+    connect(developProperties, &DevelopProperties::beforeAfterChanged, this,
+            [this](bool showingBefore){
+                if (developBeforeAfterAction)
+                    developBeforeAfterAction->setChecked(showingBefore);
+            });
     /* The dock's "Edit: Raw / Embedded Preview" selector drives G::useRaw through the same path as
        the status-bar button (toggleUseRaw is a private slot, hence the signal hop). */
     connect(developProperties, &DevelopProperties::useRawRequested, this,

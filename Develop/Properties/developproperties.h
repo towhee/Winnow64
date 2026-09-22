@@ -305,6 +305,31 @@ public:
        panel, mark the sidecar dirty and re-render. Steps after it are discarded by the
        NEXT edit (see DevelopHistory::record). */
     void applyHistoryEntry(int index);
+
+    /*
+        BEFORE / AFTER ("\" in Develop mode, Develop > Before / After).
+
+        Before is the FIRST history entry -- the image as this session found it
+        ("Original", or "Saved settings" when the sidecar already carried edits). After is
+        the entry currently applied, which is just the stored stack. The key flips between
+        the two and the popup names which one is up.
+
+        It rides the SAME previewStack override the History hover uses, so the stored
+        stack, the sliders and the history itself are never touched, and
+        renderMatchesStoredRecipe keeps the Before frame out of the devPreview cache. Two
+        things set it apart from a hover:
+
+          o it LATCHES. Nothing takes it down but another "\", an edit, a navigation, or
+            a tool that wants the canvas (mask / spot). clearBeforeAfterLatch is what
+            every one of those routes through, so the flag can never outlive the override
+            it describes.
+          o it renders the FULL path (paramsChanged, proxy + settled full-res) rather than
+            the hover's proxy-only render: a comparison the user holds on screen and zooms
+            into has to be crisp on both sides, where a cursor passing down a list does
+            not.
+    */
+    void toggleBeforeAfter();
+    bool isShowingBefore() const { return beforeAfterActive; }
     /* Index (into the active scope's submasks) of the in-progress, uncommitted submask.
        MW composites it into the veil with the PREVIEWED op (pendingMaskOp), so the
        overlay shows the outcome. -1 when nothing is being defined. */
@@ -621,8 +646,12 @@ signals:
        only. Deliberately not paramsChanged -- that also arms the full-res settle render,
        which a passing cursor must not trigger. */
     void historyPreviewChanged();
-    /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw (toggleUseRaw)
-       -- a private slot, so we route through this signal rather than calling it directly. */
+    /* The Before / After latch went up or down ("\"). MW ticks the Develop menu item from
+       it, so the menu reports which side is on screen. */
+    void beforeAfterChanged(bool showingBefore);
+    /* The "Edit: Raw / Embedded Preview" selector was changed; MW drives G::useRaw
+       (toggleUseRaw) -- a private slot, so we route through this signal rather than
+       calling it directly. */
     void useRawRequested(bool useRaw);
     /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
        Winnow). MW sets G::decodeRawEngine and re-decodes the current image. */
@@ -1223,6 +1252,12 @@ private:
     /* A slider's committed value, formatted the way the slider itself shows it (int when
        div == 0, else 2 dp) with a + on positives. */
     static QString historyValueText(const QModelIndex &valIdx, const QVariant &v);
+    /* Drop the Before latch (and report it) WITHOUT touching previewStack: the caller
+       either owns the override already (endHistoryPreview, applyHistoryEntry) or is
+       replacing it with one of its own (a hover, a profile, a preset). Every route that
+       can end a Before goes through here, so the flag cannot describe an override that is
+       no longer up. */
+    void clearBeforeAfterLatch();
 
     DevelopHistory *history = nullptr;
     HistoryView *historyView = nullptr;
@@ -1230,6 +1265,9 @@ private:
     PresetsView *presetsView = nullptr;
     EditStack previewStack;
     bool previewActive = false;
+    /* The Before / After latch ("\"): previewStack is holding history entry 0 and only a
+       deliberate act takes it down. Always implies previewActive. */
+    bool beforeAfterActive = false;
     bool isRestoringHistory = false;
     int activeScopeIndex = 0;
     bool isPopulating = false;

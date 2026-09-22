@@ -1204,6 +1204,17 @@ void MW::createUtilActions()
     addAction(developWbSamplerAction);
     connect(developWbSamplerAction, &QAction::triggered, this, &MW::toggleDevelopWbSampler);
 
+    /* Checkable so the menu reports which side is on screen; kept in sync from
+       DevelopProperties::beforeAfterChanged, which fires for every route that can take
+       the latch down (an edit, a navigation, a tool taking the canvas). */
+    developBeforeAfterAction = new QAction(tr("Before / After\t\\"), this);
+    developBeforeAfterAction->setObjectName("developBeforeAfter");
+    developBeforeAfterAction->setShortcutVisibleInContextMenu(true);
+    developBeforeAfterAction->setCheckable(true);
+    addAction(developBeforeAfterAction);
+    connect(developBeforeAfterAction, &QAction::triggered,
+            this, &MW::toggleDevelopBeforeAfter);
+
     developExportAction = new QAction(tr("Export Developed Image\tX"), this);
     developExportAction->setObjectName("developExport");
     developExportAction->setShortcutVisibleInContextMenu(true);
@@ -2498,6 +2509,7 @@ void MW::createUtilMenu()
     developMenu->addAction(developTransformAction);
     developMenu->addAction(developSpotAction);
     developMenu->addAction(developWbSamplerAction);
+    developMenu->addAction(developBeforeAfterAction);
     developMenu->addSeparator();
     /* Scopes submenu: the same four actions the strip's right-click menu shows. Ticked
        to match the strip as it opens (syncDevelopScopesMenu). */
@@ -3638,6 +3650,11 @@ void MW::loadDevelopShortcuts()
        runs before this table), so it reaches the dropper only when no Transform is up. */
     developShortcuts[Qt::Key_W] = developWbSamplerAction;   // global: New Workspace
     developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
+    /* Lightroom's Before/After key. The only NON-LETTER in this table, which is why the
+       arbiter's value-editor guard tests the table rather than the A-Z range -- focus
+       sits on a Develop dock slider for most of a session and a slider has no more use
+       for "\" than it has for a letter. */
+    developShortcuts[Qt::Key_Backslash] = developBeforeAfterAction; // global: Image count
     /* No Develop-local G: the scopes strip is chosen from its right-click menu and the
        Develop menu's Scopes submenu, so G keeps its global meaning -- and in Develop that
        meaning is the way out: Preview mode, Grid view (see asGridAction). */
@@ -3660,7 +3677,7 @@ void MW::syncDevelopMenuEnabled()
     const QList<QAction *> modeLocal {
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
         developTransformAction, developSpotAction, developWbSamplerAction,
-        developExportAction,
+        developBeforeAfterAction, developExportAction,
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
@@ -3689,5 +3706,8 @@ void MW::syncDevelopMenuEnabled()
 
     // Reflect live state for the checkable toggles
     if (developTransformAction) developTransformAction->setChecked(developTransformVisible);
+    if (developBeforeAfterAction)
+        developBeforeAfterAction->setChecked(developProperties &&
+                                             developProperties->isShowingBefore());
 }
 

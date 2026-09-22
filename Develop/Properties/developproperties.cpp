@@ -1080,6 +1080,12 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     EditScope *scope = activeScope();
     if (!scope || activeScopeIndex == 0) return;
 
+    /* The mask tool is taking the canvas, so a latched Before ("\") has to come off it --
+       the same reason toggleBeforeAfter declines to go up while a tool is open. FIRST,
+       before the submask is appended: ending a preview renders, and that render must not
+       re-enter on a half-built pending submask. */
+    endHistoryPreview();
+
     const bool first = scope->components.isEmpty();
     /* An empty mask has nothing to combine with, whatever was asked for. */
     if (first) op = int(MaskOp::Add);
@@ -1518,6 +1524,9 @@ void DevelopProperties::onSpotToolToggled(bool active)
     if (G::isLogger) G::log("DevelopProperties::onSpotToolToggled");
     if (spotMode == active) return;
     spotMode = active;
+    /* The tool is taking the canvas, so a latched Before has to come off it first --
+       the same reason toggleBeforeAfter declines to go up while a tool is armed. */
+    if (active) endHistoryPreview();
     emit spotActiveChanged(active);            // update the action-row spot button icon
     if (active) { emit spotEditBegin(); emitSpotPins(); }   // arm + seed the pins
     else        emit spotEditEnd();
@@ -1670,6 +1679,7 @@ void DevelopProperties::resetAllEdits()
     maskLatched = false;
     previewActive = false;
     previewStack = EditStack();
+    clearBeforeAfterLatch();
     cameraProfileHoverActive = false;
     if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
 
@@ -4884,6 +4894,7 @@ void DevelopProperties::previewCameraProfile(const QString &name)
     /* Scope 0, whatever scope is active: a profile characterises the CAMERA, exactly as
        setCameraProfile writes it. */
     preview.scopes[0].params.cameraProfile = name;
+    clearBeforeAfterLatch();            // this hover is now the override, not Before
     previewStack = preview;
     previewActive = true;
     cameraProfileHoverActive = true;
@@ -6171,6 +6182,9 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     maskLatched = false;         // a fresh image starts with no latched mask overlay
     previewActive = false;       // a History hover does not follow the image
     previewStack = EditStack();
+    /* ...and neither does a latched Before: the new image has its own baseline, and the
+       key must start from After there. */
+    clearBeforeAfterLatch();
     /* ...and neither does a Profile-dropdown hover. Cleared alongside, so the flag cannot
        outlive the override it describes and leave endCameraProfilePreview() firing a
        render for a preview that is already gone. */
@@ -6259,6 +6273,10 @@ void DevelopProperties::noteScopeEdit(const QString &scope, const QString &actio
                                       const QString &value, const QString &mergeKey)
 {
     if (currentImagePath.isEmpty()) return;
+    /* Editing while Before is latched is the user saying they are done comparing: take
+       the override down so the edit they just made is the thing on screen. Guarded on the
+       latch so a History HOVER (which also runs through no edit path) is untouched. */
+    if (beforeAfterActive) endHistoryPreview();
     dirty.insert(currentImagePath);
     /* Do not record our own writes: isPopulating is pushing saved values into the
        editors, isRestoringHistory is a revert repopulating the panel. */
@@ -6315,6 +6333,9 @@ void DevelopProperties::previewHistoryEntry(int index)
         endHistoryPreview();
         return;
     }
+    /* A hover is the more recent statement of intent, so it supersedes a latched Before
+       rather than the two fighting over previewStack. */
+    clearBeforeAfterLatch();
     previewStack = e->stack;
     previewActive = true;
     emit historyPreviewChanged();
@@ -6322,10 +6343,70 @@ void DevelopProperties::previewHistoryEntry(int index)
 
 void DevelopProperties::endHistoryPreview()
 {
+    clearBeforeAfterLatch();
     if (!previewActive) return;
     previewActive = false;
     previewStack = EditStack();
     emit historyPreviewChanged();
+}
+
+void DevelopProperties::clearBeforeAfterLatch()
+{
+    if (!beforeAfterActive) return;
+    beforeAfterActive = false;
+    emit beforeAfterChanged(false);
+}
+
+void DevelopProperties::toggleBeforeAfter()
+{
+/*
+    "\" -- flip the loupe between Before (history entry 0, the state this session started
+    from) and After (the state the image is actually in).  See the header for why this
+    latches and renders the full path where a History hover does neither.
+*/
+    if (G::isLogger) G::log("DevelopProperties::toggleBeforeAfter");
+
+    if (beforeAfterActive) {            // back to After
+        previewActive = false;
+        previewStack = EditStack();
+        clearBeforeAfterLatch();
+        /* NOT endHistoryPreview(): that renders the proxy only, and coming back to After
+           has to end as crisp as the Before it replaces. */
+        emit paramsChanged();
+        if (G::popup) G::popup->showPopup("After", 1200);
+        return;
+    }
+
+    if (!history || currentImagePath.isEmpty()) return;
+    /* The crop overlay and an open mask tool own the canvas; swapping the picture out
+       from under them would fight for it (the same guard previewHistoryEntry uses). */
+    if (maskPanelOpen || spotMode) {
+        if (G::popup)
+            G::popup->showPopup("Close the tool to compare Before and After.", 2500);
+        return;
+    }
+    const HistoryEntry *before = history->at(currentImagePath, 0);
+    if (!before) return;
+    /* Sitting on the baseline already: Before IS After, so there is nothing to show and a
+       silent no-op would read as a dead key. */
+    if (history->pos(currentImagePath) <= 0) {
+        if (G::popup)
+            G::popup->showPopup("No develop edits yet -- Before and After are the same.",
+                                2500);
+        return;
+    }
+
+    /* Some other preview (a Presets or Profile hover) may be up; this replaces it, and
+       its own "end" is a no-op once previewActive goes down with the latch. */
+    cameraProfileHoverActive = false;
+    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+
+    previewStack = before->stack;
+    previewActive = true;
+    beforeAfterActive = true;
+    emit beforeAfterChanged(true);
+    emit paramsChanged();               // proxy now, crisp full-res on settle
+    if (G::popup) G::popup->showPopup("Before  (" + before->action + ")", 1800);
 }
 
 void DevelopProperties::applyHistoryEntry(int index)
@@ -6355,6 +6436,7 @@ void DevelopProperties::applyHistoryEntry(int index)
     maskLatched = false;
     previewActive = false;              // the previewed state is about to become real
     previewStack = EditStack();
+    clearBeforeAfterLatch();            // committing a state is not comparing two
 
     isRestoringHistory = true;
     EditStack s = e->stack;
@@ -6888,6 +6970,7 @@ void DevelopProperties::previewPreset(const QString &name)
     const EditStack s = stackCache.value(currentImagePath);
     /* NOT previewed: the raw decode engine. Switching it forces a full raw re-decode,
        which a passing cursor must never trigger -- it is applied on click only. */
+    clearBeforeAfterLatch();            // this hover is now the override, not Before
     previewStack = mergePreset(presets->read(name), s, targetScopeIndex(s));
     previewActive = true;
     emit historyPreviewChanged();       // proxy render only, no full-res settle
@@ -6956,6 +7039,7 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
     maskLatched = false;
     previewActive = false;              // the previewed state is about to become real
     previewStack = EditStack();
+    clearBeforeAfterLatch();            // committing a state is not comparing two
 
     isRestoringHistory = true;          // suppress recording while the panel repopulates
     EditStack s = stackCache.value(currentImagePath);
