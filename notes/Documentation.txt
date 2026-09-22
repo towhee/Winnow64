@@ -2913,7 +2913,7 @@ MW's single-key shortcuts use the default Qt::WindowShortcut context, which Qt a
 
 ⏺ Action Enable/Disable Rules > Develop Mode Local Shortcuts
 
-Nine keys mean something different in Develop mode than in Preview mode:
+Ten keys mean something different in Develop mode than in Preview mode:
 
   R   Crop / Transform panel      developTransformAction   (Preview: unbound)
   N   New Mask                    developNewScopeAction    (Preview: unbound)
@@ -2924,6 +2924,9 @@ Nine keys mean something different in Develop mode than in Preview mode:
   X   Export developed images     developExportAction      (Preview: Reject)
   H   History panel               historyDockVisibleAction (Preview: unbound)
   P   History panel, Presets open presetsDockVisibleAction (Preview: Pick)
+  \   Before / After              developBeforeAfterAction (Preview: Show image count)
+
+"\" is the only NON-LETTER in the table, and that is why the arbiter's value-editor guard tests MEMBERSHIP OF THE TABLE rather than the A-Z range it originally used: a slider has no more use for "\" than it has for a letter, and the A-Z test left the key going to the global Show-image-count action whenever a Develop slider held the focus (which is most of a session).  Nothing in the table is a key an editor needs -- arrows and digits are deliberately absent -- so membership is the right question.  See Guards below.
 
 Plus three keys that apply only while a SUBMASK is being defined (it is still PENDING), handled in MW::eventFilter rather than by an action:
 
@@ -2987,7 +2990,7 @@ A value editor keeps Space as a literal character (same guard as the arbiter), a
 
 - Esc while a submask is open -> discard it if still PENDING, else just close it (escapeMaskTool) and consume. Placed BEFORE the value-editor bail so it fires even when focus is on a mask slider (Hue/Sat) or the Color Range wheel; skipped (falls through) while the WB dropper or Transform is up, whose Esc handlers run later.
 
-- Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit / QComboBox) -> bail, so arrows still nudge a Develop slider and letters still type. EXCEPTION (2026-08-15): a LETTER that is in developShortcuts is still arbitrated over a slider or spin box (incl. a spin box's internal QLineEdit -- see isTextEntryWidget()).  Focus sits on a dock slider for most of a Develop session, and bailing there passed the letter to the GLOBAL action on that key: O opened the folder dialog instead of toggling the mask overlay (likewise S = Slideshow, X = Reject, G = Grid), the very collision the arbiter exists to stop.  A slider/spin box has no use for a letter; only real text entry (the search field, an editable QComboBox) keeps its letters unconditionally.  FIX (2026-08-29): isTextEntryWidget() had been treating EVERY QComboBox as text entry, editable or not, which bailed out of the arbiter entirely.  The Develop dock's rows are read-only combos (View transform is the first row, WB preset the next) and a combo keeps the focus after a pick, so after choosing a View the next mode-local key went to its GLOBAL action instead -- R stopped opening/committing Transform, and S/O/N/M/W/X/H/P were dead the same way.  A read-only combo now only loses its type-to-select-an-item search, which the mode-local keys outrank.
+- Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit / QComboBox) -> bail, so arrows still nudge a Develop slider and letters still type. EXCEPTION (2026-08-15, widened 2026-09-21): a key that is in developShortcuts is still arbitrated over a slider or spin box (incl. a spin box's internal QLineEdit -- see isTextEntryWidget()).  The test was originally the A-Z range and is now membership of the table itself, so "\" (Before / After) gets the same treatment -- as will any future non-letter key added there.  Focus sits on a dock slider for most of a Develop session, and bailing there passed the key to the GLOBAL action on it: O opened the folder dialog instead of toggling the mask overlay (likewise S = Slideshow, X = Reject, G = Grid), the very collision the arbiter exists to stop.  A slider/spin box has no use for a letter; only real text entry (the search field, an editable QComboBox) keeps its letters unconditionally.  FIX (2026-08-29): isTextEntryWidget() had been treating EVERY QComboBox as text entry, editable or not, which bailed out of the arbiter entirely.  The Develop dock's rows are read-only combos (View transform is the first row, WB preset the next) and a combo keeps the focus after a pick, so after choosing a View the next mode-local key went to its GLOBAL action instead -- R stopped opening/committing Transform, and S/O/N/M/W/X/H/P were dead the same way.  A read-only combo now only loses its type-to-select-an-item search, which the mode-local keys outrank.
 - Auto-repeat -> bail; every Develop key is a toggle or pops a dialog.
 
 
@@ -4742,6 +4745,14 @@ Revert model (Lightroom). pos is the entry currently applied. Recording a new ac
   meantime.
 
 Hover preview = PROXY RENDER ONLY. previewHistoryEntry sets previewStack/previewActive (read at the top of stackJob and editParams, so nothing else in the render path knows) and emits historyPreviewChanged, which createDevelopDock connects to renderDevelopPreview(false). It deliberately does NOT go through developParamsChange: that also arms the full-res settle render, and a cursor passing down the list must not queue one heavy render per row. The view debounces the hover (kHoverDelayMs 120) and ends the preview on leave; preview is skipped while a mask tool or the spot tool is armed (they own the canvas overlay). The click (applyHistoryEntry) takes the full path: retire any half-built mask tool, write the snapshot into stackCache, mark dirty, refreshScopeList + buildTree (scope/mask structure may differ), emit paramsChanged.
+
+BEFORE / AFTER ("\", Develop menu > Before / After). Flips the loupe between BEFORE -- history entry 0, the state this session found the image in ("Original", or "Saved settings" when the sidecar already carried edits) -- and AFTER, the entry currently applied, which is just the stored stack. DevelopProperties::toggleBeforeAfter owns it; MW::toggleDevelopBeforeAfter is only the mode gate. It rides the SAME previewStack / previewActive override the hover uses, so the stored stack, the sliders and the history itself are never touched, and renderMatchesStoredRecipe keeps the Before frame out of the devPreview cache. Two things set it apart from a hover:
+
+- It LATCHES. A hover ends when the cursor leaves; Before stays until the user presses "\" again, EDITS (noteScopeEdit -- an edit while comparing means the comparing is over, and the edit has to be the thing on screen), NAVIGATES (setCurrentImage), or opens a MASK or SPOT tool (those take the canvas; toggleBeforeAfter likewise declines to go up while one is open, saying so rather than doing nothing). Every one of those routes through DevelopProperties::clearBeforeAfterLatch, so beforeAfterActive can never describe an override that is no longer up; the other preview sources (a Presets hover, a Profile-dropdown hover, a History hover) call it too, since they are replacing previewStack with one of their own.
+
+- It renders the FULL path (emit paramsChanged: proxy now, crisp full-res on settle), not the hover's proxy-only historyPreviewChanged. A comparison the user holds on screen and zooms into has to be crisp on BOTH sides; a cursor passing down a list does not.
+
+The state is reported through DevelopProperties::beforeAfterChanged(bool), which ticks the checkable developBeforeAfterAction -- the latch comes down on routes the user did not press a key for, so the menu follows the signal rather than only being synced as the menu opens. A popup names the side that just came up ("Before  (Original)" / "After"), and declines with a reason when Before and After are the same (pos == 0, nothing edited yet) or a tool owns the canvas.
 
 Files. Develop/History/develophistory.h (HistoryEntry + DevelopHistory, header-only, owned by DevelopProperties) and Develop/History/historyview.{h,cpp} (HistoryView, a QListWidget already themed by WidgetCSS::listWidget, plus HistoryDelegate painting action left / value right). MW::createHistoryDock runs AFTER createDevelopDock (it binds to developProperties). Adding the dock required the full new-dock checklist above, including the history_white.png glyph and the winnowStateVersion bump to 2.
 

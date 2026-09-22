@@ -954,6 +954,9 @@ private slots:
        Transform session is up. */
     void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
+    /* "\" in Develop mode: flip the loupe between Before (the first History entry, the
+       state this session started from) and After (the current state). */
+    void toggleDevelopBeforeAfter();
     /* Repaint the tint swatch (it lives on the Mask band): it is filled with the overlay
        colour and it carries the blue active border while the tint is shown. */
     void refreshDevelopMaskTintBtn();
@@ -1496,6 +1499,7 @@ private:
     QAction *developAddToMaskAction;      // M
     QAction *developSpotAction;         // S
     QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
+    QAction *developBeforeAfterAction = nullptr;  // "\" (global: Show image count)
     QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
     QAction *developCopySettingsAction = nullptr;  // Cmd+Opt+C (real, mode-gated)

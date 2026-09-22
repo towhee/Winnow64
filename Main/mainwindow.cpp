@@ -1752,14 +1752,20 @@ bool MW::developShortcutIntercept(QEvent *event)
        Develop dock slider for most of a session -- bailing there sent the letter on to
        the GLOBAL action bound to it (O opened the folder dialog instead of toggling the
        overlay, S started a slideshow, X rejected the image), which is exactly what this
-       arbiter exists to prevent. So a letter in developShortcuts is still arbitrated over
-       a slider/spin box; only real text entry keeps its letters unconditionally. */
+       arbiter exists to prevent. So a key in developShortcuts is still arbitrated over a
+       slider/spin box; only real text entry keeps its keys unconditionally.
+
+       The test is MEMBERSHIP OF THE TABLE, not the A-Z range it once was: "\"
+       (Before/After) is a table key a slider has no more use for than a letter, and
+       restricting the exemption to letters left it going to the global Show-image-count
+       action whenever a slider had the focus. Nothing in the table is a key an editor
+       needs -- arrows and digits are deliberately absent -- so membership is the right
+       question. */
     const int key = e->key();
-    const bool developLetter = key >= Qt::Key_A && key <= Qt::Key_Z
-                               && G::bareModifiers(e) == Qt::NoModifier
-                               && !e->isAutoRepeat() && developShortcuts.contains(key);
+    const bool developKey = G::bareModifiers(e) == Qt::NoModifier
+                            && !e->isAutoRepeat() && developShortcuts.contains(key);
     if (isTextEntryWidget(fw)) return false;
-    if (!developLetter &&
+    if (!developKey &&
         (qobject_cast<QAbstractSlider *>(fw) || qobject_cast<QAbstractSpinBox *>(fw) ||
          qobject_cast<QLineEdit *>(fw)))
         return false;
@@ -11948,6 +11954,28 @@ void MW::toggleDevelopWbSampler()
         return;
     }
     if (developProperties) developProperties->toggleWbDropper();
+}
+
+void MW::toggleDevelopBeforeAfter()
+{
+/*
+    "\" in Develop mode (and the Develop menu): flip the loupe between BEFORE -- the first
+    History entry, the state this session found the image in -- and AFTER, the state it is
+    in now. DevelopProperties owns the latch and the render (toggleBeforeAfter); this is
+    the mode gate, matching the other Develop-local keys.
+
+    Outside Develop "\" keeps its global meaning (Show image count), so this is only
+    reached from the menu there -- hence the message rather than a silent no-op.
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopBeforeAfter");
+    if (G::operationMode != G::OperationMode::Develop) {
+        if (G::popup)
+            G::popup->showPopup("Before / After is only available in Develop Mode, which "
+                                "can be set in the status bar or the shortcut \"D\".",
+                                3000);
+        return;
+    }
+    if (developProperties) developProperties->toggleBeforeAfter();
 }
 
 void MW::toggleMaskOverlay()

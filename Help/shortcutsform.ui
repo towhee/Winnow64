@@ -1131,10 +1131,10 @@
          <string>Develop Mode keys</string>
         </property>
         <property name="text">
-         <string>R  N  M  O  S  W  X  H  P</string>
+         <string>R  N  M  O  S  W  X  H  P  \</string>
         </property>
         <property name="text">
-         <string>These nine keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, W is New Workspace, X is Reject, O is Open Folder, P is Pick, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
+         <string>These ten keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, W is New Workspace, X is Reject, O is Open Folder, P is Pick, \ is Show image count, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
         </property>
        </item>
        <item>
@@ -1157,6 +1157,17 @@
         </property>
         <property name="text">
          <string>Adjusts the focused slider; click or Tab to a slider to give it focus (it shows an accent bar)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Before / After</string>
+        </property>
+        <property name="text">
+         <string>\</string>
+        </property>
+        <property name="text">
+         <string>Flips the loupe between Before -- the first entry in the History panel, the state this session found the image in -- and After, the state it is in now. It stays on Before until you press \ again, edit, move to another image, or open a mask / spot tool. Nothing is changed either way. In Develop mode</string>
         </property>
        </item>
        <item>
