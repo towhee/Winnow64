@@ -176,3 +176,130 @@ void MW::slideshowHelpMsg()
     G::popup->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
 }
 
+
+/* ---------------------------------------------------------------------------
+   The in-slideshow keys.
+
+   One slot per key, so MW::keyReleaseEvent and the View > Slide Show menu items run the
+   same code instead of two copies of it.  Each is a no-op unless a slideshow is running:
+   slideShowTimer is deleted (and not nulled) when the slideshow ends, so G::isSlideShow
+   has to be tested before the timer is touched.
+   --------------------------------------------------------------------------- */
+
+void MW::slideShowNext()
+{
+    if (G::isLogger) G::log("MW::slideShowNext");
+    if (!G::isSlideShow || !slideShowTimer->isActive()) return;
+    nextSlide();
+}
+
+void MW::slideShowPrevRandom()
+{
+    if (G::isLogger) G::log("MW::slideShowPrevRandom");
+    if (!G::isSlideShow || !slideShowTimer->isActive()) return;
+    prevRandomSlide();
+}
+
+void MW::slideShowPauseOrContinue()
+{
+/*
+    Space pauses a running slideshow and resumes a paused one.  The paused branch also
+    clears the help popup, the way the key handler does when it wakes a paused slideshow.
+*/
+    if (G::isLogger) G::log("MW::slideShowPauseOrContinue");
+    if (!G::isSlideShow) return;
+    if (slideShowTimer->isActive()) {
+        slideShowTimer->stop();
+        G::popup->showPopup("Slideshow is paused", 0);
+    }
+    else {
+        if (isSlideShowHelpVisible) {
+            G::popup->reset();
+            isSlideShowHelpVisible = false;
+        }
+        G::popup->showPopup("Slideshow is active");
+        nextSlide();
+        slideShowTimer->start(slideShowDelay * 1000);
+    }
+}
+
+void MW::slideShowToggleWrap()
+{
+    if (G::isLogger) G::log("MW::slideShowToggleWrap");
+    if (!G::isSlideShow || !slideShowTimer->isActive()) return;
+    isSlideShowWrap = !isSlideShowWrap;
+    isSlideShowHelpVisible = true;
+    QString msg;
+    if (isSlideShowWrap) msg = "Slide wrapping is on.";
+    else msg = "Slide wrapping is off.";
+    G::popup->showPopup(msg);
+}
+
+void MW::slideShowToggleRandom()
+{
+    if (G::isLogger) G::log("MW::slideShowToggleRandom");
+    if (!G::isSlideShow || !slideShowTimer->isActive()) return;
+    isSlideShowRandom = !isSlideShowRandom;
+    slideShowResetSequence();
+    QString msg;
+    if (isSlideShowRandom) msg = "Random selection enabled.";
+    else msg = "Sequential selection enabled.";
+    G::popup->showPopup(msg);
+}
+
+void MW::slideShowKeysHelp()
+{
+    if (G::isLogger) G::log("MW::slideShowKeysHelp");
+    if (!G::isSlideShow || !slideShowTimer->isActive()) return;
+    slideShowTimer->stop();
+    slideshowHelpMsg();
+}
+
+void MW::slideShowSetDelayFromAction(QAction *action)
+{
+/*
+    The interval actions carry their seconds in QAction::data, so the same slot serves all
+    nine.  Keys 1-9 reach it through MW::keyReleaseEvent.
+*/
+    if (G::isLogger) G::log("MW::slideShowSetDelayFromAction");
+    if (action == nullptr) return;
+    if (!G::isSlideShow || !slideShowTimer->isActive()) return;
+    slideShowDelay = action->data().toInt();
+    slideShowResetDelay();
+    QString msg = "Slideshow interval set to " + QString::number(slideShowDelay) + " seconds.";
+    G::popup->showPopup(msg);
+}
+
+void MW::syncSlideShowMenuEnabled()
+{
+/*
+    Called as View > Slide Show opens.  Everything below Start / Stop only works while a
+    slideshow is running -- outside one those keys belong to other actions entirely (X is
+    Reject, W is New Workspace, R is unbound, Space is zoom toggle) -- so an enabled item
+    would advertise a shortcut that does something else.  Same reasoning, and the same
+    aboutToShow treatment, as MW::syncDevelopMenuEnabled.
+*/
+    if (G::isLogger) G::log("MW::syncSlideShowMenuEnabled");
+    const bool running = G::isSlideShow;
+
+    const QList<QAction *> runOnly {
+        slideShowNextAction, slideShowPrevRandomAction, slideShowPauseAction,
+        slideShowWrapAction, slideShowRandomAction, slideShowKeysAction
+    };
+    for (QAction *a : runOnly) if (a) a->setEnabled(running);
+    if (slideShowIntervalMenu) slideShowIntervalMenu->setEnabled(running);
+
+    // Reflect live state for the toggles
+    if (slideShowWrapAction) {
+        QSignalBlocker blocker(slideShowWrapAction);
+        slideShowWrapAction->setChecked(isSlideShowWrap);
+    }
+    if (slideShowRandomAction) {
+        QSignalBlocker blocker(slideShowRandomAction);
+        slideShowRandomAction->setChecked(isSlideShowRandom);
+    }
+    for (QAction *a : slideShowIntervalActions) {
+        QSignalBlocker blocker(a);
+        a->setChecked(a->data().toInt() == slideShowDelay);
+    }
+}

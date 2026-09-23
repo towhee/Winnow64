@@ -1,4 +1,5 @@
 #include "buildfilters.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 
 /*
     Classes involved in filtering:
@@ -796,6 +797,7 @@ void BuildFilters::appendUniqueItems(const FilterSnapshot &snap, FilterOps &ops)
     const double progressInc = 100.0 / (sink.size() + 1);
 
     // search carries predefined items that are always shown, so it has its own sink
+    emit buildStage("search");
     ops.append({FilterOp::SearchCount, countSlot(snap, FilterCat::Search, false),
                 nullptr, false, QString()});
     time("Initialize search count");
@@ -804,6 +806,7 @@ void BuildFilters::appendUniqueItems(const FilterSnapshot &snap, FilterOps &ops)
     for (const Sink &s : sink) {
         if (abort) return;
         if (s.slot == FilterCat::Search) continue;      // handled above
+        emit buildStage(s.name);
         ops.append({FilterOp::AddItems, countSlot(snap, s.slot, false),
                     s.item, false, QString()});
         time(QString("Initialize %1").arg(s.name));
@@ -811,6 +814,7 @@ void BuildFilters::appendUniqueItems(const FilterSnapshot &snap, FilterOps &ops)
     }
 
     if (abort) return;
+    emit buildStage("keywords");
     ops.append({FilterOp::AddItems, countKeywords(snap, false),
                 filters->keywords, false, QString()});
     time("Initialize keywords");
@@ -893,6 +897,12 @@ void BuildFilters::applyOps(const FilterOps &ops)
         return;
     }
 
+    /*  The ops were recorded off the GUI thread; THIS is where they turn into tree items,
+        one per unique value, and at catalog-scope row counts it is the longest single
+        stretch of the build. It does not return to the event loop, so it says so first.
+        A no-op unless the message pane is up -- see MW::setCentralProgressMessage. */
+    emit buildStage("updating the panel");
+
     for (const FilterOp &op : ops) {
         switch (op.kind) {
         case FilterOp::SearchCount:
@@ -927,6 +937,9 @@ void BuildFilters::applyOps(const FilterOps &ops)
     if (probeBig)
         qDebug().noquote() << "[PERF] BuildFilters::applyOps" << aoTimer.elapsed()
                            << "ms  ops =" << ops.size();
+
+    CatLoad::mark(QString("5x filters: applyOps (%1 ops -> tree items)")
+                      .arg(ops.size()));   // TEMPORARY
 
 }
 

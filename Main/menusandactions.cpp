@@ -15,9 +15,10 @@ void MW::createActions()
     createGoActions();              // Go Menu
     createFilterActions();          // Filter Menu
     createSortActions();            // Sort Menu
-    createUtilActions();            // Utilities Menu
-    createViewActions();            // View Menu
-    createWindowActions();          // View Menu now
+    createUtilActions();            // Tools menu
+    createViewActions();            // View menu
+    createSlideShowActions();       // View > Slide Show submenu
+    createWindowActions();          // Window menu
     createHelpActions();            // Help Menu
     createMiscActions();            // Misc
 }
@@ -33,7 +34,10 @@ void MW::createFileActions()
     addAction(openAction);
     connect(openAction, &QAction::triggered, this, &MW::openFolder);
 
-    refreshCurrentAction = new QAction(tr("Refresh"), this);
+    /*  Named for what it does, not "Refresh": it sits two rows below refreshFoldersAction
+        (also "Refresh") in the File menu now, and two identical labels with different keys
+        is no documentation at all. */
+    refreshCurrentAction = new QAction(tr("Refresh Current Folder"), this);
     refreshCurrentAction->setObjectName("refresh");
     refreshCurrentAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshCurrentAction);
@@ -46,7 +50,6 @@ void MW::createFileActions()
     connect(openUsbAction, &QAction::triggered, this, &MW::openUsbFolder);
 
     openWithMenu = new QMenu(tr("Open With..."));
-
     openWithMenuAction = new QAction(tr("Open With..."), this);
     openWithMenuAction->setObjectName("openWithMenu");
     openWithMenuAction->setShortcutVisibleInContextMenu(true);
@@ -303,19 +306,23 @@ void MW::createFileActions()
     moveFilesToWhatever = "Move file(s) to trash";
     moveFolderToWhatever = "Move folder to trash";
 #endif
+    /*  Delete and Backspace both delete, and they used to be two separate QActions -- the
+        Backspace twin was never in a menu, so half the binding was invisible.  One action
+        with setShortcuts() carries both, and the text names them the way pickAction names
+        its two keys (see loadShortcuts). */
     deleteImagesAction = new QAction(moveFilesToWhatever, this);
     deleteImagesAction->setObjectName("deleteFiles");
     deleteImagesAction->setShortcutVisibleInContextMenu(true);
-    deleteImagesAction->setShortcut(QKeySequence("Delete"));
+    {
+        QList<QKeySequence> deleteKeys;
+        deleteKeys << QKeySequence("Delete") << QKeySequence("Backspace");
+        deleteImagesAction->setShortcuts(deleteKeys);
+        deleteImagesAction->setText(QString("%1\t%2, %3").arg(moveFilesToWhatever)
+            .arg(deleteKeys.at(0).toString(QKeySequence::NativeText))
+            .arg(deleteKeys.at(1).toString(QKeySequence::NativeText)));
+    }
     addAction(deleteImagesAction);
     connect(deleteImagesAction, &QAction::triggered, this, &MW::deleteSelectedFiles);
-
-    deleteAction1 = new QAction(moveFilesToWhatever, this);
-    deleteAction1->setObjectName("backspaceDeleteFiles");
-    deleteAction1->setShortcutVisibleInContextMenu(true);
-    deleteAction1->setShortcut(QKeySequence("Backspace"));
-    addAction(deleteAction1);
-    connect(deleteAction1, &QAction::triggered, this, &MW::deleteSelectedFiles);
 
     deleteActiveFolderAction = new QAction(moveFolderToWhatever, this);
     deleteActiveFolderAction->setObjectName("deleteActiveFolder");
@@ -333,11 +340,15 @@ void MW::createFileActions()
     addAction(deleteFSTreeFolderAction);
     connect(deleteFSTreeFolderAction, &QAction::triggered, this, &MW::deleteFolder);
 
-    // Place keeper for now
+    /*  Place keeper for now: nothing is connected to it, so there is nothing to put in a
+        menu.  Its "A" shortcut is therefore NOT set -- a bare letter that silently does
+        nothing is worse than no key, and while it was claimed here ImageView had to take
+        "A" back from it to run Auto Mask (see ImageView::event).  Restore the setShortcut
+        line when Run Droplet is implemented, and add it to the Tools menu at the same
+        time; MW::shortcutCoverage will insist on the menu item. */
     runDropletAction = new QAction(tr("Run Droplet"), this);
     runDropletAction->setObjectName("runDroplet");
     runDropletAction->setShortcutVisibleInContextMenu(true);
-    runDropletAction->setShortcut(QKeySequence("A"));
     addAction(runDropletAction);
 
     reportMetadataAction = new QAction(tr("Diagnostics Metadata"), this);
@@ -1475,7 +1486,10 @@ void MW::createViewActions()
     addAction(fullScreenAction);
     connect(fullScreenAction, &QAction::triggered, this, &MW::toggleFullScreen);
 
-    escapeFullScreenAction = new QAction(tr("Escape Full Screen"), this);
+    /*  Esc is not a QAction shortcut -- MW::keyReleaseEvent runs a cancel chain and full
+        screen is the last thing it tries -- so the key goes in the text after a tab, the
+        way keyRightAction advertises the Right Arrow. */
+    escapeFullScreenAction = new QAction(tr("Escape Full Screen\tEsc"), this);
     escapeFullScreenAction->setObjectName("escapeFullScreenAct");
     escapeFullScreenAction->setShortcutVisibleInContextMenu(true);
     addAction(escapeFullScreenAction);
@@ -1531,10 +1545,10 @@ void MW::createViewActions()
        the Develop panel before the view is shown. A no-op when already in Preview. */
     connect(asLoupeAction, &QAction::triggered, this, [this]() {
         setOperationMode(G::OperationMode::Preview);
-        /* E / G / C are the Library workflow, so they reassert the Library layout every
+        /* E / G / C are the Source workflow, so they reassert the Source layout every
            time -- the view key is how a layout that has got away from the user (a panel
            left open, a dock stranded on a monitor that is gone) is recovered. */
-        invokeWorkflowWorkspace(WfLibrary);
+        invokeWorkflowWorkspace(WfSource);
         loupeDisplay("asLoupeAction");
     });
 
@@ -1547,7 +1561,7 @@ void MW::createViewActions()
     // G leaves Develop into the grid, the same way E leaves it into the loupe (above).
     connect(asGridAction, &QAction::triggered, this, [this]() {
         setOperationMode(G::OperationMode::Preview);
-        invokeWorkflowWorkspace(WfLibrary);        // see asLoupeAction
+        invokeWorkflowWorkspace(WfSource);        // see asLoupeAction
         gridDisplay();
     });
 
@@ -1563,7 +1577,7 @@ void MW::createViewActions()
         tableDisplay();
     });
 
-    /* K applies the Keywords workspace, the way E / G / T apply the Library one and D
+    /* K applies the Keywords workspace, the way E / G / T apply the Source one and D
        applies Develop.  Like them it leaves Develop first (setOperationMode restores the
        Preview decode and read-ahead); a no-op when already in Preview.  K is NOT in
        developShortcuts, so it has the same meaning in both modes. */
@@ -1582,7 +1596,7 @@ void MW::createViewActions()
     asCompareAction->setChecked(false); // never start with compare set true
     addAction(asCompareAction);
     connect(asCompareAction, &QAction::triggered, this, [this]() {
-        invokeWorkflowWorkspace(WfLibrary);        // see asLoupeAction
+        invokeWorkflowWorkspace(WfSource);        // see asLoupeAction
         compareDisplay();
     });
 
@@ -2002,6 +2016,12 @@ void MW::createHelpActions()
     addAction(diagnosticsDevelopAction);
     connect(diagnosticsDevelopAction, &QAction::triggered, this, &MW::diagnosticsDevelop);
 
+    diagnosticsShortcutsAction = new QAction(tr("Shortcut coverage"), this);
+    diagnosticsShortcutsAction->setObjectName("diagnosticsShortcuts");
+    diagnosticsShortcutsAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsShortcutsAction);
+    connect(diagnosticsShortcutsAction, &QAction::triggered, this, &MW::diagnosticsShortcuts);
+
     diagnosticsMainAction = new QAction(tr("Main diagnostics"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
     diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
@@ -2173,7 +2193,9 @@ void MW::createMiscActions()
     connect(copyInfoTextToClipboardAction, &QAction::triggered, infoView, &InfoView::copyEntry);
 
     // Rory (extra functionality)
-    roryAction = new QAction(tr("Test"), this);
+    /*  Named, not "Test": it is one of four items in Help > Diagnostics > Tests >
+        Developer now, and two of them were both called "Test". */
+    roryAction = new QAction(tr("Toggle Rory Mode"), this);
     roryAction->setObjectName("rory");
     roryAction->setShortcutVisibleInContextMenu(true);
     addAction(roryAction);
@@ -2233,9 +2255,10 @@ void MW::createMenus()
     createSortMenu();
     createEmbellishMenu();
     createFocusStackMenu();
+    createDevelopMenu();
     createUtilMenu();
     createViewMenu();
-    // createWindowMenu();
+    createWindowMenu();
     createHelpMenu();
 
     createMainMenu();
@@ -2285,8 +2308,12 @@ void MW::createFileMenu()
     fileMenu->addAction(manageCatalogAction);
 
     fileMenu->addSeparator();
-    // fileMenu->addAction(refreshCurrentAction);
     fileMenu->addAction(refreshFoldersAction);
+    /*  Alt+F5 and Alt+C were live shortcuts with no menu item: refreshCurrentAction was
+        commented out here, and collapseFoldersAction reached the user only from the
+        folder tree's context menu, where it still is. */
+    fileMenu->addAction(refreshCurrentAction);
+    fileMenu->addAction(collapseFoldersAction);
 
     // fileMenu->addSeparator();
     // fileMenu->addAction(ingestAction);
@@ -2384,13 +2411,6 @@ void MW::createEditMenu()
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
     editMenu->addSeparator();
-    utilitiesMenu = editMenu->addMenu("Utilities");
-    utilitiesMenu->addAction(mediaReadSpeedAction);
-    utilitiesMenu->addAction(findDuplicatesAction);
-    // utilitiesMenu->addAction(reportHueCountAction);
-    utilitiesMenu->addAction(meanStackAction);
-    utilitiesMenu->addAction(focusStackAction);
-    editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 }
 
@@ -2412,26 +2432,31 @@ void MW::createGoMenu()
     goMenu->addAction(keyHomeAction);
     goMenu->addAction(keyEndAction);
     goMenu->addSeparator();
-    goMenu->addAction(keyRightAddToSelectionAction);
-    goMenu->addAction(keyLeftAddToSelectionAction);
-    goMenu->addAction(keyUpAddToSelectionAction);
-    goMenu->addAction(keyDownAddToSelectionAction);
-    goMenu->addAction(keyPageUpAddToSelectionAction);
-    goMenu->addAction(keyPageDownAddToSelectionAction);
-    goMenu->addAction(keyHomeAddToSelectionAction);
-    goMenu->addAction(keyEndAddToSelectionAction);
-    goMenu->addSeparator();
-    goMenu->addAction(keyScrollLeftAction);
-    goMenu->addAction(keyScrollRightAction);
-    goMenu->addAction(keyScrollUpAction);
-    goMenu->addAction(keyScrollDownAction);
-    // goMenu->addAction(keyScrollPageLeftAction);
-    // goMenu->addAction(keyScrollPageRightAction);
-    goMenu->addAction(keyScrollPageUpAction);
-    goMenu->addAction(keyScrollPageDownAction);
-    goMenu->addAction(keyScrollHomeAction);
-    goMenu->addAction(keyScrollEndAction);
-    goMenu->addAction(keyScrollCurrentAction);
+    /*  The Shift+ and Alt+ blocks are documentation of their key more than they are
+        things anyone picks with the mouse, and seventeen of them flat made the Go menu
+        the longest in the bar.  Each keeps its own action (and so its own gating in
+        enableSelectionDependentMenus); only the nesting changes. */
+    goExtendSelectionMenu = goMenu->addMenu(tr("Extend Selection"));
+    goExtendSelectionMenu->addAction(keyRightAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyLeftAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyUpAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyDownAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyPageUpAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyPageDownAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyHomeAddToSelectionAction);
+    goExtendSelectionMenu->addAction(keyEndAddToSelectionAction);
+    goScrollMenu = goMenu->addMenu(tr("Scroll"));
+    goScrollMenu->addAction(keyScrollLeftAction);
+    goScrollMenu->addAction(keyScrollRightAction);
+    goScrollMenu->addAction(keyScrollUpAction);
+    goScrollMenu->addAction(keyScrollDownAction);
+    // goScrollMenu->addAction(keyScrollPageLeftAction);
+    // goScrollMenu->addAction(keyScrollPageRightAction);
+    goScrollMenu->addAction(keyScrollPageUpAction);
+    goScrollMenu->addAction(keyScrollPageDownAction);
+    goScrollMenu->addAction(keyScrollHomeAction);
+    goScrollMenu->addAction(keyScrollEndAction);
+    goScrollMenu->addAction(keyScrollCurrentAction);
     goMenu->addSeparator();
     goMenu->addAction(nextPickAction);
     goMenu->addAction(prevPickAction);
@@ -2465,10 +2490,6 @@ void MW::createFilterMenu()
     filterMenu->addAction(filterPurpleAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterLastDayAction);
-    filterMenu->addSeparator();
-    //    filterMenu->addAction(filterUpdateAction);
-    //    filterMenu->addAction(filterInvertAction);
-    filterMenu->addAction(filterLastDayAction);
 }
 
 void MW::createSortMenu()
@@ -2481,18 +2502,84 @@ void MW::createSortMenu()
     sortMenu->addAction(sortReverseAction);
 }
 
-void MW::createUtilMenu()
+void MW::createSlideShowActions()
 {
-    utilMenu = new QMenu(this);
+/*
+    The nine keys that work WHILE a slideshow runs.  They lived only in
+    MW::keyReleaseEvent, so the H overlay was the only way to find out about them.
 
-    utilGroupAct = new QAction("Utilities", this);
-    utilGroupAct->setMenu(utilMenu);
+    None of these carries a QKeySequence, and cannot: MW::slideShow sets every QAction in
+    the window to Qt::WidgetShortcut while a slideshow is running (see slideshow.cpp), so
+    a real shortcut here would be dead exactly when it is needed.  The key goes in the
+    text after a tab instead -- the same convention the Develop menu uses for its
+    mode-local keys -- and MW::keyReleaseEvent triggers the action.
+*/
+    if (G::isLogger) G::log("MW::createSlideShowActions");
 
-    /* Develop submenu.  The Develop mode tools were previously reachable only by their
-       shortcut keys, which made them invisible to anyone not reading the help.  The keys
-       shown after the tab are Develop mode local -- outside Develop mode they do what the
-       global table says (S = Slideshow, X = Reject...), so the items are enabled only in
-       Develop mode (see syncDevelopMenuEnabled). */
+    slideShowNextAction = new QAction(tr("Next Slide\tX"), this);
+    slideShowNextAction->setObjectName("slideShowNext");
+    connect(slideShowNextAction, &QAction::triggered, this, &MW::slideShowNext);
+
+    slideShowPrevRandomAction = new QAction(tr("Previous Random Slide\tBackspace"), this);
+    slideShowPrevRandomAction->setObjectName("slideShowPrevRandom");
+    connect(slideShowPrevRandomAction, &QAction::triggered, this, &MW::slideShowPrevRandom);
+
+    slideShowPauseAction = new QAction(tr("Pause / Continue\tSpace"), this);
+    slideShowPauseAction->setObjectName("slideShowPause");
+    connect(slideShowPauseAction, &QAction::triggered, this, &MW::slideShowPauseOrContinue);
+
+    slideShowWrapAction = new QAction(tr("Wrap at End of Folder\tW"), this);
+    slideShowWrapAction->setObjectName("slideShowWrap");
+    slideShowWrapAction->setCheckable(true);
+    connect(slideShowWrapAction, &QAction::triggered, this, &MW::slideShowToggleWrap);
+
+    slideShowRandomAction = new QAction(tr("Random Order\tR"), this);
+    slideShowRandomAction->setObjectName("slideShowRandom");
+    slideShowRandomAction->setCheckable(true);
+    connect(slideShowRandomAction, &QAction::triggered, this, &MW::slideShowToggleRandom);
+
+    slideShowKeysAction = new QAction(tr("Show Slideshow Keys\tH"), this);
+    slideShowKeysAction->setObjectName("slideShowKeys");
+    connect(slideShowKeysAction, &QAction::triggered, this, &MW::slideShowKeysHelp);
+
+    /*  Interval: keys 1-9 index the delay table in MW::keyReleaseEvent
+        {1,2,3,5,10,30,60,180,600} seconds.  The action data carries the seconds, the
+        text carries the key. */
+    struct Interval { int seconds; const char *text; const char *key; };
+    static const Interval intervals[] = {
+        {  1, QT_TR_NOOP("1 second"),   "1"}, {  2, QT_TR_NOOP("2 seconds"), "2"},
+        {  3, QT_TR_NOOP("3 seconds"),  "3"}, {  5, QT_TR_NOOP("5 seconds"), "4"},
+        { 10, QT_TR_NOOP("10 seconds"), "5"}, { 30, QT_TR_NOOP("30 seconds"),"6"},
+        { 60, QT_TR_NOOP("1 minute"),   "7"}, {180, QT_TR_NOOP("3 minutes"), "8"},
+        {600, QT_TR_NOOP("10 minutes"), "9"},
+    };
+    slideShowIntervalGroup = new QActionGroup(this);
+    slideShowIntervalGroup->setExclusive(true);
+    for (const Interval &i : intervals) {
+        QAction *a = new QAction(QString("%1\t%2").arg(tr(i.text)).arg(i.key), this);
+        a->setCheckable(true);
+        a->setData(i.seconds);
+        slideShowIntervalGroup->addAction(a);
+        slideShowIntervalActions << a;
+    }
+    connect(slideShowIntervalGroup, &QActionGroup::triggered,
+            this, &MW::slideShowSetDelayFromAction);
+}
+
+void MW::createDevelopMenu()
+{
+/*
+    Develop was a submenu of Utilities.  It is an operation mode with its own key (D),
+    its own dock, its own history and its own export, so it sits in the menu bar beside
+    View rather than two levels down.  Nothing about its contents or its enabling
+    changes -- only the parent.
+
+    The Develop mode tools were previously reachable only by their shortcut keys, which
+    made them invisible to anyone not reading the help.  The keys shown after the tab are
+    Develop mode local -- outside Develop mode they do what the global table says
+    (S = Slideshow, X = Reject...), so the items are enabled only in Develop mode (see
+    syncDevelopMenuEnabled).
+*/
     developMenu = new QMenu(this);
     developGroupAct = new QAction("Develop", this);
     developGroupAct->setMenu(developMenu);
@@ -2535,23 +2622,104 @@ void MW::createUtilMenu()
     /* Grey the mode-local items outside Develop mode: their keys belong to other actions
        there, so an enabled item would advertise a shortcut that does something else. */
     connect(developMenu, &QMenu::aboutToShow, this, &MW::syncDevelopMenuEnabled);
+}
 
-    utilMenu->addAction(developGroupAct);
+void MW::createUtilMenu()
+{
+/*
+    "Tools", formerly "Utilities".  Develop has moved out to the menu bar; what is left
+    is the batch and one-off operations.  runDropletAction is deliberately NOT here: it is
+    a place keeper with no slot connected (see createFileActions), so a menu item for it
+    would do nothing.  It no longer carries a shortcut either, so the menu still accounts
+    for every key -- see MW::shortcutCoverage.
+*/
+    utilMenu = new QMenu(this);
+
+    utilGroupAct = new QAction("Tools", this);
+    utilGroupAct->setMenu(utilMenu);
+
     utilMenu->addAction(embelGroupAct);
-    utilMenu->addAction(mediaReadSpeedAction);
-    utilMenu->addAction(findDuplicatesAction);
-    // utilitiesMenu->addAction(reportHueCountAction);
-    utilMenu->addAction(meanStackAction);
     utilMenu->addAction(focusStackGroupAct);
-
+    utilMenu->addSeparator();
+    utilMenu->addAction(meanStackAction);
+    utilMenu->addAction(findDuplicatesAction);
+    utilMenu->addAction(mediaReadSpeedAction);
+    // utilMenu->addAction(reportHueCountAction);
+    utilMenu->addSeparator();
+    utilMenu->addAction(manageAppAction);
 }
 
 void MW::createViewMenu()
 {
+/*
+    View is now what is shown IN the window -- view mode, slideshow, full screen, the
+    overlays, zoom and thumbnail size.  Everything about the window itself (workspaces,
+    docks, the status bar) has moved to createWindowMenu.  Before the split this one menu
+    carried all of it, some forty five items across five unrelated jobs.
+*/
     viewMenu = new QMenu(this);
+    viewGroupAct = new QAction("View", this);
+    viewGroupAct->setMenu(viewMenu);
+
+    viewMenu->addActions(centralGroupAction->actions());
+    viewMenu->addAction(keywordsWorkspaceAction);   // K: the Keywords workflow layout
+    viewMenu->addSeparator();
+    slideShowMenu = viewMenu->addMenu(tr("Slide Show"));
+    slideShowMenu->addAction(slideShowAction);      // S: start / stop
+    slideShowMenu->addSeparator();
+    slideShowMenu->addAction(slideShowNextAction);
+    slideShowMenu->addAction(slideShowPrevRandomAction);
+    slideShowMenu->addAction(slideShowPauseAction);
+    slideShowMenu->addSeparator();
+    slideShowMenu->addAction(slideShowWrapAction);
+    slideShowMenu->addAction(slideShowRandomAction);
+    slideShowIntervalMenu = slideShowMenu->addMenu(tr("Interval"));
+    for (QAction *a : slideShowIntervalActions) slideShowIntervalMenu->addAction(a);
+    slideShowMenu->addSeparator();
+    slideShowMenu->addAction(slideShowKeysAction);
+    /*  Everything below the first separator only means anything while a slideshow is
+        running, and their keys belong to other actions when one is not -- so they are
+        greyed, the way the Develop menu greys its mode-local items. */
+    connect(slideShowMenu, &QMenu::aboutToShow, this, &MW::syncSlideShowMenuEnabled);
+    viewMenu->addSeparator();
+    viewMenu->addAction(fullScreenAction);
+    viewMenu->addAction(escapeFullScreenAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(previewSourceOriginalAction);
+    viewMenu->addAction(previewSourceDevelopedAction);
+    viewMenu->addAction(togglePreviewSourceAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(ratingBadgeVisibleAction);
+    viewMenu->addAction(iconNumberVisibleAction);
+    viewMenu->addAction(infoVisibleAction);
+    viewMenu->addAction(infoSelectAction);
+    /* "\" toggles the image count on the folder rows.  It had a working shortcut and no
+       menu item, so it belongs with the other overlay toggles. */
+    viewMenu->addAction(showImageCountAction);
+    viewMenu->addSeparator();
+    zoomSubMenu = viewMenu->addMenu(tr("Zoom"));
+    zoomSubMenu->addAction(zoomToAction);
+    zoomSubMenu->addAction(zoomInAction);
+    zoomSubMenu->addAction(zoomOutAction);
+    zoomSubMenu->addAction(zoomToggleAction);
+    zoomSubMenu->addAction(panFocusToggleAction);
+    viewThumbsMenu = viewMenu->addMenu(tr("Thumbnails"));
+    viewThumbsMenu->addAction(thumbsEnlargeAction);
+    viewThumbsMenu->addAction(thumbsShrinkAction);
+}
+
+void MW::createWindowMenu()
+{
+/*
+    The Window menu, restored.  windowGroupAct has existed all along but pointed at
+    viewMenu and was commented out of the menu bar, so workspaces and the eleven dock
+    toggles lived in View.  They are about the window, not the picture.
+*/
+    windowMenu = new QMenu(this);
     windowGroupAct = new QAction("Window", this);
-    windowGroupAct->setMenu(viewMenu);
-    workspaceMenu = viewMenu->addMenu(tr("&Workspace"));
+    windowGroupAct->setMenu(windowMenu);
+
+    workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
     workspaceMenu->addAction(newWorkspaceAction);
     workspaceMenu->addAction(manageWorkspaceAction);
     workspaceMenu->addSeparator();
@@ -2588,55 +2756,25 @@ void MW::createViewMenu()
             SLOT(invokeWorkspaceFromAction(QAction*)));
     syncWorkflowWorkspaceMenus();
 
-    viewMenu->addSeparator();
-    viewMenu->addAction(folderDockVisibleAction);
-    viewMenu->addAction(favDockVisibleAction);
-    viewMenu->addAction(filterDockVisibleAction);
-    viewMenu->addAction(catalogDockVisibleAction);
-    viewMenu->addAction(keywordsDockVisibleAction);
-    viewMenu->addAction(metadataDockVisibleAction);
-    viewMenu->addAction(thumbDockVisibleAction);
-    if (!hideEmbellish) viewMenu->addAction(embelDockVisibleAction);
-    viewMenu->addAction(developDockVisibleAction);
-    viewMenu->addAction(historyDockVisibleAction);
-    viewMenu->addAction(presetsDockVisibleAction);
-    // viewMenu->addSeparator();
+    windowMenu->addSeparator();
+    windowMenu->addAction(folderDockVisibleAction);
+    windowMenu->addAction(favDockVisibleAction);
+    windowMenu->addAction(filterDockVisibleAction);
+    windowMenu->addAction(catalogDockVisibleAction);
+    windowMenu->addAction(keywordsDockVisibleAction);
+    windowMenu->addAction(metadataDockVisibleAction);
+    windowMenu->addAction(thumbDockVisibleAction);
+    if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
+    windowMenu->addAction(developDockVisibleAction);
+    windowMenu->addAction(historyDockVisibleAction);
+    windowMenu->addAction(presetsDockVisibleAction);
+    windowMenu->addSeparator();
     //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
     //windowMenu->addAction(menuBarVisibleAction);
     #endif
-    viewMenu->addAction(statusBarVisibleAction);  // crash
-    viewMenu->addSeparator();
-    viewGroupAct = new QAction("View", this);
-    viewGroupAct->setMenu(viewMenu);
-    viewMenu->addActions(centralGroupAction->actions());
-    viewMenu->addAction(keywordsWorkspaceAction);   // K: the Keywords workflow layout
-    viewMenu->addSeparator();
-    viewMenu->addAction(slideShowAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(fullScreenAction);
-    viewMenu->addAction(escapeFullScreenAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(previewSourceOriginalAction);
-    viewMenu->addAction(previewSourceDevelopedAction);
-    viewMenu->addAction(togglePreviewSourceAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(ratingBadgeVisibleAction);
-    viewMenu->addAction(iconNumberVisibleAction);
-    viewMenu->addAction(infoVisibleAction);
-    viewMenu->addAction(infoSelectAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(zoomToAction);
-    viewMenu->addAction(zoomInAction);
-    viewMenu->addAction(zoomOutAction);
-    viewMenu->addAction(zoomToggleAction);
-    viewMenu->addAction(panFocusToggleAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(thumbsEnlargeAction);
-    viewMenu->addAction(thumbsShrinkAction);
-
+    windowMenu->addAction(statusBarVisibleAction);  // crash
 }
-
 
 void MW::createHelpMenu()
 {
@@ -2650,7 +2788,7 @@ void MW::createHelpMenu()
     helpMenu->addSeparator();
 
     helpMenu->addAction(aboutAction);
-    //    helpMenu->addAction(helpAction);
+    helpMenu->addAction(helpAction);         // "?" -- had a shortcut and no menu item
     helpMenu->addAction(helpWelcomeAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpPerformanceTipsAction);
@@ -2671,10 +2809,22 @@ void MW::createHelpMenu()
     testMenu = helpDiagnosticsMenu->addMenu(tr("&Tests"));
     testMenu->addAction(traverseFolderStressTestAction);
     testMenu->addAction(bounceFoldersStressTestAction);
+    /*  The four developer keys were live shortcuts with no menu item anywhere.  They are
+        listed here so the menu accounts for every key, and the submenu hides itself
+        outside a Rory build the same way the Workspace > Default branch does (see
+        MW::syncDeveloperTestMenu, re-run from MW::rory when the flag is toggled). */
+    developerTestMenu = testMenu->addMenu(tr("Developer"));
+    developerTestMenuAction = developerTestMenu->menuAction();
+    developerTestMenu->addAction(testAction);
+    developerTestMenu->addAction(testAction1);
+    developerTestMenu->addAction(testNewFileFormatAction);
+    developerTestMenu->addAction(roryAction);
+    syncDeveloperTestMenu();
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
     helpDiagnosticsMenu->addAction(diagnosticsDevelopAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
+    helpDiagnosticsMenu->addAction(diagnosticsShortcutsAction);
     helpDiagnosticsMenu->addAction(diagnosticsSelectionAction);
     helpDiagnosticsMenu->addAction(diagnosticsWorkspacesAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
@@ -2704,14 +2854,13 @@ void MW::createMainMenu()
     menuBar()->addAction(fileGroupAct);
     menuBar()->addAction(ingestGroupAct);
     menuBar()->addAction(editGroupAct);
-    menuBar()->addMenu(goMenu);
     menuBar()->addAction(goGroupAct);
     menuBar()->addAction(filterGroupAct);
     menuBar()->addAction(sortGroupAct);
+    menuBar()->addAction(developGroupAct);
     menuBar()->addAction(utilGroupAct);
-    // menuBar()->addAction(embelGroupAct);
     menuBar()->addAction(viewGroupAct);
-    // menuBar()->addAction(windowGroupAct);
+    menuBar()->addAction(windowGroupAct);
     menuBar()->addAction(helpGroupAct);
     menuBar()->setVisible(true);
 }
@@ -2726,9 +2875,10 @@ void MW::createMainContextMenu()
     mainContextActions->append(goGroupAct);
     mainContextActions->append(filterGroupAct);
     mainContextActions->append(sortGroupAct);
+    mainContextActions->append(developGroupAct);
     mainContextActions->append(utilGroupAct);
     mainContextActions->append(viewGroupAct);
-    // mainContextActions->append(windowGroupAct);
+    mainContextActions->append(windowGroupAct);
     mainContextActions->append(helpGroupAct);
     // Central Widget mode context menu
     centralWidget->addActions(*mainContextActions);
@@ -3220,9 +3370,12 @@ void MW::enableSelectionDependentMenus()
     setMenuEnabled(labelsMenu, canWrite, needWritable);
     gate(rotateRightAction, canWrite, needWritable);
     gate(rotateLeftAction, canWrite, needWritable);
-    /* Utilities children (mediaReadSpeed, visCmpImages) operate on the loaded images;
-       meanStack and focusStack need at least two selected images to stack */
-    setMenuEnabled(utilitiesMenu, dmHasRows, needFolder);
+    /* Utilities children (mediaReadSpeed, findDuplicates) operate on the loaded images;
+       meanStack and focusStack need at least two selected images to stack.  Gated
+       individually rather than via setMenuEnabled: the Utilities menu also carries the
+       Develop and Embellish submenus, which are not folder dependent. */
+    gate(mediaReadSpeedAction, dmHasRows, needFolder);
+    gate(findDuplicatesAction, dmHasRows, needFolder);
     gate(meanStackAction, has2Selected, need2Sel);
     gate(focusStackAction, has2Selected, need2Sel);
 
@@ -3290,7 +3443,7 @@ void MW::enableSelectionDependentMenus()
        until the user returns to Preview.
 
        E / G / T are NOT gated on a loaded folder, unlike the rest of this function.  They
-       are the Library WORKSPACE keys as well as view keys (see asLoupeAction), and D
+       are the Source WORKSPACE keys as well as view keys (see asLoupeAction), and D
        enters the Develop layout with no folder loaded, so gating them on dmHasRows left
        the user stuck in the Develop layout with no way back.  With nothing to show the
        view functions reinstate the central message (MW::showCentralMessageIfNoImages). */
@@ -3662,6 +3815,17 @@ void MW::loadDevelopShortcuts()
     /* "P" opens the History panel with its Presets section expanded (there is no
        Presets panel of its own any more). */
     developShortcuts[Qt::Key_P] = presetsDockVisibleAction; // global: Pick
+}
+
+void MW::syncDeveloperTestMenu()
+{
+/*
+    The Developer submenu carries the four internal test keys.  G::isRory is false in a
+    release build, and MW::rory re-runs this when it is toggled at runtime.
+*/
+    if (G::isLogger) G::log("MW::syncDeveloperTestMenu");
+    if (developerTestMenuAction == nullptr) return;
+    developerTestMenuAction->setVisible(G::isRory);
 }
 
 void MW::syncDevelopMenuEnabled()

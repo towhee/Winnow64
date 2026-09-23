@@ -6,6 +6,7 @@
 #include "Cache/cachedb.h"
 #include "Metadata/keywordpaths.h"
 #include "ui_metadatareport.h"
+#include "ui_shortcutsform.h"
 
 #if defined(Q_OS_WIN)
 #ifndef NOMINMAX
@@ -311,6 +312,7 @@ QString MW::diagnostics()
     rpt << "\n" << "displayPhysicalHorizontalPixels = " << G::s(G::displayPhysicalHorizontalPixels);
     rpt << "\n" << "displayPhysicalVerticalPixels = " << G::s(G::displayPhysicalVerticalPixels);
     rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
+    rpt << "\n" << "openLibraryAtStart = " << G::s(openLibraryAtStart);
     rpt << "\n" << "updateSkipVersion = " << updateSkipVersion;
     rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
     rpt << "\n" << "isIconNumberVisible = " << G::s(isIconNumberVisible);
@@ -1635,4 +1637,258 @@ void MW::mailLogs()
     revealAndMailto();
   #endif
 #endif
+}
+
+/* ---------------------------------------------------------------------------
+   SHORTCUT COVERAGE
+
+   Every function with a keyboard shortcut is supposed to have a menu item, so the menu
+   bar documents the shortcuts.  That is a rule about the whole action table, and nothing
+   enforced it: an action created with a bare addAction(this) and never added to a menu
+   works perfectly and is invisible, which is how "A", "\", Alt+F5, Alt+C, Backspace and
+   "?" all ended up unreachable at once.
+
+   This walks the menu bar and reports what is missing.  It runs from
+   Help > Diagnostics, and from --selftest (see MW::runSelfTest), where each hard failure
+   also goes to stderr as a SHORTCUT COVERAGE FAIL line so ctest can fail on it.
+
+   Hard failures (the mechanical rules):
+     1. an action with a shortcut that no menu reaches
+     2. a key sequence claimed by two actions -- Qt's QShortcutMap calls that an
+        ambiguous overload and fires NEITHER, so both keys are dead
+
+   Soft findings (reported, not failed): menu shortcuts with no obvious row in the
+   Help > Winnow Shortcuts table.  That table is prose, hand-maintained and deliberately
+   so -- "Shift 1 to 5", "Opt/Alt + 0 - 9" -- so this can only ever be a prompt to go and
+   look, never a pass/fail.
+   --------------------------------------------------------------------------- */
+
+static void collectMenuActions(QMenu *menu, QSet<QAction *> &found, QSet<QMenu *> &visited)
+{
+    if (menu == nullptr || visited.contains(menu)) return;
+    visited.insert(menu);
+    for (QAction *a : menu->actions()) {
+        if (a->isSeparator()) continue;
+        found.insert(a);
+        if (a->menu()) collectMenuActions(a->menu(), found, visited);
+    }
+}
+
+/*  Reduce a key sequence, or a cell from the Shortcuts help table, to a comparable form:
+    lower case, no spaces, the "Cmd/Ctrl" and "Opt/Alt" spellings folded onto one name,
+    and the modifiers sorted so order does not matter. */
+static QString normaliseKeyText(const QString &text)
+{
+    static const QHash<QString, QString> alias {
+        {"cmd", "ctrl"}, {"command", "ctrl"}, {"meta", "ctrl"}, {"cmd/ctrl", "ctrl"},
+        {"opt", "alt"},  {"option", "alt"},   {"opt/alt", "alt"},
+        {"del", "delete"}, {"esc", "escape"}, {"return", "enter"},
+        {"pagedown", "pgdown"}, {"pageup", "pgup"}, {"spacebar", "space"},
+    };
+    QString s = text.toLower().simplified();
+    s.replace("page down", "pagedown");
+    s.replace("page up", "pageup");
+    s.remove(' ');
+    QStringList parts = s.split('+', Qt::SkipEmptyParts);
+    for (QString &p : parts) p = alias.value(p, p);
+    parts.sort();
+    return parts.join('+');
+}
+
+/*  One cell of the Shortcuts help table can stand for several keys.  The table is written
+    for people, so it says "1 to 5", "Shift 6 to 0", "Cmd/Ctrl + 0 to 9", "E   or   Return
+    / Enter", "[ / ]" -- expand those into the individual sequences, otherwise every key in
+    a range reads as undocumented. */
+static QStringList expandHelpShortcutCell(const QString &cell)
+{
+    QStringList out;
+    /*  The digit ring, so "6 to 0" is 6 7 8 9 0 (the colour labels) as well as "1 to 5"
+        being 1 2 3 4 5. */
+    static const QString ring = "1234567890";
+
+    /*  A parenthesised gloss is for the reader, not part of the key: ". (period)". */
+    static const QRegularExpression glossRe(R"(\s*\([^)]*\))");
+    const QString cleaned = QString(cell).remove(glossRe);
+
+    for (QString piece : cleaned.split(" or ", Qt::SkipEmptyParts)) {
+        piece = piece.simplified();
+        if (piece.isEmpty()) continue;
+
+        /*  A range: an optional modifier prefix, then <char> to|- <char>.  The prefix
+            keeps its "+" if it has one ("Cmd/Ctrl + 0 to 9"), and is bare in the older
+            rows that omit it ("Shift 1 to 5"). */
+        static const QRegularExpression rangeRe(
+            R"(^(.*?)([0-9A-Za-z])\s*(?:to|-|–)\s*([0-9A-Za-z])$)");
+        const QRegularExpressionMatch m = rangeRe.match(piece);
+        if (m.hasMatch()) {
+            QString prefix = m.captured(1).simplified();
+            if (!prefix.isEmpty() && !prefix.endsWith('+')) prefix += "+";
+            const int from = ring.indexOf(m.captured(2));
+            const int to   = ring.indexOf(m.captured(3));
+            if (from >= 0 && to >= 0) {
+                for (int i = from; ; i = (i + 1) % ring.size()) {
+                    out << prefix + ring.at(i);
+                    if (i == to) break;
+                }
+                continue;
+            }
+        }
+
+        /*  Alternatives written with slashes, but only when each side is a single token
+            ("[ / ]", "C / L / W", "Return / Enter") -- never "Cmd/Ctrl", which is one
+            modifier spelled two ways. */
+        const QStringList slashed = piece.split('/', Qt::SkipEmptyParts);
+        bool allSingleTokens = slashed.size() > 1;
+        for (const QString &t : slashed)
+            if (t.simplified().contains(' ') || t.simplified().isEmpty()) allSingleTokens = false;
+        if (allSingleTokens && piece.contains(" / ")) {
+            for (const QString &t : slashed) out << t.simplified();
+            continue;
+        }
+
+        out << piece;
+    }
+    return out;
+}
+
+/*  The menu bar as text, so the report shows the structure the coverage rules are about
+    -- and so "what is in the menus" is answerable without opening eleven menus. */
+static void describeMenu(QMenu *menu, QTextStream &ts, int depth, QSet<QMenu *> &visited)
+{
+    if (menu == nullptr || visited.contains(menu)) return;
+    visited.insert(menu);
+    const QString pad(depth * 4, ' ');
+    for (QAction *a : menu->actions()) {
+        if (a->isSeparator()) { ts << pad << "    ---\n"; continue; }
+        if (!a->isVisible()) continue;
+        /*  Menu text can carry its key after a tab (the Develop and Slide Show
+            mode-local keys), so show that where there is no QKeySequence. */
+        const QStringList bits = a->text().split('\t');
+        /*  QMenu paints the part after the tab as the shortcut column when there is one,
+            in preference to shortcut() -- which is how one action shows two keys
+            ("Toggle Pick\t`, P").  Follow the same order so this reads as the menu does. */
+        QString key = bits.size() > 1
+            ? bits.at(1)
+            : a->shortcut().toString(QKeySequence::NativeText);
+        ts << pad << "    " << QString(bits.first()).leftJustified(44, '.')
+           << " " << key << "\n";
+        if (a->menu()) describeMenu(a->menu(), ts, depth + 1, visited);
+    }
+}
+
+QString MW::shortcutCoverage(bool reportFailures)
+{
+    if (G::isLogger) G::log("MW::shortcutCoverage");
+
+    // What the menu bar reaches
+    QSet<QAction *> inMenus;
+    QSet<QMenu *> visited;
+    for (QAction *a : menuBar()->actions()) {
+        if (a->isSeparator()) continue;
+        inMenus.insert(a);
+        if (a->menu()) collectMenuActions(a->menu(), inMenus, visited);
+    }
+
+    // What the Shortcuts help table documents
+    QSet<QString> documented;
+    {
+        QScrollArea scratch;
+        Ui::shortcutsForm form;
+        form.setupUi(&scratch);
+        std::function<void(QTreeWidgetItem *)> walk = [&](QTreeWidgetItem *item) {
+            const QString cell = item->text(1).trimmed();
+            if (!cell.isEmpty())
+                for (const QString &k : expandHelpShortcutCell(cell))
+                    documented.insert(normaliseKeyText(k));
+            for (int i = 0; i < item->childCount(); ++i) walk(item->child(i));
+        };
+        for (int i = 0; i < form.treeWidget->topLevelItemCount(); ++i)
+            walk(form.treeWidget->topLevelItem(i));
+    }
+
+    // Internal keys, excluded from the user-facing documentation check only
+    QSet<QAction *> internal;
+    if (developerTestMenu) {
+        QSet<QMenu *> devVisited;
+        collectMenuActions(developerTestMenu, internal, devVisited);
+    }
+
+    QStringList orphans, clashes, undocumented;
+    QHash<QString, QAction *> claimed;
+
+    const QList<QAction *> all = findChildren<QAction *>();
+    for (QAction *a : all) {
+        const QList<QKeySequence> keys = a->shortcuts();
+        if (keys.isEmpty()) continue;
+
+        const QString name = a->objectName().isEmpty()
+            ? a->text().split('\t').first() : a->objectName();
+        const QString keyText = QStringList(
+            [&]{ QStringList l; for (const QKeySequence &k : keys)
+                 l << k.toString(QKeySequence::PortableText); return l; }()).join(", ");
+
+        if (!inMenus.contains(a))
+            orphans << QString("    %1  [%2]").arg(keyText, -28).arg(name);
+
+        for (const QKeySequence &k : keys) {
+            const QString portable = k.toString(QKeySequence::PortableText);
+            if (claimed.contains(portable)) {
+                QAction *other = claimed.value(portable);
+                clashes << QString("    %1  [%2] and [%3]")
+                    .arg(portable, -28)
+                    .arg(other->objectName().isEmpty() ? other->text() : other->objectName())
+                    .arg(name);
+            }
+            else claimed.insert(portable, a);
+
+            /*  The Developer submenu is internal and hidden outside a Rory build, so its
+                keys are deliberately not in the user-facing Shortcuts table. */
+            if (inMenus.contains(a) && !internal.contains(a)
+                && !documented.contains(normaliseKeyText(portable)))
+                undocumented << QString("    %1  [%2]").arg(portable, -28).arg(name);
+        }
+    }
+
+    orphans.sort();
+    clashes.sort();
+    undocumented.sort();
+
+    QString rpt;
+    QTextStream rs(&rpt);
+    rs << "\nSHORTCUT COVERAGE\n" << QString(60, '-') << "\n\n";
+    rs << "Actions carrying a shortcut : " << claimed.count() << " key sequences\n";
+    rs << "Reachable from the menu bar : " << inMenus.count() << " actions\n\n";
+
+    rs << "FAIL  shortcut with no menu item (" << orphans.count() << ")\n";
+    rs << (orphans.isEmpty() ? QString("    none\n") : orphans.join("\n") + "\n");
+    rs << "\nFAIL  key sequence claimed twice -- neither fires (" << clashes.count() << ")\n";
+    rs << (clashes.isEmpty() ? QString("    none\n") : clashes.join("\n") + "\n");
+    rs << "\nCHECK menu shortcut not found in Help > Winnow Shortcuts ("
+       << undocumented.count() << ")\n";
+    rs << (undocumented.isEmpty() ? QString("    none\n") : undocumented.join("\n") + "\n");
+
+    rs << "\n\nMENU BAR\n" << QString(60, '-') << "\n";
+    QSet<QMenu *> described;
+    for (QAction *a : menuBar()->actions()) {
+        if (a->isSeparator() || !a->isVisible()) continue;
+        rs << "\n" << a->text() << "\n";
+        describeMenu(a->menu(), rs, 0, described);
+    }
+
+    if (reportFailures) {
+        for (const QString &o : orphans)
+            fprintf(stderr, "SHORTCUT COVERAGE FAIL: no menu item for%s\n",
+                    o.toLocal8Bit().constData());
+        for (const QString &c : clashes)
+            fprintf(stderr, "SHORTCUT COVERAGE FAIL: key claimed twice%s\n",
+                    c.toLocal8Bit().constData());
+        fflush(stderr);
+    }
+
+    return rpt;
+}
+
+void MW::diagnosticsShortcuts()
+{
+    diagnosticsReport(shortcutCoverage(false), "Winnow Diagnostics: Shortcut Coverage");
 }

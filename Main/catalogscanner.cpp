@@ -1,4 +1,5 @@
 #include "Main/catalogscanner.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 #include "Metadata/metadata.h"
@@ -188,6 +189,10 @@ void CatalogScanner::scan(const CatalogScope &scope)
 
     if (running.exchange(true, std::memory_order_relaxed)) return;   // already scanning
     abort.store(false, std::memory_order_relaxed);
+    /*  TEMPORARY. Selecting the Catalog is what STARTS this (MW::maybeAutoScanCatalog),
+        so it runs underneath the load the probe is timing -- walking folders and
+        committing to the same catalog the readers are querying per row. */
+    CatLoad::note("CatalogScanner::scan STARTED (background)");
 
     /* Created here, not in the constructor: the constructor runs on the GUI thread
        (before moveToThread), and Metadata must belong to the thread that parses
@@ -379,6 +384,8 @@ void CatalogScanner::scan(const CatalogScope &scope)
     }
 
     running.store(false, std::memory_order_relaxed);
+    CatLoad::note(QString("CatalogScanner::scan FINISHED (scanned %1, indexed %2)")
+                      .arg(scanned).arg(indexed));   // TEMPORARY
     emit finished(scanned, indexed, unreadable, newFolders, demoted,
                   aborted || abort.load(std::memory_order_relaxed));
 }

@@ -207,6 +207,9 @@ int main(int argc, char *argv[])
                             || isCatalogProbe || isCatalogLoad;
     const bool usesRealIndex = isCatalogProbe || isCatalogLoad;
     if (isTestMode && !usesRealIndex) QStandardPaths::setTestModeEnabled(true);
+    /*  Told separately from the settings isolation above, which the probe runs opt out
+        of: this says "a harness is driving", which is true for all of them. */
+    G::isAutomatedRun = isTestMode || isCatalogProbe || isCatalogLoad;
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);

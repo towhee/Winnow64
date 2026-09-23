@@ -98,6 +98,12 @@ signals:
     void abortedAfterClearing();
     void stopped(QString src);
     void updateProgress(int progress);
+    /*  WHICH PART OF THE BUILD IS RUNNING, for the central widget. A build over a catalog
+        scope is seconds long and the message pane is still up for most of it (see
+        MW::setCentralProgressMessage), so each category names itself as it is counted and
+        the panel update names itself as it is applied. The stage is the bare name --
+        "lenses", "keywords" -- and MW makes the sentence. */
+    void buildStage(QString stage);
     // void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();
     void quickFilter();

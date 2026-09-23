@@ -433,6 +433,12 @@ void Preferences::itemChange(QModelIndex idx)
         mw->checkIfUpdate = v.toBool();
     }
 
+    /*  Takes effect at the NEXT start: changing it mid-session must not yank the user out
+        of the folder they are browsing. */
+    if (source == "openLibraryAtStart") {
+        mw->openLibraryAtStart = v.toBool();
+    }
+
     if (source == "limitFit100Pct") {
         mw->imageView->limitFit100Pct = v.toBool();
         mw->imageView->refresh();
@@ -581,6 +587,24 @@ void Preferences::addGeneral()
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
+    addItem(i);
+
+    /*  FIRST under General, because it is about what Winnow does before the user has
+        done anything.  Off by default: the established behaviour is to come up on a
+        folder. */
+    i.name = "openLibraryAtStart";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Open library at start";
+    i.tooltip = "Start Winnow showing the whole library -- the same as clicking Catalog\n"
+                "above the folder tree -- instead of a folder.\n\n"
+                "If nothing has been catalogued yet the Manage Catalog window opens\n"
+                "instead, which is where folders are nominated for indexing.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->openLibraryAtStart;
+    i.key = "openLibraryAtStart";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
     addItem(i);
 
     // Allow source files to be changed

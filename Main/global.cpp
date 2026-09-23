@@ -396,6 +396,7 @@ QElapsedTimer t;
 bool isTimer;
 bool isTest;
 bool isStressTest;
+bool isAutomatedRun = false;
 
 // memory overrun guardrail
 quint64 memoryAbortMB = 6000;

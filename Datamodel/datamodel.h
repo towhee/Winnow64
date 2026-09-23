@@ -789,7 +789,23 @@ private:
     qint64 perfFillInsertNs = 0;
     qint64 perfFillFileDataNs = 0;
     qint64 perfFillIndexFillNs = 0;
+    /*  MEMO FOR THE KEYWORD EXPANSION -- see DataModel::addMetadataForItem.
+
+        keywordEffectivePaths and keywordPrefixExpand are pure functions of the two
+        keyword lists, and a library's rows share those lists heavily: measured on a
+        41,464-row catalog, 18,325 rows carry hierarchical paths but only 2,935 DISTINCT
+        values of them, and 23,653 rows carry none at all. So the same few thousand
+        answers were being recomputed forty thousand times.
+
+        Keyed on the two lists joined with separators that cannot occur in a keyword.
+        Cleared by clearDataModel, so it lives exactly as long as the set it describes
+        and cannot serve one scope's answers to another. */
+    QHash<QString, QStringList> keywordsAllMemo;
+
     qint64 perfFillAddMetaNs = 0;
+    // TEMPORARY: decomposing addMetadataForItem. Remove with the CatLoad probe.
+    qint64 perfMetaSearchReadNs = 0;
+    qint64 perfMetaKeywordsNs = 0;
     qint64 perfFillEmitNs = 0;
     qint64 perfFillPrepNs = 0;
 

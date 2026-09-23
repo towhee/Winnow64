@@ -1,6 +1,7 @@
 #include "Views/filterpanel.h"
 #include "Datamodel/filters.h"
 #include "Main/global.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 
 #include <QVBoxLayout>
 
@@ -72,6 +73,7 @@ void FilterPanel::applyScope()
     longer showing as active.
 */
     if (currentScope == CatalogScope) {
+        CatLoad::begin("Catalog scope selected");   // TEMPORARY: catalog load timing
         /*  THE TREE KEEPS THE DATAMODEL'S CATEGORIES, which is the whole change.
 
             This used to call loadCatalogCategories() and hide the datamodel's own, on the
@@ -84,6 +86,7 @@ void FilterPanel::applyScope()
             the category head turns yellow, exactly as in Folders, instead of re-running a
             query that reloaded the model and rebuilt the tree from the survivors. */
         filters->showAllCategories();
+        CatLoad::mark("1a scope switch (showAllCategories)");   // TEMPORARY
         /*  Load the set; the categories follow from it. NOT requested explicitly here --
             the load is asynchronous, so a rebuild asked for now would run against the
             model being replaced. MW::folderChangeCompleted builds the filters when the
@@ -105,7 +108,24 @@ void FilterPanel::applyScope()
            text survives the switch even though the checks do not. */
         emit rebuildFolderCategoriesRequested();
     }
-    refresh();
+
+    /*  NOT refresh() -- IT WOULD ASK THE WHOLE CATALOG A SECOND TIME.
+
+        refresh() means "the index changed under us, go and look again", and for a Catalog
+        scope that is runSearch(), which is a query over every indexed image. The Catalog
+        branch above has just run it. Calling refresh() here therefore ran the 41,464-row
+        query TWICE per scope switch, the second time only to end up at the updateStatus()
+        the first one had already done -- and it ran it on the GUI thread while the load
+        the first query asked for was queued behind it.
+
+        MEASURED on the real library: 735 ms for the query the scope switch needs, then a
+        further 346 ms of the load's own critical path spent repeating it. A third of what
+        was left of a 2,977 ms catalog load, spent asking the same question twice.
+
+        The status line still gets written: runSearch() calls updateStatus() itself, and
+        the Folders branch has nothing to query, so it only needs that call. */
+    if (currentScope == CatalogScope) updateStatus();
+    else refresh();
 
     if (G::isPerfProbe)
         qDebug().noquote() << "[PERF] FilterPanel::applyScope" << asTimer.elapsed()
@@ -187,6 +207,7 @@ void FilterPanel::runSearch(bool force)
         also fire on a rating edited elsewhere. */
     const QStringList previous = resultPaths();
     results = Catalog::instance().searchRows(q, resultLimit(), &totalMatches);
+    CatLoad::markEarly("1b Catalog::searchRows (index query)");   // TEMPORARY
     updateStatus();
 
     /*  LOADED WITHOUT BEING ASKED, which is the only way it is loaded now: picking a
@@ -210,6 +231,8 @@ void FilterPanel::runSearch(bool force)
     if ((force || resultPaths() != previous) && !results.isEmpty()
         && results.size() <= autoLoadMax())
         emit loadResults(results, false, currentQuery());
+    else
+        CatLoad::cancel("runSearch did not load (unchanged, empty or over autoLoadMax)");
 }
 
 void FilterPanel::searchTextChanged(const QString &text)

@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
@@ -570,6 +571,12 @@ void DataModel::clearDataModel()
        — they all target the instance being discarded, and queuedReaderEvents
        is reset below. */
     QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
+
+    /*  The keyword expansions describe the set being discarded. Correctness does not
+        depend on this -- the memo is keyed on the keyword lists, not on rows, so an
+        entry is as true for the next set as for this one -- but a cache that is never
+        emptied is one that only grows. */
+    keywordsAllMemo.clear();
 
     clear();
     setModelProperties();
@@ -1798,9 +1805,11 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         what makes Add (a second search onto the first) work. */
     perfFillInsertNs = perfFillFileDataNs = perfFillIndexFillNs = 0;
     perfFillAddMetaNs = perfFillEmitNs = perfFillPrepNs = 0;
+    perfMetaSearchReadNs = perfMetaKeywordsNs = 0;      // TEMPORARY
     QElapsedTimer prepTimer;
     if (G::isPerfProbe) prepTimer.start();
 
+    CatLoad::mark("3a addCatalogRows entered");   // TEMPORARY
     QVector<CatalogRow> ordered;
     ordered.reserve(rows.size());
     for (const CatalogRow &r : rows) {
@@ -1856,6 +1865,7 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
     expectedRows = rowCount() + pendingCatalogRows.size();
     if (G::isPerfProbe) perfFillPrepNs = prepTimer.nsecsElapsed();
 
+    CatLoad::mark("3b dedupe + sort by key");   // TEMPORARY
     insertCatalogBatch();
 }
 
@@ -1975,6 +1985,17 @@ void DataModel::finishCatalogFill()
     QElapsedTimer ft;
     if (probeBig) ft.start();
 
+    /*  THE TAIL IS NOT INSTANT, so it says what it is doing. The batches above have been
+        reporting "n of n images loading..." and the last of them leaves that on screen
+        for the whole of what follows -- the folder collation and the proxy sort here,
+        and then the filter build in MW::folderChangeCompleted. On a catalog scope of
+        tens of thousands of rows that is seconds of a message that has stopped moving,
+        which reads as a hang. Each stage overwrites it instead. */
+    CatLoad::mark("3c insert every batch into the model");   // TEMPORARY
+
+    const QString loaded = QString::number(pendingCatalogAt) + " images loaded.\n\n";
+    emit centralMsg(loaded + "Collating folders ...");
+
     /* Register the folders the results came from -- what the Folders filter category,
        removeFolder and isFolderLoaded all read. */
     {
@@ -2010,6 +2031,8 @@ void DataModel::finishCatalogFill()
             << " indexFill="   << us(perfFillIndexFillNs)
             << " addMeta="     << us(perfFillAddMetaNs)
             << " emit(ms)="    << perfFillEmitNs / 1000000.0
+            << "\n         [of addMeta] searchRead=" << us(perfMetaSearchReadNs)
+            << " keywordExpand=" << us(perfMetaKeywordsNs)
             << " us/row total="
             << us(perfFillInsertNs + perfFillFileDataNs + perfFillIndexFillNs
                   + perfFillAddMetaNs + perfFillEmitNs);
@@ -2035,7 +2058,10 @@ void DataModel::finishCatalogFill()
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  endLoad"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
+    CatLoad::mark("3d collate folders + setCurrent + endLoad");   // TEMPORARY
+    emit centralMsg(loaded + "Sorting ...");
     restoreProxySortAfterLoad();
+    CatLoad::mark("3e restore the proxy sort");   // TEMPORARY
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  restoreSort"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
@@ -2576,7 +2602,12 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
             : fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
-    setData(index(row, G::PickColumn), "Unpicked");
+    /*  THE CATALOG REMEMBERS THE PICK, SO HONOUR IT. image.pick has existed since the
+        table did, catalogRowFor writes it and IndexMetadata::fill reads it into m.pick --
+        but nothing ever put it on the row, so a catalog-loaded image came back Unpicked
+        however it was left. Unpicked stays the default for a row with no catalog entry
+        behind it, which is every row of an ordinary folder load. */
+    setData(index(row, G::PickColumn), (cat && cat->pick) ? "Picked" : "Unpicked");
     /*  bool, not the QString "false" this used to be. Ingested had three writers
         disagreeing about the type -- "false" here, true (bool) from the ingest
         pass, "true" (QString) from MW::setIngested -- so the column's type
@@ -3330,7 +3361,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         if (!rawPath.isEmpty()) fPathRawInfoSet(rawPath, m.rawInfo);
     }
 
+    QElapsedTimer mTimer;                       // TEMPORARY
+    if (G::isPerfProbe) mTimer.start();
     QString search = index(row, G::SearchTextColumn).data().toString();
+    if (G::isPerfProbe) perfMetaSearchReadNs += mTimer.nsecsElapsed();
 
     QMutexLocker locker(&dmMutex);
     mLock = true;
@@ -3430,8 +3464,48 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
        adds every ancestor of every path, so an ancestor is a keyword in its own right and
        filtering on it needs no subtree walk. The two source columns above are left as the
        file spelled them -- see G::KeywordsAllColumn on why they must be. */
-    QStringList keywordsAll =
-        keywordPrefixExpand(keywordEffectivePaths(m.keywords, m.keywordPaths));
+    if (G::isPerfProbe) mTimer.restart();        // TEMPORARY
+    /*  MEMOISED. Both functions are pure -- they read nothing but their arguments -- and
+        the same handful of keyword sets recur across the whole library, so the expansion
+        is done once per DISTINCT set rather than once per row. See keywordsAllMemo.
+
+        The key is the two lists joined by characters a keyword cannot contain: Unit
+        Separator between entries, Record Separator between the lists. Building it costs
+        one pass over strings already in hand, against the QSet churn and per-node folding
+        the expansion does. */
+    QStringList keywordsAll;
+    /*  MOST ROWS HAVE NO KEYWORDS AT ALL -- 23,653 of 41,464 on the measured library --
+        and for those the answer is empty without asking anything. Worth its own branch
+        because the memo's key is two joins and a hash, which is the whole cost for a row
+        whose lists are both empty. */
+    if (m.keywords.isEmpty() && m.keywordPaths.isEmpty()) {
+        // keywordsAll stays empty
+    }
+    else {
+    static const QChar kUnitSep(0x1f);
+    static const QChar kRecSep(0x1e);
+    /*  THE COUNTS ARE IN THE KEY, not decoration. Joining a list is ambiguous on its own
+        -- {"a","b"} and {"a<US>b"} produce the same string -- and while a keyword holding
+        a control character is not a real shape, a cache that can serve the wrong answer
+        for an input nobody predicted is worth two integers to rule out. */
+    const QString kwKey = QString::number(m.keywords.size()) + kUnitSep
+                        + QString::number(m.keywordPaths.size()) + kRecSep
+                        + m.keywords.join(kUnitSep) + kRecSep + m.keywordPaths.join(kUnitSep);
+    const auto kwIt = keywordsAllMemo.constFind(kwKey);
+    if (kwIt != keywordsAllMemo.cend()) {
+        keywordsAll = *kwIt;
+    }
+    else {
+        keywordsAll = keywordPrefixExpand(keywordEffectivePaths(m.keywords, m.keywordPaths));
+        /*  A ceiling, because this is keyed on DATA rather than on the load: a long
+            session that keeps adding rows with new keyword sets would otherwise grow it
+            without end. Far above the few thousand distinct sets a real library has, so
+            in practice it never fires. */
+        if (keywordsAllMemo.size() > 100000) keywordsAllMemo.clear();
+        keywordsAllMemo.insert(kwKey, keywordsAll);
+    }
+    }
+    if (G::isPerfProbe) perfMetaKeywordsNs += mTimer.nsecsElapsed();
     setData(index(row, G::KeywordsAllColumn), QVariant(keywordsAll));
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     search += m.shootingInfo;

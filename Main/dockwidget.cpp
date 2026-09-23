@@ -1095,9 +1095,9 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 /*  PER-WORKSPACE TAB SELECTION ***************************************************************
 
     A workspace state blob carries the front tab of every tab group as it was when the
-    layout was CAPTURED, so applying a workspace re-raises that panel -- Keywords in the
-    shipped Library layout -- and throws away whatever panel the user was actually working
-    in.  Leaving Library on Bookmarks, pressing D and pressing E came back to Keywords.
+    layout was CAPTURED, so applying a workspace re-raises that panel -- Folders in the
+    shipped Source layout -- and throws away whatever panel the user was actually working
+    in.  Leaving Source on Keywords, pressing D and pressing E came back to Folders.
 
     Instead the front tab of each group is remembered per workspace when a workspace is
     left (MW::invokeWorkspace calls rememberDockTabSelection before it applies the new

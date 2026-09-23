@@ -445,6 +445,76 @@ void ThumbCache::writeStampBatch(const QStringList &keys)
                                             std::memory_order_relaxed);
 }
 
+QHash<QString, QByteArray> ThumbCache::getBatch(const QVector<ThumbRequest> &reqs)
+{
+    QHash<QString, QByteArray> hits;
+    if (reqs.isEmpty()) return hits;
+    if (!G::cacheThumbnails) return hits;
+
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return hits;
+
+    QElapsedTimer gTimer;
+    if (G::isPerfProbe) gTimer.start();
+
+    /*  PREPARED ONCE FOR THE WHOLE BATCH. This is the difference that matters at ten
+        thousand rows: preparing per row is a parse and a plan per row, and it is what
+        made the equivalent loop in Catalog::fetchFresh worth writing this way. */
+    QSqlQuery q(db);
+    if (!q.prepare("SELECT jpg, srcsize, srcmtime, used FROM thumb WHERE pathkey = ?"))
+        return hits;
+
+    hits.reserve(reqs.size());
+    /*  Stamps to refresh, collected and handed over ONCE at the end rather than per row.
+        get() posts one takeStamp per hit; ten thousand queued invocations to say "these
+        are still in use" is a cost this exists to avoid. */
+    QStringList stamps;
+    const qint64 now = nowSecs();
+
+    for (const ThumbRequest &r : reqs) {
+        /*  The same two gates get()/getImage apply, per row: an edited image in a
+            developed-showing mode must not be served the camera's picture. */
+        if (!wantsOriginalThumb(r.hasDevelopRecipe)) continue;
+        const QString key = cachePathKey(r.fPath);
+        if (key.isEmpty()) continue;
+
+        q.addBindValue(key);
+        if (!q.exec() || !q.next()) { q.finish(); continue; }
+
+        /*  STALENESS, the same rule and the same grandfathering as get(): a row stamped
+            with zeros predates the stamp and is trusted; anything else must match the
+            stamps the caller brought or it is a miss. */
+        const qint64 rowSize  = q.value(1).toLongLong();
+        const qint64 rowMtime = q.value(2).toLongLong();
+        if ((rowSize || rowMtime)
+            && (rowSize != r.srcSize || rowMtime != r.srcMtime)) { q.finish(); continue; }
+
+        const QByteArray jpg = q.value(0).toByteArray();
+        const qint64 rowUsed = q.value(3).toLongLong();
+        q.finish();
+        if (jpg.isEmpty()) continue;
+
+        hits.insert(r.fPath, jpg);
+        if (now - rowUsed >= kUsedStampMaxAgeSecs) stamps << key;
+    }
+
+    if (!stamps.isEmpty()) {
+        if (ThumbWriter *w = writerOrStart()) {
+            for (const QString &key : stamps)
+                QMetaObject::invokeMethod(w, "takeStamp", Qt::QueuedConnection,
+                                          Q_ARG(QString, key));
+        }
+    }
+
+    if (G::isPerfProbe) {
+        G::probeThumbSqlNs.fetch_add(gTimer.nsecsElapsed(), std::memory_order_relaxed);
+        qDebug().noquote() << "[PERF] ThumbCache::getBatch  asked" << reqs.size()
+                           << " hit" << hits.size()
+                           << " in" << gTimer.elapsed() << "ms";
+    }
+    return hits;
+}
+
 bool ThumbCache::wantsOriginalThumb(bool hasDevelopRecipe)
 {
     /*  No recipe, no developed thumbnail to prefer -- Thumb::devThumb finds

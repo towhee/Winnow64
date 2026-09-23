@@ -4714,3 +4714,134 @@ Help
 
 
   The four developer keys would be added but hidden unless G::isRory, the way workspaceDefaultMenu already hides itself (menusandactions.cpp:2559).
+
+
+===========  LOADING THE CATALOG ====================
+
+1 — Scope switch
+
+- User picks Catalog (the Catalog row in the Source panel / scope switch) →
+  FilterPanel::setScope Views/filterpanel.cpp:36 → applyScope :58, which points the
+  category tree at the datamodel's own categories and emits scopeChanged so MW::setScope
+  sets G::scope.
+
+- runSearch(force=true) :168 asks the index: Catalog::searchRows(q, limit,
+  &totalMatches). An empty query = the whole catalog, newest first. Returns whole
+  CatalogRows, not paths
+
+  — nothing is opened or stat'd.
+
+- Guarded emit loadResults(rows, append=false, query) → MW::loadCatalogRows
+  Main/mainwindow.cpp:4218, which wraps them in a ScopeRequest (scope=Catalog,
+  reconcile=false).
+
+2 — Teardown (replace only)
+
+- MW::loadCatalogScope :4245: okToDiscardPicks, then resetDevelopCachesForNewFolder,
+  disable Bookmarks/FSTree, setCentralMessage("Loading search results…"), stop() — tears
+  down the reader threads and drops caches, exactly as a folder change does. Append skips
+  all of this.
+
+- The fill is queued (singleShot(0)) so it never runs inside the signal that asked for
+  it; a single-shot connect on dm->folderChange is armed to fire the availability pass
+  after.
+
+3 — Model fill
+
+- DataModel::setScope :1344 → no reconcile + rows present → addCatalogRows :1753: dedupe
+  against what's loaded, precomputed-key sort, proxy dynamic sort switched off for the
+  load.
+
+- insertCatalogBatch :1862 runs 2000 rows per event-loop turn: insertRows,
+  addFileDataForRow, IndexMetadata::fill, addMetadataForItem with signals blocked, one
+  dataChanged per batch. Rows land MetaLoaded — MetaRead will skip them for metadata.
+  Reports "n of m images loading…".
+
+- finishCatalogFill :1964: register every parent folder in folderList/folderImageCount,
+  setCurrent(row 0), setAllMetadataAttempted(true), endLoad, restoreProxySortAfterLoad,
+  then emit folderChange.
+
+4 — Post-fill
+
+- MW::folderChanged :5933 sizes the cache estimate, setIconRange; a hydrated scope is
+  already meta-complete, so it calls folderChangeCompleted directly — otherwise MetaRead
+  starts and calls it on done.
+
+- MW::queueAvailabilityPass :4326 — off-thread Catalog::availabilityOf for the whole set
+  (a row can name a file on an unplugged drive), fed back into the Availability
+  column/filter category.
+
+- MW::folderChangeCompleted :6317: one-shot devPreview + thumb/catalog sweeps, catalog
+  commit (skipped for a hydrated scope — only re-verified stale rows commit),
+  updateInstance on the image cache, clear the progress bar, re-enable sort/filter/rawJpg
+  controls, resizeColumns, emit setImageCachePosition, emit metadataLoaded.
+
+5 — Filters
+
+- MW::buildFiltersWhenModelReady :6594 waits for dm->queuedReaderEvents to drain (10 ms
+  poll, 2 s cap), then buildFilters->build() — snapshot on the GUI thread, worker counts
+  each category (appendUniqueItems) and records FilterOps — then recount() for the
+  filtered/unfiltered counts.
+
+- Worker posts back → BuildFilters::applyOps on the GUI thread turns the ops into tree
+  items, setEachCatTextColor, done() → finishedBuildFilters → applyPendingCatalogYear,
+  refreshFilterVocabMarking, filterBuildCompleted.
+
+6 — Pixels
+
+- MetaRead still runs for the one thing the index can't supply: icons (ThumbCache first,
+  else the file).
+
+- The image cache decodes around the current row; MW::refreshViewsOnCacheChange switches
+  the central widget off the message pane to the loupe when the first image is cached —
+  which is what ends the load visually, and why the stage messages we just added stop
+  there.
+
+[CATLOAD] ===== begin: Catalog scope selected
+[CATLOAD] 1a scope switch (showAllCategories)                0 ms   (t+      0 ms)
+[CATLOAD] 1b Catalog::searchRows (index query)             302 ms   (t+    302 ms)
+[CATLOAD] 2a okToDiscardPicks + reset develop caches         1 ms   (t+    304 ms)
+[CATLOAD] 2b stop() (tear down readers + caches)           113 ms   (t+    417 ms)
+[CATLOAD] 2c wait for the queued fill to start              26 ms   (t+    443 ms)
+[CATLOAD] 3a addCatalogRows entered                          0 ms   (t+    443 ms)
+[CATLOAD] 3b dedupe + sort by key                           49 ms   (t+    492 ms)
+[CATLOAD] 3c insert every batch into the model             927 ms   (t+   1420 ms)
+[CATLOAD] 3d collate folders + setCurrent + endLoad         30 ms   (t+   1451 ms)
+[CATLOAD] 3e restore the proxy sort                          3 ms   (t+   1455 ms)
+[CATLOAD] 4a MW::folderChanged (cache estimate, icon range)       2 ms   (t+   1457 ms)
+[CATLOAD]    . MetaRead::initialize                                   (t+   1457 ms)
+[CATLOAD]    . icon prefetch asking for 9789                          (t+   1607 ms)
+[CATLOAD]    . availability pass queued (off-thread)                  (t+   1607 ms)
+[CATLOAD] 6 loupe shown from fileSelectionChange           183 ms   (t+   1640 ms)
+[CATLOAD]       still waiting for: filters
+[CATLOAD] 4a1 reached metadataComplete (src hydrated catalog scope)       1 ms   (t+   1642 ms)
+[CATLOAD] 4a2 fCC: sweeps started, catalog commit posted       0 ms   (t+   1642 ms)
+[CATLOAD] 4a3 fCC: queueBackgroundDevPreviewBuild            0 ms   (t+   1642 ms)
+[CATLOAD] 4a4 fCC: fsTree->scrollToCurrent                   0 ms   (t+   1642 ms)
+[CATLOAD] 4b folderChangeCompleted before filters            0 ms   (t+   1642 ms)
+[CATLOAD] 5x filters: applyOps (0 ops -> tree items)         0 ms   (t+   1642 ms)
+[CATLOAD] 5b filters: build() (snapshot + start worker)      49 ms   (t+   1691 ms)
+[CATLOAD] 5x filters: applyOps (38 ops -> tree items)      142 ms   (t+   1834 ms)
+[CATLOAD] 5c filters: recount() (2 passes + apply)           6 ms   (t+   1840 ms)
+[CATLOAD] 4c returned from buildFiltersWhenModelReady        0 ms   (t+   1840 ms)
+[CATLOAD]    . CatalogScanner::scan STARTED (background)              (t+   2188 ms)
+[CATLOAD] 5f filters: build completed (panel up to date)     389 ms   (t+   2229 ms)
+[CATLOAD] ----- summary (longest first)
+[CATLOAD] 3c insert every batch into the model             927 ms   41.6%
+[CATLOAD] 5f filters: build completed (panel up to date)     389 ms   17.5%
+[CATLOAD] 1b Catalog::searchRows (index query)             302 ms   13.5%
+[CATLOAD] 6 loupe shown from fileSelectionChange           183 ms    8.2%
+[CATLOAD] 5x filters: applyOps (38 ops -> tree items)      142 ms    6.4%
+[CATLOAD] 2b stop() (tear down readers + caches)           113 ms    5.1%
+[CATLOAD] 3b dedupe + sort by key                           49 ms    2.2%
+[CATLOAD] 5b filters: build() (snapshot + start worker)      49 ms    2.2%
+[CATLOAD] 3d collate folders + setCurrent + endLoad         30 ms    1.3%
+[CATLOAD] 2c wait for the queued fill to start              26 ms    1.2%
+[CATLOAD] 5c filters: recount() (2 passes + apply)           6 ms    0.3%
+[CATLOAD] 3e restore the proxy sort                          3 ms    0.1%
+[CATLOAD] 4a MW::folderChanged (cache estimate, icon range)       2 ms    0.1%
+[CATLOAD] 2a okToDiscardPicks + reset develop caches         1 ms    0.0%
+[CATLOAD] 4a1 reached metadataComplete (src hydrated catalog scope)       1 ms    0.0%
+[CATLOAD] ===== TOTAL  scope selected -> images shown AND filters built  2229 ms
+Utilities::subFolderTree "/Users/roryhill/Pictures" = 218 in 38 ms (threads: 20 )
+[PERF] icon prefetch: served 8437 of 9789 from the index; 1352 left for MetaRead

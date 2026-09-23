@@ -954,6 +954,10 @@ Q_NAMESPACE
     extern bool isTimer;
     extern bool isTest;
     extern bool isStressTest;
+    /*  Launched by one of the automated harnesses (--selftest, --metatest, --soaktest,
+        --devtest), which drive a specific folder and assert on what loads.  Startup
+        behaviour that would take the app somewhere else has to stand aside. */
+    extern bool isAutomatedRun;
 
     // Signal relay class for global communication
     class SignalRelay : public QObject {
