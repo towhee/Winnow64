@@ -318,7 +318,7 @@ public:
 
     /*  WORKFLOW WORKSPACES
 
-        A layout per workflow, invoked by the workflow's key: E / G / C (Library),
+        A layout per workflow, invoked by the workflow's key: E / G / C (Source),
         D (Develop) and K (Keywords).  Embellish and Slide Show have no key yet.
 
         Each workflow has a DEFAULT layout that ships with Winnow, read from the
@@ -330,9 +330,12 @@ public:
 
         To add a workflow: append to the enum before WfCount, add a row to
         MW::workflowKeys / MW::workflowNames, and capture a default layout. */
-    enum Workflow {WfLibrary, WfDevelop, WfKeywords, WfEmbellish, WfSlideShow, WfCount};
-    /* Stable keys for JSON and QSettings (never translated, never renamed) and the
-       menu names (translated).  Both are indexed by Workflow. */
+    enum Workflow {WfSource, WfDevelop, WfKeywords, WfEmbellish, WfSlideShow, WfCount};
+    /* Stable keys for JSON and QSettings (never translated) and the menu names
+       (translated).  Both are indexed by Workflow.  The keys are not renamed lightly
+       -- an existing profile and every committed defaults.json are keyed on them; the
+       one rename so far, Library -> Source, carries a migration (see
+       MW::migrateWorkflowKey). */
     static const QStringList &workflowKeys();
     static QStringList workflowNames();
     QList<WorkspaceData> workflowDefaultWs;   // shipped layout, indexed by Workflow
@@ -342,7 +345,7 @@ public:
     /*  The workflow the session is in, or -1 when a named workspace was invoked instead.
         Persisted ("currentWorkflow") because the layout a session is LEFT in is not
         always a layout the next session can start in -- see MW::showEvent. */
-    int currentWorkflow = WfLibrary;
+    int currentWorkflow = WfSource;
 
     // recoverGeometry info
     struct RecoverGeometry {
@@ -387,6 +390,7 @@ public:
     // int displayHorizontalPixels; // move to global
     // int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;          // automatic check for a newer Winnow at startup
+    bool openLibraryAtStart = false;    // start in Catalog scope instead of a folder
     QString updateSkipVersion;          // version the user chose to skip (suppresses startup dialog)
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
@@ -578,6 +582,9 @@ public slots:
     /*  The catalog payload for the rows refreshStaleRows cleared, built once their
         re-read has landed. Rows still unread stay pending for the next completion. */
     QVector<CatalogRow> catalogRowsForStale();
+    /*  Commit the rows the verification passes had re-read, whenever they are ready --
+        not only when a load completes. See the definition. */
+    void drainStaleRecommit();
     /*  HEADLESS CATALOG LOAD, against the user's real index: what clicking Catalog
         actually costs. --catalogload <optional path filter>. Prints the time to the
         first batch and to the last, then exits. See Cache/catalogprobe.h for why this
@@ -602,7 +609,10 @@ public slots:
         THROTTLED, because selecting Library is a cheap gesture and a scope walk is not.
         G::autoScanCatalogMinutes is the floor between automatic runs; the Scan button is
         unaffected and always runs at once. */
-    void maybeAutoScanCatalog(const QString &src);
+    void maybeAutoScanCatalog(const QString &src, bool loadExpected = false);
+    /*  Start the automatic scan that maybeAutoScanCatalog deferred, if it is still
+        wanted. Called when a load finishes, and by the fallback timer. */
+    void runPendingCatalogScan();
     /*  IS THIS FOLDER INSIDE THE CATALOG SCOPE? The scope table is definitive: browsing
         a folder catalogues it only when the table says that folder belongs in the index.
         Empty table = nothing is in scope, which is why the first-run prompt exists. */
@@ -685,11 +695,31 @@ public slots:
     void setThumbDockFloatFeatures(bool isFloat);
     void resortImageCache();
     void setCentralMessage(QString message);
+    /*  A progress line for the stages of a load that run AFTER the images have been
+        counted into the datamodel -- see MW::folderChangeCompleted and BuildFilters.
+        Unlike setCentralMessage it only writes when the central widget is ALREADY
+        showing the message pane, so a stage that reports itself after the loupe has
+        appeared cannot yank the view back off the picture. */
+    void setCentralProgressMessage(QString message);
+    /* "43,050 images loaded.\n\n" -- the first line of every stage message above, so the
+       count the user was last given does not disappear while the stages tick over. */
+    QString loadedMsg() const;
     bool showCentralMessageIfNoImages();
     void slideShow();
     void slideShowResetDelay();
     void slideShowResetSequence();
     void slideshowHelpMsg();
+    /*  The in-slideshow keys, one slot each, so MW::keyReleaseEvent and the
+        View > Slide Show menu items run the same code.  Every one is a no-op unless a
+        slideshow is running. */
+    void slideShowNext();
+    void slideShowPrevRandom();
+    void slideShowPauseOrContinue();
+    void slideShowToggleWrap();
+    void slideShowToggleRandom();
+    void slideShowKeysHelp();
+    void slideShowSetDelayFromAction(QAction *action);
+    void syncSlideShowMenuEnabled();
     void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
     void invokeCurrentWorkspace();
     void invokeWorkspaceFromAction(QAction *workAction);
@@ -722,6 +752,7 @@ public slots:
     void captureWorkflowOverride();
     void loadWorkflowDefaults();
     void loadWorkflowOverrides();
+    void migrateWorkflowKey(const QString &from, const QString &to);
     void saveWorkflowOverride(int wf);
     bool hasWorkflowOverride(int wf) const;
     void syncWorkflowWorkspaceMenus();
@@ -1092,6 +1123,15 @@ private slots:
         been written. See MW::updateCatalogForRow. */
     void updateCatalogForRow(int dmRow);
 
+    /*  EVERYTHING THE LOAD CAN FINISH WITHOUT AN ICON -- the filter build, the sort and
+        filter controls, the column widths, the catalog commit. Split out of
+        folderChangeCompleted so a hydrated catalog scope, whose metadata is complete the
+        moment the fill ends, does not wait on the icon pass to reach any of it. Runs at
+        most once per load; see the guard. */
+    /*  Fill the icon chunk from the thumbnail index in bulk, before the Reader is asked
+        for any of it. See the definition for why the per-row path cannot do this. */
+    void prefetchIconsFromIndex(QString src);
+    void metadataComplete(QString src);
     void folderChangeCompleted();
     void buildFiltersWhenModelReady(int forInstance, int attempt = 0);
     void onMemoryOverrun(quint64 footprintMB, quint64 capMB);
@@ -1292,10 +1332,11 @@ private:
     QMenu *ratingsMenu;
     QMenu *labelsMenu;
     QMenu *goMenu;
+        QMenu *goExtendSelectionMenu;
+        QMenu *goScrollMenu;
     QMenu *filterMenu;
     QMenu *sortMenu;
 
-    QMenu *utilitiesMenu;
     QMenu *utilMenu;
         QMenu *developMenu;
         QMenu *embelMenu;
@@ -1304,12 +1345,17 @@ private:
         QMenu *focusStackMenu;
     QMenu *viewMenu;
        QMenu *zoomSubMenu;
+       QMenu *viewThumbsMenu;
+       QMenu *slideShowMenu = nullptr;
+       QMenu *slideShowIntervalMenu = nullptr;
     QMenu *windowMenu;
         QMenu *workspaceMenu;
     QMenu *helpMenu;
         QMenu *logMenu;
         QMenu *helpDiagnosticsMenu;
             QMenu *testMenu;
+                QMenu *developerTestMenu = nullptr;
+                QAction *developerTestMenuAction = nullptr;
 
     QMenu *viewSubMenu;
     QMenu *imageFileSubMenu;
@@ -1373,7 +1419,6 @@ private:
     QAction *copyFilesAction;
     QAction *copyImageAction;
     QAction *deleteImagesAction;
-    QAction *deleteAction1;
     QAction *deleteActiveFolderAction;
     QAction *deleteBookmarkFolderAction;
     QAction *deleteFSTreeFolderAction;
@@ -1540,6 +1585,14 @@ private:
     QAction *asLoupeAction;
     QAction *asCompareAction;
     QAction *slideShowAction;
+    QAction *slideShowNextAction = nullptr;
+    QAction *slideShowPrevRandomAction = nullptr;
+    QAction *slideShowPauseAction = nullptr;
+    QAction *slideShowWrapAction = nullptr;
+    QAction *slideShowRandomAction = nullptr;
+    QAction *slideShowKeysAction = nullptr;
+    QActionGroup *slideShowIntervalGroup = nullptr;
+    QList<QAction *> slideShowIntervalActions;
     QAction *randomImageAction; // req'd by slideshow
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
@@ -1616,6 +1669,7 @@ private:
     QAction *diagnosticsCurrentAction;
     QAction *diagnosticsDevelopAction;
     QAction *diagnosticsMainAction;
+    QAction *diagnosticsShortcutsAction;
     QAction *diagnosticsSelectionAction;
     QAction *diagnosticsWorkspacesAction;
     QAction *viewLogIssuesAction;
@@ -1939,6 +1993,9 @@ private:
         which is the first selection of Library and must not be skipped. */
     QElapsedTimer catalogAutoScanElapsed;
     bool catalogAutoScanRan = false;
+    /*  An automatic scan the throttle has allowed but the load has not yet let run.
+        Fired by MW::folderChangeCompleted -- see MW::maybeAutoScanCatalog. */
+    bool catalogAutoScanPending = false;
     /*  Whether the scan now running was asked for by the user or by maybeAutoScanCatalog.
         Only the second reports itself: a scan the user pressed a button for is already
         accounted for by the progress row they are watching. Same rule as the devPreview
@@ -2132,6 +2189,10 @@ private:
     /* One-shot guard for the catalog sweep, run from folderChangeCompleted
        (see Cache/catalog.h). */
     bool catalogSweepDone = false;
+    /*  MW::metadataComplete has run for the load now in progress. Cleared in
+        MW::folderChanged, which runs once per completed fill and ahead of both of the
+        places that call it. */
+    bool metadataCompleteDone = false;
     bool developProxyInFlight = false;
     bool developProxyPending = false;
     quint64 developProxyReqGen = 0;
@@ -2293,6 +2354,12 @@ private:
         scope entirely -- these are the only rows in it the index has anything to learn
         from. */
     QSet<QString> staleRecommit;
+    /*  Paces drainStaleRecommit while staleRecommit is non-empty. Single-shot and
+        re-armed by the drain itself, so it stops as soon as the set is discharged. */
+    QTimer *staleRecommitTimer = nullptr;
+    /*  Consecutive drains that committed nothing while rows were still pending. Bounds
+        the retry; see MW::drainStaleRecommit. */
+    int staleRecommitAttempts = 0;
     Thumb *refreshThumb = nullptr;    // lazily created; refreshes a single icon after in-place replace
     ImageCache *imageCache;
     QThread imageCacheThread;
@@ -2564,6 +2631,8 @@ private:
     void createGoMenu();
     void createFilterMenu();
     void createSortMenu();
+    void createSlideShowActions();
+    void createDevelopMenu();
     void createUtilMenu();
     void createViewMenu();
     void createWindowMenu();
@@ -2615,6 +2684,7 @@ private:
     bool developShortcutIntercept(QEvent *event);
     bool thumbViewHasFocus() const;     // the selection keys' gate in Develop mode
     /* Grey the Develop menu's mode-local items outside Develop mode (aboutToShow). */
+    void syncDeveloperTestMenu();
     void syncDevelopMenuEnabled();
     void startLog();
     void closeLog();
@@ -2678,6 +2748,11 @@ private:
     QString keywordDiagnostics();
     void diagnosticsDevelop();
     void diagnosticsMain();
+    /*  Shortcut coverage: every action with a key must be reachable from a menu.
+        shortcutCoverage() builds the report; with reportFailures it also writes a
+        SHORTCUT COVERAGE FAIL line per problem to stderr for --selftest / ctest. */
+    void diagnosticsShortcuts();
+    QString shortcutCoverage(bool reportFailures);
     void diagnosticsSelection();
     void diagnosticsWorkspaces();
     void diagnosticsGridView();

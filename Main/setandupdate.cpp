@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Utilities/panelprobe.h"
 
 void MW::setCentralMessage(QString message)
@@ -11,12 +12,40 @@ void MW::setCentralMessage(QString message)
     centralLayout->currentWidget()->repaint();
 }
 
+void MW::setCentralProgressMessage(QString message)
+{
+/*
+    Report a load stage in the central widget, but only while the message pane is what
+    the user is looking at.
+
+    THE LOAD IS NOT OVER WHEN THE IMAGES ARE COUNTED IN. After the last row is inserted
+    there is still the folder collation, the proxy sort, and the filter build -- seconds
+    of it on a catalog scope of tens of thousands of rows -- and until now the central
+    widget sat on "n of n images loading..." for all of it, which reads as a hang. Each
+    of those stages says what it is doing through here.
+
+    IT MUST NOT STEAL THE VIEW BACK. The image cache switches the central widget to the
+    loupe the moment the first image is cached (MW::refreshViewsOnCacheChange), and that
+    can happen while the filters are still being built. setCentralMessage would put the
+    message pane back over the picture the user is finally looking at, so a stage that
+    reports itself after the switch is silently dropped instead.
+*/
+    if (G::isLogger) G::log("MW::setCentralProgressMessage", message);
+    if (centralLayout->currentIndex() != MessageTab) return;
+    setCentralMessage(message);
+}
+
+QString MW::loadedMsg() const
+{
+    return QString::number(dm->rowCount()) + " images loaded.\n\n";
+}
+
 bool MW::showCentralMessageIfNoImages()
 {
 /*
     Reinstate the central message when there is nothing to show.
 
-    The view keys (E / G / T) are also the Library workspace keys, so they work with no
+    The view keys (E / G / T) are also the Source workspace keys, so they work with no
     folder loaded -- that is the only way back out of the Develop layout when the user
     presses D before selecting a folder (see MW::enableSelectionDependentMenus).  Each
     view switch points centralLayout at its own tab though, which would replace the
@@ -485,7 +514,9 @@ void MW::setScope(G::Scope s, QString src)
         AHEAD OF THE "not changed" RETURN BELOW, deliberately: selecting Library again
         after browsing is exactly when a user wants it rechecked, and the throttle -- not
         whether the scope moved -- is what decides. */
-    if (s == G::Scope::Catalog) maybeAutoScanCatalog("MW::setScope");
+    /*  `changed` is what says a load is coming: an unchanged scope re-asserts the panel
+        state and loads nothing, so there would be no folderChangeCompleted to wait for. */
+    if (s == G::Scope::Catalog) maybeAutoScanCatalog("MW::setScope", /*loadExpected*/ changed);
 
     /*  WHICH SET THE PANEL IS FILTERING, said where it stays visible. The Search category
         can be collapsed and the query is typed into a tree row, so there is no
@@ -1076,6 +1107,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
             because the image was not cached; this is the moment it is filled in, and the
             gap between the two is exactly how long the user looked at nothing. */
         if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
+        CatLoad::finish("image", "6 first image cached -> loupe replaces the message");  // TEMPORARY
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         /*  DON'T FLASH THE UNDEVELOPED IMAGE. loadImage above paints the decode -- the

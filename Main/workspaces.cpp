@@ -149,8 +149,8 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         back to it comes back to the panel last used there and not to whatever was front
         when the layout was captured (see MW::restoreDockTabSelection).  Before ws is
         replaced below -- ws is the outgoing workspace until then.  An unnamed current
-        workspace is the layout restored at startup, which is the Library one. */
-    const QString leaving = ws.name.isEmpty() ? workflowNames().at(WfLibrary) : ws.name;
+        workspace is the layout restored at startup, which is the Source one. */
+    const QString leaving = ws.name.isEmpty() ? workflowNames().at(WfSource) : ws.name;
     rememberDockTabSelection(leaving);
 
     ws = w;     // current workspace ws
@@ -190,7 +190,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         MW::writeSettings.  Applying it here made the toggle transient: every workspace
         bakes a value, the shipped defaults all bake TRUE, and E / G / C / K / D apply a
         workspace every time, so an overlay switched off came straight back on -- and
-        showEvent's Library reassertion after a session left in Develop lost the choice
+        showEvent's Source reassertion after a session left in Develop lost the choice
         across a restart as well.  The field is still snapshotted and serialised so the
         QSettings and defaults.json layout is unchanged; it is simply never applied. */
     // View
@@ -559,7 +559,7 @@ void MW::centreWindowOnPrimaryScreen()
     Three quarters of the primary screen, centred.  Split out of
     MW::builtInDefaultWorkspace because a workflow workspace deliberately does not own
     the window position and size, so a first run (no saved Geometry) has to size the
-    window before the Library layout is applied.  See MW::showEvent.
+    window before the Source layout is applied.  See MW::showEvent.
 */
     if (G::isLogger) G::log("MW::centreWindowOnPrimaryScreen");
     QRect desktop = QGuiApplication::screens().first()->geometry();
@@ -1139,7 +1139,7 @@ void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const
     WORKFLOW WORKSPACES
 
     A layout per workflow rather than one "default workspace" for the whole app.  The
-    workflow's key applies it: E / G / C (Library), D (Develop) and K (Keywords).
+    workflow's key applies it: E / G / C (Source), D (Develop) and K (Keywords).
     Embellish and Slide Show are defined but have no key yet -- they are reached from
     Window > Workspace.
 
@@ -1167,16 +1167,66 @@ void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const
 const QStringList &MW::workflowKeys()
 {
 /*
-    Stable identifiers for QSettings groups and the JSON resource.  NEVER renamed: an
-    existing profile and every committed defaults.json are keyed on them.
+    Stable identifiers for QSettings groups and the JSON resource.  Not renamed lightly:
+    an existing profile and every committed defaults.json are keyed on them, so a rename
+    strands the user's captured override unless it is migrated.
+
+    ONE HAS BEEN RENAMED.  "Library" became "Source" when the nomenclature was settled:
+    SOURCE is where the images come from (a Catalog or Folders -- the two halves of the
+    Source panel), and LIBRARY is the catalogue plus the keywords, which is not what this
+    layout is about.  MW::migrateWorkflowKey moves an existing group across.
 */
-    static const QStringList keys{"Library", "Develop", "Keywords", "Embellish", "SlideShow"};
+    static const QStringList keys{"Source", "Develop", "Keywords", "Embellish", "SlideShow"};
     return keys;
 }
 
 QStringList MW::workflowNames()
 {
-    return {tr("Library"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show")};
+    return {tr("Source"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show")};
+}
+
+void MW::migrateWorkflowKey(const QString &from, const QString &to)
+{
+/*
+    Move a captured workflow override from an old key to its new one.
+
+    A workflow's key names its QSettings group ("WorkflowWorkspaces/<key>"), so renaming
+    the key would otherwise orphan the layout the user captured: loadWorkflowOverrides
+    would find nothing under the new name and silently fall back to the shipped default,
+    which reads as "my workspace was thrown away".
+
+    The captured state blob is the tell that a group is really there, the same test
+    MW::hasWorkflowOverride uses.  Copy every key across and drop the old group -- a
+    one-shot, because the new group exists afterwards and the guard below is false from
+    then on.  Never overwrites: a user who has already captured under the new name keeps
+    that one.
+*/
+    if (G::isLogger) G::log("MW::migrateWorkflowKey", from + " -> " + to);
+    const QString oldGroup = "WorkflowWorkspaces/" + from;
+    const QString newGroup = "WorkflowWorkspaces/" + to;
+    if (!settings->contains(oldGroup + "/state")) return;
+    if (settings->contains(newGroup + "/state")) return;
+
+    settings->beginGroup(oldGroup);
+    const QStringList keys = settings->allKeys();
+    QVariantMap values;
+    for (const QString &key : keys) values.insert(key, settings->value(key));
+    settings->endGroup();
+
+    /*  "name" is the one field that carries the OLD name across: it is the display name
+        of the workspace, and copying it verbatim would leave "name=Library" sitting in
+        the migrated group.  Harmless -- loadWorkflowOverrides stamps the name from
+        workflowNames() straight after reading -- but a stale word in the settings file
+        is exactly what a rename is supposed to remove, so it is restamped here too. */
+    const int wf = workflowKeys().indexOf(to);
+    if (wf >= 0 && values.contains("name")) values.insert("name", workflowNames().at(wf));
+
+    settings->beginGroup(newGroup);
+    for (auto i = values.cbegin(); i != values.cend(); ++i) settings->setValue(i.key(), i.value());
+    settings->endGroup();
+
+    /* remove() on a group path drops the whole group -- see MW::saveWorkflowOverride. */
+    settings->remove(oldGroup);
 }
 
 void MW::loadWorkflowDefaults()
@@ -1230,6 +1280,10 @@ void MW::loadWorkflowOverrides()
     if (G::isLogger) G::log("MW::loadWorkflowOverrides");
     if (!isSettings) return;
     if (workflowUserWs.count() < WfCount) return;
+
+    /*  Before anything is read: an override captured under a key that has since been
+        renamed still belongs to the user.  See MW::workflowKeys. */
+    migrateWorkflowKey("Library", "Source");
 
     for (int wf = 0; wf < WfCount; ++wf) {
         settings->beginGroup("WorkflowWorkspaces/" + workflowKeys().at(wf));
@@ -1310,7 +1364,7 @@ void MW::toggleWorkflowOverride(int wf, bool isOverride)
     Tick / untick a workflow in Window > Workspace > User override.
 
     Ticking a workflow that has never been captured SNAPSHOTS THE CURRENT LAYOUT -- the
-    common case is "I have the panels how I want them for culling, make that my Library
+    common case is "I have the panels how I want them for culling, make that my Source
     layout", and making that one click rather than two is the point.  Ticking one that
     has already been captured restores the kept copy instead, so unticking is not
     destructive.  "Update Override from Current Layout ..." is how a kept copy is

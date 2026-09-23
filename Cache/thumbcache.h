@@ -101,6 +101,17 @@ bool mStampScheduled = false;
 };
 
 
+/*  ONE ROW'S WORTH OF THE QUESTION getBatch ASKS. The stamps travel WITH the request
+    because the caller has them and the cache does not: a catalog row's size and mtime
+    came out of the image table, so a batch read need not stat a single file -- which is
+    the whole reason the batch exists. See ThumbCache::getBatch. */
+struct ThumbRequest {
+    QString fPath;
+    qint64  srcSize  = -1;
+    qint64  srcMtime = -1;
+    bool    hasDevelopRecipe = false;
+};
+
 class ThumbCache
 {
     friend class ThumbWriter;
@@ -203,6 +214,32 @@ public:
     static bool wantsOriginalThumb(bool hasDevelopRecipe);
 
     bool contains(const QString &fPath, qint64 srcSize, qint64 srcMtime) const;
+
+    /*  MANY THUMBNAILS, ONE PASS, NO STATS.
+
+        get() answers one path and is shaped for the Reader: a thread per row, a stat to
+        learn the stamps, and a dispatch round trip to ask the next question. That is the
+        right shape when the icon is wanted because the user scrolled to it, and the wrong
+        one entirely for a catalog scope, which wants ten thousand at once and already
+        knows every stamp -- they came out of the image table with the rest of the row.
+        Measured: the per-row path took 11.7 s of a 14.2 s catalog load, while reading all
+        32,552 stored thumbnails out of SQLite takes 134 ms.
+
+        SO THIS TAKES THE STAMPS RATHER THAN LOOKING THEM UP. No QFileInfo is constructed
+        and no file is touched. A request whose stamps do not match the stored row is a
+        MISS exactly as in get(), and the caller falls back to the Reader for it.
+
+        ONE PREPARED STATEMENT, REUSED -- not "WHERE pathkey IN (...)", because SQLite's
+        parameter limit makes that a special case for large sets; Catalog::fetchFresh made
+        and documented the same choice for the same reason. The saving here is not fewer
+        queries, it is no stat, no thread hop and no dispatch cycle per row.
+
+        NO LOCK ON THE SELECT, for the reason get() gives at length: one connection per
+        thread, WAL, and the mutex guards only the writer's lifetime and the byte cap.
+
+        Returns the HITS ONLY, keyed by the caller's spelling of the path so the result
+        maps straight back to rows. Safe to call off the GUI thread; it decodes nothing. */
+    QHash<QString, QByteArray> getBatch(const QVector<ThumbRequest> &reqs);
 
     /*  File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);

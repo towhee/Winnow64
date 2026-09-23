@@ -51,6 +51,7 @@ private slots:
     void theDevelopGateIsPerImageNotPerMode();
     void getImageReturnsAPaintableIcon();
     void getImageUsesACallerSuppliedStat();
+    void getBatchAnswersManyWithoutStattingAnything();
 
 private:
     QTemporaryDir *tmp = nullptr;
@@ -488,6 +489,79 @@ void tst_thumbcache::getImageUsesACallerSuppliedStat()
 
     /*  And the default still stats: an icon-only read passes nothing and hits. */
     QVERIFY(!t.getImage(p, false).isNull());
+}
+
+void tst_thumbcache::getBatchAnswersManyWithoutStattingAnything()
+{
+/*
+    THE BATCH IS THE SAME ANSWER AS N SINGLE READS, and it has to be exactly that or the
+    catalog load it exists for would show different pictures from a scroll. So the cases
+    are the ones where the two could diverge: the staleness rule, the develop gate, and a
+    path the cache has never seen.
+
+    NOTHING IS STAT'D. Every stamp arrives in the request, which is what makes it
+    affordable at ten thousand rows -- so the test deliberately passes stamps that do NOT
+    match the file on disk and expects them to be believed. A row whose supplied stamps
+    match the STORED row is a hit even though the file has since changed; a row whose
+    supplied stamps do not is a miss even though the file has not. That is the contract
+    getImageUsesACallerSuppliedStat states for one row, asserted here for many.
+*/
+    ThumbCache &t = ThumbCache::instance();
+    G::cacheThumbnails = true;
+
+    const QString a = makeFile("batch_a.jpg");
+    const QString b = makeFile("batch_b.jpg");
+    const QString c = makeFile("batch_c.jpg");
+    const QString missing = tmp->filePath("batch_never_seen.jpg");
+
+    QImage im(160, 120, QImage::Format_RGB32);
+    im.fill(Qt::magenta);
+    for (const QString &p : { a, b, c }) t.putImage(p, im, false);
+    t.flush();
+
+    const auto sa = stampOf(a);
+    const auto sb = stampOf(b);
+    const auto sc = stampOf(c);
+
+    QVector<ThumbRequest> reqs;
+    reqs << ThumbRequest{ a, sa.first, sa.second, false }
+         << ThumbRequest{ b, sb.first + 1, sb.second, false }   // stale: size moved
+         << ThumbRequest{ c, sc.first, sc.second, false }
+         << ThumbRequest{ missing, 1, 1, false };               // never stored
+
+    const QHash<QString, QByteArray> hits = t.getBatch(reqs);
+
+    QCOMPARE(hits.size(), 2);
+    QVERIFY2(hits.contains(a), "a row whose supplied stamps match the stored row is a hit");
+    QVERIFY2(hits.contains(c), "a row whose supplied stamps match the stored row is a hit");
+    QVERIFY2(!hits.contains(b), "a stamp mismatch is a miss, not a stale picture");
+    QVERIFY2(!hits.contains(missing), "a path the cache never stored is simply absent");
+
+    /*  THE SAME BYTES get() RETURNS. If these ever differ the two read paths have drifted
+        and a scroll would repaint what the load already drew. */
+    QCOMPARE(hits.value(a), t.get(a, sa.first, sa.second));
+    QCOMPARE(hits.value(c), t.get(c, sc.first, sc.second));
+
+    /*  And what comes back is a paintable picture, not just bytes. */
+    QImage out;
+    QVERIFY(out.loadFromData(hits.value(a), "JPG"));
+    QCOMPARE(out.size(), QSize(160, 120));
+
+    /*  THE DEVELOP GATE IS PER ROW, as it is in getImage: an edited image in a
+        developed-showing mode must not be handed the camera's picture. */
+    const G::OperationMode wasMode = G::operationMode;
+    G::operationMode = G::OperationMode::Develop;
+    QVector<ThumbRequest> edited;
+    edited << ThumbRequest{ a, sa.first, sa.second, true }      // has a recipe: excluded
+           << ThumbRequest{ c, sc.first, sc.second, false };    // no recipe: served
+    const QHash<QString, QByteArray> gated = t.getBatch(edited);
+    QCOMPARE(gated.size(), 1);
+    QVERIFY2(!gated.contains(a), "an edited image in Develop must not get the original");
+    QVERIFY(gated.contains(c));
+    G::operationMode = wasMode;
+
+    /*  An empty ask is an empty answer and touches no database. */
+    QVERIFY(t.getBatch({}).isEmpty());
 }
 
 QTEST_MAIN(tst_thumbcache)

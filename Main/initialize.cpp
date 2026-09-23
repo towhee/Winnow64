@@ -300,6 +300,14 @@ void MW::createDataModel()
     //         Qt::BlockingQueuedConnection);
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::abortProcessing);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
+    /*  The build is the tail of a load and the central widget is still showing the load
+        message for it, so each stage is reported there. Queued when it comes from the
+        worker thread, direct when it comes from applyOps on the GUI thread -- either way
+        MW::setCentralProgressMessage drops it unless the message pane is what the user is
+        actually looking at. */
+    connect(buildFilters, &BuildFilters::buildStage, this, [this](QString stage) {
+        setCentralProgressMessage(loadedMsg() + "Building filters: " + stage + " ...");
+    });
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
     /*  A year picked in the Catalog tree is checked HERE and not where the build is
         asked for: BuildFilters::build starts a THREAD, so the Years category has no

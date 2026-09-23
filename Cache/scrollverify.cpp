@@ -19,12 +19,18 @@ ScrollVerify::ScrollVerify(DataModel *dm, Metadata *metadata, QObject *parent)
     settle.setSingleShot(true);
     settle.setInterval(kSettleMs);
     connect(&settle, &QTimer::timeout, this, &ScrollVerify::runPass);
+
+    wholeSet.setSingleShot(true);
+    connect(&wholeSet, &QTimer::timeout, this, &ScrollVerify::runWholeSetPage);
 }
 
 void ScrollVerify::reset()
 {
     if (G::isLogger) G::log("ScrollVerify::reset");
     settle.stop();
+    wholeSet.stop();
+    wholeSetAt = -1;
+    wholeSetStale = 0;
     verifiedAt.clear();
 }
 
@@ -57,6 +63,164 @@ bool ScrollVerify::scopeIsHydrated() const
     return req.scope == G::Scope::Catalog && !req.rows.isEmpty();
 }
 
+QString ScrollVerify::pathToVerify(int sfRow, qint64 now, qint64 expiry) const
+{
+/*
+    The row filters, in one place, because the whole-set sweep and the scroll pass must
+    ask about the same rows for the same reasons -- two copies would drift and the two
+    passes would disagree about the same picture.
+*/
+    /*  A row still being read is not yet an answer about anything. */
+    if (dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded)
+        return QString();
+    /*  A row whose file is on an unmounted volume or is gone cannot be stat'd
+        usefully -- and on an absent network volume the attempt is not cheap. The
+        availability pass has already said so; take its word for it. */
+    if (dm->sf->index(sfRow, G::AvailabilityColumn).data().toInt()
+            != int(Catalog::Availability::Present))
+        return QString();
+
+    const QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+    if (fPath.isEmpty()) return QString();
+    const auto it = verifiedAt.constFind(fPath);
+    if (it != verifiedAt.cend() && now - *it < expiry) return QString();
+    return fPath;
+}
+
+void ScrollVerify::dispatch(const QStringList &paths, bool forWholeSet)
+{
+/*
+    Stat the paths off the GUI thread, ask the catalog which of them have moved, and
+    report those. Both passes come through here.
+*/
+    inFlight = true;
+    Metadata *md = metadata;
+    QThreadPool::globalInstance()->start([this, paths, md, forWholeSet]{
+        /*  THE STAT IS THE POINT AND IT IS WHY THIS RUNS OFF THE GUI THREAD. One per
+            image plus one per sidecar -- IndexMetadata::candidate does both, and it is
+            the same candidate the loader builds, so the freshness question is asked in
+            exactly the terms the index answers it in. */
+        QElapsedTimer t;
+        const bool probe = G::isPerfProbe;
+        if (probe) t.start();
+
+        QList<CatalogRow> cands;
+        cands.reserve(paths.size());
+        for (const QString &p : paths)
+            cands.append(IndexMetadata::candidate(QFileInfo(p), md));
+        const qint64 statMs = probe ? t.elapsed() : 0;
+
+        const QSet<QString> stale = Catalog::instance().outOfDate(cands);
+
+        if (probe) {
+            qDebug().noquote() << "[PERF] verify" << paths.size()
+                               << "rows: stat" << statMs << "ms + catalog"
+                               << (t.elapsed() - statMs) << "ms (pool thread)  stale ="
+                               << stale.size();
+        }
+
+        QMetaObject::invokeMethod(this, [this, stale, forWholeSet]{
+            inFlight = false;
+            if (stale.isEmpty()) return;
+            /*  Only the sweep's own findings, or its summary would be inflated by every
+                scroll pass that happened to run while it was walking. */
+            if (forWholeSet) wholeSetStale += stale.size();
+            QStringList out;
+            out.reserve(stale.size());
+            for (const QString &p : stale) out << p;
+            emit rowsAreStale(out);
+        }, Qt::QueuedConnection);
+    });
+}
+
+void ScrollVerify::verifyWholeSet()
+{
+/*
+    Start (or restart) the background sweep of every loaded row. See the header.
+*/
+    /*  TEMPORARY, and unconditional. The sweep is the one part of this work whose
+        absence looks exactly like its success -- no output either way -- so while it is
+        being brought up it says which it is. */
+    if (!G::useScrollInVerify) {
+        qDebug().noquote() << "[CATLOAD] whole-set verify DECLINED: useScrollInVerify off";
+        return;
+    }
+    if (G::isInitializing) {
+        qDebug().noquote() << "[CATLOAD] whole-set verify DECLINED: still initializing";
+        return;
+    }
+    if (!scopeIsHydrated()) {
+        qDebug().noquote() << "[CATLOAD] whole-set verify DECLINED: scope not hydrated";
+        return;
+    }
+    if (G::isLogger || G::isFlowLogger) G::log("ScrollVerify::verifyWholeSet");
+    qDebug().noquote() << "[CATLOAD] whole-set verify ARMED for"
+                       << (dm && dm->sf ? dm->sf->rowCount() : 0) << "rows, starting in"
+                       << kWholeSetStartMs << "ms";
+
+    wholeSetAt = 0;
+    wholeSetStale = 0;
+    wholeSet.start(kWholeSetStartMs);
+}
+
+void ScrollVerify::runWholeSetPage()
+{
+/*
+    One page of the sweep: collect on the GUI thread, stat on a pool thread, schedule the
+    next page. GUI thread.
+*/
+    if (wholeSetAt < 0) return;
+
+    /*  ANY OF THESE MEANS THE SET THIS SWEEP WAS ABOUT IS NO LONGER LOADED. Stopping
+        rather than pausing is deliberate: a new load calls reset() and then starts its
+        own sweep, so there is nothing here worth resuming. */
+    if (!G::useScrollInVerify || dm == nullptr || dm->sf == nullptr
+        || G::stop || dm->abort || !scopeIsHydrated()) {
+        wholeSetAt = -1;
+        return;
+    }
+
+    /*  THE SCROLL PASS OUTRANKS THE SWEEP, and a load outranks both. Deferring rather
+        than skipping keeps the sweep's place: the page is collected when the slot is
+        free, not abandoned. */
+    if (inFlight || G::isModifyingDatamodel) {
+        wholeSet.start(kWholeSetPaceMs);
+        return;
+    }
+
+    const int rows = dm->sf->rowCount();
+    if (wholeSetAt >= rows) {
+        /*  TEMPORARY: unconditional for the same reason as the ARMED line above. */
+        qDebug().noquote() << "[CATLOAD] whole-set verify FINISHED:" << rows
+                           << "rows, stale =" << wholeSetStale;
+        wholeSetAt = -1;
+        return;
+    }
+
+    const qint64 now = clock.elapsed();
+    const qint64 expiry = qint64(kReverifySecs) * 1000;
+    const int end = qMin(rows, wholeSetAt + kWholeSetPage);
+
+    QStringList paths;
+    paths.reserve(end - wholeSetAt);
+    for (int sfRow = wholeSetAt; sfRow < end; ++sfRow) {
+        const QString p = pathToVerify(sfRow, now, expiry);
+        if (!p.isEmpty()) paths << p;
+    }
+    wholeSetAt = end;
+
+    if (!paths.isEmpty()) {
+        /*  Remembered as verified before the answer comes back, exactly as the scroll
+            pass does -- which is also what makes the two passes cheap together: a row
+            this sweep has just asked about is one the next scroll settle skips. The cost
+            is one hash entry per loaded row, ~10 MB at 41,000 rows, cleared by reset(). */
+        for (const QString &p : paths) verifiedAt.insert(p, now);
+        dispatch(paths, /*forWholeSet*/ true);
+    }
+
+    wholeSet.start(kWholeSetPaceMs);
+}
+
 void ScrollVerify::runPass()
 {
 /*
@@ -76,21 +240,8 @@ void ScrollVerify::runPass()
 
     QStringList paths;
     for (int sfRow = first; sfRow <= last; ++sfRow) {
-        /*  A row still being read is not yet an answer about anything. */
-        if (dm->sf->index(sfRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded)
-            continue;
-        /*  A row whose file is on an unmounted volume or is gone cannot be stat'd
-            usefully -- and on an absent network volume the attempt is not cheap. The
-            availability pass has already said so; take its word for it. */
-        if (dm->sf->index(sfRow, G::AvailabilityColumn).data().toInt()
-                != int(Catalog::Availability::Present))
-            continue;
-
-        const QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
-        if (fPath.isEmpty()) continue;
-        const auto it = verifiedAt.constFind(fPath);
-        if (it != verifiedAt.cend() && now - *it < expiry) continue;
-        paths << fPath;
+        const QString p = pathToVerify(sfRow, now, expiry);
+        if (!p.isEmpty()) paths << p;
     }
     if (paths.isEmpty()) return;
 
@@ -99,39 +250,5 @@ void ScrollVerify::runPass()
         stale is re-read, which re-stamps it anyway. */
     for (const QString &p : paths) verifiedAt.insert(p, now);
 
-    inFlight = true;
-    Metadata *md = metadata;
-    QThreadPool::globalInstance()->start([this, paths, md]{
-        /*  THE STAT IS THE POINT AND IT IS WHY THIS RUNS OFF THE GUI THREAD. One per
-            image plus one per sidecar -- IndexMetadata::candidate does both, and it is
-            the same candidate the loader builds, so the freshness question is asked in
-            exactly the terms the index answers it in. */
-        QElapsedTimer t;
-        const bool probe = G::isPerfProbe;
-        if (probe) t.start();
-
-        QList<CatalogRow> cands;
-        cands.reserve(paths.size());
-        for (const QString &p : paths)
-            cands.append(IndexMetadata::candidate(QFileInfo(p), md));
-        const qint64 statMs = probe ? t.elapsed() : 0;
-
-        const QSet<QString> stale = Catalog::instance().outOfDate(cands);
-
-        if (probe) {
-            qDebug().noquote() << "[PERF] scroll-in verify" << paths.size()
-                               << "rows: stat" << statMs << "ms + catalog"
-                               << (t.elapsed() - statMs) << "ms (pool thread)  stale ="
-                               << stale.size();
-        }
-
-        QMetaObject::invokeMethod(this, [this, stale]{
-            inFlight = false;
-            if (stale.isEmpty()) return;
-            QStringList out;
-            out.reserve(stale.size());
-            for (const QString &p : stale) out << p;
-            emit rowsAreStale(out);
-        }, Qt::QueuedConnection);
-    });
+    dispatch(paths, /*forWholeSet*/ false);
 }

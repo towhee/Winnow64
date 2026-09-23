@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Dialogs/keyworddropdlg.h"
 #include "Dialogs/keywordmergedlg.h"
 #include "Dialogs/keywordretagdlg.h"
@@ -420,6 +421,16 @@ void MW::filterBuildCompleted()
     MW::rebuildAbortedFilters for why there is an allowance at all.
 */
     filterRebuildAttempts = 0;
+
+    /*  THE LAST WORD OF THE LOAD. The filter build is the end of the wait that the
+        central widget has been narrating, but it is not the end of the load: the image
+        cache is still decoding the first image, and it is the cache that finally puts the
+        loupe up (MW::refreshViewsOnCacheChange). Without this the pane would sit on
+        whichever category finished last, which reads as a stall in the filters. A no-op
+        once the loupe is up. */
+    setCentralProgressMessage(loadedMsg() + "Loading images ...");
+
+    CatLoad::finish("filters", "5f filters: build completed (panel up to date)"); // TEMPORARY
 }
 
 void MW::rebuildAbortedFilters()

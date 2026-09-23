@@ -46,6 +46,19 @@ class Metadata;
     and filtering, and an answer held by row would be attached to a different image the
     moment the user re-sorts.
 
+    AND THE WHOLE SET, ONCE, AFTER A LOAD. The paragraph above is about the rows a person
+    is looking at, and it leaves the other 40,000 unverified until they scroll to them.
+    verifyWholeSet closes that: the same stat, the same question and the same repair, run
+    over every loaded row in the background once the load has settled. It is affordable
+    for the reason the scroll pass is -- a stat is ~137x cheaper than a read, and the
+    measured rate on the real library is 41,464 rows in about 3.6 s -- but it is NOT
+    affordable in one gulp on the GUI thread, so it is paged: a page of rows is collected
+    here, stat'd on a pool thread, and the next page is scheduled behind it.
+
+    THE SCROLL PASS OUTRANKS IT. Both use the one in-flight slot, and a page defers while
+    a scroll pass holds it. The rows on screen are the ones whose staleness the user can
+    actually see; the sweep can wait 50 ms.
+
     WHAT IT DOES NOT DO. It does not re-read anything and it does not touch the model:
     the pass runs on a pool thread and reports paths. MW::refreshStaleRows owns what
     happens next -- clearing the row's metadata and icon so MetaRead reads it again, and
@@ -70,8 +83,15 @@ public slots:
         timer and returns. GUI thread. */
     void viewChanged();
 
-    /*  A new set is loading. Forget every answer -- they were about other images. */
+    /*  A new set is loading. Forget every answer -- they were about other images, and
+        abandon any whole-set sweep still walking the old one. */
     void reset();
+
+    /*  VERIFY EVERY LOADED ROW, ONCE, IN THE BACKGROUND. Called when a load has settled.
+        Starts after kWholeSetStartMs so it does not stat 41,000 files while MetaRead is
+        still opening the ones it could not serve from the index. Safe to call again while
+        a sweep is running -- it restarts from the top, which is what a new load wants. */
+    void verifyWholeSet();
 
 signals:
     /*  These paths are indexed, were served from the index, and no longer match their
@@ -80,6 +100,13 @@ signals:
 
 private:
     void runPass();
+    void runWholeSetPage();
+    /*  Stat these paths off the GUI thread, ask the catalog, and report the stale ones.
+        Shared by both passes so the freshness question cannot be asked two ways. */
+    void dispatch(const QStringList &paths, bool forWholeSet);
+    /*  The filters both passes apply to a candidate row, in proxy-row terms. Returns an
+        empty string for a row not worth asking about. */
+    QString pathToVerify(int sfRow, qint64 now, qint64 expiry) const;
     bool scopeIsHydrated() const;
 
     DataModel *dm;
@@ -93,6 +120,23 @@ private:
     /*  One pass at a time. A second pass launched while the first is in flight would
         stat the same window again and race it to the same conclusion. */
     bool inFlight = false;
+
+    /*  THE WHOLE-SET SWEEP. wholeSetAt is the next proxy row to collect, or -1 when no
+        sweep is running; wholeSet paces the pages. */
+    QTimer wholeSet;
+    int wholeSetAt = -1;
+    int wholeSetStale = 0;          // reported across the sweep, for the probe line
+
+    /*  A page is big enough that the per-page overhead is nothing beside 2,000 stats, and
+        small enough that collecting it on the GUI thread is not a stall. */
+    static constexpr int kWholeSetPage = 2000;
+    /*  How long after the load before the sweep starts. The icons the index could not
+        serve are still being read by MetaRead at that point, and 41,000 stats across the
+        same volumes would be competing with them for nothing. */
+    static constexpr int kWholeSetStartMs = 3000;
+    /*  Between pages: long enough to let the GUI breathe, short enough that the sweep is
+        over in seconds rather than minutes. */
+    static constexpr int kWholeSetPaceMs = 25;
 };
 
 #endif // SCROLLVERIFY_H

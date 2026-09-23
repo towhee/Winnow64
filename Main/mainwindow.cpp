@@ -7,6 +7,7 @@
 #include "Utilities/panelprobe.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
+#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
 #include "Main/global.h"
@@ -652,6 +653,17 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         fprintf(stderr, "SELFTEST: model contract tester attached\n");
     }
 
+    /*  WINNOW_SELFTEST_SHORTCUTS=1 runs the shortcut-coverage audit: every action with a
+        key sequence must be reachable from the menu bar, and no two actions may claim the
+        same key.  The menus are fully built by now, so it needs nothing loaded.  Each
+        problem prints a SHORTCUT COVERAGE FAIL line; ctest's shortcut_coverage test fails
+        on that string (tests/CMakeLists.txt). */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_SHORTCUTS") == 1) {
+        const QString rpt = shortcutCoverage(true);
+        fprintf(stderr, "%s\n", rpt.toLocal8Bit().constData());
+        fflush(stderr);
+    }
+
     if (fsTree->select(folderPath))
         folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
@@ -1168,23 +1180,24 @@ void MW::showEvent(QShowEvent *event)
         restoreGeometry(settings->value("Geometry").toByteArray());
         if (G::isPanelProbe) PanelProbe::Instance().Mark("after second restoreGeometry");
         /* Unreadable state (or none): the initialize() layout is not a usable one, so
-           fall back to the Library workflow workspace -- the layout the app starts a
+           fall back to the Source workflow workspace -- the layout the app starts a
            session in.  A workflow workspace does not own the window position and size,
            so on a first run (nothing to restoreGeometry) the window is sized first. */
         if (!restored) {
             if (settings->value("Geometry").toByteArray().isEmpty())
                 centreWindowOnPrimaryScreen();
-            invokeWorkflowWorkspace(WfLibrary);
+            invokeWorkflowWorkspace(WfSource);
             if (G::isPanelProbe)
-                PanelProbe::Instance().Mark("after WfLibrary fallback (state unreadable)");
+                PanelProbe::Instance().Mark("after WfSource fallback (state unreadable)");
         }
         /*  A session LEFT in Develop cannot be the layout the next one comes up in:
             Winnow always starts in Preview and closeDevelopDock (below) hides the three
             Develop panels, which leaves the rest of the layout at the DEVELOP widths --
             a left dock narrow enough that its tab bar falls back to icons.  Reassert the
-            Library workspace, exactly as E / G / C do (see MW::asLoupeAction), so the
-            first session layout is the one the workflow owns.  Any other workflow's
-            layout is a Preview layout and is restored as saved.
+            Source workspace, exactly as E / G / C do (see MW::asLoupeAction), so the
+            first session layout is the one the workflow owns.  Source is reasserted
+            too (see below).  Any OTHER workflow's layout is a Preview layout and is
+            restored as saved.
 
             currentWorkflow is absent in a state written before it was persisted, so fall
             back to the tell in the restored layout itself: the Develop panel visible. */
@@ -1193,20 +1206,41 @@ void MW::showEvent(QShowEvent *event)
                                        ? lastWf == WfDevelop
                                        : developDock->isVisible();
         if (restored && leftInDevelop) {
-            invokeWorkflowWorkspace(WfLibrary);
+            invokeWorkflowWorkspace(WfSource);
             if (G::isPanelProbe)
-                PanelProbe::Instance().Mark("after WfLibrary (session left in Develop)");
+                PanelProbe::Instance().Mark("after WfSource (session left in Develop)");
+        }
+        /*  A session left in SOURCE is reasserted for the same reason, and this is the
+            common case: the restored state carries whatever width the left dock drifted
+            to during the session -- a splitter drag, a collapse/restore round trip (the
+            deferred resizeDocks in MW::toggleDockArea), a Develop or Embellish detour
+            that was never reasserted before quitting -- and that drifted width, not the
+            Source one, is what came up.  Measured: a state written from a Source
+            session carried a 238px left area where the shipped Source layout is 337,
+            in the same size window.  So Source is APPLIED at startup, exactly as E / G
+            / C apply it, and "Winnow opens in the Source workspace" is true of the
+            layout and not only of currentWorkflow.  The cost is that a left dock the
+            user widened during a Source session does not persist across a launch --
+            the same trade E already makes, and Window > Workspace > User override is
+            how a different Source width is made permanent.
+
+            lastWf < 0 is a state written before currentWorkflow was persisted; it
+            reached here with the Develop panel hidden, so it is a Source layout. */
+        else if (restored && (lastWf == WfSource || lastWf < 0)) {
+            invokeWorkflowWorkspace(WfSource);
+            if (G::isPanelProbe)
+                PanelProbe::Instance().Mark("after WfSource (session left in Source)");
         }
         /*  Any other restored layout IS the one the last session was in, so the session
             resumes in that workflow -- otherwise quitting from it would be recorded as
-            Library and the workflow the user was in would be lost a launch later. */
+            Source and the workflow the user was in would be lost a launch later. */
         else if (restored && lastWf >= 0) currentWorkflow = lastWf;
     }
     else {
         centreWindowOnPrimaryScreen();
-        invokeWorkflowWorkspace(WfLibrary);
+        invokeWorkflowWorkspace(WfSource);
         if (G::isPanelProbe)
-            PanelProbe::Instance().Mark("after WfLibrary (no settings)");
+            PanelProbe::Instance().Mark("after WfSource (no settings)");
     }
 
     // Apply persisted per-dock collapsed flag. Deferred so the just-restored
@@ -1281,6 +1315,22 @@ void MW::showEvent(QShowEvent *event)
         empty, which reads as "my keywords are gone" rather than as "nothing asked for
         them yet". */
     ensureKeywordVocabLoaded();
+
+    /*  "Open library at start": come up on the whole library instead of a folder.
+
+        Here and not earlier because MW::setScope returns immediately while
+        G::isInitializing, and because updateCatalogScopeTrees() above is what seeds the
+        Catalog rows this lights up.  setCatalogScopeWhole is the same call the Catalog
+        row above the folder tree makes, so the two cannot drift -- including its answer
+        to an empty catalog, which is to open Manage Catalog rather than show an empty
+        search box (MW::catalogEmptyOpenManage).
+
+        Never during an automated run.  The harnesses open a named FOLDER and assert on
+        what loads, and they do not reliably get their own settings file -- so a developer
+        with this preference on would otherwise change what the tests do.  A stress test is
+        excluded for the same reason: it drives folders on a timer. */
+    if (openLibraryAtStart && !G::isAutomatedRun && !G::isStressTest)
+        setCatalogScopeWhole("MW::showEvent openLibraryAtStart");
 
     G::issueBeginSession();
 
@@ -1569,63 +1619,47 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // else if (filters->buildingFilters) buildFilters->stop();
     }
 
+    /*  The in-slideshow keys.  The behaviour lives in the slots (slideshow.cpp) so that
+        the View > Slide Show menu items run exactly the same code; this block only maps
+        key to action.  Each slot re-tests G::isSlideShow and the timer itself. */
     if (G::isSlideShow) {
         int n = event->key() - 48;
-        QVector<int> delay {0,1,2,3,5,10,30,60,180,600};
 
         if (slideShowTimer->isActive()) {
             if (event->key() == Qt::Key_X) {
-                nextSlide();
+                slideShowNextAction->trigger();
             }
             else if (event->key() == Qt::Key_Backspace) {
-                prevRandomSlide();
+                slideShowPrevRandomAction->trigger();
             }
             else if (event->key() == Qt::Key_S) {
                 //qDebug() << "MW::keyReleaseEvent" << "slideCount =" << slideCount << event;
                 if (slideCount > 1) slideShow();
             }
             else if (event->key() == Qt::Key_W) {
-                // slideShowTimer->stop();
-                isSlideShowWrap = !isSlideShowWrap;
-                isSlideShowHelpVisible = true;
-                QString msg;
-                if (isSlideShowWrap) msg = "Slide wrapping is on.";
-                else msg = "Slide wrapping is off.";
-                G::popup->showPopup(msg);
+                slideShowToggleWrap();
             }
             else if (event->key() == Qt::Key_H) {
-                slideShowTimer->stop();
-                slideshowHelpMsg();
+                slideShowKeysAction->trigger();
             }
             else if (event->key() == Qt::Key_Space) {
-                slideShowTimer->stop();
-                G::popup->showPopup("Slideshow is paused", 0);
+                slideShowPauseAction->trigger();
             }
             else if (event->key() == Qt::Key_R) {
-                isSlideShowRandom = !isSlideShowRandom;
-                slideShowResetSequence();
-                QString msg;
-                if (isSlideShowRandom) msg = "Random selection enabled.";
-                else msg = "Sequential selection enabled.";
-                G::popup->showPopup(msg);
+                slideShowToggleRandom();
             }
             // quick change slideshow delay 1 - 9 seconds
             else if (n > 0 && n <= 9) {
-                slideShowDelay = delay[n];
-                slideShowResetDelay();
-                QString msg = "Slideshow interval set to " + QString::number(slideShowDelay) + " seconds.";
-                G::popup->showPopup(msg);
+                slideShowSetDelayFromAction(slideShowIntervalActions.at(n - 1));
             }
         }
-        else {  // slideshow is inactive
-            if (isSlideShowHelpVisible) {
+        else {  // slideshow is paused
+            if (event->key() == Qt::Key_Space) {
+                slideShowPauseAction->trigger();
+            }
+            else if (isSlideShowHelpVisible) {
                 G::popup->reset();
                 isSlideShowHelpVisible = false;
-            }
-            if (event->key() == Qt::Key_Space) {
-                G::popup->showPopup("Slideshow is active");
-                nextSlide();
-                slideShowTimer->start(slideShowDelay * 1000);
             }
         }
 
@@ -4023,7 +4057,7 @@ void MW::startCatalogScan(bool automatic)
                               Q_ARG(CatalogScope, catalogScope));
 }
 
-void MW::maybeAutoScanCatalog(const QString &src)
+void MW::maybeAutoScanCatalog(const QString &src, bool loadExpected)
 {
 /*
     THE LIBRARY CHECKS ITSELF WHEN IT IS OPENED.
@@ -4048,6 +4082,21 @@ void MW::maybeAutoScanCatalog(const QString &src)
     in front of it, that query is a stall the user sees as the panel hesitating. The
     delay also collapses a flurry of scope changes -- Library, a year, Library again --
     into the one run they deserve.
+
+    AND IT WAITS FOR THE LOAD TO FINISH, RATHER THAN GUESSING HOW LONG THAT TAKES.
+
+    This used to fire on a fixed delay and re-check G::isModifyingDatamodel, which was a
+    reasonable proxy for "the load is still going" while that flag was cleared at the END
+    of the load. It is not one any more: MW::metadataComplete clears it as soon as the
+    metadata is complete, which is now most of a second before the icons are in and the
+    filters are built. MEASURED on the real library after that change, the scan started at
+    t+2,188 ms -- in the middle of the filter build -- walking 218 folders and taking the
+    catalog mutex while the load was still using it.
+
+    So when a load is coming, the scan is not scheduled at all: it is marked pending and
+    MW::folderChangeCompleted starts it, which is the point at which MetaRead has actually
+    finished. When no load is coming -- selecting Library while it is already loaded --
+    there is nothing to wait for and the old delay is still the right trigger.
 */
     if (G::isLogger) G::log("MW::maybeAutoScanCatalog", src);
     if (G::isInitializing) return;
@@ -4066,6 +4115,35 @@ void MW::maybeAutoScanCatalog(const QString &src)
 
     catalogAutoScanRan = true;
     catalogAutoScanElapsed.start();
+    catalogAutoScanPending = true;
+
+    QPointer<MW> self(this);
+
+    if (loadExpected) {
+        /*  MW::folderChangeCompleted is the trigger. The fallback exists because a load
+            is EXPECTED rather than promised: FilterPanel::runSearch declines to load an
+            empty result or one over autoLoadMax, and then no folderChangeCompleted is
+            coming and the scan would wait for ever. Long enough that it never beats a
+            real load to the punch. */
+        QTimer::singleShot(30000, this, [self]{
+            if (self && self->catalogAutoScanPending) self->runPendingCatalogScan();
+        });
+        return;
+    }
+
+    QTimer::singleShot(kAutoScanDelayMs, this, [self]{
+        if (!self) return;
+        self->runPendingCatalogScan();
+    });
+}
+
+void MW::runPendingCatalogScan()
+{
+/*
+    Start the deferred automatic scan, if everything that made it a good idea is still
+    true. See MW::maybeAutoScanCatalog.
+*/
+    if (!catalogAutoScanPending) return;
 
     QPointer<MW> self(this);
     QTimer::singleShot(kAutoScanDelayMs, this, [self]{
@@ -4074,6 +4152,8 @@ void MW::maybeAutoScanCatalog(const QString &src)
             in the delay -- the user may have picked a folder, pressed Scan themselves, or
             closed the catalog -- and acting on an answer that is a second and a half old
             is how a background job starts after the reason for it has gone. */
+        if (!self || !self->catalogAutoScanPending) return;
+        self->catalogAutoScanPending = false;
         if (G::isInitializing || G::stop) return;
         if (G::scope != G::Scope::Catalog) return;
         if (!G::autoScanCatalog) return;
@@ -4239,6 +4319,8 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
 */
     QString fun = "MW::loadCatalogScope";
 
+    CatLoad::loadStarted();   // TEMPORARY: past here the run is a real load
+
     /*  A replacing result set clears the model exactly as a folder change does (see the
         header comment), so it loses picks exactly as a folder change does.  Appending
         keeps every loaded row, and with it every pick, so it never asks. */
@@ -4262,7 +4344,9 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
         fsTree->setEnabled(false);
 
         setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
+        CatLoad::mark("2a okToDiscardPicks + reset develop caches");   // TEMPORARY
         stop(fun);
+        CatLoad::mark("2b stop() (tear down readers + caches)");       // TEMPORARY
     }
 
     dm->abort = false;
@@ -4286,12 +4370,14 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
             disconnect(*conn);
             queueAvailabilityPass(paths);
         });
+        CatLoad::mark("2c wait for the queued fill to start");   // TEMPORARY
         dm->setScope(req);
     });
 }
 
 void MW::queueAvailabilityPass(const QStringList &paths)
 {
+    CatLoad::note("availability pass queued (off-thread)");   // TEMPORARY
 /*
     ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog row can outlive
     its file, and the two ways that happens are different things the user can act on
@@ -4456,14 +4542,30 @@ void MW::refreshStaleRows(const QStringList &paths)
     }
     if (!cleared) return;
 
-    if (G::isPerfProbe)
-        qDebug().noquote() << "[PERF] scroll-in verify: re-reading" << cleared
-                           << "stale rows";
+    /*  TEMPORARY, and unconditional for the same reason the sweep's lines are: this is
+        the middle link of the repair chain, and it is only reachable when a row is
+        actually stale -- which is rare enough that gating it behind a flag meant it was
+        never seen at the moment it mattered. */
+    qDebug().noquote() << "[CATLOAD] stale repair: re-reading" << cleared << "row(s)";
 
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
     QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
     reloadIconChunk();
+
+    /*  The re-read has been asked for; the commit follows when it lands. Created on first
+        use rather than at startup because a session that never verifies anything -- every
+        folder scope -- should not carry a timer for it. */
+    if (!staleRecommitTimer) {
+        staleRecommitTimer = new QTimer(this);
+        staleRecommitTimer->setSingleShot(true);
+        /*  Long enough that a burst of stale rows is one commit rather than one per
+            settle, and far below anything the user would notice. */
+        staleRecommitTimer->setInterval(3000);
+        connect(staleRecommitTimer, &QTimer::timeout, this, &MW::drainStaleRecommit);
+    }
+    staleRecommitAttempts = 0;
+    staleRecommitTimer->start();
 }
 
 QVector<CatalogRow> MW::catalogRowsForStale()
@@ -4496,6 +4598,82 @@ QVector<CatalogRow> MW::catalogRowsForStale()
     }
     staleRecommit = stillPending;
     return rows;
+}
+
+void MW::drainStaleRecommit()
+{
+/*
+    COMMIT THE ROWS THE VERIFICATION PASSES HAD RE-READ, WHENEVER THEY ARE READY.
+
+    catalogRowsForStale was drained in one place only -- the tail of a LOAD -- which was
+    enough while the only verifier was ScrollVerify::runPass: the user scrolls, a row is
+    found stale, it is re-read, and the correction sits in staleRecommit until the next
+    scope change writes it back. Until then the index is knowingly wrong, and if the
+    session ends first the re-read is simply lost.
+
+    The whole-set sweep makes that untenable rather than merely untidy: it runs seconds
+    AFTER the load, so every correction it produces arrives when the one drain has
+    already happened, and nothing would ever commit them.
+
+    SO THE DRAIN IS PACED BY THE WORK RATHER THAN BY THE LOAD. Re-armed only while rows
+    are still pending -- catalogRowsForStale leaves a row in the set until its re-read has
+    landed, so the timer stops of its own accord once the last one is committed.
+*/
+    if (staleRecommit.isEmpty()) return;
+    if (!dm || !Catalog::instance().isAvailable()) return;
+
+    const int pendingBefore = staleRecommit.size();
+    const QVector<CatalogRow> fixed = inCatalogScope(catalogRowsForStale());
+    if (!fixed.isEmpty()) {
+        QThreadPool::globalInstance()->start([fixed]{
+            Catalog::instance().commit(fixed);
+        });
+    }
+    /*  Printed even when nothing is committed, because the two reasons for that are
+        different and both matter: the re-reads have not landed yet (still pending), or
+        they have and the scope table does not admit those folders (committed 0 with
+        nothing pending, which is correct and not a failure). */
+    qDebug().noquote() << "[CATLOAD] stale re-commit: committed" << fixed.size()
+                       << "of" << pendingBefore << "pending; still pending ="
+                       << staleRecommit.size();   // TEMPORARY
+
+    /*  ROWS WHOSE RE-READ HAS NOT LANDED YET ARE STILL IN THE SET; COME BACK FOR THEM --
+        BUT NOT FOREVER.
+
+        catalogRowsForStale deliberately leaves a row pending until it comes back
+        MetaLoaded, so that a half-read row is never committed over a good index entry.
+        That is right, and it means this timer's stopping condition is somebody else's
+        work finishing. If the re-read never lands -- the row was filtered out of the
+        proxy, the file went away, MetaRead was stopped by a folder change midway -- the
+        set never empties and this would re-arm every three seconds for the rest of the
+        session. Observed doing exactly that.
+
+        So the allowance is bounded, the way MW::rebuildAbortedFilters bounds its own
+        retry and for the same reason. Giving up is cheap: the verification passes forget
+        an answer after ScrollVerify::kReverifySecs, so a row genuinely still stale is
+        asked about again the next time it is scrolled to or swept, and this time the
+        re-read may well land. What is not acceptable is a timer nobody can stop. */
+    if (staleRecommit.isEmpty()) {
+        staleRecommitAttempts = 0;
+        return;
+    }
+    constexpr int kMaxStaleRecommitAttempts = 5;        // 5 x 3 s = 15 s
+    if (fixed.isEmpty() && ++staleRecommitAttempts >= kMaxStaleRecommitAttempts) {
+        qDebug().noquote() << "[CATLOAD] stale re-commit: GAVE UP on"
+                           << staleRecommit.size() << "row(s)";   // TEMPORARY
+        G::issue("Warning",
+                 QString("Gave up re-committing %1 verified row(s): the re-read did not "
+                         "complete. They will be re-checked when next visited.")
+                     .arg(staleRecommit.size()),
+                 "MW::drainStaleRecommit");
+        staleRecommit.clear();
+        staleRecommitAttempts = 0;
+        return;
+    }
+    /*  Progress resets the allowance: a batch that is landing a few rows at a time is
+        working, however long it takes. */
+    if (!fixed.isEmpty()) staleRecommitAttempts = 0;
+    if (staleRecommitTimer) staleRecommitTimer->start();
 }
 
 void MW::armGuiStallWatchdog()
@@ -4975,6 +5153,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             if ((G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick")
                 && centralLayout->currentIndex() != LoupeTab)
             {
+                /*  TEMPORARY. The other way the message pane is left -- fileSelectionChange
+                    switches to the loupe whether or not the image is cached, so on a load
+                    where it IS cached this is the moment, not the repair in
+                    MW::refreshViewsOnCacheChange. Whichever runs first ends the run; the
+                    label says which it was. */
+                CatLoad::finish("image", "6 loupe shown from fileSelectionChange");
                 centralLayout->setCurrentIndex(LoupeTab);
             }
             /* Develop mode: remember the zoom/pan of the image being left BEFORE it is
@@ -5897,6 +6081,186 @@ void MW::reloadIconChunk()
                               );
 }
 
+void MW::prefetchIconsFromIndex(QString src)
+{
+/*
+    FILL THE ICON CHUNK FROM THE INDEX, IN BULK, BEFORE THE READER IS ASKED FOR ANY OF IT.
+
+    THE PROBLEM THIS SOLVES. A hydrated catalog scope arrives with every metadata column
+    already filled from the image table and not one icon, so MetaRead is started for the
+    thumbnails alone -- ten thousand of them (DataModel::resolveIconChunkSize, brute force,
+    G::maxIconChunk). Each one costs a dispatch round trip, a stat, a SELECT, a decode and
+    a queued cross-thread event, and they are produced by a self-feeding pool one row per
+    reader per cycle. Measured on 41,464 images: 11.7 s, which was 83% of the load.
+
+    NONE OF THAT COST IS THE DATA. Three quarters of those rows already have their
+    thumbnail sitting in the same database the metadata came from, and reading all 32,552
+    stored thumbnails out of it takes 134 ms. What the per-row path is spending is
+    machinery, not I/O.
+
+    NO STAT, AND THAT IS THE POINT OF DOING IT HERE. ThumbCache::get compares the stored
+    row's stamps against the file's, and the icon-only Reader path has no stat of its own
+    so it makes one per row. This does not need to: the model's ByteSize and Modified were
+    filled from the CatalogRow's srcSize and srcMtime -- the very values the thumb row was
+    stamped with -- so the comparison is already in hand. Ten thousand syscalls that never
+    happen. A row whose stamps have moved is a miss, exactly as before, and falls through
+    to the Reader, which stats it properly.
+
+    IT IS A PRE-PASS, NOT A REPLACEMENT. Whatever it does not find -- a row never
+    thumbnailed, a stale stamp, a video, an image on an unplugged drive -- is left for
+    MetaRead exactly as now. The two cannot fight over a row: DataModel::setIcon1 is
+    idempotent when the decoration is already set, and MetaRead::needToRead stops asking
+    for a row once iconLoadedAt() is true.
+
+    THE ORDER IS OUTWARD FROM THE CURRENT ROW, for the same reason MetaRead's nextRowToRead
+    alternates ahead and behind: the page the user is looking at must not be last.
+
+    THREADING. The ask is built HERE, on the GUI thread, because it reads the model; the
+    SELECT and the decode happen on a pool thread; the insert comes back to the GUI thread
+    and goes through setIcon1, so every piece of per-icon bookkeeping it does -- the
+    aspect ratio, IconLoaded, the chunk-missing count, the footprint accumulator, the
+    coalesced dataChanged for visible rows -- happens exactly as it does for a Reader
+    icon. The counter setIcon1 decrements is incremented here to match, or MetaRead's
+    backpressure arithmetic would drift negative.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log("MW::prefetchIconsFromIndex", src);
+    if (!G::cacheThumbnails) return;
+    if (G::stop || dm->abort) return;
+
+    const int sfRows = dm->sf->rowCount();
+    if (sfRows == 0) return;
+
+    const int first = qMax(0, dm->startIconRange.load());
+    const int last  = qMin(sfRows - 1, dm->endIconRange.load());
+    if (last < first) return;
+    const int startSf = qBound(first, dm->currentSfRow, last);
+    const int instance = dm->instance;
+
+    /*  Outward from the current row, clamped to the chunk. Built as an explicit order
+        rather than sorted afterwards so the first page really is the visible page. */
+    QVector<ThumbRequest> reqs;
+    QVector<int> dmRows;
+    reqs.reserve(last - first + 1);
+    dmRows.reserve(last - first + 1);
+
+    auto consider = [&](int sfRow) {
+        if (sfRow < first || sfRow > last) return;
+        const int dmRow = dm->modelRowFromProxyRow(sfRow);
+        if (dmRow < 0) return;
+        const QModelIndex idx = dm->index(dmRow, 0);
+        // already has one -- a revisit, or the Reader got there first
+        if (!idx.data(Qt::DecorationRole).isNull()) return;
+        // the index holds no thumbnail for a video; FrameDecoder makes those
+        if (dm->index(dmRow, G::VideoColumn).data().toBool()) return;
+        // and none for a file that is not reachable -- ask the availability pass, not the disk
+        if (dm->index(dmRow, G::AvailabilityColumn).data().toInt()
+            != int(Catalog::Availability::Present)) return;
+        const QString fPath = idx.data(G::PathRole).toString();
+        if (fPath.isEmpty()) return;
+
+        ThumbRequest r;
+        r.fPath = fPath;
+        r.srcSize = dm->index(dmRow, G::ByteSizeColumn).data().toLongLong();
+        r.srcMtime = dm->index(dmRow, G::ModifiedColumn).data()
+                         .toDateTime().toSecsSinceEpoch();
+        r.hasDevelopRecipe = dm->index(dmRow, G::DevelopColumn).data().toBool();
+        reqs.append(r);
+        dmRows.append(dmRow);
+    };
+
+    consider(startSf);
+    for (int d = 1; d <= qMax(startSf - first, last - startSf); ++d) {
+        consider(startSf + d);
+        consider(startSf - d);
+    }
+    if (reqs.isEmpty()) return;
+
+    CatLoad::note(QString("icon prefetch asking for %1").arg(reqs.size()));  // TEMPORARY
+
+    /*  PAGED, so the first icons paint while the rest are still being read, and so a
+        folder change part way through abandons the remainder rather than finishing a
+        read nobody is waiting for. */
+    QThreadPool::globalInstance()->start([this, reqs, dmRows, instance]{
+        constexpr int kPage = 512;
+        int found = 0;
+        for (int from = 0; from < reqs.size(); from += kPage) {
+            if (G::stop || instance != dm->instance) return;
+            const int to = qMin(reqs.size(), from + kPage);
+            const QVector<ThumbRequest> page = reqs.mid(from, to - from);
+
+            const QHash<QString, QByteArray> hits =
+                ThumbCache::instance().getBatch(page);
+            if (hits.isEmpty()) continue;
+
+            /*  Decoded on THIS thread, not the GUI's. A 256 px JPEG is ~260 us and there
+                are thousands of them; on the GUI thread that is the stall this function
+                exists to remove, merely moved. */
+            QVector<QPair<int, QImage>> ready;
+            ready.reserve(hits.size());
+            for (int i = from; i < to; ++i) {
+                if (G::stop || instance != dm->instance) return;
+                const auto it = hits.constFind(reqs.at(i).fPath);
+                if (it == hits.cend()) continue;
+                QImage im;
+                if (!im.loadFromData(*it, "JPG") || im.isNull()) continue;
+                /*  The same clamp getImage applies: a row written by an older build or a
+                    larger icon setting must not paint over its cell. */
+                if (im.width() > G::maxIconSize || im.height() > G::maxIconSize)
+                    im = im.scaled(G::maxIconSize, G::maxIconSize,
+                                   Qt::KeepAspectRatio, Qt::FastTransformation);
+                im.convertTo(QImage::Format_RGB32);
+                ready.append({ dmRows.at(i), im });
+            }
+            if (ready.isEmpty()) continue;
+            found += ready.size();
+
+            QMetaObject::invokeMethod(this, [this, ready, instance]{
+                if (G::stop || instance != dm->instance) return;
+                for (const auto &p : ready) {
+                    /*  Matches the fetch_sub setIcon1 does in its RAII guard. Reader bumps
+                        this before every emit; a caller that skips it would walk the
+                        counter negative and MetaRead::dispatch reads it to decide whether
+                        the GUI is keeping up. */
+                    dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
+                    dm->setIcon1(p.first, p.second, instance, "MW::prefetchIconsFromIndex");
+                }
+            }, Qt::QueuedConnection);
+        }
+        const int asked = reqs.size();
+        /*  NOT through CatLoad::note. The prefetch outlives the load it belongs to -- the
+            probe run closes as soon as the images are shown and the filters are built,
+            which is the point of the pre-pass -- so a note here is written after the run
+            has stopped listening and is silently dropped. This is the number that says
+            whether the pre-pass is working, so it prints on its own terms. */
+        qDebug().noquote() << "[PERF] icon prefetch: served" << found << "of" << asked
+                           << "from the index;" << (asked - found)
+                           << "left for MetaRead";
+        QMetaObject::invokeMethod(this, [this, asked, found, instance]{
+            CatLoad::note(QString("icon prefetch served %1 of %2 from the index")
+                              .arg(found).arg(asked));   // TEMPORARY
+            if (G::stop || instance != dm->instance) return;
+            /*  PUT THE CHUNK COUNT BACK ON AN EXACT FOOTING.
+
+                iconChunkMissing is maintained incrementally -- one decrement per icon
+                that lands in the range -- and DataModel::updateIconChunkLoaded decrements
+                on its idempotent path too, so a row delivered twice is counted twice.
+                That drift already existed (a re-dispatch after a scroll does it) and is
+                tolerated because every range change recomputes the count exactly; but
+                this pre-pass runs ALONGSIDE the readers and duplicates deliberately
+                wherever both reach the same row, which is a great deal more of it. Left
+                alone the count would run low, G::iconChunkLoaded would go true early, and
+                MetaRead would stop asking for icons that are not there.
+
+                countIconChunkMissing is that exact recount, which is what setIconRange
+                uses; asking for it here once, at the end, costs one O(span) walk and
+                removes the whole class of drift this pass could introduce. */
+            dm->iconChunkMissing = dm->countIconChunkMissing(dm->startIconRange,
+                                                             dm->endIconRange);
+            dm->updateIconChunkLoaded();
+        }, Qt::QueuedConnection);
+    });
+}
+
 void MW::folderChanged(bool aborted)
 {
 /*
@@ -5930,6 +6294,10 @@ void MW::folderChanged(bool aborted)
                                        << t->elapsed() << "ms";
         }
     } fcReport{&fcT, probeBig};
+
+    /*  One fill, one run of the metadata tail. Cleared here because this runs once per
+        completed fill and ahead of both the places that call MW::metadataComplete. */
+    metadataCompleteDone = false;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -6013,6 +6381,7 @@ void MW::folderChanged(bool aborted)
         row comes out of the image table; the thumbnail comes from ThumbCache or from
         opening the file, and either way it is MetaRead's job. */
     dm->setIconRange(startRow);
+    CatLoad::mark("4a MW::folderChanged (cache estimate, icon range)");   // TEMPORARY
     if (dm->isMetaReadFinished() && dm->isIconRangeLoaded()) {
         G::allMetadataAttempted = true;
         G::iconChunkLoaded = true;
@@ -6055,6 +6424,37 @@ void MW::folderChanged(bool aborted)
                                   Q_ARG(bool, true),
                                   Q_ARG(QString, fun)
                                   );
+    }
+
+    /*  THE METADATA IS ALREADY COMPLETE, SO DO NOT WAIT FOR THE ICONS.
+
+        A hydrated catalog scope reaches here with every row MetaLoaded from the index and
+        not one icon loaded, so the early return above is not taken and MetaRead has just
+        been set going -- for thumbnails alone. Until now the filter build, the sort and
+        filter controls and the column widths all hung off MetaRead::done, which on a
+        41,464-image catalog is 11.7 seconds after the pictures are on screen. None of
+        them reads an icon.
+
+        AFTER setStartRow, NOT BEFORE. The icons are what the user is waiting to SEE, so
+        the readers are given their work first and the tail runs on the event loop behind
+        them. Queued for the same reason: this is called from DataModel::folderChange, and
+        the tail must not run inside the signal that reports the fill.
+
+        THE TEST IS THE SCOPE REQUEST, not G::allMetadataAttempted -- that flag flaps
+        false whenever the scroll-in verifier clears a stale row. It is the same hydrated
+        test MW::folderChangeCompleted uses to decide there is nothing to commit and that
+        ScrollVerify uses to decide the scope is its responsibility. */
+    const bool hydrated = dm->scopeRequest().scope == G::Scope::Catalog
+                          && !dm->scopeRequest().rows.isEmpty();
+    if (hydrated && !aborted && dm->rowCount() > 0) {
+        /*  THE ICONS THE INDEX CAN ALREADY ANSWER FOR, in bulk and without a stat, rather
+            than one Reader round trip at a time. The readers started just above keep
+            running and pick up whatever this does not find. */
+        prefetchIconsFromIndex("hydrated catalog scope");
+
+        QMetaObject::invokeMethod(this, [this]{
+            metadataComplete("hydrated catalog scope");
+        }, Qt::QueuedConnection);
     }
 }
 
@@ -6281,24 +6681,47 @@ void MW::updateCatalogForRow(int dmRow)
     QThreadPool::globalInstance()->start([r]{ Catalog::instance().commit({r}); });
 }
 
-void MW::folderChangeCompleted()
+void MW::metadataComplete(QString src)
 {
 /*
-    Signalled by MetaRead::dispatchFinished (done) when finished reading all metadata.
-    Also called by folderChanged when a folder has been removed.
+    EVERYTHING THE LOAD CAN FINISH WITHOUT AN ICON.
 
-    - check for missing thumbnails.
-    - update filters
-    - resize tableView columns
+    This was the first two thirds of folderChangeCompleted, and folderChangeCompleted is
+    reached only from MetaRead::done -- so all of it waited on the icon pass. For a FOLDER
+    that is right: the metadata and the icons are read by the same pass and arrive
+    together. For a HYDRATED CATALOG SCOPE it is not. Every row comes out of the image
+    table already MetaLoaded, DataModel::finishCatalogFill has already called
+    setAllMetadataAttempted(true), and the only thing MetaRead has left to do is fetch
+    thumbnails -- which nothing here needs. Measured on a 41,464-image catalog: the filter
+    build began 11.7 SECONDS after the images were on screen, and the filters do not read
+    an icon (BuildFilters::makeSnapshot takes text columns, KeywordsAllColumn and
+    DupHideRawRole, and nothing else).
+
+    So the two halves are separated by what they depend on rather than by which signal
+    happens to carry them. MW::folderChanged calls this directly for a scope whose
+    metadata is already complete; everything else still reaches it through
+    folderChangeCompleted, unchanged and at the same moment as before.
+
+    ONCE PER LOAD. Both callers can fire for the same load -- the hydrated path calls this
+    and then MetaRead::done calls folderChangeCompleted, which calls it again -- so the
+    guard is what makes the early call safe rather than a second execution of the tail.
+    MW::folderChanged clears it, which runs once per completed fill and ahead of both.
 */
-    IngestProbe::Scope _ip("MW::folderChangeCompleted");
+    if (metadataCompleteDone) return;
+    metadataCompleteDone = true;
+
+    IngestProbe::Scope _ip("MW::metadataComplete");
+    /*  TEMPORARY. Closes the segment that began when the model finished filling. On the
+        hydrated path that is now the fill itself; on the folder path it is still the wait
+        for MetaRead::done. */
+    CatLoad::mark("4a1 reached metadataComplete (src " + src + ")");
     if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
-        QString msg = QString::number(rows) + " images";
-        G::log("MW::folderChangeCompleted", msg);
+        QString msg = QString::number(rows) + " images, src = " + src;
+        G::log("MW::metadataComplete", msg);
     }
-    QString fun = "MW::folderChangeCompleted";
+    QString fun = "MW::metadataComplete";
 
     /* One-shot cache housekeeping, deferred to here so it never competes with the folder
        load the user is waiting for, and run off the GUI thread because it stats every
@@ -6473,6 +6896,7 @@ void MW::folderChangeCompleted()
         catalogSweepDone = true;
         QThreadPool::globalInstance()->start([]{ Catalog::instance().sweep(); });
     }
+    CatLoad::mark("4a2 fCC: sweeps started, catalog commit posted");   // TEMPORARY
 
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
@@ -6481,16 +6905,14 @@ void MW::folderChangeCompleted()
        image, which is the work the byproduct rule exists to avoid. Queued here, after the
        load, for the same reason as the sweep above. */
     queueBackgroundDevPreviewBuild();
+    CatLoad::mark("4a3 fCC: queueBackgroundDevPreviewBuild");   // TEMPORARY
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
+    CatLoad::mark("4a4 fCC: fsTree->scrollToCurrent");          // TEMPORARY
 
     // // update FSTree image count if fsModel isMaxRecurse is true
     // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
-
-    // hide metadata read progress
-    progress->clearProgress(progressMetaReadRow);
-    updateMetadataThreadRunStatus(false, true);
 
     // build filters if filter dock is visible
     /*
@@ -6504,7 +6926,14 @@ void MW::folderChangeCompleted()
         // && !filterDock->visibleRegion().isNull()
        )
     {
+        /*  The last thing the user was told is how many images loaded, and the build
+            below is the rest of the wait -- seconds of it on a catalog scope. It reports
+            itself from here on (MW::setCentralProgressMessage), through
+            buildFiltersWhenModelReady and then per category from the worker. */
+        setCentralProgressMessage(loadedMsg() + "Building filters ...");
+        CatLoad::mark("4b folderChangeCompleted before filters");   // TEMPORARY
         buildFiltersWhenModelReady(dm->instance);
+        CatLoad::mark("4c returned from buildFiltersWhenModelReady"); // TEMPORARY
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -6553,6 +6982,51 @@ void MW::folderChangeCompleted()
     //*/
 }
 
+void MW::folderChangeCompleted()
+{
+/*
+    Signalled by MetaRead::dispatchFinished (done) when finished reading all metadata.
+    Also called by folderChanged when a folder has been removed.
+
+    WHAT IS LEFT HERE is only what depends on the READ having finished: the metadata-read
+    progress row and the thread activity light. Everything else moved to
+    MW::metadataComplete, which see for why -- on a hydrated catalog scope it has already
+    run by the time this is reached, and the call below is a no-op.
+
+    ON A FOLDER LOAD NOTHING HAS CHANGED. metadataComplete has not run yet, so it runs
+    here, in the same order and at the same moment as when it was one function.
+*/
+    IngestProbe::Scope _ip("MW::folderChangeCompleted");
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::folderChangeCompleted",
+               QString::number(dm->rowCount()) + " images");
+
+    metadataComplete("MetaRead::done");
+
+    /*  TEMPORARY. On the hydrated path this is the icon pass, running AFTER the filters
+        are already up rather than in front of them -- which means it lands after the probe
+        run has closed, so it is reported as a late event rather than a segment. */
+    CatLoad::mark("4d MetaRead finished (icons)");
+    CatLoad::late("MetaRead finished (icons)");
+
+    // hide metadata read progress
+    progress->clearProgress(progressMetaReadRow);
+    updateMetadataThreadRunStatus(false, true);
+
+    /*  IS WHAT WE JUST LOADED STILL TRUE? The rows came out of the index without a single
+        file being opened, which is what makes a 41,000-image scope openable at all -- and
+        it means nothing has checked any of them against the files they name. The sweep
+        asks, in the background, now that the load is over. It gates itself on the scope
+        being hydrated, so a folder load (where the row IS the file) reaches it and
+        returns. */
+    if (scrollVerify) scrollVerify->verifyWholeSet();
+
+    /*  AND NOW, NOT DURING. The automatic scope scan that selecting the Catalog asks for
+        waits here rather than on a guessed delay -- this is the point at which MetaRead
+        has finished and the load is genuinely over. See MW::maybeAutoScanCatalog. */
+    runPendingCatalogScan();
+}
+
 void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
 {
 /*
@@ -6586,8 +7060,24 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
        them when the panel is shown (the datamodel is fully loaded by then). */
     if (!filterDock->isVisible()) return;
 
+    /*  A HYDRATED SCOPE HAS NO METADATA EVENTS TO WAIT FOR, AND WAITING COSTS EVERYTHING.
+
+        queuedReaderEvents counts BOTH kinds of reader delivery: Reader bumps it before
+        each addToDatamodel AND before each setIcon. A catalog scope's rows were filled
+        synchronously in batches by DataModel::addCatalogRows -- no reader touched them --
+        so every event in that queue is an ICON, and draining it is exactly the 11.7 s
+        wait that MW::metadataComplete was separated out to avoid. Waiting here would put
+        it straight back, one 10 ms poll at a time.
+
+        The condition the wait exists to guarantee -- that the model is fully updated
+        before the filters read it -- is already true on this path, and by a stronger
+        route: the fill is complete and setAllMetadataAttempted(true) has run before
+        folderChange is emitted at all (DataModel::finishCatalogFill). */
+    const bool hydrated = dm->scopeRequest().scope == G::Scope::Catalog
+                          && !dm->scopeRequest().rows.isEmpty();
+
     // wait for the reader-event queue to drain so the datamodel is fully updated
-    if (dm->queuedReaderEvents.load(std::memory_order_relaxed) > 0) {
+    if (!hydrated && dm->queuedReaderEvents.load(std::memory_order_relaxed) > 0) {
         /* Bounded fallback: queuedReaderEvents is balanced (every Reader emit has a
            matching RAII decrement in addMetadataForItem/setIcon1), so it normally
            drains to 0 once the readers finish. But a wedged GUI loop or a future
@@ -6597,6 +7087,9 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         constexpr int kPollMs = 10;
         constexpr int kMaxAttempts = 200;           // 200 × 10ms ≈ 2s
         if (attempt < kMaxAttempts) {
+            setCentralProgressMessage(loadedMsg() + "Waiting for metadata ...");
+            /*  Marked on the LAST poll only -- see the mark below -- so the segment is
+                the whole wait rather than 10 ms repeated two hundred times. */
             QTimer::singleShot(kPollMs, this, [this, forInstance, attempt]{
                 buildFiltersWhenModelReady(forInstance, attempt + 1);
             });
@@ -6611,8 +7104,18 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         // fall through and build with whatever metadata has been applied
     }
 
+    /*  Two stages, and the second is the slower of them: build() takes the snapshot and
+        starts the worker (which reports each category as it counts it -- see
+        BuildFilters::appendUniqueItems), while recount() walks every row twice more on
+        THIS thread and then applies the counts to the tree. Neither returns to the event
+        loop, so each says what it is about to do before doing it. */
+    if (attempt > 0) CatLoad::mark("5a filters: wait for reader queue to drain"); // TEMPORARY
+    setCentralProgressMessage(loadedMsg() + "Building filters ...");
     buildFilters->build();
+    CatLoad::mark("5b filters: build() (snapshot + start worker)");   // TEMPORARY
+    setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
     buildFilters->recount();
+    CatLoad::mark("5c filters: recount() (2 passes + apply)");        // TEMPORARY
     filters->setEnabled(true);
 }
 
@@ -14149,9 +14652,11 @@ void MW::toggleRory()   // shortcut = "Shift+Ctrl+Alt+."
 void MW::rory()
 {
     if (pref != nullptr) pref->rory();
-    /* The Workspace menu's Default branch is Rory only, so it appears and disappears
-       with the flag rather than only at startup. */
+    /* The Workspace menu's Default branch and the Help > Diagnostics > Tests > Developer
+       submenu are Rory only, so they appear and disappear with the flag rather than only
+       at startup. */
     syncWorkflowWorkspaceMenus();
+    syncDeveloperTestMenu();
     if (G::isRory) {
         G::showCacheProgress = true;
         setCacheProgressEnabled(true);

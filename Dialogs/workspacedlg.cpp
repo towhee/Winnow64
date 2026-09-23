@@ -61,7 +61,7 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
     int h = ui->workspaceCB->height() - 8;
 
     /* The dropdown lists the user's saved workspaces only.  The per-workflow default and
-       override layouts (Library, Develop, Keywords, Embellish, Slide Show) are managed
+       override layouts (Source, Develop, Keywords, Embellish, Slide Show) are managed
        from Window > Workspace, not here. */
     ui->workspaceCB->view()->setItemDelegate(new ComboSeparatorDelegate(ui->workspaceCB));
 

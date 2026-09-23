@@ -81,6 +81,7 @@ void MW::writeSettings()
     settings->setValue("decodeRawEngine", static_cast<int>(G::decodeRawEngine));
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
+    settings->setValue("openLibraryAtStart", openLibraryAtStart);
     settings->setValue("updateSkipVersion", updateSkipVersion);
     settings->setValue("combineRawJpg", combineRawJpg);
 
@@ -411,6 +412,7 @@ bool MW::loadSettings()
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
         checkIfUpdate = true;
+        openLibraryAtStart = false;
         updateSkipVersion = "";
         lastDir = "";
         deleteWarning = true;
@@ -690,6 +692,8 @@ bool MW::loadSettings()
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();
+    if (settings->contains("openLibraryAtStart"))
+        openLibraryAtStart = settings->value("openLibraryAtStart").toBool();
     if (settings->contains("updateSkipVersion")) updateSkipVersion = settings->value("updateSkipVersion").toString();
     if (settings->contains("lastDir")) lastDir = settings->value("lastDir").toString();
 

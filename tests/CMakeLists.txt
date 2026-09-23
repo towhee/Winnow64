@@ -480,6 +480,25 @@ if(TARGET Winnow)
     # around every insert and remove are its own responsibility now. Fatal mode:
     # a violation aborts and the test fails.
     # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # shortcut_coverage — every action carrying a key sequence must be reachable
+    # from the menu bar, and no two actions may claim the same key (Qt fires
+    # NEITHER of an ambiguous pair). Nothing enforced this, and six shortcuts had
+    # drifted out of the menus entirely while still working: an action created
+    # with a bare addAction(this) and never added to a menu is invisible and
+    # perfectly functional. Runs against the built menus, so it needs no images.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME shortcut_coverage
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(shortcut_coverage PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_SHORTCUTS=1"
+        FAIL_REGULAR_EXPRESSION "SHORTCUT COVERAGE FAIL"
+        LABELS "smoke"
+        TIMEOUT 120
+    )
+
     add_test(
         NAME model_contract
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
