@@ -340,7 +340,32 @@ void Reader::readIcon()
             the same gap in the ICON path, and the answer is the same. It costs
             nothing extra here: the cache has already missed, so this thread is
             about to open the file regardless. */
-        if (m && m->fromIndex && !abort) {
+        /*  WHAT TO ASK DEPENDS ON WHETHER `m` IS THIS ROW'S.
+
+            After a metadata read it is, so m->fromIndex is the right question: a row the
+            catalog answered for has no segment offsets and the header must be walked.
+
+            On an ICON-ONLY read it is NOT. readMetadata() was skipped, so `m` still holds
+            the PREVIOUS row's metadata (or a default-constructed struct on the reader's
+            first task) and m->fromIndex is that row's answer, not this one's. It is false
+            by default, so the header walk below was skipped for exactly the rows that
+            needed it -- a hydrated catalog row, whose offsets were preset from the model
+            and are therefore 0, because the decode geometry is deliberately not stored.
+
+            A JPEG survives that: loadThumb can find an embedded thumbnail unaided. A RAW
+            cannot -- the preview's location is only in the header -- so it produced no
+            image, fell back to the error icon, and never reached the putImage below. The
+            thumbnail was therefore never cached, so the next load missed the cache and
+            failed the same way. MEASURED on a 41,464-row catalog: 1,241 of the 1,352 rows
+            the index could not serve were raw (1,190 arw, 46 cr2), the same ones on every
+            load, while every jpg and tif in the chunk cached on first sight.
+
+            So the icon-only path asks the only question it can answer locally, and the
+            one that actually matters: do I have usable offsets? */
+        const bool haveThumbOffsets = (offsetThumb != 0 && lengthThumb != 0);
+        const bool needGeometry = metaReadThisTask ? (m && m->fromIndex)
+                                                   : !haveThumbOffsets;
+        if (needGeometry && !abort) {
             QFileInfo fi(fPath);
             if (metadata->loadImageMetadata(fi, dmRow, instance, true, true, false, true,
                                             "Reader::readIcon geometry")) {
@@ -510,6 +535,7 @@ void Reader::read(int dmRow, QString filePath, int instance,
             ;
     }
 
+    metaReadThisTask = needMeta;
     if (!abort && needMeta) readMetadata();
     if (!abort && needIcon) {
         /* Icon-only read: readMetadata() was skipped, so m still points at the previous

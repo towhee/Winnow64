@@ -1,5 +1,4 @@
 #include "buildfilters.h"
-#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 
 /*
     Classes involved in filtering:
@@ -938,8 +937,6 @@ void BuildFilters::applyOps(const FilterOps &ops)
         qDebug().noquote() << "[PERF] BuildFilters::applyOps" << aoTimer.elapsed()
                            << "ms  ops =" << ops.size();
 
-    CatLoad::mark(QString("5x filters: applyOps (%1 ops -> tree items)")
-                      .arg(ops.size()));   // TEMPORARY
 
 }
 

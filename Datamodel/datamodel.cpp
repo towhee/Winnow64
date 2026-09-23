@@ -1,5 +1,4 @@
 #include "Datamodel/datamodel.h"
-#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
@@ -1805,11 +1804,9 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
         what makes Add (a second search onto the first) work. */
     perfFillInsertNs = perfFillFileDataNs = perfFillIndexFillNs = 0;
     perfFillAddMetaNs = perfFillEmitNs = perfFillPrepNs = 0;
-    perfMetaSearchReadNs = perfMetaKeywordsNs = 0;      // TEMPORARY
     QElapsedTimer prepTimer;
     if (G::isPerfProbe) prepTimer.start();
 
-    CatLoad::mark("3a addCatalogRows entered");   // TEMPORARY
     QVector<CatalogRow> ordered;
     ordered.reserve(rows.size());
     for (const CatalogRow &r : rows) {
@@ -1865,7 +1862,6 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
     expectedRows = rowCount() + pendingCatalogRows.size();
     if (G::isPerfProbe) perfFillPrepNs = prepTimer.nsecsElapsed();
 
-    CatLoad::mark("3b dedupe + sort by key");   // TEMPORARY
     insertCatalogBatch();
 }
 
@@ -1991,7 +1987,6 @@ void DataModel::finishCatalogFill()
         and then the filter build in MW::folderChangeCompleted. On a catalog scope of
         tens of thousands of rows that is seconds of a message that has stopped moving,
         which reads as a hang. Each stage overwrites it instead. */
-    CatLoad::mark("3c insert every batch into the model");   // TEMPORARY
 
     const QString loaded = QString::number(pendingCatalogAt) + " images loaded.\n\n";
     emit centralMsg(loaded + "Collating folders ...");
@@ -2031,8 +2026,6 @@ void DataModel::finishCatalogFill()
             << " indexFill="   << us(perfFillIndexFillNs)
             << " addMeta="     << us(perfFillAddMetaNs)
             << " emit(ms)="    << perfFillEmitNs / 1000000.0
-            << "\n         [of addMeta] searchRead=" << us(perfMetaSearchReadNs)
-            << " keywordExpand=" << us(perfMetaKeywordsNs)
             << " us/row total="
             << us(perfFillInsertNs + perfFillFileDataNs + perfFillIndexFillNs
                   + perfFillAddMetaNs + perfFillEmitNs);
@@ -2058,10 +2051,8 @@ void DataModel::finishCatalogFill()
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  endLoad"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
-    CatLoad::mark("3d collate folders + setCurrent + endLoad");   // TEMPORARY
     emit centralMsg(loaded + "Sorting ...");
     restoreProxySortAfterLoad();
-    CatLoad::mark("3e restore the proxy sort");   // TEMPORARY
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  restoreSort"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
@@ -3361,10 +3352,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         if (!rawPath.isEmpty()) fPathRawInfoSet(rawPath, m.rawInfo);
     }
 
-    QElapsedTimer mTimer;                       // TEMPORARY
-    if (G::isPerfProbe) mTimer.start();
     QString search = index(row, G::SearchTextColumn).data().toString();
-    if (G::isPerfProbe) perfMetaSearchReadNs += mTimer.nsecsElapsed();
 
     QMutexLocker locker(&dmMutex);
     mLock = true;
@@ -3464,7 +3452,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
        adds every ancestor of every path, so an ancestor is a keyword in its own right and
        filtering on it needs no subtree walk. The two source columns above are left as the
        file spelled them -- see G::KeywordsAllColumn on why they must be. */
-    if (G::isPerfProbe) mTimer.restart();        // TEMPORARY
     /*  MEMOISED. Both functions are pure -- they read nothing but their arguments -- and
         the same handful of keyword sets recur across the whole library, so the expansion
         is done once per DISTINCT set rather than once per row. See keywordsAllMemo.
@@ -3505,7 +3492,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         keywordsAllMemo.insert(kwKey, keywordsAll);
     }
     }
-    if (G::isPerfProbe) perfMetaKeywordsNs += mTimer.nsecsElapsed();
     setData(index(row, G::KeywordsAllColumn), QVariant(keywordsAll));
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     search += m.shootingInfo;
@@ -4431,6 +4417,41 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     /* Idempotent: see setIcon1 for rationale.  Replacing a live decoration
        runs ~QPixmapIconEngine on the old QIcon, which under memory pressure
        can crash. */
+    /*  A NULL PIXMAP IS A REMOVE, NOT A REPLACEMENT, AND IT HAS TO BE ANSWERED FIRST.
+
+        The idempotence guard below exists to avoid destroying a live QIcon when a real
+        picture replaces it. A caller passing a null pixmap is not replacing anything --
+        it is asking for the thumbnail to be taken away -- and the guard was answering
+        "there is already an icon here", setting IconLoadedColumn back to TRUE and
+        leaving the old picture in place. Both callers that pass one (MW::refreshStaleRows
+        and the insert in Main/fileoperations.cpp) meant to drop it.
+
+        THAT IS NOT COSMETIC. MetaRead::needToRead returns false on iconLoadedAt() BEFORE
+        it looks at the metadata status, so a row whose icon survives can never be
+        re-read. It is how the verification passes came to detect a stale row, clear it,
+        and then wait for a re-read that was never dispatched: the drain reported
+        "committed 0 of 2 pending" until it gave up, and the same rows were found stale
+        again on every load.
+
+        The empty-QVariant write is the remove the icon store documents (see the
+        DecorationRole branch of setData), the same one clearIconsOutsideChunkRange uses.
+
+        THE CHUNK COUNT IS RECOMPUTED RATHER THAN DECREMENTED. updateIconChunkLoaded's
+        O(1) path assumes an icon has ARRIVED; an icon leaving moves the count the other
+        way. Removals are rare -- a repair or an insert -- so the exact O(span) recount is
+        affordable here and cannot drift. */
+    if (pm.isNull()) {
+        {
+            const QSignalBlocker blocker(this);
+            setData(dmIdx, QVariant(), Qt::DecorationRole);
+            setData(index(dmIdx.row(), G::IconLoadedColumn), false);
+        }
+        if (iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
+        iconChunkMissing = countIconChunkMissing(startIconRange, endIconRange);
+        G::iconChunkLoaded = (iconChunkMissing == 0);
+        return;
+    }
+
     /*  Through data(), not itemFromIndex()->icon(): the thumbnail lives in the
         path-keyed icon store now, and the item's own icon is always null. */
     /*  BLOCKED AND EMITTED ONCE, the same shape setIcon1 uses two functions down and for

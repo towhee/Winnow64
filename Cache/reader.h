@@ -94,6 +94,10 @@ private:
     FrameDecoder *frameDecoder;     // shared, owned by MetaRead
     Thumb *thumb;
 
+    /*  Did THIS task read the metadata? It decides whether `m` describes this row or the
+        previous one, which readIcon has to know before it can trust anything in it. */
+    bool metaReadThisTask = false;
+
     uint offsetThumb;
     uint lengthThumb;
 

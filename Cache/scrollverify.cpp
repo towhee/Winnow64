@@ -138,25 +138,10 @@ void ScrollVerify::verifyWholeSet()
 /*
     Start (or restart) the background sweep of every loaded row. See the header.
 */
-    /*  TEMPORARY, and unconditional. The sweep is the one part of this work whose
-        absence looks exactly like its success -- no output either way -- so while it is
-        being brought up it says which it is. */
-    if (!G::useScrollInVerify) {
-        qDebug().noquote() << "[CATLOAD] whole-set verify DECLINED: useScrollInVerify off";
-        return;
-    }
-    if (G::isInitializing) {
-        qDebug().noquote() << "[CATLOAD] whole-set verify DECLINED: still initializing";
-        return;
-    }
-    if (!scopeIsHydrated()) {
-        qDebug().noquote() << "[CATLOAD] whole-set verify DECLINED: scope not hydrated";
-        return;
-    }
+    if (!G::useScrollInVerify) return;
+    if (G::isInitializing) return;
+    if (!scopeIsHydrated()) return;
     if (G::isLogger || G::isFlowLogger) G::log("ScrollVerify::verifyWholeSet");
-    qDebug().noquote() << "[CATLOAD] whole-set verify ARMED for"
-                       << (dm && dm->sf ? dm->sf->rowCount() : 0) << "rows, starting in"
-                       << kWholeSetStartMs << "ms";
 
     wholeSetAt = 0;
     wholeSetStale = 0;
@@ -190,9 +175,9 @@ void ScrollVerify::runWholeSetPage()
 
     const int rows = dm->sf->rowCount();
     if (wholeSetAt >= rows) {
-        /*  TEMPORARY: unconditional for the same reason as the ARMED line above. */
-        qDebug().noquote() << "[CATLOAD] whole-set verify FINISHED:" << rows
-                           << "rows, stale =" << wholeSetStale;
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] whole-set verify finished:" << rows
+                               << "rows, stale =" << wholeSetStale;
         wholeSetAt = -1;
         return;
     }

@@ -803,9 +803,6 @@ private:
     QHash<QString, QStringList> keywordsAllMemo;
 
     qint64 perfFillAddMetaNs = 0;
-    // TEMPORARY: decomposing addMetadataForItem. Remove with the CatLoad probe.
-    qint64 perfMetaSearchReadNs = 0;
-    qint64 perfMetaKeywordsNs = 0;
     qint64 perfFillEmitNs = 0;
     qint64 perfFillPrepNs = 0;
 
