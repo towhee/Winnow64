@@ -1,5 +1,4 @@
 #include "Main/mainwindow.h"
-#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Utilities/panelprobe.h"
 
 void MW::setCentralMessage(QString message)
@@ -1107,7 +1106,6 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
             because the image was not cached; this is the moment it is filled in, and the
             gap between the two is exactly how long the user looked at nothing. */
         if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
-        CatLoad::finish("image", "6 first image cached -> loupe replaces the message");  // TEMPORARY
         centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         /*  DON'T FLASH THE UNDEVELOPED IMAGE. loadImage above paints the decode -- the

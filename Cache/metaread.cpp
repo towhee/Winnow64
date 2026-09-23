@@ -1,5 +1,4 @@
 #include "metaread.h"
-#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Main/global.h"
 
 namespace {
@@ -558,7 +557,6 @@ void MetaRead::initialize(QString src)
     Must use QMetaObject::invokeMethod when calling this function
 */
 {
-    CatLoad::note("MetaRead::initialize");   // TEMPORARY
     if (G::isLogger || G::isFlowLogger)
     {
         /* not dm->primaryFolderPath(): it walks folderList, which the GUI
@@ -1933,7 +1931,6 @@ void MetaRead::quitAfterTimeout()
 
 void MetaRead::dispatchFinished(QString src)
 {
-    CatLoad::note("MetaRead::dispatchFinished src=" + src);   // TEMPORARY
     if (quitTimer->isActive()) quitTimer->stop();
     isDone = true;
 

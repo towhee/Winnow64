@@ -7,7 +7,6 @@
 #include "Utilities/panelprobe.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
-#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
 #include "Main/global.h"
@@ -4319,7 +4318,6 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
 */
     QString fun = "MW::loadCatalogScope";
 
-    CatLoad::loadStarted();   // TEMPORARY: past here the run is a real load
 
     /*  A replacing result set clears the model exactly as a folder change does (see the
         header comment), so it loses picks exactly as a folder change does.  Appending
@@ -4344,9 +4342,7 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
         fsTree->setEnabled(false);
 
         setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
-        CatLoad::mark("2a okToDiscardPicks + reset develop caches");   // TEMPORARY
         stop(fun);
-        CatLoad::mark("2b stop() (tear down readers + caches)");       // TEMPORARY
     }
 
     dm->abort = false;
@@ -4370,14 +4366,12 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
             disconnect(*conn);
             queueAvailabilityPass(paths);
         });
-        CatLoad::mark("2c wait for the queued fill to start");   // TEMPORARY
         dm->setScope(req);
     });
 }
 
 void MW::queueAvailabilityPass(const QStringList &paths)
 {
-    CatLoad::note("availability pass queued (off-thread)");   // TEMPORARY
 /*
     ASK WHY EACH ROW IS NOT OPENABLE, once, off the GUI thread. A catalog row can outlive
     its file, and the two ways that happens are different things the user can act on
@@ -4542,11 +4536,8 @@ void MW::refreshStaleRows(const QStringList &paths)
     }
     if (!cleared) return;
 
-    /*  TEMPORARY, and unconditional for the same reason the sweep's lines are: this is
-        the middle link of the repair chain, and it is only reachable when a row is
-        actually stale -- which is rare enough that gating it behind a flag meant it was
-        never seen at the moment it mattered. */
-    qDebug().noquote() << "[CATLOAD] stale repair: re-reading" << cleared << "row(s)";
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] stale repair: re-reading" << cleared << "row(s)";
 
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
@@ -4594,7 +4585,56 @@ QVector<CatalogRow> MW::catalogRowsForStale()
             continue;
         }
         CatalogRow r;
-        if (dm->catalogRowFor(dmRow, r)) rows.append(r);
+        if (!dm->catalogRowFor(dmRow, r)) continue;
+
+        /*  THE STAMPS MUST DESCRIBE THE FILE THAT WAS JUST READ, NOT THE ONE THE INDEX
+            REMEMBERED.
+
+            catalogRowFor takes srcSize and srcMtime from the model's ByteSize and
+            Modified columns, which is right for the bulk capture: there they were filled
+            from the same QFileInfo the load enumerated. It is wrong HERE. A re-read
+            refreshes the metadata columns through addMetadataForItem and never touches
+            those two -- addFileDataForRow is only called when a row is first added -- so
+            the row still carries the stamps the catalog was holding when it was found
+            stale. Committing that writes back the very values that failed verification,
+            and the next pass finds the same row stale again: observed as "committed 2 of
+            2" on every load, for ever, with the content corrected and the freshness never
+            settling.
+
+            One stat, on the repair path only, for a row already known to have changed. */
+        /*  THE STAMPS ARE TAKEN FROM THE FILESYSTEM HERE, NOT FROM THE MODEL, AND BOTH
+            HALVES OF THAT MATTER.
+
+            catalogRowFor is built for the bulk capture, where the model's ByteSize,
+            Modified and Sidecar columns were filled from the same enumeration that is
+            about to be committed -- so reading them back is free and correct. On the
+            REPAIR path neither holds:
+
+              o a re-read refreshes the metadata columns through addMetadataForItem and
+                never touches ByteSize or Modified (addFileDataForRow runs only when a row
+                is first added), so the row still carries the stamps that just FAILED
+                verification;
+
+              o catalogRowFor stats the sidecar only when the model's SidecarColumn says
+                there is one -- and for a hydrated row that column was derived from the
+                stored sidecarMtime, which is 0 precisely for the rows whose .xmp appeared
+                AFTER they were catalogued. So it committed 0 while IndexMetadata::candidate
+                stats the sidecar unconditionally and found a real mtime.
+
+            Either one alone writes back a row that the next verification pass declares
+            stale again, which is what "committed 2 of 2" on every load actually was: the
+            content was being corrected and the freshness never settled.
+
+            Stat'd the same way IndexMetadata::candidate does, because these two have to
+            agree -- one decides the row is stale and the other says what makes it fresh. */
+        const QFileInfo fi(fPath);
+        if (fi.exists()) {
+            r.srcSize = fi.size();
+            r.srcMtime = fi.lastModified().toSecsSinceEpoch();
+        }
+        const QFileInfo si(metadata->sidecarPath(fPath));
+        r.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
+        rows.append(r);
     }
     staleRecommit = stillPending;
     return rows;
@@ -4633,9 +4673,10 @@ void MW::drainStaleRecommit()
         different and both matter: the re-reads have not landed yet (still pending), or
         they have and the scope table does not admit those folders (committed 0 with
         nothing pending, which is correct and not a failure). */
-    qDebug().noquote() << "[CATLOAD] stale re-commit: committed" << fixed.size()
-                       << "of" << pendingBefore << "pending; still pending ="
-                       << staleRecommit.size();   // TEMPORARY
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] stale re-commit: committed" << fixed.size()
+                           << "of" << pendingBefore << "pending; still pending ="
+                           << staleRecommit.size();
 
     /*  ROWS WHOSE RE-READ HAS NOT LANDED YET ARE STILL IN THE SET; COME BACK FOR THEM --
         BUT NOT FOREVER.
@@ -4659,8 +4700,6 @@ void MW::drainStaleRecommit()
     }
     constexpr int kMaxStaleRecommitAttempts = 5;        // 5 x 3 s = 15 s
     if (fixed.isEmpty() && ++staleRecommitAttempts >= kMaxStaleRecommitAttempts) {
-        qDebug().noquote() << "[CATLOAD] stale re-commit: GAVE UP on"
-                           << staleRecommit.size() << "row(s)";   // TEMPORARY
         G::issue("Warning",
                  QString("Gave up re-committing %1 verified row(s): the re-read did not "
                          "complete. They will be re-checked when next visited.")
@@ -5153,12 +5192,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             if ((G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick")
                 && centralLayout->currentIndex() != LoupeTab)
             {
-                /*  TEMPORARY. The other way the message pane is left -- fileSelectionChange
-                    switches to the loupe whether or not the image is cached, so on a load
-                    where it IS cached this is the moment, not the repair in
-                    MW::refreshViewsOnCacheChange. Whichever runs first ends the run; the
-                    label says which it was. */
-                CatLoad::finish("image", "6 loupe shown from fileSelectionChange");
                 centralLayout->setCurrentIndex(LoupeTab);
             }
             /* Develop mode: remember the zoom/pan of the image being left BEFORE it is
@@ -6175,7 +6208,6 @@ void MW::prefetchIconsFromIndex(QString src)
     }
     if (reqs.isEmpty()) return;
 
-    CatLoad::note(QString("icon prefetch asking for %1").arg(reqs.size()));  // TEMPORARY
 
     /*  PAGED, so the first icons paint while the rest are still being read, and so a
         folder change part way through abandons the remainder rather than finishing a
@@ -6227,17 +6259,14 @@ void MW::prefetchIconsFromIndex(QString src)
             }, Qt::QueuedConnection);
         }
         const int asked = reqs.size();
-        /*  NOT through CatLoad::note. The prefetch outlives the load it belongs to -- the
-            probe run closes as soon as the images are shown and the filters are built,
-            which is the point of the pre-pass -- so a note here is written after the run
-            has stopped listening and is silently dropped. This is the number that says
-            whether the pre-pass is working, so it prints on its own terms. */
-        qDebug().noquote() << "[PERF] icon prefetch: served" << found << "of" << asked
-                           << "from the index;" << (asked - found)
-                           << "left for MetaRead";
+        /*  HOW MUCH OF THE ICON CHUNK THE INDEX COULD ANSWER FOR -- the one number that
+            says whether this pre-pass is earning its keep, and the one to watch if a
+            catalog load ever feels slow again. */
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] icon prefetch: served" << found << "of" << asked
+                               << "from the index;" << (asked - found)
+                               << "left for MetaRead";
         QMetaObject::invokeMethod(this, [this, asked, found, instance]{
-            CatLoad::note(QString("icon prefetch served %1 of %2 from the index")
-                              .arg(found).arg(asked));   // TEMPORARY
             if (G::stop || instance != dm->instance) return;
             /*  PUT THE CHUNK COUNT BACK ON AN EXACT FOOTING.
 
@@ -6381,7 +6410,6 @@ void MW::folderChanged(bool aborted)
         row comes out of the image table; the thumbnail comes from ThumbCache or from
         opening the file, and either way it is MetaRead's job. */
     dm->setIconRange(startRow);
-    CatLoad::mark("4a MW::folderChanged (cache estimate, icon range)");   // TEMPORARY
     if (dm->isMetaReadFinished() && dm->isIconRangeLoaded()) {
         G::allMetadataAttempted = true;
         G::iconChunkLoaded = true;
@@ -6711,10 +6739,6 @@ void MW::metadataComplete(QString src)
     metadataCompleteDone = true;
 
     IngestProbe::Scope _ip("MW::metadataComplete");
-    /*  TEMPORARY. Closes the segment that began when the model finished filling. On the
-        hydrated path that is now the fill itself; on the folder path it is still the wait
-        for MetaRead::done. */
-    CatLoad::mark("4a1 reached metadataComplete (src " + src + ")");
     if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
@@ -6896,7 +6920,6 @@ void MW::metadataComplete(QString src)
         catalogSweepDone = true;
         QThreadPool::globalInstance()->start([]{ Catalog::instance().sweep(); });
     }
-    CatLoad::mark("4a2 fCC: sweeps started, catalog commit posted");   // TEMPORARY
 
     QMetaObject::invokeMethod(imageCache, "updateInstance", Qt::QueuedConnection);
 
@@ -6905,11 +6928,9 @@ void MW::metadataComplete(QString src)
        image, which is the work the byproduct rule exists to avoid. Queued here, after the
        load, for the same reason as the sweep above. */
     queueBackgroundDevPreviewBuild();
-    CatLoad::mark("4a3 fCC: queueBackgroundDevPreviewBuild");   // TEMPORARY
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
-    CatLoad::mark("4a4 fCC: fsTree->scrollToCurrent");          // TEMPORARY
 
     // // update FSTree image count if fsModel isMaxRecurse is true
     // if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
@@ -6931,9 +6952,7 @@ void MW::metadataComplete(QString src)
             itself from here on (MW::setCentralProgressMessage), through
             buildFiltersWhenModelReady and then per category from the worker. */
         setCentralProgressMessage(loadedMsg() + "Building filters ...");
-        CatLoad::mark("4b folderChangeCompleted before filters");   // TEMPORARY
         buildFiltersWhenModelReady(dm->instance);
-        CatLoad::mark("4c returned from buildFiltersWhenModelReady"); // TEMPORARY
     }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial
@@ -7002,12 +7021,6 @@ void MW::folderChangeCompleted()
                QString::number(dm->rowCount()) + " images");
 
     metadataComplete("MetaRead::done");
-
-    /*  TEMPORARY. On the hydrated path this is the icon pass, running AFTER the filters
-        are already up rather than in front of them -- which means it lands after the probe
-        run has closed, so it is reported as a late event rather than a segment. */
-    CatLoad::mark("4d MetaRead finished (icons)");
-    CatLoad::late("MetaRead finished (icons)");
 
     // hide metadata read progress
     progress->clearProgress(progressMetaReadRow);
@@ -7109,13 +7122,10 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         BuildFilters::appendUniqueItems), while recount() walks every row twice more on
         THIS thread and then applies the counts to the tree. Neither returns to the event
         loop, so each says what it is about to do before doing it. */
-    if (attempt > 0) CatLoad::mark("5a filters: wait for reader queue to drain"); // TEMPORARY
     setCentralProgressMessage(loadedMsg() + "Building filters ...");
     buildFilters->build();
-    CatLoad::mark("5b filters: build() (snapshot + start worker)");   // TEMPORARY
     setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
     buildFilters->recount();
-    CatLoad::mark("5c filters: recount() (2 passes + apply)");        // TEMPORARY
     filters->setEnabled(true);
 }
 

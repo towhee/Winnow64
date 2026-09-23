@@ -1458,16 +1458,18 @@ void Preferences::addDevPreviews()
 
     i.name = "useScrollInVerify";
     i.parentName = "DevPreviewHeader";
-    i.captionText = "Verify images as they scroll into view";
-    i.tooltip = "Check each image that scrolls into view against the file on disk,\n"
-                "and re-read it if the file or its sidecar has changed since it was\n"
-                "catalogued.\n\n"
+    i.captionText = "Verify catalogued images against their files";
+    i.tooltip = "Check catalogued images against the files on disk, and re-read any\n"
+                "whose file or sidecar has changed since it was catalogued.\n\n"
                 "Without this, a row taken from the catalog is trusted until\n"
                 "something else happens to revisit it -- so keywords edited in\n"
                 "Lightroom, which rewrites the .xmp and never touches the raw file,\n"
                 "keep showing their old value in Catalog scope.\n\n"
-                "Only the images you can actually see are checked, and checking one\n"
-                "costs about a hundredth of what re-reading it would."
+                "Two passes, both in the background. Images are checked as they\n"
+                "scroll into view, and the whole loaded set is checked once after\n"
+                "a catalog load settles.\n\n"
+                "Checking an image costs about a hundredth of what re-reading it\n"
+                "would: a 41,000 image library is checked in a few seconds."
         ;
     i.hasValue = true;
     i.captionIsEditable = false;

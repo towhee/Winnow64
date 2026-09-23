@@ -1,5 +1,4 @@
 #include "Main/mainwindow.h"
-#include "Utilities/catalogloadprobe.h"   // TEMPORARY: catalog load timing
 #include "Dialogs/keyworddropdlg.h"
 #include "Dialogs/keywordmergedlg.h"
 #include "Dialogs/keywordretagdlg.h"
@@ -430,7 +429,6 @@ void MW::filterBuildCompleted()
         once the loupe is up. */
     setCentralProgressMessage(loadedMsg() + "Loading images ...");
 
-    CatLoad::finish("filters", "5f filters: build completed (panel up to date)"); // TEMPORARY
 }
 
 void MW::rebuildAbortedFilters()
