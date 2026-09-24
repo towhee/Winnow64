@@ -2,6 +2,8 @@
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
 #include <QSet>
+#include <QElapsedTimer>
+#include <QProgressDialog>
 
 /*  *******************************************************************************************
 
@@ -518,31 +520,76 @@ void MW::deleteFiles(QStringList paths)
 
     G::ScrollSignalGuard scrollGuard;   // deleting rows scrolls; that is not the user
 
-    // delete file(s) in folder on disk, including any xmp sidecars
-    bool fileWasLocked = false;
-    for (int i = 0; i < paths.count(); ++i) {
-        QString fPath = paths.at(i);
-        if (QFile::exists(fPath)) {
-            // delete the file
-            ImageMetadata m = dm->imMetadata(fPath);
-            if (!m.isReadWrite) {
-                fileWasLocked = true;
-                QString msg = "File is locked.";
-                G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
-            }
-            /* FileOps carries the sidecars and drops the cached develop preview.
-               It reports its own failures. */
-            FileOps::trashFile(fPath);
-        }
-        else {
-            QString msg = "File does not exist.";
-            G::issue("Warning", msg, "MW::deleteFiles", -1, fPath);
-        }
+    /* PROGRESS AND CANCEL. Trashing is one OS call per file (plus its sidecars), so a
+       large selection runs for tens of seconds however lean the rest is. The dialog is
+       window-modal, so nothing can change the folder or the selection mid-delete, and
+       setValue pumps events once per FileOps chunk rather than once per file. A
+       cancel stops between chunks; whatever was trashed by then still leaves the model
+       below, so the model always matches the disk. */
+    QElapsedTimer t;
+    t.start();
+    const int total = paths.count();
+    QProgressDialog *progress = nullptr;
+    if (total > 20) {
+        progress = new QProgressDialog("Moving " + QString::number(total) +
+                                       " images to the " + G::trash + "...",
+                                       "Cancel", 0, total, this);
+        progress->setWindowTitle("Delete Images");
+        progress->setWindowModality(Qt::WindowModal);
+        progress->setMinimumDuration(500);
+        progress->setAutoClose(false);
+        progress->setAutoReset(false);
+        progress->setStyleSheet(G::css);
+        progress->setValue(0);
     }
-    if (fileWasLocked) G::popup->showPopup("Locked file(s) were not deleted", 3000);
 
-    // updata datamodel, imagecache, image counts
-    refresh();
+    FileOps::TrashResult result = FileOps::trashFiles(paths, [&](int done) {
+        if (!progress) return true;
+        progress->setLabelText("Moving images to the " + G::trash + ": " +
+                               QString::number(done) + " of " + QString::number(total));
+        progress->setValue(done);
+        return !progress->wasCanceled();
+    });
+    const qint64 trashMs = t.restart();
+
+    if (progress) {
+        progress->setLabelText("Updating the image list...");
+        progress->setCancelButton(nullptr);
+        progress->setValue(progress->value());      // repaint the new label
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+
+    /* update datamodel, imagecache, image counts. A missing file is gone from disk
+       either way (a drag-move out of IconView lands here after the target moved it), so
+       its row goes too. */
+    refreshAfterRemoval(result.trashed + result.missing);
+    const qint64 refreshMs = t.elapsed();
+
+    // TEMPORARY: bulk delete timing, until the 7,000 image case is measured in the app
+    qDebug() << "MW::deleteFiles" << total << "requested" << result.trashed.size()
+             << "trashed" << result.failed.size() << "failed"
+             << "cancelled" << result.cancelled
+             << "trash ms" << trashMs << "refresh ms" << refreshMs;
+
+    // reset LAST, after every phase
+    if (progress) {
+        progress->close();
+        progress->deleteLater();
+    }
+
+    if (result.cancelled || !result.failed.isEmpty()) {
+        QString msg;
+        if (result.cancelled)
+            msg = "Cancelled: " + QString::number(result.trashed.size()) + " of " +
+                  QString::number(total) + " images were moved to the " + G::trash + ".";
+        else
+            msg = QString::number(result.trashed.size()) + " images were moved to the " +
+                  G::trash + ".";
+        if (!result.failed.isEmpty())
+            msg += "<br>" + QString::number(result.failed.size()) +
+                   " could not be moved (locked or protected). See the Issues log.";
+        G::popup->showPopup(msg, 4000);
+    }
 
     /* Update selection. When every filtered item is deleted the filters are
        cleared and the prior current/saved rows no longer exist, leaving

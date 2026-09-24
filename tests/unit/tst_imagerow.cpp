@@ -41,6 +41,7 @@ private slots:
     void internedRepeatsCollapse();
     void insertRowsShiftsTheRowsAfterIt();
     void removeRowsSplicesRatherThanTruncates();
+    void compactDropsScatteredRowsInOrder();
     void prefixExpansionStaysInBudget();
 
 private:
@@ -319,6 +320,27 @@ void tst_imagerow::removeRowsSplicesRatherThanTruncates()
     s.removeRows(1, 99);
     QCOMPARE(s.size(), 1);
     QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
+}
+
+void tst_imagerow::compactDropsScatteredRowsInOrder()
+{
+/*
+    DataModel::removeFiles compacts a scattered multi-file delete in one pass. Survivors
+    keep their order, and newRow of the wrong size changes nothing.
+*/
+    RowStore s;
+    s.resize(5);
+    fill(s, 0, "/a.jpg"); fill(s, 1, "/b.jpg"); fill(s, 2, "/c.jpg");
+    fill(s, 3, "/d.jpg"); fill(s, 4, "/e.jpg");
+
+    s.compact({-1, -1});                    // wrong size: refused
+    QCOMPARE(s.size(), 5);
+
+    s.compact({0, -1, 1, -1, 2});           // drop b and d
+    QCOMPARE(s.size(), 3);
+    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(1, G::PathColumn, G::PathRole).toString(), QString("/c.jpg"));
+    QCOMPARE(s.value(2, G::PathColumn, G::PathRole).toString(), QString("/e.jpg"));
 }
 
 void tst_imagerow::prefixExpansionStaysInBudget()

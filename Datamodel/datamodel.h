@@ -199,6 +199,10 @@ public:
         different model. */
     QHash<int, QVariant> mIssueLists;      // dm row -> the issue list
 
+    /*  Set by removeFiles: a removal Winnow performed itself is not the anomaly
+        removeRows reports as ROWLOSS. */
+    bool mExpectedRemoval = false;
+
     /*  Thumbnails, keyed by path rather than held on the row -- see
         Datamodel/iconstore.h. Reached through data()/setData() on
         Qt::DecorationRole exactly as before, so no view or delegate changed. */
@@ -269,6 +273,7 @@ public:
     int pickCount();
     void clearPicks();
     void remove(QString fPath);
+    void removeFiles(const QStringList &paths);
     int insert(QString fPath);
     void refresh();
     QModelIndex indexFromPath(QString fPath);
