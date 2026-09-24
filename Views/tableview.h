@@ -5,6 +5,24 @@
 #include "Datamodel/datamodel.h"
 #include "Views/iconview.h"
 
+/*  TableView's frozen first-column overlay. A class of its own only so accessibility
+    can tell it from a QTableView: it shares TableView's model and selection model, so
+    on macOS it needs the same list interface (main.cpp winnowItemViewAccessible) and
+    the same skipped per-item events -- see TableView::selectionChanged. */
+class FrozenTableView : public QTableView
+{
+    Q_OBJECT
+
+public:
+    explicit FrozenTableView(QWidget *parent = nullptr) : QTableView(parent) {}
+
+protected slots:
+    void selectionChanged(const QItemSelection &selected,
+                          const QItemSelection &deselected) override;
+    void currentChanged(const QModelIndex &current,
+                        const QModelIndex &previous) override;
+};
+
 class TableView : public QTableView
 {
     Q_OBJECT
@@ -45,6 +63,14 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+
+protected slots:
+    /*  macOS: skip QListView/QTableView's per-item accessibility events -- see the
+        .cpp. Everything else they do is QAbstractItemView's, which is still called. */
+    void selectionChanged(const QItemSelection &selected,
+                          const QItemSelection &deselected) override;
+    void currentChanged(const QModelIndex &current,
+                        const QModelIndex &previous) override;
 
 private:
     IconView *thumbView;

@@ -135,6 +135,14 @@ protected:
 
     // void scrollContentsBy(int dx, int dy) override;
 
+protected slots:
+    /*  macOS: skip QListView/QTableView's per-item accessibility events -- see the
+        .cpp. Everything else they do is QAbstractItemView's, which is still called. */
+    void selectionChanged(const QItemSelection &selected,
+                          const QItemSelection &deselected) override;
+    void currentChanged(const QModelIndex &current,
+                        const QModelIndex &previous) override;
+
 signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole);

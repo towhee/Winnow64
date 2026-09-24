@@ -545,6 +545,8 @@ So MW answers the signal rather than only returning from it.  MW::folderSelectio
 
 syncSelectionToFolders is passed an EMPTY list outside the Folders scope: after a catalog load folderList holds every parent folder of the results, which is why the Folders panel deliberately does not follow a search.
 
+The same rule applies to the Filter panel's Here/Everywhere selector (the scopeChanged lambda in MW::createFilterDock). Switching back to Here re-selects from folderList only when the datamodel holds a FOLDER load (dm->scopeRequest().scope == Folders); otherwise it clears the tree. That lambda ALSO runs as the echo of a folder click: MW::folderSelectionChange -> MW::setScope(Folders) -> FilterPanel::setScope emits scopeChanged while the catalog rows are still loaded. Syncing on that echo selected every catalog folder and hid the folder just clicked. The lambda reads G::scope before calling setScope and syncs only when the flip started in the catalog, which means the user pressed the selector.
+
 TWO MORE THINGS THAT WOULD UNDO THE REPAIR:
 
 - THE RELEASE.  QAbstractItemView defers a selection to mouseReleaseEvent when the press landed on an already-selected item (so a drag can start).  FSTree::mousePressEvent records pressWasRefused and mouseReleaseEvent swallows that release rather than chaining to QTreeView.
@@ -1727,6 +1729,20 @@ DataModel::scheduleVisibleEmit collects the dirty rows and flushes on the next t
 THE TWO QUESTIONS ARE SEPARATE, and keeping them separate is what makes this work: iconRowVisible answers "does this row need repainting at all", scheduleVisibleEmit answers "how often". Suppressing invisible rows without coalescing the visible ones left a tenth of the notifications doing half the damage.
 
 THE SAME SHAPE, THREE TIMES IN ONE INVESTIGATION: SortFilter recompiling the whole predicate per tree item, MetaRead re-dispatching every row per redo, and the accessibility bridge rebuilding every row per write. Each was invisible at folder scale and quadratic at catalog scale.
+
+THE END STATE: THE VIEWS NO LONGER OFFER A TABLE (macOS). Everything above reduces the NUMBER of notifications; a fill still inserts in 21 batches, and a folder -> Catalog switch measured 7.9-8.3 s against 1.6 s for the same load at startup. The per-batch notification climbed with the model (0.3 -> 5 ms) and the GUI stalled 1-2 s between batches; after the load, 550 icons took 4,206 ms to set (0.2 ms for 126 at startup). The difference was only whether the bridge was on.
+
+THE BRIDGE CANNOT BE HELD OFF. Qt activates accessibility on the FIRST system accessibility query to any Winnow window (qnsview_accessibility.mm, activateQtAccessibility) -- window managers, clipboard and text-expander utilities send them -- and it stays on for the session. Startup was fast only because no query had arrived yet. The same mechanism re-enables it under WINNOW_NO_A11Y=1 or a G::A11ySuspend, so neither is a dependable fix.
+
+SO main.cpp INSTALLS A QAccessible FACTORY (winnowItemViewAccessible) that gives IconView and TableView a plain QAccessibleWidget with role List. Qt consults factories against the MOST-DERIVED class name first (QAccessible::queryAccessibleInterface), so it pre-empts the built-in QListView/QTableView interface. With no tableInterface(), QAccessible::updateAccessibility skips modelChange and QCocoaAccessibility's TableModelChanged -> updateTableModel does nothing. The cost goes away for every write path at once, including hidden views, which the bridge was rebuilding too.
+
+THE TRADE, CHOSEN DELIBERATELY: VoiceOver still reaches the views and the rest of the UI but cannot step through individual thumbnails or table rows; at catalog scale that navigation froze the app on every change anyway. macOS only (Q_OS_MAC) -- the O(rows) rebuild is the Cocoa bridge's; Windows UIA has not been measured to need it. The visible-only and coalesced emits above STAY: they also save the proxy and view work, which is not accessibility.
+
+THE PER-ITEM EVENTS HAD TO GO WITH IT. QListView/QTableView::selectionChanged and ::currentChanged post SelectionAdd/SelectionRemove/Focus events addressed to a numbered CHILD, and the list interface has none -- so every thumbnail selection printed "Cannot create accessible child interface", "Invalid child in QAccessibleEvent" and Cocoa's "invalid element". IconView and TableView override both and, on macOS, call QAbstractItemView's version directly: in Qt 6.11 those overrides do nothing else. Recheck them on a Qt upgrade.
+
+FOUR VIEWS, NOT THREE. TableView builds a frozenView -- a plain QTableView overlay for the frozen first column on the SAME model and selection model. With only IconView and TableView covered, a folder -> Catalog switch went 8.2 s -> 3.1 s, and the per-batch notification still climbed 0.12 -> 1.43 ms (a quarter of the old 5 ms: one view of four). It is now a FrozenTableView, matched by the factory and given the same selectionChanged/currentChanged overrides. A new view on dm->sf must join all three places: the factory's class list, and the two overrides.
+
+The probe lines kept from this: "[PERF] setScope(Catalog) START" (rows loaded, trigger, a11yActive), "[PERF] catalog switch click-to-loaded", "[PERF] loadCatalogScope teardown" and "[PERF] MW::stop" (busy subsystems, wait, reset).
 
 ⏺ DataModel Changes > Filter the Catalog and Nothing Paints (An Invalid Fallback Index)
 

@@ -902,7 +902,7 @@ Q_NAMESPACE
         return QColor(s, s, s);
     }
 
-    /* A colour blended halfway into the panel background: the DISABLED form of anything
+    /* A colour blended halfway into the panel background: he DISABLED form of anything
        that carries meaning through colour rather than text (a selection band, a hue
        chip, the scope rail). Still identifiable, visibly dead. Text does not use this --
        it has disabledColor. */

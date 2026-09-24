@@ -87,7 +87,7 @@ TableView::TableView(QWidget *parent, DataModel *dm)
     createOkToShow();
 
     // Setup frozenView
-    frozenView = new QTableView(this);
+    frozenView = new FrozenTableView(this);
     frozenView->setModel(dm->sf);  // Same model
     frozenView->setSelectionModel(dm->selectionModel);
     frozenView->setSortingEnabled(true); // rory
@@ -726,4 +726,57 @@ QString ErrItemDelegate::displayText(const QVariant& value, const QLocale& /*loc
         s += sl.at(i) + " \n";
     }
     return s;
+}
+
+void TableView::selectionChanged(const QItemSelection &selected,
+                                const QItemSelection &deselected)
+{
+/*
+    QTableView::selectionChanged and ::currentChanged (Qt 6.11) do two things: post a
+    per-item accessibility event (SelectionAdd/SelectionRemove/Focus) addressed to a
+    numbered child, then chain to QAbstractItemView. On macOS main.cpp gives this view a
+    plain list interface with NO children (winnowItemViewAccessible -- the table
+    interface rebuilt the Cocoa element array for every row on every model change), so
+    those events name a child that does not exist: Qt warns "Cannot create accessible
+    child interface" / "Invalid child in QAccessibleEvent" and Cocoa "invalid element",
+    on every selection. Calling QAbstractItemView directly skips only the events.
+    Recheck against QTableView when Qt is upgraded.
+*/
+#ifdef Q_OS_MAC
+    QAbstractItemView::selectionChanged(selected, deselected);
+#else
+    QTableView::selectionChanged(selected, deselected);
+#endif
+}
+
+void TableView::currentChanged(const QModelIndex &current, const QModelIndex &previous)
+{
+    // See selectionChanged.
+#ifdef Q_OS_MAC
+    QAbstractItemView::currentChanged(current, previous);
+#else
+    QTableView::currentChanged(current, previous);
+#endif
+}
+
+void FrozenTableView::selectionChanged(const QItemSelection &selected,
+                                       const QItemSelection &deselected)
+{
+    // See TableView::selectionChanged.
+#ifdef Q_OS_MAC
+    QAbstractItemView::selectionChanged(selected, deselected);
+#else
+    QTableView::selectionChanged(selected, deselected);
+#endif
+}
+
+void FrozenTableView::currentChanged(const QModelIndex &current,
+                                     const QModelIndex &previous)
+{
+    // See TableView::selectionChanged.
+#ifdef Q_OS_MAC
+    QAbstractItemView::currentChanged(current, previous);
+#else
+    QTableView::currentChanged(current, previous);
+#endif
 }

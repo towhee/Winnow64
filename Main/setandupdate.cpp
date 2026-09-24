@@ -484,6 +484,13 @@ void MW::setScope(G::Scope s, QString src)
     const bool changed = (G::scope != s);
     G::scope = s;
 
+    if (G::isPerfProbe && changed && s == G::Scope::Catalog) {
+        catalogSwitchClock.start();
+        qDebug().noquote() << "[PERF] setScope(Catalog) START  rows loaded ="
+                           << dm->rowCount() << " src =" << src
+                           << " a11yActive =" << QAccessible::isActive();
+    }
+
     /*  RE-ASSERT THE ROWS EVEN WHEN THE SCOPE DID NOT CHANGE, so the Catalog row of
         the dock that was NOT clicked lights up too, and so a click on the row while
         the catalog is already current leaves it selected rather than toggled off.

@@ -4336,13 +4336,21 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
     G::isModifyingDatamodel = true;
 
     if (!req.append) {
+        QElapsedTimer lcT;
+        if (G::isPerfProbe) lcT.start();
         resetDevelopCachesForNewFolder();
+        const qint64 devMs = G::isPerfProbe ? lcT.restart() : 0;
 
         bookmarks->setEnabled(false);
         fsTree->setEnabled(false);
 
         setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
+        const qint64 msgMs = G::isPerfProbe ? lcT.restart() : 0;
         stop(fun);
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] loadCatalogScope teardown  resetDevelopCaches ="
+                               << devMs << "ms  centralMsg =" << msgMs
+                               << "ms  stop =" << lcT.elapsed() << "ms";
     }
 
     dm->abort = false;
@@ -5588,6 +5596,9 @@ void MW::stop(QString src)
     stopped["MetaRead"] = metaRead->isIdle();
     stopped["ImageCache"] = imageCache->isIdle();
     stopped["BuildFilters"] = buildFilters->isIdle();
+    const bool wasIdleMetaRead = stopped["MetaRead"];
+    const bool wasIdleImageCache = stopped["ImageCache"];
+    const bool wasIdleBuildFilters = stopped["BuildFilters"];
 
     // stop slideshow
     if (G::isSlideShow && !G::isStressTest) slideShow();
@@ -5618,12 +5629,20 @@ void MW::stop(QString src)
     }
 
     if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
+    const qint64 waitMs = waitTimer.elapsed();
 
     // Clean up connections
     for (const auto& c : conns) QObject::disconnect(c);
 
     // reset all parameters
     reset(src);
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] MW::stop  src =" << src
+                           << " busy at entry: MetaRead =" << !wasIdleMetaRead
+                           << " ImageCache =" << !wasIdleImageCache
+                           << " BuildFilters =" << !wasIdleBuildFilters
+                           << " wait =" << waitMs << "ms  reset ="
+                           << waitTimer.elapsed() - waitMs << "ms";
 
     G::log(""); // force show prev G::log in reset()
 
@@ -6321,8 +6340,16 @@ void MW::folderChanged(bool aborted)
         ~FcReport() {
             if (on) qDebug().noquote() << "[PERF] MW::folderChanged TOTAL"
                                        << t->elapsed() << "ms";
+            /*  Once per switch: the clock is invalidated so a later folder load does
+                not report against a stale start. */
+            if (on && sw->isValid()) {
+                qDebug().noquote() << "[PERF] catalog switch click-to-loaded"
+                                   << sw->elapsed() << "ms";
+                sw->invalidate();
+            }
         }
-    } fcReport{&fcT, probeBig};
+        QElapsedTimer *sw;
+    } fcReport{&fcT, probeBig, &catalogSwitchClock};
 
     /*  One fill, one run of the metadata tail. Cleared here because this runs once per
         completed fill and ahead of both the places that call MW::metadataComplete. */
