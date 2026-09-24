@@ -99,6 +99,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Sort Change
      Combine Raw+JPG
      Folder Tree Auto-Refresh
+     Creating a Folder (Folders Context Menu)
      Insertions, Deletions, Modifications
      Instance
 
@@ -175,7 +176,9 @@ Follow the format conventions above for anything new. In particular, do not hard
      Publishing version.json
 
 11. FIND DUPLICATES
-     Candidates (A List) and the Model Mapping
+     Modeless Window
+     Candidates (A List) Snapshot
+     Target Folder Lists (DragToList)
      Targets (B List)
      Comparison and Thumbnail Normalization
      Video Frames (Async Sync)
@@ -1899,6 +1902,17 @@ Note: drive/volume mount/unmount is a separate path (Windows WM_DEVICECHANGE via
 Key files: File/fstree.cpp / File/fstree.h.
 
 
+⏺ DataModel Changes > Creating a Folder (Folders Context Menu)
+
+Right-clicking a folder in the Folders panel (FSTree) offers "Create folder in "<folder>"", placed directly above "Reveal in Finder" / "Open in Explorer". The parent is the folder under the right mouse click (MW::mouseOverFolderPath, set in MW::eventFilter as the context menu opens), not the selected folder.
+
+Flow: createFolderFromContextAction -> MW::createFolderFromContext (Main/fileoperations.cpp) -> FSTree::createFolder(parentFolder). createFolder asks for the name with a QInputDialog (default "untitled folder"). An empty name, "." / "..", a name containing any of / \ : * ? " < > | (illegal on Windows, and / is illegal on macOS, so one rule serves both platforms), or a name that already exists re-opens the dialog with the problem stated above the prompt, keeping what was typed. The folder is made with QDir::mkdir, then refreshModel() runs, the parent is expanded and the new folder is scrolled into view. The new folder is deliberately NOT selected: selecting it would load an empty folder and throw away the current datamodel.
+
+Disabled with a reason: as the menu is built, MW::eventFilter greys the item out and appends the reason to its label when the create cannot succeed -- "(read-only)" when the folder is not writable, "(preview cache folder)" for the Develop preview cache (DevPreviewCache::isCachePath). MW::createFolderFromContext also calls refuseCacheFolder, and FSTree::createFolder re-checks the parent exists and is writable, so a caller that skips the menu gate is still refused. The item is not in the Bookmarks context menu.
+
+Key files: File/fstree.cpp (FSTree::createFolder), Main/fileoperations.cpp (MW::createFolderFromContext), Main/menusandactions.cpp (createFolderFromContextAction, fsTreeActions order, MW::renameCreateFolderAction), Main/mainwindow.cpp (eventFilter enable/rename).
+
+
 ⏺ DataModel Changes > Insertions, Deletions, Modifications
 
   Images inserted:   (TBD)
@@ -3166,28 +3180,46 @@ The deploy scripts publish the descriptor (see packaging/README.md):
 
 *** FIND DUPLICATES ***
 
-FindDuplicatesDlg (`Dialogs/findduplicatesdlg.*`) finds duplicates of a set of candidate images among a set of target images. Launched from MW::findDuplicates, which runs it modally (exec) and, on accept, rebuilds the Compare filter so the flagged duplicates can be shown.
+FindDuplicatesDlg (`Dialogs/findduplicatesdlg.*`) finds duplicates of a set of candidate images among a set of target images. Launched from MW::findDuplicates as a modeless window (see Modeless Window) and, on accept, rebuilds the Compare filter so the flagged duplicates can be shown.
 
 Two columns of data drive everything:
 
-- The candidate "A" list — the images being checked. Held in the datamodel proxy dm->sf, addressed through the aSfRows mapping (see below).
+- The candidate "A" list — the images being checked. A snapshot (aItems) of the selected dm->sf rows taken when the window opens (see below).
 
 - The target "B" list — bItems, built from the include/exclude folders dragged into the dialog. Each B entry caches name, type, createdDate, aspect, duration and a thumbnail (im) for pixel comparison.
 
 
-⏺ Find Duplicates > Candidates (A List) and the Model Mapping
+⏺ Find Duplicates > Modeless Window
 
-Candidates are the SELECTED images in dm->sf, not all filtered images. setupModel() builds aSfRows, a list mapping each candidate index (the loop variable 'a' / the row in the dialog's QStandardItemModel) to its dm->sf proxy row:
+The window is modeless (show(), not exec()) so folders can be dragged into the include/exclude lists from Winnow's own Folders panel (FSTree) as well as from Finder/Explorer. It is parented to MW with Qt::Window, so it is an independent, movable window that stays ABOVE MW — a parentless window drops behind MW the moment a drag starts in FSTree. WA_DeleteOnClose; MW holds it in a QPointer (MW::findDuplicatesDlg) so a second Find Duplicates request raises the open window instead of making another. MW connects QDialog::accepted to the Compare-filter rebuild.
 
-- aSfRows is populated from dm->isSelected(sfRow) over the filtered proxy.
-- If nothing is selected it falls back to all filtered rows, so the dialog is never empty.
+Consequences of being modeless:
 
-Because the candidate list is no longer 1:1 with dm->sf, every candidate access to the datamodel goes through aSfRow(a) (returns -1 when out of range, so an invalid QModelIndex yields safe empty data rather than throwing). The dialog model row and results[a]/matches[a] stay keyed by the candidate index a; dm->sf is reached only via aSfRow(a).
+- Pressing a folder in FSTree to drag it LOADS that folder, so the datamodel can change under the window at any time. Hence the candidate snapshot (next section) and path-based output.
+- The window owns its own Metadata instance (not MW's), because MW may be using its Metadata for a folder load while a search runs here.
+- DragToList (the include/exclude lists) always takes a drop as a CopyAction. FSTree is InternalMove, so it proposes MoveAction, and a view whose drag is accepted as a Move tries to remove what was dragged (compare the IconView drag-deletes bug).
+- Closing mid-search: the search loops pump the event loop, so closeEvent can arrive mid-run. It sets abort + closePending and ignores the close; on_compareBtn_clicked closes once the run unwinds.
+
+
+⏺ Find Duplicates > Candidates (A List) Snapshot
+
+Candidates are the SELECTED images in dm->sf, not all filtered images; if nothing is selected it falls back to all filtered rows, so the dialog is never empty. setupModel() copies everything the comparison needs into aItems (struct A: path, name, created, aspect, video, duration, and the DecorationRole icon as a QImage). The candidate index a is the row in the dialog's QStandardItemModel and keys results[a]/matches[a] and aItems[a]. Nothing in the search reads dm->sf for a candidate, so a folder change in Winnow cannot shift or invalidate the candidates.
+
+
+⏺ Find Duplicates > Target Folder Lists (DragToList)
+
+The include and exclude lists (ui->includeSubfolders / excludeSubfolders) are DragToList, a QListWidget in which every item is an editable folder path with a checkbox (Qt::ItemIsUserCheckable, default unchecked) meaning "and its subfolders"; a grey "*checked includes subfolders" note (subfoldersNoteLbl) sits under the lists, beside Clear Folders. Every item is made by DragToList::newPathItem so the flags cannot drift between routes. Toggling the checkbox fires itemChanged like an edit, so it also raises pathsChanged and clears stale results; the context menu has a matching Include subfolders toggle. Paths get in by drop (FSTree, Finder, Explorer), the Add buttons (addFolders), editing an item (double-click; F2 on Windows, Return on macOS), or appending one (double-click empty space, or right-click > Add folder path). Right-click also has Edit path / Remove path; Delete or Backspace removes the selected paths. The list tooltip says all of this.
+
+- All entry routes go through DragToList::addPath or the edit commit (onItemChanged), which normalize: trim, expand a leading ~, fromNativeSeparators, cleanPath (drops a trailing slash). Normalizing first is what makes the duplicate test reliable.
+- The editor is the default line edit plus a QCompleter over a QFileSystemModel of folders (PathEditDelegate, local to the .cpp).
+- A path that is not an existing folder is kept but drawn red with a "Folder not found" tooltip (a typo, or an unmounted drive); buildBList skips it.
+- Empty and duplicate rows are removed in closeEditor override, i.e. AFTER the editor is gone. Removing a row from inside itemChanged would delete the item the view is still committing to. This also cleans up an append abandoned with Escape.
+- pathsChanged() fires on any drop or edit; the dialog connects it to clear() so stale results are dropped — but not while isRunning, because clear() empties bItems under the running search.
 
 
 ⏺ Find Duplicates > Targets (B List)
 
-buildBList() expands the include folders (optionally recursing subfolders), subtracts the exclude folders, then appends a bItem per supported file found.
+buildBList() expands the include folders, subtracts the exclude folders, then appends a bItem per supported file found. Recursion is PER ROW (DragToList::includesSubfolders(row), the item checkbox) on both sides: an include row checked adds its whole subfolder tree, an exclude row checked removes its whole tree, unchecked means that folder alone. It replaced a single global "Include subfolders" checkbox that applied to every row of both lists at once (the same move the Manage Catalog roots made).
 
 - If no candidate is a video (candidatesHaveVideo() is false, tested via G::VideoColumn), videos are excluded from the targets too — there is no point comparing against video duplicates when no candidate is a video. getMetadataBItems() then fills each bItem's metadata and thumbnail.
 
@@ -3195,6 +3227,8 @@ buildBList() expands the include folders (optionally recursing subfolders), subt
 ⏺ Find Duplicates > Comparison and Thumbnail Normalization
 
 on_compareBtn_clicked() runs the search: clear → buildBList → getMetadataBItems → pixelCompare() (when "same pixels" is checked) or findMatches() (criteria match: name/type/date/aspect/duration). matched candidates are checked in the dialog table.
+
+Both paths skip a target whose path IS the candidate (sameFilePath), so a candidate folder that is also a target does not report every image as its own duplicate. findMatches once had this test inverted (if (!sameFilePath) continue), which skipped every target EXCEPT the candidate itself: criteria searches found nothing in other folders. File name matching compares the full lowercased file name, extension included.
 
 Pixel comparison only makes sense if the two thumbnails share dimensions, so both the candidate (A, from the decoration-role icon) and target (B) thumbnails are run through normalizeBThumb(): scaled to 256 px on the long side (aspect preserved, the same 256 box used to extract the A icon) and converted to QImage::Format_RGB32. For matching-aspect images this yields identical dimensions.
 
@@ -3213,7 +3247,9 @@ The whole search runs synchronously on the GUI thread. The dialog's progress/abo
 
 ⏺ Find Duplicates > Output
 
-on_updateDupsAndQuitBtn_clicked() writes the result back to the datamodel: it first clears G::CompareColumn on ALL dm->sf rows (candidates are only a subset, so a candidate-only pass would leave stale flags), then sets it true for each checked candidate via aSfRow(a), and accepts the dialog. MW::findDuplicates then refreshes the Compare filter.
+on_updateDupsAndQuitBtn_clicked() writes the result back to the datamodel: it first clears G::CompareColumn on ALL dm->sf rows (candidates are only a subset, so a candidate-only pass would leave stale flags), then sets it true for each checked candidate, found by PATH (dm->proxyRowFromPath) because Winnow may have changed folders since the snapshot; candidates no longer loaded are skipped. It then accepts the dialog and MW's accepted handler refreshes the Compare filter.
+
+When NONE of the candidates are loaded any more, updateApplyState() greys the button and puts the reason ("Candidate folder is no longer open in Winnow...") in progressLbl and the tooltip. It is re-checked when the window is activated (changeEvent ActivationChange) and after each search.
 
 
 ⏺ Find Duplicates > Dialog Layout

@@ -650,6 +650,71 @@ void FSTree::refreshModel()
     // select(currentFolderPath());
 }
 
+bool FSTree::createFolder(QString parentFolder)
+{
+/*
+    Create a new subfolder in parentFolder (the folder under the right mouse click when
+    the context menu "Create folder in ..." was triggered). A dialog asks for the new
+    folder name. On success the tree is refreshed, parentFolder is expanded and the new
+    folder is scrolled into view. The new folder is NOT selected, so the datamodel is not
+    reloaded. Returns true if the folder was created.
+*/
+    if (G::isLogger) G::log("FSTree::createFolder", parentFolder);
+
+    QFileInfo parentInfo(parentFolder);
+    QString parentName = parentInfo.fileName();
+    if (parentFolder.isEmpty() || !parentInfo.isDir()) {
+        G::popup->showPopup("Cannot create folder: parent folder not found.", 2000);
+        return false;
+    }
+    if (!parentInfo.isWritable()) {
+        G::popup->showPopup("Cannot create folder: " +
+                            Utilities::enquote(parentName) +
+                            " is read-only.", 2500);
+        return false;
+    }
+
+    QString title = "Create Folder";
+    QString label = "New folder name in " + Utilities::enquote(parentName) + ":";
+    QString name = "untitled folder";
+    while (true) {
+        bool ok = false;
+        name = QInputDialog::getText(this, title, label, QLineEdit::Normal, name, &ok);
+        if (!ok) return false;                  // cancelled
+        name = name.trimmed();
+
+        QString problem;
+        static const QRegularExpression illegal(R"([/\\:*?"<>|])");
+        if (name.isEmpty()) problem = "The folder name cannot be empty.";
+        else if (name == "." || name == "..") problem = "That name is reserved.";
+        else if (name.contains(illegal))
+            problem = "The folder name cannot contain any of  / \\ : * ? \" < > |";
+        else if (QFileInfo::exists(QDir(parentFolder).filePath(name)))
+            problem = Utilities::enquote(name) + " already exists in " +
+                      Utilities::enquote(parentName) + ".";
+        if (problem.isEmpty()) break;
+        // re-ask with the problem shown in the dialog
+        label = problem + "\n\nNew folder name in " +
+                Utilities::enquote(parentName) + ":";
+    }
+
+    QString newPath = QDir(parentFolder).filePath(name);
+    if (!QDir(parentFolder).mkdir(name)) {
+        G::popup->showPopup("Failed to create folder " + Utilities::enquote(newPath), 2500);
+        return false;
+    }
+
+    // show the new folder
+    refreshModel();
+    QModelIndex parentIdx = fsFilter->mapFromSource(fsModel->index(parentFolder));
+    if (parentIdx.isValid()) expand(parentIdx);
+    QModelIndex newIdx = fsFilter->mapFromSource(fsModel->index(newPath));
+    if (newIdx.isValid()) scrollTo(newIdx, QAbstractItemView::EnsureVisible);
+
+    emit status(false, "Created folder " + newPath, "FSTree::createFolder");
+    return true;
+}
+
 bool FSTree::isShowImageCount()
 {
     if (G::isLogger) G::log("FSTree::isShowImageCount");

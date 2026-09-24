@@ -178,6 +178,12 @@ void MW::createFileActions()
     addAction(revealFileActionFromContext);
     connect(revealFileActionFromContext, &QAction::triggered, this, &MW::revealFileFromContext);
 
+    createFolderFromContextAction = new QAction("Create folder", this);
+    createFolderFromContextAction->setObjectName("createFolderFromContext");
+    createFolderFromContextAction->setShortcutVisibleInContextMenu(true);
+    addAction(createFolderFromContextAction);
+    connect(createFolderFromContextAction, &QAction::triggered, this, &MW::createFolderFromContext);
+
     copyFolderPathFromContextAction = new QAction("Copy folder path", this);
     copyFolderPathFromContextAction->setObjectName("copyPathFromContext");
     copyFolderPathFromContextAction->setShortcutVisibleInContextMenu(true);
@@ -2909,6 +2915,7 @@ void MW::createFSTreeContextMenu()
     // fsTreeActions->append(eraseUsbActionFromContextMenu);
     fsTreeActions->append(separatorAction1);
     //    fsTreeActions->append(showImageCountAction);
+    fsTreeActions->append(createFolderFromContextAction);
     fsTreeActions->append(revealFileActionFromContext);
     fsTreeActions->append(copyFolderPathFromContextAction);
     fsTreeActions->append(separatorAction2);
@@ -3205,6 +3212,12 @@ void MW::renameRevealFileAction(QString folderName)
     #endif
     QString txt = "Reveal in " + app + " folder " + Utilities::enquote(folderName) ;
     revealFileActionFromContext->setText(txt);
+}
+
+void MW::renameCreateFolderAction(QString folderName)
+{
+    QString txt = "Create folder in " + Utilities::enquote(folderName);
+    createFolderFromContextAction->setText(txt);
 }
 
 void MW::renameDeleteFolderAction(QString folderName)
