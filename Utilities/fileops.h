@@ -71,6 +71,27 @@ public:
     static bool moveFile(const QString &srcPath, const QString &dstPath);
     static bool trashFile(const QString &fPath);
 
+    /* BATCH TRASH. The same job as trashFile for every path, but priced per file rather
+       than per folder: the folder listing that finds sidecars is made once per folder
+       (not once per image, which made a 7,000 image delete O(N^2)), the Develop flush
+       runs once, and the cache notifications are committed one transaction per chunk.
+       progress(done) is called after each chunk; returning false stops the batch
+       between chunks, and what was trashed so far is still reported. */
+    struct TrashResult {
+        QStringList trashed;        // images that went, in the order given
+        QStringList missing;        // already gone from disk -- issued, not trashed
+        QStringList failed;         // protected, locked, refused -- each already issued
+        bool cancelled = false;
+    };
+    static TrashResult trashFiles(const QStringList &paths,
+                                  const std::function<bool(int done)> &progress = {});
+
+    /* Test seam: what actually moves one file to the trash. Defaults to
+       QFile::moveToTrash; the unit tests point it at a temp folder so the batch can be
+       exercised without filling the user's real Trash. Pass an empty function to
+       restore the default. */
+    static void setTrashHook(std::function<bool(const QString &)> hook);
+
     /* Notifications, for callers that move the bytes themselves. These do NOT touch the
        image or its companions -- they only bring the caches into line. */
     static void onCopied(const QString &srcPath, const QString &dstPath);
@@ -82,6 +103,8 @@ public:
 
 private:
     static std::function<void()> flushHook;
+    static std::function<bool(const QString &)> trashHook;
+    static bool moveOneToTrash(const QString &path);
 };
 
 #endif // FILEOPS_H

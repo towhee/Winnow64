@@ -28,6 +28,7 @@ private slots:
     void doesNotCoverResidentColumns();
     void unwrittenFieldsReadBackAsInvalid();
     void untouchedRowsHaveNoEntry();
+    void compactRekeysSurvivors();
     void valuesRoundTripWithTheirType();
     void ifdOffsetsRoundTripAsAVariantList();
     void iccBuffersAreInternedNotCopiedPerRow();
@@ -114,6 +115,19 @@ void tst_rowscratch::untouchedRowsHaveNoEntry()
 
     s.remove(3);
     QCOMPARE(s.count(), 0);
+    QVERIFY(!s.contains(3));
+}
+
+void tst_rowscratch::compactRekeysSurvivors()
+{
+    ScratchStore s;
+    s.setValue(1, G::OffsetFullColumn, quint32(11));
+    s.setValue(3, G::OffsetFullColumn, quint32(33));
+    s.setValue(4, G::OffsetFullColumn, quint32(44));
+
+    s.compact({0, -1, 1, 2, -1});           // drop rows 1 and 4
+    QCOMPARE(s.count(), 1);
+    QCOMPARE(s.value(2, G::OffsetFullColumn).toUInt(), 33u);
     QVERIFY(!s.contains(3));
 }
 

@@ -673,6 +673,8 @@ public slots:
     void folderAndFileSelectionChange(QString fPath, QString src = "");
     void currentFolderDeletedExternally(QString path);
     void refresh();
+    void refreshAfterRemoval(const QStringList &removed);
+    void refreshViews(QString srcFun);
     void updateImageCount();
     void stop(QString src = "");
     bool reset(QString src = "");

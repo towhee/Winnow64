@@ -1,4 +1,5 @@
 #include "Utilities/fileops.h"
+#include "Cache/cachedb.h"
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
@@ -7,8 +8,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
+#include <QSqlDatabase>
 
 std::function<void()> FileOps::flushHook;
+std::function<bool(const QString &)> FileOps::trashHook;
 
 void FileOps::setFlushHook(std::function<void()> hook)
 {
@@ -26,27 +30,45 @@ const QStringList &FileOps::sidecarSuffixes()
     return suffixes;
 }
 
+namespace {
+
+/* Every sidecar in folder, keyed by lower-cased base name. Only the sidecar suffixes are
+   listed (QDir name filters are case-insensitive, so .XMP from another application still
+   matches), which keeps the listing to the sidecars rather than a stat of every image in
+   the folder. */
+using SidecarIndex = QHash<QString, QStringList>;
+
+SidecarIndex sidecarIndex(const QDir &folder)
+{
+    QStringList filters;
+    for (const QString &suffix : FileOps::sidecarSuffixes()) filters << "*." + suffix;
+    SidecarIndex index;
+    const auto files = folder.entryInfoList(filters, QDir::Files | QDir::Hidden);
+    for (const QFileInfo &f : files) {
+        if (!FileOps::sidecarSuffixes().contains(f.suffix().toLower())) continue;
+        index[f.baseName().toLower()] << f.absoluteFilePath();
+    }
+    return index;
+}
+
+QStringList companionsFrom(const SidecarIndex &index, const QFileInfo &info)
+{
+    const QString base = info.baseName();
+    if (base.isEmpty()) return {};
+    const QString self = info.absoluteFilePath();
+    QStringList result;
+    for (const QString &s : index.value(base.toLower()))
+        if (s != self) result << s;
+    return result;
+}
+
+}  // namespace
+
 QStringList FileOps::companions(const QString &fPath)
 {
-    QStringList result;
-    if (fPath.isEmpty()) return result;
-
+    if (fPath.isEmpty()) return {};
     const QFileInfo info(fPath);
-    const QString base = info.baseName();
-    if (base.isEmpty()) return result;
-
-    /* Scan the folder rather than probing "<base>.xmp" directly so a sidecar written in
-       a different case (.XMP from another application) is still found. */
-    const QDir folder = info.absoluteDir();
-    const QString self = info.absoluteFilePath();
-    const auto files = folder.entryInfoList(QDir::Files | QDir::Hidden);
-    for (const QFileInfo &f : files) {
-        if (f.absoluteFilePath() == self) continue;
-        if (f.baseName().compare(base, Qt::CaseInsensitive) != 0) continue;
-        if (!sidecarSuffixes().contains(f.suffix().toLower())) continue;
-        result << f.absoluteFilePath();
-    }
-    return result;
+    return companionsFrom(sidecarIndex(info.absoluteDir()), info);
 }
 
 namespace {
@@ -139,30 +161,90 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
 bool FileOps::trashFile(const QString &fPath)
 {
     if (G::isLogger) G::log("FileOps::trashFile");
-    if (isProtected(fPath, "FileOps::trashFile")) return false;
+    return trashFiles({fPath}).trashed.size() == 1;
+}
+
+void FileOps::setTrashHook(std::function<bool(const QString &)> hook)
+{
+    trashHook = std::move(hook);
+}
+
+bool FileOps::moveOneToTrash(const QString &path)
+{
+    if (trashHook) return trashHook(path);
+    return QFile::moveToTrash(path);
+}
+
+FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
+                                         const std::function<bool(int)> &progress)
+{
+    if (G::isLogger) G::log("FileOps::trashFiles", QString::number(paths.size()));
+    TrashResult result;
+    if (paths.isEmpty()) return result;
     flushPendingEdits();
 
-    const auto sidecars = companions(fPath);
+    /* Sized so a chunk is a fraction of a second of OS trash calls: often enough for a
+       responsive progress bar and cancel, rarely enough that the per-chunk transaction
+       and repaint are noise. */
+    const int chunkSize = 100;
 
-    QFile image(fPath);
-    if (!image.moveToTrash()) {
-        QString msg = "Unable to move to trash.";
-        G::issue("Warning", msg, "FileOps::trashFile", -1, fPath);
-        return false;
-    }
+    QHash<QString, SidecarIndex> folders;       // folder path -> its sidecars
+    QStringList chunkTrashed;
+    int done = 0;
 
-    /* Only once the image is gone -- a sidecar whose image survived would lose every
-       develop edit for an image still in the folder. */
-    for (const QString &s : sidecars) {
-        QFile f(s);
-        if (f.exists() && !f.moveToTrash()) {
-            QString msg = "Trashed the image but could not trash its sidecar.";
-            G::issue("Warning", msg, "FileOps::trashFile", -1, s);
+    for (const QString &fPath : paths) {
+        const QFileInfo info(fPath);
+        if (isProtected(fPath, "FileOps::trashFiles")) {
+            result.failed << fPath;
+        }
+        else if (!info.exists()) {
+            G::issue("Warning", "File does not exist.", "FileOps::trashFiles", -1, fPath);
+            result.missing << fPath;
+        }
+        else {
+            const QString folder = info.absolutePath();
+            auto it = folders.find(folder);
+            if (it == folders.end())
+                it = folders.insert(folder, sidecarIndex(info.absoluteDir()));
+            const QStringList sidecars = companionsFrom(it.value(), info);
+
+            if (!moveOneToTrash(fPath)) {
+                QString msg = info.isWritable() ? "Unable to move to trash."
+                                                : "File is locked. Unable to move to trash.";
+                G::issue("Warning", msg, "FileOps::trashFiles", -1, fPath);
+                result.failed << fPath;
+            }
+            else {
+                /* Only once the image is gone -- a sidecar whose image survived would
+                   lose every develop edit for an image still in the folder. */
+                for (const QString &s : sidecars) {
+                    if (QFile::exists(s) && !moveOneToTrash(s)) {
+                        QString msg = "Trashed the image but could not trash its sidecar.";
+                        G::issue("Warning", msg, "FileOps::trashFiles", -1, s);
+                    }
+                }
+                chunkTrashed << fPath;
+            }
+        }
+
+        ++done;
+        if (done % chunkSize == 0 || done == paths.size()) {
+            /* One transaction for the chunk's cache rows. The three caches share this
+               thread's CacheDb connection, so their statements all join it. */
+            QSqlDatabase db = CacheDb::instance().db();
+            const bool tx = db.isOpen() && db.transaction();
+            for (const QString &p : std::as_const(chunkTrashed)) onDeleted(p);
+            if (tx) db.commit();
+            result.trashed << chunkTrashed;
+            chunkTrashed.clear();
+
+            if (progress && !progress(done) && done < paths.size()) {
+                result.cancelled = true;
+                break;
+            }
         }
     }
-
-    onDeleted(fPath);
-    return true;
+    return result;
 }
 
 /* ---------------------------------------------------------------------------------

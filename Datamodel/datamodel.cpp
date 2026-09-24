@@ -832,7 +832,7 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
         a handful of rows out of a populated model -- so a folder change, which removes
         thousands, and a teardown, which removes them all, stay silent.
     */
-    if (count < 10 && rowCount() > 100) {
+    if (!mExpectedRemoval && count < 10 && rowCount() > 100) {
         const QString fPath = index(row, 0).data(G::PathRole).toString();
         qWarning().noquote()
             << "ROWLOSS DataModel::removeRows row" << row << "count" << count
@@ -1274,29 +1274,92 @@ void DataModel::remove(QString fPath)
     if (G::isLogger) G::log("DataModel::remove");
     if (isDebug)
         qDebug() << "DataModel::remove" << "instance =" << instance << fPath;
+    removeFiles({fPath});
+}
+
+void DataModel::removeFiles(const QStringList &paths)
+{
+/*
+    Remove the rows for paths (files Winnow itself deleted) in one pass, then rebuild
+    fPathRow, the load-flag counts and the current index ONCE.
+
+    This used to be remove() per file, and each one scanned the model for its row,
+    shifted the store, rebuilt the whole path hash and recounted every load flag, while
+    the proxy and three views each handled a rowsRemoved -- O(N^2) over a 7,000 image
+    delete, and a ROWLOSS warning per row on top.
+
+    A few contiguous runs (the usual shift-click selection) go out as removeRows, which
+    keeps the views' scroll and selection. Many scattered runs are cheaper as a single
+    reset: the stores compact in one pass and the proxy rebuilds once instead of once
+    per run.
+*/
+    if (G::isLogger) G::log("DataModel::removeFiles", QString::number(paths.size()));
 
     // do not use a mutex here  rgh 2025-04-10
 
-    // remove row from datamodel
-    int row;
-    for (row = 0; row < rowCount(); ++row) {
-        QString rowPath = index(row, 0).data(G::PathRole).toString();
-        if (rowPath == fPath) {
-            QModelIndex par = QModelIndex();
-            removeRow(row);
-            break;
-        }
+    QVector<int> rows;
+    rows.reserve(paths.size());
+    for (const QString &fPath : paths) {
+        if (!fPathRowContains(fPath)) continue;
+        const int row = fPathRowValue(fPath);
+        if (row >= 0 && row < rowCount()) rows << row;
     }
+    if (rows.isEmpty()) return;
+    std::sort(rows.begin(), rows.end());
+    rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+
+    // contiguous runs, as (first row, count), ascending
+    QVector<QPair<int,int>> runs;
+    for (int r : std::as_const(rows)) {
+        if (!runs.isEmpty() && runs.last().first + runs.last().second == r)
+            ++runs.last().second;
+        else
+            runs.append({r, 1});
+    }
+
+    G::removingRowsFromDM = true;
+    mExpectedRemoval = true;
+    const int maxRuns = 16;
+    if (runs.size() <= maxRuns) {
+        // descending, so an earlier removal does not shift a later run
+        for (int i = runs.size() - 1; i >= 0; --i)
+            removeRows(runs[i].first, runs[i].second);
+    }
+    else {
+        const int n = rowCount();
+        QVector<int> newRow(n);
+        int next = 0;
+        int k = 0;
+        for (int r = 0; r < n; ++r) {
+            if (k < rows.size() && rows[k] == r) { newRow[r] = -1; ++k; }
+            else newRow[r] = next++;
+        }
+        beginResetModel();
+        rowStore.compact(newRow);
+        scratchStore.compact(newRow);
+        if (!mIssueLists.isEmpty()) {
+            QHash<int, QVariant> remapped;
+            remapped.reserve(mIssueLists.size());
+            for (auto it = mIssueLists.cbegin(); it != mIssueLists.cend(); ++it) {
+                const int r = it.key();
+                if (r >= 0 && r < n && newRow[r] >= 0) remapped.insert(newRow[r], it.value());
+            }
+            mIssueLists.swap(remapped);
+        }
+        endResetModel();
+    }
+    mExpectedRemoval = false;
+    G::removingRowsFromDM = false;
 
     // rebuild fPathRow hash
     rebuildRowFromPathHash();
 
-    // removeRow bypasses setData, so resync the running load-flag counts
+    // removeRows bypasses setData, so resync the running load-flag counts
     recountLoadFlags();
 
     // update current index
-    int last = sf->rowCount() - 1;;
-    currentSfRow <= last ? row = currentSfRow : row = last;
+    int last = sf->rowCount() - 1;
+    int row = currentSfRow <= last ? currentSfRow : last;
     QModelIndex sfIdx = sf->index(row,0);
     setCurrentSF(sfIdx, instance);
 }
@@ -5628,7 +5691,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
                  << folderList;
 
     bool hasChanged = false;
-    QStringList srcImageFiles;
+    QSet<QString> srcImageFiles;    // a set: the removed check looks up every row
 
     // added
     foreach(QString folderPath, folderList) {
@@ -5639,7 +5702,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         d.setFilter(QDir::Files);
         foreach(QFileInfo info, d.entryInfoList()) {
             QString fPath = info.filePath();
-            srcImageFiles << fPath;
+            srcImageFiles.insert(fPath);
             // in datamodel?
             if (!fPathRowContains(fPath)) {
                 added << fPath;

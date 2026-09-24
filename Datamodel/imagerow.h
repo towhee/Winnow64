@@ -277,6 +277,22 @@ public:
         count = qMin(count, mRows.size() - at);
         mRows.remove(at, count);
     }
+    /*  Many scattered removals in ONE pass. newRow[old] is the row's new index,
+        or -1 when it goes; kept rows keep their order, so newRow is ascending
+        over the survivors. A per-run removeRows would shift the tail once per
+        run -- quadratic for a scattered selection of thousands. */
+    void compact(const QVector<int> &newRow)
+    {
+        QWriteLocker l(&mLock);
+        if (newRow.size() != mRows.size()) return;
+        int kept = 0;
+        for (int r = 0; r < mRows.size(); ++r) {
+            if (newRow[r] < 0) continue;
+            if (kept != r) mRows[kept] = std::move(mRows[r]);
+            ++kept;
+        }
+        mRows.resize(kept);
+    }
     int  size() const { QReadLocker l(&mLock); return mRows.size(); }
     bool contains(int row) const
     {

@@ -15,7 +15,8 @@
     Develop recipe. Before FileOps that pairing was reimplemented four different ways and
     they disagreed; these tests pin the one definition.
 
-    trashFile is deliberately not exercised: it would put files in the user's real Trash.
+    The trash tests point FileOps::setTrashHook at a temp folder; nothing here may reach
+    the user's real Trash.
 */
 class tst_fileops : public QObject
 {
@@ -32,6 +33,9 @@ private slots:
     void copyRenamesCompanionsToDestinationBase();
     void moveCarriesCompanionsAndPreview();
     void refusesToWriteInThePreviewCacheFolder();
+    void trashFilesCarriesSidecarsNotPairs();
+    void trashFilesSortsMissingAndProtected();
+    void trashFilesCancelsBetweenChunks();
 
 private:
     QString p(const QString &name) const;
@@ -39,6 +43,8 @@ private:
 
     QTemporaryDir tmp;
     QTemporaryDir cacheTmp;
+    QTemporaryDir trashTmp;         // the fake Trash the trash hook moves into
+    void useFakeTrash();
 };
 
 QString tst_fileops::p(const QString &name) const
@@ -61,8 +67,20 @@ void tst_fileops::initTestCase()
     QStandardPaths::setTestModeEnabled(true);
 }
 
+void tst_fileops::useFakeTrash()
+{
+    QVERIFY(trashTmp.isValid());
+    QDir t(trashTmp.path());
+    for (const QString &f : t.entryList(QDir::Files | QDir::Hidden)) t.remove(f);
+    const QString dir = trashTmp.path();
+    FileOps::setTrashHook([dir](const QString &path) {
+        return QFile::rename(path, QDir(dir).absoluteFilePath(QFileInfo(path).fileName()));
+    });
+}
+
 void tst_fileops::cleanupTestCase()
 {
+    FileOps::setTrashHook({});
     /* Release the index database before QTemporaryDir removes the directory under it. */
     CacheDb::instance().closeThisThread();
 }
@@ -229,6 +247,80 @@ void tst_fileops::refusesToWriteInThePreviewCacheFolder()
     // and the cache file is not trashed (the one trashFile case safe to run: it refuses)
     QVERIFY(!FileOps::trashFile(cached));
     QVERIFY(QFile::exists(cached));
+}
+
+void tst_fileops::trashFilesCarriesSidecarsNotPairs()
+{
+/*
+    The batch path indexes each folder's sidecars once instead of listing the folder per
+    image. It must still find mixed-case sidecars, and it must still leave a raw+jpg
+    pair's JPG alone. 250 images spans three chunks.
+*/
+    useFakeTrash();
+    QStringList paths;
+    for (int i = 0; i < 250; ++i) {
+        const QString base = QString("IMG_%1").arg(i, 4, 10, QChar('0'));
+        touch(base + ".NEF");
+        touch(base + (i % 2 ? ".XMP" : ".xmp"));
+        if (i % 10 == 0) touch(base + ".txt");
+        paths << p(base + ".NEF");
+    }
+    touch("IMG_0000.JPG");      // the pair of IMG_0000.NEF: must survive
+
+    int calls = 0;
+    const FileOps::TrashResult r = FileOps::trashFiles(paths, [&](int) { ++calls; return true; });
+
+    QCOMPARE(r.trashed.size(), 250);
+    QVERIFY(r.failed.isEmpty());
+    QVERIFY(r.missing.isEmpty());
+    QVERIFY(!r.cancelled);
+    QCOMPARE(calls, 3);
+    const QStringList left = QDir(tmp.path()).entryList(QDir::Files | QDir::Hidden);
+    QCOMPARE(left, QStringList{"IMG_0000.JPG"});
+    QCOMPARE(QDir(trashTmp.path()).entryList(QDir::Files).size(), 250 + 250 + 25);
+}
+
+void tst_fileops::trashFilesSortsMissingAndProtected()
+{
+    useFakeTrash();
+    touch("DSC_070.NEF");
+    const QString cached = QDir(cacheTmp.path()).absoluteFilePath("0000002.jpg");
+    QFile f(cached);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("preview");
+    f.close();
+
+    const FileOps::TrashResult r =
+        FileOps::trashFiles({p("DSC_070.NEF"), p("gone.NEF"), cached});
+
+    QCOMPARE(r.trashed, QStringList{p("DSC_070.NEF")});
+    QCOMPARE(r.missing, QStringList{p("gone.NEF")});
+    QCOMPARE(r.failed, QStringList{cached});
+    QVERIFY(QFile::exists(cached));
+}
+
+void tst_fileops::trashFilesCancelsBetweenChunks()
+{
+/*
+    Cancel stops between chunks, and the result names exactly what went -- MW removes
+    those rows, so the model must match the disk.
+*/
+    useFakeTrash();
+    QStringList paths;
+    for (int i = 0; i < 350; ++i) {
+        const QString name = QString("C_%1.JPG").arg(i, 4, 10, QChar('0'));
+        touch(name);
+        paths << p(name);
+    }
+
+    const FileOps::TrashResult r =
+        FileOps::trashFiles(paths, [](int done) { return done < 200; });
+
+    QVERIFY(r.cancelled);
+    QCOMPARE(r.trashed.size(), 200);
+    QCOMPARE(r.trashed, paths.mid(0, 200));
+    for (const QString &t : r.trashed) QVERIFY(!QFile::exists(t));
+    for (const QString &k : paths.mid(200)) QVERIFY(QFile::exists(k));
 }
 
 QTEST_MAIN(tst_fileops)

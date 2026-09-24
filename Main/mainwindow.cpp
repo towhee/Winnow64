@@ -5451,8 +5451,30 @@ void MW::refresh()
     fsTree->updateCount();
     bookmarks->updateCount();
     dm->refresh();
+    refreshViews(srcFun);
+}
 
+void MW::refreshAfterRemoval(const QStringList &removed)
+{
+/*
+    MW::refresh for files Winnow itself just removed from disk (MW::deleteFiles). The
+    removed rows are known, so the datamodel drops them directly instead of re-listing
+    every folder and statting every row to rediscover them.
+*/
+    QString srcFun = "MW::refreshAfterRemoval";
+    if (G::isLogger) G::log(srcFun);
+    fsTree->updateCount();
+    bookmarks->updateCount();
+    dm->removeFiles(removed);
+    refreshViews(srcFun);
+}
 
+void MW::refreshViews(QString srcFun)
+{
+/*
+    The second half of MW::refresh: bring filters, proxy, ImageCache and views into line
+    with a datamodel that has just gained or lost rows.
+*/
     if (!dm->sf->rowCount()) {
         buildFilters->rebuild();
     }

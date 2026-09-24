@@ -198,6 +198,20 @@ public:
         }
         mRows.swap(next);
     }
+    /*  RowStore::compact's twin: newRow[old] is the new key, -1 drops it. */
+    void compact(const QVector<int> &newRow)
+    {
+        QWriteLocker l(&mLock);
+        if (mRows.isEmpty()) return;
+        QHash<int, RowScratch> next;
+        next.reserve(mRows.size());
+        for (auto it = mRows.cbegin(); it != mRows.cend(); ++it) {
+            const int r = it.key();
+            if (r < 0 || r >= newRow.size() || newRow[r] < 0) continue;
+            next.insert(newRow[r], it.value());
+        }
+        mRows.swap(next);
+    }
 
     /*  Test/report accessors. Not locked and not for the workers -- they exist
         so tst_rowscratch can assert that a shared ICC profile interned to one
