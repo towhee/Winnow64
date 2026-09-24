@@ -572,6 +572,18 @@ void MW::currentFolderDeletedExternally(QString path)
     fsTree->setCurrentIndex(QModelIndex());
 }
 
+void MW::createFolderFromContext()
+{
+/*
+    Context menu "Create folder in <folder>" in the Folders panel (FSTree). The parent is
+    the folder under the right mouse click (mouseOverFolderPath, set in MW::eventFilter).
+*/
+    if (G::isLogger) G::log("MW::createFolderFromContext", mouseOverFolderPath);
+    if (mouseOverFolderPath.isEmpty()) return;
+    if (refuseCacheFolder(mouseOverFolderPath)) return;
+    fsTree->createFolder(mouseOverFolderPath);
+}
+
 void MW::deleteFolder()
 {
     if (G::isLogger)

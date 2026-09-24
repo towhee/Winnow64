@@ -2343,6 +2343,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                deliberately absent from MW::enableSelectionDependentMenus. */
             copyFolderPathFromContextAction->setEnabled(true);
             revealFileActionFromContext->setEnabled(true);
+            createFolderFromContextAction->setEnabled(true);
             deleteFSTreeFolderAction->setEnabled(true);
             eraseUsbActionFromContextMenu->setEnabled(true);
             ejectActionFromContextMenu->setEnabled(true);
@@ -2407,6 +2408,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (mouseOverFolderPath == "") {
                 copyFolderPathFromContextAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                createFolderFromContextAction->setEnabled(false);
                 deleteFSTreeFolderAction->setEnabled(false);
                 eraseUsbActionFromContextMenu->setEnabled(false);
                 ejectActionFromContextMenu->setEnabled(false);
@@ -2418,12 +2420,26 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (folderName.length()) {
                 renameCopyFolderPathAction(folderName);
                 renameRevealFileAction(folderName);
+                renameCreateFolderAction(folderName);
                 renameDeleteFolderAction(folderName);
                 renameEraseMemCardFromContextMenu(mouseOverFolderPath);
                 renameEjectUsbMenu(mouseOverFolderPath);
                 renamePasteFilesAction(folderName);
                 renameAddBookmarkAction(folderName);
                 renameRemoveBookmarkAction(folderName);
+
+                // grey out "Create folder in" with the reason when it cannot succeed
+                QString noCreateReason;
+                if (DevPreviewCache::instance().isCachePath(mouseOverFolderPath))
+                    noCreateReason = "preview cache folder";
+                else if (!QFileInfo(mouseOverFolderPath).isWritable())
+                    noCreateReason = "read-only";
+                if (!noCreateReason.isEmpty()) {
+                    createFolderFromContextAction->setEnabled(false);
+                    createFolderFromContextAction->setText(
+                        "Create folder in " + Utilities::enquote(folderName) +
+                        "  (" + noCreateReason + ")");
+                }
             }
 
             /* PROBE copy-path (temporary) */
@@ -14563,19 +14579,24 @@ void MW::findDuplicates()
 {
     QString srcFun = "MW::findDuplicate";
     if (G::isLogger) G::log(srcFun);
-    FindDuplicatesDlg *findDuplicatesDlg = new FindDuplicatesDlg(nullptr, dm, metadata);
-    findDuplicatesDlg->setStyleSheet(G::css);
-    // minimize dialog size fitting contents
-    // findDuplicatesDlg->resize(100, 100);
-    if (findDuplicatesDlg->exec()) {
-        qDebug() << srcFun << "accepted";
+    /* Modeless, so folders can be dragged in from FSTree while it is open. Only one:
+       a second request brings the open window forward. */
+    if (findDuplicatesDlg) {
+        findDuplicatesDlg->show();
+        findDuplicatesDlg->raise();
+        findDuplicatesDlg->activateWindow();
+        return;
+    }
+    findDuplicatesDlg = new FindDuplicatesDlg(this, dm);   // WA_DeleteOnClose
+    connect(findDuplicatesDlg, &QDialog::accepted, this, [this, srcFun]() {
         // add true to compare filter
         /*  runSync: filterChange follows, and an async category rebuild racing it is a
             use-after-free -- see the contract in BuildFilters::updateCategory. */
         buildFilters->updateCategory(BuildFilters::CompareEdit, BuildFilters::NoAfterAction,
                                      /*runSync*/ true);
         filterChange(srcFun);
-    }
+    });
+    findDuplicatesDlg->show();
 }
 
 void MW::help()

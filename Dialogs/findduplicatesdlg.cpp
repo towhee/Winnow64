@@ -1,4 +1,4 @@
-#include "Dialogs/FindDuplicatesDlg.h"
+#include "Dialogs/findduplicatesdlg.h"
 #include "ui_findduplicatesdlg.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
@@ -9,12 +9,218 @@
 
 /*******************************************************************************************/
 
+/*
+    DragToList: the include / exclude folder lists.
+
+    Every item is an editable folder path with a checkbox: checked = include the
+    folder's whole subfolder tree, unchecked = that folder only. Paths get in four ways: dropped (FSTree,
+    Finder, Explorer), the Add buttons, editing an item (double-click, F2 / Return),
+    or appending one (double-click empty space, or the context menu). The editor
+    autocompletes folder paths.
+
+    An edited path is normalized (~ expanded, native separators, no trailing slash) and
+    shown in red when the folder does not exist. When the editor closes, empty and
+    duplicate rows are removed, so an abandoned append leaves nothing behind.
+    pathsChanged() fires whenever the list content changes by drop or edit.
+*/
+
+namespace {
+class PathEditDelegate : public QStyledItemDelegate
+{
+/*
+    The default line edit, plus a completer over the folders in the file system.
+*/
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const override
+    {
+        QWidget *editor = QStyledItemDelegate::createEditor(parent, option, index);
+        if (QLineEdit *lineEdit = qobject_cast<QLineEdit*>(editor)) {
+            QFileSystemModel *fsModel = new QFileSystemModel(lineEdit);
+            fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Drives);
+            fsModel->setRootPath(QString());
+            QCompleter *completer = new QCompleter(fsModel, lineEdit);
+            #ifdef Q_OS_WIN
+            completer->setCaseSensitivity(Qt::CaseInsensitive);
+            #endif
+            lineEdit->setCompleter(completer);
+            lineEdit->setPlaceholderText("Type a folder path");
+        }
+        return editor;
+    }
+};
+} // namespace
+
 DragToList::DragToList(QWidget *parent) :
     QListWidget(parent)
 {
     setAcceptDrops(true);
     setDragEnabled(false);
     setDragDropMode(QAbstractItemView::DropOnly);
+    setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
+    setItemDelegate(new PathEditDelegate(this));
+    setToolTip("Drag folders here, or double-click empty space to type a path.\n"
+               "Check a folder to include its subfolders too.\n"
+               "Double-click a path to edit it. Delete removes the selected path.\n"
+               "Right-click for more.");
+    connect(this, &QListWidget::itemChanged, this, &DragToList::onItemChanged);
+}
+
+QString DragToList::normalizePath(QString path)
+{
+    path = path.trimmed();
+    if (path.isEmpty()) return path;
+    if (path == "~" || path.startsWith("~/")) path = QDir::homePath() + path.mid(1);
+    return QDir::cleanPath(QDir::fromNativeSeparators(path));  // also drops a trailing /
+}
+
+QListWidgetItem *DragToList::newPathItem(const QString &path)
+{
+    // editable path + "include subfolders" checkbox (off: that folder only)
+    QListWidgetItem *item = new QListWidgetItem(path);
+    item->setFlags(item->flags() | Qt::ItemIsEditable | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    return item;
+}
+
+bool DragToList::includesSubfolders(int row) const
+{
+    QListWidgetItem *it = item(row);
+    return it && it->checkState() == Qt::Checked;
+}
+
+void DragToList::markValidity(QListWidgetItem *item)
+{
+    // red text + tooltip for a folder that does not exist (a typo, or an unmounted drive)
+    QSignalBlocker blocker(this);
+    if (QFileInfo(item->text()).isDir()) {
+        item->setData(Qt::ForegroundRole, QVariant());
+        item->setToolTip(item->text());
+    }
+    else {
+        item->setForeground(QColor("#E57373"));
+        item->setToolTip("Folder not found: " + item->text());
+    }
+}
+
+bool DragToList::addPath(const QString &path)
+{
+/*
+    Append path as an editable item. Returns false if it is empty or already listed.
+*/
+    QString p = normalizePath(path);
+    if (p.isEmpty() || !findItems(p, Qt::MatchExactly).isEmpty()) return false;
+    QListWidgetItem *item = newPathItem(p);
+    {
+        QSignalBlocker blocker(this);
+        addItem(item);
+    }
+    markValidity(item);
+    return true;
+}
+
+void DragToList::appendNew()
+{
+    // an empty row with its editor open; removed in closeEditor if left empty
+    QListWidgetItem *item = newPathItem(QString());
+    {
+        QSignalBlocker blocker(this);
+        addItem(item);
+    }
+    setCurrentItem(item);
+    scrollToItem(item);
+    editItem(item);
+}
+
+void DragToList::onItemChanged(QListWidgetItem *item)
+{
+    // an edit was committed, or the subfolders checkbox toggled
+    QString p = normalizePath(item->text());
+    if (p != item->text()) {
+        QSignalBlocker blocker(this);
+        item->setText(p);
+    }
+    markValidity(item);
+    emit pathsChanged();
+}
+
+bool DragToList::removeEmptyAndDuplicates()
+{
+    bool removed = false;
+    for (int i = count() - 1; i >= 0; i--) {
+        // walk from the end so the FIRST occurrence of a path is the one kept
+        QString p = item(i)->text();
+        bool isDup = false;
+        for (int j = 0; j < i; j++) {
+            if (item(j)->text() == p) { isDup = true; break; }
+        }
+        if (p.isEmpty() || isDup) {
+            delete takeItem(i);
+            removed = true;
+        }
+    }
+    return removed;
+}
+
+void DragToList::closeEditor(QWidget *editor, QAbstractItemDelegate::EndEditHint hint)
+{
+    // after the editor is gone it is safe to remove rows (commit or escape)
+    QListWidget::closeEditor(editor, hint);
+    if (removeEmptyAndDuplicates()) emit pathsChanged();
+}
+
+void DragToList::keyPressEvent(QKeyEvent *event)
+{
+    // Delete / Backspace removes the selected paths (the editor, when open, gets keys first)
+    if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) {
+        const QList<QListWidgetItem*> items = selectedItems();
+        if (!items.isEmpty()) {
+            qDeleteAll(items);
+            emit pathsChanged();
+        }
+        event->accept();
+        return;
+    }
+    QListWidget::keyPressEvent(event);
+}
+
+void DragToList::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    // double-click on a path edits it (edit trigger); on empty space appends a new one
+    if (!itemAt(event->pos())) {
+        appendNew();
+        event->accept();
+        return;
+    }
+    QListWidget::mouseDoubleClickEvent(event);
+}
+
+void DragToList::contextMenuEvent(QContextMenuEvent *event)
+{
+    QListWidgetItem *item = itemAt(event->pos());
+    QMenu menu(this);
+    QAction *addAction = menu.addAction("Add folder path");
+    QAction *editAction = menu.addAction("Edit path");
+    QAction *removeAction = menu.addAction("Remove path");
+    menu.addSeparator();
+    QAction *subAction = menu.addAction("Include subfolders");
+    subAction->setCheckable(true);
+    subAction->setChecked(item && item->checkState() == Qt::Checked);
+    editAction->setEnabled(item);
+    removeAction->setEnabled(item);
+    subAction->setEnabled(item);
+    QAction *chosen = menu.exec(event->globalPos());
+    if (chosen == addAction) appendNew();
+    else if (chosen == subAction) {
+        // itemChanged -> onItemChanged -> pathsChanged
+        item->setCheckState(subAction->isChecked() ? Qt::Checked : Qt::Unchecked);
+    }
+    else if (chosen == editAction) editItem(item);
+    else if (chosen == removeAction) {
+        delete item;
+        emit pathsChanged();
+    }
 }
 
 void DragToList::showEvent(QShowEvent *event)
@@ -31,34 +237,44 @@ void DragToList::showEvent(QShowEvent *event)
 
 void DragToList::dragEnterEvent(QDragEnterEvent *event)
 {
-    // qDebug() << "DragToList::dragEnterEvent" << event;
-    event->acceptProposedAction();
+/*
+    Folders arrive from FSTree (InternalMove, so it proposes a MoveAction) or from the
+    OS file manager. Always take them as a Copy: accepting a Move tells the source view
+    to remove what was dragged.
+*/
+    if (event->mimeData()->hasUrls()) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
+    }
+    else event->ignore();
 }
 
 void DragToList::dragMoveEvent(QDragMoveEvent *event)
 {
-    if (event->mimeData()->hasUrls()) {  // Check if the drag event contains URLs
-        event->acceptProposedAction();   // Accept the proposed action (copy or move)
-    } else {
-        event->ignore();  // Ignore the event if it doesn't contain URLs
+    if (event->mimeData()->hasUrls()) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
     }
+    else event->ignore();
 }
 
 void DragToList::dropEvent(QDropEvent *event)
 {
     // qDebug() << "DragToList::dropEvent" << event;
-    if (event->mimeData()->hasUrls()) {
-        QList<QUrl> urls = event->mimeData()->urls();
-        for (QList<QUrl>::Iterator i = urls.begin(); i != urls.end(); ++i) {
-            QFileInfo fInfo = QFileInfo(i->toLocalFile());
-            if (fInfo.isDir()) {
-                QString path = i->toLocalFile(); // Get the full path of the file or folder
-                addItem(path);
-            }
-        }
-        event->acceptProposedAction();
-        emit dropped();
+    if (!event->mimeData()->hasUrls()) {
+        event->ignore();
+        return;
     }
+    const QList<QUrl> urls = event->mimeData()->urls();
+    bool added = false;
+    for (const QUrl &url : urls) {
+        QString path = url.toLocalFile();
+        if (!QFileInfo(path).isDir()) continue;
+        if (addPath(path)) added = true;    // skips folders already listed
+    }
+    event->setDropAction(Qt::CopyAction);
+    event->accept();
+    if (added) emit pathsChanged();
 }
 
 /*******************************************************************************************
@@ -81,12 +297,19 @@ Comparison terms:
 
 */
 
-FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *metadata) :
+FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm) :
     QDialog(parent),
     ui(new Ui::FindDuplicatesDlg),
-    dm(dm),
-    metadata(metadata)
+    dm(dm)
 {
+    /* Modeless, independent window so folders can be dragged in from FSTree while it
+       is open. Parented to MW so it stays above it (a parentless window drops behind
+       MW as soon as the drag starts). */
+    setWindowFlag(Qt::Window);
+    setModal(false);
+    setAttribute(Qt::WA_DeleteOnClose);
+
+    metadata = new Metadata(this);
     frameDecoder = new FrameDecoder;
     pixmap = new Pixmap(this, dm, metadata);
     connect(frameDecoder, &FrameDecoder::frameImage, this, &FindDuplicatesDlg::setImageFromVideoFrame);
@@ -135,6 +358,14 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm, Metadata *m
     // set enabled states
     on_samePixelsCB_clicked();
 
+    // a changed target list makes any results stale (not mid-run: clear() empties bItems)
+    connect(ui->includeSubfolders, &DragToList::pathsChanged, this, [this]() {
+        if (!isRunning) clear();
+    });
+    connect(ui->excludeSubfolders, &DragToList::pathsChanged, this, [this]() {
+        if (!isRunning) clear();
+    });
+
     clear();
 
     setupModel();
@@ -154,14 +385,59 @@ FindDuplicatesDlg::~FindDuplicatesDlg()
     // pixmap is parented to this dialog and deleted by Qt
 }
 
-int FindDuplicatesDlg::aSfRow(int a) const
+int FindDuplicatesDlg::candidatesInDataModel() const
 {
 /*
-    Maps a candidate index (model row / loop variable 'a') to its dm->sf proxy
-    row. Returns -1 when out of range so dm->sf->index(-1, ...) yields an invalid
-    index (safe empty data) rather than throwing.
+    How many candidates are still in the datamodel. Winnow may have moved to another
+    folder since the window opened (pressing a folder in FSTree to drag it loads it),
+    in which case the duplicate flags have nowhere to go.
 */
-    return aSfRows.value(a, -1);
+    int n = 0;
+    for (const A &item : aItems) {
+        if (dm->proxyRowFromPath(item.path) >= 0) n++;
+    }
+    return n;
+}
+
+void FindDuplicatesDlg::updateApplyState()
+{
+/*
+    Grey "Update duplicates" with the reason when none of the candidates are loaded in
+    Winnow any more.
+*/
+    if (isRunning) return;
+    bool ok = candidatesInDataModel() > 0;
+    ui->updateDupsAndQuitBtn->setEnabled(ok);
+    QString reason = "Candidate folder is no longer open in Winnow. "
+                     "Reopen it to update duplicates.";
+    ui->updateDupsAndQuitBtn->setToolTip(ok ? "" : reason);
+    if (!ok) ui->progressLbl->setText(reason);
+    else if (ui->progressLbl->text() == reason) ui->progressLbl->setText("");
+}
+
+void FindDuplicatesDlg::changeEvent(QEvent *event)
+{
+    // re-check on return to the window: the datamodel may have changed meanwhile
+    if (event->type() == QEvent::ActivationChange && isActiveWindow()) {
+        updateApplyState();
+    }
+    QDialog::changeEvent(event);
+}
+
+void FindDuplicatesDlg::closeEvent(QCloseEvent *event)
+{
+/*
+    The search loops pump the event loop, so the window can be closed mid-run. Deleting
+    it then would pull the dialog out from under the running loop: abort instead, and
+    close when on_compareBtn_clicked unwinds.
+*/
+    if (isRunning) {
+        abort = true;
+        closePending = true;
+        event->ignore();
+        return;
+    }
+    QDialog::closeEvent(event);
 }
 
 bool FindDuplicatesDlg::candidatesHaveVideo() const
@@ -169,26 +445,39 @@ bool FindDuplicatesDlg::candidatesHaveVideo() const
 /*
     True if any candidate (selected image) is a video.
 */
-    for (int a = 0; a < aSfRows.count(); a++) {
-        if (dm->sf->index(aSfRow(a), G::VideoColumn).data().toBool()) return true;
+    for (int a = 0; a < aItems.count(); a++) {
+        if (aItems.at(a).video) return true;
     }
     return false;
 }
 
 void FindDuplicatesDlg::setupModel()
 {
-    /* Only selected images are candidates. Build the candidate -> dm->sf proxy
-       row mapping; if nothing is selected, fall back to all rows so the dialog
-       still has something to work with. */
-    aSfRows.clear();
+    /* Only selected images are candidates; if nothing is selected, fall back to all
+       rows so the dialog still has something to work with. Snapshot everything the
+       comparison needs (see struct A). */
+    QList<int> sfRows;
     for (int sfRow = 0; sfRow < dm->sf->rowCount(); sfRow++) {
-        if (dm->isSelected(sfRow)) aSfRows << sfRow;
+        if (dm->isSelected(sfRow)) sfRows << sfRow;
     }
-    if (aSfRows.isEmpty()) {
-        for (int sfRow = 0; sfRow < dm->sf->rowCount(); sfRow++) aSfRows << sfRow;
+    if (sfRows.isEmpty()) {
+        for (int sfRow = 0; sfRow < dm->sf->rowCount(); sfRow++) sfRows << sfRow;
+    }
+    aItems.clear();
+    for (int sfRow : std::as_const(sfRows)) {
+        A item;
+        item.path = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+        item.name = dm->sf->index(sfRow, G::NameColumn).data().toString();
+        item.created = dm->sf->index(sfRow, G::CreatedColumn).data().toString();
+        item.aspect = dm->sf->index(sfRow, G::AspectRatioColumn).data().toDouble();
+        item.video = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
+        item.duration = dm->sf->index(sfRow, G::DurationColumn).data().toString();
+        QIcon icon = dm->sf->index(sfRow, 0).data(Qt::DecorationRole).value<QIcon>();
+        item.icon = icon.pixmap(icon.actualSize(QSize(256, 256))).toImage();
+        aItems << item;
     }
 
-    model.setRowCount(aSfRows.count());
+    model.setRowCount(aItems.count());
     model.setColumnCount(5);
     // optional way to set header alignment
     QStandardItem *iconItem = new QStandardItem("Icon");
@@ -202,18 +491,16 @@ void FindDuplicatesDlg::setupModel()
     model.setHorizontalHeaderItem(4, new QStandardItem("  File Name"));
 
     // populate model
-    for (int a = 0; a < aSfRows.count(); a++) {
+    for (int a = 0; a < aItems.count(); a++) {
         QVariant dupCount = 0;
         //model.setData(model.index(a,0), 0);
         // add checkbox
         model.itemFromIndex(model.index(a,0))->setCheckable(true);
         // add pixmap
-        QVariant var = dm->sf->index(aSfRow(a),0).data(Qt::DecorationRole);
-        QIcon icon = var.value<QIcon>();
-        QPixmap pm = icon.pixmap(icon.actualSize(QSize(256, 256))).scaled(48, 48, Qt::KeepAspectRatio);
+        QPixmap pm = QPixmap::fromImage(aItems.at(a).icon).scaled(48, 48, Qt::KeepAspectRatio);
         model.setData(model.index(a,3), pm, Qt::DecorationRole);
         // add file name
-        QString fName = dm->sf->index(aSfRow(a),G::NameColumn).data().toString();
+        QString fName = aItems.at(a).name;
         model.setData(model.index(a,4), fName);
     }
 
@@ -438,19 +725,17 @@ void FindDuplicatesDlg::pixelCompare()
     matches hash.
 */
     initializeResultsVector();
-    quint64 totIterations = aSfRows.count() * bItems.count();
+    quint64 totIterations = aItems.count() * bItems.count();
     ui->progressLbl->setText("Searching for duplicates in " + QString::number(totIterations) + " combinations");
     // iterate filtered datamodel
     int counter = 0;
     int lastPct = -1;   // last progress percent painted (UI-update throttle)
-    for (int a = 0; a < aSfRows.count(); a++) {
-        QString aPath = dm->sf->index(aSfRow(a),0).data(G::PathRole).toString();
-        QString aFName = dm->sf->index(aSfRow(a),G::NameColumn).data().toString();
+    for (int a = 0; a < aItems.count(); a++) {
+        QString aPath = aItems.at(a).path;
+        QString aFName = aItems.at(a).name;
 
         // candidate thumbnail, normalized to the same size/format as the targets
-        QVariant var = dm->sf->index(aSfRow(a),0).data(Qt::DecorationRole);
-        QIcon icon = var.value<QIcon>();
-        QImage imA = normalizeBThumb(icon.pixmap(icon.actualSize(QSize(256, 256))).toImage());
+        QImage imA = normalizeBThumb(aItems.at(a).icon);
 
         // compare candidate to each thumbnail in bList
         for (int b = 0; b < bItems.size(); b++) {
@@ -459,6 +744,13 @@ void FindDuplicatesDlg::pixelCompare()
                 clear();
                 return;
             }
+            // do not report the candidate as a duplicate of itself
+            if (sameFilePath(a, b)) {
+                results[a][b].match = false;
+                counter++;
+                continue;
+            }
+
             // getMetadataBItems has loaded thumbnails into bItems
             QImage imB = bItems.at(b).im;
             QString bPath = bItems.at(b).fPath;
@@ -631,7 +923,7 @@ void FindDuplicatesDlg::initializeResultsVector()
     a search for matches is run.
 */
     results.clear();
-    results.resize(aSfRows.count());
+    results.resize(aItems.count());
     for (auto& vec : results) {
         vec.resize(bItems.count());
     }
@@ -685,9 +977,7 @@ void FindDuplicatesDlg::addFolders(DragToList *list, const QString &title)
     QStringList folders = chooseFolders(title);
     if (folders.isEmpty()) return;
     foreach (const QString &folder, folders) {
-        if (list->findItems(folder, Qt::MatchExactly).isEmpty()) {
-            list->addItem(folder);
-        }
+        list->addPath(folder);      // skips folders already listed
     }
     clear();
 }
@@ -871,8 +1161,9 @@ void FindDuplicatesDlg::buildBList()
         if (!root.isEmpty() && root[root.length()-1] == '/') {
             root.chop(1);
         }
+        if (!QFileInfo(root).isDir()) continue;     // typed path that does not exist
         bFolderPaths << root;
-        if (ui->includeSubfoldersCB->isChecked()) {
+        if (ui->includeSubfolders->includesSubfolders(cF)) {
             QDirIterator it(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
             while (it.hasNext()) {
                 it.next();
@@ -893,7 +1184,7 @@ void FindDuplicatesDlg::buildBList()
             root.chop(1);
         }
         bExcludeFolderPaths << root;
-        if (ui->includeSubfoldersCB->isChecked()) {
+        if (ui->excludeSubfolders->includesSubfolders(cF)) {
             QDirIterator it(root, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
             while (it.hasNext()) {
                 it.next();
@@ -951,10 +1242,10 @@ bool FindDuplicatesDlg::sameFilePath(int a, int b)
     Compare candidate / target image file path and return result.  This is used
     to prevent including the candidate file as a duplicate result.
 */
-    QString pathA = dm->sf->index(aSfRow(a), G::PathColumn).data(G::PathRole).toString().toLower();
+    QString pathA = aItems.at(a).path.toLower();
     QString pathB = bItems.at(b).fPath.toLower();
     bool isSame = (pathA == pathB);
-    // if (isDebug)
+    if (isDebug)
         qDebug() << "FilePath     a =" << a << pathA << "b =" << b << pathB << "isSame" << isSame;
     return isSame;
 }
@@ -964,7 +1255,7 @@ bool FindDuplicatesDlg::sameFileName(int a, int b)
     /*
     Compare candidate / target image file name and return result
 */
-    QString nameA = dm->sf->index(aSfRow(a), G::NameColumn).data().toString().toLower();
+    QString nameA = aItems.at(a).name.toLower();
     QString nameB = bItems.at(b).name;
     bool isSame = (nameA == nameB);
     if (isDebug)
@@ -978,7 +1269,7 @@ bool FindDuplicatesDlg::sameFileType(int a, int b)
 /*
     Compare candidate / target image file type and return result
 */
-    QString pathA = dm->sf->index(aSfRow(a), G::PathColumn).data(G::PathRole).toString();
+    QString pathA = aItems.at(a).path;
     QString extA = QFileInfo(pathA).suffix().toLower();
     QString pathB = bItems.at(b).fPath;
     QString extB = QFileInfo(pathB).suffix().toLower();
@@ -994,7 +1285,7 @@ bool FindDuplicatesDlg::sameCreationDate(int a, int b)
 /*
     Compare candidate / target image creation date and return result
 */
-    QString dateA = dm->sf->index(aSfRow(a), G::CreatedColumn).data().toString();
+    QString dateA = aItems.at(a).created;
     QString dateB = bItems.at(b).createdDate;
     //QString dateB = m->createdDate.toString("yyyy-MM-dd hh:mm:ss.zzz");
     bool isSame = (dateA == dateB);
@@ -1010,7 +1301,7 @@ bool FindDuplicatesDlg::sameAspect(int a, int b)
     Compare candidate / target image aspect and return result
 */
     // A datamodel
-    double aspect = dm->sf->index(aSfRow(a), G::AspectRatioColumn).data().toDouble();
+    double aspect = aItems.at(a).aspect;
     QString aspectA = QString::number(aspect,'f', 2);
     // B target
     QString aspectB = bItems.at(b).aspect;
@@ -1031,9 +1322,9 @@ bool FindDuplicatesDlg::sameDuration(int a, int b)
     bool isSame;
     QString durationA;
     QString durationB;
-    bool isVideo = dm->sf->index(aSfRow(a), G::VideoColumn).data().toBool();
+    bool isVideo = aItems.at(a).video;
     if (isVideo) {
-        durationA = dm->sf->index(aSfRow(a), G::DurationColumn).data().toString();
+        durationA = aItems.at(a).duration;
         if (durationA.length() == 0) durationA = "00:00";
         // B collection
         durationB = bItems.at(b).duration;
@@ -1060,7 +1351,7 @@ void FindDuplicatesDlg::findMatches()
     Note that pixel comparison is not done here.  See pixelCompare().
 */
     initializeResultsVector();
-    int aCount =  aSfRows.count();
+    int aCount =  aItems.count();
     int bCount =  bItems.count();
     for (int a = 0; a < aCount; a++) {
         matchCount = 0;
@@ -1076,7 +1367,7 @@ void FindDuplicatesDlg::findMatches()
             results[a][b].match = false;
 
             // same file path = candidate image file = compare to itself
-            if (!sameFilePath(a, b)) continue;
+            if (sameFilePath(a, b)) continue;
 
             // same file name
             if (ui->sameFileNameCB->isChecked()) {
@@ -1145,11 +1436,11 @@ void FindDuplicatesDlg::buildResults()
     if (isDebug)
     qDebug() << "\nFindDuplicatesDlg::buildResults\n";
 
-    for (int a = 0; a < aSfRows.count(); a++) {
+    for (int a = 0; a < aItems.count(); a++) {
         for (int b = 0; b < bItems.count(); b++) {
             if (isDebug)
             qDebug() << "FindDuplicatesDlg::buildResults  A ="
-                     <<  dm->sf->index(aSfRow(a),G::NameColumn).data().toString()
+                     <<  aItems.at(a).name
                      <<  "B =" << bItems.at(b).fPath
                 ;
             // same file name
@@ -1203,7 +1494,7 @@ void::FindDuplicatesDlg::reportResults()
     if (modifiers & Qt::AltModifier) isModifier = true;
     // check for too many combinations
     if (isModifier) {
-        quint32 tot = aSfRows.count() * bItems.count();
+        quint32 tot = aItems.count() * bItems.count();
         QLocale locale(QLocale::English, QLocale::UnitedStates);
         // Format the number using the locale-specific rules
         //QString formattedNumber = locale.toString(tot);
@@ -1219,12 +1510,12 @@ void::FindDuplicatesDlg::reportResults()
     QTextStream rpt;
     rpt.setString(&reportString);
     QString s = " ";
-    int aDigits = QString::number(aSfRows.count()).length() + 1;
+    int aDigits = QString::number(aItems.count()).length() + 1;
     int bDigits = QString::number(bItems.count()).length() + 1;
     // longest A filename string length
     int maxFileNameLenA = 0;
-    for (int a = 0; a < aSfRows.count(); a++) {
-        QString pathA = dm->sf->index(aSfRow(a), G::NameColumn).data().toString();
+    for (int a = 0; a < aItems.count(); a++) {
+        QString pathA = aItems.at(a).name;
         if (pathA.length() > maxFileNameLenA) maxFileNameLenA = pathA.length();
     }
     // longest B path string length
@@ -1234,13 +1525,13 @@ void::FindDuplicatesDlg::reportResults()
         if (pathB.length() > pathLenB) pathLenB = pathB.length();
     }
     // report each combination
-    for (int a = 0; a < aSfRows.count(); a++) {
-        QString fileNameA = dm->sf->index(aSfRow(a),G::NameColumn).data().toString().leftJustified(maxFileNameLenA);
-        QString pathA = dm->sf->index(aSfRow(a), G::PathColumn).data(G::PathRole).toString();
+    for (int a = 0; a < aItems.count(); a++) {
+        QString fileNameA = aItems.at(a).name.leftJustified(maxFileNameLenA);
+        QString pathA = aItems.at(a).path;
         QString typeA = QFileInfo(pathA).suffix().toLower();
-        QString dateA = dm->sf->index(aSfRow(a), G::CreatedColumn).data().toString();
-        QString aspectA = QString::number(dm->sf->index(aSfRow(a), G::AspectRatioColumn).data().toDouble(),'f', 2);
-        QString durationA = dm->sf->index(aSfRow(a), G::DurationColumn).data().toString();
+        QString dateA = aItems.at(a).created;
+        QString aspectA = QString::number(aItems.at(a).aspect,'f', 2);
+        QString durationA = aItems.at(a).duration;
         if (durationA.length() == 0) durationA = "00:00";
         for (int b = 0; b < bItems.count(); b++) {
             // show only matches
@@ -1319,10 +1610,6 @@ void::FindDuplicatesDlg::reportResults()
     dlg->exec();
 }
 
-void FindDuplicatesDlg::on_includeSubfoldersCB_clicked()
-{
-    clear();
-}
 
 void FindDuplicatesDlg::on_samePixelsCB_clicked()
 {
@@ -1368,6 +1655,7 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     if (isRunning) return;
     isRunning = true;
     ui->compareBtn->setEnabled(false);
+    ui->updateDupsAndQuitBtn->setEnabled(false);
     clear();
     buildBList();
     if (bItems.size() == 0) {
@@ -1377,6 +1665,7 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
         QMessageBox::warning(this, tr("Empty Folder(s)"), msg);
         isRunning = false;
         ui->compareBtn->setEnabled(true);
+        updateApplyState();
         return;
     }
     getMetadataBItems();
@@ -1388,6 +1677,11 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     }
 
     isRunning = false;
+    // window closed mid-search (see closeEvent)
+    if (closePending) {
+        close();
+        return;
+    }
 
     // candidates with duplicates
     int candidatesWithDups = 0;
@@ -1405,6 +1699,7 @@ void FindDuplicatesDlg::on_compareBtn_clicked()
     // enable candidate table
     ui->tv->setEnabled(true);
     ui->compareBtn->setEnabled(true);
+    updateApplyState();
 }
 
 void FindDuplicatesDlg::on_prevToolBtn_clicked()
@@ -1511,9 +1806,9 @@ void FindDuplicatesDlg::on_tv_clicked(const QModelIndex &index)
 
     currentMatch = 0;
     // larger A image (candidate)
-    QString aName = dm->sf->index(aSfRow(a),G::NameColumn).data().toString();
+    QString aName = aItems.at(a).name;
     // candidate image path
-    QString aPath = dm->sf->index(aSfRow(a),0).data(G::PathRole).toString();
+    QString aPath = aItems.at(a).path;
     QString bPath = "";
     bool isMatch = matches.contains(a);
     if (isMatch) {
@@ -1557,9 +1852,10 @@ void FindDuplicatesDlg::on_abortBtn_clicked()
     else clear();
 }
 
-void FindDuplicatesDlg::on_cancelBtn_clicked()
+void FindDuplicatesDlg::on_closeBtn_clicked()
 {
-    reject();
+    // close(), not reject(): closeEvent defers the close when a search is running
+    close();
 }
 
 void FindDuplicatesDlg::on_updateDupsAndQuitBtn_clicked()
@@ -1567,12 +1863,20 @@ void FindDuplicatesDlg::on_updateDupsAndQuitBtn_clicked()
     /* Clear the compare flag on every row first (candidates are only a selected
        subset, so a candidate-only loop would leave stale flags on other rows),
        then mark the checked candidates. */
+    if (isRunning) return;
+    /* Candidates are a snapshot, and Winnow may have changed folders since, so map
+       each back to its current row by path; ones no longer loaded are skipped. */
+    if (candidatesInDataModel() == 0) {
+        updateApplyState();
+        return;
+    }
     for (int sfRow = 0; sfRow < dm->sf->rowCount(); sfRow++) {
         dm->sf->setData(dm->sf->index(sfRow, G::CompareColumn), false);
     }
-    for (int a = 0; a < aSfRows.count(); a++) {
+    for (int a = 0; a < aItems.count(); a++) {
         if (model.itemFromIndex(model.index(a, MC::CheckBox))->checkState() == Qt::Checked) {
-            dm->sf->setData(dm->sf->index(aSfRow(a), G::CompareColumn), true);
+            int sfRow = dm->proxyRowFromPath(aItems.at(a).path);
+            if (sfRow >= 0) dm->sf->setData(dm->sf->index(sfRow, G::CompareColumn), true);
         }
     }
     accept();
@@ -1673,8 +1977,8 @@ void::FindDuplicatesDlg::reportMatches()
     QString matchCount;
     QString delta;
     QString mPath;
-    for (int a = 0; a < aSfRows.count(); a++) {
-        QString candidate = dm->sf->index(aSfRow(a),G::NameColumn).data().toString().leftJustified(40);
+    for (int a = 0; a < aItems.count(); a++) {
+        QString candidate = aItems.at(a).name.leftJustified(40);
         if (matches[a].count() == 0) {
             matchCount = "  0";
             delta = "  n/a";
@@ -1713,7 +2017,7 @@ void FindDuplicatesDlg::reportbItems()
 void FindDuplicatesDlg::reportAspects()
 {
     qDebug() << "\n" << "FindDuplicatesDlg::reportAspects";
-    for (int a = 0, b = 0; static_cast<void>(a < aSfRows.count()), b < bItems.count(); a++, b++) {
+    for (int a = 0, b = 0; static_cast<void>(a < aItems.count()), b < bItems.count(); a++, b++) {
         QFileInfo fInfo(bItems.at(b).fPath);
         int row = dm->proxyRowFromPath(bItems.at(b).fPath);
         QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
@@ -1723,8 +2027,8 @@ void FindDuplicatesDlg::reportAspects()
         qDebug().noquote()
             << QString::number(a).rightJustified(3)
             << QString::number(b).rightJustified(3)
-            //<< dm->sf->index(aSfRow(a),G::NameColumn).data().toString()
-            << "aspectA/B" << QString::number(dm->sf->index(aSfRow(a),G::AspectRatioColumn).data().toDouble(), 'f', 2)
+            //<< aItems.at(a).name
+            << "aspectA/B" << QString::number(aItems.at(a).aspect, 'f', 2)
             << bItems.at(b).aspect
             << "m >> w" << QString::number(m->width).rightJustified(5)
             << "h" << QString::number(m->height).rightJustified(5)
@@ -1741,13 +2045,13 @@ void::FindDuplicatesDlg::reportFindMatch(int a, int b)
     rpt = "a = " + QString::number(a).leftJustified(5) + " b = " + QString::number(b).leftJustified(5);
 
     // A items
-    QString fileNameA = dm->sf->index(aSfRow(a),G::NameColumn).data().toString().leftJustified(20);
-    QString pathA = dm->sf->index(aSfRow(a), G::PathColumn).data(G::PathRole).toString();
+    QString fileNameA = aItems.at(a).name.leftJustified(20);
+    QString pathA = aItems.at(a).path;
     QString nameA = QFileInfo(pathA).fileName().toLower();
     QString typeA = QFileInfo(pathA).suffix().toLower();
-    QString dateA = dm->sf->index(aSfRow(a), G::CreatedColumn).data().toString();
-    QString aspectA = QString::number(dm->sf->index(aSfRow(a), G::AspectRatioColumn).data().toDouble(),'f', 2);
-    QString durationA = dm->sf->index(aSfRow(a), G::DurationColumn).data().toString();
+    QString dateA = aItems.at(a).created;
+    QString aspectA = QString::number(aItems.at(a).aspect,'f', 2);
+    QString durationA = aItems.at(a).duration;
     if (durationA.length() == 0) durationA = "00:00";
 
     QString same;

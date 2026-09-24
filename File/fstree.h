@@ -138,6 +138,7 @@ public slots:
     bool select(QString folderPath, QString modifier = "None", QString src = "");
     void resizeColumns();
     void refreshModel();
+    bool createFolder(QString parentFolder);
     void updateCount();
     void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
     void howThisWorks();

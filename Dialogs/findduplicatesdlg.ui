@@ -628,21 +628,12 @@
                 <number>6</number>
                </property>
                <item>
-                <widget class="QCheckBox" name="includeSubfoldersCB">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>30</height>
-                  </size>
+                <widget class="QLabel" name="subfoldersNoteLbl">
+                 <property name="styleSheet">
+                  <string notr="true">color: gray;</string>
                  </property>
                  <property name="text">
-                  <string>Include subfolders</string>
+                  <string>*checked includes subfolders</string>
                  </property>
                 </widget>
                </item>
@@ -1749,7 +1740,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="cancelBtn">
+       <widget class="QPushButton" name="closeBtn">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
           <horstretch>0</horstretch>
@@ -1769,7 +1760,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Cancel</string>
+         <string>Close</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>

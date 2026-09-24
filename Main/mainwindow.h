@@ -798,6 +798,7 @@ private slots:
     void renameDeleteFolderAction(QString folderName);
     void renameCopyFolderPathAction(QString folderName);
     void renameRevealFileAction(QString folderName);
+    void renameCreateFolderAction(QString folderName);
     void ejectUsb(QString path);
     void ejectUsbFromContextMenu();
     void renameEraseMemCardFromContextMenu(QString path);
@@ -1276,6 +1277,7 @@ private slots:
     void revealLogFile();
     void revealFile();
     void revealFileFromContext();
+    void createFolderFromContext();
     void revealInFileBrowser(QString path);
     void openInFinder();
     void openInExplorer();
@@ -1371,6 +1373,7 @@ private:
     QAction *revealFileAction;
     QAction *saveAsFileAction;
     QAction *revealFileActionFromContext;
+    QAction *createFolderFromContextAction;
     QAction *copyFolderPathFromContextAction;
     QAction *copyImagePathFromContextAction;
     QAction *openWithMenuAction;
@@ -2426,6 +2429,7 @@ private:
 
     // QList<QWidget*> openWindows;
     QList<QPointer<QWidget>> openWindows;
+    QPointer<FindDuplicatesDlg> findDuplicatesDlg;     // modeless; one at a time
     QList<QPointer<QScrollArea>> shortcutsWindows;   // open Shortcuts help, for live font updates
 
     bool ignoreDockResize;

@@ -16,19 +16,26 @@ the candidate images already exist in the target images group.</p>
 <p>The candidate images are the <u>selected images</u> in the currently selected
 folder(s) in Winnow, shown in the right side of the Find Duplicate Images dialog.
 Select the images you want to check before opening the dialog; if nothing is
-selected, all of the filtered images are used as candidates.
+selected, all of the filtered images are used as candidates. The candidates are
+fixed when the dialog opens, so you can go on browsing other folders in Winnow
+while it is open.
 If there are not any images, close the dialog, select the folder with the
 candidate images, select the images to check (filter if necessary) and run the
 Find Duplicate Images dialog again.</p>
 
 <h2>Step 2: Pick the target group</h2>
-<p>Using finder or explorer, drag folders into the
+<p>Drag folders from Winnow's Folders panel, or from Finder or Explorer, into the
 <span class="highlight">include list</span> located at the top of the dialog.
-If a folder has a hierarchy of subfolders you also want to include, then also
-check <span class="highlight">include subfolders</span>. If you want to exclude
-any folders in the hierarchy then drag the exclude folders to the
-<span class="highlight">exclude list</span>. Excluded folders do not include
-subfolders.</p>
+Each folder has its own checkbox: check it to include the folder's whole
+subfolder tree, leave it unchecked for that folder alone. If you want to leave
+out any folders in the hierarchy then drag them to the
+<span class="highlight">exclude list</span>. The checkbox works the same way
+there: checked excludes the folder and all its subfolders, unchecked excludes
+only that folder.</p>
+<p>You can also type paths. Double-click a path to edit it, or double-click empty
+space in a list to add a new one (the editor suggests folders as you type).
+Right-click a list for Add, Edit, Remove and Include subfolders; Delete removes the selected path.
+A path shown in red is not an existing folder and is ignored.</p>
 
 <h2>Step 3: Set the search criteria</h2>
 <p>The criteria for duplication is either file metadata or image pixels. It is
