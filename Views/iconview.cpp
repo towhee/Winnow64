@@ -2372,3 +2372,34 @@ void IconView::dropEvent(QDropEvent *event)
         QListView::dropEvent(event);
     }
 }
+
+void IconView::selectionChanged(const QItemSelection &selected,
+                                const QItemSelection &deselected)
+{
+/*
+    QListView::selectionChanged and ::currentChanged (Qt 6.11) do two things: post a
+    per-item accessibility event (SelectionAdd/SelectionRemove/Focus) addressed to a
+    numbered child, then chain to QAbstractItemView. On macOS main.cpp gives this view a
+    plain list interface with NO children (winnowItemViewAccessible -- the table
+    interface rebuilt the Cocoa element array for every row on every model change), so
+    those events name a child that does not exist: Qt warns "Cannot create accessible
+    child interface" / "Invalid child in QAccessibleEvent" and Cocoa "invalid element",
+    on every selection. Calling QAbstractItemView directly skips only the events.
+    Recheck against QListView when Qt is upgraded.
+*/
+#ifdef Q_OS_MAC
+    QAbstractItemView::selectionChanged(selected, deselected);
+#else
+    QListView::selectionChanged(selected, deselected);
+#endif
+}
+
+void IconView::currentChanged(const QModelIndex &current, const QModelIndex &previous)
+{
+    // See selectionChanged.
+#ifdef Q_OS_MAC
+    QAbstractItemView::currentChanged(current, previous);
+#else
+    QListView::currentChanged(current, previous);
+#endif
+}

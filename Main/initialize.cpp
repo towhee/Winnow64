@@ -1907,6 +1907,10 @@ void MW::createFilterDock()
             filterPanel->setScope(FilterPanel::FolderScope);
             return;
         }
+        /*  Read BEFORE setScope: MW::setScope sets G::scope and only then pushes the
+            scope into this panel, so a flip MW made itself arrives here with G::scope
+            already Folders. Only a flip that starts in the catalog is the user's. */
+        const bool leavingCatalog = (G::scope == G::Scope::Catalog);
         setScope(sc == FilterPanel::CatalogScope ? G::Scope::Catalog
                                                : G::Scope::Folders,
                  "FilterPanel::scopeChanged");
@@ -1917,9 +1921,22 @@ void MW::createFilterDock()
             what is loaded. Re-selecting from dm->folderList only here, and not in
             setScope itself, because MW::folderSelectionChange calls setScope(Folders)
             BEFORE folderList has the folder just clicked: doing it there would undo the
-            click. syncSelectionToFolders does not re-emit (see its comment). */
-        if (sc == FilterPanel::FolderScope && fsTree)
-            fsTree->syncSelectionToFolders(dm->folderList);
+            click. syncSelectionToFolders does not re-emit (see its comment).
+
+            A FOLDER CLICK ALSO ARRIVES HERE, as the echo of MW::setScope(Folders) from
+            MW::folderSelectionChange -- before the catalog rows are replaced. Syncing
+            then selected every parent folder of the catalog results and buried the
+            folder just clicked, so the echo is skipped (leavingCatalog is false).
+
+            And folderList is only what the tree shows when the datamodel holds a FOLDER
+            load. After a catalog load it is every parent folder of the results, so the
+            tree is cleared instead -- the same rule as MW::folderSelectionChange's
+            refusal path. */
+        if (sc == FilterPanel::FolderScope && fsTree && leavingCatalog) {
+            const bool foldersLoaded = (dm->scopeRequest().scope == G::Scope::Folders);
+            fsTree->syncSelectionToFolders(foldersLoaded ? dm->folderList
+                                                         : QStringList());
+        }
     });
 
         connect(filterPanel, &FilterPanel::rebuildFolderCategoriesRequested, this, [this]{

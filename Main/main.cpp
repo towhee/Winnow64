@@ -11,9 +11,53 @@
 #include <cstdlib>
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
+#include <QAccessibleWidget>
 #endif
 
 static QString rory = "Rory";
+
+#ifdef Q_OS_MAC
+static QAccessibleInterface *winnowItemViewAccessible(const QString &classname,
+                                                      QObject *object)
+{
+/*
+    THE IMAGE VIEWS ARE A LIST TO ACCESSIBILITY, NOT A TABLE.
+
+    Qt's own interface for QListView/QTableView carries a table interface, and on macOS
+    every dataChanged, row insert or reset a view receives makes the Cocoa bridge rebuild
+    its element array for EVERY row in the model (QCocoaAccessibility::
+    notifyAccessibilityUpdate -> -[QMacAccessibilityElement updateTableModel] ->
+    populateTableArray). That is O(rows) per notification, for each of the three views,
+    hidden ones included: ~27 ms at 43,000 rows. It is what made a switch from a folder
+    into the Catalog take 8 s against 1.5 s at startup, and what every per-row
+    notification fix in DataModel has been working around.
+
+    THE BRIDGE CANNOT BE SUSPENDED RELIABLY. Qt activates accessibility on the first
+    system accessibility query to any Winnow window (qnsview_accessibility.mm,
+    activateQtAccessibility) -- window managers, clipboard and text-expander utilities
+    all send them -- and it stays on for the session. Startup is fast only because no
+    query has arrived yet. G::A11ySuspend and WINNOW_NO_A11Y are undone by the next one.
+
+    SO THE TABLE INTERFACE IS NOT OFFERED. Qt tries factories against the MOST-DERIVED
+    class name first (QAccessible::queryAccessibleInterface), so matching IconView,
+    TableView and TableView's frozen-column overlay (FrozenTableView -- a fourth view on
+    the same model, and a quarter of the cost when it was missed) here pre-empts the built-in QListView/QTableView interface. With no
+    tableInterface() both the Qt-side modelChange and the Cocoa rebuild are skipped.
+
+    THE TRADE: VoiceOver still reaches the views and the rest of the UI, but can no
+    longer step through individual thumbnails or table rows. At catalog scale that
+    navigation froze the app on every change anyway. macOS only: the O(rows) rebuild is
+    the Cocoa bridge's, and Windows UIA has not been measured to need this.
+*/
+    if (classname == QLatin1StringView("IconView")
+        || classname == QLatin1StringView("TableView")
+        || classname == QLatin1StringView("FrozenTableView")) {
+        if (auto *w = qobject_cast<QWidget *>(object))
+            return new QAccessibleWidget(w, QAccessible::List);
+    }
+    return nullptr;
+}
+#endif
 
 // Define the custom message handler
 void winnowMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -282,6 +326,12 @@ int main(int argc, char *argv[])
         A SWITCH RATHER THAN A DEFAULT: turning accessibility off for everyone would fix
         the stall by removing VoiceOver support, which is not a trade to make silently.
         The real fix is to stop emitting one dataChanged per row. */
+    /*  Before any window exists, so no view has had the built-in table interface
+        created and cached for it. See winnowItemViewAccessible. */
+#ifdef Q_OS_MAC
+    QAccessible::installFactory(winnowItemViewAccessible);
+#endif
+
     if (qEnvironmentVariableIntValue("WINNOW_NO_A11Y") == 1) {
         QAccessible::setActive(false);
         fprintf(stderr, "WINNOW: accessibility bridge DISABLED (WINNOW_NO_A11Y=1)\n");

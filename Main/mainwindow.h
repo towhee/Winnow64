@@ -2478,6 +2478,10 @@ private:
     QTimer *guiStallTimer = nullptr;
     qint64 guiStallLastMs = 0;
     QElapsedTimer guiStallClock;
+    /*  [PERF] click-to-loaded for a switch INTO the catalog, started in MW::setScope and
+        read at the end of MW::folderChanged. Compares a switch from a loaded folder with
+        the one at startup. */
+    QElapsedTimer catalogSwitchClock;
 
     QString filterDockTabText;
     QString catalogDockTabText;
