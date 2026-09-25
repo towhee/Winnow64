@@ -170,11 +170,26 @@ private:
         datamodel row displays (Catalog::searchRows), so loading them opens no files. The
         paths are still what the panel compares run-to-run -- see resultPaths. */
     QVector<CatalogRow> results;
-    /*  The result as paths, which is what the run-to-run comparison needs. Built on
-        demand rather than stored beside results, so the two cannot disagree about what
-        the current result is. */
-    QStringList resultPaths() const;
+    /*  The result as paths, which is what the run-to-run comparison needs. Built on the
+        search's worker thread and set together with results in applySearchResult (and
+        cleared together on leaving Catalog scope), so the two cannot disagree. */
+    QStringList resultPaths() const { return resultPathList; }
+    QStringList resultPathList;
     int totalMatches = 0;
+
+    /*  THE SEARCH RUNS OFF THE GUI THREAD. runSearch starts Catalog::searchRows on a pool
+        thread and applySearchResult takes the answer back on this one. searchGen numbers
+        the searches: only the NEWEST one is applied, so a slow result cannot land over
+        a later scope switch or query. appliedGen is the last one applied -- a search is
+        in flight while they differ. forcePending accumulates `force` across searches a
+        newer one superseded: a scope ENTRY must still load even when the search that
+        finally lands was an ordinary refresh. */
+    quint64 searchGen = 0;
+    quint64 appliedGen = 0;
+    bool forcePending = false;
+    bool searchPending() const { return searchGen != appliedGen; }
+    void applySearchResult(quint64 gen, const QVector<CatalogRow> &rows, int total,
+                           const QStringList &paths, const CatalogQuery &q, qint64 queryMs);
     Scope currentScope = FolderScope;
     bool scanning = false;
 

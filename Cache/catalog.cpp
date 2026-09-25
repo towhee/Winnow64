@@ -1163,6 +1163,15 @@ QVector<CatalogRow> Catalog::searchRows(const CatalogQuery &cq, int limit, int *
     QStringList where;
     QVariantList binds;
     buildQueryLocked(cq, from, where, binds);
+    /*  UNLOCKED FOR THE QUERY ITSELF. Everything below runs on this thread's own
+        connection (CacheDb gives each thread one) and on locals; the mutex guards the
+        lazy load and the state buildQueryLocked reads, both done. Held, it made the
+        whole-catalog query -- 1.1-1.5 s at 148,567 rows -- block every other Catalog
+        call for its duration, which is exactly what FilterPanel::runSearch moving it to
+        a pool thread must not do: the GUI thread's own Catalog calls (isAvailable, a
+        rating's updateCatalogForRow) would have waited it out. WAL mode lets this read
+        run alongside another thread's write. */
+    lk.unlock();
 
     const QString whereSql = where.isEmpty() ? QString()
                                              : " WHERE " + where.join(" AND ");
