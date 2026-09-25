@@ -1,4 +1,5 @@
 #include "Datamodel/filters.h"
+#include "Utilities/foldertree.h"
 #include "Cache/catalog.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
@@ -140,7 +141,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catRating] = G::RatingColumn;
     filterCategoryToDmColumn[catLabel] = G::LabelColumn;
     filterCategoryToDmColumn[catType] = G::TypeColumn;
-    filterCategoryToDmColumn[catFolder] = G::FolderNameColumn;
+    /* The folder AND every folder above it (FolderTree::ancestry), so a checked parent
+       folder matches the images of every folder beneath it -- the same move the Keywords
+       category makes. The item's value is the folder's PATH, never its name: 22 of one
+       library's 1,599 folder names were used more than once. */
+    filterCategoryToDmColumn[catFolder] = G::FolderPathsAllColumn;
     filterCategoryToDmColumn[catYear] = G::YearColumn;
     filterCategoryToDmColumn[catMonth] = G::MonthColumn;
     filterCategoryToDmColumn[catDay] = G::DayColumn;
@@ -160,6 +165,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     createPredefinedFilters();
     createDynamicFilters();
+    updateKeywordModeLabel();       // the any/all control is there from the start
     setCategoryBackground(a, b);
 
     setItemDelegate(new FiltersDelegate(this));
@@ -741,20 +747,26 @@ void Filters::setEachCatTextColor()
 
     QMutexLocker locker(&mutex);
 
+    /*  ITEMS AT EVERY DEPTH, not the category's children. Keywords and Folders are
+        trees: a library under one catalogued root is ONE top-level folder with hundreds
+        beneath it, and counting children greyed the whole category as "nothing to
+        choose between". The same count missed a checked item below the top level, so a
+        filtering nested category never lit its header. */
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (!(*it)->parent() && (*it) != search) {
-            if ((*it)->childCount() == 0)
+            const QList<QTreeWidgetItem *> items = itemsInCategory(*it);
+            if (items.isEmpty())
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             // category only has one item and item not "true"
-            else if ((*it)->childCount() == 1 && (*it)->child(0)->text(0) != "true")
+            else if (items.size() == 1 && items.first()->text(0) != "true")
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
                 bool isChecked = false;
-                for (int i = 0; i < (*it)->childCount(); i++) {
+                for (QTreeWidgetItem *item : items) {
                     /* Includes and excludes alike: the header says whether the category
                        is doing anything, and an exclusion is doing something. */
-                    if ((*it)->child(i)->checkState(0) != Qt::Unchecked) {
+                    if (item->checkState(0) != Qt::Unchecked) {
                         isChecked = true;
                         break;
                     }
@@ -766,6 +778,8 @@ void Filters::setEachCatTextColor()
         }
         ++it;
     }
+
+    updateKeywordModeLabel();
 
     search->setForeground(0, G::textColor);
     if (searchTrue->text(0) != enterSearchString) {
@@ -799,10 +813,11 @@ bool Filters::isCatFiltering(QTreeWidgetItem *item)
         }
         else return false;
     }
-    if (item->childCount() > 1) {
-        for (int i = 0; i < item->childCount(); i++) {
-            if (item->child(i)->checkState(0) != Qt::Unchecked) return true;
-        }
+    // at every depth: see setEachCatTextColor
+    const QList<QTreeWidgetItem *> items = itemsInCategory(item);
+    if (items.size() > 1) {
+        for (QTreeWidgetItem *child : items)
+            if (child->checkState(0) != Qt::Unchecked) return true;
     }
     return false;
 }
@@ -821,8 +836,8 @@ void Filters::disableEmptyCat()
     while (*it) {
         // categories
         if (!(*it)->parent() && (*it) != search) {
-            //qDebug() << (*it)->text(0) << (*it)->childCount();
-            if ((*it)->childCount() < 2)
+            // at every depth: see setEachCatTextColor
+            if (itemsInCategory(*it).size() < 2)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
                 (*it)->setForeground(0, G::textColor);
@@ -1061,6 +1076,11 @@ void Filters::reset()
 
     // reset all items to unchecked
     clearAll();
+    /*  And the Keywords any/all mode with them: a lasting "all" would quietly empty the
+        next set the first time two keywords were checked. save()/restore() carry it
+        across the rebuilds that are not a new set. */
+    if (keywords) keywords->setData(0, MatchAllRole, false);
+    updateKeywordModeLabel();
 
     // reset message frame
     // loadingDataModel(true);
@@ -1425,10 +1445,13 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
             and it must stay exactly that. */
         QMenu menu(this);
         QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
+        QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
         addFilterActions(menu);
         QAction *chosen = menu.exec(event->globalPos());
         if (unfiled != nullptr && chosen == unfiled)
             setShowUnfiledOnly(!showUnfiledOnly);
+        else if (mode != nullptr && chosen == mode)
+            setKeywordsMatchAll(!keywordsMatchAll());
         return;
     }
 
@@ -1474,6 +1497,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     exc->setChecked(now == Qt::PartiallyChecked);
     clr->setEnabled(now != Qt::Unchecked);
     QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
+    QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
     addFilterActions(menu);
 
     QAction *chosen = menu.exec(event->globalPos());
@@ -1484,6 +1508,8 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         emit mergeUnfiledKeyword(item->data(1, Qt::EditRole).toString());
     else if (unfiled != nullptr && chosen == unfiled)
         setShowUnfiledOnly(!showUnfiledOnly);
+    else if (mode != nullptr && chosen == mode)
+        setKeywordsMatchAll(!keywordsMatchAll());
 }
 
 bool Filters::vocabHasLeaf(const QString &leafFold) const
@@ -1507,6 +1533,62 @@ bool Filters::vocabHasLeaf(const QString &leafFold) const
         if ((i < 0 ? p : p.mid(i + 1)) == leafFold) return true;
     }
     return false;
+}
+
+QAction *Filters::addKeywordModeAction(QMenu &menu)
+{
+    QAction *a = menu.addAction("Match all checked keywords");
+    a->setCheckable(true);
+    a->setChecked(keywordsMatchAll());
+    a->setToolTip("On: an image must carry EVERY checked keyword (Family and Beach).\n"
+                  "Off: any one of them is enough (Family or Beach).");
+    return a;
+}
+
+bool Filters::keywordsMatchAll() const
+{
+    return keywords && keywords->data(0, MatchAllRole).toBool();
+}
+
+int Filters::includedKeywordCount() const
+{
+    int n = 0;
+    for (QTreeWidgetItem *item : itemsInCategory(keywords))
+        if (item->checkState(0) == Qt::Checked) ++n;
+    return n;
+}
+
+void Filters::setKeywordsMatchAll(bool all)
+{
+    if (!keywords) return;
+    const bool changed = keywordsMatchAll() != all;
+    keywords->setData(0, MatchAllRole, all);
+    updateKeywordModeLabel();
+    /*  The mode is compiled with the checks, so it only changes the result when there
+        are two or more to combine; with fewer the refilter would be wasted work. */
+    if (changed && includedKeywordCount() >= 2)
+        emit filterChange("Filters::setKeywordsMatchAll");
+}
+
+void Filters::updateKeywordModeLabel()
+{
+/*
+    "any" or "all" in the Filter column of the Keywords header -- where the header row
+    has room, and above the column that counts what passes. Always SHOWN, so the choice
+    can be found; DIMMED while it changes nothing (fewer than two keywords included), and
+    lit in the filtering colour when "all" is actually narrowing.
+*/
+    if (!keywords) return;
+    const bool all = keywordsMatchAll();
+    const bool matters = includedKeywordCount() >= 2;
+    keywords->setText(2, all ? "all" : "any");
+    keywords->setTextAlignment(2, Qt::AlignCenter);
+    keywords->setForeground(2, QBrush(!matters ? hdrIsEmptyColor
+                                      : all    ? hdrIsFilteringColor
+                                               : G::textColor));
+    keywords->setToolTip(2, all
+        ? "Images with ALL the checked keywords. Click for any of them."
+        : "Images with ANY of the checked keywords. Click to require all of them.");
 }
 
 QAction *Filters::addUnfiledAction(QMenu &menu)
@@ -1841,7 +1923,7 @@ bool Filters::loadCatalogCategories()
         {ratings,      G::RatingColumn},
         {labels,       G::LabelColumn},
         {types,        G::TypeColumn},
-        {folders,      G::FolderNameColumn},
+        {folders,      G::FolderPathsAllColumn},
         {years,        G::YearColumn},
         {months,       G::MonthColumn},
         {days,         G::DayColumn},
@@ -1857,10 +1939,14 @@ bool Filters::loadCatalogCategories()
     for (const Cat &c : cats) {
         const QMap<QString, int> map = cat.categoryItems(c.dmColumn);
         addCategoryItems(map, c.item);
+        /*  Folders arrive PER FOLDER and each node shows the total beneath it, which is
+            the rolled-up map, not the one the items were built from. */
+        const QMap<QString, int> counts =
+            c.item == folders ? FolderTree::expandCounts(map) : map;
         /* Both columns get the library total: column 2 is normally the filtered count,
            and leaving it blank would make every row look half-loaded. */
         for (QTreeWidgetItem *child : itemsInCategory(c.item)) {
-            const int n = map.value(itemMapKey(c.item, child), 0);
+            const int n = counts.value(itemMapKey(c.item, child), 0);
             child->setData(2, Qt::EditRole, n);
             child->setData(3, Qt::EditRole, n);
         }
@@ -1915,7 +2001,7 @@ void Filters::fillQuery(CatalogQuery &q) const
         {ratings,      G::RatingColumn},
         {labels,       G::LabelColumn},
         {types,        G::TypeColumn},
-        {folders,      G::FolderNameColumn},
+        {folders,      G::FolderPathsAllColumn},
         {years,        G::YearColumn},
         {months,       G::MonthColumn},
         {days,         G::DayColumn},
@@ -1943,6 +2029,7 @@ void Filters::fillQuery(CatalogQuery &q) const
         if (c.dmColumn == G::KeywordsAllColumn) {
             q.keywords = inc;
             q.excludeKeywords = exc;
+            q.keywordsMatchAll = keywordsMatchAll();
         }
         else {
             if (!inc.isEmpty()) q.include.insert(c.dmColumn, inc);
@@ -1984,6 +2071,7 @@ void Filters::save()
     QMutexLocker locker(&mutex);
 
     itemStates.clear();
+    savedKeywordsMatchAll = keywordsMatchAll();
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -2040,6 +2128,9 @@ void Filters::restore()
         styleFilterItem(item);
     }
     searchTrue->setText(0, searchText);
+    // the mode goes back with the checks it combines; the caller re-applies both
+    if (keywords) keywords->setData(0, MatchAllRole, savedKeywordsMatchAll);
+    updateKeywordModeLabel();
     // emit filterChange("Filters::restore");
 }
 
@@ -2336,6 +2427,158 @@ void Filters::updateKeywordItems(const QMap<QString, int> &pathCounts,
     }
 }
 
+void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
+                             QTreeWidgetItem *category)
+{
+/*
+    Build the Folders category as a TREE from per-folder counts.
+
+    THE LABEL IS THE NAME AND THE VALUE IS THE PATH, as for keywords: the predicate
+    compares data(1) against G::FolderPathsAllColumn, which holds each row's folder and
+    every folder above it, so checking "2020-2029" matches every image beneath it.
+
+    THE SHAPE COMES FROM FolderTree::hierarchy, the rules LibTree also uses: top-level
+    rows are the anchors (setFolderAnchors), folders between an anchor and the folders
+    that hold images are synthesised, and siblings sort naturally. A node's count is the
+    total BENEATH it -- exact, because an image is in exactly one folder.
+
+    COMPOSES WITH A SECOND CALL rather than building the tree twice: nodes already here
+    are found by path and kept, which is what addCategoryItems' duplicate pass does for
+    the flat categories.
+*/
+    QMutexLocker locker(&mutex);
+
+    QHash<QString, QTreeWidgetItem *> byPath;
+    for (QTreeWidgetItem *existing : itemsInCategory(category)) {
+        const QString path = existing->data(1, Qt::EditRole).toString();
+        if (!path.isEmpty()) byPath.insert(path, existing);
+    }
+
+    const QMap<QString, int> totals = FolderTree::expandCounts(folderCounts);
+    const QVector<FolderTree::Node> nodes =
+        FolderTree::hierarchy(folderCounts.keys(), folderAnchors);
+
+    for (const FolderTree::Node &n : nodes) {
+        if (G::stop) return;
+        if (byPath.contains(n.path)) continue;
+        QTreeWidgetItem *parent = n.parent.isEmpty()
+                                      ? category : byPath.value(n.parent, category);
+        QTreeWidgetItem *node = new QTreeWidgetItem(parent);
+        node->setText(0, n.label);
+        node->setData(1, Qt::EditRole, n.path);
+        node->setCheckState(0, Qt::Unchecked);
+        const int count = totals.value(n.path, 0);
+        node->setData(2, Qt::EditRole, count);
+        node->setData(3, Qt::EditRole, count);
+        node->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        node->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        node->setToolTip(0, QString("%1\n\nClick to include this folder and every folder "
+                                    "in it. Opt+click to exclude.")
+                                .arg(QDir::toNativeSeparators(n.path)));
+        styleFilterItem(node);
+        byPath.insert(n.path, node);
+    }
+}
+
+void Filters::folderFilterState(QStringList &includes, QStringList &excludes) const
+{
+    includes.clear();
+    excludes.clear();
+    for (QTreeWidgetItem *item : itemsInCategory(folders)) {
+        const Qt::CheckState st = item->checkState(0);
+        if (st == Qt::Unchecked) continue;
+        const QString path = item->data(1, Qt::EditRole).toString();
+        (st == Qt::Checked ? includes : excludes) << path;
+    }
+}
+
+bool Filters::setFolderFilter(const QStringList &includes, const QStringList &excludes,
+                              QStringList *missing)
+{
+/*
+    What a LibTree click becomes. ONE filterChange for the whole state, not one per item:
+    each emission refilters the proxy and recounts every category, and a click that
+    includes one folder and excludes six would otherwise do that seven times.
+
+    A CHECKED FOLDER IS MADE VISIBLE -- the category and the folder's ancestors are
+    expanded -- because a filter applied where the user cannot see it is indistinguishable
+    from a panel that did nothing. Only the Folders category is expanded; the others stay
+    as the user left them.
+*/
+    if (G::isLogger) G::log("Filters::setFolderFilter");
+    if (!filtersBuilt) return false;
+
+    const QSet<QString> inc(includes.begin(), includes.end());
+    const QSet<QString> exc(excludes.begin(), excludes.end());
+    QSet<QString> found;
+    bool changed = false;
+    for (QTreeWidgetItem *item : itemsInCategory(folders)) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        const Qt::CheckState want = inc.contains(path) ? Qt::Checked
+                                    : exc.contains(path) ? Qt::PartiallyChecked
+                                                         : Qt::Unchecked;
+        if (want != Qt::Unchecked) found.insert(path);
+        if (item->checkState(0) == want) continue;
+        item->setCheckState(0, want);
+        styleFilterItem(item);
+        changed = true;
+        if (want == Qt::Checked) {
+            for (QTreeWidgetItem *up = item->parent(); up; up = up->parent())
+                if (!up->isExpanded()) up->setExpanded(true);
+        }
+    }
+    if (missing) {
+        missing->clear();
+        for (const QString &p : includes) if (!found.contains(p)) *missing << p;
+    }
+    /*  A programmatic change, not a click still to be interpreted: see dataChanged,
+        which sets this whenever a check state moves. */
+    itemCheckStateHasChanged = false;
+    if (changed) {
+        activeCategory = folders;
+        emit filterChange("Filters::setFolderFilter");
+    }
+    return true;
+}
+
+void Filters::updateFolderItems(const QMap<QString, int> &folderCounts,
+                                QTreeWidgetItem *category)
+{
+/*
+    REBUILT, keeping what the user set -- the check state and the expansion, both keyed
+    on the PATH -- for the reasons updateKeywordItems gives. A folder that has genuinely
+    gone takes its state with it.
+*/
+    if (G::isLogger) G::log("Filters::updateFolderItems");
+    if (G::stop) return;        // leave the old tree, as updateKeywordItems does
+
+    QHash<QString, Qt::CheckState> stateByPath;
+    QSet<QString> expanded;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        if (path.isEmpty()) continue;
+        if (item->checkState(0) != Qt::Unchecked) stateByPath.insert(path, item->checkState(0));
+        if (item->isExpanded()) expanded.insert(path);
+    }
+
+    {
+        QMutexLocker locker(&mutex);
+        qDeleteAll(category->takeChildren());
+    }
+
+    addFolderItems(folderCounts, category);
+
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString path = item->data(1, Qt::EditRole).toString();
+        const auto it = stateByPath.constFind(path);
+        if (it != stateByPath.constEnd()) {
+            item->setCheckState(0, it.value());
+            styleFilterItem(item);
+        }
+        if (expanded.contains(path)) item->setExpanded(true);
+    }
+}
+
 void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
@@ -2355,6 +2598,10 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         deep in both halves. Delegated for the same reason addCategoryItems is. */
     if (category == keywords) {
         updateKeywordItems(itemMap, category);
+        return;
+    }
+    if (category == folders) {
+        updateFolderItems(itemMap, category);
         return;
     }
 
@@ -2446,7 +2693,7 @@ QString Filters::itemMapKey(const QTreeWidgetItem *category,
     /*  Keywords are keyed on the PATH the item carries, because the label is only the
         leaf and two keywords can share one -- keying on the label would put both
         Vancouvers' counts on whichever item was visited first. */
-    if (category == keywords) return item->data(1, Qt::EditRole).toString();
+    if (isNestedCategory(category)) return item->data(1, Qt::EditRole).toString();
     return item->text(0);
 }
 
@@ -2610,6 +2857,10 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         addKeywordItems(itemMap, category);
         return;
     }
+    if (category == folders) {
+        addFolderItems(itemMap, category);
+        return;
+    }
 
     QMutexLocker locker(&mutex);
 
@@ -2709,6 +2960,9 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
     If a category item was just checked (activeCategory) then it is ignored, as the
     user may want to check another item in the same category.
 */
+
+    /*  Folder counts arrive PER FOLDER; a node shows everything beneath it. */
+    if (category == folders) itemMap = FolderTree::expandCounts(itemMap);
     //    if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
     if (debugFilters)
         qDebug() << "Filters::updateUnfilteredCountPerItem"
@@ -2742,6 +2996,9 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     If a category item was just checked (activeCategory) then it is ignored, as the
     user may want to check another item in the same category.
 */
+
+    /*  Folder counts arrive PER FOLDER; a node shows everything beneath it. */
+    if (category == folders) itemMap = FolderTree::expandCounts(itemMap);
     // if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
     if (debugFilters)
         qDebug() << "Filters::updateFilteredCountPerItem"
@@ -2774,6 +3031,9 @@ void Filters::updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidge
     have a zero filtered count. The filter picked item must be unchecked to avoid a
     proxy filter null result.
 */
+
+    /*  Folder counts arrive PER FOLDER; a node shows everything beneath it. */
+    if (category == folders) itemMap = FolderTree::expandCounts(itemMap);
     //if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::updateZeroCountCheckedItems"
                  << "category =" << category->text(0)
@@ -3087,6 +3347,14 @@ void Filters::mousePressEvent(QMouseEvent *event)
             swallowNextRelease = true;
             return;
         }
+    }
+
+    /*  THE any/all LABEL on the Keywords header is a control, not part of the header's
+        expand/collapse target. */
+    if (isLeftBtn && isHdr && item == keywords && idx.column() == 2) {
+        setKeywordsMatchAll(!keywordsMatchAll());
+        swallowNextRelease = true;
+        return;
     }
 
     if (isLeftBtn && isHdr && isValid /*&& notIndentation*/) {

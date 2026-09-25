@@ -88,6 +88,34 @@ public:
         delegation, so the op dispatch stays generic. */
     void updateKeywordItems(const QMap<QString, int> &pathCounts,
                             QTreeWidgetItem *category);
+    /*  The Folders category is NESTED too: a folder's identity is its PATH, and a
+        checked parent takes every folder beneath it (G::FolderPathsAllColumn). Built
+        from PER-FOLDER counts, which it rolls up itself -- see Utilities/foldertree.h,
+        the rules the Source panel's LibTree shares so the two trees agree. */
+    void addFolderItems(const QMap<QString, int> &folderCounts, QTreeWidgetItem *category);
+    void updateFolderItems(const QMap<QString, int> &folderCounts,
+                           QTreeWidgetItem *category);
+    /*  The Folders category's top-level rows. In Library scope MW passes the catalog's
+        include folders, so the tree starts where the user's library does rather than at
+        "/"; empty (Folders scope) means "the deepest folder they share". Takes effect at
+        the next build, which a scope change always brings. */
+    void setFolderAnchors(const QStringList &anchors) { folderAnchors = anchors; }
+    /*  Keywords and Folders: categories whose items form a tree and are keyed on the
+        PATH in data(1) rather than on their label. */
+    bool isNestedCategory(const QTreeWidgetItem *category) const
+    {
+        return category != nullptr && (category == keywords || category == folders);
+    }
+    /*  THE ONE FOLDER FILTER, as paths: what the Folders category includes (Checked) and
+        excludes (PartiallyChecked). The Source panel's LibTree is a second view of it,
+        and MW mirrors this into it after every filter change. */
+    void folderFilterState(QStringList &includes, QStringList &excludes) const;
+    /*  Set the Folders category to exactly this and apply it with ONE filterChange --
+        what a LibTree click asks for. Every other category is left alone. Paths the
+        category does not hold are returned in missing (nothing loaded is in them); false
+        only when the category has not been built yet, which the caller must wait for. */
+    bool setFolderFilter(const QStringList &includes, const QStringList &excludes,
+                         QStringList *missing = nullptr);
     /*  Every filterable item beneath a category, at ANY depth. Categories other than
         Keywords are one level deep and this is just their children; writing the loops
         against it is what stops a nested category being half-handled. */
@@ -193,6 +221,9 @@ public slots:
     bool isCatFiltering(QTreeWidgetItem *item);
     void reset();
     void save();
+    /*  Whether save() found anything checked -- what a caller restoring after a rebuild
+        needs to know to decide whether the compiled predicate is now stale. */
+    bool hasSavedStates() const { return !itemStates.isEmpty(); }
     void restore();
     void reportSaved();
     void disable();
@@ -251,8 +282,21 @@ public:
             key on. NOT text(0): the Keywords header appends its unfiled count, and a
             key that moved with the display text would silently drop every restored
             keyword filter the first time that count changed. */
-        CategoryNameRole
+        CategoryNameRole,
+        /*  On a category HEADER: its includes must ALL match, not any one. Only the
+            Keywords header ever carries it -- see setKeywordsMatchAll. Read by
+            SortFilter::compileFilters into FilterCategory::matchAll. */
+        MatchAllRole
     };
+
+    /*  ANY OR ALL OF THE CHECKED KEYWORDS. Checked items in a category are OR-ed; for
+        Keywords, where an image carries several, "Family AND Beach" is the question as
+        often as "Family OR Beach". The mode is the any/all label on the Keywords header
+        (click it) and the header's context menu. It resets to any with the categories,
+        and travels through save()/restore(). Emits filterChange only when it changes
+        what matches -- two or more keywords included. */
+    bool keywordsMatchAll() const;
+    void setKeywordsMatchAll(bool all);
 
     /*  THE AUTHORED VOCABULARY, PUSHED IN AS A VALUE rather than reached through a
         KeywordVocab *. The vocabulary is loaded lazily and its dock is off by default, so
@@ -329,6 +373,13 @@ private:
     /*  The "Show unfiled only" toggle, appended to whichever menu a right-click in the
         Keywords category built. Returns it so the caller can recognise it. */
     QAction *addUnfiledAction(QMenu &menu);
+    /*  "Match all checked keywords", appended beside the unfiled toggle. */
+    QAction *addKeywordModeAction(QMenu &menu);
+    /*  The any/all label in the Keywords header's Filter column: dimmed while fewer than
+        two keywords are included, because the mode changes nothing until then. Called
+        from setEachCatTextColor, which runs after every build and filter change. */
+    void updateKeywordModeLabel();
+    int includedKeywordCount() const;
     /*  Does the keyword list hold any branch whose leaf is this folded name? Answered
         from vocabPathsFold, which the panel already holds for the unfiled marking. */
     bool vocabHasLeaf(const QString &leafFold) const;
@@ -369,6 +420,7 @@ private:
         filed" -- see setVocabPaths. */
     QSet<QString> vocabPathsFold;
     bool showUnfiledOnly = false;
+    QStringList folderAnchors;          // see setFolderAnchors
     struct ItemState {
         /*  KEYED ON THE TOP-LEVEL CATEGORY AND THE ITEM'S FILTER VALUE, not on the
             item's parent and its label. Those were the same thing while every category
@@ -384,6 +436,7 @@ private:
         Qt::CheckState state = Qt::Checked;
     };
     QList<ItemState>itemStates;
+    bool savedKeywordsMatchAll = false;     // the any/all mode, with itemStates
     QString searchText;
 };
 

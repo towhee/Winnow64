@@ -458,6 +458,11 @@ winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cp
 # folders) went with the old implementation; this is what is left.
 winnow_add_unit_test(tst_filterpredicate unit/tst_filterpredicate.cpp)
 
+# tst_foldertree pins Utilities/foldertree.h -- the hierarchy rules the Source panel's
+# LibTree and the Filters panel's Folders category are both built from, so the two
+# trees cannot disagree about a parent, a top-level row or a label.
+winnow_add_unit_test(tst_foldertree unit/tst_foldertree.cpp)
+
 # tst_thumbcache covers the thumbnail index -- the layer that makes scrolling an
 # unvisited region of a 250k catalog a database read rather than a file open per
 # row. The cases are the ones where a cache can be WRONG rather than empty: a

@@ -4800,3 +4800,304 @@ Help
 
 2016-04-05_0259 Focus Stack.jpg
 2016-04-05_0259 Focus Stack.jpg
+
+==========================================================================================
+Library
+==========================================================================================
+
+LibTree: a Folders | Library toggle on the Source panel
+
+ Context
+
+ Winnow has two image sources: Folders (the filesystem, FSTree) and the Library
+ (the catalogued index, browsed whole). Today the Library is reached through a "Catalog"
+ band above FSTree (Views/catalogscopetree.*, with year rows). Once it is loaded, the
+ only way to narrow by folder is the Filters Folders category, and that has two
+ problems:
+
+ - It matches the folder's own name, not its path. The category filters on
+   G::FolderNameColumn = fileInfo.dir().dirName() (Datamodel/datamodel.cpp:2590).
+   The user's index has 1,599 folders, and 22 of those names are shared by more than one
+   folder (DxO ×8, pbase2048 ×8, 08 ×5, …). Ticking "DxO" selects all eight.
+ - It is a flat list. 1,599 rows can't be navigated, and there's no way to pick a
+   whole branch.
+
+ Outcome:
+
+ - The Source title bar gets a Folders | Library toggle, which is the scope switch
+   itself.
+ - Folders shows FSTree, as today.
+ - Library shows LibTree, the Library's folders in FSTree's parent/child layout.
+ - Clicking a LibTree node filters the fully loaded Library to that folder and its
+   subfolders (user decision). It does not reload.
+ - The Filters Folders category becomes path-keyed and nested, so LibTree and Filters
+   are two views of one folder filter.
+
+ Decisions already made by the user:
+
+ - Plain click = folder + subfolders. Opt+click = this folder only. Cmd = toggle.
+   Shift = range.
+ - Naming split by meaning. Library = what you browse (all catalogs). Catalog =
+   one index and its folder rules. The user wants to keep multiple catalogs per
+   Library possible, so the code keeps a seam for it but builds nothing multi-catalog
+   now.
+ - The year rows are dropped. The Filters Years category covers them.
+
+ Before starting: the working tree has uncommitted changes in
+ Datamodel/datamodel.cpp, imagerow.h, rowscratch.h and the matching tests. This plan
+ edits the same files, so commit or finish that work first to keep the diffs separate.
+
+ ---
+
+ Stage 1: A path-keyed, nested Folders filter (both scopes)
+
+ This stage is useful on its own: it fixes the name collision, and a recursive Folders
+ load gets a folder tree in Filters.
+
+ 1a. Add the column, following the KeywordsAll precedent.
+
+ - Add G::FolderPathsAllColumn (Main/global.h, Datamodel/rowfields.h as
+   WF_RESIDENT, sqlName empty).
+ - Reading the column returns the row's folder path plus every ancestor, the same way
+   KeywordsAllColumn holds every ancestor prefix.
+ - Parent filtering is then a QStringList::contains. FilterPredicate does not
+   change, and exclude subtracts a branch for free.
+ - Storage: one interned folderPathId per row (Datamodel/imagerow.h, +4 bytes).
+   - Add a per-folder ancestor-list cache in RowStore, keyed by that id.
+   - Fill it on write, under the write lock, so worker-thread reads never mutate
+     anything.
+   - Rows share the cached list (implicit sharing), so there's no per-row vector.
+ - Write the id in DataModel::addFileDataForRow (datamodel.cpp:2553). This is the one
+   write site for both folder loads and catalog loads, so use cat->folder when a
+   CatalogRow is given.
+ - FolderNameColumn is untouched: the TableView column and Main/keywordedit.cpp still
+   read it.
+
+ 1b. Count folders the way keywords are counted.
+
+ - Follow "ADDING A FILTER CATEGORY" in notes/Documentation.txt (line ~884).
+ - filtersnapshot.h: add QStringList folderPaths to FilterSnapshotRow, and take the
+   FolderName slot off the single-value v[] path.
+ - buildfilters.cpp: generalise countKeywords to a list counter used for both
+   keywords and folders, and move folders out of sinks() beside keywords.
+ - Ancestor expansion makes every node's count exact without a separate roll-up, because
+   a row has only one folder.
+
+ 1c. Build the Filters Folders category as a tree (Datamodel/filters.cpp/.h).
+
+ - filterCategoryToDmColumn[catFolder] and both {item, column} tables (filters.cpp
+   ~1844, ~1918) → FolderPathsAllColumn.
+ - New Filters::addFolderItems, the counterpart of addKeywordItems: label = folder
+   name, data(1) = full path, tooltip = full path.
+ - itemMapKey returns data(1) for folders as well as keywords.
+ - Replace every category == keywords nesting branch (the nested update path,
+   itemMapKey, …) with isNestedCategory(cat). itemsInCategory already walks any
+   depth.
+ - Anchors: Filters::setFolderAnchors(QStringList), pushed by MW the same way
+   setVocabPaths is.
+   - Library scope: the catalog's include rows (MW::catalogScopeEffective(true)).
+   - Folders scope: the outermost entries of dm->folderList.
+   - Nodes above an anchor are not created.
+   - An anchor shows its folder name, adding its parent's name only when two anchors
+     share a name.
+
+ 1d. A shared hierarchy helper.
+
+ - New header-only Utilities/foldertree.h: buildFolderHierarchy(pathCounts, anchors)
+   returns the nodes, with synthesised parent folders and rolled-up counts.
+ - It serves:
+   - addFolderItems: fed ancestor-expanded counts, so it only builds the structure.
+   - LibTree: fed raw per-folder counts from the index.
+   - The catalog side below.
+ - There is one set of rules, so the two trees can't disagree.
+
+ 1e. The catalog side (Cache/catalog.cpp).
+
+ - Add a categorySql case, and have categoryItems(FolderPathsAllColumn) return
+   ancestor-expanded counts through the helper.
+   tst_catalog::categoryItemsMatchWhatTheDatamodelWrites pins this parity.
+ - buildQueryLocked: a FolderPathsAll include/exclude becomes
+   (i.folder = ? OR i.folder LIKE ?||'/%'), the same form cq.folder already uses
+   (~line 1023). This path is only reached when a search cap is set.
+ - Add Catalog::liveFolderCounts() (live = 1). folderCounts() counts demoted rows
+   too, so it can't be used for display.
+
+ Stage 2: LibTree and the toggle
+
+ 2a. Views/libtree.h/.cpp.
+
+ - LibTree : QTreeWidget, styled like FSTree: the same HoverDelegate, the folder icon,
+   and the count column aligned using FSTree's metric ("(99999", 10).
+ - Honour the folderMaxWidth cap and lift it when the panel floats, as the
+   topLevelChanged lambda in initialize.cpp:1589 does for the current trees.
+ - Rows: the top row is "Library  52468", then one top-level node per anchor, then
+   the hierarchy from foldertree.h.
+ - Catalog seam: the tree is built from
+   QVector<LibrarySource>{id, name, anchors, folderCounts}, and MW::librarySources()
+   returns one entry today. The catalog level is created only when there is more than one
+   source.
+ - Loading: Catalog::liveFolderCounts() runs off the GUI thread and the result is
+   applied on it, the same pattern as CatalogScopeTree::refreshYears.
+ - Offline volumes: nodes on an unmounted volume are greyed. Stat once per anchor or
+   volume root, never per folder.
+ - Expanded paths persist in QSettings.
+ - Clicks:
+   - Click: clear the folder filter, then include the node. The node's subtree
+     follows from the ancestor column.
+   - Opt+click: "this folder only". Include the node and exclude each direct child.
+     This is expressed in the existing tri-state checks, so Filters shows it truthfully.
+   - Cmd+click: toggle the node in or out of the includes. Clears any exclude on it.
+   - Shift+click: include the visible range.
+   - Library row: clear the folder category. Other categories are left alone.
+ - Signals: it emits folderFilterRequested(includes, excludes), and
+   syncFromFilters(includes, excludes) updates it without emitting.
+   - Selected = included.
+   - An excluded node is drawn in the Filters exclude colour.
+ - Context menu (v1, read-only):
+   - Reveal in Folders: switch to Folders and fsTree->select(path).
+   - Show in Finder/Explorer: the existing reveal helper.
+   - Manage Catalog…: opens CatalogRootsDlg.
+   - No rename, move or drag-drop in v1, and LibTree accepts no drops. Thumbnail drags
+     have caused data loss before (Qt::IgnoreAction).
+
+ 2b. One folder-filter state, owned by Filters.
+
+ - MW::applyLibraryFolderFilter(includes, excludes):
+   - Library not loaded or filters not built: store a pending request, call
+     setScope(Catalog), and apply it on BuildFilters::finishedBuildFilters.
+     - This replaces pendingCatalogYear/applyPendingCatalogYear
+       (setandupdate.cpp:557-626) and reuses its timing reasoning.
+     - Applying immediately after build() checked nothing.
+   - Otherwise: Filters::setFolderFilter sets the check states with signals blocked,
+     expands to the checked items, and triggers one filter change.
+ - Filters → LibTree: MW's existing filter-change hook calls
+   libTree->syncFromFilters(filters->folderFilterState()).
+
+ 2c. Toggle and panel body (Main/initialize.cpp ~1570-1640).
+
+ - Replace wrapWithCatalogScopeTree(folderCatalogTree, fsTree) with a
+   QStackedWidget {fsTree, libTree}.
+ - Add two checkable QToolButtons ("Folders", "Library") in an exclusive QButtonGroup
+   (the transformpanel.cpp:267 pattern) to folderTitleLayout, after the title.
+   - Use QToolButton, not QPushButton: the global 100px min-width would widen the dock.
+   - Tooltips say what each button does.
+ - The toggle is a mirror of G::scope.
+   - MW::setScope sets the checked button and the stack page with signals blocked.
+   - It goes beside where setScope now calls folderCatalogTree->setScopeIsCatalog
+     (setandupdate.cpp:499).
+   - A folder or bookmark click therefore flips it to Folders by itself.
+ - Library clicked: setCatalogScopeWhole(...), the existing path (empty-catalog
+   guard and auto-scan).
+ - Folders clicked:
+   - Replay the folder selection remembered when Folders was last left (captured in
+     setScope on the Folders→Catalog change) through FSTree::select.
+   - If the pick-discard guard refuses the change, setScope pushes the toggle back to
+     Library.
+   - If nothing is remembered, show FSTree with the model empty, as at startup with no
+     folder.
+
+ Stage 3: Retire the band, split the strings, update the docs
+
+ - Delete:
+   - Views/catalogscopetree.* and its CMake entry.
+   - wrapWithCatalogScopeTree.
+   - folderCatalogTree (mainwindow.h:2026, mainwindow.cpp:7903,
+     setandupdate.cpp:437/499).
+   - setCatalogScopeForYear, applyPendingCatalogYear, appliedCatalogYear, and their
+     finishedBuildFilters connection.
+   - setCatalogScopeWhole stays for the toggle and openLibraryAtStart
+     (mainwindow.cpp:1332), without the year logic.
+ - Rename updateCatalogScopeTrees → updateLibraryTree, which pushes the count and
+   refreshes LibTree. Add refresh triggers:
+   - its 4 existing callers;
+   - CatalogScanner::finished;
+   - the catalog reconcile / forgetFolders paths;
+   - folder rename, move and delete through Utilities/fileops.
+ - Strings (split by meaning):
+   - Library: the toggle, the LibTree root, "Filters (Library)", File > Open Library,
+     Search Library, and the tooltips in updateCatalogScopeTrees.
+   - Catalog (unchanged): Manage Catalog…, Scan, "Nothing is catalogued yet".
+   - Shift+O's label also changes in Help/shortcutsform.ui.
+   - Code identifiers keep Catalog*.
+ - notes/Documentation.txt (soft-wrapped; sync the ToC at the end):
+   - Add a section "The Library Tree (LibTree)": the toggle, the one folder-filter state,
+     the click rules, anchors, the catalog seam, and why there is no reload.
+   - Update "The Filter Dock (Folders and Catalog)".
+   - In "ADDING A FILTER CATEGORY", add that a nested category needs isNestedCategory.
+   - Update the nomenclature paragraph (~line 369). It currently says "Library is the
+     catalogue plus the keywords"; the new meaning is Library = everything browsed,
+     across all catalogs.
+ - Memory: save the Library vs Catalog decision (multi-catalog intent).
+
+ Critical files
+
+ - Main/global.h, Datamodel/rowfields.h, Datamodel/imagerow.{h,cpp}
+ - Datamodel/datamodel.cpp
+ - Datamodel/filtersnapshot.h, Datamodel/buildfilters.{h,cpp}
+ - Datamodel/filters.{h,cpp}
+ - Cache/catalog.{h,cpp}
+ - Utilities/foldertree.h (new), Views/libtree.{h,cpp} (new)
+ - Main/initialize.cpp, Main/setandupdate.cpp, Main/mainwindow.{h,cpp}
+ - Main/menusandactions.cpp
+ - CMakeLists.txt, tests/CMakeLists.txt
+ - Help/shortcutsform.ui, notes/Documentation.txt
+
+ Existing pieces this reuses
+
+ - Ancestor expansion + nested category: KeywordsAllColumn, addKeywordItems,
+   itemsInCategory, and itemMapKey (filters.cpp:2420-2580).
+ - Scope entry and guards: MW::setScope, setCatalogScopeWhole,
+   catalogEmptyOpenManage, maybeAutoScanCatalog.
+ - Apply after the filters are built: the applyPendingCatalogYear timing pattern.
+ - Subtree SQL: bindFolderScope and the cq.folder clause in catalog.cpp.
+ - Anchors: catalogScopeEffective, catalogScopeNormalize (Main/catalogscope.h,
+   the trailing-slash rule).
+ - FSTree selection and look: FSTree::select, syncSelectionToFolders,
+   HoverDelegate.
+
+ Verification
+
+ Unit tests: ctest --test-dir build/<preset> --output-on-failure
+
+ - tst_foldertree (new): anchors, synthesised parent folders, roll-up, two anchors
+   sharing a name, a folder outside every anchor, Windows C:/ paths.
+ - tst_filterpredicate:
+   - including a parent folder matches its descendants;
+   - "folder only" (include the folder, exclude its children);
+   - .../DxO in one branch does not match DxO in another;
+   - /Photos/2024 does not match /Photos/2024 raw.
+ - tst_imagerow: FolderPathsAllColumn round-trip. Also extend
+   prefixExpansionStaysInBudget with the delta gate for the new id.
+ - tst_filters: the Folders category builds nested with anchors, and the
+   check → predicate path.
+ - tst_catalog:
+   - extend categoryItemsMatchWhatTheDatamodelWrites to FolderPathsAll;
+   - buildQueryLocked subtree include/exclude;
+   - liveFolderCounts excludes demoted rows.
+ - tst_rowfields: the column order still matches.
+
+ Checks without a build: per memory, run -fsyntax-only against
+ compile_commands.json while editing, and run moc directly on libtree.h. The user
+ builds in Qt Creator.
+
+ Performance: WINNOW_PERF_PROBE=1 Winnow --catalogload on the real index.
+
+ - Filters build time with ~1,600 folder nodes must stay in line with Keywords.
+ - The icons/beachball numbers must not regress.
+
+ In the app:
+
+ 1. Library → the tree shows the anchors and the right counts.
+ 2. Click a "DxO" folder → only that folder's images show.
+ 3. Click 2020-2029 → the whole decade shows.
+ 4. Opt+click a parent that has images of its own → only its own images show, and
+    Filters shows the children excluded.
+ 5. Cmd-add a second branch.
+ 6. Check a folder in Filters → the LibTree highlight follows.
+ 7. Clear all → the highlight clears.
+ 8. Click the Library row → the folder filter clears and other filters stay.
+ 9. Switch to Folders → the previous folder reloads.
+ 10. Click a bookmark → the toggle flips to Folders.
+ 11. Recursive Folders load → Filters Folders is now a tree.
+ 12. Unmount a volume → its nodes are greyed.
+ 13. Scan adds a folder → LibTree updates.

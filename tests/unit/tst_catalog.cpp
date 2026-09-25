@@ -84,6 +84,9 @@ private slots:
     void categoryItemsAreEmptyForColumnsTheIndexCannotAnswer();
     void genericIncludeAndExcludeNarrowTheSearch();
     void blankCategoryItemAccountsForEveryImage();
+    void folderQueryTakesTheSubtreeAndNothingBeside();
+    void liveFolderCountsSkipDemotedRows();
+    void keywordsMatchAllNeedsEveryOne();
 
 private:
     QString imagePath(const QString &name) const;
@@ -1992,6 +1995,101 @@ void tst_catalog::genericIncludeAndExcludeNarrowTheSearch()
     CatalogQuery none;
     none.exclude.insert(G::CameraModelColumn, {"CANON R5"});
     QCOMPARE(cat.search(none).size(), 3);
+}
+
+void tst_catalog::folderQueryTakesTheSubtreeAndNothingBeside()
+{
+/*
+    A checked FOLDER is that folder and everything beneath it -- what the datamodel does
+    through G::FolderPathsAllColumn -- and must not leak to a neighbour that merely shares
+    a prefix ("2024 raw" beside "2024") or, through LIKE's '_' wildcard, to a name one
+    character different ("a_b" vs "aXb"). Two folders with the same NAME stay apart.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString root = QDir(tmp.path()).absolutePath();
+    cat.commit({rowIn("fq/2024", "a.jpg"), rowIn("fq/2024/DxO", "b.jpg"),
+                rowIn("fq/2024 raw", "c.jpg"), rowIn("fq/a_b", "d.jpg"),
+                rowIn("fq/aXb", "e.jpg"), rowIn("fq/2025/DxO", "f.jpg")});
+
+    CatalogQuery q;
+    q.include.insert(G::FolderPathsAllColumn, {root + "/fq/2024"});
+    QStringList got = cat.search(q);
+    got.sort();
+    QCOMPARE(got, QStringList({imagePath("fq/2024/DxO/b.jpg"), imagePath("fq/2024/a.jpg")}));
+
+    // a trailing slash is the same folder
+    CatalogQuery slash;
+    slash.include.insert(G::FolderPathsAllColumn, {root + "/fq/2024/"});
+    QCOMPARE(cat.search(slash).size(), 2);
+
+    CatalogQuery under;
+    under.include.insert(G::FolderPathsAllColumn, {root + "/fq/a_b"});
+    QCOMPARE(cat.search(under), QStringList{imagePath("fq/a_b/d.jpg")});
+
+    // one DxO is not the other
+    CatalogQuery dxo;
+    dxo.include.insert(G::FolderPathsAllColumn, {root + "/fq/2025/DxO"});
+    QCOMPARE(cat.search(dxo), QStringList{imagePath("fq/2025/DxO/f.jpg")});
+
+    // include a branch, exclude a sub-branch: "this folder only"
+    CatalogQuery only;
+    only.include.insert(G::FolderPathsAllColumn, {root + "/fq/2024"});
+    only.exclude.insert(G::FolderPathsAllColumn, {root + "/fq/2024/DxO"});
+    QCOMPARE(cat.search(only), QStringList{imagePath("fq/2024/a.jpg")});
+
+    // the category lists folders one by one; Filters rolls them up
+    const QMap<QString, int> items = cat.categoryItems(G::FolderPathsAllColumn);
+    QCOMPARE(items.value(root + "/fq/2024"), 1);
+    QCOMPARE(items.value(root + "/fq/2024/DxO"), 1);
+}
+
+void tst_catalog::liveFolderCountsSkipDemotedRows()
+{
+/*
+    LibTree is built from these. A folder whose images have all gone must not be offered
+    as a place to browse -- but reconciling (folderCounts) must still see it.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString gone = QDir(tmp.path()).absoluteFilePath("lf-gone");
+    const QString kept = QDir(tmp.path()).absoluteFilePath("lf-kept");
+    const CatalogRow g = rowIn("lf-gone", "g.jpg");
+    cat.commit({g, rowIn("lf-kept", "k.jpg")});
+    QVERIFY(QFile::remove(g.path));
+    QCOMPARE(cat.sweep(), 1);
+
+    const QMap<QString, int> live = cat.liveFolderCounts();
+    QVERIFY(!live.contains(gone));
+    QCOMPARE(live.value(kept), 1);
+    QCOMPARE(cat.folderCounts().value(gone), 1);
+}
+
+void tst_catalog::keywordsMatchAllNeedsEveryOne()
+{
+/*
+    The index answers "all of these keywords" the same way the datamodel does: one EXISTS
+    per keyword, ancestors reached through the prefix expansion, and no row returned
+    twice for carrying several of them.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("ma-both.jpg", {}, {"Family", "Place|Beach"}),
+                rowFor("ma-fam.jpg", {}, {"Family"}),
+                rowFor("ma-beach.jpg", {}, {"Place|Beach"})});
+
+    CatalogQuery any;
+    any.keywords = {"Family", "Place|Beach"};
+    QCOMPARE(cat.search(any).size(), 3);
+
+    CatalogQuery all = any;
+    all.keywordsMatchAll = true;
+    QCOMPARE(cat.search(all), QStringList{imagePath("ma-both.jpg")});
+
+    CatalogQuery viaAncestor;
+    viaAncestor.keywords = {"Family", "Place"};
+    viaAncestor.keywordsMatchAll = true;
+    QCOMPARE(cat.search(viaAncestor), QStringList{imagePath("ma-both.jpg")});
+
+    all.excludeKeywords = {"Family"};
+    QVERIFY(cat.search(all).isEmpty());
 }
 
 void tst_catalog::blankCategoryItemAccountsForEveryImage()

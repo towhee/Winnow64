@@ -304,6 +304,8 @@ void DataModel::setModelProperties()
         { G::KeywordsColumn,             "Keywords",                 false },
         { G::KeywordPathsColumn,         "KeywordPaths",             true },
         { G::KeywordsAllColumn,          "All Keywords",             true },
+        { G::FolderPathColumn,           "Folder Path",              true },
+        { G::FolderPathsAllColumn,       "Folder Paths All",         true },
         { G::MetadataReadingColumn,      "Meta Reading",             true },
         { G::MetadataStatusColumn,       "Meta Status",              true },
         { G::IconLoadedColumn,           "Icon Loaded",              true },
@@ -2611,6 +2613,11 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::FolderNameColumn), folderName);
+    /*  The folder's PATH as well as its name -- what tells two "DxO" folders apart (see
+        G::FolderPathColumn). A catalog row carries it already; the row store derives
+        G::FolderPathsAllColumn from it. */
+    setData(index(row, G::FolderPathColumn),
+            (cat && !cat->folder.isEmpty()) ? cat->folder : fileInfo.absolutePath());
     QString s = fileInfo.suffix().toUpper();
     setData(index(row, G::TypeColumn), s);
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
@@ -6121,15 +6128,12 @@ bool DataModel::getSelectionOrPicks(QStringList &list)
 bool DataModel::isAnyPick()
 {
 /*
-    Returns true if any row is picked.
+    Returns true if any row is picked. O(1): RowStore keeps the count exact on every
+    write (see RowStore::pickedCount) -- this used to walk every row, twice per
+    selection, which at 148,567 rows was a visible share of an arrow keypress.
 */
     if (G::isLogger) G::log("DataModel::isPick");
-    if (isDebug) qDebug() << "DataModel::isPick" << "instance =" << instance;
-    for (int row = 0; row < rowCount(); ++row) {
-        QModelIndex idx = index(row, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "Picked") return true;
-    }
-    return false;
+    return rowStore.pickedCount() > 0;
 }
 
 int DataModel::pickCount()
@@ -6139,12 +6143,7 @@ int DataModel::pickCount()
     current filter is still a pick, and still lost when the model is cleared.
 */
     if (G::isLogger) G::log("DataModel::pickCount");
-    int picks = 0;
-    for (int row = 0; row < rowCount(); ++row) {
-        QModelIndex idx = index(row, G::PickColumn);
-        if (idx.data(Qt::EditRole).toString() == "Picked") ++picks;
-    }
-    return picks;
+    return rowStore.pickedCount();
 }
 
 void DataModel::clearPicks()
@@ -6768,6 +6767,10 @@ void SortFilter::compileFilters()
         else {
             FilterCategory cat;
             cat.column = item->data(0, G::ColumnRole).toInt();
+            /*  Carried on the category's own header item, so it is compiled with the
+                checks it applies to and cannot drift from them. See
+                Filters::setKeywordsMatchAll. */
+            cat.matchAll = item->data(0, Filters::MatchAllRole).toBool();
             fresh->categories.append(cat);
         }
         ++it;

@@ -273,7 +273,7 @@ bool isPerfProbe = false;                // [PERF] Phase 1/2 load timing lines
 std::atomic<bool> isIngestProbe{false};  // [INGEST] cull path: selection->loupe, key cost
 std::atomic<bool> isPanelProbe{false};   // dock geometry negotiation (panel sizing glitches)
 bool isReportDevelopTime = false;        // [DevTime] per-stage Develop re-render timings
-bool isCopyPathProbe = true;            // [COPYPATH] context-menu Copy path tracing
+bool isCopyPathProbe = false;            // [COPYPATH] context-menu Copy path tracing
 bool isWheelProbe = false;               // [WHEEL] IconView wheel/trackpad events
 
 std::atomic<int> probeThumbRetryCount{0};  // count of Thumb::loadThumb 100ms retry waits (Phase-2 probe)

@@ -336,10 +336,36 @@ QString MW::getPicked()
     Returns a string like "16 (38MB)"
 */
     if (G::isLogger) G::log("MW::getPicked");
+    /*  NOT A WALK PER CALL. This walked every proxy row, and updateStatus calls it from
+        the selection change, from loupeDisplay and from ImageView::scale -- several
+        times per arrow keypress. At 148,567 rows it was half the GUI thread's time
+        while stepping through images (sampled).
+
+        With nothing filtered the proxy holds every row, so the model's exact count
+        (RowStore::pickedCount, maintained on every write) is the answer. With a filter
+        the count is over a subset only a walk can see, so the walk is kept but
+        re-run only when its inputs change: a pick or the row set (pickGeneration), a
+        filter change (dm->instance -- MW::filterChange always bumps it) or the proxy's
+        size. */
+    const int sfRows = dm->sf->rowCount();
     int count = 0;
-    for (int row = 0; row < dm->sf->rowCount(); row++) {
-        if (G::stop) return "";
-        if (dm->valueSf(row, G::PickColumn) == "Picked") count++;   // dm->valueSF is thread safe
+    if (sfRows == dm->rowCount()) {
+        count = dm->pickCount();
+    }
+    else {
+        const quint64 gen = dm->rowStore.pickGeneration();
+        const int inst = dm->instance;
+        if (gen != pickedSfGen || inst != pickedSfInstance || sfRows != pickedSfRows) {
+            for (int row = 0; row < sfRows; row++) {
+                if (G::stop) return "";
+                if (dm->valueSf(row, G::PickColumn) == "Picked") count++;
+            }
+            pickedSfCount = count;
+            pickedSfGen = gen;
+            pickedSfInstance = inst;
+            pickedSfRows = sfRows;
+        }
+        count = pickedSfCount;
     }
 
     QString image = count == 1 ? " image, " : " images, ";

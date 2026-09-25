@@ -27,6 +27,11 @@ private slots:
     void savedNestedStateSurvivesARebuild();
     void twoKeywordsSharingALeafRestoreIndependently();
     void everyDepthReachesTheQuery();
+    void foldersBuildAsATreeUnderTheirAnchors();
+    void folderCountsRollUpAndStateSurvivesARebuild();
+    void foldersReachTheQueryByPath();
+    void aNestedCategoryIsCountedAtEveryDepth();
+    void keywordMatchModeTravelsAndResets();
 
 private:
     /*  The vocabulary the catalog hands over: PATHS, prefix-expanded, so every ancestor
@@ -171,6 +176,156 @@ void tst_filters::everyDepthReachesTheQuery()
     QVERIFY(q.keywords.contains("Location|Canada|BC|Vancouver"));
     QVERIFY2(!q.keywords.contains("Vancouver"), "the LABEL must never reach the query");
     QCOMPARE(q.excludeKeywords, QStringList{"Location|USA"});
+}
+
+/*  PER-FOLDER counts, the shape BuildFilters and Catalog::categoryItems hand over. Two
+    folders share the NAME "DxO"; "2020-2029" and "2020" hold no images of their own. */
+static QMap<QString, int> folderCounts()
+{
+    return {
+        {"/U/Photos/2020-2029/2020/DxO", 3},
+        {"/U/Photos/2020-2029/2021/DxO", 4},
+        {"/U/Photos/Zen", 5},
+    };
+}
+
+void tst_filters::foldersBuildAsATreeUnderTheirAnchors()
+{
+    Filters f(nullptr);
+    f.setFolderAnchors({"/U/Photos"});
+    f.addCategoryItems(folderCounts(), f.folders);
+
+    QVERIFY(f.isNestedCategory(f.folders));
+    QCOMPARE(f.folders->childCount(), 1);                   // the anchor, not "/"
+    QTreeWidgetItem *photos = findByValue(f.folders, "/U/Photos");
+    QVERIFY(photos);
+    QCOMPARE(photos->text(0), QString("Photos"));
+
+    // synthesised parents, labelled by name, valued by path
+    QTreeWidgetItem *decade = findByValue(f.folders, "/U/Photos/2020-2029");
+    QVERIFY(decade);
+    QCOMPARE(decade->parent(), photos);
+    QTreeWidgetItem *dxo20 = findByValue(f.folders, "/U/Photos/2020-2029/2020/DxO");
+    QTreeWidgetItem *dxo21 = findByValue(f.folders, "/U/Photos/2020-2029/2021/DxO");
+    QVERIFY(dxo20 && dxo21 && dxo20 != dxo21);
+    QCOMPARE(dxo20->text(0), QString("DxO"));
+    QCOMPARE(f.itemMapKey(f.folders, dxo20), QString("/U/Photos/2020-2029/2020/DxO"));
+}
+
+void tst_filters::folderCountsRollUpAndStateSurvivesARebuild()
+{
+    Filters f(nullptr);
+    f.setFolderAnchors({"/U/Photos"});
+    f.addCategoryItems(folderCounts(), f.folders);
+
+    // a node counts everything beneath it
+    QCOMPARE(findByValue(f.folders, "/U/Photos")->data(3, Qt::EditRole).toInt(), 12);
+    QCOMPARE(findByValue(f.folders, "/U/Photos/2020-2029")->data(3, Qt::EditRole).toInt(),
+             7);
+
+    // filtered counts arrive per folder too, and roll up the same way
+    f.updateFilteredCountPerItem({{"/U/Photos/2020-2029/2020/DxO", 3}}, f.folders);
+    QCOMPARE(findByValue(f.folders, "/U/Photos/2020-2029")->data(2, Qt::EditRole).toInt(),
+             3);
+    QCOMPARE(findByValue(f.folders, "/U/Photos/Zen")->data(2, Qt::EditRole).toInt(), 0);
+
+    // an edit-driven rebuild keeps the check and the expansion, keyed on the path
+    QTreeWidgetItem *decade = findByValue(f.folders, "/U/Photos/2020-2029");
+    decade->setCheckState(0, Qt::Checked);
+    decade->setExpanded(true);
+    f.updateCategoryItems(folderCounts(), f.folders);
+    QTreeWidgetItem *again = findByValue(f.folders, "/U/Photos/2020-2029");
+    QVERIFY(again);
+    QCOMPARE(again->checkState(0), Qt::Checked);
+    QVERIFY(again->isExpanded());
+
+    // and save/restore across a folder-change rebuild
+    f.save();
+    f.folders->takeChildren();
+    f.addCategoryItems(folderCounts(), f.folders);
+    f.restore();
+    QCOMPARE(findByValue(f.folders, "/U/Photos/2020-2029")->checkState(0), Qt::Checked);
+}
+
+void tst_filters::foldersReachTheQueryByPath()
+{
+    Filters f(nullptr);
+    f.setFolderAnchors({"/U/Photos"});
+    f.addCategoryItems(folderCounts(), f.folders);
+    findByValue(f.folders, "/U/Photos/2020-2029")->setCheckState(0, Qt::Checked);
+    findByValue(f.folders, "/U/Photos/2020-2029/2021/DxO")
+        ->setCheckState(0, Qt::PartiallyChecked);
+
+    CatalogQuery q;
+    f.fillQuery(q);
+    QCOMPARE(q.include.value(G::FolderPathsAllColumn),
+             QStringList{"/U/Photos/2020-2029"});
+    QCOMPARE(q.exclude.value(G::FolderPathsAllColumn),
+             QStringList{"/U/Photos/2020-2029/2021/DxO"});
+    QVERIFY2(!q.include.contains(G::FolderNameColumn), "a folder NAME must not reach it");
+}
+
+void tst_filters::aNestedCategoryIsCountedAtEveryDepth()
+{
+/*
+    One catalogued root is ONE top-level folder with everything beneath it. Counting the
+    category's CHILDREN called that "a single item, nothing to filter", and never saw a
+    check below the top level -- the header stayed unlit while the category filtered.
+*/
+    Filters f(nullptr);
+    f.setFolderAnchors({"/U/Photos"});
+    f.addCategoryItems(folderCounts(), f.folders);
+    QCOMPARE(f.folders->childCount(), 1);
+    QVERIFY(!f.isCatFiltering(f.folders));
+
+    findByValue(f.folders, "/U/Photos/2020-2029/2021/DxO")->setCheckState(0, Qt::Checked);
+    QVERIFY2(f.isCatFiltering(f.folders), "a check four levels down is still filtering");
+
+    f.addCategoryItems(vocabulary(), f.keywords);
+    findByValue(f.keywords, "Location|Canada|BC")->setCheckState(0, Qt::Checked);
+    QVERIFY(f.isCatFiltering(f.keywords));
+}
+
+void tst_filters::keywordMatchModeTravelsAndResets()
+{
+/*
+    Any/all for Keywords lives on the category header (compiled into the predicate), is
+    shown as its label, reaches the catalog query, survives the save/restore around a
+    folder add, and goes back to "any" when the filters are reset for a new set.
+*/
+    Filters f(nullptr);
+    f.addCategoryItems(vocabulary(), f.keywords);
+    QVERIFY(!f.keywordsMatchAll());
+    QCOMPARE(f.keywords->text(2), QString("any"));
+
+    findByValue(f.keywords, "Fauna")->setCheckState(0, Qt::Checked);
+    findByValue(f.keywords, "Location|USA")->setCheckState(0, Qt::Checked);
+
+    QSignalSpy spy(&f, &Filters::filterChange);
+    f.setKeywordsMatchAll(true);
+    QCOMPARE(spy.count(), 1);                       // two included: it changes the result
+    QVERIFY(f.keywords->data(0, Filters::MatchAllRole).toBool());
+    QCOMPARE(f.keywords->text(2), QString("all"));
+
+    CatalogQuery q;
+    f.fillQuery(q);
+    QVERIFY(q.keywordsMatchAll);
+
+    f.save();
+    f.keywords->setData(0, Filters::MatchAllRole, false);
+    f.restore();
+    QVERIFY2(f.keywordsMatchAll(), "restore() must bring the mode back with the checks");
+
+    f.reset();
+    QVERIFY2(!f.keywordsMatchAll(), "a new set starts at any");
+    QCOMPARE(f.keywords->text(2), QString("any"));
+
+    // with fewer than two included the mode changes nothing, so nothing is refiltered
+    f.addCategoryItems(vocabulary(), f.keywords);
+    findByValue(f.keywords, "Fauna")->setCheckState(0, Qt::Checked);
+    spy.clear();
+    f.setKeywordsMatchAll(true);
+    QCOMPARE(spy.count(), 0);
 }
 
 QTEST_MAIN(tst_filters)

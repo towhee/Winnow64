@@ -230,7 +230,11 @@ void MW::createFileActions()
         for, and which folders are indexed is configuration -- neither is part of the
         search surface, and putting them in the panel meant they were only findable by
         someone who had already opened it. Shift+O sits beside O (open a folder). */
-    openCatalogAction = new QAction(tr("Open Catalog"), this);
+    /*  LIBRARY, NOT CATALOG, in what the user browses: the Library is every catalog seen
+        together (one today), and a catalog is one index with its folder rules -- which is
+        why "Manage Catalog..." below keeps its word. The objectName stays "openCatalog",
+        because saved shortcut customisations are keyed on it. */
+    openCatalogAction = new QAction(tr("Open Library"), this);
     openCatalogAction->setObjectName("openCatalog");
     openCatalogAction->setShortcutVisibleInContextMenu(true);
     addAction(openCatalogAction);
@@ -1711,7 +1715,7 @@ void MW::createWindowActions()
        item says what it now does. It carries no shortcut: F2 searches whichever scope is
        current, and this is how the Catalog scope is entered. */
     catalogDockVisibleAction = new QAction(
-        G::useFilterPanel ? tr("Search Catalog") : tr("Catalog Panel"), this);
+        G::useFilterPanel ? tr("Search Library") : tr("Catalog Panel"), this);
     catalogDockVisibleAction->setObjectName("toggleCatalog");
     catalogDockVisibleAction->setShortcutVisibleInContextMenu(true);
     catalogDockVisibleAction->setCheckable(true);
@@ -3263,9 +3267,7 @@ bool MW::isPreviewCacheFolderLoaded() const
     whether the current load is that folder, so the actions are GREYED with a reason
     rather than firing into a silent refusal.
 */
-    for (const QString &f : dm->folderList)
-        if (DevPreviewCache::instance().isCachePath(f)) return true;
-    return false;
+    return DevPreviewCache::instance().containsCachePath(dm->folderList);
 }
 
 void MW::enableSelectionDependentMenus()
@@ -3705,8 +3707,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         /*  ONE SEARCH KEY. F2 focuses the search box in the scope that is current --
             Folders or Catalog -- rather than one key per scope. Shift+F2 used to be
             "search the catalog", but a shortcut that also SWITCHES scope discards the
-            scope the user is in; the Catalog is entered from the Catalog rows, the
-            panel's Folders|Catalog buttons, or File > Open Catalog instead. */
+            scope the user is in; the Library is entered from the Source panel's
+            Folders | Library toggle or File > Open Library instead. */
         filterSearchAction->setShortcut(QKeySequence("F2"));
 
         filterRating1Action->setShortcut(QKeySequence("Shift+1"));

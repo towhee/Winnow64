@@ -421,25 +421,57 @@ void MW::showFavDock() {
     }
 }
 
-/*  Push the catalogued image count onto both Catalog rows.
+/*  Push the Library into LibTree: its folders, their counts, and which are offline.
 
-    The rows say how much is behind them, so "Catalog 84,102" answers "is there
-    anything in there?" without opening the panel -- the discoverability point of
-    putting the row in the tree at all. A count of -1 (index not open) shows the
-    bare name: an unopened index and an empty one are different facts.
+    The folders are a GROUP BY over every catalogued image, and whether an anchor's volume
+    is mounted is a stat that can stall on a dead network mount -- so both are read OFF
+    THE GUI THREAD. One read at a time: a burst of catalog commits during a folder load
+    asks for this once per commit, and they would all return the same answer, so a
+    request that arrives while one is in flight just asks for one more pass afterwards.
 */
-void MW::updateCatalogScopeTrees()
+void MW::updateLibraryTree()
 {
-    if (G::isLogger) G::log("MW::updateCatalogScopeTrees");
+    if (G::isLogger) G::log("MW::updateLibraryTree");
     const qint64 n = Catalog::instance().isAvailable()
                          ? static_cast<qint64>(Catalog::instance().count())
                          : -1;
-    if (folderCatalogTree) folderCatalogTree->setImageCount(n);
 
-    /*  File > Open Catalog greys out when the index could not be opened, with the reason
-        in its tooltip -- the same fact the panel's Catalog button used to carry by being
-        disabled. Manage Catalog... stays enabled: choosing which folders are indexed and
-        rescanning them is what the user would do about it. */
+    if (libTree) {
+        if (n < 0) libTree->setSources({}, -1);
+        else if (libraryTreePending) libraryTreeAgain = true;
+        else {
+            libraryTreePending = true;
+            QStringList anchors;
+            for (const CatalogScopeEntry &e : catalogScopeEffective(true)) anchors << e.path;
+            QPointer<MW> self(this);
+            QThreadPool::globalInstance()->start([self, anchors] {
+                LibrarySource src;
+                src.anchors = anchors;
+                src.folderCounts = Catalog::instance().liveFolderCounts();
+                for (const QString &a : anchors)
+                    if (!QFileInfo::exists(a)) src.offlineAnchors << a;
+                /*  THE TOTAL IS THE SUM OF WHAT IS SHOWN, so the Library row adds up to
+                    its folders. Catalog::count() includes demoted rows, which the tree
+                    deliberately leaves out. */
+                qint64 total = 0;
+                for (int c : src.folderCounts) total += c;
+                if (!self) return;
+                QMetaObject::invokeMethod(self, [self, src, total] {
+                    if (!self || !self->libTree) return;
+                    self->libraryTreePending = false;
+                    self->libTree->setSources({src}, total);
+                    if (self->libraryTreeAgain) {
+                        self->libraryTreeAgain = false;
+                        self->updateLibraryTree();
+                    }
+                }, Qt::QueuedConnection);
+            });
+        }
+    }
+
+    /*  File > Open Library greys out when the index could not be opened, with the reason
+        in its tooltip. Manage Catalog... stays enabled: choosing which folders are
+        indexed and rescanning them is what the user would do about it. */
     const bool open = (n >= 0);
     if (openCatalogAction) {
         openCatalogAction->setEnabled(open);
@@ -452,8 +484,8 @@ void MW::updateCatalogScopeTrees()
                        "be opened.")
             : n == 0 ? tr("Nothing is catalogued yet. Opens Manage Catalog, where you "
                           "choose which folders Winnow indexes.")
-                     : tr("Browse and search every image Winnow has catalogued, "
-                          "including folders that are not open."));
+                     : tr("Browse the whole Library: every image Winnow has "
+                          "catalogued, including folders that are not open."));
         /*  The same property enableSelectionDependentMenus' gate() writes, so the
             Disabled Shortcut Feedback path can say why. Set here rather than there
             because this depends on the catalog, not on the selection. */
@@ -470,9 +502,9 @@ void MW::setScope(G::Scope s, QString src)
     Scope used to be private to the Filter dock, and the Folders/Bookmarks trees knew
     nothing about it -- so selecting a folder and searching the catalog behaved like two
     different applications, and the catalog was reachable only by someone who already knew
-    the panel existed. It is now one fact with three views (the Catalog row above each of
-    the two trees, and the panel's Folders|Catalog buttons); every entry point routes here
-    and this pushes the result back to all of them, so they cannot disagree.
+    the panel existed. It is now one fact with its views -- the Source panel's Folders |
+    Library toggle and the tree beneath it, and the Filters title; every entry point
+    routes here and this pushes the result back to all of them, so they cannot disagree.
 
     IT IS IDEMPOTENT AND RE-ENTRANT-SAFE. Pushing the state back sets widgets that emit on
     change, and those emissions come back here; the early return on "already in this
@@ -491,18 +523,48 @@ void MW::setScope(G::Scope s, QString src)
                            << " a11yActive =" << QAccessible::isActive();
     }
 
-    /*  RE-ASSERT THE ROWS EVEN WHEN THE SCOPE DID NOT CHANGE, so the Catalog row of
-        the dock that was NOT clicked lights up too, and so a click on the row while
-        the catalog is already current leaves it selected rather than toggled off.
-        The trees emit on itemClicked, not on selection, so putting the selection
-        back cannot loop. */
-    if (folderCatalogTree) folderCatalogTree->setScopeIsCatalog(s == G::Scope::Catalog);
+    const bool isLibrary = (s == G::Scope::Catalog);
 
-    /*  THE FOLDERS TREE SHOWS NO SELECTION WHILE THE CATALOG IS THE SCOPE. Two lit rows
-        in the one panel -- the Catalog row above and a folder below it -- read as two
-        scopes at once, which is the confusion the single scope was introduced to end.
-        Clearing here rather than in the "changed" branch below so that clicking Catalog
-        while it is ALREADY the scope clears a folder the user selected in between.
+    /*  REMEMBER WHAT THE FOLDERS VIEW HAD LOADED, so the toggle's Folders button can go
+        back to it. Read from the model's own request -- the folder and whether its
+        subtree came too -- before the Library replaces it. */
+    if (changed && isLibrary && dm->scopeRequest().scope == G::Scope::Folders
+        && !dm->scopeRequest().query.folder.isEmpty()) {
+        lastFolderPath = dm->scopeRequest().query.folder;
+        lastFolderRecurse = dm->scopeRequest().recurse;
+    }
+
+    /*  THE TOGGLE AND THE TREE BENEATH IT, re-asserted even when the scope did not
+        change, so a click the scope refused (Library with nothing catalogued) puts the
+        toggle back. Signals blocked: the buttons act on clicked, and this is not one. */
+    if (sourceFoldersBtn && sourceLibraryBtn) {
+        QSignalBlocker a(sourceFoldersBtn), b(sourceLibraryBtn);
+        sourceLibraryBtn->setChecked(isLibrary);
+        sourceFoldersBtn->setChecked(!isLibrary);
+    }
+    if (sourceStack && libTree)
+        sourceStack->setCurrentWidget(isLibrary ? static_cast<QWidget *>(libTree)
+                                                : static_cast<QWidget *>(fsTree));
+
+    /*  WHERE THE FILTERS FOLDERS TREE STARTS: the catalog's include folders in the
+        Library, so it reads like LibTree; in Folders, the folder that was loaded (the
+        deepest folder the rows share). Pushed before the load its build follows. */
+    if (filters) {
+        QStringList anchors;
+        if (isLibrary)
+            for (const CatalogScopeEntry &e : catalogScopeEffective(true)) anchors << e.path;
+        filters->setFolderAnchors(anchors);
+    }
+    if (!isLibrary) pendingLibraryFolderFilter = PendingFolderFilter();
+    /*  Entering the Library re-reads its folders: a file moved or a folder renamed since
+        the last read is otherwise shown where it was until the next scan. */
+    if (changed && isLibrary) updateLibraryTree();
+
+    /*  THE FOLDERS TREE SHOWS NO SELECTION WHILE THE LIBRARY IS THE SCOPE. It is out of
+        sight behind LibTree then, but a lit folder waiting there would read as a second
+        scope the moment the toggle went back -- the confusion the single scope was
+        introduced to end. Clearing here rather than in the "changed" branch below so a
+        folder selected in between (Reveal in Folders) is cleared too.
 
         Clearing the selection does not unload the folder: FSTree::selectionChanged only
         reschedules the folder watch, and the datamodel keeps what it has (dm->folderList
@@ -528,9 +590,9 @@ void MW::setScope(G::Scope s, QString src)
         can be collapsed and the query is typed into a tree row, so there is no
         placeholder to carry it; the dock title is the one part of the panel that is
         always on screen. Re-asserted even when the scope did not change, for the same
-        reason the Catalog rows above are. */
+        reason the toggle above is. */
     if (G::useFilterPanel && filterTitleBar)
-        filterTitleBar->setTitle(s == G::Scope::Catalog ? "Filters (Catalog)"
+        filterTitleBar->setTitle(s == G::Scope::Catalog ? "Filters (Library)"
                                                         : "Filters (Folders)");
 
     if (!changed) return;
@@ -554,101 +616,147 @@ void MW::setScope(G::Scope s, QString src)
         catalogDockVisibleAction->setChecked(s == G::Scope::Catalog);
 }
 
-void MW::setCatalogScopeForYear(const QString &year)
-{
-/*
-    ONE YEAR OF THE CATALOG, chosen from the Catalog tree above the Folders (or
-    Bookmarks) panel.
-
-    A year is not a second kind of scope: it is the catalog, with one filter already
-    applied. So this switches scope the normal way and then checks that year in the
-    Filters panel -- which leaves the user somewhere they could have got to by hand, and
-    able to uncheck it, add to it or filter further exactly as usual.
-
-    THE CHECK CANNOT HAPPEN HERE when the scope is changing, because switching to the
-    catalog REPLACES the datamodel asynchronously and the Years category is rebuilt from
-    what lands. Checking an item now would check one about to be deleted. The year is
-    therefore remembered and applied by applyPendingCatalogYear(), which runs on
-    BuildFilters::finishedBuildFilters -- NOT where the build is asked for.
-    BuildFilters::build starts a thread, so the Years category is still empty when it
-    returns, and calling the two in sequence checked nothing at all: the first version of
-    this did exactly that, and selecting a year appeared to do nothing.
-
-    When the catalog is already loaded and its filters are built there is no rebuild to
-    wait for -- build() returns early on filtersBuilt and would never emit -- so it
-    applies immediately. Otherwise picking a SECOND year would do nothing.
-*/
-    if (G::isLogger) G::log("MW::setCatalogScopeForYear", year);
-    if (G::isInitializing) return;
-
-    pendingCatalogYear = year;
-    const bool alreadyThere = (G::scope == G::Scope::Catalog);
-    setScope(G::Scope::Catalog, "MW::setCatalogScopeForYear");
-    if (alreadyThere && filters->filtersBuilt) applyPendingCatalogYear();
-}
-
-void MW::applyPendingCatalogYear()
-{
-/*
-    Check the remembered year in the Filters panel, once there is a Years category to
-    check it in. Any other year is cleared first: the tree offers one year at a time, and
-    leaving the previous one checked would make the second click widen the filter instead
-    of changing it. Filters the user set by hand in OTHER categories are left alone.
-*/
-    if (pendingCatalogYear.isEmpty()) return;
-    const QString year = pendingCatalogYear;
-    pendingCatalogYear.clear();
-
-    if (!filters || !filters->years) return;
-
-    QTreeWidgetItem *target = nullptr;
-    for (int i = 0; i < filters->years->childCount(); i++) {
-        QTreeWidgetItem *item = filters->years->child(i);
-        if (item->text(0) == year) target = item;
-        else if (item->checkState(0) != Qt::Unchecked)
-            item->setCheckState(0, Qt::Unchecked);
-    }
-    /*  A year with nothing behind it is possible -- the catalog holds years the loaded
-        set does not -- and silently doing nothing would look like a dead row, so say so
-        rather than leaving the panel unfiltered without explanation. */
-    if (!target) {
-        if (G::popup) G::popup->showPopup("No images from " + year + " in the catalog.");
-        return;
-    }
-
-    /*  Expand only the Years category: the check must be VISIBLE -- a filter applied
-        where the user cannot see it is the same as an unexplained empty panel -- but
-        expanding every category would bury it again. */
-    filters->years->setExpanded(true);
-    filters->setItemFilterState(target, Qt::Checked);
-    filters->scrollToItem(target);
-    appliedCatalogYear = year;
-}
-
 void MW::setCatalogScopeWhole(QString src)
 {
 /*
-    The WHOLE catalog -- the Catalog row itself, as opposed to one of its years.
-
-    Widening back from a year has to undo the year, or clicking Catalog after clicking
-    2018 would leave the panel still showing 2018 while the row says the whole library.
-    Only a year THIS put there is cleared: a year the user checked by hand in the Filters
-    panel is their filter, not ours to remove.
+    The WHOLE Library -- the toggle's Library button, File > Open Library, and "open the
+    library at start". Nothing catalogued opens Manage Catalog instead, because an empty
+    Library is a question, not a result (MW::catalogEmptyOpenManage).
 */
     if (G::isLogger) G::log("MW::setCatalogScopeWhole", src);
     if (catalogEmptyOpenManage(src)) return;
-    pendingCatalogYear.clear();
-    if (!appliedCatalogYear.isEmpty() && filters && filters->years) {
-        for (int i = 0; i < filters->years->childCount(); i++) {
-            QTreeWidgetItem *item = filters->years->child(i);
-            if (item->text(0) == appliedCatalogYear
-                && item->checkState(0) == Qt::Checked) {
-                filters->setItemFilterState(item, Qt::Unchecked);
-            }
-        }
-        appliedCatalogYear.clear();
-    }
     setScope(G::Scope::Catalog, src);
+}
+
+void MW::showFoldersSource()
+{
+/*
+    The toggle's Folders button. Back to the folder the Folders view had loaded before
+    the Library was chosen, through FSTree::select -- the ordinary folder load, with its
+    ordinary guards: un-ingested picks are asked about, and a refusal leaves the Library
+    showing (setScope pushes the toggle back).
+
+    WITH NOTHING TO GO BACK TO the Folders view comes up empty, waiting for a folder to be
+    picked, rather than leaving the Library's rows on screen under a toggle that says
+    Folders -- the toggle has to describe what is loaded.
+*/
+    if (G::isLogger) G::log("MW::showFoldersSource");
+    if (G::scope == G::Scope::Folders) return;
+    pendingLibraryFolderFilter = PendingFolderFilter();
+
+    if (!lastFolderPath.isEmpty() && QFileInfo(lastFolderPath).isDir()) {
+        if (!fsTree->select(lastFolderPath, lastFolderRecurse ? "Recurse" : "None",
+                            "MW::showFoldersSource")) {
+            setScope(G::scope, "MW::showFoldersSource refused");
+        }
+        return;
+    }
+
+    if (!okToDiscardPicks("Leaving the Library", "Leave the Library")) {
+        setScope(G::scope, "MW::showFoldersSource refused");
+        return;
+    }
+    stop("MW::showFoldersSource");
+    setScope(G::Scope::Folders, "MW::showFoldersSource");
+    setCentralMessage(tr("Select a folder."));
+}
+
+void MW::applyLibraryFolderFilter(const QStringList &includes, const QStringList &excludes)
+{
+/*
+    A LibTree click. The Library is already loaded, so this FILTERS it: it sets the
+    Filters panel's Folders category, which is the one folder filter, and LibTree is then
+    re-synced from it like after any other filter change.
+
+    A CLICK DURING THE LOAD WAITS. The Folders category is rebuilt from what lands, and
+    BuildFilters::build runs on a THREAD, so checking items now would check ones about to
+    be deleted. The request is kept and applied on BuildFilters::finishedBuildFilters --
+    the same lesson the Catalog tree's year rows learned, where applying straight after
+    asking for the build checked nothing at all.
+*/
+    if (G::isLogger) G::log("MW::applyLibraryFolderFilter");
+    if (G::isInitializing || !filters) return;
+
+    pendingLibraryFolderFilter = {true, includes, excludes};
+    if (G::scope != G::Scope::Catalog) {
+        setCatalogScopeWhole("LibTree");
+        // nothing catalogued: Manage Catalog opened instead, and nothing is waiting
+        if (G::scope != G::Scope::Catalog) pendingLibraryFolderFilter = PendingFolderFilter();
+        return;
+    }
+    if (filters->filtersBuilt && !G::isModifyingDatamodel && !filters->buildingFilters) {
+        applyPendingLibraryFolderFilter();
+        return;
+    }
+    // a build is coming, and finishedBuildFilters applies the click
+    if (G::isModifyingDatamodel || filters->buildingFilters) return;
+
+    /*  NO BUILD IS COMING when the Filters panel is hidden: the filters are built lazily,
+        only while it is on screen (see buildFiltersWhenModelReady), so the click would
+        wait for ever with nothing to show for it. The folder filter lives in that panel,
+        so it is brought up -- unless it shares a tab with the Source panel, where raising
+        it would hide the very tree that was clicked. Then the click waits for the panel,
+        and says so. */
+    if (!filterDock->isVisible()) {
+        if (tabifiedDockWidgets(folderDock).contains(filterDock)) {
+            if (G::popup)
+                G::popup->showPopup(tr("Open the Filters panel to filter the Library by "
+                                       "folder."), 3000);
+            return;
+        }
+        filterDock->setVisible(true);
+        filterDockVisibleAction->setChecked(true);
+    }
+    buildFiltersWhenModelReady(dm->instance);
+}
+
+void MW::applyPendingLibraryFolderFilter()
+{
+    if (!pendingLibraryFolderFilter.pending || !filters) return;
+    if (G::scope != G::Scope::Catalog) {
+        pendingLibraryFolderFilter = PendingFolderFilter();
+        return;
+    }
+    QStringList missing;
+    if (!filters->setFolderFilter(pendingLibraryFolderFilter.includes,
+                                  pendingLibraryFolderFilter.excludes, &missing)) {
+        return;                                 // not built yet: still pending
+    }
+    pendingLibraryFolderFilter = PendingFolderFilter();
+    syncLibTreeFromFilters();
+    /*  A folder the Library lists and nothing loaded holds -- every image in it is a raw
+        hidden behind its JPG, say -- would otherwise be a click that silently did
+        nothing. */
+    if (!missing.isEmpty() && G::popup)
+        G::popup->showPopup(tr("No loaded images are in %1.")
+                                .arg(QDir::toNativeSeparators(missing.first())));
+}
+
+void MW::restoreFiltersAfterFolderChange()
+{
+/*
+    See MW::folderSelectionChange. A check whose value is no longer in the set (the
+    removed folder, say) simply does not come back -- Filters::restore finds no item for
+    it, which is the right answer.
+
+    RE-APPLIED WHENEVER ANYTHING HAD BEEN CHECKED, not only when something still is: the
+    proxy's compiled predicate holds the pre-rebuild checks until a filterChange
+    recompiles it, so a check that did not come back would otherwise keep filtering.
+*/
+    if (!restoreFiltersPending || !filters) return;
+    restoreFiltersPending = false;
+    const bool hadChecks = filters->hasSavedStates();
+    filters->restore();
+    if (hadChecks || filters->isAnyFilter())
+        filterChange("MW::restoreFiltersAfterFolderChange");
+}
+
+void MW::syncLibTreeFromFilters()
+{
+    if (!libTree || !filters) return;
+    QStringList inc, exc;
+    filters->folderFilterState(inc, exc);
+    libTree->syncFromFilters(inc, exc);
 }
 
 void MW::showKeywordsDock()

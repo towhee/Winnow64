@@ -4,6 +4,7 @@
 #include "Cache/pathkey.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
+#include "Utilities/foldertree.h"
 #include "Utilities/searchterms.h"
 
 #include <QDir>
@@ -223,6 +224,11 @@ QString categorySql(int dmColumn)
     /* The folder NAME, not the path: rtrim everything up to the last separator. */
     case G::FolderNameColumn: expr = "replace(i.folder, rtrim(i.folder,"
                                      " replace(i.folder, '/', '')), '')"; break;
+    /* The folder's PATH, grouped per folder: categoryItems returns one count per folder
+       and Filters rolls them up to the ancestors, the same way it does for the
+       datamodel's counts. A QUERY on this column is not an IN list -- it means "this
+       folder or anything beneath it" -- so buildQueryLocked handles it by name. */
+    case G::FolderPathsAllColumn: expr = "i.folder"; break;
     default:                  return QString();
     }
     return "IFNULL(" + expr + ", '')";
@@ -848,7 +854,7 @@ QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList 
         asked about a folder's worth of paths and became a 30-second freeze the moment a
         catalog scope asked about 42,979 of them. The queries run off the GUI thread, so
         the pass itself was never the problem -- what blocked was every GUI-thread call
-        INTO the catalog (FilterPanel::refresh, updateCatalogScopeTrees, the dock becoming
+        INTO the catalog (FilterPanel::refresh, updateLibraryTree, the dock becoming
         visible) waiting on a mutex held for one query per row. Measured from a person's
         click: GUI STALL 30,689 ms, beginning the instant the load completed, with every
         stage of the load itself under 30 ms.
@@ -940,7 +946,21 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
         binds << notFts;
     }
 
-    if (!cq.keywords.isEmpty()) {
+    if (!cq.keywords.isEmpty() && cq.keywordsMatchAll) {
+        /*  ALL OF THEM: one EXISTS per keyword rather than a join, which would need a
+            GROUP BY ... HAVING COUNT to say "every one" and would multiply the rows on
+            the way. Each is still an indexed equality on pathfold, and ancestors still
+            match through the prefix expansion -- "Location" AND "Beach" is "has some
+            Location keyword and Beach". */
+        for (const QString &k : cq.keywords) {
+            if (k.trimmed().isEmpty()) continue;
+            where << "EXISTS (SELECT 1 FROM image_keyword aik"
+                     " JOIN keyword ak ON ak.id = aik.keyword_id"
+                     " WHERE aik.image_id = i.id AND ak.pathfold = ?)";
+            binds << fold(k);
+        }
+    }
+    else if (!cq.keywords.isEmpty()) {
         /* OR-ed, matching what checking several items in one Filters category does. No
            subtree walk and no LIKE: every image is linked to every ANCESTOR PREFIX of
            every path it carries, so checking "Fauna" reaches everything beneath it by
@@ -990,7 +1010,38 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
        can check and a null QString binds as SQL NULL -- "NULL IN (NULL)" is NULL, so the
        blank row would select nothing at all. categorySql's IFNULL puts the column side at
        '', and this puts the bound side there too. */
+    /*  FOLDERS MATCH A SUBTREE, not a value: a checked folder takes every folder beneath
+        it, as it does in the datamodel through G::FolderPathsAllColumn. A HALF-OPEN
+        RANGE rather than LIKE, because '_' is a LIKE wildcard and folder names are full
+        of underscores ("2020-01-01_Trip") -- LIKE would quietly match neighbours. '0' is
+        0x30, one past '/' (0x2F), so [p/, p0) is exactly "starts with p/". */
+    auto folderSubtrees = [](const QStringList &paths, QVariantList &b) {
+        QStringList ors;
+        for (const QString &raw : paths) {
+            const QString p = FolderTree::normalize(raw);
+            if (p.isEmpty()) continue;
+            const QString lo = p.endsWith('/') ? p : p + '/';
+            QString hi = lo;
+            hi[hi.size() - 1] = QChar('0');
+            ors << "(IFNULL(i.folder, '') = ?"
+                   " OR (i.folder >= ? AND i.folder < ?))";
+            b << p << lo << hi;
+        }
+        return ors.join(" OR ");
+    };
+    if (cq.include.contains(G::FolderPathsAllColumn)) {
+        QVariantList b;
+        const QString ors = folderSubtrees(cq.include.value(G::FolderPathsAllColumn), b);
+        if (!ors.isEmpty()) { where << "(" + ors + ")"; binds += b; }
+    }
+    if (cq.exclude.contains(G::FolderPathsAllColumn)) {
+        QVariantList b;
+        const QString ors = folderSubtrees(cq.exclude.value(G::FolderPathsAllColumn), b);
+        if (!ors.isEmpty()) { where << "NOT (" + ors + ")"; binds += b; }
+    }
+
     for (auto it = cq.include.constBegin(); it != cq.include.constEnd(); ++it) {
+        if (it.key() == G::FolderPathsAllColumn) continue;     // a subtree, above
         const QString expr = categorySql(it.key());
         if (expr.isEmpty() || it.value().isEmpty()) continue;
         QStringList marks;
@@ -998,6 +1049,7 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
         where << "(" + expr + ") IN (" + marks.join(",") + ")";
     }
     for (auto it = cq.exclude.constBegin(); it != cq.exclude.constEnd(); ++it) {
+        if (it.key() == G::FolderPathsAllColumn) continue;     // a subtree, above
         const QString expr = categorySql(it.key());
         if (expr.isEmpty() || it.value().isEmpty()) continue;
         QStringList marks;
@@ -1793,6 +1845,19 @@ QMap<QString, int> Catalog::folderCounts()
     if (!db.isOpen()) return out;
     QSqlQuery q(db);
     if (!q.exec("SELECT folder, COUNT(*) FROM image GROUP BY folder")) return out;
+    while (q.next()) out.insert(q.value(0).toString(), q.value(1).toInt());
+    return out;
+}
+
+QMap<QString, int> Catalog::liveFolderCounts()
+{
+    QMap<QString, int> out;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+    QSqlQuery q(db);
+    if (!q.exec("SELECT folder, COUNT(*) FROM image WHERE live = 1 GROUP BY folder"))
+        return out;
     while (q.next()) out.insert(q.value(0).toString(), q.value(1).toInt());
     return out;
 }

@@ -1,4 +1,5 @@
 #include "Datamodel/imagerow.h"
+#include "Utilities/foldertree.h"
 
 /*
     The column <-> field mapping. This is the seam that lets the storage change
@@ -32,7 +33,7 @@ enum Field {
     F_MetadataReading, F_Rating_, F_Label_, F_Creator_, F_Title_, F_Copyright_,
     F_Email_, F_Url_, F_Permissions, F_ReadWrite, F_Sidecar, F_OrientationOffset,
     F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
-    F_Search, F_Ingested, F_Availability,
+    F_Search, F_Ingested, F_Availability, F_FolderPath,
     /* column 0's custom roles -- not values */
     F_IconRect, F_DupHideRaw, F_DupIsJpg, F_DupRawType, F_DupOtherIdx,
     F_Count
@@ -123,6 +124,10 @@ int fieldBit(int column, int role)
     case G::DevelopColumn:              return F_Develop;
     case G::DevPreviewKeyColumn:        return F_DevPreviewKey;
     case G::AvailabilityColumn:         return F_Availability;
+    /*  FolderPathsAll is DERIVED from FolderPath, so it shares that field's bit: it is
+        set exactly when the path is, and setValue refuses to write it. */
+    case G::FolderPathColumn:           return F_FolderPath;
+    case G::FolderPathsAllColumn:       return F_FolderPath;
 
     /*  SETTLED, AND NOW HELD. Both columns used to carry a different TYPE
         depending on which path wrote them last -- "false" (QString) at row
@@ -161,9 +166,15 @@ QVariant RowStore::value(int row, int column, int role) const
         between the bounds check and the read. */
     QReadLocker locker(&mLock);
     if (row < 0 || row >= mRows.size()) return QVariant();
-    const ImageRow &r = mRows.at(row);
+    return valueLocked(mRows.at(row), column, role);
+}
 
-    /*  Nothing has written this field, so the item it replaces is UNSET and an
+QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
+{
+    /*  Caller holds mLock for reading: value() for one cell, forEachRow() for a
+        whole pass.
+
+        Nothing has written this field, so the item it replaces is UNSET and an
         invalid QVariant is the right answer -- not the field's zero, and not an
         interned empty string. See "WHICH FIELDS HAVE ACTUALLY BEEN WRITTEN" in
         imagerow.h for why that distinction is load-bearing. */
@@ -246,6 +257,8 @@ QVariant RowStore::value(int row, int column, int role) const
     case G::DevelopColumn:         return r.developEdited;
     case G::DevPreviewKeyColumn:   return mStrings.value(r.devPreviewKeyId);
     case G::AvailabilityColumn:    return int(r.availability);
+    case G::FolderPathColumn:      return mStrings.value(r.folderPathId);
+    case G::FolderPathsAllColumn:  return mFolderAncestry.value(r.folderPathId);
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {
@@ -268,6 +281,9 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     if (row < 0 || row >= mRows.size()) return;
     const int bit = fieldBit(column, role);
     if (bit < 0) return;
+    /*  Derived, not stored: writing it would set FolderPath's bit with no path behind
+        it. The ancestry follows from G::FolderPathColumn. */
+    if (column == G::FolderPathsAllColumn) return;
     ImageRow &r = mRows[row];
     setBit(r, bit);
 
@@ -296,7 +312,13 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::DayColumn:             r.dayId = mStrings.id(v.toString()); break;
     case G::RatingColumn:          r.ratingId = mStrings.id(v.toString()); break;
     case G::LabelColumn:           r.labelId = mStrings.id(v.toString()); break;
-    case G::PickColumn:            r.pickId = mStrings.id(v.toString()); break;
+    case G::PickColumn: {
+        const bool was = isPickedLocked(r);
+        r.pickId = mStrings.id(v.toString());
+        const bool now = isPickedLocked(r);
+        if (was != now) { mPicked += now ? 1 : -1; ++mPickGen; }
+        break;
+    }
     case G::TitleColumn:           r.title = v.toString(); break;
     case G::CreatorColumn:         r.creatorId = mStrings.id(v.toString()); break;
     case G::CopyrightColumn:       r.copyrightId = mStrings.id(v.toString()); break;
@@ -348,6 +370,13 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::DevelopColumn:         r.developEdited = v.toBool(); break;
     case G::DevPreviewKeyColumn:   r.devPreviewKeyId = mStrings.id(v.toString()); break;
     case G::AvailabilityColumn:    r.availability = quint8(v.toInt()); break;
+    case G::FolderPathColumn: {
+        const QString path = FolderTree::normalize(v.toString());
+        r.folderPathId = mStrings.id(path);
+        if (r.folderPathId >= 0 && !mFolderAncestry.contains(r.folderPathId))
+            mFolderAncestry.insert(r.folderPathId, FolderTree::ancestry(path));
+        break;
+    }
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {

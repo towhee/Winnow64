@@ -2,7 +2,6 @@
 #include "Metadata/xmpapply.h"
 #include "Main/global.h"
 #include "Metadata/iptc.h"      // req'd to report embedded jpeg
-#include "Metadata/ExifTool.h"  // req'd for some Nikon lenses not in lookup
 #include "ImageFormats/Raw/tiffwalk.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "ImageFormats/Raw/cameramatrix.h"
@@ -963,29 +962,56 @@ bool Nikon::parse(MetadataParameters &p,
         uint lensType = 0;
         lensType = ifd->ifdDataHash.value(131).tagValue;
 
-        uint32_t serial = static_cast<uint32_t>(m.cameraSN.toInt());
+        /*  THE LENS ID IS 7 BYTES OF LensData (tag 0x98) PLUS LensType, and where those
+            7 bytes sit -- and whether they are encrypted -- depends on the LensData
+            VERSION in its first 4 bytes (exiftool Nikon.pm, tag 0x0098):
+
+                0100        D100, D1X     plain      offset 0x06
+                0101        D70, D70s     plain      offset 0x0b
+                0201-0203   D2X, D700...  encrypted  offset 0x0b
+                0204        D90, D850...  encrypted  offset 0x0c
+                0800-0802   Z6, Z7, Z9    encrypted  offset 0x0d
+
+            This always decrypted and always read offset 0x0c, so only 0204 bodies ever
+            matched nikonLensHash. Every other NEF then fell through to an exiftool
+            PROCESS LAUNCH on every metadata read -- and asked it for LensModel, which
+            these bodies do not write, so it returned nothing and the next read of the
+            same file launched it again. Twenty reader threads doing that made a fork
+            storm: fork() takes every malloc zone lock and the objc runtime locks, and
+            the GUI thread sampled 97% blocked in __ulock_wait2 behind them (multi-second
+            GUI STALLs in a 148k-row catalog). Validated against exiftool's LensID on 40
+            NEFs spanning 0100/0201/0203/0204/0801: all keys match.
+
+            The serial key follows exiftool's SerialKey: a numeric serial is its own
+            key, otherwise 0x22 for a D50 and 0x60 for everything else. toInt() gave 0.
+
+            An unknown lens stays blank. No exiftool fallback: it is a process launch
+            inside a parser that runs for every thumbnail. */
+        const QString sn = m.cameraSN.trimmed();
+        bool snIsNumber = false;
+        uint32_t serial = sn.toUInt(&snIsNumber);
+        if (!snIsNumber) serial = m.model.trimmed().endsWith("D50") ? 0x22 : 0x60;
         uint32_t count = static_cast<uint32_t>(m.shutterCount);
-        QByteArray encryptedLensInfo = "";
         quint32 offset = ifd->ifdDataHash.value(152).tagValue + makerOffsetBase;
-        encryptedLensInfo = u.getByteArray(p.file, offset,
-                                 ifd->ifdDataHash.value(152).tagCount);
-        QByteArray lensInfo = nikonDecrypt(encryptedLensInfo, count, serial);
-        // the byte array code is in the middle of the lensInfo byte stream
-        lensInfo.remove(0, 12);
-        lensInfo.remove(7, lensInfo.size() - 7);
-        lensInfo.append(static_cast<char>(lensType));
-        m.nikonLensCode = lensInfo.toHex().toUpper();
-        if (m.lens.isEmpty()) {
-            // Pre Z lenses were encrypted
-            m.lens = nikonLensHash.value(m.nikonLensCode);
-            // no luck? Try exiftool as last resort
-            if (m.lens.isEmpty()) {
-                ExifTool et;
-                m.lens = et.readTag(m.fPath, "LensModel");
-                // qDebug() << "Nikon lens =" << m.lens << m.fPath;
-                et.close();
-            }
+        QByteArray lensData = u.getByteArray(p.file, offset,
+                                             ifd->ifdDataHash.value(152).tagCount);
+        const QByteArray version = lensData.left(4);
+        int idOffset = -1;
+        bool encrypted = true;
+        if (version == "0100") { idOffset = 0x06; encrypted = false; }
+        else if (version == "0101") { idOffset = 0x0b; encrypted = false; }
+        else if (version >= "0201" && version <= "0203") idOffset = 0x0b;
+        else if (version == "0204") idOffset = 0x0c;
+        else if (version >= "0800" && version <= "0802") idOffset = 0x0d;
+        m.nikonLensCode = "";
+        if (idOffset >= 0 && lensData.size() >= idOffset + 7) {
+            if (encrypted) lensData = nikonDecrypt(lensData, count, serial);
+            QByteArray lensId = lensData.mid(idOffset, 7);
+            lensId.append(static_cast<char>(lensType));
+            m.nikonLensCode = lensId.toHex().toUpper();
         }
+        if (m.lens.isEmpty() && !m.nikonLensCode.isEmpty())
+            m.lens = nikonLensHash.value(m.nikonLensCode);
         /*
         or could go with nikonLensHash<QString, QString>
         and use lensInfo.toHex().toUpper() as the key  */

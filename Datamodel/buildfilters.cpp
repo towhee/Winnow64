@@ -463,7 +463,7 @@ QVector<BuildFilters::Sink> BuildFilters::sinks() const
         {FilterCat::Rating,      filters->ratings,      "ratings"},
         {FilterCat::Label,       filters->labels,       "labels"},
         {FilterCat::Type,        filters->types,        "types"},
-        {FilterCat::FolderName,  filters->folders,      "folders"},
+        {FilterCat::FolderPath,  filters->folders,      "folders"},
         {FilterCat::Year,        filters->years,        "years"},
         {FilterCat::Month,       filters->months,       "months"},
         {FilterCat::Day,         filters->days,         "days"},
@@ -491,7 +491,7 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
 */
     static const int col[FilterCat::SlotCount] = {
         G::SearchColumn,      G::PickColumn,        G::RatingColumn,
-        G::LabelColumn,       G::TypeColumn,        G::FolderNameColumn,
+        G::LabelColumn,       G::TypeColumn,        G::FolderPathColumn,
         G::YearColumn,        G::MonthColumn,       G::DayColumn,
         G::CameraModelColumn, G::LensColumn,        G::FocalLengthColumn,
         G::ISOColumn,         G::TitleColumn,       G::CreatorColumn,
@@ -505,12 +505,32 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     const int rows = dm->rowCount();
     snap.rows.resize(rows);
 
+    /*  ONE PASS OVER THE STORE, ONE LOCK. This read every cell through
+        dm->index(row, col).data(): an index, DataModel::data, and three RowStore lock
+        acquisitions per cell, nineteen cells a row -- the bulk of the 173-264 ms
+        "buildFilters" phase of every filter change at 148,567 rows (sampled). Every
+        column read here is a RowStore column, and DataModel::data serves those
+        straight from RowStore::value, so forEachRow hands back the same QVariants. */
     const bool combine = G::combineRawJpg;
-    for (int row = 0; row < rows; ++row) {
+    const int kKeywords = FilterCat::SlotCount;
+    const int kHideRaw  = FilterCat::SlotCount + 1;
+    QVector<QPair<int, int>> cells;
+    cells.reserve(FilterCat::SlotCount + 2);
+    for (int slot = 0; slot < FilterCat::SlotCount; ++slot)
+        cells.append({col[slot], Qt::DisplayRole});
+    cells.append({G::KeywordsAllColumn, Qt::DisplayRole});     // kKeywords
+    cells.append({G::PathColumn, G::DupHideRawRole});          // kHideRaw
+
+    dm->rowStore.forEachRow(cells, [&](int row, const QVariant *val) {
+        if (row >= rows) return;
         FilterSnapshotRow &r = snap.rows[row];
         for (int slot = 0; slot < FilterCat::SlotCount; ++slot) {
-            r.v[slot] = dm->index(row, col[slot]).data().toString().trimmed();
+            r.v[slot] = val[slot].toString().trimmed();
         }
+        /*  A folder path is an IDENTITY, not display text: trimming it would turn a
+            folder named "Trip " into a different folder -- one the checked item's value
+            (the untrimmed path, see Filters::addFolderItems) then never matches. */
+        r.v[FilterCat::FolderPath] = val[FilterCat::FolderPath].toString();
         /* Focal length is right-justified so "50" and "400" sort as numbers
            rather than as text. All three passes did this, so bake it in once. */
         r.v[FilterCat::FocalLength] =
@@ -529,17 +549,15 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
         r.v[FilterCat::Availability] =
             Catalog::availabilityLabel(r.v[FilterCat::Availability].toInt());
 
-        const QStringList kw =
-            dm->index(row, G::KeywordsAllColumn).data().toStringList();
+        const QStringList kw = val[kKeywords].toStringList();
         r.keywords.reserve(kw.size());
         for (const QString &k : kw) r.keywords << k.trimmed();
 
         /* When combineRawJpg is on the raw half of a pair is hidden in the
            proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
            skip it or they will not match the proxy baseline. */
-        r.hiddenRaw = combine &&
-                      dm->index(row, 0).data(G::DupHideRawRole).toBool();
-    }
+        r.hiddenRaw = combine && val[kHideRaw].toBool();
+    });
 
     // mark the rows the current filter admits
     if (dm->sf != nullptr) {

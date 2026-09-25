@@ -8,37 +8,54 @@
 <h1>The Source panel</h1>
 
 <p>The <span class="highlight">Source</span> panel is where you say which images you are
-looking at. It has two subpanels, and they are two different answers to that one
-question:</p>
+looking at. The two buttons in its title bar are the two answers to that question, and one
+of them is always lit:</p>
 
 <ul>
-<li><span class="highlight">Catalog</span> &mdash; every image Winnow has indexed,
-wherever it lives, or one year of it.</li>
-<li><span class="highlight">Folders</span> &mdash; the folders on your drives, chosen one
-at a time or several at once.</li>
+<li><span class="highlight">Folders</span> &mdash; the folders on your drives. Clicking a
+folder <em>loads</em> it.</li>
+<li><span class="highlight">Library</span> &mdash; every image Winnow has catalogued,
+wherever it lives, shown as its folders. The whole Library is loaded at once, so clicking a
+folder here <em>filters</em> to it rather than loading it.</li>
 </ul>
 
-<p>Choosing in either subpanel replaces what the other one had chosen: only one source is
-in effect at a time. Filtering, sorting and searching then mean the same thing whichever
-you picked &mdash; they work on the source you chose.</p>
+<p>Only one source is in effect at a time. Filtering, sorting and searching mean the same
+thing whichever you picked &mdash; they work on the source you chose. Clicking a folder or
+a bookmark switches to Folders; <span class="highlight">File &gt; Open Library</span>
+switches to the Library.</p>
 
-<h1>Catalog</h1>
+<h1>Library</h1>
 
-<p>Selecting the <span class="highlight">Catalog</span> row looks at the whole catalog,
-the way clicking a folder looks at that folder. The number beside it is how many images
-have been indexed; if no number is shown, the catalog has not been opened yet, which is
-not the same as it being empty.</p>
+<p>The top row, <span class="highlight">Library</span>, is the whole Library. The number
+beside it is how many images it holds; if no number is shown, the catalog has not been
+opened yet, which is not the same as it being empty. Beneath it are the folders you chose
+to catalog (<span class="highlight">Manage Catalog...</span>), and the folders inside them.
+A folder whose drive is not connected is greyed.</p>
 
-<p>Expand the row to see the <span class="highlight">years</span> in the catalog.
-Selecting a year does two things at once: it switches to the catalog and checks that year
-in the Filters panel. To widen it again, clear that year in Filters or select the Catalog
-row itself.</p>
+<p>Clicking a folder checks it in the <span class="highlight">Folders</span> category of
+the Filters panel &mdash; the Library tree and that category are two views of the same
+filter, so a change in either shows in both.</p>
 
-<p>Picking a folder or a bookmark folds the years away again, so the folder tree gets the
-room back. It does not change what you chose &mdash; only what is showing.</p>
+<h2>No modifier</h2>
+<p>Shows the folder <em>and every folder inside it</em>. Clicking
+<span class="highlight">2020-2029</span> shows the whole decade.</p>
 
-<p>The catalog holds what Winnow has scanned. Folders it has never visited are still
-reachable in the Folders subpanel below &mdash; they are simply not in the catalog yet.</p>
+<h2>Alt/Opt modifier</h2>
+<p>Shows this folder only, without the folders inside it. In the Filters panel this reads
+as the folder included and each folder directly inside it excluded.</p>
+
+<h2>Ctrl/Cmd modifier</h2>
+<p>Adds the folder to what is shown, or removes it if it was already there.</p>
+
+<h2>Shift modifier</h2>
+<p>Shows every visible folder from the one clicked last to this one.</p>
+
+<p>Clicking the <span class="highlight">Library</span> row clears the folder filter and
+shows the whole Library again. Your other filters are left as they are.</p>
+
+<p>Right-click a folder to reveal it in the Folders view or in the Finder/Explorer, or to
+open Manage Catalog. The Library holds what Winnow has scanned: folders it has never
+catalogued are still reachable under <span class="highlight">Folders</span>.</p>
 
 <h1>Folders</h1>
 

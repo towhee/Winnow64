@@ -8,6 +8,7 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
+- when scanning catalog show progress in manage catalog dialog.
 - Edit title not persistent or applying to embellish
 - If in Library, bookmark applies Folders filter OR
   Separate workspaces for Library and Folders

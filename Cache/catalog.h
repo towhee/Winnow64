@@ -183,6 +183,9 @@ struct CatalogQuery
        flat, picking an ancestor name already reaches everything that was beneath it --
        there is no subtree walk to ask for. */
     QStringList keywords;
+    /* Every one of keywords rather than any of them -- the Keywords header's any/all
+       label in the Filter dock. */
+    bool keywordsMatchAll = false;
     /* Keyword names to reject. AND-NOT, applied after everything else, and the way an
        ambiguous name is resolved: keywords = {Vancouver}, excludeKeywords = {USA}. */
     QStringList excludeKeywords;
@@ -506,6 +509,11 @@ public:
         would be the same answer for one query per folder. The vocabulary is folders, not
         images, so this stays cheap at the 250,000 rows the database is sized for. */
     QMap<QString, int> folderCounts();
+    /*  The same, LIVE ROWS ONLY -- what browsing the Library shows. folderCounts counts
+        demoted rows too, because reconciling has to know they exist; a tree the user
+        reads must not offer a folder whose images are all gone. What LibTree is built
+        from. Thread-safe like every call here, so it can run off the GUI thread. */
+    QMap<QString, int> liveFolderCounts();
 
     /*  FORGET THESE FOLDERS EXACTLY -- no prefix test, because the caller has already
         decided folder by folder (see MW::reconcileCatalogToScope). forgetUnder answers

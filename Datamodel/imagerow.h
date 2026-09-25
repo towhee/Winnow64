@@ -116,6 +116,9 @@ struct ImageRow
         Created/Modified are formatted timestamp strings for the same reason,
         and intern well because a shoot shares most of them. */
     qint32 folderId = -1, typeId = -1, makeId = -1, modelId = -1, lensId = -1;
+    /*  The folder's full path, interned: a shoot shares one. Its ancestry is NOT stored
+        per row -- RowStore keeps one list per distinct folder (mFolderAncestry). */
+    qint32 folderPathId = -1;
     qint32 yearId = -1, monthId = -1, dayId = -1, creatorId = -1, copyrightId = -1;
     qint32 labelId = -1, pickId = -1, gpsId = -1;
     qint32 dimensionsId = -1;
@@ -250,12 +253,16 @@ public:
     void clear()
     {
         QWriteLocker l(&mLock);
-        mRows.clear(); mStrings.clear();
+        mRows.clear(); mStrings.clear(); mFolderAncestry.clear();
+        mPicked = 0;
+        ++mPickGen;
     }
     void resize(int n)
     {
         QWriteLocker l(&mLock);
+        if (n < mRows.size()) uncountPicksLocked(n, mRows.size() - n);
         if (n != mRows.size()) mRows.resize(n);
+        ++mPickGen;
     }
 
     /*  ROW SPLICING. The store is indexed by row, so an insert or a removal in
@@ -269,13 +276,16 @@ public:
         QWriteLocker l(&mLock);
         if (count <= 0 || at < 0 || at > mRows.size()) return;
         mRows.insert(at, count, ImageRow());
+        ++mPickGen;
     }
     void removeRows(int at, int count)
     {
         QWriteLocker l(&mLock);
         if (count <= 0 || at < 0 || at >= mRows.size()) return;
         count = qMin(count, mRows.size() - at);
+        uncountPicksLocked(at, count);
         mRows.remove(at, count);
+        ++mPickGen;
     }
     /*  Many scattered removals in ONE pass. newRow[old] is the row's new index,
         or -1 when it goes; kept rows keep their order, so newRow is ascending
@@ -287,11 +297,12 @@ public:
         if (newRow.size() != mRows.size()) return;
         int kept = 0;
         for (int r = 0; r < mRows.size(); ++r) {
-            if (newRow[r] < 0) continue;
+            if (newRow[r] < 0) { uncountPicksLocked(r, 1); continue; }
             if (kept != r) mRows[kept] = std::move(mRows[r]);
             ++kept;
         }
         mRows.resize(kept);
+        ++mPickGen;
     }
     int  size() const { QReadLocker l(&mLock); return mRows.size(); }
     bool contains(int row) const
@@ -311,6 +322,10 @@ public:
         QReadLocker l(&mLock);
         size_t n = size_t(mRows.capacity()) * sizeof(ImageRow);
         for (const ImageRow &r : mRows) n += r.approxBytes() - sizeof(ImageRow);
+        for (const QStringList &a : mFolderAncestry) {
+            n += size_t(a.capacity()) * sizeof(QString);
+            for (const QString &s : a) n += size_t(s.capacity()) * 2;
+        }
         return n + mStrings.approxBytes();
     }
 
@@ -326,10 +341,58 @@ public:
     QVariant value(int row, int column, int role = Qt::EditRole) const;
     void setValue(int row, int column, int role, const QVariant &v);
 
+    /*  HOW MANY ROWS ARE "Picked", kept exact on every write, insert and removal rather
+        than counted. The count was a walk of every row through DataModel::data -- a
+        QVariant and a QString per row -- and the status bar and the menu gating asked
+        for it several times per SELECTION: at 148,567 rows that was ~65% of an arrow
+        keypress (sampled). pickGeneration() changes whenever a pick or the row set
+        does, so a caller holding a count over a SUBSET (the filtered proxy) knows when
+        its own answer has gone stale. */
+    /*  EVERY ROW, SEVERAL CELLS EACH, UNDER ONE READ LOCK. cells is (column, role)
+        pairs; fn(row, vals) gets them in that order, each exactly what value() would
+        return. For the whole-model passes that run on the GUI thread --
+        BuildFilters::makeSnapshot reads nineteen cells of every row on every filter
+        change, and through DataModel::data that was three lock acquisitions and an
+        index per cell: ~9 million at 148,567 rows. fn MUST NOT call back into this
+        store (the lock is not recursive, and a waiting writer would deadlock it). */
+    template <typename Fn>
+    void forEachRow(const QVector<QPair<int, int>> &cells, Fn fn) const
+    {
+        QReadLocker l(&mLock);
+        QVector<QVariant> vals(cells.size());
+        for (int row = 0; row < mRows.size(); ++row) {
+            const ImageRow &r = mRows.at(row);
+            for (int i = 0; i < cells.size(); ++i)
+                vals[i] = valueLocked(r, cells.at(i).first, cells.at(i).second);
+            fn(row, vals.constData());
+        }
+    }
+
+    int pickedCount() const { QReadLocker l(&mLock); return mPicked; }
+    quint64 pickGeneration() const { QReadLocker l(&mLock); return mPickGen; }
+
 private:
+    QVariant valueLocked(const ImageRow &r, int column, int role) const;
+    bool isPickedLocked(const ImageRow &r) const
+    {
+        return r.pickId >= 0 && mStrings.value(r.pickId) == QLatin1String("Picked");
+    }
+    void uncountPicksLocked(int at, int count)
+    {
+        for (int r = at; r < at + count && r < mRows.size(); ++r)
+            if (isPickedLocked(mRows[r])) --mPicked;
+    }
+    int mPicked = 0;
+    quint64 mPickGen = 0;
+
     mutable QReadWriteLock mLock;
     QVector<ImageRow> mRows;
     Interner mStrings;
+    /*  folderPathId -> that folder and every folder above it, root first. ONE LIST PER
+        DISTINCT FOLDER, shared by every row in it (QStringList is implicitly shared), so
+        G::FolderPathsAllColumn costs a row nothing beyond its folderPathId. Filled on
+        WRITE, under the write lock, so a worker-thread read never mutates it. */
+    QHash<qint32, QStringList> mFolderAncestry;
 };
 
 #endif // IMAGEROW_H

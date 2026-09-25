@@ -104,13 +104,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Open Catalog</string>
+         <string>Open Library</string>
         </property>
         <property name="text">
          <string>Shift + O</string>
         </property>
         <property name="text">
-         <string>Browse the indexed catalog instead of a folder</string>
+         <string>Browse the whole Library instead of a folder</string>
         </property>
        </item>
        <item>
@@ -453,7 +453,7 @@
          <string>F2</string>
         </property>
         <property name="text">
-         <string>Edit the Filters Search row in the current scope (Folders or Catalog). Return runs the query</string>
+         <string>Edit the Filters Search row in the current scope (Folders or Library). Return runs the query</string>
         </property>
        </item>
        <item>

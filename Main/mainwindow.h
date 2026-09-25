@@ -45,7 +45,7 @@
 #include "Views/keywordtree.h"
 #include "Views/keywordtags.h"
 #include "Datamodel/keywordvocab.h"
-#include "Views/catalogscopetree.h"
+#include "Views/libtree.h"
 #include "Main/catalogscanner.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
@@ -1249,20 +1249,30 @@ private slots:
     void showFilterDock();
     void showCatalogDock();
     void showKeywordsDock();
-    /*  THE ONE PLACE G::scope CHANGES. Every entry point -- either Catalog row,
-        the Filter dock's Folders|Catalog buttons, File > Open Catalog, and selecting a
-        folder -- routes here, and this pushes the result back to all of them so
-        they cannot disagree. src is for the log only. */
+    /*  THE ONE PLACE G::scope CHANGES. Every entry point -- the Source panel's Folders |
+        Library toggle, File > Open Library, and selecting a folder or a bookmark --
+        routes here, and this pushes the result back to all of them so they cannot
+        disagree. src is for the log only. */
     void setScope(G::Scope s, QString src = "");
-    void updateCatalogScopeTrees();   // push the catalogued count onto both trees
-    /*  The catalog, prefiltered on one year -- what selecting a year under the Catalog
-        row in the Source panel's Catalog subpanel means. See Views/catalogscopetree.h. */
-    void setCatalogScopeForYear(const QString &year);
-    /*  Check the year setCatalogScopeForYear remembered, once the Filters panel has a
-        Years category to check it in. Called from buildFiltersWhenModelReady. */
-    void applyPendingCatalogYear();
-    /*  The Catalog row itself: the whole catalog, undoing a year this put on. */
+    /*  Push the Library's count and folders into LibTree and Open Library's state.
+        The folders are read off the GUI thread. */
+    void updateLibraryTree();
+    /*  The whole Library -- the toggle's Library button and File > Open Library. */
     void setCatalogScopeWhole(QString src = "");
+    /*  The toggle's Folders button: back to the folder that was loaded before the
+        Library was, or to an empty Folders view when there was none. */
+    void showFoldersSource();
+    /*  What a LibTree click asks for, applied to the Filters panel's Folders category --
+        or, while the Library is still loading, remembered until its filters are built
+        (applyPendingLibraryFolderFilter, on BuildFilters::finishedBuildFilters). */
+    void applyLibraryFolderFilter(const QStringList &includes, const QStringList &excludes);
+    void applyPendingLibraryFolderFilter();
+    /*  Mirror the Filters panel's folder filter into LibTree. Emits nothing. */
+    void syncLibTreeFromFilters();
+    /*  Put back the checks a folder add/remove saved, once the categories have been
+        rebuilt for the new set, and re-apply them. */
+    void restoreFiltersAfterFolderChange();
+    void styleSourceToggle();           // re-applied by setBackgroundShade
     void showMetadataDock();
 
     void setMenuBarVisibility();
@@ -2021,16 +2031,30 @@ private:
        a second dock. Null when the flag is off, in which case the two original panels are
        built exactly as before. */
     FilterPanel *filterPanel = nullptr;
-    /*  The Catalog rows above the Folders tree. See Views/catalogscopetree.h -- a
-        second view of G::scope, mirrored by MW::setScope. */
-    CatalogScopeTree *folderCatalogTree = nullptr;
-    /*  The year a Catalog tree asked for, waiting for the filters to be rebuilt over
-        the catalog that is loading. Empty means nothing is pending. */
-    QString pendingCatalogYear;
-    /*  The year currently checked BECAUSE a Catalog tree asked for it, so widening back
-        to the whole catalog can take it off again without touching a filter the user set
-        by hand. */
-    QString appliedCatalogYear;
+    /*  THE SOURCE PANEL'S TWO VIEWS. The title bar's Folders | Library toggle is a
+        second view of G::scope, mirrored by MW::setScope; the stack shows FSTree or
+        LibTree to match. See Views/libtree.h. */
+    LibTree *libTree = nullptr;
+    QStackedWidget *sourceStack = nullptr;
+    QToolButton *sourceFoldersBtn = nullptr;
+    QToolButton *sourceLibraryBtn = nullptr;
+    /*  A LibTree click that arrived before the Library's filters were built, waiting
+        for them. */
+    struct PendingFolderFilter {
+        bool pending = false;
+        QStringList includes;
+        QStringList excludes;
+    } pendingLibraryFolderFilter;
+    /*  What the Folders view had loaded when the Library was chosen, so the toggle's
+        Folders button can go back to it. */
+    QString lastFolderPath;
+    bool lastFolderRecurse = false;
+    /*  Filters saved by a folder add/remove, waiting for the rebuild to finish; see
+        MW::folderSelectionChange and restoreFiltersAfterFolderChange. */
+    bool restoreFiltersPending = false;
+    /*  One Library-tree read in flight at a time; see updateLibraryTree. */
+    bool libraryTreePending = false;
+    bool libraryTreeAgain = false;
     QWidget *centralWidget;
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
@@ -2734,6 +2758,13 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
+    /*  getPicked's count over the FILTERED rows, and what it was counted against. See
+        the definition: with a filter active the count can only be had by a walk, so it
+        is walked once per change rather than once per status refresh. */
+    int pickedSfCount = 0;
+    quint64 pickedSfGen = ~quint64(0);
+    int pickedSfInstance = -1;
+    int pickedSfRows = -1;
     QString getRawRendered();
     QString getSelectedFileSize();
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
