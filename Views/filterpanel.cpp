@@ -3,6 +3,10 @@
 #include "Main/global.h"
 
 #include <QVBoxLayout>
+#include <QPointer>
+#include <QThreadPool>
+#include <QElapsedTimer>
+#include <QCoreApplication>
 
 FilterPanel::FilterPanel(Filters *f, QWidget *parent)
     : QWidget(parent), filters(f)
@@ -99,7 +103,10 @@ void FilterPanel::applyScope()
     else {
         filters->showAllCategories();
         results.clear();
+        resultPathList.clear();
         totalMatches = 0;
+        appliedGen = ++searchGen;           // a catalog search still in flight is void
+        forcePending = false;
         /* The tree is holding the catalog's values; only MW knows whether the model is
            ready to rebuild them from. It re-applies the search text afterwards, so the
            text survives the switch even though the checks do not. */
@@ -215,9 +222,53 @@ void FilterPanel::runSearch(bool force)
         5.8x faster than asking for paths and looking each one up. The paths are still
         what "did the result actually change" compares, because comparing whole rows would
         also fire on a rating edited elsewhere. */
-    const QStringList previous = resultPaths();
-    results = Catalog::instance().searchRows(q, resultLimit(), &totalMatches);
+    /*  ON A POOL THREAD. This was the one whole-catalog query left on the GUI thread:
+        ~1.5 s at startup (the Library opening) and ~1.1 s whenever a background scan
+        finished -- possibly mid-browse -- at 148,567 rows, sampled. The rest of what
+        this used to do is applySearchResult, back on the GUI thread when the rows
+        arrive; see searchGen for how a superseded search is dropped. */
+    const int limit = resultLimit();
+    const quint64 gen = ++searchGen;
+    forcePending = forcePending || force;
+    QPointer<FilterPanel> self(this);
+    QThreadPool::globalInstance()->start([self, q, limit, gen] {
+        QElapsedTimer t;
+        t.start();
+        int total = 0;
+        const QVector<CatalogRow> rows = Catalog::instance().searchRows(q, limit, &total);
+        QStringList paths;
+        paths.reserve(rows.size());
+        for (const CatalogRow &r : rows) paths << r.path;
+        const qint64 ms = t.elapsed();
+        QMetaObject::invokeMethod(qApp, [self, gen, rows, total, paths, q, ms] {
+            if (self) self->applySearchResult(gen, rows, total, paths, q, ms);
+        }, Qt::QueuedConnection);
+    });
     updateStatus();
+}
+
+void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows,
+                                    int total, const QStringList &paths,
+                                    const CatalogQuery &q, qint64 queryMs)
+{
+/*
+    The second half of runSearch, back on the GUI thread with the rows.
+*/
+    if (gen != searchGen) return;                       // a newer search superseded it
+    appliedGen = gen;
+    if (currentScope != CatalogScope) return;           // left Catalog meanwhile
+    const bool force = forcePending;
+    forcePending = false;
+
+    const bool changed = paths != resultPathList;
+    results = rows;
+    resultPathList = paths;
+    totalMatches = total;
+    updateStatus();
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] catalog search" << queryMs << "ms (pool thread)  rows ="
+                           << rows.size() << " changed =" << changed
+                           << " forced =" << force;
 
     /*  LOADED WITHOUT BEING ASKED, which is the only way it is loaded now: picking a
         folder shows pictures, so picking Catalog -- or narrowing it -- must too. The
@@ -237,9 +288,8 @@ void FilterPanel::runSearch(bool force)
             Search row edit ONLY in a capped scope. Narrowing an uncapped catalog is a
             proxy filter and reaches none of this -- see searchTextChanged.
     */
-    if ((force || resultPaths() != previous) && !results.isEmpty()
-        && results.size() <= autoLoadMax())
-        emit loadResults(results, false, currentQuery());
+    if ((force || changed) && !results.isEmpty() && results.size() <= autoLoadMax())
+        emit loadResults(results, false, q);
 }
 
 void FilterPanel::searchTextChanged(const QString &text)
@@ -276,13 +326,6 @@ void FilterPanel::searchTextChanged(const QString &text)
     updateStatus();
 }
 
-QStringList FilterPanel::resultPaths() const
-{
-    QStringList out;
-    out.reserve(results.size());
-    for (const CatalogRow &r : results) out << r.path;
-    return out;
-}
 
 void FilterPanel::updateStatus()
 {
@@ -306,7 +349,10 @@ void FilterPanel::updateStatus()
         msg = "The catalog is unavailable -- the local index database could not be "
               "opened. Browsing and the Folders scope are unaffected.";
     }
-    else if (currentScope == CatalogScope && totalMatches == 0 && !scanning) {
+    /*  Not while a search is in flight: at startup totalMatches is 0 for the whole
+        query, and "nothing catalogued" would flash over a Library that is loading. */
+    else if (currentScope == CatalogScope && totalMatches == 0 && !scanning
+             && !searchPending()) {
         msg = "Nothing catalogued yet. Folders are catalogued as you open them, and "
               "File > Manage Catalog... chooses what is indexed in the background.";
     }
