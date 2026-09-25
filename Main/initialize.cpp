@@ -231,6 +231,15 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(messageView);      // 6
     centralLayout->addWidget(blankView);        // 7
 
+    /* The Map module's page (MapTab). Built here, not with the other views, because it
+       needs the Selection (createSelection) to hand its clicks to. */
+    mapView = new MapView(centralWidget, dm);
+    centralLayout->addWidget(mapView);          // 8
+    connect(mapView, &MapView::selectRows, sel, &Selection::selectRows);
+    connect(mapView, &MapView::openInLoupe, this, [this]() { requestView(CvLoupe); });
+    connect(mapView, &MapView::openPreferences, this, [this]() { preferences("MapHeader"); });
+    applyMapProvider();
+
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -3343,8 +3352,8 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
     Built before createActions, so a button looks its action up at click time; the
     enabled state and the reason for a greyed button are mirrored from the actions in
     createActions. QToolButton rather than QPushButton: the global QPushButton min-width
-    (widgetcss.cpp) would widen whatever holds them. Slide Show has no button -- it is a
-    presentation action, not a workflow.
+    (widgetcss.cpp) would widen whatever holds them. The Slide Show button applies the
+    Slide Show layout; it does not start the show (S does).
 */
     btns.clear();
     for (int wf = 0; wf < WfCount; ++wf) btns.append(nullptr);
@@ -3353,6 +3362,8 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
         {WfDevelop,   tr("Develop")},
         {WfKeywords,  tr("Keywords")},
         {WfEmbellish, tr("Embellish")},
+        {WfSlideShow, tr("Slide Show")},
+        {WfMap,       tr("Map")},
     };
     bool first = true;
     for (const auto &b : buttons) {
@@ -3377,6 +3388,8 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
             else if (wf == WfDevelop) a = operationModeAction;
             else if (wf == WfKeywords) a = keywordsWorkspaceAction;
             else if (wf == WfEmbellish) a = embellishWorkspaceAction;
+            else if (wf == WfSlideShow) a = slideShowWorkspaceAction;
+            else if (wf == WfMap) a = mapWorkspaceAction;
             if (a && a->isEnabled()) a->trigger();
             syncWorkflowSwitcher();
         });
@@ -3386,9 +3399,9 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
 void MW::createModuleDock()
 {
 /*
-    THE MODULE DOCK: Browse | Develop | Keywords | Embellish across the top of the window,
-    the workflow setting of the UI model (see "THE UI MODEL" in workspaces.cpp). It
-    replaces the status-bar switcher, which is still built but hidden.
+    THE MODULE DOCK: Browse | Develop | Keywords | Embellish | Slide Show | Map across the
+    top of the window, the workflow setting of the UI model (see "THE UI MODEL" in
+    workspaces.cpp). It replaces the status-bar switcher, which is still built but hidden.
 
     A DOCK RATHER THAN A TOOLBAR so it behaves like every other panel: a workspace
     records whether it is showing (isModuleDockVisible), Full Screen has a preference for

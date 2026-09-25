@@ -470,6 +470,9 @@ void MW::updateLibraryTree()
                     if (!self || !self->libTree) return;
                     self->libraryTreePending = false;
                     self->libTree->setSources({src}, total);
+                    // the Library-mode counts and "is it in the Library" of Bookmarks
+                    if (self->bookmarks)
+                        self->bookmarks->setLibraryFolders(src.anchors, src.folderCounts);
                     if (self->libraryTreeAgain) {
                         self->libraryTreeAgain = false;
                         self->updateLibraryTree();
@@ -566,6 +569,13 @@ void MW::setScope(G::Scope s, QString src)
     if (sourceStack && libTree)
         sourceStack->setCurrentWidget(isLibrary ? static_cast<QWidget *>(libTree)
                                                 : static_cast<QWidget *>(fsTree));
+    /*  BOOKMARKS FOLLOW THE SOURCE too: in the Library a bookmark filters it and counts
+        what the Library holds there (see MW::bookmarkClicked). Back in Folders, the
+        folder load that follows re-selects its bookmark as it always has. */
+    if (bookmarks) {
+        bookmarks->setLibraryMode(isLibrary);
+        if (isLibrary) syncLibTreeFromFilters();
+    }
     updateWindowTitle();                        // the title names the source too
 
     /*  WHERE THE FILTERS FOLDERS TREE STARTS: the catalog's include folders in the
@@ -896,6 +906,7 @@ void MW::syncLibTreeFromFilters()
     QStringList inc, exc;
     filters->folderFilterState(inc, exc);
     libTree->syncFromFilters(inc, exc);
+    if (bookmarks) bookmarks->syncFromLibraryFilter(inc, exc);
 }
 
 void MW::showKeywordsDock()
@@ -1321,7 +1332,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
 
     if (sfRow == -1) {
-        QString msg = "No sfRow for fPath = " + fPath;
+        QString msg = "No sfRow for fPath = " + fPath + " src = " + src;
         qWarning() << "WARNING:" << srcFun << msg;
         return;
     }
@@ -1360,7 +1371,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
             because the image was not cached; this is the moment it is filled in, and the
             gap between the two is exactly how long the user looked at nothing. */
         if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
-        centralLayout->setCurrentIndex(prevCentralView);
+        if (!inMapModule()) centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         /*  DON'T FLASH THE UNDEVELOPED IMAGE. loadImage above paints the decode -- the
             picture WITHOUT the saved recipe. In Develop that is the one thing the user

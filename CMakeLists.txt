@@ -427,6 +427,9 @@ set(WINNOW_SOURCES
     Views/tableview.cpp
     Views/videoview.cpp
     Views/videowidget.cpp
+    Utilities/geo.cpp
+    Views/Map/maptilesource.cpp
+    Views/Map/mapview.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -704,6 +707,9 @@ set(WINNOW_HEADERS
     Views/tableview.h
     Views/videoview.h
     Views/videowidget.h
+    Utilities/geo.h
+    Views/Map/maptilesource.h
+    Views/Map/mapview.h
 )
 
 # -----------------------------------------------------------------------------

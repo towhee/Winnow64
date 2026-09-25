@@ -1601,6 +1601,24 @@ void MW::createViewActions()
     connect(embellishWorkspaceAction, &QAction::triggered,
             this, &MW::invokeEmbellishWorkflow);
 
+    /* Slide Show applies its workflow layout the same way. It does NOT start the show --
+       that is slideShowAction (S), a presentation that blanks the cursor and takes the
+       keyboard, which a module button should not do. No key yet. */
+    slideShowWorkspaceAction = new QAction(tr("Slide Show Mode"), this);
+    slideShowWorkspaceAction->setObjectName("slideShowWorkspace");
+    slideShowWorkspaceAction->setShortcutVisibleInContextMenu(true);
+    addAction(slideShowWorkspaceAction);
+    connect(slideShowWorkspaceAction, &QAction::triggered,
+            this, &MW::invokeSlideShowWorkflow);
+
+    /* The Map module: a map with a pin for every image that has a GPS location. Its
+       workflow layout plus the map as the central page. No key yet. */
+    mapWorkspaceAction = new QAction(tr("Map Mode"), this);
+    mapWorkspaceAction->setObjectName("mapWorkspace");
+    mapWorkspaceAction->setShortcutVisibleInContextMenu(true);
+    addAction(mapWorkspaceAction);
+    connect(mapWorkspaceAction, &QAction::triggered, this, &MW::invokeMapWorkflow);
+
     /* The one way to recover a layout that has got away from the user (a panel left open,
        a dock stranded on a monitor that is gone). The view keys used to do this as a side
        effect of reasserting the Browse layout every time; now they only change the
@@ -1640,7 +1658,8 @@ void MW::createViewActions()
        "disabledReason" the action was gated with. */
     const QList<QPair<int, QAction *>> workflowActions{
         {WfSource, browseWorkflowAction}, {WfDevelop, operationModeAction},
-        {WfKeywords, keywordsWorkspaceAction}, {WfEmbellish, embellishWorkspaceAction}};
+        {WfKeywords, keywordsWorkspaceAction}, {WfEmbellish, embellishWorkspaceAction},
+        {WfSlideShow, slideShowWorkspaceAction}, {WfMap, mapWorkspaceAction}};
     for (const auto &wa : workflowActions)
     for (QToolButton *btn : {workflowBtns.value(wa.first), moduleBtns.value(wa.first)}) {
         QAction *a = wa.second;
@@ -1802,7 +1821,7 @@ void MW::createWindowActions()
     addAction(keywordsDockVisibleAction);
     connect(keywordsDockVisibleAction, &QAction::triggered, this, &MW::showKeywordsDock);
 
-    /*  The Module dock (Browse | Develop | Keywords | Embellish across the top). ON by
+    /*  The Module dock (Browse | Develop | ... | Map across the top). ON by
         default: it is where the workflow is chosen. Choosing it from the menu while the
         top show/hide bar has the area collapsed un-collapses it -- the user has asked to
         see it, and leaving the bar holding it hidden would make the menu item look
@@ -2761,6 +2780,8 @@ void MW::createViewMenu()
     viewMenu->addAction(operationModeAction);       // D: also in the Develop menu
     viewMenu->addAction(keywordsWorkspaceAction);   // K: the Keywords workflow layout
     if (!hideEmbellish) viewMenu->addAction(embellishWorkspaceAction);
+    viewMenu->addAction(slideShowWorkspaceAction);
+    viewMenu->addAction(mapWorkspaceAction);
     viewMenu->addSeparator();
     viewMenu->addActions(centralGroupAction->actions());
     viewMenu->addSeparator();
@@ -2830,7 +2851,7 @@ void MW::createWindowMenu()
 
     /*  The two workflow branches.  Default is hidden unless G::isRory (see
         MW::syncWorkflowWorkspaceMenus, which also runs from MW::rory when it is toggled
-        at runtime); User override is always shown and lists the same five workflows. */
+        at runtime); User override is always shown and lists the same six workflows. */
     workspaceDefaultMenu = workspaceMenu->addMenu(tr("Default"));
     workspaceDefaultMenuAction = workspaceDefaultMenu->menuAction();
     for (QAction *a : workflowDefaultActions) workspaceDefaultMenu->addAction(a);

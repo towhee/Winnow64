@@ -357,6 +357,24 @@ void Preferences::itemChange(QModelIndex idx)
         mw->isSlideShowWrap = v.toBool();
     }
 
+    // Map module tile provider (see MapTileSource)
+    if (source == "mapTileUrl") {
+        mw->mapTileUrl = v.toString();
+        mw->applyMapProvider();
+    }
+    if (source == "mapTileKey") {
+        mw->mapTileKey = v.toString();
+        mw->applyMapProvider();
+    }
+    if (source == "mapAttribution") {
+        mw->mapAttribution = v.toString();
+        mw->applyMapProvider();
+    }
+    if (source == "mapMaxZoom") {
+        mw->mapMaxZoom = v.toInt();
+        mw->applyMapProvider();
+    }
+
     if (source == "classificationBadgeSizeFactor") {
         int value = v.toInt();
         mw->setClassificationBadgeSizeFactor(value);
@@ -577,6 +595,7 @@ void Preferences::addItems()
     addDevPreviews();
     addCatalog();
     addSlideShow();
+    addMap();
     addFullScreen();
     addMetadataPanel();
     addTableView();
@@ -1878,6 +1897,88 @@ void Preferences::addSlideShow()
     i.key = "isSlideShowWrap";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
+    addItem(i);
+}
+
+void Preferences::addMap()
+{
+/*
+    The Map module's tile provider. Winnow ships none: OpenStreetMap's own servers do
+    not allow an application's users to pull tiles from them, and Google's terms do not
+    allow Google tiles in a map that is not Google's. So the user supplies a provider
+    they have an account with. See "Map Module" in notes/Documentation.txt.
+*/
+    i.name = "MapHeader";
+    i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Map";
+    i.tooltip = "The map tile provider behind the Map module";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    i.name = "mapTileUrl";
+    i.parentName = "MapHeader";
+    i.captionText = "Tile URL template";
+    i.tooltip = "The address of one map tile, from your tile provider's documentation,\n"
+                "with {z}, {x} and {y} where the zoom and tile numbers go and {key}\n"
+                "where your API key goes.  For example:\n\n"
+                "MapTiler:  https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png"
+                "?key={key}\n"
+                "Stadia:  https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png"
+                "?api_key={key}\n\n"
+                "Leave empty for a map with pins and no background.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->mapTileUrl;
+    i.key = "mapTileUrl";
+    i.delegateType = DT_LineEdit;
+    i.type = "string";
+    addItem(i);
+
+    i.name = "mapTileKey";
+    i.parentName = "MapHeader";
+    i.captionText = "API key";
+    i.tooltip = "Your key from the tile provider.  It replaces {key} in the URL template.\n"
+                "It is stored in Winnow's settings file, not encrypted.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->mapTileKey;
+    i.key = "mapTileKey";
+    i.delegateType = DT_LineEdit;
+    i.type = "string";
+    addItem(i);
+
+    i.name = "mapAttribution";
+    i.parentName = "MapHeader";
+    i.captionText = "Attribution";
+    i.tooltip = "The credit line your provider requires on the map, ie\n"
+                "\"© MapTiler © OpenStreetMap contributors\".  Drawn in the\n"
+                "bottom right corner of the map.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->mapAttribution;
+    i.key = "mapAttribution";
+    i.delegateType = DT_LineEdit;
+    i.type = "string";
+    addItem(i);
+
+    i.name = "mapMaxZoom";
+    i.parentName = "MapHeader";
+    i.captionText = "Maximum zoom";
+    i.tooltip = "The highest zoom level your provider serves (usually 18 to 22).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->mapMaxZoom;
+    i.key = "mapMaxZoom";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 1;
+    i.max = 22;
+    i.fixedWidth = 50;
     addItem(i);
 }
 

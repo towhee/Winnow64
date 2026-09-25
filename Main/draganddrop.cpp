@@ -126,7 +126,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
         destDir = getSelectedPath();
     } else if (QObject::sender() == bookmarks) {
         if (bookmarks->currentItem()) {
-            destDir = bookmarks->currentItem()->toolTip(0);
+            destDir = BookMarks::pathOf(bookmarks->currentItem());
         } else {
             addBookmark(cpMvDirPath);
             return;

@@ -727,11 +727,12 @@ void MW::toggleColorManage(Tog n)
 
     if (dm->rowCount() == 0) return;
 
-    // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
-        refreshViewsOnCacheChange(fPath, false, "MW::toggleColorManage");
-    }
+    /* Repaint the thumbnails' cache badges. This was a refreshViewsOnCacheChange call
+       per SOURCE row, which only repaints that row's cell -- 155k calls (and warnings,
+       for every filtered-out row) in a filtered Library. The rebuilt image cache
+       updates each row's cached flag as it goes. */
+    thumbView->viewport()->update();
+    gridView->viewport()->update();
 
     // // let ImageView know that the image changed
     imageView->currentImageHasChanged = true;
@@ -890,11 +891,12 @@ void MW::setPreviewSource(G::PreviewSource source)
 
     refreshDevelopThumbs();
 
-    // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
-        refreshViewsOnCacheChange(fPath, false, "MW::setPreviewSource");
-    }
+    /* Repaint the thumbnails' cache badges. This was a refreshViewsOnCacheChange call
+       per SOURCE row, which only repaints that row's cell -- 155k calls (and warnings,
+       for every filtered-out row) in a filtered Library. The rebuilt image cache
+       updates each row's cached flag as it goes. */
+    thumbView->viewport()->update();
+    gridView->viewport()->update();
 
     // let ImageView know that the image changed
     imageView->currentImageHasChanged = true;
@@ -932,11 +934,12 @@ void MW::toggleUseRaw(Tog n)
 
     if (dm->rowCount() == 0) return;
 
-    // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
-        refreshViewsOnCacheChange(fPath, false, "MW::toggleUseRaw");
-    }
+    /* Repaint the thumbnails' cache badges. This was a refreshViewsOnCacheChange call
+       per SOURCE row, which only repaints that row's cell -- 155k calls (and warnings,
+       for every filtered-out row) in a filtered Library. The rebuilt image cache
+       updates each row's cached flag as it goes. */
+    thumbView->viewport()->update();
+    gridView->viewport()->update();
 
     // let ImageView know that the image changed
     imageView->currentImageHasChanged = true;

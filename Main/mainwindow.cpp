@@ -1245,6 +1245,7 @@ void MW::showEvent(QShowEvent *event)
         else if (restored && lastWf >= 0) {
             currentWorkflow = lastWf;
             syncWorkflowSwitcher();
+            if (lastWf == WfMap) showMapPage();     // the layout alone brings up Loupe
         }
     }
     else {
@@ -2437,8 +2438,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (idx.isValid()) {
                     QModelIndex idx0 = idx.sibling(idx.row(), 0);
                     folderName = idx0.data().toString();
-                    // tooltip is set to path when bookmark is added
-                    mouseOverFolderPath = idx0.data(Qt::ToolTipRole).toString();
+                    mouseOverFolderPath = idx0.data(BookMarks::PathRole).toString();
                     /*
                     qDebug() << "MW::eventFilter QEvent::ContextMenu"
                              << "mouseOverFolderPath =" << mouseOverFolderPath
@@ -5248,7 +5248,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     // waitUntilMetadataLoaded(5000, fun);
 
     // if new folder and 1st file is a video and mode == "Table"
-    if (G::mode == "Table" && centralLayout->currentIndex() != TableTab) {
+    if (G::mode == "Table" && centralLayout->currentIndex() != TableTab
+        && !inMapModule()) {
         tableDisplay();
     }
 
@@ -5339,12 +5340,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     videoView->stop();
     probe.mark("videoStop");
     if (G::isIngestProbe) IngestProbe::Instance().NoteLoupe(IngestProbe::NoView);
+    /*  In the Map module the page is the map: the image still loads (for the loupe to
+        have it on the way back) but none of the branches below may switch the page. */
+    const bool mapUp = inMapModule();
+    if (mapUp && centralLayout->currentWidget() != mapView) showMapPage();
     if (G::mode == "Loupe" || G::mode == "Grid" || G::mode == "Table") {
         if (isVideo) {
             if (G::isIngestProbe) IngestProbe::Instance().NoteLoupe(IngestProbe::Video);
             G::isFirstImageNewInstance = false;
             updateClassification();
-            if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+            if (!mapUp && (G::mode == "Loupe"
+                           || G::fileSelectionChangeSource == "IconMouseDoubleClick")) {
                 // loupeDisplay(fun);
                 if (G::useMultimedia) {
                     centralLayout->setCurrentIndex(VideoTab);
@@ -5361,7 +5367,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             // imageView->loadImage can return false (cache miss, other early-returns),
             // which would skip loupeDisplay and leave the central widget on VideoTab
             // from a prior video selection.
-            if ((G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick")
+            if (!mapUp
+                && (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick")
                 && centralLayout->currentIndex() != LoupeTab)
             {
                 centralLayout->setCurrentIndex(LoupeTab);
@@ -5385,7 +5392,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 IngestProbe::Instance().NoteLoupe(loaded ? IngestProbe::Cached
                                                          : IngestProbe::Miss);
             if (loaded) {
-                if (G::mode == "Loupe" || G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                if (!mapUp && (G::mode == "Loupe"
+                               || G::fileSelectionChangeSource == "IconMouseDoubleClick")) {
                     loupeDisplay(fun);
                     probe.mark("loupeDisplay");
                 }
@@ -5407,8 +5415,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 if (imageView->loadImageInterim(fPath, cachedPreview)) {
                     if (G::isIngestProbe)
                         IngestProbe::Instance().NoteLoupe(IngestProbe::Interim);
-                    if (G::mode == "Loupe" ||
-                        G::fileSelectionChangeSource == "IconMouseDoubleClick") {
+                    if (!mapUp && (G::mode == "Loupe" ||
+                        G::fileSelectionChangeSource == "IconMouseDoubleClick")) {
                         loupeDisplay(fun);
                     }
                 }
@@ -5711,7 +5719,7 @@ void MW::refreshViews(QString srcFun)
        which is left stale/blank without an explicit reload. Re-assert the current
        video's first frame when in Loupe; the guard skips a clip already shown paused
        on its first frame so there is no redundant reload. */
-    if (G::useMultimedia && G::mode == "Loupe" && dm->sf->rowCount()) {
+    if (G::useMultimedia && G::mode == "Loupe" && !inMapModule() && dm->sf->rowCount()) {
         bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
         if (isVideo && !dm->currentFilePath.isEmpty()) {
             QMediaPlayer *mp = videoView->video->mediaPlayer;
@@ -7688,16 +7696,32 @@ void MW::updateImageCacheStatus(int instruction, bool isAutoSize,
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 {
 /*
-    Called by signal itemClicked in bookmark.
+    Called by signal itemPressed in bookmark.
+
+    BOOKMARKS FOLLOW THE SOURCE. In the Library the whole Library is already loaded, so
+    a bookmark FILTERS it -- the request a plain click on the same folder in LibTree
+    makes, through the same MW::applyLibraryFolderFilter, and the highlight then comes
+    back from the Filters panel like any other folder filter (syncLibTreeFromFilters).
+    A bookmark the Library holds nothing in is not a dead row: it opens the folder in
+    Folders, which switches the source the ordinary way (its tooltip says so).
 */
+    Q_UNUSED(col)
     if (G::isLogger) G::log("MW::bookmarkClicked");
+
+    const QString dPath = BookMarks::pathOf(item);
+
+    if (G::scope == G::Scope::Catalog) {
+        const QStringList inc = bookmarks->libraryFolders(dPath);
+        if (!inc.isEmpty()) {
+            applyLibraryFolderFilter(inc, {});
+            return;
+        }
+    }
 
     if (G::stop) {
         G::popup->showPopup("Busy, try new folder in a sec.", 1000);
         return;
     }
-
-    const QString dPath = item->toolTip(col);
     if (isFolderValid(dPath, true, false)) {
         // folderSelectionChange(dPath);
         QModelIndex idx = fsTree->fsModel->index(dPath);

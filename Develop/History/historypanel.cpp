@@ -6,12 +6,12 @@
 #include <QLabel>
 #include <QLinearGradient>
 #include <QMenu>
-#include <QAbstractItemModel>
 #include <QContextMenuEvent>
 #include <QListWidget>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QSettings>
+#include <QSplitter>
 #include <QVBoxLayout>
 
 #include "Develop/History/historyview.h"
@@ -118,20 +118,39 @@ HistoryPanel::HistoryPanel(QWidget *parent, QSettings *setting)
     v->setContentsMargins(0, 0, 0, 0);
     v->setSpacing(0);
 
+    /*  THE TWO SECTIONS SHARE A SPLITTER, so the user drags the boundary between them to
+        decide how much of the dock each list gets (the Keywords dock's tag zone / tree
+        split is the same idiom). Each pane is its band plus its list, so the handle sits
+        on the Presets band's top edge and the band travels with the drag. Not
+        collapsible: a pane dragged to nothing would take its band with it, and the bands
+        NEVER hide -- folding a section is the arrow's job (see applySplit). */
+    splitter = new QSplitter(Qt::Vertical, this);
+    splitter->setChildrenCollapsible(false);
+    splitter->setHandleWidth(4);
+
     /* ---- History ---- */
-    histHeader = new PanelSectionHeader(tr("History"), this);
+    histPane = new QWidget(splitter);
+    QVBoxLayout *histLayout = new QVBoxLayout(histPane);
+    histLayout->setContentsMargins(0, 0, 0, 0);
+    histLayout->setSpacing(0);
+    histHeader = new PanelSectionHeader(tr("History"), histPane);
     BarBtn *histMenuBtn = new BarBtn();
     histMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
     histMenuBtn->setToolTip("History actions");
     connect(histMenuBtn, &BarBtn::clicked, this, [this]{ showHistoryMenu(); });
     histHeader->addButton(histMenuBtn);
-    v->addWidget(histHeader);
+    histLayout->addWidget(histHeader);
 
-    histView = new HistoryView(this);
-    v->addWidget(histView);
+    histView = new HistoryView(histPane);
+    histLayout->addWidget(histView, 1);
+    splitter->addWidget(histPane);
 
     /* ---- Presets ---- */
-    presHeader = new PanelSectionHeader(tr("Presets"), this);
+    presPane = new QWidget(splitter);
+    QVBoxLayout *presLayout = new QVBoxLayout(presPane);
+    presLayout->setContentsMargins(0, 0, 0, 0);
+    presLayout->setSpacing(0);
+    presHeader = new PanelSectionHeader(tr("Presets"), presPane);
     /*  New preset: the same flow as Cmd+Shift+N, put where the presets are so it can be
         found without knowing the shortcut. */
     BarBtn *presNewBtn = new BarBtn();
@@ -143,17 +162,35 @@ HistoryPanel::HistoryPanel(QWidget *parent, QSettings *setting)
     presMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
     presMenuBtn->setToolTip("Preset actions");
     presHeader->addButton(presMenuBtn);
-    v->addWidget(presHeader);
+    presLayout->addWidget(presHeader);
 
-    presView = new PresetsView(this);
-    v->addWidget(presView);
+    presView = new PresetsView(presPane);
+    presLayout->addWidget(presView, 1);
+    splitter->addWidget(presPane);
 
-    /*  THE ONLY STRETCH IN THE PANEL, and it is last: the two bands and their lists pack
-        against the TOP, and whatever is left over falls to the bottom as empty panel.
-        Giving the lists the stretch instead spread the leftover between them, which
-        pushed the Presets band into the middle of the dock and left a pane of empty
-        background under each band. */
-    v->addStretch(1);
+    /*  The splitter takes the panel. The trailing stretch only matters when BOTH
+        sections are folded: the panes are then capped at their band heights, and the
+        leftover has to fall below the bands rather than open a gap between them. */
+    v->addWidget(splitter, 1);
+    v->addStretch(0);
+
+    /*  The split persists as the two EXPANDED pane heights. setSizes treats them as
+        proportions of whatever the splitter is given, so a size saved in a tall window
+        still reads right in a short one. The first-run split favours History: it is the
+        panel's primary list and the one that grows as the user edits. */
+    if (setting) {
+        const QVariantList saved = setting->value("Develop/SectionSplit").toList();
+        if (saved.size() == 2 && saved[0].toInt() > 0 && saved[1].toInt() > 0)
+            splitSizes = {saved[0].toInt(), saved[1].toInt()};
+    }
+    connect(splitter, &QSplitter::splitterMoved, this, [this]{
+        /*  A drag is only possible with both sections open (a folded pane is capped at
+            its band), so every size read here is a real expanded size. */
+        if (!historyExpanded() || !presetsExpanded()) return;
+        splitSizes = splitter->sizes();
+        if (this->setting) this->setting->setValue("Develop/SectionSplit",
+                                             QVariantList{splitSizes[0], splitSizes[1]});
+    });
 
     /*  The band's menu is the list's own context menu (so there is one set of preset
         actions, not two that can drift), acting on the SELECTED preset, plus help. */
@@ -183,19 +220,7 @@ HistoryPanel::HistoryPanel(QWidget *parent, QSettings *setting)
     histView->setVisible(histOn);
     presHeader->setExpanded(presOn);
     presView->setVisible(presOn);
-
-    /*  Re-fit on every rebuild. Hooked to the MODEL rather than to the views' refresh()
-        so it catches every route that changes the rows -- a new edit, an image change, a
-        preset added or deleted -- without either view having to report back. */
-    for (QListWidget *view : {static_cast<QListWidget*>(histView),
-                              static_cast<QListWidget*>(presView)}) {
-        QAbstractItemModel *m = view->model();
-        connect(m, &QAbstractItemModel::rowsInserted, this, [this, view]{ fitListToContent(view); });
-        connect(m, &QAbstractItemModel::rowsRemoved,  this, [this, view]{ fitListToContent(view); });
-        connect(m, &QAbstractItemModel::modelReset,   this, [this, view]{ fitListToContent(view); });
-        view->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-    }
-    fitListsToContent();
+    applySplit();
 }
 
 bool HistoryPanel::historyExpanded() const { return histHeader && histHeader->isExpanded(); }
@@ -208,6 +233,7 @@ void HistoryPanel::setSectionExpanded(PanelSectionHeader *header, QWidget *body,
     header->setExpanded(expanded);
     body->setVisible(expanded);
     if (setting) setting->setValue("Develop/SectionExpanded/" + key, expanded);
+    applySplit();
 }
 
 /*  Both emit unconditionally, even when the section is already open: the callers (H, P,
@@ -284,38 +310,28 @@ void HistoryPanel::contextMenuEvent(QContextMenuEvent *event)
     }
 }
 
-void HistoryPanel::fitListToContent(QListWidget *view)
+void HistoryPanel::applySplit()
 {
 /*
-    A list is exactly as tall as its rows, so the next band sits under the last row.
+    Fit the splitter to which sections are open.
 
-    The ceiling is half the panel: a long history (up to 100 entries) would otherwise push
-    the Presets band off the bottom, and a list that hits the ceiling simply scrolls. It
-    is a MAXIMUM rather than a fixed height, so when both lists are full the layout can
-    still squeeze them to fit rather than overflowing the dock.
+    A FOLDED pane is capped at its band's height, so the open section takes the rest of
+    the dock and the handle stops where the band is (QSplitter honours a child's maximum).
+    With both open the caps come off and the remembered split is re-applied: lifting a
+    cap does not by itself grow the pane back, so without setSizes a re-opened section
+    would stay squeezed to its band until the user dragged it.
 */
-    if (!view) return;
-    int h = 2 * view->frameWidth();
-    for (int i = 0; i < view->count(); ++i) h += view->sizeHintForRow(i);
-    /* An empty list keeps one row's worth, so it reads as an empty list rather than as
-       two bands stacked on each other. */
-    const int rowH = view->count() ? view->sizeHintForRow(0)
-                                   : view->fontMetrics().height() + 8;
-    const int minH = rowH + 2 * view->frameWidth();
-    const int maxH = qMax(minH, height() / 2);
-    view->setMaximumHeight(qBound(minH, h, maxH));
-}
-
-void HistoryPanel::fitListsToContent()
-{
-    fitListToContent(histView);
-    fitListToContent(presView);
-}
-
-void HistoryPanel::resizeEvent(QResizeEvent *event)
-{
-    QWidget::resizeEvent(event);
-    fitListsToContent();
+    if (!splitter) return;
+    const bool histOn = historyExpanded();
+    const bool presOn = presetsExpanded();
+    histPane->setMaximumHeight(histOn ? QWIDGETSIZE_MAX : histHeader->sizeHint().height());
+    presPane->setMaximumHeight(presOn ? QWIDGETSIZE_MAX : presHeader->sizeHint().height());
+    /*  Both folded: cap the splitter itself too, so the panel's trailing stretch gets
+        the leftover and the two bands stay stacked at the top. */
+    splitter->setMaximumHeight(histOn || presOn ? QWIDGETSIZE_MAX
+        : histHeader->sizeHint().height() + presHeader->sizeHint().height()
+          + splitter->handleWidth());
+    if (histOn && presOn) splitter->setSizes(splitSizes);
 }
 
 void HistoryPanel::showHistoryMenu()

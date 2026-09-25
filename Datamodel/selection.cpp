@@ -255,6 +255,44 @@ void Selection::toggleSelect(QModelIndex sfIdx)
     sm->select(toggleSelection, QItemSelectionModel::Toggle | QItemSelectionModel::Rows);
 }
 
+void Selection::selectRows(const QList<int> &sfRows, bool add)
+{
+/*
+    Select a set of proxy rows at once: the pins of a map cluster (MapView::selectRows).
+
+    ONE QItemSelection, built from runs of consecutive rows, and one select() call --
+    not a select per row, which would emit selectionChanged (and repaint three views)
+    once for every image in the cluster.
+
+    Without `add` the first row becomes current through setCurrentIndex, exactly as a
+    click in the grid does (it loads the image and clears the old selection); the rest
+    are then added. With `add` the rows join the selection and the current image stays.
+*/
+    if (G::isLogger || isDebug) G::log("Selection::selectRows");
+    QList<int> rows;
+    const int n = dm->sf->rowCount();
+    for (int r : sfRows) if (r >= 0 && r < n) rows.append(r);
+    if (rows.isEmpty()) return;
+    const int first = rows.first();
+    std::sort(rows.begin(), rows.end());
+    rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+
+    QItemSelection selection;
+    int runStart = rows.first();
+    int prev = runStart;
+    for (int i = 1; i <= rows.size(); ++i) {
+        if (i < rows.size() && rows.at(i) == prev + 1) {
+            prev = rows.at(i);
+            continue;
+        }
+        selection.select(dm->sf->index(runStart, 0), dm->sf->index(prev, 0));
+        if (i < rows.size()) runStart = prev = rows.at(i);
+    }
+
+    if (!add) setCurrentIndex(dm->sf->index(first, 0));
+    sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+}
+
 void Selection::next(Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || isDebug) G::log("Selection::next");

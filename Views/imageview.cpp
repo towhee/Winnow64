@@ -703,6 +703,16 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
             interimZoomScale = 1.0;     // full size image again
             resetFitZoom();
         }
+        /* Both refits shrink the scene rect to the image, which removes the crop tool's
+           pan room. Opening the crop on an already-cropped image does exactly this: the
+           render arrives at the full frame, after beginCropEdit. Without the pad the frame
+           can't be moved at fit zoom. */
+        if (cropActive()) {
+            cropSetPanSceneRect();
+            centerOn(pmItem);
+            cropSyncFrameFromN();
+            viewport()->update();
+        }
     }
 }
 
@@ -1675,13 +1685,21 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
     /* Give the view room to pan even at fit zoom (so the image can be dragged under the fixed
        frame, with parts moving off the central widget) WITHOUT changing the zoom: only the
        scrollable area grows, not the transform. Restored in endCropEdit. */
-    const QRectF imgScene = pmItem->mapToScene(pmItem->boundingRect()).boundingRect();
-    setSceneRect(imgScene.adjusted(-imgScene.width(), -imgScene.height(),
-                                    imgScene.width(),  imgScene.height()));
+    cropSetPanSceneRect();
     cropSyncFrameFromN();             // derive the on-screen frame from cropN (no transform change)
     setCursor(Qt::ArrowCursor);
     viewport()->update();
     cropEmitChanged();
+}
+
+void ImageView::cropSetPanSceneRect()
+{
+    /* Pad the scene by one image size on every side so the canvas can be panned under the
+       fixed crop frame even at fit zoom. Anything that resets the scene rect to the image
+       bounds while cropping (a refit when the render changes size) must call this again. */
+    const QRectF imgScene = pmItem->mapToScene(pmItem->boundingRect()).boundingRect();
+    setSceneRect(imgScene.adjusted(-imgScene.width(), -imgScene.height(),
+                                    imgScene.width(),  imgScene.height()));
 }
 
 void ImageView::endCropEdit()

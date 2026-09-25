@@ -1,14 +1,15 @@
 #ifndef HISTORYPANEL_H
 #define HISTORYPANEL_H
 
+#include <QList>
 #include <QString>
 #include <QWidget>
 
 class QContextMenuEvent;
-class QResizeEvent;
 class QLabel;
 class QListWidget;
 class QSettings;
+class QSplitter;
 class QHBoxLayout;
 class BarBtn;
 class HistoryView;
@@ -68,6 +69,7 @@ private:
         History                        X    <- the dock's own DockTitleBar
         > History                     [:]   <- this widget
         >   (HistoryView)
+        ================================== <- splitter handle: drag to resize
         > Presets                 [+] [:]
         >   (PresetsView)
 
@@ -76,6 +78,10 @@ private:
     is still a dumb view over a model DevelopProperties owns, so this widget CREATES the
     two views and hands them out (historyView() / presetsView()) for MW to bind -- it
     knows nothing about develop state itself.
+
+    The two sections sit in a vertical QSplitter, so the user sizes them against each
+    other; the split persists under Develop/SectionSplit. A folded section's pane is
+    capped at its band, so the open one takes the dock.
 
     Expand state persists per section under Develop/SectionExpanded/<name>, the same key
     shape the Develop tree's Basic / Color / Detail / Effects sections use. This widget is
@@ -102,8 +108,6 @@ public:
     void expandPresets();
 
 protected:
-    /* The content-height ceiling is a share of the panel, so a resize re-runs the fit. */
-    void resizeEvent(QResizeEvent *event) override;
     /* Expand all / Collapse all / Solo mode, from anywhere in the panel. The bands and the
        History list do not consume the right-click, so it arrives here; the Presets list
        keeps its own preset menu. */
@@ -123,12 +127,9 @@ private:
     void setPresetsSection(bool expanded);
     void setSectionExpanded(PanelSectionHeader *header, QWidget *body,
                             const QString &key, bool expanded);
-    /* Pin a list to the height of the rows it holds, so the band below it sits directly
-       under the last row instead of under a pane of empty background. Re-run whenever the
-       list rebuilds (wired to its model's row signals) and on resize, which is what moves
-       the ceiling. */
-    void fitListToContent(QListWidget *view);
-    void fitListsToContent();
+    /* Cap a folded section's pane at its band and re-apply the remembered split when
+       both are open. Run after every expand / collapse. */
+    void applySplit();
     void showHistoryMenu();
     static void showHistoryHelp();
     static void showPresetsHelp();
@@ -139,6 +140,10 @@ private:
     PanelSectionHeader *presHeader  = nullptr;
     HistoryView        *histView    = nullptr;
     PresetsView        *presView    = nullptr;
+    QSplitter          *splitter    = nullptr;
+    QWidget            *histPane    = nullptr;   // histHeader + histView
+    QWidget            *presPane    = nullptr;   // presHeader + presView
+    QList<int>          splitSizes  = {3, 2};    // expanded pane heights (proportions)
 };
 
 #endif // HISTORYPANEL_H

@@ -336,7 +336,16 @@ qint64 Catalog::keywordIdLocked(QSqlDatabase &db, const QString &path)
         return 0;
     }
 
-    qint64 id = q.lastInsertId().toLongLong();
+    /*  numRowsAffected, NEVER "lastInsertId() == 0". DO NOTHING is a successful exec()
+        that inserted nothing, and sqlite3_last_insert_rowid() then still holds the rowid
+        of the connection's last successful insert -- here, the previous image's FTS row,
+        whose rowid is that IMAGE's id. So a keyword that already existed was linked to
+        whichever keyword happened to share the previous image's id, and the memo kept
+        that wrong id for the rest of the session. It fires on the first use of every
+        existing keyword in every session, which is how 99% of a 155k-image library came
+        to carry links that disagree with its own text (2026-09-25; the drift schema 12
+        repaired without finding a cause). Same trap as KeywordVocab::ensureChild. */
+    qint64 id = q.numRowsAffected() > 0 ? q.lastInsertId().toLongLong() : 0;
     if (!id) {
         /* DO NOTHING fired: the row already existed (another folder, or a previous
            session), so look it up rather than treating a conflict as a failure. */

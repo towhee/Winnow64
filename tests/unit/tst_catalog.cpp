@@ -4,6 +4,7 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QSqlDatabase>
+#include <QSqlError>
 #include <QSqlQuery>
 
 #include "Cache/cachedb.h"
@@ -68,6 +69,7 @@ private slots:
     void versionNineFileRebuildsPathKeyedKeywords();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
+    void existingKeywordLinksToItsOwnRow();
     void keywordAuditReportsDriftWhenTheLinksAreWrong();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
@@ -222,8 +224,11 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         cleared rows. So 14 clears the stamps again, now that both writers agree, and
         drops the thumbnail index with them: a thumbnail cached against orientation 0
         is unrotated, and ThumbCache validates against the source file, which did not
-        change. */
-    QCOMPARE(CacheDb::schemaVersion(), 14);
+        change; version 15 added NO table either -- the fifth data repair, schema 12's
+        rebuild again, now that its cause is found and fixed: Catalog::keywordIdLocked
+        trusted lastInsertId() after ON CONFLICT DO NOTHING, so every keyword that
+        already existed was linked to the previous insert's rowid. */
+    QCOMPARE(CacheDb::schemaVersion(), 15);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1504,6 +1509,53 @@ void tst_catalog::linksFollowTheTextEvenWhenTheExpansionDisagrees()
     /*  And the count the Keywords dock reads now agrees with the text the Filters panel
         counts -- the two numbers that disagreed in the report. */
     QCOMPARE(cat.imagesUnderKeyword("Location|New Zealand|Castlepoint"), 1);
+}
+
+void tst_catalog::existingKeywordLinksToItsOwnRow()
+{
+/*
+    THE CAUSE OF THE LINK DRIFT schema 12 repaired and schema 15 repaired again.
+
+    A keyword that ALREADY EXISTS, and that this session's memo has not seen, is the
+    ordinary case: it is every keyword of every image on the first commit after a launch.
+    The insert's ON CONFLICT DO NOTHING fires, and lastInsertId() then reports the
+    connection's PREVIOUS insert -- the image row just written -- rather than nothing.
+    keywordIdLocked trusted it, so the image was linked to whichever keyword row happened
+    to have its image's id, and the memo kept that for the session.
+
+    Decoy rows take the low ids so the stale rowid (the image's id, 1 on a cleared table)
+    lands on a keyword that exists but that the image does not carry.
+*/
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+
+    QSqlQuery q(CacheDb::instance().db());
+    for (const char *k : {"Decoy A", "Decoy B", "Decoy C", "Fauna", "Fauna|Fish"}) {
+        const QString path = QString::fromUtf8(k);
+        const QString leaf = path.section('|', -1);
+        q.prepare("INSERT INTO keyword (name, namefold, path, pathfold)"
+                  " VALUES (?, ?, ?, ?)");
+        q.addBindValue(leaf);
+        q.addBindValue(leaf.toCaseFolded());
+        q.addBindValue(path);
+        q.addBindValue(path.toCaseFolded());
+        QVERIFY2(q.exec(), qPrintable(q.lastError().text()));
+    }
+
+    cat.commit({rowFor("fish1.jpg", {}, {"Fauna|Fish"}),
+                rowFor("fish2.jpg", {}, {"Fauna|Fish"})});
+
+    for (const char *name : {"fish1.jpg", "fish2.jpg"}) {
+        QVERIFY(q.exec(QString("SELECT k.path FROM image_keyword ik"
+                               " JOIN keyword k ON k.id = ik.keyword_id"
+                               " JOIN image i   ON i.id = ik.image_id"
+                               " WHERE i.path LIKE '%%1' ORDER BY k.pathfold")
+                           .arg(QString::fromUtf8(name))));
+        QStringList links;
+        while (q.next()) links << q.value(0).toString();
+        QCOMPARE(links, QStringList({"Fauna", "Fauna|Fish"}));
+    }
+    QCOMPARE(cat.imagesUnderKeyword("Fauna|Fish"), 2);
 }
 
 void tst_catalog::versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone()

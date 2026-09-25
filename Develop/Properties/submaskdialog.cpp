@@ -125,6 +125,14 @@ void SubmaskDialog::buildUi()
     addToolGroup(tr("Content"),   int(MaskTool::ColorRange),     int(MaskTool::LuminanceRange));
     addToolGroup(tr("Automatic"), int(MaskTool::Subject),        int(MaskTool::Object));
 
+    /* Tall enough for every row: the list is short and scrolling it hides choices. Row
+       heights are summed (headings are bold, so not uniform) rather than assumed. */
+    int listH = 2 * toolList->frameWidth();
+    for (int r = 0; r < toolList->count(); ++r)
+        listH += toolList->sizeHintForRow(r) + 2 * toolList->spacing();
+    toolList->setMinimumHeight(listH);
+    toolList->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
     /* Nothing preselected: the tool is the one thing the dialog cannot guess, and a
        default row would be added by a stray Return. OK stays off until a row is picked;
        a double-click is the shortcut for people who know which one they want. */
@@ -142,7 +150,7 @@ void SubmaskDialog::buildUi()
     v->addWidget(box);
 
     syncOkEnabled();
-    resize(sizeHint().width(), qMax(sizeHint().height(), 460));
+    resize(sizeHint());
 }
 
 void SubmaskDialog::addToolGroup(const QString &heading, int firstTool, int lastTool)

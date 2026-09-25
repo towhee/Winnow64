@@ -2043,6 +2043,14 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
         return;
     }
 
+    /* In the Map module a double-click opens the image in Browse Loupe, the way a
+       double-click on a pin does: loupeDisplay alone would put up the loupe page while
+       the workflow was still Map. */
+    if (m2->inMapModule() && event->button() == Qt::LeftButton) {
+        m2->requestView(MW::CvLoupe);
+        return;
+    }
+
     // show/play when not in loupe mode
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         /*
