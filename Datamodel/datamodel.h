@@ -112,6 +112,9 @@ private slots:
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+    /*  Qt's own comparison on keys taken in ONE pass, while a sort WE started is
+        running; Qt's base lessThan otherwise. See the definition. */
+    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
 
 
 
@@ -130,6 +133,19 @@ private:
     FilterPredicatePtr filterPredicate() const;
     mutable QMutex mPredicateMutex;
     FilterPredicatePtr mPredicate;
+
+    /*  The sort column's value for every DATAMODEL row, valid only inside a
+        SortKeyScope (datamodel.cpp) on the GUI thread. */
+    friend struct SortKeyScope;
+    void prepareSortKeys(int column);
+    void clearSortKeys();
+    /*  --perfprobe only: after a keyed sort, check every adjacent pair of proxy rows with
+        Qt's base lessThan (through data(), the pre-key path) and print the number out of
+        order. The keyed comparison is only correct if this stays 0. */
+    void verifySortOrder(const QString &src);
+    QVector<QVariant> mSortKeys;
+    int mSortKeyColumn = -1;
+    bool mSortKeysValid = false;
 };
 
 class DataModel : public QAbstractTableModel
@@ -339,6 +355,11 @@ public:
     // all folders in the datamodel.  folderSet mirrors folderList for O(1)
     // membership tests (folderList preserves insertion order).
     QStringList folderList;
+    /*  Bumped at every folderList mutation, so a caller can cache an answer derived
+        from the list (MW::isPreviewCacheFolderLoaded) instead of re-walking thousands of
+        folders per selection. Atomic: addFolder writes the list under dmMutex, and is not
+        guaranteed to be on the GUI thread that reads this. */
+    std::atomic<quint64> folderListGen{0};
     QSet<QString> folderSet;
     QHash<QString, int> folderImageCount;
     QDir::SortFlags thumbsSortFlags;

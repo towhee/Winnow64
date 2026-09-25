@@ -503,7 +503,6 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     if (dm == nullptr) return out;
     snap.instance = dm->instance;
     const int rows = dm->rowCount();
-    snap.rows.resize(rows);
 
     /*  ONE PASS OVER THE STORE, ONE LOCK. This read every cell through
         dm->index(row, col).data(): an index, DataModel::data, and three RowStore lock
@@ -521,51 +520,73 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     cells.append({G::KeywordsAllColumn, Qt::DisplayRole});     // kKeywords
     cells.append({G::PathColumn, G::DupHideRawRole});          // kHideRaw
 
-    dm->rowStore.forEachRow(cells, [&](int row, const QVariant *val) {
-        if (row >= rows) return;
-        FilterSnapshotRow &r = snap.rows[row];
-        for (int slot = 0; slot < FilterCat::SlotCount; ++slot) {
-            r.v[slot] = val[slot].toString().trimmed();
-        }
-        /*  A folder path is an IDENTITY, not display text: trimming it would turn a
-            folder named "Trip " into a different folder -- one the checked item's value
-            (the untrimmed path, see Filters::addFolderItems) then never matches. */
-        r.v[FilterCat::FolderPath] = val[FilterCat::FolderPath].toString();
-        /* Focal length is right-justified so "50" and "400" sort as numbers
-           rather than as text. All three passes did this, so bake it in once. */
-        r.v[FilterCat::FocalLength] =
-            r.v[FilterCat::FocalLength].rightJustified(4, ' ');
-        /*  ISO for the same reason, to six: unpadded, "800" sorts between "100" and
-            "8000". Six covers the largest ISO a camera reports (409600). The model
-            holds an int, and a QVariant int compares equal to its padded string form,
-            so a checked item still matches the row -- which is what lets the item
-            carry the padded text as its value the way focal length does. */
-        r.v[FilterCat::Iso] = r.v[FilterCat::Iso].rightJustified(6, ' ');
+    /*  REUSED UNTIL A COUNTED CELL CHANGES. See FilterValuesPtr in filtersnapshot.h:
+        a filter change moves only inProxy, so the table from the last snapshot is
+        still exact unless RowStore's watched generation, the row count or
+        combineRawJpg (which hiddenRaw folds in) has moved. The generation is read
+        BEFORE the pass, so a write landing during it forces the next rebuild rather
+        than being missed. */
+    dm->rowStore.setWatchedCells(cells);
+    const quint64 gen = dm->rowStore.watchedGeneration();
+    if (cachedValues && gen == cachedValuesGen && rows == cachedValues->size()
+        && combine == cachedValuesCombine) {
+        snap.values = cachedValues;
+    }
+    else {
+        auto values = std::make_shared<QVector<FilterSnapshotRow>>(rows);
+        QVector<FilterSnapshotRow> &vrows = *values;
+        dm->rowStore.forEachRow(cells, [&](int row, const QVariant *val) {
+            if (row >= rows) return;
+            FilterSnapshotRow &r = vrows[row];
+            for (int slot = 0; slot < FilterCat::SlotCount; ++slot) {
+                r.v[slot] = val[slot].toString().trimmed();
+            }
+            /*  A folder path is an IDENTITY, not display text: trimming it would turn
+                a folder named "Trip " into a different folder -- one the checked item's
+                value (the untrimmed path, see Filters::addFolderItems) then never
+                matches. */
+            r.v[FilterCat::FolderPath] = val[FilterCat::FolderPath].toString();
+            /* Focal length is right-justified so "50" and "400" sort as numbers
+               rather than as text. All three passes did this, so bake it in once. */
+            r.v[FilterCat::FocalLength] =
+                r.v[FilterCat::FocalLength].rightJustified(4, ' ');
+            /*  ISO for the same reason, to six: unpadded, "800" sorts between "100" and
+                "8000". Six covers the largest ISO a camera reports (409600). The model
+                holds an int, and a QVariant int compares equal to its padded string form,
+                so a checked item still matches the row -- which is what lets the item
+                carry the padded text as its value the way focal length does. */
+            r.v[FilterCat::Iso] = r.v[FilterCat::Iso].rightJustified(6, ' ');
 
-        /*  Availability is the one column whose value is a CODE, not a word -- see
-            Catalog::Availability, and "Present is 0 and unset reads as 0", which is
-            what makes a folder-scope row (nothing ever wrote this column) come out
-            Present rather than blank. The category shows the word. */
-        r.v[FilterCat::Availability] =
-            Catalog::availabilityLabel(r.v[FilterCat::Availability].toInt());
+            /*  Availability is the one column whose value is a CODE, not a word -- see
+                Catalog::Availability, and "Present is 0 and unset reads as 0", which is
+                what makes a folder-scope row (nothing ever wrote this column) come out
+                Present rather than blank. The category shows the word. */
+            r.v[FilterCat::Availability] =
+                Catalog::availabilityLabel(r.v[FilterCat::Availability].toInt());
 
-        const QStringList kw = val[kKeywords].toStringList();
-        r.keywords.reserve(kw.size());
-        for (const QString &k : kw) r.keywords << k.trimmed();
+            const QStringList kw = val[kKeywords].toStringList();
+            r.keywords.reserve(kw.size());
+            for (const QString &k : kw) r.keywords << k.trimmed();
 
-        /* When combineRawJpg is on the raw half of a pair is hidden in the
-           proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
-           skip it or they will not match the proxy baseline. */
-        r.hiddenRaw = combine && val[kHideRaw].toBool();
-    });
+            /* When combineRawJpg is on the raw half of a pair is hidden in the
+               proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
+               skip it or they will not match the proxy baseline. */
+            r.hiddenRaw = combine && val[kHideRaw].toBool();
+        });
+        cachedValues = values;
+        cachedValuesGen = gen;
+        cachedValuesCombine = combine;
+        snap.values = values;
+    }
 
     // mark the rows the current filter admits
+    snap.inProxy.fill(0, rows);
     if (dm->sf != nullptr) {
         const int sfRows = dm->sf->rowCount();
         for (int sfRow = 0; sfRow < sfRows; ++sfRow) {
             const int dmRow = dm->sf->mapToSource(dm->sf->index(sfRow, 0)).row();
             if (dmRow >= 0 && dmRow < rows) {
-                snap.rows[dmRow].inProxy = true;
+                snap.inProxy[dmRow] = 1;
                 ++snap.proxyRows;
             }
         }
@@ -590,9 +611,11 @@ QMap<QString,int> BuildFilters::countSlot(const FilterSnapshot &snap, int slot,
     raw+jpg pair.
 */
     QMap<QString,int> map;
-    for (const FilterSnapshotRow &r : snap.rows) {
+    const int n = snap.rowCount();
+    for (int i = 0; i < n; ++i) {
         if (abort) return map;
-        if (filtered ? !r.inProxy : r.hiddenRaw) continue;
+        const FilterSnapshotRow &r = snap.row(i);
+        if (filtered ? !snap.admitted(i) : r.hiddenRaw) continue;
         map[r.v[slot]]++;
     }
     return map;
@@ -602,9 +625,11 @@ QMap<QString,int> BuildFilters::countKeywords(const FilterSnapshot &snap,
                                              bool filtered) const
 {
     QMap<QString,int> map;
-    for (const FilterSnapshotRow &r : snap.rows) {
+    const int n = snap.rowCount();
+    for (int i = 0; i < n; ++i) {
         if (abort) return map;
-        if (filtered ? !r.inProxy : r.hiddenRaw) continue;
+        const FilterSnapshotRow &r = snap.row(i);
+        if (filtered ? !snap.admitted(i) : r.hiddenRaw) continue;
         for (const QString &k : r.keywords) map[k]++;
     }
     return map;
@@ -1036,7 +1061,7 @@ void BuildFilters::run()
         SKIPPING LEAVES THE TREE STALE, WHICH IS THE RIGHT FAILURE: stale is recoverable
         and self-correcting -- the next rebuild replaces it -- where empty is neither.
     */
-    if (snapshot->rows.isEmpty() && dm != nullptr && dm->rowCount() > 0) {
+    if (snapshot->isEmpty() && dm != nullptr && dm->rowCount() > 0) {
         G::issue("Warning",
                  QString("Filter rebuild skipped: snapshot held 0 rows but the datamodel "
                          "holds %1 (action %2). The category tree was left as it was.")
@@ -1061,6 +1086,15 @@ void BuildFilters::run()
     switch (ranAction) {
     case Action::Reset:
         if (!abort) appendUniqueItems(snap, ops);
+        /*  UNFILTERED COUNTS FOR THE ITEMS ADDITEMS SKIPS. Filters::addCategoryItems
+            drops a value that is already an item -- the predefined Picks, Ratings and
+            Labels items, and anything a non-reset build kept -- so those items never
+            get a total from AddItems. MW::buildFiltersWhenModelReady used to fill them
+            by calling recount() on the GUI thread straight after build(): both counting
+            passes again over every row, ~250-430 ms of the post-load stall at 148,567
+            rows (sampled). Done here instead, on this thread, and AFTER AddItems, so it
+            reaches every item rather than only the ones that existed when recount ran. */
+        if (!abort) updateUnfilteredCounts(snap, ops);
         [[fallthrough]]; // deliberate fall-through
     case Action::UpdateCounts:
         if (!abort) {

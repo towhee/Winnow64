@@ -346,6 +346,7 @@ private:
        category, ambiguous (amber). The two compose -- an excluded ambiguous keyword must
        still read as both. */
     void styleFilterItem(QTreeWidgetItem *item);
+    void applyItemStyle(QTreeWidgetItem *item);  // styleFilterItem minus the header test
     /*  Re-read UnfiledRole for every keyword item from vocabPathsFold, restyle them, and
         put the count on the category header. */
     void applyVocabMarking();

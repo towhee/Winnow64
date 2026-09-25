@@ -452,6 +452,12 @@ winnow_add_unit_test(tst_rowscratch unit/tst_rowscratch.cpp ../Datamodel/rowscra
 # splicing that replaced the rebuild-from-items.
 winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cpp)
 
+# tst_variantless pins SortFilter's sort keys to Qt's own order: the proxy compares
+# stored keys with a COPY of Qt's private isVariantLessThan, and this sorts the same
+# values both ways -- stock QSortFilterProxyModel, and the copy -- and requires the
+# same rows in the same order.
+winnow_add_unit_test(tst_variantless unit/tst_variantless.cpp)
+
 # tst_filterpredicate pins the filter SEMANTICS that compiling the Filters tree
 # was not allowed to move. The temporary shadow that proved it (both
 # implementations over 1,600 randomised check-state combinations on real

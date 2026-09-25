@@ -3267,7 +3267,14 @@ bool MW::isPreviewCacheFolderLoaded() const
     whether the current load is that folder, so the actions are GREYED with a reason
     rather than firing into a silent refusal.
 */
-    return DevPreviewCache::instance().containsCachePath(dm->folderList);
+    /*  Cached per folder list: it is asked on every selection (menu gating), and even
+        resolved once, cleaning 8,400 catalog folder paths was ~4 ms of each keypress. */
+    if (dm->folderListGen != previewCacheLoadedGen) {
+        previewCacheLoadedAnswer =
+            DevPreviewCache::instance().containsCachePath(dm->folderList);
+        previewCacheLoadedGen = dm->folderListGen;
+    }
+    return previewCacheLoadedAnswer;
 }
 
 void MW::enableSelectionDependentMenus()

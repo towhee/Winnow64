@@ -4,6 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <memory>
 
 /*
     A PLAIN-DATA COPY of the datamodel columns BuildFilters counts.
@@ -63,16 +64,27 @@ struct FilterSnapshotRow {
     QString v[FilterCat::SlotCount];    // already trimmed, ready to count
     QStringList keywords;               // G::KeywordsAllColumn, trimmed
     bool hiddenRaw = false;             // combineRawJpg && G::DupHideRawRole
-    bool inProxy   = false;             // survives the current proxy filter
 };
+
+/*  THE VALUES ARE SHARED, THE PROXY MEMBERSHIP IS NOT. A filter change alters which
+    rows the proxy admits and nothing else, yet every one used to re-copy nineteen cells
+    of every row (and free the previous copy) on the GUI thread: the larger half of a
+    filter change at 148,567 rows, sampled. So the row values are an immutable table
+    that BuildFilters::makeSnapshot REUSES until RowStore::watchedGeneration says a
+    counted cell or the row set changed, and each snapshot carries only its own inProxy.
+    Shared read-only across threads, which is what shared_ptr<const> is for. */
+typedef std::shared_ptr<const QVector<FilterSnapshotRow>> FilterValuesPtr;
 
 struct FilterSnapshot {
     int instance = -1;                  // dm->instance when taken
-    QVector<FilterSnapshotRow> rows;    // by DATAMODEL row
+    FilterValuesPtr values;             // by DATAMODEL row; may be shared
+    QVector<char> inProxy;              // by DATAMODEL row: survives the current filter
     int proxyRows = 0;                  // rows with inProxy set
 
-    bool isEmpty() const { return rows.isEmpty(); }
-    void clear() { instance = -1; rows.clear(); proxyRows = 0; }
+    int rowCount() const { return values ? int(values->size()) : 0; }
+    bool isEmpty() const { return rowCount() == 0; }
+    const FilterSnapshotRow &row(int i) const { return values->at(i); }
+    bool admitted(int i) const { return i < inProxy.size() && inProxy.at(i); }
 };
 
 #endif // FILTERSNAPSHOT_H

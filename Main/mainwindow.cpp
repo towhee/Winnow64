@@ -1,6 +1,7 @@
 ﻿#include "Main/mainwindow.h"
 #include "Metadata/keywordpaths.h"
 #include <QtConcurrent>
+#include <QSslConfiguration>
 #include <QFutureWatcher>
 #include <QLocale>
 #include "Utilities/fileops.h"
@@ -1348,8 +1349,20 @@ void MW::showEvent(QShowEvent *event)
 
     /* Silent check for a newer Winnow, deferred so it never delays launch.  Only when
        the user preference is on and not in an automated test run. */
-    if (checkIfUpdate && !G::isTest)
+    if (checkIfUpdate && !G::isTest) {
+        /*  WARM THE TLS BACKEND OFF THE GUI THREAD FIRST. The check's first
+            QNetworkAccessManager::get initialises Qt's TLS backend and loads the system
+            certificates -- on the GUI thread, 4 s in, which is the middle of a large
+            Library load: ~100-150 ms of the post-load stall at 148,567 rows (sampled).
+            Both backends guard that initialisation with a mutex
+            (QSecureTransportBackend::ensureInitialized, QTlsBackendOpenSSL::
+            ensureCiphersAndCertsLoaded), so doing it here on a pool thread leaves the
+            later call nothing to do. */
+        QThreadPool::globalInstance()->start([]{
+            (void)QSslConfiguration::defaultConfiguration();
+        });
         QTimer::singleShot(4000, this, [this]{ checkForUpdate(/*silent*/true); });
+    }
 
     /*  The size the user actually SEES is not the size at the end of showEvent: the dock
         area redistributes over the next few turns, and applyDockCollapseState has not run
@@ -7216,11 +7229,11 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         // fall through and build with whatever metadata has been applied
     }
 
-    /*  Two stages, and the second is the slower of them: build() takes the snapshot and
-        starts the worker (which reports each category as it counts it -- see
-        BuildFilters::appendUniqueItems), while recount() walks every row twice more on
-        THIS thread and then applies the counts to the tree. Neither returns to the event
-        loop, so each says what it is about to do before doing it. */
+    /*  build() takes the snapshot and starts the worker, which reports each category as
+        it counts it (see BuildFilters::appendUniqueItems). recount(), when it runs --
+        see below -- walks every row twice more on THIS thread and applies the counts to
+        the tree. Neither returns to the event loop, so each says what it is about to do
+        before doing it. */
     /*  THE FOLDERS CATEGORY STARTS AT THE FOLDERS THE USER PICKED. Set here, at the
         build, rather than in setScope, because a Cmd- or Shift-click adds to the
         selection without changing the scope, and by now the tree's selection has
@@ -7228,10 +7241,20 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         left alone. See FolderTree::hierarchy. */
     if (G::scope == G::Scope::Folders && fsTree)
         filters->setFolderAnchors(FolderTree::outermost(fsTree->selectedFolderPaths()));
+    /*  RECOUNT ONLY WHEN THERE IS NO BUILD TO DO IT. build() returns at once when the
+        filters are already built or being built, and then recount() is what brings the
+        counts up to date (the Cmd-click-a-second-folder case). When build() does start
+        a Reset, the worker now produces every count itself, unfiltered ones included
+        (see Action::Reset in BuildFilters::run), and recount() here only repeated both
+        passes on the GUI thread -- the largest part of the post-load stall. The test
+        mirrors build()'s own early returns. */
+    const bool resetWillRun = !filters->filtersBuilt && !filters->buildingFilters;
     setCentralProgressMessage(loadedMsg() + "Building filters ...");
     buildFilters->build();
-    setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
-    buildFilters->recount();
+    if (!resetWillRun) {
+        setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
+        buildFilters->recount();
+    }
     filters->setEnabled(true);
 }
 
