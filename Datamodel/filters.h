@@ -9,6 +9,18 @@ class Filters : public QTreeWidget
 {
     Q_OBJECT
 public:
+    /*  THE CHECKED STATE AS SETTINGS CAN HOLD IT, and back. What save() records -- each
+        checked item as {top-level category, filter value, include/exclude}, the search
+        text, the keyword any/all mode -- as a QVariantMap, for MW::saveLibraryState. The
+        reverse loads it as the state the NEXT restore() applies, which is how a restored
+        Library state rides the same after-build path a folder change uses
+        (MW::restoreFiltersAfterFolderChange). Neither touches the tree's check boxes;
+        persistableState does not touch save()'s pending states either. GUI thread.
+        Declared HERE, not beside save(): the section above the slots is signals:, and
+        a method there gets a moc-generated body and links as a duplicate symbol. */
+    QVariantMap persistableState() const;
+    void setStateToRestore(const QVariantMap &m);
+
     Filters(QWidget *parent);
     QTreeWidgetItem *search;
     QTreeWidgetItem *searchTrue;
@@ -329,9 +341,16 @@ public:
     void setShowUnfiledOnly(bool showUnfiledOnly);
     bool isShowUnfiledOnly() const { return showUnfiledOnly; }
 
+    /*  THE LARGEST COUNT A ROW CAN SHOW -- the number of images loaded. The two count
+        columns were sized for "99999", so a catalog of 154,933 images drew "154,933"
+        (seven characters with the separator) clipped or elided. Set once a load
+        completes; the columns widen to fit it and never shrink below the old width. */
+    void setCountCeiling(int maxCount);
+
 private:
     QMutex mutex;
     void resizeColumns();
+    int countCeiling = 0;       // see setCountCeiling
     QLinearGradient categoryBackground;
     QFont categoryFont;
     QFont searchDefaultTextFont;
@@ -437,6 +456,8 @@ private:
         Qt::CheckState state = Qt::Checked;
     };
     QList<ItemState>itemStates;
+    /*  Every item that is not Unchecked, keyed as ItemState says. save()'s walk. */
+    QList<ItemState> checkedItemStates() const;
     bool savedKeywordsMatchAll = false;     // the any/all mode, with itemStates
     QString searchText;
 };

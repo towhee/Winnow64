@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
 #include "Metadata/keywordpaths.h"
 #include "Views/libtree.h"
@@ -469,11 +470,36 @@ void MW::createCatalogScanner()
     catalogScanner = new CatalogScanner;
 
     connect(catalogScanner, &CatalogScanner::progress, this,
-            [this](int done, int total) {
-                if (progress && total > 0)
-                    progress->updateProgress(progressCatalogRow, done, total,
-                                             QColor("#3fa8a0"));
-            }, Qt::QueuedConnection);
+            [this](const CatalogScanProgress &p) {
+        /*  A lambda with MW as its context object is a QEvent::MetaCall ON MW, exactly
+            like a slot -- so it needs its own Scope or the ingest probe's slot tally
+            cannot see it, and a stall lands as an unattributed MW(MW)/MetaCall. */
+        IngestProbe::Scope _ip("catalogScanner::progress");
+        /*  THE ROW'S LABEL STAYS "Catalog", like every other row. The counts and
+            the time left changed four times a second, and a changing label resizes
+            Progress's shared text column and rebuilds EVERY row's bar -- the Image
+            Cache and Metadata bars were wiped on each report -- while the container
+            clipped the label before the estimate. The detail is the row's tooltip,
+            and Manage Catalog shows it in full. */
+        const QLocale loc;
+        QString tip;
+        if (p.phase == CatalogScanProgress::Checking)
+            tip = QString("Catalog: checking folders, %1 of %2")
+                      .arg(loc.toString(p.done), loc.toString(p.total));
+        else
+            tip = QString("Catalog: indexing %1 of %2 images")
+                      .arg(loc.toString(p.done), loc.toString(p.total));
+        tip += " · " + catalogFormatEta(p.etaSecs)
+               + (p.etaSecs < 0 ? "" : " left");
+        if (p.paused) tip = "Catalog: paused while a folder loads\n" + tip;
+        if (progress) {
+            progress->setRowToolTip(progressCatalogRow, tip);
+            if (p.total > 0)
+                progress->updateProgress(progressCatalogRow, p.done, p.total,
+                                         QColor("#3fa8a0"));
+        }
+        if (catalogRootsDlg) catalogRootsDlg->setScanProgress(p);
+    }, Qt::QueuedConnection);
 
     connect(catalogScanner, &CatalogScanner::finished, this,
             [this](int scanned, int indexed, int unreadable,
@@ -483,7 +509,22 @@ void MW::createCatalogScanner()
                    is only for the log, where a scan that indexed nothing and skipped
                    twenty files is a different event from one that found nothing to do. */
                 Q_UNUSED(unreadable)
-                if (progress) progress->clearProgress(progressCatalogRow);
+                if (progress) {
+                    progress->clearProgress(progressCatalogRow);
+                    progress->setRowToolTip(progressCatalogRow, QString());
+                }
+                /*  WHAT A NEXT LAUNCH SHOULD DO, saved now. A complete pass, or one
+                    the user stopped, is not resumed; one that ended any other way (the
+                    object torn down under it) is. The uncatalogable count only means
+                    anything from a complete pass, which saw every folder. */
+                const CatalogScanStats st = catalogScanner->lastStats();
+                if (!aborted) catalogUncatalogable = st.zeroByte + st.collisions;
+                catalogScanIncomplete = aborted && !catalogScanUserStopped;
+                catalogScanUserStopped = false;
+                if (settings) {
+                    settings->setValue("catalogScanIncomplete", catalogScanIncomplete);
+                    settings->setValue("catalogUncatalogable", catalogUncatalogable);
+                }
                 if (catalogView) catalogView->setScanning(false);
                 if (filterPanel) filterPanel->setScanning(false);
                 if (catalogRootsDlg) {
@@ -557,13 +598,6 @@ void MW::createCatalogScanner()
                            (aborted ? " (stopped early)" : ""));
             }, Qt::QueuedConnection);
 
-    connect(catalogScanner, &CatalogScanner::status, this, [this](const QString &msg) {
-        /*  A lambda with MW as its context object is a QEvent::MetaCall ON MW, exactly
-            like a slot -- so it needs its own Scope or the ingest probe's slot tally
-            cannot see it, and a stall lands as an unattributed MW(MW)/MetaCall. */
-        IngestProbe::Scope _ip("catalogScanner::status -> setRowText");
-        if (progress) progress->setRowText(progressCatalogRow, msg);
-    }, Qt::QueuedConnection);
 }
 
 void MW::createImageCache()
@@ -1374,6 +1408,27 @@ void MW::createStatusBar()
     progressCatalogRow = progress->addRow("Catalog", 2, QColor("#3fa8a0"),
                                           Progress::Fill::FromStart);
     progress->setRowText(progressCatalogRow, "Catalog");
+    /*  LOADING A CATALOG RESULT. At 150k rows the streamed fill runs for seconds, and the
+        central message saying "x of y images loading" is covered as soon as the grid
+        paints; this row keeps the answer visible in the status bar until the last row
+        is in. A label that never changes (see Progress::setRowToolTip for why); the
+        counts are its tooltip. */
+    progressCatalogLoadRow = progress->addRow("CatalogLoad", 2, QColor("#6a8fd0"),
+                                              Progress::Fill::FromStart);
+    progress->setRowText(progressCatalogLoadRow, "Loading");
+    connect(dm, &DataModel::catalogFillProgress, this, [this](int done, int total) {
+        if (!progress) return;
+        if (total <= 0) {
+            progress->clearProgress(progressCatalogLoadRow);
+            progress->setRowToolTip(progressCatalogLoadRow, QString());
+            return;
+        }
+        const QLocale loc;
+        progress->setRowToolTip(progressCatalogLoadRow,
+                                QString("Loading %1 of %2 images")
+                                    .arg(loc.toString(done), loc.toString(total)));
+        progress->updateProgress(progressCatalogLoadRow, done, total);
+    });
     connect(progress, &Progress::clicked, this, [this]() {
         preferences("CacheHeader");
     });

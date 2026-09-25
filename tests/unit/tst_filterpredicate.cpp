@@ -198,7 +198,20 @@ void tst_filterpredicate::includeAllMatchesWithoutComparing()
 
     Row anything{};
     QVERIFY(p.accepts(fetch(anything)));
-    QVERIFY(!p.acceptsEverything());        // it IS filtering, it just matches all
+    /*  And it is NOT filtering: it can reject nothing, so the proxy's no-filter fast
+        path applies and the column is never read. This was asserted the other way,
+        which made every filter pass read every row's Search cell (see isFiltering). */
+    QVERIFY(p.acceptsEverything());
+    int reads = 0;
+    QVERIFY(p.accepts([&](int) { ++reads; return QVariant(); }));
+    QCOMPARE(reads, 0);
+
+    /*  An exclude on the same category still rejects -- includeAll only makes the
+        INCLUDES moot. */
+    p.categories[0].excludes.append("true");
+    QVERIFY(!p.acceptsEverything());
+    Row excluded { { G::SearchColumn, "true" } };
+    QVERIFY(!p.accepts(fetch(excluded)));
 }
 
 void tst_filterpredicate::keywordListsMatchByMembership()
@@ -307,7 +320,7 @@ void tst_filterpredicate::readsColumnOnlyForActiveCategories()
     when this says no active category reads the column. A false "no" would leave a
     filtered view showing an image the edit has just filtered out, so: an idle category
     does not read its column, an include or an exclude makes it read, and includeAll
-    counts as active.
+    alone does not -- it accepts every row, so no edit can change what it admits.
 */
     FilterPredicate p;
     p.categories << cat(G::RatingColumn) << cat(G::LabelColumn);
@@ -322,9 +335,13 @@ void tst_filterpredicate::readsColumnOnlyForActiveCategories()
     p.categories[1] = cat(G::LabelColumn, {}, { "Red" });    // exclude only
     QVERIFY(p.readsColumn(G::LabelColumn));
 
+    /*  An armed-but-empty search accepts every row, so it reads nothing -- until it
+        also carries an exclude. */
     FilterCategory any = cat(G::SearchColumn);
     any.includeAll = true;
     p.categories << any;
+    QVERIFY(!p.readsColumn(G::SearchColumn));
+    p.categories.last().excludes.append("true");
     QVERIFY(p.readsColumn(G::SearchColumn));
 }
 

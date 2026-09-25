@@ -8,6 +8,8 @@
 #include "Utilities/panelprobe.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
+#include "Cache/cachedb.h"
+#include "Main/catalogenumerate.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
 #include "Main/global.h"
@@ -737,8 +739,14 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     if (!catalogScanRoot.isNull()) {
         if (catalogScanner) {
             connect(catalogScanner, &CatalogScanner::finished, this,
-                    [scanResult](int scanned, int indexed, int unreadable, bool aborted) {
+                    /*  ALL SIX ARGUMENTS. This took four, and Qt matches a slot's
+                        leading arguments by position -- so `aborted` was bound to
+                        newFolders, an int that converts to bool without complaint. */
+                    [scanResult](int scanned, int indexed, int unreadable,
+                                 int newFolders, int demoted, bool aborted) {
                         Q_UNUSED(unreadable)
+                        Q_UNUSED(newFolders)
+                        Q_UNUSED(demoted)
                         scanResult->finished = true;
                         scanResult->scanned = scanned;
                         scanResult->indexed = indexed;
@@ -1316,6 +1324,10 @@ void MW::showEvent(QShowEvent *event)
         them yet". */
     ensureKeywordVocabLoaded();
 
+    /*  A catalog scan the last session did not finish -- quit, crash or logout part way
+        through a long one -- picks up again once the first load has settled. */
+    resumeIncompleteCatalogScan();
+
     /*  "Open library at start": come up on the whole library instead of a folder.
 
         Here and not earlier because MW::setScope returns immediately while
@@ -1329,8 +1341,10 @@ void MW::showEvent(QShowEvent *event)
         what loads, and they do not reliably get their own settings file -- so a developer
         with this preference on would otherwise change what the tests do.  A stress test is
         excluded for the same reason: it drives folders on a timer. */
-    if (openLibraryAtStart && !G::isAutomatedRun && !G::isStressTest)
+    if (openLibraryAtStart && !G::isAutomatedRun && !G::isStressTest) {
+        if (restoreLibraryState) queueLibraryStateRestore();
         setCatalogScopeWhole("MW::showEvent openLibraryAtStart");
+    }
 
     G::issueBeginSession();
 
@@ -1399,6 +1413,9 @@ void MW::closeEvent(QCloseEvent *event)
         event->ignore();
         return;
     }
+
+    /*  Before any teardown: the filter tree and the sort are still the Library's. */
+    saveLibraryState();
 
     setCentralMessage("Closing Winnow ...");
 
@@ -1492,6 +1509,14 @@ void MW::closeEvent(QCloseEvent *event)
     if (!simulateJustInstalled) {
         writeSettings();
     }
+    /*  FLUSH NOW. QSettings writes to disk only on sync(), on a deferred UpdateRequest
+        the event loop gets round to, or when it is destroyed -- and `settings` is never
+        destroyed, while the event loop ends moments after this returns. So everything
+        written from here -- writeSettings, hasCrashed=false, saveLibraryState -- was
+        lost unless that deferred flush happened to run first. Found 2026-09-24:
+        settings.ini still said hasCrashed=true after a clean quit, and the Library state
+        saved at quit never reached the file. */
+    settings->sync();
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
@@ -3660,6 +3685,9 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 /* The one colour in the catalog editor, and it marks the one clause that asks for an
    action. Warm enough to read on the dark theme, dark enough to read on the light one. */
 static const char *kCatalogOwedColor = "#e0685c";
+/* The href of the status line's "See which" link; CatalogRootsDlg hands it back and MW
+   opens the Catalog Diagnostics report. */
+static const char *kCatalogDiagnosticsLink = "catalog-diagnostics";
 
 QVector<CatalogRow> MW::inCatalogScope(const QVector<CatalogRow> &rows) const
 {
@@ -3744,55 +3772,98 @@ QString MW::catalogStatusText() const
         return QString("The catalog is unavailable -- the local index database could "
                        "not be opened, so nothing can be indexed.");
 
+    /*  A TABLE, NOT A SENTENCE. This was one run-on line -- counts, the backlog, the
+        unreadable files -- and at 100k images, with disk space added, it read as a
+        paragraph to be parsed. A label column and a value column let each fact be found
+        by its name. Qt's rich text renders <table> in a QLabel. */
     const QLocale loc;
-    QString text = QString("Catalog: %1 images in %2 folders.")
-                       .arg(loc.toString(Catalog::instance().count()))
-                       .arg(loc.toString(Catalog::instance().folderCount()));
+    QStringList rows;
+    auto row = [&rows](const QString &label, const QString &value) {
+        rows << QString("<tr><td style=\"padding:2px 16px 2px 0; color:gray;\">%1</td>"
+                        "<td style=\"padding:2px 0;\">%2</td></tr>").arg(label, value);
+    };
+    const QString seeWhich =
+        QString(" &nbsp;<a href=\"%1\">See which</a>").arg(kCatalogDiagnosticsLink);
+
+    const int count = Catalog::instance().count();
+    row("Catalogued", QString("%1 images in %2 folders")
+                          .arg(loc.toString(count))
+                          .arg(loc.toString(Catalog::instance().folderCount())));
 
     if (catalogScopeOnDisk < 0) {
-        text += "   Scope: counting&hellip;";
-        return text;
-    }
-
-    text += QString("   Scope: %1 images on disk.").arg(loc.toString(catalogScopeOnDisk));
-
-    /*  THE UNREADABLE FILES ARE PART OF THE GAP AND ARE NOT WORK. The last complete scan
-        tried to index them and could not parse them, so they are on disk, absent from the
-        index, and will stay that way however many times Scan is pressed. Counted against
-        the difference they explain, what is left is the real backlog -- and when they
-        explain all of it the window says so instead of asking for a scan that can achieve
-        nothing. */
-    const int diff = catalogScopeOnDisk - Catalog::instance().count();
-
-    /*  THE UNREADABLE FILES ARE COUNTED, NOT MISSING. Each one holds a stub row, so it is
-        part of the catalog's own count and the two numbers still reconcile -- what the
-        clause adds is that some of what is catalogued is a filename and nothing else, and
-        where to go to see which. */
-    const int cannotRead = Catalog::instance().unreadableCount();
-    const QString unreadable =
-        cannotRead > 0
-            ? QString(" %1 could not be read (unsupported or damaged) -- see Filters > "
-                      "Availability > Unreadable.").arg(loc.toString(cannotRead))
-            : QString();
-
-    if (diff > 0) {
-        /* RED, and only this clause. It is the one sentence here that asks for an action
-           -- the rest is reporting -- and a user who opened this window to find out
-           whether their library is indexed should be able to see the answer without
-           reading it. Everything else stays the label's own colour, or the red stops
-           meaning anything. */
-        text += QString(" <span style=\"color:%1;\">%2 images not catalogued yet -- "
-                        "press Scan.</span>")
-                    .arg(kCatalogOwedColor, loc.toString(diff));
-    }
-    else if (diff < 0) {
-        text += QString(" %1 catalogued images are outside the scope.")
-                    .arg(loc.toString(-diff));
+        row("On disk", "counting&hellip;");
     }
     else {
-        text += " Up to date.";
+        row("On disk", QString("%1 images in the folders above")
+                           .arg(loc.toString(catalogScopeOnDisk)));
+
+        const int diff = catalogScopeOnDisk - count;
+        /*  WHAT NO SCAN CAN CLOSE IS NOT OWED. Zero-byte files and case or Unicode twins
+            are counted on disk by name and are never catalogued, so as part of the red
+            clause they asked for a Scan that achieved nothing -- the "13 images not
+            catalogued yet" that survived every rescan. The last complete scan counted
+            them; they are taken out of the backlog and given their own row. */
+        const int explained = diff > 0 ? qMin(diff, catalogUncatalogable) : 0;
+        const int owed = diff - explained;
+
+        /* RED, and only this value. It is the one statement here that asks for an
+           action -- the rest is reporting -- so it must be visible without reading. */
+        if (owed > 0)
+            row("Status", QString("<span style=\"color:%1;\">%2 images not catalogued "
+                                  "yet &mdash; press Scan.</span>%3")
+                              .arg(kCatalogOwedColor, loc.toString(owed), seeWhich));
+        else if (diff < 0)
+            row("Status", QString("%1 catalogued images are not found in these "
+                                  "folders.%2").arg(loc.toString(-diff), seeWhich));
+        else
+            row("Status", "Up to date.");
+
+        if (explained > 0)
+            row("Cannot catalogue",
+                QString("%1 file%2 &mdash; empty, or a name that differs only in case "
+                        "from another.%3")
+                    .arg(loc.toString(explained), explained == 1 ? "" : "s", seeWhich));
     }
-    return text + unreadable;
+
+    /*  THE UNREADABLE FILES ARE COUNTED, NOT MISSING. Each holds a stub row, so it is
+        part of the catalog's own count and the two numbers still reconcile -- what the
+        row adds is that some of what is catalogued is a filename and nothing else, and
+        where to go to see which. */
+    const int cannotRead = Catalog::instance().unreadableCount();
+    if (cannotRead > 0)
+        row("Unreadable", QString("%1 (unsupported or damaged) &mdash; Filters &rsaquo; "
+                                  "Availability &rsaquo; Unreadable")
+                              .arg(loc.toString(cannotRead)));
+
+    /* Disk space in SI units, as the Finder reports it. */
+    if (catalogStorage.valid) {
+        auto size = [](qint64 b) {
+            return Utilities::formatMemory(qulonglong(b), 1, false);
+        };
+        /*  Without dbstat (Qt's bundled SQLite lacks it) the thumbnail figure is the
+            JPEG data itself and the remainder carries the page overhead as well as the
+            catalog -- measured on a 1.28 GB index, 334 MB against an exact 228 MB -- so
+            it is named for what it is rather than called the catalog. */
+        const QString catalogLabel = catalogStorage.exact
+                                         ? "Catalog index "
+                                         : "Catalog and overhead &asymp;";
+        row("Disk space",
+            QString("%1 in total<br>"
+                    "%2%3 &nbsp;&middot;&nbsp; Thumbnails %4 (%5) "
+                    "&nbsp;&middot;&nbsp; Develop previews %6 (%7)<br>"
+                    "<span style=\"color:gray;\">%8</span>")
+                .arg(size(catalogStorage.totalBytes()), catalogLabel,
+                     size(catalogStorage.catalogBytes), size(catalogStorage.thumbBytes),
+                     loc.toString(catalogStorage.thumbCount),
+                     size(catalogStorage.devPreviewBytes),
+                     loc.toString(catalogStorage.devPreviewCount),
+                     QDir::toNativeSeparators(catalogStorage.dir).toHtmlEscaped()));
+    }
+    else {
+        row("Disk space", "measuring&hellip;");
+    }
+
+    return "<table cellspacing=\"0\" cellpadding=\"0\">" + rows.join("") + "</table>";
 }
 
 CatalogScope MW::catalogScopeEffective(bool include) const
@@ -3869,8 +3940,9 @@ bool MW::confirmCatalogForget(int images, int folders, bool whole)
     if (whole) {
         box.setText("This will empty the catalog.");
         box.setInformativeText(
-            QString("%1 catalogued image%2 in %3 folder%4 will be forgotten, because no "
-                    "row is left to include them.\n\nThe image files are not affected "
+            QString("%1 catalogued image%2 in %3 folder%4 will be removed from the "
+                    "catalog, because no row is left to include them.\n\n"
+                    "The image files are not affected "
                     "and your keywords are kept. Add folders back and Scan to rebuild "
                     "the index.")
                 .arg(loc.toString(images))
@@ -3879,7 +3951,7 @@ bool MW::confirmCatalogForget(int images, int folders, bool whole)
                 .arg(folders == 1 ? "" : "s"));
     }
     else {
-        box.setText(QString("Forget %1 catalogued image%2?")
+        box.setText(QString("Remove %1 image%2 from the catalog?")
                         .arg(loc.toString(images))
                         .arg(images == 1 ? "" : "s"));
         box.setInformativeText(
@@ -3889,7 +3961,10 @@ bool MW::confirmCatalogForget(int images, int folders, bool whole)
                 .arg(loc.toString(folders))
                 .arg(folders == 1 ? "" : "s"));
     }
-    QPushButton *forget = box.addButton("Forget", QMessageBox::DestructiveRole);
+    /* "Remove from Catalog", never "Forget": the user-facing word for dropping index
+       rows. The files themselves are untouched, which the text above says. */
+    QPushButton *forget = box.addButton("Remove from Catalog",
+                                        QMessageBox::DestructiveRole);
     QPushButton *cancel = box.addButton("Cancel", QMessageBox::RejectRole);
     box.setDefaultButton(cancel);
     box.setEscapeButton(cancel);
@@ -4028,19 +4103,21 @@ void MW::updateCatalogCounts()
 
     const int gen = ++catalogCountGen;
     const CatalogScope scope = catalogScope;
-    const CatalogScope includes = catalogScopeEffective(true);
-    const CatalogScope excludes = catalogScopeEffective(false);
 
-    auto *watcher = new QFutureWatcher<CatalogScopeCounts>(this);
+    /* Disk space rides along: it is a few hundred ms of queries on a large index, so it
+       belongs off the GUI thread for the same reason the walk does. */
+    using Result = QPair<CatalogScopeCounts, CacheDb::StorageUsage>;
+    auto *watcher = new QFutureWatcher<Result>(this);
     connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, gen]() {
-        const CatalogScopeCounts c = watcher->result();
+        const CatalogScopeCounts c = watcher->result().first;
+        catalogStorage = watcher->result().second;
         watcher->deleteLater();
         if (gen != catalogCountGen || !catalogRootsDlg) return;   // the table moved on
         catalogScopeOnDisk = c.inScope;
         catalogRootsDlg->setRowCounts(c.rows);
         catalogRootsDlg->setCatalogStatus(catalogStatusText());
     });
-    watcher->setFuture(QtConcurrent::run([scope, includes, excludes, exts]() {
+    watcher->setFuture(QtConcurrent::run([scope, exts]() {
         CatalogScopeCounts c;
         c.rows.reserve(scope.size());
         for (const CatalogScopeEntry &e : scope) {
@@ -4048,17 +4125,14 @@ void MW::updateCatalogCounts()
                            ? -1
                            : countImagesOnDisk(e.path, e.recurse, exts));
         }
-        /* The sum the table implies: what the includes reach, less what the exclusions
-           take back out of them. Compared against the catalog's own count, this is what
-           says whether a Scan is owed. */
-        for (const CatalogScopeEntry &e : includes)
-            if (QFileInfo::exists(e.path))
-                c.inScope += countImagesOnDisk(e.path, e.recurse, exts);
-        for (const CatalogScopeEntry &e : excludes)
-            if (QFileInfo::exists(e.path))
-                c.inScope -= countImagesOnDisk(e.path, e.recurse, exts);
-        if (c.inScope < 0) c.inScope = 0;
-        return c;
+        /*  THE SCANNER'S OWN WALK, not arithmetic over the table. This was the includes
+            summed less the excludes, a second definition of the scope that could
+            disagree with the one the scanner walks -- and every disagreement showed up
+            as images "not catalogued yet" that no scan would ever catalogue. One
+            definition (Main/catalogenumerate.h) means the two numbers compare like with
+            like. */
+        c.inScope = catalogScopeFileCount(scope, exts);
+        return Result(c, CacheDb::instance().storageUsage());
     }));
 }
 
@@ -4078,6 +4152,11 @@ void MW::startCatalogScan(bool automatic)
         this run rather than left over from the last one. */
     catalogScanIsAuto = automatic;
     catalogScanForgotten = 0;
+    catalogScanUserStopped = false;
+    /* Written now, not at quit: a crash or a forced quit mid-scan is exactly the case
+       this flag exists for. See resumeIncompleteCatalogScan. */
+    catalogScanIncomplete = true;
+    if (settings) settings->setValue("catalogScanIncomplete", true);
 
     if (progress) {
         progress->setRowText(progressCatalogRow, "Catalog");
@@ -4268,6 +4347,8 @@ void MW::manageCatalogRoots()
                 this, [this]{ startCatalogScan(false); });
         connect(catalogRootsDlg, &CatalogRootsDlg::stopScanRequested,
                 this, &MW::stopCatalogScan);
+        connect(catalogRootsDlg, &CatalogRootsDlg::diagnosticsRequested,
+                this, &MW::diagnosticsCatalog);
     }
 
     catalogRootsDlg->setScope(catalogScope);
@@ -4282,7 +4363,38 @@ void MW::manageCatalogRoots()
 void MW::stopCatalogScan()
 {
     if (G::isLogger) G::log("MW::stopCatalogScan");
+    /* The user's Stop is final: the scan is not resumed at the next launch. */
+    if (catalogScanner && catalogScanner->isRunning()) catalogScanUserStopped = true;
     if (catalogScanner) catalogScanner->stop();
+}
+
+void MW::resumeIncompleteCatalogScan()
+{
+/*
+    Start-up hook: called once the window is up. Waits, re-checking, until no folder load
+    is running, then starts the scan as an automatic one -- so it reports at the end only
+    if it found something, like any scan the user did not press a button for.
+*/
+    if (G::isLogger) G::log("MW::resumeIncompleteCatalogScan");
+    if (!catalogScanIncomplete) return;
+    if (G::isAutomatedRun) return;        // the harnesses drive their own scans
+
+    /* A few seconds in, so the first folder load has started; then a retry every
+       kAutoScanDelayMs while it runs, for about a minute. */
+    auto *timer = new QTimer(this);
+    timer->setInterval(kAutoScanDelayMs);
+    connect(timer, &QTimer::timeout, this, [this, timer, tries = 40]() mutable {
+        const bool wanted = catalogScanIncomplete && catalogScanner
+                            && !catalogScanner->isRunning() && !catalogScope.isEmpty()
+                            && Catalog::instance().isAvailable();
+        if (!wanted || --tries < 0) { timer->deleteLater(); return; }
+        if (G::isInitializing || G::isModifyingDatamodel || G::stop) return;
+        timer->deleteLater();
+        if (G::isLogger)
+            G::log("MW::resumeIncompleteCatalogScan", "resuming the unfinished scan");
+        startCatalogScan(true);
+    });
+    QTimer::singleShot(5000, timer, qOverload<>(&QTimer::start));
 }
 
 void MW::loadCatalogResults(const QStringList &paths, bool append, const CatalogQuery &query)
@@ -5783,8 +5895,11 @@ bool MW::reset(QString src)
     // filters
     buildFilters->reset();
     /*  A whole new set: checks saved by an earlier folder add/remove belong to the set
-        being thrown away. */
-    restoreFiltersPending = false;
+        being thrown away -- EXCEPT the Library's own restore (restoreLibraryState),
+        which queueLibraryStateRestore queued FOR the load this reset begins. Clearing it
+        here is what made the saved filters never come back; leaving the Library before
+        it lands still cancels it (MW::setScope). */
+    if (!libraryFilterRestorePending) restoreFiltersPending = false;
 
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
@@ -7083,6 +7198,13 @@ void MW::metadataComplete(QString src)
     combineRawJpgAction->setEnabled(true);
     // must retain default order in datamodel as ImageCache is already working
     updateSortColumn(G::NameColumn);
+    /*  A restored Library sort (restoreLibraryState) goes AFTER that reset, or the reset
+        undoes it on the menu and in sortColumn. Still ahead of the filter build's
+        completion, so a restored filter's filterChange finds the proxy already sorted. */
+    applyRestoredLibrarySort();
+    /*  And a sort the user asked for while this load was still reading metadata, which
+        sortChange deferred rather than dropped. After the restore, so it wins. */
+    applyDeferredSort();
 
     enableStatusBarBtns();
     updateStatus(true, "", fun);    // clear any status message
@@ -7250,6 +7372,10 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         (see Action::Reset in BuildFilters::run), and recount() here only repeated both
         passes on the GUI thread -- the largest part of the post-load stall. The test
         mirrors build()'s own early returns. */
+    /*  The largest count any filter row can show is the number of images loaded -- in
+        Library scope, the whole catalog. Known now, so the count columns are sized to
+        fit it before the counts arrive. */
+    filters->setCountCeiling(dm->rowCount());
     const bool resetWillRun = !filters->filtersBuilt && !filters->buildingFilters;
     setCentralProgressMessage(loadedMsg() + "Building filters ...");
     buildFilters->build();

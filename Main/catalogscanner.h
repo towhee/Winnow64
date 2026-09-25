@@ -1,6 +1,9 @@
 #ifndef CATALOGSCANNER_H
 #define CATALOGSCANNER_H
 
+#include <QDateTime>
+#include <QElapsedTimer>
+#include <QMutex>
 #include <QObject>
 #include <QStringList>
 #include <QThread>
@@ -10,6 +13,63 @@
 #include "Main/catalogscope.h"
 
 class Metadata;
+
+/*  WHERE A RUNNING SCAN IS, sent to the GUI at most four times a second.
+
+    TWO PHASES, BECAUSE ONLY THE SECOND HAS A HONEST TOTAL. Checking walks every folder,
+    stats every file and asks the catalog which are stale -- cheap per file, and it is
+    what finds out how much real work there is. Indexing then parses exactly those files,
+    so done/total is a count of parses and the rate is a parse rate. A single pass with a
+    folder total (what this replaced) moved once per folder -- a folder of 10,000 images
+    sat still for an hour -- and could not estimate anything, because files skipped as
+    unchanged cost microseconds and files parsed cost tens of milliseconds.
+
+    filesPerSec and etaSecs are over ACTIVE time (in Checking the rate is folders per
+    second and the estimate covers the checking only): time spent paused
+    for a folder load is left out, or browsing during a scan would make the estimate
+    climb for no reason. etaSecs < 0 means there is not enough data to say yet. */
+struct CatalogScanProgress
+{
+    enum Phase { Checking, Indexing };
+    int phase = Checking;
+    int done = 0;
+    int total = 0;
+    double filesPerSec = 0;
+    double etaSecs = -1;
+    bool paused = false;
+    QString folder;           // the folder being worked on, for the status line
+};
+Q_DECLARE_METATYPE(CatalogScanProgress)
+
+/*  WHERE THE TIME WENT in the last scan, for the Catalog Diagnostics report. Recorded
+    because the decision about parallel parsing waits on it: a 100k-image scan takes
+    hours, and whether that is parsing, stat'ing a network volume or committing is the
+    question these numbers answer. All milliseconds are active time. */
+struct CatalogScanStats
+{
+    QDateTime started;
+    QDateTime ended;
+    bool ran = false;
+    bool aborted = false;
+    int folders = 0;
+    int scanned = 0;          // candidate files stat'd
+    int stale = 0;            // of those, needing a parse
+    int parsed = 0;           // parse attempts made
+    int indexed = 0;
+    int unreadable = 0;
+    int zeroByte = 0;
+    int collisions = 0;       // same folder, same path key (case / Unicode twins)
+    int newFolders = 0;
+    int demoted = 0;
+    qint64 walkMs = 0;        // expanding the scope to folders
+    qint64 listMs = 0;        // directory listings
+    qint64 reconcileMs = 0;
+    qint64 stampMs = 0;       // stat of each file and its sidecar
+    qint64 staleMs = 0;       // the staleOf queries
+    qint64 parseMs = 0;
+    qint64 commitMs = 0;
+    qint64 pausedMs = 0;      // given way to folder loads
+};
 
 /*
     Walks the folders the user's scope table includes (minus the branches it excludes)
@@ -69,6 +129,9 @@ public:
         Idempotent; the destructor calls it too. GUI thread. */
     void shutdown(int maxWaitMs = 5000);
 
+    /* The last scan's (or the running scan's) figures. Any thread. */
+    CatalogScanStats lastStats() const;
+
     /* This object lives here, so scan() never runs on the GUI thread. Owned rather than
        managed by MW, following Cache/metaread.h. */
     QThread scannerThread;
@@ -83,9 +146,9 @@ public slots:
     void stop();
 
 signals:
-    /* done/total are FILES, updated per folder rather than per file: at a hundred
-       thousand images a signal each would cost more than the indexing. */
-    void progress(int done, int total);
+    /* Throttled to four a second: at a hundred thousand images a signal per file would
+       cost more than the indexing. See CatalogScanProgress. */
+    void progress(const CatalogScanProgress &p);
     /*  indexed = rows actually written (unchanged files are skipped, so this is usually
         far smaller than the number scanned). unreadable = files the scan WANTED to index
         and could not parse.
@@ -105,14 +168,17 @@ signals:
         rather than its catalogued keywords. */
     void finished(int scanned, int indexed, int unreadable,
                   int newFolders, int demoted, bool aborted);
-    void status(const QString &msg);
 
 private:
     /* True when the scan should give way -- a folder load is running, or the app is
        shutting down. */
     bool shouldPause() const;
-    /* Block while shouldPause(), returning false if we were asked to stop instead. */
+    /* Block while shouldPause(), returning false if we were asked to stop instead. Time
+       spent blocked is added to pausedMs, and a paused progress report is sent so the
+       UI can say why nothing is moving. */
     bool waitWhilePaused();
+    /* Send p if a quarter second has passed since the last one, or if force. */
+    void report(const CatalogScanProgress &p, bool force = false);
 
     /* Fill a CatalogRow from what is on disk WITHOUT parsing the image: path, folder,
        size, mtimes. That is everything staleOf needs to decide whether parsing is
@@ -123,6 +189,12 @@ private:
     bool parseInto(CatalogRow &row);
 
     Metadata *metadata = nullptr;      // created lazily, on the scanner thread
+    mutable QMutex statsMutex;
+    CatalogScanStats stats;            // guarded by statsMutex
+    CatalogScanProgress lastProgress;  // scanner thread only
+    QElapsedTimer clock;               // scanner thread only; runs for a scan
+    qint64 lastReportMs = -1;          // scanner thread only
+    qint64 pausedMs = 0;               // scanner thread only
     std::atomic<bool> abort{false};
     std::atomic<bool> running{false};
 };

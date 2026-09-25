@@ -5101,3 +5101,8 @@ LibTree: a Folders | Library toggle on the Source panel
  11. Recursive Folders load → Filters Folders is now a tree.
  12. Unmount a volume → its nodes are greyed.
  13. Scan adds a folder → LibTree updates.
+
+Filters count columns: they were sized for five digits, so "154,933" was cut off. When a
+load finishes, both count columns now widen to fit the number of images loaded. In the
+Library that's the whole catalog, the largest count any filter row can show. They never
+get narrower than before.

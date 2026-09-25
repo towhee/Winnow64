@@ -87,7 +87,17 @@ struct FilterCategory
         either mode. */
     bool matchAll = false;
 
-    bool isFiltering() const { return includeAll || !includes.isEmpty() || !excludes.isEmpty(); }
+    /*  CAN THIS CATEGORY REJECT A ROW? An exclude can. An include can -- unless
+        includeAll is set, because includeAll accepts every row without comparing, so its
+        includes can never reject anything. So an armed-but-empty search (includeAll and
+        nothing else) is NOT filtering. It used to count, and since the Search category's
+        "true" item is checked by default, EVERY filter pass fetched and compared every
+        row's Search cell to accept all of them -- ~20 ms per pass at 148,567 rows,
+        sampled -- and acceptsEverything() never took its fast path. */
+    bool isFiltering() const
+    {
+        return !excludes.isEmpty() || (!includeAll && !includes.isEmpty());
+    }
 };
 
 struct FilterPredicate

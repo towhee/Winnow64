@@ -62,6 +62,18 @@ public:
 
     static void setOpacity(QWidget *widget, qreal opacity);
 
+    /*  Make every button in box at least as wide as its label. On macOS, under the
+        global stylesheet (5 px padding, 100 px minimum), a QMessageBox gives a button
+        LESS than its own size hint -- "Remove from Catalog" got 128 px for 129 px of
+        text and was clipped at both ends. Measured after polishing, so the stylesheet's
+        font is the one counted. */
+    static void fitMessageBoxButtons(QMessageBox *box);
+    /*  Apply fitMessageBoxButtons to EVERY QMessageBox the app shows, including the
+        static QMessageBox::question / warning / ... calls, which never hand out the box.
+        An event filter on the application that acts on QEvent::Show. Call once, after
+        the QApplication exists. */
+    static void installMessageBoxButtonFitter(QCoreApplication *app);
+
     // Format
     static QString formatMemory(qulonglong bytes, int precision = 1, bool useBinary = true);
     static QString enquote(QString &s);

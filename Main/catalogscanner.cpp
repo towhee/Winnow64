@@ -1,4 +1,6 @@
 #include "Main/catalogscanner.h"
+#include "Main/catalogenumerate.h"
+#include "Cache/pathkey.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 #include "Metadata/metadata.h"
@@ -22,6 +24,19 @@ constexpr int kCommitRows = 200;
    resume promptly, long enough that waiting costs nothing. */
 constexpr int kPauseSliceMs = 100;
 
+/* Progress reports at most this often. */
+constexpr qint64 kReportMs = 250;
+
+/* The indexing rate is measured over this much recent ACTIVE time, so it follows a
+   library that moves from small JPEGs to big raws instead of averaging the two. */
+constexpr qint64 kRateWindowMs = 60000;
+
+/* Below both of these there is not enough data to estimate: the first files of a scan
+   are the ones most likely to be cached, and a number that halves a minute later is worse
+   than "estimating". */
+constexpr int kEtaMinFiles = 50;
+constexpr qint64 kEtaMinMs = 10000;
+
 }  // namespace
 
 CatalogScanner::CatalogScanner(QObject *parent)
@@ -30,6 +45,7 @@ CatalogScanner::CatalogScanner(QObject *parent)
     /* scan() is invoked across threads with a queued connection, which cannot marshal a
        type the metatype system has not been told about. */
     qRegisterMetaType<CatalogScope>("CatalogScope");
+    qRegisterMetaType<CatalogScanProgress>("CatalogScanProgress");
     moveToThread(&scannerThread);
     scannerThread.start(QThread::LowPriority);
 }
@@ -83,11 +99,38 @@ bool CatalogScanner::waitWhilePaused()
     Returns false only when the scan has actually been ASKED to end: the user pressed
     Stop, or the object is being destroyed. Everything else is waited out.
 */
+    if (!shouldPause()) return !abort.load(std::memory_order_relaxed);
+
+    QElapsedTimer t;
+    t.start();
+    CatalogScanProgress p = lastProgress;
+    p.paused = true;
+    report(p, true);
     while (shouldPause()) {
-        if (abort.load(std::memory_order_relaxed)) return false;
+        if (abort.load(std::memory_order_relaxed)) {
+            pausedMs += t.elapsed();
+            return false;
+        }
         QThread::msleep(kPauseSliceMs);
     }
+    pausedMs += t.elapsed();
+    report(lastProgress, true);
     return !abort.load(std::memory_order_relaxed);
+}
+
+void CatalogScanner::report(const CatalogScanProgress &p, bool force)
+{
+    if (!p.paused) lastProgress = p;
+    const qint64 now = clock.elapsed();
+    if (!force && lastReportMs >= 0 && now - lastReportMs < kReportMs) return;
+    lastReportMs = now;
+    emit progress(p);
+}
+
+CatalogScanStats CatalogScanner::lastStats() const
+{
+    QMutexLocker lk(&statsMutex);
+    return stats;
 }
 
 CatalogRow CatalogScanner::stampOnly(const QString &fPath)
@@ -193,6 +236,13 @@ void CatalogScanner::scan(const CatalogScope &scope)
     THE WHOLE PASS IS BOUNDED BY THE ABORT CHECKS, not by its own size: a library scan is
     minutes to hours, and the user must be able to change folders, quit, or turn the scan
     off at any point in it without waiting.
+
+    TWO PHASES (see CatalogScanProgress). Checking lists, stamps, reconciles and asks
+    staleOf about every folder, keeping only the PATHS that need a parse; Indexing parses
+    those. The split costs one extra stat per stale file and buys a real total, so the
+    progress bar moves per file and the time estimate is a parse rate rather than a
+    guess. Only paths are held between the phases -- a whole CatalogRow per file would be
+    a few hundred MB at 100k images.
 */
     if (G::isLogger) G::log("CatalogScanner::scan");
 
@@ -203,11 +253,26 @@ void CatalogScanner::scan(const CatalogScope &scope)
        (before moveToThread), and Metadata must belong to the thread that parses
        with it. */
     if (!metadata) metadata = new Metadata;
+    const QSet<QString> exts(metadata->supportedFormats.cbegin(),
+                             metadata->supportedFormats.cend());
+
+    clock.start();
+    lastReportMs = -1;
+    pausedMs = 0;
+    lastProgress = CatalogScanProgress();
+
+    CatalogScanStats st;
+    st.ran = true;
+    st.started = QDateTime::currentDateTime();
+    {
+        QMutexLocker lk(&statsMutex);
+        stats = st;
+    }
+    QElapsedTimer t;
 
     int scanned = 0;
     int indexed = 0;
     int unreadable = 0;
-    int newFolders = 0;
     int demoted = 0;
     bool aborted = false;
 
@@ -222,50 +287,28 @@ void CatalogScanner::scan(const CatalogScope &scope)
             known.insert(it.key());
     }
 
-    /* Expand the include rows to the folders actually to be walked.
-       Utilities::subFolderTree is the same multi-threaded walk the recursive folder load
-       uses, so a folder the user could open with Opt-click covers exactly the same
-       folders here.
+    /* Expand the include rows to the folders actually to be walked -- the one
+       definition the Manage Catalog count and the diagnostics also use
+       (Main/catalogenumerate.h). */
+    t.start();
+    const QStringList folders = catalogScopeFolders(
+        scope, [this]{ return waitWhilePaused(); }, &aborted);
+    st.walkMs = t.elapsed();
+    st.folders = folders.size();
 
-       THE RECURSIVE EXCLUDES ARE HANDED TO THE WALK rather than applied to its result,
-       so an excluded hierarchy is never enumerated at all -- which is the point, since a
-       big branch is exactly what a user excludes. The non-recursive ones cannot prune a
-       descent, so those are filtered out of what comes back. */
-    const QStringList prune = catalogScopePrunePaths(scope);
-    QStringList folders;
-    for (const CatalogScopeEntry &e : scope) {
-        if (!e.include || e.path.isEmpty()) continue;
-        if (!waitWhilePaused()) { aborted = true; break; }
-        /* Normalised here as well as in the editor: the scope can also arrive from
-           migrated settings or a self-test, and one trailing slash makes every prefix
-           test below quietly false. */
-        const QString root = catalogScopeNormalize(e.path);
-        if (!QFileInfo::exists(root)) continue;      // unmounted volume, or moved
-        if (!catalogScopeExcludes(scope, root)) folders << root;
-        if (e.recurse) {
-            QStringList subDirs;
-            Utilities::subFolderTree(root, subDirs, prune);
-            for (const QString &d : subDirs) {
-                /* Same exclusion as the folder load: a .photoslibrary holds thousands of
-                   derivative masters per photo and would swamp the catalog. */
-                if (d.contains(".photoslibrary")) continue;
-                if (catalogScopeExcludes(scope, d)) continue;
-                folders << d;
-            }
-        }
-    }
-    folders.removeDuplicates();
+    /* ---------------- Phase 1: Checking ---------------- */
 
-    /* Total is FOLDERS, not files -- the file count is not known until each folder is
-       enumerated, and a total that kept growing would make the bar run backwards. */
-    const int totalFolders = folders.size();
+    QStringList toParse;
+    /* New folders with something to parse; a folder counts as added only once one of
+       its files actually indexes (see newFolders in the header). */
+    QSet<QString> newWithWork;
     int folderNo = 0;
 
-    QVector<CatalogRow> batch;
-    batch.reserve(kCommitRows);
-    /* Files that would not parse, kept apart from the rows that did: they are written by
-       a different call, and mixing them would mean inventing metadata for them. */
-    QVector<CatalogRow> unreadableBatch;
+    const qint64 checkStartActive = clock.elapsed() - pausedMs;
+    CatalogScanProgress p;
+    p.phase = CatalogScanProgress::Checking;
+    p.total = folders.size();
+    report(p, true);
 
     for (const QString &folder : folders) {
         if (aborted) break;
@@ -273,7 +316,9 @@ void CatalogScanner::scan(const CatalogScope &scope)
         ++folderNo;
 
         const QDir dir(folder);
+        t.start();
         const QStringList names = dir.entryList(QDir::Files, QDir::NoSort);
+        st.listMs += t.elapsed();
 
         /*  WHAT IS GONE, answered from the listing we already have. dir.exists() is the
             load-bearing guard: an unmounted volume and an empty folder both enumerate to
@@ -283,82 +328,143 @@ void CatalogScanner::scan(const CatalogScope &scope)
             "what the folder holds", not "what this scan would index" -- a file truncated
             to zero bytes, or one whose format support has since been dropped, is still
             on disk, and leaving it out would demote a row that should stand. */
+        t.start();
         if (dir.exists()) {
             QSet<QString> present;
             present.reserve(names.size());
             for (const QString &name : names) present.insert(dir.filePath(name));
             demoted += Catalog::instance().reconcileFolder(folder, present);
         }
-
-        const bool folderIsNew = !known.contains(folder);
-        /*  ROWS THIS FOLDER CONTRIBUTED, counted here rather than from the running
-            indexed total. indexed only moves when a 200-row batch FLUSHES, and a batch
-            spans folders -- so a new folder of five images would leave indexed exactly
-            where it found it and never be counted, while whichever folder happened to
-            trip the flush would be credited with it. */
-        int addedThisFolder = 0;
+        st.reconcileMs += t.elapsed();
 
         /* Stat everything first, then ask the catalog which of them actually need
            reading. On a rescan this is the entire cost of the folder. */
+        t.start();
         QList<CatalogRow> candidates;
         candidates.reserve(names.size());
+        QSet<QString> keys;
         for (const QString &name : names) {
-            const int dot = name.lastIndexOf('.');
-            if (dot < 0) continue;
-            const QString ext = name.mid(dot + 1).toLower();
-            if (!metadata->supportedFormats.contains(ext)) continue;
-            const QString fPath = dir.filePath(name);
-            const QFileInfo fi(fPath);
-            if (fi.size() == 0) continue;
-            candidates.append(stampOnly(fPath));
+            if (!catalogCandidateName(name, exts)) continue;
+            CatalogRow row = stampOnly(dir.filePath(name));
+            /* Counted, so the diagnostics can explain the gap they leave: the Manage
+               Catalog count is by name and cannot see size. */
+            if (row.srcSize == 0) { ++st.zeroByte; continue; }
+            /*  TWO NAMES, ONE KEY -- "IMG_1.JPG" beside "img_1.jpg" on a case-sensitive
+                volume, or the same name in two Unicode forms. The index keys on
+                cachePathKey, so both would write the SAME row, each overwriting the
+                other and each looking stale to the next scan for ever. The first wins
+                and the twin is counted; the diagnostics report names it. */
+            const QString key = cachePathKey(row.path);
+            if (keys.contains(key)) { ++st.collisions; continue; }
+            keys.insert(key);
+            candidates.append(row);
         }
-        if (candidates.isEmpty()) {
-            emit progress(folderNo, totalFolders);
-            continue;
+        st.stampMs += t.elapsed();
+
+        if (!candidates.isEmpty()) {
+            t.start();
+            const QSet<QString> stale = Catalog::instance().staleOf(candidates);
+            st.staleMs += t.elapsed();
+            scanned += candidates.size();
+            for (const CatalogRow &row : std::as_const(candidates))
+                if (stale.contains(row.path)) toParse << row.path;
+            if (!stale.isEmpty() && !known.contains(folder)) newWithWork.insert(folder);
         }
 
-        const QSet<QString> stale = Catalog::instance().staleOf(candidates);
-        scanned += candidates.size();
+        /*  CHECKING HAS AN ESTIMATE TOO. It is usually seconds, but not on a library
+            whose folders are slow to list or reconcile -- the first measured rescan
+            spent 268 s here with nothing to say how long was left. Folders per second
+            over active time; a folder is a coarse unit, so it is only offered once
+            there is enough to average. */
+        p.done = folderNo;
+        p.folder = dir.dirName();
+        const qint64 activeMs = clock.elapsed() - pausedMs - checkStartActive;
+        p.filesPerSec = activeMs > 0 ? folderNo * 1000.0 / activeMs : 0;
+        const bool enough = folderNo >= kEtaMinFiles || activeMs >= kEtaMinMs;
+        p.etaSecs = (enough && p.filesPerSec > 0)
+                        ? (p.total - folderNo) / p.filesPerSec : -1;
+        report(p);
+    }
 
-        for (CatalogRow &row : candidates) {
-            if (!stale.contains(row.path)) continue;
-            if (!waitWhilePaused()) { aborted = true; break; }
-            /* Counted, not just skipped: a file the parser cannot read is a permanent
-               gap between the folder and the index, and the editor has to be able to say
-               so rather than ask for another scan. */
-            if (!parseInto(row)) {
+    /* ---------------- Phase 2: Indexing ---------------- */
+
+    st.scanned = scanned;
+    st.stale = toParse.size();
+
+    QVector<CatalogRow> batch;
+    batch.reserve(kCommitRows);
+    /* Files that would not parse, kept apart from the rows that did: they are written by
+       a different call, and mixing them would mean inventing metadata for them. */
+    QVector<CatalogRow> unreadableBatch;
+    QSet<QString> newCredited;
+
+    auto flush = [&]() {
+        t.start();
+        if (!batch.isEmpty()) indexed += Catalog::instance().commit(batch);
+        batch.clear();
+        if (!unreadableBatch.isEmpty())
+            Catalog::instance().commitUnreadable(unreadableBatch);
+        unreadableBatch.clear();
+        st.commitMs += t.elapsed();
+    };
+
+    /* (active ms, files done) samples over the last kRateWindowMs of active time. */
+    QVector<QPair<qint64, int>> samples;
+    const qint64 indexStartActive = clock.elapsed() - pausedMs;
+
+    p = CatalogScanProgress();
+    p.phase = CatalogScanProgress::Indexing;
+    p.total = toParse.size();
+    if (!aborted) report(p, true);
+
+    QElapsedTimer parseTimer;
+    for (int i = 0; i < toParse.size() && !aborted; ++i) {
+        if (!waitWhilePaused()) { aborted = true; break; }
+        const QString &path = toParse.at(i);
+
+        /* Stamped again, not carried over from Checking: holding every row between the
+           phases is what this split avoids. A file removed since Checking is simply
+           passed over -- the next scan's reconcile demotes its row. */
+        CatalogRow row = stampOnly(path);
+        if (row.srcSize > 0) {
+            parseTimer.start();
+            const bool ok = parseInto(row);
+            st.parseMs += parseTimer.elapsed();
+            ++st.parsed;
+            if (!ok) {
                 /* Recorded, not merely counted. A stub row is what makes an unreadable
                    file something the user can list under Availability instead of an
                    unexplained gap between the folder and the index. */
                 ++unreadable;
-                unreadableBatch.append(stampOnly(row.path));
-                if (unreadableBatch.size() >= kCommitRows) {
-                    Catalog::instance().commitUnreadable(unreadableBatch);
-                    unreadableBatch.clear();
-                }
-                continue;
+                unreadableBatch.append(stampOnly(path));
             }
-            batch.append(row);
-            ++addedThisFolder;
-            if (batch.size() >= kCommitRows) {
-                indexed += Catalog::instance().commit(batch);
-                batch.clear();
+            else {
+                if (newWithWork.contains(row.folder)) newCredited.insert(row.folder);
+                batch.append(row);
             }
+            if (batch.size() >= kCommitRows || unreadableBatch.size() >= kCommitRows)
+                flush();
         }
 
-        /*  A folder the catalog had never seen that yielded nothing -- no supported
-            files, or every one of them unreadable -- is not something the user added, so
-            it does not count. (The no-supported-files case never reaches here: it
-            continues out of the loop above.) */
-        if (folderIsNew && addedThisFolder > 0) ++newFolders;
-
-        emit progress(folderNo, totalFolders);
-        emit status("Cataloguing " + dir.dirName());
+        /* The rate over recent active time, and the estimate from it. */
+        const int done = i + 1;
+        const qint64 active = clock.elapsed() - pausedMs;
+        if (samples.isEmpty() || active - samples.last().first >= kReportMs)
+            samples.append({active, done});
+        while (samples.size() > 2 && active - samples.first().first > kRateWindowMs)
+            samples.removeFirst();
+        p.done = done;
+        p.folder = QFileInfo(path).dir().dirName();
+        const qint64 spanMs = active - samples.first().first;
+        const int spanFiles = done - samples.first().second;
+        p.filesPerSec = spanMs > 0 ? spanFiles * 1000.0 / spanMs : 0;
+        const bool enough = done >= kEtaMinFiles
+                            || active - indexStartActive >= kEtaMinMs;
+        p.etaSecs = (enough && p.filesPerSec > 0) ? (p.total - done) / p.filesPerSec : -1;
+        report(p, done == p.total);
     }
 
-    if (!batch.isEmpty()) indexed += Catalog::instance().commit(batch);
-    if (!unreadableBatch.isEmpty())
-        Catalog::instance().commitUnreadable(unreadableBatch);
+    flush();
 
     /*  FOLDERS THAT HAVE GONE FROM DISK ENTIRELY. The loop above reconciles what it
         walks, and a folder that no longer exists is never walked -- so without this its
@@ -377,6 +483,7 @@ void CatalogScanner::scan(const CatalogScope &scope)
         ejected card is not a deletion. The snapshot is taken here, after the walk, so its
         window is as short as possible (see Cache/mountsnapshot.h). */
     if (!aborted && !abort.load(std::memory_order_relaxed)) {
+        t.start();
         const MountSnapshot mounts = MountSnapshot::take();
         for (const QString &f : std::as_const(known)) {
             if (!waitWhilePaused()) { aborted = true; break; }
@@ -386,9 +493,22 @@ void CatalogScanner::scan(const CatalogScope &scope)
             if (QDir(f).exists()) continue;
             demoted += Catalog::instance().reconcileFolder(f, QSet<QString>());
         }
+        st.reconcileMs += t.elapsed();
+    }
+
+    aborted = aborted || abort.load(std::memory_order_relaxed);
+    st.indexed = indexed;
+    st.unreadable = unreadable;
+    st.newFolders = newCredited.size();
+    st.demoted = demoted;
+    st.pausedMs = pausedMs;
+    st.aborted = aborted;
+    st.ended = QDateTime::currentDateTime();
+    {
+        QMutexLocker lk(&statsMutex);
+        stats = st;
     }
 
     running.store(false, std::memory_order_relaxed);
-    emit finished(scanned, indexed, unreadable, newFolders, demoted,
-                  aborted || abort.load(std::memory_order_relaxed));
+    emit finished(scanned, indexed, unreadable, st.newFolders, demoted, aborted);
 }

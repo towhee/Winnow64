@@ -3,6 +3,8 @@
 #include <QPaintEvent>
 #include <QMouseEvent>
 #include <QFontMetrics>
+#include <QHelpEvent>
+#include <QToolTip>
 
 /*
     See progress.h for the overall design.
@@ -234,6 +236,48 @@ int Progress::addRow(const QString &name, int barHeight, const QColor &color,
     return rows.size() - 1;
 }
 
+int Progress::rowsYOffset() const
+{
+    /* Center the rows block within the actual widget height so the top and
+       bottom margins are equal whatever height the status bar gives us. */
+    int yOff = (height() - rowsBlockHeight) / 2;
+    if (yOff < 0) yOff = 0;
+
+    /* When only one row is visible, nudge the whole row (text + bar) down to
+       vertically align with the MetaRead/ImageCache activity labels to the right
+       of the progress in the status bar. */
+    int visibleCount = 0;
+    for (const Row &r : rows) if (r.visible) ++visibleCount;
+    if (visibleCount == 1) yOff += singleProgressItemNudge();
+    return yOff;
+}
+
+void Progress::setRowToolTip(int id, const QString &text)
+{
+    int i = rowIndex(id);
+    if (i < 0) return;
+    rows[i].toolTip = text;
+}
+
+bool Progress::event(QEvent *event)
+{
+    if (event->type() == QEvent::ToolTip) {
+        auto *he = static_cast<QHelpEvent *>(event);
+        const int y = he->pos().y() - rowsYOffset();
+        for (const Row &r : rows) {
+            if (!r.visible || r.toolTip.isEmpty()) continue;
+            if (y >= r.top - vGap && y < r.top + r.height + vGap) {
+                QToolTip::showText(he->globalPos(), r.toolTip, this);
+                return true;
+            }
+        }
+        QToolTip::hideText();
+        event->ignore();
+        return true;
+    }
+    return QWidget::event(event);
+}
+
 void Progress::setRowText(int id, const QString &text)
 {
     int i = rowIndex(id);
@@ -339,17 +383,7 @@ void Progress::paintEvent(QPaintEvent * /*event*/)
     QPainter p(this);
     p.fillRect(rect(), bgColor);
 
-    /* Center the rows block within the actual widget height so the top and
-       bottom margins are equal whatever height the status bar gives us. */
-    int yOff = (height() - rowsBlockHeight) / 2;
-    if (yOff < 0) yOff = 0;
-
-    /* When only one row is visible, nudge the whole row (text + bar) down to
-       vertically align with the MetaRead/ImageCache activity labels to the right
-       of the progress in the status bar. */
-    int visibleCount = 0;
-    for (const Row &r : rows) if (r.visible) ++visibleCount;
-    if (visibleCount == 1) yOff += singleProgressItemNudge();
+    const int yOff = rowsYOffset();
 
     QFont f = font();
     for (const Row &r : rows) {

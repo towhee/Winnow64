@@ -451,6 +451,13 @@ void DataModel::scheduleProxySnapshotRebuild()
     if (!G::isGuiThread()) return;
     if (proxySnapshotPending) return;
     proxySnapshotPending = true;
+    /*  NOT BETWEEN CATALOG FILL BATCHES. The fill inserts 2,000 rows per turn of the event
+        loop and every batch fired this, so a 148,567-row Library rebuilt the snapshot ~75
+        times over a growing model -- ~1 s of the load, sampled -- for readers that are not
+        running: MW::stop has halted MetaRead and the ImageCache, and the icon prefetch
+        starts after the fill. The flag stays set, so the first flushProxySnapshot after
+        the fill (a dispatch site) or endLoad's explicit rebuild makes it current. */
+    if (!pendingCatalogRows.isEmpty()) return;
     QTimer::singleShot(0, this, [this]{ flushProxySnapshot(); });
 }
 
@@ -473,21 +480,38 @@ void DataModel::rebuildProxySnapshot()
 
     auto snap = std::make_shared<ProxySnapshot>();
     snap->instance = instance;
-    snap->sourceRows = rowCount();
+    const int dmRows = rowCount();
+    snap->sourceRows = dmRows;
+
+    /*  THE PATHS ARE SHARED -- see ProxyPaths. Rebuilt only when a path was written or
+        rows were inserted or removed (RowStore::fieldGeneration), in one pass over the
+        store; a filter or sort change reuses them. */
+    const quint64 pathGen = rowStore.fieldGeneration(G::PathColumn, G::PathRole);
+    if (!mProxyPaths || pathGen != mProxyPathsGen
+        || mProxyPaths->pathOfDm.size() != dmRows) {
+        auto paths = std::make_shared<ProxyPaths>();
+        paths->pathOfDm.resize(dmRows);
+        paths->dmRowOfPath.reserve(dmRows);
+        rowStore.forEachRow({{G::PathColumn, G::PathRole}},
+                            [&](int row, const QVariant *v) {
+            if (row >= dmRows) return;
+            const QString p = v[0].toString();
+            paths->pathOfDm[row] = p;
+            if (!p.isEmpty()) paths->dmRowOfPath.insert(p, row);
+        });
+        mProxyPaths = paths;
+        mProxyPathsGen = pathGen;
+    }
+    snap->paths = mProxyPaths;
+
+    snap->sfRowOfDm.fill(-1, dmRows);
     if (sf != nullptr) {
         const int n = sf->rowCount();
         snap->dmRowOf.resize(n);
-        snap->pathOf.resize(n);
-        snap->sfRowOfPath.reserve(n);
-        snap->sfRowOfDmRow.reserve(n);
         for (int sfRow = 0; sfRow < n; ++sfRow) {
-            const QModelIndex sfIdx = sf->index(sfRow, 0);
-            const int dmRow = sf->mapToSource(sfIdx).row();
-            const QString fPath = sfIdx.data(G::PathRole).toString();
+            const int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
             snap->dmRowOf[sfRow] = dmRow;
-            snap->pathOf[sfRow] = fPath;
-            if (!fPath.isEmpty()) snap->sfRowOfPath.insert(fPath, sfRow);
-            if (dmRow >= 0) snap->sfRowOfDmRow.insert(dmRow, sfRow);
+            if (dmRow >= 0 && dmRow < dmRows) snap->sfRowOfDm[dmRow] = sfRow;
         }
     }
     {
@@ -2027,6 +2051,7 @@ void DataModel::insertCatalogBatch()
             emit centralMsg(QString::number(row) + " of "
                             + QString::number(expectedRows) + " images loading...");
             emit updateProgress(1.0 * row / qMax(1, expectedRows) * 100);
+            emit catalogFillProgress(row, expectedRows);
         }
         QTimer::singleShot(0, this, [this]{ insertCatalogBatch(); });
         return;
@@ -2041,6 +2066,7 @@ void DataModel::finishCatalogFill()
     The tail of the streamed fill: what addPaths does inline at the end of its one pass.
 */
     const bool aborted = abort;
+    emit catalogFillProgress(0, 0);      // every row is in (or the fill was stopped)
 
     /*  EVERY STAGE OF THE TAIL IS TIMED, printed for a large set. The stall begins the
         instant the last batch lands, so it is in here or in what folderChange triggers --
@@ -5150,6 +5176,54 @@ void DataModel::applyIconCachePressure()
     }
 }
 
+void DataModel::evictHiddenIcons()
+{
+/*
+    See the declaration. Only in the BOUNDED case: when the chunk covers every row the
+    design is to hold every thumbnail, filtered or not, and a filter must not undo that.
+    Only past the retention bound (maxIconChunkOrAll, "Thumbnails held in memory"), so a
+    small filter over a large set that is still within budget keeps its icons for the
+    moment it is cleared. Hidden rows are off screen by definition, so nothing is told.
+
+    THEY COME BACK WHEN THE FILTER IS CLEARED. Dropping a loaded icon outside the loader
+    does not by itself make MetaRead read it again (readSuccessThisCycle -- see
+    MetaRead::invalidateLoadedIcons). Here that is already handled: the only caller,
+    MW::filterChange, queues MetaRead::initialize right after this, which clears that
+    set, and every later filter change does the same before its dispatch.
+*/
+    if (!G::isGuiThread() || !sf) return;
+    const int rows = rowCount();
+    if (iconChunkSize >= rows) return;
+    if (sf->rowCount() >= rows) return;                     // nothing is hidden
+    const int retain = qMax(int(iconChunkSize.load()), maxIconChunkOrAll());
+    const int loaded = iconLoadedCount.load(std::memory_order_relaxed);
+    if (loaded <= retain) return;
+
+    const ProxySnapshotPtr snap = proxySnapshot();
+    if (!snap) return;
+    QElapsedTimer t;
+    if (G::isPerfProbe) t.start();
+
+    /*  Collected first: forEachRow's callback may not call back into the store. */
+    QVector<int> hidden;
+    rowStore.forEachRow({{G::IconLoadedColumn, Qt::EditRole}},
+                        [&](int row, const QVariant *v) {
+        if (row < rows && v[0].toBool() && snap->sfRowFromDmRow(row) < 0) hidden << row;
+    });
+    {
+        const QSignalBlocker blocker(this);
+        for (int row : hidden) {
+            setData(index(row, 0), QVariant(), Qt::DecorationRole);
+            setData(index(row, G::IconLoadedColumn), false);
+        }
+    }
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] evictHiddenIcons  loaded =" << loaded
+                           << " retain =" << retain << " hidden evicted =" << hidden.size()
+                           << " now =" << iconLoadedCount.load(std::memory_order_relaxed)
+                           << " " << t.elapsed() << "ms";
+}
+
 void DataModel::clearIconsOutsideChunkRange(int instance)
 {
     if (instance != this->instance) return;
@@ -6892,13 +6966,41 @@ struct SortKeyScope
 void SortFilter::prepareSortKeys(int column)
 {
     mSortKeysValid = false;
+    mRanksActive = false;
     auto *dm = qobject_cast<DataModel*>(sourceModel());
     if (!dm || column < 0 || !RowStore::covers(column, sortRole())) return;
+
+    /*  The cached ranks, if they still describe this column's values under these sort
+        settings: the usual case for a filter change, which re-sorts the same data. */
+    const quint64 gen = dm->rowStore.fieldGeneration(column, sortRole());
+    const int rows = dm->rowStore.size();
+    if (!mRanks.isEmpty() && mRanks.size() == rows && column == mRankColumn
+        && sortRole() == mRankRole && sortCaseSensitivity() == mRankCs
+        && isSortLocaleAware() == mRankLocale && gen == mRankGen) {
+        mSortKeyColumn = column;
+        mRanksActive = true;
+        return;
+    }
+
     QVector<QVariant> keys;
-    keys.reserve(dm->rowStore.size());
+    keys.reserve(rows);
     dm->rowStore.forEachRow({{column, sortRole()}}, [&](int, const QVariant *v) {
         keys.append(v[0]);
     });
+    QVector<int> ranks;
+    if (winnowSortRanks(keys, sortCaseSensitivity(), isSortLocaleAware(), ranks)) {
+        mRanks.swap(ranks);
+        mRankColumn = column;
+        mRankRole = sortRole();
+        mRankCs = sortCaseSensitivity();
+        mRankLocale = isSortLocaleAware();
+        mRankGen = gen;
+        mSortKeyColumn = column;
+        mRanksActive = true;
+        return;
+    }
+    /*  Mixed key types: compare the keys themselves, and hold no ranks. */
+    mRanks.clear();
     mSortKeys.swap(keys);
     mSortKeyColumn = column;
     mSortKeysValid = true;
@@ -6906,20 +7008,26 @@ void SortFilter::prepareSortKeys(int column)
 
 void SortFilter::clearSortKeys()
 {
+    /*  The keys go; the RANKS stay cached for the next sort of the same column. */
     mSortKeysValid = false;
+    mRanksActive = false;
     mSortKeyColumn = -1;
     QVector<QVariant>().swap(mSortKeys);
 }
 
-
 bool SortFilter::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-    if (mSortKeysValid && left.column() == mSortKeyColumn
+    if ((mRanksActive || mSortKeysValid) && left.column() == mSortKeyColumn
         && right.column() == mSortKeyColumn && QThread::currentThread() == thread()) {
         const int l = left.row(), r = right.row();
-        if (l >= 0 && r >= 0 && l < mSortKeys.size() && r < mSortKeys.size())
+        if (mRanksActive) {
+            if (l >= 0 && r >= 0 && l < mRanks.size() && r < mRanks.size())
+                return mRanks.at(l) < mRanks.at(r);
+        }
+        else if (l >= 0 && r >= 0 && l < mSortKeys.size() && r < mSortKeys.size()) {
             return winnowVariantLessThan(mSortKeys.at(l), mSortKeys.at(r),
-                                   sortCaseSensitivity(), isSortLocaleAware());
+                                         sortCaseSensitivity(), isSortLocaleAware());
+        }
     }
     return QSortFilterProxyModel::lessThan(left, right);
 }

@@ -82,6 +82,7 @@ void MW::writeSettings()
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
     settings->setValue("openLibraryAtStart", openLibraryAtStart);
+    settings->setValue("restoreLibraryState", restoreLibraryState);
     settings->setValue("updateSkipVersion", updateSkipVersion);
     settings->setValue("combineRawJpg", combineRawJpg);
 
@@ -181,6 +182,8 @@ void MW::writeSettings()
     /* Survives a restart, or the editor would ask for a scan that can never close the
        gap every time Winnow is launched. */
     settings->setValue("catalogScopePrompted", catalogScopePrompted);
+    settings->setValue("catalogUncatalogable", catalogUncatalogable);
+    settings->setValue("catalogScanIncomplete", catalogScanIncomplete);
     settings->remove("CatalogScope");
     settings->beginWriteArray("CatalogScope");
     for (int i = 0; i < catalogScope.size(); ++i) {
@@ -413,6 +416,7 @@ bool MW::loadSettings()
         rememberLastDir = false;
         checkIfUpdate = true;
         openLibraryAtStart = false;
+        restoreLibraryState = false;
         updateSkipVersion = "";
         lastDir = "";
         deleteWarning = true;
@@ -694,6 +698,8 @@ bool MW::loadSettings()
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();
     if (settings->contains("openLibraryAtStart"))
         openLibraryAtStart = settings->value("openLibraryAtStart").toBool();
+    if (settings->contains("restoreLibraryState"))
+        restoreLibraryState = settings->value("restoreLibraryState").toBool();
     if (settings->contains("updateSkipVersion")) updateSkipVersion = settings->value("updateSkipVersion").toString();
     if (settings->contains("lastDir")) lastDir = settings->value("lastDir").toString();
 
@@ -769,6 +775,8 @@ bool MW::loadSettings()
 
     /* read the catalog scope (see the write side for why it is not in the db) */
     catalogScopePrompted = settings->value("catalogScopePrompted", false).toBool();
+    catalogUncatalogable = settings->value("catalogUncatalogable", 0).toInt();
+    catalogScanIncomplete = settings->value("catalogScanIncomplete", false).toBool();
     catalogScope.clear();
     int scopeRows = settings->beginReadArray("CatalogScope");
     for (int i = 0; i < scopeRows; ++i) {

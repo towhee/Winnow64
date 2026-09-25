@@ -171,6 +171,13 @@ void RowStore::setWatchedCells(const QVector<QPair<int, int>> &cells)
     markWatchStructuralLocked();
 }
 
+quint64 RowStore::fieldGeneration(int column, int role) const
+{
+    const int bit = fieldBit(column, role);
+    QReadLocker l(&mLock);
+    return bit < 0 ? 0 : mFieldGen[bit] + mSpliceGen;
+}
+
 bool RowStore::covers(int column, int role)
 {
     return fieldBit(column, role) >= 0;
@@ -303,6 +310,7 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     if (column == G::FolderPathsAllColumn) return;
     ImageRow &r = mRows[row];
     setBit(r, bit);
+    ++mFieldGen[bit];
     if (bit < 64 ? (mWatchLo & (quint64(1) << bit))
                  : (mWatchHi & (quint64(1) << (bit - 64)))) {
         ++mWatchGen;

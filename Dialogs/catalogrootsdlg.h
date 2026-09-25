@@ -3,10 +3,13 @@
 
 #include <QDialog>
 #include <QLabel>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QTableWidget>
 
 #include "Main/catalogscope.h"
+
+struct CatalogScanProgress;
 
 /*
     Which folders Winnow indexes in the background, and the button that starts a scan.
@@ -38,8 +41,9 @@
 
     IT IS NOT MODAL. A scan takes minutes to hours, and this window is where its state is
     shown; a modal dialog would either block the app for the duration or have to be closed
-    to watch it, and neither is a reasonable way to run a background job. Progress itself
-    stays on the status-bar row, which is visible whether this is open or not.
+    to watch it, and neither is a reasonable way to run a background job. Progress is on
+    the status-bar row, visible whether this is open or not, and here too -- a bar, the
+    rate and the time left -- because this is where someone comes to ask "how long".
 
     IT OWNS NOTHING. MW holds the scope table and its QSettings persistence (catalogScope)
     exactly as before; this is only the editor, and it emits what changed. That is
@@ -71,10 +75,16 @@ public:
        folder actually achieved anything. */
     void setCatalogStatus(const QString &text);
 
+    /*  Where the running scan is: a bar, and one line with the counts, the rate and the
+        time left, or why it is paused. Hidden again by setScanning(false). */
+    void setScanProgress(const CatalogScanProgress &p);
+
 signals:
     void scopeChanged(const CatalogScope &scope);
     void scanRequested();
     void stopScanRequested();
+    /* The Diagnostics button, or the status line's "See which" link. */
+    void diagnosticsRequested();
 
 private:
     /* Build one table row. Widgets, not item flags: a combo says what the two states ARE
@@ -86,14 +96,23 @@ private:
        included tree excludes nothing, and silently accepting it would leave the user
        believing they had carved out a branch that was never going to be scanned. */
     void updateNote();
+    /* Size the table to its rows (up to a cap), then the window to its contents. */
+    void fitTableHeight();
+    /* Resize the window's height to what the layout needs; deferred and coalesced. */
+    void fitToContents();
+    bool fitPending = false;
 
     QTableWidget *table = nullptr;
     QPushButton *addBtn = nullptr;
     QPushButton *removeBtn = nullptr;
     QPushButton *scanBtn = nullptr;
     QPushButton *closeBtn = nullptr;
+    QPushButton *diagBtn = nullptr;
     QLabel *noteLabel = nullptr;
     QLabel *statusLabel = nullptr;
+    QWidget *scanBlock = nullptr;      // scanBar + scanLabel, shown together
+    QProgressBar *scanBar = nullptr;
+    QLabel *scanLabel = nullptr;
     bool scanning = false;
     bool populating = false;
 };

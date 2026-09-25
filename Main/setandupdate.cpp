@@ -514,6 +514,17 @@ void MW::setScope(G::Scope s, QString src)
     if (G::isInitializing) return;
 
     const bool changed = (G::scope != s);
+    /*  Leaving the Library: remember how it was left, while it is still what is loaded. */
+    if (changed && G::scope == G::Scope::Catalog) {
+        saveLibraryState();
+        /*  A Library filter restore still waiting for its build must not land on the
+            folder being switched to. */
+        if (libraryFilterRestorePending) {
+            libraryFilterRestorePending = false;
+            restoreFiltersPending = false;
+        }
+        libraryRestoreSortPending = false;
+    }
     G::scope = s;
 
     if (G::isPerfProbe && changed && s == G::Scope::Catalog) {
@@ -745,10 +756,127 @@ void MW::restoreFiltersAfterFolderChange()
 */
     if (!restoreFiltersPending || !filters) return;
     restoreFiltersPending = false;
+    libraryFilterRestorePending = false;
     const bool hadChecks = filters->hasSavedStates();
     filters->restore();
     if (hadChecks || filters->isAnyFilter())
         filterChange("MW::restoreFiltersAfterFolderChange");
+}
+
+void MW::saveLibraryState()
+{
+/*
+    Remember how the Library was left -- its sort and its filters -- for the next start
+    (see restoreLibraryState). Called on leaving the Library for Folders and at quit;
+    only while the Library is what is loaded, so a quit from Folders keeps the state the
+    Library was last left in. The filter state is Filters::persistableState: checked
+    items by {category, value, include/exclude}, the search text, the keyword any/all.
+*/
+    /*  --perfprobe: what is saved, or why nothing is. This feature fails SILENTLY -- the
+        Library just opens the ordinary way -- so the line is the only evidence. */
+    if (G::isPerfProbe) {
+        const QVariantMap fp = filters ? filters->persistableState() : QVariantMap();
+        qDebug().noquote() << "[PERF] saveLibraryState  enabled =" << restoreLibraryState
+                           << " scopeIsCatalog =" << (G::scope == G::Scope::Catalog)
+                           << " rows =" << (dm ? dm->rowCount() : -1)
+                           << " sortColumn =" << sortColumn
+                           << " reverse =" << sortReverseAction->isChecked()
+                           << " items =" << fp.value("items").toStringList()
+                                                .replaceInStrings(QChar(0x1f), "|");
+    }
+    if (!restoreLibraryState || G::scope != G::Scope::Catalog || !filters) return;
+    /*  NEVER AN EMPTY LIBRARY. Once closeEvent's teardown has cleared the model and
+        reset the filters and the sort, a second save (a second close, or anything else
+        that reaches here late) would record THAT -- File Name, ascending, nothing
+        checked -- over the state the user left, which is what the first end-to-end test
+        of this found in settings.ini. A Library with no rows is not a state to reopen. */
+    if (!dm || dm->rowCount() == 0) return;
+    settings->beginGroup("LibraryState");
+    settings->setValue("sortColumn", sortColumn);
+    settings->setValue("isReverseSort", sortReverseAction->isChecked());
+    settings->setValue("filters", filters->persistableState());
+    settings->endGroup();
+}
+
+void MW::queueLibraryStateRestore()
+{
+/*
+    At start, before the Library loads: read the saved state and queue both halves.
+
+    THE SORT is applied by applyRestoredLibrarySort from metadataComplete, AFTER that
+    function's updateSortColumn(G::NameColumn) -- which resets the sort menu to File Name
+    on every completed load. Applied any earlier, the grid was sorted but the menu and
+    sortColumn went back to File Name, and the next filter change re-sorted by name (the
+    first cut of this did exactly that).
+
+    THE FILTERS go to the after-build path a folder change uses (restoreFiltersPending ->
+    MW::restoreFiltersAfterFolderChange -> Filters::restore + one filterChange). That path
+    runs when the filter BUILD finishes, and the build only runs while the Filters panel
+    is showing -- so a restored filter is never applied where it cannot be seen: with
+    the panel hidden it lands the moment the panel is opened. (The first cut tested the
+    dock's visibility HERE, in showEvent, where it is not yet settled, and so restored
+    nothing.)
+*/
+    if (!settings->childGroups().contains("LibraryState")) return;
+    settings->beginGroup("LibraryState");
+    const int col = settings->value("sortColumn", G::NameColumn).toInt();
+    const bool reverse = settings->value("isReverseSort", false).toBool();
+    const QVariantMap f = settings->value("filters").toMap();
+    settings->endGroup();
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] queueLibraryStateRestore  sortColumn =" << col
+                           << " reverse =" << reverse << " items ="
+                           << f.value("items").toStringList()
+                                  .replaceInStrings(QChar(0x1f), "|");
+
+    if (col > 0 && col < G::TotalColumns) {
+        libraryRestoreSortColumn = col;
+        libraryRestoreReverse = reverse;
+        libraryRestoreSortPending = true;
+    }
+    if (filters && !f.value("items").toStringList().isEmpty()) {
+        filters->setStateToRestore(f);
+        restoreFiltersPending = true;
+        libraryFilterRestorePending = true;
+    }
+}
+
+void MW::applyRestoredLibrarySort()
+{
+/*
+    The restored sort, once per start, from metadataComplete after its reset of the sort
+    menu to File Name: put the saved column and direction on the menu and in sortColumn,
+    then sort. A filter restore that runs later finds the proxy already sorted by the
+    same column and does not sort again.
+*/
+    if (!libraryRestoreSortPending) return;
+    libraryRestoreSortPending = false;
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] applyRestoredLibrarySort  column ="
+                           << libraryRestoreSortColumn << " reverse =" << libraryRestoreReverse;
+    if (G::scope != G::Scope::Catalog || !dm->rowCount()) return;
+    sortColumn = libraryRestoreSortColumn;
+    updateSortColumn(sortColumn);
+    if (libraryRestoreReverse != sortReverseAction->isChecked())
+        toggleSortDirection(libraryRestoreReverse ? Tog::on : Tog::off);
+    sortChange("MW::applyRestoredLibrarySort");
+}
+
+void MW::applyDeferredSort()
+{
+/*
+    See MW::sortChange. Put the deferred column and direction back on the menu and in
+    sortColumn -- metadataComplete has just reset them to File Name -- and sort.
+*/
+    if (!sortDeferredForMetadata) return;
+    if (!G::allMetadataAttempted) return;               // still not ready: keep it
+    sortDeferredForMetadata = false;
+    if (deferredSortColumn < 0 || deferredSortColumn >= G::TotalColumns) return;
+    sortColumn = deferredSortColumn;
+    updateSortColumn(sortColumn);
+    if (deferredReverseSort != isReverseSort)
+        toggleSortDirection(deferredReverseSort ? Tog::on : Tog::off);
+    sortChange("MW::applyDeferredSort");
 }
 
 void MW::syncLibTreeFromFilters()

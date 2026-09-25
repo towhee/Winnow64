@@ -152,6 +152,55 @@ QString CacheDb::path() const
     return dbPath;
 }
 
+CacheDb::StorageUsage CacheDb::storageUsage()
+{
+    StorageUsage u;
+    QSqlDatabase d = db();
+    if (!d.isOpen()) return u;
+    const QString file = path();
+    u.valid = true;
+    u.dir = QFileInfo(file).absolutePath();
+    for (const char *suffix : {"", "-wal", "-shm"}) {
+        const QFileInfo fi(file + suffix);
+        if (fi.exists()) u.fileBytes += fi.size();
+    }
+
+    QSqlQuery q(d);
+    if (q.exec("SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM thumb") && q.next()) {
+        u.thumbCount = q.value(0).toInt();
+        u.thumbBytes = q.value(1).toLongLong();
+    }
+    if (q.exec("SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM devpreview WHERE live = 1")
+        && q.next()) {
+        u.devPreviewCount = q.value(0).toInt();
+        u.devPreviewBytes = q.value(1).toLongLong();
+    }
+
+    /*  Pages per table, when the driver was built with dbstat. Names are grouped by
+        prefix: the catalog is image* (with its full-text shadow tables), keyword*,
+        vocab*; thumb* is the thumbnail tenant. Everything else -- the preview index,
+        the schema -- is left out of both. */
+    if (q.exec("SELECT name, pgsize FROM dbstat WHERE aggregate = TRUE")) {
+        qint64 catalog = 0, thumbs = 0;
+        while (q.next()) {
+            const QString name = q.value(0).toString();
+            const qint64 bytes = q.value(1).toLongLong();
+            if (name.startsWith("thumb") || name == "sqlite_autoindex_thumb_1")
+                thumbs += bytes;
+            else if (name.startsWith("image") || name.startsWith("keyword")
+                     || name.startsWith("vocab"))
+                catalog += bytes;
+        }
+        u.exact = true;
+        u.catalogBytes = catalog;
+        u.thumbBytes = thumbs;
+    }
+    else {
+        u.catalogBytes = qMax<qint64>(0, u.fileBytes - u.thumbBytes);
+    }
+    return u;
+}
+
 void CacheDb::closeThisThread()
 {
     if (!tlsConn.hasLocalData()) return;

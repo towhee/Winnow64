@@ -284,6 +284,10 @@ void MW::filterChange(QString source)
         this phase from 348 walks of the whole proxy to one. */
     dm->flushProxySnapshot();
     phase("snapshot");
+    /*  The filter may have hidden rows whose thumbnails nothing else will ever evict --
+        see DataModel::evictHiddenIcons. Needs the snapshot just flushed. */
+    dm->evictHiddenIcons();
+    phase("evictHidden");
 
     /*  Sync the datamodel instance -- QUEUED, like every other caller of initialize.
         It was a DIRECT call, which meant the GUI thread cleared rowsReading,
@@ -598,7 +602,29 @@ void MW::sortChange(QString source)
         G::log("MW::sortChange",  "Src = " + source);
     // qDebug() << "MW::sortChange  Src:" << source;
 
-    if (G::isInitializing || !G::allMetadataAttempted || sortMenuUpdateToMatchTable) {
+    if (G::isInitializing || sortMenuUpdateToMatchTable) return;
+    /*  NOT SILENTLY. A sort asked for while a load's metadata is still arriving cannot
+        run yet (the proxy would sort half-read rows), and this used to just return: the
+        user's choice was dropped, and metadataComplete then reset the menu to File Name.
+        That is also how the first cut of the Library-state restore failed without a
+        trace. A sort the USER asked for -- the menu, the direction button, a table
+        header, a workspace -- is now remembered and run when the metadata completes
+        (MW::applyDeferredSort), and says so in the issue log. Internal callers keep the
+        silent skip: they re-sort at load completion anyway. */
+    if (!G::allMetadataAttempted) {
+        static const QStringList userSources{
+            "Action", "MW::toggleSortDirectionClick", "MW::sortIndicatorChanged",
+            "MW::invokeWorkspace"};
+        if (userSources.contains(source)) {
+            sortDeferredForMetadata = true;
+            deferredSortColumn = sortColumn;
+            deferredReverseSort = isReverseSort;
+            G::issue("Comment",
+                     QString("Sort (column %1, %2) deferred until the images' metadata has "
+                             "loaded; it runs when loading completes.")
+                         .arg(sortColumn).arg(isReverseSort ? "descending" : "ascending"),
+                     "MW::sortChange");
+        }
         return;
     }
 

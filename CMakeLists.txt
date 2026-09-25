@@ -304,6 +304,7 @@ set(WINNOW_SOURCES
     Log/log.cpp
 
     # Main
+    Main/catalogenumerate.cpp
     Main/catalogscanner.cpp
     Main/devpreviewbuilder.cpp
     Main/diagnostics.cpp
@@ -620,6 +621,7 @@ set(WINNOW_HEADERS
     Main/dockwidget.h
     Main/showhidebar.h
     Main/global.h
+    Main/catalogenumerate.h
     Main/catalogscanner.h
     Main/catalogscope.h
     Main/devpreviewpolicy.h
