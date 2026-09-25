@@ -23,6 +23,7 @@ public:
     void setCurrentRow(int sfRow);
     void setCurrentPath(QString &fPath);
     void toggleSelect(QModelIndex sfIdx);
+    void selectRows(const QList<int> &sfRows, bool add);
     void all();
     void random();
     QModelIndex nearestSelectedIndex(int sfRow);

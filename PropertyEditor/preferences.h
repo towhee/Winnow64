@@ -36,6 +36,7 @@ private:
     static QString devPreviewCacheLabel(qint64 bytes);
     static qint64 devPreviewCacheValue(const QString &label);
     void addSlideShow();
+    void addMap();
     void addFullScreen();
     void addMetadataPanel();
     void addTableView();

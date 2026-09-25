@@ -80,6 +80,8 @@ endfunction()
 winnow_add_unit_test(tst_byteops   unit/tst_byteops.cpp)
 winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
+# tst_geo tests Utilities/geo.* (the Map module's pure math: no network, no widgets).
+winnow_add_unit_test(tst_geo unit/tst_geo.cpp ${CMAKE_SOURCE_DIR}/Utilities/geo.cpp)
 # tst_colorgrade tests Develop/colorgrade.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
 # tst_calibrate tests Develop/calibrate.h (header-only, same as colorgrade).

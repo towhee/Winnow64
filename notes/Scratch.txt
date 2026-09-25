@@ -5118,3 +5118,221 @@ Dedicated workspaces are used for specific workflows.
 Shortcuts are a combination of source / central widget modes / workflows at present.
 What is the best UI to support all of the above and be clear to the user?
 
+===============================================================
+MAPS
+===============================================================
+
+Map module — v1 (view + browse)
+
+Context
+
+Winnow has no way to see where images were taken. Lightroom's Map module is the model to
+follow.
+Decisions already made:
+- Map engine: a native Winnow widget that draws OpenStreetMap-style raster tiles. No
+  Qt Location, no QML and no new Qt modules; Qt6::Network is already linked.
+- Why not Google or Apple Maps: licensing and billing. Google's terms don't allow
+  its tiles in a non-Google map viewer or permanent storage of geocoding results.
+  Apple's MapKit only runs on Apple platforms.
+- Tiles: come from a commercial OSM tile provider, set in Preferences.
+- v1 scope: VIEW + BROWSE only. Geotagging by drag, GPX tracklogs, reverse
+  geocoding, Saved Locations and a Location filter are later phases (listed at the end).
+
+Map becomes a sixth module: Browse | Develop | Keywords | Embellish | Slide Show |
+Map. It has its own workspace (default and user override come free with the
+workflow) and its own central view.
+
+What exists to reuse
+
+- GPS data: m.gpsCoord is decoded for every format by GPS::decode
+  (Metadata/gps.cpp). It lands in G::GPSCoordColumn (DataModel) and in the catalog's
+  gpscoord column (Cache/catalog.cpp). The format is a DMS string, 49°13'13.477" N 123°57'22.220" W; the catalog tests also use the decimal form 49.28,-123.12. There
+  are no numeric lat/lon fields yet.
+- Workflow plumbing: enum Workflow (Main/mainwindow.h:346), workflowKeys() /
+  workflowNames() (Main/workspaces.cpp) and buildWorkflowButtons
+  (Main/initialize.cpp). Also the button-enable mirror list in createActions
+  (Main/menusandactions.cpp) and the Default / User override menus, which loop over
+  WfCount. Follow the Slide Show pattern just added: slideShowWorkspaceAction +
+  MW::invokeSlideShowWorkflow.
+- Central stack: centralLayout (Main/initialize.cpp:214) plus the
+  centralWidgetTabs enum (Main/mainwindow.h:503).
+- Thumbnails: the DataModel icon (Qt::DecorationRole) of dm->sf rows. No new
+  decoding.
+- Selection: Selection (Datamodel/selection.h) has select(sfRow), select(idx, idx2) (range) and toggleSelect. There's no select-a-set yet (see step 5).
+- Networking: follow Dialogs/modeldownloaddlg.cpp, which uses
+  QNetworkAccessManager.
+- Wheel handling: phase()==NoScrollPhase identifies a mouse wheel (memory: wheel
+  event identity).
+
+Implementation
+
+1. Geo math — Utilities/geo.h/.cpp (pure, unit-tested)
+
+- bool Geo::parseCoord(const QString &s, double &lat, double &lon). Accepts the DMS
+  string GPS::decode produces and the lat,lon decimal form. Returns false for "",
+  "Error" and out-of-range values.
+- Web Mercator: lonLatToWorld(lat, lon, zoom) -> QPointF (pixel space, 256·2^z) and
+  worldToLonLat. Clamp latitude to ±85.0511.
+- tileRange(QRectF worldRect, int zoom) and wraparound of tile x.
+- cluster(points, zoom, cellPx): grid-bucket screen-space clustering. It returns
+  clusters, each with a centroid, its rows and a count. It's O(n) and fine at 43k rows.
+
+2. Tile source — Views/Map/maptilesource.h/.cpp
+
+- Owns a QNetworkAccessManager and a QNetworkDiskCache (under
+  QStandardPaths::CacheLocation/maptiles, capped at about 500 MB). It also keeps an
+  in-memory QCache<quint64, QPixmap> of decoded tiles.
+- QPixmap tile(z, x, y) returns the cached tile, or queues a request and returns null.
+  It emits tileReady() when a tile arrives.
+- Request control:
+  - Duplicate requests are merged.
+  - At most about 6 requests are in flight.
+  - Requests are ordered by distance from the view centre.
+  - When the zoom changes, pending requests for other zoom levels are dropped.
+  - Replies are aborted in the destructor.
+- Request headers and fallback:
+  - Sends a proper User-Agent (Winnow/<version>), as tile providers' policies require.
+  - While a tile is missing, it draws the scaled-up parent tile from the cache.
+- Provider settings: URL template ({z}/{x}/{y} plus {key}), API key, attribution
+  text and maximum zoom. These are stored in QSettings and edited in Preferences
+  (PropertyEditor/preferences.cpp, persisted in Main/settings.cpp).
+- No provider set: the map shows an inline message ("Choose a map tile provider in
+  Preferences > Map") with a button that opens that preference. There's no popup, per
+  the discoverability and disable-with-reason rules.
+
+3. Map view — Views/Map/mapview.h/.cpp (QWidget with paintEvent)
+
+- State: centre (lat/lon) and a fractional zoom. It draws tiles at floor(zoom) and
+  scales them for the fraction.
+- Navigation:
+  - Drag to pan.
+  - A mouse wheel zooms one step about the cursor. A trackpad scroll pans and a pinch
+    (QNativeGestureEvent ZoomNativeGesture) zooms.
+  - Double-click zooms in.
+  - +/− buttons and a zoom slider sit in the corner.
+  - "Fit" zooms to all pins and "Fit selection" zooms to the selected pins.
+- Pins:
+  - rebuildPoints() walks dm->sf (the filtered rows, on the GUI thread only, per the
+    proxy thread-safety memory) and parses coordinates with Geo::parseCoord. It caches
+    {sfRow → lat/lon}.
+  - Clusters are recomputed on zoom or pan-end.
+  - A pin is drawn with its count; selected images get the highlight colour
+    (kSelectedOptionColor).
+  - Clusters that are off screen are culled.
+- Hover: hovering over a pin opens a small preview popup: the cluster's thumbnail
+  from the DataModel icon, "n of m", ◀ ▶ arrows, the file name and the date. It's a
+  child widget, not a showPopup, which is queued (memory).
+- Click and double-click:
+  - Clicking a pin selects its images and makes the first one current. Cmd/Ctrl-click
+    adds them to the selection.
+  - Double-clicking a pin opens the current image in Browse Loupe via
+    requestView(CvLoupe).
+- Map follows the selection: when the current image has GPS and its pin is off
+  screen, the map pans to it. A "Follow selection" toggle sits in the corner controls,
+  on by default.
+- Attribution: always drawn bottom-right (the licence requires it) as the text from
+  the tile-provider setting.
+- Status line: "n of m images have location" at the bottom-left. Filtered-out and
+  ungeotagged images are counted so the user knows why pins are missing.
+- Refresh: a single-shot debounced (~150 ms) rebuildPoints() on:
+  - folder or catalog load done;
+  - filter change;
+  - metadata arriving for rows (gpsCoord is filled by MetaRead);
+  - dataChanged on GPSCoordColumn.
+- Idle cost: the map does nothing while it isn't the central page, and only rebuilds
+  when it's shown again. That avoids adding to the signal fan-out costs recorded in
+  memory.
+
+4. Wire in the Map workflow
+
+- enum Workflow: append WfMap before WfCount. Add "Map" to workflowKeys() and
+  tr("Map") to workflowNames().
+- centralWidgetTabs: add MapTab. In initialize.cpp, create mapView and
+  centralLayout->addWidget(mapView) at the matching index.
+- mapWorkspaceAction (View > Map Mode, no key yet) triggers MW::invokeMapWorkflow():
+  a. setOperationMode(Preview);
+  b. invokeWorkflowWorkspace(WfMap);
+  c. centralLayout->setCurrentIndex(MapTab);
+  d. mapView->activate().
+- Add a WfMap row in buildWorkflowButtons and in the mirror list in createActions.
+- Leaving Map: view keys already route to Browse (MW::requestView invokes WfSource
+  when currentWorkflow != WfSource). Check that every central-page setter
+  (loupeDisplay, gridDisplay, …) takes the page away from MapTab correctly.
+- Startup: in showEvent, the "session left in another workflow" branch
+  (Main/mainwindow.cpp ~1246) restores currentWorkflow = WfMap. It must also select
+  MapTab (call invokeMapWorkflow, or set the page).
+- Workspace data: no new WorkspaceData field and no winnowStateVersion bump,
+  because there's no new dock. The Map layout is just a workspace; Rory captures a Map
+  default into Workspaces/defaults.json via Window > Workspace > Default. Until then
+  builtInDefaultWorkspace is used and the Default item is greyed with its reason.
+- Update the docs in Main/mainwindow.h and workspaces.cpp that list the workflows
+  ("Browse … Slide Show").
+
+5. Selection support
+
+Add Selection::selectRows(const QList<int> &sfRows, bool add). It builds one
+QItemSelection and emits once, not once per row, because of the dataChanged/selection
+fan-out cost. Then it sets current to the first row.
+
+6. Docs, tests, build
+
+- notes/Documentation.txt, in the same pass:
+  - add a "Map Module" section covering the engine choice and why, the tile-provider
+    setting, attribution, clustering, refresh triggers, and why there's no Qt Location
+    or Google;
+  - update the UI-model table and the Module dock text;
+  - sync the ToC.
+- Help/shortcutsform.ui: no change, since there are no new keys.
+- tests/unit/tst_geo.cpp:
+  - parseCoord on real GPS::decode output strings (N/S/E/W, zero minutes, "Error",
+    empty);
+  - Mercator round-trip;
+  - tileRange at the antimeridian;
+  - cluster() counts.
+  - Register it in tests/CMakeLists.txt.
+- CMakeLists.txt: add Utilities/geo.* and Views/Map/*. The winnow64.pro file is
+  legacy and is skipped.
+- Before hand-back: run -fsyntax-only on each edited .cpp via compile_commands.json,
+  and run moc on every edited Q_OBJECT header (mainwindow.h, mapview.h,
+  maptilesource.h).
+
+Open item (needs you, not code)
+
+Pick a tile provider and create an account/key. Winnow is distributed free, and several
+providers' free tiers are non-commercial only, so check the terms. For v1 the key is a
+user preference, so nothing is baked into the binary.
+
+Verification
+
+1. ctest --test-dir build/<preset> --output-on-failure: tst_geo passes.
+2. In-app, on a folder with geotagged JPGs/HEICs plus some untagged images:
+   - The Map button lights and the map fills the centre.
+   - Pins sit where the images were taken; check a couple against the coordinates in
+     InfoView.
+   - The count line says "n of m".
+3. Interaction:
+   - Zoom with the wheel, then with a trackpad pinch; clusters split and merge.
+   - Hovering a pin shows the thumbnail and the arrows step through the images.
+   - Clicking a pin selects the images in the filmstrip; Cmd-click adds to the selection.
+   - Arrow-keying the filmstrip pans the map to the current image.
+4. Filter: apply a rating filter and the pins update.
+5. No provider set: the inline message and button show. Airplane mode: cached tiles
+   still draw, and missing ones show the scaled parent tile or a blank.
+6. Workspace: Window > Workspace > User override > Map captures and restores the
+   layout. Quit while in Map, relaunch, and it comes back in Map with the map showing.
+7. Check on Windows too: tile cache path, the wheel versus trackpad split, and the pinch
+   gesture, which is absent there (the wheel zooms).
+
+Later phases (not in v1)
+
+- Geotag by dragging thumbnails onto the map, and moving or removing a pin. Write GPS to
+  the XMP sidecar using the Metadata::writeOrientation pattern (sidecar, or ExifTool
+  when G::modifySourceFiles is on). Register exif:GPSLatitude/GPSLongitude in
+  Xmp::initialize and read them in parseSidecar.
+- GPX tracklog: draw the track and auto-tag by capture time with a time-zone offset.
+- Offline reverse geocoding (a GeoNames cities table) into City/State/Country, and a
+  Location filter category (Visible on map / Tagged / Untagged).
+- Saved Locations with a radius and Private (strip GPS on export).
+- Numeric lat/lon columns in the catalog (an additive schema bump) for catalog-wide
+  spatial queries.
+

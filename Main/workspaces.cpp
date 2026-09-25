@@ -1188,7 +1188,8 @@ const QStringList &MW::workflowKeys()
     Source panel), and LIBRARY is the catalogue plus the keywords, which is not what this
     layout is about.  MW::migrateWorkflowKey moves an existing group across.
 */
-    static const QStringList keys{"Source", "Develop", "Keywords", "Embellish", "SlideShow"};
+    static const QStringList keys{"Source", "Develop", "Keywords", "Embellish", "SlideShow",
+                                  "Map"};
     return keys;
 }
 
@@ -1198,7 +1199,8 @@ QStringList MW::workflowNames()
         every workflow works on. The key stays "Source" (see workflowKeys), so this is a
         display rename only. The name also keys the session-only front-tab memory
         (MW::rememberDockTabSelection), which is why the rename costs nothing there. */
-    return {tr("Browse"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show")};
+    return {tr("Browse"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show"),
+            tr("Map")};
 }
 
 void MW::migrateWorkflowKey(const QString &from, const QString &to)
@@ -1354,6 +1356,10 @@ void MW::invokeWorkflowWorkspace(int wf)
         invokeWorkflowDefault(wf);
     currentWorkflow = wf;
     syncWorkflowSwitcher();
+    /* A workspace carries a Browse view (Loupe, Grid ...) and invokeWorkspace just put
+       it up; the Map workflow's page is the map instead. Here rather than in
+       invokeMapWorkflow so Reset Layout and a resumed session get the map too. */
+    if (wf == WfMap) showMapPage();
 }
 
 void MW::invokeWorkflowDefault(int wf)
@@ -1542,7 +1548,8 @@ void MW::syncWorkflowWorkspaceMenus()
     SOURCE    Library | Folders.  The Source panel's toggle, Ctrl+Shift+L / Ctrl+Shift+F,
               View > Library / Folders.  Every workflow works on the current source and
               selection, so switching source never changes the workflow.
-    WORKFLOW  Browse, Develop, Keywords, Embellish.  The status-bar switcher, D and K.
+    WORKFLOW  Browse, Develop, Keywords, Embellish, Slide Show, Map.  The Module dock, D
+              and K.
               The only setting that owns a workspace (panel layout).
     VIEW      Loupe, Grid, Table, Compare.  E / G / T / C.  These are the BROWSE views:
               a view key always lands in Browse (MW::requestView).
@@ -1603,6 +1610,62 @@ void MW::invokeEmbellishWorkflow()
     if (G::isLogger) G::log("MW::invokeEmbellishWorkflow");
     setOperationMode(G::OperationMode::Preview);
     invokeWorkflowWorkspace(WfEmbellish);
+}
+
+void MW::invokeSlideShowWorkflow()
+{
+/*
+    The Slide Show workflow layout, the way Embellish applies its own. Only the layout:
+    the show itself is started by slideShowAction (S).
+*/
+    if (G::isLogger) G::log("MW::invokeSlideShowWorkflow");
+    setOperationMode(G::OperationMode::Preview);
+    invokeWorkflowWorkspace(WfSlideShow);
+}
+
+void MW::invokeMapWorkflow()
+{
+/*
+    The Map module: its workflow layout, with the map as the central page (put up by
+    invokeWorkflowWorkspace). Leaves Develop first, like every Preview workflow.
+*/
+    if (G::isLogger) G::log("MW::invokeMapWorkflow");
+    setOperationMode(G::OperationMode::Preview);
+    invokeWorkflowWorkspace(WfMap);
+}
+
+void MW::showMapPage()
+{
+/*
+    Put the map up as the central page. G::mode is left as the Browse view it was (it
+    is Loupe / Grid / Table / Compare everywhere else, compared in some fifty places);
+    the paths that would otherwise take the page back on their own -- a selection
+    change, an image arriving in the cache, a re-sort -- check inMapModule instead.
+*/
+    if (G::isLogger) G::log("MW::showMapPage");
+    if (!mapView) return;
+    centralLayout->setCurrentIndex(MapTab);
+}
+
+bool MW::inMapModule() const
+{
+/*
+    The WORKFLOW, not the page: while a folder loads the page is the message page, and
+    MW::fileSelectionChange uses this to put the map back up afterwards. Every way out
+    of Map changes currentWorkflow (invokeWorkspace, invokeWorkflowWorkspace).
+*/
+    return mapView && currentWorkflow == WfMap;
+}
+
+void MW::applyMapProvider()
+{
+    if (!mapView) return;
+    MapTileSource::Provider p;
+    p.urlTemplate = mapTileUrl.trimmed();
+    p.apiKey = mapTileKey.trimmed();
+    p.attribution = mapAttribution.trimmed();
+    p.maxZoom = std::clamp(mapMaxZoom, 1, 22);
+    mapView->setProvider(p);
 }
 
 void MW::resetLayout()

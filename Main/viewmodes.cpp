@@ -37,6 +37,16 @@ void MW::loupeDisplay(const QString src)
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::loupeDisplay", "src = " + src);
 
+    /*  FROM THE MAP MODULE a view is a Browse view (see "THE UI MODEL" in
+        workspaces.cpp): leave through requestView so the workflow, its layout and the
+        lit Module button change with the page. Without this Enter or a double-click
+        put up the loupe with the workflow still Map, and the next selection change put
+        the map back. requestView re-enters here with the workflow already Browse. */
+    if (inMapModule()) {
+        requestView(CvLoupe);
+        return;
+    }
+
     /*  ALREADY IN LOUPE: A NEW IMAGE, NOT A MODE SWITCH.
 
         MW::fileSelectionChange calls this for every selection made in Loupe, and it
@@ -159,6 +169,10 @@ void MW::gridDisplay()
     QListView has finished painting itself.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::gridDisplay");
+    if (inMapModule()) {                // see loupeDisplay
+        requestView(CvGrid);
+        return;
+    }
 
     /*
     qDebug() << "MW::gridDisplay"
@@ -258,6 +272,10 @@ void MW::gridDisplay()
 void MW::tableDisplay()
 {
     if (G::isLogger || G::isFlowLogger) G::log(" MW::tableDisplay");
+    if (inMapModule()) {                // see loupeDisplay
+        requestView(CvTable);
+        return;
+    }
     // if (G::isLogger || G::isFlowLogger)
         // qDebug() << "MW::tableDisplay";
 
@@ -359,6 +377,10 @@ void MW::tableDisplay()
 void MW::compareDisplay()
 {
     if (G::isLogger) G::log("MW::compareDisplay");
+    if (inMapModule()) {                // see loupeDisplay
+        requestView(CvCompare);
+        return;
+    }
 
     if (embelProperties->templateId > 0) {
         QString msg = "Only loupe mode is available while the Embellish Editor is active.<br>"

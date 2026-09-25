@@ -132,6 +132,11 @@ void MW::writeSettings()
     settings->setValue("slideShowDelay", slideShowDelay);
     settings->setValue("isSlideShowRandom", isSlideShowRandom);
     settings->setValue("isSlideShowWrap", isSlideShowWrap);
+    // map (the Map module's tile provider)
+    settings->setValue("mapTileUrl", mapTileUrl);
+    settings->setValue("mapTileKey", mapTileKey);
+    settings->setValue("mapAttribution", mapAttribution);
+    settings->setValue("mapMaxZoom", mapMaxZoom);
 
     // image cache (see preferences.cpp)
     // settings->setValue("autoMaxMB", imageCache->getAutoMaxMB());
@@ -734,6 +739,12 @@ bool MW::loadSettings()
     if (settings->contains("slideShowDelay")) slideShowDelay = settings->value("slideShowDelay").toInt();
     if (settings->contains("isSlideShowRandom")) isSlideShowRandom = settings->value("isSlideShowRandom").toBool();
     if (settings->contains("isSlideShowWrap")) isSlideShowWrap = settings->value("isSlideShowWrap").toBool();
+
+    // map
+    mapTileUrl = settings->value("mapTileUrl").toString();
+    mapTileKey = settings->value("mapTileKey").toString();
+    mapAttribution = settings->value("mapAttribution").toString();
+    mapMaxZoom = settings->value("mapMaxZoom", 19).toInt();
 
     // image cache (see initialize.cpp MW::createImageCache)
 

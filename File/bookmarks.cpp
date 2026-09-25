@@ -1,5 +1,6 @@
 #include "File/bookmarks.h"
 #include "Utilities/fileops.h"
+#include "Utilities/foldertree.h"
 #include <QSet>
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
@@ -10,10 +11,12 @@ A QStringList of paths to bookmarked folders is displayed as top level items
 in a QWidgetTree in column 0.  Column 1 holds a count of the readable image files
 in the folder.
 
-When the user mouse clicks on one of the folders the itemClicked signal is sent
-to the MW slot bookmarkClicked along with the tooltip, which holds the path
-string.  Since the user could also click in the count column, it's tooltip is
-also the path string.
+When the user mouse clicks on one of the folders the itemPressed signal is sent
+to the MW slot bookmarkClicked, which reads the path from PathRole (pathOf).
+
+Bookmarks follow the source (G::scope). In Folders a click loads the folder; in the
+Library it filters the Library to the folder, and the counts are the Library's. See
+setLibraryMode.
 
 Bookmarks can be added via the context menu in FSTree or the folders can be
 dragged from the FSTree to Bookmarks.  Folders or files can also be dragged
@@ -97,14 +100,98 @@ void BookMarks::addBookmark(QString itemPath)
     QTreeWidgetItem *item = new QTreeWidgetItem(this);
     item->setText(0, QFileInfo(itemPath).fileName());
     item->setIcon(0, QIcon(":/images/bookmarks.png"));
-    item->setToolTip(0, itemPath);
+    item->setData(0, PathRole, itemPath);
     insertTopLevelItem(0, item);
-    dir->setPath(itemPath);
-    item->setToolTip(1, itemPath);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
-    if (!QFileInfo::exists(itemPath)) {
-        item->setForeground(0, QBrush(QColor(G::disabledColor)));
+    styleItem(item);
+}
+
+QString BookMarks::pathOf(const QTreeWidgetItem *item)
+{
+    return item ? item->data(0, PathRole).toString() : QString();
+}
+
+void BookMarks::styleItem(QTreeWidgetItem *item)
+{
+/*
+    Dimmed, with the reason in the tooltip, when the bookmark cannot do what a click on it
+    does in the current source: the folder is gone (or its volume is not mounted), or --
+    in the Library -- the Library holds nothing there. Such a Library bookmark still
+    works: the click opens the folder in Folders instead.
+*/
+    const QString path = pathOf(item);
+    QString tip = QDir::toNativeSeparators(path);
+    bool dim = false;
+    if (!QFileInfo::exists(path)) {
+        dim = true;
+        tip += tr("\n\nNot available: the folder does not exist or its volume is not "
+                  "mounted.");
     }
+    else if (libraryMode && libraryKnown && libraryFolders(path).isEmpty()) {
+        dim = true;
+        tip += tr("\n\nNot in the Library. Click to open it in Folders.");
+    }
+    item->setToolTip(0, tip);
+    item->setToolTip(1, tip);
+    if (dim) item->setForeground(0, QBrush(QColor(G::disabledColor)));
+    else     item->setData(0, Qt::ForegroundRole, QVariant());
+}
+
+void BookMarks::setLibraryMode(bool on)
+{
+    if (G::isLogger) G::log("BookMarks::setLibraryMode", on ? "Library" : "Folders");
+    if (on == libraryMode) return;
+    libraryMode = on;
+    updateCount();
+    // the highlight belonged to the other source; each source re-asserts its own
+    selectionModel()->clear();
+}
+
+void BookMarks::setLibraryFolders(const QStringList &anchors,
+                                  const QMap<QString, int> &perFolder)
+{
+    if (G::isLogger) G::log("BookMarks::setLibraryFolders");
+    libraryAnchors = anchors;
+    libraryTotals = FolderTree::expandCounts(perFolder);
+    libraryKnown = true;
+    if (libraryMode) updateCount();
+}
+
+QStringList BookMarks::libraryFolders(const QString &path) const
+{
+/*
+    Folders the Filters Folders category (and LibTree) can hold: the tree starts at the
+    Library's include folders, so a bookmark ABOVE them asks for those beneath it -- the
+    same thing LibTree's catalog row asks for -- rather than for a folder the filter has
+    no row for.
+*/
+    if (path.isEmpty()) return {};
+    for (const QString &a : libraryAnchors)
+        if (FolderTree::isAtOrUnder(path, a))
+            return libraryTotals.value(path) > 0 ? QStringList{path} : QStringList();
+    QStringList under;
+    for (const QString &a : libraryAnchors)
+        if (FolderTree::isAtOrUnder(a, path) && libraryTotals.value(a) > 0) under << a;
+    return under;
+}
+
+void BookMarks::syncFromLibraryFilter(const QStringList &includes,
+                                      const QStringList &excludes)
+{
+    if (!libraryMode) return;
+    const QSet<QString> inc(includes.begin(), includes.end());
+    if (excludes.isEmpty() && !inc.isEmpty()) {
+        QTreeWidgetItemIterator it(this);
+        while (*it) {
+            const QStringList f = libraryFolders(pathOf(*it));
+            if (!f.isEmpty() && QSet<QString>(f.begin(), f.end()) == inc) {
+                if (currentItem() != *it) setCurrentItem(*it);
+                return;
+            }
+            ++it;
+        }
+    }
+    selectionModel()->clear();
 }
 
 void BookMarks::saveBookmarks(QSettings *setting)
@@ -131,39 +218,47 @@ void BookMarks::updateBookmarks()
     updateCount();
 }
 
+int BookMarks::diskCount(const QString &path)
+{
+/*
+    The readable images in the folder on disk, a raw+jpg pair counting once when
+    combineRawJpg.
+*/
+    int count = 0;
+    dir->setPath(path);
+    const QFileInfoList list = dir->entryInfoList();
+    for (const QFileInfo &info : list) {
+        if (!info.size()) continue;
+        if (combineRawJpg && metadata->hasJpg.contains(info.suffix().toLower())) {
+            const QString jpgPath = info.path() + "/" + info.baseName() + ".jpg";
+            if (list.contains(QFileInfo(jpgPath))) continue;
+        }
+        count++;
+    }
+    return count;
+}
+
 void BookMarks::updateCount()
 {
 /*
-     Update the image count for all folders in BookMarks
+     Update the image count for all folders in BookMarks: the folder on disk in Folders,
+     the Library's images at or beneath it in the Library -- the number the LibTree row
+     for that folder shows. Blank in the Library until its folders have been read.
 */
     if (G::isLogger) G::log("BookMarks::count");
      QTreeWidgetItemIterator it(this);
      while (*it) {
-         QString path = (*it)->toolTip(0);
-         int count = 0;
-         dir->setPath(path);
-         QListIterator<QFileInfo> i(dir->entryInfoList());
-         if (combineRawJpg) {
-             while (i.hasNext()) {
-                 QFileInfo info = i.next();
-                 if (!info.size()) continue;
-                 QString fPath = info.path();
-                 QString baseName = info.baseName();
-                 QString suffix = info.suffix().toLower();
-                 QString jpgPath = fPath + "/" + baseName + ".jpg";
-                 if (metadata->hasJpg.contains(suffix)) {
-                     if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
-                 }
-                 count++;
-             }
+         const QString path = pathOf(*it);
+         QString text;
+         if (!libraryMode) text = QString::number(diskCount(path));
+         else if (libraryKnown) {
+             int n = 0;
+             const QStringList f = libraryFolders(path);
+             for (const QString &p : f) n += libraryTotals.value(p);
+             text = QString::number(n);
          }
-         else {
-             while (i.hasNext()) {
-                 QFileInfo info = i.next();
-                 if (info.size()) count++;
-             }
-         }
-         (*it)->setText(1, QString::number(count));
+         (*it)->setText(1, text);
+         styleItem(*it);
          ++it;
      }
 }
@@ -175,33 +270,11 @@ void BookMarks::updateCount(QString dPath)
     Is this being used? 2025-06-30
 */
      if (G::isLogger) G::log("BookMarks::count(fPath)");
+     if (libraryMode) { updateCount(); return; }
      QTreeWidgetItemIterator it(this);
      while (*it) {
-         QString path = (*it)->toolTip(0);
-         if (path == dPath) {
-             int count = 0;
-             dir->setPath(path);
-             QListIterator<QFileInfo> i(dir->entryInfoList());
-             if (combineRawJpg) {
-                 while (i.hasNext()) {
-                     QFileInfo info = i.next();
-                     QString fPath = info.path();
-                     QString baseName = info.baseName();
-                     QString suffix = info.suffix().toLower();
-                     QString jpgPath = fPath + "/" + baseName + ".jpg";
-                     if (metadata->hasJpg.contains(suffix)) {
-                         if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
-                     }
-                     count++;
-                 }
-             }
-             else {
-                 while (i.hasNext()) {
-                     QFileInfo info = i.next();
-                     if (info.size()) count++;
-                 }
-             }
-             (*it)->setText(1, QString::number(count));
+         if (pathOf(*it) == dPath) {
+             (*it)->setText(1, QString::number(diskCount(dPath)));
              return;
          }
          ++it;
@@ -219,7 +292,7 @@ QStringList BookMarks::bookmarksWithImages()
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->text(1).toInt() >= 2) {
-            paths << (*it)->toolTip(0);
+            paths << pathOf(*it);
         }
         ++it;
     }
@@ -241,20 +314,24 @@ void BookMarks::select(QString fPath)
 
     // qDebug() << "BookMarks::select" << fPath;
 
-    // ignore if already selected path (in tooltip)
+    // the Library's highlight follows its folder filter (syncFromLibraryFilter)
+    if (libraryMode) return;
+
+    // ignore if already selected path
     if (selectedItems().size())
-        if (fPath == selectedItems().at(0)->toolTip(0)) return;
+        if (fPath == pathOf(selectedItems().at(0))) return;
 
+    /*  Matched by PATH: two bookmarks can share a folder name ("2024" on two drives),
+        and matching the name selected whichever came first. */
     if (bookmarkPaths.contains(fPath)) {
-        QList <QTreeWidgetItem *> items;
-        items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
-        if (items.length() > 0) {
-            // qDebug() << "BookMarks::select" << fPath;
-            setCurrentItem(items[0]);
-            setCurrentIndex(selectedIndexes().at(0));
-            //count();  // big slowdown
+        QTreeWidgetItemIterator it(this);
+        while (*it) {
+            if (pathOf(*it) == fPath) {
+                setCurrentItem(*it);
+                return;
+            }
+            ++it;
         }
-
     }
     else {
         selectionModel()->clear();
@@ -364,7 +441,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         QModelIndex idx = indexAt(event->pos());
         QModelIndex idx0 = idx.sibling(idx.row(), 0);
         rightClickItem = itemAt(event->pos());
-        rightMouseClickPath = idx0.data(Qt::ToolTipRole).toString();
+        rightMouseClickPath = idx0.data(PathRole).toString();
         return;
     }
 
@@ -372,14 +449,15 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     if (event->modifiers() & Utilities::modifiersMask) {
         QString msg =
             "Modifier keys for multi-folder selection<br>"
-            "only works in the Folders tree of the Source panel."
+            "only work in the Source panel."
             ;
         G::popup->showPopup(msg, 2000);
         if (G::useProcessEvents) qApp->processEvents();
     }
 
     /* trigger itemPressed event, connected to MW::bookmarkClicked slot, which updates
-       FSTree, which signals MW::folderSelectionChange  */
+       FSTree, which signals MW::folderSelectionChange -- or, in the Library, filters
+       the Library to the bookmark  */
     QTreeWidget::mousePressEvent(event);
 }
 
@@ -407,9 +485,9 @@ void BookMarks::mouseMoveEvent(QMouseEvent *event)
 void BookMarks::removeBookmark()
 {
     if (G::isLogger)
-        G::log("BookMarks::removeBookmark", rightClickItem->toolTip(0));
+        G::log("BookMarks::removeBookmark", pathOf(rightClickItem));
     if (rightClickItem) {
-        bookmarkPaths.remove(rightClickItem->toolTip(0));
+        bookmarkPaths.remove(pathOf(rightClickItem));
         reloadBookmarks();
     }
 }
@@ -491,7 +569,8 @@ void BookMarks::dropEvent(QDropEvent *event)
              << mimeData->hasUrls() << mimeData->urls();
     //*/
 
-    QString dropDir = indexAt(event->pos()).data(Qt::ToolTipRole).toString();
+    const QModelIndex dropIdx = indexAt(event->position().toPoint());
+    QString dropDir = dropIdx.sibling(dropIdx.row(), 0).data(PathRole).toString();
 
     QString dPath;      // path to folder
     QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());

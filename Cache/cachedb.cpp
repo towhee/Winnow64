@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 14;
+constexpr int kSchemaVersion = 15;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -390,7 +390,9 @@ bool rebuildPathKeyedKeywords(QSqlDatabase &db, bool seedVocab)
                 insKw.addBindValue(p);
                 insKw.addBindValue(pathFold);
                 if (!insKw.exec()) return false;
-                id = insKw.lastInsertId().toLongLong();
+                /* Not lastInsertId alone: after DO NOTHING it reports the previous
+                   insert's rowid. See Catalog::keywordIdLocked. */
+                id = insKw.numRowsAffected() > 0 ? insKw.lastInsertId().toLongLong() : 0;
                 if (!id) {
                     /* DO NOTHING fired -- the row exists from an earlier image. */
                     selKw.addBindValue(pathFold);
@@ -446,7 +448,17 @@ bool rebuildPathKeyedKeywords(QSqlDatabase &db, bool seedVocab)
         insVocab.addBindValue(parentId);
         if (!insVocab.exec()) return false;
 
-        qint64 id = insVocab.lastInsertId().toLongLong();
+        /*  A path the vocabulary already holds is refused by DO NOTHING, and lastInsertId
+            would then hand back the PREVIOUS row's id -- parenting this path's children
+            under the wrong node. Look the existing row up instead. */
+        qint64 id = insVocab.numRowsAffected() > 0
+                        ? insVocab.lastInsertId().toLongLong() : 0;
+        if (!id) {
+            QSqlQuery sel(db);
+            sel.prepare("SELECT id FROM vocab WHERE pathfold = ?");
+            sel.addBindValue(pathFold);
+            if (sel.exec() && sel.next()) id = sel.value(0).toLongLong();
+        }
         if (id) vocabIds.insert(pathFold, id);
     }
 
@@ -1193,10 +1205,9 @@ bool CacheDb::migrate(QSqlDatabase &db)
         Catalog::commit skips the row -- a rescan is precisely the thing that cannot fix
         it, and the user reported exactly that.
 
-        THE ROOT CAUSE IS NOT ESTABLISHED. This repairs the data; it does not claim to
-        know how the data got that way, and if the links drift again that is worth knowing
-        rather than papering over -- see MW::verifyKeywordMoveCounts, which reports a
-        disagreement between the two counts at the moment it appears.
+        THE ROOT CAUSE WAS NOT ESTABLISHED HERE, and the links did drift again. It was
+        found at schema 15: Catalog::keywordIdLocked trusted lastInsertId() after an
+        ON CONFLICT DO NOTHING. See the version < 15 block.
 
         seedVocab IS FALSE. See rebuildPathKeyedKeywords: seeding is additive and would
         push every observed path back into the vocabulary the user curates, including the
@@ -1308,6 +1319,52 @@ bool CacheDb::migrate(QSqlDatabase &db)
                 db.rollback();
                 return false;
             }
+        }
+    }
+
+    if (version < 15) {
+    /*
+        THE FIFTH DATA REPAIR, and schema 12's again -- this time with the cause found.
+
+        Catalog::keywordIdLocked inserted a keyword with ON CONFLICT DO NOTHING and read
+        the new id from lastInsertId(). When the keyword already existed that is a
+        successful exec() that inserted nothing, and sqlite3_last_insert_rowid() still
+        held the connection's previous insert: the previous image's FTS row, whose rowid
+        is that image's id. So every existing keyword's first use in a session linked the
+        image to whatever keyword shared the previous image's id, and the memo kept the
+        wrong id for the session. Schema 14 cleared every stamp, the scanner re-committed
+        the whole library through that path, and on the author's 155k-image index 99% of
+        the images with keywords carried links that disagreed with their own text (about
+        457,000 missing, 47,000 belonging to other keywords). The Keywords dock and every
+        keyword search through the index read those links.
+
+        The writer is fixed, so this rebuild stays repaired. Same statements and the same
+        seedVocab = false as 12, for the same reasons.
+    */
+        const char *ddl[] = {
+            "CREATE TEMP TABLE kw_carry AS"
+            " SELECT ik.image_id AS image_id, k.name AS name"
+            " FROM image_keyword ik"
+            " JOIN keyword k ON k.id = ik.keyword_id"
+            " JOIN image i   ON i.id = ik.image_id"
+            " WHERE i.keywordpaths = \'\' AND i.keywords_literal = \'\'",
+            "DELETE FROM keyword_context",
+            "DELETE FROM image_keyword",
+            "DELETE FROM keyword",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
+        }
+        if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ false)) {
+            db.rollback();
+            return false;
+        }
+        if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            db.rollback();
+            return false;
         }
     }
 

@@ -39,6 +39,7 @@
 #include "Views/tableview.h"
 #include "Views/imageview.h"
 #include "Views/videoview.h"
+#include "Views/Map/mapview.h"
 #include "Views/infoview.h"
 #include "Views/catalogview.h"
 #include "Views/filterpanel.h"
@@ -326,8 +327,9 @@ public:
 
         A layout per workflow, invoked by the workflow's key or its button in the
         status-bar workflow switcher: E / G / T / C (Browse, whose key is "Source"),
-        D (Develop) and K (Keywords).  Embellish has a switcher button but no key yet;
-        Slide Show is reached from its own action.
+        D (Develop) and K (Keywords).  Embellish, Slide Show and Map have switcher
+        buttons but no key yet (S starts and stops the slide show itself, not its
+        layout).  Map also owns a central page, the map (MW::showMapPage).
 
         THE UI MODEL.  Three settings, each changed only by its own controls: the SOURCE
         (Library | Folders, the Source panel toggle), the WORKFLOW (the switcher and the
@@ -343,7 +345,8 @@ public:
 
         To add a workflow: append to the enum before WfCount, add a row to
         MW::workflowKeys / MW::workflowNames, and capture a default layout. */
-    enum Workflow {WfSource, WfDevelop, WfKeywords, WfEmbellish, WfSlideShow, WfCount};
+    enum Workflow {WfSource, WfDevelop, WfKeywords, WfEmbellish, WfSlideShow, WfMap,
+                   WfCount};
     /* Stable keys for JSON and QSettings (never translated) and the menu names
        (translated).  Both are indexed by Workflow.  The keys are not renamed lightly
        -- an existing profile and every committed defaults.json are keyed on them; the
@@ -488,6 +491,14 @@ public:
     bool isSlideShowWrap = true;
     QStack<QString> *slideshowRandomHistoryStack;
 
+    /* preferences: map. The tile provider behind the Map module. Winnow ships none --
+       see MapTileSource -- so all of it is the user's, from a provider they signed up
+       with. The attribution is drawn on the map, as providers' terms require. */
+    QString mapTileUrl;
+    QString mapTileKey;
+    QString mapAttribution;
+    int mapMaxZoom = 19;
+
     // preferences: cache
     int cacheBarProgressWidth;
 
@@ -509,7 +520,8 @@ public:
         StartTab,       // 5
         MessageTab,     // 6
         BlankTab,       // 7
-        EmbelTab        // 8    rgh req'd? for coord help?
+        MapTab,         // 8    the Map module (MW::showMapPage)
+        EmbelTab        // 9    rgh req'd? for coord help?
     };
 
     enum Tog {
@@ -810,6 +822,11 @@ public slots:
     void requestView(int view);
     void invokeBrowseWorkflow();
     void invokeEmbellishWorkflow();
+    void invokeSlideShowWorkflow();
+    void invokeMapWorkflow();
+    void showMapPage();
+    bool inMapModule() const;
+    void applyMapProvider();
     void resetLayout();
     void syncWorkflowSwitcher();
     void styleWorkflowSwitcher();       // re-applied by setBackgroundShade
@@ -1689,7 +1706,7 @@ private:
     QList<QAction *> workspaceActions;
     /*  Workflow workspaces (see the Workflow enum).  The Default branch is Rory only --
         its submenu action is hidden unless G::isRory -- while User override is always
-        shown.  Both list the same five workflows. */
+        shown.  Both list the same six workflows. */
     QMenu *workspaceDefaultMenu = nullptr;
     QMenu *workspaceOverrideMenu = nullptr;
     QAction *workspaceDefaultMenuAction = nullptr;
@@ -1701,6 +1718,8 @@ private:
     QAction *keywordsWorkspaceAction = nullptr;     // "K"
     QAction *browseWorkflowAction = nullptr;        // Browse, in the view it was last in
     QAction *embellishWorkspaceAction = nullptr;    // no key yet
+    QAction *slideShowWorkspaceAction = nullptr;    // the layout; S starts the show
+    QAction *mapWorkspaceAction = nullptr;          // the Map module; no key yet
     QAction *resetLayoutAction = nullptr;           // reapply the workflow's layout
     QAction *showLibrarySourceAction = nullptr;     // Source = Library
     QAction *showFoldersSourceAction = nullptr;     // Source = Folders
@@ -1842,6 +1861,7 @@ private:
     QScrollArea *welcome;       // welcome screen for first time use
     QWidget *messageView;
     QWidget *blankView = new QWidget;
+    MapView *mapView = nullptr;         // the Map module's central page (MapTab)
     Ui::message msg;
     QLineEdit *filterBar;
     QProgressBar *progressBar;
@@ -1897,7 +1917,7 @@ private:
         (shipped off, like catalogDock -- the left group is already four tabs deep), so
         every use is null-guarded. */
     DockWidget *keywordsDock = nullptr;
-    /*  THE MODULE DOCK: the workflow switcher (Browse | Develop | Keywords | Embellish)
+    /*  THE MODULE DOCK: the workflow switcher (Browse | Develop | ... | Map)
         across the top of the window. No title bar, not movable, not floatable, top area
         only; MW::placeShowHideBars pins it there. See MW::createModuleDock. */
     DockWidget *moduleDock = nullptr;
@@ -2629,9 +2649,9 @@ private:
     void createCatalogDock();
     void createKeywordsDock();
     void createModuleDock();
-    /*  Build one row of workflow buttons (Browse, Develop, Keywords, Embellish) into
-        `layout`, filling `btns` (indexed by Workflow) and, when `separators` is given,
-        putting a " | " label between them. Shared by the Module dock and the (hidden)
+    /*  Build one row of workflow buttons (Browse ... Map) into `layout`, filling
+        `btns` (indexed by Workflow) and, when `separators` is given, putting a " | "
+        label between them. Shared by the Module dock and the (hidden)
         status-bar switcher so both trigger the same actions. */
     void buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
                               QList<QLabel *> *separators);

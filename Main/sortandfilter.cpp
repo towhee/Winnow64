@@ -654,7 +654,7 @@ void MW::sortChange(QString source)
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
 
-    centralLayout->setCurrentIndex(prevCentralView);
+    if (!inMapModule()) centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", "MW::sortChange");
 
     /* sync image cache with datamodel filtered proxy unless sort has been triggered by a
