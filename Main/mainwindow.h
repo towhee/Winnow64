@@ -2757,6 +2757,11 @@ private:
     void getSubfolders(QString fPath);
     QString getPosition();
     QString getZoom();
+    /*  MW::isPreviewCacheFolderLoaded's answer and the dm->folderListGen it was for.
+        Here, not beside that function: it is declared under slots:, and a data member
+        there fails AUTOMOC. */
+    mutable bool previewCacheLoadedAnswer = false;
+    mutable quint64 previewCacheLoadedGen = ~quint64(0);
     QString getPicked();
     /*  getPicked's count over the FILTERED rows, and what it was counted against. See
         the definition: with a filter active the count can only be had by a walk, so it

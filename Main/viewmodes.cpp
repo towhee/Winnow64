@@ -36,6 +36,33 @@ void MW::loupeDisplay(const QString src)
                     ; //*/
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::loupeDisplay", "src = " + src);
+
+    /*  ALREADY IN LOUPE: A NEW IMAGE, NOT A MODE SWITCH.
+
+        MW::fileSelectionChange calls this for every selection made in Loupe, and it
+        used to run the whole switch below each time: filters->enable (a walk of the
+        filter tree), sel->save/recover (a ClearAndSelect that re-emits the selection
+        just made), setThumbParameters (whose setSpacing makes QListView schedule a
+        relayout, which the next scrollToRow's visualRect then forces over EVERY row),
+        and enableSelectionDependentMenus a second time. At 148,567 rows that was ~20
+        of a ~30 ms keypress, sampled -- the relayout alone ~12 ms.
+
+        None of it changes when the mode has not: the tree is only disabled by Compare
+        (a mode switch), the selection is the one just made, the thumb parameters
+        change only through a mode switch, a workspace or a preference (all of which
+        call this with their own src), and fileSelectionChange gated the menus a
+        moment ago. What does follow the IMAGE is kept: the status bar, the
+        classification badge, the thumb strip's scroll, and the no-images message. */
+    if (src == "MW::fileSelectionChange" && G::mode == "Loupe" && prevMode == "Loupe"
+        && centralLayout->currentIndex() == LoupeTab)
+    {
+        updateStatus(true, "", "MW::loupeDisplay");
+        updateClassification();
+        thumbView->scrollToRow(dm->scrollToIcon, "MW::loupeDisplay");
+        showCentralMessageIfNoImages();
+        return;
+    }
+
     /* Capture the shared scroll anchor before any view is shown/hidden. Showing a view
        emits scroll signals from its stale position, whose handlers overwrite
        dm->scrollToIcon; using the captured value keeps the new view's scroll in sync. */

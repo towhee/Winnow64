@@ -1112,7 +1112,16 @@ void Filters::styleFilterItem(QTreeWidgetItem *item)
     other fact exactly when they need it -- while resolving the ambiguity.
 */
     if (!item || !item->parent()) return;
+    applyItemStyle(item);
+}
 
+void Filters::applyItemStyle(QTreeWidgetItem *item)
+{
+/*
+    styleFilterItem's work without its "not a category header" test, for a caller that
+    styles an item BEFORE attaching it: addFolderItems builds its nodes detached so that
+    setting them up emits nothing, and a detached top-level node has no parent yet.
+*/
     const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
     const bool duplicate = item->data(0, DuplicateRole).toBool();
     const bool unfiled = item->data(0, UnfiledRole).toBool();
@@ -2458,12 +2467,31 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
     const QVector<FolderTree::Node> nodes =
         FolderTree::hierarchy(folderCounts.keys(), folderAnchors);
 
+    /*  BUILT DETACHED, ATTACHED ONCE PER PARENT. Created attached, every node cost an
+        insertChild (begin/endInsertRows) and each of its setters a dataChanged through
+        the tree model -- ~50,000 signals for the 8,400 folders of a 148,567-image
+        Library, most of the 542 ms applyOps in the second post-load stall (sampled). An
+        item not yet in a tree emits nothing. So a node whose parent is ALSO new is built
+        under it, and the nodes whose parent is already attached (the category, or a
+        kept node) are collected and handed to that parent in one addChildren. Order is
+        unchanged: nodes arrive parent first with siblings in order, and addChildren
+        appends in list order. */
+    QSet<QTreeWidgetItem *> created;
+    QList<QTreeWidgetItem *> attachOrder;               // attached parents, first seen
+    QHash<QTreeWidgetItem *, QList<QTreeWidgetItem *>> pending;
     for (const FolderTree::Node &n : nodes) {
-        if (G::stop) return;
+        if (G::stop) break;                                 // attach what was built
         if (byPath.contains(n.path)) continue;
         QTreeWidgetItem *parent = n.parent.isEmpty()
                                       ? category : byPath.value(n.parent, category);
-        QTreeWidgetItem *node = new QTreeWidgetItem(parent);
+        const bool parentIsNew = created.contains(parent);
+        QTreeWidgetItem *node = parentIsNew ? new QTreeWidgetItem(parent)
+                                            : new QTreeWidgetItem();
+        if (!parentIsNew) {
+            if (!pending.contains(parent)) attachOrder << parent;
+            pending[parent] << node;
+        }
+        created.insert(node);
         node->setText(0, n.label);
         node->setData(1, Qt::EditRole, n.path);
         node->setCheckState(0, Qt::Unchecked);
@@ -2475,9 +2503,10 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
         node->setToolTip(0, QString("%1\n\nClick to include this folder and every folder "
                                     "in it. Opt+click to exclude.")
                                 .arg(QDir::toNativeSeparators(n.path)));
-        styleFilterItem(node);
+        applyItemStyle(node);       // never a header, and may not have a parent yet
         byPath.insert(n.path, node);
     }
+    for (QTreeWidgetItem *parent : attachOrder) parent->addChildren(pending.value(parent));
 }
 
 void Filters::folderFilterState(QStringList &includes, QStringList &excludes) const
@@ -2737,6 +2766,19 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         return !vocabPathsFold.isEmpty() && !vocabPathsFold.contains(keywordFold(path));
     };
 
+    /*  New nodes are BUILT DETACHED and attached once per already-attached parent, as in
+        addFolderItems and for the same reason: set up while attached, every node emits
+        an insert and a dataChanged per setter. attachPending must run before anything
+        that reads the tree (the duplicate pass below walks category->child). */
+    QSet<QTreeWidgetItem *> created;
+    QList<QTreeWidgetItem *> attachOrder;
+    QHash<QTreeWidgetItem *, QList<QTreeWidgetItem *>> pending;
+    auto attachPending = [&] {
+        for (QTreeWidgetItem *p : attachOrder) p->addChildren(pending.value(p));
+        attachOrder.clear();
+        pending.clear();
+    };
+
     std::function<QTreeWidgetItem *(const QString &)> ensureNode =
         [&](const QString &path) -> QTreeWidgetItem * {
         const QString fold = keywordFold(path);
@@ -2746,7 +2788,14 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         QTreeWidgetItem *parent =
             parentPath.isEmpty() ? category : ensureNode(parentPath);
 
-        QTreeWidgetItem *node = new QTreeWidgetItem(parent);
+        const bool parentIsNew = created.contains(parent);
+        QTreeWidgetItem *node = parentIsNew ? new QTreeWidgetItem(parent)
+                                            : new QTreeWidgetItem();
+        if (!parentIsNew) {
+            if (!pending.contains(parent)) attachOrder << parent;
+            pending[parent] << node;
+        }
+        created.insert(node);
         /*  THE LABEL IS THE LEAF AND THE VALUE IS THE PATH. A tree that repeated the
             whole path on every row would be unreadable at depth, and a filter that bound
             the leaf would match the wrong Vancouver. */
@@ -2765,7 +2814,7 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
             all until something happened to it, so an unfiled keyword drew in the ordinary
             colour until the first time it was clicked. */
         node->setData(0, UnfiledRole, isUnfiled(path));
-        styleFilterItem(node);
+        applyItemStyle(node);       // never a header, and may not have a parent yet
         byPath.insert(fold, node);
         return node;
     };
@@ -2775,12 +2824,13 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
             describing a tree that is no longer there. updateKeywordCategoryHeader counts
             what is actually in the category, so calling it on the way out is what stops
             "Keywords (282 unfiled)" sitting above nothing at all. */
-        if (G::stop) { updateKeywordCategoryHeader(); return; }
+        if (G::stop) { attachPending(); updateKeywordCategoryHeader(); return; }
         if (it.key().isEmpty()) continue;       // a blank path is a bad row, not a value
         QTreeWidgetItem *node = ensureNode(it.key());
         node->setData(2, Qt::EditRole, it.value());
         node->setData(3, Qt::EditRole, it.value());
     }
+    attachPending();
 
     /*
         MARK A TOP-LEVEL KEYWORD THAT SHARES ITS NAME WITH ONE INSIDE THE TREE.
@@ -2892,11 +2942,16 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         keys = inCalendarOrder;
     }
 
-    // add all remaining items in unique itemList to filter tree
+    /*  Add all remaining items -- built detached and attached in ONE addChildren, for the
+        reason given in addFolderItems: an attached item emits an insert, and a
+        dataChanged per setter, while it is being set up. */
+    QList<QTreeWidgetItem *> newItems;
+    newItems.reserve(keys.size());
     QTreeWidgetItem *item;
     for (const QString &key : keys) {
         const int count = itemMap.value(key);
-        item = new QTreeWidgetItem(category);
+        item = new QTreeWidgetItem();
+        newItems << item;
         item->setText(0, key);
         item->setCheckState(0, Qt::Unchecked);
         item->setData(1, Qt::EditRole, filterValueFor(category, key));
@@ -2905,6 +2960,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
     }
+    category->addChildren(newItems);
 
     // sort the result
 //    category->sortChildren(0, Qt::AscendingOrder);

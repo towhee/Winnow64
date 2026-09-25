@@ -44,6 +44,7 @@ private slots:
     void compactDropsScatteredRowsInOrder();
     void pickedCountStaysExact();
     void forEachRowMatchesValue();
+    void watchedGenerationMovesOnlyForWatchedCells();
     void prefixExpansionStaysInBudget();
     void folderPathsAllIsDerivedFromThePath();
     void folderAncestryCostsARowOneId();
@@ -436,6 +437,47 @@ void tst_imagerow::forEachRowMatchesValue()
         for (int i = 0; i < cells.size(); ++i)
             QCOMPARE(got[row][i], s.value(row, cells[i].first, cells[i].second));
     QVERIFY(!got[1][0].isValid());                          // unset stays unset
+}
+
+void tst_imagerow::watchedGenerationMovesOnlyForWatchedCells()
+{
+/*
+    BuildFilters::makeSnapshot reuses its copy of the counted columns while this holds
+    still, so a MISSED move is a stale filter count. It must move for a watched cell
+    (including a path-column role, DupHideRaw) and for any change to the row set --
+    and must NOT move for the icon and bookkeeping writes that run constantly while
+    browsing, or the cache never survives to be reused.
+*/
+    RowStore s;
+    s.resize(3);
+    s.setWatchedCells({{G::RatingColumn, Qt::DisplayRole},
+                       {G::PathColumn, G::DupHideRawRole}});
+    quint64 g = s.watchedGeneration();
+
+    // unwatched: the icon rect, a non-counted column, the path itself
+    s.setValue(0, G::PathColumn, G::IconRectRole, QRect(0, 0, 10, 10));
+    s.setValue(0, G::IconLoadedColumn, Qt::EditRole, true);
+    s.setValue(0, G::PathColumn, G::PathRole, "/a.jpg");
+    QCOMPARE(s.watchedGeneration(), g);
+
+    // setting the SAME watch set again is not a change
+    s.setWatchedCells({{G::RatingColumn, Qt::DisplayRole},
+                       {G::PathColumn, G::DupHideRawRole}});
+    QCOMPARE(s.watchedGeneration(), g);
+
+    // watched: a rating (EditRole writes the same field DisplayRole reads)
+    s.setValue(1, G::RatingColumn, Qt::EditRole, "4");
+    QVERIFY(s.watchedGeneration() != g);
+    g = s.watchedGeneration();
+    s.setValue(2, G::PathColumn, G::DupHideRawRole, true);
+    QVERIFY(s.watchedGeneration() != g);
+
+    // the row set
+    g = s.watchedGeneration(); s.insertRows(1, 1);   QVERIFY(s.watchedGeneration() != g);
+    g = s.watchedGeneration(); s.removeRows(0, 1);   QVERIFY(s.watchedGeneration() != g);
+    g = s.watchedGeneration(); s.compact({0, -1, 1}); QVERIFY(s.watchedGeneration() != g);
+    g = s.watchedGeneration(); s.resize(5);          QVERIFY(s.watchedGeneration() != g);
+    g = s.watchedGeneration(); s.clear();            QVERIFY(s.watchedGeneration() != g);
 }
 
 void tst_imagerow::prefixExpansionStaysInBudget()

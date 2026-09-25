@@ -256,6 +256,7 @@ public:
         mRows.clear(); mStrings.clear(); mFolderAncestry.clear();
         mPicked = 0;
         ++mPickGen;
+        ++mWatchGen;
     }
     void resize(int n)
     {
@@ -263,6 +264,7 @@ public:
         if (n < mRows.size()) uncountPicksLocked(n, mRows.size() - n);
         if (n != mRows.size()) mRows.resize(n);
         ++mPickGen;
+        ++mWatchGen;
     }
 
     /*  ROW SPLICING. The store is indexed by row, so an insert or a removal in
@@ -277,6 +279,7 @@ public:
         if (count <= 0 || at < 0 || at > mRows.size()) return;
         mRows.insert(at, count, ImageRow());
         ++mPickGen;
+        ++mWatchGen;
     }
     void removeRows(int at, int count)
     {
@@ -286,6 +289,7 @@ public:
         uncountPicksLocked(at, count);
         mRows.remove(at, count);
         ++mPickGen;
+        ++mWatchGen;
     }
     /*  Many scattered removals in ONE pass. newRow[old] is the row's new index,
         or -1 when it goes; kept rows keep their order, so newRow is ascending
@@ -303,6 +307,7 @@ public:
         }
         mRows.resize(kept);
         ++mPickGen;
+        ++mWatchGen;
     }
     int  size() const { QReadLocker l(&mLock); return mRows.size(); }
     bool contains(int row) const
@@ -368,6 +373,16 @@ public:
         }
     }
 
+    /*  A GENERATION FOR A CHOSEN SET OF CELLS. setWatchedCells names (column, role)
+        pairs; watchedGeneration() then moves whenever one of them is written on any
+        row, or rows are inserted, removed or cleared -- and on nothing else, so the
+        icon, cache and bookkeeping writes that never stop while browsing leave it
+        alone. BuildFilters::makeSnapshot keeps its copy of the counted columns for as
+        long as this holds still. A write that stores the same value still moves it:
+        a spurious rebuild is the safe failure. */
+    void setWatchedCells(const QVector<QPair<int, int>> &cells);
+    quint64 watchedGeneration() const { QReadLocker l(&mLock); return mWatchGen; }
+
     int pickedCount() const { QReadLocker l(&mLock); return mPicked; }
     quint64 pickGeneration() const { QReadLocker l(&mLock); return mPickGen; }
 
@@ -384,6 +399,8 @@ private:
     }
     int mPicked = 0;
     quint64 mPickGen = 0;
+    quint64 mWatchLo = 0, mWatchHi = 0;     // field bits, as ImageRow::setLo/setHi
+    quint64 mWatchGen = 0;
 
     mutable QReadWriteLock mLock;
     QVector<ImageRow> mRows;

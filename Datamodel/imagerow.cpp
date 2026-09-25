@@ -154,6 +154,22 @@ inline void setBit(ImageRow &r, int bit)
 
 } // namespace
 
+void RowStore::setWatchedCells(const QVector<QPair<int, int>> &cells)
+{
+    quint64 lo = 0, hi = 0;
+    for (const auto &c : cells) {
+        const int bit = fieldBit(c.first, c.second);
+        if (bit < 0) continue;
+        if (bit < 64) lo |= (quint64(1) << bit);
+        else          hi |= (quint64(1) << (bit - 64));
+    }
+    QWriteLocker l(&mLock);
+    if (lo == mWatchLo && hi == mWatchHi) return;
+    mWatchLo = lo;
+    mWatchHi = hi;
+    ++mWatchGen;            // a different set: nothing cached against the old one holds
+}
+
 bool RowStore::covers(int column, int role)
 {
     return fieldBit(column, role) >= 0;
@@ -286,6 +302,9 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     if (column == G::FolderPathsAllColumn) return;
     ImageRow &r = mRows[row];
     setBit(r, bit);
+    if (bit < 64 ? (mWatchLo & (quint64(1) << bit))
+                 : (mWatchHi & (quint64(1) << (bit - 64))))
+        ++mWatchGen;
 
     if (column == G::PathColumn) {
         switch (role) {

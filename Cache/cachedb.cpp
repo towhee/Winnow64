@@ -7,6 +7,8 @@
 #include "Metadata/keywordpaths.h"
 
 #include <algorithm>
+#include <atomic>
+#include <cstdlib>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -34,6 +36,26 @@ constexpr int kSchemaVersion = 14;
     whose connection points at a database that is no longer current discovers it on its
     next db() call and reopens.
 */
+/*
+    SET BY AN atexit HANDLER, AND WHY THE APPLICATION TEST BELOW IS NOT ENOUGH.
+
+    Quitting from the Dock, at logout or at shutdown goes through -[NSApplication
+    terminate:], which calls exit() directly: main() never returns, so the QApplication
+    on its stack still exists while static destructors run. QtSql's connection registry
+    (a Q_GLOBAL_STATIC) is destroyed among them, and the main thread's QThreadStorage is
+    cleaned up AFTER it -- so Conn::release saw a live QCoreApplication, called
+    QSqlDatabase::database, and read the destroyed registry: SIGSEGV in
+    QtSqlGlobals::connection on every such quit (crash reports 2026-09-24).
+
+    atexit handlers and static destructors run in reverse order of registration. The
+    handler is registered just after the first addDatabase -- after the registry exists
+    -- so it runs before the registry is destroyed, and release() sees the flag.
+    Trivially destructible, so it is itself still readable at that point.
+*/
+std::atomic<bool> gProcessExiting{false};
+
+void markProcessExiting() { gProcessExiting.store(true, std::memory_order_relaxed); }
+
 struct Conn
 {
     QString name;
@@ -54,7 +76,8 @@ struct Conn
             A pool thread reaped while the app is still running takes the real path below,
             which is the case this cleanup exists for.
         */
-        if (!QCoreApplication::instance()) {
+        if (!QCoreApplication::instance()
+            || gProcessExiting.load(std::memory_order_relaxed)) {
             name.clear();
             generation = -1;
             return;
@@ -179,6 +202,9 @@ QSqlDatabase CacheDb::db()
 
     for (int attempt = 0; attempt < 2; ++attempt) {
         QSqlDatabase d = QSqlDatabase::addDatabase("QSQLITE", name);
+        /*  Once, now that QtSql's registry certainly exists -- see gProcessExiting. */
+        static const bool exitHookRegistered = (std::atexit(markProcessExiting), true);
+        Q_UNUSED(exitHookRegistered);
         d.setDatabaseName(p);
         if (d.open() && applyPragmas(d) && migrate(d)) {
             c->name = name;

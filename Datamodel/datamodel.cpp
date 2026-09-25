@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Datamodel/variantless.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
@@ -588,6 +589,7 @@ void DataModel::clearDataModel()
     fPathRawInfoClear();
     // clear the folder list
     folderList.clear();
+    ++folderListGen;
     folderSet.clear();
     pendingPaths.clear();
     folderQueue.clear();
@@ -1679,6 +1681,7 @@ void DataModel::addFolder(const QString &folderPath)
     QMutexLocker locker(&dmMutex);
     abort = false;
     folderList.append(folderPath);
+    ++folderListGen;
     folderSet.insert(folderPath);
     loadingModel = true;
     locker.unlock(); // Unlock the queue while processing
@@ -2067,6 +2070,7 @@ void DataModel::finishCatalogFill()
                                        : r.folder;
             if (!folderSet.contains(folder)) {
                 folderList.append(folder);
+                ++folderListGen;
                 folderSet.insert(folder);
             }
             folderImageCount[folder] = folderImageCount.value(folder) + 1;
@@ -2116,7 +2120,11 @@ void DataModel::finishCatalogFill()
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  endLoad"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
-    emit centralMsg(loaded + "Sorting ...");
+    /*  No "Sorting ..." message here any more. restoreProxySortAfterLoad is sort(-1) and
+        a dynamic-sort flag, 3-7 ms at 148,567 rows, while the message's synchronous
+        repaint (MW::setCentralMessage) cost several times that inside the post-load
+        stall -- a label for a step too short to read, paid for by the step after it.
+        "Collating folders ..." above stays up until the filter build replaces it. */
     restoreProxySortAfterLoad();
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  restoreSort"
                                        << ft.elapsed() << "ms"; ft.restart(); }
@@ -2235,6 +2243,7 @@ void DataModel::addPaths(const QStringList &fPaths)
             const QString folder = fi.absoluteDir().path();
             if (!folderSet.contains(folder)) {
                 folderList.append(folder);
+                ++folderListGen;
                 folderSet.insert(folder);
             }
             folderImageCount[folder] = folderImageCount.value(folder) + 1;
@@ -2261,6 +2270,7 @@ void DataModel::removeFolder(const QString &folderPath)
     if (G::isLogger || G::isFlowLogger) G::log(fun, folderPath);
 
     folderList.removeAll(folderPath);
+    ++folderListGen;
     folderSet.remove(folderPath);
     folderImageCount.remove(folderPath);
     QModelIndex par = QModelIndex();
@@ -6849,6 +6859,64 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     return ok;
 }
 
+/*
+    SORT KEYS FOR THE SORTS WE START. Every re-sort of the proxy -- each filter change
+    (invalidate() re-sorts every admitted row) and each sortChange -- compared rows
+    through QSortFilterProxyModel::lessThan, which fetches BOTH values through
+    DataModel::data: an index, a covers check and three RowStore lock acquisitions per
+    side per comparison. Clearing a filter at 148,567 rows is ~2.5 million comparisons,
+    350-518 ms of the 700-900 ms toggle (sampled 2026-09-24).
+
+    So a scope started around those calls takes the sort column for every row in one
+    RowStore::forEachRow pass, and lessThan compares the stored keys with a copy of
+    Qt's own QAbstractItemModelPrivate::isVariantLessThan (qabstractitemmodel.cpp,
+    Qt 6.11) -- the same order, cheaper. Outside a scope, off the GUI thread, for a
+    column RowStore does not hold, or for a row past the keys, it is Qt's lessThan
+    unchanged: dynamic re-sorts of a single edited row still go through data(), which
+    is what they did before and costs nothing noticeable.
+*/
+struct SortKeyScope
+{
+    SortKeyScope(SortFilter *sf, int column) : sf(sf) { sf->prepareSortKeys(column); }
+    ~SortKeyScope() { sf->clearSortKeys(); }
+    SortFilter *sf;
+};
+
+void SortFilter::prepareSortKeys(int column)
+{
+    mSortKeysValid = false;
+    auto *dm = qobject_cast<DataModel*>(sourceModel());
+    if (!dm || column < 0 || !RowStore::covers(column, sortRole())) return;
+    QVector<QVariant> keys;
+    keys.reserve(dm->rowStore.size());
+    dm->rowStore.forEachRow({{column, sortRole()}}, [&](int, const QVariant *v) {
+        keys.append(v[0]);
+    });
+    mSortKeys.swap(keys);
+    mSortKeyColumn = column;
+    mSortKeysValid = true;
+}
+
+void SortFilter::clearSortKeys()
+{
+    mSortKeysValid = false;
+    mSortKeyColumn = -1;
+    QVector<QVariant>().swap(mSortKeys);
+}
+
+
+bool SortFilter::lessThan(const QModelIndex &left, const QModelIndex &right) const
+{
+    if (mSortKeysValid && left.column() == mSortKeyColumn
+        && right.column() == mSortKeyColumn && QThread::currentThread() == thread()) {
+        const int l = left.row(), r = right.row();
+        if (l >= 0 && r >= 0 && l < mSortKeys.size() && r < mSortKeys.size())
+            return winnowVariantLessThan(mSortKeys.at(l), mSortKeys.at(r),
+                                   sortCaseSensitivity(), isSortLocaleAware());
+    }
+    return QSortFilterProxyModel::lessThan(left, right);
+}
+
 void SortFilter::filterChange(QString src)
 {
 /*
@@ -6894,7 +6962,16 @@ void SortFilter::filterChange(QString src)
         MW::filterChange saves the selection before this and restores it afterwards
         (Selection::recover, or a fresh select when rows were eliminated), which is the
         same thing it has always done for a sort. */
-    invalidate();
+    {
+        /*  The re-sort happens INSIDE this scope: invalidate() rebuilds the mapping at
+            once when anything holds a persistent index (the selection model always
+            does), and rowCount() forces it when nothing does, so the keys are never
+            used after they are gone. */
+        SortKeyScope keys(this, sortColumn());
+        invalidate();
+        rowCount();
+    }
+    verifySortOrder("SortFilter::filterChange");
     return;
 
     // force wait until finished to prevent sorting/editing datamodel
@@ -6956,5 +7033,45 @@ void SortFilter::sort(int column, Qt::SortOrder order)
                                << (order == Qt::DescendingOrder ? "Desc" : "Asc");
         column = -1;
     }
-    QSortFilterProxyModel::sort(column, order);
+    {
+        SortKeyScope keys(this, column);
+        QSortFilterProxyModel::sort(column, order);
+    }
+    verifySortOrder("SortFilter::sort");
+}
+
+void SortFilter::verifySortOrder(const QString &src)
+{
+/*
+    THE ORDER, CHECKED AGAINST QT'S OWN COMPARISON. Runs after the SortKeyScope has
+    closed, so lessThan here is QSortFilterProxyModel's base -- two data() calls, the
+    path every sort took before the keys. A stable sort leaves every adjacent pair
+    in order under the comparator it used: ascending uses lessThan(l, r), so right
+    must not be less than left; descending uses lessThan(r, l), so left must not be
+    less than right. Any violation means the keyed comparison and Qt's disagree.
+    O(rows) data() pairs -- tens of ms at 148k -- so --perfprobe only.
+*/
+    if (!G::isPerfProbe) return;
+    const int col = sortColumn();
+    const int n = rowCount();
+    if (col < 0 || n < 2) return;
+    const bool desc = sortOrder() == Qt::DescendingOrder;
+    QElapsedTimer t;
+    t.start();
+    int bad = 0, firstBad = -1;
+    QModelIndex prev = mapToSource(index(0, col));
+    for (int i = 1; i < n; ++i) {
+        const QModelIndex cur = mapToSource(index(i, col));
+        const bool outOfOrder = desc ? QSortFilterProxyModel::lessThan(prev, cur)
+                                     : QSortFilterProxyModel::lessThan(cur, prev);
+        if (outOfOrder) {
+            if (firstBad < 0) firstBad = i;
+            ++bad;
+        }
+        prev = cur;
+    }
+    qDebug().noquote() << "[PERF] sort check" << src << " column =" << col
+                       << (desc ? "Desc" : "Asc") << " rows =" << n
+                       << " out of order =" << bad << " first at proxy row" << firstBad
+                       << "  " << t.elapsed() << "ms";
 }
