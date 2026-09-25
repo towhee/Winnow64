@@ -1550,17 +1550,10 @@ void MW::createViewActions()
     //                                  || setting->value("isEmbelDisplay").toBool()
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
-    /* E is the way OUT of Develop mode into the loupe (D only enters Develop), so leave
-       Develop first: setOperationMode restores the Preview decode / read-ahead and greys
-       the Develop panel before the view is shown. A no-op when already in Preview. */
-    connect(asLoupeAction, &QAction::triggered, this, [this]() {
-        setOperationMode(G::OperationMode::Preview);
-        /* E / G / C are the Source workflow, so they reassert the Source layout every
-           time -- the view key is how a layout that has got away from the user (a panel
-           left open, a dock stranded on a monitor that is gone) is recovered. */
-        invokeWorkflowWorkspace(WfSource);
-        loupeDisplay("asLoupeAction");
-    });
+    /* E / G / T / C are the Browse views, and the way OUT of any other workflow into
+       Browse (D only enters Develop). All four go through MW::requestView, which says
+       what they do and do not change. */
+    connect(asLoupeAction, &QAction::triggered, this, [this]() { requestView(CvLoupe); });
 
     asGridAction = new QAction(tr("Grid Mode"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
@@ -1568,12 +1561,7 @@ void MW::createViewActions()
     if (isSettings && settings->contains("isGridDisplay")) asGridAction->setChecked(settings->value("isGridDisplay").toBool());
     else asGridAction->setChecked(true);
     addAction(asGridAction);
-    // G leaves Develop into the grid, the same way E leaves it into the loupe (above).
-    connect(asGridAction, &QAction::triggered, this, [this]() {
-        setOperationMode(G::OperationMode::Preview);
-        invokeWorkflowWorkspace(WfSource);        // see asLoupeAction
-        gridDisplay();
-    });
+    connect(asGridAction, &QAction::triggered, this, [this]() { requestView(CvGrid); });
 
     asTableAction = new QAction(tr("Table Mode"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);
@@ -1581,13 +1569,9 @@ void MW::createViewActions()
     if (isSettings && settings->contains("isTableDisplay")) asTableAction->setChecked(settings->value("isTableDisplay").toBool());
     else asTableAction->setChecked(false);
     addAction(asTableAction);
-    // T leaves Develop into the table, the same way E / G leave it (above).
-    connect(asTableAction, &QAction::triggered, this, [this]() {
-        setOperationMode(G::OperationMode::Preview);
-        tableDisplay();
-    });
+    connect(asTableAction, &QAction::triggered, this, [this]() { requestView(CvTable); });
 
-    /* K applies the Keywords workspace, the way E / G / T apply the Source one and D
+    /* K applies the Keywords workspace, the way E / G / T / C apply the Browse one and D
        applies Develop.  Like them it leaves Develop first (setOperationMode restores the
        Preview decode and read-ahead); a no-op when already in Preview.  K is NOT in
        developShortcuts, so it has the same meaning in both modes. */
@@ -1600,14 +1584,89 @@ void MW::createViewActions()
         invokeWorkflowWorkspace(WfKeywords);
     });
 
+    /* The switcher's Browse button (and the View menu item): Browse in the view it was
+       last shown in. No key -- E / G / T / C are the Browse keys, each naming a view. */
+    browseWorkflowAction = new QAction(tr("Browse Mode"), this);
+    browseWorkflowAction->setObjectName("browseWorkflow");
+    browseWorkflowAction->setShortcutVisibleInContextMenu(true);
+    addAction(browseWorkflowAction);
+    connect(browseWorkflowAction, &QAction::triggered, this, &MW::invokeBrowseWorkflow);
+
+    /* Embellish applies its workflow layout the way K applies Keywords. No key yet: the
+       switcher button and the View menu item are the ways in. */
+    embellishWorkspaceAction = new QAction(tr("Embellish Mode"), this);
+    embellishWorkspaceAction->setObjectName("embellishWorkspace");
+    embellishWorkspaceAction->setShortcutVisibleInContextMenu(true);
+    addAction(embellishWorkspaceAction);
+    connect(embellishWorkspaceAction, &QAction::triggered,
+            this, &MW::invokeEmbellishWorkflow);
+
+    /* The one way to recover a layout that has got away from the user (a panel left open,
+       a dock stranded on a monitor that is gone). The view keys used to do this as a side
+       effect of reasserting the Browse layout every time; now they only change the
+       view. */
+    resetLayoutAction = new QAction(tr("Reset Layout"), this);
+    resetLayoutAction->setObjectName("resetLayout");
+    /* Set here, not in loadShortcuts' default block (see gotoFolderAction). */
+    resetLayoutAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
+    resetLayoutAction->setShortcutVisibleInContextMenu(true);
+    addAction(resetLayoutAction);
+    connect(resetLayoutAction, &QAction::triggered, this, &MW::resetLayout);
+
+    /* THE SOURCE, from the keyboard. The same requests the Source panel's Folders |
+       Library toggle makes, so a refused change leaves everything where it was. Neither
+       changes the workflow: switching source inside Develop stays in Develop. */
+    showLibrarySourceAction = new QAction(tr("Library"), this);
+    showLibrarySourceAction->setObjectName("showLibrarySource");
+    /* A modifier on both source keys: plain letters are for workflows and views. Set
+       here, not in loadShortcuts' default block (see gotoFolderAction). */
+    showLibrarySourceAction->setShortcut(QKeySequence("Ctrl+Shift+L"));
+    showLibrarySourceAction->setShortcutVisibleInContextMenu(true);
+    addAction(showLibrarySourceAction);
+    connect(showLibrarySourceAction, &QAction::triggered, this, [this]() {
+        setCatalogScopeWhole("showLibrarySourceAction");
+    });
+
+    showFoldersSourceAction = new QAction(tr("Folders"), this);
+    showFoldersSourceAction->setObjectName("showFoldersSource");
+    showFoldersSourceAction->setShortcut(QKeySequence("Ctrl+Shift+F"));
+    showFoldersSourceAction->setShortcutVisibleInContextMenu(true);
+    addAction(showFoldersSourceAction);
+    connect(showFoldersSourceAction, &QAction::triggered, this, &MW::showFoldersSource);
+
+    /* The workflow buttons -- the Module dock's and the hidden status-bar switcher's,
+       both built before these actions (createDocks, createStatusBar) -- follow their
+       actions' enabled state, and a greyed button says why in its tooltip: the
+       "disabledReason" the action was gated with. */
+    const QList<QPair<int, QAction *>> workflowActions{
+        {WfSource, browseWorkflowAction}, {WfDevelop, operationModeAction},
+        {WfKeywords, keywordsWorkspaceAction}, {WfEmbellish, embellishWorkspaceAction}};
+    for (const auto &wa : workflowActions)
+    for (QToolButton *btn : {workflowBtns.value(wa.first), moduleBtns.value(wa.first)}) {
+        QAction *a = wa.second;
+        if (!btn || !a) continue;
+        const QString key = wa.first == WfSource ? tr("E / G / T / C")
+                          : wa.first == WfDevelop ? tr("D")
+                          : wa.first == WfKeywords ? tr("K") : QString();
+        auto mirror = [btn, a, key]() {
+            btn->setEnabled(a->isEnabled());
+            QString tip = a->text();
+            if (!key.isEmpty()) tip += "  (" + key + ")";
+            const QString why = a->property("disabledReason").toString();
+            if (!a->isEnabled() && !why.isEmpty()) tip += "\n" + why;
+            btn->setToolTip(tip);
+        };
+        connect(a, &QAction::changed, btn, mirror);
+        mirror();
+    }
+
     asCompareAction = new QAction(tr("Compare Mode"), this);
     asCompareAction->setShortcutVisibleInContextMenu(true);
     asCompareAction->setCheckable(true);
     asCompareAction->setChecked(false); // never start with compare set true
     addAction(asCompareAction);
     connect(asCompareAction, &QAction::triggered, this, [this]() {
-        invokeWorkflowWorkspace(WfSource);        // see asLoupeAction
-        compareDisplay();
+        requestView(CvCompare);
     });
 
     centralGroupAction = new QActionGroup(this);
@@ -1742,6 +1801,25 @@ void MW::createWindowActions()
     else keywordsDockVisibleAction->setChecked(false);
     addAction(keywordsDockVisibleAction);
     connect(keywordsDockVisibleAction, &QAction::triggered, this, &MW::showKeywordsDock);
+
+    /*  The Module dock (Browse | Develop | Keywords | Embellish across the top). ON by
+        default: it is where the workflow is chosen. Choosing it from the menu while the
+        top show/hide bar has the area collapsed un-collapses it -- the user has asked to
+        see it, and leaving the bar holding it hidden would make the menu item look
+        dead. */
+    moduleDockVisibleAction = new QAction(tr("Module Panel"), this);
+    moduleDockVisibleAction->setObjectName("toggleModule");
+    moduleDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    moduleDockVisibleAction->setCheckable(true);
+    moduleDockVisibleAction->setChecked(
+        !isSettings || settings->value("isModuleDockVisible", true).toBool());
+    addAction(moduleDockVisibleAction);
+    connect(moduleDockVisibleAction, &QAction::triggered, this, [this]() {
+        areaCollapsed.remove(Qt::TopDockWidgetArea);
+        areaCollapsedExtent.remove(Qt::TopDockWidgetArea);
+        setModuleDockVisibility();
+        syncShowHideBars();
+    });
 
     metadataDockVisibleAction = new QAction(tr("Metadata Panel"), this);
     metadataDockVisibleAction->setObjectName("toggleMetadata");
@@ -2677,8 +2755,17 @@ void MW::createViewMenu()
     viewGroupAct = new QAction("View", this);
     viewGroupAct->setMenu(viewMenu);
 
-    viewMenu->addActions(centralGroupAction->actions());
+    /*  THE THREE SETTINGS, one block each (see "THE UI MODEL" in mainwindow.h): the
+        workflow, then the Browse views, then the source. */
+    viewMenu->addAction(browseWorkflowAction);
+    viewMenu->addAction(operationModeAction);       // D: also in the Develop menu
     viewMenu->addAction(keywordsWorkspaceAction);   // K: the Keywords workflow layout
+    if (!hideEmbellish) viewMenu->addAction(embellishWorkspaceAction);
+    viewMenu->addSeparator();
+    viewMenu->addActions(centralGroupAction->actions());
+    viewMenu->addSeparator();
+    viewMenu->addAction(showLibrarySourceAction);
+    viewMenu->addAction(showFoldersSourceAction);
     viewMenu->addSeparator();
     slideShowMenu = viewMenu->addMenu(tr("Slide Show"));
     slideShowMenu->addAction(slideShowAction);      // S: start / stop
@@ -2738,6 +2825,7 @@ void MW::createWindowMenu()
     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
     workspaceMenu->addAction(newWorkspaceAction);
     workspaceMenu->addAction(manageWorkspaceAction);
+    workspaceMenu->addAction(resetLayoutAction);
     workspaceMenu->addSeparator();
 
     /*  The two workflow branches.  Default is hidden unless G::isRory (see
@@ -2773,6 +2861,7 @@ void MW::createWindowMenu()
     syncWorkflowWorkspaceMenus();
 
     windowMenu->addSeparator();
+    windowMenu->addAction(moduleDockVisibleAction);
     windowMenu->addAction(folderDockVisibleAction);
     windowMenu->addAction(favDockVisibleAction);
     windowMenu->addAction(filterDockVisibleAction);
@@ -3328,9 +3417,11 @@ void MW::enableSelectionDependentMenus()
         ? DevPreviewCache::readOnlyReason() : needFolder;
 
     /* gate() sets the enabled state and records why it would be disabled. */
+    /* The reason first: setEnabled emits QAction::changed, and the workflow switcher's
+       buttons read the reason from that signal (see createActions). */
     auto gate = [](QAction *a, bool enabled, const QString &reason) {
-        a->setEnabled(enabled);
         a->setProperty("disabledReason", reason);
+        a->setEnabled(enabled);
     };
 
     /* Disabling a QMenu greys its entry in the menu bar but does NOT disable the
@@ -3539,6 +3630,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[renameAction->objectName()] = renameAction;
     actionKeys[reportMetadataAction->objectName()] = reportMetadataAction;
     actionKeys[slideShowAction->objectName()] = slideShowAction;
+    actionKeys[resetLayoutAction->objectName()] = resetLayoutAction;
+    actionKeys[showLibrarySourceAction->objectName()] = showLibrarySourceAction;
+    actionKeys[showFoldersSourceAction->objectName()] = showFoldersSourceAction;
 //    actionKeys[keyHomeAction->objectName()] = keyHomeAction;
 //    actionKeys[keyEndAction->objectName()] = keyEndAction;
     actionKeys[randomImageAction->objectName()] = randomImageAction;
@@ -3562,6 +3656,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
     actionKeys[catalogDockVisibleAction->objectName()] = catalogDockVisibleAction;
     actionKeys[keywordsDockVisibleAction->objectName()] = keywordsDockVisibleAction;
+    actionKeys[moduleDockVisibleAction->objectName()] = moduleDockVisibleAction;
     actionKeys[openCatalogAction->objectName()] = openCatalogAction;
     actionKeys[manageCatalogAction->objectName()] = manageCatalogAction;
     actionKeys[metadataDockVisibleAction->objectName()] = metadataDockVisibleAction;

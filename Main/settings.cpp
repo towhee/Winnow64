@@ -34,6 +34,7 @@ void MW::writeSettings()
     settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
     settings->setValue("isFullScreenCatalog", fullScreenDocks.isCatalog);
     settings->setValue("isFullScreenKeywords", fullScreenDocks.isKeywords);
+    settings->setValue("isFullScreenModule", fullScreenDocks.isModule);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
     settings->setValue("isFullScreenHistory", fullScreenDocks.isHistory);
@@ -169,6 +170,9 @@ void MW::writeSettings()
                        isDockAreaCollapsed(Qt::RightDockWidgetArea));
     settings->setValue("isBottomAreaCollapsed",
                        isDockAreaCollapsed(Qt::BottomDockWidgetArea));
+    settings->setValue("isTopAreaCollapsed",
+                       isDockAreaCollapsed(Qt::TopDockWidgetArea));
+    settings->setValue("isModuleDockVisible", moduleDockVisibleAction->isChecked());
 
     /* The scope table the user nominated for background cataloguing. It lives HERE and
        not in the index database: CacheDb::moveAside discards that file without asking
@@ -741,6 +745,8 @@ bool MW::loadSettings()
         fullScreenDocks.isCatalog = settings->value("isFullScreenCatalog").toBool();
     if (settings->contains("isFullScreenKeywords"))
         fullScreenDocks.isKeywords = settings->value("isFullScreenKeywords").toBool();
+    if (settings->contains("isFullScreenModule"))
+        fullScreenDocks.isModule = settings->value("isFullScreenModule").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
     if (settings->contains("isFullScreenDevelop")) fullScreenDocks.isDevelop = settings->value("isFullScreenDevelop").toBool();
     if (settings->contains("isFullScreenHistory")) fullScreenDocks.isHistory = settings->value("isFullScreenHistory").toBool();

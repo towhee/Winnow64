@@ -22,7 +22,7 @@
     THE TRIANGLE POINTS WHERE THE PANELS ARE ABOUT TO GO, so it reads as an instruction
     rather than as a label for which edge this is: the left bar shows a left-pointing
     triangle while its panels are up (click and they collapse leftwards) and a
-    right-pointing one once they are down. Each of the three bars therefore has its own
+    right-pointing one once they are down. Each of the four bars therefore has its own
     pair of glyphs, which is what makes them tellable apart at a glance.
 
     PAINTED, not an icon. Six orientations from one widget, crisp at any DPI, and the
@@ -41,7 +41,7 @@ class ShowHideBar : public QWidget
 public:
     /* Which window edge this bar sits on. Fixes both the bar's orientation and which way
        its triangle points in each state. */
-    enum Edge { Left, Right, Bottom };
+    enum Edge { Left, Right, Bottom, Top };
 
     explicit ShowHideBar(Edge edge, QWidget *parent = nullptr);
 

@@ -255,6 +255,16 @@ void MW::setKeywordsDockVisibility()
     if (keywordsDockVisibleAction->isChecked()) ensureKeywordVocabLoaded();
 }
 
+void MW::setModuleDockVisibility()
+{
+    if (G::isLogger) G::log("MW::setModuleDockVisibility");
+    if (!moduleDock || !moduleDockVisibleAction) return;
+    /*  A top area the show/hide bar is holding collapsed stays collapsed: the bar owns
+        that, and re-showing the dock here would undo its click (isDockAreaCollapsed). */
+    if (isDockAreaCollapsed(Qt::TopDockWidgetArea)) return;
+    moduleDock->setVisible(moduleDockVisibleAction->isChecked());
+}
+
 void MW::setMetadataDockVisibility()
 {
     if (G::isLogger) G::log("MW::setMetadataDockVisibility");
@@ -556,6 +566,7 @@ void MW::setScope(G::Scope s, QString src)
     if (sourceStack && libTree)
         sourceStack->setCurrentWidget(isLibrary ? static_cast<QWidget *>(libTree)
                                                 : static_cast<QWidget *>(fsTree));
+    updateWindowTitle();                        // the title names the source too
 
     /*  WHERE THE FILTERS FOLDERS TREE STARTS: the catalog's include folders in the
         Library, so it reads like LibTree; in Folders, the folder that was loaded (the

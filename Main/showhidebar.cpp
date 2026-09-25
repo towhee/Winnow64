@@ -29,7 +29,7 @@ ShowHideBar::ShowHideBar(Edge e, QWidget *parent) : QWidget(parent), edge(e)
     setCursor(Qt::PointingHandCursor);
     /* Fixed across the short axis, free along the long one: the bar spans its whole edge
        the way Lightroom's does, so there is no "where exactly do I click" to learn. */
-    if (edge == Bottom) {
+    if (edge == Bottom || edge == Top) {
         setFixedHeight(kThickness);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
@@ -56,6 +56,7 @@ QPolygonF ShowHideBar::triangle(const QRectF &r) const
     switch (edge) {
     case Left:   dir = expanded ? PointLeft  : PointRight; break;
     case Right:  dir = expanded ? PointRight : PointLeft;  break;
+    case Top:    dir = expanded ? PointUp    : PointDown;  break;
     default:     dir = expanded ? PointDown  : PointUp;    break;
     }
 
