@@ -191,7 +191,6 @@ private:
     /*  makeSnapshot's reusable row-value table and what it was built against. GUI
         thread only (makeSnapshot is const, hence mutable). See FilterValuesPtr. */
     mutable FilterValuesPtr cachedValues;
-    mutable quint64 cachedValuesGen = 0;
     mutable bool cachedValuesCombine = false;
     FilterOps pendingOps;                   // guarded by mutex; drained by flushOps
 

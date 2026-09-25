@@ -2763,6 +2763,10 @@ private:
     mutable bool previewCacheLoadedAnswer = false;
     mutable quint64 previewCacheLoadedGen = ~quint64(0);
     QString getPicked();
+    /*  Rating / label edits: refilter only when a sort or active filter reads the column;
+        otherwise just repaint the visible thumbnails. See the definitions. */
+    bool editNeedsRefilter(int column);
+    void repaintIconViews();
     /*  getPicked's count over the FILTERED rows, and what it was counted against. See
         the definition: with a filter active the count can only be had by a walk, so it
         is walked once per change rather than once per status refresh. */

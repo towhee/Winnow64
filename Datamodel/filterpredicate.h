@@ -102,6 +102,16 @@ struct FilterPredicate
         return true;
     }
 
+    /*  Does any ACTIVE category read this column? An edit to a column no active
+        category reads cannot change which rows are admitted -- the question
+        MW::editNeedsRefilter asks before paying for a whole-proxy refilter. */
+    bool readsColumn(int column) const
+    {
+        for (const FilterCategory &c : categories)
+            if (c.isFiltering() && c.column == column) return true;
+        return false;
+    }
+
     /*  THE TWO COMPARISONS ARE DELIBERATELY DIFFERENT, because the code this
         replaces made them differently and the job here is to move the cost, not
         the meaning.

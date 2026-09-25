@@ -40,6 +40,7 @@ private slots:
     void aCategoryIsReadOncePerRowNotOncePerItem();
     void foldersMatchTheirSubtreeByPathNotName();
     void matchAllNeedsEveryKeyword();
+    void readsColumnOnlyForActiveCategories();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -297,6 +298,34 @@ void tst_filterpredicate::matchAllNeedsEveryKeyword()
     withExclude.categories << cat(G::KeywordsAllColumn, { "Family", "Beach" }, { "Beach" });
     withExclude.categories[0].matchAll = true;
     QVERIFY(!withExclude.accepts(fetch(both)));
+}
+
+void tst_filterpredicate::readsColumnOnlyForActiveCategories()
+{
+/*
+    MW::editNeedsRefilter skips the whole-proxy refilter after a rating or label edit
+    when this says no active category reads the column. A false "no" would leave a
+    filtered view showing an image the edit has just filtered out, so: an idle category
+    does not read its column, an include or an exclude makes it read, and includeAll
+    counts as active.
+*/
+    FilterPredicate p;
+    p.categories << cat(G::RatingColumn) << cat(G::LabelColumn);
+    QVERIFY(!p.readsColumn(G::RatingColumn));               // present but idle
+    QVERIFY(!p.readsColumn(G::LabelColumn));
+    QVERIFY(!p.readsColumn(G::PickColumn));                 // not present at all
+
+    p.categories[0] = cat(G::RatingColumn, { "3" });         // include
+    QVERIFY(p.readsColumn(G::RatingColumn));
+    QVERIFY(!p.readsColumn(G::LabelColumn));
+
+    p.categories[1] = cat(G::LabelColumn, {}, { "Red" });    // exclude only
+    QVERIFY(p.readsColumn(G::LabelColumn));
+
+    FilterCategory any = cat(G::SearchColumn);
+    any.includeAll = true;
+    p.categories << any;
+    QVERIFY(p.readsColumn(G::SearchColumn));
 }
 
 QTEST_MAIN(tst_filterpredicate)

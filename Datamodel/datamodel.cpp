@@ -6790,6 +6790,13 @@ void SortFilter::compileFilters()
     mPredicate = fresh;
 }
 
+bool SortFilter::filterReadsColumn(int column)
+{
+    flushPendingCompile();
+    const FilterPredicatePtr pred = filterPredicate();
+    return pred && pred->readsColumn(column);
+}
+
 FilterPredicatePtr SortFilter::filterPredicate() const
 {
     QMutexLocker lock(&mPredicateMutex);

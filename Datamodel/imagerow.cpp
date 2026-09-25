@@ -168,6 +168,7 @@ void RowStore::setWatchedCells(const QVector<QPair<int, int>> &cells)
     mWatchLo = lo;
     mWatchHi = hi;
     ++mWatchGen;            // a different set: nothing cached against the old one holds
+    markWatchStructuralLocked();
 }
 
 bool RowStore::covers(int column, int role)
@@ -303,8 +304,10 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     ImageRow &r = mRows[row];
     setBit(r, bit);
     if (bit < 64 ? (mWatchLo & (quint64(1) << bit))
-                 : (mWatchHi & (quint64(1) << (bit - 64))))
+                 : (mWatchHi & (quint64(1) << (bit - 64)))) {
         ++mWatchGen;
+        noteWatchedRowLocked(row);
+    }
 
     if (column == G::PathColumn) {
         switch (role) {
