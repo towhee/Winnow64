@@ -13,16 +13,16 @@ going back to at least 16 September. My test wrote 7 of them, during filter togg
 likely cause is the ImageCache reporting a cached image by a proxy row number that a
 filter has since changed. It's harmless so far, but it's noise that could hide real
 problems.
-- When Catalog loading, supplement the x of y images opening with a progress bar in the status bar
+- Bookmarks use either Folders or Library
 - Thumnail tooltip over file name showing file name.
-- when scanning catalog show progress in manage catalog dialog.
 - Edit title not persistent or applying to embellish
 - If in Library, bookmark applies Folders filter OR
   Separate workspaces for Library and Folders
 - AI keywording
 - Redo Develop help
-- Edit Winnow shortcuts
+- Edit Winnow shortcutse
 - Customize Info (I) location/size.
+- Review Apple render (new raw engine)
 - Develop behavior when no image is selected
 - Test search in filter (Add entire keyword heirarchy ie Gloria + Family + People)
 - Tweak welcome screen re to get started incl Catalog ??

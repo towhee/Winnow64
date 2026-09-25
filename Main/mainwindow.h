@@ -218,8 +218,12 @@ public:
        since MW::placeShowHideBars() re-asserts their positions after EVERY layout path,
        restored or not, because they are not user-movable and so there is never a user
        choice to preserve. The bump is still needed: saveState covers toolbars as well as
-       docks, so a v6 blob has no record of them and Qt hides anything it cannot find. */
-    static constexpr int winnowStateVersion = 7;
+       docks, so a v6 blob has no record of them and Qt hides anything it cannot find.
+       v8: moduleDock (top area) and the fourth, top, show/hide bar. placeDocksAddedSince
+       only restores the Module dock's visibility (no tab group); MW::placeShowHideBars
+       pins its position, since it is not movable and where it lives is never a user
+       choice to migrate. */
+    static constexpr int winnowStateVersion = 8;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -278,6 +282,7 @@ public:
         bool isFilterDockVisible;
         bool isCatalogDockVisible;
         bool isKeywordsDockVisible;
+        bool isModuleDockVisible = true;    // absent from older workspaces: shown
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
         bool isDevelopDockVisible;
@@ -319,8 +324,15 @@ public:
 
     /*  WORKFLOW WORKSPACES
 
-        A layout per workflow, invoked by the workflow's key: E / G / C (Source),
-        D (Develop) and K (Keywords).  Embellish and Slide Show have no key yet.
+        A layout per workflow, invoked by the workflow's key or its button in the
+        status-bar workflow switcher: E / G / T / C (Browse, whose key is "Source"),
+        D (Develop) and K (Keywords).  Embellish has a switcher button but no key yet;
+        Slide Show is reached from its own action.
+
+        THE UI MODEL.  Three settings, each changed only by its own controls: the SOURCE
+        (Library | Folders, the Source panel toggle), the WORKFLOW (the switcher and the
+        workflow keys; the one thing that owns a workspace) and the VIEW (Loupe, Grid,
+        Table, Compare).  The view keys always mean Browse -- see MW::requestView.
 
         Each workflow has a DEFAULT layout that ships with Winnow, read from the
         resource ":/Workspaces/defaults.json" (MW::loadWorkflowDefaults), and an
@@ -347,6 +359,10 @@ public:
         Persisted ("currentWorkflow") because the layout a session is LEFT in is not
         always a layout the next session can start in -- see MW::showEvent. */
     int currentWorkflow = WfSource;
+    /*  The central views, in the order of the View menu.  browseView is the one Browse
+        was last shown in, which is where the switcher's Browse button goes back to. */
+    enum CentralView {CvLoupe, CvGrid, CvTable, CvCompare};
+    int browseView = CvGrid;
 
     // recoverGeometry info
     struct RecoverGeometry {
@@ -364,6 +380,7 @@ public:
         bool isFilters = false;
         bool isCatalog = false;
         bool isKeywords = false;
+        bool isModule = false;
         bool isMetadata = false;
         bool isDevelop = false;
         bool isHistory = false;
@@ -790,6 +807,13 @@ public slots:
     bool hasWorkflowOverride(int wf) const;
     void syncWorkflowWorkspaceMenus();
     bool writeWorkflowDefaultsJson(QString &path, QString &err) const;
+    void requestView(int view);
+    void invokeBrowseWorkflow();
+    void invokeEmbellishWorkflow();
+    void resetLayout();
+    void syncWorkflowSwitcher();
+    void styleWorkflowSwitcher();       // re-applied by setBackgroundShade
+    void updateWindowTitle();
     /* One field list for every workspace serialisation (QSettings and JSON).  Add a new
        WorkspaceData field HERE, plus MW::snapshotWorkspace and MW::invokeWorkspace. */
     QVariantMap workspaceToMap(const WorkspaceData &wsd) const;
@@ -1253,6 +1277,7 @@ private slots:
     void setFilterDockVisibility();
     void setCatalogDockVisibility();
     void setKeywordsDockVisibility();
+    void setModuleDockVisibility();
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
     void setDevelopDockVisibility();
@@ -1674,6 +1699,11 @@ private:
     QAction *captureWorkflowDefaultAction = nullptr;
     QAction *captureWorkflowOverrideAction = nullptr;
     QAction *keywordsWorkspaceAction = nullptr;     // "K"
+    QAction *browseWorkflowAction = nullptr;        // Browse, in the view it was last in
+    QAction *embellishWorkspaceAction = nullptr;    // no key yet
+    QAction *resetLayoutAction = nullptr;           // reapply the workflow's layout
+    QAction *showLibrarySourceAction = nullptr;     // Source = Library
+    QAction *showFoldersSourceAction = nullptr;     // Source = Folders
 
     QAction *folderDockVisibleAction;
     QAction *favDockVisibleAction;
@@ -1685,6 +1715,7 @@ private:
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
     QAction *historyDockVisibleAction = nullptr;   // "H": develop-mode local (arbiter)
+    QAction *moduleDockVisibleAction = nullptr;    // the top Module dock
     /* "P": opens the History panel with its Presets SECTION expanded. Checked mirrors
        that section, not a dock of its own (there is no Presets dock any more). */
     QAction *presetsDockVisibleAction = nullptr;   // "P": develop-mode local (arbiter)
@@ -1820,6 +1851,12 @@ private:
     BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
     QComboBox *previewSourceCombo = nullptr;   // status-bar Original / Developed dropdown
+    /*  The status-bar workflow switcher, indexed by Workflow (Slide Show has none, so its
+        slot is null).  See MW::createStatusBar and MW::syncWorkflowSwitcher. */
+    QList<QToolButton *> workflowBtns;
+    /*  The file the window title names, kept so a source change can rebuild the title
+        without a new selection.  See MW::updateWindowTitle. */
+    QString titleFilePath;
     BarBtn *panToFocusToggleBtn;
     BarBtn *modifyImagesBtn;
     BarBtn *cacheMethodBtn;
@@ -1860,6 +1897,12 @@ private:
         (shipped off, like catalogDock -- the left group is already four tabs deep), so
         every use is null-guarded. */
     DockWidget *keywordsDock = nullptr;
+    /*  THE MODULE DOCK: the workflow switcher (Browse | Develop | Keywords | Embellish)
+        across the top of the window. No title bar, not movable, not floatable, top area
+        only; MW::placeShowHideBars pins it there. See MW::createModuleDock. */
+    DockWidget *moduleDock = nullptr;
+    QList<QToolButton *> moduleBtns;        // indexed by Workflow, like workflowBtns
+    QList<QLabel *> moduleSeparators;       // the " | " between them, restyled with them
     DockWidget *metadataDock;
     DockWidget *thumbDock;
     DockWidget *propertiesDock;
@@ -1889,6 +1932,8 @@ private:
     ShowHideBar *leftBar   = nullptr;
     ShowHideBar *rightBar  = nullptr;
     ShowHideBar *bottomBar = nullptr;
+    QToolBar *topBarDock    = nullptr;       // over the Module dock
+    ShowHideBar *topBar    = nullptr;
     /* For a COLLAPSED area, the docks that were showing when the bar collapsed it AND
        the size each one had. Restoring re-shows exactly these at exactly those sizes: a
        panel the user had already closed stays closed, and one that was 300px wide comes
@@ -2087,6 +2132,7 @@ private:
     QStackedWidget *sourceStack = nullptr;
     QToolButton *sourceFoldersBtn = nullptr;
     QToolButton *sourceLibraryBtn = nullptr;
+    QLabel *sourceSeparator = nullptr;       // the " | " between Library and Folders
     /*  A LibTree click that arrived before the Library's filters were built, waiting
         for them. */
     struct PendingFolderFilter {
@@ -2582,6 +2628,18 @@ private:
     void createFilterDock();
     void createCatalogDock();
     void createKeywordsDock();
+    void createModuleDock();
+    /*  Build one row of workflow buttons (Browse, Develop, Keywords, Embellish) into
+        `layout`, filling `btns` (indexed by Workflow) and, when `separators` is given,
+        putting a " | " label between them. Shared by the Module dock and the (hidden)
+        status-bar switcher so both trigger the same actions. */
+    void buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
+                              QList<QLabel *> *separators);
+    /*  The Library | Folders look, shared by the Source toggle and the Module dock: the
+        selected option in kSelectedOptionColor (bold when boldSelected), the others in
+        the default text colour. fontPt <= 0 leaves the font size alone; vPad is the
+        buttons' top and bottom padding in px. */
+    QString segmentedOptionCss(int fontPt, bool boldSelected = true, int vPad = 1) const;
     /*  A vocabulary node was renamed or re-parented: offer to bring the images that
         carry the old path into line. The model has already changed the NAME; this is
         only about the files. */

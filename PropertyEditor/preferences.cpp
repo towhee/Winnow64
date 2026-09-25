@@ -505,6 +505,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->fullScreenDocks.isKeywords = v.toBool();
     }
 
+    if (source == "fullScreenShowModule") {
+        mw->fullScreenDocks.isModule = v.toBool();
+    }
+
     if (source == "fullScreenShowMetadata") {
         mw->fullScreenDocks.isMetadata = v.toBool();
     }
@@ -1953,6 +1957,20 @@ void Preferences::addFullScreen()
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isKeywords;
     i.key = "fullScreenShowKeywords";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show module
+    i.name = "fullScreenShowModule";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show module";
+    i.tooltip = "When you switch to full screen show the Module dock "
+                "(Browse | Develop | Keywords | Embellish) across the top.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isModule;
+    i.key = "fullScreenShowModule";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

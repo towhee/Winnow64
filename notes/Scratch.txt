@@ -5106,3 +5106,15 @@ Filters count columns: they were sized for five digits, so "154,933" was cut off
 load finishes, both count columns now widen to fit the number of images loaded. In the
 Library that's the whole catalog, the largest count any filter row can show. They never
 get narrower than before.
+
+Winnow has two sources: Library and Folders.
+Central widget modes (Loupe, Grid, Table, Compare) apply to both Library and Folders.
+Both Library and Folders are for viewing and managing images.
+Develop is a separate workflow.
+Keywording is a separate workflow.
+Editing embellish templates is a separate workflow.
+Workspaces define the app layout.
+Dedicated workspaces are used for specific workflows.
+Shortcuts are a combination of source / central widget modes / workflows at present.
+What is the best UI to support all of the above and be clear to the user?
+

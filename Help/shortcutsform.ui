@@ -880,7 +880,7 @@
          <string>E   or   Return / Enter</string>
         </property>
         <property name="text">
-         <string>In Develop mode returns to Preview mode, in loupe view</string>
+         <string>Always Browse: from Develop, Keywords or Embellish, returns to Browse in loupe view</string>
         </property>
        </item>
        <item>
@@ -891,7 +891,7 @@
          <string>G</string>
         </property>
         <property name="text">
-         <string>In Develop mode returns to Preview mode, in grid view</string>
+         <string>Always Browse: from Develop, Keywords or Embellish, returns to Browse in grid view</string>
         </property>
        </item>
        <item>
@@ -902,7 +902,7 @@
          <string>T</string>
         </property>
         <property name="text">
-         <string>In Develop mode returns to Preview mode, in table view</string>
+         <string>Always Browse: from Develop, Keywords or Embellish, returns to Browse in table view</string>
         </property>
        </item>
        <item>
@@ -913,7 +913,7 @@
          <string>C</string>
         </property>
         <property name="text">
-         <string>Preview mode only (Compare needs two or more selected images)</string>
+         <string>Always Browse, like E / G / T (Compare needs two or more selected images)</string>
         </property>
        </item>
        <item>
@@ -1608,13 +1608,24 @@
        </item>
        <item>
         <property name="text">
-         <string>Source Workspace</string>
+         <string>Browse Workspace</string>
         </property>
         <property name="text">
-         <string>E, G, C</string>
+         <string>E, G, T, C</string>
         </property>
         <property name="text">
-         <string>The view keys also apply the Source workflow layout</string>
+         <string>The view keys return to Browse from any other workflow; in Browse they only change the view</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Reset Layout</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + R</string>
+        </property>
+        <property name="text">
+         <string>Reapplies the current workflow's layout (recovers a stranded panel)</string>
         </property>
        </item>
        <item>
@@ -1637,6 +1648,28 @@
         </property>
         <property name="text">
          <string>Applies the Keywords workflow layout</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Library Source</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + L</string>
+        </property>
+        <property name="text">
+         <string>Switches the source to the Library; the workflow does not change</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Folders Source</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + F</string>
+        </property>
+        <property name="text">
+         <string>Switches the source to Folders; the workflow does not change</string>
         </property>
        </item>
       </item>

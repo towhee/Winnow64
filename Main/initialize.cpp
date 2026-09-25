@@ -1500,6 +1500,26 @@ void MW::createStatusBar()
        DISABLED IN DEVELOP MODE, where it reads Developed: Develop always shows the
        developed image, so the choice does not exist there. MW::syncPreviewSourceEnabled
        owns that, and setPreviewSource / setOperationMode call it. */
+    /* THE STATUS-BAR WORKFLOW SWITCHER -- HIDDEN. The Module dock across the top of the
+       window (MW::createModuleDock) is now where the workflow is chosen, and the
+       Original / Developed dropdown below is hidden with it. Both are still BUILT, added
+       and kept in sync, only not shown, so reinstating either is flipping its flag.
+       Built by the same MW::buildWorkflowButtons as the Module dock, so the two rows
+       trigger the same actions and MW::syncWorkflowSwitcher lights both. */
+    const bool showStatusBarWorkflowSwitcher = false;
+    const bool showStatusBarPreviewSource = false;
+    {
+        QWidget *switcher = new QWidget;
+        switcher->setObjectName("workflowSwitcher");
+        QHBoxLayout *switcherLayout = new QHBoxLayout(switcher);
+        switcherLayout->setContentsMargins(4, 0, 4, 0);
+        switcherLayout->setSpacing(2);
+        buildWorkflowButtons(switcherLayout, workflowBtns, nullptr);
+        styleWorkflowSwitcher();
+        statusBar()->addWidget(switcher);
+        switcher->setVisible(showStatusBarWorkflowSwitcher);
+    }
+
     previewSourceCombo = new QComboBox;
     previewSourceCombo->setObjectName("previewSourceCombo");
     previewSourceCombo->addItem("Original");
@@ -1532,6 +1552,7 @@ void MW::createStatusBar()
                              : G::PreviewSource::Original);
     });
     statusBar()->addWidget(previewSourceCombo);
+    previewSourceCombo->setVisible(showStatusBarPreviewSource);   // see switcher above
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;
@@ -1689,10 +1710,14 @@ void MW::createFolderDock()
         b->setCheckable(true);
         b->setAutoRaise(true);
         b->setFocusPolicy(Qt::NoFocus);
+        /*  Full title-bar height, like the "Source" title label beside them, with no
+            vertical padding (MW::styleSourceToggle): both then centre their text in the
+            same box, so the three words sit on one line. A button left at its own
+            height is centred by the layout instead, and lands a pixel or two off. */
+        b->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
         sourceGroup->addButton(b);
     }
     sourceFoldersBtn->setChecked(true);
-    styleSourceToggle();
     /*  clicked, not toggled: setScope pushes the state back with the signals blocked,
         and only the USER's click should ask for a change. */
     connect(sourceFoldersBtn, &QToolButton::clicked, this, [this] { showFoldersSource(); });
@@ -1705,11 +1730,20 @@ void MW::createFolderDock()
         sourceLibraryBtn->setChecked(lib);
         sourceFoldersBtn->setChecked(!lib);
     });
+    /*  Library | Folders, in that order: the Library is the whole collection and Folders
+        is a way into part of it. The selected one is bold in the selection yellow and the
+        other in the default text colour (MW::segmentedOptionCss) -- the same look as the
+        Module dock across the top of the window. */
+    sourceSeparator = new QLabel("|");
+    sourceSeparator->setObjectName("sourceSeparator");
+    /*  After the separator exists: styled before it, the separator was left to the app
+        sheet's "DockTitleBar > QLabel" rule and came out in the title's cyan. */
+    styleSourceToggle();
     // after the title label (index 0), before the stretch DockTitleBar adds
     folderTitleLayout->insertSpacing(1, 16);
-    folderTitleLayout->insertWidget(2, sourceFoldersBtn);
-    folderTitleLayout->insertSpacing(3, 2);
-    folderTitleLayout->insertWidget(4, sourceLibraryBtn);
+    folderTitleLayout->insertWidget(2, sourceLibraryBtn);
+    folderTitleLayout->insertWidget(3, sourceSeparator);
+    folderTitleLayout->insertWidget(4, sourceFoldersBtn);
     // The folders tab starts with its text title; when G::useDockTitleGraphic
     // is on, MW::updateDockTabGraphics swaps text<->graphic per available width.
 
@@ -1777,19 +1811,38 @@ void MW::createFolderDock()
 void MW::styleSourceToggle()
 {
 /*
-    The lit half in the selection colour, the way a selected folder is lit in the tree
-    beneath -- the toggle and the tree say the same thing. From the palette, so
-    MW::setBackgroundShade calls this again.
+    Library | Folders: the selected source bold in the selection yellow, the other in the
+    default text colour. From the palette, so MW::setBackgroundShade calls this again.
 */
     if (!sourceFoldersBtn || !sourceLibraryBtn) return;
-    const QString css = QString(
-        "QToolButton { border:none; border-radius:3px; padding:1px 8px;"
-        "  color:%1; background:transparent; }"
-        "QToolButton:checked { color:%2; background:%3; }"
-        "QToolButton:hover:!checked { color:%2; }")
-        .arg(G::disabledColor.name(), G::textColor.name(), G::selectionColor.name());
+    const QString css = segmentedOptionCss(0, /*boldSelected*/ true, /*vPad*/ 0);
     sourceFoldersBtn->setStyleSheet(css);
     sourceLibraryBtn->setStyleSheet(css);
+    if (sourceSeparator) sourceSeparator->setStyleSheet(css);
+}
+
+/*  The one yellow a selected option is drawn in (Library | Folders, the Module dock). */
+static const char *kSelectedOptionColor = "#f0c419";
+
+QString MW::segmentedOptionCss(int fontPt, bool boldSelected, int vPad) const
+{
+/*
+    One look for every "A | B | C" choice in the chrome: no button frames, the selected
+    option in kSelectedOptionColor (bold when boldSelected -- Library | Folders is, the
+    Module dock is not), the others in G::textColor, and the " | " separators (QLabels)
+    in the same text colour. The weight is set on the unchecked state too, so a
+    stylesheet rule, not the inherited font, decides it.
+*/
+    const QString size = fontPt > 0 ? QString(" font-size:%1pt;").arg(fontPt) : QString();
+    return QString(
+        "QToolButton { border:none; padding:%5px 6px; background:transparent;"
+        "  color:%1; font-weight:normal;%3 }"
+        "QToolButton:checked { color:%2; font-weight:%6; }"
+        "QToolButton:disabled { color:%4; }"
+        "QLabel { color:%1; background:transparent; border:none; padding:0;%3 }")
+        .arg(G::textColor.name(), kSelectedOptionColor, size, G::disabledColor.name())
+        .arg(vPad)
+        .arg(boldSelected ? "bold" : "normal");
 }
 
 void MW::createFavDock()
@@ -3277,6 +3330,101 @@ void MW::createHistoryDock()
     historyTitleLayout->addSpacing(5);
 }
 
+void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
+                              QList<QLabel *> *separators)
+{
+/*
+    One button per workflow, the active one lit by MW::syncWorkflowSwitcher. Each button
+    triggers its workflow's action, so a click and the key run the same code; the lit
+    button is then set from currentWorkflow, so a refused switch (Develop in the cache
+    folder) leaves it where it was. None is lit while a named workspace is applied, which
+    is not a workflow.
+
+    Built before createActions, so a button looks its action up at click time; the
+    enabled state and the reason for a greyed button are mirrored from the actions in
+    createActions. QToolButton rather than QPushButton: the global QPushButton min-width
+    (widgetcss.cpp) would widen whatever holds them. Slide Show has no button -- it is a
+    presentation action, not a workflow.
+*/
+    btns.clear();
+    for (int wf = 0; wf < WfCount; ++wf) btns.append(nullptr);
+    const QList<QPair<int, QString>> buttons{
+        {WfSource,    tr("Browse")},
+        {WfDevelop,   tr("Develop")},
+        {WfKeywords,  tr("Keywords")},
+        {WfEmbellish, tr("Embellish")},
+    };
+    bool first = true;
+    for (const auto &b : buttons) {
+        const int wf = b.first;
+        if (wf == WfEmbellish && hideEmbellish) continue;
+        if (!first && separators) {
+            QLabel *sep = new QLabel("|");
+            separators->append(sep);
+            layout->addWidget(sep);
+        }
+        first = false;
+        QToolButton *btn = new QToolButton;
+        btn->setText(b.second);
+        btn->setCheckable(true);
+        btn->setAutoRaise(true);
+        btn->setFocusPolicy(Qt::NoFocus);
+        btns[wf] = btn;
+        layout->addWidget(btn);
+        connect(btn, &QToolButton::clicked, this, [this, wf]() {
+            QAction *a = nullptr;
+            if (wf == WfSource) a = browseWorkflowAction;
+            else if (wf == WfDevelop) a = operationModeAction;
+            else if (wf == WfKeywords) a = keywordsWorkspaceAction;
+            else if (wf == WfEmbellish) a = embellishWorkspaceAction;
+            if (a && a->isEnabled()) a->trigger();
+            syncWorkflowSwitcher();
+        });
+    }
+}
+
+void MW::createModuleDock()
+{
+/*
+    THE MODULE DOCK: Browse | Develop | Keywords | Embellish across the top of the window,
+    the workflow setting of the UI model (see "THE UI MODEL" in workspaces.cpp). It
+    replaces the status-bar switcher, which is still built but hidden.
+
+    A DOCK RATHER THAN A TOOLBAR so it behaves like every other panel: a workspace
+    records whether it is showing (isModuleDockVisible), Full Screen has a preference for
+    it, Window > Module Panel toggles it, and the top show/hide bar collapses it the way
+    the other three bars collapse their sides -- all through machinery that already
+    works on DockWidgets (docksInArea, dockVisibleAction, toggleDockArea).
+
+    BUT NOT A PANEL THE USER ARRANGES: no title bar, not movable, not floatable, not
+    closable and top area only, so it can never join a tab group (and so needs no tab
+    glyph -- see updateDockTabGraphics) and is never anywhere but the top.
+    MW::placeShowHideBars re-pins it after every layout path.
+
+    Text at 1.5x G::fontSize, in the Library | Folders look (MW::segmentedOptionCss)
+    but NOT bold: the yellow alone marks the selected module.
+    MW::styleWorkflowSwitcher restyles it and fixes its height to the text, so the top
+    dock area has no splitter worth dragging.
+*/
+    if (G::isLogger) G::log("MW::createModuleDock");
+    moduleDock = new DockWidget(tr("Module"), "ModuleDock", this);
+    moduleDock->setObjectName("ModuleDock");
+    moduleDock->setTitleBarWidget(new QWidget(moduleDock));      // no title bar
+    moduleDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    moduleDock->setAllowedAreas(Qt::TopDockWidgetArea);
+
+    QWidget *body = new QWidget(moduleDock);
+    body->setObjectName("ModuleDockBody");
+    QHBoxLayout *layout = new QHBoxLayout(body);
+    layout->setContentsMargins(0, 2, 0, 2);
+    layout->setSpacing(0);
+    layout->addStretch();
+    moduleSeparators.clear();
+    buildWorkflowButtons(layout, moduleBtns, &moduleSeparators);
+    layout->addStretch();
+    moduleDock->setWidget(body);
+}
+
 void MW::createKeywordsDock()
 {
 /*
@@ -3923,6 +4071,7 @@ void MW::createDocks()
     createEmbelDock();
     createDevelopDock();
     createHistoryDock();   // after Develop: it binds to developProperties
+    createModuleDock();
 
     // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -3936,6 +4085,7 @@ void MW::createDocks()
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::RightDockWidgetArea, developDock);
     addDockWidget(Qt::RightDockWidgetArea, historyDock);
+    addDockWidget(Qt::TopDockWidgetArea, moduleDock);
 
     /* The rim strips that collapse each side. After the panels, so createShowHideBars'
        addDockWidget lands them outboard; placeShowHideBars pins that down properly once

@@ -236,7 +236,8 @@ void MW::renameSelectedFiles()
     rf.exec();
 
     // may have renamed current image
-    setWindowTitle(winnowWithVersion + "   " + dm->currentFilePath);
+    titleFilePath = dm->currentFilePath;
+    updateWindowTitle();
 }
 
 void MW::shareFiles()

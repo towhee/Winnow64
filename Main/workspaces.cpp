@@ -144,6 +144,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     /*  A named workspace is not a workflow.  invokeWorkflowWorkspace re-stamps this
         after the layout is applied, so the workflow routes still record themselves. */
     currentWorkflow = -1;
+    syncWorkflowSwitcher();
 
     /*  Which panel was front in each tab group in the workspace being LEFT, so coming
         back to it comes back to the panel last used there and not to whatever was front
@@ -178,6 +179,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     filterDockVisibleAction->setChecked(w.isFilterDockVisible);
     catalogDockVisibleAction->setChecked(w.isCatalogDockVisible);
     keywordsDockVisibleAction->setChecked(w.isKeywordsDockVisible);
+    moduleDockVisibleAction->setChecked(w.isModuleDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
     developDockVisibleAction->setChecked(w.isDevelopDockVisible);
@@ -344,6 +346,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
     wsd.isCatalogDockVisible = catalogDockVisibleAction->isChecked();
     wsd.isKeywordsDockVisible = keywordsDockVisibleAction->isChecked();
+    wsd.isModuleDockVisible = moduleDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
     wsd.isDevelopDockVisible = developDockVisibleAction->isChecked();
@@ -540,6 +543,8 @@ void MW::placeDocksAddedSince(int stateVersion)
         {2, historyDock, developDock, historyDockVisibleAction},
         {4, catalogDock, filterDock, catalogDockVisibleAction},
         {5, keywordsDock, filterDock, keywordsDockVisibleAction},
+        /* Top area, never tabbed; MW::placeShowHideBars pins it there. */
+        {8, moduleDock, nullptr, moduleDockVisibleAction},
     };
 
     for (const AddedDock &a : added) {
@@ -588,6 +593,7 @@ void MW::builtInDefaultWorkspace()
     /*  Off, for the reason the Catalog panel is off: the left group is already four
         tabs deep and a fifth most sessions never open costs every session the space. */
     keywordsDockVisibleAction->setChecked(false);
+    moduleDockVisibleAction->setChecked(true);
     metadataDockVisibleAction->setChecked(true);
     embelDockVisibleAction->setChecked(false);
     thumbDockVisibleAction->setChecked(true);
@@ -748,6 +754,7 @@ QString MW::reportWorkspaces()
             << "\n  isFilterDockVisible       " << G::s(ws.isFilterDockVisible)
             << "\n  isCatalogDockVisible      " << G::s(ws.isCatalogDockVisible)
             << "\n  isKeywordsDockVisible     " << G::s(ws.isKeywordsDockVisible)
+            << "\n  isModuleDockVisible       " << G::s(ws.isModuleDockVisible)
             << "\n  isMetadataDockVisible     " << G::s(ws.isMetadataDockVisible)
             << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
             << "\n  isDevelopDockVisible      " << G::s(ws.isDevelopDockVisible)
@@ -822,6 +829,7 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisFilterDockVisible" << ws.isFilterDockVisible
         << "\nisCatalogDockVisible" << ws.isCatalogDockVisible
         << "\nisKeywordsDockVisible" << ws.isKeywordsDockVisible
+        << "\nisModuleDockVisible" << ws.isModuleDockVisible
         << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
         << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
         << "\nisDevelopDockVisible" << ws.isDevelopDockVisible
@@ -894,6 +902,7 @@ QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
     m["isFilterDockVisible"] = wsd.isFilterDockVisible;
     m["isCatalogDockVisible"] = wsd.isCatalogDockVisible;
     m["isKeywordsDockVisible"] = wsd.isKeywordsDockVisible;
+    m["isModuleDockVisible"] = wsd.isModuleDockVisible;
     m["isMetadataDockVisible"] = wsd.isMetadataDockVisible;
     m["isEmbelDockVisible"] = wsd.isEmbelDockVisible;
     m["isDevelopDockVisible"] = wsd.isDevelopDockVisible;
@@ -961,6 +970,9 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     /*  Absent from a workspace saved before the Keywords dock existed, which reads as
         false -- the same as its default, so an old workspace needs no migration. */
     wsd.isKeywordsDockVisible = m.value("isKeywordsDockVisible").toBool();
+    /*  Absent from every workspace and shipped default saved before the Module dock
+        existed: show it, since it is where the workflow is chosen. */
+    wsd.isModuleDockVisible = m.value("isModuleDockVisible", true).toBool();
     wsd.isMetadataDockVisible = m.value("isMetadataDockVisible").toBool();
     wsd.isEmbelDockVisible = m.value("isEmbelDockVisible").toBool();
     wsd.isDevelopDockVisible = m.value("isDevelopDockVisible").toBool();
@@ -1182,7 +1194,11 @@ const QStringList &MW::workflowKeys()
 
 QStringList MW::workflowNames()
 {
-    return {tr("Source"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show")};
+    /*  "Browse", not "Source": the SOURCE is Library | Folders (the Source panel), which
+        every workflow works on. The key stays "Source" (see workflowKeys), so this is a
+        display rename only. The name also keys the session-only front-tab memory
+        (MW::rememberDockTabSelection), which is why the rename costs nothing there. */
+    return {tr("Browse"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show")};
 }
 
 void MW::migrateWorkflowKey(const QString &from, const QString &to)
@@ -1332,13 +1348,12 @@ void MW::invokeWorkflowWorkspace(int wf)
     if (G::isPanelProbe)
         PanelProbe::Instance().Mark(QString("invokeWorkflowWorkspace(%1) enter").arg(wf));
 
-    if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf) && hasWorkflowOverride(wf)) {
+    if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf) && hasWorkflowOverride(wf))
         invokeWorkspace(workflowUserWs.at(wf));
-        currentWorkflow = wf;
-        return;
-    }
-    invokeWorkflowDefault(wf);
+    else
+        invokeWorkflowDefault(wf);
     currentWorkflow = wf;
+    syncWorkflowSwitcher();
 }
 
 void MW::invokeWorkflowDefault(int wf)
@@ -1518,4 +1533,147 @@ void MW::syncWorkflowWorkspaceMenus()
             : tr("Tick to save the current layout as your %1 workspace")
                   .arg(workflowNames().at(wf)));
     }
+}
+
+/*  THE UI MODEL: SOURCE x WORKFLOW x VIEW *****************************************
+
+    Three settings, each with one home and its own keys, none changing another:
+
+    SOURCE    Library | Folders.  The Source panel's toggle, Ctrl+Shift+L / Ctrl+Shift+F,
+              View > Library / Folders.  Every workflow works on the current source and
+              selection, so switching source never changes the workflow.
+    WORKFLOW  Browse, Develop, Keywords, Embellish.  The status-bar switcher, D and K.
+              The only setting that owns a workspace (panel layout).
+    VIEW      Loupe, Grid, Table, Compare.  E / G / T / C.  These are the BROWSE views:
+              a view key always lands in Browse (MW::requestView).
+
+    Slide Show is a presentation action (S), not a workflow.  Window > Workspace > Reset
+    Layout is how a layout that has got away from the user is recovered.
+*/
+
+void MW::requestView(int view)
+{
+/*
+    E / G / T / C: show a central view, in Browse.
+
+    From another workflow -- or from Develop mode under any layout -- this leaves it: out
+    of Develop first (setOperationMode restores the Preview decode / read-ahead and greys
+    the Develop panel before the view is shown), then the Browse layout, then the view.
+
+    ALREADY IN BROWSE IT ONLY CHANGES THE VIEW.  The view keys used to reassert the Browse
+    layout every time, as the way to recover a stranded panel; that made a view key move
+    panels as a side effect, and it is now MW::resetLayout's job.  A named workspace
+    (currentWorkflow -1) is the user's own layout and is left alone the same way.
+*/
+    if (G::isLogger) G::log("MW::requestView", QString::number(view));
+    const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    const bool otherWorkflow = currentWorkflow >= 0 && currentWorkflow != WfSource;
+    setOperationMode(G::OperationMode::Preview);
+    if (otherWorkflow || inDevelop) invokeWorkflowWorkspace(WfSource);
+
+    switch (view) {
+    case CvLoupe:   loupeDisplay("MW::requestView"); break;
+    case CvGrid:    gridDisplay();                  break;
+    case CvTable:   tableDisplay();                 break;
+    case CvCompare: compareDisplay();               break;
+    default: return;
+    }
+    browseView = view;
+}
+
+void MW::invokeBrowseWorkflow()
+{
+/*
+    The switcher's Browse button and View > Browse Mode: Browse, in the view it was last
+    shown in.  Unlike a view key this applies the Browse layout from a named workspace
+    too -- asking for Browse by name is asking for its layout.
+*/
+    if (G::isLogger) G::log("MW::invokeBrowseWorkflow");
+    setOperationMode(G::OperationMode::Preview);
+    if (currentWorkflow != WfSource) invokeWorkflowWorkspace(WfSource);
+    requestView(browseView);
+}
+
+void MW::invokeEmbellishWorkflow()
+{
+/*
+    The Embellish workflow layout, the way K applies Keywords.  Leaves Develop first; a
+    no-op when already in Preview.
+*/
+    if (G::isLogger) G::log("MW::invokeEmbellishWorkflow");
+    setOperationMode(G::OperationMode::Preview);
+    invokeWorkflowWorkspace(WfEmbellish);
+}
+
+void MW::resetLayout()
+{
+/*
+    Window > Workspace > Reset Layout: reapply the current workflow's layout (the user's
+    override when ticked, else the shipped one), or the named workspace in use.  The
+    recovery for a panel left open or a dock stranded on a monitor that is gone.
+
+    Neither the operation mode nor the view changes: a workflow layout carries a central
+    view of its own, so Browse's view is put back afterwards.
+*/
+    if (G::isLogger) G::log("MW::resetLayout");
+    if (currentWorkflow < 0) {
+        invokeWorkspace(ws);
+        return;
+    }
+    const int wf = currentWorkflow;
+    invokeWorkflowWorkspace(wf);
+    if (wf == WfSource) requestView(browseView);
+}
+
+void MW::syncWorkflowSwitcher()
+{
+/*
+    Light the button for currentWorkflow in the Module dock and in the (hidden)
+    status-bar switcher; none while a named workspace is in use.  Set programmatically,
+    so a click the workflow refused shows the truth again.
+*/
+    for (const QList<QToolButton *> *btns : {&moduleBtns, &workflowBtns}) {
+        for (int wf = 0; wf < btns->count(); ++wf) {
+            QToolButton *btn = btns->at(wf);
+            if (!btn) continue;
+            QSignalBlocker block(btn);
+            btn->setChecked(wf == currentWorkflow);
+        }
+    }
+}
+
+void MW::styleWorkflowSwitcher()
+{
+/*
+    The Library | Folders look (MW::segmentedOptionCss) for both workflow rows: the Module
+    dock at 1.5x G::fontSize, the hidden status-bar switcher at the normal size.  From
+    the palette and the font size, so MW::setBackgroundShade and MW::setFontSize call
+    this again.
+
+    The Module dock's height is FIXED to its text afterwards: the top dock area has a
+    splitter against the central widget, and a strip of buttons has no use for being
+    dragged taller.
+*/
+    /* Not bold, in either row: at the Module dock's size the yellow alone is enough. */
+    const QString css = segmentedOptionCss(0, /*boldSelected*/ false);
+    for (QToolButton *btn : std::as_const(workflowBtns))
+        if (btn) btn->setStyleSheet(css);
+
+    if (!moduleDock || !moduleDock->widget()) return;
+    moduleDock->widget()->setStyleSheet(segmentedOptionCss(qRound(1.5 * G::fontSize), false));
+    moduleDock->widget()->adjustSize();
+    moduleDock->setFixedHeight(moduleDock->widget()->sizeHint().height());
+}
+
+void MW::updateWindowTitle()
+{
+/*
+    "Winnow <version>   Library  <file>": the source is named in the title as well as in
+    the Source panel, which may be hidden (the Develop layout hides it).  titleFilePath is
+    the current file, set by the selection and cleared by a new load.
+*/
+    QString title = winnowWithVersion + "   "
+                  + (G::scope == G::Scope::Catalog ? tr("Library") : tr("Folders"));
+    if (!titleFilePath.isEmpty()) title += "   " + titleFilePath;
+    setWindowTitle(title);
 }

@@ -788,6 +788,8 @@ void MW::createShowHideBars()
          "RightShowHideBar",  &rightBar,  &rightBarDock,  "Hide or show the panels on the right"},
         {ShowHideBar::Bottom, Qt::BottomDockWidgetArea, Qt::BottomToolBarArea,
          "BottomShowHideBar", &bottomBar, &bottomBarDock, "Hide or show the thumbnails"},
+        {ShowHideBar::Top,    Qt::TopDockWidgetArea,    Qt::TopToolBarArea,
+         "TopShowHideBar",    &topBar,    &topBarDock,    "Hide or show the Module panel"},
     };
 
     for (const Spec &sp : specs) {
@@ -807,7 +809,8 @@ void MW::createShowHideBars()
                           " spacing: 0; background: transparent; }");
         tb->layout()->setContentsMargins(0, 0, 0, 0);
         tb->addWidget(bar);
-        if (sp.edge == ShowHideBar::Bottom) tb->setFixedHeight(ShowHideBar::thickness());
+        if (sp.edge == ShowHideBar::Bottom || sp.edge == ShowHideBar::Top)
+            tb->setFixedHeight(ShowHideBar::thickness());
         else                                tb->setFixedWidth(ShowHideBar::thickness());
         const Qt::DockWidgetArea area = sp.area;
         connect(bar, &ShowHideBar::clicked, this, [this, area]{ toggleDockArea(area); });
@@ -844,11 +847,20 @@ void MW::placeShowHideBars()
     (see createShowHideBars).
 */
     if (G::isLogger) G::log("MW::placeShowHideBars");
-    if (!leftBarDock || !rightBarDock || !bottomBarDock) return;
+    if (!leftBarDock || !rightBarDock || !bottomBarDock || !topBarDock) return;
 
     addToolBar(Qt::LeftToolBarArea,   leftBarDock);
     addToolBar(Qt::RightToolBarArea,  rightBarDock);
     addToolBar(Qt::BottomToolBarArea, bottomBarDock);
+    addToolBar(Qt::TopToolBarArea,    topBarDock);
+
+    /*  The Module dock is pinned the same way. It cannot be moved or floated, so a
+        position of its own is never a user choice -- and a state saved before it existed
+        (winnowStateVersion < 8) leaves it wherever Qt drops it. Re-adding a dock that is
+        already in the top area is a no-op move. */
+    if (moduleDock && (moduleDock->isFloating()
+                       || dockWidgetArea(moduleDock) != Qt::TopDockWidgetArea))
+        addDockWidget(Qt::TopDockWidgetArea, moduleDock);
 
     syncShowHideBars();
 }
@@ -866,6 +878,7 @@ QAction *MW::dockVisibleAction(QDockWidget *dock) const
     if (dock == embelDock)    return embelDockVisibleAction;
     if (dock == developDock)  return developDockVisibleAction;
     if (dock == historyDock)  return historyDockVisibleAction;
+    if (dock == moduleDock)   return moduleDockVisibleAction;
     return nullptr;
 }
 
@@ -978,13 +991,14 @@ void MW::syncShowHideBars()
     would empty the area, the bar would judge itself pointless and vanish, and the only
     route back would be the F-keys -- the bar could hide panels but never show them.
 */
-    if (!leftBarDock || !rightBarDock || !bottomBarDock) return;
+    if (!leftBarDock || !rightBarDock || !bottomBarDock || !topBarDock) return;
 
     struct Entry { Qt::DockWidgetArea area; ShowHideBar *bar; QToolBar *tb; };
     const Entry entries[] = {
         {Qt::LeftDockWidgetArea,   leftBar,   leftBarDock},
         {Qt::RightDockWidgetArea,  rightBar,  rightBarDock},
         {Qt::BottomDockWidgetArea, bottomBar, bottomBarDock},
+        {Qt::TopDockWidgetArea,    topBar,    topBarDock},
     };
 
     for (const Entry &e : entries) {
