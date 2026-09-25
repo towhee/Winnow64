@@ -10,27 +10,21 @@
 #import <IOKit/storage/IOMedia.h>
 #import <IOKit/storage/IOBlockStorageDevice.h>
 
-// Define an AppDelegate class
-@interface AppDelegate : NSObject <NSApplicationDelegate>
-@end
-
-@implementation AppDelegate
-
-// Implement the applicationSupportsSecureRestorableState method
-- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
-    return YES;
-}
-
-@end
-
-// Set up the delegate in your main application entry
-void Mac::initializeAppDelegate() {
-    static AppDelegate *appDelegate = nil;
-    if (!appDelegate) {
-        appDelegate = [[AppDelegate alloc] init];
-        [NSApp setDelegate:appDelegate];
-    }
-}
+/*
+    NO AppDelegate OF OUR OWN. There was one here, installed by main() with
+    [NSApp setDelegate:], whose only method was applicationSupportsSecureRestorableState
+    (to silence AppKit's secure-coding warning). Setting it REPLACED Qt's
+    QCocoaApplicationDelegate, which is what connects AppKit to Qt: with it gone, a quit
+    from the Dock, at logout or at shutdown asked a delegate with no
+    applicationShouldTerminate, so AppKit called exit() at once -- MW::closeEvent never
+    ran (no picks prompt, no Develop-edit flush, no cache saves, worker threads left
+    running into static destruction: the crash-on-quit reports of 2026-09-24). It also
+    disconnected openFiles (files dropped on the Dock icon), Dock-icon reopen and the
+    Dock menu. Qt 6.11's own delegate already answers the secure-restorable-state
+    question (qcocoaapplicationdelegate.mm), so nothing is lost by leaving it in place.
+    If Winnow ever needs its own delegate methods, set the delegate BEFORE QApplication
+    is constructed: Qt then keeps it as its reflectionDelegate and forwards to it.
+*/
 
 /*
     macOS auto-appends system items to whatever menu AppKit identifies as the

@@ -45,6 +45,7 @@ private slots:
     void pickedCountStaysExact();
     void forEachRowMatchesValue();
     void watchedGenerationMovesOnlyForWatchedCells();
+    void watchedChangesNameTheRowsUntilTheyCannot();
     void prefixExpansionStaysInBudget();
     void folderPathsAllIsDerivedFromThePath();
     void folderAncestryCostsARowOneId();
@@ -478,6 +479,47 @@ void tst_imagerow::watchedGenerationMovesOnlyForWatchedCells()
     g = s.watchedGeneration(); s.compact({0, -1, 1}); QVERIFY(s.watchedGeneration() != g);
     g = s.watchedGeneration(); s.resize(5);          QVERIFY(s.watchedGeneration() != g);
     g = s.watchedGeneration(); s.clear();            QVERIFY(s.watchedGeneration() != g);
+}
+
+void tst_imagerow::watchedChangesNameTheRowsUntilTheyCannot()
+{
+/*
+    BuildFilters::makeSnapshot re-reads only the rows this names. A row missing from it
+    is a filter count that never updates; a structural change NOT flagged is a patch
+    written to the wrong row. So: watched writes are listed, unwatched ones are not,
+    taking clears, and anything that renumbers rows -- or too many rows to list --
+    says structural instead.
+*/
+    RowStore s;
+    s.resize(10);
+    s.setWatchedCells({{G::RatingColumn, Qt::DisplayRole}});
+    RowStore::WatchedChanges c = s.takeWatchedChanges();
+    QVERIFY(c.structural);                                  // set changed / first take
+
+    c = s.takeWatchedChanges();                             // nothing since
+    QVERIFY(!c.structural);
+    QVERIFY(c.rows.isEmpty());
+
+    s.setValue(3, G::RatingColumn, Qt::EditRole, "5");
+    s.setValue(7, G::RatingColumn, Qt::EditRole, "2");
+    s.setValue(5, G::IconLoadedColumn, Qt::EditRole, true);  // not watched
+    c = s.takeWatchedChanges();
+    QVERIFY(!c.structural);
+    QCOMPARE(c.rows, (QVector<int>{3, 7}));
+
+    QVERIFY(s.takeWatchedChanges().rows.isEmpty());          // taking cleared it
+
+    s.setValue(1, G::RatingColumn, Qt::EditRole, "1");
+    s.removeRows(0, 1);                                     // renumbers: the 1 is stale
+    c = s.takeWatchedChanges();
+    QVERIFY(c.structural);
+    QVERIFY(c.rows.isEmpty());
+
+    s.resize(6000);
+    s.takeWatchedChanges();
+    for (int r = 0; r < 5000; ++r) s.setValue(r, G::RatingColumn, Qt::EditRole, "3");
+    c = s.takeWatchedChanges();
+    QVERIFY(c.structural);                                  // past the cap: rebuild
 }
 
 void tst_imagerow::prefixExpansionStaysInBudget()

@@ -520,61 +520,95 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     cells.append({G::KeywordsAllColumn, Qt::DisplayRole});     // kKeywords
     cells.append({G::PathColumn, G::DupHideRawRole});          // kHideRaw
 
-    /*  REUSED UNTIL A COUNTED CELL CHANGES. See FilterValuesPtr in filtersnapshot.h:
-        a filter change moves only inProxy, so the table from the last snapshot is
-        still exact unless RowStore's watched generation, the row count or
-        combineRawJpg (which hiddenRaw folds in) has moved. The generation is read
-        BEFORE the pass, so a write landing during it forces the next rebuild rather
-        than being missed. */
+    /*  REUSED, PATCHED OR REBUILT. See FilterValues in filtersnapshot.h. A filter change
+        moves only inProxy, so the table from the last snapshot is still exact unless
+        RowStore reports watched writes since it was built: when it can name the rows
+        (a rating or label edit -- one row), only those are re-read and only their chunks
+        copied; when it cannot (rows inserted or removed, the watched set changed, too
+        many rows written), or the row count or combineRawJpg (which hiddenRaw folds in)
+        moved, the table is rebuilt in one forEachRow pass. The changes are TAKEN before
+        the pass, so a write landing during it is patched next time rather than missed. */
     dm->rowStore.setWatchedCells(cells);
-    const quint64 gen = dm->rowStore.watchedGeneration();
-    if (cachedValues && gen == cachedValuesGen && rows == cachedValues->size()
-        && combine == cachedValuesCombine) {
+    const RowStore::WatchedChanges changes = dm->rowStore.takeWatchedChanges();
+
+    auto fill = [&](FilterSnapshotRow &r, const QVariant *val) {
+        for (int slot = 0; slot < FilterCat::SlotCount; ++slot) {
+            r.v[slot] = val[slot].toString().trimmed();
+        }
+        /*  A folder path is an IDENTITY, not display text: trimming it would turn
+            a folder named "Trip " into a different folder -- one the checked item's
+            value (the untrimmed path, see Filters::addFolderItems) then never
+            matches. */
+        r.v[FilterCat::FolderPath] = val[FilterCat::FolderPath].toString();
+        /* Focal length is right-justified so "50" and "400" sort as numbers
+           rather than as text. All three passes did this, so bake it in once. */
+        r.v[FilterCat::FocalLength] =
+            r.v[FilterCat::FocalLength].rightJustified(4, ' ');
+        /*  ISO for the same reason, to six: unpadded, "800" sorts between "100" and
+            "8000". Six covers the largest ISO a camera reports (409600). The model
+            holds an int, and a QVariant int compares equal to its padded string form,
+            so a checked item still matches the row -- which is what lets the item
+            carry the padded text as its value the way focal length does. */
+        r.v[FilterCat::Iso] = r.v[FilterCat::Iso].rightJustified(6, ' ');
+
+        /*  Availability is the one column whose value is a CODE, not a word -- see
+            Catalog::Availability, and "Present is 0 and unset reads as 0", which is
+            what makes a folder-scope row (nothing ever wrote this column) come out
+            Present rather than blank. The category shows the word. */
+        r.v[FilterCat::Availability] =
+            Catalog::availabilityLabel(r.v[FilterCat::Availability].toInt());
+
+        const QStringList kw = val[kKeywords].toStringList();
+        r.keywords.reserve(kw.size());
+        for (const QString &k : kw) r.keywords << k.trimmed();
+
+        /* When combineRawJpg is on the raw half of a pair is hidden in the
+           proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
+           skip it or they will not match the proxy baseline. */
+        r.hiddenRaw = combine && val[kHideRaw].toBool();
+    };
+
+    constexpr int kChunk = FilterValues::kChunk;
+    const bool reusable = cachedValues && !changes.structural
+                          && rows == cachedValues->rows && combine == cachedValuesCombine;
+    if (reusable && changes.rows.isEmpty()) {
         snap.values = cachedValues;
     }
+    else if (reusable) {
+        auto patched = std::make_shared<FilterValues>(*cachedValues);  // chunk pointers
+        QHash<int, std::shared_ptr<QVector<FilterSnapshotRow>>> copied;
+        QVector<QVariant> val(cells.size());
+        for (int row : changes.rows) {
+            if (row < 0 || row >= rows) continue;
+            const int c = row / kChunk;
+            std::shared_ptr<QVector<FilterSnapshotRow>> &chunk = copied[c];
+            if (!chunk)
+                chunk = std::make_shared<QVector<FilterSnapshotRow>>(*patched->chunks.at(c));
+            dm->rowStore.readRow(row, cells, val.data());
+            FilterSnapshotRow fresh;
+            fill(fresh, val.constData());
+            (*chunk)[row % kChunk] = fresh;
+        }
+        for (auto it = copied.cbegin(); it != copied.cend(); ++it)
+            patched->chunks[it.key()] = it.value();
+        cachedValues = patched;
+        snap.values = patched;
+    }
     else {
-        auto values = std::make_shared<QVector<FilterSnapshotRow>>(rows);
-        QVector<FilterSnapshotRow> &vrows = *values;
+        auto values = std::make_shared<FilterValues>();
+        values->rows = rows;
+        const int nChunks = (rows + kChunk - 1) / kChunk;
+        QVector<std::shared_ptr<QVector<FilterSnapshotRow>>> build(nChunks);
+        for (int c = 0; c < nChunks; ++c)
+            build[c] = std::make_shared<QVector<FilterSnapshotRow>>(
+                qMin(kChunk, rows - c * kChunk));
         dm->rowStore.forEachRow(cells, [&](int row, const QVariant *val) {
             if (row >= rows) return;
-            FilterSnapshotRow &r = vrows[row];
-            for (int slot = 0; slot < FilterCat::SlotCount; ++slot) {
-                r.v[slot] = val[slot].toString().trimmed();
-            }
-            /*  A folder path is an IDENTITY, not display text: trimming it would turn
-                a folder named "Trip " into a different folder -- one the checked item's
-                value (the untrimmed path, see Filters::addFolderItems) then never
-                matches. */
-            r.v[FilterCat::FolderPath] = val[FilterCat::FolderPath].toString();
-            /* Focal length is right-justified so "50" and "400" sort as numbers
-               rather than as text. All three passes did this, so bake it in once. */
-            r.v[FilterCat::FocalLength] =
-                r.v[FilterCat::FocalLength].rightJustified(4, ' ');
-            /*  ISO for the same reason, to six: unpadded, "800" sorts between "100" and
-                "8000". Six covers the largest ISO a camera reports (409600). The model
-                holds an int, and a QVariant int compares equal to its padded string form,
-                so a checked item still matches the row -- which is what lets the item
-                carry the padded text as its value the way focal length does. */
-            r.v[FilterCat::Iso] = r.v[FilterCat::Iso].rightJustified(6, ' ');
-
-            /*  Availability is the one column whose value is a CODE, not a word -- see
-                Catalog::Availability, and "Present is 0 and unset reads as 0", which is
-                what makes a folder-scope row (nothing ever wrote this column) come out
-                Present rather than blank. The category shows the word. */
-            r.v[FilterCat::Availability] =
-                Catalog::availabilityLabel(r.v[FilterCat::Availability].toInt());
-
-            const QStringList kw = val[kKeywords].toStringList();
-            r.keywords.reserve(kw.size());
-            for (const QString &k : kw) r.keywords << k.trimmed();
-
-            /* When combineRawJpg is on the raw half of a pair is hidden in the
-               proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
-               skip it or they will not match the proxy baseline. */
-            r.hiddenRaw = combine && val[kHideRaw].toBool();
+            fill((*build[row / kChunk])[row % kChunk], val);
         });
+        values->chunks.reserve(nChunks);
+        for (const auto &c : build) values->chunks.append(c);
         cachedValues = values;
-        cachedValuesGen = gen;
         cachedValuesCombine = combine;
         snap.values = values;
     }

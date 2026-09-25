@@ -257,6 +257,7 @@ public:
         mPicked = 0;
         ++mPickGen;
         ++mWatchGen;
+        markWatchStructuralLocked();
     }
     void resize(int n)
     {
@@ -265,6 +266,7 @@ public:
         if (n != mRows.size()) mRows.resize(n);
         ++mPickGen;
         ++mWatchGen;
+        markWatchStructuralLocked();
     }
 
     /*  ROW SPLICING. The store is indexed by row, so an insert or a removal in
@@ -280,6 +282,7 @@ public:
         mRows.insert(at, count, ImageRow());
         ++mPickGen;
         ++mWatchGen;
+        markWatchStructuralLocked();
     }
     void removeRows(int at, int count)
     {
@@ -290,6 +293,7 @@ public:
         mRows.remove(at, count);
         ++mPickGen;
         ++mWatchGen;
+        markWatchStructuralLocked();
     }
     /*  Many scattered removals in ONE pass. newRow[old] is the row's new index,
         or -1 when it goes; kept rows keep their order, so newRow is ascending
@@ -308,6 +312,7 @@ public:
         mRows.resize(kept);
         ++mPickGen;
         ++mWatchGen;
+        markWatchStructuralLocked();
     }
     int  size() const { QReadLocker l(&mLock); return mRows.size(); }
     bool contains(int row) const
@@ -383,6 +388,36 @@ public:
     void setWatchedCells(const QVector<QPair<int, int>> &cells);
     quint64 watchedGeneration() const { QReadLocker l(&mLock); return mWatchGen; }
 
+    /*  WHICH ROWS, not just whether. Every watched write records its row, so a consumer
+        holding a copy of the watched cells can re-read those rows instead of all of them
+        -- a rating edit re-reads one row, not 148,567. `structural` means the row
+        NUMBERS may have moved (an insert, removal, compact, resize or clear), the
+        watched set itself changed, or more rows changed than are worth listing; the
+        copy must then be rebuilt whole. Taking the changes clears them: there is one
+        consumer (BuildFilters::makeSnapshot). A row may appear more than once. */
+    struct WatchedChanges { bool structural = true; QVector<int> rows; };
+    WatchedChanges takeWatchedChanges()
+    {
+        QWriteLocker l(&mLock);
+        WatchedChanges c;
+        c.structural = mWatchStructural;
+        c.rows.swap(mWatchDirty);
+        mWatchStructural = false;
+        return c;
+    }
+    /*  One row's cells, under one read lock -- forEachRow for a single row. */
+    void readRow(int row, const QVector<QPair<int, int>> &cells, QVariant *out) const
+    {
+        QReadLocker l(&mLock);
+        if (row < 0 || row >= mRows.size()) {
+            for (int i = 0; i < cells.size(); ++i) out[i] = QVariant();
+            return;
+        }
+        const ImageRow &r = mRows.at(row);
+        for (int i = 0; i < cells.size(); ++i)
+            out[i] = valueLocked(r, cells.at(i).first, cells.at(i).second);
+    }
+
     int pickedCount() const { QReadLocker l(&mLock); return mPicked; }
     quint64 pickGeneration() const { QReadLocker l(&mLock); return mPickGen; }
 
@@ -401,6 +436,19 @@ private:
     quint64 mPickGen = 0;
     quint64 mWatchLo = 0, mWatchHi = 0;     // field bits, as ImageRow::setLo/setHi
     quint64 mWatchGen = 0;
+    /*  Rows written in watched cells since the last takeWatchedChanges, and whether
+        the row numbering (or the watched set) changed so the list cannot be trusted.
+        Starts structural: nothing has been taken yet. */
+    static constexpr int kMaxWatchDirty = 4096;
+    QVector<int> mWatchDirty;
+    bool mWatchStructural = true;
+    void markWatchStructuralLocked() { mWatchStructural = true; mWatchDirty.clear(); }
+    void noteWatchedRowLocked(int row)
+    {
+        if (mWatchStructural) return;
+        if (mWatchDirty.size() >= kMaxWatchDirty) { markWatchStructuralLocked(); return; }
+        mWatchDirty.append(row);
+    }
 
     mutable QReadWriteLock mLock;
     QVector<ImageRow> mRows;

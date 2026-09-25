@@ -292,7 +292,9 @@ int main(int argc, char *argv[])
     }
 
 #ifdef Q_OS_MAC
-    Mac::initializeAppDelegate();
+    /*  No Mac::initializeAppDelegate() -- it replaced Qt's application delegate, and
+        with it every quit that did not come from Winnow's own menu skipped closeEvent.
+        See the note in Utilities/mac.mm. */
     // Strip the Sequoia "Writing Tools" / "Autofill" items AppKit appends to
     // the Edit menu (no defaults switch exists for these).
     Mac::stripEditMenuExtras();

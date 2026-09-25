@@ -86,6 +86,10 @@ public:
        column silently reverses the model in descending order; treat invalid as -1 (no sort,
        source order). See the column-88 trace. */
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+    /*  True when an active filter category reads this column, compiled from the
+        tree as it stands now (a pending coalesced compile is flushed first). GUI
+        thread. */
+    bool filterReadsColumn(int column);
 
 public slots:
     void filterChange(QString src = "");

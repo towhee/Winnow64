@@ -70,10 +70,24 @@ struct FilterSnapshotRow {
     rows the proxy admits and nothing else, yet every one used to re-copy nineteen cells
     of every row (and free the previous copy) on the GUI thread: the larger half of a
     filter change at 148,567 rows, sampled. So the row values are an immutable table
-    that BuildFilters::makeSnapshot REUSES until RowStore::watchedGeneration says a
-    counted cell or the row set changed, and each snapshot carries only its own inProxy.
-    Shared read-only across threads, which is what shared_ptr<const> is for. */
-typedef std::shared_ptr<const QVector<FilterSnapshotRow>> FilterValuesPtr;
+    that BuildFilters::makeSnapshot REUSES, and each snapshot carries only its own
+    inProxy. Shared read-only across threads, which is what shared_ptr<const> is for.
+
+    CHUNKED, SO AN EDIT PATCHES RATHER THAN REBUILDS. A rating edit changes one row; a
+    table that could only be rebuilt whole re-read all of them (~110 ms). The table is
+    chunks of kChunk rows, each an immutable shared vector: a patch copies the chunk
+    POINTERS (a hundred and fifty of them) plus only the chunks holding edited rows, so a
+    snapshot a worker still holds keeps seeing its own, unmodified chunks. */
+struct FilterValues {
+    static constexpr int kChunk = 1024;
+    QVector<std::shared_ptr<const QVector<FilterSnapshotRow>>> chunks;
+    int rows = 0;
+    const FilterSnapshotRow &row(int i) const
+    {
+        return chunks.at(i / kChunk)->at(i % kChunk);
+    }
+};
+typedef std::shared_ptr<const FilterValues> FilterValuesPtr;
 
 struct FilterSnapshot {
     int instance = -1;                  // dm->instance when taken
@@ -81,9 +95,9 @@ struct FilterSnapshot {
     QVector<char> inProxy;              // by DATAMODEL row: survives the current filter
     int proxyRows = 0;                  // rows with inProxy set
 
-    int rowCount() const { return values ? int(values->size()) : 0; }
+    int rowCount() const { return values ? values->rows : 0; }
     bool isEmpty() const { return rowCount() == 0; }
-    const FilterSnapshotRow &row(int i) const { return values->at(i); }
+    const FilterSnapshotRow &row(int i) const { return values->row(i); }
     bool admitted(int i) const { return i < inProxy.size() && inProxy.at(i); }
 };
 

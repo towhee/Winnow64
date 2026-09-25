@@ -720,6 +720,38 @@ void MW::updateSortColumn(int sortColumn)
 //     }
 // }
 
+bool MW::editNeedsRefilter(int column)
+{
+/*
+    DOES AN EDIT TO THIS COLUMN CHANGE WHICH ROWS ARE SHOWN, OR THEIR ORDER?
+
+    A rating or label edit used to end in a full MW::filterChange: a new datamodel
+    instance, an invalidate() that re-sorts every admitted row, a filter recount, the
+    proxy snapshot, a thumbnail refresh -- ~150 ms at 148,567 rows (sampled), for one
+    cell that, in the ordinary culling case, no filter and no sort even looks at. The
+    edited cell repaints on its own (setValDm notifies visible rows), and the edited
+    category's counts are rebuilt by the updateCategory that precedes this.
+
+    So refilter only when it can matter: the proxy is SORTED by this column (the
+    written values reach the proxy under a QSignalBlocker, so it would not re-sort on
+    its own), or an ACTIVE filter category reads it. Anything else leaves the proxy
+    exactly as it was, and filterChange would only have rebuilt the same answer.
+*/
+    return dm->sf->sortColumn() == column || dm->sf->filterReadsColumn(column);
+}
+
+void MW::repaintIconViews()
+{
+/*
+    What a classification edit needs from the thumbnail views: repaint what is on
+    screen, where the badge is drawn from the model on every paint. refreshIcons does a
+    rejustify (a relayout and a delegate cache flush) and a dataChanged over every row,
+    which is what a change of thumbnail SIZE needs, not a change of badge.
+*/
+    thumbView->viewport()->update();
+    gridView->viewport()->update();
+}
+
 void MW::setRating()
 {
 /*
@@ -730,6 +762,8 @@ void MW::setRating()
     // qDebug() << "MW::setRating";
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
+    QElapsedTimer editTimer;            // the whole keypress, G::isPerfProbe
+    editTimer.start();
 
     // make sure classification badges are visible
     if (!isRatingBadgeVisible) {
@@ -816,8 +850,7 @@ void MW::setRating()
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
 
     // update thumbnail appearance to show classification
-    thumbView->refreshIcons("MW::setRating");
-    gridView->refreshIcons("MW::setRating");
+    repaintIconViews();
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
 
     /* must execute in order:
@@ -837,12 +870,17 @@ void MW::setRating()
     buildFilters->updateCategory(BuildFilters::RatingEdit, BuildFilters::NoAfterAction,
                                  /*runSync*/ true);
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
-    filterChange("MW::setRating");
+    const bool refilter = editNeedsRefilter(G::RatingColumn);
+    if (refilter) filterChange("MW::setRating");
+    else dm->sf->suspend(false, "MW::setRating: nothing active reads ratings");
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
 
     // update ImageView classification badge
     updateClassification();
     if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] MW::setRating" << editTimer.elapsed() << "ms  images ="
+                           << n << " refilter =" << (refilter ? "yes" : "no");
 
     // auto advance
     if (G::autoAdvance) sel->next();
@@ -951,6 +989,8 @@ void MW::setColorClass()
     //qDebug() << "MW::setColorClass";
     // do not set color class if slideshow is on
     if (G::isSlideShow) return;
+    QElapsedTimer editTimer;            // the whole keypress, G::isPerfProbe
+    editTimer.start();
 
     // make sure classification badges are visible
     if (!isRatingBadgeVisible) {
@@ -1033,8 +1073,7 @@ void MW::setColorClass()
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
 
     // update thumbnail appearance to show classification
-    thumbView->refreshIcons("MW::setColorClass");
-    gridView->refreshIcons("MW::setColorClass");
+    repaintIconViews();
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
 
     /* must execute in order:
@@ -1052,7 +1091,9 @@ void MW::setColorClass()
     buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction,
                                  /*runSync*/ true);
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
-    filterChange("MW::setColorClass");
+    const bool refilter = editNeedsRefilter(G::LabelColumn);
+    if (refilter) filterChange("MW::setColorClass");
+    else dm->sf->suspend(false, "MW::setColorClass: nothing active reads labels");
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
 
     // // // was this rating filtered
@@ -1064,6 +1105,9 @@ void MW::setColorClass()
     // update ImageView classification badge
     updateClassification();
     if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] MW::setColorClass" << editTimer.elapsed()
+                           << "ms  refilter =" << (refilter ? "yes" : "no");
 
     // auto advance
     if (G::autoAdvance) sel->next();
