@@ -47,6 +47,7 @@
 #include "Datamodel/keywordvocab.h"
 #include "Views/libtree.h"
 #include "Main/catalogscanner.h"
+#include "Cache/cachedb.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
@@ -391,6 +392,26 @@ public:
     // int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;          // automatic check for a newer Winnow at startup
     bool openLibraryAtStart = false;    // start in Catalog scope instead of a folder
+    /*  With openLibraryAtStart: reopen the Library with the sort and filters it was left
+        with. Saved by saveLibraryState on leaving the Library and at quit; applied by
+        queueLibraryStateRestore (filters, through restoreFiltersAfterFolderChange) and
+        applyRestoredLibrarySort (the sort, from metadataComplete). */
+    bool restoreLibraryState = false;
+    bool libraryRestoreSortPending = false;
+    int  libraryRestoreSortColumn = -1;     // what queueLibraryStateRestore read
+    bool libraryRestoreReverse = false;
+    /*  The pending filter restore is the LIBRARY's (not a folder change's), so leaving
+        the Library before it lands must cancel it -- see setScope. */
+    bool libraryFilterRestorePending = false;
+    /*  A user sort asked for while metadata was still loading (see MW::sortChange), run
+        by applyDeferredSort from metadataComplete. */
+    bool sortDeferredForMetadata = false;
+    int  deferredSortColumn = -1;
+    bool deferredReverseSort = false;
+    void applyDeferredSort();
+    void saveLibraryState();
+    void queueLibraryStateRestore();
+    void applyRestoredLibrarySort();
     QString updateSkipVersion;          // version the user chose to skip (suppresses startup dialog)
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
@@ -653,6 +674,16 @@ public slots:
        adding a folder achieved anything. */
     void updateCatalogCounts();
     void stopCatalogScan();
+    /*  Help > Diagnostics > Catalog, the Manage Catalog Diagnostics button, and the "see
+        which" link in its status line: every file behind the gap between the folders and
+        the index, with the reason it is there, plus where the last scan spent its time.
+        The walk runs off the GUI thread. */
+    void diagnosticsCatalog();
+    /*  A SCAN THAT DID NOT FINISH PICKS UP AT THE NEXT LAUNCH. Checked once, after
+        start-up has settled; files already indexed are skipped by staleOf, so the run
+        resumes near where the last one stopped. A scan the user stopped is not
+        resumed. */
+    void resumeIncompleteCatalogScan();
     /* Open the Catalogued Folders editor -- which folders are indexed in the background.
        Created on first use and kept, so it can stay open while a scan runs. Reachable
        from the Catalog panel and from Preferences > Catalog. */
@@ -1710,6 +1741,7 @@ private:
     QAction *diagnosticsEmbellishAction;
     QAction *diagnosticsFiltersAction;
     QAction *diagnosticsKeywordsAction;
+    QAction *diagnosticsCatalogAction;
     QAction *diagnosticsFileTreeAction;
     QAction *diagnosticsBookmarksAction;
     QAction *diagnosticsPixmapAction;
@@ -1806,6 +1838,9 @@ private:
     int progressDevPreviewRow = -1;
     /* Background catalog scan over the user's designated roots. */
     int progressCatalogRow = -1;
+    /* Loading a catalog (Library) result into the model -- the status-bar companion to
+       the central "x of y images loading" message. */
+    int progressCatalogLoadRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -1994,10 +2029,24 @@ private:
        CacheDb::moveAside discards that file without asking, and this is user intent
        rather than derived data. */
     CatalogScope catalogScope;
-    /* Images on disk under the scope table (includes less exclusions), or -1 while the
+    /* Images on disk under the scope table (the scanner's own walk), or -1 while the
        walk that counts them is still running. Compared with the catalog's own count, it
        is what says whether a Scan is owed. */
     int catalogScopeOnDisk = -1;
+    /*  Files in scope the scanner can never catalogue -- zero-byte files and case or
+        Unicode twins of a file already indexed -- as the last scan counted them.
+        Persisted. catalogStatusText takes them out of the "press Scan" gap and names
+        them instead, so the line stops asking for a scan that cannot help. */
+    int catalogUncatalogable = 0;
+    /* Disk space the local index and previews use, measured with the scope counts
+       (off the GUI thread). valid is false until the first measurement lands. */
+    CacheDb::StorageUsage catalogStorage;
+    /*  Set when a scan starts, cleared when one completes or the user stops it; saved at
+        once, so a quit or a crash in between leaves it set. See
+        resumeIncompleteCatalogScan. */
+    bool catalogScanIncomplete = false;
+    /* The Stop button was pressed for the scan now ending: do not resume it. */
+    bool catalogScanUserStopped = false;
     /* Bumped on every recount so a walk whose table has since been edited is dropped
        rather than shown. */
     int catalogCountGen = 0;

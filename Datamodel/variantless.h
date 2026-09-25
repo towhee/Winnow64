@@ -2,6 +2,8 @@
 #define VARIANTLESS_H
 
 #include <QVariant>
+#include <QVector>
+#include <algorithm>
 #include <QString>
 #include <QDate>
 #include <QTime>
@@ -41,6 +43,46 @@ inline bool winnowVariantLessThan(const QVariant &left, const QVariant &right,
         else
             return left.toString().compare(right.toString(), cs) < 0;
     }
+}
+
+/*
+    SORT RANKS: each key's position in the sorted order, with EQUAL keys given EQUAL
+    ranks, so that rank[a] < rank[b] exactly when winnowVariantLessThan(key[a], key[b]).
+    A stable sort then produces the same order comparing ranks as comparing keys -- the
+    comparator's answers are identical -- whatever order it starts from, and comparing two
+    ints is far cheaper than two QVariant string conversions and a compare (~58 ms of a
+    148,567-row filter clear, sampled). SortFilter caches the ranks per sort column and
+    reuses them until that column's data changes.
+
+    ONLY FOR A WELL-BEHAVED KEY SET. The equivalence needs a strict weak ordering, which
+    isVariantLessThan is for keys of one type plus unset ones (unset sorts last and equal
+    to itself) but is NOT guaranteed to be across mixed types, where the left key's type
+    picks the comparison. So this returns false -- and the caller keeps comparing keys --
+    unless every valid key has the same type.
+*/
+inline bool winnowSortRanks(const QVector<QVariant> &keys, Qt::CaseSensitivity cs,
+                            bool isLocaleAware, QVector<int> &ranks)
+{
+    int type = QMetaType::UnknownType;
+    for (const QVariant &k : keys) {
+        const int t = k.userType();
+        if (t == QMetaType::UnknownType) continue;
+        if (type == QMetaType::UnknownType) type = t;
+        else if (t != type) return false;
+    }
+    const int n = keys.size();
+    QVector<int> order(n);
+    for (int i = 0; i < n; ++i) order[i] = i;
+    auto less = [&](int a, int b) {
+        return winnowVariantLessThan(keys.at(a), keys.at(b), cs, isLocaleAware);
+    };
+    std::stable_sort(order.begin(), order.end(), less);
+    ranks.resize(n);
+    for (int i = 0; i < n; ++i) {
+        const int cur = order.at(i);
+        ranks[cur] = (i > 0 && !less(order.at(i - 1), cur)) ? ranks.at(order.at(i - 1)) : i;
+    }
+    return true;
 }
 
 #endif // VARIANTLESS_H

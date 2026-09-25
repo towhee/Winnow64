@@ -150,6 +150,17 @@ private:
     QVector<QVariant> mSortKeys;
     int mSortKeyColumn = -1;
     bool mSortKeysValid = false;
+    /*  SORT RANKS (see winnowSortRanks): used in place of the keys when the key set
+        allows it, and CACHED across sorts -- a filter change re-sorts the same column's
+        same values, so the ranks from the last one still hold until that column is
+        written (RowStore::fieldGeneration) or the sort settings change. */
+    QVector<int> mRanks;
+    bool mRanksActive = false;
+    int mRankColumn = -1;
+    int mRankRole = -1;
+    Qt::CaseSensitivity mRankCs = Qt::CaseSensitive;
+    bool mRankLocale = false;
+    quint64 mRankGen = 0;
 };
 
 class DataModel : public QAbstractTableModel
@@ -319,6 +330,12 @@ public:
     QList<int> failedMetadataRows();    // rows with MetaFailed status (reporting)
     int iconCount();
     void clearIconsOutsideChunkRange(int instance);
+    /*  Drop the thumbnails of rows the current filter HIDES, when more are held than the
+        retention bound allows. clearIconsOutsideChunkRange walks PROXY rows only, so a
+        filtered-out row's icon was never considered: 18,090 held against a 10,000 bound
+        after one filter at 148,567 rows. GUI thread, after the proxy snapshot is current
+        (MW::filterChange). */
+    void evictHiddenIcons();
     bool iconLoaded(int sfRow, int instance);
     bool isIconRangeLoaded();
     void setIconRange(int sfRow);
@@ -465,6 +482,10 @@ public:
     mutable QMutex mSyncMutex;
     RowSyncPtr mRowSync;
     ProxySnapshotPtr mProxySnapshot;
+    /*  The shared path table and the RowStore path generation it was built for. GUI
+        thread (rebuildProxySnapshot). */
+    ProxyPathsPtr mProxyPaths;
+    quint64 mProxyPathsGen = 0;
 
     qint64 bytesUsedSampleTotal = 0;    // exact bytes of the sampled rows
     int    bytesUsedSampleCount = 0;    // how many rows were sampled
@@ -554,6 +575,10 @@ signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void centralMsg(QString message);
     void updateProgress(int progress);
+    /*  The streamed catalog fill, per batch: done of total rows inserted. total == 0
+        means the fill has ended (finished or aborted). Drives the status-bar Loading row
+        beside the central "x of y images loading" message. */
+    void catalogFillProgress(int done, int total);
     void rowLoaded();
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);

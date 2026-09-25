@@ -258,6 +258,7 @@ public:
         ++mPickGen;
         ++mWatchGen;
         markWatchStructuralLocked();
+        ++mSpliceGen;
     }
     void resize(int n)
     {
@@ -267,6 +268,7 @@ public:
         ++mPickGen;
         ++mWatchGen;
         markWatchStructuralLocked();
+        ++mSpliceGen;
     }
 
     /*  ROW SPLICING. The store is indexed by row, so an insert or a removal in
@@ -283,6 +285,7 @@ public:
         ++mPickGen;
         ++mWatchGen;
         markWatchStructuralLocked();
+        ++mSpliceGen;
     }
     void removeRows(int at, int count)
     {
@@ -294,6 +297,7 @@ public:
         ++mPickGen;
         ++mWatchGen;
         markWatchStructuralLocked();
+        ++mSpliceGen;
     }
     /*  Many scattered removals in ONE pass. newRow[old] is the row's new index,
         or -1 when it goes; kept rows keep their order, so newRow is ascending
@@ -313,6 +317,7 @@ public:
         ++mPickGen;
         ++mWatchGen;
         markWatchStructuralLocked();
+        ++mSpliceGen;
     }
     int  size() const { QReadLocker l(&mLock); return mRows.size(); }
     bool contains(int row) const
@@ -418,6 +423,14 @@ public:
             out[i] = valueLocked(r, cells.at(i).first, cells.at(i).second);
     }
 
+    /*  A GENERATION PER FIELD, for consumers that cache something derived from ONE
+        column -- the proxy snapshot's path table (G::PathRole), SortFilter's sort ranks
+        (the sort column). It moves when that field is written on any row, or when rows
+        are inserted, removed or cleared, and on nothing else: the sum of two counters
+        that only ever increase, so any change to either changes it. 0 for a (column,
+        role) the store does not hold. */
+    quint64 fieldGeneration(int column, int role) const;
+
     int pickedCount() const { QReadLocker l(&mLock); return mPicked; }
     quint64 pickGeneration() const { QReadLocker l(&mLock); return mPickGen; }
 
@@ -434,6 +447,8 @@ private:
     }
     int mPicked = 0;
     quint64 mPickGen = 0;
+    quint64 mFieldGen[128] = {};            // per field bit; see fieldGeneration
+    quint64 mSpliceGen = 0;
     quint64 mWatchLo = 0, mWatchHi = 0;     // field bits, as ImageRow::setLo/setHi
     quint64 mWatchGen = 0;
     /*  Rows written in watched cells since the last takeWatchedChanges, and whether

@@ -106,7 +106,20 @@ private:
 
 typedef std::shared_ptr<RowSyncArray> RowSyncPtr;
 
-/*  The proxy's order and identity, copied on the GUI thread. */
+/*  EVERY ROW'S PATH, BY DATAMODEL ROW, and the reverse. It does not depend on the
+    filter or the sort, only on which rows exist and what their paths are, so it is
+    built once and SHARED by every snapshot until RowStore::fieldGeneration(PathColumn,
+    PathRole) says otherwise (DataModel::rebuildProxySnapshot). Rebuilding it per filter
+    change -- a path copy and a 148,567-entry hash each time -- was most of the ~60 ms
+    a snapshot cost when a filter was cleared. Immutable once published. */
+struct ProxyPaths {
+    QVector<QString> pathOfDm;          // by datamodel row -> absolute file path
+    QHash<QString, int> dmRowOfPath;    // reverse
+};
+typedef std::shared_ptr<const ProxyPaths> ProxyPathsPtr;
+
+/*  The proxy's order and identity, copied on the GUI thread. Per proxy change only the
+    two integer vectors are rebuilt; the paths come from the shared ProxyPaths. */
 struct ProxySnapshot {
     int instance = -1;
     /*  The DATAMODEL row count. Not the same as rowCount() below, which is the
@@ -114,17 +127,26 @@ struct ProxySnapshot {
         reporting and the load-completion checks count model rows. */
     int sourceRows = 0;
     QVector<int> dmRowOf;               // by proxy row -> datamodel row
-    QVector<QString> pathOf;            // by proxy row -> absolute file path
-    QHash<QString, int> sfRowOfPath;    // reverse lookup, replaces proxyRowFromPath
-    QHash<int, int> sfRowOfDmRow;       // reverse of dmRowOf, for readers that
-                                        // report a datamodel row
+    QVector<int> sfRowOfDm;             // by datamodel row -> proxy row, -1 if filtered out
+    ProxyPathsPtr paths;
 
     int rowCount() const { return dmRowOf.size(); }
     bool contains(int sfRow) const { return sfRow >= 0 && sfRow < dmRowOf.size(); }
     int dmRow(int sfRow) const { return contains(sfRow) ? dmRowOf.at(sfRow) : -1; }
-    QString path(int sfRow) const { return contains(sfRow) ? pathOf.at(sfRow) : QString(); }
-    int sfRow(const QString &fPath) const { return sfRowOfPath.value(fPath, -1); }
-    int sfRowFromDmRow(int dmRow) const { return sfRowOfDmRow.value(dmRow, -1); }
+    QString path(int sfRow) const
+    {
+        const int d = dmRow(sfRow);
+        return (paths && d >= 0 && d < paths->pathOfDm.size()) ? paths->pathOfDm.at(d)
+                                                                : QString();
+    }
+    int sfRow(const QString &fPath) const
+    {
+        return paths ? sfRowFromDmRow(paths->dmRowOfPath.value(fPath, -1)) : -1;
+    }
+    int sfRowFromDmRow(int dmRow) const
+    {
+        return (dmRow >= 0 && dmRow < sfRowOfDm.size()) ? sfRowOfDm.at(dmRow) : -1;
+    }
 };
 
 typedef std::shared_ptr<const ProxySnapshot> ProxySnapshotPtr;

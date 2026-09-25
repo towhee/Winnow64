@@ -12,6 +12,7 @@
 #include "Cache/devpreviewcache.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
+#include "Main/catalogenumerate.h"
 
 /*
     The catalog -- the local index behind cross-folder keyword and metadata search.
@@ -87,6 +88,13 @@ private slots:
     void folderQueryTakesTheSubtreeAndNothingBeside();
     void liveFolderCountsSkipDemotedRows();
     void keywordsMatchAllNeedsEveryOne();
+    void scopeFoldersHonourExcludesAndPhotosLibrary();
+    void scopeFileCountUsesTheScannersNameRule();
+    void gapAnalysisNamesEveryFileWithItsReason();
+    void allPathsReturnsEveryRowWithItsStamps();
+    void etaWording();
+    void reconcileQueryUsesTheFolderIndex();
+    void storageUsageMeasuresTheIndex();
 
 private:
     QString imagePath(const QString &name) const;
@@ -2379,6 +2387,199 @@ void tst_catalog::pruneUnusedKeywordsKeepsWhatIsStillLinked()
     CatalogQuery q;
     q.keywords = {"Nanaimo"};
     QCOMPARE(cat.search(q).size(), 1);
+}
+
+void tst_catalog::scopeFoldersHonourExcludesAndPhotosLibrary()
+{
+/*
+    ONE DEFINITION OF THE SCOPE ON DISK. The scanner, the Manage Catalog count and the
+    diagnostics all walk catalogScopeFolders, so this is what each of them means by "in
+    scope": a recursive exclude prunes its whole subtree, a non-recursive one drops that
+    folder alone and keeps what is under it, and a .photoslibrary is never entered.
+*/
+    const QDir root(QDir(tmp.path()).absoluteFilePath("ce"));
+    for (const char *d : {"a/b", "x/y", "lib.photoslibrary/m", "n/deep"})
+        QVERIFY(root.mkpath(d));
+    const QString r = root.path();
+
+    CatalogScope scope;
+    scope << CatalogScopeEntry{r, true, true}
+          << CatalogScopeEntry{r + "/x", false, true}
+          << CatalogScopeEntry{r + "/n", false, false};
+
+    QStringList got = catalogScopeFolders(scope);
+    got.sort();
+    QStringList want{r, r + "/a", r + "/a/b", r + "/n/deep"};
+    want.sort();
+    QCOMPARE(got, want);
+
+    /* keepGoing refusing stops the walk and says so. */
+    bool aborted = false;
+    QVERIFY(catalogScopeFolders(scope, []{ return false; }, &aborted).isEmpty());
+    QVERIFY(aborted);
+}
+
+void tst_catalog::scopeFileCountUsesTheScannersNameRule()
+{
+/*
+    The count is by NAME, as the scanner filters: a supported extension in any case, and
+    nothing else. A zero-byte image is counted -- a names-only count cannot see size --
+    which is why the scanner reports the ones it skips and the status line takes them
+    out of the backlog.
+*/
+    const QDir dir(QDir(tmp.path()).absoluteFilePath("cc"));
+    QVERIFY(dir.mkpath("."));
+    for (const char *name : {"a.jpg", "b.JPG", "c.txt"}) {
+        QFile f(dir.filePath(name));
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("x");
+    }
+    {
+        QFile f(dir.filePath("empty.jpg"));
+        QVERIFY(f.open(QIODevice::WriteOnly));
+    }
+    CatalogScope scope;
+    scope << CatalogScopeEntry{dir.path(), true, false};
+    const QSet<QString> exts{"jpg"};
+
+    QCOMPARE(catalogScopeFileCount(scope, exts), 3);
+
+    const QVector<CatalogDiskFile> files = catalogScopeFiles(scope, exts, true);
+    QCOMPARE(files.size(), 3);
+    for (const CatalogDiskFile &f : files)
+        QCOMPARE(f.size, f.path.endsWith("empty.jpg") ? 0 : 1);
+}
+
+void tst_catalog::gapAnalysisNamesEveryFileWithItsReason()
+{
+/*
+    Every image behind the status line's difference is named, and the counts add up:
+        onDisk - rows == notCatalogued - notOnDisk - outsideScope
+    Synthetic paths, because a case twin cannot be made on a case-insensitive volume.
+    A.JPG is listed BEFORE a.jpg on purpose: the twin reported must be the one the index
+    does not hold, whichever the walk met first.
+*/
+    auto disk = [](const QString &p, qint64 size) {
+        CatalogDiskFile d;
+        d.path = p;
+        d.size = size;
+        d.mtime = 100;
+        return d;
+    };
+    auto row = [](const QString &p, qint64 size) {
+        CatalogPathInfo r;
+        r.path = p;
+        r.pathKey = p.toCaseFolded();
+        r.folder = QFileInfo(p).path();
+        r.srcSize = size;
+        r.srcMtime = 100;
+        return r;
+    };
+
+    const QVector<CatalogDiskFile> onDisk{
+        disk("/L/A.JPG", 10), disk("/L/a.jpg", 10), disk("/L/z.jpg", 0),
+        disk("/L/new.jpg", 5), disk("/L/s.jpg", 7), disk("/L/u.jpg", 3)};
+    CatalogPathInfo unreadable = row("/L/u.jpg", 3);
+    unreadable.unreadable = true;
+    const QVector<CatalogPathInfo> rows{
+        row("/L/a.jpg", 10), row("/L/s.jpg", 6), row("/L/gone.jpg", 4),
+        row("/Out/o.jpg", 4), unreadable};
+    CatalogScope scope;
+    scope << CatalogScopeEntry{"/L", true, true};
+
+    const CatalogGapReport g = catalogAnalyzeGap(
+        onDisk, rows, scope,
+        [](const QString &p) { return p.toCaseFolded(); },
+        [](const QString &) { return false; },
+        [](const QString &) { return true; });
+
+    QCOMPARE(g.onDisk, 6);
+    QCOMPARE(g.rows, 5);
+    QCOMPARE(g.onDisk - g.rows,
+             int(g.notCatalogued.size() - g.notOnDisk.size() - g.outsideScope.size()));
+
+    QCOMPARE(g.collisions, 1);
+    QCOMPARE(g.zeroByte, 1);
+    QCOMPARE(g.neverIndexed, 1);
+    QStringList missing;
+    for (const CatalogGapItem &i : g.notCatalogued) missing << i.path;
+    missing.sort();
+    QCOMPARE(missing, (QStringList{"/L/A.JPG", "/L/new.jpg", "/L/z.jpg"}));
+
+    QCOMPARE(g.notOnDisk.size(), 1);
+    QCOMPARE(g.notOnDisk.first().path, QString("/L/gone.jpg"));
+    QCOMPARE(g.outsideScope.size(), 1);
+    QCOMPARE(g.outsideScope.first().path, QString("/Out/o.jpg"));
+    QCOMPARE(g.stale.size(), 1);
+    QCOMPARE(g.stale.first().path, QString("/L/s.jpg"));
+    QCOMPARE(g.unreadable.size(), 1);
+    QCOMPARE(g.unreadable.first().path, QString("/L/u.jpg"));
+}
+
+void tst_catalog::allPathsReturnsEveryRowWithItsStamps()
+{
+    Catalog &cat = Catalog::instance();
+    const CatalogRow a = rowFor("ap-a.jpg");
+    const CatalogRow b = rowFor("ap-b.jpg");
+    cat.commit({a});
+    cat.commitUnreadable({b});
+
+    const QVector<CatalogPathInfo> all = cat.allPaths();
+    QCOMPARE(all.size(), 2);
+    for (const CatalogPathInfo &p : all) {
+        const CatalogRow &r = p.path == a.path ? a : b;
+        QCOMPARE(p.path, r.path);
+        QCOMPARE(p.pathKey, cachePathKey(r.path));
+        QCOMPARE(p.folder, r.folder);
+        QCOMPARE(p.srcSize, r.srcSize);
+        QCOMPARE(p.srcMtime, r.srcMtime);
+        QVERIFY(p.live);
+        QCOMPARE(p.unreadable, p.path == b.path);
+    }
+}
+
+void tst_catalog::etaWording()
+{
+    QCOMPARE(catalogFormatEta(-1), QString::fromUtf8("estimating…"));
+    QCOMPARE(catalogFormatEta(30), QString("less than a minute"));
+    QCOMPARE(catalogFormatEta(60), QString("about 1 min"));
+    QCOMPARE(catalogFormatEta(61), QString("about 2 min"));
+    QCOMPARE(catalogFormatEta(3599), QString("about 1 h"));
+    QCOMPARE(catalogFormatEta(7800), QString("about 2 h 10 m"));
+}
+
+void tst_catalog::reconcileQueryUsesTheFolderIndex()
+{
+/*
+    THE SCAN'S HOT QUERY MUST SEARCH BY FOLDER. Without ANALYZE statistics SQLite chose
+    image_live (live, id) for "folder = ? AND live = 1", and since nearly every row is
+    live that read the whole table once per folder: 268 s of a 290 s rescan of 8,842
+    folders. The plan is the same on an empty table, so it can be pinned here.
+*/
+    QSqlQuery q(CacheDb::instance().db());
+    QVERIFY(q.prepare(QString("EXPLAIN QUERY PLAN ") + Catalog::reconcileSelectSql()));
+    q.addBindValue("/some/folder");
+    QVERIFY(q.exec());
+    QString plan;
+    while (q.next()) plan += q.value(3).toString() + "\n";
+    QVERIFY2(plan.contains("image_folder"), qPrintable(plan));
+}
+
+void tst_catalog::storageUsageMeasuresTheIndex()
+{
+/*
+    Manage Catalog's Disk space row. The file is measured whatever the driver offers;
+    the per-table split is exact only when SQLite was built with dbstat, and the test
+    reports which, since that decides whether the dialog shows "≈".
+*/
+    Catalog::instance().commit({rowFor("su-a.jpg"), rowFor("su-b.jpg")});
+    const CacheDb::StorageUsage u = CacheDb::instance().storageUsage();
+    QVERIFY(u.valid);
+    QVERIFY(u.fileBytes > 0);
+    QVERIFY(u.catalogBytes > 0);
+    QVERIFY(u.catalogBytes <= u.fileBytes);
+    QVERIFY(!u.dir.isEmpty());
+    qInfo("dbstat available: %s", u.exact ? "yes" : "no");
 }
 
 QTEST_MAIN(tst_catalog)

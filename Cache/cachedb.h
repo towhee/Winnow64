@@ -84,6 +84,30 @@ public:
     /* The schema version this build writes (PRAGMA user_version). */
     static int schemaVersion();
 
+    /*  WHAT THE LOCAL INDEX COSTS IN DISK SPACE, by tenant -- shown in Manage Catalog so
+        a user adding 100,000 images can see what that is doing to their drive.
+
+        index.db holds the catalog, the thumbnail JPEGs (BLOBs in thumb) and the develop
+        preview INDEX; the develop previews themselves are files beside it. The split
+        inside the file comes from SQLite's dbstat table when the driver has it (exact,
+        pages per table) and otherwise from the tenants' own byte columns, with the
+        catalog as the remainder (approximate). Any thread; a few hundred ms on a GB
+        file, so not the GUI thread. */
+    struct StorageUsage
+    {
+        bool valid = false;
+        bool exact = false;           // the split came from dbstat
+        QString dir;                  // folder holding index.db and the previews
+        qint64 fileBytes = 0;         // index.db + -wal + -shm
+        qint64 catalogBytes = 0;      // image, keyword, vocab and full-text tables
+        qint64 thumbBytes = 0;
+        int thumbCount = 0;
+        qint64 devPreviewBytes = 0;   // the preview files, not their index rows
+        int devPreviewCount = 0;
+        qint64 totalBytes() const { return fileBytes + devPreviewBytes; }
+    };
+    StorageUsage storageUsage();
+
 private:
     CacheDb() = default;
     Q_DISABLE_COPY(CacheDb)

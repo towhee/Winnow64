@@ -3,6 +3,9 @@
 #include "Develop/workingimagecache.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/catalog.h"
+#include "Cache/mountsnapshot.h"
+#include "Cache/pathkey.h"
+#include "Main/catalogenumerate.h"
 #include "Cache/cachedb.h"
 #include "Metadata/keywordpaths.h"
 #include "ui_metadatareport.h"
@@ -1447,6 +1450,209 @@ void MW::diagnosticsKeywords()
     const QString rpt = this->keywordDiagnostics();
     QGuiApplication::restoreOverrideCursor();
     diagnosticsReport(rpt, "Winnow Diagnostics: Keywords");
+}
+
+namespace {
+
+/* Long lists are capped: the report is for finding the pattern, and 43,000 lines of one
+   reason say no more than 500 do. The count of the rest is always given. */
+constexpr int kCatalogDiagListCap = 500;
+
+QString catalogDiagList(const QString &heading, const QVector<CatalogGapItem> &items)
+{
+    QString out;
+    QTextStream rpt(&out);
+    rpt << "\n" << heading << " (" << items.size() << ")\n";
+    rpt << QString(heading.size(), '-') << "\n";
+    if (items.isEmpty()) { rpt << "  none\n"; return out; }
+
+    /* Grouped by reason, so a list of 13 files with two different causes reads as two
+       causes, not thirteen lines to sort by eye. */
+    QMap<QString, QStringList> byReason;
+    for (const CatalogGapItem &i : items) byReason[i.reason] << i.path;
+    int shown = 0;
+    for (auto it = byReason.constBegin(); it != byReason.constEnd(); ++it) {
+        rpt << "  " << it.key() << " (" << it.value().size() << "):\n";
+        QStringList paths = it.value();
+        paths.sort();
+        for (const QString &p : std::as_const(paths)) {
+            if (shown >= kCatalogDiagListCap) break;
+            rpt << "    " << p << "\n";
+            ++shown;
+        }
+    }
+    if (items.size() > shown)
+        rpt << "  ... and " << items.size() - shown << " more\n";
+    return out;
+}
+
+QString catalogDiagMs(qint64 ms, int files)
+{
+    QString s = QString("%1 s").arg(ms / 1000.0, 0, 'f', 1);
+    if (files > 0)
+        s += QString("  (%1 ms/file, %2 files/s)")
+                 .arg(double(ms) / files, 0, 'f', 2)
+                 .arg(ms > 0 ? files * 1000.0 / ms : 0.0, 0, 'f', 1);
+    return s;
+}
+
+/*  THE WHOLE REPORT, built OFF THE GUI THREAD: it walks every folder in scope and stats
+    every file, which on a 100k library is seconds to minutes. Nothing here touches MW;
+    everything it needs is passed in by value. */
+QString buildCatalogDiagnostics(const CatalogScope &scope, const QSet<QString> &exts,
+                                const CatalogScanStats &st, bool scanning,
+                                bool incomplete, int uncatalogable)
+{
+    QElapsedTimer t;
+    t.start();
+    const QVector<CatalogDiskFile> disk = catalogScopeFiles(scope, exts, true);
+    const qint64 walkMs = t.elapsed();
+    t.start();
+    const QVector<CatalogPathInfo> rows = Catalog::instance().allPaths();
+    const qint64 readMs = t.elapsed();
+
+    const MountSnapshot mounts = MountSnapshot::take();
+    const CatalogGapReport g = catalogAnalyzeGap(
+        disk, rows, scope,
+        [](const QString &p) { return cachePathKey(p); },
+        [](const QString &p) { return QFileInfo::exists(p); },
+        [&mounts](const QString &p) { return !mounts.rootOf(p).isEmpty(); });
+
+    int live = 0;
+    for (const CatalogPathInfo &r : rows) if (r.live) ++live;
+    const QLocale loc;
+
+    QString out;
+    QTextStream rpt(&out);
+    rpt << "Catalog Diagnostics  " << QDateTime::currentDateTime().toString(Qt::ISODate)
+        << "\n\n";
+    rpt << "WHAT THIS IS. The Manage Catalog status line compares the images the\n"
+           "scope's folders hold on disk with the rows the catalog holds. This report\n"
+           "names every file behind any difference, with the reason it is there.\n\n";
+
+    rpt << "Summary\n-------\n";
+    rpt << "  On disk in scope:          " << loc.toString(g.onDisk) << "\n";
+    rpt << "  Catalog rows:              " << loc.toString(g.rows)
+        << "  (live " << loc.toString(live) << ", demoted "
+        << loc.toString(g.rows - live) << ", unreadable stubs "
+        << loc.toString(g.unreadable.size()) << ")\n";
+    rpt << "  Difference (disk - rows):  " << loc.toString(g.onDisk - g.rows) << "\n";
+    rpt << "    = on disk, not catalogued  " << loc.toString(g.notCatalogued.size())
+        << "  (zero-byte " << g.zeroByte << ", name twins " << g.collisions
+        << ", not in index " << g.neverIndexed << ")\n";
+    rpt << "    - catalogued, not on disk  " << loc.toString(g.notOnDisk.size()) << "\n";
+    rpt << "    - catalogued outside scope " << loc.toString(g.outsideScope.size())
+        << "\n";
+    rpt << "  Changed since indexed:     " << loc.toString(g.stale.size())
+        << "  (a Scan refreshes these)\n";
+    rpt << "  Uncatalogable, last scan:  " << loc.toString(uncatalogable) << "\n";
+    rpt << "  Scan state:                "
+        << (scanning ? "running" : incomplete ? "last scan did not finish (resumes at "
+                                                "next launch)"
+                                              : "idle")
+        << "\n";
+    rpt << "  This report:               walk + stat " << catalogDiagMs(walkMs, g.onDisk)
+        << ", read index " << catalogDiagMs(readMs, 0) << "\n";
+
+    rpt << "\nScope table\n-----------\n";
+    for (const CatalogScopeEntry &e : scope) {
+        const bool exists = QFileInfo::exists(e.path);
+        rpt << "  " << (e.include ? "Include " : "Exclude ")
+            << (e.recurse ? "+subfolders " : "folder only ") << e.path
+            << (exists ? "" : mounts.rootOf(e.path).isEmpty() ? "  [volume not mounted]"
+                                                              : "  [missing]")
+            << "\n";
+    }
+    if (scope.isEmpty()) rpt << "  (empty -- nothing is catalogued)\n";
+
+    rpt << catalogDiagList("On disk, not catalogued", g.notCatalogued);
+    rpt << catalogDiagList("Catalogued, not found on disk", g.notOnDisk);
+    rpt << catalogDiagList("Catalogued outside the scope", g.outsideScope);
+    rpt << catalogDiagList("Changed since indexed", g.stale);
+    rpt << catalogDiagList("Unreadable (stub rows)", g.unreadable);
+
+    rpt << "\nLast scan\n---------\n";
+    if (!st.ran) {
+        rpt << "  No scan has run this session.\n";
+    }
+    else {
+        const QDateTime end = st.ended.isValid() ? st.ended
+                                                 : QDateTime::currentDateTime();
+        const qint64 wallMs = st.started.msecsTo(end);
+        rpt << "  Started:      " << st.started.toString(Qt::ISODate) << "\n";
+        rpt << "  Ended:        "
+            << (st.ended.isValid() ? st.ended.toString(Qt::ISODate)
+                                   : QString("(running)"))
+            << (st.aborted ? "  (stopped early)" : "") << "\n";
+        rpt << "  Wall time:    " << catalogDiagMs(wallMs, 0) << "\n";
+        rpt << "  Folders:      " << loc.toString(st.folders) << "\n";
+        rpt << "  Files:        stat'd " << loc.toString(st.scanned) << ", stale "
+            << loc.toString(st.stale) << ", parsed " << loc.toString(st.parsed)
+            << ", indexed " << loc.toString(st.indexed) << ", unreadable "
+            << loc.toString(st.unreadable) << "\n";
+        rpt << "  Skipped:      zero-byte " << st.zeroByte << ", name twins "
+            << st.collisions << "\n";
+        rpt << "  Changes:      new folders " << st.newFolders << ", demoted "
+            << st.demoted << "\n";
+        rpt << "\n  Where the time went (active time; pauses listed separately)\n";
+        rpt << "    walk scope   " << catalogDiagMs(st.walkMs, 0) << "\n";
+        rpt << "    list dirs    " << catalogDiagMs(st.listMs, 0) << "\n";
+        rpt << "    reconcile    " << catalogDiagMs(st.reconcileMs, 0) << "\n";
+        rpt << "    stat/stamp   " << catalogDiagMs(st.stampMs, st.scanned) << "\n";
+        rpt << "    staleOf      " << catalogDiagMs(st.staleMs, st.scanned) << "\n";
+        rpt << "    parse        " << catalogDiagMs(st.parseMs, st.parsed) << "\n";
+        rpt << "    commit       " << catalogDiagMs(st.commitMs, st.parsed) << "\n";
+        rpt << "    paused       " << catalogDiagMs(st.pausedMs, 0)
+            << "  (giving way to folder loads)\n";
+    }
+    return out;
+}
+
+}  // namespace
+
+void MW::diagnosticsCatalog()
+{
+/*
+    OFF THE GUI THREAD, with the popup up first: the report walks and stats the whole
+    scope, which on a large library is well over the one second anything may take without
+    saying so. One at a time -- a second request while one is running is dropped.
+*/
+    if (G::isLogger) G::log("MW::diagnosticsCatalog");
+    static bool busy = false;
+    if (busy) return;
+
+    const QString title = "Winnow Diagnostics: Catalog";
+    if (!Catalog::instance().isAvailable()) {
+        diagnosticsReport("The catalog is unavailable -- the local index database could "
+                          "not be opened.", title);
+        return;
+    }
+
+    QSet<QString> exts;
+    if (metadata) for (const QString &e : metadata->supportedFormats) exts << e;
+    const CatalogScope scope = catalogScope;
+    const CatalogScanStats st = catalogScanner ? catalogScanner->lastStats()
+                                               : CatalogScanStats();
+    const bool scanning = catalogScanner && catalogScanner->isRunning();
+    const bool incomplete = catalogScanIncomplete && !scanning;
+    const int uncatalogable = catalogUncatalogable;
+
+    busy = true;
+    if (G::popup) G::popup->showPopupNow("Checking the catalog against the disk...",
+                                         600000);
+    auto *watcher = new QFutureWatcher<QString>(this);
+    connect(watcher, &QFutureWatcherBase::finished, this, [this, watcher, title]() {
+        const QString rpt = watcher->result();
+        watcher->deleteLater();
+        busy = false;
+        diagnosticsReport(rpt, title);
+        if (G::popup) G::popup->reset();
+    });
+    watcher->setFuture(QtConcurrent::run([scope, exts, st, scanning, incomplete,
+                                          uncatalogable]() {
+        return buildCatalogDiagnostics(scope, exts, st, scanning, incomplete,
+                                       uncatalogable);
+    }));
 }
 
 void MW::diagnosticsReport(QString reportString, QString title)

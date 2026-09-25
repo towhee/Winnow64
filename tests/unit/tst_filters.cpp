@@ -1,4 +1,6 @@
 #include <QtTest>
+#include <QTemporaryDir>
+#include <QSettings>
 
 #include "Datamodel/filters.h"
 #include "Main/global.h"
@@ -25,6 +27,7 @@ class tst_filters : public QObject
 private slots:
     void keywordsBuildAsATree();
     void savedNestedStateSurvivesARebuild();
+    void persistedStateSurvivesSettingsAndARebuild();
     void twoKeywordsSharingALeafRestoreIndependently();
     void everyDepthReachesTheQuery();
     void foldersBuildAsATreeUnderTheirAnchors();
@@ -115,6 +118,62 @@ void tst_filters::savedNestedStateSurvivesARebuild()
     QTreeWidgetItem *again = findByValue(f.keywords, "Location|Canada|BC|Vancouver");
     QVERIFY(again);
     QCOMPARE(again->checkState(0), Qt::Checked);
+}
+
+void tst_filters::persistedStateSurvivesSettingsAndARebuild()
+{
+/*
+    MW::saveLibraryState / queueLibraryStateRestore: the checked state goes into QSettings
+    as persistableState()'s map and comes back through setStateToRestore() + restore()
+    after the categories have been rebuilt from scratch at the next start. Include AND
+    exclude must both survive -- an exclusion restored as an inclusion inverts the filter
+    silently -- and so must a nested keyword keyed on its path, not its leaf.
+*/
+    Filters f(nullptr);
+    f.addCategoryItems(vocabulary(), f.keywords);
+    QTreeWidgetItem *bc  = findByValue(f.keywords, "Location|Canada|BC|Vancouver");
+    QTreeWidgetItem *usa = findByValue(f.keywords, "Location|USA|WA|Vancouver");
+    QVERIFY(bc && usa);
+    bc->setCheckState(0, Qt::Checked);
+    usa->setCheckState(0, Qt::PartiallyChecked);
+
+    /*  Through a real QSettings file, because the map crosses one in the app. */
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    {
+        QSettings st(dir.filePath("s.ini"), QSettings::IniFormat);
+        st.setValue("LibraryState/filters", f.persistableState());
+    }
+    QVariantMap back;
+    {
+        QSettings st(dir.filePath("s.ini"), QSettings::IniFormat);
+        back = st.value("LibraryState/filters").toMap();
+    }
+
+    Filters g(nullptr);                                     // the next start
+    g.addCategoryItems(vocabulary(), g.keywords);
+    g.setStateToRestore(back);
+    g.restore();
+
+    QTreeWidgetItem *bc2  = findByValue(g.keywords, "Location|Canada|BC|Vancouver");
+    QTreeWidgetItem *usa2 = findByValue(g.keywords, "Location|USA|WA|Vancouver");
+    QVERIFY(bc2 && usa2);
+    QCOMPARE(bc2->checkState(0), Qt::Checked);
+    QCOMPARE(usa2->checkState(0), Qt::PartiallyChecked);
+
+    /*  And nothing else changed: the restored tree's checked set is EXACTLY the
+        original's -- which includes the Search category's own "true" item, checked by
+        default in any fresh Filters, so the count is not simply the two set above. */
+    auto checkedIn = [](Filters &t) {
+        QStringList out;
+        QTreeWidgetItemIterator it(&t);
+        for (; *it; ++it)
+            if ((*it)->parent() && (*it)->checkState(0) != Qt::Unchecked)
+                out << (*it)->data(1, Qt::EditRole).toString() + "=" +
+                           QString::number(int((*it)->checkState(0)));
+        return out;
+    };
+    QCOMPARE(checkedIn(g), checkedIn(f));
 }
 
 void tst_filters::twoKeywordsSharingALeafRestoreIndependently()

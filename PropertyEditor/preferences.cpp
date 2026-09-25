@@ -438,6 +438,11 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "openLibraryAtStart") {
         mw->openLibraryAtStart = v.toBool();
     }
+    /*  Also takes effect at the next start; the state is saved regardless of when this
+        is turned on, from the next time the Library is left or Winnow quits. */
+    if (source == "restoreLibraryState") {
+        mw->restoreLibraryState = v.toBool();
+    }
 
     if (source == "limitFit100Pct") {
         mw->imageView->limitFit100Pct = v.toBool();
@@ -603,6 +608,25 @@ void Preferences::addGeneral()
     i.captionIsEditable = false;
     i.value = mw->openLibraryAtStart;
     i.key = "openLibraryAtStart";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    /*  Directly under what it modifies: it only means anything when the Library is what
+        Winnow opens. */
+    i.name = "restoreLibraryState";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Reopen library as it was left";
+    i.tooltip = "With \"Open library at start\" on, open the library with the sort and\n"
+                "the filters it had when you last left it -- by switching to Folders or\n"
+                "by quitting -- instead of newest first with no filters.\n\n"
+                "The filters are applied when the Filters panel is showing -- at start,\n"
+                "or when you open it -- so a filter is never applied where you cannot\n"
+                "see it.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->restoreLibraryState;
+    i.key = "restoreLibraryState";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

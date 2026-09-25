@@ -1,4 +1,5 @@
 #include "utilities.h"
+#include <QMessageBox>
 #include "Utilities/fileops.h"
 #include "Main/global.h"
 #include <filesystem>
@@ -1075,4 +1076,45 @@ void Utilities::hexFromByteArray(QByteArray &ba, int cols, int start, int end)
     }
     qDebug() << "\n";
 //    return s;
+}
+
+void Utilities::fitMessageBoxButtons(QMessageBox *box)
+{
+    if (!box) return;
+    box->ensurePolished();
+    const auto buttons = box->buttons();
+    for (QAbstractButton *b : buttons) {
+        b->ensurePolished();
+        /* 32 covers the stylesheet padding and border and the macOS bevel. */
+        const int need = b->fontMetrics().horizontalAdvance(b->text()) + 32;
+        if (b->minimumWidth() < need) b->setMinimumWidth(need);
+    }
+}
+
+namespace {
+
+/*  The app-wide half of fitMessageBoxButtons. QEvent::Show reaches the box before it is
+    painted, after every button has been added, so the widths are fixed before anyone
+    sees a clipped label. The type test comes first: this sees every event in the app,
+    and a Show is rare. */
+class MessageBoxButtonFitter : public QObject
+{
+public:
+    using QObject::QObject;
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override
+    {
+        if (event->type() == QEvent::Show)
+            if (auto *box = qobject_cast<QMessageBox *>(obj))
+                Utilities::fitMessageBoxButtons(box);
+        return false;
+    }
+};
+
+}  // namespace
+
+void Utilities::installMessageBoxButtonFitter(QCoreApplication *app)
+{
+    if (!app) return;
+    app->installEventFilter(new MessageBoxButtonFitter(app));
 }

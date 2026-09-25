@@ -1642,6 +1642,11 @@ int Catalog::folderCount()
    Maintenance
    --------------------------------------------------------------------------------- */
 
+const char *Catalog::reconcileSelectSql()
+{
+    return "SELECT id, path FROM image WHERE folder = ? AND +live = 1";
+}
+
 int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present)
 {
 /*
@@ -1668,7 +1673,13 @@ int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present
         QSqlDatabase db = dbLocked();
         if (!db.isOpen()) return 0;
         QSqlQuery q(db);
-        q.prepare("SELECT id, path FROM image WHERE folder = ? AND live = 1");
+        /*  `+live`, NOT `live`. The unary plus stops SQLite using an index for that term,
+            which is the point: with no ANALYZE statistics the planner preferred
+            image_live (live, id) over image_folder, and live = 1 matches nearly the
+            whole table -- so every folder scanned ~150k rows. Measured on a 155k-row
+            catalog: 39 ms per folder against 0.08 ms, and 268 s of a 290 s rescan
+            of 8,842 folders (Catalog Diagnostics, "reconcile"). */
+        q.prepare(reconcileSelectSql());
         q.addBindValue(folder);
         if (!q.exec()) return 0;
         while (q.next()) live.append({q.value(0).toLongLong(), q.value(1).toString()});
@@ -1773,6 +1784,39 @@ int Catalog::unreadableCount()
     if (q.exec("SELECT COUNT(*) FROM image WHERE unreadable = 1") && q.next())
         return q.value(0).toInt();
     return 0;
+}
+
+QVector<CatalogPathInfo> Catalog::allPaths()
+{
+    QVector<CatalogPathInfo> out;
+    qint64 lastId = 0;
+    for (;;) {
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return out;
+        QSqlQuery q(db);
+        q.prepare("SELECT id, path, pathkey, folder, live, unreadable, srcsize, srcmtime,"
+                  " sidecarmtime FROM image WHERE id > ? ORDER BY id LIMIT ?");
+        q.addBindValue(lastId);
+        q.addBindValue(kPageRows * 8);
+        if (!q.exec()) return out;
+        int n = 0;
+        while (q.next()) {
+            ++n;
+            lastId = q.value(0).toLongLong();
+            CatalogPathInfo p;
+            p.path = q.value(1).toString();
+            p.pathKey = q.value(2).toString();
+            p.folder = q.value(3).toString();
+            p.live = q.value(4).toBool();
+            p.unreadable = q.value(5).toBool();
+            p.srcSize = q.value(6).toLongLong();
+            p.srcMtime = q.value(7).toLongLong();
+            p.sidecarMtime = q.value(8).toLongLong();
+            out.append(p);
+        }
+        if (n < kPageRows * 8) return out;
+    }
 }
 
 namespace {

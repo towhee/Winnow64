@@ -46,6 +46,7 @@ private slots:
     void forEachRowMatchesValue();
     void watchedGenerationMovesOnlyForWatchedCells();
     void watchedChangesNameTheRowsUntilTheyCannot();
+    void fieldGenerationMovesForItsFieldAndSplicesOnly();
     void prefixExpansionStaysInBudget();
     void folderPathsAllIsDerivedFromThePath();
     void folderAncestryCostsARowOneId();
@@ -520,6 +521,28 @@ void tst_imagerow::watchedChangesNameTheRowsUntilTheyCannot()
     for (int r = 0; r < 5000; ++r) s.setValue(r, G::RatingColumn, Qt::EditRole, "3");
     c = s.takeWatchedChanges();
     QVERIFY(c.structural);                                  // past the cap: rebuild
+}
+
+void tst_imagerow::fieldGenerationMovesForItsFieldAndSplicesOnly()
+{
+/*
+    The proxy snapshot's path table and SortFilter's sort ranks are reused while this
+    holds still. Missing a move is a stale path or a wrong sort; moving for other fields
+    only costs a rebuild, but would defeat the cache while thumbnails load.
+*/
+    RowStore s;
+    s.resize(3);
+    const auto gen = [&] { return s.fieldGeneration(G::PathColumn, G::PathRole); };
+    quint64 g = gen();
+    s.setValue(0, G::RatingColumn, Qt::EditRole, "3");            // another field
+    s.setValue(0, G::PathColumn, G::IconRectRole, QRect(0, 0, 1, 1)); // another role
+    QCOMPARE(gen(), g);
+    s.setValue(1, G::PathColumn, G::PathRole, "/b.jpg");          // a rename
+    QVERIFY(gen() != g);
+    g = gen(); s.insertRows(0, 1);  QVERIFY(gen() != g);
+    g = gen(); s.removeRows(0, 1);  QVERIFY(gen() != g);
+    g = gen(); s.clear();           QVERIFY(gen() != g);
+    QCOMPARE(s.fieldGeneration(G::PathColumn, Qt::ToolTipRole), quint64(0)); // not held
 }
 
 void tst_imagerow::prefixExpansionStaysInBudget()

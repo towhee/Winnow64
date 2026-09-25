@@ -257,6 +257,8 @@ int main(int argc, char *argv[])
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
+    /* Every QMessageBox button fits its label: Utilities::fitMessageBoxButtons. */
+    Utilities::installMessageBoxButtonFitter(&instance);
 
     QString args;
     QString delimiter = "\n";

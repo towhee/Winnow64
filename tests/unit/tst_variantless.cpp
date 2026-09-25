@@ -46,6 +46,18 @@ protected:
     }
 };
 
+/*  SortFilter's rank path in miniature: ranks from winnowSortRanks, compared as ints. */
+class RankedProxy : public QSortFilterProxyModel
+{
+public:
+    QVector<int> ranks;
+protected:
+    bool lessThan(const QModelIndex &l, const QModelIndex &r) const override
+    {
+        return ranks.at(l.row()) < ranks.at(r.row());
+    }
+};
+
 class tst_variantless : public QObject
 {
     Q_OBJECT
@@ -55,6 +67,9 @@ private slots:
     void comparatorAgreesPairwise();
     void sameOrderAsQt_data();
     void sameOrderAsQt();
+    void ranksGiveTheSameOrderAsQt_data();
+    void ranksGiveTheSameOrderAsQt();
+    void ranksRefuseMixedTypes();
 
 private:
     static void fillModel(QStandardItemModel &m, const QList<QVariant> &vals)
@@ -189,6 +204,59 @@ void tst_variantless::sameOrderAsQt()
                              << "\n  qt   " << a << "\n  keyed" << b;
         QCOMPARE(b, a);
     }
+}
+
+void tst_variantless::ranksGiveTheSameOrderAsQt_data() { addDataSets(); }
+
+void tst_variantless::ranksGiveTheSameOrderAsQt()
+{
+/*
+    SortFilter compares cached RANKS instead of keys when winnowSortRanks accepts the key
+    set. Equal keys share a rank, so the comparator answers exactly as the key comparison
+    does and the same history must give the same order -- ties included.
+*/
+    QFETCH(QList<QVariant>, vals);
+    QVector<QVariant> keys;
+    QStandardItemModel m;
+    fillModel(m, vals);
+    for (int r = 0; r < vals.size(); ++r) keys << m.index(r, 0).data();
+
+    const struct { Qt::SortOrder order; Qt::CaseSensitivity cs; bool locale; } steps[] = {
+        {Qt::AscendingOrder,  Qt::CaseSensitive,   false},
+        {Qt::DescendingOrder, Qt::CaseSensitive,   false},
+        {Qt::AscendingOrder,  Qt::CaseInsensitive, false},
+        {Qt::DescendingOrder, Qt::CaseInsensitive, true},
+        {Qt::AscendingOrder,  Qt::CaseSensitive,   true},
+    };
+    QSortFilterProxyModel stock;
+    RankedProxy ranked;
+    stock.setSourceModel(&m);
+    ranked.setSourceModel(&m);
+    for (const auto &st : steps) {
+        QVector<int> ranks;
+        if (!winnowSortRanks(keys, st.cs, st.locale, ranks))
+            QSKIP("mixed key types: SortFilter compares keys here, not ranks");
+        ranked.ranks = ranks;
+        for (QSortFilterProxyModel *p : {static_cast<QSortFilterProxyModel *>(&stock),
+                                         static_cast<QSortFilterProxyModel *>(&ranked)}) {
+            p->setSortCaseSensitivity(st.cs);
+            p->setSortLocaleAware(st.locale);
+            p->sort(0, st.order);
+            p->invalidate();
+        }
+        QCOMPARE(order(ranked), order(stock));
+    }
+}
+
+void tst_variantless::ranksRefuseMixedTypes()
+{
+    /*  isVariantLessThan is not a strict weak ordering across types (the LEFT key's type
+        picks the comparison), so ranks could disagree with it -- they must not be used. */
+    QVector<int> ranks;
+    QVERIFY(!winnowSortRanks({QString("5"), 3, QVariant()}, Qt::CaseSensitive, false, ranks));
+    QVERIFY(winnowSortRanks({QString("b"), QVariant(), QString("a"), QString("b")},
+                            Qt::CaseSensitive, false, ranks));
+    QCOMPARE(ranks, (QVector<int>{1, 3, 0, 1}));             // ties share; unset is last
 }
 
 QTEST_MAIN(tst_variantless)

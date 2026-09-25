@@ -1,13 +1,17 @@
 #include "Dialogs/catalogrootsdlg.h"
+#include "Main/catalogenumerate.h"
+#include "Main/catalogscanner.h"
 #include "Main/global.h"
 
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QFontMetrics>
 #include <QHeaderView>
 #include <QLocale>
+#include <QTimer>
 #include <QVBoxLayout>
 
 namespace {
@@ -27,7 +31,10 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     /* A tool window, not an application-modal dialog: a scan runs for minutes and this is
        where its state is shown. See the header. */
     setWindowFlag(Qt::Tool);
-    setMinimumWidth(672);
+    /* 850 so the Folder path column shows a real library path, and the info table
+       below keeps each value on one line. */
+    setMinimumWidth(850);
+    resize(850, height());
 
     QLabel *intro = new QLabel(
         "Folders included here are scanned in the background so their images can be "
@@ -61,19 +68,45 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
         table->horizontalHeader()->setSectionResizeMode(ColImages, QHeaderView::Fixed);
         table->setColumnWidth(ColImages, qMax(wide, header));
     }
-    table->setMinimumHeight(160);
+    /*  THE TABLE IS AS TALL AS ITS ROWS, and the window follows it (fitTableHeight,
+        fitToContents). A fixed minimum left a band of empty table under two rows that
+        pushed the info section out of the window. */
+    table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    table->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
     noteLabel = new QLabel;
     noteLabel->setWordWrap(true);
     statusLabel = new QLabel;
-    statusLabel->setWordWrap(true);
+    /*  NOT word-wrapped. It holds an HTML table whose lines are laid out already, and a
+        word-wrapped rich-text QLabel under-reports its height -- the last line (the
+        disk-space folder) was clipped. Unwrapped, its size hint is exact. */
+    statusLabel->setWordWrap(false);
     /* MW composes this one, and colours the clause that says a scan is owed. */
     statusLabel->setTextFormat(Qt::RichText);
+    /* Its one link, "See which", opens the Catalog Diagnostics report, not a URL. */
+    statusLabel->setOpenExternalLinks(false);
+    statusLabel->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
+    connect(statusLabel, &QLabel::linkActivated, this,
+            [this]{ emit diagnosticsRequested(); });
+
+    /*  THE SCAN'S PROGRESS LIVES HERE AS WELL AS ON THE STATUS BAR. A library scan is
+        hours, and this is the window someone opens to ask "how long". The line also says
+        the window can be closed -- the scan is a background job and does not need it. */
+    scanBar = new QProgressBar;
+    scanBar->setTextVisible(false);
+    scanBar->setMaximumHeight(8);
+    scanLabel = new QLabel;
+    scanLabel->setWordWrap(true);
+    scanLabel->setTextFormat(Qt::RichText);
 
     addBtn = new QPushButton("Append");
     removeBtn = new QPushButton("Remove");
     scanBtn = new QPushButton("Scan");
     closeBtn = new QPushButton("Close");
+    diagBtn = new QPushButton("Diagnostics...");
+    diagBtn->setToolTip("List every image behind the difference between the folders and "
+                        "the catalog, with the reason for each, and where the last scan "
+                        "spent its time.");
     removeBtn->setEnabled(false);
 
     QHBoxLayout *btns = new QHBoxLayout;
@@ -81,6 +114,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     btns->addWidget(addBtn);
     btns->addWidget(removeBtn);
     btns->addStretch(1);
+    btns->addWidget(diagBtn);
     btns->addWidget(scanBtn);
     btns->addWidget(closeBtn);
 
@@ -90,10 +124,35 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     /* The table is a different kind of thing from the paragraph above it and the buttons
        below it, and a blank line either side is what says so. */
     layout->addSpacing(8);
-    layout->addWidget(table, 1);
+    layout->addWidget(table);
     layout->addWidget(noteLabel);
+    /*  THREE SECTIONS -- the table, the info, the buttons -- divided by two rules with
+        the SAME space either side, made by one function so the two gaps cannot drift
+        apart. The info section is reporting where the table is editing; the buttons act
+        on both. kSectionGap sits on top of the layout's own 8 px spacing. */
+    constexpr int kSectionGap = 12;
+    auto addSectionRule = [layout]{
+        QFrame *rule = new QFrame;
+        rule->setFrameShape(QFrame::HLine);
+        rule->setFrameShadow(QFrame::Sunken);
+        layout->addSpacing(kSectionGap);
+        layout->addWidget(rule);
+        layout->addSpacing(kSectionGap);
+    };
+    addSectionRule();
     layout->addWidget(statusLabel);
-    layout->addSpacing(8);
+    /*  The scan's bar and line are ONE block, shown and hidden together, with their gap
+        from the info above inside it -- so an idle window has no stray spacing above the
+        button rule and the two section gaps stay equal. */
+    scanBlock = new QWidget;
+    QVBoxLayout *scanLayout = new QVBoxLayout(scanBlock);
+    scanLayout->setContentsMargins(0, 4, 0, 0);
+    scanLayout->setSpacing(8);
+    scanLayout->addWidget(scanBar);
+    scanLayout->addWidget(scanLabel);
+    scanBlock->hide();
+    layout->addWidget(scanBlock);
+    addSectionRule();
     layout->addLayout(btns);
 
     /* The only editable item state is the Include Subfolders check, so every itemChanged
@@ -141,6 +200,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
             for (int r = range.topRow(); r <= range.bottomRow(); ++r) rows << r;
         std::sort(rows.begin(), rows.end(), std::greater<int>());
         for (int r : rows) table->removeRow(r);
+        fitTableHeight();
         /*  REMOVING A ROW UN-CATALOGUES WHAT IT CONTRIBUTED, and this is the ordinary
             scopeChanged that says so: the table states what the catalog HOLDS, not
             merely what a scan visits, so no separate signal or confirmation belongs
@@ -157,6 +217,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     });
 
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
+    connect(diagBtn, &QPushButton::clicked, this, [this]{ emit diagnosticsRequested(); });
 
     updateNote();
 }
@@ -198,6 +259,45 @@ void CatalogRootsDlg::addRow(const CatalogScopeEntry &e)
                        "The includes less the excludes is what the catalog should hold "
                        "once a Scan has run.");
     table->setItem(r, ColImages, images);
+    fitTableHeight();
+}
+
+void CatalogRootsDlg::fitTableHeight()
+{
+/*
+    Header plus every row, up to kMaxVisibleRows; beyond that the table scrolls rather
+    than pushing the buttons off a laptop screen. An empty table keeps one row's height
+    so it still reads as a table.
+*/
+    constexpr int kMaxVisibleRows = 12;
+    int rowsH = 0;
+    const int n = table->rowCount();
+    for (int r = 0; r < qMin(n, kMaxVisibleRows); ++r) rowsH += table->rowHeight(r);
+    if (n == 0) rowsH = table->verticalHeader()->defaultSectionSize();
+    /* sizeHint, not height(): before the window is first shown the header has no
+       geometry yet and reports 0. */
+    table->setFixedHeight(table->horizontalHeader()->sizeHint().height() + rowsH
+                          + 2 * table->frameWidth());
+    fitToContents();
+}
+
+void CatalogRootsDlg::fitToContents()
+{
+/*
+    Take the height the contents need, no more and no less, keeping the user's width.
+    Deferred a tick so every change made in one pass (rows, counts, status, progress)
+    is laid out once, and so a label's new text has been measured.
+*/
+    if (fitPending) return;
+    fitPending = true;
+    QTimer::singleShot(0, this, [this]{
+        fitPending = false;
+        layout()->activate();
+        const int h = layout()->hasHeightForWidth()
+                          ? layout()->totalHeightForWidth(width())
+                          : layout()->totalSizeHint().height();
+        if (h > 0 && h != height()) resize(width(), h);
+    });
 }
 
 void CatalogRootsDlg::setRowCounts(const QVector<int> &counts)
@@ -228,6 +328,7 @@ void CatalogRootsDlg::setScope(const CatalogScope &scope)
     table->setRowCount(0);
     for (const CatalogScopeEntry &e : scope) addRow(e);
     populating = false;
+    fitTableHeight();
     removeBtn->setEnabled(false);
     updateNote();
 }
@@ -263,6 +364,7 @@ void CatalogRootsDlg::updateNote()
     than in a popup after the fact: a rule that quietly achieves nothing is exactly the
     kind of thing a user only discovers hours later, when a search comes back short.
 */
+    fitToContents();        // the note's length, and so its wrapped height, changes
     if (scanning) {
         noteLabel->setText("The table cannot be changed while a scan is running.");
         return;
@@ -288,8 +390,8 @@ void CatalogRootsDlg::updateNote()
         }
     }
 
-    noteLabel->setText("These folders are the catalog: removing a row forgets what it "
-                       "contributed. The image files are not affected.");
+    noteLabel->setText("These folders are the catalog: removing a row removes its "
+                       "images from the catalog. The image files are not affected.");
 }
 
 void CatalogRootsDlg::setScanning(bool on)
@@ -304,10 +406,60 @@ void CatalogRootsDlg::setScanning(bool on)
     table->setEnabled(!on);
     addBtn->setEnabled(!on);
     removeBtn->setEnabled(!on && !table->selectedItems().isEmpty());
+    if (!on) {
+        scanBlock->hide();
+        fitToContents();
+    }
+    else if (scanBlock->isHidden()) {
+        scanBar->setRange(0, 0);            // busy until the first report
+        scanLabel->setText("Starting the scan...");
+        scanBlock->show();
+        fitToContents();
+    }
     updateNote();
+}
+
+void CatalogRootsDlg::setScanProgress(const CatalogScanProgress &p)
+{
+    if (!scanning) return;
+    const QLocale loc;
+    scanBar->setRange(0, qMax(1, p.total));
+    scanBar->setValue(qMin(p.done, qMax(1, p.total)));
+
+    /*  TWO LINES: where the scan is and how long is left, then -- in grey -- that the
+        window is not needed. One sentence carrying both was the crowding. */
+    QString text;
+    if (p.phase == CatalogScanProgress::Checking) {
+        text = QString("<b>Checking folders</b> for new and changed images: %1 of %2")
+                   .arg(loc.toString(p.done), loc.toString(p.total));
+    }
+    else {
+        text = QString("<b>Indexing</b> %1 of %2 images").arg(loc.toString(p.done),
+                                                              loc.toString(p.total));
+        if (p.filesPerSec > 0) {
+            const int decimals = p.filesPerSec < 10 ? 1 : 0;
+            text += QString(" &nbsp;&middot;&nbsp; %1 per second")
+                        .arg(loc.toString(p.filesPerSec, 'f', decimals));
+        }
+    }
+    text += " &nbsp;&middot;&nbsp; " + catalogFormatEta(p.etaSecs)
+            + (p.etaSecs < 0 ? "" : " left")
+            + (p.phase == CatalogScanProgress::Checking && p.etaSecs >= 0
+                   ? " to check" : "");
+    if (p.paused)
+        text = "<b>Paused</b> while a folder loads &mdash; resumes by itself.<br>" + text;
+    text += "<br><span style=\"color:gray;\">You can close this window: the scan "
+            "continues in the background, and resumes at the next launch if Winnow "
+            "quits first.</span>";
+    const bool wasHidden = scanBlock->isHidden();
+    const int oldLines = scanLabel->text().count("<br>");
+    scanLabel->setText(text);
+    scanBlock->show();
+    if (wasHidden || oldLines != text.count("<br>")) fitToContents();
 }
 
 void CatalogRootsDlg::setCatalogStatus(const QString &text)
 {
     statusLabel->setText(text);
+    fitToContents();
 }

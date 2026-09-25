@@ -55,6 +55,11 @@ public:
     int addRow(const QString &name, int barHeight, const QColor &color,
                Fill fill = Fill::FromStart);
     void setRowText(int id, const QString &text);
+    /* Hover text for one row. For detail that changes often (a count, a time left):
+       setRowText resizes the text column and rebuilds EVERY row's bar, so a label that
+       changed four times a second wiped the other rows' progress and was clipped to the
+       container width anyway. The tooltip carries it instead. */
+    void setRowToolTip(int id, const QString &text);
     void showRow(int id, bool visible);
     /* Enable/disable a row as a preference gate.  A disabled row stays hidden
        even when its update function requests it, without losing its painted
@@ -118,6 +123,7 @@ signals:
     void clicked();
 
 protected:
+    bool event(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
 
@@ -125,6 +131,7 @@ private:
     struct Row {
         QString name;            // identifier key
         QString text;            // label, empty by default
+        QString toolTip;         // hover text, empty = none
         int     fontSize;        // point size for this row's text
         int     barHeight;       // pixel height of the bar
         QColor  barColor;        // base color
@@ -145,6 +152,7 @@ private:
     int barNudge() const;                // px to nudge the bar down vs the text (platform-specific)
     int singleProgressItemNudge() const; // extra px to nudge the row when only one is visible (platform-specific)
     int effectiveTextColWidth() const;   // explicit textColWidth, else auto-fit
+    int rowsYOffset() const;             // y where the rows block is painted
     void rebuildRowPixmap(Row &r);       // (re)create r.bar at current barWidth
     void fillBarBackground(Row &r);      // fill r.bar with the bg gradient (so progress shows against it)
     void relayout();                     // recompute tops/heights, emit height

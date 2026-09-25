@@ -91,6 +91,20 @@
     search returns nothing, a commit does nothing, and browsing is unaffected.
 */
 
+/*  ONE INDEX ROW, reduced to what the catalog diagnostics compare against the disk. See
+    Catalog::allPaths and Main/catalogenumerate.h. */
+struct CatalogPathInfo
+{
+    QString path;
+    QString pathKey;
+    QString folder;
+    bool live = true;
+    bool unreadable = false;
+    qint64 srcSize = 0;
+    qint64 srcMtime = 0;
+    qint64 sidecarMtime = 0;
+};
+
 /*
     One image's worth of catalog data, read off the DataModel on the GUI thread and then
     handed to a pool thread. A plain value with no Qt model types in it, deliberately: the
@@ -540,6 +554,11 @@ public:
     int commitUnreadable(const QVector<CatalogRow> &rows);
     /* How many rows are flagged unreadable. */
     int unreadableCount();
+    /*  EVERY ROW, reduced to its path, key and freshness stamps -- what the Catalog
+        Diagnostics report compares with the disk. Paged by id, taking the lock per page
+        (the staleOf convention), so a 250k-row read never holds the catalog for long.
+        Thread-safe; meant to run off the GUI thread. */
+    QVector<CatalogPathInfo> allPaths();
 
     /* Demote rows whose source file is gone, skipping unmounted volumes so an ejected
        card never reads as a mass deletion. Returns the number demoted. */
@@ -564,6 +583,9 @@ public:
 
         Returns the number demoted. */
     int reconcileFolder(const QString &folder, const QSet<QString> &present);
+    /* The per-folder SELECT reconcileFolder runs, exposed so tst_catalog can pin its
+       query plan to image_folder (see the definition for what the wrong plan cost). */
+    static const char *reconcileSelectSql();
 
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);

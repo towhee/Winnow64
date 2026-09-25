@@ -1,4 +1,5 @@
 #include "Datamodel/filters.h"
+#include <QLocale>
 #include "Utilities/foldertree.h"
 #include "Cache/catalog.h"
 #include "Metadata/keywordpaths.h"
@@ -2079,10 +2080,16 @@ void Filters::save()
 
     QMutexLocker locker(&mutex);
 
-    itemStates.clear();
+    itemStates = checkedItemStates();
     savedKeywordsMatchAll = keywordsMatchAll();
+    searchText = searchTrue->text(0);
+    if (searchText == enterSearchString) searchText = "";
+}
 
-    QTreeWidgetItemIterator it(this);
+QList<Filters::ItemState> Filters::checkedItemStates() const
+{
+    QList<ItemState> out;
+    QTreeWidgetItemIterator it(const_cast<Filters *>(this));
     while (*it) {
         QTreeWidgetItem *item = *it;
         ++it;
@@ -2096,10 +2103,46 @@ void Filters::save()
         state.category = root->data(0, CategoryNameRole).toString();
         state.value = itemMapKey(root, item);
         state.state = item->checkState(0);
-        itemStates << state;
+        out << state;
     }
-    searchText = searchTrue->text(0);
-    if (searchText == enterSearchString) searchText = "";
+    return out;
+}
+
+/*  One ItemState per string: category, value and state, separated by the ASCII unit
+    separator -- a character no category name, folder path or keyword can contain. */
+static const QChar kStateSep(0x1f);
+
+QVariantMap Filters::persistableState() const
+{
+    QStringList items;
+    for (const ItemState &st : checkedItemStates())
+        items << st.category + kStateSep + st.value + kStateSep
+                     + QString::number(int(st.state));
+    QString text = searchTrue->text(0);
+    if (text == enterSearchString) text.clear();
+    QVariantMap m;
+    m["items"] = items;
+    m["searchText"] = text;
+    m["keywordsMatchAll"] = keywordsMatchAll();
+    return m;
+}
+
+void Filters::setStateToRestore(const QVariantMap &m)
+{
+    QMutexLocker locker(&mutex);
+    itemStates.clear();
+    for (const QString &line : m.value("items").toStringList()) {
+        const QStringList parts = line.split(kStateSep);
+        if (parts.size() != 3) continue;
+        ItemState st;
+        st.category = parts.at(0);
+        st.value = parts.at(1);
+        st.state = Qt::CheckState(parts.at(2).toInt());
+        if (st.state == Qt::Unchecked) continue;        // never saved; never restored
+        itemStates << st;
+    }
+    searchText = m.value("searchText").toString();
+    savedKeywordsMatchAll = m.value("keywordsMatchAll").toBool();
 }
 
 void Filters::restore()
@@ -2136,7 +2179,13 @@ void Filters::restore()
         item->setCheckState(0, state.state);
         styleFilterItem(item);
     }
-    searchTrue->setText(0, searchText);
+    /*  ONLY IF IT DIFFERS, AND THE PLACEHOLDER WHEN NOTHING WAS SEARCHED. save() stores
+        an unsearched row as "", and writing that back replaced the "Enter search query"
+        placeholder with an empty row -- an EDIT of the search text, which ran a search
+        and two whole-proxy filterChanges (~600 ms at 148,567 rows) on every restore, a
+        folder add/remove's as well as the Library's at start. */
+    const QString wantSearch = searchText.isEmpty() ? enterSearchString : searchText;
+    if (searchTrue->text(0) != wantSearch) searchTrue->setText(0, wantSearch);
     // the mode goes back with the checks it combines; the caller re-applies both
     if (keywords) keywords->setData(0, MatchAllRole, savedKeywordsMatchAll);
     updateKeywordModeLabel();
@@ -3305,13 +3354,24 @@ void Filters::resizeColumns()
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
 //    int decorationWidth = 25;       // the expand/collapse arrows
-    int countColumnWidth = fm.boundingRect("-99999-").width();
-    int countFilteredColumnWidth = fm.boundingRect("-99999-").width();
+    /* Wide enough for the ceiling as the delegate draws it (QLocale groups the
+       digits), and never narrower than the old five-digit sizing. */
+    const QString widest = "-" + QLocale().toString(qMax(99999, countCeiling)) + "-";
+    int countColumnWidth = qMax(fm.boundingRect("-99999-").width(),
+                                fm.horizontalAdvance(widest));
+    int countFilteredColumnWidth = countColumnWidth;
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;
     setColumnWidth(3, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
     setColumnWidth(0, col0Width);
+}
+
+void Filters::setCountCeiling(int maxCount)
+{
+    if (maxCount == countCeiling) return;
+    countCeiling = maxCount;
+    resizeColumns();
 }
 
 void Filters::resizeEvent(QResizeEvent *event)

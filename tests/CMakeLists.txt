@@ -372,12 +372,14 @@ winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
 # string to QString::contains.
 winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # tst_catalog covers the catalog tables in the shared index database (schema 4).
-# Catalog.cpp is already in WINNOW_CORE_TEST_SOURCES, so no extra source is needed.
+# Catalog.cpp is already in WINNOW_CORE_TEST_SOURCES; Main/catalogenumerate.cpp is added
+# for the scope walk and the gap classifier behind Catalog Diagnostics.
 # Several cases test the BOUNDARY with the devPreview tenant: the migration must not
 # disturb devpreview rows, and clearing one tenant must not clear the other. It also
 # builds a version 3 file by hand and migrates it, because an existing catalog must merge
 # its duplicate keyword rows in place rather than be rebuilt.
-winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp)
+winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp
+    ${CMAKE_SOURCE_DIR}/Main/catalogenumerate.cpp)
 
 # tst_keywordvocab covers the AUTHORED vocabulary's tree surgery, and above all the MERGE
 # -- the one operation that walks two trees at once and destroys part of one of them.
