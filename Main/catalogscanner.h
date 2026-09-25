@@ -61,6 +61,13 @@ public:
     ~CatalogScanner() override;
 
     bool isRunning() const { return running.load(std::memory_order_relaxed); }
+    /*  Stop, AND WAIT for the scanner thread to finish the file it is on (bounded). Call
+        before the process can exit: stop() alone only raises a flag, and a quit from the
+        Dock, logout or shutdown reaches exit() without destroying MW -- so the destructor
+        never runs and the thread was still parsing while exit() destroyed the globals it
+        uses (crash reports 2026-09-24: G::issueDedup's hash, QtSql's registry).
+        Idempotent; the destructor calls it too. GUI thread. */
+    void shutdown(int maxWaitMs = 5000);
 
     /* This object lives here, so scan() never runs on the GUI thread. Owned rather than
        managed by MW, following Cache/metaread.h. */

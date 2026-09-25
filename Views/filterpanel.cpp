@@ -143,8 +143,21 @@ void FilterPanel::focusSearch()
 
 void FilterPanel::setScanning(bool on)
 {
+/*
+    A SCAN STARTING CHANGES NOTHING THE SEARCH COULD FIND. This called refresh() both
+    ways, and refresh() runs the whole catalog query: at the automatic scan that follows
+    opening the Library that was Catalog::searchRows fetching all 148,567 rows on the GUI
+    thread (~1.1 s, sampled) -- the second post-load stall -- only for runSearch to find
+    the paths unchanged and load nothing. The one thing `scanning` affects here is the
+    "Nothing catalogued yet" line in updateStatus, so starting a scan updates that alone.
+
+    A scan ENDING does need the query: it is how rows the scan catalogued reach the
+    panel, so that path still refreshes (and still costs the query -- see the note under
+    "The two post-load stalls" in notes/Documentation.txt).
+*/
     scanning = on;
-    refresh();
+    if (on) updateStatus();
+    else refresh();
 }
 
 void FilterPanel::refresh()

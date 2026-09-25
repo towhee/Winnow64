@@ -1439,10 +1439,12 @@ void MW::closeEvent(QCloseEvent *event)
     metaRead->stop();
     imageCache->stop();
 
-    /* End the background catalog scan. Its thread checks between files, so this returns
-       promptly, and anything already committed is kept -- the scan resumes from staleOf
-       next time rather than starting over. */
-    if (catalogScanner) catalogScanner->stop();
+    /* End the background catalog scan, and WAIT for it -- see CatalogScanner::shutdown:
+       a quit from the Dock, logout or shutdown goes straight on to exit(), and a scanner
+       thread still mid-file then crashed in the globals exit() was destroying. Its thread
+       checks between files, so this returns promptly, and anything already committed is
+       kept -- the scan resumes from staleOf next time rather than starting over. */
+    if (catalogScanner) catalogScanner->shutdown();
 
     if (filterDock->isVisible()) {
         folderDock->raise();

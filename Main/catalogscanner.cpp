@@ -36,12 +36,22 @@ CatalogScanner::CatalogScanner(QObject *parent)
 
 CatalogScanner::~CatalogScanner()
 {
-    /* Ask the scan to end, then let the thread finish the file it is on. The wait is
-       bounded because every loop checks abort between files. */
-    stop();
-    scannerThread.quit();
-    scannerThread.wait();
+    shutdown();
     delete metadata;
+}
+
+void CatalogScanner::shutdown(int maxWaitMs)
+{
+/*
+    Ask the scan to end, then let the thread finish the file it is on. Bounded, because
+    every loop checks abort between files -- normally this returns in milliseconds -- and
+    a quit must not hang on one pathological file. A thread that does not stop in time is
+    left running, which is no worse than what every quit did before this existed.
+*/
+    stop();
+    if (!scannerThread.isRunning()) return;
+    scannerThread.quit();
+    scannerThread.wait(QDeadlineTimer(maxWaitMs));
 }
 
 void CatalogScanner::stop()
