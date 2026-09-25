@@ -230,6 +230,17 @@ Q_NAMESPACE
 
            Appended for the same reason as DevelopColumn. */
         KeywordsAllColumn,
+        /* The FULL PATH of the folder the image is in. FolderNameColumn is only the
+           folder's NAME, and names repeat -- a library of 1,599 folders held 22 names
+           used more than once -- so anything that must tell two folders apart reads
+           this. Appended for the same reason as DevelopColumn. */
+        FolderPathColumn,
+        /* FolderPathColumn and every folder ABOVE it (FolderTree::ancestry), which is
+           what the Filters Folders category filters on: "this folder and everything
+           beneath it" becomes an exact QStringList::contains, the same move
+           KeywordsAllColumn makes for keyword paths. READ-ONLY -- derived from
+           FolderPathColumn by the row store, never written. */
+        FolderPathsAllColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -281,9 +292,9 @@ Q_NAMESPACE
     /*  WHICH SET OF IMAGES THE USER IS LOOKING AT.
 
         Folders = whatever the Folders/Bookmarks selection loaded. Catalog = the
-        whole local index, searched across folders. It is ONE fact with three
-        views -- the Catalog row above the Folders tree, the same row above
-        Bookmarks, and the Filter dock's Folders|Catalog buttons -- so it lives
+        whole Library (every catalog; the local index today), searched across
+        folders. It is ONE fact with its views -- the Source panel's Folders |
+        Library toggle and the tree it shows, and the Filters title -- so it lives
         here and MW::setScope is the only thing that changes it. Before this the
         Filter dock owned the scope privately and the trees knew nothing about it,
         which is why selecting a folder and searching the catalog felt like two

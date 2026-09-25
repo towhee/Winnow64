@@ -1,7 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Utilities/panelprobe.h"
 #include "Metadata/keywordpaths.h"
-#include "Views/catalogscopetree.h"
+#include "Views/libtree.h"
 #include "Develop/workingimagecache.h"
 #include "Utilities/fileops.h"
 #include "Utilities/gradientheader.h"
@@ -251,6 +251,9 @@ void MW::createFilterView()
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
     connect(filters, &Filters::filterChange, this, &MW::filterChange);
+    /*  After MW::filterChange, so LibTree shows the folder filter the panel now holds --
+        whichever of the two views the change was made in. */
+    connect(filters, &Filters::filterChange, this, [this] { syncLibTreeFromFilters(); });
 }
 
 void MW::createDataModel()
@@ -309,12 +312,20 @@ void MW::createDataModel()
         setCentralProgressMessage(loadedMsg() + "Building filters: " + stage + " ...");
     });
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
-    /*  A year picked in the Catalog tree is checked HERE and not where the build is
-        asked for: BuildFilters::build starts a THREAD, so the Years category has no
-        items until the build's Done op has run on the GUI thread, which is what emits
-        this. See MW::applyPendingCatalogYear. */
+    /*  A folder clicked in LibTree while the Library was loading is checked HERE and not
+        where the build is asked for: BuildFilters::build starts a THREAD, so the Folders
+        category has no items until the build's Done op has run on the GUI thread, which
+        is what emits this. See MW::applyPendingLibraryFolderFilter. Then LibTree is
+        re-synced: a rebuild re-creates the Folders category, and restore() may have put
+        a folder filter back. */
+    /*  First: a folder added to or removed from the loaded set rebuilt the categories,
+        and the user's checks go back on before anything else reads them. */
     connect(buildFilters, &BuildFilters::finishedBuildFilters,
-            this, &MW::applyPendingCatalogYear);
+            this, &MW::restoreFiltersAfterFolderChange);
+    connect(buildFilters, &BuildFilters::finishedBuildFilters,
+            this, &MW::applyPendingLibraryFolderFilter);
+    connect(buildFilters, &BuildFilters::finishedBuildFilters,
+            this, &MW::syncLibTreeFromFilters);
     /*  AND THE UNFILED MARKING, for the same reason: the build runs on a THREAD, so the
         Keywords category has no items to mark until its Done op has run on the GUI
         thread. This is also what marks the panel on the FIRST folder of a session, when
@@ -535,7 +546,7 @@ void MW::createCatalogScanner()
                 if (catalogView && catalogDock && catalogDock->isVisible())
                     catalogView->refresh();
                 if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
-                updateCatalogScopeTrees();
+                updateLibraryTree();
                 if (G::isLogger)
                     G::log("MW::createCatalogScanner",
                            "catalog scan finished, indexed = " +
@@ -1521,33 +1532,6 @@ void MW::createStatusBar()
     statusBar()->setMinimumHeight(qMax(statusBarBaseHeight, progress->preferredHeight()));
 }
 
-/*  Wrap the Folders tree with the Catalog tree above it.
-
-    The dock's widget becomes a plain container so the catalog rows sit at the top and
-    the tree fills the rest. The DOCK keeps its objectName, so a WindowState saved
-    before the catalog rows existed still restores -- Qt keys dock state on the dock, not
-    on what it contains.
-
-    TWO NAMED SUBPANELS, not two bare trees. The panel is titled "Source" because that is
-    what both halves answer -- where the images being looked at come from -- and each half
-    gets its own gradient band, the same band the Keywords panel uses, so "Catalog" and
-    "Folders" read as the two answers rather than as one tree with odd rows on top.
-    Without the bands the catalog rows look like part of the file tree, which is the
-    confusion this fixes.
-*/
-static QWidget *wrapWithCatalogScopeTree(CatalogScopeTree *row, QWidget *tree)
-{
-    QWidget *box = new QWidget;
-    QVBoxLayout *v = new QVBoxLayout(box);
-    v->setContentsMargins(0, 0, 0, 0);
-    v->setSpacing(0);
-    v->addWidget(new GradientHeader(QObject::tr("Catalog"), box));
-    v->addWidget(row);
-    v->addWidget(new GradientHeader(QObject::tr("Folders"), box));
-    v->addWidget(tree, 1);
-    return box;
-}
-
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log("MW::createFolderDock");
@@ -1568,57 +1552,109 @@ void MW::createFolderDock()
     dockTextNames << folderDockTabText;
     folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Source 📁
     // folderDock->setObjectName("FoldersDock");
-    /*  The count metric and margin are FSTree::resizeColumns', so the catalog counts
-        line up with the folder counts directly beneath them. */
-    folderCatalogTree = new CatalogScopeTree("(99999", 10);
-    /*  And it keeps lining up when the folder tree grows a vertical scrollbar: both trees
-        stretch their last section, so the counts hang off the VIEWPORT edge, which the
-        scrollbar moves in one tree and not the other. See CatalogScopeTree::alignCountColumn. */
-    folderCatalogTree->setAlignWith(fsTree);
+    /*  THE SOURCE PANEL IS FOLDERS OR LIBRARY, one at a time. The title bar's toggle
+        picks which, and the stack shows the tree that answers it: FSTree, which LOADS
+        the folder clicked, or LibTree, whose click FILTERS the loaded Library. There used
+        to be a "Catalog" band above the folder tree instead -- two trees stacked in one
+        panel, which read as one list with odd rows on top. See Views/libtree.h.
+
+        The count metric and margin are FSTree::resizeColumns', so the counts sit where
+        they do in the Folders view. */
+    libTree = new LibTree("(99999", 10);
     /*  BOTH TREES CARRY THE SAME WIDTH CAP, AND BOTH LOSE IT WHEN THE PANEL FLOATS.
         fsTree is capped at folderMaxWidth (MW::createFSTree) so a docked panel dragged
         wide cannot eat the window. A FLOATING panel is a window the user sized
         deliberately, and a tree that stops at the cap inside it is the panel refusing the
         space it was given: folder names elide while a blank strip sits to their right,
-        and the counts strand mid-panel. The catalog tree takes the same cap so the two
-        are the same width in every state, which is what keeps their count columns lined
-        up in the first place -- without it, a docked area wider than the cap would part
-        them. A dock restored FLOATING gets this too: QMainWindow::restoreState floats it
-        after it was built docked, so topLevelChanged fires. */
-    folderCatalogTree->setMaximumWidth(folderMaxWidth);
+        and the counts strand mid-panel. A dock restored FLOATING gets this too:
+        QMainWindow::restoreState floats it after it was built docked, so
+        topLevelChanged fires. */
+    libTree->setMaximumWidth(folderMaxWidth);
     connect(folderDock, &QDockWidget::topLevelChanged, this, [this](bool floating) {
         const int cap = floating ? QWIDGETSIZE_MAX : folderMaxWidth;
         fsTree->setMaximumWidth(cap);
-        folderCatalogTree->setMaximumWidth(cap);
+        libTree->setMaximumWidth(cap);
     });
-    connect(folderCatalogTree, &CatalogScopeTree::catalogChosen, this, [this]{
-        setCatalogScopeWhole("folderCatalogTree");
+    connect(libTree, &LibTree::folderFilterRequested,
+            this, &MW::applyLibraryFolderFilter);
+    connect(libTree, &LibTree::revealInFoldersRequested, this, [this](const QString &p) {
+        /*  Folders first, so the folder is loaded the ordinary way and the toggle and the
+            tree agree about what is being looked at. */
+        if (fsTree->select(p, "None", "LibTree::revealInFolders"))
+            setScope(G::Scope::Folders, "LibTree::revealInFolders");
     });
-    connect(folderCatalogTree, &CatalogScopeTree::catalogYearChosen, this,
-            [this](const QString &year){ setCatalogScopeForYear(year); });
-    /*  Choosing a folder or a bookmark folds the years away: the user has moved to the
-        other subpanel, and an expanded year list left over it is the tallest thing in the
-        panel saying nothing about what they are now looking at. FSTree's own signal
-        rather than QAbstractItemView::clicked, because FSTree::mousePressEvent only
-        chains to the base class on one of its branches, so clicked() does not fire for a
-        modifier click. BookMarks does chain, so itemPressed is reliable there -- and it
-        is what MW::bookmarkClicked already listens to. */
-    connect(fsTree, &FSTree::folderSelectionChange,
-            folderCatalogTree, &CatalogScopeTree::collapseCatalog);
-    connect(bookmarks, &QTreeWidget::itemPressed,
-            folderCatalogTree, &CatalogScopeTree::collapseCatalog);
-    folderDock->setWidget(wrapWithCatalogScopeTree(folderCatalogTree, fsTree));
+    connect(libTree, &LibTree::showInFileManagerRequested,
+            this, &MW::revealInFileBrowser);
+    connect(libTree, &LibTree::manageCatalogRequested, this, &MW::manageCatalogRoots);
+    connect(libTree, &QTreeWidget::itemExpanded, this, [this] {
+        settings->setValue("LibTreeExpanded", libTree->expandedPaths());
+    });
+    connect(libTree, &QTreeWidget::itemCollapsed, this, [this] {
+        settings->setValue("LibTreeExpanded", libTree->expandedPaths());
+    });
+    libTree->setExpandedPaths(settings->value("LibTreeExpanded").toStringList());
+
+    sourceStack = new QStackedWidget;
+    sourceStack->addWidget(fsTree);         // index 0: Folders
+    sourceStack->addWidget(libTree);        // index 1: Library
+    folderDock->setWidget(sourceStack);
     connect(folderDock, &DockWidget::focus, this, &MW::focusOnDock);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
     folderTitleLayout->setSpacing(0);
-    /*  "Source", not "Folders": the panel holds the Catalog subpanel as well, and a
-        header naming only one of the two was what made the distinction confusing. Same
-        word as the tab (folderDockTabText). */
+    /*  "Source", not "Folders": the panel shows the Library as well, and a header
+        naming only one of the two was what made the distinction confusing. Same word as
+        the tab (folderDockTabText). */
     folderTitleBar = new DockTitleBar("Source", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
     folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
+
+    /*  FOLDERS | LIBRARY, beside the title: where the images come from. An either/or
+        pair (an exclusive QButtonGroup), so exactly one is lit and it always says which
+        tree the panel is showing. QToolButton rather than QPushButton, because the
+        global QPushButton min-width (widgetcss.cpp) would widen the whole dock.
+
+        THE TOGGLE DOES NOT HOLD THE SCOPE -- G::scope does. A click asks MW::setScope
+        (through setCatalogScopeWhole / showFoldersSource), and setScope pushes the
+        answer back here, so a folder or bookmark click that changes the scope flips the
+        toggle too, and a refused change (unsaved picks) leaves it where it was. */
+    sourceFoldersBtn = new QToolButton;
+    sourceLibraryBtn = new QToolButton;
+    sourceFoldersBtn->setText(tr("Folders"));
+    sourceLibraryBtn->setText(tr("Library"));
+    sourceFoldersBtn->setToolTip(tr(
+        "Browse folders on disk. Clicking a folder loads it."));
+    sourceLibraryBtn->setToolTip(tr(
+        "Browse the whole Library: every catalogued image, across all its folders.\n"
+        "Clicking a folder in the Library filters to it."));
+    QButtonGroup *sourceGroup = new QButtonGroup(folderTitleBar);
+    sourceGroup->setExclusive(true);
+    for (QToolButton *b : {sourceFoldersBtn, sourceLibraryBtn}) {
+        b->setCheckable(true);
+        b->setAutoRaise(true);
+        b->setFocusPolicy(Qt::NoFocus);
+        sourceGroup->addButton(b);
+    }
+    sourceFoldersBtn->setChecked(true);
+    styleSourceToggle();
+    /*  clicked, not toggled: setScope pushes the state back with the signals blocked,
+        and only the USER's click should ask for a change. */
+    connect(sourceFoldersBtn, &QToolButton::clicked, this, [this] { showFoldersSource(); });
+    connect(sourceLibraryBtn, &QToolButton::clicked, this, [this] {
+        setCatalogScopeWhole("Source toggle");
+        /*  Nothing to browse opens Manage Catalog instead of switching; put the toggle
+            back to what is actually showing. */
+        const bool lib = G::scope == G::Scope::Catalog;
+        QSignalBlocker a(sourceFoldersBtn), b(sourceLibraryBtn);
+        sourceLibraryBtn->setChecked(lib);
+        sourceFoldersBtn->setChecked(!lib);
+    });
+    // after the title label (index 0), before the stretch DockTitleBar adds
+    folderTitleLayout->insertSpacing(1, 16);
+    folderTitleLayout->insertWidget(2, sourceFoldersBtn);
+    folderTitleLayout->insertSpacing(3, 2);
+    folderTitleLayout->insertWidget(4, sourceLibraryBtn);
     // The folders tab starts with its text title; when G::useDockTitleGraphic
     // is on, MW::updateDockTabGraphics swaps text<->graphic per available width.
 
@@ -1647,7 +1683,7 @@ void MW::createFolderDock()
     // question mark button
     BarBtn *folderQuestionBtn = new BarBtn();
     folderQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    folderQuestionBtn->setToolTip("How this works: the Source panel (Catalog and Folders)");
+    folderQuestionBtn->setToolTip("How this works: the Source panel (Folders and Library)");
     connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
     folderTitleLayout->addWidget(folderQuestionBtn);
 
@@ -1681,6 +1717,24 @@ void MW::createFolderDock()
     folderTitleLayout->addSpacing(5);
 
     connect(folderDock, &QDockWidget::visibilityChanged, this, &MW::folderDockVisibilityChange);
+}
+
+void MW::styleSourceToggle()
+{
+/*
+    The lit half in the selection colour, the way a selected folder is lit in the tree
+    beneath -- the toggle and the tree say the same thing. From the palette, so
+    MW::setBackgroundShade calls this again.
+*/
+    if (!sourceFoldersBtn || !sourceLibraryBtn) return;
+    const QString css = QString(
+        "QToolButton { border:none; border-radius:3px; padding:1px 8px;"
+        "  color:%1; background:transparent; }"
+        "QToolButton:checked { color:%2; background:%3; }"
+        "QToolButton:hover:!checked { color:%2; }")
+        .arg(G::disabledColor.name(), G::textColor.name(), G::selectionColor.name());
+    sourceFoldersBtn->setStyleSheet(css);
+    sourceLibraryBtn->setStyleSheet(css);
 }
 
 void MW::createFavDock()
@@ -1893,8 +1947,8 @@ void MW::createFilterDock()
         /* Returning to Folders: the tree is holding catalog values, so rebuild it from
            the datamodel. buildFilters->reset() clears the catalog items (and the checks
            that went with them) before build() repopulates from the model. */
-    /*  The panel reports its own scope flips; MW mirrors them to the Catalog
-        rows in the Source panel's Catalog subpanel. */
+    /*  The panel reports its own scope flips; MW mirrors them to the Source
+        panel's Folders | Library toggle. */
     connect(filterPanel, &FilterPanel::scopeChanged, this, [this](int sc){
         /*  Switching to Everywhere with nothing catalogued would leave the panel
             searching an empty index, so the window that fills it opens instead and the

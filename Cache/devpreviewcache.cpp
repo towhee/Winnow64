@@ -126,6 +126,29 @@ bool DevPreviewCache::isCachePath(const QString &path) const
     return p.startsWith(d + "/", Qt::CaseInsensitive);
 }
 
+bool DevPreviewCache::containsCachePath(const QStringList &paths) const
+{
+    if (paths.isEmpty()) return false;
+
+    QString d;
+    {
+        QMutexLocker lk(&mutex);
+        d = dirLocked();
+    }
+    d = QDir::cleanPath(QFileInfo(d).absoluteFilePath());
+    if (d.isEmpty()) return false;
+    const QString dSlash = d + "/";
+
+    for (const QString &path : paths) {
+        if (path.isEmpty()) continue;
+        const QString p = QDir::cleanPath(QDir::isAbsolutePath(path)
+                                          ? path : QFileInfo(path).absoluteFilePath());
+        if (!p.compare(d, Qt::CaseInsensitive)) return true;
+        if (p.startsWith(dSlash, Qt::CaseInsensitive)) return true;
+    }
+    return false;
+}
+
 QString DevPreviewCache::readOnlyReason()
 {
     return "the develop preview cache can only be viewed, not edited";

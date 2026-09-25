@@ -420,7 +420,7 @@ set(WINNOW_SOURCES
     Views/catalogview.cpp
     Datamodel/imagerow.cpp
     Datamodel/rowscratch.cpp
-    Views/catalogscopetree.cpp
+    Views/libtree.cpp
     Views/filterpanel.cpp
     Views/infoview.cpp
     Views/tableview.cpp
@@ -455,7 +455,7 @@ set(WINNOW_HEADERS
     Datamodel/imagerow.h
     Datamodel/rowscratch.h
     Datamodel/filterpredicate.h
-    Views/catalogscopetree.h
+    Views/libtree.h
     Datamodel/selection.h
 
     Develop/cameraprofile.h
@@ -685,6 +685,7 @@ set(WINNOW_HEADERS
     Utilities/usbutil.h
     Utilities/volumeinfo.h
     Utilities/fileops.h
+    Utilities/foldertree.h
     Utilities/searchterms.h
     Utilities/utilities.h
     Utilities/winnets.h

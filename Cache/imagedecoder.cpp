@@ -133,9 +133,21 @@ void ImageDecoder::decode(int row, int instance)
     sfRow = row;                   // set early so fillCache has valid row
     this->instance = instance;
 
-    if (dm->sf->isSuspended() || row >= dm->sf->rowCount()) {
+    /*  NEVER THE PROXY FROM THIS THREAD. Every column below used to be read through
+        dm->sf->index(sfRow, ...), and QSortFilterProxyModel builds its mapping LAZILY:
+        when the GUI thread's filterChange had just invalidated it, the first index()
+        call on each decoder thread rebuilt it -- a stable_sort of every row. At 148,567
+        rows that was ~18 decoder threads each sorting the whole model at once, all
+        contending on RowStore's QReadWriteLock with the GUI thread's own sort, which
+        then took over 20 s to clear a one-item filter (sampled 2026-09-24). It was also
+        a data race on the proxy's private mapping. The snapshot is immutable and is
+        what the ImageCache chose this row from, so the row means the same thing here. */
+    const ProxySnapshotPtr snap = dm->proxySnapshot();
+    const bool suspended = dm->sf->isSuspended();
+    if (suspended || !snap || !snap->contains(row)) {
+        dmRow = -1;
         status = Status::Failed;
-        errMsg = dm->sf->isSuspended() ? "Proxy suspended." : "Row out of range.";
+        errMsg = suspended ? "Proxy suspended." : "Row out of range.";
         setIdle();
         emit done(threadId, int(status), sfRow, QImage(), QString(), 0);
         return;
@@ -147,7 +159,8 @@ void ImageDecoder::decode(int row, int instance)
     setBusy();
 
     status = Status::Undefined;
-    fPath = dm->sf->index(sfRow,0).data(G::PathRole).toString();
+    dmRow = snap->dmRow(sfRow);
+    fPath = snap->path(sfRow);
     image = QImage();
     loadedFromDevPreview = false;
     errMsg = "";
@@ -269,7 +282,7 @@ bool ImageDecoder::loadDevPreview()
     if (G::operationMode == G::OperationMode::Develop) return false;
     if (G::previewSource != G::PreviewSource::Developed) return false;
 
-    QString key = dm->sf->index(sfRow, G::DevPreviewKeyColumn).data().toString();
+    QString key = dmVal(G::DevPreviewKeyColumn).toString();
     if (key.isEmpty()) {
         /* No develop recipe. For a raw that Winnow can demosaic there may still be a cached
            DEFAULT RENDER -- the pipeline run with identity adjustments -- and serving it is
@@ -313,7 +326,7 @@ bool ImageDecoder::ensureDecodeGeometry(int sfRow, ImageMetadata &geo)
     through the same queued setValSf every other cross-thread write uses.
 */
     if (!dm || sfRow < 0) return false;
-    const QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::PathRole).toString();
+    const QString fPath = dmVal(G::PathColumn, G::PathRole).toString();
     if (fPath.isEmpty()) return false;
     const QFileInfo fi(fPath);
     if (!fi.exists()) return false;
@@ -408,7 +421,7 @@ bool ImageDecoder::load()
         thread and have NOT landed by the time this function reads anything, so
         the two are not interchangeable and geo is the one that must be read. */
     if (!isIndependent && dm && sfRow >= 0
-        && !dm->sf->index(sfRow, G::OffsetFullColumn).data().isValid()) {
+        && !dmVal(G::OffsetFullColumn).isValid()) {
         haveGeoMeta = ensureDecodeGeometry(sfRow, geoMeta);
     }
 
@@ -445,7 +458,7 @@ bool ImageDecoder::load()
 
     ext = isIndependent
               ? indMeta.ext.toLower()
-              : dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
+              : dmVal(G::TypeColumn).toString().toLower();
 
     // do not cache video files
     if (metadata->videoFormats.contains(ext)) {
@@ -544,8 +557,8 @@ bool ImageDecoder::load()
             if (isIndependent) rawMeta = indMeta;
             else {
                 dm->fPathRawInfoGet(fPath, rawMeta.rawInfo);
-                rawMeta.ISONum = dm->sf->index(sfRow, G::ISOColumn).data().toInt();  // "Denoise raw" conditioning
-                rawMeta.model  = dm->sf->index(sfRow, G::CameraModelColumn).data().toString();  // PMRID calibration
+                rawMeta.ISONum = dmVal(G::ISOColumn).toInt();  // "Denoise raw" conditioning
+                rawMeta.model  = dmVal(G::CameraModelColumn).toString();  // PMRID calibration
             }
             std::shared_ptr<const WorkingImage> work;
             /* Demosaic progress: a cache-mode decode reports per tile via the
@@ -583,10 +596,10 @@ bool ImageDecoder::load()
     bool isEmbeddedJpg = false;
     int offsetFull = isIndependent ? int(indMeta.offsetFull)
                    : haveGeoMeta   ? int(geoMeta.offsetFull)
-                                   : dm->sf->index(sfRow, G::OffsetFullColumn).data().toInt();
+                                   : dmVal(G::OffsetFullColumn).toInt();
     int lengthFull = isIndependent ? int(indMeta.lengthFull)
                    : haveGeoMeta   ? int(geoMeta.lengthFull)
-                                   : dm->sf->index(sfRow, G::LengthFullColumn).data().toInt();
+                                   : dmVal(G::LengthFullColumn).toInt();
 /*
     EMBEDDED IMAGE TYPE BUT NO OFFSET -- the guard that was left empty.
 
@@ -769,7 +782,7 @@ bool ImageDecoder::load()
             int samplesPerPixel = isIndependent
                 ? indMeta.samplesPerPixel
                 : haveGeoMeta ? geoMeta.samplesPerPixel
-                          : dm->sf->index(sfRow, G::samplesPerPixelColumn).data().toInt();
+                          : dmVal(G::samplesPerPixelColumn).toInt();
             if (samplesPerPixel > 3) {
                  errMsg = "TIFF samplesPerPixel more than 3.";
                  G::issue("Warning", errMsg, "ImageDecoder::run", sfRow, fPath);
@@ -919,6 +932,17 @@ bool ImageDecoder::isBusy()
     return !idle;
 }
 
+QVariant ImageDecoder::dmVal(int col, int role) const
+{
+/*
+    A column of this decode's row, read from the DATAMODEL by the row decode() resolved
+    from the proxy snapshot. RowStore reads are locked, so this is safe on the decoder
+    thread; dm->sf is not. An invalid QVariant if the row is gone.
+*/
+    if (dmRow < 0 || dmRow >= dm->rowCount()) return QVariant();
+    return dm->index(dmRow, col).data(role);
+}
+
 void ImageDecoder::rotate()
 {
     if (G::isLogger) G::log("ImageDecoder::rotate", "sfRow = " + QString::number(sfRow));
@@ -926,10 +950,10 @@ void ImageDecoder::rotate()
     int degrees = 0;
     int orientation = isIndependent
         ? indMeta.orientation
-        : dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
+        : dmVal(G::OrientationColumn).toInt();
     int rotationDegrees = isIndependent
         ? indMeta.rotationDegrees
-        : dm->sf->index(sfRow, G::RotationDegreesColumn).data().toInt();
+        : dmVal(G::RotationDegreesColumn).toInt();
     if (orientation > 0) {
         switch (orientation) {
         case 3:
@@ -1042,7 +1066,7 @@ void ImageDecoder::colorManage()
         iccBuf = isIndependent
             ? indMeta.iccBuf
             : haveGeoMeta ? geoMeta.iccBuf
-                      : dm->sf->index(sfRow, G::ICCBufColumn).data().toByteArray();
+                      : dmVal(G::ICCBufColumn).toByteArray();
     }
     ICC::transform(iccBuf, image);
 }

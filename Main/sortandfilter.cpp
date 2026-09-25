@@ -1138,10 +1138,9 @@ void MW::searchTextEdit()
     There used to be two keys: F2 searched the folders and Shift+F2 searched the catalog,
     each one FORCING its scope on the way in. That made the shortcut a scope switch as
     much as a search, so pressing the one you had learnt threw away the scope you were
-    already working in. Scope is now chosen where scope is chosen (the Catalog rows above
-    the Source panel's Catalog subpanel, the panel's own Folders|Catalog buttons, File > Open
-    Catalog); F2 just puts the cursor in the search box of whatever is active and leaves
-    the scope alone.
+    already working in. Scope is now chosen where scope is chosen (the Source panel's
+    Folders | Library toggle, File > Open Library); F2 just puts the cursor in the search
+    box of whatever is active and leaves the scope alone.
 */
 {
     if (G::isLogger) G::log("MW::searchTextEdit");

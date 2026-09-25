@@ -7,6 +7,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include "Utilities/foldertree.h"
+
 /*
     WHAT THE BACKGROUND SCANNER IS ALLOWED TO WALK, as one ordered table of rules rather
     than a root list plus a separate exclusion list. See notes/Documentation.txt
@@ -35,11 +37,12 @@
     settings and from the folder tree, and those three do not agree about the slash. The
     catalog's own `folder` column has none, so no-trailing-slash is the form that also
     matches the database. A volume root ("/" or "C:/") keeps its slash: it IS the slash. */
+/*  THE RULE ITSELF LIVES IN Utilities/foldertree.h, because the folder trees (LibTree and
+    the Filters Folders category) compare these same paths and must spell them the same
+    way. */
 inline QString catalogScopeNormalize(const QString &path)
 {
-    QString p = QDir::fromNativeSeparators(path.trimmed());
-    while (p.size() > 1 && p.endsWith('/') && !p.endsWith(":/")) p.chop(1);
-    return p;
+    return FolderTree::normalize(path);
 }
 
 struct CatalogScopeEntry

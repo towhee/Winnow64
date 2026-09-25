@@ -42,7 +42,11 @@ private slots:
     void insertRowsShiftsTheRowsAfterIt();
     void removeRowsSplicesRatherThanTruncates();
     void compactDropsScatteredRowsInOrder();
+    void pickedCountStaysExact();
+    void forEachRowMatchesValue();
     void prefixExpansionStaysInBudget();
+    void folderPathsAllIsDerivedFromThePath();
+    void folderAncestryCostsARowOneId();
 
 private:
     static void fill(RowStore &s, int row, const QString &path)
@@ -343,6 +347,97 @@ void tst_imagerow::compactDropsScatteredRowsInOrder()
     QCOMPARE(s.value(2, G::PathColumn, G::PathRole).toString(), QString("/e.jpg"));
 }
 
+void tst_imagerow::pickedCountStaysExact()
+{
+/*
+    RowStore::pickedCount replaced a walk of every row, so nothing re-derives it: it has
+    to stay exact through every write, splice and removal on its own, or isAnyPick and
+    the status bar drift silently. pickGeneration must move whenever the answer over a
+    SUBSET could have changed, because MW::getPicked caches its filtered count on it.
+*/
+    auto pick = [](RowStore &s, int row, const QString &v) {
+        s.setValue(row, G::PickColumn, Qt::EditRole, v);
+    };
+    RowStore s;
+    s.resize(6);
+    QCOMPARE(s.pickedCount(), 0);
+
+    quint64 g = s.pickGeneration();
+    pick(s, 0, "Picked"); pick(s, 2, "Picked"); pick(s, 4, "Picked");
+    QCOMPARE(s.pickedCount(), 3);
+    QVERIFY(s.pickGeneration() != g);
+
+    // re-writing the same value, or another non-pick value, changes nothing
+    g = s.pickGeneration();
+    pick(s, 0, "Picked");
+    pick(s, 1, "Rejected");
+    QCOMPARE(s.pickedCount(), 3);
+    QCOMPARE(s.pickGeneration(), g);
+
+    // unpick, and the ingest path's "Ingested"
+    pick(s, 2, "Unpicked");
+    pick(s, 4, "Ingested");
+    QCOMPARE(s.pickedCount(), 1);
+    pick(s, 2, "Picked"); pick(s, 4, "Picked");            // rows 0, 2, 4 picked
+
+    // inserting blank rows adds no picks but moves the generation
+    g = s.pickGeneration();
+    s.insertRows(1, 2);                                     // picks now at 0, 4, 6
+    QCOMPARE(s.pickedCount(), 3);
+    QVERIFY(s.pickGeneration() != g);
+
+    s.removeRows(3, 2);                                     // drops 3 and 4 -> picks 0, 4
+    QCOMPARE(s.pickedCount(), 2);
+
+    s.compact({0, 1, 2, 3, -1, 4});                         // 6 rows; drop row 4 (picked)
+    QCOMPARE(s.pickedCount(), 1);
+    QCOMPARE(s.value(0, G::PickColumn).toString(), QString("Picked"));
+
+    s.resize(0);                                            // truncation uncounts
+    QCOMPARE(s.pickedCount(), 0);
+
+    s.resize(2);
+    pick(s, 1, "Picked");
+    s.clear();
+    QCOMPARE(s.pickedCount(), 0);
+}
+
+void tst_imagerow::forEachRowMatchesValue()
+{
+/*
+    BuildFilters::makeSnapshot reads the whole model through forEachRow instead of
+    DataModel::data, on the promise that each cell is EXACTLY what value() returns --
+    including invalid for an unset cell, which the snapshot turns into "" and a filter
+    category shows as a blank item rather than "0" or "false".
+*/
+    RowStore s;
+    s.resize(3);
+    fill(s, 0, "/a.jpg");
+    s.setValue(0, G::RatingColumn, Qt::EditRole, "3");
+    s.setValue(0, G::ISOColumn, Qt::EditRole, 800);
+    s.setValue(0, G::SearchColumn, Qt::EditRole, true);
+    s.setValue(0, G::KeywordsAllColumn, Qt::EditRole, QStringList{"a", "b"});
+    s.setValue(0, G::PathColumn, G::DupHideRawRole, true);
+    fill(s, 2, "/c.jpg");                                   // row 1 left unwritten
+
+    const QVector<QPair<int, int>> cells = {
+        {G::RatingColumn, Qt::DisplayRole}, {G::ISOColumn, Qt::DisplayRole},
+        {G::SearchColumn, Qt::DisplayRole}, {G::KeywordsAllColumn, Qt::DisplayRole},
+        {G::PathColumn, G::DupHideRawRole}, {G::TypeColumn, Qt::DisplayRole},
+    };
+    /*  Collected, then compared: the callback may not call back into the store. */
+    QVector<QVector<QVariant>> got;
+    s.forEachRow(cells, [&](int row, const QVariant *val) {
+        QCOMPARE(row, got.size());
+        got.append(QVector<QVariant>(val, val + cells.size()));
+    });
+    QCOMPARE(got.size(), 3);
+    for (int row = 0; row < got.size(); ++row)
+        for (int i = 0; i < cells.size(); ++i)
+            QCOMPARE(got[row][i], s.value(row, cells[i].first, cells[i].second));
+    QVERIFY(!got[1][0].isValid());                          // unset stays unset
+}
+
 void tst_imagerow::prefixExpansionStaysInBudget()
 {
 /*
@@ -448,6 +543,79 @@ void tst_imagerow::prefixExpansionStaysInBudget()
     QVERIFY(distinctExpanded > distinctFlat);
     QVERIFY2(distinctExpanded < kRows / 10,
              "interned strings must scale with the vocabulary, not the row count");
+}
+
+void tst_imagerow::folderPathsAllIsDerivedFromThePath()
+{
+/*
+    G::FolderPathsAllColumn is what the Filters Folders category filters on: the folder
+    and every folder above it, so a checked parent is an exact QStringList::contains. It
+    is DERIVED -- written through G::FolderPathColumn and never on its own.
+*/
+    RowStore s;
+    s.resize(3);
+    QVERIFY(RowStore::covers(G::FolderPathColumn, Qt::EditRole));
+    QVERIFY(RowStore::covers(G::FolderPathsAllColumn, Qt::EditRole));
+
+    // unset reads back invalid, like every other conditional column
+    QVERIFY(!s.value(0, G::FolderPathColumn).isValid());
+    QVERIFY(!s.value(0, G::FolderPathsAllColumn).isValid());
+
+    // written with a trailing slash: stored in the one spelling
+    s.setValue(0, G::FolderPathColumn, Qt::EditRole, "/U/Photos/2020/DxO/");
+    QCOMPARE(s.value(0, G::FolderPathColumn).toString(), QString("/U/Photos/2020/DxO"));
+    QCOMPARE(s.value(0, G::FolderPathsAllColumn).toStringList(),
+             QStringList({"/", "/U", "/U/Photos", "/U/Photos/2020",
+                          "/U/Photos/2020/DxO"}));
+
+    // two folders with the same NAME stay two folders
+    s.setValue(1, G::FolderPathColumn, Qt::EditRole, "/U/Photos/2021/DxO");
+    const QStringList other = s.value(1, G::FolderPathsAllColumn).toStringList();
+    QVERIFY(!other.contains("/U/Photos/2020/DxO"));
+    QVERIFY(other.contains("/U/Photos"));
+
+    // the derived column refuses a write: no bit set, nothing stored
+    s.setValue(2, G::FolderPathsAllColumn, Qt::EditRole, QStringList({"/nonsense"}));
+    QVERIFY(!s.value(2, G::FolderPathColumn).isValid());
+    QVERIFY(!s.value(2, G::FolderPathsAllColumn).isValid());
+
+    // clear() drops the ancestry cache with the strings it is keyed on
+    s.clear();
+    s.resize(1);
+    s.setValue(0, G::FolderPathColumn, Qt::EditRole, "/Z");
+    QCOMPARE(s.value(0, G::FolderPathsAllColumn).toStringList(), QStringList({"/", "/Z"}));
+}
+
+void tst_imagerow::folderAncestryCostsARowOneId()
+{
+/*
+    The ancestry is held ONCE PER FOLDER and shared by the rows in it, so the folder-path
+    column must cost a row about the qint32 it adds -- not a list of ancestors each. The
+    ceiling (16 bytes) is loose enough for padding and strict enough to fail if the
+    ancestry ever lands on the row.
+*/
+    const int kRows = 20000;
+    const size_t kMaxBytesPerRow = 16;
+    auto measure = [&](bool withFolder) {
+        RowStore s;
+        s.resize(kRows);
+        for (int row = 0; row < kRows; ++row) {
+            const QString folder = QString("/Volumes/Photos/2024/shoot%1").arg(row / 250);
+            s.setValue(row, G::PathColumn, G::PathRole,
+                       folder + QString("/DSC_%1.NEF").arg(row, 6, 10, QChar('0')));
+            s.setValue(row, G::TypeColumn, Qt::EditRole, "NEF");
+            if (withFolder) s.setValue(row, G::FolderPathColumn, Qt::EditRole, folder);
+        }
+        return s.approxBytes() / size_t(kRows);
+    };
+    const size_t without = measure(false);
+    const size_t with    = measure(true);
+    const size_t delta   = with > without ? with - without : 0;
+    qInfo() << "bytes/row  without folder path:" << without << " with:" << with
+            << " delta:" << delta;
+    QVERIFY2(delta < kMaxBytesPerRow,
+             qPrintable(QString("folder path costs %1 bytes/row, ceiling %2")
+                            .arg(delta).arg(kMaxBytesPerRow)));
 }
 
 QTEST_MAIN(tst_imagerow)

@@ -517,7 +517,21 @@ void IconView::updateVisible(QString src)
     QModelIndex brIdx = indexAt(QPoint(br));
     firstVisibleCell = tlIdx.row();
     lastVisibleCell = brIdx.row();
-    if (lastVisibleCell == -1) lastVisibleCell = dm->sf->rowCount() - 1;
+    /*  NO CELL UNDER THE BOTTOM-RIGHT PROBE DOES NOT MEAN "THE LIST ENDS HERE". It
+        also happens mid-list whenever the probe lands in the spacing between cells (a
+        rejustify changes cell size and it often does), and taking rowCount-1 then made
+        the visible range the rest of the model: "visible = 361 - 148566" in a 148k-row
+        catalog, which grew the brute-force icon chunk (grow-only) to the whole library
+        and set MetaRead loading 84k+ thumbnails. A page's worth past the first cell is
+        right in both cases -- at the end of the list it clamps to the last row. */
+    if (lastVisibleCell == -1) {
+        const int rows = dm->sf->rowCount();
+        // + 2 for the partial rows at top and bottom
+        const int perPage = qMax(1, cellsPerPageRow) * (rowsPerPage + 2);
+        lastVisibleCell = firstVisibleCell < 0
+            ? rows - 1
+            : qMin(rows - 1, firstVisibleCell + perPage - 1);
+    }
     visibleCellCount = lastVisibleCell - firstVisibleCell + 1;
     midVisibleCell = firstVisibleCell + (visibleCellCount / 2);
     // midVisibleCell = firstVisibleCell + ((lastVisibleCell - firstVisibleCell) / 2);

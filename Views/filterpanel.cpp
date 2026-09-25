@@ -49,7 +49,7 @@ void FilterPanel::setScope(Scope s)
     if (s == currentScope) return;
     currentScope = s;
     applyScope();
-    /*  Tell MW, which owns G::scope and the Catalog rows above the two trees.
+    /*  Tell MW, which owns G::scope and the Source panel's Folders | Library toggle.
         MW::setScope early-returns when the scope already matches, so calling
         back into this panel from there cannot loop. */
     emit scopeChanged(static_cast<int>(s));
@@ -59,7 +59,7 @@ void FilterPanel::applyScope()
 {
     /*  TIMED UNCONDITIONALLY -- once per scope switch is one line, and this is inside
         the click a person reported as a beachball: it re-points the category tree and is
-        what the Catalog row in the Source panel calls into. */
+        what the Source panel's Library button calls into. */
     QElapsedTimer asTimer;
     asTimer.start();
 

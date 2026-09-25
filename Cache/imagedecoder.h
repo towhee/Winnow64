@@ -60,6 +60,11 @@ public:
 
     int threadId;
     int sfRow;
+    /*  The DATAMODEL row this decode is for, resolved from the proxy snapshot once at
+        the top of decode(). Every column the decode reads goes through it (dmVal), never
+        through dm->sf: see decode() for the 148k-row stall that access caused. */
+    int dmRow = -1;
+    QVariant dmVal(int col, int role = Qt::DisplayRole) const;
     std::atomic<int> instance{0};
     QImage image;
     QString fPath;

@@ -2,6 +2,7 @@
 
 #include "Datamodel/filterpredicate.h"
 #include "Main/global.h"
+#include "Utilities/foldertree.h"
 
 /*
     THE FILTER SEMANTICS, PINNED.
@@ -37,6 +38,8 @@ private slots:
     void includeAllMatchesWithoutComparing();
     void keywordListsMatchByMembership();
     void aCategoryIsReadOncePerRowNotOncePerItem();
+    void foldersMatchTheirSubtreeByPathNotName();
+    void matchAllNeedsEveryKeyword();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -227,6 +230,73 @@ void tst_filterpredicate::aCategoryIsReadOncePerRowNotOncePerItem()
     const bool ok = p.accepts([&](int column) { ++reads; return r.value(column); });
     QVERIFY(ok);
     QCOMPARE(reads, 1);
+}
+
+void tst_filterpredicate::foldersMatchTheirSubtreeByPathNotName()
+{
+/*
+    The Folders category filters on G::FolderPathsAllColumn -- a row's folder and every
+    folder above it (FolderTree::ancestry) -- with the folder's PATH as the item's value.
+    So a checked parent takes its whole subtree with the ordinary membership test, a
+    neighbour that shares a prefix is not taken, two folders called "DxO" stay two, and
+    "this folder only" is include-the-folder, exclude-its-children.
+*/
+    auto rowIn = [](const QString &folder) {
+        return Row{ { G::FolderPathsAllColumn, FolderTree::ancestry(folder) } };
+    };
+    const Row top     = rowIn("/P/2024");
+    const Row inner   = rowIn("/P/2024/DxO");
+    const Row beside  = rowIn("/P/2024 raw");
+    const Row dxo2025 = rowIn("/P/2025/DxO");
+
+    FilterPredicate branch;
+    branch.categories << cat(G::FolderPathsAllColumn, { "/P/2024" });
+    QVERIFY(branch.accepts(fetch(top)));
+    QVERIFY(branch.accepts(fetch(inner)));
+    QVERIFY(!branch.accepts(fetch(beside)));
+    QVERIFY(!branch.accepts(fetch(dxo2025)));
+
+    FilterPredicate oneDxo;
+    oneDxo.categories << cat(G::FolderPathsAllColumn, { "/P/2024/DxO" });
+    QVERIFY(oneDxo.accepts(fetch(inner)));
+    QVERIFY(!oneDxo.accepts(fetch(dxo2025)));
+
+    FilterPredicate only;
+    only.categories << cat(G::FolderPathsAllColumn, { "/P/2024" }, { "/P/2024/DxO" });
+    QVERIFY(only.accepts(fetch(top)));
+    QVERIFY(!only.accepts(fetch(inner)));
+}
+
+void tst_filterpredicate::matchAllNeedsEveryKeyword()
+{
+/*
+    The Keywords header's "all": Family AND Beach. Ancestors still match through the
+    prefix-expanded list, and an exclusion rejects in either mode.
+*/
+    const Row both    { { G::KeywordsAllColumn, QStringList{"Family", "Beach"} } };
+    const Row family  { { G::KeywordsAllColumn, QStringList{"Family"} } };
+    const Row nested  { { G::KeywordsAllColumn,
+                          QStringList{"Location", "Location|Beach", "Family"} } };
+
+    FilterPredicate any;
+    any.categories << cat(G::KeywordsAllColumn, { "Family", "Beach" });
+    QVERIFY(any.accepts(fetch(both)));
+    QVERIFY(any.accepts(fetch(family)));
+
+    FilterPredicate all = any;
+    all.categories[0].matchAll = true;
+    QVERIFY(all.accepts(fetch(both)));
+    QVERIFY(!all.accepts(fetch(family)));
+
+    FilterPredicate ancestor;
+    ancestor.categories << cat(G::KeywordsAllColumn, { "Location", "Family" });
+    ancestor.categories[0].matchAll = true;
+    QVERIFY(ancestor.accepts(fetch(nested)));
+
+    FilterPredicate withExclude;
+    withExclude.categories << cat(G::KeywordsAllColumn, { "Family", "Beach" }, { "Beach" });
+    withExclude.categories[0].matchAll = true;
+    QVERIFY(!withExclude.accepts(fetch(both)));
 }
 
 QTEST_MAIN(tst_filterpredicate)

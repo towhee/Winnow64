@@ -1303,9 +1303,9 @@ void MW::showEvent(QShowEvent *event)
 
     G::isInitializing = false;
 
-    /*  Seed the Catalog rows once the index can be asked. Not earlier: the
+    /*  Seed the Library tree once the index can be asked. Not earlier: the
         catalog opens lazily and a count taken before that reads as "no index". */
-    updateCatalogScopeTrees();
+    updateLibraryTree();
 
     /*  And the keyword vocabulary, for the same reason and at the same moment: it lives
         in that index. THIS IS THE ROUTE THAT MATTERS -- restoreState() above has already
@@ -1318,9 +1318,9 @@ void MW::showEvent(QShowEvent *event)
     /*  "Open library at start": come up on the whole library instead of a folder.
 
         Here and not earlier because MW::setScope returns immediately while
-        G::isInitializing, and because updateCatalogScopeTrees() above is what seeds the
-        Catalog rows this lights up.  setCatalogScopeWhole is the same call the Catalog
-        row above the folder tree makes, so the two cannot drift -- including its answer
+        G::isInitializing, and because updateLibraryTree() above is what seeds the
+        Library tree this shows.  setCatalogScopeWhole is the same call the toggle's
+        Library button makes, so the two cannot drift -- including its answer
         to an empty catalog, which is to open Manage Catalog rather than show an empty
         search box (MW::catalogEmptyOpenManage).
 
@@ -3520,8 +3520,8 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     G::t.start();
 
     /*  Choosing a folder IS choosing the Folders scope -- that is what makes the
-        Catalog row an alternative to the tree rather than a separate feature.
-        Ahead of everything else so the panel and both Catalog rows are already
+        Library an alternative to the folders rather than a separate feature.
+        Ahead of everything else so the panel and the Source toggle are already
         consistent by the time the load starts. setScope early-returns when the
         scope has not changed, so the ordinary folder click costs nothing. */
     setScope(G::Scope::Folders, "MW::folderSelectionChange");
@@ -3589,8 +3589,23 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 
     }
     else {
-        // stop building but do not clear filters
         buildFilters->abortProcessing();
+        /*  ADDING OR REMOVING A FOLDER CHANGES WHAT THE CATEGORIES HOLD, so they are
+            rebuilt -- keeping what the user checked. They used to be left as they were,
+            and BuildFilters::build returns at once while filtersBuilt is set, so after a
+            Cmd-click added a second folder only recount() ran: it updates the counts of
+            items that already exist and creates none. The added folder, and any camera,
+            lens or year only it held, never appeared in the panel.
+
+            The checks are saved ONCE PER BURST: a Shift-select arrives as one
+            folderSelectionChange per folder, and saving on the second would save the
+            tree the first had already cleared. restoreFiltersAfterFolderChange puts
+            them back when the build finishes. */
+        if (!restoreFiltersPending) {
+            filters->save();
+            restoreFiltersPending = true;
+        }
+        buildFilters->reset(false);
     }
 
     /*  Walk the tree once: get the subfolder count AND the list of
@@ -3914,7 +3929,7 @@ int MW::reconcileCatalogToScope(bool confirm)
         G::log("MW::reconcileCatalogToScope", "forgot " + QString::number(gone) +
                                                   " out of scope rows");
 
-    updateCatalogScopeTrees();
+    updateLibraryTree();
     if (catalogView && catalogDock && catalogDock->isVisible()) catalogView->refresh();
     if (filterPanel && filterDock && filterDock->isVisible()) filterPanel->refresh();
     return gone;
@@ -4914,8 +4929,8 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
                     again->start();
                     fprintf(stderr, "CATALOGLOAD: --- second click ---\n");
                     fflush(stderr);
-                    /*  THROUGH MW::setScope, which is what the Catalog row in the Folders
-                        panel calls -- and which also shows and raises the filter dock.
+                    /*  THROUGH MW::setScope, which is what the Source panel's toggle
+                        calls -- and which also shows and raises the filter dock.
                         Showing a dock whose tree holds tens of thousands of items is
                         itself work, and it was outside everything measured so far. */
                     setScope(G::Scope::Folders, "catalogload second click");
@@ -5450,6 +5465,7 @@ void MW::refresh()
     // update image counts
     fsTree->updateCount();
     bookmarks->updateCount();
+    updateLibraryTree();
     dm->refresh();
     refreshViews(srcFun);
 }
@@ -5465,6 +5481,9 @@ void MW::refreshAfterRemoval(const QStringList &removed)
     if (G::isLogger) G::log(srcFun);
     fsTree->updateCount();
     bookmarks->updateCount();
+    /*  The catalog demoted these rows as they went (FileOps::onDeleted), so the Library's
+        folder counts moved too. */
+    updateLibraryTree();
     dm->removeFiles(removed);
     refreshViews(srcFun);
 }
@@ -5748,6 +5767,9 @@ bool MW::reset(QString src)
 
     // filters
     buildFilters->reset();
+    /*  A whole new set: checks saved by an earlier folder add/remove belong to the set
+        being thrown away. */
+    restoreFiltersPending = false;
 
     setWindowTitle(winnowWithVersion);
     if (G::useInfoView) {
@@ -6036,6 +6058,12 @@ void MW::updateIconRange(QString src)
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
     bool chunkSizeChanged = false;
+    /*  THE LARGEST SINGLE VIEW'S PAGE, not the span of their union. The filmstrip and
+        the table are both visible in Table mode and scroll independently until the sync
+        lands, so the union can be "3083 - 72935": two 60-row pages 70,000 rows apart.
+        As a page size that grew the (grow-only) brute-force chunk toward the whole
+        catalog, and inflated the JIT floor, which is 3x this number. */
+    int largestPage = 0;
 
     // Grid might not be selected in CentralWidget
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
@@ -6044,23 +6072,29 @@ void MW::updateIconRange(QString src)
         thumbView->updateVisible("MW::updateIconRange");
         if (thumbView->firstVisibleCell < firstVisible) firstVisible = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > lastVisible) lastVisible = thumbView->lastVisibleCell;
+        largestPage = qMax(largestPage,
+                           thumbView->lastVisibleCell - thumbView->firstVisibleCell + 1);
     }
 
     if (gridView->isVisible()) {
         gridView->updateVisible("MW::updateIconRange");
         if (gridView->firstVisibleCell < firstVisible) firstVisible = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > lastVisible) lastVisible = gridView->lastVisibleCell;
+        largestPage = qMax(largestPage,
+                           gridView->lastVisibleCell - gridView->firstVisibleCell + 1);
     }
 
     if (tableView->isVisible()) {
         tableView->updateVisible("MW::updateIconRange");
         if (tableView->firstVisibleRow < firstVisible) firstVisible = tableView->firstVisibleRow;
         if (tableView->lastVisibleRow > lastVisible) lastVisible = tableView->lastVisibleRow;
+        largestPage = qMax(largestPage,
+                           tableView->lastVisibleRow - tableView->firstVisibleRow + 1);
     }
 
     // visible icons
     int midVisible = (firstVisible + lastVisible) / 2;
-    int visibleIcons = lastVisible - firstVisible + 1;
+    int visibleIcons = largestPage;
 
     // publish visibleIcons first so dm->iconChunkFloor() sees the current value
     dm->firstVisibleIcon = firstVisible;
@@ -6971,7 +7005,7 @@ void MW::metadataComplete(QString src)
                 QMetaObject::invokeMethod(this, [this]{
                     if (catalogDock && catalogDock->isVisible()) catalogView->refresh();
                     if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
-                    updateCatalogScopeTrees();
+                    updateLibraryTree();
                 }, Qt::QueuedConnection);
             });
         }
@@ -7187,6 +7221,13 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         BuildFilters::appendUniqueItems), while recount() walks every row twice more on
         THIS thread and then applies the counts to the tree. Neither returns to the event
         loop, so each says what it is about to do before doing it. */
+    /*  THE FOLDERS CATEGORY STARTS AT THE FOLDERS THE USER PICKED. Set here, at the
+        build, rather than in setScope, because a Cmd- or Shift-click adds to the
+        selection without changing the scope, and by now the tree's selection has
+        settled. The Library's anchors (its catalogued roots) are pushed by setScope and
+        left alone. See FolderTree::hierarchy. */
+    if (G::scope == G::Scope::Folders && fsTree)
+        filters->setFolderAnchors(FolderTree::outermost(fsTree->selectedFolderPaths()));
     setCentralProgressMessage(loadedMsg() + "Building filters ...");
     buildFilters->build();
     setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
@@ -7900,7 +7941,12 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(G::css);
     filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
-    if (folderCatalogTree) folderCatalogTree->updateStyle();
+    if (libTree) {
+        libTree->setStyleSheet(G::css);
+        libTree->verticalScrollBar()->setStyleSheet(G::css);
+        libTree->updateStyle();
+    }
+    styleSourceToggle();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(G::css);

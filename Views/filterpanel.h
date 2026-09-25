@@ -37,9 +37,8 @@ class Filters;
     the context menus, not in buttons under a filter tree.
 
     THE SCOPE IS NOT SET FROM THIS PANEL. The Folders|Catalog buttons and the "Manage..."
-    row are gone: choosing the catalog is File > Open Catalog (or the Catalog row above
-    the Source panel's Catalog subpanel, or File > Open Catalog), and choosing a folder is
-    selecting one.
+    row are gone: choosing the Library is the Source panel's Folders | Library toggle (or
+    File > Open Library), and choosing a folder is selecting one.
     Which folders are indexed is configuration, and lives in File > Manage Catalog...
     The panel is the search surface for whichever scope MW has set; it does not own it.
 
@@ -131,9 +130,9 @@ signals:
        the rebuild (buildFiltersWhenModelReady) and this only asks. */
     void rebuildFolderCategoriesRequested();
     /*  The panel changed scope. MW::setScope is the one place G::scope changes and the
-        Catalog tree rows are mirrored, so the panel reports rather than decides. The
-        scope is now only ever set FROM MW (File > Open Catalog, the Catalog tree rows,
-        selecting a folder), so this is a mirror rather than an entry point -- kept
+        Source toggle is mirrored, so the panel reports rather than decides. The scope is
+        now only ever set FROM MW (File > Open Library, the Source toggle, selecting a
+        folder), so this is a mirror rather than an entry point -- kept
         because MW::setScope early-returns on no change and is the single authority. */
     void scopeChanged(int scope);
 

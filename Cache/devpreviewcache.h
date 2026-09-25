@@ -148,6 +148,11 @@ public:
        them at the next launch. Every write path asks this first and refuses. See
        "The Preview Cache Folder Is Read-Only" in notes/Documentation.txt. */
     bool isCachePath(const QString &path) const;
+    /* isCachePath over a list, true if ANY entry is the cache or inside it. Resolves
+       the cache directory ONCE and skips QFileInfo for paths that are already
+       absolute: isCachePath per entry over a catalog's 8,400 folders ran on every
+       selection (menu gating) and was a fifth of an arrow keypress. */
+    bool containsCachePath(const QStringList &paths) const;
 
     /* The one user-facing explanation of the refusal, so the popup, the menu tooltips
        and the G::issue warnings all say the same thing. */

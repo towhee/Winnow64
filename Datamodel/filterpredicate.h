@@ -80,6 +80,12 @@ struct FilterCategory
         matched every row. Kept as a flag rather than as an include, because it
         matches without comparing anything. */
     bool includeAll = false;
+    /*  ALL rather than ANY of the includes. Only the Keywords category offers it (the
+        any/all label on its header), because it is the one category whose column holds
+        a LIST: every other category has one value per row, so "has all of these" of two
+        values matches nothing. Excludes are untouched by it -- an exclusion rejects in
+        either mode. */
+    bool matchAll = false;
 
     bool isFiltering() const { return includeAll || !includes.isEmpty() || !excludes.isEmpty(); }
 };
@@ -145,6 +151,12 @@ struct FilterPredicate
                 isCategoryUnchecked, which an exclusion deliberately did not
                 clear. */
             if (cat.includeAll || cat.includes.isEmpty()) continue;
+
+            if (cat.matchAll) {
+                for (const QVariant &in : cat.includes)
+                    if (!includeHit(dataValue, in)) return false;   // missing one
+                continue;
+            }
 
             bool isMatch = false;
             for (const QVariant &in : cat.includes)
