@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 15;
+constexpr int kSchemaVersion = 16;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1363,6 +1363,31 @@ bool CacheDb::migrate(QSqlDatabase &db)
             return false;
         }
         if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 16) {
+    /*
+        A DATA CONVERSION: image.captured becomes the camera's WALL CLOCK encoded as UTC
+        (Catalog::wallClockSecs) instead of a true instant.
+
+        It was the instant Qt made from the EXIF fields in the indexing Mac's timezone,
+        and the category SQL read it back in UTC, so the Library filed an evening photo
+        under the next day while the same folder browsed from disk filed it under the day
+        the camera recorded. 'localtime' in the SQL would only have moved the problem:
+        it converts with the timezone of the Mac at QUERY time, so travel or a second
+        Mac would split the scopes again.
+
+        strftime('%s', captured, 'unixepoch', 'localtime') is the local wall clock read
+        as UTC -- exactly wallClockSecs of the instant -- using this machine's zone and
+        the DST rules for each row's own date, the same conversion Qt made when the row
+        was indexed. Correct wherever the catalog was built in the zone it is opened in.
+    */
+        if (!q.exec("UPDATE image SET captured ="
+                    " CAST(strftime('%s', captured, 'unixepoch', 'localtime') AS INTEGER)"
+                    " WHERE captured IS NOT NULL")) {
             db.rollback();
             return false;
         }

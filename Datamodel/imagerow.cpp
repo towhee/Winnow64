@@ -128,6 +128,9 @@ int fieldBit(int column, int role)
         set exactly when the path is, and setValue refuses to write it. */
     case G::FolderPathColumn:           return F_FolderPath;
     case G::FolderPathsAllColumn:       return F_FolderPath;
+    /*  HasGPS is DERIVED from GPSCoord the same way: set exactly when the coordinate
+        is, so a row whose metadata has not been read is unset, not "False". */
+    case G::HasGPSColumn:               return F_GPSCoord;
 
     /*  SETTLED, AND NOW HELD. Both columns used to carry a different TYPE
         depending on which path wrote them last -- "false" (QString) at row
@@ -283,6 +286,8 @@ QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
     case G::AvailabilityColumn:    return int(r.availability);
     case G::FolderPathColumn:      return mStrings.value(r.folderPathId);
     case G::FolderPathsAllColumn:  return mFolderAncestry.value(r.folderPathId);
+    case G::HasGPSColumn:
+        return QString(mStrings.value(r.gpsId).trimmed().isEmpty() ? "False" : "True");
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {
@@ -308,6 +313,8 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     /*  Derived, not stored: writing it would set FolderPath's bit with no path behind
         it. The ancestry follows from G::FolderPathColumn. */
     if (column == G::FolderPathsAllColumn) return;
+    // Derived from G::GPSCoordColumn, likewise.
+    if (column == G::HasGPSColumn) return;
     ImageRow &r = mRows[row];
     setBit(r, bit);
     ++mFieldGen[bit];

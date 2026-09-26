@@ -76,6 +76,10 @@ public:
     QString toolButton();
     QString tabWidget();
     QString stackedWidget();
+    /*  The frameLine (G::frameLineColor, G::frameLineWidth) as a border value, eg
+        "border: " + frameLine() + ";". */
+    QString frameLine();
+    QString panelFrame();
     /*  The shared check-indicator rules for a checkable item view; `view` is the
         selector (QTreeView / QListView / QTableView). See the .cpp. */
     QString itemViewIndicator(const QString &view);

@@ -328,8 +328,10 @@ public:
         A layout per workflow, invoked by the workflow's key or its button in the
         status-bar workflow switcher: E / G / T / C (Browse, whose key is "Source"),
         D (Develop) and K (Keywords).  Embellish, Slide Show and Map have switcher
-        buttons but no key yet (S starts and stops the slide show itself, not its
-        layout).  Map also owns a central page, the map (MW::showMapPage).
+        buttons but no key yet.  The Slide Show button applies its layout AND starts the
+        show, and stopping the show goes back to the workflow it came from; S starts and
+        stops the show in whatever layout is up.  Map also owns a central page, the map
+        (MW::showMapPage).
 
         THE UI MODEL.  Three settings, each changed only by its own controls: the SOURCE
         (Library | Folders, the Source panel toggle), the WORKFLOW (the switcher and the
@@ -490,10 +492,17 @@ public:
     bool isSlideShowRandom;
     bool isSlideShowWrap = true;
     QStack<QString> *slideshowRandomHistoryStack;
+    /*  The workflow the Slide Show module was entered from (-1 = a named workspace), put
+        back when that show stops. kNoSlideShowReturn when the show was started by S,
+        which does not change the layout. See MW::invokeSlideShowWorkflow. */
+    static constexpr int kNoSlideShowReturn = -2;
+    int slideShowReturnWorkflow = kNoSlideShowReturn;
+    WorkspaceData slideShowReturnWs;    // the named workspace, when that was -1
 
-    /* preferences: map. The tile provider behind the Map module. Winnow ships none --
-       see MapTileSource -- so all of it is the user's, from a provider they signed up
-       with. The attribution is drawn on the map, as providers' terms require. */
+    /* preferences: map. An OPTIONAL tile provider for the Map module: with mapTileUrl
+       empty the map uses OpenStreetMap's own tiles, which need no key (see
+       MapTileSource). The attribution is drawn on the map, as providers require. */
+    QString mapStyle = "standard";      // standard | cyclosm | opentopo | custom
     QString mapTileUrl;
     QString mapTileKey;
     QString mapAttribution;
@@ -823,6 +832,7 @@ public slots:
     void invokeBrowseWorkflow();
     void invokeEmbellishWorkflow();
     void invokeSlideShowWorkflow();
+    void leaveSlideShowWorkflow();
     void invokeMapWorkflow();
     void showMapPage();
     bool inMapModule() const;
@@ -1718,7 +1728,7 @@ private:
     QAction *keywordsWorkspaceAction = nullptr;     // "K"
     QAction *browseWorkflowAction = nullptr;        // Browse, in the view it was last in
     QAction *embellishWorkspaceAction = nullptr;    // no key yet
-    QAction *slideShowWorkspaceAction = nullptr;    // the layout; S starts the show
+    QAction *slideShowWorkspaceAction = nullptr;    // layout + start; S = show only
     QAction *mapWorkspaceAction = nullptr;          // the Map module; no key yet
     QAction *resetLayoutAction = nullptr;           // reapply the workflow's layout
     QAction *showLibrarySourceAction = nullptr;     // Source = Library

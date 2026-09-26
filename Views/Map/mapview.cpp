@@ -71,6 +71,35 @@ MapView::MapView(QWidget *parent, DataModel *dm) : QWidget(parent), dm(dm)
     zoomSlider->setFixedWidth(110);
     zoomSlider->setFocusPolicy(Qt::NoFocus);
     zoomSlider->setToolTip(tr("Zoom"));
+    /* Map style: the keyless built-ins, and Custom when Preferences > Map has a URL.
+       MW owns the choice (MW::mapStyle, persisted) -- this only asks for it. */
+    styleBtn = makeBtn(tr("Standard"), tr("Map style"));
+    styleBtn->setPopupMode(QToolButton::InstantPopup);
+    auto *styleMenu = new QMenu(styleBtn);
+    styleGroup = new QActionGroup(styleMenu);
+    const QList<QPair<QString, QString>> styles{
+        {"standard", tr("Standard")},
+        {"cyclosm",  tr("Cycle (CyclOSM)")},
+        {"opentopo", tr("Topographic (OpenTopoMap)")},
+        {"custom",   tr("Custom (Preferences > Map)")},
+    };
+    for (const auto &st : styles) {
+        QAction *a = styleMenu->addAction(st.second);
+        a->setCheckable(true);
+        a->setData(st.first);
+        styleGroup->addAction(a);
+        if (st.first == "custom") customStyleAction = a;
+    }
+    styleMenu->setToolTipsVisible(true);        // Custom says why it is greyed
+    styleMenu->addSeparator();
+    QAction *prefs = styleMenu->addAction(tr("Map Preferences ..."));
+    connect(prefs, &QAction::triggered, this, &MapView::openPreferences);
+    connect(styleGroup, &QActionGroup::triggered, this, [this](QAction *a) {
+        emit styleChosen(a->data().toString());
+    });
+    styleBtn->setMenu(styleMenu);
+    cl->addWidget(styleBtn);
+    cl->addSpacing(8);
     cl->addWidget(fitAllBtn);
     cl->addWidget(fitSelBtn);
     cl->addWidget(followBtn);
@@ -167,6 +196,21 @@ MapView::MapView(QWidget *parent, DataModel *dm) : QWidget(parent), dm(dm)
     syncControls();
     updateBanner();
     updateCount();
+}
+
+void MapView::setStyleState(const QString &key, bool customAvailable)
+{
+    customStyleAction->setEnabled(customAvailable);
+    customStyleAction->setToolTip(customAvailable ? QString()
+        : tr("Enter a tile URL in Preferences > Map to use a custom style"));
+    for (QAction *a : styleGroup->actions()) {
+        if (a->data().toString() != key) continue;
+        a->setChecked(true);
+        QString name = a->text();
+        name = name.left(name.indexOf(" (")).trimmed();     // "Cycle (CyclOSM)" -> "Cycle"
+        styleBtn->setText(name + "  ▾");
+    }
+    layoutOverlays();
 }
 
 void MapView::setProvider(const MapTileSource::Provider &p)
@@ -535,8 +579,8 @@ void MapView::updateBanner()
 {
     QString msg;
     if (!tiles->provider().isValid())
-        msg = tr("No map tile provider is set, so the map has no background. "
-                 "Pins still show where the images were taken.");
+        msg = tr("The map tile URL in Preferences > Map is not a valid template, so the "
+                 "map has no background. Clear it to use OpenStreetMap.");
     else
         msg = tiles->lastError();
     bannerText->setText(msg);

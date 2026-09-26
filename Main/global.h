@@ -241,6 +241,12 @@ Q_NAMESPACE
            KeywordsAllColumn makes for keyword paths. READ-ONLY -- derived from
            FolderPathColumn by the row store, never written. */
         FolderPathsAllColumn,
+        /* "True" when the image carries GPS coordinates (GPSCoordColumn is not empty),
+           else "False" -- what the Filters GPS category groups on. READ-ONLY, derived
+           from GPSCoordColumn by the row store and never written, like
+           FolderPathsAllColumn. Text rather than bool so the filter item's label and
+           the value it matches are the same string. */
+        HasGPSColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -726,6 +732,11 @@ Q_NAMESPACE
     extern QColor header3Color;
     extern QColor borderColor;
     extern QColor tabWidgetBorderColor;
+    /*  THE FRAMELINE: the 1px line in colour mb (backgroundShade + 15) that borders every
+        panel and the central widget. Set by WidgetCSS::css(); WidgetCSS::frameLine() is
+        the same line as a stylesheet border value. See FrameLineBox (dockwidget.h). */
+    extern QColor frameLineColor;
+    extern int frameLineWidth;
     extern QColor pushButtonBackgroundColor;
     extern QColor scrollBarHandleBackgroundColor;
     extern QColor helpColor;

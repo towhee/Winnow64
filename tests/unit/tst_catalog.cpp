@@ -67,6 +67,7 @@ private slots:
     void sameLeafUnderTwoParentsIsTwoKeywords();
     void subtreeCountRespectsTheSeparator();
     void versionNineFileRebuildsPathKeyedKeywords();
+    void migrationStoresCaptureAsTheWallClock();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
     void existingKeywordLinksToItsOwnRow();
@@ -227,8 +228,11 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         change; version 15 added NO table either -- the fifth data repair, schema 12's
         rebuild again, now that its cause is found and fixed: Catalog::keywordIdLocked
         trusted lastInsertId() after ON CONFLICT DO NOTHING, so every keyword that
-        already existed was linked to the previous insert's rowid. */
-    QCOMPARE(CacheDb::schemaVersion(), 15);
+        already existed was linked to the previous insert's rowid; version 16 added NO
+        table either -- a data conversion: image.captured became the camera's wall clock
+        encoded as UTC (Catalog::wallClockSecs), so the Library's Year/Month/Day match a
+        folder's on any Mac in any timezone. */
+    QCOMPARE(CacheDb::schemaVersion(), 16);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1464,6 +1468,59 @@ void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
 }
 
+void tst_catalog::migrationStoresCaptureAsTheWallClock()
+{
+/*
+    Schema 16: captured was the true instant (toSecsSinceEpoch in the indexing Mac's
+    zone); it becomes the camera's wall clock read as UTC. 23:30 is the case that
+    mattered -- west of Greenwich the old SQL read it in UTC and filed it under the
+    NEXT day. A current file is stamped back to 15 with the old encoding written in.
+*/
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+
+    const QDateTime shot(QDate(2024, 6, 15), QTime(23, 30));    // local, as EXIF parses
+    CatalogRow r = rowFor("late.nef");
+    r.captured = shot;
+
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+    cat.commit({r});
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec(QString("UPDATE image SET captured = %1")
+                           .arg(shot.toSecsSinceEpoch())));
+        QVERIFY(q.exec("PRAGMA user_version = 15"));
+    }
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(cat.isAvailable(), "a version 15 file must migrate, not be moved aside");
+
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("PRAGMA user_version") && q.next());
+        QCOMPARE(q.value(0).toInt(), CacheDb::schemaVersion());
+        QVERIFY(q.exec("SELECT captured FROM image") && q.next());
+        QCOMPARE(q.value(0).toLongLong(), Catalog::wallClockSecs(shot));
+    }
+
+    /* The fields the file records, in both the category SQL and the row read back. */
+    QCOMPARE(cat.categoryItems(G::DayColumn).value("15"), 1);
+    QCOMPARE(cat.categoryItems(G::MonthColumn).value("Jun"), 1);
+    QCOMPARE(cat.mostRecentCaptureDate(), QDate(2024, 6, 15));
+    const QVector<CatalogRow> rows = cat.searchRows(CatalogQuery(), 0);
+    QCOMPARE(rows.size(), 1);
+    QCOMPARE(rows.first().captured, shot);
+
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
 void tst_catalog::linksFollowTheTextEvenWhenTheExpansionDisagrees()
 {
 /*
@@ -1961,9 +2018,10 @@ void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
     QCOMPARE(types.value("NEF"), 1);
     QCOMPARE(types.value("JPG"), 1);
 
-    /* Year "yyyy" and Day "yyyy-MM-dd", as addMetadataForItem writes them. */
+    /* Year "yyyy" and Day the unpadded day of the month, as addMetadataForItem writes
+       them. */
     QCOMPARE(cat.categoryItems(G::YearColumn).value("2024"), 2);
-    QCOMPARE(cat.categoryItems(G::DayColumn).value("2024-06-15"), 2);
+    QCOMPARE(cat.categoryItems(G::DayColumn).value("15"), 2);
 
     /* Month is the English abbreviation Catalog::monthLabel spells, NOT a locale's
        month name and not "06": the datamodel writes that string into G::MonthColumn,

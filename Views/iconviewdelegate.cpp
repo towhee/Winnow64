@@ -705,10 +705,13 @@ textRect         = a rectangle below itemRect
         else if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
     }
 
-    // Paint the frame background and main border
+    /* Paint the frame background only. The border is stroked after the icon
+       number badge, which fills a rounded rect anchored at the same corner and
+       would otherwise paint over the inner half of the antialiased border,
+       thinning or erasing the top-left arc. */
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setBrush(labelColorToUse);
-    painter->setPen(QPen(QColor(G::backgroundShade + 40, G::backgroundShade + 40, G::backgroundShade + 40), 1));
+    painter->setPen(Qt::NoPen);
     painter->drawRoundedRect(frameRect, 8, 8);
 
     // Render filename or title label if enabled
@@ -817,6 +820,11 @@ textRect         = a rectangle below itemRect
         painter->setPen(numberTextColor);
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }
+
+    // Main frame border, stroked over the icon number badge (see frame background)
+    painter->setBrush(Qt::NoBrush);
+    painter->setPen(QPen(QColor(G::backgroundShade + 40, G::backgroundShade + 40, G::backgroundShade + 40), 1));
+    painter->drawRoundedRect(frameRect, 8, 8);
 
     // Draw status borders for Picked / Ingested / Rejected states
     painter->setBrush(Qt::transparent);

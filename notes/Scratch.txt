@@ -5336,3 +5336,28 @@ Later phases (not in v1)
 - Numeric lat/lon columns in the catalog (an additive schema bump) for catalog-wide
   spatial queries.
 
+Next is testing Map v1 in the app, since none of it has run properly yet: the first click hit the window bug before the map could show.
+
+  1. Rebuild and check Map v1 (the list from the plan):
+  - Open a folder with some geotagged JPGs or HEICs. Pins should sit in the right places; compare a couple against the GPS line in the Metadata panel. The bottom-left count should
+    read "n of m".
+  - Try zooming with the wheel and with a pinch, and watch clusters split and merge. Hover a pin for its preview, click to select, and Cmd-click to add.
+  - Arrow through the filmstrip and the map should follow the current image. Apply a rating filter and the pins should update.
+  - Press E, G or Enter to leave for Browse: the Map button should go dark and the loupe should stay up.
+  - Quit while in Map and relaunch. It should come back in Map with the map showing.
+
+  2. Choose a tile provider and enter it in Preferences > Map. Until then you'll see pins on a plain background and a banner saying why. MapTiler and Stadia both have free tiers,
+  but check whether the free tier allows use in a distributed app.
+
+  3. Capture a Map default layout (Window > Workspace > Default > Set Default from Current Layout) once the panels are how you want them. That stops Map using the built-in fallback
+  layout.
+
+  4. Commit once it checks out. The working tree also still holds your earlier bookmarks/history/catalog changes, so you'll probably want those as a separate commit.
+
+  Then Phase 2. In order of usefulness:
+  1. Drag to geotag: drop filmstrip thumbnails on the map, drag a pin to move it, remove GPS. Writes to the XMP sidecar, or through ExifTool when Modify Source Files is on. This is
+     what makes the map useful for images that have no GPS.
+  2. GPX tracklog: load a GPX file, draw the route, and auto-tag the selected images by capture time with a time-zone offset.
+  3. Place names and a Location filter: fill City/State/Country from an offline GeoNames table, and add a Filter panel category: Visible on Map, Tagged, or Untagged.
+  4. Saved Locations: named places with a radius, plus a Private option that strips GPS on export.
+

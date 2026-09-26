@@ -208,7 +208,9 @@ void MW::createCentralWidget()
 {
     if (G::isLogger) G::log("MW::createCentralWidget");
     // centralWidget required by ImageView/CompareView constructors
-    centralWidget = new QWidget(this);
+    /* A FrameLineBox: the central widget is bordered by the frameLine like every panel,
+       its pages inset by the line (the layout honours the box's contents margins). */
+    centralWidget = new FrameLineBox(this);
     centralWidget->setObjectName("centralWidget");
     // stack layout for loupe, table, compare and grid displays
     centralLayout = new QStackedLayout;
@@ -238,10 +240,26 @@ void MW::setupCentralWidget()
     connect(mapView, &MapView::selectRows, sel, &Selection::selectRows);
     connect(mapView, &MapView::openInLoupe, this, [this]() { requestView(CvLoupe); });
     connect(mapView, &MapView::openPreferences, this, [this]() { preferences("MapHeader"); });
+    connect(mapView, &MapView::styleChosen, this, [this](const QString &key) {
+        mapStyle = key;
+        applyMapProvider();
+    });
     applyMapProvider();
 
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
+
+    /* No frameLine around the loupe: the image runs to the edge of the central widget.
+       Every other page keeps the border. Follows the page, so all the setCurrentIndex
+       call sites are covered. */
+    auto syncCentralFrame = [this](int index) {
+        if (auto *box = qobject_cast<FrameLineBox*>(centralWidget))
+            box->setSides(index == LoupeTab ? Qt::Edges()
+                                            : Qt::TopEdge | Qt::LeftEdge |
+                                              Qt::RightEdge | Qt::BottomEdge);
+    };
+    connect(centralLayout, &QStackedLayout::currentChanged, this, syncCentralFrame);
+    syncCentralFrame(centralLayout->currentIndex());
 }
 
 void MW::createFilterView()
@@ -3188,8 +3206,18 @@ void MW::createDevelopDock()
     developPresetBtn->setIcon(":/images/icon16/colorwheel.png", G::iconOpacity);
     developPresetBtn->setToolTip("Develop presets: apply a saved preset  (P)");
     connect(developPresetBtn, &BarBtn::clicked, this, &MW::showPresetsDock);
-    developActionLayout->addWidget(developPresetBtn);
-    developActionLayout->addSpacing(10);
+    /* HIDDEN (2026-09-26): the Presets dock stays reachable via P and the View menu. The
+       button is still built so its active-border refresh keeps working; to restore it,
+       set showDevelopPresetBtn = true. */
+    const bool showDevelopPresetBtn = false;
+    if (showDevelopPresetBtn) {
+        developActionLayout->addWidget(developPresetBtn);
+        developActionLayout->addSpacing(10);
+    }
+    else {
+        developPresetBtn->setParent(developActionRow);
+        developPresetBtn->hide();
+    }
 
     /* Export the developed image. STUB for now (MW::developExport is not built yet). */
     BarBtn *developExportBtn = new BarBtn();
@@ -3353,7 +3381,7 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
     enabled state and the reason for a greyed button are mirrored from the actions in
     createActions. QToolButton rather than QPushButton: the global QPushButton min-width
     (widgetcss.cpp) would widen whatever holds them. The Slide Show button applies the
-    Slide Show layout; it does not start the show (S does).
+    Slide Show layout and starts the show (MW::invokeSlideShowWorkflow).
 */
     btns.clear();
     for (int wf = 0; wf < WfCount; ++wf) btns.append(nullptr);
@@ -3436,6 +3464,8 @@ void MW::createModuleDock()
     buildWorkflowButtons(layout, moduleBtns, &moduleSeparators);
     layout->addStretch();
     moduleDock->setWidget(body);
+    /* No frameLine: the Module dock is a strip of workflow names, not a panel to outline. */
+    moduleDock->setFrameLineVisible(false);
 }
 
 void MW::createKeywordsDock()

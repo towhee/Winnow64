@@ -13,6 +13,9 @@ going back to at least 16 September. My test wrote 7 of them, during filter togg
 likely cause is the ImageCache reporting a cached image by a proxy row number that a
 filter has since changed. It's harmless so far, but it's noise that could hide real
 problems.
+- Hide Presets button in Develop Editor bar buttons.
+- Subject mask not working on 2021-05-16_0358-2.tif
+- Object mask needs some TLC
 - Thumnail tooltip over file name showing file name.
 - Edit title not persistent or applying to embellish
 - If in Library, bookmark applies Folders filter OR

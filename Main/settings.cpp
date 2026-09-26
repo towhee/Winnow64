@@ -133,6 +133,7 @@ void MW::writeSettings()
     settings->setValue("isSlideShowRandom", isSlideShowRandom);
     settings->setValue("isSlideShowWrap", isSlideShowWrap);
     // map (the Map module's tile provider)
+    settings->setValue("mapStyle", mapStyle);
     settings->setValue("mapTileUrl", mapTileUrl);
     settings->setValue("mapTileKey", mapTileKey);
     settings->setValue("mapAttribution", mapAttribution);
@@ -741,6 +742,7 @@ bool MW::loadSettings()
     if (settings->contains("isSlideShowWrap")) isSlideShowWrap = settings->value("isSlideShowWrap").toBool();
 
     // map
+    mapStyle = settings->value("mapStyle", "standard").toString();
     mapTileUrl = settings->value("mapTileUrl").toString();
     mapTileKey = settings->value("mapTileKey").toString();
     mapAttribution = settings->value("mapAttribution").toString();

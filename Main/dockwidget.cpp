@@ -154,6 +154,41 @@ void BarBtn::setActive(bool on)
     This replaces the QDockWidget titlebar, enabling the placement of tool buttons.
 */
 
+/* FrameLineBox ************************************************************************/
+
+FrameLineBox::FrameLineBox(QWidget *parent) : QWidget(parent)
+{
+    setSides(m_sides);
+}
+
+void FrameLineBox::setSides(Qt::Edges sides)
+{
+/*
+    The content is inset by the frameLine on each drawn side through the widget's
+    contents margins, which any layout set on the box respects.
+*/
+    m_sides = sides;
+    const int w = G::frameLineWidth;
+    setContentsMargins(sides & Qt::LeftEdge ? w : 0, sides & Qt::TopEdge ? w : 0,
+                       sides & Qt::RightEdge ? w : 0, sides & Qt::BottomEdge ? w : 0);
+    update();
+}
+
+void FrameLineBox::paintEvent(QPaintEvent *)
+{
+    /* Read at paint time, so a background shade change (WidgetCSS::css) carries over. */
+    QPainter p(this);
+    const int w = G::frameLineWidth;
+    const QRect r = rect();
+    const QColor c = G::frameLineColor;
+    if (m_sides & Qt::TopEdge)    p.fillRect(0, 0, r.width(), w, c);
+    if (m_sides & Qt::BottomEdge) p.fillRect(0, r.height() - w, r.width(), w, c);
+    if (m_sides & Qt::LeftEdge)   p.fillRect(0, 0, w, r.height(), c);
+    if (m_sides & Qt::RightEdge)  p.fillRect(r.width() - w, 0, w, r.height(), c);
+}
+
+/* DockTitleBar ************************************************************************/
+
 QSize DockTitleBar::sizeHint() const
 {
 #ifdef Q_OS_MAC
@@ -167,6 +202,10 @@ QSize DockTitleBar::sizeHint() const
 
 DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
 {
+    /* The panel's frameLine runs up the sides and across the top of the title bar (see
+       paintEvent); the panel's FrameLineBox draws the rest. Inset so no child covers it. */
+    const int w = G::frameLineWidth;
+    setContentsMargins(w, w, w, 0);
     setStyle();
     setLayout(titleBarLayout);
     titleLabel = new QLabel(this);
@@ -230,6 +269,14 @@ void DockTitleBar::paintEvent(QPaintEvent *)
     opt.initFrom(this);
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+
+    /* The panel's frameLine: left, top and right. The rule under the title (setStyle)
+       is the divider, not the border, and stays as it is. */
+    const int w = G::frameLineWidth;
+    const QColor c = G::frameLineColor;
+    p.fillRect(0, 0, width(), w, c);
+    p.fillRect(0, 0, w, height(), c);
+    p.fillRect(width() - w, 0, w, height(), c);
 }
 
 void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
@@ -337,6 +384,73 @@ DockWidget::DockWidget(const QString &title, QString objName, QWidget *parent)
     isRestoring = false;
 }
 
+void DockWidget::setWidget(QWidget *content)
+{
+/*
+    EVERY PANEL IS BORDERED BY THE FRAMELINE. QDockWidget draws no border of its own (and
+    its layout ignores contents margins), so the content goes in a FrameLineBox, named
+    "DockFrame" for the stylesheet (WidgetCSS::panelFrame drops the border of a tree or
+    stacked widget that fills it, which would otherwise double the line).
+*/
+    if (!m_frame) {
+        m_frame = new FrameLineBox(this);
+        m_frame->setObjectName("DockFrame");
+        QVBoxLayout *layout = new QVBoxLayout(m_frame);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+        QDockWidget::setWidget(m_frame);
+    }
+    QLayout *layout = m_frame->layout();
+    if (m_content && m_content != content) {
+        layout->removeWidget(m_content);
+        m_content->setParent(nullptr);
+    }
+    m_content = content;
+    if (content) {
+        layout->addWidget(content);
+        /* The DockFrame rules match on ancestry, which just changed: re-polish the
+           content and the stacked pages below it. */
+        QList<QWidget *> ws{content};
+        for (QObject *o : content->children())
+            if (QWidget *cw = qobject_cast<QWidget *>(o)) ws << cw;
+        for (QWidget *w : ws) {
+            w->style()->unpolish(w);
+            w->style()->polish(w);
+        }
+    }
+    syncFrameSides();
+}
+
+void DockWidget::setTitleBarWidget(QWidget *titleBar)
+{
+    QDockWidget::setTitleBarWidget(titleBar);
+    syncFrameSides();
+}
+
+void DockWidget::setFrameLineVisible(bool visible)
+{
+    m_frameLineVisible = visible;
+    syncFrameSides();
+}
+
+void DockWidget::syncFrameSides()
+{
+/*
+    Under a DockTitleBar the box leaves its top side off: the title bar carries the
+    frameLine across the top and down its sides, and its own rule is the divider. With
+    Qt's title bar (the thumb dock) the box draws all four sides; with the frameLine off
+    (the Module dock, setFrameLineVisible) it draws none.
+*/
+    if (!m_frame) return;
+    if (!m_frameLineVisible) {
+        m_frame->setSides({});
+        return;
+    }
+    Qt::Edges sides = Qt::LeftEdge | Qt::RightEdge | Qt::BottomEdge;
+    if (!qobject_cast<DockTitleBar *>(titleBarWidget())) sides |= Qt::TopEdge;
+    m_frame->setSides(sides);
+}
+
 bool DockWidget::hasCustomTitleBar()
 {
     QWidget *titleBarWidget = this->titleBarWidget();
@@ -372,6 +486,11 @@ void DockWidget::setCollapsed(bool collapse)
             m_uncollapsedBodyMinH = body->minimumHeight();
             body->setMinimumHeight(0);
         }
+        /* body is the FrameLineBox; the content's own minimum would hold it open. */
+        if (m_content) {
+            m_uncollapsedContentMinH = m_content->minimumHeight();
+            m_content->setMinimumHeight(0);
+        }
         /* min = 0 (not titleH) so an adjacent expanded sibling can grow by
         squeezing this collapsed dock smaller. max = titleH keeps the body
         from un-collapsing. The dock still naturally sits at titleH because
@@ -390,6 +509,7 @@ void DockWidget::setCollapsed(bool collapse)
     } else {
         m_isCollapsed = false;
         if (body) body->setMinimumHeight(m_uncollapsedBodyMinH);
+        if (m_content) m_content->setMinimumHeight(m_uncollapsedContentMinH);
 
         if (isFloating()) {
             setMinimumHeight(m_uncollapsedMinH);

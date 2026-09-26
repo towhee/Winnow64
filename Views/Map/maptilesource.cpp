@@ -18,6 +18,42 @@ bool MapTileSource::Provider::isValid() const
            && (urlTemplate.startsWith("https://") || urlTemplate.startsWith("http://"));
 }
 
+MapTileSource::Provider MapTileSource::Provider::openStreetMap()
+{
+    Provider p;
+    p.urlTemplate = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+    p.attribution = "© OpenStreetMap contributors";
+    p.maxZoom = 19;
+    p.maxConnections = 2;
+    return p;
+}
+
+MapTileSource::Provider MapTileSource::Provider::cyclOsm()
+{
+    /* OpenStreetMap France, under the OSM Foundation's fair-use tile policy
+       (cyclosm.org). The "Cycle Map" layer on openstreetmap.org is a different map,
+       OpenCycleMap, which needs a Thunderforest key. */
+    Provider p;
+    p.urlTemplate = "https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png";
+    p.attribution = "CyclOSM | © OpenStreetMap contributors";
+    p.maxZoom = 19;
+    p.maxConnections = 2;
+    return p;
+}
+
+MapTileSource::Provider MapTileSource::Provider::openTopoMap()
+{
+    /* opentopomap.org/about: third-party use is welcome as long as it does not
+       overload the server (no mass downloads); no uptime guarantee. Its tiles stop at
+       zoom 17. */
+    Provider p;
+    p.urlTemplate = "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png";
+    p.attribution = "© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)";
+    p.maxZoom = 17;
+    p.maxConnections = 2;
+    return p;
+}
+
 MapTileSource::MapTileSource(QObject *parent) : QObject(parent)
 {
     nam = new QNetworkAccessManager(this);
@@ -46,6 +82,7 @@ void MapTileSource::setProvider(const Provider &p)
     if (p.urlTemplate == mProvider.urlTemplate && p.apiKey == mProvider.apiKey
         && p.maxZoom == mProvider.maxZoom) {
         mProvider.attribution = p.attribution;
+        mProvider.maxConnections = p.maxConnections;
         return;
     }
     mProvider = p;
@@ -79,6 +116,9 @@ QString MapTileSource::url(int z, int x, int y) const
     u.replace("{x}", QString::number(x));
     u.replace("{y}", QString::number(y));
     u.replace("{key}", mProvider.apiKey);
+    /* {s}: a/b/c subdomains. Chosen from the tile, not rotated per request, so a tile
+       always has the same URL and the disk cache finds it again. */
+    u.replace("{s}", QString(QChar('a' + (x + y) % 3)));
     return u;
 }
 
@@ -128,8 +168,9 @@ void MapTileSource::endFrame(int z, double centreTileX, double centreTileY)
 void MapTileSource::pump()
 {
     static const QByteArray userAgent =
-        ("Winnow/" + QCoreApplication::applicationVersion()).toUtf8();
-    while (inFlight.size() < kMaxInFlight && !queue.isEmpty()) {
+        ("Winnow/" + QCoreApplication::applicationVersion() + " (+https://winnow.ca)")
+            .toUtf8();      // OSM's policy: name the app, and a contact URL
+    while (inFlight.size() < std::max(1, mProvider.maxConnections) && !queue.isEmpty()) {
         const quint64 k = queue.takeFirst();
         int z, x, y;
         unkey(k, z, x, y);

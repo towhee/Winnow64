@@ -14,6 +14,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
+#include <QTimeZone>
 #include <QVariant>
 
 namespace {
@@ -90,8 +91,8 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
     r.folder = q.value(5).toString();
     r.filename = q.value(6).toString();
     r.ext = q.value(7).toString();
-    /*  captured is stored as SECONDS SINCE EPOCH -- commit() binds
-        r.captured.toSecsSinceEpoch(), and the category SQL reads it with
+    /*  captured is stored as SECONDS SINCE EPOCH of the camera's WALL CLOCK -- commit()
+        binds Catalog::wallClockSecs(r.captured), and the category SQL reads it with
         strftime(..., 'unixepoch'). Reading it back with QVariant::toDateTime gave a
         QDateTime parsed from the DIGITS of the integer, which is a plausible-looking date
         that is simply wrong: an A7R2 shot in September 2016 came back as April 2017.
@@ -99,7 +100,7 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
         from its file. */
     r.captured = q.value(8).isNull()
                      ? QDateTime()
-                     : QDateTime::fromSecsSinceEpoch(q.value(8).toLongLong());
+                     : Catalog::fromWallClockSecs(q.value(8).toLongLong());
     r.rating = q.value(9).toInt();
     r.label = q.value(10).toString();
     r.pick = q.value(11).toBool();
@@ -169,7 +170,7 @@ QStringList flatOf(const CatalogRow &r)
     dock shows one list and the user does not know which scope produced it: TypeColumn is
     the suffix UPPER-cased, YearColumn is "yyyy", MonthColumn is the English abbreviation
     ("Jan".."Dec"), ISOColumn is the number right-justified to six, DayColumn is
-    "yyyy-MM-dd", FolderName is
+    the day of the month unpadded ("1".."31"), FolderName is
     the folder's NAME and not its path, Pick is the words "Picked"/"Unpicked", and Rating
     is the digit as text with "" for unrated.
 
@@ -200,10 +201,13 @@ QString categorySql(int dmColumn)
        would otherwise make "400" and "400.0" look like two focal lengths. */
     case G::FocalLengthColumn: expr = "CAST(CAST(i.focallength AS INTEGER) AS TEXT)";
                               break;
-    /* captured is seconds since epoch; 'unixepoch' is what makes these local-agnostic and
-       stable, which a category list has to be. */
+    /* captured is the camera's wall clock encoded as UTC (Catalog::wallClockSecs), so
+       'unixepoch' with NO 'localtime' gives back exactly the fields the file records --
+       the same Year/Month/Day the datamodel derives -- on any Mac, in any timezone. */
     case G::YearColumn:       expr = "strftime('%Y', i.captured, 'unixepoch')"; break;
-    case G::DayColumn:        expr = "strftime('%Y-%m-%d', i.captured, 'unixepoch')"; break;
+    /* The day of the month, "1".."31": %d is zero-padded, the datamodel's is not. */
+    case G::DayColumn:        expr = "CAST(CAST(strftime('%d', i.captured, 'unixepoch')"
+                                     " AS INTEGER) AS TEXT)"; break;
     /* The month NAME, spelled from Catalog::monthLabels so the CASE cannot drift from
        what DataModel writes into G::MonthColumn. A row with no capture date gives NULL
        here and IFNULL folds it into the blank item, exactly as Year and Day do. */
@@ -566,7 +570,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         if (id && fresh) continue;
 
         const QVariant captured = r.captured.isValid()
-                                      ? QVariant(r.captured.toSecsSinceEpoch())
+                                      ? QVariant(Catalog::wallClockSecs(r.captured))
                                       : QVariant();
         const QString vol = mounts.rootOf(r.path);
 
@@ -748,6 +752,21 @@ QStringList Catalog::monthLabels()
     static const QStringList names = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     return names;
+}
+
+qint64 Catalog::wallClockSecs(const QDateTime &dt)
+{
+    /* The fields in dt's OWN spec -- what the datamodel's Year/Month/Day are made of --
+       relabelled as UTC so no zone conversion can move them. */
+    return QDateTime(dt.date(), dt.time(), QTimeZone::utc()).toSecsSinceEpoch();
+}
+
+QDateTime Catalog::fromWallClockSecs(qint64 secs)
+{
+    /* Back to the same fields as a local time, which is what a file read produces
+       (QDateTime::fromString on the EXIF text), so a catalog row and the file agree. */
+    const QDateTime utc = QDateTime::fromSecsSinceEpoch(secs, QTimeZone::utc());
+    return QDateTime(utc.date(), utc.time());
 }
 
 QString Catalog::monthLabel(int month)
@@ -1074,11 +1093,11 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
     if (!cq.lens.isEmpty())    { where << "i.lens = ?";     binds << cq.lens; }
     if (cq.from.isValid()) {
         where << "i.captured >= ?";
-        binds << cq.from.toSecsSinceEpoch();
+        binds << Catalog::wallClockSecs(cq.from);
     }
     if (cq.to.isValid()) {
         where << "i.captured <= ?";
-        binds << cq.to.toSecsSinceEpoch();
+        binds << Catalog::wallClockSecs(cq.to);
     }
     if (!cq.folder.isEmpty()) {
         where << "(i.folder = ? OR i.folder LIKE ?)";
@@ -1388,6 +1407,18 @@ KeywordAudit Catalog::keywordAudit(int sampleLimit)
     }
 
     return a;
+}
+
+QDate Catalog::mostRecentCaptureDate()
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return QDate();
+    QSqlQuery q(db);
+    if (!q.exec("SELECT MAX(captured) FROM image WHERE live = 1") || !q.next()
+        || q.value(0).isNull())
+        return QDate();
+    return fromWallClockSecs(q.value(0).toLongLong()).date();
 }
 
 QMap<QString, int> Catalog::categoryItems(int dmColumn)

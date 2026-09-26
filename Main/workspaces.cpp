@@ -580,7 +580,12 @@ void MW::builtInDefaultWorkspace()
     shipped default.  See MW::invokeWorkflowWorkspace.
 */
     if (G::isLogger) G::log("MW::builtInDefaultWorkspace");
-    centreWindowOnPrimaryScreen();
+    /*  NO centreWindowOnPrimaryScreen here. This runs on a WORKFLOW switch (a workflow
+        with no shipped layout -- Map, until one is captured), and a workflow workspace
+        never owns the window position (see isGeometryIncluded). Centring here threw
+        the window onto the primary display the first time Map was clicked, which on a
+        second monitor looked like Winnow quitting. A first run centres the window
+        itself (MW::showEvent) before it applies Source. */
 //    menuBarVisibleAction->setChecked(true);
     statusBarVisibleAction->setChecked(true);
 
@@ -1554,8 +1559,10 @@ void MW::syncWorkflowWorkspaceMenus()
     VIEW      Loupe, Grid, Table, Compare.  E / G / T / C.  These are the BROWSE views:
               a view key always lands in Browse (MW::requestView).
 
-    Slide Show is a presentation action (S), not a workflow.  Window > Workspace > Reset
-    Layout is how a layout that has got away from the user is recovered.
+    The Slide Show module is a workflow only while its show runs: its button starts the
+    show and stopping it returns to the previous workflow.  S starts and stops a show
+    without changing workflow.  Window > Workspace > Reset Layout is how a layout that
+    has got away from the user is recovered.
 */
 
 void MW::requestView(int view)
@@ -1615,12 +1622,60 @@ void MW::invokeEmbellishWorkflow()
 void MW::invokeSlideShowWorkflow()
 {
 /*
-    The Slide Show workflow layout, the way Embellish applies its own. Only the layout:
-    the show itself is started by slideShowAction (S).
+    The Slide Show module button (and View > Slide Show Mode): apply the Slide Show
+    layout and start the show. The module is the show -- a lit Slide Show button with
+    nothing playing would be a mode with nothing to do -- so stopping the show (Esc, S,
+    the end of an unwrapped sequence) returns to the workflow it was entered from, via
+    MW::leaveSlideShowWorkflow.
+
+    ALWAYS THE SHIPPED DEFAULT LAYOUT (MW::invokeWorkflowDefault), never the user
+    override: a show is a presentation, so it looks the same every time. The override
+    is still what Reset Layout applies while in the Slide Show module.
+
+    Clicked while a show is running, it stops it. S alone still starts and stops a show
+    in whatever layout is up, and does not change workflow.
 */
     if (G::isLogger) G::log("MW::invokeSlideShowWorkflow");
+    if (G::isSlideShow) {
+        slideShow();
+        return;
+    }
+    if (!slideShowAction->isEnabled()) return;
+    const int from = currentWorkflow;
+    if (from == -1) slideShowReturnWs = ws;     // invokeWorkspace overwrites ws
     setOperationMode(G::OperationMode::Preview);
-    invokeWorkflowWorkspace(WfSlideShow);
+    invokeWorkflowDefault(WfSlideShow);
+    currentWorkflow = WfSlideShow;      // invokeWorkspace stamped -1 (a named workspace)
+    syncWorkflowSwitcher();
+    slideShowReturnWorkflow = from == WfSlideShow ? WfSource : from;
+    slideShow();
+}
+
+void MW::leaveSlideShowWorkflow()
+{
+/*
+    Called by MW::slideShow as a show stops: go back to the workflow the Slide Show
+    module was entered from, the way its own button would (so Develop re-enters Develop
+    mode). Nothing when the show was started by S, or when the layout has already been
+    changed away from Slide Show.
+*/
+    const int wf = slideShowReturnWorkflow;
+    slideShowReturnWorkflow = kNoSlideShowReturn;
+    if (wf == kNoSlideShowReturn || currentWorkflow != WfSlideShow) return;
+    if (G::isLogger) G::log("MW::leaveSlideShowWorkflow", QString::number(wf));
+
+    QAction *a = nullptr;
+    switch (wf) {
+    case -1:          invokeWorkspace(slideShowReturnWs); return;   // named workspace
+    case WfSource:    invokeBrowseWorkflow(); return;
+    case WfDevelop:   a = operationModeAction; break;
+    case WfKeywords:  a = keywordsWorkspaceAction; break;
+    case WfEmbellish: a = embellishWorkspaceAction; break;
+    case WfMap:       a = mapWorkspaceAction; break;
+    default: break;
+    }
+    if (a && a->isEnabled()) a->trigger();
+    else invokeBrowseWorkflow();
 }
 
 void MW::invokeMapWorkflow()
@@ -1659,13 +1714,37 @@ bool MW::inMapModule() const
 
 void MW::applyMapProvider()
 {
+/*
+    The map style (MW::mapStyle, chosen from the map's style menu) picks the tiles:
+    one of the keyless built-ins, or "custom", the URL template in Preferences > Map.
+    Custom with no URL falls back to Standard. A custom template that points at an
+    OpenStreetMap server -- openstreetmap.org, or a local chapter's such as
+    openstreetmap.fr -- keeps the 2-connection limit those volunteer-run servers ask
+    for.
+*/
     if (!mapView) return;
+    const bool customAvailable = !mapTileUrl.trimmed().isEmpty();
+    if (mapStyle == "custom" && !customAvailable) mapStyle = "standard";
+
     MapTileSource::Provider p;
-    p.urlTemplate = mapTileUrl.trimmed();
-    p.apiKey = mapTileKey.trimmed();
-    p.attribution = mapAttribution.trimmed();
-    p.maxZoom = std::clamp(mapMaxZoom, 1, 22);
+    if (mapStyle == "cyclosm") p = MapTileSource::Provider::cyclOsm();
+    else if (mapStyle == "opentopo") p = MapTileSource::Provider::openTopoMap();
+    else if (mapStyle == "custom") {
+        p.urlTemplate = mapTileUrl.trimmed();
+        p.apiKey = mapTileKey.trimmed();
+        p.attribution = mapAttribution.trimmed();
+        p.maxZoom = std::clamp(mapMaxZoom, 1, 22);
+        if (p.urlTemplate.contains("openstreetmap.")) {
+            p.maxConnections = 2;
+            if (p.attribution.isEmpty()) p.attribution = "© OpenStreetMap contributors";
+        }
+    }
+    else {
+        mapStyle = "standard";
+        p = MapTileSource::Provider::openStreetMap();
+    }
     mapView->setProvider(p);
+    mapView->setStyleState(mapStyle, customAvailable);
 }
 
 void MW::resetLayout()
@@ -1722,8 +1801,10 @@ void MW::styleWorkflowSwitcher()
     for (QToolButton *btn : std::as_const(workflowBtns))
         if (btn) btn->setStyleSheet(css);
 
-    if (!moduleDock || !moduleDock->widget()) return;
-    moduleDock->widget()->setStyleSheet(segmentedOptionCss(qRound(1.5 * G::fontSize), false));
+    if (!moduleDock || !moduleDock->content()) return;
+    moduleDock->content()->setStyleSheet(segmentedOptionCss(qRound(1.5 * G::fontSize), false));
+    moduleDock->content()->adjustSize();
+    /* widget() is the content's FrameLineBox; its hint includes any frameLine inset. */
     moduleDock->widget()->adjustSize();
     moduleDock->setFixedHeight(moduleDock->widget()->sizeHint().height());
 }
