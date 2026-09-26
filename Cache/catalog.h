@@ -419,6 +419,16 @@ public:
         sequence rather than alphabetically. */
     static QStringList monthLabels();
 
+    /*  image.captured is the CAMERA'S WALL CLOCK, not an instant: the date and time
+        fields as the file records them, encoded as if they were UTC (schema 16). EXIF
+        capture times carry no zone, so this is the only value that means the same on
+        every Mac and in every timezone, and plain strftime(..., 'unixepoch') then
+        yields exactly the Year/Month/Day the datamodel derives from the same fields.
+        Every read and write of captured -- and every bind compared against it -- goes
+        through these two. */
+    static qint64 wallClockSecs(const QDateTime &dt);
+    static QDateTime fromWallClockSecs(qint64 secs);
+
     /*  The availability of each of these paths, in one pass. Paths the catalog
         does not know are absent from the result rather than reported Missing --
         "not indexed" is a different statement from "indexed and gone".
@@ -493,6 +503,10 @@ public:
        same column, because the user checks one category item and both scopes must agree
        what it means. */
     QMap<QString, int> categoryItems(int dmColumn);
+    /* The capture date of the newest live image, on the camera's wall clock like
+       categorySql's strftime, so it matches the items categoryItems offers. Invalid if
+       none. */
+    QDate mostRecentCaptureDate();
 
     /* How many images the catalog holds, and how many folders they came from. */
     int count();

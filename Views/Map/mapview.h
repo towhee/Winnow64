@@ -13,6 +13,8 @@ class QPushButton;
 class QSlider;
 class QToolButton;
 class QFrame;
+class QActionGroup;
+class QAction;
 
 /*
     MAP VIEW: the central page of the Map module (MW::invokeMapWorkflow). A world map of
@@ -46,6 +48,9 @@ public:
     MapView(QWidget *parent, DataModel *dm);
 
     void setProvider(const MapTileSource::Provider &p);
+    /* The style menu: which style is in use ("standard", "cyclosm", "opentopo" or
+       "custom") and whether a custom URL is set in Preferences > Map. */
+    void setStyleState(const QString &key, bool customAvailable);
     void activate();            // connect to the model and read the points
     void fitAll();
     void fitSelection();
@@ -56,6 +61,7 @@ signals:
     void selectRows(const QList<int> &sfRows, bool add);
     void openInLoupe();
     void openPreferences();
+    void styleChosen(const QString &key);
 
 protected:
     void paintEvent(QPaintEvent *) override;
@@ -127,6 +133,9 @@ private:
     QToolButton *zoomOutBtn = nullptr, *zoomInBtn = nullptr;
     QSlider *zoomSlider = nullptr;
     QToolButton *fitAllBtn = nullptr, *fitSelBtn = nullptr, *followBtn = nullptr;
+    QToolButton *styleBtn = nullptr;
+    QActionGroup *styleGroup = nullptr;
+    QAction *customStyleAction = nullptr;
     QFrame *banner = nullptr;
     QLabel *bannerText = nullptr;
     QPushButton *bannerBtn = nullptr;

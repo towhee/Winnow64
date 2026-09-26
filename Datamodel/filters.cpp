@@ -160,6 +160,8 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
        in its own right. See Metadata/keywordpaths.h. */
     filterCategoryToDmColumn[catKeyword] = G::KeywordsAllColumn;
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
+    /* "True"/"False": whether the image has coordinates, derived from G::GPSCoordColumn. */
+    filterCategoryToDmColumn[catGps] = G::HasGPSColumn;
     filterCategoryToDmColumn[catAvailability] = G::AvailabilityColumn;
     // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
@@ -295,6 +297,7 @@ void Filters::createDynamicFilters()
     titles = new QTreeWidgetItem(this);
     keywords = new QTreeWidgetItem(this);
     creators = new QTreeWidgetItem(this);
+    gps = new QTreeWidgetItem(this);
     availability = new QTreeWidgetItem(this);
     // missingThumbs = new QTreeWidgetItem(this);
     compare = new QTreeWidgetItem(this);
@@ -314,6 +317,7 @@ void Filters::createDynamicFilters()
     createFilter(titles, catTitle);
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
+    createFilter(gps, catGps);
     createFilter(availability, catAvailability);
     // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
@@ -361,6 +365,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(titles);
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
+    setCategoryBackground(gps);
     setCategoryBackground(availability);
     // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
@@ -392,6 +397,7 @@ void Filters::removeChildrenDynamicFilters()
     titles->takeChildren();
     keywords->takeChildren();
     creators->takeChildren();
+    gps->takeChildren();
     availability->takeChildren();
     // missingThumbs->takeChildren();
     compare->takeChildren();
@@ -575,21 +581,58 @@ bool Filters::isAnyFilter()
 bool Filters::isOnlyMostRecentDayChecked()
 {
 /*
-    This is used to sync MW filters menu check state with Filters panel (here)
+    This is used to sync MW filters menu check state with Filters panel (here): true when
+    the only checked Year, Month and Day items are the ones setMostRecentDay checked.
 */
     if (G::isLogger) G::log("Filters::isOnlyMostRecentDayChecked");
     if (debugFilters)
         qDebug() << "Filters::isOnlyMostRecentDayChecked"
                     ;
-    int n = days->childCount();
-    for (int i = 0; i < n; i++) {
-        /* Qt::Checked only: an EXCLUDED day (PartiallyChecked) is not a day the user
-           asked to see, and would otherwise read as one because it is non-zero. */
-        bool isChecked = days->child(i)->checkState(0) == Qt::Checked;
-        if ((i < n - 1) && isChecked) return false;
-         if (i == n - 1) return isChecked;
+    if (!mostRecentDay.isValid()) return false;
+    const QStringList want {
+        QString::number(mostRecentDay.year()),
+        Catalog::monthLabel(mostRecentDay.month()),
+        QString::number(mostRecentDay.day())
+    };
+    const QList<QTreeWidgetItem *> cats {years, months, days};
+    for (int c = 0; c < cats.size(); ++c) {
+        int nChecked = 0;
+        bool wantChecked = false;
+        for (int i = 0; i < cats[c]->childCount(); ++i) {
+            /* Qt::Checked only: an EXCLUDED item (PartiallyChecked) is not one the user
+               asked to see, and would otherwise read as one because it is non-zero. */
+            QTreeWidgetItem *child = cats[c]->child(i);
+            if (child->checkState(0) != Qt::Checked) continue;
+            ++nChecked;
+            if (child->text(0) == want[c]) wantChecked = true;
+        }
+        if (nChecked != 1 || !wantChecked) return false;
     }
-    return false;
+    return true;
+}
+
+bool Filters::setMostRecentDay(const QDate &date, bool checked)
+{
+    if (G::isLogger) G::log("Filters::setMostRecentDay");
+    if (!date.isValid()) return false;
+    const QStringList want {
+        QString::number(date.year()),
+        Catalog::monthLabel(date.month()),
+        QString::number(date.day())
+    };
+    const QList<QTreeWidgetItem *> cats {years, months, days};
+    QList<QTreeWidgetItem *> items;
+    for (int c = 0; c < cats.size(); ++c) {
+        QTreeWidgetItem *found = nullptr;
+        for (int i = 0; i < cats[c]->childCount() && !found; ++i)
+            if (cats[c]->child(i)->text(0) == want[c]) found = cats[c]->child(i);
+        if (!found) return false;
+        items << found;
+    }
+    for (QTreeWidgetItem *item : items)
+        item->setCheckState(0, checked ? Qt::Checked : Qt::Unchecked);
+    mostRecentDay = date;
+    return true;
 }
 
 void Filters::setSearchNewFolder()
@@ -2314,6 +2357,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(titles));
     collapse(indexFromItem(keywords));
     collapse(indexFromItem(creators));
+    collapse(indexFromItem(gps));
     collapse(indexFromItem(availability));
     // collapse(indexFromItem(missingThumbs));
     collapse(indexFromItem(compare));
@@ -2989,6 +3033,15 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
             under Years and Days, and it is not a month so it goes last. */
         if (itemMap.contains("")) inCalendarOrder << "";
         keys = inCalendarOrder;
+    }
+    /*  Days are the day of the month, "1".."31", unpadded: as text 10 would come before
+        2, so they go in numeric order, blank (no capture date) last as for months. */
+    if (category == days) {
+        const bool hasBlank = keys.removeAll("") > 0;
+        std::sort(keys.begin(), keys.end(), [](const QString &a, const QString &b) {
+            return a.toInt() < b.toInt();
+        });
+        if (hasBlank) keys << "";
     }
 
     /*  Add all remaining items -- built detached and attached in ONE addChildren, for the

@@ -473,6 +473,7 @@ QVector<BuildFilters::Sink> BuildFilters::sinks() const
         {FilterCat::Iso,         filters->isos,         "ISOs"},
         {FilterCat::Title,       filters->titles,       "titles"},
         {FilterCat::Creator,     filters->creators,     "creators"},
+        {FilterCat::Gps,         filters->gps,          "GPS"},
         {FilterCat::Availability, filters->availability, "availability"},
         {FilterCat::Compare,     filters->compare,      "compare"},
     };
@@ -495,7 +496,7 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
         G::YearColumn,        G::MonthColumn,       G::DayColumn,
         G::CameraModelColumn, G::LensColumn,        G::FocalLengthColumn,
         G::ISOColumn,         G::TitleColumn,       G::CreatorColumn,
-        G::AvailabilityColumn, G::CompareColumn
+        G::HasGPSColumn,      G::AvailabilityColumn, G::CompareColumn
     };
 
     auto out = std::make_shared<FilterSnapshot>();

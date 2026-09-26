@@ -307,6 +307,7 @@ void DataModel::setModelProperties()
         { G::KeywordsAllColumn,          "All Keywords",             true },
         { G::FolderPathColumn,           "Folder Path",              true },
         { G::FolderPathsAllColumn,       "Folder Paths All",         true },
+        { G::HasGPSColumn,               "Has GPS",                  true },
         { G::MetadataReadingColumn,      "Meta Reading",             true },
         { G::MetadataStatusColumn,       "Meta Status",              true },
         { G::IconLoadedColumn,           "Icon Loaded",              true },
@@ -3503,7 +3504,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
             two different filter items in the two scopes. Catalog::monthLabel is the
             one spelling both sides read. */
         setData(index(row, G::MonthColumn), Catalog::monthLabel(createdDT.date().month()));
-        setData(index(row, G::DayColumn), createdDT.toString("yyyy-MM-dd"));
+        /*  The day of the MONTH, "1".."31", not the date: Year, Month and Day are three
+            independent categories that AND together, so "the 15th of every month" is a
+            filter, and one date is the three items checked together (MW::filterLastDay). */
+        setData(index(row, G::DayColumn), QString::number(createdDT.date().day()));
     }
 
     /*  INT, not QString::number. The other writer of these two columns --

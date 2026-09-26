@@ -228,7 +228,11 @@ int run(const QString &pathFilter)
         if (r.filename != f.filename)   bad << "filename";
         if (r.folder != f.folder)       bad << "folder";
         if (r.ext != f.ext)             bad << "ext";
-        if (r.captured != f.captured)   bad << "captured";
+        /* Compared as the camera's wall clock, which is what the index stores. */
+        if (r.captured.isValid() != f.captured.isValid()
+            || (r.captured.isValid()
+                && Catalog::wallClockSecs(r.captured) != Catalog::wallClockSecs(f.captured)))
+            bad << "captured";
         if (r.rating != f.rating)       bad << "rating";
         if (r.label != f.label)         bad << "label";
         if (r.pick != f.pick)           bad << "pick";

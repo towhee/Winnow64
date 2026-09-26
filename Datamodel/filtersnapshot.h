@@ -53,9 +53,11 @@ namespace FilterCat {
         each: Month holds the NAME the model was written with (Catalog::monthLabel),
         and Iso -- an int in the model -- is right-justified when the snapshot is
         taken, the way FocalLength is, so it counts and sorts as a number. */
+    /*  Gps is G::HasGPSColumn, "True" or "False", derived from the coordinate by the
+        row store -- so it is the column's own string like the rest. */
     enum Slot {
         Search, Pick, Rating, Label, Type, FolderPath, Year, Month, Day,
-        CameraModel, Lens, FocalLength, Iso, Title, Creator, Availability, Compare,
+        CameraModel, Lens, FocalLength, Iso, Title, Creator, Gps, Availability, Compare,
         SlotCount
     };
 }

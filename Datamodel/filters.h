@@ -40,6 +40,7 @@ public:
     QTreeWidgetItem *months;
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
+    QTreeWidgetItem *gps;
     QTreeWidgetItem *availability;
     // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare;
@@ -62,6 +63,7 @@ public:
     QString catTitle = "Titles";
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
+    QString catGps = "GPS";
     QString catAvailability = "Availability";
     // QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
@@ -151,6 +153,11 @@ public:
     void disableColorAllHeaders(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
+    /*  "Most recent day" is ONE DATE, but Days is the day of the month, so the date is
+        its Year, Month and Day items checked together (they AND across categories).
+        Checks or unchecks all three; false if any of them is not in the panel. */
+    bool setMostRecentDay(const QDate &date, bool checked);
+    QDate mostRecentDay;
 
     /* Set one item to include (Qt::Checked), exclude (Qt::PartiallyChecked) or off, then
        restyle it and emit filterChange. The one way an item's filter state changes. */

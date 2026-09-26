@@ -44,6 +44,7 @@ QString WidgetCSS::css()
     G::pushButtonBackgroundColor = QColor(d10,d10,d10);
     borderColor = QColor(l40,l40,l40);
     G::borderColor = borderColor;
+    G::frameLineColor = QColor(mb,mb,mb);
     G::scrollBarHandleBackgroundColor = QColor(bg,l3,bg);
     selectionColor = G::selectionColor;
     mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
@@ -90,6 +91,7 @@ QString WidgetCSS::css()
             scrollBar() +
             spinBox() +
             stackedWidget() +
+            panelFrame() +
             statusBar() +
             tableView() +
             tabWidget() +
@@ -124,9 +126,11 @@ QString WidgetCSS::widget()
 
 QString WidgetCSS::mainWindow()
 {
+    /* The separators between docks and the central widget are invisible (window
+       background) until the mouse is over one; the frameLines already mark the edges. */
     return
     "QMainWindow::separator {"
-        "background: " + QColor(l5,l5,l5).name() + ";"
+        "background: " + QColor(bg,bg,bg).name() + ";"
         "width: 4px;"
         "height: 4px;"
     "}"
@@ -350,7 +354,7 @@ QString WidgetCSS::dockTabBar()
     "QMainWindow > QTabBar::tab {"
         // "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
         // "background-color: " + QColor(l20,l20,l20).name() + ";"
-        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
+        "border: " + frameLine() + ";"
         // "border-bottom: none;"
         // "border-radius: " + brInteractive + ";"
         "border-top-left-radius: " + brInteractive + ";"
@@ -405,7 +409,7 @@ QString WidgetCSS::tabWidget()
         "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
         "background-color: " + QColor(l20,l20,l20).name() + ";"
 //        "background-color: " + QColor(l10,l10,l10).name() + ";"
-        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
+        "border: " + frameLine() + ";"
         "padding-top: 2px;"
         "padding-bottom: 3px;"
         "padding-left: 5px;"
@@ -422,6 +426,31 @@ QString WidgetCSS::tabWidget()
         "color:" + disabledColor.name() + ";"
     "}"
     ;
+}
+
+QString WidgetCSS::frameLine()
+{
+    return QString::number(G::frameLineWidth) + "px solid " + G::frameLineColor.name();
+}
+
+QString WidgetCSS::panelFrame()
+{
+/*
+    Every panel's content sits in a FrameLineBox ("DockFrame", see DockWidget::setWidget)
+    that draws the frameLine round it. A tree or stacked widget that IS the content fills
+    the box edge to edge, so its own border would sit right against the frameLine and
+    double it: those borders go. (They were the stand-in for a panel border -- see the
+    DockWidget notes.) A tree nested deeper, inset by its container's margins, keeps its
+    border as an inner box.
+*/
+    return
+    "QWidget#DockFrame > QTreeView,"
+    "QWidget#DockFrame > QTreeWidget,"
+    "QWidget#DockFrame > QStackedWidget,"
+    "QWidget#DockFrame > QStackedWidget > QTreeView,"
+    "QWidget#DockFrame > QStackedWidget > QTreeWidget {"
+        "border: none;"
+    "}";
 }
 
 QString WidgetCSS::stackedWidget()
@@ -555,7 +584,7 @@ QString WidgetCSS::treeView()
     "QTreeView, QTreeWidget {"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
         "color: " + textColor.name() + ";"
-        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
+        "border: " + frameLine() + ";"
     "}"
 
     /*  THE SOURCE PANEL'S TWO TREES SIT DIRECTLY UNDER ITS TITLE BAR, which already draws

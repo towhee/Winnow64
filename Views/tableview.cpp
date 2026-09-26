@@ -250,7 +250,7 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::CreatedColumn] = fm.boundingRect("=2019-09-09 09:09:09.999=").width();
     defaultColumnWidth[G::YearColumn] = fm.boundingRect("=2000=").width();
     defaultColumnWidth[G::MonthColumn] = fm.boundingRect("=Sept=").width();
-    defaultColumnWidth[G::DayColumn] = fm.boundingRect("=2000-00-00=").width();
+    defaultColumnWidth[G::DayColumn] = fm.boundingRect("=00=").width();
     defaultColumnWidth[G::CreatorColumn] = fm.boundingRect("Rory Hill=====").width();
     defaultColumnWidth[G::MegaPixelsColumn] = fm.boundingRect("=999.99=").width();
     defaultColumnWidth[G::LoadMsecPerMpColumn] = fm.boundingRect("=Msec/Mp=").width();

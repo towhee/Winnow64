@@ -359,7 +359,10 @@ void Preferences::itemChange(QModelIndex idx)
 
     // Map module tile provider (see MapTileSource)
     if (source == "mapTileUrl") {
+        /* Entering a URL is choosing it: switch the map to Custom. Clearing it goes
+           back to Standard (applyMapProvider). */
         mw->mapTileUrl = v.toString();
+        if (!mw->mapTileUrl.trimmed().isEmpty()) mw->mapStyle = "custom";
         mw->applyMapProvider();
     }
     if (source == "mapTileKey") {
@@ -1903,10 +1906,10 @@ void Preferences::addSlideShow()
 void Preferences::addMap()
 {
 /*
-    The Map module's tile provider. Winnow ships none: OpenStreetMap's own servers do
-    not allow an application's users to pull tiles from them, and Google's terms do not
-    allow Google tiles in a map that is not Google's. So the user supplies a provider
-    they have an account with. See "Map Module" in notes/Documentation.txt.
+    The Map module's tile provider. OPTIONAL: left empty the map uses OpenStreetMap's own
+    tiles, which need no key (MapTileSource::Provider::openStreetMap). These fields are
+    for someone who wants a different provider they have an account with. See "Map
+    Module" in notes/Documentation.txt.
 */
     i.name = "MapHeader";
     i.parentName = "";
@@ -1914,7 +1917,7 @@ void Preferences::addMap()
     i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Map";
-    i.tooltip = "The map tile provider behind the Map module";
+    i.tooltip = "Optional.  Leave these empty to use OpenStreetMap, which needs no key.";
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
@@ -1922,15 +1925,17 @@ void Preferences::addMap()
 
     i.name = "mapTileUrl";
     i.parentName = "MapHeader";
-    i.captionText = "Tile URL template";
-    i.tooltip = "The address of one map tile, from your tile provider's documentation,\n"
+    i.captionText = "Tile URL template (optional)";
+    i.tooltip = "Leave empty to use the built-in map styles (the style menu on the map:\n"
+                "Standard, Cycle and Topographic), which need no key or account.\n\n"
+                "To use another provider: the address of one map tile, from its documentation,\n"
                 "with {z}, {x} and {y} where the zoom and tile numbers go and {key}\n"
                 "where your API key goes.  For example:\n\n"
                 "MapTiler:  https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png"
                 "?key={key}\n"
                 "Stadia:  https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png"
                 "?api_key={key}\n\n"
-                "Leave empty for a map with pins and no background.";
+                "Entering a URL switches the map to Custom; clear it to go back.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->mapTileUrl;

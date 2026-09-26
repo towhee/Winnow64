@@ -135,6 +135,7 @@
     WF(KeywordsAll,        QStringList,    "",            "",        WF_RESIDENT)   \
     WF(FolderPath,         QString,        "",            "",        WF_RESIDENT)   \
     WF(FolderPathsAll,     QStringList,    "",            "",        WF_DERIVED)    \
+    WF(HasGPS,             QString,        "",            "",        WF_DERIVED)    \
     WF(Video,              bool,           "",            "",        WF_RESIDENT)   \
     WF(MetadataStatus,     quint8,         "",            "",        WF_RESIDENT)   \
     WF(IconLoaded,         bool,           "",            "",        WF_RESIDENT)   \

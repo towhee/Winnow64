@@ -156,6 +156,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         //  new dock height based on new cell size
         int newThumbDockHeight = cellHt + G::scrollBarThickness;
         if (newThumbDockHeight > maxHt) newThumbDockHeight = maxHt;
+        // the dock's FrameLineBox (DockWidget::setWidget) borders the view top and bottom
+        newThumbDockHeight += 2 * G::frameLineWidth;
 
         thumbView->setMaximumHeight(maxHt);
         thumbView->setMinimumHeight(minHt);

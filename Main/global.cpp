@@ -136,6 +136,8 @@ QColor header2Color;                // define after app stylesheet defined
 QColor header3Color;                // define after app stylesheet defined
 QColor borderColor;                 // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
+QColor frameLineColor;              // define after app stylesheet defined (mb)
+int frameLineWidth = 1;
 QColor pushButtonBackgroundColor;   // define after app stylesheet defined
 QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
 QColor helpColor = QColor(37,65,40);

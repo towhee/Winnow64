@@ -50,6 +50,7 @@ private slots:
     void prefixExpansionStaysInBudget();
     void folderPathsAllIsDerivedFromThePath();
     void folderAncestryCostsARowOneId();
+    void hasGpsIsDerivedFromTheCoordinate();
 
 private:
     static void fill(RowStore &s, int row, const QString &path)
@@ -691,6 +692,30 @@ void tst_imagerow::folderPathsAllIsDerivedFromThePath()
     s.resize(1);
     s.setValue(0, G::FolderPathColumn, Qt::EditRole, "/Z");
     QCOMPARE(s.value(0, G::FolderPathsAllColumn).toStringList(), QStringList({"/", "/Z"}));
+}
+
+void tst_imagerow::hasGpsIsDerivedFromTheCoordinate()
+{
+/*
+    G::HasGPSColumn is what the Filters GPS category filters on: "True" when the row has
+    a coordinate, "False" when the coordinate was read and is empty. DERIVED from
+    G::GPSCoordColumn, so an unread row is unset rather than "False", and a write to it
+    is refused.
+*/
+    RowStore s;
+    s.resize(3);
+    QVERIFY(RowStore::covers(G::HasGPSColumn, Qt::EditRole));
+
+    QVERIFY(!s.value(0, G::HasGPSColumn).isValid());
+
+    s.setValue(0, G::GPSCoordColumn, Qt::EditRole, "49°13'13.477\" N 123°57'22.220\" W");
+    s.setValue(1, G::GPSCoordColumn, Qt::EditRole, "");
+    QCOMPARE(s.value(0, G::HasGPSColumn), QVariant(QString("True")));
+    QCOMPARE(s.value(1, G::HasGPSColumn), QVariant(QString("False")));
+
+    s.setValue(2, G::HasGPSColumn, Qt::EditRole, QString("True"));
+    QVERIFY(!s.value(2, G::GPSCoordColumn).isValid());
+    QVERIFY(!s.value(2, G::HasGPSColumn).isValid());
 }
 
 void tst_imagerow::folderAncestryCostsARowOneId()

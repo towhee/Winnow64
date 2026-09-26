@@ -60,6 +60,26 @@ private:
 };
 
 //-------------------------------------------------------------------------------------------
+class FrameLineBox : public QWidget
+{
+/*
+    A container that draws the frameLine (G::frameLineColor, G::frameLineWidth) on the
+    chosen sides and insets its content by the same width, so the line is never painted
+    over and nothing overlaps the content (an overlay would break Qt's scroll blits).
+    Holds every panel's content (DockWidget::setWidget) and is the central widget.
+*/
+    Q_OBJECT
+public:
+    explicit FrameLineBox(QWidget *parent = nullptr);
+    void setSides(Qt::Edges sides);
+    Qt::Edges sides() const { return m_sides; }
+protected:
+    void paintEvent(QPaintEvent *event) override;
+private:
+    Qt::Edges m_sides = Qt::TopEdge | Qt::LeftEdge | Qt::RightEdge | Qt::BottomEdge;
+};
+
+//-------------------------------------------------------------------------------------------
 class DockTitleBar : public QWidget
 {
     Q_OBJECT
@@ -96,6 +116,15 @@ class DockWidget : public QDockWidget
 public:
     DockWidget(const QString &title, QString objName, QWidget *parent = nullptr);
     bool isCollapsed() const { return m_isCollapsed; }
+    /*  These HIDE QDockWidget's (non-virtual) versions, so they are only reached through
+        a DockWidget pointer -- which every panel is. setWidget puts the content in a
+        FrameLineBox, so widget() is that box and content() is what was passed in.
+        setTitleBarWidget re-decides the box's top side (see syncFrameSides). */
+    void setWidget(QWidget *content);
+    void setTitleBarWidget(QWidget *titleBar);
+    QWidget *content() const { return m_content; }
+    /*  Off for a panel that is not bordered (the Module dock): no sides, no inset. */
+    void setFrameLineVisible(bool visible);
 
 public slots:
     void setCollapsed(bool collapse);
@@ -119,6 +148,11 @@ private:
     int m_uncollapsedMinH = 0;
     int m_uncollapsedMaxH = QWIDGETSIZE_MAX;
     int m_uncollapsedBodyMinH = 0;
+    int m_uncollapsedContentMinH = 0;
+    FrameLineBox *m_frame = nullptr;
+    bool m_frameLineVisible = true;
+    QWidget *m_content = nullptr;
+    void syncFrameSides();
 
 signals:
     void focus(DockWidget *dw);

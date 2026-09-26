@@ -538,19 +538,30 @@ void MW::filterLastDay()
 //    if (!filters->days->childCount()) launchBuildFilters();
     }
 
+    /*  The most recent capture date. Days is the day of the month, not the date, so the
+        date is found here and checked as its Year, Month and Day items together. Catalog
+        scope asks the index, which is where its items came from; folder scope reads the
+        same three columns its items were counted from. */
+    QDate last;
+    if (filters->categorySource() == Filters::FromCatalog) {
+        last = Catalog::instance().mostRecentCaptureDate();
+    }
+    else {
+        const QStringList months = Catalog::monthLabels();
+        for (int row = 0; row < dm->rowCount(); ++row) {
+            const int y = dm->index(row, G::YearColumn).data().toInt();
+            const int m = months.indexOf(dm->index(row, G::MonthColumn).data().toString()) + 1;
+            const int d = dm->index(row, G::DayColumn).data().toInt();
+            const QDate date(y, m, d);
+            if (date.isValid() && (!last.isValid() || date > last)) last = date;
+        }
+    }
+
     // if there still are no days then tell user and return
-    int last = filters->days->childCount();
-    if (last == 0) {
+    if (!filters->setMostRecentDay(last, filterLastDayAction->isChecked())) {
         G::popup->showPopup("No days are available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
-    }
-
-    if (filterLastDayAction->isChecked()) {
-        filters->days->child(last - 1)->setCheckState(0, Qt::Checked);
-    }
-    else {
-        filters->days->child(last - 1)->setCheckState(0, Qt::Unchecked);
     }
 
     filterChange("MW::filterLastDay");

@@ -24,6 +24,8 @@ void MW::slideShow()
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
+        // started from the Slide Show module: back to the workflow it was entered from
+        leaveSlideShowWorkflow();
     }
     else {
         // start slideshow

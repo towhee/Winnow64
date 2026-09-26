@@ -15,19 +15,24 @@ class QNetworkReply;
     MAP TILE SOURCE: the raster tiles behind MapView, fetched from the tile provider the
     user sets in Preferences > Map.
 
-    WHY A PROVIDER SETTING AND NOT A BUILT-IN URL. OpenStreetMap's own tile servers
-    forbid an application's users pulling tiles from them, and Google's terms forbid
-    Google tiles in a map that is not Google's (see "Map Module" in
-    notes/Documentation.txt). So Winnow ships no provider: the user enters a URL
-    template from a provider they have an account with (MapTiler, Stadia, Thunderforest,
-    Mapbox ...), its key, and its attribution text, which MapView must draw.
+    THE DEFAULT IS OPENSTREETMAP'S OWN TILES (Provider::openStreetMap): no key, no
+    account, nothing to set up. Their tile usage policy allows an application like this
+    on conditions Winnow meets: a User-Agent that names the app, the attribution drawn on
+    the map, tiles cached locally, at most 2 connections (maxConnections), and no bulk
+    or ahead-of-view downloading -- only the tiles a paint asks for are fetched. OSM can
+    block an app that abuses the service, so do not relax any of those. Google is not an
+    option at all (its terms forbid Google tiles in a map that is not Google's; see "Map
+    Module" in notes/Documentation.txt).
+
+    A DIFFERENT PROVIDER is optional: Preferences > Map takes a URL template, a key and
+    the attribution text for one the user has an account with (MapTiler, Stadia ...).
 
     CACHING. Two levels. The QNetworkDiskCache (QStandardPaths::CacheLocation/maptiles)
     keeps what the provider sent, honouring its cache headers, so a place looked at
     before draws without the network. The QCache holds decoded pixmaps for painting.
 
     REQUESTS. MapView asks for every tile it wants each paint (tile()); a tile not in
-    memory is QUEUED, not fetched at once. pump() starts at most kMaxInFlight requests,
+    memory is QUEUED, not fetched at once. pump() starts at most maxConnections requests,
     nearest the view centre first, and drops queued tiles the last frame did not ask for
     -- a fast zoom would otherwise download every level it passed through.
 
@@ -41,11 +46,17 @@ class MapTileSource : public QObject
     Q_OBJECT
 public:
     struct Provider {
-        QString urlTemplate;        // {z} {x} {y} and optionally {key}
+        QString urlTemplate;        // {z} {x} {y}, optionally {key} and {s} (a/b/c)
         QString apiKey;
         QString attribution;
         int maxZoom = 19;
+        int maxConnections = 6;     // OpenStreetMap's policy allows 2
         bool isValid() const;
+        /* The built-in styles, all keyless and all on volunteer-run servers that
+           allow apps on OpenStreetMap's fair-use terms, hence 2 connections each. */
+        static Provider openStreetMap();
+        static Provider cyclOsm();
+        static Provider openTopoMap();
     };
 
     explicit MapTileSource(QObject *parent = nullptr);
@@ -75,7 +86,6 @@ private:
     void finished(QNetworkReply *reply);
     void setError(const QString &error);
 
-    static constexpr int kMaxInFlight = 6;
     static constexpr qint64 kRetryMs = 60000;
 
     Provider mProvider;

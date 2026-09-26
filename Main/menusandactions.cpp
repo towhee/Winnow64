@@ -1601,9 +1601,9 @@ void MW::createViewActions()
     connect(embellishWorkspaceAction, &QAction::triggered,
             this, &MW::invokeEmbellishWorkflow);
 
-    /* Slide Show applies its workflow layout the same way. It does NOT start the show --
-       that is slideShowAction (S), a presentation that blanks the cursor and takes the
-       keyboard, which a module button should not do. No key yet. */
+    /* Slide Show applies its workflow layout and starts the show; stopping the show
+       returns to the previous workflow (MW::invokeSlideShowWorkflow). S (slideShowAction)
+       starts and stops a show without changing the layout. No key yet. */
     slideShowWorkspaceAction = new QAction(tr("Slide Show Mode"), this);
     slideShowWorkspaceAction->setObjectName("slideShowWorkspace");
     slideShowWorkspaceAction->setShortcutVisibleInContextMenu(true);
@@ -3597,6 +3597,7 @@ void MW::enableSelectionDependentMenus()
     gate(copyInfoTextToClipboardAction, dmHasRows, needFolder);
 
     gate(slideShowAction, dmHasRows, needFolder);
+    gate(slideShowWorkspaceAction, dmHasRows, needFolder);   // it starts the show too
     gate(zoomToAction, dmHasRows, needFolder);
     gate(zoomInAction, dmHasRows, needFolder);
     gate(zoomOutAction, dmHasRows, needFolder);
