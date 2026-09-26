@@ -138,6 +138,7 @@ QColor borderColor;                 // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
 QColor frameLineColor;              // define after app stylesheet defined (mb)
 int frameLineWidth = 1;
+int frameLineRadius = 6;             // = WidgetCSS brInteractive (buttons)
 QColor pushButtonBackgroundColor;   // define after app stylesheet defined
 QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
 QColor helpColor = QColor(37,65,40);

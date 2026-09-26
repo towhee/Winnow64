@@ -460,6 +460,7 @@ set(WINNOW_HEADERS
     Datamodel/rowscratch.h
     Datamodel/filterpredicate.h
     Views/libtree.h
+    Views/loadcurtain.h
     Datamodel/selection.h
 
     Develop/cameraprofile.h

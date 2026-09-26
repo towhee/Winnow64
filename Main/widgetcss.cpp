@@ -60,7 +60,7 @@ QString WidgetCSS::css()
     halfFontSize = fontSize / 2;
 
     // border radius
-    brInteractive  = "6px";
+    brInteractive  = QString::number(G::frameLineRadius) + "px";   // panel corners too
     brContainer    = "8px";
     brLargeObjects = "10px";
 
