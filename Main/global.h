@@ -734,9 +734,12 @@ Q_NAMESPACE
     extern QColor tabWidgetBorderColor;
     /*  THE FRAMELINE: the 1px line in colour mb (backgroundShade + 15) that borders every
         panel and the central widget. Set by WidgetCSS::css(); WidgetCSS::frameLine() is
-        the same line as a stylesheet border value. See FrameLineBox (dockwidget.h). */
+        the same line as a stylesheet border value. See FrameLineBox (dockwidget.h).
+        frameLineRadius rounds the panel corners and is the button radius too: WidgetCSS
+        builds brInteractive from it, so panels and buttons cannot drift apart. */
     extern QColor frameLineColor;
     extern int frameLineWidth;
+    extern int frameLineRadius;
     extern QColor pushButtonBackgroundColor;
     extern QColor scrollBarHandleBackgroundColor;
     extern QColor helpColor;

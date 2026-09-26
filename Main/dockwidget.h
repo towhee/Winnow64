@@ -67,12 +67,18 @@ class FrameLineBox : public QWidget
     chosen sides and insets its content by the same width, so the line is never painted
     over and nothing overlaps the content (an overlay would break Qt's scroll blits).
     Holds every panel's content (DockWidget::setWidget) and is the central widget.
+    A corner where two drawn sides meet is rounded by G::frameLineRadius (the button
+    radius); the sides that meet there inset their content further (sideInset) so the
+    content's square corner stays inside the arc instead of painting over it.
 */
     Q_OBJECT
 public:
     explicit FrameLineBox(QWidget *parent = nullptr);
     void setSides(Qt::Edges sides);
     Qt::Edges sides() const { return m_sides; }
+    /* Shared with DockTitleBar, which carries the top of a panel's frameLine. */
+    static int sideInset(Qt::Edges sides, Qt::Edge side);
+    static void paintFrameLine(QPainter &p, const QRect &r, Qt::Edges sides);
 protected:
     void paintEvent(QPaintEvent *event) override;
 private:

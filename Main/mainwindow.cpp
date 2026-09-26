@@ -4510,6 +4510,10 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
         setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
         const qint64 msgMs = G::isPerfProbe ? lcT.restart() : 0;
         stop(fun);
+        /*  A FILTER TO RESTORE: the unfiltered Library is not what the user will be
+            looking at, so it is not shown on the way there. After stop(), which lowers
+            it. See MW::raiseLoadCurtain. */
+        if (restoreFiltersPending && libraryFilterRestorePending) raiseLoadCurtain();
         if (G::isPerfProbe)
             qDebug().noquote() << "[PERF] loadCatalogScope teardown  resetDevelopCaches ="
                                << devMs << "ms  centralMsg =" << msgMs
@@ -5779,6 +5783,10 @@ void MW::stop(QString src)
 
     // ignore if already stopping
     if (G::stop) return;
+
+    /*  Whatever the curtain was waiting for belongs to the load being stopped. A new
+        Library load raises it again after this (MW::loadCatalogScope). */
+    lowerLoadCurtain("MW::stop " + src);
 
     // stop flags
     G::stop = true;
@@ -7322,7 +7330,12 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
        latch filters->filtersBuilt, blocking the rebuild. When hidden, leave the
        filters unbuilt; MW::showFilterDock / MW::filterDockTabMousePress build
        them when the panel is shown (the datamodel is fully loaded by then). */
-    if (!filterDock->isVisible()) return;
+    if (!filterDock->isVisible()) {
+        /*  No build, so no restored filter to wait for: it lands when the panel is
+            opened, and the unfiltered set is the honest thing to show until then. */
+        lowerLoadCurtain("MW::buildFiltersWhenModelReady Filters panel hidden");
+        return;
+    }
 
     /*  A HYDRATED SCOPE HAS NO METADATA EVENTS TO WAIT FOR, AND WAITING COSTS EVERYTHING.
 
@@ -7397,6 +7410,8 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
     if (!resetWillRun) {
         setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
         buildFilters->recount();
+        /*  No finishedBuildFilters follows a recount, so no restore either. */
+        lowerLoadCurtain("MW::buildFiltersWhenModelReady no build");
     }
     filters->setEnabled(true);
 }

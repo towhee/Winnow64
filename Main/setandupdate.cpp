@@ -8,6 +8,11 @@ void MW::setCentralMessage(QString message)
     if (G::isLogger) G::log(fun, message);
     centralLayout->setCurrentIndex(MessageTab);
     msg.msgLabel->setText(message);
+    if (loadCurtainUp && centralCurtain) {
+        centralCurtain->setMessage(message);
+        centralCurtain->repaint();
+        return;
+    }
     centralLayout->currentWidget()->repaint();
 }
 
@@ -30,6 +35,13 @@ void MW::setCentralProgressMessage(QString message)
     reports itself after the switch is silently dropped instead.
 */
     if (G::isLogger) G::log("MW::setCentralProgressMessage", message);
+    /*  Behind the load curtain the picture is not what the user is looking at yet, so
+        the stage is reported on the curtain, which is. */
+    if (loadCurtainUp && centralCurtain) {
+        centralCurtain->setMessage(message);
+        centralCurtain->repaint();
+        return;
+    }
     if (centralLayout->currentIndex() != MessageTab) return;
     setCentralMessage(message);
 }
@@ -156,8 +168,9 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         //  new dock height based on new cell size
         int newThumbDockHeight = cellHt + G::scrollBarThickness;
         if (newThumbDockHeight > maxHt) newThumbDockHeight = maxHt;
-        // the dock's FrameLineBox (DockWidget::setWidget) borders the view top and bottom
-        newThumbDockHeight += 2 * G::frameLineWidth;
+        // the dock's FrameLineBox (DockWidget::setWidget) insets the view top and bottom
+        const QMargins frameInset = thumbDock->widget()->contentsMargins();
+        newThumbDockHeight += frameInset.top() + frameInset.bottom();
 
         thumbView->setMaximumHeight(maxHt);
         thumbView->setMinimumHeight(minHt);
@@ -539,6 +552,7 @@ void MW::setScope(G::Scope s, QString src)
             restoreFiltersPending = false;
         }
         libraryRestoreSortPending = false;
+        lowerLoadCurtain("MW::setScope leaving the Library");
     }
     G::scope = s;
 
@@ -784,6 +798,41 @@ void MW::restoreFiltersAfterFolderChange()
     filters->restore();
     if (hadChecks || filters->isAnyFilter())
         filterChange("MW::restoreFiltersAfterFolderChange");
+    // the filtered set is what is loaded now: show it
+    lowerLoadCurtain("MW::restoreFiltersAfterFolderChange");
+}
+
+void MW::raiseLoadCurtain()
+{
+/*
+    Cover the central views and the filmstrip until the Library's restored filter has
+    been applied -- see the note on loadCurtainUp in mainwindow.h. The views load
+    underneath as they always do (the first image is cached, the icons are read); only
+    the sight of the unfiltered set is withheld. The central curtain carries the load
+    messages meanwhile (setCentralMessage and setCentralProgressMessage write to it), so
+    the wait still says what it is doing.
+
+    LIFTED ON EVERY PATH THAT ENDS THE WAIT, because a curtain left up is a window that
+    looks hung: the restore landing (restoreFiltersAfterFolderChange), a build that will
+    not come (buildFiltersWhenModelReady with the Filters panel hidden, or filters
+    already built), leaving the Library (setScope), and any stop -- Esc, or another load.
+*/
+    if (G::isLogger) G::log("MW::raiseLoadCurtain");
+    if (!centralCurtain) centralCurtain = new LoadCurtain(centralWidget);
+    if (!thumbCurtain) thumbCurtain = new LoadCurtain(thumbView);
+    loadCurtainUp = true;
+    centralCurtain->setMessage(msg.msgLabel->text());
+    centralCurtain->cover(G::css);
+    thumbCurtain->cover(G::css);
+}
+
+void MW::lowerLoadCurtain(QString src)
+{
+    if (!loadCurtainUp) return;
+    if (G::isLogger) G::log("MW::lowerLoadCurtain", src);
+    loadCurtainUp = false;
+    if (centralCurtain) centralCurtain->hide();
+    if (thumbCurtain) thumbCurtain->hide();
 }
 
 void MW::saveLibraryState()

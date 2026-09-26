@@ -47,6 +47,7 @@
 #include "Views/keywordtags.h"
 #include "Datamodel/keywordvocab.h"
 #include "Views/libtree.h"
+#include "Views/loadcurtain.h"
 #include "Main/catalogscanner.h"
 #include "Cache/cachedb.h"
 #include "Dialogs/catalogrootsdlg.h"
@@ -425,6 +426,18 @@ public:
     /*  The pending filter restore is the LIBRARY's (not a folder change's), so leaving
         the Library before it lands must cancel it -- see setScope. */
     bool libraryFilterRestorePending = false;
+    /*  THE VIEWS STAY COVERED UNTIL THE RESTORED FILTER HAS LANDED. A Library load with
+        a filter to restore would otherwise show the whole unfiltered Library -- loupe,
+        grid and filmstrip -- for the seconds the filter build takes, and then jump to
+        the filtered set. Raised by loadCatalogScope, lifted by lowerLoadCurtain from
+        every path on which the restore lands, is abandoned, or can no longer come. See
+        "REOPEN LIBRARY AS IT WAS LEFT" in notes/Documentation.txt. */
+    void raiseLoadCurtain();
+    void lowerLoadCurtain(QString src);
+    bool isLoadCurtainUp() const { return loadCurtainUp; }
+    bool loadCurtainUp = false;
+    LoadCurtain *centralCurtain = nullptr;
+    LoadCurtain *thumbCurtain = nullptr;
     /*  A user sort asked for while metadata was still loading (see MW::sortChange), run
         by applyDeferredSort from metadataComplete. */
     bool sortDeferredForMetadata = false;

@@ -3,6 +3,7 @@
 #include "Utilities/panelprobe.h"
 #include <QTimer>
 #include <QToolBar>
+#include <cmath>
 
 /*
     Try to create your own font that contains the graphic you want at the corresponding
@@ -168,23 +169,77 @@ void FrameLineBox::setSides(Qt::Edges sides)
     contents margins, which any layout set on the box respects.
 */
     m_sides = sides;
-    const int w = G::frameLineWidth;
-    setContentsMargins(sides & Qt::LeftEdge ? w : 0, sides & Qt::TopEdge ? w : 0,
-                       sides & Qt::RightEdge ? w : 0, sides & Qt::BottomEdge ? w : 0);
+    setContentsMargins(sideInset(sides, Qt::LeftEdge), sideInset(sides, Qt::TopEdge),
+                       sideInset(sides, Qt::RightEdge), sideInset(sides, Qt::BottomEdge));
     update();
+}
+
+int FrameLineBox::sideInset(Qt::Edges sides, Qt::Edge side)
+{
+/*
+    An undrawn side has no inset, a drawn side the frameLine width, and a drawn side
+    that ends in a rounded corner (its neighbour at either end is drawn too) enough for
+    the content's square corner to clear the inner edge of the arc: the corner at
+    (d, d) must lie within r - w of the arc centre (r, r), so d >= r - (r - w) / sqrt 2.
+    3 px for the 6 px radius.
+*/
+    if (!(sides & side)) return 0;
+    const int w = G::frameLineWidth;
+    const bool vertical = side == Qt::LeftEdge || side == Qt::RightEdge;
+    const Qt::Edges ends = vertical ? Qt::TopEdge | Qt::BottomEdge
+                                    : Qt::LeftEdge | Qt::RightEdge;
+    if (!(sides & ends)) return w;
+    const int r = G::frameLineRadius;
+    return qMax(w, int(std::ceil(r - (r - w) / std::sqrt(2.0))));
+}
+
+void FrameLineBox::paintFrameLine(QPainter &p, const QRect &rect, Qt::Edges sides)
+{
+/*
+    The straight runs are filled rects, crisp at any width; only the corner arcs are
+    antialiased. A corner is rounded where both of its sides are drawn; otherwise a
+    side runs to the end of the rect, so it meets the next widget's line square (a
+    panel's sides continue into its DockTitleBar).
+    Read at paint time, so a background shade change (WidgetCSS::css) carries over.
+*/
+    const int w = G::frameLineWidth;
+    const int r = qMin(G::frameLineRadius, qMin(rect.width(), rect.height()) / 2);
+    const QColor c = G::frameLineColor;
+    const int x0 = rect.left(), y0 = rect.top();
+    const int x1 = x0 + rect.width(), y1 = y0 + rect.height();   // exclusive
+    const bool tl = (sides & Qt::TopEdge) && (sides & Qt::LeftEdge);
+    const bool tr = (sides & Qt::TopEdge) && (sides & Qt::RightEdge);
+    const bool bl = (sides & Qt::BottomEdge) && (sides & Qt::LeftEdge);
+    const bool br = (sides & Qt::BottomEdge) && (sides & Qt::RightEdge);
+
+    if (sides & Qt::TopEdge)
+        p.fillRect(QRect(QPoint(tl ? x0 + r : x0, y0), QPoint((tr ? x1 - r : x1) - 1, y0 + w - 1)), c);
+    if (sides & Qt::BottomEdge)
+        p.fillRect(QRect(QPoint(bl ? x0 + r : x0, y1 - w), QPoint((br ? x1 - r : x1) - 1, y1 - 1)), c);
+    if (sides & Qt::LeftEdge)
+        p.fillRect(QRect(QPoint(x0, tl ? y0 + r : y0), QPoint(x0 + w - 1, (bl ? y1 - r : y1) - 1)), c);
+    if (sides & Qt::RightEdge)
+        p.fillRect(QRect(QPoint(x1 - w, tr ? y0 + r : y0), QPoint(x1 - 1, (br ? y1 - r : y1) - 1)), c);
+
+    if (!(tl || tr || bl || br) || r <= 0) return;
+    p.save();
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(c, w, Qt::SolidLine, Qt::FlatCap));
+    p.setBrush(Qt::NoBrush);
+    /* The pen is centred on the arc, so the arc runs half a line in from the edge. */
+    const qreal h = w / 2.0;
+    const qreal d = 2 * (r - h);                 // arc diameter
+    if (tl) p.drawArc(QRectF(x0 + h, y0 + h, d, d), 90 * 16, 90 * 16);
+    if (tr) p.drawArc(QRectF(x1 - h - d, y0 + h, d, d), 0, 90 * 16);
+    if (bl) p.drawArc(QRectF(x0 + h, y1 - h - d, d, d), 180 * 16, 90 * 16);
+    if (br) p.drawArc(QRectF(x1 - h - d, y1 - h - d, d, d), 270 * 16, 90 * 16);
+    p.restore();
 }
 
 void FrameLineBox::paintEvent(QPaintEvent *)
 {
-    /* Read at paint time, so a background shade change (WidgetCSS::css) carries over. */
     QPainter p(this);
-    const int w = G::frameLineWidth;
-    const QRect r = rect();
-    const QColor c = G::frameLineColor;
-    if (m_sides & Qt::TopEdge)    p.fillRect(0, 0, r.width(), w, c);
-    if (m_sides & Qt::BottomEdge) p.fillRect(0, r.height() - w, r.width(), w, c);
-    if (m_sides & Qt::LeftEdge)   p.fillRect(0, 0, w, r.height(), c);
-    if (m_sides & Qt::RightEdge)  p.fillRect(r.width() - w, 0, w, r.height(), c);
+    paintFrameLine(p, rect(), m_sides);
 }
 
 /* DockTitleBar ************************************************************************/
@@ -203,9 +258,12 @@ QSize DockTitleBar::sizeHint() const
 DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
 {
     /* The panel's frameLine runs up the sides and across the top of the title bar (see
-       paintEvent); the panel's FrameLineBox draws the rest. Inset so no child covers it. */
-    const int w = G::frameLineWidth;
-    setContentsMargins(w, w, w, 0);
+       paintEvent); the panel's FrameLineBox draws the rest. Inset so no child covers it,
+       including the rounded top corners. */
+    const Qt::Edges sides = Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge;
+    setContentsMargins(FrameLineBox::sideInset(sides, Qt::LeftEdge),
+                       FrameLineBox::sideInset(sides, Qt::TopEdge),
+                       FrameLineBox::sideInset(sides, Qt::RightEdge), 0);
     setStyle();
     setLayout(titleBarLayout);
     titleLabel = new QLabel(this);
@@ -270,13 +328,9 @@ void DockTitleBar::paintEvent(QPaintEvent *)
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 
-    /* The panel's frameLine: left, top and right. The rule under the title (setStyle)
-       is the divider, not the border, and stays as it is. */
-    const int w = G::frameLineWidth;
-    const QColor c = G::frameLineColor;
-    p.fillRect(0, 0, width(), w, c);
-    p.fillRect(0, 0, w, height(), c);
-    p.fillRect(width() - w, 0, w, height(), c);
+    /* The panel's frameLine: left, top and right, the top corners rounded. The rule
+       under the title (setStyle) is the divider, not the border, and stays as it is. */
+    FrameLineBox::paintFrameLine(p, rect(), Qt::LeftEdge | Qt::TopEdge | Qt::RightEdge);
 }
 
 void DockTitleBar::mouseDoubleClickEvent(QMouseEvent *event)
