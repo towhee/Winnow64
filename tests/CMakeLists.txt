@@ -368,6 +368,9 @@ winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
 # Metadata/xmpapply.h that replaced eight copies of the same XMP block.
 winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
+# tst_editrotate is header-only (Develop/editrotate.h): a Develop recipe's masks, spots,
+# crop and perspective quad follow the photo through Cmd+[ / Cmd+] rotation.
+winnow_add_unit_test(tst_editrotate unit/tst_editrotate.cpp)
 # tst_xmpembed pins the container writers behind "Permit image file modification":
 # splicing the XMP packet into JPEG (APP1), PNG (iTXt) and TIFF/DNG (IFD0 tag 700)
 # without disturbing anything else in the file, and the XMP shapes Lightroom reads

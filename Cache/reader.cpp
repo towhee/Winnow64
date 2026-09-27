@@ -546,6 +546,19 @@ void Reader::read(int dmRow, QString filePath, int instance,
             offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
             lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
             thumb->presetOffset(offsetThumb, lengthThumb);
+            /*  And every other field of m the icon path READS, for the same reason.
+                loadThumb rotates the thumbnail by m->orientation, so on an icon-only read
+                it was turned by whatever image this reader parsed LAST -- invisible while
+                the grid rarely re-read a loaded icon, glaring once a rotation (Cmd+[ /
+                Cmd+]) made it re-read one: the icon snapped back, or turned the wrong way.
+                developEdited decides whether ThumbCache may answer at all, and the size
+                feeds a whole-file decode. The model holds this row's current values,
+                including a rotation made seconds ago. */
+            m->orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
+            m->rotationDegrees = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
+            m->developEdited = dm->index(dmRow, G::DevelopColumn).data().toBool();
+            m->width = dm->index(dmRow, G::WidthColumn).data().toInt();
+            m->height = dm->index(dmRow, G::HeightColumn).data().toInt();
         }
         readIcon();
     }

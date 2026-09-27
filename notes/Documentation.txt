@@ -211,6 +211,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Detail 1:1 Preview (Live Full-Resolution Patch)
      Develop Transform Panel (Crop + Perspective)  [UI PROTOTYPE]
      Overlays over a Transformed Image (Mask Space vs Displayed Space) -- IMPLEMENTED
+     Rotating a Developed Image (the Recipe Follows the Photo)
      White Balance (Absolute, Kelvin) -- IMPLEMENTED
      Curves Panel (Tone Curve)
      Calibrate Panel (RGB Primaries)
@@ -4599,6 +4600,18 @@ o maskViewportToNorm / maskNormToViewport go through it, so hit-testing, draggin
 
 Under a perspective warp the gradient RAMPS (linear/radial) are positioned correctly but their spacing stays linear on screen; the tint rasters, which go through the full projective map, are exact.
 
+
+⏺ Develop / Image Edit (Parametric Adjustments) > Rotating a Developed Image (the Recipe Follows the Photo)
+
+Cmd+[ / Cmd+] (MW::setRotation) turns the image. Three things used to stay behind in Develop, each found by rotating in Develop and then opening the crop tool.
+
+THE PIXELS DEVELOP RENDERS FROM. The loupe and the ImageCache image were turned, but Develop renders from its own copies. MW::invalidateDevelopAfterRotation drops them: a DISPLAY-REFERRED WorkingImage (JPEG/TIFF/HEIC, or raw in preview mode) is built from the already-rotated display image, so it is removed and rebuilt from the ImageCache (which setRotation has just turned -- that call used to rotate a null QImage and cache it). A scene-referred raw work is sensor-native and developOrientationDegrees applies the model's orientation on every render, so it is kept rather than re-demosaiced. For the current image the interactive proxy (keyed only by path, so it survived), the stack cache (a 180 degree turn keeps its size check happy), the retained frames, and -- for display-referred works -- the Range/Subject/Sky/Depth refs and the brush guide, all computed in the old frame, go too.
+
+THE RECIPE'S COORDINATES. Everything positional in an EditStack is normalized in the ORIENTED frame: gradients, brush and object strokes, Replace spots, the perspective quad, and the crop (post-warp, which turns with it). For raw as much as JPEG, since raw masks are mapped from output coordinates. Develop/editrotate.h re-expresses them: points rotate; quad corners are relabelled so TL is still top-left; the crop rect rotates as a rectangle; radial rx/ry SWAP on a quarter turn (rx is a fraction of W and ry of H, and the ellipse (a,b) turned 90 degrees is (b,a) at the same angle, so the angle is untouched); sizes are fractions of the long edge and do not change; ranges and AI masks are not positional. DevelopProperties::rotateImageEdits applies it to the stack and to every History snapshot of the image (DevelopHistory::transformAll -- a rotation is not an edit step, and undoing across it must not bring back the old frame), flushes the sidecar and re-renders. Pinned by tst_editrotate: each stored form, a turn and its inverse, four quarter turns.
+
+THE STORED PREVIEWS. The 256px sidecar thumbnail and the DevPreviewCache loupe preview are rendered already rotated and checked only against the recipe's hash (Metadata::devPreviewKey), which a tone-only recipe keeps through a rotation -- so they were served as current. rotateImageEdits runs AFTER MW has dropped its frames, so flushImage's provider has nothing to give and CLEARS them; an unedited image (a raw's default render) has its preview dropped directly. The next render writes fresh ones.
+
+THE GRID THUMBNAIL. Dropping the develop preview makes MW::devPreviewUpdated re-read the camera thumbnail, and two things turned that re-read back to the old orientation. ThumbCache stores icons ALREADY ROTATED and judges freshness by the image file's size and mtime, which a rotation into the sidecar does not change -- so invalidateDevelopAfterRotation now drops the entry (ThumbCache::onDeleted). And on an ICON-ONLY read Reader passes loadThumb the PREVIOUS row's ImageMetadata (readMetadata was skipped), so the icon was turned by whatever image that reader had parsed last; Reader::read now fills orientation, rotationDegrees, developEdited and the size from the model, as it already did the thumbnail offsets.
 
 ⏺ Develop / Image Edit (Parametric Adjustments) > White Balance (Absolute, Kelvin) -- IMPLEMENTED
 

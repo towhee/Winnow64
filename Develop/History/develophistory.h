@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <functional>
 #include "Develop/editstack.h"
 
 /*
@@ -123,6 +124,19 @@ public:
         const int n = byImage.value(path).size();
         if (i < 0 || i >= n) return;
         posByImage[path] = i;
+        emit changed(path);
+    }
+
+    /* Apply f to EVERY snapshot of path's history. For a change that re-expresses the
+       recipe rather than editing it -- an image rotation moves every stored coordinate
+       into the new frame (Develop/editrotate.h) -- so that stepping back through the
+       history does not restore masks and crops measured in the old one. Not a step of
+       its own: the rotation is not a develop edit, and undoing it here would leave the
+       image turned and its recipe not. */
+    void transformAll(const QString &path, const std::function<void(EditStack &)> &f) {
+        auto it = byImage.find(path);
+        if (it == byImage.end()) return;
+        for (HistoryEntry &e : *it) f(e.stack);
         emit changed(path);
     }
 
