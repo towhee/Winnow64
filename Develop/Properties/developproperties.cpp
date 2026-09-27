@@ -1,6 +1,7 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/cameraprofilestore.h"
 #include "Cache/devpreviewcache.h"
+#include "Develop/editrotate.h"
 #include "Develop/Properties/scopeheader.h"
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
@@ -7394,6 +7395,47 @@ void DevelopProperties::topUpDevPreviews(const QString &fPath)
 
     toppedUpPath = fPath;
     toppedUpKey = key;
+}
+
+void DevelopProperties::rotateImageEdits(const QString &fPath, int degrees)
+{
+/*
+    Called by MW::setRotation for every rotated image, AFTER MW has dropped its own
+    frames and proxy for it (MW::invalidateDevelopAfterRotation) -- the order matters:
+    flushImage asks MW for a preview, and MW must by then have nothing from the old
+    orientation to give, so the stale previews are CLEARED rather than re-saved under
+    the new recipe's hash.
+
+    Every stored coordinate is re-expressed in the rotated frame (EditRotate::stack), and
+    so is every History snapshot, so undo does not bring back masks in the old frame.
+
+    PREVIEWS GO EVEN WHEN NOTHING MOVED. A recipe of tone and colour alone is unchanged
+    by a rotation, so its hash -- the only thing the stored previews are checked against
+    -- is unchanged too, and the thumbnail and loupe previews rendered in the old
+    orientation would be served as current. An unedited image has no recipe to flush,
+    but a raw's default-render preview is just as stale, so it is dropped directly.
+*/
+    if (G::isLogger) G::log("DevelopProperties::rotateImageEdits", fPath);
+    if (fPath.isEmpty() || !EditRotate::isRotation(degrees)) return;
+
+    EditStack &s = stackFor(fPath);
+    EditRotate::stack(s, degrees);
+    if (history)
+        history->transformAll(fPath, [degrees](EditStack &e) { EditRotate::stack(e, degrees); });
+
+    if (!s.isIdentity()) {
+        dirty.insert(fPath);
+        flushImage(fPath);              // new recipe, previews cleared (see above)
+    }
+    else {
+        DevPreviewCache::instance().onDeleted(fPath);
+        emit devPreviewUpdated(fPath, QImage());
+    }
+
+    if (fPath != currentImagePath) return;
+    if (spotMode) emitSpotPins();
+    syncPropagateBase();                // the rotated recipe is the new diff baseline
+    emit paramsChanged();               // re-render in the new frame
 }
 
 void DevelopProperties::flushImage(const QString &fPath)

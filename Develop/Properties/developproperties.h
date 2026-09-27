@@ -192,6 +192,10 @@ public:
     void clearScopeData();
     bool wantsScopeData() const;
     void flushImage(const QString &fPath);  // write one image's dirty stack to sidecar
+    /* fPath was just rotated by degrees (90 = clockwise): move its recipe's masks,
+       spots, crop and quad into the new frame, and drop its developed previews, which
+       were rendered in the old one. See Develop/editrotate.h. */
+    void rotateImageEdits(const QString &fPath, int degrees);
     void flushAll();                        // write every dirty stack (quit/pre-op)
 
     /* Bring BOTH preview tiers up to date for fPath when the render has already produced

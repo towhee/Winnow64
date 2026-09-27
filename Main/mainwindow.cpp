@@ -8861,6 +8861,8 @@ void MW::setRotation(int degrees)
         }
         // after the cache holds the rotated image: Develop rebuilds from it
         invalidateDevelopAfterRotation(fPath);
+        // then the recipe: its coordinates follow the photo, its previews are dropped
+        if (developProperties) developProperties->rotateImageEdits(fPath, degrees);
 
         // update exif in image
         QString orient;
@@ -11577,10 +11579,17 @@ void MW::invalidateDevelopAfterRotation(const QString &fPath)
       developFrame /     the frames the sharpening preview and the devPreview encode
       developFullFrame   derive from.
 
-    Then re-render, as the denoise completion does. Call AFTER the ImageCache holds the
-    rotated image.
+    Then DevelopProperties::rotateImageEdits re-expresses the recipe and re-renders.
+    Call AFTER the ImageCache holds the rotated image.
 */
     if (G::isLogger) G::log("MW::invalidateDevelopAfterRotation", fPath);
+
+    /* The thumbnail index stores icons ALREADY ROTATED and judges freshness by the
+       image file's size and mtime -- which a rotation into the sidecar does not touch.
+       The grid re-reads the icon once the develop preview is dropped (MW::
+       devPreviewUpdated), and without this it was served the old orientation. */
+    ThumbCache::instance().onDeleted(fPath);
+
     auto work = WorkingImageCache::instance().get(fPath);
     if (work && !work->sceneReferred) WorkingImageCache::instance().remove(fPath);
 
@@ -11597,10 +11606,25 @@ void MW::invalidateDevelopAfterRotation(const QString &fPath)
     developFullFrameFaithful = false;
     developFullFrameRecipe.clear();
     ++developParamsGen;                 // discard any stale in-flight full-res render
-    if (fPath == dm->currentFilePath && currentDevelopEditsVisible()) {
-        renderDevelopPreview(false);
-        developFullResTimer->start(kDevelopSettleMs);
+
+    /* Mask references computed on a DISPLAY-REFERRED work are in its (old) frame; a raw
+       work is sensor-native and its refs stay valid. Object refs are keyed on the
+       stroke JSON, which the rotation rewrites, so they miss by themselves. */
+    if (!(isFileRaw(fPath) && G::useRaw)) {
+        RangeMask::putRef(fPath, nullptr);
+        SubjectMask::putRef(fPath, nullptr);
+        SkyMask::putRef(fPath, nullptr);
+        DepthMask::putRef(fPath, nullptr);
+        BrushStamp::putGuide(fPath, nullptr);
+        if (developRangeRefPath == fPath) developRangeRefPath.clear();
+        if (developSubjectRefPath == fPath) developSubjectRefPath.clear();
+        if (developSkyRefPath == fPath) developSkyRefPath.clear();
+        if (developDepthRefPath == fPath) developDepthRefPath.clear();
+        maskFoldCacheClear();
     }
+    /* No render here: DevelopProperties::rotateImageEdits runs next, moves the recipe
+       into the new frame and emits paramsChanged, which renders. Rendering now would
+       paint the old recipe on the new frame for one pass. */
 }
 
 int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath) const
