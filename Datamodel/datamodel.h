@@ -634,7 +634,7 @@ public slots:
     void setCurrent(QModelIndex dmIdx, int instance);
     void setCurrent(QString fPath, int instance);
     bool setCurrentSF(QModelIndex sfIdx, int instance);
-    void setCached(int sfRow, bool isCached, int instance);
+    void setCached(int sfRow, QString fPath, bool isCached, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);
     void rebuildTypeFilter();

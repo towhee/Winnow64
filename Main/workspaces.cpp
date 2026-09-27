@@ -1784,6 +1784,71 @@ void MW::syncWorkflowSwitcher()
     }
 }
 
+QAction *MW::workflowAction(int wf) const
+{
+    /* The action a workflow button triggers and takes its enabled state from. Null
+       until createActions has run. */
+    switch (wf) {
+    case WfSource:    return browseWorkflowAction;
+    case WfDevelop:   return operationModeAction;
+    case WfKeywords:  return keywordsWorkspaceAction;
+    case WfEmbellish: return embellishWorkspaceAction;
+    case WfSlideShow: return slideShowWorkspaceAction;
+    case WfMap:       return mapWorkspaceAction;
+    default:          return nullptr;
+    }
+}
+
+void MW::syncWorkflowButtonEnabled(int wf)
+{
+/*
+    A workflow button, in the Module dock and the hidden status-bar switcher, is enabled
+    only when its action is, the DataModel has rows (a folder or catalog is loaded -- so
+    every button starts greyed when Winnow opens), and no catalog fill is running
+    (setCatalogLoading). A greyed button says why in its tooltip.
+*/
+    QAction *a = workflowAction(wf);
+    if (!a) return;
+    const QString key = wf == WfSource ? tr("E / G / T / C")
+                      : wf == WfDevelop ? tr("D")
+                      : wf == WfKeywords ? tr("K") : QString();
+    QString tip = a->text();
+    if (!key.isEmpty()) tip += "  (" + key + ")";
+    const bool hasRows = dm && dm->rowCount() > 0;
+    if (isCatalogLoading)
+        tip += "\n" + tr("Not available while the catalog is loading.");
+    else if (!hasRows)
+        tip += "\n" + tr("Not available until a folder or catalog is loaded.");
+    else if (!a->isEnabled()) {
+        const QString why = a->property("disabledReason").toString();
+        if (!why.isEmpty()) tip += "\n" + why;
+    }
+    for (QToolButton *btn : {workflowBtns.value(wf), moduleBtns.value(wf)}) {
+        if (!btn) continue;
+        btn->setEnabled(a->isEnabled() && hasRows && !isCatalogLoading);
+        btn->setToolTip(tip);
+    }
+}
+
+void MW::setCatalogLoading(bool loading)
+{
+/*
+    Grey every workflow button for the length of a catalog fill. Raised by
+    loadCatalogScope; lowered by folderChanged (the fill is in, or was aborted) and by
+    stop(), so an Esc or a new load never leaves the buttons dead. Always re-syncs,
+    even when the flag is unchanged: folderChanged relies on it to enable the buttons
+    once a folder's rows are in.
+*/
+    isCatalogLoading = loading;
+    syncWorkflowButtonsEnabled();
+}
+
+void MW::syncWorkflowButtonsEnabled()
+{
+    /* Every workflow button: after the model gains rows or is cleared. */
+    for (int wf = 0; wf < WfCount; ++wf) syncWorkflowButtonEnabled(wf);
+}
+
 void MW::styleWorkflowSwitcher()
 {
 /*
@@ -1796,13 +1861,26 @@ void MW::styleWorkflowSwitcher()
     splitter against the central widget, and a strip of buttons has no use for being
     dragged taller.
 */
+    /* THE MODULE COLOURS, set here independently of the Source panel's Library | Folders
+       (which keeps segmentedOptionCss's G::textColor). Appended after the shared CSS so
+       they win; the selected (yellow) and disabled colours still come from
+       segmentedOptionCss. */
+    int l = G::textShade - 40;
+    int m = G::backgroundShade + 20;
+    const QColor unselectedColor = QColor(l,l,l);  //G::textColor;    // an unselected module name
+    const QColor separatorColor  = QColor(m,m,m);    // the " | " between module names
+    const QString moduleCss =
+        "QToolButton:!checked:enabled { color:" + unselectedColor.name() + "; }"
+        "QLabel { color:" + separatorColor.name() + "; }";
+
     /* Not bold, in either row: at the Module dock's size the yellow alone is enough. */
-    const QString css = segmentedOptionCss(0, /*boldSelected*/ false);
+    const QString css = segmentedOptionCss(0, /*boldSelected*/ false) + moduleCss;
     for (QToolButton *btn : std::as_const(workflowBtns))
         if (btn) btn->setStyleSheet(css);
 
     if (!moduleDock || !moduleDock->content()) return;
-    moduleDock->content()->setStyleSheet(segmentedOptionCss(qRound(1.5 * G::fontSize), false));
+    moduleDock->content()->setStyleSheet(
+        segmentedOptionCss(qRound(1.5 * G::fontSize), false) + moduleCss);
     moduleDock->content()->adjustSize();
     /* widget() is the content's FrameLineBox; its hint includes any frameLine inset. */
     moduleDock->widget()->adjustSize();

@@ -735,10 +735,12 @@ void MW::createImageCache()
     /* RAW demosaic progress -> the "Demosaic" status-bar row (MW gates on current image +
        Winnow + Auto-run off). Clear it when the current image finishes caching. */
     connect(imageCache, &ImageCache::demosaicProgress, this, &MW::onDemosaicProgress);
-    connect(imageCache, &ImageCache::setCached, this, [this](int sfRow, bool isCached, int){
+    connect(imageCache, &ImageCache::setCached, this,
+            [this](int, QString fPath, bool isCached, int){
         // Named for the ingest probe -- see catalogScanner::status.
         IngestProbe::Scope _ip("imageCache::setCached -> clearProgress");
-        if (isCached && dm && sfRow == dm->currentSfRow)
+        // By path: a filter change between emit and delivery re-numbers the proxy rows.
+        if (isCached && dm && fPath == dm->currentFilePath)
             progress->clearProgress(progressDemosaicRow);
     });
 
@@ -3411,14 +3413,8 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
         btns[wf] = btn;
         layout->addWidget(btn);
         connect(btn, &QToolButton::clicked, this, [this, wf]() {
-            QAction *a = nullptr;
-            if (wf == WfSource) a = browseWorkflowAction;
-            else if (wf == WfDevelop) a = operationModeAction;
-            else if (wf == WfKeywords) a = keywordsWorkspaceAction;
-            else if (wf == WfEmbellish) a = embellishWorkspaceAction;
-            else if (wf == WfSlideShow) a = slideShowWorkspaceAction;
-            else if (wf == WfMap) a = mapWorkspaceAction;
-            if (a && a->isEnabled()) a->trigger();
+            QAction *a = workflowAction(wf);
+            if (a && a->isEnabled() && !isCatalogLoading) a->trigger();
             syncWorkflowSwitcher();
         });
     }

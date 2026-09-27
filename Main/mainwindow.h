@@ -438,6 +438,15 @@ public:
     bool loadCurtainUp = false;
     LoadCurtain *centralCurtain = nullptr;
     LoadCurtain *thumbCurtain = nullptr;
+    /*  THE MODULE BUTTONS ARE GREYED UNTIL THE MODEL HAS ROWS (from launch, and after
+        any clear) AND WHILE A CATALOG FILL RUNS: from loadCatalogScope until
+        folderChanged (or a stop). A workflow switch mid-fill would rebuild the layout
+        under a model that is still arriving. See MW::syncWorkflowButtonEnabled. */
+    void setCatalogLoading(bool loading);
+    void syncWorkflowButtonEnabled(int wf);
+    void syncWorkflowButtonsEnabled();
+    QAction *workflowAction(int wf) const;
+    bool isCatalogLoading = false;
     /*  A user sort asked for while metadata was still loading (see MW::sortChange), run
         by applyDeferredSort from metadataComplete. */
     bool sortDeferredForMetadata = false;
