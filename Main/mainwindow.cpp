@@ -666,8 +666,30 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         fflush(stderr);
     }
 
-    if (fsTree->select(folderPath))
-        folderSelectionChange(folderPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
+    /*  WINNOW_SELFTEST_MUTATION=1 loads a TEMPORARY COPY of the folder, because the
+        mutation test creates and deletes files (see Main/selftestmutation.cpp). The copy
+        is removed at the end of the run; _Exit skips QTemporaryDir's destructor. */
+    const bool mutation = qEnvironmentVariableIntValue("WINNOW_SELFTEST_MUTATION") == 1;
+    QString loadPath = folderPath;
+    if (mutation) {
+        loadPath = QDir::tempPath() + "/WinnowSelfTestMutation_" +
+                   QString::number(QCoreApplication::applicationPid());
+        QDir().mkpath(loadPath);
+        const QDir src(folderPath);
+        for (const QString &n : src.entryList(QDir::Files))
+            QFile::copy(src.filePath(n), QDir(loadPath).filePath(n));
+        qputenv("WINNOW_SELFTEST_MUTATION_SRC", folderPath.toLocal8Bit());
+        fprintf(stderr, "SELFTEST: mutation test on copy %s\n",
+                loadPath.toLocal8Bit().constData());
+        QTimer::singleShot(settleMs / 2, this, [this, loadPath]() {
+            QThreadPool::globalInstance()->waitForDone(30000);
+            selfTestModelMutation(loadPath);
+            QDir(loadPath).removeRecursively();
+        });
+    }
+
+    if (fsTree->select(loadPath))
+        folderSelectionChange(loadPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
     /*  WINNOW_SELFTEST_CATALOG_QUERY loads a CATALOG SEARCH instead of stopping at
         the folder, so the other of the two load paths gets exercised headlessly.
@@ -5613,12 +5635,7 @@ void MW::refresh()
 */
     QString srcFun = "MW::refresh";
     if (G::isLogger) G::log(srcFun);
-    // update image counts
-    fsTree->updateCount();
-    bookmarks->updateCount();
-    updateLibraryTree();
-    dm->refresh();
-    refreshViews(srcFun);
+    applyModelChange(QStringList(), QStringList(), srcFun, /*reconcileDisk*/true);
 }
 
 void MW::refreshAfterRemoval(const QStringList &removed)
@@ -5630,13 +5647,9 @@ void MW::refreshAfterRemoval(const QStringList &removed)
 */
     QString srcFun = "MW::refreshAfterRemoval";
     if (G::isLogger) G::log(srcFun);
-    fsTree->updateCount();
-    bookmarks->updateCount();
     /*  The catalog demoted these rows as they went (FileOps::onDeleted), so the Library's
-        folder counts moved too. */
-    updateLibraryTree();
-    dm->removeFiles(removed);
-    refreshViews(srcFun);
+        folder counts moved too -- applyModelChange updates them. */
+    applyModelChange(QStringList(), removed, srcFun);
 }
 
 void MW::refreshViews(QString srcFun)
@@ -14833,14 +14846,10 @@ void MW::generateMeanStack()
     connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
     QString fPath = meanStack->mean();
     if (fPath != "") {
-        int dmRow = dm->insert(fPath);
-        int sfRow = dm->rowFromPath(fPath);
-        qDebug() << "MW::generateMeanStack" << sfRow << dmRow << fPath;
-        // metadataCacheThread->loadIcon(sfRow);
+        /* Through the on-the-fly pipeline (metadata, proxy, filters), not a bare
+           dm->insert, which left the row unread and uncounted. */
+        insertFiles(QStringList{fPath});
         sel->setCurrentPath(fPath);
-        // update FSTree image count
-        fsTree->refreshModel();
-        bookmarks->updateCount();
 
         if (thumbView && thumbView->isVisible()) {
             thumbView->refreshIcons("MW::generateMeanStack");

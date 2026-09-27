@@ -535,6 +535,25 @@ if(TARGET Winnow)
     )
 
     # -------------------------------------------------------------------------
+    # model_mutation — on-the-fly insert / replace / delete / refresh against a
+    # TEMPORARY copy of the fixture folder (MW::selfTestModelMutation). Each step
+    # checks DataModel::verifyIntegrity, presence, sort order, metadata loaded and
+    # the proxy mirroring source order. Runs with the model-contract tester too,
+    # so a nested or unbalanced begin/end insert/remove aborts the run.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME model_mutation
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(model_mutation PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MUTATION=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=20000"
+        PASS_REGULAR_EXPRESSION "SELFTEST: MUTATION PASS"
+        FAIL_REGULAR_EXPRESSION "MUTATION FAIL|MODELINTEGRITY|ROWLOSS"
+        LABELS "smoke"
+        TIMEOUT 180
+    )
+
+    # -------------------------------------------------------------------------
     # catalog_capture — a folder load must actually reach the catalog. This had
     # no coverage and was silently broken: folderChangeCompleted read
     # catalogRows() inline, that skips rows not yet MetaLoaded, and the status

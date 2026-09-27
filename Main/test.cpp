@@ -767,7 +767,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     QString destPath = dm->primaryFolderPath() + "/" + fi.fileName();
     qDebug() << destPath;
     QFile::copy(fusedPath, destPath);
-    dm->insert(destPath);
+    insertFiles(QStringList{destPath});
     sel->select(destPath);
     qDebug() << "G::allMetadataAttempted =" << G::allMetadataAttempted;
     waitUntilMetadataLoaded(3000);

@@ -307,6 +307,7 @@ set(WINNOW_SOURCES
     Main/catalogenumerate.cpp
     Main/catalogscanner.cpp
     Main/devpreviewbuilder.cpp
+    Main/selftestmutation.cpp
     Main/diagnostics.cpp
     Main/dockwidget.cpp
     Main/showhidebar.cpp
