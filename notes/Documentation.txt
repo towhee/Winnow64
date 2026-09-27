@@ -229,6 +229,8 @@ Follow the format conventions above for anything new. In particular, do not hard
 
 18. FILE HANDLING
      File Operations and Companion Files (the FileOps Choke Point)
+     Sidecar Naming (Full-name Sidecars for JPEG, TIFF, PNG and DNG)
+     Writing Metadata Into Image Files (Permit Image File Modification)
 
 19. IMAGE COLOUR MANAGEMENT (EMBEDDED PROFILES)
      HEIC and the colr Box
@@ -5429,7 +5431,7 @@ WHAT IT PROVIDES. companions() (one definition of "the sidecars belonging to thi
 
 THE FLUSH IS NOT OPTIONAL. Develop edits are written on a 2s debounce. Before FileOps only copy and export flushed first, so deleting, renaming, moving or ingesting an image inside that window let the pending write land AFTERWARDS -- recreating a sidecar at the old path after a rename, or resurrecting one that had just been deleted. Every entry point now flushes first. This was a live data-loss bug for the recipe, independent of previews.
 
-companions() IS DELIBERATELY NARROWER THAN THE RENAME SCAN. It matches only sidecar suffixes (.xmp, .txt), case-insensitively. Every file sharing the base name would sweep in the paired JPG of a raw+jpg pair, and trashing a NEF must not trash its JPG. Rename is the one operation that genuinely wants the wider net and keeps its own scan; it notifies FileOps per file so the devPreview cache follows.
+companions() IS DELIBERATELY NARROWER THAN THE RENAME SCAN. It matches only sidecar suffixes (.xmp, .txt), case-insensitively, and only the sidecars that are THIS image's under the naming rule in "Sidecar Naming" below. Every file sharing the base name would sweep in the paired JPG of a raw+jpg pair, and trashing a NEF must not trash its JPG -- nor may trashing the JPG take the NEF's IMG_1.xmp, which it did until full-name sidecars. Rename is the one operation that genuinely wants the wider net and keeps its own scan; it notifies FileOps per file so the devPreview cache follows.
 
 COPY DOES NOT DUPLICATE THE devPreview. A copied image carries its sidecar, so the 256px thumbnail travels; the devPreview simply misses at the destination and is re-rendered on the next edit. Duplicating it would double the cache for every copy to buy back one decode.
 
@@ -5440,6 +5442,52 @@ ROUTED OPERATIONS: delete/trash (MW::deleteFiles), rename (all four paths in Ren
 DEFECTS FIXED WHILE ROUTING. External drops from Finder/Explorer now carry sidecars (the block used to be gated on isInternal, so a dropped raw arrived without its ratings or recipe). Folder counts refresh after ANY drop, not only a CopyAction. Ingest no longer reports a spurious integrity failure for every image that simply has no sidecar, no longer files a failed backup copy under "integrity failure" against the wrong pair of paths, and no longer runs a second uniquifying rename that could desynchronise an image from its sidecar. Utilities::backup carries the sidecars, so restoring a backup no longer loses the image's edits.
 
 MOVE DROPS STILL DELETE FROM THE DRAG SOURCE. Both drop handlers always copy; the source deletion comes from IconView::startDrag after drag->exec() reports a MoveAction. This looks split but is correct: it is also what makes dragging OUT of Winnow to Finder behave as a move. Do not "fix" it by deleting in the drop handler -- an internal move would then delete twice.
+
+
+⏺ File Handling > Sidecar Naming (Full-name Sidecars for JPEG, TIFF, PNG and DNG)
+
+THE RULE, in Utilities/fileops.h (FileOps::sidecarPath and friends), and nowhere else:
+
+  Raw and HEIC              IMG_1.NEF  ->  IMG_1.xmp       Lightroom's name
+  JPEG, TIFF, PNG, DNG      IMG_1.JPG  ->  IMG_1.JPG.xmp   full-name sidecar
+
+WHY. Lightroom Classic writes XMP INTO JPEG, TIFF, PNG, PSD and DNG files and IGNORES any .xmp beside them; only proprietary raw (and HEIC) get a sidecar, named by replacing the extension. So in a raw+JPEG pair IMG_1.xmp is the RAW's, and Winnow -- which used to write IMG_1.xmp for every format -- was writing a JPEG's title, rating, keywords and Develop recipe into the raw's Lightroom sidecar. Lightroom then showed them on the raw and never on the JPEG. The full-name sidecar cannot collide. It is Winnow-private: the Develop recipe always lives there, and so do the standard fields while "Permit image file modification" (G::modifySourceFiles, default OFF) forbids writing into the image. When that preference is on, the standard fields go INTO the file instead -- see "Writing Metadata Into Image Files" below.
+
+READ PRIORITY IS UNCHANGED: the image's own embedded XMP first, then the sidecar by newer-wins on xmp:ModifyDate (Metadata::parseSidecar). That is correct for the full-name formats too: if Lightroom later rewrites the file's embedded XMP, its newer ModifyDate beats a stale Winnow sidecar.
+
+LEGACY SIDECARS. A full-name image with no IMG_1.JPG.xmp still READS an old IMG_1.xmp (FileOps::existingSidecar) -- unless a file of any other format shares the base name, in which case it is that file's (a raw's Lightroom sidecar) and is left alone. The first write adopts it (FileOps::prepareSidecarForWrite): MOVED to the new name when the image is the only file with that base name, COPIED when another full-name image may still read it (the DNG of a DNG+JPG pair). Every sidecar writer calls prepareSidecarForWrite; every reader calls existingSidecar. A JPEG in a raw+JPEG pair therefore loses sight of anything an older Winnow wrote to the shared IMG_1.xmp for it -- that data could not be told apart from the raw's.
+
+THE OWNERSHIP TEST NEEDS THE FOLDER'S FILE NAMES. existingSidecar is on the folder-load path (DataModel's Sidecar column, parseSidecar on the MetaRead workers), and in a raw+JPEG folder every JPEG asks. So FileOps keeps one names-only listing per folder, keyed on the folder's mtime and guarded by a mutex; trashFiles builds its own once per folder, because every trash moves the mtime.
+
+EVERYTHING THAT BUILDS A SIDECAR NAME GOES THROUGH IT: the Metadata writers and readers (writeXMP, writeOrientation, writeDevelopSidecar, writeKeywordsToSidecar, readDevelopSidecar, readDevThumb, parseSidecar, the metadata report), the catalog freshness stamps (catalogscanner, catalogenumerate, IndexMetadata::candidate, catalogRowFor, the keyword write-backs), the focus-stack output label, and FileOps::companionDest for anything that renames a companion (move, copy, ingest, Utilities::backup): DSC_1.JPG.xmp becomes <new>.JPG.xmp, never <new>.xmp. The rename dialog keeps its own base-name scan but now rebuilds names with completeSuffix, so it preserves everything after the base name. Metadata::sidecarPath is gone. Base names use the LAST dot, as Lightroom does: a.b.NEF -> a.b.xmp (older Winnow wrote a.xmp). Pinned by tst_fileops.
+
+
+⏺ File Handling > Writing Metadata Into Image Files (Permit Image File Modification)
+
+WHAT. With "Permit image file modification" on (G::modifySourceFiles; Preferences > General or the status-bar delta button; default OFF), Metadata::writeXMP and Metadata::writeKeywordsToSidecar write rating, label, title, creator, rights, email, url and keywords into the XMP packet INSIDE a JPEG, TIFF, PNG or DNG -- where Lightroom Classic reads them, since it ignores sidecars for those formats. Raw and HEIC keep the .xmp sidecar in every case. Develop recipes and their previews are never embedded; they stay in the full-name sidecar (see "Sidecar Naming"). Orientation is not embedded yet: writeOrientation still uses ExifTool when permitted.
+
+THE CONTAINERS, in Metadata/xmpembed.{h,cpp} (namespace XmpEmbed), which is pure Qt Core so tst_xmpembed drives it on real bytes:
+
+  JPEG   the APP1 "http://ns.adobe.com/xap/1.0/" segment is replaced, or inserted after the leading JFIF/Exif segments (Exif has to stay first). Extended XMP segments are left alone. Rebuilt in memory and replaced atomically with QSaveFile. A packet over 65,502 bytes is TooLarge (padding is dropped first).
+  PNG    the iTXt "XML:com.adobe.xmp" chunk (uncompressed) is replaced, or inserted before the first IDAT, with a fresh CRC. Rebuilt and replaced atomically.
+  TIFF   IFD0 tag 700. NOTHING EXISTING IS MOVED OR OVERWRITTEN. The packet is appended at the end of the file; then either the 700 entry is repointed (8 bytes), or -- when IFD0 has none -- a copy of IFD0 with the entry added in tag order is appended and the header's 4-byte IFD0 pointer is repointed. Each step is fsync'd before the pointer that makes it reachable is written, so a crash at any point leaves the old file plus unreferenced bytes at the end. Rewriting was ruled out because a TIFF can be hundreds of MB and writeXMP runs on the GUI thread per image; measured on a 209 MB TIFF, the whole read-modify-write took a quarter of a second. The price is that each edit leaves the previous packet behind (a few KB). BigTIFF is refused.
+  DNG    the same as TIFF.
+
+A PACKET WINNOW CANNOT READ IS NEVER REPLACED. XmpEmbed::read reports Malformed for a packet it found but could not lift an <x:xmpmeta> out of (a compressed PNG iTXt, an x:xapmeta packet), and Metadata::embedXmp refuses a packet rapidxml cannot parse, allowing only the repair that adds (a missing rdf:about). Xmp::fix() would otherwise start from an empty skeleton and silently delete another application's data -- Lightroom's develop settings, for one. Every refusal is reported with G::issue and the edit is written to the sidecar instead, so nothing the user typed is lost, only not where they asked. The backup (G::backupBeforeModifying, Utilities::backup) is taken before any write.
+
+THE SIDECAR IS STRIPPED AND MARKED after a successful embed (Metadata::markSidecarEmbedded): the standard fields come out and winnow:MetadataEmbedded="True" goes in. Without that the stale copy would win later: a Develop edit bumps the sidecar's xmp:ModifyDate, newer-wins then prefers the sidecar, and its dc:subject -- read unguarded, so that a removal syncs -- would clear every keyword. Metadata::parseSidecar reads only orientation from a marked sidecar. A later sidecar write (permission turned off again) removes the marker, and writeXMP then writes EVERY field so the sidecar can speak for the image again.
+
+XMP SHAPES, fixed while here because Lightroom reads the embedded packet with a real XMP toolkit. dc:title and dc:rights are written as a language alternative (rdf:Alt, xml:lang="x-default") and dc:creator as a sequence (rdf:Seq) -- Xmp::ElementType LangAlt and Seq -- where Winnow used to write plain attributes. Values are UTF-8; writeXMP passed them through toLatin1(), which turned anything outside Latin-1 into '?'. Iptc4xmpCore:CreatorContactInfo (email, url) is created INSIDE rdf:Description when first needed (Xmp::ensureParent); the skeleton used to carry it as a sibling of rdf:Description, which is not valid RDF. The reader already handled all three shapes, so existing sidecars read as before.
+
+A NON-EMPTY XMP CREATOR NOW WINS ON READ. Metadata/xmpapply.h took the XMP dc:creator only when the parser had found no EXIF Artist, and Png::parse did the same for title, creator and rights against its tEXt/eXIf values. Harmless while edits lived in a sidecar (parseSidecar overrides afterwards), but with the edit embedded that guard made a creator typed in Winnow read back as the camera's Artist. XMP is where Winnow and Lightroom write an edit, so a non-empty XMP value now wins -- the MWG rule -- and an empty one still never clears the EXIF value.
+
+IPTC-IIM IS NOT UPDATED. A JPEG or TIFF whose APP13/IPTC block also carries a title or keywords keeps the old values there. Winnow's own readers apply XMP over IIM, and MWG-compliant readers (Lightroom included) prefer XMP while the IIM digest still matches, which it does since the IIM is untouched. Macintosh extended attributes (Finder tags) are lost when a JPEG or PNG is replaced, as with any write-and-rename.
+
+EVERY CALLER NOW WRITES A FILE THE USER CAN LOSE, so a caller that names the WRONG image is no longer a stray sidecar but a changed original. The first in-app test found one: InfoView::dataChanged built a list of datamodel rows and then indexed the model with selection.at(i).row() -- a PROXY row -- so in a multi-folder set a title typed for _test5/2019-09-24_2003.JPG was embedded into an unrelated image in the Photos library (repaired by hand). It uses the datamodel rows now. MW::setRating, MW::setColorClass and the keyword paths were audited and map proxy to datamodel correctly. Any new writer must do the same.
+
+WHERE EDITS GO IS SHOWN WHILE EDITING. InfoView::updateSaveNote puts it on the Tags header -- "saved in the image file", "saved to a Winnow sidecar" (tooltip: Lightroom will not see it, and how to turn the permission on), or "saved to sidecar" for raw -- refreshed on selection and when the permission is toggled (MW::toggleModifyImages).
+
+VERIFIED on real files (two Lightroom-edited JPEGs, a PNG, a DNG, a 209 MB TIFF): every existing XMP property survived as ExifTool reports it, the added one appeared, and exiftool -validate gave the same warnings before and after. Pinned by tst_xmpembed.
 
 
 *** IMAGE COLOUR MANAGEMENT (EMBEDDED PROFILES) ***

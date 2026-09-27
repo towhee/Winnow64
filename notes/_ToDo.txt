@@ -8,15 +8,9 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO DO
-- the issue log gets hundreds of Invalid sfIdx … DataModel::setCached warnings a day,
-going back to at least 16 September. My test wrote 7 of them, during filter toggles. The
-likely cause is the ImageCache reporting a cached image by a proxy row number that a
-filter has since changed. It's harmless so far, but it's noise that could hide real
-problems.
-- Develop Basic hide Profile and Tone mapping except global scope and raw files
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
-- Thumnail tooltip over file name showing file name.
+- Thumbnail tooltip over file name showing borders tooltip.
 - Edit title not persistent or applying to embellish
 - If in Library, bookmark applies Folders filter OR
   Separate workspaces for Library and Folders

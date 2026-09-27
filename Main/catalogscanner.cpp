@@ -1,4 +1,5 @@
 #include "Main/catalogscanner.h"
+#include "Utilities/fileops.h"
 #include "Main/catalogenumerate.h"
 #include "Cache/pathkey.h"
 #include "Metadata/keywordpaths.h"
@@ -149,8 +150,9 @@ CatalogRow CatalogScanner::stampOnly(const QString &fPath)
     r.srcSize = fi.size();
     r.srcMtime = fi.lastModified().toSecsSinceEpoch();
 
-    const QFileInfo si(fi.absoluteDir().path() + "/" + fi.completeBaseName() + ".xmp");
-    if (si.exists()) r.sidecarMtime = si.lastModified().toSecsSinceEpoch();
+    const QString sc = FileOps::existingSidecar(fPath);
+    const QFileInfo si(sc);
+    if (!sc.isEmpty()) r.sidecarMtime = si.lastModified().toSecsSinceEpoch();
     return r;
 }
 

@@ -1,5 +1,6 @@
 #include "Main/catalogenumerate.h"
 #include "Utilities/utilities.h"
+#include "Utilities/fileops.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -100,8 +101,9 @@ QVector<CatalogDiskFile> catalogScopeFiles(const CatalogScope &scope,
                 const QFileInfo fi(d.path);
                 d.size = fi.size();
                 d.mtime = fi.lastModified().toSecsSinceEpoch();
-                const QFileInfo si(dir.path() + "/" + fi.completeBaseName() + ".xmp");
-                if (si.exists()) d.sidecarMtime = si.lastModified().toSecsSinceEpoch();
+                const QString sc = FileOps::existingSidecar(d.path);
+                const QFileInfo si(sc);
+                if (!sc.isEmpty()) d.sidecarMtime = si.lastModified().toSecsSinceEpoch();
             }
             out.append(d);
         }

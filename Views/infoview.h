@@ -31,6 +31,9 @@ public:
     InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView,
              Filters *filters, BuildFilters *buildFilters);
     void updateInfo(const int &row);
+    /* The Tags header says where an edit to the current image is saved -- see the
+       definition. Called by updateInfo and when the permission is toggled. */
+    void updateSaveNote();
     void clearInfo();
     void refreshLayout();
     void enable(bool isEnable);

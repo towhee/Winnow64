@@ -1267,6 +1267,7 @@ private slots:
     void setRatingBadgeVisibility();
     void setIconNumberVisibility();
     void setShootingInfoVisibility();
+    void revealInfoOverlayOnce();
 //    void selectTokenString();
     void changeInfoOverlay();
 //    void toggleThumbWrap();

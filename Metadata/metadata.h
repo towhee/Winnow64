@@ -55,7 +55,6 @@ public:
     void reportMetadata();
     void testNewFileFormat(const QString &path);
     bool parseSidecar();
-    QString sidecarPath(QString fPath);
     inline QString b(bool x)
     {
         if (x == true)  return "true";
@@ -150,6 +149,13 @@ public:
     bool writeKeywordsToSidecar(const QString &fPath, const QStringList &subject,
                                 const QStringList &hierarchical);
     static void writeOrientation(QString fPath, QString orientationNumber);
+    /*  The XMP packet INSIDE an image (JPEG/TIFF/PNG/DNG), used by writeXMP and
+        writeKeywordsToSidecar when "Permit image file modification" is on. See
+        Metadata/xmpembed.h. */
+    static bool embedXmp(const QString &fPath, const std::function<void(Xmp &)> &edit,
+                         const QString &src);
+    static void markSidecarEmbedded(const QString &fPath);
+    static QByteArray xmpNow();         // xmp:ModifyDate for "now"
 
     /* Per-image Develop edit state (base64 of the EditStack JSON) <-> the XMP sidecar's
        winnow:Develop attribute. Static and self-contained (open the sidecar, one Xmp item), so

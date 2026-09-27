@@ -5361,3 +5361,4 @@ Next is testing Map v1 in the app, since none of it has run properly yet: the fi
   3. Place names and a Location filter: fill City/State/Country from an offline GeoNames table, and add a Filter panel category: Visible on Map, Tagged, or Untagged.
   4. Saved Locations: named places with a radius, plus a Private option that strips GPS on export.
 
+example: Users/roryhill/Pictures/_test5/2019-09-24_2003.JPG

@@ -5,10 +5,13 @@
 #include "Cache/thumbcache.h"
 #include "Main/global.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QSqlDatabase>
 
 std::function<void()> FileOps::flushHook;
@@ -30,60 +33,177 @@ const QStringList &FileOps::sidecarSuffixes()
     return suffixes;
 }
 
+const QStringList &FileOps::fullNameSidecarFormats()
+{
+    static const QStringList formats = {"jpg", "jpeg", "tif", "tiff", "png", "dng"};
+    return formats;
+}
+
 namespace {
 
-/* Every sidecar in folder, keyed by lower-cased base name. Only the sidecar suffixes are
-   listed (QDir name filters are case-insensitive, so .XMP from another application still
-   matches), which keeps the listing to the sidecars rather than a stat of every image in
-   the folder. */
-using SidecarIndex = QHash<QString, QStringList>;
-
-SidecarIndex sidecarIndex(const QDir &folder)
+/* Lower-cased name split at the LAST dot: "IMG_1.JPG.xmp" -> ("img_1.jpg", "xmp").
+   QFileInfo::baseName stops at the FIRST dot, which would file IMG_1.JPG.xmp under
+   IMG_1 -- the raw's name -- and is exactly the confusion full-name sidecars exist to
+   avoid. */
+void splitName(const QString &name, QString &base, QString &suffix)
 {
-    QStringList filters;
-    for (const QString &suffix : FileOps::sidecarSuffixes()) filters << "*." + suffix;
-    SidecarIndex index;
-    const auto files = folder.entryInfoList(filters, QDir::Files | QDir::Hidden);
-    for (const QFileInfo &f : files) {
-        if (!FileOps::sidecarSuffixes().contains(f.suffix().toLower())) continue;
-        index[f.baseName().toLower()] << f.absoluteFilePath();
+    const int dot = name.lastIndexOf('.');
+    if (dot <= 0) { base = name.toLower(); suffix.clear(); return; }
+    base = name.left(dot).toLower();
+    suffix = name.mid(dot + 1).toLower();
+}
+
+/* Who else in a folder answers to a base name. images counts every non-sidecar file;
+   rawOwner is set when one of them is not a full-name format, which makes the
+   base-name IMG_1.xmp that file's. */
+struct Claim {
+    int images = 0;
+    bool rawOwner = false;
+};
+
+/* One folder, listed once (names only -- no stat per file):
+   sidecars  every sidecar, keyed by its lower-cased complete base name, so IMG_1.xmp is
+             under "img_1" and IMG_1.JPG.xmp under "img_1.jpg"
+   claims    every image's base name */
+struct FolderIndex {
+    QHash<QString, QStringList> sidecars;
+    QHash<QString, Claim> claims;
+};
+
+FolderIndex folderIndex(const QDir &folder)
+{
+    FolderIndex index;
+    const QStringList names = folder.entryList(QDir::Files | QDir::Hidden, QDir::NoSort);
+    QString base, suffix;
+    for (const QString &name : names) {
+        splitName(name, base, suffix);
+        if (FileOps::sidecarSuffixes().contains(suffix)) {
+            index.sidecars[base] << folder.absoluteFilePath(name);
+            continue;
+        }
+        Claim &c = index.claims[base];
+        ++c.images;
+        if (!FileOps::fullNameSidecarFormats().contains(suffix)) c.rawOwner = true;
     }
     return index;
 }
 
-QStringList companionsFrom(const SidecarIndex &index, const QFileInfo &info)
+/* The claims for info's folder, for the per-image read path. Folder load asks this once
+   per JPEG of a raw+JPEG folder, so the listing is cached and re-taken only when the
+   folder's mtime moves (any file added, removed or renamed). Worker threads call it. */
+Claim claimFor(const QFileInfo &info)
 {
-    const QString base = info.baseName();
-    if (base.isEmpty()) return {};
+    struct Entry { QDateTime mtime; QHash<QString, Claim> claims; };
+    static QMutex mutex;
+    static QHash<QString, Entry> cache;
+
+    const QString folder = info.absolutePath();
+    const QDateTime mtime = QFileInfo(folder).lastModified();
+    QString base, suffix;
+    splitName(info.fileName(), base, suffix);
+
+    QMutexLocker lock(&mutex);
+    auto it = cache.find(folder);
+    if (it == cache.end() || it->mtime != mtime) {
+        // a bound, not an LRU: a rebuild is one names-only listing
+        if (cache.size() > 64) cache.clear();
+        it = cache.insert(folder, {mtime, folderIndex(info.absoluteDir()).claims});
+    }
+    return it->claims.value(base);
+}
+
+QString legacySidecarPath(const QFileInfo &info)
+{
+    return info.absoluteDir().absoluteFilePath(info.completeBaseName() + ".xmp");
+}
+
+QStringList companionsFrom(const FolderIndex &index, const QFileInfo &info)
+{
+    if (info.fileName().isEmpty()) return {};
+    QString base, suffix;
+    splitName(info.fileName(), base, suffix);
     const QString self = info.absoluteFilePath();
     QStringList result;
-    for (const QString &s : index.value(base.toLower()))
+
+    // full-name: IMG_1.JPG.xmp -- also darktable's IMG_1.NEF.xmp
+    for (const QString &s : index.sidecars.value(info.fileName().toLower()))
         if (s != self) result << s;
+
+    // base-name: IMG_1.xmp -- a raw's own; a full-name image's only if it is alone
+    const bool ownsBase = !FileOps::fullNameSidecarFormats().contains(suffix)
+                          || index.claims.value(base).images <= 1;
+    if (ownsBase) {
+        for (const QString &s : index.sidecars.value(base))
+            if (s != self) result << s;
+    }
+    result.removeDuplicates();      // an extension-less name is its own base
     return result;
 }
 
 }  // namespace
 
+bool FileOps::usesFullNameSidecar(const QString &fPath)
+{
+    return fullNameSidecarFormats().contains(QFileInfo(fPath).suffix().toLower());
+}
+
+QString FileOps::sidecarPath(const QString &fPath)
+{
+    const QFileInfo info(fPath);
+    if (usesFullNameSidecar(fPath))
+        return info.absoluteDir().absoluteFilePath(info.fileName() + ".xmp");
+    return legacySidecarPath(info);
+}
+
+QString FileOps::existingSidecar(const QString &fPath)
+{
+    if (fPath.isEmpty()) return QString();
+    const QString path = sidecarPath(fPath);
+    if (QFileInfo::exists(path)) return path;
+    if (!usesFullNameSidecar(fPath)) return QString();
+
+    const QFileInfo info(fPath);
+    const QString legacy = legacySidecarPath(info);
+    if (!QFileInfo::exists(legacy)) return QString();
+    return claimFor(info).rawOwner ? QString() : legacy;
+}
+
+QString FileOps::prepareSidecarForWrite(const QString &fPath)
+{
+    const QString path = sidecarPath(fPath);
+    const QString existing = existingSidecar(fPath);
+    if (existing.isEmpty() || existing == path) return path;
+
+    /* existing is a legacy IMG_1.xmp this image reads. Never follow a symlink -- the
+       writers refuse one, and a copy or rename here would launder it. */
+    if (QFileInfo(existing).isSymLink()) return path;
+    const bool alone = claimFor(QFileInfo(fPath)).images <= 1;
+    const bool ok = alone ? QFile::rename(existing, path) : QFile::copy(existing, path);
+    if (!ok) {
+        G::issue("Warning", "Could not carry the old sidecar to its new name.",
+                 "FileOps::prepareSidecarForWrite", -1, existing);
+    }
+    return path;
+}
+
 QStringList FileOps::companions(const QString &fPath)
 {
     if (fPath.isEmpty()) return {};
     const QFileInfo info(fPath);
-    return companionsFrom(sidecarIndex(info.absoluteDir()), info);
+    return companionsFrom(folderIndex(info.absoluteDir()), info);
 }
 
-namespace {
-
-/* Companion destination for a companion of srcPath moving to dstPath. The companion
-   follows the destination's base name, so renaming DSC_001.NEF to Sunset.NEF takes
-   DSC_001.xmp to Sunset.xmp. */
-QString companionDest(const QString &companion, const QString &dstPath)
+QString FileOps::companionDest(const QString &companion, const QString &srcPath,
+                               const QString &dstPath)
 {
     const QFileInfo ci(companion);
+    const QFileInfo si(srcPath);
     const QFileInfo di(dstPath);
-    return di.absoluteDir().absoluteFilePath(di.baseName() + "." + ci.suffix());
+    const bool fullName =
+        ci.completeBaseName().compare(si.fileName(), Qt::CaseInsensitive) == 0;
+    const QString stem = fullName ? di.fileName() : di.completeBaseName();
+    return di.absoluteDir().absoluteFilePath(stem + "." + ci.suffix());
 }
-
-}  // namespace
 
 /*
     The develop preview cache folder is browsable but read-only: its files are named by an
@@ -115,7 +235,7 @@ bool FileOps::copyFile(const QString &srcPath, const QString &dstPath)
 
     const auto sidecars = companions(srcPath);
     for (const QString &s : sidecars) {
-        const QString dst = companionDest(s, dstPath);
+        const QString dst = companionDest(s, srcPath, dstPath);
         if (QFile::exists(dst)) QFile::remove(dst);
         if (!QFile::copy(s, dst)) {
             QString msg = "Copied the image but failed to copy its sidecar.";
@@ -146,7 +266,7 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
     }
 
     for (const QString &s : sidecars) {
-        const QString dst = companionDest(s, dstPath);
+        const QString dst = companionDest(s, srcPath, dstPath);
         if (QFile::exists(dst)) QFile::remove(dst);
         if (!QFile::rename(s, dst)) {
             QString msg = "Moved the image but failed to move its sidecar.";
@@ -188,7 +308,7 @@ FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
        and repaint are noise. */
     const int chunkSize = 100;
 
-    QHash<QString, SidecarIndex> folders;       // folder path -> its sidecars
+    QHash<QString, FolderIndex> folders;        // folder path -> its sidecars and claims
     QStringList chunkTrashed;
     int done = 0;
 
@@ -205,7 +325,7 @@ FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
             const QString folder = info.absolutePath();
             auto it = folders.find(folder);
             if (it == folders.end())
-                it = folders.insert(folder, sidecarIndex(info.absoluteDir()));
+                it = folders.insert(folder, folderIndex(info.absoluteDir()));
             const QStringList sidecars = companionsFrom(it.value(), info);
 
             if (!moveOneToTrash(fPath)) {

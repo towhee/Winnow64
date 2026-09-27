@@ -4363,7 +4363,7 @@ void ImageView::updateShootingInfo()
     infoOverlay->setText(infoText);
 }
 
-void ImageView::setShootingInfo(QString infoText)
+void ImageView::setShootingInfo(QString text)
 {
 /*
     Locate and format the info label, which currently displays the shooting
@@ -4371,14 +4371,22 @@ void ImageView::setShootingInfo(QString infoText)
     to help make it visible against different coloured backgrounds.
 
     window (w) and view (v) sizes are updated during resize
+
+    text empty = re-parse the template for the current image. EITHER WAY THE MEMBER
+    infoText ends up holding what is shown. The parameter used to be called infoText
+    too, so the re-parse landed in the parameter and the member kept the old string --
+    and scale() and resizeEvent() re-lay out with setShootingInfo(infoText), putting the
+    stale text straight back. An edited title showed for an instant and reverted.
 */
     if (G::isLogger) G::log("ImageView::setShootingInfo");
 
-    if (infoText == "") {
+    if (text.isEmpty()) {
         QModelIndex idx = thumbView->currentIndex();
         QString current = infoString->getCurrentInfoTemplate();
-        infoText = infoString->parseTokenString(infoString->infoTemplates[current],
-                                                    currentImagePath, idx);    }
+        text = infoString->parseTokenString(infoString->infoTemplates[current],
+                                            currentImagePath, idx);
+    }
+    infoText = text;
 
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol

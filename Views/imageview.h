@@ -104,7 +104,7 @@ public:
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotateImage(int degrees);
-    void setShootingInfo(QString infoString = "");
+    void setShootingInfo(QString text = "");
     void updateShootingInfo();
     QPoint scene2CW(QPointF pctPt);
     QSizeF vpNormSizeInScene();

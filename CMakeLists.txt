@@ -368,6 +368,7 @@ set(WINNOW_SOURCES
     Metadata/metadata.cpp
     Metadata/metareport.cpp
     Metadata/xmp.cpp
+    Metadata/xmpembed.cpp
 
     # PropertyEditor
     PropertyEditor/preferences.cpp
@@ -651,6 +652,7 @@ set(WINNOW_HEADERS
     Metadata/rapidxml_print_rgh.h
     Metadata/xmp.h
     Metadata/xmpapply.h
+    Metadata/xmpembed.h
 
     PropertyEditor/preferences.h
     PropertyEditor/propertydelegate.h

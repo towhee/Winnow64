@@ -7,6 +7,8 @@
 #include "Metadata/metareport.h"
 #include "Metadata/keywordpaths.h"   // keywordFold, for writeXMP's change detection
 #include "Cache/devpreviewcache.h"
+#include "Utilities/fileops.h"
+#include "Metadata/xmpembed.h"
 #include "ImageFormats/Video/mov.h"
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
@@ -453,9 +455,8 @@ void Metadata::reportMetadata()
 
     if (m.sidecar) {
         // separate sidecar xmp file
-        QFileInfo info(m.fPath);
-        QString sidecarName = info.completeBaseName() + ".xmp";
-        QString sidecarPath = info.dir().path() + "/" + sidecarName;
+        QString sidecarPath = FileOps::existingSidecar(m.fPath);
+        QString sidecarName = QFileInfo(sidecarPath).fileName();
         qDebug() << "    m.fPath =" << m.fPath;
         qDebug() << "sidecarPath =" << sidecarPath;
         QFile sidecarFile(sidecarPath);
@@ -561,8 +562,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
         return;
     }
 
-    QFileInfo info(fPath);
-    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    QString sidecarPath = FileOps::prepareSidecarForWrite(fPath);
     // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
     if (QFileInfo(sidecarPath).isSymLink()) {
         QString msg = "Refusing to write sidecar: path is a symlink.";
@@ -662,8 +662,8 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     if (isPreviewCachePath(fPath, "Metadata::writeDevelopSidecar")) return;
 
     QFileInfo info(fPath);
-    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
-    const bool exists = QFileInfo::exists(sidecarPath);
+    QString sidecarPath = FileOps::sidecarPath(fPath);
+    const bool exists = !FileOps::existingSidecar(fPath).isEmpty();
     if (blob.isEmpty() && !exists) return;          // nothing to write or clear
 
     // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
@@ -694,6 +694,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
         return;
     }
 
+    sidecarPath = FileOps::prepareSidecarForWrite(fPath);
     QFile sidecarFile(sidecarPath);
     if (!sidecarFile.open(QIODevice::ReadWrite)) {
         QString msg = "Failed to open sidecar to write develop settings.";
@@ -729,9 +730,8 @@ QString Metadata::readDevelopSidecar(QString fPath)
 */
     if (G::isLogger) G::log("Metadata::readDevelopSidecar");
 
-    QFileInfo info(fPath);
-    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
-    if (!QFileInfo::exists(sidecarPath)) return "";
+    const QString sidecarPath = FileOps::existingSidecar(fPath);
+    if (sidecarPath.isEmpty()) return "";
 
     QFile sidecarFile(sidecarPath);
     if (!sidecarFile.open(QIODevice::ReadOnly)) return "";
@@ -755,9 +755,8 @@ QByteArray Metadata::readDevThumb(QString fPath)
 */
     if (G::isLogger) G::log("Metadata::readDevThumb");
 
-    QFileInfo info(fPath);
-    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
-    if (!QFileInfo::exists(sidecarPath)) return QByteArray();
+    const QString sidecarPath = FileOps::existingSidecar(fPath);
+    if (sidecarPath.isEmpty()) return QByteArray();
 
     QFile sidecarFile(sidecarPath);
     if (!sidecarFile.open(QIODevice::ReadOnly)) return QByteArray();
@@ -812,11 +811,25 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
     if (G::isLogger) G::log("Metadata::writeKeywordsToSidecar", fPath);
     if (isPreviewCachePath(fPath, "Metadata::writeKeywordsToSidecar")) return false;
 
-    const QString sPath = sidecarPath(fPath);
+    // into the file when permitted -- see writeXMP
+    if (G::modifySourceFiles && XmpEmbed::canEmbed(fPath)) {
+        auto edit = [&](Xmp &xmp) {
+            xmp.setItemList("subject", subject);
+            xmp.setItemList("hierarchicalsubject", hierarchical);
+            xmp.setItem("modifydate", xmpNow());
+        };
+        if (embedXmp(fPath, edit, "Metadata::writeKeywordsToSidecar")) {
+            markSidecarEmbedded(fPath);
+            return true;
+        }
+    }
+
     /*  Nothing to write and nothing to clear: an image with no keywords and no sidecar
         must not have one created for it. */
-    if (subject.isEmpty() && hierarchical.isEmpty() && !QFileInfo::exists(sPath))
+    if (subject.isEmpty() && hierarchical.isEmpty()
+        && FileOps::existingSidecar(fPath).isEmpty())
         return true;
+    const QString sPath = FileOps::prepareSidecarForWrite(fPath);
 
     // Refuse to write through a symlink, as every other sidecar writer here does.
     if (QFileInfo(sPath).isSymLink()) {
@@ -837,10 +850,11 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
 
     xmp.setItemList("subject", subject);
     xmp.setItemList("hierarchicalsubject", hierarchical);
-
-    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
-        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
-    xmp.setItem("modifydate", modifyDate.toLatin1());
+    /*  A stripped sidecar (the image took its metadata while permitted) that now holds
+        keywords again speaks for them; the scalars it lacks are skipped on read by their
+        isEmpty guards, so the file's own keep showing. */
+    xmp.setItem("metadataembedded", "");
+    xmp.setItem("modifydate", xmpNow());
 
     const bool ok = xmp.writeSidecar(sidecarFile);
     if (!ok) {
@@ -849,6 +863,88 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
     }
     sidecarFile.close();
     return ok;
+}
+
+QByteArray Metadata::xmpNow()
+{
+    const QDateTime now = QDateTime::currentDateTime();
+    return now.toOffsetFromUtc(now.offsetFromUtc()).toString(Qt::ISODate).toLatin1();
+}
+
+bool Metadata::embedXmp(const QString &fPath, const std::function<void(Xmp &)> &edit,
+                        const QString &src)
+{
+/*
+    Apply edit to the XMP packet INSIDE fPath and write it back. Returns false, having
+    reported why, when the file cannot take it -- the caller then writes the sidecar.
+
+    A PACKET THAT CANNOT BE PARSED IS NEVER REPLACED. Xmp::fix() answers a parse failure
+    by starting from an empty skeleton, which is right for Winnow's own sidecar and
+    wrong here: the packet may carry another application's data (Lightroom's develop
+    settings, a phone's depth map reference) that a fresh document would silently
+    delete. Only the one repair that adds rather than removes (a missing rdf:about) is
+    allowed on a packet that was found.
+*/
+    if (G::isLogger) G::log("Metadata::embedXmp", fPath);
+    auto fail = [&](const QString &why) {
+        G::issue("Warning", "Could not write metadata into the file (" + why
+                 + "). It was saved to the sidecar instead.", src, -1, fPath);
+        return false;
+    };
+
+    QByteArray xmpmeta;
+    const XmpEmbed::Result r = XmpEmbed::read(fPath, xmpmeta);
+    if (r != XmpEmbed::Result::Ok && r != XmpEmbed::Result::NoPacket)
+        return fail(XmpEmbed::describe(r));
+
+    Xmp xmp(xmpmeta, G::dmInstance);
+    if (!xmp.isValid) {
+        if (r == XmpEmbed::Result::Ok && xmp.err != Xmp::Err::NoRdfAbout)
+            return fail("its existing XMP could not be parsed");
+        xmp.fix();
+    }
+    edit(xmp);
+
+    if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup"))
+        return fail("the backup failed");
+
+    const XmpEmbed::Result w = XmpEmbed::write(fPath, xmp.docToByteArray());
+    if (w != XmpEmbed::Result::Ok) return fail(XmpEmbed::describe(w));
+    return true;
+}
+
+void Metadata::markSidecarEmbedded(const QString &fPath)
+{
+/*
+    The image now carries its own metadata, so its sidecar's copy is stale: strip the
+    standard fields and set winnow:MetadataEmbedded, which parseSidecar reads as "the
+    image speaks for itself". Without it the next Develop edit -- which bumps the
+    sidecar's ModifyDate -- would make the stale copy the newer one, and an absent
+    dc:subject would read as every keyword removed. The Develop recipe, its preview and
+    orientation stay. No sidecar, nothing to do.
+*/
+    if (FileOps::existingSidecar(fPath).isEmpty()) return;
+    const QString sPath = FileOps::prepareSidecarForWrite(fPath);
+    if (QFileInfo(sPath).isSymLink()) return;
+    QFile f(sPath);
+    if (!f.open(QIODevice::ReadWrite)) {
+        G::issue("Warning", "Failed to open sidecar to mark metadata embedded.",
+                 "Metadata::markSidecarEmbedded", -1, sPath);
+        return;
+    }
+    Xmp xmp(f, G::dmInstance);
+    if (!xmp.isValid) return;       // not ours to repair; parseSidecar skips it anyway
+    for (const char *item : {"rating", "label", "title", "creator", "rights",
+                             "email", "url"})
+        xmp.setItem(item, "");
+    xmp.setItemList("subject", {});
+    xmp.setItemList("hierarchicalsubject", {});
+    xmp.setItem("metadataembedded", "True");
+    if (!xmp.writeSidecar(f)) {
+        G::issue("Warning", "Failed to mark sidecar metadata embedded.",
+                 "Metadata::markSidecarEmbedded", -1, sPath);
+    }
+    f.close();
 }
 
 bool Metadata::writeXMP(const QString &fPath, QString src)
@@ -874,7 +970,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     bool isDebug = false;
 
     // is xmp supported for this file
-    QString sPath = sidecarPath(fPath);
+    QString sPath = FileOps::sidecarPath(fPath);
     QFileInfo info(sPath);
     QString suffix = info.suffix().toLower();
 
@@ -959,11 +1055,47 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         nothing found when filtering on it, across restarts. */
     const bool updateSidecar = true;
 
-    // data edited, open image file
-    p.file.setFileName(sPath);
+    /*  The edits, applied to whichever document receives them -- the file's own packet
+        or the sidecar. all = write every field, not only the changed ones: a sidecar
+        that was stripped when the image took its metadata (see markSidecarEmbedded) has
+        to be made whole again before it can speak for the image. UTF-8 throughout; these
+        went through toLatin1(), which turned every accent outside Latin-1 and all CJK
+        into '?'. */
+    auto applyEdits = [&](Xmp &xmp, bool all) {
+        if (all || urlChanged) xmp.setItem("url", m.url.toUtf8());
+        if (all || emailChanged) xmp.setItem("email", m.email.toUtf8());
+        if (all || copyrightChanged) xmp.setItem("rights", m.copyright.toUtf8());
+        if (all || creatorChanged) xmp.setItem("creator", m.creator.toUtf8());
+        if (all || titleChanged) xmp.setItem("title", m.title.toUtf8());
+        if (all || labelChanged) xmp.setItem("Label", m.label.toUtf8());
+        if (all || ratingChanged) xmp.setItem("Rating", m.rating.toUtf8());
+        /*  BOTH, whenever EITHER changed: they are one fact in two properties.
+            setItemList rather than setItem -- these are rdf:Bag lists, and setItem
+            refuses them (it used to delete them). An empty list removes the property,
+            which is how the last keyword is taken off an image. */
+        if (all || keywordsChanged) {
+            xmp.setItemList("subject", m.keywords);
+            xmp.setItemList("hierarchicalsubject", m.keywordPaths);
+        }
+        xmp.setItem("ModifyDate", xmpNow());
+    };
+
+    /*  INTO THE FILE when the user permits it, as Lightroom does for these formats. A
+        failure is reported and the edit still lands in the sidecar below, so it is never
+        lost -- only not where the user asked for it. */
+    if (G::modifySourceFiles && XmpEmbed::canEmbed(fPath)) {
+        if (embedXmp(fPath, [&](Xmp &xmp) { applyEdits(xmp, false); }, srcFun)) {
+            markSidecarEmbedded(fPath);
+            return true;
+        }
+    }
+
+    // data edited, open the sidecar
     if (p.file.isOpen()) return false;
+    sPath = FileOps::prepareSidecarForWrite(fPath);
+    p.file.setFileName(sPath);
     // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
-    if (QFileInfo(fPath).isSymLink()) {
+    if (QFileInfo(fPath).isSymLink() || QFileInfo(sPath).isSymLink()) {
         G::issue("Warning", "Refusing to write sidecar: path is a symlink.", "Metadata::writeXMP", -1, fPath);
         return false;
     }
@@ -973,26 +1105,9 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     Xmp xmp(p.file, p.instance);
     if (!xmp.isValid) xmp.fix();
 
-    // update xmp data
-    if (urlChanged) xmp.setItem("url", m.url.toLatin1());
-    if (emailChanged) xmp.setItem("email", m.email.toLatin1());
-    if (copyrightChanged) xmp.setItem("rights", m.copyright.toLatin1());
-    if (creatorChanged) xmp.setItem("creator", m.creator.toLatin1());
-    if (titleChanged) xmp.setItem("title", m.title.toLatin1());
-    if (labelChanged) xmp.setItem("Label", m.label.toLatin1());
-    if (ratingChanged) xmp.setItem("Rating", m.rating.toLatin1());
-    /*  BOTH, whenever EITHER changed: they are one fact in two properties. setItemList
-        rather than setItem -- these are rdf:Bag lists, and setItem refuses them (it used
-        to delete them). An empty list removes the property, which is how the last
-        keyword is taken off an image. */
-    if (keywordsChanged) {
-        xmp.setItemList("subject", m.keywords);
-        xmp.setItemList("hierarchicalsubject", m.keywordPaths);
-    }
-
-    QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
-        (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
-    xmp.setItem("ModifyDate", modifyDate.toLatin1());
+    const bool wasEmbedded = xmp.getItem("metadataembedded") == "True";
+    if (wasEmbedded) xmp.setItem("metadataembedded", "");
+    applyEdits(xmp, wasEmbedded);
 
 
     // get the buffer to write to a new p.file
@@ -1254,8 +1369,7 @@ bool Metadata::parseSidecar()
     m.developEdited = false;
     m.devPreviewKey.clear();
 
-    QFileInfo info(p.file);
-    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    QString sidecarPath = FileOps::existingSidecar(QFileInfo(p.file).absoluteFilePath());
     QFile sidecarFile(sidecarPath);
     /* debug
     qDebug() << "Metadata::parseSidecar"
@@ -1265,7 +1379,7 @@ bool Metadata::parseSidecar()
                 //*/
 
     // no sidecar file
-    if (!sidecarFile.exists()) {
+    if (sidecarPath.isEmpty()) {
         return false;
     }
 
@@ -1324,6 +1438,17 @@ bool Metadata::parseSidecar()
     }
 
     QString s;
+    /*  THE IMAGE CARRIES ITS OWN METADATA. Written while "Permit image file
+        modification" was on, which also stripped rating, title, keywords... out of this
+        sidecar (Metadata::markSidecarEmbedded). Their ABSENCE here means nothing, and
+        the keyword read below would take it as "all keywords removed". Orientation is
+        still Winnow's to keep here: it is not embedded. */
+    if (xmp.getItem("metadataembedded") == "True") {
+        s = xmp.getItem("orientation");
+        if (!s.isEmpty()) {m.orientation = s.toInt(); m._orientation = s.toInt();}
+        sidecarFile.close();
+        return true;
+    }
     s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
     s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
     s = xmp.getItem("title"); if (!s.isEmpty()) {m.title = s; m._title = s;}
@@ -1356,16 +1481,6 @@ bool Metadata::parseSidecar()
     sidecarFile.close();
     return true;
 
-}
-
-QString Metadata::sidecarPath(QString fPath)
-/*
-    The sidecar file has the same name as the image file, but uses the extension "xmp".
-*/
-{
-    if (G::isLogger) G::log("Metadata::sidecarPath");
-    QFileInfo info(fPath);
-    return info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
 }
 
 void Metadata::clearMetadata()

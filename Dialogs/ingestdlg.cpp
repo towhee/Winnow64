@@ -486,9 +486,12 @@ void IngestDlg::ingest()
         foreach (const QString &companion, FileOps::companions(sourcePath)) {
             if (!copyOk) break;   // no image at the destination for it to belong to
 
-            const QString cSuffix = "." + QFileInfo(companion).suffix();
-            const QString destSidecarPath = folderPath + destBaseName + cSuffix;
-            const QString backupSidecarPath = folderPath2 + destBaseName + cSuffix;
+            /* companionDest keeps a full-name sidecar full-name: DSC_1.JPG.xmp becomes
+               <dest>.JPG.xmp, not <dest>.xmp -- the raw's name in a raw+JPEG pair. */
+            const QString destSidecarPath =
+                FileOps::companionDest(companion, sourcePath, destinationPath);
+            const QString backupSidecarPath = FileOps::companionDest(
+                companion, sourcePath, folderPath2 + QFileInfo(destinationPath).fileName());
 
             if (!QFile::copy(companion, destSidecarPath)) {
                 QString msg = "Failed to copy " + companion + " to " + destSidecarPath + ".";

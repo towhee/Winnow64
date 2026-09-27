@@ -55,14 +55,55 @@ public:
        call it directly before any file work this class does not yet cover. */
     static void flushPendingEdits();
 
-    /* The sidecars belonging to fPath: files in the same folder with the same base name
-       and a sidecar suffix (.xmp, .txt), matched case-insensitively so a .XMP written by
-       another application is not missed. Existence-filtered.
+    /* SIDECAR NAMING -- the one definition. See "Sidecar naming" in
+       notes/Documentation.txt.
+
+       Raw and HEIC:            IMG_1.NEF  -> IMG_1.xmp      (Lightroom's name)
+       JPEG, TIFF, PNG, DNG:    IMG_1.JPG  -> IMG_1.JPG.xmp  (full-name sidecar)
+
+       Lightroom writes XMP INTO the full-name formats and ignores any sidecar beside
+       them, so there IMG_1.xmp is always another file's -- a raw+JPEG pair shares that
+       name, and a JPEG edit written there used to change the raw's Lightroom metadata.
+       The full-name sidecar cannot collide. It is Winnow's own: it holds the Develop
+       recipe, and the standard fields while "Permit image file modification" is off.
+
+       LEGACY. Winnow once wrote IMG_1.xmp for every format. A full-name image with no
+       IMG_1.JPG.xmp still READS an IMG_1.xmp, unless a raw/HEIC (any sibling of another
+       format) shares the base name -- then it is that file's and is left alone. The
+       first write adopts it (prepareSidecarForWrite). */
+    static bool usesFullNameSidecar(const QString &fPath);
+
+    /* Where Winnow writes fPath's XMP sidecar. May not exist. */
+    static QString sidecarPath(const QString &fPath);
+
+    /* The sidecar to READ for fPath: sidecarPath() if it exists, else a readable legacy
+       IMG_1.xmp (see above), else "". Safe on worker threads. */
+    static QString existingSidecar(const QString &fPath);
+
+    /* Call before writing fPath's sidecar; returns sidecarPath(). If only a readable
+       legacy IMG_1.xmp exists it is carried to the new name first, so the write updates
+       it rather than starting an empty document beside it. Moved when fPath is the only
+       file with that base name, copied when another full-name image (the DNG of a
+       DNG+JPG pair) may still read it. */
+    static QString prepareSidecarForWrite(const QString &fPath);
+
+    /* The sidecars belonging to fPath: its full-name sidecars (IMG_1.JPG.xmp/.txt), and
+       the base-name ones (IMG_1.xmp/.txt) when they are fPath's -- always for a raw or
+       HEIC, and for a full-name format only when no other file shares the base name.
+       Matched case-insensitively so a .XMP written by another application is not
+       missed. Existence-filtered.
 
        Deliberately NOT every file sharing the base name -- that would sweep in the
-       paired JPG of a raw+jpg pair, and trashing a NEF must not trash its JPG. Rename is
-       the one operation that does want the wider net, and it keeps its own scan. */
+       paired JPG of a raw+jpg pair, and trashing a NEF must not trash its JPG. Nor may
+       trashing the JPG take the NEF's IMG_1.xmp. Rename is the one operation that does
+       want the wider net, and it keeps its own scan. */
     static QStringList companions(const QString &fPath);
+
+    /* Where companion of srcPath goes when srcPath becomes dstPath. A base-name sidecar
+       follows the destination's base name (DSC_001.xmp -> Sunset.xmp); a full-name one
+       follows its file name (DSC_001.JPG.xmp -> Sunset.JPG.xmp). */
+    static QString companionDest(const QString &companion, const QString &srcPath,
+                                 const QString &dstPath);
 
     /* Full operations: the image, its companions, and the preview cache. Return true
        when the IMAGE itself was handled; a companion failure is reported but does not
@@ -100,6 +141,9 @@ public:
 
     /* The suffixes companions() recognises, without the dot. */
     static const QStringList &sidecarSuffixes();
+
+    /* The formats that get a full-name sidecar, lower case, without the dot. */
+    static const QStringList &fullNameSidecarFormats();
 
 private:
     static std::function<void()> flushHook;

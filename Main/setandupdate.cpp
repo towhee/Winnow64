@@ -228,6 +228,21 @@ void MW::setIconNumberVisibility() {
     gridView->refreshIcons("MW::setIconNumberVisibility");
 }
 
+void MW::revealInfoOverlayOnce()
+{
+/*
+    ImageView creates the info overlay HIDDEN, so an OS permission prompt at startup is
+    not overlaid with it; it is revealed, per View > Show Info Overlay, the first time an
+    image reaches the loupe. Called after EVERY successful loupe load. It used to live
+    only in refreshViewsOnCacheChange -- the cache-MISS path -- so a first image that was
+    already cached never revealed it, and the overlay stayed hidden with the menu item
+    checked until 'I' was pressed twice.
+*/
+    if (!isFirstImageSelected) return;
+    isFirstImageSelected = false;
+    setShootingInfoVisibility();
+}
+
 void MW::setShootingInfoVisibility() {
     if (G::isLogger) G::log("MW::setShootingInfoVisibility");
     imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
@@ -1446,13 +1461,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         }
         applyDevelopPreviewIfEdited();   // overlay saved develop edits once the decode is cached
         updateClassification();
-        /* Hide Info until first image shown.  If Winnow is interrupted by an OS
-           permission request then we do not want an info to show */
-        if (isFirstImageSelected) {
-            // qDebug() << fun << "isFirstImageSelected =" << isFirstImageSelected;
-            setShootingInfoVisibility();
-            isFirstImageSelected = false;
-        }
+        revealInfoOverlayOnce();
     }
 
     thumbView->refreshIcon(sfIdx, srcFun);

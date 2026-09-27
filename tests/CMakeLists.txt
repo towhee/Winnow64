@@ -368,6 +368,13 @@ winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
 # Metadata/xmpapply.h that replaced eight copies of the same XMP block.
 winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
+# tst_xmpembed pins the container writers behind "Permit image file modification":
+# splicing the XMP packet into JPEG (APP1), PNG (iTXt) and TIFF/DNG (IFD0 tag 700)
+# without disturbing anything else in the file, and the XMP shapes Lightroom reads
+# (dc:title as a language alternative, dc:creator as a sequence).
+winnow_add_unit_test(tst_xmpembed unit/tst_xmpembed.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/xmpembed.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
 # tst_searchterms is header-only (Utilities/searchterms.h, Qt Core). It pins the ONE
 # grammar behind both search scopes: Folders over the datamodel and Catalog over the index are
 # paired as "Folders"/"Catalog", and used to disagree -- "heron OR eagle" was a literal

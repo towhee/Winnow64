@@ -448,13 +448,19 @@ bool PNG::parse(MetadataParameters &p,
                 p.xmpModifyDate = QDateTime::fromString(xmp.getItem("modifydate"), Qt::ISODate);
                 m.rating = xmp.getItem("Rating");
                 m.label = xmp.getItem("Label");
-                if (m.title.isEmpty())     m.title = xmp.getItem("title");
+                /* title, creator and rights: a non-empty XMP value wins over the
+                   tEXt/eXIf one read earlier -- it is where Winnow and Lightroom write
+                   an edit (see xmpapply.h). */
+                const QString title = xmp.getItem("title");
+                if (!title.isEmpty())      m.title = title;
                 m.cameraSN = xmp.getItem("SerialNumber");
                 if (m.lens.isEmpty())      m.lens = xmp.getItem("Lens");
                 if (m.lens.isEmpty())      m.lens = xmp.getItem("LensModel");
                 m.lensSN = xmp.getItem("LensSerialNumber");
-                if (m.creator.isEmpty())   m.creator = xmp.getItem("creator");
-                if (m.copyright.isEmpty()) m.copyright = xmp.getItem("rights");
+                const QString creator = xmp.getItem("creator");
+                if (!creator.isEmpty())    m.creator = creator;
+                const QString rights = xmp.getItem("rights");
+                if (!rights.isEmpty())     m.copyright = rights;
                 m.email = xmp.getItem("email");
                 m.url = xmp.getItem("url");
                 /* Not routed through applyXmp (Metadata/xmpapply.h): the guards below
