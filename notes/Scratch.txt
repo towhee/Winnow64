@@ -5362,3 +5362,175 @@ Next is testing Map v1 in the app, since none of it has run properly yet: the fi
   4. Saved Locations: named places with a radius, plus a Private option that strips GPS on export.
 
 example: Users/roryhill/Pictures/_test5/2019-09-24_2003.JPG
+
+=========================================================================================
+HARDEN DATAMODEL INSERT/DELETE OPERATIONS
+=========================================================================================
+
+Harden on-the-fly DataModel insert / delete
+
+ Context
+
+ Inserting a new file into a loaded DataModel while the app is running has failed four
+ times, in four different ways:
+ - the proxy put the new file at the end instead of its sorted position (twice);
+ - the second of two focus stacks was deleted: an empty "" path key made refresh()
+   treat it as a file missing from disk;
+ - the Filters were built before the new rows had metadata.
+
+ Each was fixed at the point it showed up. Nobody has looked at the whole pipeline. It has
+ too many entry points, each doing a different subset of the steps. Every one of these bugs
+ was an ordering mistake: which step ran before which.
+
+ The goal is one pipeline that gets the order right. Every caller goes through it, a
+ checker catches a broken model the moment it breaks, and a self-test runs every case.
+
+ What the audit found (read-only so far)
+
+ All entries below were found by reading the code. Confirmed = I traced the code and
+ the fault follows from it. Suspected = step 1 must reproduce it before anything is
+ changed.
+
+ 1. Too many entry points, each doing different steps.
+    - MW::insertFiles → dmInsert → DataModel::insert, then MW::refresh →
+      DataModel::refresh. That runs sourceModified and inserts the files it finds a
+      second time, one at a time.
+    - MW::refreshAfterRemoval → DataModel::removeFiles.
+    - DataModel::removeFolder.
+    - MW::generateMeanStack (Main/mainwindow.cpp, ~14836) calls dm->insert directly.
+      It skips the metadata load, the proxy re-assert and the filters.
+    - MW::testNewFileFormat (Main/test.cpp) does the same.
+
+    Confirmed.
+ 2. removeFolder nests model notifications. It calls beginRemoveRows, then
+    removeRows(row, 1), which calls beginRemoveRows / endRemoveRows again, then
+    endRemoveRows. Qt doesn't allow nesting; the proxy and views get inconsistent
+    notifications. Confirmed (Datamodel/datamodel.cpp, removeFolder).
+ 3. Rows shift under background threads. MetaRead and ImageCache write to the model by
+    row number (emit setValSf(sfRow, …, instance)). insert / removeFiles shift
+    rows but don't change instance, so a write already in flight lands on the wrong
+    image.
+    G::isModifyingDatamodel is only set by folder loads, never by these on-the-fly
+    changes. Suspected (it's a race).
+ 4. DataModel::refresh() is fragile on its own:
+    - it inserts one row at a time. Each insert scans the whole model for its position and
+      rebuilds the whole path hash (O(N²));
+    - its modified loop calls setData(index(rowFromPath(p))) with no check for -1;
+    - sourceModified walks fPathRow without taking fPathRowLock, although other
+      threads read that hash.
+
+    Confirmed by reading.
+ 5. Catalog scope. Catalog loads add their folders to folderList, so in a Catalog
+    query scope, sourceModified would report every file in those folders that the query
+    excluded as "added". Suspected: this is the kind of case the self-test must cover.
+ 6. Two different sort keys. insert finds its position by comparing lower-cased paths
+    (QString <). The folder load and proxy use their own ordering. When the two disagree,
+    the proxy re-assert has to hide it, which is the root of the "lands at the end"
+    regressions. Needs checking against the load's sort.
+ 7. Nothing checks the model after a change. The only guard is the ROWLOSS warning in
+    removeRows, and it only fires for small, unexpected removals.
+
+ Approach
+
+ Step 1: Integrity checker, before changing any behaviour
+
+ Add DataModel::verifyIntegrity(QString src) (Datamodel/datamodel.cpp). It asserts:
+ - fPathRow.size() == rowCount();
+ - no empty path key;
+ - every row's path maps back to that same row;
+ - the load-flag counts match recountLoadFlags();
+ - sf->rowCount() is consistent with the filter.
+
+ Call it at the end of every mutation in debug builds and in --selftest. On failure, log
+ MODELINTEGRITY plus G::issue (the same style as ROWLOSS). Use it to reproduce
+ defects 3, 5 and 6 before fixing them.
+
+ Step 2: One DataModel mutation API
+
+ In Datamodel/datamodel.cpp/.h:
+ - DataModel::insertFiles(const QStringList&) sorts the new paths by the same key the
+   load uses (defect 6). It inserts contiguous runs with a single insertRows each,
+   fills the rows (addFileDataForRow), rebuilds the hash once and returns the new
+   rows.
+ - DataModel::removeFiles already works this way and stays the model for the pattern.
+ - removeFolder routes through removeFiles instead of its own loop, which fixes the
+   nesting (defect 2).
+ - DataModel::refresh() passes its added / removed / modified lists to these batch calls,
+   guards the -1 row and takes fPathRowLock while it walks the hash (defect 4).
+ - insert(QString) becomes a thin wrapper, or is removed. Its callers move to
+   insertFiles.
+
+ Step 3: One MW pipeline around every mutation
+
+ Add MW::applyModelChange(added, removed, modified, src), built from the tail of today's
+ insertFiles. Its fixed order is the fix:
+ 1. Quiesce (defect 3): set G::isModifyingDatamodel, pause MetaRead and ImageCache
+    dispatch, and wait for in-flight work to finish. Use stop/initialize where they
+    already exist; check MW::stop for how a folder change does this.
+ 2. Change the model through the Step 2 API, then call verifyIntegrity.
+ 3. Load the new or modified rows' metadata and thumbnails synchronously. This is the
+    existing loop in MW::insertFiles.
+ 4. Re-assert the proxy order (dm->sf->filterChange), then currentSfRow.
+ 5. Re-sync ImageCache to the new rows.
+ 6. buildFilters->rebuild(), last, now that the rows have metadata.
+ 7. Views: refreshIcons, scroll; FSTree and Bookmarks counts.
+ 8. Resume the background readers and clear G::isModifyingDatamodel.
+
+ MW::insertFiles, MW::refresh, MW::refreshAfterRemoval, generateMeanStack and
+ Export / Embellish / FocusStack all call this. refreshViews folds into it.
+
+ Step 4: Catalog scope (defect 5)
+
+ When the scope is a catalog query, refresh must not add files the query excluded. Either
+ limit added to files that pass the scope, or let catalog scopes insert only the paths
+ they were given. Choose after step 1 reproduces it.
+
+ Step 5: Docs and memory
+
+ - Add a section "DataModel on-the-fly insert / delete" to notes/Documentation.txt, and
+   sync the table of contents.
+ - Update the project_insertfiles_proxy_brittle memory to point at the single pipeline.
+
+ Critical files
+
+ - Datamodel/datamodel.cpp/.h: insert, insertRows, removeRows, removeFiles,
+   removeFolder, refresh, sourceModified, rebuildRowFromPathHash, the fPathRow*
+   helpers.
+ - Main/fileoperations.cpp: dmInsert, insertFiles, deleteFiles.
+ - Main/mainwindow.cpp: refresh, refreshAfterRemoval, refreshViews,
+   generateMeanStack, onExportFinished, the embellish insert (~3413).
+ - FocusStack/generateFocusStack.cpp: the finished handler.
+ - Cache/metaread.cpp and Cache/imagecache.cpp: pause/resume hooks and the
+   setValSf(sfRow…) writers.
+
+ Reuse
+
+ - DataModel::removeFiles (the batch-run pattern), recountLoadFlags,
+   rebuildRowFromPathHash (now skips empty paths), the ROWLOSS reporting style.
+ - G::isModifyingDatamodel (already respected by the catalog scanner, keyword edits and
+   sortandfilter).
+ - The metadata/thumbnail load loop and proxy re-assert already in MW::insertFiles.
+ - MW::runSelfTest / --selftest, and the existing catalog_scan smoke test as the
+   template.
+
+ Verification
+
+ - New --selftest step, model_mutation (it runs under
+   ctest -L smoke --test-dir build/mac-debug). It copies fixture images into a temp
+   folder, loads it, and in order:
+   a. inserts 1 file, then 2 at once (one sorting between existing rows, one at the end);
+   b. replaces a file in place;
+   c. deletes scattered files, then deletes everything;
+   d. inserts into the now-empty folder;
+   e. removes a folder from a multi-folder selection;
+   f. repeats with a filter active and in a Catalog scope.
+
+   After each step it asserts: verifyIntegrity, each new file's proxy row matches its
+   sorted position, it has a thumbnail, the Filters counts equal the row counts, and no
+   ROWLOSS / MODELINTEGRITY issue was logged.
+ - Race check: run the same steps while MetaRead is still reading a large folder,
+   under the TSan build (tests/tsan).
+ - Manual: a two-stack focus stack, Export with "add to folder view", Embellish, and
+   Delete in a filtered view.
+ - The existing unit tests (tst_imagerow covers the removeFiles compaction) must still
+   pass.

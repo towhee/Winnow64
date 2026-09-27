@@ -301,92 +301,76 @@ void MW::saveAsFile()
     if (exportPresets) exportPresets->writeLast(dlg.settings());
 }
 
-void MW::dmInsert(QStringList pathList)
-{
-    QString src = "MW::dmInsert";
-    if (G::isLogger)
-        G::log(src);
-    foreach(QString fPath, pathList) {
-        // replace existing image with the same name
-        if (dm->isPath(fPath)) {
-            int dmRow = dm->rowFromPath(fPath);
-            int sfRow = dm->proxyRowFromPath(fPath, src);
-            // qDebug() << src << "replace row" << sfRow << fPath;
-            // insertedRows << dmRow;
-            QModelIndex dmIdx = dm->index(dmRow, G::MetadataStatusColumn);
-            dm->setData(dmIdx, G::MetaNotAttempted);
-            dm->setIcon(dmIdx, QPixmap(), dm->instance, "MW::insert");
-            imageCache->removeCachedImage(fPath);
-            if (dm->sf->index(sfRow, G::IsCachedColumn).data().toBool()) {
-                emit setValSf(sfRow, G::IsCachedColumn, false, instance, src);
-            }
-            if (dm->sf->index(sfRow, G::IsCachingColumn).data().toBool()) {
-                emit setValSf(sfRow, G::IsCachingColumn, false, instance, src);
-            }
-            if (dm->sf->index(sfRow, G::AttemptsColumn).data().toInt()) {
-                emit setValSf(sfRow, G::AttemptsColumn, 0, instance, src);
-            }
-            G::allMetadataAttempted = false;
-            G::iconChunkLoaded = false;
-        }
-        // insert a new image
-        else {
-            qDebug() << src << "insert" << fPath;
-            dm->insert(fPath);
-            ImageMetadata m = dm->imMetadata(fPath, false);
-            buildFilters->rebuild();
-            sel->select(dm->currentFilePath);
-        }
-    }
-}
-
-void MW::insertFiles(QStringList pathList)
+void MW::applyModelChange(const QStringList &added, const QStringList &removed,
+                          const QString &src, bool reconcileDisk)
 {
 /*
-    Replace or insert a new image file into the datamodel.
+    Change the loaded datamodel -- insert new files, replace files rewritten in place,
+    remove files that are gone -- and bring every consumer of it back in line.
 
-    After insertion, the call function should select row: sel->select(fPath);
-    This will invoke MetaRead which will load the metadata, icon and imageCache.
+    THE ORDER IS THE FIX. Each of the defects this pipeline replaced was a step run too
+    early or not at all, by one of several callers that each did its own subset:
 
-    It is used by a remote embellish operation when the embellish folder is in the
-    datamodel.
+      1  Bump the instance BEFORE any row moves. MetaRead and ImageCache write to the
+         model by ROW NUMBER, stamped with the instance they were started under; an
+         insert or remove shifts rows under a write already in flight, which then lands
+         on the wrong image. A new instance makes the model drop those writes. refreshViews
+         -> MW::filterChange re-initializes the readers on the new instance.
+      2  Mutate, through DataModel's batch calls only (insertFiles / removeFiles /
+         refresh). They rebuild fPathRow once, after every row has its path.
+      3  Load the new and changed rows' metadata and thumbnails SYNCHRONOUSLY, so each
+         ends MetaLoaded with a current icon. The async MetaRead re-read does not
+         reliably complete in this flow, and ImageCache only decodes MetaLoaded rows.
+      4  refreshViews: proxy re-assert (in source order, now that metadata has landed and
+         cannot kick the rows to the end again), ImageCache, selection, icons, video and
+         the Develop panel.
+      5  Filters LAST, once the rows carry their values -- saved, rebuilt and restored
+         (restoreFiltersAfterFolderChange on finishedBuildFilters), so an active filter
+         survives an insert or a delete.
+      6  verifyIntegrity.
+
+    See "DataModel On-the-Fly Insert and Delete" in notes/Documentation.txt.
 */
-    if (G::isLogger) G::log("MW::insertFile", "dm->instance = " + QString::number(dm->instance));
+    if (G::isLogger || G::isFlowLogger) G::log("MW::applyModelChange", src);
+    if (added.isEmpty() && removed.isEmpty() && !reconcileDisk) return;
 
-    if (pathList.isEmpty()) {
-        QString msg = "No files to insert, fPaths is empty.";
-        G::issue("Warning", msg, "MW::insertFiles");
-        return;
+    // 1  no row-addressed write started before this may land after it
+    dm->newInstance("applyModelChange: " + src);
+
+    // 2  mutate
+    const int rowsBefore = dm->rowCount();
+    QStringList toLoad;
+    if (!removed.isEmpty()) dm->removeFiles(removed);
+    for (const QString &fPath : added) {
+        if (fPath.isEmpty() || toLoad.contains(fPath)) continue;
+        toLoad << fPath;
+        const int dmRow = dm->rowFromPath(fPath);
+        if (dmRow < 0) continue;                    // new: inserted below
+        /* Rewritten in place (a re-run focus stack, a re-embellish): forget everything
+           decoded from the old content. */
+        dm->setData(dm->index(dmRow, G::MetadataStatusColumn), G::MetaNotAttempted);
+        dm->setData(dm->index(dmRow, G::IconLoadedColumn), false);
+        dm->setData(dm->index(dmRow, G::IsCachedColumn), false);
+        dm->setData(dm->index(dmRow, G::IsCachingColumn), false);
+        dm->setData(dm->index(dmRow, G::AttemptsColumn), 0);
+        dm->setData(dm->index(dmRow, 0), QVariant(), Qt::DecorationRole);
+        imageCache->removeCachedImage(fPath);
     }
+    if (!added.isEmpty()) dm->insertFiles(added);
+    if (reconcileDisk) toLoad << dm->refresh();
+    toLoad.removeDuplicates();
+    /*  A Refresh that found nothing on disk changed nothing: the views are still brought
+        up to date below (as Refresh always did), but the filters are not rebuilt. */
+    const bool changed = !toLoad.isEmpty() || !removed.isEmpty() ||
+                         dm->rowCount() != rowsBefore;
 
-    QString fPath;
-    QList<int> insertedRows;
-    QString src = "MW::insertFiles";
-
-    // must sort fPaths before insertion in case multiple items are appended to end of datamodel
-    // fPaths.sort(Qt::CaseInsensitive);
-    dmInsert(pathList);
-
-    // updata datamodel, imagecache, image counts, selection
-    refresh();
-
-    /* Re-read metadata + thumbnail synchronously for the inserted/replaced files
-       so each row ends MetaLoaded with a current icon. For a replaced file (same
-       path, new content - e.g. an image re-embellished in place, or a re-run
-       focus stack), dm->refresh() inside refresh() above detects it as "modified"
-       and resets it to MetaNotAttempted, expecting an async metaRead re-read.
-       That re-read does not reliably complete in this synchronous insert flow,
-       and the ImageCache only decodes MetaLoaded rows - so the image stayed blank
-       in the loupe (and its thumbnail stale) until the user navigated away.
-       Loading here (after refresh, before the caller selects) makes the
-       subsequent selection decode and display the image, and refreshes the icon. */
-    if (!refreshThumb && metaRead)
+    // 3  metadata + thumbnail, synchronously
+    if (!toLoad.isEmpty() && !refreshThumb && metaRead)
         refreshThumb = new Thumb(dm, metaRead->getFrameDecoder());
 
-    for (const QString &fPath : pathList) {
-        int dmRow = dm->rowFromPath(fPath);
+    for (const QString &fPath : std::as_const(toLoad)) {
+        const int dmRow = dm->rowFromPath(fPath);
         if (dmRow < 0) continue;
-        // only the rows reset by dm->refresh() (modified/new) need reloading
         if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded)
             continue;
 
@@ -396,9 +380,8 @@ void MW::insertFiles(QStringList pathList)
             continue;
         dm->addMetadataForItem(metadata->m, src);
 
-        /* Refresh the thumbnail. setIcon is idempotent and will not replace a
-           live icon, so clear the stale decoration first, then load the new
-           embedded thumb (metadata->m, just read above, has its offset/length). */
+        /* setIcon will not replace a live icon, so clear the stale decoration first,
+           then load the new embedded thumb (metadata->m, just read, has its offset). */
         if (refreshThumb) {
             QModelIndex iconIdx = dm->index(dmRow, 0);
             dm->setData(iconIdx, QVariant(), Qt::DecorationRole);
@@ -412,18 +395,39 @@ void MW::insertFiles(QStringList pathList)
         }
     }
 
-    /* Re-assert the proxy's sorted order. dm->insert() placed each new row at its
-       sorted position in the SOURCE model, but with no active proxy sort column
-       sf appends it, and the addMetadataForItem dataChanged emitted in the loop
-       above re-appends it to the end. filterChange() (invalidateRowsFilter) rebuilds
-       the proxy mapping in source order so the inserted rows land in their sorted
-       position. This must run synchronously here - the async metadataLoaded signal
-       that refresh() relied on does not reliably fire in this insert flow.
-       See memory project_insertfiles_proxy_brittle. */
-    dm->sf->filterChange(src);
-    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
-    if (thumbView->isVisible()) thumbView->refreshIcons(src);
-    if (gridView->isVisible()) gridView->refreshIcons(src);
+    // 4  image counts, proxy, ImageCache, selection, views
+    fsTree->updateCount();
+    bookmarks->updateCount();
+    updateLibraryTree();
+    refreshViews(src);
+
+    // 5  filters last, keeping the user's checks
+    if (changed) {
+        if (!restoreFiltersPending) {
+            filters->save();
+            restoreFiltersPending = true;
+        }
+        buildFilters->rebuild();
+    }
+
+    // 6
+    dm->verifyIntegrity(src);
+}
+
+void MW::insertFiles(QStringList pathList)
+{
+/*
+    Insert new image files -- or replace ones rewritten in place -- in the loaded
+    datamodel: focus stack, embellish and export results. See applyModelChange.
+*/
+    if (G::isLogger) G::log("MW::insertFiles", "dm->instance = " + QString::number(dm->instance));
+
+    if (pathList.isEmpty()) {
+        QString msg = "No files to insert, fPaths is empty.";
+        G::issue("Warning", msg, "MW::insertFiles");
+        return;
+    }
+    applyModelChange(pathList, QStringList(), "MW::insertFiles");
 }
 
 void MW::deleteSelectedFiles()

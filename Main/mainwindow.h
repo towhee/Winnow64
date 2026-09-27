@@ -165,6 +165,9 @@ public:
     // Headless self-test used by the smoke test layer (tests/). Opens folderPath,
     // lets it load for settleMs, then exits the app 0 if images loaded, else 2.
     void runSelfTest(const QString &folderPath, int settleMs);
+    /* WINNOW_SELFTEST_MUTATION=1: insert/replace/delete/refresh on the loaded copy of the
+       fixture folder, checking the model after each (Main/selftestmutation.cpp). */
+    void selfTestModelMutation(const QString &folder);
 
     // End-to-end metadata read used by the metadata test layer (tests/). Reads
     // filePath through the full Metadata pipeline and exits 0 if make/model and
@@ -2903,7 +2906,12 @@ private:
     void copyFolderPathFromContext();
     void copyImagePathFromContext();
     void renameSelectedFiles();
-    void dmInsert(QStringList pathList);
+    /*  THE ONE PIPELINE for changing the loaded datamodel on the fly (fileoperations.cpp).
+        insertFiles, refresh and refreshAfterRemoval are thin callers; see the definition
+        for the order and why it is fixed. reconcileDisk also diffs the loaded folders
+        against the disk (DataModel::refresh) -- the menu Refresh, not a known change. */
+    void applyModelChange(const QStringList &added, const QStringList &removed,
+                          const QString &src, bool reconcileDisk = false);
     void insertFiles(QStringList fPaths);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);

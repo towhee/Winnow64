@@ -305,8 +305,29 @@ public:
     void clearPicks();
     void remove(QString fPath);
     void removeFiles(const QStringList &paths);
+    /*  THE ON-THE-FLY INSERT. Inserts every path not already in the model at its sorted
+        position (sortKey, the order a load uses), then rebuilds fPathRow ONCE and
+        re-derives the load counts and the current index. Returns the source rows of the
+        rows it inserted. MW::applyModelChange is the only caller that should use it from
+        the GUI: it owns the ordering around it (instance bump, metadata load, proxy,
+        filters). insert() is a one-path wrapper. */
+    QList<int> insertFiles(const QStringList &paths);
     int insert(QString fPath);
-    void refresh();
+    /*  Reconcile with the disk: insert files added to a loaded folder, drop rows whose
+        file is gone, and reset modified rows to MetaNotAttempted. Returns the paths that
+        need their metadata (re)loaded -- the added and the modified. In Catalog scope
+        only modifications are taken: the set is a query result, not a folder listing,
+        and its rows may be deliberately offline (see sourceModified). */
+    QStringList refresh();
+    /*  The key the model is ordered by: the lower-cased path, with the jpg/jpeg of a
+        raw+jpg pair rewritten to sort after its raw when combineRawJpg is on. The ONE
+        definition, shared by the folder load, the catalog fill and insertFiles. */
+    static QString sortKey(const QString &path, bool combineRawJpg);
+    /*  Structural self-check after a mutation: fPathRow has one entry per row, no empty
+        key, and every row's path maps back to that row; the running load counts match a
+        full recount. Reports a MODELINTEGRITY warning + G::issue on a failure and
+        returns false. Cheap (one pass), so it runs after every on-the-fly mutation. */
+    bool verifyIntegrity(const QString &src);
     QModelIndex indexFromPath(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
     QModelIndex proxyIndexFromModelIndex(QModelIndex dmIdx);
@@ -392,6 +413,7 @@ public:
     void fPathRowSet(const QString &path, const int row);
     void fPathRowRemove(const QString &path);
     void fPathRowClear();
+    QStringList fPathRowKeys();         // snapshot under the read lock
 
     /* RAW sensor unpack info keyed by fPath, populated during metadata read for raw files.
        Lets the RAW decode path (ImageDecoder, cache mode) obtain RawSensorInfo without

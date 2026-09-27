@@ -69,6 +69,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Image Change (Legacy — Needs Rewrite)
      Filter Change
      Adding a Folder Rebuilds the Filters (Keeping the Checks)
+     DataModel On-the-Fly Insert and Delete (One Pipeline)
      Worker Threads and the Model (Snapshots, and What Still Reads It)
      The Row Store (What a Row Costs, and the Field Table)
      The Scratch Store (The Columns Only a Decoder Needs)
@@ -976,6 +977,23 @@ A FOLDER ADDED TO THE LOADED SET NEVER REACHED THE FILTERS PANEL. A Cmd-click (o
 THE FIX REBUILDS AND PUTS THE CHECKS BACK. The non-reset branch now calls Filters::save and BuildFilters::reset(false), so the build after the load is a full one, and MW::restoreFiltersAfterFolderChange -- connected to BuildFilters::finishedBuildFilters AHEAD of the LibTree handlers -- calls Filters::restore (keyed on category and value, so it survives the rebuild) and re-applies with filterChange. It re-applies whenever anything HAD been checked, not only when something still is: the proxy's compiled predicate holds the old checks until filterChange recompiles it, so a check whose value left with a removed folder would otherwise go on filtering.
 
 SAVED ONCE PER BURST. A Shift-select arrives as one folderSelectionChange per folder; saving on the second would save the tree the first had already cleared, and the user's checks would be lost. restoreFiltersPending gates it, and MW::reset clears it, because a full reset throws away the set those checks belonged to.
+
+⏺ DataModel Changes > DataModel On-the-Fly Insert and Delete (One Pipeline)
+
+Changing the LOADED model -- a focus stack, embellish or export result appearing in the folder, a file rewritten in place, Winnow deleting files, the menu Refresh finding changes made outside -- goes through ONE pipeline, MW::applyModelChange (`Main/fileoperations.cpp`). MW::insertFiles, MW::refresh (reconcileDisk) and MW::refreshAfterRemoval are thin callers; generateMeanStack and the test helpers use insertFiles. Nothing outside DataModel calls dm->insert or dm->refresh directly any more.
+
+WHY ONE PIPELINE. It broke four times in four ways (2026): a new row landing at the END of the proxy (twice); the second of two focus stacks DELETED by refresh(), because DataModel::insert rebuilt fPathRow before the new row had its path, leaving an empty key that sourceModified reported as a file gone from disk; and the Filters rebuilt per file before the rows had metadata, then never again. Each was a step run in the wrong order by one of several callers that each did its own subset.
+
+THE ORDER, which is the fix: (1) dm->newInstance BEFORE any row moves -- MetaRead and ImageCache write by ROW NUMBER stamped with their instance, so a write in flight would land on a shifted row; the model drops stale-instance writes and refreshViews -> MW::filterChange re-initialises the readers. (2) Mutate through DataModel's batch calls only. (3) Load the new/changed rows' metadata and thumbnails synchronously, so they end MetaLoaded with a current icon (the async re-read does not reliably complete here, and ImageCache decodes only MetaLoaded rows). (4) refreshViews: proxy re-assert in source order (after the metadata, whose dataChanged would otherwise kick rows to the end again), ImageCache, selection, icons, video, Develop panel; image counts. (5) Filters LAST: Filters::save, BuildFilters::rebuild, and MW::restoreFiltersAfterFolderChange puts the checks back on finishedBuildFilters -- the same route a folder add uses, so an active filter survives an insert or a delete. (6) DataModel::verifyIntegrity.
+
+THE DATAMODEL SIDE. DataModel::insertFiles inserts every path not already present at its DataModel::sortKey position INSIDE ITS FOLDER'S BLOCK (the model is sorted per folder, folders in load order; a file whose folder has no rows falls back to the first row sorting after it), then rebuilds fPathRow ONCE after every row has its path, recounts the load flags and re-derives the current index. sortKey is the single definition of the load order (lower-cased path; with combineRawJpg the jpg of a pair sorts after its raw) and is shared with the catalog fill -- the old insert ignored combineRawJpg. removeFolder now goes through removeFiles: it used to wrap each removeRows in its own begin/endRemoveRows, i.e. NESTED removal notifications. DataModel::refresh returns the paths needing (re)load, batches its inserts and removals, guards a missing row, and walks a locked snapshot of fPathRow. rebuildRowFromPathHash skips empty paths.
+
+CATALOG SCOPE: refresh takes MODIFICATIONS ONLY. The rows are a query result, so a file the query excluded is not "added" and a row on an unplugged drive is not "removed" (Catalog::Availability keeps those on purpose); diffing the folder listings would pull in the one and drop the other.
+
+VERIFYINTEGRITY runs after every mutation: fPathRow has one entry per row, no empty key, every row's path maps back to its row, and the five running load counts equal a recount. A failure prints MODELINTEGRITY lines and raises a G::issue -- the model names the defect when it happens instead of a thumbnail going missing later.
+
+TESTED BY ctest model_mutation (WINNOW_SELFTEST_MUTATION=1, Main/selftestmutation.cpp): on a temporary copy of the fixture folder it inserts one file, two at once, replaces one in place, removes scattered rows, finds an outside add and delete through Refresh, removes everything and inserts into the empty model, checking integrity, presence, sort order, MetaLoaded and proxy order after each, with the model-contract tester attached. Not yet covered: an active filter and a Catalog scope during the mutation, and a mutation racing a folder load (the TSan harness).
+
 
 ⏺ DataModel Changes > Worker Threads and the Model (Snapshots, and What Still Reads It)
 

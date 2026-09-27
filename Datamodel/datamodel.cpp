@@ -1245,60 +1245,114 @@ bool DataModel::lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2)
     return s1 < s2;
 }
 
-int DataModel::insert(QString fPath)
+QString DataModel::sortKey(const QString &path, bool combineRawJpg)
 {
 /*
-    Called by MW::dmInsert. (fileOperations.cpp)
-
-    Insert a new image into the data model.  Use when a new image is created by embel
-    export or meanStack to quickly refresh the active folder with the just saved image.
-
-    The datamodel must already contain the fPath folder.
-
-    After insertion, the call function should select row: sel->select(fPath);
-    This will invoke MetaRead which will load the metadata, icon and imageCache.
+    The key the model is ordered by -- see the header. Reproduces lessThan and
+    lessThanCombineRawJpg: the lower-cased path, with a jpg or jpeg rewritten to ".zzz"
+    so that, of a raw+jpg pair, the raw comes first.
 */
-    if (G::isLogger) G::log("DataModel::insert");
-    if (isDebug) {
-        qDebug() << "DataModel::insert"
-                 << "instance =" << instance
-                 << "fPath =" << fPath;
-    }
-
-    QFileInfo insertFileInfo(fPath);
-    QString insertFilePath = fPath.toLower();
-
-    // find insertion row
-    int dmRow;
-    for (dmRow = 0; dmRow < rowCount(); ++dmRow) {
-        QString rowPath = index(dmRow, 0).data(G::PathRole).toString().toLower();
-        if (insertFilePath < rowPath) {
-            break;
+    QString key = path.toLower();
+    if (combineRawJpg) {
+        const int dot = key.lastIndexOf('.');
+        if (dot > 0) {
+            const QStringView ext = QStringView(key).mid(dot + 1);
+            if (ext == u"jpg" || ext == u"jpeg") key = key.left(dot) + ".zzz";
         }
     }
+    return key;
+}
 
-    // insert new row
-    insertRows(dmRow, 1);
+QList<int> DataModel::insertFiles(const QStringList &paths)
+{
+/*
+    Insert new image files into the loaded model -- a focus stack, an embellish or export
+    result, a file that appeared in a loaded folder. See the header for the contract.
 
-    /*
-    Add the file data BEFORE rebuilding the fPathRow hash. The rebuild keys every row
-    by its PathRole, and the new row has no path until addFileDataForRow writes it --
-    rebuilding first stored an EMPTY key pointing at the new row. DataModel::refresh
-    (sourceModified) then reported "" as a file removed from disk and remove("")
-    deleted that row: inserting two focus stacks lost the second one.
-    */
-    addFileDataForRow(dmRow, insertFileInfo);
+    WHERE A ROW GOES. The model is not globally sorted: a folder load sorts each folder
+    and appends the folders in the order they were loaded. So a new file goes into its
+    FOLDER's block, at its sortKey position inside it; only a file whose folder has no
+    rows at all (a catalog scope, say) falls back to the first row that sorts after it.
+    The old insert scanned the whole model for the first greater path, which is right
+    only for a single folder and ignored combineRawJpg.
 
-    // update fPathRow hash (rows at and after dmRow have shifted)
+    THE HASH IS REBUILT ONCE, AT THE END, and only after every new row carries its path.
+    Rebuilding before addFileDataForRow had written the path stored an EMPTY key for the
+    new row, which DataModel::refresh then reported as a file gone from disk and
+    deleted -- the second of two focus stacks vanished that way. rebuildRowFromPathHash
+    also skips empty paths now, so the mistake cannot come back through another caller.
+*/
+    if (G::isLogger) G::log("DataModel::insertFiles", QString::number(paths.size()));
+
+    QList<int> inserted;
+
+    // new paths only, in model order
+    QVector<QPair<QString, QString>> todo;          // sortKey, path
+    QSet<QString> seen;
+    for (const QString &p : paths) {
+        if (p.isEmpty() || seen.contains(p) || fPathRowContains(p)) continue;
+        seen.insert(p);
+        todo.append({sortKey(p, combineRawJpg), p});
+    }
+    if (todo.isEmpty()) return inserted;
+    std::sort(todo.begin(), todo.end(),
+              [](const QPair<QString, QString> &a, const QPair<QString, QString> &b) {
+                  return a.first < b.first;
+              });
+
+    auto pathAt = [this](int row) {
+        return index(row, G::PathColumn).data(G::PathRole).toString();
+    };
+    auto insertionRow = [&](const QString &path, const QString &key) {
+        const QString dir = QFileInfo(path).absolutePath() + "/";
+        const int n = rowCount();
+        int last = -1;
+        for (int r = 0; r < n; ++r) {
+            const QString p = pathAt(r);
+            const bool inDir = p.startsWith(dir) && p.indexOf('/', dir.size()) < 0;
+            if (inDir) {
+                if (key < sortKey(p, combineRawJpg)) return r;
+                last = r;
+            }
+            else if (last >= 0) break;              // past the folder's block
+        }
+        if (last >= 0) return last + 1;
+        // the folder has no rows: first row that sorts after it
+        for (int r = 0; r < n; ++r)
+            if (key < sortKey(pathAt(r), combineRawJpg)) return r;
+        return n;
+    };
+
+    for (const auto &t : std::as_const(todo)) {
+        const int row = insertionRow(t.second, t.first);
+        insertRows(row, 1);
+        addFileDataForRow(row, QFileInfo(t.second));
+        for (int &r : inserted) if (r >= row) ++r;  // rows already inserted shift down
+        inserted.append(row);
+    }
+
+    // once, now that every row has its path
     rebuildRowFromPathHash();
-
-    // update current row
+    recountLoadFlags();
     setCurrent(currentFilePath, instance);
 
     // reset loaded flags so MetaRead knows to load
     G::allMetadataAttempted = false;
     G::iconChunkLoaded = false;
-    return dmRow;
+
+    verifyIntegrity("DataModel::insertFiles");
+    return inserted;
+}
+
+int DataModel::insert(QString fPath)
+{
+/*
+    One-path wrapper over insertFiles. Returns the row, or the existing row when the
+    path is already in the model.
+*/
+    if (G::isLogger) G::log("DataModel::insert");
+    const QList<int> rows = insertFiles({fPath});
+    return rows.isEmpty() ? rowFromPath(fPath) : rows.first();
 }
 
 void DataModel::remove(QString fPath)
@@ -1398,6 +1452,8 @@ void DataModel::removeFiles(const QStringList &paths)
     int row = currentSfRow <= last ? currentSfRow : last;
     QModelIndex sfIdx = sf->index(row,0);
     setCurrentSF(sfIdx, instance);
+
+    verifyIntegrity("DataModel::removeFiles");
 }
 
 /* MULTI-SELECT FOLDERS SECTION
@@ -1936,15 +1992,7 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
     keys.reserve(ordered.size());
     for (int i = 0; i < ordered.size(); ++i) {
         const CatalogRow &r = ordered.at(i);
-        QString key = r.path.toLower();
-        if (combineRawJpg) {
-            const QString ext = r.ext.toLower();
-            if (ext == "jpg" || ext == "jpeg") {
-                const int dot = key.lastIndexOf('.');
-                if (dot > 0) key = key.left(dot) + ".zzz";
-            }
-        }
-        keys.append({key, i});
+        keys.append({sortKey(r.path, combineRawJpg), i});
     }
     std::sort(keys.begin(), keys.end(),
               [](const QPair<QString, int> &a, const QPair<QString, int> &b) {
@@ -2307,35 +2355,33 @@ void DataModel::removeFolder(const QString &folderPath)
     ++folderListGen;
     folderSet.remove(folderPath);
     folderImageCount.remove(folderPath);
-    QModelIndex par = QModelIndex();
-
-    // Collect all rows that need to be removed
-    for (int row = rowCount() - 1; row >= 0; row--) {
-        QString filePath = index(row, 0).data(G::PathRole).toString();
-        QFileInfo info(filePath);
-        QString rowFolder = info.dir().absolutePath();
-        if (rowFolder == folderPath) {
-            // do not use a mutex here
-            beginRemoveRows(par, row, row);
-            removeRows(row, 1);
-            endRemoveRows();
-        }
+    /*
+    Through removeFiles, the one batch removal: contiguous runs, the hash rebuilt and
+    the load counts resynced once, and flagged as an expected removal. This loop used to
+    wrap each removeRows in its own beginRemoveRows/endRemoveRows -- removeRows already
+    emits that pair, so every row went out as a NESTED removal, which QAbstractItemModel
+    does not allow and the proxy and views then followed inconsistently.
+    */
+    QStringList paths;
+    for (int row = 0; row < rowCount(); ++row) {
+        const QString filePath = index(row, 0).data(G::PathRole).toString();
+        if (QFileInfo(filePath).dir().absolutePath() == folderPath) paths << filePath;
     }
+    removeFiles(paths);
     sf->invalidate();
-
-    // rebuild fPathRow hash
-    rebuildRowFromPathHash();
-
-    // removeRows bypasses setData, so resync the running load-flag counts
-    recountLoadFlags();
 
     // update current
     setCurrent(currentFilePath, instance);
+    verifyIntegrity("DataModel::removeFolder");
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
 
-void DataModel::refresh()
+QStringList DataModel::refresh()
 {
+/*
+    Reconcile the model with the disk -- see the header. Batch calls, not one insert or
+    remove per path: each of those rescanned the model and rebuilt the whole path hash.
+*/
     if (G::isLogger) G::log("DataModel::refresh");
 
     QStringList added;
@@ -2343,27 +2389,22 @@ void DataModel::refresh()
     QStringList modified;
 
     if (!sourceModified(added, removed, modified)) {
-        return;
+        return QStringList();
     }
 
-    // additions
-    for (const QString &fPath : added) {
-        insert(fPath);
-    }
-
-    // removals
-    G::removingRowsFromDM = true;
-    for (const QString &fPath : removed) {
-        remove(fPath);
-    }
-    G::removingRowsFromDM = false;
+    if (!added.isEmpty()) insertFiles(added);
+    if (!removed.isEmpty()) removeFiles(removed);
 
     // modifications
-    for (const QString &fPath : modified) {
-        int row = rowFromPath(fPath);
+    for (const QString &fPath : std::as_const(modified)) {
+        const int row = rowFromPath(fPath);
+        if (row < 0) continue;
         setData(index(row, G::MetadataStatusColumn), G::MetaNotAttempted);
         setData(index(row, G::IconLoadedColumn), false);
     }
+
+    verifyIntegrity("DataModel::refresh");
+    return added + modified;
 }
 
 QString DataModel::primaryFolderPath()
@@ -5698,6 +5739,72 @@ void DataModel::fPathRowClear()
     fPathRow.clear();
 }
 
+QStringList DataModel::fPathRowKeys()
+{
+    QReadLocker locker(&fPathRowLock);
+    return fPathRow.keys();
+}
+
+bool DataModel::verifyIntegrity(const QString &src)
+{
+/*
+    See the header. Every on-the-fly defect found so far left the model in a state this
+    would have named on the spot -- an empty key, a row the hash could not find -- where
+    what the user saw was a thumbnail missing minutes later.
+*/
+    QStringList problems;
+    const int n = rowCount();
+
+    int hashSize = 0;
+    bool emptyKey = false;
+    {
+        QReadLocker locker(&fPathRowLock);
+        hashSize = fPathRow.size();
+        emptyKey = fPathRow.contains(QString());
+    }
+    if (hashSize != n)
+        problems << QString("fPathRow has %1 entries for %2 rows").arg(hashSize).arg(n);
+    if (emptyKey) problems << "fPathRow has an empty key";
+
+    int rowProblems = 0;
+    int meta = 0, loaded = 0, icon = 0, video = 0, unloadable = 0;
+    for (int row = 0; row < n; ++row) {
+        const QString p = index(row, G::PathColumn).data(G::PathRole).toString();
+        const int mapped = p.isEmpty() ? -1 : fPathRowValue(p);
+        if (mapped != row && rowProblems++ < 5)
+            problems << QString("row %1 (%2) maps to %3").arg(row).arg(p).arg(mapped);
+
+        // the same tally as recountLoadFlags
+        const int status = index(row, G::MetadataStatusColumn).data().toInt();
+        if (status != G::MetaNotAttempted)                          ++meta;
+        if (status == G::MetaLoaded)                                ++loaded;
+        if (index(row, G::IconLoadedColumn).data().toBool())        ++icon;
+        if (index(row, G::VideoColumn).data().toBool())             ++video;
+        if (index(row, G::AvailabilityColumn).data().toInt()
+                != int(Catalog::Availability::Present))             ++unloadable;
+    }
+    if (rowProblems > 5) problems << QString("... %1 rows misaddressed").arg(rowProblems);
+
+    auto count = [&](const char *name, const std::atomic<int> &have, int want) {
+        const int h = have.load(std::memory_order_relaxed);
+        if (h != want) problems << QString("%1 %2, recount %3").arg(name).arg(h).arg(want);
+    };
+    count("metadataAttemptedCount", metadataAttemptedCount, meta);
+    count("metadataLoadedCount", metadataLoadedCount, loaded);
+    count("iconLoadedCount", iconLoadedCount, icon);
+    count("videoRowCount", videoRowCount, video);
+    count("iconUnloadableCount", iconUnloadableCount, unloadable);
+
+    if (problems.isEmpty()) return true;
+
+    qWarning().noquote() << "MODELINTEGRITY" << src << "rows" << n << "instance" << instance;
+    for (const QString &p : std::as_const(problems))
+        qWarning().noquote() << "MODELINTEGRITY  " << p;
+    G::issue("Warning", "Datamodel integrity after " + src + ": " + problems.join("; "),
+             "DataModel::verifyIntegrity");
+    return false;
+}
+
 bool DataModel::fPathRawInfoGet(const QString &path, RawSensorInfo &info)
 {
     QReadLocker locker(&fPathRawInfoLock);
@@ -5798,8 +5905,17 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
     bool hasChanged = false;
     QSet<QString> srcImageFiles;    // a set: the removed check looks up every row
 
+    /*
+    CATALOG SCOPE TAKES MODIFICATIONS ONLY. Its rows are a query result, not a folder
+    listing: the folders are in folderList, but a file in one of them that the query
+    excluded is not "added", and a row whose drive is unplugged is not "removed" -- the
+    catalog keeps offline rows on purpose (Catalog::Availability). Diffing a listing
+    against it would pull in every excluded file and drop every offline row.
+    */
+    const bool diffListing = (G::scope != G::Scope::Catalog);
+
     // added
-    foreach(QString folderPath, folderList) {
+    if (diffListing) foreach(QString folderPath, folderList) {
         // populate srcImageFiles
         QDir d;
         d.setPath(folderPath);
@@ -5815,11 +5931,14 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         }
     }
 
-    // removed
-    for (auto i = fPathRow.begin(), end = fPathRow.end(); i != end; ++i) {
-        QString fPath = i.key();
-        if (!srcImageFiles.contains(fPath)) {
-            removed << fPath;
+    // removed (a snapshot of the keys: other threads read fPathRow under its lock)
+    if (diffListing) {
+        const QStringList known = fPathRowKeys();
+        for (const QString &fPath : known) {
+            if (fPath.isEmpty()) continue;
+            if (!srcImageFiles.contains(fPath)) {
+                removed << fPath;
+            }
         }
     }
 
