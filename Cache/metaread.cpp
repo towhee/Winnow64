@@ -493,7 +493,7 @@ void MetaRead::setAwaitingDecode(int sfRow)
     awaitingDecodeTimer.restart();
 }
 
-void MetaRead::onRowCached(int sfRow, bool isCached, int /*instance*/)
+void MetaRead::onRowCached(int sfRow, QString /*fPath*/, bool isCached, int /*instance*/)
 {
     if (!isCached) return;
     int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);

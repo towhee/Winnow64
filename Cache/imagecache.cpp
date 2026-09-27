@@ -602,7 +602,7 @@ void ImageCache::trimOutsideTargetRange()
                 keysToRemove.append(fPath);
                 removedFromCache.append(sfRow);
                 setStateCached(fPath, false);
-                emit setCached(sfRow, false, instance);
+                emit setCached(sfRow, fPath, false, instance);
             }
         }
         // release locker
@@ -904,7 +904,7 @@ void ImageCache::setTargetRange(int key)
         // Videos: mark cached; do not count toward sumMB
         if (isVideoAt(pos)) {
             setStateCached(fPath, true);
-            emit setCached(pos, true, instance);
+            emit setCached(pos, fPath, true, instance);
             return;
         }
 
@@ -912,7 +912,7 @@ void ImageCache::setTargetRange(int key)
         // endless looping in fillCache.
         if (stateOf(fPath).status == ImageDecoder::Status::Invalid) {
             setStateCached(fPath, true);
-            emit setCached(pos, true, instance);
+            emit setCached(pos, fPath, true, instance);
             return;
         }
 
@@ -2947,8 +2947,8 @@ void ImageCache::cacheImage(int id, int sfRow,
 
     // update our own state, then mirror to the datamodel for the icon badge
     if (!abort) {
-        setStateCached(pathAt(sfRow), true);
-        emit setCached(sfRow, true, instance);
+        setStateCached(fPath, true);
+        emit setCached(sfRow, fPath, true, instance);
     }
 
     // Reset attempts so a later trim/re-decode cycle gets a fresh retry budget.
@@ -2956,7 +2956,7 @@ void ImageCache::cacheImage(int id, int sfRow,
     // not to penalise rows that were cached, trimmed, and need re-caching.
     if (!abort) {
         QMutexLocker lock(&cacheStateMutex);
-        cacheState[pathAt(sfRow)].attempts = 0;
+        cacheState[fPath].attempts = 0;
     }
     if (!abort) emit setValSf(sfRow, G::AttemptsColumn, 0, instance, src);
 

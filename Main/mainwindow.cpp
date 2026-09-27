@@ -4520,6 +4520,10 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
                                << "ms  stop =" << lcT.elapsed() << "ms";
     }
 
+    /*  After stop(), which lowers it. Appending is a fill too, so both paths grey the
+        Module buttons until folderChanged. */
+    setCatalogLoading(true);
+
     dm->abort = false;
     /* Queued for the same reason enqueueFolderSelection is: stop() has just torn down the
        reader threads, and the fill must not run inside the signal that asked for it. On
@@ -5787,6 +5791,7 @@ void MW::stop(QString src)
     /*  Whatever the curtain was waiting for belongs to the load being stopped. A new
         Library load raises it again after this (MW::loadCatalogScope). */
     lowerLoadCurtain("MW::stop " + src);
+    setCatalogLoading(false);
 
     // stop flags
     G::stop = true;
@@ -5907,6 +5912,7 @@ bool MW::reset(QString src)
     dm->selectionModel->clear();
     dm->currentSfRow = 0;
     dm->clearDataModel();
+    syncWorkflowButtonsEnabled();   // no rows: the Module buttons grey
     // new instance: only done here and if sort/filter operation
     dm->newInstance("folderSelectionChange");
     emit initializeImageCache();    // may not be req'd
@@ -6582,6 +6588,7 @@ void MW::folderChanged(bool aborted)
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
+    setCatalogLoading(false);       // the Module buttons: enabled now if there are rows
     // update FSTree image count if fsModel isMaxRecurse is true
     if (fsTree->fsModel->isMaxRecurse) fsTree->updateCount();
     if (aborted) {

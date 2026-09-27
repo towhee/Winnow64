@@ -5516,7 +5516,7 @@ void DataModel::reportScrollProbe(const QString &src)
     probeFlushEmitNs = 0;
 }
 
-void DataModel::setCached(int sfRow, bool isCached, int instance)
+void DataModel::setCached(int sfRow, QString fPath, bool isCached, int instance)
 {
 /*
     THE LAST UNTHROTTLED PROXY WRITE.
@@ -5529,9 +5529,19 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
     ImageCache re-targets and refills. So a click on a thumbnail in a large catalog paid
     the whole rebuild hundreds of times before the loupe could be painted.
 */
+/*
+    KEYED BY PATH, NOT ROW. sfRow is a row in ImageCache's proxy snapshot, and this slot
+    runs queued on the GUI thread, so a filter or sort change in between re-numbers the
+    proxy: the row was either out of range (hundreds of "Invalid sfIdx" warnings a day)
+    or, worse, a DIFFERENT image, whose cache badge was then set. ImageCache also reports
+    images evicted because they left the filtered view, with sfRow = -1. fPath is
+    stable, and IsCachedColumn lives in the source model, so the proxy is not needed. A
+    path no longer in the model (folder changed, file deleted) has nothing to mark.
+*/
+    Q_UNUSED(sfRow)
     // Do not use mutex here 2025-02-22
     QString src = "DataModel::setCached";
-    QModelIndex sfIdx = sf->index(sfRow, G::IsCachedColumn);
+    const QModelIndex dmIdx = index(fPathRowValue(fPath), G::IsCachedColumn);
     if (instance != this->instance) {
         /*  THE LOUPE IS NEVER TOLD. The image is in the cache -- ImageCache::cacheImage
             inserted it before it got here -- but refreshViewsOnCacheChange is below this
@@ -5539,7 +5549,7 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
             user does something else. Counted rather than silently dropped. */
         if (G::isIngestProbe) IngestProbe::Instance().NoteDroppedCacheSignal();
         errMsg = "Instance clash from " + src;
-        G::issueDedup("Comment", errMsg, src, sfIdx.row());
+        G::issueDedup("Comment", errMsg, src, dmIdx.row(), fPath);
 
         /*
         qDebug() << src << sfRow << errMsg
@@ -5548,26 +5558,17 @@ void DataModel::setCached(int sfRow, bool isCached, int instance)
             ;//*/
         return;
     }
-    if (!sfIdx.isValid()) {
-        errMsg = "Invalid sfIdx.  Src: " + src;
-        G::issue("Warning", errMsg, src, sfIdx.row());
-        // qDebug() << src << sfRow << "isCached =" << isCached << errMsg;
-        return;
-    }
-    const QModelIndex dmIdx = sf->mapToSource(sfIdx);
-    if (!dmIdx.isValid()) {
-        errMsg = "Invalid dmIdx from sfIdx.  Src: " + src;
-        G::issue("Warning", errMsg, src, sfIdx.row());
-        return;
-    }
+    if (!dmIdx.isValid()) return;
     {
         const QSignalBlocker blocker(this);
         setData(dmIdx, isCached);
     }
     if (iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
 
-    QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
-    emit refreshViewsOnCacheChange(fPath, isCached, src);
+    /* Only an image still in the filtered view has a badge or loupe to refresh (an
+       evicted-by-filter image is hidden; refreshViewsOnCacheChange would warn). */
+    if (sf->mapFromSource(dmIdx).isValid())
+        emit refreshViewsOnCacheChange(fPath, isCached, src);
 }
 
 void DataModel::setAllMetadataAttempted(bool isAttempted)
@@ -5669,7 +5670,8 @@ bool DataModel::fPathRowContains(const QString &path)
 int DataModel::fPathRowValue(const QString &path)
 {
     QReadLocker locker(&fPathRowLock);
-    return fPathRow[path];
+    // value(), not operator[]: that inserts a missing path (under a READ lock) as row 0.
+    return fPathRow.value(path, -1);
 }
 
 void DataModel::fPathRowSet(const QString &path, const int row)

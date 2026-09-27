@@ -90,7 +90,7 @@ public:
 signals:
     void stopped(QString src);
     void waitingForRow(int sfRow, int instance);
-    void setCached(int sfRow, bool isCached, int instance);
+    void setCached(int sfRow, QString fPath, bool isCached, int instance);
     void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
     void decode(int sfRow, int instance);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,

@@ -1655,28 +1655,12 @@ void MW::createViewActions()
     /* The workflow buttons -- the Module dock's and the hidden status-bar switcher's,
        both built before these actions (createDocks, createStatusBar) -- follow their
        actions' enabled state, and a greyed button says why in its tooltip: the
-       "disabledReason" the action was gated with. */
-    const QList<QPair<int, QAction *>> workflowActions{
-        {WfSource, browseWorkflowAction}, {WfDevelop, operationModeAction},
-        {WfKeywords, keywordsWorkspaceAction}, {WfEmbellish, embellishWorkspaceAction},
-        {WfSlideShow, slideShowWorkspaceAction}, {WfMap, mapWorkspaceAction}};
-    for (const auto &wa : workflowActions)
-    for (QToolButton *btn : {workflowBtns.value(wa.first), moduleBtns.value(wa.first)}) {
-        QAction *a = wa.second;
-        if (!btn || !a) continue;
-        const QString key = wa.first == WfSource ? tr("E / G / T / C")
-                          : wa.first == WfDevelop ? tr("D")
-                          : wa.first == WfKeywords ? tr("K") : QString();
-        auto mirror = [btn, a, key]() {
-            btn->setEnabled(a->isEnabled());
-            QString tip = a->text();
-            if (!key.isEmpty()) tip += "  (" + key + ")";
-            const QString why = a->property("disabledReason").toString();
-            if (!a->isEnabled() && !why.isEmpty()) tip += "\n" + why;
-            btn->setToolTip(tip);
-        };
-        connect(a, &QAction::changed, btn, mirror);
-        mirror();
+       "disabledReason" the action was gated with. See MW::syncWorkflowButtonEnabled. */
+    for (int wf = 0; wf < WfCount; ++wf) {
+        QAction *a = workflowAction(wf);
+        if (!a) continue;
+        connect(a, &QAction::changed, this, [this, wf]{ syncWorkflowButtonEnabled(wf); });
+        syncWorkflowButtonEnabled(wf);
     }
 
     asCompareAction = new QAction(tr("Compare Mode"), this);
