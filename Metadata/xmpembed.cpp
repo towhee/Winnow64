@@ -476,6 +476,93 @@ Result appendTiff(const QString &fPath, const QByteArray &xmpmeta)
     return syncFile(f) ? Result::Ok : Result::IoError;
 }
 
+namespace {
+
+/* Where the 2-byte value of IFD0's Orientation entry is in the file, and the byte
+   order it is written in. */
+Result locateOrientation(const QString &fPath, qint64 &valuePos, bool &big)
+{
+    const QString ext = QFileInfo(fPath).suffix().toLower();
+    QFile f(fPath);
+    if (!f.open(QIODevice::ReadOnly)) return Result::IoError;
+
+    if (ext == "tif" || ext == "tiff" || ext == "dng") {
+        TiffLayout t;
+        const Result r = readLayout(f, t);
+        if (r != Result::Ok) return r;
+        big = t.big;
+        for (int i = 0; i < t.count; ++i) {
+            if (get16(t.entries, i * 12, t.big) != 274) continue;
+            if (get16(t.entries, i * 12 + 2, t.big) != 3
+                || get32(t.entries, i * 12 + 4, t.big) != 1) return Result::Malformed;
+            valuePos = t.ifd0 + 2 + qint64(i) * 12 + 8;
+            return Result::Ok;
+        }
+        return Result::Unsupported;
+    }
+    if (ext != "jpg" && ext != "jpeg") return Result::Unsupported;
+
+    const QByteArray file = f.readAll();
+    QVector<Segment> segs;
+    const Result r = walkJpeg(file, segs);
+    if (r != Result::Ok) return r;
+    for (const Segment &s : segs) {
+        if (s.marker != 0xE1 || file.mid(s.pos + 4, 6) != QByteArray("Exif\0\0", 6))
+            continue;
+        // IFD offsets inside Exif are relative to its TIFF header, not the file
+        const qint64 tiff = s.pos + 10;
+        const qint64 end = s.pos + s.size;
+        if (tiff + 8 > end) return Result::Malformed;
+        if (file.mid(tiff, 2) == "MM") big = true;
+        else if (file.mid(tiff, 2) == "II") big = false;
+        else return Result::Malformed;
+        const qint64 ifd = tiff + get32(file, tiff + 4, big);
+        if (ifd + 2 > end) return Result::Malformed;
+        const quint16 count = get16(file, ifd, big);
+        if (ifd + 2 + qint64(count) * 12 > end) return Result::Malformed;
+        for (int i = 0; i < count; ++i) {
+            const qint64 e = ifd + 2 + qint64(i) * 12;
+            if (get16(file, e, big) != 274) continue;
+            if (get16(file, e + 2, big) != 3 || get32(file, e + 4, big) != 1)
+                return Result::Malformed;
+            valuePos = e + 8;
+            return Result::Ok;
+        }
+        return Result::Unsupported;
+    }
+    return Result::Unsupported;                 // no Exif segment
+}
+
+}  // namespace
+
+Result readOrientation(const QString &fPath, int &orientation)
+{
+    qint64 pos = 0;
+    bool big = false;
+    const Result r = locateOrientation(fPath, pos, big);
+    if (r != Result::Ok) return r;
+    QFile f(fPath);
+    if (!f.open(QIODevice::ReadOnly) || !f.seek(pos)) return Result::IoError;
+    const QByteArray v = f.read(2);
+    if (v.size() != 2) return Result::IoError;
+    orientation = get16(v, 0, big);
+    return Result::Ok;
+}
+
+Result writeOrientation(const QString &fPath, int orientation)
+{
+    if (orientation < 1 || orientation > 8) return Result::Malformed;
+    qint64 pos = 0;
+    bool big = false;
+    const Result r = locateOrientation(fPath, pos, big);
+    if (r != Result::Ok) return r;
+    QFile f(fPath);
+    if (!f.open(QIODevice::ReadWrite) || !f.seek(pos)) return Result::IoError;
+    const QByteArray v = put16(quint16(orientation), big);
+    if (f.write(v) != v.size()) return Result::IoError;
+    return syncFile(f) ? Result::Ok : Result::IoError;
+}
+
 Result read(const QString &fPath, QByteArray &xmpmeta)
 {
     const QString ext = QFileInfo(fPath).suffix().toLower();
