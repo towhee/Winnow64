@@ -543,23 +543,56 @@ static bool isPreviewCachePath(const QString &fPath, const QString &src)
 void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 {
 /*
-    Persist the new orientation.  When G::modifySourceFiles is true the source file's
-    EXIF Orientation tag is updated via ExifTool.  Otherwise the orientation is written
-    to an XMP sidecar (created if absent) so the rotation survives a reload.
+    Persist the new orientation.
+
+    INTO THE FILE only for JPEG, TIFF and DNG, and only with "Permit image file
+    modification": XmpEmbed::writeOrientation patches the 2-byte value of the EXIF
+    Orientation entry in place (native; this used to run ExifTool). Raw and HEIC always
+    use the sidecar, as Lightroom does -- the ExifTool path used to write into raw files
+    too. A file with no Orientation entry to patch (every PNG, some JPEGs) falls back to
+    the sidecar as well.
+
+    After a successful patch any tiff:Orientation in the sidecar is REMOVED: parseSidecar
+    applies it over the file's own value, so a stale one would undo this rotation on the
+    next read.
+
+    Runs on a pool thread (QtConcurrent from MW::setRotation).
 */
     if (G::isLogger) G::log("Metadata::writeOrientation");
     if (isPreviewCachePath(fPath, "Metadata::writeOrientation")) return;
-    if (G::modifySourceFiles) {
+    const QString src = "Metadata::writeOrientation";
+    const QString ext = QFileInfo(fPath).suffix().toLower();
+    const bool patchable = ext == "jpg" || ext == "jpeg" || ext == "tif" || ext == "tiff"
+                           || ext == "dng";
+    if (G::modifySourceFiles && patchable && !QFileInfo(fPath).isSymLink()) {
+        XmpEmbed::Result r = XmpEmbed::Result::IoError;
         if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup")) {
-            G::issue("Warning", "Backup failed; orientation not written.",
-                     "Metadata::writeOrientation", -1, fPath);
+            G::issue("Warning", "Backup failed; orientation saved to the sidecar instead.",
+                     src, -1, fPath);
+        }
+        else {
+            r = XmpEmbed::writeOrientation(fPath, orientationNumber.toInt());
+        }
+        if (r == XmpEmbed::Result::Ok) {
+            const QString sc = FileOps::existingSidecar(fPath);
+            if (sc.isEmpty() || QFileInfo(sc).isSymLink()) return;
+            QFile f(sc);
+            if (!f.open(QIODevice::ReadWrite)) return;
+            Xmp xmp(f, G::dmInstance);
+            if (xmp.isValid && !xmp.getItem("orientation").isEmpty()) {
+                xmp.setItem("orientation", "");
+                if (!xmp.writeSidecar(f))
+                    G::issue("Warning", "Failed to clear the sidecar's orientation.",
+                             src, -1, sc);
+            }
+            f.close();
             return;
         }
-        ExifTool et;
-        et.setOverWrite(true);
-        et.writeOrientation(fPath, orientationNumber);
-        et.close();
-        return;
+        if (r != XmpEmbed::Result::Unsupported) {
+            G::issue("Warning", "Could not write orientation into the file ("
+                     + XmpEmbed::describe(r) + "). It was saved to the sidecar instead.",
+                     src, -1, fPath);
+        }
     }
 
     QString sidecarPath = FileOps::prepareSidecarForWrite(fPath);

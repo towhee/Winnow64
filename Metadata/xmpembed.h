@@ -59,6 +59,15 @@ Result read(const QString &fPath, QByteArray &xmpmeta);
    so the next writer has room. */
 Result write(const QString &fPath, const QByteArray &xmpmeta);
 
+/* EXIF Orientation -- tag 274 in IFD0, inside the Exif APP1 segment of a JPEG, or IFD0
+   of a TIFF/DNG -- which is what every viewer reads; tiff:Orientation in the XMP is
+   not. The value lives INSIDE its 12-byte IFD entry, so writeOrientation patches those
+   2 bytes in place: nothing moves and there is no half-written state. Unsupported when
+   there is no entry to patch (PNG, or a file without one); adding one would mean
+   rewriting the IFD, and the caller keeps the orientation in the sidecar instead. */
+Result readOrientation(const QString &fPath, int &orientation);
+Result writeOrientation(const QString &fPath, int orientation);
+
 /* The pieces, exposed for tst_xmpembed. The in-memory ones never touch disk. */
 QByteArray packet(const QByteArray &xmpmeta, int padding);
 Result readJpeg(const QByteArray &file, QByteArray &xmpmeta);

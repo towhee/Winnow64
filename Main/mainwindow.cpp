@@ -8789,9 +8789,10 @@ void MW::setRotation(int degrees)
     When there is a rotation action (rotateLeft or rotateRight) the current
     rotation amount (in degrees) is updated in the datamodel.
 
-    If G::modifySourceFiles == true the rotation is updated in the image file EXIF using
-    exifTool in separate threads.  Otherwise it is written to an XMP sidecar so the
-    rotation survives a reload.
+    If G::modifySourceFiles == true and the image is a JPEG, TIFF or DNG, the rotation is
+    patched into the file's EXIF Orientation on a pool thread (Metadata::
+    writeOrientation). Otherwise -- and always for raw and HEIC -- it is written to the
+    XMP sidecar so the rotation survives a reload.
 */
     if (G::isLogger) G::log("MW::setRotation");
     qDebug() << "MW::setRotation degrees =" << degrees;
@@ -8848,8 +8849,13 @@ void MW::setRotation(int degrees)
 
         // rotate selected cached full size images
         QString fPath = thumbIdx.data(G::PathRole).toString();
+        /*  get(), not contains(): this used to test contains() and then rotate a freshly
+            constructed -- NULL -- QImage and insert THAT, so every rotation replaced the
+            cached full-size image with an empty one and the loupe could blank until the
+            image was decoded again. One locked lookup; an uncached image is left for the
+            next decode, which applies the new rotation itself. */
         QImage image;
-        if (icd->contains(fPath)) {
+        if (icd->get(fPath, image) && !image.isNull()) {
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
             icd->insert(fPath, image);
         }

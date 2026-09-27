@@ -80,7 +80,7 @@ QByteArray tiff(bool big)
     struct E { quint16 tag, type; quint32 count, value; };
     const QList<E> entries = {
         {256, 3, 1, 1}, {257, 3, 1, 1}, {258, 3, 1, 8}, {259, 3, 1, 1},
-        {262, 3, 1, 1}, {273, 4, 1, 8}, {277, 3, 1, 1}, {278, 3, 1, 1},
+        {262, 3, 1, 1}, {273, 4, 1, 8}, {274, 3, 1, 1}, {277, 3, 1, 1}, {278, 3, 1, 1},
         // Copyright "ABC\0": a tag AFTER 700, so the insertion has to sort
         {279, 4, 1, 1}, {33432, 2, 4, 0},
     };
@@ -122,6 +122,33 @@ QList<quint16> tagsAt(const QByteArray &b, quint32 ifd)
     return tags;
 }
 
+/* A real JPEG with an Exif APP1 after its JFIF segment: a little-endian TIFF header and
+   an IFD0 holding one entry, Orientation = 1. */
+QByteArray jpegWithOrientation()
+{
+    const QByteArray plain = encode(testImage(), "JPG");
+    QByteArray tiffPart("II*\0\x08\0\0\0", 8);
+    tiffPart += QByteArray("\x01\0", 2);                          // one entry
+    tiffPart += QByteArray("\x12\x01\x03\0\x01\0\0\0\x01\0\0\0", 12);  // 274 SHORT 1 = 1
+    tiffPart += QByteArray(4, '\0');                               // no next IFD
+    QByteArray payload = QByteArray("Exif\0\0", 6) + tiffPart;
+    QByteArray seg("\xFF\xE1", 2);
+    const int len = payload.size() + 2;
+    seg.append(char(len >> 8));
+    seg.append(char(len & 0xFF));
+    seg += payload;
+    const qint64 app0End = 2 + 2 + ((uchar(plain[4]) << 8) | uchar(plain[5]));
+    return plain.left(app0End) + seg + plain.mid(app0End);
+}
+
+int changedBytes(const QByteArray &a, const QByteArray &b)
+{
+    if (a.size() != b.size()) return -1;
+    int n = 0;
+    for (qint64 i = 0; i < a.size(); ++i) if (a[i] != b[i]) ++n;
+    return n;
+}
+
 QByteArray readFile(const QString &path)
 {
     QFile f(path);
@@ -153,6 +180,10 @@ private slots:
     void bigTiffIsUnsupported();
     void writeThenReadThroughTheFile();
     void xmpWritesLightroomShapes();
+    void jpegOrientationPatchedInPlace();
+    void tiffOrientationPatchedInPlace_data();
+    void tiffOrientationPatchedInPlace();
+    void orientationWithNothingToPatch();
     void xmpKeepsForeignProperties();
 
 private:
@@ -292,7 +323,8 @@ void tst_xmpembed::tiffAddsTagWithoutMovingAnything()
     QVERIFY(ifd0Of(out) >= quint32(src.size()));
     QCOMPARE(ifd0Of(out) % 2, 0u);
     const QList<quint16> tags = tagsAt(out, ifd0Of(out));
-    QCOMPARE(tags, (QList<quint16>{256, 257, 258, 259, 262, 273, 277, 278, 279, 700, 33432}));
+    QCOMPARE(tags, (QList<quint16>{256, 257, 258, 259, 262, 273, 274, 277, 278, 279, 700,
+                                   33432}));
 
     QCOMPARE(XmpEmbed::readTiff(path, meta), Result::Ok);
     QCOMPARE(meta, doc("First"));
@@ -325,7 +357,7 @@ void tst_xmpembed::tiffRepointsExistingTag()
     QVERIFY(after.size() > before.size());
 
     // only the 700 entry's count and offset differ within the old extent
-    const qint64 entry = ifd0Of(before) + 2 + 9 * 12;         // 700 is the 10th entry
+    const qint64 entry = ifd0Of(before) + 2 + 10 * 12;        // 700 is the 11th entry
     for (qint64 i = 0; i < before.size(); ++i) {
         if (i >= entry + 4 && i < entry + 12) continue;
         if (before[i] != after[i]) QFAIL(qPrintable(QString("byte %1 changed").arg(i)));
@@ -429,6 +461,76 @@ void tst_xmpembed::xmpKeepsForeignProperties()
     QVERIFY(out.contains("<crs:ToneCurvePV2012>"));
     QVERIFY(out.contains("<rdf:li>0, 0</rdf:li>"));
     QVERIFY(out.contains("xmp:Rating=\"5\""));
+}
+
+void tst_xmpembed::jpegOrientationPatchedInPlace()
+{
+/*
+    Rotation into the file is a 2-byte patch of the value already in IFD0's Orientation
+    entry: one byte differs (little-endian 1 -> 6), the file is the same size, and the
+    pixels decode as before (the decoder is told nothing about orientation here).
+*/
+    const QString path = tmp.filePath("orient.jpg");
+    const QByteArray src = jpegWithOrientation();
+    writeFile(path, src);
+
+    int o = 0;
+    QCOMPARE(XmpEmbed::readOrientation(path, o), Result::Ok);
+    QCOMPARE(o, 1);
+    QCOMPARE(XmpEmbed::writeOrientation(path, 6), Result::Ok);
+    QCOMPARE(XmpEmbed::readOrientation(path, o), Result::Ok);
+    QCOMPARE(o, 6);
+    const QByteArray out = readFile(path);
+    QCOMPARE(changedBytes(src, out), 1);
+    QCOMPARE(decode(out), decode(src));
+
+    QCOMPARE(XmpEmbed::writeOrientation(path, 9), Result::Malformed);   // not an orientation
+    QCOMPARE(readFile(path), out);
+}
+
+void tst_xmpembed::tiffOrientationPatchedInPlace_data()
+{
+    QTest::addColumn<bool>("big");
+    QTest::newRow("little-endian") << false;
+    QTest::newRow("big-endian") << true;
+}
+
+void tst_xmpembed::tiffOrientationPatchedInPlace()
+{
+    QFETCH(bool, big);
+    const QString path = tmp.filePath(big ? "orient-mm.tif" : "orient-ii.tif");
+    const QByteArray src = tiff(big);
+    writeFile(path, src);
+
+    int o = 0;
+    QCOMPARE(XmpEmbed::readOrientation(path, o), Result::Ok);
+    QCOMPARE(o, 1);
+    QCOMPARE(XmpEmbed::writeOrientation(path, 8), Result::Ok);
+    QCOMPARE(XmpEmbed::readOrientation(path, o), Result::Ok);
+    QCOMPARE(o, 8);
+    QCOMPARE(changedBytes(src, readFile(path)), 1);
+
+    // and the XMP append still finds its way round the patched IFD
+    QCOMPARE(XmpEmbed::appendTiff(path, doc("X")), Result::Ok);
+    QCOMPARE(XmpEmbed::readOrientation(path, o), Result::Ok);
+    QCOMPARE(o, 8);
+}
+
+void tst_xmpembed::orientationWithNothingToPatch()
+{
+/*
+    Unsupported -- not an error -- so Metadata::writeOrientation quietly keeps the
+    rotation in the sidecar: a PNG, and a JPEG with no Exif segment at all.
+*/
+    const QString png = tmp.filePath("orient.png");
+    writeFile(png, encode(testImage(), "PNG"));
+    QCOMPARE(XmpEmbed::writeOrientation(png, 6), Result::Unsupported);
+
+    const QString jpg = tmp.filePath("noexif.jpg");
+    const QByteArray src = encode(testImage(), "JPG");
+    writeFile(jpg, src);
+    QCOMPARE(XmpEmbed::writeOrientation(jpg, 6), Result::Unsupported);
+    QCOMPARE(readFile(jpg), src);
 }
 
 QTEST_MAIN(tst_xmpembed)
