@@ -1048,6 +1048,7 @@ private slots:
     /* EXIF rotation (degrees) to apply to a scene-referred render so it matches the loupe. Reads
        the sort/filter model, so it MUST run on the GUI thread. */
     int developOrientationDegrees(const WorkingImage &work, const QString &fPath) const;
+    void invalidateDevelopAfterRotation(const QString &fPath);
     /* Refresh the Develop scopes (histogram + vectorscope) from the image currently shown: the
        develop preview after a render, else the decoded image. One strided sample pass feeds both
        scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */

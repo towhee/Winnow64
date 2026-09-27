@@ -8859,6 +8859,8 @@ void MW::setRotation(int degrees)
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
             icd->insert(fPath, image);
         }
+        // after the cache holds the rotated image: Develop rebuilds from it
+        invalidateDevelopAfterRotation(fPath);
 
         // update exif in image
         QString orient;
@@ -11553,6 +11555,52 @@ void MW::renderDevelopPreview(bool fullRes)
             }
         });
     });
+}
+
+void MW::invalidateDevelopAfterRotation(const QString &fPath)
+{
+/*
+    A rotation (Cmd+[ / Cmd+]) turns the loupe and the ImageCache image, but Develop
+    renders from its OWN copies, which kept the old orientation -- so the next render
+    (opening the crop tool, any slider) put the image back the way it was.
+
+      WorkingImageCache  a DISPLAY-REFERRED work (JPEG/TIFF/HEIC, raw in preview mode) is
+                         built from the already-rotated display image, so it is dropped
+                         and rebuilt from the ImageCache, which setRotation has just
+                         rotated. A SCENE-REFERRED raw work is sensor-native and
+                         developOrientationDegrees applies the model's orientation on
+                         every render, so it is kept -- dropping it would re-demosaic.
+      developProxy       the screen-sized copy drags and the crop tool render from, keyed
+                         only by path, so it survived the rebuild.
+      developStackCache  intermediates of the old pixels; a 180 degree turn keeps the
+                         size, so its own size check would not catch it.
+      developFrame /     the frames the sharpening preview and the devPreview encode
+      developFullFrame   derive from.
+
+    Then re-render, as the denoise completion does. Call AFTER the ImageCache holds the
+    rotated image.
+*/
+    if (G::isLogger) G::log("MW::invalidateDevelopAfterRotation", fPath);
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (work && !work->sceneReferred) WorkingImageCache::instance().remove(fPath);
+
+    if (fPath != dm->currentFilePath && fPath != developProxyPath) return;
+    developProxy.reset();
+    developProxyPath.clear();
+    developStackCache.clear();
+    developFrame = QImage();
+    developFramePath.clear();
+    developFrameFaithful = false;
+    developFrameRecipe.clear();
+    developFullFrame = QImage();
+    developFullFramePath.clear();
+    developFullFrameFaithful = false;
+    developFullFrameRecipe.clear();
+    ++developParamsGen;                 // discard any stale in-flight full-res render
+    if (fPath == dm->currentFilePath && currentDevelopEditsVisible()) {
+        renderDevelopPreview(false);
+        developFullResTimer->start(kDevelopSettleMs);
+    }
 }
 
 int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath) const
