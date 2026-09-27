@@ -458,8 +458,14 @@ bool FS::runDMap()
 
         // Sequential Part: Load and ECC Align
         try {
-            // Use your updated lambda decoder here if applicable
-            currImage = FSLoader::load(inputPaths.at(slice).toStdString(), decoder);
+            if (developDecoder && developPaths.contains(path)) {
+                const cv::Mat developed = developDecoder(path, &abort);
+                currImage = developed.empty() ? FSLoader::Image()
+                                              : FSLoader::loadFromMat(developed);
+            }
+            else {
+                currImage = FSLoader::load(path.toStdString(), decoder);
+            }
         } catch (const std::exception &e) {
             QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
             status(msg);
@@ -478,6 +484,10 @@ bool FS::runDMap()
         stack is still processing. Abort cleanly here instead of feeding empty
         matrices into alignment.
         */
+        if (abortRequested()) {
+            for (auto &f : futures) f.waitForFinished();
+            return false;
+        }
         if (currImage.color.empty() || currImage.gray.empty()) {
             QString msg = QString("Aborting: Empty image for slice %1.").arg(slice);
             status(msg);

@@ -1280,14 +1280,20 @@ int DataModel::insert(QString fPath)
     // insert new row
     insertRows(dmRow, 1);
 
-    // update fPathRow hash
+    /*
+    Add the file data BEFORE rebuilding the fPathRow hash. The rebuild keys every row
+    by its PathRole, and the new row has no path until addFileDataForRow writes it --
+    rebuilding first stored an EMPTY key pointing at the new row. DataModel::refresh
+    (sourceModified) then reported "" as a file removed from disk and remove("")
+    deleted that row: inserting two focus stacks lost the second one.
+    */
+    addFileDataForRow(dmRow, insertFileInfo);
+
+    // update fPathRow hash (rows at and after dmRow have shifted)
     rebuildRowFromPathHash();
 
     // update current row
     setCurrent(currentFilePath, instance);
-
-    // add the file data to datamodel
-    addFileDataForRow(dmRow, insertFileInfo);
 
     // reset loaded flags so MetaRead knows to load
     G::allMetadataAttempted = false;
@@ -5767,6 +5773,8 @@ void DataModel::rebuildRowFromPathHash()
     fPathRowClear();
     for (int row = 0; row < rowCount(); ++row) {
         QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
+        // a row with no path yet must not become an "" key (see DataModel::insert)
+        if (fPath.isEmpty()) continue;
         // fPathRow[fPath] = row;
         fPathRowSet(fPath, row);
     }

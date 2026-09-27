@@ -1436,9 +1436,14 @@ private:
        freezes the UI), preview hands over the plain browse decode. onExportFinished is
        the shared completion for every export entry point. */
     bool prepareExport(QStringList &targets);
+    /* mSnap / degreesSnap: a caller that captured the image's metadata and EXIF rotation
+       up front (the focus stacker, whose renders run while the user may have left the
+       folder) passes them here so the render does not read the live DataModel. Null / -1
+       reads the model as the exporter always has. */
     void developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
-                            std::function<void(bool, const QImage &)> done);
+                            std::function<void(bool, const QImage &)> done,
+                            const ImageMetadata *mSnap = nullptr, int degreesSnap = -1);
     void previewPixelSource(const QString &fPath,
                             std::function<void(bool, const QImage &)> done);
     void onExportFinished(const ImageExporter::Result &result, bool addToFolderView);
