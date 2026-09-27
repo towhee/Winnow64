@@ -1,6 +1,7 @@
 #include "Views/infoview.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
+#include "Metadata/xmpembed.h"
 
 InfoDelegate::InfoDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
 
@@ -13,11 +14,15 @@ QSize InfoDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelInd
 
 void InfoDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
+    /*  THE RIGHT EDGE IS THE CELL'S. It used to be pushed 19 px past the cell and pulled
+        back by the stylesheet's margin-right: 20px (InfoView::mousePressEvent) -- but the
+        value column already runs to the viewport's edge, so the 19 px were clipped and
+        only the margin survived: the edit box stopped ~20 px short of the cell. Left and
+        vertical offsets still pair with the stylesheet so the text does not jump. */
     int leftOffset = 4;
-    int rightOffset = 19;
     int topOffset = 1;
     QPoint topLeft(option.rect.left() - leftOffset, option.rect.top() + topOffset);
-    QPoint bottomRight(option.rect.right() + rightOffset, option.rect.bottom());
+    QPoint bottomRight(option.rect.right(), option.rect.bottom());
     QRect editRect(topLeft, bottomRight);
     editor->setGeometry(editRect);
 }
@@ -192,7 +197,12 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             G::popup->setProgressMax(n + 1);
 
             for (int i = 0; i < n; i++) {
-                int dmRow = selection.at(i).row();
+                /*  rows, NOT selection.at(i).row(). That is a PROXY row, and using it
+                    as a datamodel row named a different image whenever the two differ
+                    (a sort, a filter, a multi-folder or catalog set): the edit and its
+                    write went to that image. With "Permit image file modification" on,
+                    a title typed for one JPEG was written INTO another image's file. */
+                int dmRow = rows.at(i);
                 QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
                 if (field == "Title*") {
                     QString s = idx1.data().toString();
@@ -478,6 +488,45 @@ void InfoView::copyEntry()
     }
 }
 
+void InfoView::updateSaveNote()
+{
+/*
+    Where an edit to this image goes. It depends on the format AND on "Permit image
+    file modification", and only some of the answers are visible to Lightroom -- which
+    for JPEG, TIFF, PNG and DNG reads the file and ignores any sidecar. Said on the Tags
+    header, in view while the user edits, rather than only in the preference.
+*/
+    if (G::isLogger) G::log("InfoView::updateSaveNote");
+    const QModelIndex tags = ok->index(tagInfoCat, 0);
+    QString where;
+    QString tip = "Click category to expand/collapse";
+    const QString toggle = "Permit image file modification (Preferences > General, or "
+                           "the status bar delta button)";
+    if (fPath.isEmpty()) {
+    }
+    else if (!XmpEmbed::canEmbed(fPath)) {
+        where = "saved to sidecar";
+        tip = "Edits to raw and HEIC files are saved to an .xmp sidecar beside the image, "
+              "which is also where Lightroom reads them.";
+    }
+    else if (G::modifySourceFiles) {
+        where = "saved in the image file";
+        tip = "Edits are written into the image file itself, where Lightroom reads them.\n"
+              "Turn off " + toggle + " to leave image files untouched.";
+    }
+    else {
+        where = "saved to a Winnow sidecar";
+        tip = "Image files are never modified, so edits are saved to "
+              + QFileInfo(fPath).fileName() + ".xmp.\n"
+              "Lightroom does not read sidecars for JPEG, TIFF, PNG or DNG files, so it "
+              "will not see these edits.\n"
+              "To write them into the file, turn on " + toggle + ".";
+    }
+    ok->setData(tags, where.isEmpty() ? QString("Tags: *editable")
+                                      : "Tags: *editable, " + where);
+    ok->setData(tags, tip, Qt::ToolTipRole);
+}
+
 void InfoView::updateTooltips()
 {
     // set tooltips
@@ -613,6 +662,7 @@ void InfoView::updateInfo(const int &row)
 
     // set tooltips
     updateTooltips();
+    updateSaveNote();
 
     if (G::isThreadTrackingOn) qDebug()
         << "ThumbView::updateExifInfo - loaded metadata display info for"
@@ -660,7 +710,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
                 "QLineEdit {"
                     "border: none;"
                     "margin-left: 5px;"
-                    "margin-right: 20px;"
+                    "margin-right: 0px;"
                     "margin-bottom: -5px;"
                     "padding-top: -6px;"
                     "padding-left: 8px;"

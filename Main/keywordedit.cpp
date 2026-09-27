@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/fileops.h"
 #include "Dialogs/keyworddropdlg.h"
 #include "Dialogs/keywordmergedlg.h"
 #include "Dialogs/keywordretagdlg.h"
@@ -737,7 +738,7 @@ void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
         updated.srcSize = fi.size();
         updated.srcMtime = fi.lastModified().toSecsSinceEpoch();
     }
-    const QFileInfo si(metadata->sidecarPath(r.path));
+    const QFileInfo si(FileOps::existingSidecar(r.path));
     updated.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
 
     Catalog::instance().commit({updated});

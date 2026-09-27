@@ -1213,6 +1213,13 @@ void MW::createEmbel()
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
     if (G::useInfoView) {
         connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
+        /* The loupe's info overlay is built from the same fields (a template with
+           {Title} ...), and nothing re-parsed it after an edit in the Metadata panel.
+           setShootingInfo() with no text re-parses AND re-lays out, since the new text
+           can be wider than the old. */
+        connect(infoView, &InfoView::dataEdited, this, [this]() {
+            imageView->setShootingInfo();
+        });
     }
 }void MW::createFSTree()
 {

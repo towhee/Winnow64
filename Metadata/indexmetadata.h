@@ -2,6 +2,7 @@
 #define INDEXMETADATA_H
 
 #include <QFileInfo>
+#include "Utilities/fileops.h"
 #include <QHash>
 #include <QList>
 #include <QString>
@@ -46,9 +47,9 @@ inline CatalogRow candidate(const QFileInfo &fileInfo, Metadata *metadata)
     cand.path = fileInfo.filePath();
     cand.srcSize = fileInfo.size();
     cand.srcMtime = fileInfo.lastModified().toSecsSinceEpoch();
-    const QString sc = metadata->sidecarPath(cand.path);
+    const QString sc = FileOps::existingSidecar(cand.path);
     const QFileInfo si(sc);
-    if (si.exists()) cand.sidecarMtime = si.lastModified().toSecsSinceEpoch();
+    if (!sc.isEmpty()) cand.sidecarMtime = si.lastModified().toSecsSinceEpoch();
     return cand;
 }
 

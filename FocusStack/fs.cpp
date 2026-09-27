@@ -1,3 +1,4 @@
+#include "Utilities/fileops.h"
 #include "fs.h"
 #include "Main/global.h"
 #include "FocusStack/fsalign.h"
@@ -839,7 +840,7 @@ QString FS::save(QString fuseFolderPath)
     Utilities::uniqueFilePath(fusedPath, "_");
     QFileInfo fusedFi(fusedPath);
     base = fusedFi.completeBaseName();
-    QString xmpPath   = fuseFolderPath + "/" + base + "." + "xmp";
+    QString xmpPath   = FileOps::sidecarPath(fusedPath);   // tif/jpg/png: full-name
     QString msg = "Folder: " + fuseFolderPath + "  Last input image: " + lastFi.completeBaseName();
 
     if (G::FSLog) G::log(srcFun, fuseFolderPath);

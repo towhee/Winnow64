@@ -293,8 +293,22 @@ Xmp::Xmp(QFile &file, uint offset, uint length, int instance, QObject *parent) :
     initialize();
 }
 
+Xmp::Xmp(const QByteArray &xmpmeta, int instance, QObject *parent) :  QObject(parent)
+{
+    if (G::isLogger) G::log("Xmp::Xmp");
+    this->instance = instance;
+    xmpBa = xmpmeta;
+    initialize();
+}
+
 QByteArray Xmp::skeleton()
 {
+/*
+    Iptc4xmpCore:CreatorContactInfo used to be in here as a sibling of rdf:Description --
+    directly under rdf:RDF, which is not valid RDF, so other applications ignored the
+    email and url written into it. setItem now creates it INSIDE rdf:Description when an
+    email or url is first written (see ensureParent).
+*/
     return "<x:xmpmeta"
            "\n\txmlns:x=\"adobe:ns:meta/\">"
            "\n\t<rdf:RDF"
@@ -302,8 +316,6 @@ QByteArray Xmp::skeleton()
            "\n\t\t<rdf:Description"
            "\n\t\t\trdf:about=\"\">"
            "\n\t\t</rdf:Description>\n"
-           "\t\t<Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>\n"
-           "\t\t</Iptc4xmpCore:CreatorContactInfo>\n"
            "\t</rdf:RDF>\n"
            "</x:xmpmeta>";
 }
@@ -458,21 +470,21 @@ void Xmp::initialize()
     // title
     e.name = "dc:title";
     e.parentName = "rdf:Description";
-    e.type = ElementType::Attribute;
+    e.type = ElementType::LangAlt;
     e.schema = "dc";
     definedElements["title"] = e;
 
     // copyright
     e.name = "dc:rights";
     e.parentName = "rdf:Description";
-    e.type = ElementType::Attribute;
+    e.type = ElementType::LangAlt;
     e.schema = "dc";
     definedElements["rights"] = e;
 
     // creator
     e.name = "dc:creator";
     e.parentName = "rdf:Description";
-    e.type = ElementType::Attribute;
+    e.type = ElementType::Seq;
     e.schema = "dc";
     definedElements["creator"] = e;
 
@@ -525,6 +537,16 @@ void Xmp::initialize()
     e.type = ElementType::Attribute;
     e.schema = "winnow";
     definedElements["develop"] = e;
+
+    /* "True" on a sidecar whose image carries its standard metadata EMBEDDED (written
+       while "Permit image file modification" was on). The sidecar's rating, title,
+       keywords... were stripped when that happened, and Metadata::parseSidecar must not
+       read their absence as "cleared". See XmpEmbed. */
+    e.name = "winnow:MetadataEmbedded";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "winnow";
+    definedElements["metadataembedded"] = e;
 
     /* Cached 256px JPEG of the developed image (base64), so the thumbnail grid can show
        the developed look without decoding the raw. Lives in the sidecar rather than a
@@ -968,24 +990,65 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     // get default XmpObj for item
     element = definedElements[item];
 
+    if (value.isEmpty()) return true;       // removed above: an empty value clears it
+
+    XmpElement parElement = xmlDocElement(element.parentName, xmlDoc.first_node());
+    if (!parElement.exists()) parElement = ensureParent(element.parentName);
+    if (!parElement.exists()) return false;
+
+    /* dc:title / dc:rights (LangAlt) and dc:creator (Seq) are containers. As in
+       setItemList, the containers get NO value -- rapidxml prints a node's value INSTEAD
+       of its children. */
+    if (element.type == ElementType::LangAlt || element.type == ElementType::Seq) {
+        const bool alt = element.type == ElementType::LangAlt;
+        rapidxml::xml_node<> *prop = xmlDoc.allocate_node(
+            rapidxml::node_element, keepName(element.name.toUtf8()));
+        rapidxml::xml_node<> *list = xmlDoc.allocate_node(
+            rapidxml::node_element,
+            keepName(alt ? QByteArrayLiteral("rdf:Alt") : QByteArrayLiteral("rdf:Seq")));
+        rapidxml::xml_node<> *li = xmlDoc.allocate_node(
+            rapidxml::node_element, keepName(QByteArrayLiteral("rdf:li")), keepValue(value));
+        if (alt) li->append_attribute(xmlDoc.allocate_attribute(
+            keepName(QByteArrayLiteral("xml:lang")),
+            keepValue(QByteArrayLiteral("x-default"))));
+        list->append_node(li);
+        prop->append_node(list);
+        parElement.node->append_node(prop);
+        return true;
+    }
+
     // item and value lifetime must be same as xmpDoc, so save in QByteArrayList a and v
-    if (element.type == ElementType::Attribute && value != "") {
-        XmpElement parElement = xmlDocElement(element.parentName, xmlDoc.first_node());
-        if (!parElement.exists()) return false; // create parent node if missing!!
+    if (element.type == ElementType::Attribute) {
         // class lifetime pointers -- see keepName/keepValue
         rapidxml::xml_attribute<> *attr =
             xmlDoc.allocate_attribute(keepName(element.name.toUtf8()), keepValue(value));
         parElement.node->append_attribute(attr);
     }
     if (element.type == ElementType::Node) {
-        XmpElement parElement = xmlDocElement(element.parentName, xmlDoc.first_node());
-        if (!parElement.exists()) return false;  // create parent node if missing!!
         // class lifetime pointers -- see keepName/keepValue
         rapidxml::xml_node<> *node = xmlDoc.allocate_node(
             rapidxml::node_element, keepName(element.name.toUtf8()), keepValue(value));
         parElement.node->append_node(node);
     }
     return true;
+}
+
+Xmp::XmpElement Xmp::ensureParent(const QString &parentName)
+{
+/*
+    The one parent setItem may create: Iptc4xmpCore:CreatorContactInfo, the struct that
+    holds email and url, as a child of rdf:Description in the parseType="Resource" form
+    Lightroom writes. A packet lifted from a camera JPEG never has it, and without this
+    an email or url edit was dropped without a word.
+*/
+    if (parentName != "Iptc4xmpCore:CreatorContactInfo" || !rdfDescriptionNode)
+        return nullXmpElement;
+    rapidxml::xml_node<> *node = xmlDoc.allocate_node(
+        rapidxml::node_element, keepName(parentName.toUtf8()));
+    node->append_attribute(xmlDoc.allocate_attribute(
+        keepName(QByteArrayLiteral("rdf:parseType")), keepValue(QByteArrayLiteral("Resource"))));
+    rdfDescriptionNode->append_node(node);
+    return xmlDocElement(parentName, xmlDoc.first_node());
 }
 
 const char *Xmp::keepName(const QByteArray &name)

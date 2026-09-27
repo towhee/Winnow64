@@ -36,6 +36,15 @@ private slots:
     void trashFilesCarriesSidecarsNotPairs();
     void trashFilesSortsMissingAndProtected();
     void trashFilesCancelsBetweenChunks();
+    void sidecarPathByFormat();
+    void legacySidecarReadWhenAlone();
+    void legacySidecarBelongsToTheRaw();
+    void prepareMovesLegacyWhenAlone();
+    void prepareCopiesLegacySharedByFullNameImages();
+    void prepareLeavesTheRawsSidecarAlone();
+    void companionsSplitARawJpegPair();
+    void trashingTheJpegKeepsTheRawsSidecar();
+    void moveRenamesFullNameSidecar();
 
 private:
     QString p(const QString &name) const;
@@ -321,6 +330,174 @@ void tst_fileops::trashFilesCancelsBetweenChunks()
     QCOMPARE(r.trashed, paths.mid(0, 200));
     for (const QString &t : r.trashed) QVERIFY(!QFile::exists(t));
     for (const QString &k : paths.mid(200)) QVERIFY(QFile::exists(k));
+}
+
+/* ---------------------------------------------------------------------------------
+   Sidecar naming. Each test works in its own subfolder: FileOps caches a folder's
+   listing keyed on the folder's mtime, and a fresh folder cannot be served a listing
+   from the test before.
+   --------------------------------------------------------------------------------- */
+
+namespace {
+QString sub(const QTemporaryDir &tmp, const QString &name)
+{
+    QDir(tmp.path()).mkpath(name);
+    return QDir(tmp.path()).absoluteFilePath(name);
+}
+void put(const QString &dir, const QString &name, const QByteArray &data = "x")
+{
+    QFile f(QDir(dir).absoluteFilePath(name));
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write(data);
+}
+QByteArray read(const QString &path)
+{
+    QFile f(path);
+    return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+}
+QStringList names(const QStringList &paths)
+{
+    QStringList n;
+    for (const QString &p : paths) n << QFileInfo(p).fileName();
+    n.sort();
+    return n;
+}
+}  // namespace
+
+void tst_fileops::sidecarPathByFormat()
+{
+/*
+    Lightroom writes XMP INTO JPEG/TIFF/PNG/DNG and ignores a sidecar beside them, so
+    those get Winnow's own full-name sidecar; raw and HEIC keep Lightroom's name.
+*/
+    const QString d = sub(tmp, "naming");
+    auto sc = [&](const QString &n) {
+        return QFileInfo(FileOps::sidecarPath(QDir(d).absoluteFilePath(n))).fileName();
+    };
+    QCOMPARE(sc("IMG_1.NEF"), QString("IMG_1.xmp"));
+    QCOMPARE(sc("IMG_1.HEIC"), QString("IMG_1.xmp"));
+    QCOMPARE(sc("IMG_1.JPG"), QString("IMG_1.JPG.xmp"));
+    QCOMPARE(sc("IMG_1.tif"), QString("IMG_1.tif.xmp"));
+    QCOMPARE(sc("IMG_1.png"), QString("IMG_1.png.xmp"));
+    QCOMPARE(sc("IMG_1.dng"), QString("IMG_1.dng.xmp"));
+    QCOMPARE(sc("a.b.NEF"), QString("a.b.xmp"));        // Lightroom's rule: last dot
+}
+
+void tst_fileops::legacySidecarReadWhenAlone()
+{
+/*
+    Winnow used to write IMG_1.xmp for a JPEG. With no other file claiming the name that
+    is still the JPEG's, so the edits it holds keep showing.
+*/
+    const QString d = sub(tmp, "legacyAlone");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp", "old");
+    const QString jpg = QDir(d).absoluteFilePath("IMG_1.JPG");
+    QCOMPARE(QFileInfo(FileOps::existingSidecar(jpg)).fileName(), QString("IMG_1.xmp"));
+
+    // once the full-name one exists it wins
+    put(d, "IMG_1.JPG.xmp", "new");
+    QCOMPARE(QFileInfo(FileOps::existingSidecar(jpg)).fileName(), QString("IMG_1.JPG.xmp"));
+}
+
+void tst_fileops::legacySidecarBelongsToTheRaw()
+{
+/*
+    In a raw+JPEG pair IMG_1.xmp is the raw's Lightroom sidecar. The JPEG must not read
+    it -- that was the defect: the raw's keywords and rating showing on the JPEG.
+*/
+    const QString d = sub(tmp, "legacyRaw");
+    put(d, "IMG_1.NEF");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp");
+    QVERIFY(FileOps::existingSidecar(QDir(d).absoluteFilePath("IMG_1.JPG")).isEmpty());
+    QCOMPARE(QFileInfo(FileOps::existingSidecar(QDir(d).absoluteFilePath("IMG_1.NEF")))
+                 .fileName(), QString("IMG_1.xmp"));
+}
+
+void tst_fileops::prepareMovesLegacyWhenAlone()
+{
+    const QString d = sub(tmp, "prepareAlone");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp", "recipe");
+    const QString path = FileOps::prepareSidecarForWrite(QDir(d).absoluteFilePath("IMG_1.JPG"));
+    QCOMPARE(QFileInfo(path).fileName(), QString("IMG_1.JPG.xmp"));
+    QCOMPARE(read(path), QByteArray("recipe"));
+    QVERIFY(!QFile::exists(QDir(d).absoluteFilePath("IMG_1.xmp")));
+}
+
+void tst_fileops::prepareCopiesLegacySharedByFullNameImages()
+{
+/*
+    A DNG+JPG pair both read the old IMG_1.xmp (neither is a raw owner). Moving it to
+    the JPEG's name would strip the DNG's edits, so the first writer copies.
+*/
+    const QString d = sub(tmp, "prepareShared");
+    put(d, "IMG_1.DNG");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp", "recipe");
+    const QString path = FileOps::prepareSidecarForWrite(QDir(d).absoluteFilePath("IMG_1.JPG"));
+    QCOMPARE(read(path), QByteArray("recipe"));
+    QCOMPARE(read(QDir(d).absoluteFilePath("IMG_1.xmp")), QByteArray("recipe"));
+}
+
+void tst_fileops::prepareLeavesTheRawsSidecarAlone()
+{
+    const QString d = sub(tmp, "prepareRaw");
+    put(d, "IMG_1.NEF");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp", "lightroom");
+    const QString path = FileOps::prepareSidecarForWrite(QDir(d).absoluteFilePath("IMG_1.JPG"));
+    QCOMPARE(QFileInfo(path).fileName(), QString("IMG_1.JPG.xmp"));
+    QVERIFY(!QFile::exists(path));              // nothing carried: a fresh document
+    QCOMPARE(read(QDir(d).absoluteFilePath("IMG_1.xmp")), QByteArray("lightroom"));
+}
+
+void tst_fileops::companionsSplitARawJpegPair()
+{
+    const QString d = sub(tmp, "pairCompanions");
+    put(d, "IMG_1.NEF");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp");
+    put(d, "IMG_1.JPG.xmp");
+    QCOMPARE(names(FileOps::companions(QDir(d).absoluteFilePath("IMG_1.NEF"))),
+             QStringList{"IMG_1.xmp"});
+    QCOMPARE(names(FileOps::companions(QDir(d).absoluteFilePath("IMG_1.JPG"))),
+             QStringList{"IMG_1.JPG.xmp"});
+}
+
+void tst_fileops::trashingTheJpegKeepsTheRawsSidecar()
+{
+/*
+    Before full-name sidecars, trashing the JPEG of a pair trashed IMG_1.xmp with it --
+    the NEF's Lightroom edits.
+*/
+    useFakeTrash();
+    const QString d = sub(tmp, "pairTrash");
+    put(d, "IMG_1.NEF");
+    put(d, "IMG_1.JPG");
+    put(d, "IMG_1.xmp");
+    put(d, "IMG_1.JPG.xmp");
+    const auto r = FileOps::trashFiles({QDir(d).absoluteFilePath("IMG_1.JPG")});
+    QCOMPARE(r.trashed.size(), 1);
+    QCOMPARE(QDir(d).entryList(QDir::Files, QDir::Name),
+             (QStringList{"IMG_1.NEF", "IMG_1.xmp"}));
+}
+
+void tst_fileops::moveRenamesFullNameSidecar()
+{
+/*
+    A renaming move must keep a full-name sidecar full-name; DSC_1.xmp would be the name
+    of a raw beside it.
+*/
+    const QString d = sub(tmp, "moveFull");
+    QDir(d).mkdir("dest");
+    put(d, "DSC_1.JPG", "image");
+    put(d, "DSC_1.JPG.xmp", "recipe");
+    const QString dst = QDir(d).absoluteFilePath("dest/Sunset.JPG");
+    QVERIFY(FileOps::moveFile(QDir(d).absoluteFilePath("DSC_1.JPG"), dst));
+    QCOMPARE(read(QDir(d).absoluteFilePath("dest/Sunset.JPG.xmp")), QByteArray("recipe"));
+    QVERIFY(!QFile::exists(QDir(d).absoluteFilePath("dest/Sunset.xmp")));
 }
 
 QTEST_MAIN(tst_fileops)

@@ -41,7 +41,12 @@ inline void applyXmp(Xmp &xmp, ImageMetadata &m, MetadataParameters &p)
         m.cameraSN = xmp.getItem("SerialNumber");
         if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
         m.lensSN = xmp.getItem("LensSerialNumber");
-        if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
+        /* A non-empty XMP creator WINS over the EXIF Artist the parser already read
+           (the MWG rule). It used to only fill a blank, so a creator edited in Winnow
+           and written into the file looked lost on the next read of any camera file
+           with an Artist tag. */
+        const QString creator = xmp.getItem("creator");
+        if (!creator.isEmpty()) m.creator = creator;
         m.copyright = xmp.getItem("rights");
         m.email = xmp.getItem("email");
         m.url = xmp.getItem("url");

@@ -661,12 +661,18 @@ void Preferences::addGeneral()
     i.name = "modifySourceFiles";
     i.parentName = "GeneralHeader";
     i.captionText = "Permit image file modification";
-    i.tooltip = "Permit modification to the image file.  If turned off\n"
-                "changes may still be written to a sidecar xmp file.\n\n"
+    i.tooltip = "Permit modification to the image file.\n\n"
+                "When on, rating, label, title, creator, copyright, email,\n"
+                "url and keywords for JPEG, TIFF, PNG and DNG files are\n"
+                "written INTO the file, where Lightroom reads them.\n"
+                "When off (the default), image files are never changed:\n"
+                "those edits go to a Winnow sidecar (IMG_1.JPG.xmp),\n"
+                "which Lightroom does not read.  Raw and HEIC files always\n"
+                "use an .xmp sidecar, as Lightroom does.\n\n"
                 "DISCLAIMER: While I try my best, it is possible that\n"
                 "modification could corrupt the image file.  I suggest\n"
-                "you turn 'Backup before modifying files' until you are \n"
-                "confident the modifications are safe."
+                "you turn on 'Backup before modifying files' until you\n"
+                "are confident the modifications are safe."
         ;
     i.hasValue = true;
     i.captionIsEditable = false;

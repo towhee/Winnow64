@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Utilities/fileops.h"
 #include "Datamodel/variantless.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
@@ -2629,7 +2630,6 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
     QString folderName = fileInfo.dir().dirName();
     QString ext = fileInfo.suffix().toLower();
     QString baseName = fileInfo.completeBaseName();
-    QString sidecarPath = fileInfo.dir().path() + "/" + baseName + ".xmp";
 
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
     if (fPathRow.contains(fPath)) return;
@@ -2661,7 +2661,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
     /*  The index knows whether there is a sidecar -- it stamps one -- so an indexed row
         does not stat for it. sidecarMtime is 0 exactly when there was none. */
     setData(index(row, G::SidecarColumn),
-            cat ? cat->sidecarMtime != 0 : QFile(sidecarPath).exists());
+            cat ? cat->sidecarMtime != 0 : !FileOps::existingSidecar(fPath).isEmpty());
     /* G::DevelopColumn is NOT set here. Deciding whether an image has a develop recipe
        means parsing the sidecar, and this runs on the folder-load path -- the one place
        where per-image work has repeatedly cost visible lag. Metadata::parseSidecar is
@@ -2790,7 +2790,7 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
        folder is opened. SidecarColumn was set during the file scan, so the stat below
        is paid only by images that actually have one. */
     if (index(row, G::SidecarColumn).data().toBool()) {
-        const QFileInfo si(metadata->sidecarPath(fPath));
+        const QFileInfo si(FileOps::existingSidecar(fPath));
         if (si.exists()) r.sidecarMtime = si.lastModified().toSecsSinceEpoch();
     }
 

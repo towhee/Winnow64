@@ -674,6 +674,7 @@ void MW::toggleModifyImages()
 
     // No menu item / action to toggle
     updateStatusBar();  // updates btn image and tooltip
+    if (infoView) infoView->updateSaveNote();   // where edits go just changed
 }
 
 void MW::toggleIncludeSidecarsClick()

@@ -177,6 +177,11 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     isDebug = false;
 }
 
+/*
+    BASE NAME = up to the FIRST dot (QFileInfo::baseName), so every rebuilt name keeps
+    completeSuffix -- everything after it. With suffix() a full-name sidecar
+    DSC_1.JPG.xmp came out as <new>.xmp: the raw's sidecar name in a raw+JPEG pair.
+*/
 void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
 {
     QFileInfoList inf = QDir(folderPath).entryInfoList(QDir::Files);
@@ -184,7 +189,7 @@ void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
         QString existBase = inf.at(i).baseName();
         if (existBase == oldBase) {
             QString oldPath = inf.at(i).filePath();
-            QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).suffix();
+            QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).completeSuffix();
             QFile(oldPath).rename(newPath);
             FileOps::onMoved(oldPath, newPath);
             if (isDebug) qDebug() << "RenameFileDlg::renameFileBase Renamed file oldPath ="
@@ -215,7 +220,7 @@ void RenameFileDlg::makeExistingBaseUnique(QString newBase)
                             ;
             // update datamodel, imageCache
             QString oldPath = inf.at(i).filePath();
-            QString newName = uniqueBase + "." + inf.at(i).suffix();
+            QString newName = uniqueBase + "." + inf.at(i).completeSuffix();
             QString newPath = inf.at(i).dir().path() + "/" + newName;
             renameDatamodel(oldPath, newPath, newName);
             if (isDebug) {
@@ -294,7 +299,7 @@ void RenameFileDlg::renameAllSharingBaseName(QString oldBase, QString newBase)
         if (filesToRename.at(i).at(baseCol) == oldBase) {
             QString oldPath = filesToRename.at(i).at(pathCol);
             QString dirPath = QFileInfo(oldPath).dir().path();
-            QString ext = QFileInfo(oldPath).suffix();
+            QString ext = QFileInfo(oldPath).completeSuffix();
             QString newPath = dirPath +"/" + newBase + "." + ext;
             filesToRename[i][pathCol] = newPath;
             filesToRename[i][baseCol] = newBase;
@@ -462,7 +467,7 @@ void RenameFileDlg::rename()
     for (int i = 0; i < filesToRename.size(); i++) {
         QString oldPath = filesToRename.at(i).at(pathCol);
         QFileInfo info(oldPath);
-        QString newPath = info.dir().path() + "/d78sn34_" + QString::number(i) + "." + info.suffix();
+        QString newPath = info.dir().path() + "/d78sn34_" + QString::number(i) + "." + info.completeSuffix();
 
         if (oldPath.toLower() == newPath.toLower()) {
             if (isDebug) qDebug() << "RenameFileDlg::rename" << i << oldPath << newPath << "Nothing to do here";
@@ -531,7 +536,7 @@ void RenameFileDlg::rename()
             newBase = parseTokenString(info, tokenString);
         }
 
-        QString newName = newBase + "." + info.suffix();
+        QString newName = newBase + "." + info.completeSuffix();
         QString newPath = info.dir().path() + "/" + newName;
 
         if (isDebug) {
@@ -883,7 +888,7 @@ bool RenameFileDlg::renameSingleManual(const QString &newBase)
     for (const QFileInfo &fi : inf) {
         if (fi.baseName() != oldBase) continue;
         QString oldPath = fi.filePath();
-        QString newName = newBase + "." + fi.suffix();
+        QString newName = newBase + "." + fi.completeSuffix();
         QString newPath = fi.dir().path() + "/" + newName;
         errno = 0;
         if (std::rename(oldPath.toUtf8().constData(), newPath.toUtf8().constData()) != 0) {

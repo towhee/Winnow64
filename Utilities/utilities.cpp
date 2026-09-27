@@ -460,8 +460,7 @@ bool Utilities::backup(QString fPath, QString subfolderName)
        restoring it loses every rating, label and develop edit the image had. */
     const QFileInfo bi(backupPath);
     foreach (const QString &companion, FileOps::companions(fPath)) {
-        QString cDest = backupFolder + "/" + bi.baseName() + "." +
-                        QFileInfo(companion).suffix();
+        QString cDest = FileOps::companionDest(companion, fPath, bi.absoluteFilePath());
         if (!QFile::copy(companion, cDest)) {
             G::issue("Warning", "Failed to copy sidecar to backup.",
                      "Utilities::backup", -1, companion);

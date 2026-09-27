@@ -4811,7 +4811,7 @@ QVector<CatalogRow> MW::catalogRowsForStale()
             r.srcSize = fi.size();
             r.srcMtime = fi.lastModified().toSecsSinceEpoch();
         }
-        const QFileInfo si(metadata->sidecarPath(fPath));
+        const QFileInfo si(FileOps::existingSidecar(fPath));
         r.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
         rows.append(r);
     }
@@ -5407,6 +5407,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 }
                 applyDevelopPreviewIfEdited();   // overlay saved develop edits, if any
                 probe.mark("devPreview");
+                revealInfoOverlayOnce();
             }
             /* Image-cache miss in Develop mode on a RAW: the scene-linear sensor decode
                is slow (~2-3s), so paint the embedded JPG preview immediately instead of a
@@ -5421,6 +5422,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 const QImage cachedPreview = devPreview(fPath);
                 developInterimIsDevPreview = !cachedPreview.isNull();
                 if (imageView->loadImageInterim(fPath, cachedPreview)) {
+                    revealInfoOverlayOnce();
                     if (G::isIngestProbe)
                         IngestProbe::Instance().NoteLoupe(IngestProbe::Interim);
                     if (!mapUp && (G::mode == "Loupe" ||

@@ -21,6 +21,9 @@ class Xmp : public QObject
 public:
     Xmp(QFile &file, uint offset, uint length, int instance, QObject *parent = nullptr);
     Xmp(QFile &file, int instance, QObject *parent = nullptr);
+    /* A packet already in hand -- the <x:xmpmeta> document XmpEmbed::read lifted out of
+       an image. Empty means none: the document starts from the skeleton. */
+    Xmp(const QByteArray &xmpmeta, int instance, QObject *parent = nullptr);
 
     enum Err {
         NoErr,
@@ -34,10 +37,18 @@ public:
     } err;
     QVector<QString> errMsg;
 
+    /* The shape a property is WRITTEN in. xmlDocElement reports only Node or
+       Attribute for what it finds; the others say what setItem builds.
+         LangAlt   <dc:title><rdf:Alt><rdf:li xml:lang="x-default">v</rdf:li>...
+         Seq       <dc:creator><rdf:Seq><rdf:li>v</rdf:li>...
+       Both are what the XMP spec (and Lightroom) require for dc:title, dc:rights and
+       dc:creator; a plain dc:title="v" attribute is not valid XMP for them. */
     enum ElementType {
         Node,
         Attribute,
-        List
+        List,
+        LangAlt,
+        Seq
     };
 
     struct XmpElement {
@@ -95,6 +106,10 @@ private:
     */
     const char *keepName(const QByteArray &name);
     const char *keepValue(const QByteArray &value);
+
+    /* Create a missing parent setItem may create (CreatorContactInfo); returns the
+       null element for any other name. */
+    XmpElement ensureParent(const QString &parentName);
 
     /* Remove an element from xmlDoc in either of the two forms xmlDocElement can
        report, doing nothing if it was not found. */
