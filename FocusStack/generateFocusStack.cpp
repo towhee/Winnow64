@@ -4,6 +4,35 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <chrono>
+#include <future>
+
+namespace {
+cv::Mat bgrFromDevelopImage(const QImage &img)
+{
+/*
+    A develop render (Format_RGBX64 at 16 bit, Format_RGB888 at 8 bit, though the
+    geometry and spot stages may hand back another format of the same depth) as an
+    owned 3-channel BGR Mat of the same depth -- what cv::imread gives FSLoader.
+*/
+    cv::Mat bgr;
+    if (img.isNull()) return bgr;
+    if (img.depth() > 32) {
+        const QImage c = img.convertToFormat(QImage::Format_RGBX64);
+        const cv::Mat rgbx(c.height(), c.width(), CV_16UC4,
+                           const_cast<uchar *>(c.constBits()), c.bytesPerLine());
+        cv::cvtColor(rgbx, bgr, cv::COLOR_RGBA2BGR);
+    }
+    else {
+        const QImage c = img.convertToFormat(QImage::Format_RGB888);
+        const cv::Mat rgb(c.height(), c.width(), CV_8UC3,
+                          const_cast<uchar *>(c.constBits()), c.bytesPerLine());
+        cv::cvtColor(rgb, bgr, cv::COLOR_RGB2BGR);
+    }
+    return bgr;
+}
+}  // namespace
+
 
 void MW::focusStackFromSelection()
 {
@@ -269,6 +298,92 @@ void MW::generateFocusStack(const QStringList paths,
         }
     }
 
+    /*
+    DEVELOP RENDER. A slice is loaded from its develop rendering -- the same full
+    recipe render an export produces (MW::developPixelSource) -- rather than from
+    the browse decode or the file on disk, so the stack is built from what the user
+    sees in Develop: edits, masks, spots and geometry, and a raw from Winnow's
+    sensor render. 16-bit, so the fused TIFF keeps the develop precision.
+
+    Which slices: every raw, and any other image with a stored develop recipe. An
+    unedited JPEG/TIFF is still read straight from disk -- its file already IS its
+    develop render, and the direct read keeps a 16-bit TIFF at full depth (the
+    develop path would come in through an 8-bit decode).
+
+    PER GROUP, all or nothing: one develop-rendered slice makes the whole group
+    develop-rendered, so every slice in a stack has the same bit depth and the same
+    rendering. Fusion takes its output depth from slice 0.
+
+    Everything the render needs from the DataModel -- metadata, EXIF rotation -- is
+    captured here on the GUI thread, like metaSnapshot above, so the user can leave
+    the folder while the stack runs. The recipe itself comes from the sidecar.
+    */
+    fs->developPaths.clear();
+    QHash<QString, int> degreesSnap;
+    if (developProperties) {
+        const QStringList cvReadable = {"tif", "tiff", "jpg", "jpeg", "png"};
+        for (const QStringList &group : std::as_const(fs->groups)) {
+            bool develop = false;
+            for (const QString &p : group) {
+                const QString ext = QFileInfo(p).suffix().toLower();
+                if (!cvReadable.contains(ext) ||
+                    !developProperties->developBlobFor(p).isEmpty()) {
+                    develop = true;
+                    break;
+                }
+            }
+            if (!develop) continue;
+            for (const QString &p : group) {
+                fs->developPaths.insert(p);
+                if (dm->proxyRowFromPath(p) >= 0) {
+                    degreesSnap.insert(p, developOrientationDegrees(WorkingImage(), p));
+                }
+                else {
+                    /* Not in the model (external launch): the same rule from the
+                       file's own EXIF. */
+                    const ImageMetadata &m = fs->metaSnapshot[p];
+                    int degrees = m.rotationDegrees;
+                    if (m.orientation == 3)      degrees += 180;
+                    else if (m.orientation == 6) degrees += 90;
+                    else if (m.orientation == 8) degrees += 270;
+                    if (degrees > 360) degrees -= 360;
+                    degreesSnap.insert(p, degrees);
+                }
+            }
+        }
+    }
+
+    /*
+    Runs on the FS worker thread. The render is started on the GUI thread (it owns
+    the recipe capture and the mask prerequisites) and runs on developRenderPool,
+    calling back on the GUI thread; the worker waits for the result, which is why
+    this cannot be a BlockingQueuedConnection like requestImage -- that would park
+    the GUI thread the render's own callbacks need. The wait polls the abort flag,
+    so ESC and quit (closeEvent aborts, then waits on fsThread) never hang on a
+    render still in flight.
+    */
+    fs->developDecoder = [this, meta = fs->metaSnapshot, degreesSnap]
+        (const QString &p, const std::atomic_bool *abort) -> cv::Mat
+    {
+        auto result = std::make_shared<std::promise<QImage>>();
+        std::future<QImage> rendered = result->get_future();
+        const ImageMetadata m = meta.value(p);
+        const int degrees = degreesSnap.value(p, -1);
+        QMetaObject::invokeMethod(this, [this, p, m, degrees, result]() {
+            developPixelSource(p, /*want16Bit*/true, OutputTransform::Space::sRGB,
+                [result](bool ok, const QImage &out) {
+                    result->set_value(ok ? out : QImage());
+                },
+                m.fPath.isEmpty() ? nullptr : &m, degrees);
+        }, Qt::QueuedConnection);
+
+        while (rendered.wait_for(std::chrono::milliseconds(100)) !=
+               std::future_status::ready) {
+            if (abort && abort->load(std::memory_order_relaxed)) return cv::Mat();
+        }
+        return bgrFromDevelopImage(rendered.get());
+    };
+
     // --------------------------------------------------------------------
     // Finished
     // --------------------------------------------------------------------
@@ -279,8 +394,29 @@ void MW::generateFocusStack(const QStringList paths,
         // clear progress (Progress hides its container if no other row is live)
         progress->clearProgress(progressFocusStackRow);
 
+        /*
+        Every stack written this run -- one per group. ALL of them go into the
+        DataModel, not just the first: a selection spanning several stacks writes
+        several results, and inserting only fsFusedPaths.first() left the rest on
+        disk but missing from the thumbnails. This also runs when a later group
+        fails or the user aborts, because the stacks finished before that are
+        already on disk.
+        */
+        const QStringList fusedPaths = G::fsFusedPaths;
+        auto showFused = [&]() {
+            if (fusedPaths.isEmpty()) return;
+            if (isLocal) {
+                insertFiles(fusedPaths);
+            } else {
+                folderAndFileSelectionChange(fusedPaths.first(), "FS::threadFinished");
+            }
+            fsTree->updateCount();
+            bookmarks->updateCount();
+        };
+
         // aborted or failed
         if (!success) {
+            showFused();
             if (aborted) {
                 // User pressed ESC
                 msg = "Focus stacking was aborted.";
@@ -299,7 +435,7 @@ void MW::generateFocusStack(const QStringList paths,
         }
 
         // Evaluate we have a result path
-        if (G::fsFusedPaths.isEmpty()) {
+        if (fusedPaths.isEmpty()) {
             msg = "Focus stacking failed: No output path found.";
             if (G::FSLog) G::log(srcFun, msg);
             updateStatus(false, msg);
@@ -307,19 +443,11 @@ void MW::generateFocusStack(const QStringList paths,
             return;
         }
 
-        // Update UI with the new file
-        QString resultPath = G::fsFusedPaths.first();
-        if (isLocal) {
-            insertFiles(QStringList{resultPath});
-        } else {
-            folderAndFileSelectionChange(resultPath, "FS::threadFinished");
-        }
-
-        fsTree->updateCount();
-        bookmarks->updateCount();
+        // Update UI with the new files
+        showFused();
 
         // Handle Success
-        QString nGroups = QVariant(G::fsFusedPaths.count()).toString();
+        QString nGroups = QVariant(fusedPaths.count()).toString();
         if (nGroups == "1") msg = nGroups + " focus stack completed";
         else msg = nGroups + " focus stacks completed";
         if (G::FSLog) G::log(srcFun, msg);

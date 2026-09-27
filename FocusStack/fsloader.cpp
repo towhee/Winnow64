@@ -282,7 +282,7 @@ FSLoader isolates all wavelet-specific preparation logic:
 
 This keeps wavelet, alignment, and fusion code simpler and more robust.
 */
-// not being used
+// Used by FS::runDMap for slices rendered through Develop (MW::developPixelSource)
 Image loadFromMat(const cv::Mat &source)
 {
     Image out;

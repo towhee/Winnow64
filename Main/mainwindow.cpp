@@ -13106,7 +13106,8 @@ bool MW::prepareExport(QStringList &targets)
 
 void MW::developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
-                            std::function<void(bool, const QImage &)> done)
+                            std::function<void(bool, const QImage &)> done,
+                            const ImageMetadata *mSnap, int degreesSnap)
 {
 /*
     Render one image's FULL develop recipe for the exporter.
@@ -13134,7 +13135,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
 
     /* GUI thread: this image's stored recipe, and the metadata the decoder needs. */
     const DevelopProperties::StackRenderJob mj = developProperties->stackJobFor(fPath);
-    ImageMetadata m = dm->imMetadata(fPath);
+    ImageMetadata m = mSnap ? *mSnap : dm->imMetadata(fPath);
     if (m.fPath.isEmpty()) m.fPath = fPath;
     if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
 
@@ -13169,7 +13170,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     /* Step 1 (worker): make sure the scene-linear WorkingImage exists. decodeIndependent
        caches it as a side effect, so an image already visited is a cache hit. */
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
-                              pmridCached, done]() mutable {
+                              pmridCached, degreesSnap, done]() mutable {
         auto work = WorkingImageCache::instance().get(fPath);
         /* A cached base is only usable here if it IS the sensor image. The cache is keyed
            by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
@@ -13240,9 +13241,10 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
            concurrently with the live session's use of the same path-keyed caches. */
         QMetaObject::invokeMethod(this, [this, fPath, work, src, mj, depth, space, outSpace,
-                                         decodedHere, done]() {
-            const int degrees = work->sceneReferred
-                                    ? developOrientationDegrees(*work, fPath) : 0;
+                                         decodedHere, degreesSnap, done]() {
+            const int degrees = !work->sceneReferred ? 0
+                              : degreesSnap >= 0     ? degreesSnap
+                                                     : developOrientationDegrees(*work, fPath);
 
             if (stackHasRangeMask(mj))   ensureRangeRef(fPath, *work, mj.global, degrees);
             if (stackHasSubjectMask(mj)) ensureSubjectMask(fPath, *work, mj.global, degrees);

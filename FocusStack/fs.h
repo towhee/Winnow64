@@ -10,7 +10,9 @@
 #include <QStringList>
 #include <QString>
 #include <QHash>
+#include <QSet>
 #include <atomic>
+#include <functional>
 #include <vector>
 
 #include <opencv2/core.hpp>
@@ -56,6 +58,17 @@ public:
     the decode failing (and previously crashing). Keyed by file path.
     */
     QHash<QString, ImageMetadata> metaSnapshot;
+
+    /*
+    Slices in developPaths are loaded through developDecoder -- the full develop
+    render (MW::developPixelSource, the exporter's path: stored recipe, masks,
+    spots, geometry, 16-bit) -- instead of the file on disk or the browse decode.
+    Both are set by MW::generateFocusStack before the thread starts. The decoder
+    runs on this worker thread and waits for the render; it returns an empty Mat
+    on failure, or as soon as *abort is set.
+    */
+    std::function<cv::Mat(const QString &, const std::atomic_bool *)> developDecoder;
+    QSet<QString> developPaths;
 
     // Input configuration
     bool setOptions(const Options &opt);
