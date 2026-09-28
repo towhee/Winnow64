@@ -8,7 +8,7 @@ WHAT'S NEW
 - Keywords
 
 BUGS / TO
-- Are focus stacks being resized to 3200 px on the long side?
+- Add Network drives to Folders
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
 - Thumbnail tooltip over file name showing borders tooltip.

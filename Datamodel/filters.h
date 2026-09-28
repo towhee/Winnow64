@@ -354,6 +354,10 @@ public:
         completes; the columns widen to fit it and never shrink below the old width. */
     void setCountCeiling(int maxCount);
 
+    /*  The app stylesheet plus the panel's own smaller font (G::panelFontSize). Use this,
+        not setStyleSheet(G::css), or the override is lost on the next restyle. */
+    void applyCss(const QString &css);
+
 private:
     QMutex mutex;
     void resizeColumns();

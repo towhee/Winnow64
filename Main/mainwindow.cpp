@@ -1360,10 +1360,11 @@ void MW::showEvent(QShowEvent *event)
 
         Here and not earlier because MW::setScope returns immediately while
         G::isInitializing, and because updateLibraryTree() above is what seeds the
-        Library tree this shows.  setCatalogScopeWhole is the same call the toggle's
+        Library tree this shows.  MW::chooseSource is the same call the Module dock's
         Library button makes, so the two cannot drift -- including its answer
         to an empty catalog, which is to open Manage Catalog rather than show an empty
-        search box (MW::catalogEmptyOpenManage).
+        search box (MW::catalogEmptyOpenManage), and, in Browse, the switch to Browse's
+        Library layout.
 
         Never during an automated run.  The harnesses open a named FOLDER and assert on
         what loads, and they do not reliably get their own settings file -- so a developer
@@ -1371,7 +1372,7 @@ void MW::showEvent(QShowEvent *event)
         excluded for the same reason: it drives folders on a timer. */
     if (openLibraryAtStart && !G::isAutomatedRun && !G::isStressTest) {
         if (restoreLibraryState) queueLibraryStateRestore();
-        setCatalogScopeWhole("MW::showEvent openLibraryAtStart");
+        chooseSource(true, "MW::showEvent openLibraryAtStart");
     }
 
     G::issueBeginSession();
@@ -2696,7 +2697,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 tabBar->setFont(glyphs);
                 for (int i = 0; i < tabBar->count(); ++i) {
                     if (tabBar->tabText(i) == folderDockTabText) {
-                        tabBar->setTabToolTip(i, "Source Panel (F3)");
+                        tabBar->setTabToolTip(i, "Folders Panel (F3)");
                     }
                     if (tabBar->tabText(i) == favDockTabText) {
                         tabBar->setTabToolTip(i, "Bookmarks Panel (F4)");
@@ -8086,7 +8087,7 @@ void MW::setShowImageCount()
 {
     if (G::isLogger) G::log("MW::setShowImageCount");
     if (!fsTree->isVisible()) {
-        G::popup->showPopup("Show image count is only available when the Source Panel is visible",
+        G::popup->showPopup("Show image count is only available when the Folders Panel is visible",
               1500);
     }
     bool isShow = showImageCountAction->isChecked();
@@ -8114,8 +8115,8 @@ void MW::setFontSize(int fontPixelSize)
     if (G::useInfoView) infoView->refreshLayout();                   // triggers sizehint!
 //    infoView->updateInfo(currentRow);                           // triggers sizehint!
     bookmarks->setStyleSheet(G::css);
-    fsTree->setStyleSheet(G::css);
-    filters->setStyleSheet(G::css);
+    fsTree->applyCss(G::css);
+    filters->applyCss(G::css);
     infoView->setStyleSheet(G::css);
     tableView->setStyleSheet(G::css);
     statusLabel->setStyleSheet(G::css);
@@ -8156,9 +8157,9 @@ void MW::setBackgroundShade(int shade)
     }
     bookmarks->setStyleSheet(G::css);
     bookmarks->verticalScrollBar()->setStyleSheet(G::css);
-    fsTree->setStyleSheet(G::css);
+    fsTree->applyCss(G::css);
     fsTree->verticalScrollBar()->setStyleSheet(G::css);
-    filters->setStyleSheet(G::css);
+    filters->applyCss(G::css);
     filters->verticalScrollBar()->setStyleSheet(G::css);
     filters->setCategoryBackground(a, b);
     if (libTree) {
@@ -8166,7 +8167,6 @@ void MW::setBackgroundShade(int shade)
         libTree->verticalScrollBar()->setStyleSheet(G::css);
         libTree->updateStyle();
     }
-    styleSourceToggle();
     styleWorkflowSwitcher();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);

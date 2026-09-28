@@ -150,7 +150,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         back to it comes back to the panel last used there and not to whatever was front
         when the layout was captured (see MW::restoreDockTabSelection).  Before ws is
         replaced below -- ws is the outgoing workspace until then.  An unnamed current
-        workspace is the layout restored at startup, which is the Source one. */
+        workspace is the layout restored at startup, which is a Browse one. */
     const QString leaving = ws.name.isEmpty() ? workflowNames().at(WfSource) : ws.name;
     rememberDockTabSelection(leaving);
 
@@ -715,7 +715,7 @@ QString MW::reportWorkspaces()
 
     // Workflow workspaces (see MW::invokeWorkflowWorkspace)
     rpt << "Workflow workspaces:";
-    for (int wf = 0; wf < WfCount; ++wf) {
+    for (int wf : workflowLayoutOrder()) {
         const bool isDef = wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf);
         const bool isOvr = wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf);
         rpt << "\n  " << workflowNames().at(wf).leftJustified(14)
@@ -1156,9 +1156,14 @@ void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const
     WORKFLOW WORKSPACES
 
     A layout per workflow rather than one "default workspace" for the whole app.  The
-    workflow's key applies it: E / G / C (Source), D (Develop) and K (Keywords).
-    Embellish and Slide Show are defined but have no key yet -- they are reached from
-    Window > Workspace.
+    workflow's key applies it: E / G / T / C (Browse), D (Develop) and K (Keywords).
+    Embellish, Slide Show and Map have no key yet -- they are reached from the Module
+    dock.
+
+    BROWSE HAS TWO LAYOUTS, Library and Folders, and uses the one that matches the
+    source (MW::workflowLayout); switching source inside Browse switches layout
+    (MW::chooseSource).  So the lists below are indexed by LAYOUT (WorkflowLayout):
+    one per Workflow, WfSource's being the Folders layout, then WsLibrary.
 
     Each workflow has TWO possible layouts:
 
@@ -1188,24 +1193,35 @@ const QStringList &MW::workflowKeys()
     an existing profile and every committed defaults.json are keyed on them, so a rename
     strands the user's captured override unless it is migrated.
 
-    ONE HAS BEEN RENAMED.  "Library" became "Source" when the nomenclature was settled:
-    SOURCE is where the images come from (a Catalog or Folders -- the two halves of the
-    Source panel), and LIBRARY is the catalogue plus the keywords, which is not what this
-    layout is about.  MW::migrateWorkflowKey moves an existing group across.
+    THE BROWSE KEY HAS MOVED TWICE.  "Library" became "Source" when the Browse layout
+    was the one layout for both sources; then Browse split into a Library and a Folders
+    layout, and "Source" became "Folders" (the layout it had mostly been captured in),
+    with "Library" the new, second one.  MW::migrateWorkflowKey moves "Source" across.
 */
-    static const QStringList keys{"Source", "Develop", "Keywords", "Embellish", "SlideShow",
-                                  "Map"};
+    static const QStringList keys{"Folders", "Develop", "Keywords", "Embellish",
+                                  "SlideShow", "Map", "Library"};
     return keys;
 }
 
 QStringList MW::workflowNames()
 {
-    /*  "Browse", not "Source": the SOURCE is Library | Folders (the Source panel), which
-        every workflow works on. The key stays "Source" (see workflowKeys), so this is a
-        display rename only. The name also keys the session-only front-tab memory
-        (MW::rememberDockTabSelection), which is why the rename costs nothing there. */
-    return {tr("Browse"), tr("Develop"), tr("Keywords"), tr("Embellish"), tr("Slide Show"),
-            tr("Map")};
+    /*  The names also key the session-only front-tab memory
+        (MW::rememberDockTabSelection), so renaming one costs nothing there. */
+    return {tr("Folders"), tr("Develop"), tr("Keywords"), tr("Embellish"),
+            tr("Slide Show"), tr("Map"), tr("Library")};
+}
+
+const QList<int> &MW::workflowLayoutOrder()
+{
+    static const QList<int> order{WsLibrary, WfSource, WfDevelop, WfKeywords, WfEmbellish,
+                                  WfSlideShow, WfMap};
+    return order;
+}
+
+int MW::workflowLayout(int wf) const
+{
+    if (wf == WfSource && G::scope == G::Scope::Catalog) return WsLibrary;
+    return wf;
 }
 
 void MW::migrateWorkflowKey(const QString &from, const QString &to)
@@ -1265,7 +1281,7 @@ void MW::loadWorkflowDefaults()
     isWorkflowDefault.clear();
     workflowUserWs.clear();
     isWorkflowOverride.clear();
-    for (int wf = 0; wf < WfCount; ++wf) {
+    for (int wf = 0; wf < WsCount; ++wf) {
         workflowDefaultWs.append(WorkspaceData());
         isWorkflowDefault.append(false);
         workflowUserWs.append(WorkspaceData());
@@ -1283,7 +1299,7 @@ void MW::loadWorkflowDefaults()
     }
 
     const QJsonObject root = doc.object();
-    for (int wf = 0; wf < WfCount; ++wf) {
+    for (int wf = 0; wf < WsCount; ++wf) {
         const QString key = workflowKeys().at(wf);
         if (!root.contains(key) || !root.value(key).isObject()) continue;
         workspaceFromJson(root.value(key).toObject(), workflowDefaultWs[wf]);
@@ -1302,13 +1318,13 @@ void MW::loadWorkflowOverrides()
 */
     if (G::isLogger) G::log("MW::loadWorkflowOverrides");
     if (!isSettings) return;
-    if (workflowUserWs.count() < WfCount) return;
+    if (workflowUserWs.count() < WsCount) return;
 
     /*  Before anything is read: an override captured under a key that has since been
         renamed still belongs to the user.  See MW::workflowKeys. */
-    migrateWorkflowKey("Library", "Source");
+    migrateWorkflowKey("Source", "Folders");
 
-    for (int wf = 0; wf < WfCount; ++wf) {
+    for (int wf = 0; wf < WsCount; ++wf) {
         settings->beginGroup("WorkflowWorkspaces/" + workflowKeys().at(wf));
         const bool isCaptured = settings->contains("state");
         if (isCaptured) {
@@ -1324,7 +1340,7 @@ void MW::loadWorkflowOverrides()
 void MW::saveWorkflowOverride(int wf)
 {
     if (G::isLogger) G::log("MW::saveWorkflowOverride");
-    if (wf < 0 || wf >= WfCount) return;
+    if (wf < 0 || wf >= WsCount) return;
 
     const QString group = "WorkflowWorkspaces/" + workflowKeys().at(wf);
     settings->remove(group);
@@ -1348,17 +1364,30 @@ void MW::invokeWorkflowWorkspace(int wf)
 {
 /*
     Apply the layout for a workflow: the user's override when it is ticked, else the
-    layout Winnow ships with, else the built-in layout.
+    layout Winnow ships with, else the built-in layout.  Browse's layout is the one for
+    the current source (MW::workflowLayout).
 */
     if (G::isLogger) G::log("MW::invokeWorkflowWorkspace");
     if (wf < 0 || wf >= WfCount) return;
     if (G::isPanelProbe)
         PanelProbe::Instance().Mark(QString("invokeWorkflowWorkspace(%1) enter").arg(wf));
 
-    if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf) && hasWorkflowOverride(wf))
-        invokeWorkspace(workflowUserWs.at(wf));
+    invokeWorkflowLayout(wf, workflowLayout(wf));
+}
+
+void MW::invokeWorkflowLayout(int wf, int lay)
+{
+/*
+    Apply layout `lay` as workflow `wf`'s.  Only Browse has a choice -- MW::chooseSource
+    applies the layout for the source it is ABOUT to switch to, before G::scope says so.
+*/
+    if (wf < 0 || wf >= WfCount || lay < 0 || lay >= WsCount) return;
+    if (lay < isWorkflowOverride.count() && isWorkflowOverride.at(lay)
+        && hasWorkflowOverride(lay))
+        invokeWorkspace(workflowUserWs.at(lay));
     else
-        invokeWorkflowDefault(wf);
+        invokeWorkflowDefault(lay);
+    if (wf == WfSource) browseLayoutApplied = lay;
     currentWorkflow = wf;
     syncWorkflowSwitcher();
     /* A workspace carries a Browse view (Loupe, Grid ...) and invokeWorkspace just put
@@ -1375,7 +1404,7 @@ void MW::invokeWorkflowDefault(int wf)
     resource does not define is the built-in layout.
 */
     if (G::isLogger) G::log("MW::invokeWorkflowDefault");
-    if (wf < 0 || wf >= WfCount) return;
+    if (wf < 0 || wf >= WsCount) return;
 
     if (wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf)) {
         invokeWorkspace(workflowDefaultWs.at(wf));
@@ -1390,14 +1419,14 @@ void MW::toggleWorkflowOverride(int wf, bool isOverride)
     Tick / untick a workflow in Window > Workspace > User override.
 
     Ticking a workflow that has never been captured SNAPSHOTS THE CURRENT LAYOUT -- the
-    common case is "I have the panels how I want them for culling, make that my Source
+    common case is "I have the panels how I want them for culling, make that my Folders
     layout", and making that one click rather than two is the point.  Ticking one that
     has already been captured restores the kept copy instead, so unticking is not
     destructive.  "Update Override from Current Layout ..." is how a kept copy is
     replaced.
 */
     if (G::isLogger) G::log("MW::toggleWorkflowOverride");
-    if (wf < 0 || wf >= WfCount) return;
+    if (wf < 0 || wf >= WsCount) return;
 
     if (isOverride && !hasWorkflowOverride(wf)) {
         snapshotWorkspace(workflowUserWs[wf]);
@@ -1419,8 +1448,10 @@ void MW::captureWorkflowOverride()
 
     bool ok;
     const QStringList names = workflowNames();
+    QStringList listed;
+    for (int lay : workflowLayoutOrder()) listed << names.at(lay);
     const QString name = QInputDialog::getItem(this, tr("Update Override"),
-        tr("Save the current layout as the workspace for:"), names, 0, false, &ok);
+        tr("Save the current layout as the workspace for:"), listed, 0, false, &ok);
     if (!ok) return;
     const int wf = names.indexOf(name);
     if (wf < 0) return;
@@ -1445,8 +1476,10 @@ void MW::captureWorkflowDefault()
 
     bool ok;
     const QStringList names = workflowNames();
+    QStringList listed;
+    for (int lay : workflowLayoutOrder()) listed << names.at(lay);
     const QString name = QInputDialog::getItem(this, tr("Set Workflow Default"),
-        tr("Save the current layout as the shipped default for:"), names, 0, false, &ok);
+        tr("Save the current layout as the shipped default for:"), listed, 0, false, &ok);
     if (!ok) return;
     const int wf = names.indexOf(name);
     if (wf < 0) return;
@@ -1491,7 +1524,7 @@ bool MW::writeWorkflowDefaultsJson(QString &path, QString &err) const
     path = dir + "/defaults.json";
 
     QJsonObject root;
-    for (int wf = 0; wf < WfCount; ++wf) {
+    for (int wf = 0; wf < WsCount; ++wf) {
         if (wf >= isWorkflowDefault.count() || !isWorkflowDefault.at(wf)) continue;
         root.insert(workflowKeys().at(wf), workspaceToJson(workflowDefaultWs.at(wf)));
     }
@@ -1550,12 +1583,13 @@ void MW::syncWorkflowWorkspaceMenus()
 
     Three settings, each with one home and its own keys, none changing another:
 
-    SOURCE    Library | Folders.  The Source panel's toggle, Ctrl+Shift+L / Ctrl+Shift+F,
-              View > Library / Folders.  Every workflow works on the current source and
-              selection, so switching source never changes the workflow.
-    WORKFLOW  Browse, Develop, Keywords, Embellish, Slide Show, Map.  The Module dock, D
-              and K.
-              The only setting that owns a workspace (panel layout).
+    SOURCE    Library | Folders.  The left end of the Module dock, Ctrl+Shift+L /
+              Ctrl+Shift+F, View > Library / Folders.  Every workflow works on the
+              current source and selection, so switching source never changes the
+              workflow -- but in Browse it switches the layout, since Browse has one
+              per source (MW::chooseSource).
+    WORKFLOW  Browse, Develop, Keywords, Embellish, Slide Show, Map.  The Module dock's
+              centred modes, D and K.  Owns the workspace (panel layout).
     VIEW      Loupe, Grid, Table, Compare.  E / G / T / C.  These are the BROWSE views:
               a view key always lands in Browse (MW::requestView).
 
@@ -1600,12 +1634,60 @@ void MW::invokeBrowseWorkflow()
 /*
     The switcher's Browse button and View > Browse Mode: Browse, in the view it was last
     shown in.  Unlike a view key this applies the Browse layout from a named workspace
-    too -- asking for Browse by name is asking for its layout.
+    too -- asking for Browse by name is asking for its layout -- and it re-applies it
+    when the source has changed since (a folder click out of the Library), so the
+    layout matches the source again.
 */
     if (G::isLogger) G::log("MW::invokeBrowseWorkflow");
     setOperationMode(G::OperationMode::Preview);
-    if (currentWorkflow != WfSource) invokeWorkflowWorkspace(WfSource);
+    if (currentWorkflow != WfSource || browseLayoutApplied != workflowLayout(WfSource))
+        invokeWorkflowWorkspace(WfSource);
     requestView(browseView);
+}
+
+void MW::chooseSource(bool library, const QString &src)
+{
+/*
+    Library | Folders at the left of the Module dock, and View > Library / Folders
+    (Ctrl+Shift+L / Ctrl+Shift+F).  The scope change is MW::setCatalogScopeWhole /
+    MW::showFoldersSource, exactly as the Source panel's toggle ran it.
+
+    IN BROWSE THE LAYOUT FOLLOWS: Browse has a Library layout and a Folders layout.  It
+    is applied BEFORE the scope changes, so no panel moves under a load that has
+    started; a refused change (unsaved picks, an empty catalog opening Manage Catalog)
+    puts the old layout back.  Any other workflow keeps its layout.
+
+    Other routes that change the scope -- a folder or bookmark clicked out of the
+    Library, File > Open Library -- leave the layout alone; the Browse button re-syncs
+    it (MW::invokeBrowseWorkflow).
+*/
+    if (G::isLogger) G::log("MW::chooseSource", src);
+    const G::Scope target = library ? G::Scope::Catalog : G::Scope::Folders;
+    const int before = browseLayoutApplied;
+    const int lay = library ? int(WsLibrary) : int(WfSource);
+    const bool follow = currentWorkflow == WfSource
+                        && G::operationMode != G::OperationMode::Develop
+                        && G::scope != target && before != lay;
+    if (follow) {
+        invokeWorkflowLayout(WfSource, lay);
+        requestView(browseView);
+    }
+
+    if (library) setCatalogScopeWhole(src);
+    else showFoldersSource();
+
+    if (follow && G::scope != target) {
+        invokeWorkflowLayout(WfSource, before);
+        requestView(browseView);
+    }
+    /*  setScope pushes the buttons back, but an empty catalog returns before it is
+        called; say what is actually loaded. */
+    if (sourceFoldersBtn && sourceLibraryBtn) {
+        const bool lib = G::scope == G::Scope::Catalog;
+        QSignalBlocker a(sourceFoldersBtn), b(sourceLibraryBtn);
+        sourceLibraryBtn->setChecked(lib);
+        sourceFoldersBtn->setChecked(!lib);
+    }
 }
 
 void MW::invokeEmbellishWorkflow()
@@ -1852,7 +1934,7 @@ void MW::syncWorkflowButtonsEnabled()
 void MW::styleWorkflowSwitcher()
 {
 /*
-    The Library | Folders look (MW::segmentedOptionCss) for both workflow rows: the Module
+    MW::segmentedOptionCss's look for both workflow rows: the Module
     dock at 1.5x G::fontSize, the hidden status-bar switcher at the normal size.  From
     the palette and the font size, so MW::setBackgroundShade and MW::setFontSize call
     this again.
@@ -1861,8 +1943,8 @@ void MW::styleWorkflowSwitcher()
     splitter against the central widget, and a strip of buttons has no use for being
     dragged taller.
 */
-    /* THE MODULE COLOURS, set here independently of the Source panel's Library | Folders
-       (which keeps segmentedOptionCss's G::textColor). Appended after the shared CSS so
+    /* THE MODULE COLOURS, for the modes and for Library | Folders beside them (all in
+       the dock's content, so one sheet styles both). Appended after the shared CSS so
        they win; the selected (yellow) and disabled colours still come from
        segmentedOptionCss. */
     int l = G::textShade - 40;

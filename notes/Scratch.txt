@@ -5534,3 +5534,17 @@ Harden on-the-fly DataModel insert / delete
    Delete in a filtered view.
  - The existing unit tests (tst_imagerow covers the removeFiles compaction) must still
    pass.
+
+In the Modules panel add Library | Folders to the left side.  Keep current modes centered.
+
+Library | Folders                             Browse | Develop | Keywords | ...
+
+Use the same formatting for selected / unselected for Library | Folders as for Modes.
+
+Run the same code for Library | Folders as before except for the Source panel.
+
+In default workspaces replace Browse with Library and Folders
+
+Change the Source panel back to the Folders panel only.
+
+I have comitted in case we want to revert this change.

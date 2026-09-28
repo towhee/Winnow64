@@ -133,7 +133,8 @@ QColor backgroundColor;             // define after app stylesheet defined
 QColor disabledColor;               // define after app stylesheet defined
 QColor header1Color;                // define after app stylesheet defined
 QColor header2Color;                // define after app stylesheet defined
-QColor header3Color;                // define after app stylesheet defined
+QColor header3Color;                //
+
 QColor borderColor;                 // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
 QColor frameLineColor;              // define after app stylesheet defined (mb)
@@ -203,6 +204,17 @@ double iconOpacity = 0.5;           // 0.0 - 1.0 (higher is brighter)
 // ui
 int wheelSensitivity = 50;          // percent of maximum sensitivity, 1 - 100
 bool wheelSpinning = false;
+
+int panelFontSize()
+{
+    return qMax(6, fontSize - 2);
+}
+
+QString panelFontCss(const QString &selector)
+{
+    // Same unit as WidgetCSS::widget(), where fontSize becomes every widget's size
+    return selector + " {font-size:" + QString::number(panelFontSize()) + "pt;}";
+}
 
 int wheelSpinThreshold()
 /*

@@ -282,11 +282,12 @@ void Filters::createDynamicFilters()
         qDebug() << "Filters::createDynamicFilters"
                     ;
 
+    // Folders sits directly under Search, above Picks
+    folders = new QTreeWidgetItem(this);
     picks = new QTreeWidgetItem(this);
     ratings = new QTreeWidgetItem(this);
     labels = new QTreeWidgetItem(this);
     types = new QTreeWidgetItem(this);
-    folders = new QTreeWidgetItem(this);
     years = new QTreeWidgetItem(this);
     months = new QTreeWidgetItem(this);
     days = new QTreeWidgetItem(this);
@@ -3397,6 +3398,22 @@ void Filters::setSoloMode(bool isSolo)
 {
     if (G::isLogger) G::log("Filters::setSoloMode");
     this->isSolo = isSolo;
+}
+
+void Filters::applyCss(const QString &css)
+{
+/*
+    The Filters tree reads two sizes smaller than the rest of the app, the same size as
+    the Folders tree (G::panelFontSize).
+*/
+    if (G::isLogger) G::log("Filters::applyCss");
+    setStyleSheet(css + G::panelFontCss("Filters"));
+    categoryFont = font();
+    searchDefaultTextFont = font();
+    searchDefaultTextFont.setItalic(true);
+    search->setFont(0, categoryFont);
+    searchTrue->setFont(0, searchDefaultTextFont);
+    resizeColumns();
 }
 
 void Filters::resizeColumns()
