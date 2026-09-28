@@ -330,17 +330,22 @@ public:
     /*  WORKFLOW WORKSPACES
 
         A layout per workflow, invoked by the workflow's key or its button in the
-        status-bar workflow switcher: E / G / T / C (Browse, whose key is "Source"),
-        D (Develop) and K (Keywords).  Embellish, Slide Show and Map have switcher
+        Module dock: E / G / T / C (Browse), D (Develop) and K (Keywords).  Embellish, Slide Show and Map have switcher
         buttons but no key yet.  The Slide Show button applies its layout AND starts the
         show, and stopping the show goes back to the workflow it came from; S starts and
         stops the show in whatever layout is up.  Map also owns a central page, the map
         (MW::showMapPage).
 
         THE UI MODEL.  Three settings, each changed only by its own controls: the SOURCE
-        (Library | Folders, the Source panel toggle), the WORKFLOW (the switcher and the
-        workflow keys; the one thing that owns a workspace) and the VIEW (Loupe, Grid,
-        Table, Compare).  The view keys always mean Browse -- see MW::requestView.
+        (Library | Folders, the left end of the Module dock), the WORKFLOW (the Module
+        dock's centred modes and the workflow keys) and the VIEW (Loupe, Grid, Table,
+        Compare).  The view keys always mean Browse -- see MW::requestView.
+
+        BROWSE HAS TWO LAYOUTS, one per source: Library and Folders.  Every other
+        workflow has one.  So the workspaces are indexed by LAYOUT, not by Workflow:
+        layouts 0 .. WfCount-1 are the workflows' own (WfSource's being the Folders
+        layout) and WsLibrary is Browse's Library layout.  MW::workflowLayout picks
+        Browse's by G::scope.
 
         Each workflow has a DEFAULT layout that ships with Winnow, read from the
         resource ":/Workspaces/defaults.json" (MW::loadWorkflowDefaults), and an
@@ -353,17 +358,28 @@ public:
         MW::workflowKeys / MW::workflowNames, and capture a default layout. */
     enum Workflow {WfSource, WfDevelop, WfKeywords, WfEmbellish, WfSlideShow, WfMap,
                    WfCount};
+    /*  The layouts: one per Workflow (WfSource's is Browse's Folders layout), then
+        Browse's Library layout. */
+    enum WorkflowLayout {WsLibrary = WfCount, WsCount};
+    /*  The layout workflow `wf` uses now: its own, except Browse, whose layout follows
+        the source. */
+    int workflowLayout(int wf) const;
+    /*  Library, Folders, Develop ... Map: the order the Workspace menus and the capture
+        dialogs list the layouts in. */
+    static const QList<int> &workflowLayoutOrder();
     /* Stable keys for JSON and QSettings (never translated) and the menu names
-       (translated).  Both are indexed by Workflow.  The keys are not renamed lightly
-       -- an existing profile and every committed defaults.json are keyed on them; the
-       one rename so far, Library -> Source, carries a migration (see
-       MW::migrateWorkflowKey). */
+       (translated).  Both are indexed by WorkflowLayout.  The keys are not renamed
+       lightly -- an existing profile and every committed defaults.json are keyed on
+       them; a rename carries a migration (see MW::migrateWorkflowKey). */
     static const QStringList &workflowKeys();
     static QStringList workflowNames();
-    QList<WorkspaceData> workflowDefaultWs;   // shipped layout, indexed by Workflow
+    QList<WorkspaceData> workflowDefaultWs;   // shipped layout, indexed by WorkflowLayout
     QList<bool> isWorkflowDefault;            // a shipped layout was found
     QList<WorkspaceData> workflowUserWs;      // the user's captured layout
     QList<bool> isWorkflowOverride;           // use the user's layout, not the default
+    /*  The Browse layout last applied (WfSource or WsLibrary), so a source change
+        inside Browse knows whether the layout has to follow it. */
+    int browseLayoutApplied = WfSource;
     /*  The workflow the session is in, or -1 when a named workspace was invoked instead.
         Persisted ("currentWorkflow") because the layout a session is LEFT in is not
         always a layout the next session can start in -- see MW::showEvent. */
@@ -842,15 +858,19 @@ public slots:
 
     /*  Workflow workspaces.  See the Workflow enum above. */
     void invokeWorkflowWorkspace(int wf);
-    void invokeWorkflowDefault(int wf);
-    void toggleWorkflowOverride(int wf, bool isOverride);
+    void invokeWorkflowLayout(int wf, int lay);
+    void invokeWorkflowDefault(int lay);        // lay: a WorkflowLayout
+    void toggleWorkflowOverride(int lay, bool isOverride);
+    /*  Library | Folders: the Module dock's source buttons and View > Library / Folders.
+        In Browse the layout follows the source. */
+    void chooseSource(bool library, const QString &src);
     void captureWorkflowDefault();
     void captureWorkflowOverride();
     void loadWorkflowDefaults();
     void loadWorkflowOverrides();
     void migrateWorkflowKey(const QString &from, const QString &to);
-    void saveWorkflowOverride(int wf);
-    bool hasWorkflowOverride(int wf) const;
+    void saveWorkflowOverride(int lay);
+    bool hasWorkflowOverride(int lay) const;
     void syncWorkflowWorkspaceMenus();
     bool writeWorkflowDefaultsJson(QString &path, QString &err) const;
     void requestView(int view);
@@ -1382,7 +1402,6 @@ private slots:
     /*  Put back the checks a folder add/remove saved, once the categories have been
         rebuilt for the new set, and re-apply them. */
     void restoreFiltersAfterFolderChange();
-    void styleSourceToggle();           // re-applied by setBackgroundShade
     void showMetadataDock();
 
     void setMenuBarVisibility();
@@ -1959,8 +1978,8 @@ private:
         (shipped off, like catalogDock -- the left group is already four tabs deep), so
         every use is null-guarded. */
     DockWidget *keywordsDock = nullptr;
-    /*  THE MODULE DOCK: the workflow switcher (Browse | Develop | ... | Map)
-        across the top of the window. No title bar, not movable, not floatable, top area
+    /*  THE MODULE DOCK: the source (Library | Folders) at the left and the workflow
+        switcher (Browse | Develop | ... | Map) centred, across the top of the window. No title bar, not movable, not floatable, top area
         only; MW::placeShowHideBars pins it there. See MW::createModuleDock. */
     DockWidget *moduleDock = nullptr;
     QList<QToolButton *> moduleBtns;        // indexed by Workflow, like workflowBtns
@@ -2187,11 +2206,11 @@ private:
        a second dock. Null when the flag is off, in which case the two original panels are
        built exactly as before. */
     FilterPanel *filterPanel = nullptr;
-    /*  THE SOURCE PANEL'S TWO VIEWS. The title bar's Folders | Library toggle is a
-        second view of G::scope, mirrored by MW::setScope; the stack shows FSTree or
-        LibTree to match. See Views/libtree.h. */
+    /*  LIBTREE IS BUILT BUT NOT SHOWN: the Folders panel holds FSTree only. It still
+        feeds Bookmarks' Library counts (MW::updateLibraryTree). See Views/libtree.h.
+        The Library | Folders buttons at the left of the Module dock are a view of
+        G::scope, mirrored by MW::setScope. */
     LibTree *libTree = nullptr;
-    QStackedWidget *sourceStack = nullptr;
     QToolButton *sourceFoldersBtn = nullptr;
     QToolButton *sourceLibraryBtn = nullptr;
     QLabel *sourceSeparator = nullptr;       // the " | " between Library and Folders
@@ -2697,7 +2716,8 @@ private:
         status-bar switcher so both trigger the same actions. */
     void buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
                               QList<QLabel *> *separators);
-    /*  The Library | Folders look, shared by the Source toggle and the Module dock: the
+    /*  The Module dock's look (Library | Folders and the modes, both styled by
+        MW::styleWorkflowSwitcher): the
         selected option in kSelectedOptionColor (bold when boldSelected), the others in
         the default text colour. fontPt <= 0 leaves the font size alone; vPad is the
         buttons' top and bottom padding in px. */

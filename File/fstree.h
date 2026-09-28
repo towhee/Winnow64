@@ -138,6 +138,9 @@ public slots:
     bool select(QString folderPath, QString modifier = "None", QString src = "");
     void resizeColumns();
     void refreshModel();
+    /*  The app stylesheet plus the Folders tree's smaller font (G::panelFontSize), the
+        same size as Filters. Use this, not setStyleSheet(G::css). */
+    void applyCss(const QString &css);
     bool createFolder(QString parentFolder);
     void updateCount();
     void onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);

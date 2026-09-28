@@ -1080,7 +1080,7 @@
        </property>
        <item>
         <property name="text">
-         <string>Source Panel</string>
+         <string>Folders Panel</string>
         </property>
         <property name="text">
          <string>F3</string>

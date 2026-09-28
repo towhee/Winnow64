@@ -589,17 +589,14 @@ void MW::setScope(G::Scope s, QString src)
         lastFolderRecurse = dm->scopeRequest().recurse;
     }
 
-    /*  THE TOGGLE AND THE TREE BENEATH IT, re-asserted even when the scope did not
+    /*  THE MODULE DOCK'S LIBRARY | FOLDERS, re-asserted even when the scope did not
         change, so a click the scope refused (Library with nothing catalogued) puts the
-        toggle back. Signals blocked: the buttons act on clicked, and this is not one. */
+        buttons back. Signals blocked: the buttons act on clicked, and this is not one. */
     if (sourceFoldersBtn && sourceLibraryBtn) {
         QSignalBlocker a(sourceFoldersBtn), b(sourceLibraryBtn);
         sourceLibraryBtn->setChecked(isLibrary);
         sourceFoldersBtn->setChecked(!isLibrary);
     }
-    if (sourceStack && libTree)
-        sourceStack->setCurrentWidget(isLibrary ? static_cast<QWidget *>(libTree)
-                                                : static_cast<QWidget *>(fsTree));
     /*  BOOKMARKS FOLLOW THE SOURCE too: in the Library a bookmark filters it and counts
         what the Library holds there (see MW::bookmarkClicked). Back in Folders, the
         folder load that follows re-selects its bookmark as it always has. */

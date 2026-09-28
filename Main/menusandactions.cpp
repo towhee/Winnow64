@@ -1631,9 +1631,10 @@ void MW::createViewActions()
     addAction(resetLayoutAction);
     connect(resetLayoutAction, &QAction::triggered, this, &MW::resetLayout);
 
-    /* THE SOURCE, from the keyboard. The same requests the Source panel's Folders |
-       Library toggle makes, so a refused change leaves everything where it was. Neither
-       changes the workflow: switching source inside Develop stays in Develop. */
+    /* THE SOURCE, from the keyboard. The same MW::chooseSource the Module dock's
+       Library | Folders buttons call, so a refused change leaves everything where it
+       was. Neither changes the workflow: switching source inside Develop stays in
+       Develop (in Browse the layout follows the source). */
     showLibrarySourceAction = new QAction(tr("Library"), this);
     showLibrarySourceAction->setObjectName("showLibrarySource");
     /* A modifier on both source keys: plain letters are for workflows and views. Set
@@ -1642,7 +1643,7 @@ void MW::createViewActions()
     showLibrarySourceAction->setShortcutVisibleInContextMenu(true);
     addAction(showLibrarySourceAction);
     connect(showLibrarySourceAction, &QAction::triggered, this, [this]() {
-        setCatalogScopeWhole("showLibrarySourceAction");
+        chooseSource(true, "showLibrarySourceAction");
     });
 
     showFoldersSourceAction = new QAction(tr("Folders"), this);
@@ -1650,7 +1651,9 @@ void MW::createViewActions()
     showFoldersSourceAction->setShortcut(QKeySequence("Ctrl+Shift+F"));
     showFoldersSourceAction->setShortcutVisibleInContextMenu(true);
     addAction(showFoldersSourceAction);
-    connect(showFoldersSourceAction, &QAction::triggered, this, &MW::showFoldersSource);
+    connect(showFoldersSourceAction, &QAction::triggered, this, [this]() {
+        chooseSource(false, "showFoldersSourceAction");
+    });
 
     /* The workflow buttons -- the Module dock's and the hidden status-bar switcher's,
        both built before these actions (createDocks, createStatusBar) -- follow their
@@ -1746,7 +1749,7 @@ void MW::createWindowActions()
     addAction(statusBarVisibleAction);
     connect(statusBarVisibleAction, &QAction::triggered, this, &MW::setStatusBarVisibility);
 
-    folderDockVisibleAction = new QAction(tr("Source Panel"), this);
+    folderDockVisibleAction = new QAction(tr("Folders Panel"), this);
     folderDockVisibleAction->setObjectName("toggleFiless");
     folderDockVisibleAction->setShortcutVisibleInContextMenu(true);
     folderDockVisibleAction->setCheckable(true);
@@ -1958,9 +1961,11 @@ void MW::createWindowActions()
     /*  WORKFLOW WORKSPACES (see MW::invokeWorkflowWorkspace).  Two parallel lists of
         actions, one per workflow: Default applies the layout Winnow ships with and is
         Rory only, User override ticks the user's own layout in place of it.  Both are
-        built here and kept in step by MW::syncWorkflowWorkspaceMenus. */
+        built here and kept in step by MW::syncWorkflowWorkspaceMenus.  Indexed by
+        WorkflowLayout -- Browse has two, Library and Folders -- and added to the menus
+        in workflowLayoutOrder. */
     const QStringList wfNames = workflowNames();
-    for (int wf = 0; wf < WfCount; ++wf) {
+    for (int wf = 0; wf < WsCount; ++wf) {
         QAction *d = new QAction(wfNames.at(wf), this);
         d->setObjectName("workflowDefault" + workflowKeys().at(wf));
         d->setShortcutVisibleInContextMenu(true);
@@ -2835,16 +2840,18 @@ void MW::createWindowMenu()
 
     /*  The two workflow branches.  Default is hidden unless G::isRory (see
         MW::syncWorkflowWorkspaceMenus, which also runs from MW::rory when it is toggled
-        at runtime); User override is always shown and lists the same six workflows. */
+        at runtime); User override is always shown and lists the same layouts. */
     workspaceDefaultMenu = workspaceMenu->addMenu(tr("Default"));
     workspaceDefaultMenuAction = workspaceDefaultMenu->menuAction();
-    for (QAction *a : workflowDefaultActions) workspaceDefaultMenu->addAction(a);
+    for (int lay : workflowLayoutOrder())
+        workspaceDefaultMenu->addAction(workflowDefaultActions.at(lay));
     workspaceDefaultMenu->addSeparator();
     workspaceDefaultMenu->addAction(captureWorkflowDefaultAction);
 
     workspaceOverrideMenu = workspaceMenu->addMenu(tr("User override"));
     workspaceOverrideMenuAction = workspaceOverrideMenu->menuAction();
-    for (QAction *a : workflowOverrideActions) workspaceOverrideMenu->addAction(a);
+    for (int lay : workflowLayoutOrder())
+        workspaceOverrideMenu->addAction(workflowOverrideActions.at(lay));
     workspaceOverrideMenu->addSeparator();
     workspaceOverrideMenu->addAction(captureWorkflowOverrideAction);
 

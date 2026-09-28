@@ -275,6 +275,7 @@ void MW::createFilterView()
     filters = new Filters(this);
     filters->setObjectName("Filters");
     filters->setMaximumWidth(folderMaxWidth);
+    filters->applyCss(G::css);      // G::fontSize - 2
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
@@ -1228,6 +1229,7 @@ void MW::createEmbel()
     fsTree = new FSTree(this, dm, metadata, this);
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
+    fsTree->applyCss(G::css);       // G::panelFontSize, same as Filters
     fsTree->combineRawJpg = combineRawJpg;
 
     // watch folders for external deletion
@@ -1647,34 +1649,29 @@ void MW::createStatusBar()
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log("MW::createFolderDock");
-    /*  "Source" on the TAB as well as in the title bar. The panel holds two subpanels,
-        Catalog and Folders, and a tab naming only one of them was half the confusion the
-        rename fixes -- a tab reading Folders over a title bar reading Source would be the
-        other half. This string is the KEY for dockTextNames, the tab-graphic maps
-        (graphicFor/dockFor), dockForTabText and dockTabToolTip, but every one of those
-        reads the variable, so they move with it. Saved layouts are unaffected: Qt keys
-        QMainWindow::saveState on the dock's objectName ("FolderDock", unchanged), not on
-        its title, so no winnowStateVersion bump -- that version names the dock SET, and
-        no dock was added. */
-    folderDockTabText = "Source";
+    /*  "Folders" on the tab and in the title bar. The panel held Library | Folders for a
+        while (the "Source" panel); the source is now chosen at the left end of the
+        Module dock and this panel is the folder tree only. This string is the KEY for
+        dockTextNames, the tab-graphic maps (graphicFor/dockFor), dockForTabText and
+        dockTabToolTip, but every one of those reads the variable. Saved layouts key on
+        the dock's objectName ("FolderDock", unchanged), not on its title. */
+    folderDockTabText = "Folders";
     // folderDockTabText = "  📁  ";
     QPixmap pm(":/images/icon16/anchor.png");
     folderDockTabRichText = "test";
     // folderDockTabRichText = Utilities::pixmapToString(pm);
     dockTextNames << folderDockTabText;
-    folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Source 📁
+    folderDock = new DockWidget(folderDockTabText, "FolderDock", this);  // Folders 📁
     // folderDock->setObjectName("FoldersDock");
-    /*  THE SOURCE PANEL IS FOLDERS OR LIBRARY, one at a time. The title bar's toggle
-        picks which, and the stack shows the tree that answers it: FSTree, which LOADS
-        the folder clicked, or LibTree, whose click FILTERS the loaded Library. There used
-        to be a "Catalog" band above the folder tree instead -- two trees stacked in one
-        panel, which read as one list with odd rows on top. See Views/libtree.h.
-
-        The count metric and margin are FSTree::resizeColumns', so the counts sit where
-        they do in the Folders view. */
+    /*  LIBTREE IS BUILT BUT NOT SHOWN. The Folders panel is FSTree only; the Library is
+        narrowed from the Filters panel. LibTree stays because MW::updateLibraryTree feeds
+        Bookmarks' Library counts through it. Parented and hidden so it never surfaces as
+        a stray child of the main window. */
     libTree = new LibTree("(99999", 10);
-    /*  BOTH TREES CARRY THE SAME WIDTH CAP, AND BOTH LOSE IT WHEN THE PANEL FLOATS.
-        fsTree is capped at folderMaxWidth (MW::createFSTree) so a docked panel dragged
+    libTree->setParent(this);
+    libTree->hide();
+    /*  THE TREE LOSES ITS WIDTH CAP WHEN THE PANEL FLOATS (LibTree keeps in step, so
+        it is right if it is ever shown again). fsTree is capped at folderMaxWidth (MW::createFSTree) so a docked panel dragged
         wide cannot eat the window. A FLOATING panel is a window the user sized
         deliberately, and a tree that stops at the cap inside it is the panel refusing the
         space it was given: folder names elide while a blank strip sits to their right,
@@ -1706,80 +1703,16 @@ void MW::createFolderDock()
     });
     libTree->setExpandedPaths(settings->value("LibTreeExpanded").toStringList());
 
-    sourceStack = new QStackedWidget;
-    sourceStack->addWidget(fsTree);         // index 0: Folders
-    sourceStack->addWidget(libTree);        // index 1: Library
-    folderDock->setWidget(sourceStack);
+    folderDock->setWidget(fsTree);
     connect(folderDock, &DockWidget::focus, this, &MW::focusOnDock);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
     folderTitleLayout->setSpacing(0);
-    /*  "Source", not "Folders": the panel shows the Library as well, and a header
-        naming only one of the two was what made the distinction confusing. Same word as
-        the tab (folderDockTabText). */
-    folderTitleBar = new DockTitleBar("Source", folderTitleLayout);
+    folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
     folderTitleBar->setToolTip(dockTabToolTip(folderDockTabText));
 
-    /*  FOLDERS | LIBRARY, beside the title: where the images come from. An either/or
-        pair (an exclusive QButtonGroup), so exactly one is lit and it always says which
-        tree the panel is showing. QToolButton rather than QPushButton, because the
-        global QPushButton min-width (widgetcss.cpp) would widen the whole dock.
-
-        THE TOGGLE DOES NOT HOLD THE SCOPE -- G::scope does. A click asks MW::setScope
-        (through setCatalogScopeWhole / showFoldersSource), and setScope pushes the
-        answer back here, so a folder or bookmark click that changes the scope flips the
-        toggle too, and a refused change (unsaved picks) leaves it where it was. */
-    sourceFoldersBtn = new QToolButton;
-    sourceLibraryBtn = new QToolButton;
-    sourceFoldersBtn->setText(tr("Folders"));
-    sourceLibraryBtn->setText(tr("Library"));
-    sourceFoldersBtn->setToolTip(tr(
-        "Browse folders on disk. Clicking a folder loads it."));
-    sourceLibraryBtn->setToolTip(tr(
-        "Browse the whole Library: every catalogued image, across all its folders.\n"
-        "Clicking a folder in the Library filters to it."));
-    QButtonGroup *sourceGroup = new QButtonGroup(folderTitleBar);
-    sourceGroup->setExclusive(true);
-    for (QToolButton *b : {sourceFoldersBtn, sourceLibraryBtn}) {
-        b->setCheckable(true);
-        b->setAutoRaise(true);
-        b->setFocusPolicy(Qt::NoFocus);
-        /*  Full title-bar height, like the "Source" title label beside them, with no
-            vertical padding (MW::styleSourceToggle): both then centre their text in the
-            same box, so the three words sit on one line. A button left at its own
-            height is centred by the layout instead, and lands a pixel or two off. */
-        b->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-        sourceGroup->addButton(b);
-    }
-    sourceFoldersBtn->setChecked(true);
-    /*  clicked, not toggled: setScope pushes the state back with the signals blocked,
-        and only the USER's click should ask for a change. */
-    connect(sourceFoldersBtn, &QToolButton::clicked, this, [this] { showFoldersSource(); });
-    connect(sourceLibraryBtn, &QToolButton::clicked, this, [this] {
-        setCatalogScopeWhole("Source toggle");
-        /*  Nothing to browse opens Manage Catalog instead of switching; put the toggle
-            back to what is actually showing. */
-        const bool lib = G::scope == G::Scope::Catalog;
-        QSignalBlocker a(sourceFoldersBtn), b(sourceLibraryBtn);
-        sourceLibraryBtn->setChecked(lib);
-        sourceFoldersBtn->setChecked(!lib);
-    });
-    /*  Library | Folders, in that order: the Library is the whole collection and Folders
-        is a way into part of it. The selected one is bold in the selection yellow and the
-        other in the default text colour (MW::segmentedOptionCss) -- the same look as the
-        Module dock across the top of the window. */
-    sourceSeparator = new QLabel("|");
-    sourceSeparator->setObjectName("sourceSeparator");
-    /*  After the separator exists: styled before it, the separator was left to the app
-        sheet's "DockTitleBar > QLabel" rule and came out in the title's cyan. */
-    styleSourceToggle();
-    // after the title label (index 0), before the stretch DockTitleBar adds
-    folderTitleLayout->insertSpacing(1, 16);
-    folderTitleLayout->insertWidget(2, sourceLibraryBtn);
-    folderTitleLayout->insertWidget(3, sourceSeparator);
-    folderTitleLayout->insertWidget(4, sourceFoldersBtn);
     // The folders tab starts with its text title; when G::useDockTitleGraphic
     // is on, MW::updateDockTabGraphics swaps text<->graphic per available width.
 
@@ -1808,7 +1741,7 @@ void MW::createFolderDock()
     // question mark button
     BarBtn *folderQuestionBtn = new BarBtn();
     folderQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
-    folderQuestionBtn->setToolTip("How this works: the Source panel (Folders and Library)");
+    folderQuestionBtn->setToolTip("How this works: the Folders panel");
     connect(folderQuestionBtn, &BarBtn::clicked, fsTree, &FSTree::howThisWorks);
     folderTitleLayout->addWidget(folderQuestionBtn);
 
@@ -1834,7 +1767,7 @@ void MW::createFolderDock()
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    folderCloseBtn->setToolTip("Hide the Source Panel");
+    folderCloseBtn->setToolTip("Hide the Folders Panel");
     connect(folderCloseBtn, &BarBtn::clicked, this, &MW::closeFolderDock);
     folderTitleLayout->addWidget(folderCloseBtn);
 
@@ -1842,19 +1775,6 @@ void MW::createFolderDock()
     folderTitleLayout->addSpacing(5);
 
     connect(folderDock, &QDockWidget::visibilityChanged, this, &MW::folderDockVisibilityChange);
-}
-
-void MW::styleSourceToggle()
-{
-/*
-    Library | Folders: the selected source bold in the selection yellow, the other in the
-    default text colour. From the palette, so MW::setBackgroundShade calls this again.
-*/
-    if (!sourceFoldersBtn || !sourceLibraryBtn) return;
-    const QString css = segmentedOptionCss(0, /*boldSelected*/ true, /*vPad*/ 0);
-    sourceFoldersBtn->setStyleSheet(css);
-    sourceLibraryBtn->setStyleSheet(css);
-    if (sourceSeparator) sourceSeparator->setStyleSheet(css);
 }
 
 /*  The one yellow a selected option is drawn in (Library | Folders, the Module dock). */
@@ -3430,9 +3350,14 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
 void MW::createModuleDock()
 {
 /*
-    THE MODULE DOCK: Browse | Develop | Keywords | Embellish | Slide Show | Map across the
-    top of the window, the workflow setting of the UI model (see "THE UI MODEL" in
-    workspaces.cpp). It replaces the status-bar switcher, which is still built but hidden.
+    THE MODULE DOCK: Library | Folders at the left and Browse | Develop | Keywords |
+    Embellish | Slide Show | Map centred, across the top of the window -- the source and
+    the workflow settings of the UI model (see "THE UI MODEL" in workspaces.cpp). It
+    replaces the status-bar switcher, which is still built but hidden.
+
+    THE MODES STAY CENTRED ON THE WINDOW, not on the space the source buttons leave: a
+    three-column grid whose outer columns stretch equally, so the empty right column is
+    as wide as the left one.
 
     A DOCK RATHER THAN A TOOLBAR so it behaves like every other panel: a workspace
     records whether it is showing (isModuleDockVisible), Full Screen has a preference for
@@ -3445,8 +3370,8 @@ void MW::createModuleDock()
     glyph -- see updateDockTabGraphics) and is never anywhere but the top.
     MW::placeShowHideBars re-pins it after every layout path.
 
-    Text at 1.5x G::fontSize, in the Library | Folders look (MW::segmentedOptionCss)
-    but NOT bold: the yellow alone marks the selected module.
+    Text at 1.5x G::fontSize, in MW::segmentedOptionCss's look but NOT bold: the yellow
+    alone marks the selected source and the selected module.
     MW::styleWorkflowSwitcher restyles it and fixes its height to the text, so the top
     dock area has no splitter worth dragging.
 */
@@ -3459,13 +3384,61 @@ void MW::createModuleDock()
 
     QWidget *body = new QWidget(moduleDock);
     body->setObjectName("ModuleDockBody");
-    QHBoxLayout *layout = new QHBoxLayout(body);
-    layout->setContentsMargins(0, 2, 0, 2);
-    layout->setSpacing(0);
-    layout->addStretch();
+    QGridLayout *grid = new QGridLayout(body);
+    grid->setContentsMargins(8, 2, 8, 2);
+    grid->setSpacing(0);
+    grid->setColumnStretch(0, 1);
+    grid->setColumnStretch(2, 1);
+
+    /*  LIBRARY | FOLDERS: where the images come from. An exclusive pair, so exactly one
+        is lit and it always says what is loaded -- in every module, not only Browse.
+
+        THE BUTTONS DO NOT HOLD THE SCOPE -- G::scope does. A click asks MW::chooseSource
+        (setCatalogScopeWhole / showFoldersSource), and MW::setScope pushes the answer
+        back here, so a folder or bookmark click that changes the scope flips them too,
+        and a refused change (unsaved picks) leaves them where they were. clicked, not
+        toggled: setScope sets them with the signals blocked. */
+    QWidget *sourceBox = new QWidget(body);
+    QHBoxLayout *sourceLayout = new QHBoxLayout(sourceBox);
+    sourceLayout->setContentsMargins(0, 0, 0, 0);
+    sourceLayout->setSpacing(0);
+    sourceLibraryBtn = new QToolButton;
+    sourceFoldersBtn = new QToolButton;
+    sourceLibraryBtn->setText(tr("Library"));
+    sourceFoldersBtn->setText(tr("Folders"));
+    sourceLibraryBtn->setToolTip(tr(
+        "Browse the whole Library: every catalogued image, across all its folders.  "
+        "(Ctrl+Shift+L)"));
+    sourceFoldersBtn->setToolTip(tr(
+        "Browse folders on disk, chosen in the Folders panel.  (Ctrl+Shift+F)"));
+    QButtonGroup *sourceGroup = new QButtonGroup(sourceBox);
+    sourceGroup->setExclusive(true);
+    for (QToolButton *b : {sourceLibraryBtn, sourceFoldersBtn}) {
+        b->setCheckable(true);
+        b->setAutoRaise(true);
+        b->setFocusPolicy(Qt::NoFocus);
+        sourceGroup->addButton(b);
+    }
+    sourceFoldersBtn->setChecked(true);
+    connect(sourceLibraryBtn, &QToolButton::clicked, this, [this] {
+        chooseSource(true, "Module dock Library");
+    });
+    connect(sourceFoldersBtn, &QToolButton::clicked, this, [this] {
+        chooseSource(false, "Module dock Folders");
+    });
+    sourceSeparator = new QLabel("|");
+    sourceLayout->addWidget(sourceLibraryBtn);
+    sourceLayout->addWidget(sourceSeparator);
+    sourceLayout->addWidget(sourceFoldersBtn);
+    grid->addWidget(sourceBox, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
+
+    QWidget *modeBox = new QWidget(body);
+    QHBoxLayout *modeLayout = new QHBoxLayout(modeBox);
+    modeLayout->setContentsMargins(0, 0, 0, 0);
+    modeLayout->setSpacing(0);
     moduleSeparators.clear();
-    buildWorkflowButtons(layout, moduleBtns, &moduleSeparators);
-    layout->addStretch();
+    buildWorkflowButtons(modeLayout, moduleBtns, &moduleSeparators);
+    grid->addWidget(modeBox, 0, 1, Qt::AlignCenter);
     moduleDock->setWidget(body);
     /* No frameLine: the Module dock is a strip of workflow names, not a panel to outline. */
     moduleDock->setFrameLineVisible(false);

@@ -810,6 +810,10 @@ Q_NAMESPACE
 
     extern int fontSize;                        // in pixels
     extern QString strFontSize;                 // in pixels
+    /*  The smaller font the Folders and Filters trees share. As a stylesheet rule for
+        SELECTOR, appended to G::css, so the two panels cannot drift apart. */
+    int panelFontSize();
+    QString panelFontCss(const QString &selector);
     extern qreal dpi;                           // current screen dots per inch
     extern qreal ptToPx;
     extern int textShade;

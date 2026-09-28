@@ -1316,12 +1316,19 @@ void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int en
     }
 }
 
+void FSTree::applyCss(const QString &css)
+{
+    if (G::isLogger) G::log("FSTree::applyCss");
+    setStyleSheet(css + G::panelFontCss("FSTree"));
+    resizeColumns();
+}
+
 void FSTree::resizeColumns()
 {
     if (G::isLogger) G::log("FSTree::resizeColumns");
     if (fsModel->showImageCount) {
         QFont font = this->font();
-        font.setPointSize(G::strFontSize.toInt());
+        font.setPointSize(G::panelFontSize());
         QFontMetrics fm(font);
         imageCountColumnWidth = fm.boundingRect("(99999").width();
         showColumn(4);
@@ -2162,7 +2169,7 @@ void FSTree::howThisWorks()
 {
     if (G::isLogger) G::log("FSTree::howThisWorks");
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
-    new HtmlWindow("Winnow - How the Source panel works",
+    new HtmlWindow("Winnow - How the Folders panel works",
                    ":/Docs/sourcecatalogfoldershelp.html",
                    QSize(700, 600), r, window());
 }
