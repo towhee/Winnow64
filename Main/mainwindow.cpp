@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Utilities/versionkey.h"
 #include "Metadata/keywordpaths.h"
 #include <QtConcurrent>
 #include <QSslConfiguration>
@@ -943,7 +944,7 @@ void MW::runDevelopStressTest(const QString &folderPath, int durationMs)
         is the path that writes the render scratch buffers and re-arms the hot
         prefix/layer, so without it the whole adjustment side went unraced;
       o veil toggles, which flip whether the GUI thread composites at all;
-      o IMAGE SWITCHES mid-drag, so a worker completes against a changed currentFilePath
+      o IMAGE SWITCHES mid-drag, so a worker completes against a changed currentKey
         and its result must be discarded;
       o direct renderDevelopPreview() calls, standing in for the crop/warp/level callers
         that re-render WITHOUT bumping developParamsGen -- the case developProxyPending
@@ -3526,7 +3527,7 @@ bool MW::currentImageFolderIsWritable()
     within a folder. The cache is dropped with the develop caches when a new set loads,
     which is also when a volume could have changed under us.
 */
-    const QString fPath = dm ? dm->currentFilePath : QString();
+    const QString fPath = dm ? dm->currentSourcePath() : QString();
     if (fPath.isEmpty()) return true;           // nothing selected: say nothing
     const QString dir = QFileInfo(fPath).absolutePath();
     if (dir.isEmpty()) return true;
@@ -4630,7 +4631,7 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                 int offline = 0, missing = 0, unreadable = 0;
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
                     if (it.value() == Catalog::Availability::Present) continue;
-                    const int row = dm->rowFromPath(it.key());
+                    const int row = dm->rowFromKey(it.key());
                     if (row < 0) continue;
                     dm->setData(dm->index(row, G::AvailabilityColumn), int(it.value()));
                     if (it.value() == Catalog::Availability::Offline) ++offline;
@@ -4716,7 +4717,7 @@ void MW::refreshStaleRows(const QStringList &paths)
 
     int cleared = 0;
     for (const QString &fPath : paths) {
-        const int dmRow = dm->rowFromPath(fPath);
+        const int dmRow = dm->rowFromKey(fPath);
         if (dmRow < 0) continue;
 
         dm->setData(dm->index(dmRow, G::MetadataStatusColumn), G::MetaNotAttempted);
@@ -4725,7 +4726,7 @@ void MW::refreshStaleRows(const QStringList &paths)
         /*  The full-size decode was made from a file that has since changed. */
         if (icd) icd->remove(fPath);
 
-        const int sfRow = dm->proxyRowFromPath(fPath);
+        const int sfRow = dm->proxyRowFromKey(fPath);
         if (sfRow >= 0) {
             if (thumbView && thumbView->iconViewDelegate)
                 thumbView->iconViewDelegate->clearCacheItem(sfRow);
@@ -4780,7 +4781,7 @@ QVector<CatalogRow> MW::catalogRowsForStale()
 
     QSet<QString> stillPending;
     for (const QString &fPath : staleRecommit) {
-        const int dmRow = dm->rowFromPath(fPath);
+        const int dmRow = dm->rowFromKey(fPath);
         if (dmRow < 0) continue;                    // the row is gone; so is the question
         if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
             stillPending.insert(fPath);
@@ -5236,7 +5237,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         anything, so the whole keypress is inside it. Closed by ~SelectPhaseProbe. */
     if (G::isIngestProbe) {
         IngestProbe::Instance().BeginSelection(
-            current.row(), dm->sf->index(current.row(), 0).data(G::PathRole).toString());
+            current.row(), dm->sf->index(current.row(), 0).data(G::KeyRole).toString());
     }
 
     /* debug
@@ -5245,13 +5246,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::mode =" << G::mode
              // << "current =" << current
-             // << current.data(G::PathRole).toString()
+             // << current.data(G::KeyRole).toString()
              << "row =" << current.row()
              << "rate =" << G::t.restart()
              // << "dm->currentDmIdx =" << dm->currentDmIdx
              // << "G::isInitializing =" << G::isInitializing
              // << "isFilterChange =" << isFilterChange
-             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
+             << dm->sf->index(current.row(), 0).data(G::KeyRole).toString()
              // << "G::isLinearLoadDone =" << G::isLinearLoadDone
              // << "isFirstImageNewInstance =" << imageView->isFirstImageNewInstance
              // << "icon row =" << thumbView->currentIndex().row()
@@ -5296,7 +5297,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     probe.mark("menus");
 
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(current.row(), 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(current.row(), 0).data(G::KeyRole).toString();
     settings->setValue("lastFileSelection", fPath);
     probe.mark("settings");
 
@@ -5504,7 +5505,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         QMetaObject::invokeMethod(metaRead, "setAwaitingDecode",
                                   Qt::QueuedConnection,
                                   Q_ARG(int, dm->currentSfRow));
-        emit setImageCachePosition(dm->currentFilePath, "MW::fileSelectionChange");
+        emit setImageCachePosition(dm->currentKey, "MW::fileSelectionChange");
     }
     probe.mark("cachePos");
 
@@ -5572,7 +5573,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     // handle drop
     if (src == "handleDropOnCentralView") {
         if (dm->folderList.contains(folder)) {
-            if (dm->proxyIndexFromPath(fPath).isValid()) {
+            if (dm->proxyIndexFromKey(fPath).isValid()) {
                 sel->setCurrentPath(fPath);
             }
             return;
@@ -5745,14 +5746,14 @@ void MW::refreshViews(QString srcFun)
        on its first frame so there is no redundant reload. */
     if (G::useMultimedia && G::mode == "Loupe" && !inMapModule() && dm->sf->rowCount()) {
         bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-        if (isVideo && !dm->currentFilePath.isEmpty()) {
+        if (isVideo && !dm->currentKey.isEmpty()) {
             QMediaPlayer *mp = videoView->video->mediaPlayer;
-            bool sameSourceShown = mp->source().toLocalFile() == dm->currentFilePath
+            bool sameSourceShown = mp->source().toLocalFile() == dm->currentSourcePath()
                                    && mp->playbackState() == QMediaPlayer::PausedState;
             if (centralLayout->currentIndex() != VideoTab)
                 centralLayout->setCurrentIndex(VideoTab);
             if (!sameSourceShown)
-                videoView->load(dm->currentFilePath);
+                videoView->load(dm->currentSourcePath());
         }
     }
 
@@ -6454,7 +6455,7 @@ void MW::prefetchIconsFromIndex(QString src)
         // and none for a file that is not reachable -- ask the availability pass, not the disk
         if (dm->index(dmRow, G::AvailabilityColumn).data().toInt()
             != int(Catalog::Availability::Present)) return;
-        const QString fPath = idx.data(G::PathRole).toString();
+        const QString fPath = idx.data(G::KeyRole).toString();
         if (fPath.isEmpty()) return;
 
         ThumbRequest r;
@@ -6631,7 +6632,7 @@ void MW::folderChanged(bool aborted)
     // if there was a folder and file change
     if (folderAndFileChangePath != "") {
         dm->setCurrent(folderAndFileChangePath, instance);
-        startRow = dm->rowFromPath(folderAndFileChangePath);
+        startRow = dm->rowFromKey(folderAndFileChangePath);
         qDebug() << fun
                  << "startRow =" << startRow
                  << "folderAndFileChangePath =" << folderAndFileChangePath;
@@ -6910,7 +6911,7 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     if (G::isLogger) G::log("MW::devPreviewUpdated");
     if (fPath.isEmpty() || !dm) return;
 
-    const int dmRow = dm->rowFromPath(fPath);
+    const int dmRow = dm->rowFromKey(fPath);
     if (dmRow < 0) return;
 
     /* Keep the develop badge and the devPreview key in step with the recipe that was just
@@ -6920,6 +6921,9 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     dm->setData(dm->index(dmRow, G::DevelopColumn), !blob.isEmpty());
     dm->setData(dm->index(dmRow, G::DevPreviewKeyColumn),
                 blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob));
+    if (VersionKey::isVersion(fPath))
+        dm->noteVersionDevelop(fPath, !blob.isEmpty(),
+                               blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob));
 
     /* The full-size image cached for this path was decoded from the OLD recipe (or from
        the camera render), so it no longer depicts the image. Drop it: the next visit
@@ -6929,7 +6933,7 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     if (!thumb.isNull()) dm->setDevelopIcon(dmRow, thumb);
     else dm->clearDevelopIcon(dmRow);
 
-    const int sfRow = dm->proxyRowFromPath(fPath);
+    const int sfRow = dm->proxyRowFromKey(fPath);
     if (sfRow >= 0) {
         if (thumbView && thumbView->iconViewDelegate)
             thumbView->iconViewDelegate->clearCacheItem(sfRow);
@@ -7256,7 +7260,7 @@ void MW::metadataComplete(QString src)
     updateStatus(true, "", fun);    // clear any status message
 
     // update image cache in case not already done during metaRead
-    emit setImageCachePosition(dm->currentFilePath, fun);
+    emit setImageCachePosition(dm->currentKey, fun);
 
     // resize table columns now that all data is loaded
     tableView->resizeColumns();
@@ -7269,6 +7273,12 @@ void MW::metadataComplete(QString src)
        dm->insert() */
     emit metadataLoaded();
 
+    /*  VERSIONS (virtual copies): every master's sidecar has now been read, so add the
+        version rows in one applyModelChange (Main/mwversions.cpp). Queued, after this
+        load's own completion work, and never earlier -- inserting rows while MetaRead
+        still addresses the model by row number would land reads on the wrong image. */
+    QTimer::singleShot(0, this, [this] { reconcileVersionRows("MW::metadataComplete"); });
+
     /* test if any null thumbnails
     bool isNullIcon = false;
     for (int i = 0; i < dm->rowCount(); ++i) {
@@ -7276,7 +7286,7 @@ void MW::metadataComplete(QString src)
         if (icon.isNull()) {
             // qWarning() << "Warning: row" << i << "icon is null"
             //            << "G::iconChunkLoaded =" << G::iconChunkLoaded;
-            QString fPath = dm->index(i,0).data(G::PathRole).toString();
+            QString fPath = dm->index(i,0).data(G::KeyRole).toString();
             G::issue("Warning", "Icon is null", fun, i, fPath);
         }
     }
@@ -8400,8 +8410,8 @@ void MW::setDisplayResolution()
             }
             else {
                 QImage cached;
-                if (icd->get(dm->currentFilePath, cached) && !cached.isNull())
-                    imageView->loadImage(dm->currentFilePath, true, "DevicePixelRatioChange");
+                if (icd->get(dm->currentKey, cached) && !cached.isNull())
+                    imageView->loadImage(dm->currentKey, true, "DevicePixelRatioChange");
             }
         }
         if (G::mode == "Compare") compareImages->zoomTo(imageView->zoom/* / G::actDevicePixelRatio*/);
@@ -8816,14 +8826,38 @@ void MW::setRotation(int degrees)
         imageView->rotateImage(degrees);
     }
 
-    // iterate selection
-    QModelIndexList selection = dm->selectionModel->selectedRows();
-    for (int i = 0; i < selection.count(); ++i) {
+    /*  ORIENTATION IS THE FILE'S. A version (virtual copy) is the same photograph, so
+        rotating any row of a group turns the file once and every row of the group with
+        it -- including versions hidden in a collapsed group, which is why this walks
+        DATAMODEL rows rather than the proxy's -- and each row's recipe is re-expressed
+        in the new frame (rotateImageEdits), since every version's masks and crop sit on
+        the same pixels. */
+    QList<int> rows;
+    {
+        QSet<int> seen;
+        QSet<QString> files;
+        const QModelIndexList selection = dm->selectionModel->selectedRows();
+        for (const QModelIndex &sfIdx : selection) {
+            const int r = dm->modelRowFromProxyRow(sfIdx.row());
+            if (r < 0) continue;
+            const QString file = VersionKey::sourceOf(
+                dm->index(r, G::PathColumn).data(G::KeyRole).toString());
+            if (file.isEmpty() || files.contains(file)) continue;
+            files.insert(file);
+            QStringList group{file};
+            group << dm->versionKeysOf(file);
+            for (const QString &k : std::as_const(group)) {
+                const int gr = dm->rowFromKey(k);
+                if (gr >= 0 && !seen.contains(gr)) { seen.insert(gr); rows << gr; }
+            }
+        }
+    }
+    QSet<QString> orientationWritten;
+    for (int dmRow : std::as_const(rows)) {
         // update rotation amount in the data model
-        int sfRow = selection.at(i).row();
-        bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
+        bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
         if (isVideo) continue;
-        QModelIndex orientationIdx = dm->sf->index(sfRow, G::OrientationColumn);
+        QModelIndex orientationIdx = dm->index(dmRow, G::OrientationColumn);
         int orientation = orientationIdx.data(Qt::EditRole).toInt();
         int prevRotation = 0;
         switch (orientation) {
@@ -8841,7 +8875,7 @@ void MW::setRotation(int degrees)
         case 270: newOrientation = 8; break;
         }
 
-        emit setValSf(sfRow, G::OrientationColumn, newOrientation, dm->instance,
+        emit setValDm(dmRow, G::OrientationColumn, newOrientation, dm->instance,
                         "MW::setRotation", Qt::EditRole);
 
         // rotate thumbnail(s)
@@ -8851,8 +8885,7 @@ void MW::setRotation(int degrees)
             lives in the path-keyed icon store now and the item's own icon is
             always null. (The old code also leaked a QStandardItem it allocated
             and then immediately overwrote.) */
-        QModelIndex thumbIdx = dm->sf->index(sfRow, G::PathColumn);
-        QModelIndex dmIdx = dm->sf->mapToSource(thumbIdx);
+        QModelIndex dmIdx = dm->index(dmRow, G::PathColumn);
         QPixmap pm = qvariant_cast<QIcon>(dmIdx.data(Qt::DecorationRole))
                          .pixmap(G::maxIconSize, G::maxIconSize);
         if (!pm.isNull()) {
@@ -8861,7 +8894,7 @@ void MW::setRotation(int degrees)
         }
 
         // rotate selected cached full size images
-        QString fPath = thumbIdx.data(G::PathRole).toString();
+        QString fPath = dmIdx.data(G::KeyRole).toString();
         /*  get(), not contains(): this used to test contains() and then rotate a freshly
             constructed -- NULL -- QImage and insert THAT, so every rotation replaced the
             cached full-size image with an empty one and the loupe could blank until the
@@ -8885,12 +8918,17 @@ void MW::setRotation(int degrees)
             case 180: orient = "3"; break;
             case 270: orient = "8"; break;
         }
-        if (orient.length()) {
+        // once per FILE: a version's key is not a file (Utilities/versionkey.h)
+        const QString file = VersionKey::sourceOf(fPath);
+        if (orient.length() && !orientationWritten.contains(file)) {
+            orientationWritten.insert(file);
             // note that Metadata::writeOrientation must be static!
             // writes to source EXIF if G::modifySourceFiles, otherwise to xmp sidecar
-            QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
+            QtConcurrent::run(&Metadata::writeOrientation, file, orient);
         }
     }
+    for (const QString &file : std::as_const(orientationWritten))
+        dm->syncSharedToVersions(file);         // the captured metadata turns too
 }
 
 namespace {
@@ -10736,7 +10774,7 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     const bool isDepth      = (tool == int(MaskTool::Depth));
     const bool isObject     = (tool == int(MaskTool::Object));
     if (!needsSubject && !isSky && !isDepth && !isObject) return;
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
 
     /* THE DOWNLOAD GATE. The AI masks run on models that are downloaded on demand, and
@@ -10813,7 +10851,7 @@ void MW::updateMaskOverlayTint()
        no flash of an empty overlay in between. */
     if (!imageView->maskTintVisible()) return;
 
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) { imageView->clearScopeMaskTint(); return; }
@@ -11138,7 +11176,7 @@ void MW::updateSharpenMaskPreview()
     if (G::isLogger) G::log("MW::updateSharpenMaskPreview");
     if (!imageView) return;
     if (!developProperties || !developProperties->sharpenMaskPreviewActive()
-        || developFrame.isNull() || !dm || developFramePath != dm->currentFilePath) {
+        || developFrame.isNull() || !dm || developFramePath != dm->currentKey) {
         imageView->clearSharpenMaskImage();
         return;
     }
@@ -11242,7 +11280,7 @@ void MW::renderDevelopPreview(bool fullRes)
 */
     if (G::isLogger) G::log("MW::renderDevelopPreview");
 
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
 
@@ -11485,7 +11523,7 @@ void MW::renderDevelopPreview(bool fullRes)
                geometry-applied and geometry-suppressed renders and flashing the wrong one
                reads as a glitch -- and developProxyGeomGen is what catches exactly that.
                The re-arm below still renders the newest state either way. */
-            const bool current = (dm && fPath == dm->currentFilePath)
+            const bool current = (dm && fPath == dm->currentKey)
                                  && geomGen == developProxyGeomGen;
             /* Now that every frame is shown, the GUI-thread cost of showing one is on the
                hot path -- QPixmap::fromImage at proxy resolution plus the scope sample --
@@ -11606,7 +11644,7 @@ void MW::invalidateDevelopAfterRotation(const QString &fPath)
     auto work = WorkingImageCache::instance().get(fPath);
     if (work && !work->sceneReferred) WorkingImageCache::instance().remove(fPath);
 
-    if (fPath != dm->currentFilePath && fPath != developProxyPath) return;
+    if (fPath != dm->currentKey && fPath != developProxyPath) return;
     developProxy.reset();
     developProxyPath.clear();
     developStackCache.clear();
@@ -11652,7 +11690,7 @@ int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath
 */
     Q_UNUSED(work)
     int degrees = 0;
-    const int sfRow = dm->proxyRowFromPath(fPath);
+    const int sfRow = dm->proxyRowFromKey(fPath);
     if (sfRow >= 0 && sfRow < dm->sf->rowCount()) {
         const int orientation =
             dm->sf->index(sfRow, G::OrientationColumn).data().toInt();
@@ -11683,11 +11721,12 @@ bool MW::currentDevelopEditsVisible() const
     /* A RAW file's edits are calibrated for the demosaiced render, so they show only in raw mode
        (in preview mode the loupe shows the untouched embedded JPG). A non-RAW file (JPG/TIFF/PNG)
        IS the developable image, so its edits show regardless of useRaw. */
-    return G::useRaw || !isFileRaw(dm->currentFilePath);
+    return G::useRaw || !isFileRaw(dm->currentSourcePath());
 }
 
-bool MW::isFileRaw(const QString &fPath) const
+bool MW::isFileRaw(const QString &key) const
 {
+    const QString fPath = VersionKey::sourceOf(key);    // a version is its source's format
     if (!metadata) return false;
     const QString ext = QFileInfo(fPath).suffix().toLower();
     return metadata->hasJpg.contains(ext);
@@ -11696,7 +11735,7 @@ bool MW::isFileRaw(const QString &fPath) const
 QString MW::cameraModelFor(const QString &fPath) const
 {
     if (!dm || fPath.isEmpty()) return QString();
-    const int row = dm->rowFromPath(fPath);
+    const int row = dm->rowFromKey(fPath);
     if (row < 0) return QString();
     return dm->index(row, G::CameraModelColumn).data().toString();
 }
@@ -11707,7 +11746,7 @@ void MW::applyDevelopPreviewIfEdited()
     Called right after the current image's loupe pixmap is shown. If the image has saved Develop
     edits that should be visible (currentDevelopEditsVisible), render them over the loupe using the
     existing coalesced proxy + async settle pipeline; otherwise the normal decoded image is left.
-    Safe to call more than once per image (the render path is keyed on dm->currentFilePath and
+    Safe to call more than once per image (the render path is keyed on dm->currentKey and
     coalesced).
 */
     if (G::isLogger) G::log("MW::applyDevelopPreviewIfEdited");
@@ -11720,7 +11759,7 @@ void MW::applyDevelopPreviewIfEdited()
        decoded image actually shown (valid in preview mode too). */
     if (!currentDevelopEditsVisible()) {
         QImage shown;
-        icd->get(dm->currentFilePath, shown);   // locked; null when not cached
+        icd->get(dm->currentKey, shown);   // locked; null when not cached
         updateDevelopScopes(shown);
         return;
     }
@@ -11740,7 +11779,7 @@ void MW::renderDevelopFullResAsync()
     if (G::isLogger) G::log("MW::renderDevelopFullResAsync");
     if (developFullResInFlight) return;   // one at a time; onDevelopFullResReady re-arms if needed
 
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
     auto work = WorkingImageCache::instance().get(fPath);
@@ -11888,7 +11927,7 @@ void MW::renderDevelopFullResAsync()
                                    << " vignette" << rt.vignetteMs
                                    << " sharpen" << rt.sharpenMs
                                    << " grain" << rt.grainMs << "]";
-            if (dm && fPath == dm->currentFilePath) {
+            if (dm && fPath == dm->currentKey) {
                 developVerifyMaxAbs = vMaxAbs;
                 developVerifyMeanAbs = vMeanAbs;
                 developVerifyRecipeIdentity = vRecipeIdentity;
@@ -11942,7 +11981,7 @@ void MW::onDetailPointNudged(int dx, int dy)
     reads the sort/filter model (GUI-thread state the dock does not touch).
 */
     if (!developProperties) return;
-    const QString fPath = dm ? dm->currentFilePath : QString();
+    const QString fPath = dm ? dm->currentKey : QString();
     if (fPath.isEmpty()) return;
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work || !work->isValid()) return;
@@ -11980,7 +12019,7 @@ void MW::pushDevelopGeometryToView()
     the full frame, so the overlays must map through the same suppressed geometry.
 */
     if (!imageView || !developProperties || !dm) return;
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
@@ -12019,7 +12058,7 @@ void MW::updateDevelopRenderingHint()
         imageView->clearRenderingHint();
         return;
     }
-    const QString fPath = dm ? dm->currentFilePath : QString();
+    const QString fPath = dm ? dm->currentKey : QString();
     if (fPath.isEmpty()) { imageView->clearRenderingHint(); return; }
 
     /* Distinguish the two placeholders. Showing a cached develop preview already looks
@@ -12059,7 +12098,7 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
     developFullResInFlight = false;
     updateDevelopRenderingHint();
 
-    const bool currentImage = (fPath == dm->currentFilePath);
+    const bool currentImage = (fPath == dm->currentKey);
     if (!out.isNull() && currentImage && gen == developParamsGen) {
         /* gen unchanged => the recipe (and its geometry) is still the one this render
            used, so the current state is the right pairing for the overlays. */
@@ -12267,7 +12306,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             QMetaObject::invokeMethod(this, [this, freshClean, fPath]() {
                 developDenoiseInFlightKey.clear();
                 progress->clearProgress(progressRawDenoiseRow);
-                if (!dm || fPath != dm->currentFilePath) return;
+                if (!dm || fPath != dm->currentKey) return;
                 if (freshClean && !rawDenoiseCleanBaseOk(
                                       WorkingImageCache::instance().get(fPath)))
                     WorkingImageCache::instance().put(fPath, freshClean);
@@ -12285,7 +12324,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             // job finished; allow the next (latest) one
             developDenoiseInFlightKey.clear();
             progress->clearProgress(progressRawDenoiseRow);   // hide the progress row
-            if (!dm || fPath != dm->currentFilePath) return;  // navigated away; drop it
+            if (!dm || fPath != dm->currentKey) return;  // navigated away; drop it
             /* Engine switched to Apple mid-decode: this Winnow result is stale -- drop
                it so it can't re-publish a Winnow base the Apple render would ignore. */
             if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
@@ -12391,7 +12430,7 @@ void MW::runRawDenoiseNow()
 {
     if (G::isLogger) G::log("MW::runRawDenoiseNow");
     if (!G::useRaw || !developProperties || !dm) return;
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     /* PMRID is Winnow-engine only; inert on Apple. */
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
@@ -12428,7 +12467,7 @@ bool MW::rawDenoiseReadyForCurrent()
        sliders only scale the blend), so it stays true across denoise-amount changes. It
        drives both the "Denoise"/"Denoised" checkbox and the amount-slider enabled. */
     if (!dm) return false;
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || !developPmridFull) return false;
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return false;
     return developPmridKey == pmridBaseKey(fPath, currentImageIso());
@@ -12444,7 +12483,7 @@ void MW::onDemosaicProgress(const QString &fPath, int done, int total)
     if (G::autoRunDenoise) return;
     if (G::operationMode != G::OperationMode::Develop || !G::useRaw) return;
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
-    if (!dm || fPath != dm->currentFilePath) return;
+    if (!dm || fPath != dm->currentKey) return;
     progress->showRow(progressDemosaicRow, true);
     progress->updateProgress(progressDemosaicRow, done, total);
 }
@@ -12471,7 +12510,7 @@ void MW::ensureDevelopWork(const QString &fPath)
        the display-referred embedded JPG (wrong size + not scene-linear), breaking the
        "Denoise raw" blend. imMetadata() now populates ext, so this is a defensive
        fallback for the rare empty-struct return (invalid row). */
-    if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
+    if (m.ext.isEmpty()) m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
     const quint64 gen = developParamsGen;
     /* Show the Winnow raw demosaic progress on this develop-open decode -- the "Denoise
        raw" path (ensureRawDenoise) shows its own row and runs only when Auto run is on,
@@ -12498,7 +12537,7 @@ void MW::ensureDevelopWork(const QString &fPath)
             if (showDemosaic) progress->clearProgress(progressDemosaicRow);
             developWorkInFlight.clear();
             updateDevelopRenderingHint();
-            if (!dm || fPath != dm->currentFilePath) return;   // navigated away; drop it
+            if (!dm || fPath != dm->currentKey) return;   // navigated away; drop it
             /* Success (scene-linear work now cached) -> clear the marker so a future eviction can
                re-decode. Otherwise (display-referred format, e.g. lossless ARW) -> mark it so the
                re-render below uses the display fallback instead of looping the async decode. */
@@ -12603,11 +12642,11 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
        about the IMAGE, not about the drag, and 4096 QImage::pixel() calls per tick is
        pure overhead on the hot path. The settle render re-measures it. */
     if (verifyVsPreview && dm && !shown.isNull() && !developVerifyPreviewBaseline.isNull()
-        && developVerifyPreviewBaselinePath == dm->currentFilePath) {
+        && developVerifyPreviewBaselinePath == dm->currentKey) {
         // 64x64 grid: negligible per drag tick
         imageGridDiff(developVerifyPreviewBaseline, shown, 64,
                       developVerifyVsPreviewMaxAbs, developVerifyVsPreviewMeanAbs);
-        developVerifyVsPreviewPath = dm->currentFilePath;
+        developVerifyVsPreviewPath = dm->currentKey;
     }
 
     /* Two consumers of the one sample: the scopes strip, and the Curves panel's plot
@@ -12698,7 +12737,7 @@ void MW::setDevelopScopesVisible(bool isVisible)
         }
         else {
             QImage shown;
-            icd->get(dm->currentFilePath, shown);   // locked; null when not cached
+            icd->get(dm->currentKey, shown);   // locked; null when not cached
             updateDevelopScopes(shown);
         }
     }
@@ -13100,12 +13139,12 @@ bool MW::prepareExport(QStringList &targets)
     if (dm && dm->selectionModel) {
         const QModelIndexList rows = dm->selectionModel->selectedRows();
         for (const QModelIndex &idx : rows) {
-            const QString fPath = idx.data(G::PathRole).toString();
+            const QString fPath = idx.data(G::KeyRole).toString();
             if (!fPath.isEmpty()) targets << fPath;
         }
     }
-    if (targets.isEmpty() && !dm->currentFilePath.isEmpty())
-        targets << dm->currentFilePath;
+    if (targets.isEmpty() && !dm->currentKey.isEmpty())
+        targets << dm->currentKey;
 
     if (targets.isEmpty()) {
         if (G::popup) G::popup->showPopup("No images selected to export", 1500);
@@ -13150,7 +13189,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     const DevelopProperties::StackRenderJob mj = developProperties->stackJobFor(fPath);
     ImageMetadata m = mSnap ? *mSnap : dm->imMetadata(fPath);
     if (m.fPath.isEmpty()) m.fPath = fPath;
-    if (m.ext.isEmpty()) m.ext = QFileInfo(fPath).suffix().toLower();
+    if (m.ext.isEmpty()) m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
 
     /* "Denoise raw" is a property of the BASE, applied before the composite. The
        interactive path gets there through developRawDenoisedBase / ensureRawDenoise, and
@@ -13284,7 +13323,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                 /* Leave the interactive cache as we found it: a long batch would
                    otherwise evict the image the user is actively editing (the cache is
                    byte-budgeted and this walks every selected image). */
-                if (decodedHere && fPath != dm->currentFilePath)
+                if (decodedHere && fPath != dm->currentKey)
                     WorkingImageCache::instance().remove(fPath);
                 QMetaObject::invokeMethod(this, [done, out]() {
                     done(!out.isNull(), out);
@@ -13367,7 +13406,7 @@ void MW::developExport()
                                ImageExporter::renderSpace(es.space), done);
         });
 
-    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentFilePath,
+    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
                   filenameTemplates, ExportDlg::Mode::Develop, this);
     QMetaObject::Connection c = connect(imageExporter, &ImageExporter::finished, this,
         [this](const ImageExporter::Result &r) {
@@ -13569,7 +13608,7 @@ void MW::applyDevelopLevel(double deltaDeg)
     if (!imageView || !developProperties || !developCropEditing) return;
     if (deltaDeg == 0.0) return;
 
-    const QString fPath = dm->currentFilePath;
+    const QString fPath = dm->currentKey;
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) return;
     int fw = work->width, fh = work->height;
@@ -14299,7 +14338,7 @@ void MW::infoViewChanged(QStandardItem* item)
 
     // update shooting info
     QModelIndex idx = dm->currentSfIdx;  //thumbView->currentIndex();
-    QString fPath = dm->currentFilePath;  //thumbView->getCurrentFilePath();
+    QString fPath = dm->currentKey;  //thumbView->getCurrentFilePath();
     QString sel = infoString->getCurrentInfoTemplate();
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
@@ -14563,7 +14602,7 @@ void MW::revealWinnets()
 void MW::revealFile()
 {
     if (G::isLogger) G::log("MW::revealFile");
-    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::SourcePathRole).toString();
     revealInFileBrowser(fPath);
 }
 

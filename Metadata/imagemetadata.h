@@ -4,6 +4,7 @@
 #include <QtCore>
 #include "Main/global.h"
 #include "Metadata/rawsensorinfo.h"
+#include "Metadata/versions.h"
 
 class ImageMetadata
 {
@@ -41,6 +42,10 @@ public:
        G::DevPreviewKeyColumn, so a decoder thread can ask the devPreview cache for this
        image's preview without touching DevelopProperties on the GUI thread. */
     QString devPreviewKey = "";
+    /* The image's versions (virtual copies) from winnow:Versions, read in the same
+       sidecar pass as developEdited: enough to make each version's row, none of the
+       recipe or preview bytes. Empty for an image without versions. */
+    QList<VersionSummary> versions;
     bool metadataReading = false;           // all metadata except thumb
     // Read outcome (all metadata except thumb). See G::MetaStatus.
     int metaStatus = G::MetaNotAttempted;

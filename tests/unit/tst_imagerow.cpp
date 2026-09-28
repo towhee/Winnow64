@@ -30,7 +30,7 @@ class tst_imagerow : public QObject
     Q_OBJECT
 
 private slots:
-    void pathIsCoveredOnlyAtPathRole();
+    void pathIsCoveredOnlyAtKeyRole();
     void coversOnlyValueRoles();
     void searchAndIngestedAreBoolsNow();
     void variantComparisonIsTypeTolerant();
@@ -51,23 +51,24 @@ private slots:
     void folderPathsAllIsDerivedFromThePath();
     void folderAncestryCostsARowOneId();
     void hasGpsIsDerivedFromTheCoordinate();
+    void sourcePathIsDerivedFromTheKey();
 
 private:
     static void fill(RowStore &s, int row, const QString &path)
     {
-        s.setValue(row, G::PathColumn, G::PathRole, path);
+        s.setValue(row, G::PathColumn, G::KeyRole, path);
         s.setValue(row, G::NameColumn, Qt::EditRole, path.section('/', -1));
         s.setValue(row, G::TypeColumn, Qt::EditRole, "JPG");
     }
 };
 
-void tst_imagerow::pathIsCoveredOnlyAtPathRole()
+void tst_imagerow::pathIsCoveredOnlyAtKeyRole()
 {
     /*  addFileDataForRow never sets EditRole on PathColumn, so the item was
         UNSET there and data() must keep returning an invalid QVariant. Claiming
         the column at EditRole made the store answer "" where the model answered
         nothing -- a different value to anything testing isValid(). */
-    QVERIFY(RowStore::covers(G::PathColumn, G::PathRole));
+    QVERIFY(RowStore::covers(G::PathColumn, G::KeyRole));
     QVERIFY(!RowStore::covers(G::PathColumn, Qt::EditRole));
     QVERIFY(!RowStore::covers(G::PathColumn, Qt::DisplayRole));
 }
@@ -156,7 +157,7 @@ void tst_imagerow::unwrittenFieldsReadBackAsInvalid()
     s.resize(3);
     fill(s, 1, "/a/b/c.jpg");
 
-    QCOMPARE(s.value(1, G::PathColumn, G::PathRole).toString(), QString("/a/b/c.jpg"));
+    QCOMPARE(s.value(1, G::PathColumn, G::KeyRole).toString(), QString("/a/b/c.jpg"));
     QCOMPARE(s.value(1, G::TypeColumn).toString(), QString("JPG"));
 
     // everything else on that row is still nothing, not empty
@@ -301,12 +302,12 @@ void tst_imagerow::insertRowsShiftsTheRowsAfterIt()
         done by the time rowsInserted fires -- so no resize() beforehand. */
     s.insertRows(1, 2);
     QCOMPARE(s.size(), 5);
-    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::KeyRole).toString(), QString("/a.jpg"));
     // the two new rows are blank, not copies
-    QVERIFY(!s.value(1, G::PathColumn, G::PathRole).isValid());
-    QVERIFY(!s.value(2, G::PathColumn, G::PathRole).isValid());
-    QCOMPARE(s.value(3, G::PathColumn, G::PathRole).toString(), QString("/b.jpg"));
-    QCOMPARE(s.value(4, G::PathColumn, G::PathRole).toString(), QString("/c.jpg"));
+    QVERIFY(!s.value(1, G::PathColumn, G::KeyRole).isValid());
+    QVERIFY(!s.value(2, G::PathColumn, G::KeyRole).isValid());
+    QCOMPARE(s.value(3, G::PathColumn, G::KeyRole).toString(), QString("/b.jpg"));
+    QCOMPARE(s.value(4, G::PathColumn, G::KeyRole).toString(), QString("/c.jpg"));
 }
 
 void tst_imagerow::removeRowsSplicesRatherThanTruncates()
@@ -318,16 +319,16 @@ void tst_imagerow::removeRowsSplicesRatherThanTruncates()
 
     s.removeRows(1, 2);
     QCOMPARE(s.size(), 2);
-    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::KeyRole).toString(), QString("/a.jpg"));
     /*  If this said "/b.jpg" the store would have truncated from the end and
         every surviving row past the deletion point would describe a different
         image -- silently. */
-    QCOMPARE(s.value(1, G::PathColumn, G::PathRole).toString(), QString("/d.jpg"));
+    QCOMPARE(s.value(1, G::PathColumn, G::KeyRole).toString(), QString("/d.jpg"));
 
     // a removal running off the end clamps rather than corrupting
     s.removeRows(1, 99);
     QCOMPARE(s.size(), 1);
-    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::KeyRole).toString(), QString("/a.jpg"));
 }
 
 void tst_imagerow::compactDropsScatteredRowsInOrder()
@@ -346,9 +347,9 @@ void tst_imagerow::compactDropsScatteredRowsInOrder()
 
     s.compact({0, -1, 1, -1, 2});           // drop b and d
     QCOMPARE(s.size(), 3);
-    QCOMPARE(s.value(0, G::PathColumn, G::PathRole).toString(), QString("/a.jpg"));
-    QCOMPARE(s.value(1, G::PathColumn, G::PathRole).toString(), QString("/c.jpg"));
-    QCOMPARE(s.value(2, G::PathColumn, G::PathRole).toString(), QString("/e.jpg"));
+    QCOMPARE(s.value(0, G::PathColumn, G::KeyRole).toString(), QString("/a.jpg"));
+    QCOMPARE(s.value(1, G::PathColumn, G::KeyRole).toString(), QString("/c.jpg"));
+    QCOMPARE(s.value(2, G::PathColumn, G::KeyRole).toString(), QString("/e.jpg"));
 }
 
 void tst_imagerow::pickedCountStaysExact()
@@ -460,7 +461,7 @@ void tst_imagerow::watchedGenerationMovesOnlyForWatchedCells()
     // unwatched: the icon rect, a non-counted column, the path itself
     s.setValue(0, G::PathColumn, G::IconRectRole, QRect(0, 0, 10, 10));
     s.setValue(0, G::IconLoadedColumn, Qt::EditRole, true);
-    s.setValue(0, G::PathColumn, G::PathRole, "/a.jpg");
+    s.setValue(0, G::PathColumn, G::KeyRole, "/a.jpg");
     QCOMPARE(s.watchedGeneration(), g);
 
     // setting the SAME watch set again is not a change
@@ -533,12 +534,12 @@ void tst_imagerow::fieldGenerationMovesForItsFieldAndSplicesOnly()
 */
     RowStore s;
     s.resize(3);
-    const auto gen = [&] { return s.fieldGeneration(G::PathColumn, G::PathRole); };
+    const auto gen = [&] { return s.fieldGeneration(G::PathColumn, G::KeyRole); };
     quint64 g = gen();
     s.setValue(0, G::RatingColumn, Qt::EditRole, "3");            // another field
     s.setValue(0, G::PathColumn, G::IconRectRole, QRect(0, 0, 1, 1)); // another role
     QCOMPARE(gen(), g);
-    s.setValue(1, G::PathColumn, G::PathRole, "/b.jpg");          // a rename
+    s.setValue(1, G::PathColumn, G::KeyRole, "/b.jpg");          // a rename
     QVERIFY(gen() != g);
     g = gen(); s.insertRows(0, 1);  QVERIFY(gen() != g);
     g = gen(); s.removeRows(0, 1);  QVERIFY(gen() != g);
@@ -608,7 +609,7 @@ void tst_imagerow::prefixExpansionStaysInBudget()
         for (int row = 0; row < kRows; ++row) {
             const QString path = QString("/Volumes/Photos/2024/shoot/DSC_%1.NEF")
                                      .arg(row, 6, 10, QChar('0'));
-            s.setValue(row, G::PathColumn, G::PathRole, path);
+            s.setValue(row, G::PathColumn, G::KeyRole, path);
             s.setValue(row, G::NameColumn, Qt::EditRole, path.section('/', -1));
             s.setValue(row, G::TypeColumn, Qt::EditRole, "NEF");
             s.setValue(row, G::TitleColumn, Qt::EditRole, "A title for every row");
@@ -733,7 +734,7 @@ void tst_imagerow::folderAncestryCostsARowOneId()
         s.resize(kRows);
         for (int row = 0; row < kRows; ++row) {
             const QString folder = QString("/Volumes/Photos/2024/shoot%1").arg(row / 250);
-            s.setValue(row, G::PathColumn, G::PathRole,
+            s.setValue(row, G::PathColumn, G::KeyRole,
                        folder + QString("/DSC_%1.NEF").arg(row, 6, 10, QChar('0')));
             s.setValue(row, G::TypeColumn, Qt::EditRole, "NEF");
             if (withFolder) s.setValue(row, G::FolderPathColumn, Qt::EditRole, folder);
@@ -748,6 +749,44 @@ void tst_imagerow::folderAncestryCostsARowOneId()
     QVERIFY2(delta < kMaxBytesPerRow,
              qPrintable(QString("folder path costs %1 bytes/row, ceiling %2")
                             .arg(delta).arg(kMaxBytesPerRow)));
+}
+
+void tst_imagerow::sourcePathIsDerivedFromTheKey()
+{
+    /*  A version row's key is path + "/#v" + id (Utilities/versionkey.h). File I/O
+        reads G::SourcePathRole, which must give the file behind the key, must equal
+        the key for a master, and must be read-only: a write to it would set the
+        path's bit with nothing behind it. */
+    RowStore s;
+    s.resize(2);
+    s.setValue(0, G::PathColumn, G::KeyRole, "/a/IMG_1.CR3");
+    s.setValue(1, G::PathColumn, G::KeyRole, "/a/IMG_1.CR3/#v2");
+
+    QCOMPARE(s.value(0, G::PathColumn, G::SourcePathRole).toString(), QString("/a/IMG_1.CR3"));
+    QCOMPARE(s.value(1, G::PathColumn, G::SourcePathRole).toString(), QString("/a/IMG_1.CR3"));
+    QCOMPARE(s.value(1, G::PathColumn, G::KeyRole).toString(), QString("/a/IMG_1.CR3/#v2"));
+
+    s.setValue(1, G::PathColumn, G::SourcePathRole, "/elsewhere.jpg");
+    QCOMPARE(s.value(1, G::PathColumn, G::KeyRole).toString(), QString("/a/IMG_1.CR3/#v2"));
+
+    // the version id is derived from the key too, and read-only
+    QCOMPARE(s.value(0, G::PathColumn, G::VersionIdRole).toInt(), 0);
+    QCOMPARE(s.value(1, G::PathColumn, G::VersionIdRole).toInt(), 2);
+    s.setValue(1, G::PathColumn, G::VersionIdRole, 7);
+    QCOMPARE(s.value(1, G::PathColumn, G::KeyRole).toString(), QString("/a/IMG_1.CR3/#v2"));
+
+    // a master's count and a version's name are stored, and unset until written
+    QVERIFY(!s.value(0, G::PathColumn, G::VersionCountRole).isValid());
+    s.setValue(0, G::PathColumn, G::VersionCountRole, 3);
+    s.setValue(1, G::PathColumn, G::VersionNameRole, "B&W");
+    QCOMPARE(s.value(0, G::PathColumn, G::VersionCountRole).toInt(), 3);
+    QCOMPARE(s.value(1, G::PathColumn, G::VersionNameRole).toString(), QString("B&W"));
+
+    RowStore empty;
+    empty.resize(1);
+    empty.setValue(0, G::PathColumn, G::SourcePathRole, "/x.jpg");
+    QVERIFY(!empty.value(0, G::PathColumn, G::SourcePathRole).isValid());
+    QVERIFY(!empty.value(0, G::PathColumn, G::KeyRole).isValid());
 }
 
 QTEST_MAIN(tst_imagerow)

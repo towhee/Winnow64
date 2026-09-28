@@ -32,7 +32,7 @@ QString Stack::mean()
     abort = false;
     G::isRunningStackOperation = true;
 
-    int row = dm->rowFromPath(selection.at(0));
+    int row = dm->rowFromKey(selection.at(0));
     int w = dm->index(row, G::WidthColumn).data().toInt();
     int h = dm->index(row, G::HeightColumn).data().toInt();
 
@@ -42,7 +42,7 @@ QString Stack::mean()
     // total selection with same width or height
     int n = 0;
     for (int i = 0; i < selection.count(); ++i) {
-        row = dm->rowFromPath(selection.at(0));
+        row = dm->rowFromKey(selection.at(0));
         int thisW = dm->index(row, G::WidthColumn).data().toInt();
         int thisH = dm->index(row, G::HeightColumn).data().toInt();
         if (thisW == w && thisH == h) n++;

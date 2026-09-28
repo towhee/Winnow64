@@ -109,7 +109,7 @@ typedef std::shared_ptr<RowSyncArray> RowSyncPtr;
 /*  EVERY ROW'S PATH, BY DATAMODEL ROW, and the reverse. It does not depend on the
     filter or the sort, only on which rows exist and what their paths are, so it is
     built once and SHARED by every snapshot until RowStore::fieldGeneration(PathColumn,
-    PathRole) says otherwise (DataModel::rebuildProxySnapshot). Rebuilding it per filter
+    KeyRole) says otherwise (DataModel::rebuildProxySnapshot). Rebuilding it per filter
     change -- a path copy and a 148,567-entry hash each time -- was most of the ~60 ms
     a snapshot cost when a filter was cleared. Immutable once published. */
 struct ProxyPaths {

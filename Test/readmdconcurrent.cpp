@@ -48,7 +48,7 @@ void ReadMdConcurrent::go(int amount)        // = convertOrCancel
 //    total = amount;
     total = dm->rowCount();
     for(int row = 0; row < total; ++row) {
-        sourceFiles.append(dm->index(row, 0).data(G::PathRole).toString());
+        sourceFiles.append(dm->index(row, 0).data(G::SourcePathRole).toString());
     }
     qDebug() << sourceFiles;
     doTasks(sourceFiles);

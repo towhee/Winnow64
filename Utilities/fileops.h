@@ -5,6 +5,8 @@
 #include <QStringList>
 #include <functional>
 
+class QRecursiveMutex;
+
 /*
     The single place every on-disk image file operation goes through.
 
@@ -138,6 +140,22 @@ public:
     static void onCopied(const QString &srcPath, const QString &dstPath);
     static void onMoved(const QString &srcPath, const QString &dstPath);
     static void onDeleted(const QString &fPath);
+
+    /* VERSION KEY GUARD. A DataModel row key for a version (path + "/#v" + id, see
+       Utilities/versionkey.h) is not a file. Returns true, and raises G::issue, when
+       path is one -- the caller must then refuse the operation. Every file entry point
+       here calls it, and so do the metadata and image readers/writers, so a key that
+       slips past the G::KeyRole / G::SourcePathRole split fails loudly instead of
+       writing into some other file. */
+    static bool refuseVersionKey(const QString &path, const QString &src);
+
+    /* SIDECAR WRITE LOCK. Every read-modify-write of an XMP sidecar holds this for the
+       image's source path: the standard-field writer (Metadata::writeXMP, GUI thread),
+       the orientation writer (QtConcurrent) and the Develop and version writers all
+       rewrite the whole document, so two unlocked writers lose one's changes. Keyed by
+       cachePathKey; the mutexes live for the process. Recursive, because writeXMP and
+       writeKeywordsToSidecar reach markSidecarEmbedded while holding it. */
+    static QRecursiveMutex &sidecarLock(const QString &fPath);
 
     /* The suffixes companions() recognises, without the dot. */
     static const QStringList &sidecarSuffixes();

@@ -1,4 +1,6 @@
 #include "imagedecoder.h"
+#include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
 #include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 #include "ImageFormats/Raw/rawformat.h"
@@ -45,6 +47,7 @@ ImageDecoder::ImageDecoder(int id,
     threadId = id;
     // status = Status::Ready;
     fPath = "";
+    rowKey = "";
     sfRow = -1;
     instance = 0;
     this->dm = dm;
@@ -81,6 +84,7 @@ bool ImageDecoder::quit()
     abort.storeRelease(0);
     // status = Status::Abort;
     fPath = "";
+    rowKey = "";
     // QImage blank;
     // image = QImage();
     sfRow = -1;
@@ -160,7 +164,11 @@ void ImageDecoder::decode(int row, int instance)
 
     status = Status::Undefined;
     dmRow = snap->dmRow(sfRow);
-    fPath = snap->path(sfRow);
+    /*  The snapshot holds the row KEY. For a version (virtual copy) that is not a file:
+        the pixels come from its source (fPath), the result is cached and reported under
+        the key (rowKey). See Utilities/versionkey.h. */
+    rowKey = snap->path(sfRow);
+    fPath = VersionKey::sourceOf(rowKey);
     image = QImage();
     loadedFromDevPreview = false;
     errMsg = "";
@@ -182,7 +190,7 @@ void ImageDecoder::decode(int row, int instance)
         errMsg = "Instance clash.  New folder selected, processing old folder.";
         G::issueDedup("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         setIdle();
-        emit done(threadId, int(status), sfRow, QImage(), fPath, 0);
+        emit done(threadId, int(status), sfRow, QImage(), rowKey, 0);
         if (isDebug)
         {
             QString fun = "ImageDecoder::decode instance clash";
@@ -247,7 +255,7 @@ void ImageDecoder::decode(int row, int instance)
     emit setValSf(sfRow, G::NSImageColumn, nsToDecode, instance,
                   "ImageDecoder::decode");
 
-    emit done(threadId, int(status), sfRow, image, fPath, nsToDecode);
+    emit done(threadId, int(status), sfRow, image, rowKey, nsToDecode);
 }
 
 bool ImageDecoder::loadDevPreview()
@@ -299,8 +307,11 @@ bool ImageDecoder::loadDevPreview()
         key = Metadata::defaultRenderKey();
     }
 
+    /* By row KEY: a version's developed preview is its own, not its master's -- except
+       the DEFAULT render, which is the file's and so is held under the source. */
+    const bool isDefault = key.startsWith('R') && key == Metadata::defaultRenderKey();
     const QByteArray jpg =
-        DevPreviewCache::instance().get(fPath, key.toLatin1());
+        DevPreviewCache::instance().get(isDefault ? fPath : rowKey, key.toLatin1());
     if (jpg.isEmpty()) return false;          // no preview, or one for an older recipe
 
     if (!image.loadFromData(jpg, "JPG") || image.isNull()) return false;
@@ -326,7 +337,7 @@ bool ImageDecoder::ensureDecodeGeometry(int sfRow, ImageMetadata &geo)
     through the same queued setValSf every other cross-thread write uses.
 */
     if (!dm || sfRow < 0) return false;
-    const QString fPath = dmVal(G::PathColumn, G::PathRole).toString();
+    const QString fPath = dmVal(G::PathColumn, G::SourcePathRole).toString();
     if (fPath.isEmpty()) return false;
     const QFileInfo fi(fPath);
     if (!fi.exists()) return false;
@@ -447,6 +458,12 @@ bool ImageDecoder::load()
         errMsg = "Blank file path.";
         G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
         status = Status::BlankFilePath;
+        return false;
+    }
+
+    // a version row's key is not a file (Utilities/versionkey.h)
+    if (FileOps::refuseVersionKey(fPath, "ImageDecoder::load")) {
+        status = Status::NoFile;
         return false;
     }
 

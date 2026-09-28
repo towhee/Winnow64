@@ -177,6 +177,11 @@ public:
     /* Per-image edit state (Increment 1). The dock now reflects the CURRENT IMAGE's EditStack
        (loaded from / saved to its XMP sidecar) instead of app-global QSettings. */
     void setCurrentImage(const QString &fPath);   // flush previous, load+show this image's stack
+    /* The stored recipe under key changed outside this panel (a version's record
+       rewritten by Set Version as Master, or deleted): drop the cached stack, its dirty
+       flag and its History, and if key is the current image reload it from the sidecar
+       and re-render. Pending edits must already be flushed (FileOps::flushPendingEdits). */
+    void forgetImage(const QString &key);
     bool currentIsIdentity() const;               // true if the current image has no edits
 
     /* Bind the histogram's tone-region slider (created with the scopes, owned by MW): connect its

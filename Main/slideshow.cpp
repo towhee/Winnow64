@@ -20,7 +20,7 @@ void MW::slideShow()
         progress->setSuppressed(false);   // end slideshow: allow progress to show again
         // change to ImageCache
         if (G::useImageCache)
-            imageCache->setCurrentPosition(dm->currentFilePath, "MW::slideShow");
+            imageCache->setCurrentPosition(dm->currentKey, "MW::slideShow");
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
@@ -74,7 +74,7 @@ void MW::nextSlide()
     if (isSlideShowRandom) {
         // push previous image path onto the slideshow history stack
         int row = thumbView->currentIndex().row();
-        QString fPath = dm->sf->index(row, 0).data(G::PathRole).toString();
+        QString fPath = dm->sf->index(row, 0).data(G::KeyRole).toString();
         slideshowRandomHistoryStack->push(fPath);
         sel->random();
     }

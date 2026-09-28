@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/versionkey.h"
 
 /*  *******************************************************************************************
 
@@ -328,7 +329,7 @@ void MW::filterChange(QString source)
     }
 
     // rebuild imageCacheList and update priorities in image cache
-    QString fPath = newSfIdx.data(G::PathRole).toString();
+    QString fPath = newSfIdx.data(G::KeyRole).toString();
     if (!G::removingRowsFromDM)
         emit imageCacheFilterChange(fPath, "MW::filterChange");
     phase("imageCache");
@@ -663,7 +664,7 @@ void MW::sortChange(QString source)
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::KeyRole).toString();
 
     if (!inMapModule()) centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", "MW::sortChange");
@@ -693,9 +694,9 @@ void MW::sortReverse()
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::KeyRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
-    dm->currentFilePath = fPath;
+    dm->currentKey = fPath;
     sel->select(idx, Qt::NoModifier,"MW::sortReverse");
 
     scrollToCurrentRowIfNotVisible();
@@ -855,19 +856,27 @@ void MW::setRating()
     for (int i = 0; i < n; ++i) {
         int dmRow = rows.at(i);
         // update rating crash log
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
         updateRatingLog(fPath, rating);
         // update datamodel
         QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
         emit setValDm(dmRow, G::RatingColumn, rating, dm->instance, src,
                       Qt::EditRole);
+        /*  A VERSION row's rating is its own and lives in its record in the master's
+            sidecar; DataModel::noteVersionValueWrite has already queued that write from
+            the model change above. Never the file's xmp:Rating -- that is the master's. */
+        if (VersionKey::isVersion(fPath)) {
+            emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
+            G::popup->setProgress(i+1);
+            continue;
+        }
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             // is this part of a raw+jpg pair
             int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
             if (rowDup >= 0) {
                 // update rating crash log
-                QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
+                QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
                 updateRatingLog(jpgPath, rating);
                 // set rating for raw file row as well
                 emit setValDm(rowDup, G::RatingColumn, rating, dm->instance, src, Qt::EditRole);
@@ -942,7 +951,7 @@ void MW::recoverRatingLog()
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
                             QString pickStatus = settings->value(keys.at(i)).toString();
-        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        QModelIndex idx = dm->proxyIndexFromKey(fPath);
         if (idx.isValid()) {
             int sfRow = idx.row();
             emit setValSf(sfRow, G::RatingColumn, pickStatus, dm->instance,
@@ -992,6 +1001,12 @@ void MW::updateRatingLog(QString fPath, QString rating)
 void MW::setColorClassForRow(int sfRow, QString colorClass) {
     QString srcFun = "MW::setColorClassForRow";
     qDebug() << srcFun << sfRow << colorClass;
+    /*  WHICH IMAGE, decided NOW. This used to ask keyFromProxyRow(sfRow) after the
+        filterChange below, which re-filters and re-sorts the proxy -- so with a label
+        filter active sfRow could name a different image by then, and the label was
+        written into THAT file. Every later use goes through this key or its dm row. */
+    const QString fPath = dm->keyFromProxyRow(sfRow);
+    const int dmRow = dm->modelRowFromProxyRow(sfRow);
     emit setValSf(sfRow, G::LabelColumn, colorClass,
                   dm->instance, "MW::setColorClassForRow",
                   Qt::EditRole);
@@ -1006,14 +1021,17 @@ void MW::setColorClassForRow(int sfRow, QString colorClass) {
     filterChange("MW::setColorClass"); // sets dm->sf->suspend = false
     // update ImageView classification badge
     updateClassification();
-    // write to sidecar
-    QString fPath = dm->pathFromProxyRow(sfRow);
-    dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-    metadata->writeXMP(fPath, "MW::setColorClass");
-    // update _Label (used to check what metadata has changed in metadata->writeXMP)
-    emit setValSf(sfRow, G::_LabelColumn, colorClass, dm->instance, srcFun,
+    // a VERSION's label is its record's (DataModel::noteVersionValueWrite), not the file's
+    if (!VersionKey::isVersion(fPath)) {
+        // write to sidecar
+        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+        metadata->writeXMP(fPath, "MW::setColorClass");
+    }
+    /*  update _Label AFTER the write: writeXMP decides what changed by comparing the
+        label with this shadow, so setting it first would skip the write. */
+    emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, srcFun,
                   Qt::EditRole);
-    updateCatalogForRow(dm->modelRowFromProxyRow(sfRow));
+    if (!VersionKey::isVersion(fPath)) updateCatalogForRow(dmRow);
 }
 
 void MW::setColorClass()
@@ -1075,12 +1093,19 @@ void MW::setColorClass()
     for (int i = 0; i < n; ++i) {
         int dmRow = rows.at(i);
         // update color class crash log
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
         updateColorClassLog(fPath, colorClass);
         // update datamodel
         QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
         emit setValDm(dmRow, G::LabelColumn, colorClass, dm->instance, src,
                       Qt::EditRole);
+        // a VERSION's label is its record's, not the file's -- see MW::setRating
+        if (VersionKey::isVersion(fPath)) {
+            emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
+                          Qt::EditRole);
+            G::popup->setProgress(i+1);
+            continue;
+        }
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             // is this part of a raw+jpg pair
@@ -1090,7 +1115,7 @@ void MW::setColorClass()
                 /* rowDup is a DATAMODEL row -- and when combineRawJpg is on the
                    hidden raw row is filtered out of the proxy, so reading it
                    through dm->sf named a different image (or none). */
-                QString jpgPath = dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
+                QString jpgPath = dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
                 // set color class (label) for raw file row as well
                 QString src = "MW::setColorClass";
@@ -1168,7 +1193,7 @@ void MW::recoverColorClassLog()
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
                             QString colorClassStatus = settings->value(keys.at(i)).toString();
-        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        QModelIndex idx = dm->proxyIndexFromKey(fPath);
         int sfRow = idx.row();
         QString src = "MW::recoverColorClassLog";
         if (idx.isValid()) {

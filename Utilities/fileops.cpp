@@ -4,6 +4,8 @@
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
 #include "Main/global.h"
+#include "Cache/pathkey.h"
+#include "Utilities/versionkey.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -147,8 +149,27 @@ bool FileOps::usesFullNameSidecar(const QString &fPath)
     return fullNameSidecarFormats().contains(QFileInfo(fPath).suffix().toLower());
 }
 
+bool FileOps::refuseVersionKey(const QString &path, const QString &src)
+{
+    if (!VersionKey::isVersion(path)) return false;
+    G::issue("Error", "A version key reached file I/O; refused.", src, -1, path);
+    return true;
+}
+
+QRecursiveMutex &FileOps::sidecarLock(const QString &fPath)
+{
+    static QMutex mapLock;
+    static QHash<QString, QRecursiveMutex *> locks;     // never freed: one per image touched
+    const QString key = cachePathKey(VersionKey::sourceOf(fPath));
+    QMutexLocker locker(&mapLock);
+    QRecursiveMutex *&m = locks[key];
+    if (!m) m = new QRecursiveMutex;
+    return *m;
+}
+
 QString FileOps::sidecarPath(const QString &fPath)
 {
+    if (refuseVersionKey(fPath, "FileOps::sidecarPath")) return QString();
     const QFileInfo info(fPath);
     if (usesFullNameSidecar(fPath))
         return info.absoluteDir().absoluteFilePath(info.fileName() + ".xmp");
@@ -158,6 +179,7 @@ QString FileOps::sidecarPath(const QString &fPath)
 QString FileOps::existingSidecar(const QString &fPath)
 {
     if (fPath.isEmpty()) return QString();
+    if (refuseVersionKey(fPath, "FileOps::existingSidecar")) return QString();
     const QString path = sidecarPath(fPath);
     if (QFileInfo::exists(path)) return path;
     if (!usesFullNameSidecar(fPath)) return QString();
@@ -171,6 +193,7 @@ QString FileOps::existingSidecar(const QString &fPath)
 QString FileOps::prepareSidecarForWrite(const QString &fPath)
 {
     const QString path = sidecarPath(fPath);
+    if (path.isEmpty()) return path;               // refused (a version key)
     const QString existing = existingSidecar(fPath);
     if (existing.isEmpty() || existing == path) return path;
 
@@ -189,6 +212,7 @@ QString FileOps::prepareSidecarForWrite(const QString &fPath)
 QStringList FileOps::companions(const QString &fPath)
 {
     if (fPath.isEmpty()) return {};
+    if (refuseVersionKey(fPath, "FileOps::companions")) return {};
     const QFileInfo info(fPath);
     return companionsFrom(folderIndex(info.absoluteDir()), info);
 }
@@ -224,6 +248,8 @@ static bool isProtected(const QString &path, const QString &src)
 bool FileOps::copyFile(const QString &srcPath, const QString &dstPath)
 {
     if (G::isLogger) G::log("FileOps::copyFile");
+    if (refuseVersionKey(srcPath, "FileOps::copyFile")) return false;
+    if (refuseVersionKey(dstPath, "FileOps::copyFile")) return false;
     if (isProtected(dstPath, "FileOps::copyFile")) return false;
     flushPendingEdits();
 
@@ -250,6 +276,8 @@ bool FileOps::copyFile(const QString &srcPath, const QString &dstPath)
 bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
 {
     if (G::isLogger) G::log("FileOps::moveFile");
+    if (refuseVersionKey(srcPath, "FileOps::moveFile")) return false;
+    if (refuseVersionKey(dstPath, "FileOps::moveFile")) return false;
     if (isProtected(srcPath, "FileOps::moveFile")) return false;
     if (isProtected(dstPath, "FileOps::moveFile")) return false;
     flushPendingEdits();
@@ -314,7 +342,8 @@ FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
 
     for (const QString &fPath : paths) {
         const QFileInfo info(fPath);
-        if (isProtected(fPath, "FileOps::trashFiles")) {
+        if (refuseVersionKey(fPath, "FileOps::trashFiles")
+            || isProtected(fPath, "FileOps::trashFiles")) {
             result.failed << fPath;
         }
         else if (!info.exists()) {

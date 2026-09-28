@@ -683,8 +683,8 @@ void CompareView::select()
     if (!dm->setCurrentSF(sfIdx, G::dmInstance)) return;
     // dm->currentSfIdx = sfIdx;
     // dm->currentSfRow = sfRow;
-    QString fPath = dm->currentFilePath;
-    // QString fPath = sfIdx.data(G::PathRole).toString();
+    QString fPath = dm->currentKey;
+    // QString fPath = sfIdx.data(G::KeyRole).toString();
     // sync imageView used for loupe mode
     emit sync(fPath, false, "CompareView::select");
     emit updateInfo(sfRow);

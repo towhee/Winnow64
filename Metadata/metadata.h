@@ -160,7 +160,9 @@ public:
     /* Per-image Develop edit state (base64 of the EditStack JSON) <-> the XMP sidecar's
        winnow:Develop attribute. Static and self-contained (open the sidecar, one Xmp item), so
        writeDevelopSidecar can run off the GUI thread via QtConcurrent like writeOrientation.
-       An empty blob removes nothing here; the dock only writes when the stack is non-identity. */
+       An empty blob removes nothing here; the dock only writes when the stack is non-identity.
+       fPath may be a VERSION key (Utilities/versionkey.h): all three then read or write
+       that version's record in winnow:Versions instead (Metadata/versions.h). */
     static void writeDevelopSidecar(QString fPath, QString blob,
                                     QString previewB64 = QString());
     static QString readDevelopSidecar(QString fPath);

@@ -1,4 +1,5 @@
 #include "Views/infoview.h"
+#include "Utilities/versionkey.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
 #include "Metadata/xmpembed.h"
@@ -196,6 +197,11 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             G::popup->setProgressVisible(true);
             G::popup->setProgressMax(n + 1);
 
+            /*  Title, creator, copyright, email and url are the FILE's, shared by a
+                master and its versions: an edit on a version row is made on its master's
+                row and file (written once per file), then copied to the whole group
+                (DataModel::syncSharedToVersions). */
+            QSet<QString> filesWritten;
             for (int i = 0; i < n; i++) {
                 /*  rows, NOT selection.at(i).row(). That is a PROXY row, and using it
                     as a datamodel row named a different image whenever the two differ
@@ -203,7 +209,14 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                     write went to that image. With "Permit image file modification" on,
                     a title typed for one JPEG was written INTO another image's file. */
                 int dmRow = rows.at(i);
-                QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+                QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
+                if (VersionKey::isVersion(fPath)) {
+                    fPath = VersionKey::sourceOf(fPath);
+                    dmRow = dm->rowFromKey(fPath);
+                    if (dmRow < 0) continue;
+                }
+                if (filesWritten.contains(fPath)) continue;     // a master and its version
+                filesWritten.insert(fPath);
                 if (field == "Title*") {
                     QString s = idx1.data().toString();
                     emit setValDm(dmRow, G::TitleColumn, s, dm->instance, src, Qt::EditRole);
@@ -234,6 +247,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 // qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
                 dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
                 metadata->writeXMP(fPath, "InfoView::dataChanged");
+                dm->syncSharedToVersions(fPath);
                 G::popup->setProgress(i+1);
             }
 
@@ -557,13 +571,13 @@ void InfoView::updateInfo(const int &row)
     // flag updates so itemChanged will be ignored in MW::metadataChanged
     ignoreDataChange = true;
 
-    QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(row, G::PathColumn).data(G::SourcePathRole).toString();
     QFileInfo imageInfo = QFileInfo(fPath);
 
     // make sure there is metadata for this image
     if (dm->sf->index(row, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
         metadata->loadImageMetadata(imageInfo, row, dm->instance, true, true, false, true, "InfoView::");
-        // int row = dm->rowFromPath(fPath);
+        // int row = dm->rowFromKey(fPath);
         if (row == -1) return;
         // metadata->m.row = row;
         // metadata->m.instance = dm->instance;

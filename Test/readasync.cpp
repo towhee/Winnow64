@@ -17,7 +17,7 @@ void ReadASync::go(int amount)        // = convertOrCancel
     QStringList sourceFiles;
     total = amount;
     for(int row = 0; row < total; ++row) {
-        sourceFiles.append(dm->index(row, 0).data(G::PathRole).toString());
+        sourceFiles.append(dm->index(row, 0).data(G::SourcePathRole).toString());
     }
     doTasks(sourceFiles);
 }

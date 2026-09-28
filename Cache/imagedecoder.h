@@ -67,7 +67,8 @@ public:
     QVariant dmVal(int col, int role = Qt::DisplayRole) const;
     std::atomic<int> instance{0};
     QImage image;
-    QString fPath;
+    QString fPath;                  // the file decoded (a version's SOURCE)
+    QString rowKey;                 // the row key the result is cached under
     QString errMsg;
     qint64 nsToDecode;
     /* Progress sink for the RAW demosaic, set by decodeIndependent and forwarded to

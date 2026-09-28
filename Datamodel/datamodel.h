@@ -17,6 +17,7 @@
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
 #include "Log/issue.h"
+#include "Utilities/versionkey.h"
 
 #include <QAbstractItemModelTester>
 
@@ -91,6 +92,18 @@ public:
         thread. */
     bool filterReadsColumn(int column);
 
+    /*  VERSIONS (virtual copies) COLLAPSE. A version row is hidden while its group is
+        collapsed and no filter is active; with a filter set every row is judged on its
+        own values. Groups start collapsed. These only record the state -- the caller
+        re-filters (MW::setVersionsExpanded / MW::setShowAllVersions go through
+        MW::filterChange, which also re-publishes the proxy snapshot). Keyed by the
+        MASTER's key. */
+    void setShowAllVersions(bool show) { mShowAllVersions = show; }
+    bool showAllVersions() const { return mShowAllVersions; }
+    void setVersionsExpanded(const QString &masterKey, bool expanded);
+    bool versionsExpanded(const QString &masterKey) const;
+    void clearVersionsExpanded() { mExpandedVersions.clear(); }
+
 public slots:
     void filterChange(QString src = "");
     void suspend(bool suspendFiltering, QString src = "");
@@ -127,6 +140,9 @@ signals:
 private:
     Filters *filters;
     mutable bool finished;
+    bool mShowAllVersions = false;
+    QSet<QString> mExpandedVersions;        // master keys whose versions are shown
+    bool isCollapsedVersion(int sourceRow, const QModelIndex &sourceParent) const;
     bool compilePending = false;
     std::atomic<bool> suspendFiltering;
 
@@ -313,6 +329,47 @@ public:
         filters). insert() is a one-path wrapper. */
     QList<int> insertFiles(const QStringList &paths);
     int insert(QString fPath);
+
+    /*  VERSIONS (virtual copies). A version row's key is path + "/#v" + id
+        (Utilities/versionkey.h); it has no file of its own, so its values come from its
+        MASTER's metadata -- captured in addMetadataForItem when the master's sidecar is
+        read -- with the version's own name, rating, label, pick and develop state laid
+        over it. See "Versions (Virtual Copies)" in notes/Documentation.txt.
+
+        versionRowChanges: the version rows the model must gain (a master lists a
+        version the model lacks) and lose (a version row its master no longer lists).
+        MW::reconcileVersionRows applies both through applyModelChange -- never
+        mid-load, when row numbers are in flight.
+        fillVersionRow: write a version row's values. false if its master's metadata
+        has not been captured or no longer lists the version.
+        versionKeysOf: the version keys a master's sidecar lists, in id order. */
+    void versionRowChanges(QStringList &add, QStringList &remove) const;
+    bool fillVersionRow(int row);
+    /*  A version's recipe was just saved (DevelopProperties -> MW::devPreviewUpdated):
+        bring the captured summary in line so a later refill does not revert the row's
+        develop badge and devPreview key. Other per-version fields change through a
+        re-read of the master's sidecar. */
+    void noteVersionDevelop(const QString &versionKey, bool developed,
+                            const QString &devPreviewKey);
+    /*  The same for a version's rating, label and pick, once MW::writeVersionValues has
+        written them to the record. */
+    void noteVersionValues(const QString &versionKey, int rating, const QString &label,
+                           const QString &pick);
+    /*  SHARED FIELDS. Title, creator, copyright, email, url, keywords and orientation
+        belong to the FILE, so every row of a group shows the master's. After a writer has changed
+        them on the master's row (and written the file), this copies them onto its
+        version rows and into the captured master metadata, so a later refill keeps them.
+        No-op for an image without versions. */
+    void syncSharedToVersions(const QString &masterKey);
+    /*  The master's FILE was renamed in place (the Rename dialog): its version rows'
+        keys are the old path + "/#v" + id, so re-key them onto the new path -- row key,
+        fPathRow, name, captured metadata, collapse state. Returns (old, new) key pairs
+        for the caller to carry through the key-keyed caches it owns (ImageCache).
+        The versions themselves need nothing: they ride in the renamed sidecar. */
+    QList<QPair<QString, QString>> rekeyVersions(const QString &oldMaster,
+                                                 const QString &newMaster);
+    QStringList versionKeysOf(const QString &masterKey) const;
+    int versionRowCount() const { return mVersionRowCount; }
     /*  Reconcile with the disk: insert files added to a loaded folder, drop rows whose
         file is gone, and reset modified rows to MetaNotAttempted. Returns the paths that
         need their metadata (re)loaded -- the added and the modified. In Catalog scope
@@ -328,8 +385,12 @@ public:
         full recount. Reports a MODELINTEGRITY warning + G::issue on a failure and
         returns false. Cheap (one pass), so it runs after every on-the-fly mutation. */
     bool verifyIntegrity(const QString &src);
-    QModelIndex indexFromPath(QString fPath);
-    QModelIndex proxyIndexFromPath(QString fPath);
+    /*  ROW KEYS, NOT FILE PATHS. A row is found by its key (G::KeyRole): the file
+        path for a master, path + "/#v" + id for a version (Utilities/versionkey.h).
+        Pass a key; a source path finds only the master. File I/O must use the
+        source path (G::SourcePathRole, currentSourcePath()). */
+    QModelIndex indexFromKey(QString key);
+    QModelIndex proxyIndexFromKey(QString key);
     QModelIndex proxyIndexFromModelIndex(QModelIndex dmIdx);
     int proxyRowFromModelRow(int dmRow);
     int modelRowFromProxyRow(int sfRow);
@@ -485,7 +546,8 @@ public:
 
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
-    QString currentFilePath;            // used in caching to update image cache
+    QString currentKey;                 // row key of the current image (not a file path)
+    QString currentSourcePath() const { return VersionKey::sourceOf(currentKey); }
     int currentSfRow;                   // used in caching to check if new image selected
     int currentDmRow;                   // used in caching to check if new image selected
     QModelIndex currentSfIdx;
@@ -583,6 +645,13 @@ public:
     QHash<QString, QRect>iconSymbolRects;
 
 signals:
+    /*  A master's version list changed after the load finished (a re-read of its
+        sidecar): MW::reconcileVersionRows adds and drops version rows to match.
+        Coalesced by the receiver. */
+    void versionsChanged();
+    /*  A version row's rating, label or pick was edited (any writer, via setValDm /
+        setValSf): MW::writeVersionValues persists them to the record. Coalesced. */
+    void versionValuesEdited(const QStringList &versionKeys);
     /*  Emitted (queued) when a video row's in-flight frame decode has been
         resolved -- success (setIconFromVideoFrame) or failure
         (clearVideoReadingFlag). MetaRead keeps its own worker-local set of
@@ -765,9 +834,10 @@ public:
     static constexpr int kEvictFullSweepEvery = 64;
 
 public slots:
-    int rowFromPath(QString fPath);
-    int proxyRowFromPath(QString fPath, QString src = "");
-    QString pathFromProxyRow(int sfRow);
+    int rowFromKey(QString key);
+    int proxyRowFromKey(QString key, QString src = "");
+    QString keyFromProxyRow(int sfRow);
+    QString sourcePathFromProxyRow(int sfRow);
     QString folderPathFromProxyRow(int sfRow);
     QString folderPathFromModelRow(int dmRow);
 
@@ -852,6 +922,15 @@ private:
     void addCatalogRows(const QVector<CatalogRow> &rows);
 
 private:
+    /*  Versions: each master's metadata as its sidecar was last read, WITH its
+        version summaries -- what fillVersionRow copies into the version rows. Only
+        images that have versions are held. GUI thread. */
+    QHash<QString, ImageMetadata> versionMasters;
+    int mVersionRowCount = 0;
+    void noteVersionValueWrite(const QModelIndex &dmIdx);
+    QSet<QString> pendingVersionValueKeys;
+    bool versionValueWritePending = false;
+
     /*  ONE BATCH of the streamed catalog fill, re-posted to the event loop until the set
         is in. See addCatalogRows for why it is posted rather than looped. */
     void insertCatalogBatch();
@@ -892,7 +971,10 @@ public:
         QFileInfo is used only for the parts of a path that need no stat (name, folder,
         suffix). It is one function rather than two so that a row means the same thing
         whichever set it arrived in. */
-    void addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat = nullptr);
+    /*  key, when given, is the row's KEY and fileInfo its SOURCE file: a version row
+        (Utilities/versionkey.h) takes its file facts from the master's file. */
+    void addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat = nullptr,
+                           const QString &key = QString());
     // void rawPlusJpg();
     void rawJpgPairing(int row, const QString &ext, const QString &baseName);
     double aspectRatio(int w, int h, int orientation);

@@ -47,6 +47,9 @@ static const QVector<QPair<QString, QString>> &table()
         { "APERTURE",          "f/5.6" },
         { "ISO",               "1600" },
         { "FOCAL LENGTH",      "840 mm" },
+        /* A version's (virtual copy's) name, "v2" until named; empty for an original.
+           Only Export knows the row, so Rename and Ingest always expand it to "". */
+        { "VERSION",           "B&W" },
         { "XX",                "01" },
         { "XXX",               "001" },
         { "XXXX",              "0001" },
@@ -117,7 +120,7 @@ bool isToken(const QString &tokenString, int pos, QString &token, int &start, in
 }
 
 QString parse(const ImageMetadata &m, const QFileInfo &info,
-              const QString &tokenString, int seqNum)
+              const QString &tokenString, int seqNum, const QString &version)
 {
     const QDateTime createdDate = m.createdDate;
     QString s;
@@ -154,6 +157,7 @@ QString parse(const ImageMetadata &m, const QFileInfo &info,
             if (token == "APERTURE")    r = m.aperture;
             if (token == "ISO")         r = m.ISO;
             if (token == "FOCAL LENGTH") r = m.focalLength;
+            if (token == "VERSION")     r = version;
             /* Sequence {XX}..{XXXXXXX}: the token length is the zero-padded width. */
             if (token.left(2) == "XX")
                 r = QString("%1").arg(seqNum, token.length(), 10, QChar('0'));

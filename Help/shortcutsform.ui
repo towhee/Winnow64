@@ -1572,6 +1572,17 @@
          <string>Applies a saved develop preset (NOT IMPLEMENTED YET); in Develop mode. In Preview, P is Pick</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>New Version</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + '</string>
+        </property>
+        <property name="text">
+         <string>Makes a version (virtual copy) of each selected image: a second set of develop settings for the same file, shown beside it in the grid. In both modes</string>
+        </property>
+       </item>
       </item>
       <item>
        <property name="text">

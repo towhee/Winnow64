@@ -7,6 +7,8 @@
 #include "Utilities/fileops.h"
 #include "Cache/cachedb.h"
 #include "Cache/devpreviewcache.h"
+#include "Metadata/versions.h"
+#include "Utilities/versionkey.h"
 
 /*
     FileOps -- the single choke point every image file operation goes through.
@@ -45,6 +47,8 @@ private slots:
     void companionsSplitARawJpegPair();
     void trashingTheJpegKeepsTheRawsSidecar();
     void moveRenamesFullNameSidecar();
+    void versionsTravelWithTheImage();
+    void versionKeysAreRefused();
 
 private:
     QString p(const QString &name) const;
@@ -498,6 +502,70 @@ void tst_fileops::moveRenamesFullNameSidecar()
     QVERIFY(FileOps::moveFile(QDir(d).absoluteFilePath("DSC_1.JPG"), dst));
     QCOMPARE(read(QDir(d).absoluteFilePath("dest/Sunset.JPG.xmp")), QByteArray("recipe"));
     QVERIFY(!QFile::exists(QDir(d).absoluteFilePath("dest/Sunset.xmp")));
+}
+
+void tst_fileops::versionsTravelWithTheImage()
+{
+/*
+    Versions live in the sidecar (winnow:Versions, Metadata/versions.h), so every
+    operation that carries the sidecar carries them -- including a rename to a new
+    base name, and a full-name sidecar (JPEG) as well as a base-name one (raw).
+*/
+    QDir(tmp.path()).mkdir("dest");
+    touch("DSC_040.NEF", "image");
+    touch("DSC_041.JPG", "image");
+    for (const QString &img : {p("DSC_040.NEF"), p("DSC_041.JPG")}) {
+        QVERIFY(Versions::update(img, [](VersionSet &set) {
+            ImageVersion v;
+            v.name = "B&W";
+            v.develop = "RECIPE";
+            set.add(v);
+        }));
+    }
+    QVERIFY(QFile::exists(p("DSC_040.xmp")));
+    QVERIFY(QFile::exists(p("DSC_041.JPG.xmp")));
+
+    // copy
+    const QString copied = QDir(tmp.path()).absoluteFilePath("dest/DSC_040.NEF");
+    QVERIFY(FileOps::copyFile(p("DSC_040.NEF"), copied));
+    QCOMPARE(Versions::readRecipe(copied, 1), QString("RECIPE"));
+    QCOMPARE(Versions::readRecipe(p("DSC_040.NEF"), 1), QString("RECIPE"));
+
+    // move to a new base name
+    const QString moved = QDir(tmp.path()).absoluteFilePath("dest/Sunset.JPG");
+    QVERIFY(FileOps::moveFile(p("DSC_041.JPG"), moved));
+    QVERIFY(QFile::exists(moved + ".xmp"));
+    QCOMPARE(Versions::read(moved).versions.first().name, QString("B&W"));
+
+    // trash takes the sidecar, and the versions with it
+    useFakeTrash();
+    const FileOps::TrashResult r = FileOps::trashFiles({p("DSC_040.NEF")});
+    QCOMPARE(r.trashed.size(), 1);
+    QVERIFY(!QFile::exists(p("DSC_040.xmp")));
+    QVERIFY(QFile::exists(QDir(trashTmp.path()).absoluteFilePath("DSC_040.xmp")));
+}
+
+void tst_fileops::versionKeysAreRefused()
+{
+/*
+    A version row's key (path + "/#v" + id) is not a file. Every entry point refuses it
+    rather than acting on the master -- trashing a VERSION must never trash the image.
+*/
+    touch("DSC_050.NEF", "image");
+    touch("DSC_050.xmp", "recipe");
+    const QString key = VersionKey::make(p("DSC_050.NEF"), 1);
+
+    QVERIFY(FileOps::sidecarPath(key).isEmpty());
+    QVERIFY(FileOps::existingSidecar(key).isEmpty());
+    QVERIFY(FileOps::companions(key).isEmpty());
+    QVERIFY(!FileOps::copyFile(key, p("copy.NEF")));
+    QVERIFY(!FileOps::moveFile(key, p("moved.NEF")));
+    useFakeTrash();
+    const FileOps::TrashResult r = FileOps::trashFiles({key});
+    QCOMPARE(r.failed, QStringList{key});
+    QVERIFY(r.trashed.isEmpty());
+    QVERIFY(QFile::exists(p("DSC_050.NEF")));
+    QVERIFY(QFile::exists(p("DSC_050.xmp")));
 }
 
 QTEST_MAIN(tst_fileops)

@@ -103,10 +103,10 @@ void MW::loupeDisplay(const QString src)
            guard skips the redundant double-load when fileSelectionChange has just
            loaded the same clip (e.g. double-click into loupe). */
         QMediaPlayer *mp = videoView->video->mediaPlayer;
-        bool sameSourceShown = mp->source().toLocalFile() == dm->currentFilePath
+        bool sameSourceShown = mp->source().toLocalFile() == dm->currentSourcePath()
                                && mp->playbackState() == QMediaPlayer::PausedState;
         if (!sameSourceShown) {
-            videoView->load(dm->currentFilePath);
+            videoView->load(dm->currentSourcePath());
         }
     }
     else {

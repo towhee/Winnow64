@@ -5548,3 +5548,238 @@ In default workspaces replace Browse with Library and Folders
 Change the Source panel back to the Folders panel only.
 
 I have comitted in case we want to revert this change.
+
+==========================================================================================
+Versions (virtual copies) in Winnow
+==========================================================================================
+
+Add Lightroom-style virtual copies: a version is its own Develop recipe
+ (EditStack) for the same source file. Versions are real grid rows, grouped with
+ their master and collapsed by default; a collapsed master shows a count badge.
+ Rating, colour label and pick belong to each version. Keywords, title and other
+ IPTC fields are shared with the file.
+
+ Today the file path is the only identity everywhere:
+ - DataModel (fPathRow, ProxyPaths::dmRowOfPath, verifyIntegrity rejects duplicates)
+ - IconStore and ImageCache
+ - DevelopProperties::stackCache and history
+ - the sidecar, which holds one winnow:Develop
+ - the devpreview and catalog tables
+
+ So the core of the work is splitting the row key from the source path. The
+ split must be safe: a forgotten call site has to fail loudly, not write to the wrong
+ file (see memory: audit writer row mapping).
+
+ Design
+
+ 1. Row key vs source path
+
+ - The master's key is its path, byte for byte the same as today.
+ - A version's key is path + "/#v" + id.
+   - IMG_1.CR3 is a regular file, so any file I/O on a key fails with ENOTDIR on
+     both platforms.
+   - | and :: are rejected: they are legal on APFS, and sidecarPath's legacy
+     stem logic would send a version's writes to IMG_1.xmp.
+ - New header-only Utilities/versionkey.h (namespace VersionKey) with make,
+   isVersion, sourceOf, idOf, sortSuffix.
+ - Compile-time audit: delete G::PathRole (Main/global.h:58) and add
+   G::KeyRole (same value) plus a derived G::SourcePathRole. Rename
+   rowFromPath→rowFromKey, proxyRowFromPath→proxyRowFromKey, and
+   currentFilePath→currentKey + currentSourcePath(), so every call site (~129
+   PathRole reads) must choose. They split into:
+   - Identity (key): datamodel, imagecache, views, status, slideshow.
+   - File I/O (source path): renamefile, fileoperations, ingest, fstree,
+     findduplicates, thumb, imagedecoder.
+   - Version-aware writers: sortandfilter, pick, keywordedit, devpreviewbuilder,
+     developproperties, and parts of mainwindow.
+ - Runtime guard: G::issue("version key reached file I/O") at the I/O choke
+   points:
+   - FileOps::sidecarPath/existingSidecar/prepareSidecarForWrite and copy/move/trash
+   - Metadata::writeXMP, writeDevelopSidecar, writeOrientation,
+     loadImageMetadata
+   - ImageDecoder and Thumb file opens
+   - DevPreviewCache::put's stat
+ - Sort key: sortKey(src) + QChar(0x01) + zero-padded id, so versions sort right
+   after their master. The raw key would let IMG_1.CR3-edit.jpg sort between them.
+
+ 2. Sidecar storage (source of truth)
+
+ - New XMP attribute winnow:Versions, defined next to winnow:Develop in
+   Metadata/xmp.cpp:535. Its value is base64 JSON:
+   {schema:1, nextId, versions:[{id, name, created, rating, label, pick, develop, previewKey, preview}]}.
+   develop is EditStack::toBase64(); preview is the 256px JPEG, the same as
+   DevelopPreview.
+ - winnow:Develop, DevelopPreview and DevelopPreviewKey stay the master's, so
+   older Winnow builds and other apps keep working. The rapidxml DOM edit preserves
+   attributes it doesn't know.
+ - Ids are never reused (nextId only goes up).
+ - Per-version rating, label and pick are Winnow-private. They always live in the
+   sidecar, whatever G::modifySourceFiles says.
+ - New module Metadata/versions.{h,cpp}:
+   - ImageVersion and VersionSet
+   - Versions::read, update(src, fn), readRecipe, readThumb
+ - New FileOps::sidecarLock(path), a per-pathkey mutex. Retrofit it into
+   writeXMP, writeDevelopSidecar and writeOrientation: none of them is locked
+   today, and writeOrientation runs on QtConcurrent.
+ - parseSidecar (Metadata/metadata.cpp ~1402-1440) fills
+   ImageMetadata::versions without the preview bytes, so the version count comes
+   free with the Reader pass.
+
+ 3. Caches and catalog
+
+ - DevPreviewCache: no schema change. Store a version under
+   cachePathKey(versionKey). put derives folder, vol, size and mtime from
+   sourceOf(key). onMoved and onDeleted also handle the escaped LIKE 'src/#v%' prefix.
+ - ThumbCache: skip version keys. A version's icon is its sidecar preview; until
+   DevPreviewBuilder fills it, fall back to the master's thumbnail.
+ - Catalog: additive schema v17 (Cache/cachedb.cpp:24) with a new table
+   image_version(image_id, vid, name, created, rating, label, pick, developed, devpreviewkey, PK(image_id,vid)).
+   - The indexer rewrites an image's version rows whenever sidecarmtime changes.
+   - Image deletes and reaps also delete its version rows.
+   - addCatalogRows emits version rows from a join.
+
+ 4. Develop
+
+ - stackCache, dirty, currentImagePath→currentImageKey and
+   DevelopHistory::byImage are all keyed by row key.
+ - stackFor(key) reads the version recipe through Versions::readRecipe.
+ - flushImage(key): id 0 goes to writeDevelopSidecar; any other id goes to
+   Versions::update.
+ - MW develop state splits two ways:
+   - Pixel-derived, keyed by source path: proxy/working image, Subject, Sky and
+     Depth refs, range ref. Switching versions of one raw then skips the re-decode.
+   - Recipe-derived, keyed by row key: developFramePath,
+     developFullFramePath, verify baselines.
+ - Multi-image propagation and copy/paste need no change; their targets are simply
+   keys.
+ - Export: developPixelSource(key) → stackJobFor(key).
+   ImageExporter::destinationBaseName appends -<version name> (default v<id>),
+   and there is a new {Version} filename token.
+
+ 5. UI
+
+ - Create Version (Ctrl+', which is free).
+   - Available from the Develop menu, the grid context menu and the Develop Versions
+     section.
+   - Wiring: Main/menusandactions.cpp, Help/shortcutsform.ui, and
+     MW::developShortcutIntercept while in Develop.
+   - It copies the current recipe, preview, rating and label, and copies the loupe
+     devPreview.
+   - The row is inserted with applyModelChange(added={key}); then the group expands
+     and the new version is selected.
+ - Rename Version writes the record's name.
+ - Delete Version removes only the record: Versions::update, then drop
+   devPreview and history, then applyModelChange(removed=…). It never trashes the
+   file, and its confirmation wording differs from file delete.
+ - Set as Master:
+   - One sidecar read-modify-write swaps recipe, preview and name with the master.
+   - The master's rating and label change through the normal writeXMP path.
+   - stackCache and history entries are swapped, and the rows are updated in place.
+ - Collapse/expand:
+   - New roles VersionIdRole, VersionCountRole and VersionHiddenRole.
+   - A VersionNameColumn is appended at the end, so saved table layouts still
+     work.
+   - The hide test goes next to DupHideRawRole in SortFilter::filterAcceptsRow
+     (datamodel.cpp:7056), and BuildFilters (buildfilters.cpp:569) gets the
+     same test.
+   - Rule: when a filter is active, every row is judged on its own values. Otherwise,
+     collapsed groups hide their versions.
+   - Toggle a single group with its badge, or all groups with a global "Show all
+     versions" setting.
+   - If collapsing hides the selected row, the master is selected first.
+ - Badge: a count badge plus a click rect in Views/iconviewdelegate.cpp, modelled
+   on combineRawJpgRect (~:280/:427/:497). Version tiles get a small version glyph.
+ - Develop panel: a collapsible "Versions" section (list, New, Rename, Delete, Set
+   as Master) rather than a new dock, so there is no dock-registration or
+   winnowStateVersion work.
+ - Column sort: prepareSortKeys gives each version its master's value, so groups
+   stay together because the proxy sort is stable.
+
+ 6. File ops and other features
+
+ - Trash a master: the confirmation lists its N versions, and removeFiles expands
+   the removal to the whole group. The sidecar goes with the file through the existing
+   companion handling.
+ - Mixed selection: version rows are removed as records and masters are trashed.
+ - Rename/move: flushAll runs first (already the case), then a new
+   DevelopProperties::rekeySource(old,new), a prefix rewrite in DevPreviewCache, and
+   row regeneration through applyModelChange.
+ - Ingest and focus stack reduce the selection to unique source paths. Find Duplicates
+   skips version rows.
+ - Raw+JPG combine: a version belongs to its own file. dupOtherRow mirroring
+   never touches version rows.
+ - Shared fields (keywords, title, IPTC): write the source once, then copy the new
+   value to every row in the group.
+
+ Phases (each shippable, full ctest green after each)
+
+ 0. Key abstraction, no behaviour change.
+    - VersionKey, the role and accessor renames, the I/O guards, sidecarLock, the sort
+      suffix.
+    - New test tst_versionkey: separator collisions, Windows drive paths,
+      cachePathKey round trip, sort adjacency.
+ 1. Storage.
+    - The versions module, the XMP definition, parseSidecar.
+    - New test tst_versions: round trip; nextId never reused; a read-modify-write
+      keeps Develop, Rating and keywords; an unknown attribute survives another
+      writer.
+    - Extend tst_fileops: copy, move and trash carry Versions.
+ 2. Model rows.
+    - ImageRow::versionId and versionCount; key-aware insertFiles,
+      removeFiles, addFileDataForRow and imMetadata (a version's metadata is its
+      master's, with the version's own values laid over it).
+    - After the MetaRead pass, insert the version rows as a batch.
+    - The collapse filter, the badge, and toggles.
+    - Extend verifyIntegrity: every version's master exists and comes before it, and
+      keys are unique.
+    - Extend the model_mutation selftest to run load, create, delete, trash master,
+      rename master, and collapse with a version selected.
+ 3. Develop per version.
+    - DevelopProperties, history and MW caches become key-aware, as do devpreview
+      read and build.
+    - Create, rename, delete and Set as Master; the Versions section; export naming.
+    - Extend tst_devpreview with a test for key-prefix move/delete.
+ 4. Metadata writers.
+    - Per-version rating, label and pick; shared-field mirroring.
+    - Audit sortandfilter.cpp (~865-878, 1012, 1085-1103), pick.cpp,
+      keywordedit.cpp and the InfoView edit paths.
+    - Add a test: rating a version leaves xmp:Rating untouched.
+ 5. File ops and features: rename/move rekey, ingest, find duplicates, focus stack,
+    raw+JPG grouping.
+ 6. Catalog: the v17 image_version table, the indexer, catalog version rows,
+    search on version rating and label. Extend tst_catalog to cover the migration
+    and cascade deletes.
+
+ Every phase updates notes/Documentation.txt in the same pass, including a ToC sync.
+ Specifically: a new "Versions (Virtual Copies)" section, plus notes in "DataModel
+ On-the-Fly Insert and Delete" and "Multi-image editing", and the shortcut entry. Run
+ moc on each edited Q_OBJECT header.
+
+ Critical files
+
+ - Datamodel/datamodel.{h,cpp}, Datamodel/imagerow.{h,cpp},
+   Datamodel/modelsync.h, Main/global.h
+ - New Utilities/versionkey.h, new Metadata/versions.{h,cpp}, Metadata/xmp.cpp,
+   Metadata/metadata.cpp
+ - Develop/Properties/developproperties.{h,cpp},
+   Develop/History/develophistory.h, Main/mainwindow.cpp (develop state, export)
+ - Cache/devpreviewcache.cpp, Cache/cachedb.cpp, Cache/catalog.cpp
+ - Main/sortandfilter.cpp, Main/fileoperations.cpp, Utilities/fileops.cpp,
+   Views/iconviewdelegate.cpp, Export/imageexporter.cpp,
+   Main/menusandactions.cpp, Help/shortcutsform.ui
+
+ Verification
+
+ - Tests: ctest --test-dir build/<preset> --output-on-failure after each phase,
+   and model_mutation must pass verifyIntegrity after every step.
+ - Manual (macOS + Windows):
+   - Two versions of a raw with different recipes and ratings show different tiles and
+     loupe outside Develop. Rating a version leaves the master's xmp:Rating
+     unchanged.
+   - After a relaunch, versions come back collapsed with a badge.
+   - An older build edits the rating and winnow:Versions survives.
+   - Rename, move and trash of a master carry its versions or remove them with it.
+   - Export gives IMG_1.jpg and IMG_1-v1.jpg.
+   - A rating filter shows only the versions that match.
+   - Catalog scope lists version rows.
+   - Set as Master swaps the two.

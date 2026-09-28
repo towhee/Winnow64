@@ -320,6 +320,7 @@ set(WINNOW_SOURCES
     Main/mainwindow.cpp
     Main/menusandactions.cpp
     Main/navigate.cpp
+    Main/mwversions.cpp
     Main/pick.cpp
     Main/qtlocalpeer.cpp
     # qtlockedfile.cpp is #included by qtlocalpeer.cpp — do not compile standalone
@@ -368,6 +369,7 @@ set(WINNOW_SOURCES
     Metadata/irb.cpp
     Metadata/metadata.cpp
     Metadata/metareport.cpp
+    Metadata/versions.cpp
     Metadata/xmp.cpp
     Metadata/xmpembed.cpp
 
@@ -651,6 +653,7 @@ set(WINNOW_HEADERS
     Metadata/metareport.h
     Metadata/rapidxml.h
     Metadata/rapidxml_print_rgh.h
+    Metadata/versions.h
     Metadata/xmp.h
     Metadata/xmpapply.h
     Metadata/xmpembed.h
@@ -697,6 +700,7 @@ set(WINNOW_HEADERS
     Utilities/foldertree.h
     Utilities/searchterms.h
     Utilities/utilities.h
+    Utilities/versionkey.h
     Utilities/winnets.h
 
     Views/compareImages.h

@@ -3,6 +3,8 @@
 #include "Cache/catalog.h"
 #include "Metadata/indexmetadata.h"
 #include "Main/global.h"
+#include "Metadata/versions.h"
+#include "Utilities/versionkey.h"
 
 Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
                FrameDecoder *frameDecoder): QObject(nullptr)
@@ -301,6 +303,12 @@ void Reader::readIcon()
 
     if (abort) {status = Status::Aborted; return;}
 
+    /*  A VERSION ROW (virtual copy) has a key, not a file, and its picture is its own
+        developed preview -- never the path-keyed thumbnail cache, which holds the
+        master's. See readVersionIcon. */
+    const bool isVersion = VersionKey::isVersion(fPath);
+    if (isVersion) loadedIcon = readVersionIcon(image);
+
     /*  THE INDEX FIRST. This is what the whole thumbnail cache is for: a hit
         replaces opening the file, walking to its embedded preview's segment and
         decoding that, with one indexed read and a small JPEG decode. A miss
@@ -313,7 +321,7 @@ void Reader::readIcon()
         write back -- see the putImage call below. */
     bool fromThumbCache = false;
 
-    if (!abort) {
+    if (!abort && !isVersion) {
         QElapsedTimer tGet;
         if (G::isPerfProbe) tGet.start();
         image = ThumbCache::instance().getImage(fPath, m && m->developEdited,
@@ -328,7 +336,7 @@ void Reader::readIcon()
 
     if (abort) {status = Status::Aborted; return;}
 
-    if (!loadedIcon) {
+    if (!loadedIcon && !isVersion) {
         /*  THE ICON NEEDS THE SEGMENT OFFSETS TOO. A row whose metadata came
             from the index has none -- the catalog stores what is displayed and
             searched, not where the embedded preview lives -- so loadThumb had to
@@ -427,7 +435,7 @@ void Reader::readIcon()
             writer holds for a whole batch transaction -- so every Reader thread queued
             behind the writer to have its work thrown away. Measured on 1,048 raws with
             the cache warm, that was essentially the entire load. */
-        if (!image.isNull() && !fromThumbCache) {
+        if (!image.isNull() && !fromThumbCache && !isVersion) {
             QElapsedTimer tCache;
             if (G::isPerfProbe) tCache.start();
             ThumbCache::instance().putImage(fPath, image, m && m->developEdited);
@@ -475,6 +483,18 @@ void Reader::readIcon()
         << msg
             ;
     }
+}
+
+bool Reader::readVersionIcon(QImage &image)
+{
+/*
+    The icon for a VERSION row (fPath is its key). See Thumb::loadVersionThumb. Nothing is
+    written to ThumbCache: it is keyed by file path, and a version's picture under the
+    source's key would replace the master's.
+*/
+    if (G::isLogger) G::log("Reader::readVersionIcon", fPath);
+    return thumb->loadVersionThumb(fPath, dmRow, image, instance, metadata,
+                                   "Reader::readVersionIcon");
 }
 
 void Reader::read(int dmRow, QString filePath, int instance,
@@ -535,6 +555,10 @@ void Reader::read(int dmRow, QString filePath, int instance,
             ;
     }
 
+    /*  A version row's metadata is its master's, filled by the DataModel when the
+        master's sidecar is read (DataModel::fillVersionRow) -- there is no file behind
+        the key to read it from. */
+    if (VersionKey::isVersion(filePath)) needMeta = false;
     metaReadThisTask = needMeta;
     if (!abort && needMeta) readMetadata();
     if (!abort && needIcon) {

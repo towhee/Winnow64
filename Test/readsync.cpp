@@ -27,7 +27,7 @@ void ReadSync::run()
     QElapsedTimer t;
     t.start();
     for(int row = 0; row < total; ++row) {
-        QString fPath = dm->index(row, 0).data(G::PathRole).toString();
+        QString fPath = dm->index(row, 0).data(G::SourcePathRole).toString();
         qDebug() << fPath;
         QFileInfo fileInfo(fPath);
         QFile file;

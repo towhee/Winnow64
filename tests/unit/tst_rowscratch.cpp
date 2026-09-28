@@ -62,7 +62,7 @@ void tst_rowscratch::coversTheScratchColumnsAndOnlyOnValueRoles()
             Edit and Display in one slot and everything else in others. */
         QVERIFY(!ScratchStore::covers(c, Qt::TextAlignmentRole));
         QVERIFY(!ScratchStore::covers(c, Qt::ToolTipRole));
-        QVERIFY(!ScratchStore::covers(c, G::PathRole));
+        QVERIFY(!ScratchStore::covers(c, G::KeyRole));
     }
 }
 

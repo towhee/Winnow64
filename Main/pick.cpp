@@ -39,7 +39,7 @@ void MW::togglePickUnlessRejected()
     // set pick status for selection
     foreach (dmRow, rows) {
         // save pick history
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
         QString priorPickStatus = dm->index(dmRow, G::PickColumn).data().toString();
         pushPick(fPath, priorPickStatus);
         // set pick status
@@ -180,7 +180,7 @@ void MW::togglePick()
     // set pick status for selection
     foreach (dmRow, rows) {
         // save pick history
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
         QString priorPickStatus = dm->index(dmRow, G::PickColumn).data().toString();
         pushPick(fPath, priorPickStatus);
         // set pick status
@@ -270,7 +270,7 @@ void MW::toggleReject()
     foreach (idx, idxList) {
         // save pick history
         int sfRow = idx.row();
-        QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::KeyRole).toString();
         QString priorPickStatus = dm->sf->index(sfRow, G::PickColumn).data().toString();
         pushPick(fPath, priorPickStatus);
         // set pick status
@@ -327,7 +327,7 @@ void MW::recoverPickLog()
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
                             QString pickStatus = settings->value(keys.at(i)).toString();
-        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        QModelIndex idx = dm->proxyIndexFromKey(fPath);
         if (idx.isValid()) {
             int sfRow = idx.row();
             if (pickStatus == "Picked") {
@@ -414,7 +414,7 @@ void MW::popPick()
 void MW::updatePickFromHistory(QString fPath, QString status)
 {
     if (G::isLogger) G::log("MW::updatePickFromHistory");
-    int dmRow = dm->rowFromPath(fPath);
+    int dmRow = dm->rowFromKey(fPath);
     if (dmRow == -1) return;
 
     emit setValDm(dmRow, G::PickColumn, status, dm->instance, "MW::updatePickFromHistory", Qt::EditRole);

@@ -333,7 +333,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (isDebug)
     {
         qDebug() << srcFun
-         << "sfRow =" << dm->proxyRowFromPath(fPath, srcFun)
+         << "sfRow =" << dm->proxyRowFromKey(fPath, srcFun)
          << "G::isFirstImageNewInstance =" << G::isFirstImageNewInstance
          << "isCurrent =" << isCurrent
          << "replace =" << replace
@@ -344,7 +344,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     }
     if (G::isLogger || G::isFlowLogger)
     {
-        QString row = "row = " + QString::number(dm->proxyRowFromPath(fPath));
+        QString row = "row = " + QString::number(dm->proxyRowFromKey(fPath));
         G::log(srcFun, row + " Src:" + src +
                " G::isFirstImageNewInstance = " + QVariant(G::isFirstImageNewInstance).toString() +
                " " + fPath);
@@ -394,7 +394,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     if (G::isSlideShow) {
         // load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
-        int dmRow = dm->rowFromPath(fPath);
+        int dmRow = dm->rowFromKey(fPath);
         if (dmRow == -1) {
             isLoadingImage = false;
             return false;
@@ -437,7 +437,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     image in icd->imCache hash table. Also must check in case where an ejected drive has
     resulted in clearing icd->cacheItemList. */
 
-    int sfRow = dm->proxyRowFromPath(fPath, srcFun);
+    int sfRow = dm->proxyRowFromKey(fPath, srcFun);
     if (sfRow == -1 || sfRow >= dm->sf->rowCount()) {
         isLoadingImage = false;
         return false;
@@ -4215,7 +4215,7 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
     qDebug() << "ImageView::rotateByExifRotation" << imageFullPath;
 
     QTransform trans;
-    int dmRow = dm->rowFromPath(imageFullPath);
+    int dmRow = dm->rowFromKey(imageFullPath);
     if (dmRow == -1) return;
     int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
 
@@ -4307,8 +4307,8 @@ QSizeF ImageView::vpNormSizeInScene()
 void ImageView::focus()
 {
     if (G::isLogger) G::log("ImageView::focus");
-    // int row = dm->fPathRow[dm->currentFilePath];
-    int row = dm->fPathRowValue(dm->currentFilePath);
+    // int row = dm->fPathRow[dm->currentKey];
+    int row = dm->fPathRowValue(dm->currentKey);
     int fX = dm->sf->index(row, G::FocusXColumn).data().toInt();
     int fY = dm->sf->index(row, G::FocusYColumn).data().toInt();
     int w = dm->sf->index(row, G::WidthColumn).data().toInt();
@@ -5828,8 +5828,8 @@ void ImageView::copyImage()
         pm = pm.scaled(pmItem->displaySize(), Qt::IgnoreAspectRatio,
                        Qt::SmoothTransformation);
     if (pm.isNull()) {
-       if (icd->contains(dm->currentFilePath)) {
-            pm = QPixmap::fromImage(icd->imCache.value(dm->currentFilePath));
+       if (icd->contains(dm->currentKey)) {
+            pm = QPixmap::fromImage(icd->imCache.value(dm->currentKey));
         }
         else {
             QString msg = "Could not copy the current image to the clipboard";

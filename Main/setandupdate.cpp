@@ -1273,7 +1273,7 @@ void MW::setIngested()
     if (G::isLogger) G::log("MW::setIngested");
     settings->beginGroup("PickLog");
     for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
-        QString sKey = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+        QString sKey = dm->sf->index(sfRow, 0).data(G::KeyRole).toString();
         if (dm->sf->index(sfRow, G::PickColumn).data().toString() == "Picked") {
             emit setValSf(sfRow, G::IngestedColumn, true, dm->instance,
                           "MW::setIngested", Qt::EditRole);
@@ -1392,7 +1392,7 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
     IngestProbe::Scope _ip("MW::refreshViewsOnCacheChange");
     QString srcFun = "MW::refreshViewsOnCacheChange";
 
-    int sfRow = dm->proxyRowFromPath(fPath, "MW::refreshViewsOnCacheChange");
+    int sfRow = dm->proxyRowFromKey(fPath, "MW::refreshViewsOnCacheChange");
 
     if (sfRow == -1) {
         QString msg = "No sfRow for fPath = " + fPath + " src = " + src;
@@ -1402,11 +1402,11 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
 
     /* Compare by path, not row, to decide whether the loupe must reload. MW::refresh()
        can re-sort the proxy and recompute dm->currentSfRow (via currentDmIdx), leaving
-       it off by one relative to the row that was just (re)cached. currentFilePath tracks
+       it off by one relative to the row that was just (re)cached. currentKey tracks
        the selected image and is not disturbed by that re-sort, so a same-path content
        change (e.g. a re-embellished image already in the folder) is correctly seen as
        the current image and the loupe is refreshed. */
-    bool isCurrent = (fPath == dm->currentFilePath);
+    bool isCurrent = (fPath == dm->currentKey);
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     bool isVideo = dm->sf->index(sfRow, G::VideoColumn).data().toBool();
 
@@ -1528,11 +1528,11 @@ void MW::updateSidecarStatus(QString fPath)
     QString srcFun = "MW::updateSidecarStatus";
     if (G::isLogger) G::log(srcFun, fPath);
 
-    const int dmRow = dm->rowFromPath(fPath);
+    const int dmRow = dm->rowFromKey(fPath);
     if (dmRow < 0) return;
     emit setValDm(dmRow, G::SidecarColumn, true, dm->instance, srcFun, Qt::EditRole);
 
-    const QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
+    const QModelIndex sfIdx = dm->proxyIndexFromKey(fPath);
     if (sfIdx.isValid()) thumbView->refreshIcon(sfIdx, srcFun);
 }
 

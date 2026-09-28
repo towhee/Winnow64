@@ -305,6 +305,16 @@ void MW::createFileActions()
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
 
+    /*  Versions (virtual copies): show every version row instead of collapsing each
+        group behind its master. A single group opens from its thumbnail's badge. */
+    showAllVersionsAction = new QAction(tr("Show All Versions"), this);
+    showAllVersionsAction->setObjectName("showAllVersions");
+    showAllVersionsAction->setShortcutVisibleInContextMenu(true);
+    showAllVersionsAction->setCheckable(true);
+    showAllVersionsAction->setChecked(isSettings && settings->value("showAllVersions").toBool());
+    addAction(showAllVersionsAction);
+    connect(showAllVersionsAction, &QAction::triggered, this, &MW::setShowAllVersions);
+
     // Move to trash / recycle bin
     QString moveFilesToWhatever;
     QString moveFolderToWhatever;
@@ -1281,6 +1291,30 @@ void MW::createUtilActions()
        already "Copy images" here, so Winnow uses Ctrl+Alt+C / Ctrl+Alt+V (Cmd+Opt+C /
        Cmd+Opt+V on macOS) -- both free, and nothing else has to be given up. Paste is
        additionally gated on something having been copied (syncDevelopMenuEnabled). */
+    /*  VERSIONS (virtual copies). Work in both operation modes and on the thumbnail
+        context menu; Ctrl+' is Lightroom's Create Virtual Copy. See Main/mwversions.cpp. */
+    newVersionAction = new QAction(tr("New Version"), this);
+    newVersionAction->setObjectName("newVersion");
+    newVersionAction->setShortcut(QKeySequence("Ctrl+'"));
+    newVersionAction->setShortcutVisibleInContextMenu(true);
+    addAction(newVersionAction);
+    connect(newVersionAction, &QAction::triggered, this, &MW::newVersion);
+
+    renameVersionAction = new QAction(tr("Rename Version…"), this);
+    renameVersionAction->setObjectName("renameVersion");
+    addAction(renameVersionAction);
+    connect(renameVersionAction, &QAction::triggered, this, &MW::renameVersion);
+
+    deleteVersionAction = new QAction(tr("Delete Version…"), this);
+    deleteVersionAction->setObjectName("deleteVersion");
+    addAction(deleteVersionAction);
+    connect(deleteVersionAction, &QAction::triggered, this, &MW::deleteVersion);
+
+    setVersionAsMasterAction = new QAction(tr("Set Version as Master"), this);
+    setVersionAsMasterAction->setObjectName("setVersionAsMaster");
+    addAction(setVersionAsMasterAction);
+    connect(setVersionAsMasterAction, &QAction::triggered, this, &MW::setVersionAsMaster);
+
     developCopySettingsAction = new QAction(tr("Copy Develop Settings…"), this);
     developCopySettingsAction->setObjectName("developCopySettings");
     developCopySettingsAction->setShortcut(QKeySequence("Ctrl+Alt+C"));
@@ -2431,6 +2465,7 @@ void MW::createFileMenu()
     fileMenu->addSeparator();
     fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
+    fileMenu->addAction(showAllVersionsAction);
     fileMenu->addAction(includeSidecarsAction);
     fileMenu->addSeparator();
     fileMenu->addAction(deleteImagesAction);
@@ -2717,6 +2752,18 @@ void MW::createDevelopMenu()
     developExportPresetMenu = developMenu->addMenu(tr("Export with preset"));
     connect(developExportPresetMenu, &QMenu::aboutToShow,
             this, &MW::buildDevelopExportPresetMenu);
+    developMenu->addSeparator();
+    /*  Versions: shared with the thumbnail context menu (the same QMenu), enabled per
+        the current image as it opens (syncVersionsMenu). */
+    versionsMenu = new QMenu(tr("Versions"), this);
+    versionsMenu->addAction(newVersionAction);
+    versionsMenu->addAction(renameVersionAction);
+    versionsMenu->addAction(deleteVersionAction);
+    versionsMenu->addAction(setVersionAsMasterAction);
+    versionsMenu->addSeparator();
+    versionsMenu->addAction(showAllVersionsAction);
+    connect(versionsMenu, &QMenu::aboutToShow, this, &MW::syncVersionsMenu);
+    developMenu->addMenu(versionsMenu);
     developMenu->addSeparator();
     developMenu->addAction(developCopySettingsAction);
     developMenu->addAction(developPasteSettingsAction);
@@ -3193,6 +3240,11 @@ void MW::createThumbViewContextMenu()
 
     thumbViewActions->append(separatorAction6);
     thumbViewActions->append(sortReverseAction);
+    if (versionsMenu) {
+        versionsGroupAct = new QAction(tr("Versions"), this);
+        versionsGroupAct->setMenu(versionsMenu);
+        thumbViewActions->append(versionsGroupAct);
+    }
 
     thumbViewActions->append(separatorAction7);
     #if defined(Q_OS_MAC) || defined(Q_OS_WIN)

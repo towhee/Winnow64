@@ -312,6 +312,9 @@ void MW::createDataModel()
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(filters, &Filters::mergeUnfiledKeyword, this, &MW::mergeUnfiledKeyword);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
+    // versions (virtual copies): a master re-read after the load -- see Main/mwversions.cpp
+    connect(dm, &DataModel::versionsChanged, this, &MW::scheduleVersionReconcile);
+    connect(dm, &DataModel::versionValuesEdited, this, &MW::writeVersionValues);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
     connect(dm, &DataModel::updateProgress, filters, &Filters::updateProgress);
@@ -741,7 +744,7 @@ void MW::createImageCache()
         // Named for the ingest probe -- see catalogScanner::status.
         IngestProbe::Scope _ip("imageCache::setCached -> clearProgress");
         // By path: a filter change between emit and delivery re-numbers the proxy rows.
-        if (isCached && dm && fPath == dm->currentFilePath)
+        if (isCached && dm && fPath == dm->currentKey)
             progress->clearProgress(progressDemosaicRow);
     });
 
@@ -3785,12 +3788,12 @@ void MW::setOperationMode(G::OperationMode mode)
        updateDevelopScopes. Entering Develop only (leaving it, there is no Develop render
        to verify). */
     QImage prev;
-    if (mode == G::OperationMode::Develop && icd && dm && !dm->currentFilePath.isEmpty()
-        && icd->get(dm->currentFilePath, prev)) {     // one locked lookup
+    if (mode == G::OperationMode::Develop && icd && dm && !dm->currentKey.isEmpty()
+        && icd->get(dm->currentKey, prev)) {     // one locked lookup
         developVerifyPreviewBaseline = prev.isNull()
             ? QImage()
             : prev.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        developVerifyPreviewBaselinePath = dm->currentFilePath;
+        developVerifyPreviewBaselinePath = dm->currentKey;
         developVerifyVsPreviewMaxAbs = -1;   // reset until the display populates it
         developVerifyVsPreviewPath.clear();
     }
@@ -3816,7 +3819,7 @@ void MW::setOperationMode(G::OperationMode mode)
        image-cache MISS; a mode switch is a cache HIT (the Preview decode is still
        cached), so it never reaches that branch. */
     if (mode == G::OperationMode::Develop && imageView && dm && !currentIsVideo()) {
-        const QString fPath = dm->currentFilePath;
+        const QString fPath = dm->currentKey;
         const QImage cached = devPreview(fPath);
         if (!cached.isNull()) {
             imageView->captureDevelopView(fPath);
@@ -3841,7 +3844,7 @@ void MW::setOperationMode(G::OperationMode mode)
     const bool wantUseRaw = (mode == G::OperationMode::Develop);
     if (G::useRaw != wantUseRaw)
         toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);   // flips useRaw + reloads cache
-    else if (imageCache && dm && !dm->currentFilePath.isEmpty() && !currentIsVideo()) {
+    else if (imageCache && dm && !dm->currentKey.isEmpty() && !currentIsVideo()) {
         /* useRaw already matches the target, but the MODE change alone re-selects
            the decode: ImageDecoder::load() branches on (operationMode == Develop &&
            useRaw), so Preview shows the embedded preview while Develop demosaics the
@@ -3851,7 +3854,7 @@ void MW::setOperationMode(G::OperationMode mode)
            selector (which re-decodes via toggleUseRaw). Matches the toggleUseRaw
            refresh (currentImageHasChanged + imageCacheColorManageChange ->
            reloadImageCache -> refreshViewsOnCacheChange -> loupe). */
-        imageCache->setCurrentPosition(dm->currentFilePath, "MW::setOperationMode");
+        imageCache->setCurrentPosition(dm->currentKey, "MW::setOperationMode");
         imageView->currentImageHasChanged = true;
         emit imageCacheColorManageChange();
     }
@@ -3865,19 +3868,19 @@ void MW::setOperationMode(G::OperationMode mode)
         if (mode == G::OperationMode::Develop) {
             const bool selIsVideo = currentIsVideo();
             developProperties->setCurrentImage(selIsVideo || !dm ? QString()
-                                                                 : dm->currentFilePath);
+                                                                 : dm->currentKey);
             /* Entering Develop re-decodes the current image (~3s). If it has a "Denoise
                raw" amount, start that decode NOW so its progress shows immediately --
                otherwise it would not fire until the clean decode + settle. Produces the
                clean + PMRID bases in one pass and publishes the clean base (which
                ImageDecoder::load then reuses). No-op without a denoise edit / on Apple. */
-            if (!selIsVideo && dm && !dm->currentFilePath.isEmpty()) {
+            if (!selIsVideo && dm && !dm->currentKey.isEmpty()) {
                 /* Gated on the RECIPE (EditParams::denoiseRaw), which falls back to the
                    Auto run preference when the image says nothing. */
                 const auto mj = developProperties->stackJob();
                 if (mj.global.wantsDenoiseRaw(G::autoRunDenoise))
-                    ensureRawDenoise(dm->currentFilePath, mj.global,
-                                     WorkingImageCache::instance().get(dm->currentFilePath),
+                    ensureRawDenoise(dm->currentKey, mj.global,
+                                     WorkingImageCache::instance().get(dm->currentKey),
                                      currentImageIso());
             }
         }

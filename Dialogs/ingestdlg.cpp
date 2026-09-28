@@ -1,4 +1,5 @@
 #include "ingestdlg.h"
+#include "Utilities/versionkey.h"
 #include "Utilities/fileops.h"
 #include "ui_ingestdlg.h"
 #include "Utilities/htmlwindow.h"
@@ -254,20 +255,31 @@ void IngestDlg::getPicks()
 //    bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
     QString fPath;
     pickList.clear();
+    /*  VERSIONS (virtual copies): each source FILE once, and a version hidden only by a
+        collapsed group counts as in view when its master is -- see Ingest::getPicks. */
+    QSet<QString> seenFiles;
+    auto append = [&](const QString &path) {
+        if (path.isEmpty() || seenFiles.contains(path)) return;
+        seenFiles.insert(path);
+        pickList.append(QFileInfo(path));
+    };
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex pickIdx = dm->index(row, G::PickColumn);
         // only picks
         if (pickIdx.data(Qt::EditRole).toString() == "Picked") {
             QModelIndex idx = dm->index(row, 0);
+            bool inView = dm->sf->mapFromSource(idx).isValid();
+            const QString key = idx.data(G::KeyRole).toString();
+            if (!inView && VersionKey::isVersion(key))
+                inView = dm->proxyRowFromKey(VersionKey::sourceOf(key)) >= 0;
             // only filtered
-            if (dm->sf->mapFromSource(idx).isValid()) {
+            if (inView) {
                 // if raw+jpg files have been combined
                 if (combineRawJpg) {
                     // append the jpg if combineRawJpg and include combined jpgs
                     if (combinedIncludeJpg && idx.data(G::DupIsJpgRole).toBool()) {
-                        fPath = idx.data(G::PathRole).toString();
-                        QFileInfo fileInfo(fPath);
-                        pickList.append(fileInfo);
+                        fPath = idx.data(G::SourcePathRole).toString();
+                        append(fPath);
 //                        qDebug() << "IngestDlg::" << "appending" << fPath;
                     }
                     // append combined raw file
@@ -276,9 +288,8 @@ void IngestDlg::getPicks()
                         if (rawRow >= 0) idx = dm->index(rawRow, 0);
                     }
                 }
-                fPath = idx.data(G::PathRole).toString();
-                QFileInfo fileInfo(fPath);
-                pickList.append(fileInfo);
+                fPath = idx.data(G::SourcePathRole).toString();
+                append(fPath);
 //                qDebug() << "IngestDlg::" << "appending" << fPath;
             }
         }
@@ -403,7 +414,7 @@ void IngestDlg::ingest()
         QString sourcePath = fileInfo.absoluteFilePath();
 
         // thumb # for user
-        QString thumbNum = " Thumbnail " + QString::number(dm->proxyRowFromPath(sourcePath) + 1) + ": ";
+        QString thumbNum = " Thumbnail " + QString::number(dm->proxyRowFromKey(sourcePath) + 1) + ": ";
 
         // seqNum is required by parseTokenString
         // increase sequence unless dup (raw + jpg)
@@ -429,7 +440,7 @@ void IngestDlg::ingest()
         QString metadataChangedSourcePath = sourcePath;
         if (combineRawJpg) {
             // only raw files included if combineRawJpg and there is a rawjpg pair
-            int dmRow = dm->rowFromPath(sourcePath.toLower());
+            int dmRow = dm->rowFromKey(sourcePath.toLower());
             QModelIndex idx = dm->index(dmRow, 0);
             if (idx.isValid()) {
                 // check if raw/jpg pair
@@ -437,7 +448,7 @@ void IngestDlg::ingest()
                     int jpgRow = dm->dupOtherRow(dmRow);
                     if (jpgRow >= 0) {
                         metadataChangedSourcePath =
-                            dm->index(jpgRow, 0).data(G::PathRole).toString();
+                            dm->index(jpgRow, 0).data(G::SourcePathRole).toString();
                     }
                 }
             }

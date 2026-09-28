@@ -85,7 +85,7 @@ void MW::reportState(QString title)
         << "\nG::mode                                " << G::mode
         << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
         << "\nG::currRootFolder                      " << dm->folderList.at(0)
-        << "\nccurrentFilePath                       " << dm->currentFilePath
+        << "\ncurrentKey                             " << dm->currentKey
         << "\ncurrentRow                             " << dm->currentSfRow
         << "\ncurrentSfIdx                           " << dm->currentSfIdx
         << "\ncurrentDmIdx                           " << dm->currentDmIdx
@@ -163,7 +163,7 @@ void MW::diagnosticsAll()
     rpt << thumbView->diagnostics();
     rpt << imageView->diagnostics();
     rpt << embelProperties->diagnostics();
-    rpt << metadata->diagnostics(dm->currentFilePath);
+    rpt << metadata->diagnostics(dm->currentSourcePath());
     rpt << dm->diagnostics();
     diagnosticsReport(reportString);
 }
@@ -175,7 +175,7 @@ void MW::diagnosticsCurrent()
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << dm->diagnosticsForCurrentRow();
-    rpt << metadata->diagnostics(dm->currentFilePath);
+    rpt << metadata->diagnostics(dm->currentSourcePath());
     diagnosticsReport(reportString);
 }
 
@@ -519,11 +519,11 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  G::isWheelProbe = " << G::s(G::isWheelProbe);
     rpt << "\n";
 
-    const QString fPath = dm ? dm->currentFilePath : QString();
+    const QString fPath = dm ? dm->currentKey : QString();
 
     // CURRENT IMAGE
     rpt << "\n" << "CURRENT IMAGE";
-    rpt << "\n" << "  currentFilePath = " << (fPath.isEmpty() ? "(none)" : fPath);
+    rpt << "\n" << "  currentKey = " << (fPath.isEmpty() ? "(none)" : fPath);
     if (fPath.isEmpty()) {
         rpt << "\n" << "  (no image selected -- nothing further to report)";
         rpt << "\n";
@@ -755,8 +755,8 @@ void MW::diagnosticsInfoView() {} // dummy for now
 void MW::diagnosticsTableView() {} // dummy for now
 void MW::diagnosticsCompareView() {} // dummy for now
 void MW::diagnosticsMetadata() {
-    dm->imMetadata(dm->currentFilePath, true);
-    diagnosticsReport(metadata->diagnostics(dm->currentFilePath), "Winnow Diagnostics: Metadata");
+    dm->imMetadata(dm->currentKey, true);
+    diagnosticsReport(metadata->diagnostics(dm->currentSourcePath()), "Winnow Diagnostics: Metadata");
 }
 void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}
@@ -1333,7 +1333,7 @@ QString MW::keywordDiagnostics()
         rpt << "\n" << "  (no current image)";
     }
     else {
-        const QString fPath = dm->currentFilePath;
+        const QString fPath = dm->currentKey;
         const QStringList literal =
             dm->index(dmRow, G::KeywordsColumn).data().toStringList();
         const QStringList paths =

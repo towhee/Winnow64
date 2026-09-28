@@ -19,6 +19,12 @@ public:
     bool loadThumb(QString &fPath, int dmRow, QImage &image,
                    int instance, const ImageMetadata &m, QString src);
     void presetOffset(uint offset, uint length);
+    /*  The icon for a VERSION row (key = path + "/#v" + id, Utilities/versionkey.h):
+        the version's own developed preview when current, else the source file's
+        original camera thumbnail. metadata is the caller's (reader-local) Metadata,
+        used only to walk the source's header on a thumbnail-cache miss. */
+    bool loadVersionThumb(const QString &key, int dmRow, QImage &image, int instance,
+                          Metadata *metadata, QString src);
     void insertThumbnailsInJpg(QModelIndexList &selection);
     bool insertingThumbnails = false;
 

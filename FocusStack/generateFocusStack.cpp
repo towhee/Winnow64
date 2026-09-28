@@ -78,7 +78,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
     {
         QDateTime t;
 
-        const int r = dm->rowFromPath(path);
+        const int r = dm->rowFromKey(path);
         if (r >= 0) {
             t = dm->index(r, G::CreatedColumn).data().toDateTime();
         } else {
@@ -161,7 +161,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         if (G::FSLog) G::log(srcFun, msg);
         // qDebug().noquote() << "---- FocusStack Group" << (gi + 1) << "----";
         for (const QString &p : groups[gi]) {
-            const int r = dm->rowFromPath(p);
+            const int r = dm->rowFromKey(p);
             const QDateTime t = (r >= 0)
                                     ? dm->index(r, G::CreatedColumn).data().toDateTime()
                                     : QDateTime();
@@ -291,7 +291,7 @@ void MW::generateFocusStack(const QStringList paths,
         for (const QString &p : group) {
             if (fs->metaSnapshot.contains(p)) continue;
             QFileInfo fileInfo(p);
-            int row = dm->proxyRowFromPath(p);
+            int row = dm->proxyRowFromKey(p);
             metadata->loadImageMetadata(fileInfo, row, dm->instance,
                                         true, true, false, true, srcFun);
             fs->metaSnapshot.insert(p, metadata->m);
@@ -335,7 +335,7 @@ void MW::generateFocusStack(const QStringList paths,
             if (!develop) continue;
             for (const QString &p : group) {
                 fs->developPaths.insert(p);
-                if (dm->proxyRowFromPath(p) >= 0) {
+                if (dm->proxyRowFromKey(p) >= 0) {
                     degreesSnap.insert(p, developOrientationDegrees(WorkingImage(), p));
                 }
                 else {

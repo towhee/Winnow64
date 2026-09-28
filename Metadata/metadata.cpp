@@ -2,12 +2,15 @@
 #include <QDebug>
 #include <QCryptographicHash>
 #include <QStorageInfo>
+#include <QMutexLocker>
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
 #include "Metadata/keywordpaths.h"   // keywordFold, for writeXMP's change detection
 #include "Cache/devpreviewcache.h"
 #include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
+#include "Metadata/versions.h"
 #include "Metadata/xmpembed.h"
 #include "ImageFormats/Video/mov.h"
 
@@ -559,7 +562,9 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
     Runs on a pool thread (QtConcurrent from MW::setRotation).
 */
     if (G::isLogger) G::log("Metadata::writeOrientation");
+    if (FileOps::refuseVersionKey(fPath, "Metadata::writeOrientation")) return;
     if (isPreviewCachePath(fPath, "Metadata::writeOrientation")) return;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
     const QString src = "Metadata::writeOrientation";
     const QString ext = QFileInfo(fPath).suffix().toLower();
     const bool patchable = ext == "jpg" || ext == "jpeg" || ext == "tif" || ext == "tiff"
@@ -692,7 +697,30 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     user a stale image, which is worse than showing the camera thumbnail.
 */
     if (G::isLogger) G::log("Metadata::writeDevelopSidecar");
+    /*  A VERSION's recipe lives in its record in winnow:Versions, not in winnow:Develop
+        (the master's). Same contract: recipe, preview and key in one atomic write, and
+        no preview without its recipe. A version deleted meanwhile is NOT recreated. */
+    if (VersionKey::isVersion(fPath)) {
+        const QString src = VersionKey::sourceOf(fPath);
+        const int id = VersionKey::idOf(fPath);
+        const QString preview = blob.isEmpty() ? QString() : previewB64;
+        const QString key = preview.isEmpty() ? QString() : devPreviewKey(blob);
+        bool found = false;
+        Versions::update(src, [&](VersionSet &set) {
+            ImageVersion *v = set.find(id);
+            if (!v) return;
+            found = true;
+            v->develop = blob;
+            v->preview = preview.toLatin1();
+            v->previewKey = key;
+        });
+        if (!found)
+            G::issue("Warning", "Version no longer exists; its edits were not saved.",
+                     "Metadata::writeDevelopSidecar", -1, fPath);
+        return;
+    }
     if (isPreviewCachePath(fPath, "Metadata::writeDevelopSidecar")) return;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
 
     QFileInfo info(fPath);
     QString sidecarPath = FileOps::sidecarPath(fPath);
@@ -762,6 +790,9 @@ QString Metadata::readDevelopSidecar(QString fPath)
     attribute, or "" if there is no sidecar / no develop data.
 */
     if (G::isLogger) G::log("Metadata::readDevelopSidecar");
+    // a version's recipe is its record in winnow:Versions (Metadata/versions.h)
+    if (VersionKey::isVersion(fPath))
+        return Versions::readRecipe(VersionKey::sourceOf(fPath), VersionKey::idOf(fPath));
 
     const QString sidecarPath = FileOps::existingSidecar(fPath);
     if (sidecarPath.isEmpty()) return "";
@@ -787,6 +818,14 @@ QByteArray Metadata::readDevThumb(QString fPath)
     that a sidecar exists at all (G::SidecarColumn) rather than paying an open per image.
 */
     if (G::isLogger) G::log("Metadata::readDevThumb");
+    // a version's preview is in its record, checked against its own recipe
+    if (VersionKey::isVersion(fPath)) {
+        const ImageVersion v = Versions::readVersion(VersionKey::sourceOf(fPath),
+                                                     VersionKey::idOf(fPath));
+        if (v.develop.isEmpty() || v.preview.isEmpty()) return QByteArray();
+        if (v.previewKey != devPreviewKey(v.develop)) return QByteArray();
+        return QByteArray::fromBase64(v.preview);
+    }
 
     const QString sidecarPath = FileOps::existingSidecar(fPath);
     if (sidecarPath.isEmpty()) return QByteArray();
@@ -842,7 +881,9 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
     last keyword comes off an image.
 */
     if (G::isLogger) G::log("Metadata::writeKeywordsToSidecar", fPath);
+    if (FileOps::refuseVersionKey(fPath, "Metadata::writeKeywordsToSidecar")) return false;
     if (isPreviewCachePath(fPath, "Metadata::writeKeywordsToSidecar")) return false;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
 
     // into the file when permitted -- see writeXMP
     if (G::modifySourceFiles && XmpEmbed::canEmbed(fPath)) {
@@ -999,7 +1040,9 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 */
     QString srcFun = "Metadata::writeXMP";
     if (G::isLogger) G::log(srcFun);
+    if (FileOps::refuseVersionKey(fPath, srcFun)) return false;
     if (isPreviewCachePath(fPath, srcFun)) return false;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
     bool isDebug = false;
 
     // is xmp supported for this file
@@ -1401,6 +1444,7 @@ bool Metadata::parseSidecar()
        develop badge leaks onto this one. */
     m.developEdited = false;
     m.devPreviewKey.clear();
+    m.versions.clear();
 
     QString sidecarPath = FileOps::existingSidecar(QFileInfo(p.file).absoluteFilePath());
     QFile sidecarFile(sidecarPath);
@@ -1438,6 +1482,14 @@ bool Metadata::parseSidecar()
            this image should look like" rather than "what was last rendered". A devPreview
            whose key does not match simply misses. */
         if (m.developEdited) m.devPreviewKey = devPreviewKey(blob);
+
+        /* The versions, from the same parsed document. A corrupt set reads as none
+           here; Versions::update refuses to overwrite it, so nothing is lost. */
+        const QString vb64 = xmp.getItem("versions");
+        if (!vb64.isEmpty()) {
+            const VersionSet set = VersionSet::fromBase64(vb64, VersionSet::Detail::Recipe);
+            m.versions = Versions::summaries(set, &Metadata::devPreviewKey);
+        }
     }
 
     // report
@@ -1572,6 +1624,7 @@ void Metadata::clearMetadata()
     m.gpsCoord = "";
     m.keywords.clear();
     m.keywordPaths.clear();
+    m.versions.clear();
     m.title = "";
     m.lens = "";
     m.creator = "";
@@ -1901,6 +1954,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int row, int instanc
         // qDebug() << "Metadata::loadImageMetadata null file" << fPath;
         return false;
     }
+
+    if (FileOps::refuseVersionKey(fPath, "Metadata::loadImageMetadata")) return false;
 
     clearMetadata();
     p.instance = instance;

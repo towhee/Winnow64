@@ -529,11 +529,11 @@ void MW::resortImageCache()
     // if (G::isLogger)
         G::log("MW::resortImageCache");
     if (!dm->sf->rowCount()) return;
-    QString currentFilePath = dm->currentDmIdx.data(G::PathRole).toString();
-    emit imageCacheFilterChange(currentFilePath, "MW::resortImageCache");
+    QString currentKey = dm->currentDmIdx.data(G::KeyRole).toString();
+    emit imageCacheFilterChange(currentKey, "MW::resortImageCache");
     // change to ImageCache
-    emit setImageCachePosition(dm->currentFilePath, "MW::resortImageCache");
-//    emit setImageCachePosition(dm->currentFilePath);
+    emit setImageCachePosition(dm->currentKey, "MW::resortImageCache");
+//    emit setImageCachePosition(dm->currentKey);
 }
 
 void MW::enableStatusBarBtns()

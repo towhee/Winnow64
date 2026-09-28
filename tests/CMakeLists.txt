@@ -79,6 +79,9 @@ endfunction()
 
 winnow_add_unit_test(tst_byteops   unit/tst_byteops.cpp)
 winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
+# tst_versionkey tests Utilities/versionkey.h (header-only): the row key of a version
+# (virtual copy), its source path, and its sort position after the master.
+winnow_add_unit_test(tst_versionkey unit/tst_versionkey.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
 # tst_geo tests Utilities/geo.* (the Map module's pure math: no network, no widgets).
 winnow_add_unit_test(tst_geo unit/tst_geo.cpp ${CMAKE_SOURCE_DIR}/Utilities/geo.cpp)
@@ -175,7 +178,10 @@ winnow_add_unit_test(tst_devpreviewpolicy unit/tst_devpreviewpolicy.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/volumeinfo.cpp)
 # tst_fileops tests Utilities/fileops.cpp, the choke point every image file operation goes
 # through (already in the shared closure above).
-winnow_add_unit_test(tst_fileops unit/tst_fileops.cpp)
+winnow_add_unit_test(tst_fileops unit/tst_fileops.cpp
+    # versions ride in the sidecar; the test proves they travel with it
+    ${CMAKE_SOURCE_DIR}/Metadata/versions.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
 # tst_whitebalance compiles Develop/whitebalance.cpp (depends only on workingimage.h).
 winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
     ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
@@ -432,6 +438,12 @@ winnow_add_unit_test(tst_lrkeywords unit/tst_lrkeywords.cpp)
 # byte-identical makes every unrelated edit rewrite the user's keyword block.
 winnow_add_unit_test(tst_keywordwrite unit/tst_keywordwrite.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
+# tst_versions pins the storage contract of versions (virtual copies) in
+# Metadata/versions.cpp: the winnow:Versions round trip, ids never reused, and a
+# read-modify-write that leaves the master's recipe, rating and keywords untouched.
+winnow_add_unit_test(tst_versions unit/tst_versions.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/versions.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
 
 # tst_keywordpaths pins the path algebra in Metadata/keywordpaths.h -- leaf
 # consumption, prefix expansion and the descendant test. It is header-only and shared by
@@ -546,11 +558,13 @@ if(TARGET Winnow)
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
     )
     set_tests_properties(model_mutation PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MUTATION=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=20000"
+        # 120 s: the mutation steps start at half of this and must finish before the
+        # generic self-test's own timer fires at the whole of it (MW::runSelfTest).
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MUTATION=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=120000"
         PASS_REGULAR_EXPRESSION "SELFTEST: MUTATION PASS"
         FAIL_REGULAR_EXPRESSION "MUTATION FAIL|MODELINTEGRITY|ROWLOSS"
         LABELS "smoke"
-        TIMEOUT 180
+        TIMEOUT 240
     )
 
     # -------------------------------------------------------------------------

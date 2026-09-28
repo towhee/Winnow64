@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/versionkey.h"
 #include "Utilities/fileops.h"
 #include "Dialogs/keyworddropdlg.h"
 #include "Dialogs/keywordmergedlg.h"
@@ -244,9 +245,18 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         reason, same fix, as MW::setRating. */
     QList<int> rows;
     rows.reserve(selection.size());
+    QSet<int> seenRows;
     for (const QModelIndex &sfIdx : selection) {
-        const int dmRow = dm->modelRowFromProxyRow(sfIdx.row());
-        if (dmRow >= 0) rows.append(dmRow);
+        int dmRow = dm->modelRowFromProxyRow(sfIdx.row());
+        /*  Keywords are the FILE's, shared by a master and its versions: a version row's
+            edit is made on its master's row (once, however many of the group are
+            selected) and copied to the group below (DataModel::syncSharedToVersions). */
+        const QString k = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
+        if (VersionKey::isVersion(k)) dmRow = dm->rowFromKey(VersionKey::sourceOf(k));
+        if (dmRow >= 0 && !seenRows.contains(dmRow)) {
+            seenRows.insert(dmRow);
+            rows.append(dmRow);
+        }
     }
     if (rows.isEmpty()) return;
 
@@ -278,7 +288,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     for (int i = 0; i < rows.size(); ++i) {
         const int dmRow = rows.at(i);
         const QString fPath =
-            dm->index(dmRow, G::PathColumn).data(G::PathRole).toString();
+            dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
         if (fPath.isEmpty()) continue;
 
         /*  What the image carries now, as PATHS: the literal dc:subject list and the
@@ -373,7 +383,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
             const int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
             if (rowDup >= 0) {
                 const QString dupPath =
-                    dm->index(rowDup, G::PathColumn).data(G::PathRole).toString();
+                    dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
                 if (!dupPath.isEmpty()) {
                     dm->imMetadata(dupPath, true);
                     metadata->setKeywords(subject, hierarchical);
@@ -396,6 +406,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         stopwatch.restart();
         updateCatalogForRow(dmRow);
         writePhases.writeCatalog += stopwatch.nsecsElapsed();
+        dm->syncSharedToVersions(fPath);            // the group shows the file's keywords
 
         /*  THE BAR IS ACTUALLY DRAWN NOW. setProgress only writes the value, and nothing
             in this loop turns the event loop, so on a long rewrite it sat at zero for the
@@ -709,7 +720,7 @@ void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
     const QStringList expanded =
         keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
 
-    const int dmRow = dm ? dm->rowFromPath(r.path) : -1;
+    const int dmRow = dm ? dm->rowFromKey(r.path) : -1;
     if (dmRow >= 0) {
         const QString src = "MW::publishKeywordWrite";
         emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src, Qt::EditRole);
@@ -718,6 +729,7 @@ void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
         emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
                       Qt::EditRole);
         updateCatalogForRow(dmRow);
+        dm->syncSharedToVersions(r.path);       // and the image's versions, if any
         return;
     }
 
@@ -1268,7 +1280,7 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     QList<int> rows;
     QList<QStringList> haveByRow;
     for (const QString &p : imagePaths) {
-        const int dmRow = dm->rowFromPath(p);
+        const int dmRow = dm->rowFromKey(p);
         if (dmRow < 0) continue;
         rows << dmRow;
         haveByRow << keywordEffectivePaths(
@@ -1715,7 +1727,7 @@ void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imag
 
     QItemSelection toSelect;
     for (const QString &p : imagePaths) {
-        const int dmRow = dm->rowFromPath(p);
+        const int dmRow = dm->rowFromKey(p);
         if (dmRow < 0) continue;                    // dropped from outside this folder
         const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
         if (sfIdx.isValid()) toSelect.select(sfIdx, sfIdx);
