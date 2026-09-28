@@ -638,6 +638,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
 
         writeKeywordsLocked(db, id, r);
         writeFtsLocked(db, id, r);
+        writeVersionsLocked(db, id, r);
         ++written;
     }
 
@@ -826,6 +827,7 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
                " JOIN image_keyword ik ON ik.keyword_id = k.id"
                " WHERE ik.image_id = ?");
 
+    QHash<QString, qint64> idOf;            // path -> image id, for the versions pass
     for (const CatalogRow &cand : candidates) {
         if (cand.path.isEmpty()) continue;
         q.addBindValue(cachePathKey(cand.path));
@@ -857,6 +859,17 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
         kw.finish();
 
         out.insert(cand.path, r);
+        idOf.insert(cand.path, id);
+    }
+
+    /*  VERSIONS, in one query for the batch: a row served from here never parses its
+        sidecar, so this is the only way its versions reach the model. */
+    if (!idOf.isEmpty()) {
+        const auto versions = readVersionsLocked(db, idOf.values());
+        for (auto it = idOf.cbegin(); it != idOf.cend(); ++it) {
+            const auto v = versions.constFind(it.value());
+            if (v != versions.cend()) out[it.key()].versions = v.value();
+        }
     }
     return out;
 }
@@ -1251,12 +1264,85 @@ QVector<CatalogRow> Catalog::searchRows(const CatalogQuery &cq, int limit, int *
     }
     kw.finish();
 
+    // versions, attached the same way (the table is small -- see readVersionsLocked)
+    {
+        const auto versions = readVersionsLocked(db, byId.keys());
+        for (auto it = versions.cbegin(); it != versions.cend(); ++it) {
+            const auto pos = byId.constFind(it.key());
+            if (pos != byId.constEnd()) out[pos.value()].versions = it.value();
+        }
+    }
+
     if (total) {
         QString csql = "SELECT COUNT(DISTINCT i.id)" + from + whereSql;
         QSqlQuery c(db);
         c.prepare(csql);
         for (const QVariant &b : binds) c.addBindValue(b);
         if (c.exec() && c.next()) *total = c.value(0).toInt();
+    }
+    return out;
+}
+
+void Catalog::writeVersionsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r)
+{
+/*
+    The image's versions, rewritten whole: they change only when the sidecar does, and
+    that is what re-commits the image row. See image_version in cachedb.cpp.
+*/
+    QSqlQuery del(db);
+    del.prepare("DELETE FROM image_version WHERE image_id = ?");
+    del.addBindValue(imageId);
+    del.exec();
+    if (r.versions.isEmpty()) return;
+
+    QSqlQuery ins(db);
+    ins.prepare("INSERT OR REPLACE INTO image_version"
+                " (image_id, vid, name, rating, label, pick, developed, devpreviewkey)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    for (const VersionSummary &v : r.versions) {
+        if (v.id <= 0) continue;
+        ins.addBindValue(imageId);
+        ins.addBindValue(v.id);
+        ins.addBindValue(text(v.name));
+        ins.addBindValue(v.rating);
+        ins.addBindValue(text(v.label));
+        ins.addBindValue(text(v.pick));
+        ins.addBindValue(v.developed ? 1 : 0);
+        ins.addBindValue(text(v.devPreviewKey));
+        if (!ins.exec())
+            G::issueDedup("Warning", "Catalog version write failed: "
+                          + ins.lastError().text(), "Catalog::writeVersionsLocked", -1, r.path);
+        ins.finish();
+    }
+}
+
+QHash<qint64, QList<VersionSummary>> Catalog::readVersionsLocked(QSqlDatabase &db,
+                                                                 const QList<qint64> &ids)
+{
+/*
+    READS THE WHOLE TABLE and keeps the ids asked for. image_version holds only images
+    that HAVE versions -- a handful against a library -- so one scan beats binding a
+    43,000-row scope's ids into an IN list past SQLite's parameter limit.
+*/
+    QHash<qint64, QList<VersionSummary>> out;
+    if (ids.isEmpty()) return out;
+    const QSet<qint64> want(ids.cbegin(), ids.cend());
+    QSqlQuery q(db);
+    if (!q.exec("SELECT image_id, vid, name, rating, label, pick, developed, devpreviewkey"
+                " FROM image_version ORDER BY image_id, vid"))
+        return out;
+    while (q.next()) {
+        const qint64 id = q.value(0).toLongLong();
+        if (!want.contains(id)) continue;
+        VersionSummary v;
+        v.id = q.value(1).toInt();
+        v.name = q.value(2).toString();
+        v.rating = q.value(3).toInt();
+        v.label = q.value(4).toString();
+        v.pick = q.value(5).toString();
+        v.developed = q.value(6).toBool();
+        v.devPreviewKey = q.value(7).toString();
+        out[id] << v;
     }
     return out;
 }

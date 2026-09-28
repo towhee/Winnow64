@@ -176,6 +176,12 @@ public:
     /* 12-char hash identifying a develop blob, stamped beside the preview so staleness is
        detectable. One definition, used by both the writer and every reader. */
     static QString devPreviewKey(const QString &blob);
+    /*  The develop geometry's effect on the image size, as output/source per axis, for a
+        recipe blob and the file's dimensions and EXIF orientation. 1,1 for an empty blob,
+        an identity geometry, or one with Transform Preview off (the render bypasses it).
+        See ImageMetadata::cropFx. */
+    static void developCropFactors(const QString &blob, int width, int height,
+                                   int orientation, float &fx, float &fy);
     /* devPreview key for a raw with no recipe (the default render); hashes the renderer,
        not the recipe. See the .cpp. */
     static QString defaultRenderKey();

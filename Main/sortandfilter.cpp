@@ -41,6 +41,89 @@ void MW::filterDockTabMousePress()
 //    }
 }
 
+void MW::filterOnColumn()
+{
+/*
+    "Filter on..." -- offer every datamodel column whose value is text or a number and
+    that is not already a category, and add the chosen one to the bottom of the Filters
+    panel for the rest of the session. See Filters::addSessionCategory.
+
+    EVERY COLUMN, INCLUDING THE DIAGNOSTIC ONES. Ordinary columns are listed first, then
+    the geek columns (the ones the table hides unless asked), marked "(diagnostic)". A
+    column RowStore does not hold is read through DataModel::data by the snapshot (see
+    BuildFilters::makeSnapshot), so it is offered too.
+
+    WHAT IS LEFT OUT, and only this: column 0 (the icon), LIST columns (keywords, folder
+    paths -- a row carries several values, which a one-value-per-row category cannot
+    count; the Keywords and Folders categories are built for them), the ICC profile
+    bytes, and columns that already have a category. A header name that collides with a
+    category's (the search text column is also called "Search") gets " column"
+    appended, because save()/restore() key on the name.
+
+    A COLUMN WITH A VALUE PER IMAGE (file name, size, created) is allowed, but it asks
+    first: its category would hold one item per image, and building thousands of tree
+    items takes a while and filters little.
+*/
+    if (G::isLogger) G::log("MW::filterOnColumn");
+
+    static const QSet<int> kNotOffered {
+        G::PathColumn, G::KeywordsColumn, G::KeywordPathsColumn, G::KeywordsAllColumn,
+        G::FolderPathsAllColumn, G::ICCBufColumn
+    };
+
+    const QList<int> taken = filters->categoryColumns();
+    const QStringList takenNames = filters->categoryNames();
+    QMap<QString, int> ordinary, diagnostic;    // label -> column; QMap sorts the labels
+    for (int c = 0; c < G::TotalColumns; ++c) {
+        if (kNotOffered.contains(c) || taken.contains(c)) continue;
+        QString name = dm->headerData(c, Qt::Horizontal, Qt::DisplayRole)
+                           .toString().trimmed();
+        if (name.isEmpty()) continue;
+        if (takenNames.contains(name, Qt::CaseInsensitive)) name += " column";
+        if (dm->headerData(c, Qt::Horizontal, G::GeekRole).toBool())
+            diagnostic.insert(name + " (diagnostic)", c);
+        else
+            ordinary.insert(name, c);
+    }
+    const QStringList labels = ordinary.keys() + diagnostic.keys();
+    if (labels.isEmpty()) {
+        G::popup->showPopup("Every column that can be filtered on already has a category.");
+        return;
+    }
+
+    bool ok = false;
+    const QString label = QInputDialog::getItem(
+        this, "Filter on",
+        "Add a filter category for this column.\n"
+        "It stays in the Filters panel until Winnow quits.",
+        labels, 0, false, &ok);
+    if (!ok || label.isEmpty()) return;
+    const int column = ordinary.contains(label) ? ordinary.value(label)
+                                                : diagnostic.value(label);
+    QString name = label;
+    name.remove(" (diagnostic)");
+
+    // how many items the category would hold
+    const int rows = dm->rowCount();
+    QSet<QString> distinct;
+    for (int row = 0; row < rows; ++row)
+        distinct.insert(dm->index(row, column).data().toString().trimmed());
+    if (distinct.size() > 1000) {
+        const QString msg = QString("%1 has %2 different values among %3 images, so its "
+                                    "category would list about one item per image and "
+                                    "may take a while to build.\n\nAdd it anyway?")
+                                .arg(name, QLocale().toString(distinct.size()),
+                                     QLocale().toString(rows));
+        if (QMessageBox::question(this, "Filter on", msg) != QMessageBox::Yes) return;
+    }
+
+    QTreeWidgetItem *cat = filters->addSessionCategory(column, name);
+    // fill it now if the panel is built; otherwise the next build fills it with the rest
+    buildFilters->updateSessionCategory(cat);
+    cat->setExpanded(true);
+    filters->scrollToItem(cat, QAbstractItemView::PositionAtTop);
+}
+
 void MW::updateAllFilters()
 {
     if (G::isLogger) G::log("MW::updateAllFilters");

@@ -255,6 +255,15 @@ Q_NAMESPACE
            FolderPathsAllColumn. Text rather than bool so the filter item's label and
            the value it matches are the same string. */
         HasGPSColumn,
+        /* The image's size and aspect AFTER its develop geometry (crop, straighten,
+           perspective) -- what it looks like, where Width/Height/Dimensions/AspectRatio
+           describe the FILE, and are read as the file's geometry by the zoom frame and
+           the icon black-border code. A version has its own. Equal to the file's when
+           there is no crop; BLANK when the image is developed but its recipe has not
+           been read (a row from the catalog index). See DataModel::setCroppedGeometry.
+           Appended for the same reason as DevelopColumn. */
+        CroppedDimensionsColumn,
+        CroppedAspectRatioColumn,
         TotalColumns    // insert additional columns before this
     };
 

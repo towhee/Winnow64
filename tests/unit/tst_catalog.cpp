@@ -71,6 +71,7 @@ private slots:
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
     void existingKeywordLinksToItsOwnRow();
+    void versionsRoundTripThroughTheIndex();
     void keywordAuditReportsDriftWhenTheLinksAreWrong();
     void excludeKeywordSeparatesTwoPlaces();
     void textSearchHonoursOrAndNot();
@@ -231,8 +232,10 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         already existed was linked to the previous insert's rowid; version 16 added NO
         table either -- a data conversion: image.captured became the camera's wall clock
         encoded as UTC (Catalog::wallClockSecs), so the Library's Year/Month/Day match a
-        folder's on any Mac in any timezone. */
-    QCOMPARE(CacheDb::schemaVersion(), 16);
+        folder's on any Mac in any timezone; version 17 added image_version, the
+        versions (virtual copies) an image's sidecar lists, because a row served from
+        the index never parses the sidecar that holds them. */
+    QCOMPARE(CacheDb::schemaVersion(), 17);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -241,7 +244,7 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
     QVERIFY(db.isOpen());
     const auto tables = db.tables();
     for (const char *t : {"devpreview", "image", "keyword", "image_keyword",
-                          "keyword_context", "image_fts", "thumb"})
+                          "keyword_context", "image_fts", "thumb", "image_version"})
         QVERIFY2(tables.contains(t), t);
 }
 
@@ -2690,6 +2693,69 @@ void tst_catalog::storageUsageMeasuresTheIndex()
     QVERIFY(u.catalogBytes <= u.fileBytes);
     QVERIFY(!u.dir.isEmpty());
     qInfo("dbstat available: %s", u.exact ? "yes" : "no");
+}
+
+void tst_catalog::versionsRoundTripThroughTheIndex()
+{
+/*
+    Schema 17. A row served from the index never parses its sidecar, so the versions
+    (virtual copies) the sidecar lists must come back from the index -- through BOTH
+    loaders: fetchFresh (a folder load's fresh rows) and searchRows (a catalog scope).
+    A re-commit after the sidecar changed replaces them whole, and deleting the image
+    takes them with it (ON DELETE CASCADE).
+*/
+    Catalog &cat = Catalog::instance();
+    CatalogRow a = rowFor("versions.nef", {"Heron"});
+    a.sidecarMtime = 1600000000;
+    VersionSummary v1;
+    v1.id = 1; v1.name = "B&W"; v1.rating = 4; v1.label = "Red"; v1.pick = "Picked";
+    v1.developed = true; v1.devPreviewKey = "abc123";
+    VersionSummary v3;
+    v3.id = 3;
+    a.versions = {v1, v3};
+    QCOMPARE(cat.commit({a}), 1);
+
+    auto check = [&](const QList<VersionSummary> &got, const char *where) {
+        QVERIFY2(got.size() == 2, where);
+        QCOMPARE(got.at(0).id, 1);
+        QCOMPARE(got.at(0).name, QString("B&W"));
+        QCOMPARE(got.at(0).rating, 4);
+        QCOMPARE(got.at(0).label, QString("Red"));
+        QCOMPARE(got.at(0).pick, QString("Picked"));
+        QVERIFY(got.at(0).developed);
+        QCOMPARE(got.at(0).devPreviewKey, QString("abc123"));
+        QCOMPARE(got.at(1).id, 3);
+        QVERIFY(!got.at(1).developed);
+    };
+    const QHash<QString, CatalogRow> fresh = cat.fetchFresh({a});
+    QVERIFY(fresh.contains(a.path));
+    check(fresh.value(a.path).versions, "fetchFresh");
+
+    const QVector<CatalogRow> rows = cat.searchRows(CatalogQuery(), 0, nullptr);
+    bool found = false;
+    for (const CatalogRow &r : rows) {
+        if (r.path != a.path) continue;
+        found = true;
+        check(r.versions, "searchRows");
+    }
+    QVERIFY(found);
+
+    // the sidecar changed: one version deleted -- replaced whole, not merged
+    a.sidecarMtime = 1600000100;
+    a.versions = {v3};
+    QCOMPARE(cat.commit({a}), 1);
+    const auto after = cat.fetchFresh({a}).value(a.path).versions;
+    QCOMPARE(after.size(), 1);
+    QCOMPARE(after.at(0).id, 3);
+
+    // an image without versions has none, and deleting an image takes its versions
+    const CatalogRow plain = rowFor("plain.nef", {});
+    cat.commit({plain});
+    QVERIFY(cat.fetchFresh({plain}).value(plain.path).versions.isEmpty());
+    cat.onDeleted(a.path);
+    QSqlQuery q(CacheDb::instance().db());
+    QVERIFY(q.exec("SELECT COUNT(*) FROM image_version") && q.next());
+    QCOMPARE(q.value(0).toInt(), 0);
 }
 
 QTEST_MAIN(tst_catalog)

@@ -12,6 +12,7 @@
 #include <QStringList>
 #include <QVariant>
 #include <QVector>
+#include "Metadata/versions.h"      // VersionSummary (QtCore only)
 
 /*
     Winnow's catalog: what the app has learned about images it has seen, kept so that a
@@ -181,6 +182,10 @@ struct CatalogRow
        what a write-back must emit and what the full-text row is tokenised from; the
        INDEXED form is the prefix-expanded list above. */
     QStringList keywordPaths;
+    /*  schema 17: the image's VERSIONS (virtual copies) as its sidecar lists them --
+        what a row served from the index needs to make each version row (see
+        image_version in cachedb.cpp). Empty for an image without versions. */
+    QList<VersionSummary> versions;
 };
 
 /*
@@ -629,6 +634,10 @@ private:
     /* Write one row's keyword links, replacing whatever it had. */
     void writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r);
     void writeFtsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r);
+    void writeVersionsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow &r);
+    // image id -> its versions, for the ids given (one query)
+    QHash<qint64, QList<VersionSummary>> readVersionsLocked(QSqlDatabase &db,
+                                                            const QList<qint64> &ids);
 
     mutable QMutex mutex;
     /* pathfold -> keyword.id, keyed on what the unique index is keyed on so the memo and

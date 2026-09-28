@@ -210,6 +210,23 @@ void MW::selfTestModelMutation(const QString &folder)
             fail("versions appear", "v1 is visible in a collapsed group");
     }
 
+    /*  V1b The version rows went in MID-MODEL, after the load. Clicking an image past
+            them must still reach the ImageCache and the loupe: a mid-model insert once
+            left the worker-side row flags shifted by one and discarded decodes counted as
+            attempts, and the loupe stopped following the selection. */
+    {
+        const QString after = path("sample02.tif");
+        sel->select(dm->proxyIndexFromKey(after), Qt::NoModifier, "selftest");
+        settle(3000);
+        if (dm->currentKey != after) fail("click after versions", "selection did not move");
+        if (!icd->contains(after))
+            fail("click after versions", "the ImageCache did not decode the clicked image\n"
+                 + imageCache->reportHealthChecks());
+        if (imageView->currentImagePath != after)
+            fail("click after versions", "the loupe is showing " + imageView->currentImagePath);
+        fprintf(stderr, "SELFTEST: mutation [click after versions] ok\n");
+    }
+
     // V2  expanding shows the group; the versions follow the master in the proxy
     setVersionsExpanded(master, true);
     check("versions expand", {v1n, v2n}, {}, {});
@@ -277,6 +294,9 @@ void MW::selfTestModelMutation(const QString &folder)
     if (!dm->index(dm->rowFromKey(m2), G::DevelopColumn).data().toBool()
         || dm->index(dm->rowFromKey(m2v1), G::DevelopColumn).data().toBool())
         fail("set as master", "the develop badges did not swap");
+    settle(200);
+    if (dm->currentKey != m2)
+        fail("set as master", "the selection did not follow the edit to the master");
 
     /*  V9  A version's rating, label and pick are its OWN: set through the model (the
             path every writer takes -- keys, menus, undo, recovery) they land in its

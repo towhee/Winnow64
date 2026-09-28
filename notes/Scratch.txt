@@ -5783,3 +5783,142 @@ Add Lightroom-style virtual copies: a version is its own Develop recipe
    - A rating filter shows only the versions that match.
    - Catalog scope lists version rows.
    - Set as Master swaps the two.
+
+
+
+==========================================================================================
+Custom filter category
+==========================================================================================
+
+Session filter categories ("Filter on...")
+
+ Context
+
+ The user wants to filter on datamodel columns that have no Filters category, without
+ making each one permanent. A context-menu item Filter on... picks any eligible
+ column; a category for it is built from the data and appended at the bottom of the tree,
+ and lives until Winnow quits. First test case: Aspect Ratio (G::AspectRatioColumn,
+ stored as an interned string such as "1.50"/"0.67" — see datamodel.cpp:3891).
+
+ Feasibility — yes, moderate size
+
+ The pipeline is mostly generic already:
+ - Predicate is generic. SortFilter::compileFilters (datamodel.cpp:7333) walks
+   the tree and reads each header's G::ColumnRole, so a new top-level item with a
+   column is compiled with no special case. FilterPredicate::readsColumn /
+   editNeedsRefilter also work unchanged.
+ - Counting is NOT generic. BuildFilters counts from a fixed-slot snapshot
+   (FilterCat::Slot enum, FilterSnapshotRow::v[SlotCount], the col[] table in
+   makeSnapshot, sinks()). This is where most of the work is.
+ - Several Filters methods list the categories by hand (createDynamicFilters,
+   setCategoryBackground, removeChildrenDynamicFilters,
+   collapseAllFiltersExceptSearch, loadCatalogCategories). Session categories need
+   a loop in each of these.
+
+ Design
+
+ 1. Filters (Datamodel/filters.h/.cpp)
+
+ - New member QList<QTreeWidgetItem*> sessionCats and a new role SessionRole in
+   ItemRole.
+ - addSessionCategory(int column): a new top-level item appended last. Its name comes
+   from dm header text (headerData(col, Horizontal), e.g. "Aspect Ratio"). Set it up
+   with createFilter-equivalent roles (CategoryNameRole, ColumnRole, and
+   SessionRole = true), then apply the background and ask for a rebuild
+   (BuildFilters::build).
+ - removeSessionCategory(item): clears its checks, which fires filterChange, then
+   deletes the item. The action is disabled with a reason while buildingFilters,
+   because FilterOps hold raw QTreeWidgetItem*. Deleting the item mid-build would
+   leave a dangling pointer.
+ - Context menu: add Filter on... in addFilterActions so it appears on every
+   right-click. On a session category header, also add Remove "Aspect Ratio"
+   category.
+ - Column picker (QInputDialog::getItem or a small list dialog). A column is
+   offered only if all of these hold:
+   - it is not geek (G::GeekRole);
+   - it is not already a category (filterCategoryToDmColumn values plus sessionCats);
+   - it is not on a small denylist of per-row-unique or non-data columns: Icon/Path,
+     #, File Name, NS Thumb/Image, Modified, Created, Size, GPS Coord, FocusX/Y and
+     Icon Aspect Ratio.
+ - Add a for (sessionCats) loop to each hand-listed method above. In
+   removeChildrenDynamicFilters, session categories are kept across folder
+   changes; only their children are cleared, then rebuilt.
+ - Catalog scope: loadCatalogCategories hides session categories, because
+   the index cannot answer arbitrary columns. In that scope Filter on... is shown
+   disabled, with the reason "Folders scope only". showAllCategories brings them back.
+ - Persistence: persistableState() skips items under session categories, so
+   nothing refers to them after a restart. save()/restore() (within the session,
+   across folder changes) keep working because they key on CategoryNameRole.
+
+ 2. Snapshot + BuildFilters (filtersnapshot.h, buildfilters.h/.cpp)
+
+ - FilterSnapshotRow gains QVector<QString> extra, one value per session column.
+ - makeSnapshot: append the session columns to cells (Qt::DisplayRole), then fill
+   extra with trimmed strings. Numeric model values are right-justified, the same way
+   ISO and focal length are, so they sort as numbers. Add the session column list to the
+   reuse key next to cachedValuesCombine, so adding a column forces a rebuild instead
+   of reusing a table that lacks it. setWatchedCells already covers the patch path for
+   edits.
+ - countSlot: for slot >= FilterCat::SlotCount, read extra[slot - SlotCount].
+ - sinks(): append {SlotCount + i, sessionCats[i], name}. AddItems, Unfiltered and
+   Filtered counts then flow through the existing ops unchanged.
+
+ 3. Predicate compare (filterpredicate.h, compileFilters)
+
+ Counts are keyed on the column's string form, but the predicate compares QVariants.
+ For Aspect Ratio the column is already a QString, so the two match. For a numeric column
+ (Width, Aperture, MPix...) a string-vs-double QVariant compare is unreliable in Qt 6.
+ Add FilterCategory::compareAsText, set from the header's SessionRole. When it is on,
+ includeHit/excludeHit compare dataValue.toString().trimmed() with the item value
+ (trimmed on both sides so the padding does not matter). Built-in categories are
+ unaffected.
+
+ 4. Docs / tests
+
+ - notes/Documentation.txt: add a "Session filter categories" section plus a ToC sync.
+   Docs/filtershelp.html: add one paragraph.
+ - tests/unit/tst_filterpredicate.cpp: add a compareAsText case (a double column
+   against a string item, plus padding).
+ - tests/unit/tst_filters.cpp: add, rebuild across a folder change, remove, and check
+   that it is hidden in catalog scope, if the fixture allows.
+
+ Explicitly out of scope (v1)
+
+ - Binning or ranges for continuous columns (such as "Aspect 1.4–1.6"). Values are
+   exact.
+ - Persisting session categories across restarts. That is the requirement: they end
+   with the session.
+ - Session categories in Catalog scope.
+
+==========================================================================================
+Keywords Manager
+==========================================================================================
+
+Notes:
+- Keywords in Folders mode? Yes, same as Library mode.
+- How rearrange list (out of view when drag issue)
+  - Auto collapse, expand node when drag hover.  If drag out of panel, show tree pre-drag
+    state.
+- When change keyword parent, does this propogate to all keyworded images?
+- Do not allow keyword creation in Keywords panel, only the keyword list.
+
+Workspace
+- Grid view
+- Keyword list
+- Keywords panel
+- Filters panel
+- Recent keywords panel?
+
+Keyword List
+- add checkbox (assign to selected)
+- right click
+  - New
+    - Child
+    - Sibling
+- Edit (new, move, delete, rename)
+- assign to selected (right click, drag to keywords box)
+- remove from selected
+
+[] Keyword               xxxxx  =>
+
+Filters visible

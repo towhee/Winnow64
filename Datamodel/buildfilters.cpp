@@ -400,6 +400,21 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
     else build();
 }
 
+void BuildFilters::updateSessionCategory(QTreeWidgetItem *sessionCategory)
+{
+    if (G::isLogger) G::log("BuildFilters::updateSessionCategory");
+    /*  Not built yet, or building: the build in hand (or the next one) counts every
+        session category through sinks(), so there is nothing to do here -- and going
+        through updateCategory would abort a build in flight. */
+    if (!filters->filtersBuilt || filters->buildingFilters) return;
+    sessionTarget = sessionCategory;
+    updateCategory(Category::SessionEdit, AfterAction::NoFilterChange, /*runSync*/ true);
+    /*  updateCategory suspended filtering and only a filterChange would lift it; a new
+        category has nothing checked, so there is no filterChange to make. See the same
+        lift in MW::togglePick. */
+    dm->sf->suspend(false, "BuildFilters::updateSessionCategory");
+}
+
 void BuildFilters::done()
 {
     if (G::isLogger || G::isFlowLogger)
@@ -455,9 +470,9 @@ void BuildFilters::reset(bool collapse)
 
     Keywords are NOT here -- a row carries a list of them, so they are counted
     by countKeywords and appended by each caller after this loop. */
-QVector<BuildFilters::Sink> BuildFilters::sinks() const
+QVector<BuildFilters::Sink> BuildFilters::sinks(const FilterSnapshot &snap) const
 {
-    return {
+    QVector<Sink> out {
         {FilterCat::Search,      filters->search,       "search"},
         {FilterCat::Pick,        filters->picks,        "picks"},
         {FilterCat::Rating,      filters->ratings,      "ratings"},
@@ -477,6 +492,29 @@ QVector<BuildFilters::Sink> BuildFilters::sinks() const
         {FilterCat::Availability, filters->availability, "availability"},
         {FilterCat::Compare,     filters->compare,      "compare"},
     };
+    /*  SESSION CATEGORIES ("Filter on...") come from the SNAPSHOT, not from Filters:
+        this runs on the worker, and the GUI thread adds and removes them. */
+    for (int i = 0; i < snap.extraItems.size(); ++i)
+        out.append({FilterCat::SlotCount + i, snap.extraItems.at(i), "filter on"});
+    return out;
+}
+
+/*  A session category's value as the snapshot holds it: trimmed text, and a NUMBER
+    left-padded on its integer part so the category sorts as numbers ("1.25" before
+    "1.5", "9" before "10"). Padding the whole string, as ISO does, would put "1.5"
+    before "1.25". The predicate compares both sides trimmed
+    (FilterCategory::compareAsText), so the padding never affects a match. */
+static QString sessionValueText(const QVariant &value)
+{
+    QString v = value.toString().trimmed();
+    bool isNumber = false;
+    v.toDouble(&isNumber);
+    if (isNumber && !v.startsWith('-')) {
+        const int dot = v.indexOf('.');
+        const int intLen = dot < 0 ? v.size() : dot;
+        if (intLen < 10) v.prepend(QString(10 - intLen, ' '));
+    }
+    return v;
 }
 
 std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
@@ -520,6 +558,33 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
         cells.append({col[slot], Qt::DisplayRole});
     cells.append({G::KeywordsAllColumn, Qt::DisplayRole});     // kKeywords
     cells.append({G::PathColumn, G::DupHideRawRole});          // kHideRaw
+
+    /*  SESSION CATEGORIES ("Filter on..."), after the fixed cells. Captured here, on the
+        GUI thread, with the headers they belong to -- see FilterSnapshot::extraItems. A
+        change to the set changes the watched cells, which RowStore reports as
+        structural, so the value table is rebuilt rather than reused without them.
+
+        A COLUMN ROWSTORE DOES NOT HOLD (the scratch columns -- cache state, decoder
+        status, preview offsets) cannot be read in forEachRow, and RowStore cannot say
+        when it changes. extraCell[i] is -1 for such a column: it is read through
+        DataModel::data AFTER the store pass, and its presence forces a rebuild every
+        time, because a reused table would silently hold stale values. */
+    QVector<int> extraCell;             // index into cells, or -1: read via dm->data
+    QVector<int> offStore;              // the i with extraCell[i] == -1
+    for (QTreeWidgetItem *c : filters->sessionCategories()) {
+        const int column = c->data(0, G::ColumnRole).toInt();
+        snap.extraColumns.append(column);
+        snap.extraItems.append(c);
+        if (RowStore::covers(column, Qt::DisplayRole)) {
+            extraCell.append(cells.size());
+            cells.append({column, Qt::DisplayRole});
+        }
+        else {
+            offStore.append(extraCell.size());
+            extraCell.append(-1);
+        }
+    }
+    const int nExtra = snap.extraColumns.size();
 
     /*  REUSED, PATCHED OR REBUILT. See FilterValues in filtersnapshot.h. A filter change
         moves only inProxy, so the table from the last snapshot is still exact unless
@@ -567,11 +632,19 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
            proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
            skip it or they will not match the proxy baseline. */
         r.hiddenRaw = combine && val[kHideRaw].toBool();
+
+        /*  Session values (see sessionValueText). Off-store columns are filled after
+            the store pass. */
+        r.extra.resize(nExtra);
+        for (int i = 0; i < nExtra; ++i)
+            if (extraCell.at(i) >= 0) r.extra[i] = sessionValueText(val[extraCell.at(i)]);
     };
 
     constexpr int kChunk = FilterValues::kChunk;
     const bool reusable = cachedValues && !changes.structural
-                          && rows == cachedValues->rows && combine == cachedValuesCombine;
+                          && rows == cachedValues->rows && combine == cachedValuesCombine
+                          && snap.extraColumns == cachedExtraColumns
+                          && offStore.isEmpty();
     if (reusable && changes.rows.isEmpty()) {
         snap.values = cachedValues;
     }
@@ -607,10 +680,18 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
             if (row >= rows) return;
             fill((*build[row / kChunk])[row % kChunk], val);
         });
+        // outside forEachRow: its callback must not call back into the store
+        for (int row = 0; row < rows && !offStore.isEmpty(); ++row) {
+            FilterSnapshotRow &r = (*build[row / kChunk])[row % kChunk];
+            for (int i : std::as_const(offStore))
+                r.extra[i] = sessionValueText(
+                    dm->index(row, snap.extraColumns.at(i)).data(Qt::DisplayRole));
+        }
         values->chunks.reserve(nChunks);
         for (const auto &c : build) values->chunks.append(c);
         cachedValues = values;
         cachedValuesCombine = combine;
+        cachedExtraColumns = snap.extraColumns;
         snap.values = values;
     }
 
@@ -651,7 +732,9 @@ QMap<QString,int> BuildFilters::countSlot(const FilterSnapshot &snap, int slot,
         if (abort) return map;
         const FilterSnapshotRow &r = snap.row(i);
         if (filtered ? !snap.admitted(i) : r.hiddenRaw) continue;
-        map[r.v[slot]]++;
+        // past the fixed slots: a session category's value (FilterSnapshotRow::extra)
+        if (slot >= FilterCat::SlotCount) map[r.extra.value(slot - FilterCat::SlotCount)]++;
+        else map[r.v[slot]]++;
     }
     return map;
 }
@@ -694,7 +777,7 @@ void BuildFilters::updateUnfilteredCounts(const FilterSnapshot &snap, FilterOps 
 */
     if (debugBuildFilters) qDebug() << "BuildFilters::updateUnfilteredCounts";
 
-    for (const Sink &s : sinks()) {
+    for (const Sink &s : sinks(snap)) {
         if (abort) return;
         /* Search is NOT counted here. It goes through updateSearchCategoryCount
            in updateUnfilteredSearchCount(), which run() calls alongside this --
@@ -722,7 +805,7 @@ void BuildFilters::updateFilteredCounts(const FilterSnapshot &snap, FilterOps &o
     ops.append({FilterOp::SearchCount, countSlot(snap, FilterCat::Search, true),
                 nullptr, true, QString()});
 
-    for (const Sink &s : sinks()) {
+    for (const Sink &s : sinks(snap)) {
         if (abort) return;
         if (s.slot == FilterCat::Search) continue;   // handled above
         ops.append({FilterOp::FilteredCount, countSlot(snap, s.slot, true),
@@ -789,6 +872,14 @@ void BuildFilters::updateCategoryItems(const FilterSnapshot &snap, FilterOps &op
     case Category::MissingThumbEdit:
         // no snapshot slot: the MissingThumb category is not built (see sinks())
         return;
+    case Category::SessionEdit: {
+        // the snapshot names its session categories; the target's slot is its index
+        const int i = snap.extraItems.indexOf(sessionTarget);
+        if (i < 0) return;
+        slot = FilterCat::SlotCount + i;
+        cat = sessionTarget;
+        break;
+    }
     }
     if (slot < 0 || cat == nullptr) return;
 
@@ -869,7 +960,7 @@ void BuildFilters::appendUniqueItems(const FilterSnapshot &snap, FilterOps &ops)
 */
     if (debugBuildFilters) qDebug() << "BuildFilters::appendUniqueItems";
 
-    const QVector<Sink> sink = sinks();
+    const QVector<Sink> sink = sinks(snap);
     // 100% spread over the categories plus keywords
     const double progressInc = 100.0 / (sink.size() + 1);
 

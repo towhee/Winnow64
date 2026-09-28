@@ -6,9 +6,12 @@ WHAT'S NEW
 - Original/Developed previews
 - Catalog
 - Keywords
+- Map
 
 BUGS / TO
+- Change Develop > Edits to Scope
 - Add Network drives to Folders
+- Fine-tune keywords managing
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
 - Thumbnail tooltip over file name showing borders tooltip.

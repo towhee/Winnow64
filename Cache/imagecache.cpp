@@ -421,6 +421,14 @@ int ImageCache::bumpStateAttempts(const QString &fPath)
     return ++cacheState[fPath].attempts;
 }
 
+void ImageCache::unbumpStateAttempts(const QString &fPath)
+{
+    if (fPath.isEmpty()) return;
+    QMutexLocker lock(&cacheStateMutex);
+    auto it = cacheState.find(fPath);
+    if (it != cacheState.end() && it->attempts > 0) --it->attempts;
+}
+
 void ImageCache::setStateStatus(const QString &fPath, int status, const QString &errMsg)
 {
     if (fPath.isEmpty()) return;
@@ -2996,6 +3004,17 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
         if (G::isIngestProbe) IngestProbe::Instance().NoteDiscardedDecode();
         msg += "Failed: instance clash. ";
         success = false;
+        /*  NOT AN ATTEMPT AT THE IMAGE. The decode was discarded because the model
+            changed under it, not because the file could not be read -- but the
+            dispatch had already counted it. A burst of model changes while the cache
+            was filling (a load that then inserts rows, as versions do) retried every
+            row into maxAttemptsToCacheImage, after which nothing was ever decoded
+            again: the loupe stopped following the selection. Undone here, against the
+            key the decoder actually worked on -- sfRow is from the old instance and
+            may now name a different image. */
+        const QString clashKey = decoders[id]->rowKey;
+        unbumpStateAttempts(clashKey);
+        setStateCaching(clashKey, false, -1);
     }
 
     if (sfRow >= rowCountSf()) {

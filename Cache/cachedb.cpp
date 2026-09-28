@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 16;
+constexpr int kSchemaVersion = 17;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1388,6 +1388,42 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec("UPDATE image SET captured ="
                     " CAST(strftime('%s', captured, 'unixepoch', 'localtime') AS INTEGER)"
                     " WHERE captured IS NOT NULL")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 17) {
+    /*
+        VERSIONS (virtual copies): one row per version an image's sidecar lists
+        (winnow:Versions, Metadata/versions.h). ADDITIVE: a new table, nothing existing
+        changes.
+
+        WHY THE INDEX HOLDS THEM. A row served from the index -- a catalog scope, and a
+        folder load's fresh rows (Catalog::fetchFresh) -- never parses its sidecar, so
+        without this its versions would silently not appear. The index holds exactly what
+        a row needs (DataModel::fillVersionRow): id, name, rating, label, pick, developed
+        and the recipe's devPreview key -- never the recipe or the preview bytes, which
+        stay in the sidecar.
+
+        Keyed by the image's id and CASCADED, like image_keyword: deleting or reaping an
+        image takes its versions with it. Rewritten whole with the image row in
+        Catalog::commit, which already re-commits an image whose sidecar changed.
+
+        No backfill. A row indexed before this with versions already in its sidecar would
+        show none until the sidecar next changes -- which, since versions only exist from
+        this schema onward, is a row written by a development build.
+    */
+        if (!q.exec("CREATE TABLE IF NOT EXISTS image_version ("
+                    "  image_id      INTEGER NOT NULL REFERENCES image(id) ON DELETE CASCADE,"
+                    "  vid           INTEGER NOT NULL,"
+                    "  name          TEXT NOT NULL DEFAULT '',"
+                    "  rating        INTEGER NOT NULL DEFAULT 0,"
+                    "  label         TEXT NOT NULL DEFAULT '',"
+                    "  pick          TEXT NOT NULL DEFAULT '',"
+                    "  developed     INTEGER NOT NULL DEFAULT 0,"
+                    "  devpreviewkey TEXT NOT NULL DEFAULT '',"
+                    "  PRIMARY KEY (image_id, vid)) WITHOUT ROWID")) {
             db.rollback();
             return false;
         }

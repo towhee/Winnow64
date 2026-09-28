@@ -167,6 +167,8 @@ struct ImageRow
     qint32 emailId = -1, urlId = -1, shootingInfoId = -1;
     qint32 exposureCompId = -1, durationId = -1, aspectRatioId = -1, rotationId = -1;
     qint32 devPreviewKeyId = -1;
+    // after the develop geometry (G::CroppedDimensionsColumn); interned like Dimensions
+    qint32 croppedDimensionsId = -1, croppedAspectRatioId = -1;
     /*  The "original value" columns -- what the file said before the user edited
         it, so an edit can be reverted and a sidecar written only when it really
         differs. They intern as well as their live counterparts do. */

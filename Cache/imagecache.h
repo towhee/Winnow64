@@ -240,6 +240,7 @@ private:
     void setStateCaching(const QString &fPath, bool on, int decoderId);
     void setStateCached(const QString &fPath, bool on);
     int  bumpStateAttempts(const QString &fPath);
+    void unbumpStateAttempts(const QString &fPath);   // a discarded decode is no attempt
     void setStateStatus(const QString &fPath, int status, const QString &errMsg = QString());
     void clearStateFor(const QString &fPath);
     void clearAllState();

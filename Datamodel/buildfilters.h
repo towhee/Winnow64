@@ -79,8 +79,19 @@ public:
             handler therefore appends its own ops instead of going through countSlot. */
         KeywordEdit,
         MissingThumbEdit,
-        CompareEdit
+        CompareEdit,
+        /*  A session category ("Filter on..."), named by sessionTarget. See
+            updateSessionCategory. */
+        SessionEdit
     } category;
+
+    /*  FILL ONE SESSION CATEGORY that has just been added, without a full rebuild -- a
+        rebuild clears every check in the panel, and the user adding a category is not
+        asking for that. Runs inline (runSync) and lifts the proxy suspension
+        updateCategory takes; nothing in a new category is checked, so no filterChange
+        is needed. When the filters have not been built yet it does nothing: the next
+        build fills every category, this one included. GUI thread. */
+    void updateSessionCategory(QTreeWidgetItem *sessionCategory);
 
     void stop();
     void reset(bool collapse = true);
@@ -168,7 +179,7 @@ private:
         QTreeWidgetItem *item;
         const char *name;
     };
-    QVector<Sink> sinks() const;
+    QVector<Sink> sinks(const FilterSnapshot &snap) const;
     void time(QString msg);
     void setIdle();
     void setBusy();
@@ -192,6 +203,8 @@ private:
         thread only (makeSnapshot is const, hence mutable). See FilterValuesPtr. */
     mutable FilterValuesPtr cachedValues;
     mutable bool cachedValuesCombine = false;
+    mutable QVector<int> cachedExtraColumns;    // session columns cachedValues holds
+    QTreeWidgetItem *sessionTarget = nullptr;   // SessionEdit's category; GUI thread
     FilterOps pendingOps;                   // guarded by mutex; drained by flushOps
 
     bool debugBuildFilters = false;

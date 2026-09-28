@@ -103,6 +103,9 @@ inline void fill(ImageMetadata &m, const CatalogRow &r, const QDateTime &modifie
     m._url = r._url;
     m.developEdited = r.developed;
     m.devPreviewKey = r.devPreviewKey;
+    /*  schema 17: the versions, which a file read gets from parseSidecar. Without them a
+        row served from the index would show none (DataModel::fillVersionRow). */
+    m.versions = r.versions;
     /*  m.keywords is the LITERAL dc:subject list -- what may be written back to
         a file -- and m.keywordPaths is lr:hierarchicalSubject as the file
         spelled it. Both are needed: the paths are part of the row's searchable

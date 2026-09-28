@@ -321,6 +321,7 @@ set(WINNOW_SOURCES
     Main/menusandactions.cpp
     Main/navigate.cpp
     Main/mwversions.cpp
+    Main/selftestnav.cpp
     Main/pick.cpp
     Main/qtlocalpeer.cpp
     # qtlockedfile.cpp is #included by qtlocalpeer.cpp — do not compile standalone

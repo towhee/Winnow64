@@ -29,7 +29,7 @@ ScopeHeader::ScopeHeader(QWidget *parent) : QWidget(parent)
     if (G::isLogger) G::log("ScopeHeader::ScopeHeader");
 
     QVBoxLayout *outer = new QVBoxLayout(this);
-    /* 4 px of dock background ABOVE the bar, so "Edits" is not welded to whatever ends
+    /* 4 px of dock background ABOVE the bar, so "Scope" is not welded to whatever ends
        directly above it. It goes on the layout rather than the bar's own padding:
        paintEvent fills scopeBar->geometry() with the header gradient, so padding the bar
        would grow the gradient instead of leaving a gap. */
@@ -70,7 +70,7 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     /* Vertical padding ALL AT THE BOTTOM (0 / 6, where every other band in the dock uses
        3 / 3). The combo is ~6px taller than a bare caption, so this band is taller than
        the Raw, Mask, Submasks and section bands -- and with the padding split evenly the
-       whole row rides the combo's centreline, sitting the arrow and "Edits" a few pixels
+       whole row rides the combo's centreline, sitting the arrow and "Scope" a few pixels
        lower than every caption above and below them. Hanging the extra height below the
        contents instead puts this arrow and caption the same distance from their band's
        top as Raw's and Basic's are from theirs, which is what the eye lines up on. */
@@ -87,19 +87,12 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
                                   " background: transparent; }");
     connect(barCollapseBtn, &BarBtn::clicked, this, [this]{ toggleEditsCollapsed(); });
 
-    barLabel = new QLabel(tr("Edits"), scopeBar);
+    barLabel = new QLabel(tr("Scope"), scopeBar);
     barLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
     /* The caption toggles too, as a band click does everywhere else in this dock. Only
        the caption: the rest of the bar is combo and buttons with their own jobs. */
     barLabel->setCursor(Qt::PointingHandCursor);
     barLabel->installEventFilter(this);
-
-    /* "Scope:" in the panel's plain text colour (not the header2 caption colour "Edits"
-       uses, and not the combo's yellow): it labels the combo beside it rather than
-       heading the band, so it has to read as neither. It is inert -- no click toggle --
-       because only the caption folds the panel. */
-    scopeLabel = new QLabel(tr("Scope:"), scopeBar);
-    scopeLabel->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
 
     scopeCombo = new QComboBox(scopeBar);
     scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -161,13 +154,11 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     hb->addWidget(barCollapseBtn, 0, vc);
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(barLabel, 0, vc);
-    /* Two characters of clear space between the caption and "Scope:", so the band's own
-       title reads apart from the label belonging to the combo. Measured from barLabel's
-       font rather than hard-coded, so the gap still looks like two spaces when the font
-       size changes with Preferences. */
+    /* Two characters of clear space between the caption and the combo, so the band's own
+       title reads apart from the scope it names. Measured from barLabel's font rather
+       than hard-coded, so the gap still looks like two spaces when the font size changes
+       with Preferences. */
     hb->addSpacing(barLabel->fontMetrics().averageCharWidth() * 2);
-    hb->addWidget(scopeLabel, 0, vc);
-    hb->addSpacing(G::headerBtnGap);
     hb->addWidget(scopeCombo, 1, vc);
     hb->addSpacing(G::headerBtnGap);
     /* One bar-button width of clear space between the combo and the [+] [eye] [:] run, so
@@ -220,7 +211,7 @@ void ScopeHeader::updateEditsCollapseIcon()
 
 bool ScopeHeader::eventFilter(QObject *obj, QEvent *event)
 {
-    /* A click on the "Edits" caption folds the details, like a band click in every other
+    /* A click on the "Scope" caption folds the details, like a band click in every other
        Develop panel. */
     if (obj == barLabel && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *me = static_cast<QMouseEvent*>(event);

@@ -202,17 +202,25 @@ DataModel::DataModel(QObject *parent,
     /*  The row-count changes the proxy reports also size the live per-row array.
         It is grown from the SOURCE row count, not the proxy's -- the array is
         indexed by datamodel row, and a filtered-out row still needs its slot. */
+    /*  SPLICED AT THE ROWS THAT MOVED, not resized position-for-position: an insert or
+        remove in the MIDDLE (a focus stack, a version row, a scattered delete) shifts
+        every later row, and a positional copy left each reading its neighbour's flags --
+        the ImageCache then skipped real images as videos and waited on metadata that had
+        loaded. A reset renumbers everything, so it rebuilds from the row store. */
     connect(this, &QAbstractItemModel::rowsInserted, this,
-            [this]{ resizeRowSync(rowCount()); });
+            [this](const QModelIndex &, int first, int last) {
+                spliceRowSync(first, last - first + 1);
+            });
     /*  Splicing the stores used to happen HERE, off rowsInserted/rowsRemoved.
         It now happens inside DataModel::insertRows/removeRows, which are the
         only way the row count can move at all once the model owns its own
         storage -- so the splice and the count cannot disagree. Only the
         worker-thread mirror is still driven by the signal. */
     connect(this, &QAbstractItemModel::rowsRemoved, this,
-            [this]{ resizeRowSync(rowCount()); });
-    connect(this, &QAbstractItemModel::modelReset, this,
-            [this]{ resizeRowSync(rowCount()); });
+            [this](const QModelIndex &, int first, int last) {
+                spliceRowSync(first, -(last - first + 1));
+            });
+    connect(this, &QAbstractItemModel::modelReset, this, [this]{ rebuildRowSync(); });
 
     resizeRowSync(rowCount());
     rebuildProxySnapshot();
@@ -299,6 +307,8 @@ void DataModel::setModelProperties()
         { G::DimensionsColumn,           "Dimensions",               false },
         { G::AspectRatioColumn,          "Aspect Ratio",             false },
         { G::IconAspectRatioColumn,      "Icon Aspect Ratio",        false },
+        { G::CroppedDimensionsColumn,    "Cropped Dimensions",       false },
+        { G::CroppedAspectRatioColumn,   "Cropped Aspect",           false },
         { G::OrientationColumn,          "Orientation",              false },
         { G::RotationColumn,             "Rot",                      false },
         { G::CopyrightColumn,            "Copyright",                false },
@@ -420,6 +430,42 @@ ProxySnapshotPtr DataModel::proxySnapshot() const
     a worker holding the previous array keeps it alive through its shared_ptr
     while reading values that are still correct for the rows it had.
 */
+void DataModel::spliceRowSync(int at, int count)
+{
+    const int rows = rowCount();
+    auto fresh = std::make_shared<RowSyncArray>(rows);
+    QMutexLocker lock(&mSyncMutex);
+    if (mRowSync) fresh->copySpliced(*mRowSync, at, count);
+    mRowSync = fresh;
+}
+
+void DataModel::rebuildRowSync()
+{
+/*
+    Every flag from the row store, which holds the same columns the setData override
+    mirrors into the array (MetadataStatus, IconLoaded, Video, CacheSize). After a
+    reset -- a compacting removeFiles among them -- row numbers are new, so nothing
+    from the old array can be carried by position.
+*/
+    const int rows = rowCount();
+    auto fresh = std::make_shared<RowSyncArray>(rows);
+    rowStore.forEachRow({{G::MetadataStatusColumn, Qt::EditRole},
+                         {G::IconLoadedColumn, Qt::EditRole},
+                         {G::VideoColumn, Qt::EditRole},
+                         {G::CacheSizeColumn, Qt::EditRole}},
+                        [&](int r, const QVariant *v) {
+        if (r >= rows) return;
+        const int st = v[0].toInt();
+        fresh->setFlag(r, RowSync::MetaAttempted, st != G::MetaNotAttempted);
+        fresh->setFlag(r, RowSync::MetaLoaded, st == G::MetaLoaded);
+        fresh->setFlag(r, RowSync::IconLoaded, v[1].toBool());
+        fresh->setFlag(r, RowSync::IsVideo, v[2].toBool());
+        fresh->setCacheMB(r, v[3].toFloat());
+    });
+    QMutexLocker lock(&mSyncMutex);
+    mRowSync = fresh;
+}
+
 void DataModel::resizeRowSync(int rows)
 {
     if (rows < 0) rows = 0;
@@ -739,6 +785,7 @@ static QVariant columnAlignment(int column)
     case G::WidthColumn:
     case G::HeightColumn:
     case G::DimensionsColumn:
+    case G::CroppedDimensionsColumn:
     case G::LoadMsecPerMpColumn:
     case G::OrientationColumn:
     case G::RotationColumn:
@@ -748,6 +795,7 @@ static QVariant columnAlignment(int column)
         return int(Qt::AlignCenter | Qt::AlignVCenter);
     case G::ByteSizeColumn:
     case G::AspectRatioColumn:
+    case G::CroppedAspectRatioColumn:
     case G::MegaPixelsColumn:
     case G::ShutterspeedColumn:
     case G::FocalLengthColumn:
@@ -1516,8 +1564,25 @@ void DataModel::noteVersionValues(const QString &versionKey, int rating,
     }
 }
 
+void DataModel::setCroppedGeometry(int row, int width, int height, int orientation,
+                                   float cropFx, float cropFy, bool known)
+{
+    QString dims, aspect;
+    if (known && width > 0 && height > 0) {
+        const bool swap = orientation == 5 || orientation == 6
+                          || orientation == 7 || orientation == 8;
+        const int w = qMax(1, qRound((swap ? height : width) * double(cropFx)));
+        const int h = qMax(1, qRound((swap ? width : height) * double(cropFy)));
+        dims = QString::number(w) + "x" + QString::number(h);
+        aspect = QString::number(w * 1.0 / h, 'f', 2);
+    }
+    setData(index(row, G::CroppedDimensionsColumn), dims);
+    setData(index(row, G::CroppedAspectRatioColumn), aspect);
+}
+
 void DataModel::noteVersionDevelop(const QString &versionKey, bool developed,
-                                   const QString &devPreviewKey)
+                                   const QString &devPreviewKey,
+                                   float cropFx, float cropFy)
 {
     auto it = versionMasters.find(VersionKey::sourceOf(versionKey));
     if (it == versionMasters.end()) return;
@@ -1526,6 +1591,8 @@ void DataModel::noteVersionDevelop(const QString &versionKey, bool developed,
         if (v.id != id) continue;
         v.developed = developed;
         v.devPreviewKey = devPreviewKey;
+        v.cropFx = cropFx;
+        v.cropFy = cropFy;
         return;
     }
 }
@@ -1559,6 +1626,8 @@ bool DataModel::fillVersionRow(int row)
     m._label = m.label;
     m.developEdited = v.developed;
     m.devPreviewKey = v.devPreviewKey;
+    m.cropFx = v.cropFx;            // the version's own crop, not its master's
+    m.cropFy = v.cropFy;
     m.metaStatus = G::MetaLoaded;
     /*  addMetadataForItem APPENDS to the row's search text, so a refill (the master
         was re-read) would double every field in it. Start it again from the file. */
@@ -3131,6 +3200,10 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
     r._url = index(row, G::_UrlColumn).data().toString();
     r.developed = index(row, G::DevelopColumn).data().toBool();
     r.devPreviewKey = index(row, G::DevPreviewKeyColumn).data().toString();
+    /*  schema 17: its versions, as captured from its sidecar (versionMasters) -- the
+        catalog must hold them, because a row served from the index never parses the
+        sidecar that lists them. */
+    r.versions = versionMasters.value(key).versions;
     r.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
     /*  The LITERAL dc:subject list, kept apart from the flat vocabulary below --
         only this one may ever be written back to a file. */
@@ -3841,6 +3914,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::WidthColumn), m.width);
     setData(index(row, G::HeightColumn), m.height);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
+    /*  The same, after the develop geometry. Not known for a developed row served from
+        the catalog index: its recipe was not read (see ImageMetadata::cropFx). */
+    setCroppedGeometry(row, m.width, m.height, m.orientation, m.cropFx, m.cropFy,
+                       !(m.fromIndex && m.developEdited));
     QString dim = QString::number(m.width) + "x" + QString::number(m.height);
     setData(index(row, G::DimensionsColumn), dim);
     search += dim;
@@ -4384,6 +4461,15 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
     {
         const QSignalBlocker blocker(this);
         setData(dmIdx, value, role);
+        /*  The thumb path (Thumb::setImageDimensions) supplies dimensions the metadata
+            read could not, Dimensions last. An undeveloped image looks like its file,
+            so its cropped columns follow; a developed one keeps what its recipe gave,
+            since its crop factors are not held on the row. */
+        if (dmCol == G::DimensionsColumn
+            && !index(dmRow, G::DevelopColumn).data().toBool())
+            setCroppedGeometry(dmRow, index(dmRow, G::WidthColumn).data().toInt(),
+                               index(dmRow, G::HeightColumn).data().toInt(), 1,
+                               1.0f, 1.0f);
     }
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmIdx.row());
@@ -4672,6 +4758,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
             if (im.height() > 0) {
                 QString aspectRatio = QString::number(im.width() * 1.0 / im.height(), 'f', 2);
                 setData(index(dmRow, G::AspectRatioColumn), aspectRatio);
+                setCroppedGeometry(dmRow, im.width(), im.height(), 1, 1.0f, 1.0f);
             }
         }
         if (iconRowVisible(dmIdx))
@@ -6080,6 +6167,34 @@ bool DataModel::verifyIntegrity(const QString &src)
     }
     if (rowProblems > 5) problems << QString("... %1 rows misaddressed").arg(rowProblems);
 
+    /*  THE WORKER MIRROR AGREES WITH THE ROWS. RowSync is what the ImageCache and MetaRead
+        read off the GUI thread; a mid-model insert once left it copied position-for-
+        position, so every later row carried its neighbour's flags -- real images skipped
+        as videos, loaded rows waited on -- and the loupe stopped following the selection.
+        Nothing structural looked wrong, which is why it is checked here. */
+    {
+        RowSyncPtr rs;
+        { QMutexLocker lock(&mSyncMutex); rs = mRowSync; }
+        int syncProblems = 0;
+        if (!rs || rs->size() != n) {
+            problems << QString("RowSync has %1 rows for %2").arg(rs ? rs->size() : -1).arg(n);
+        }
+        else {
+            for (int row = 0; row < n; ++row) {
+                const int st = index(row, G::MetadataStatusColumn).data().toInt();
+                const bool video = index(row, G::VideoColumn).data().toBool();
+                if (rs->has(row, RowSync::MetaLoaded) != (st == G::MetaLoaded)
+                    || rs->has(row, RowSync::IsVideo) != video) {
+                    if (syncProblems++ < 5)
+                        problems << QString("RowSync row %1 flags disagree with its columns")
+                                        .arg(row);
+                }
+            }
+        }
+        if (syncProblems > 5)
+            problems << QString("... %1 RowSync rows disagree").arg(syncProblems);
+    }
+
     auto count = [&](const char *name, const std::atomic<int> &have, int want) {
         const int h = have.load(std::memory_order_relaxed);
         if (h != want) problems << QString("%1 %2, recount %3").arg(name).arg(h).arg(want);
@@ -7305,6 +7420,8 @@ void SortFilter::compileFilters()
                 checks it applies to and cannot drift from them. See
                 Filters::setKeywordsMatchAll. */
             cat.matchAll = item->data(0, Filters::MatchAllRole).toBool();
+            // a "Filter on..." category compares as text -- see FilterCategory
+            cat.compareAsText = item->data(0, Filters::SessionRole).toBool();
             fresh->categories.append(cat);
         }
         ++it;

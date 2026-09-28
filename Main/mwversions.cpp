@@ -157,6 +157,8 @@ void MW::rereadVersionMasters(const QStringList &masters, const QString &src)
     if (masters.isEmpty()) return;
     applyModelChange(masters, QStringList(), src);
     reconcileVersionRows(src);
+    // and the index, which serves these rows without reading the sidecar (schema 17)
+    for (const QString &m : masters) updateCatalogForRow(dm->rowFromKey(m));
 }
 
 void MW::syncVersionsMenu()
@@ -355,7 +357,8 @@ void MW::setVersionAsMaster()
     Swap the RECIPES (and their previews) of the current version and its master, so the
     edit the user settled on becomes the one every other application sees in
     winnow:Develop, and the old master's edit lives on as this version. Name, rating,
-    label and pick stay with their rows: they describe the row the user is looking at.
+    label and pick stay with their rows. The selection moves to the master, with the
+    edit it now holds.
 */
     if (G::isLogger) G::log("MW::setVersionAsMaster");
     const QString key = dm ? dm->currentKey : QString();
@@ -397,6 +400,15 @@ void MW::setVersionAsMaster()
     // badge, devPreview key, icon and cached full-size image, for both rows
     devPreviewUpdated(master, jpgImage(versionThumb));
     devPreviewUpdated(key, jpgImage(masterThumb));
+
+    /*  THE SELECTION FOLLOWS THE EDIT. The recipe the user was looking at now lives in
+        the master's row; staying on the version row would silently put them on the
+        OLD master's settings, so the next adjustment edits the wrong one. Selecting
+        the master also reloads the Develop panel from the swapped recipe. */
+    if (dm->currentKey == key) {
+        const QModelIndex m = dm->proxyIndexFromKey(master);
+        if (m.isValid()) sel->select(m, Qt::NoModifier, "MW::setVersionAsMaster");
+    }
 }
 
 void MW::writeVersionValues(const QStringList &versionKeys)
@@ -431,5 +443,6 @@ void MW::writeVersionValues(const QStringList &versionKeys)
             continue;
         }
         dm->noteVersionValues(key, now.rating, now.label, now.pick);
+        updateCatalogForRow(dm->rowFromKey(master));    // the index holds them too
     }
 }
