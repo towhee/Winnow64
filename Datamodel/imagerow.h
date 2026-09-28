@@ -195,6 +195,11 @@ struct ImageRow
     qint32 dupOtherIdx = -1;           // G::DupOtherIdxRole, a datamodel row
     bool   dupHideRaw = false;         // G::DupHideRawRole
     bool   dupIsJpg = false;           // G::DupIsJpgRole
+    /*  Versions (virtual copies). A master holds how many versions it has -- the
+        collapsed badge -- and a version holds its name. The version id is not
+        stored: it is part of the key (G::VersionIdRole derives it). */
+    qint32 versionCount = 0;           // G::VersionCountRole
+    qint32 versionNameId = -1;         // G::VersionNameRole, interned
 
     /*  Catalog::Availability as an int: Present / Offline / Missing. Only a
         Catalog-scope row is ever anything but Present. */
@@ -424,7 +429,7 @@ public:
     }
 
     /*  A GENERATION PER FIELD, for consumers that cache something derived from ONE
-        column -- the proxy snapshot's path table (G::PathRole), SortFilter's sort ranks
+        column -- the proxy snapshot's path table (G::KeyRole), SortFilter's sort ranks
         (the sort column). It moves when that field is written on any row, or when rows
         are inserted, removed or cleared, and on nothing else: the sum of two counters
         that only ever increase, so any change to either changes it. 0 for a (column,

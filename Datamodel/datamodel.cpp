@@ -1,5 +1,6 @@
 #include "Datamodel/datamodel.h"
 #include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
 #include "Datamodel/variantless.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
@@ -15,7 +16,8 @@ image files, defined in the metadata class, are files Winnow knows how to decode
 
 The data is structured in columns:
 
-    ● Path:             from QFileInfoList  G::PathRole (absolutePath)
+    ● Path:             from QFileInfoList  G::KeyRole (absolutePath); a version row's
+                        key is path + "/#v" + id, G::SourcePathRole is its file
                         from QFileInfoList  Qt::ToolTipRole
                                             G::IconRectRole (icon)
                                             G::CachingIcon
@@ -134,12 +136,12 @@ Code examples for model:
     dm->sf->setData(index(row, G::RotationColumn), value);
 
     // edit an isCached role in model based on file path
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::KeyRole, fPath);
     QModelIndex idx = idxList[0];
     dm->sf->setData->(index(row, G::IsCachedColumn), isCached));
 
     // file path for current index (primary selection)
-    fPath = thumbView->currentIndex().data(G::PathRole).toString();
+    fPath = thumbView->currentIndex().data(G::KeyRole).toString();
 
     // get current sf (proxy) index from a dm (datamodel) index
     QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx)
@@ -488,13 +490,13 @@ void DataModel::rebuildProxySnapshot()
     /*  THE PATHS ARE SHARED -- see ProxyPaths. Rebuilt only when a path was written or
         rows were inserted or removed (RowStore::fieldGeneration), in one pass over the
         store; a filter or sort change reuses them. */
-    const quint64 pathGen = rowStore.fieldGeneration(G::PathColumn, G::PathRole);
+    const quint64 pathGen = rowStore.fieldGeneration(G::PathColumn, G::KeyRole);
     if (!mProxyPaths || pathGen != mProxyPathsGen
         || mProxyPaths->pathOfDm.size() != dmRows) {
         auto paths = std::make_shared<ProxyPaths>();
         paths->pathOfDm.resize(dmRows);
         paths->dmRowOfPath.reserve(dmRows);
-        rowStore.forEachRow({{G::PathColumn, G::PathRole}},
+        rowStore.forEachRow({{G::PathColumn, G::KeyRole}},
                             [&](int row, const QVariant *v) {
             if (row >= dmRows) return;
             const QString p = v[0].toString();
@@ -771,6 +773,8 @@ void DataModel::clear()
     scratchStore.clear();
     iconStore.clear();
     mIssueLists.clear();
+    versionMasters.clear();
+    mVersionRowCount = 0;
     mHeaderName.clear();
     mHeaderGeek.clear();
     endResetModel();
@@ -863,7 +867,7 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
         thousands, and a teardown, which removes them all, stay silent.
     */
     if (!mExpectedRemoval && count < 10 && rowCount() > 100) {
-        const QString fPath = index(row, 0).data(G::PathRole).toString();
+        const QString fPath = index(row, 0).data(G::KeyRole).toString();
         qWarning().noquote()
             << "ROWLOSS DataModel::removeRows row" << row << "count" << count
             << "of" << rowCount() << "instance" << instance << fPath;
@@ -964,7 +968,7 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         isNull() on the variant to decide whether a thumbnail exists yet. */
     if (idx.isValid() && role == Qt::DecorationRole && idx.column() == 0) {
         const QString fPath = rowStore.contains(idx.row())
-                                  ? rowStore.value(idx.row(), G::PathColumn, G::PathRole).toString()
+                                  ? rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString()
                                   : QString();
         if (!fPath.isEmpty()) {
             const QIcon ic = iconStore.icon(fPath);
@@ -1106,7 +1110,7 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         store holds, and it is asked here and in data() with nothing else in
         front of it. There used to be an extra "EditRole or DisplayRole" guard
         on THIS side only, left over from before coverage became role-aware --
-        so G::PathRole writes were dropped while data() happily served PathRole
+        so G::KeyRole writes were dropped while data() happily served PathRole
         FROM the store, and every path read came back empty. No thumbnails, no
         loupe image: everything downstream needs the path to find the file. Two
         guards that must agree is one guard too many. */
@@ -1120,7 +1124,7 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         reach the store whatever the base class decides to do with the cell. */
     if (role == Qt::DecorationRole && col == 0) {
         const QString fPath = rowStore.contains(idx.row())
-                                  ? rowStore.value(idx.row(), G::PathColumn, G::PathRole).toString()
+                                  ? rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString()
                                   : QString();
         if (!fPath.isEmpty()) {
             const QIcon ic = qvariant_cast<QIcon>(value);
@@ -1251,8 +1255,12 @@ QString DataModel::sortKey(const QString &path, bool combineRawJpg)
     The key the model is ordered by -- see the header. Reproduces lessThan and
     lessThanCombineRawJpg: the lower-cased path, with a jpg or jpeg rewritten to ".zzz"
     so that, of a raw+jpg pair, the raw comes first.
+
+    path may be a row key: a version sorts on its source file's key plus
+    VersionKey::sortSuffix, so it lands immediately after its master and before any
+    other file (Utilities/versionkey.h).
 */
-    QString key = path.toLower();
+    QString key = VersionKey::sourceOf(path).toLower();
     if (combineRawJpg) {
         const int dot = key.lastIndexOf('.');
         if (dot > 0) {
@@ -1260,7 +1268,7 @@ QString DataModel::sortKey(const QString &path, bool combineRawJpg)
             if (ext == u"jpg" || ext == u"jpeg") key = key.left(dot) + ".zzz";
         }
     }
-    return key;
+    return key + VersionKey::sortSuffix(VersionKey::idOf(path));
 }
 
 QList<int> DataModel::insertFiles(const QStringList &paths)
@@ -1300,16 +1308,19 @@ QList<int> DataModel::insertFiles(const QStringList &paths)
                   return a.first < b.first;
               });
 
+    /* Rows are ordered by sortKey of their KEY (a version sorts after its master), but
+       folder membership is decided on SOURCE paths: a version key is not in a folder. */
     auto pathAt = [this](int row) {
-        return index(row, G::PathColumn).data(G::PathRole).toString();
+        return index(row, G::PathColumn).data(G::KeyRole).toString();
     };
     auto insertionRow = [&](const QString &path, const QString &key) {
-        const QString dir = QFileInfo(path).absolutePath() + "/";
+        const QString dir = QFileInfo(VersionKey::sourceOf(path)).absolutePath() + "/";
         const int n = rowCount();
         int last = -1;
         for (int r = 0; r < n; ++r) {
             const QString p = pathAt(r);
-            const bool inDir = p.startsWith(dir) && p.indexOf('/', dir.size()) < 0;
+            const QString src = VersionKey::sourceOf(p);
+            const bool inDir = src.startsWith(dir) && src.indexOf('/', dir.size()) < 0;
             if (inDir) {
                 if (key < sortKey(p, combineRawJpg)) return r;
                 last = r;
@@ -1326,7 +1337,8 @@ QList<int> DataModel::insertFiles(const QStringList &paths)
     for (const auto &t : std::as_const(todo)) {
         const int row = insertionRow(t.second, t.first);
         insertRows(row, 1);
-        addFileDataForRow(row, QFileInfo(t.second));
+        // a version key's file facts are its source's (Utilities/versionkey.h)
+        addFileDataForRow(row, QFileInfo(VersionKey::sourceOf(t.second)), nullptr, t.second);
         for (int &r : inserted) if (r >= row) ++r;  // rows already inserted shift down
         inserted.append(row);
     }
@@ -1334,7 +1346,7 @@ QList<int> DataModel::insertFiles(const QStringList &paths)
     // once, now that every row has its path
     rebuildRowFromPathHash();
     recountLoadFlags();
-    setCurrent(currentFilePath, instance);
+    setCurrent(currentKey, instance);
 
     // reset loaded flags so MetaRead knows to load
     G::allMetadataAttempted = false;
@@ -1342,6 +1354,222 @@ QList<int> DataModel::insertFiles(const QStringList &paths)
 
     verifyIntegrity("DataModel::insertFiles");
     return inserted;
+}
+
+QStringList DataModel::versionKeysOf(const QString &masterKey) const
+{
+    QStringList keys;
+    const auto it = versionMasters.constFind(masterKey);
+    if (it == versionMasters.constEnd()) return keys;
+    for (const VersionSummary &v : it->versions) keys << VersionKey::make(masterKey, v.id);
+    return keys;
+}
+
+void DataModel::versionRowChanges(QStringList &add, QStringList &remove) const
+{
+/*
+    What the model must gain and lose to match the versions its masters' sidecars list.
+    GUI thread; one pass over the rows only when there are version rows to check.
+*/
+    add.clear();
+    remove.clear();
+    for (auto it = versionMasters.constBegin(); it != versionMasters.constEnd(); ++it) {
+        if (!fPathRow.contains(it.key())) continue;         // master not in this model
+        for (const VersionSummary &v : it->versions) {
+            const QString k = VersionKey::make(it.key(), v.id);
+            if (!fPathRow.contains(k)) add << k;
+        }
+    }
+    if (mVersionRowCount == 0) return;
+    const int n = rowCount();
+    for (int r = 0; r < n; ++r) {
+        const QString k = index(r, G::PathColumn).data(G::KeyRole).toString();
+        if (!VersionKey::isVersion(k)) continue;
+        const auto it = versionMasters.constFind(VersionKey::sourceOf(k));
+        const int id = VersionKey::idOf(k);
+        bool listed = false;
+        if (it != versionMasters.constEnd())
+            for (const VersionSummary &v : it->versions) if (v.id == id) { listed = true; break; }
+        if (!listed) remove << k;
+    }
+}
+
+void DataModel::noteVersionValueWrite(const QModelIndex &dmIdx)
+{
+/*
+    EVERY rating, label and pick edit reaches the model through setValDm / setValSf --
+    the menu and keys, the mouse-over pick, undo, crash recovery, Ingest's mark. On a
+    VERSION row the value belongs in its record in the master's sidecar, not in the file
+    (Metadata/versions.h), so this is where it is caught: once, for all of them, rather
+    than in thirteen writers where a missed one would lose the edit on the next load.
+    Coalesced to one write per image per event-loop turn (MW::writeVersionValues).
+*/
+    if (mVersionRowCount == 0) return;
+    const int col = dmIdx.column();
+    if (col != G::RatingColumn && col != G::LabelColumn && col != G::PickColumn) return;
+    const QString key = index(dmIdx.row(), G::PathColumn).data(G::KeyRole).toString();
+    if (!VersionKey::isVersion(key)) return;
+    pendingVersionValueKeys.insert(key);
+    if (versionValueWritePending) return;
+    versionValueWritePending = true;
+    QMetaObject::invokeMethod(this, [this] {
+        versionValueWritePending = false;
+        const QStringList keys(pendingVersionValueKeys.cbegin(),
+                               pendingVersionValueKeys.cend());
+        pendingVersionValueKeys.clear();
+        emit versionValuesEdited(keys);
+    }, Qt::QueuedConnection);
+}
+
+void DataModel::syncSharedToVersions(const QString &masterKey)
+{
+    auto it = versionMasters.find(masterKey);
+    if (it == versionMasters.end()) return;
+    const int mRow = fPathRowValue(masterKey);
+    if (mRow < 0) return;
+
+    static const int shared[] = {
+        G::TitleColumn, G::CreatorColumn, G::CopyrightColumn, G::EmailColumn,
+        G::UrlColumn, G::KeywordsColumn, G::KeywordPathsColumn, G::KeywordsAllColumn,
+        G::OrientationColumn
+    };
+    auto val = [&](int col) { return index(mRow, col).data(Qt::EditRole); };
+
+    // the captured metadata, which fillVersionRow replays
+    ImageMetadata &m = it.value();
+    m.title = val(G::TitleColumn).toString();
+    m.creator = val(G::CreatorColumn).toString();
+    m.copyright = val(G::CopyrightColumn).toString();
+    m.email = val(G::EmailColumn).toString();
+    m.url = val(G::UrlColumn).toString();
+    m.keywords = val(G::KeywordsColumn).toStringList();
+    m.keywordPaths = val(G::KeywordPathsColumn).toStringList();
+    m.orientation = val(G::OrientationColumn).toInt();
+
+    for (const VersionSummary &v : std::as_const(m.versions)) {
+        const int r = fPathRowValue(VersionKey::make(masterKey, v.id));
+        if (r < 0) continue;
+        {
+            const QSignalBlocker b(this);
+            for (int col : shared) {
+                setData(index(r, col), val(col));
+                // the tooltip mirrors the five text fields, as InfoView writes them
+                const bool text = col == G::TitleColumn || col == G::CreatorColumn
+                                  || col == G::CopyrightColumn || col == G::EmailColumn
+                                  || col == G::UrlColumn;
+                if (text) setData(index(r, col), val(col), Qt::ToolTipRole);
+            }
+        }
+        emit dataChanged(index(r, 0), index(r, columnCount() - 1));
+    }
+}
+
+QList<QPair<QString, QString>> DataModel::rekeyVersions(const QString &oldMaster,
+                                                        const QString &newMaster)
+{
+    QList<QPair<QString, QString>> moved;
+    if (oldMaster.isEmpty() || newMaster.isEmpty() || oldMaster == newMaster) return moved;
+
+    /*  The collapse state FIRST: each key write below makes the proxy re-test that row
+        on the spot, and an open group whose state still named the old path would hide
+        its versions as they were re-keyed. */
+    if (sf->versionsExpanded(oldMaster) && !sf->showAllVersions()) {
+        sf->setVersionsExpanded(oldMaster, false);
+        sf->setVersionsExpanded(newMaster, true);
+    }
+
+    if (mVersionRowCount > 0) {
+        const QString newName = QFileInfo(newMaster).fileName();
+        const int n = rowCount();
+        for (int r = 0; r < n; ++r) {
+            const QString k = index(r, G::PathColumn).data(G::KeyRole).toString();
+            if (!VersionKey::isVersion(k) || VersionKey::sourceOf(k) != oldMaster) continue;
+            const QString nk = VersionKey::make(newMaster, VersionKey::idOf(k));
+            fPathRowRemove(k);
+            fPathRowSet(nk, r);
+            setData(index(r, G::PathColumn), nk, G::KeyRole);
+            setData(index(r, G::NameColumn), newName);
+            moved.append({k, nk});
+        }
+    }
+
+    if (versionMasters.contains(oldMaster)) {
+        ImageMetadata m = versionMasters.take(oldMaster);
+        m.fPath = newMaster;
+        versionMasters.insert(newMaster, m);
+    }
+    return moved;
+}
+
+void DataModel::noteVersionValues(const QString &versionKey, int rating,
+                                  const QString &label, const QString &pick)
+{
+    auto it = versionMasters.find(VersionKey::sourceOf(versionKey));
+    if (it == versionMasters.end()) return;
+    const int id = VersionKey::idOf(versionKey);
+    for (VersionSummary &v : it->versions) {
+        if (v.id != id) continue;
+        v.rating = rating;
+        v.label = label;
+        v.pick = pick;
+        return;
+    }
+}
+
+void DataModel::noteVersionDevelop(const QString &versionKey, bool developed,
+                                   const QString &devPreviewKey)
+{
+    auto it = versionMasters.find(VersionKey::sourceOf(versionKey));
+    if (it == versionMasters.end()) return;
+    const int id = VersionKey::idOf(versionKey);
+    for (VersionSummary &v : it->versions) {
+        if (v.id != id) continue;
+        v.developed = developed;
+        v.devPreviewKey = devPreviewKey;
+        return;
+    }
+}
+
+bool DataModel::fillVersionRow(int row)
+{
+/*
+    A version row's values: its master's metadata -- the same photograph, so the same
+    camera, dimensions, keywords, title and decode geometry -- with the version's own
+    name, rating, label, pick and develop state laid over it. Written through
+    addMetadataForItem so a version row is filled by exactly the code that fills every
+    other row, and reads back the same way.
+*/
+    const QString key = index(row, G::PathColumn).data(G::KeyRole).toString();
+    if (!VersionKey::isVersion(key)) return false;
+    const auto it = versionMasters.constFind(VersionKey::sourceOf(key));
+    if (it == versionMasters.constEnd()) return false;
+    const int id = VersionKey::idOf(key);
+    const VersionSummary *sum = nullptr;
+    for (const VersionSummary &v : it->versions) if (v.id == id) { sum = &v; break; }
+    if (!sum) return false;
+    const VersionSummary v = *sum;              // it-> may move under addMetadataForItem
+
+    ImageMetadata m = *it;
+    m.versions.clear();
+    m.row = row;
+    m.instance = instance;
+    m.rating = v.rating > 0 ? QString::number(v.rating) : QString();
+    m._rating = m.rating;
+    m.label = v.label;
+    m._label = m.label;
+    m.developEdited = v.developed;
+    m.devPreviewKey = v.devPreviewKey;
+    m.metaStatus = G::MetaLoaded;
+    /*  addMetadataForItem APPENDS to the row's search text, so a refill (the master
+        was re-read) would double every field in it. Start it again from the file. */
+    setData(index(row, G::SearchTextColumn), VersionKey::sourceOf(key));
+    if (!addMetadataForItem(m, "DataModel::fillVersionRow")) return false;
+
+    const QSignalBlocker b(this);
+    setData(index(row, G::PathColumn), v.name, G::VersionNameRole);
+    setData(index(row, G::PickColumn), v.pick.isEmpty() ? QString("Unpicked") : v.pick);
+    emit dataChanged(index(row, 0), index(row, columnCount() - 1));
+    return true;
 }
 
 int DataModel::insert(QString fPath)
@@ -1352,7 +1580,7 @@ int DataModel::insert(QString fPath)
 */
     if (G::isLogger) G::log("DataModel::insert");
     const QList<int> rows = insertFiles({fPath});
-    return rows.isEmpty() ? rowFromPath(fPath) : rows.first();
+    return rows.isEmpty() ? rowFromKey(fPath) : rows.first();
 }
 
 void DataModel::remove(QString fPath)
@@ -1394,6 +1622,21 @@ void DataModel::removeFiles(const QStringList &paths)
         const int row = fPathRowValue(fPath);
         if (row >= 0 && row < rowCount()) rows << row;
     }
+    /*  A MASTER TAKES ITS VERSIONS WITH IT. A version row is the master's file seen
+        through another recipe; without the master there is no file behind it, and
+        verifyIntegrity would (rightly) call it an orphan. */
+    QSet<QString> removedMasters;
+    for (const QString &fPath : paths)
+        if (!VersionKey::isVersion(fPath)) removedMasters.insert(fPath);
+    if (mVersionRowCount > 0 && !removedMasters.isEmpty()) {
+        const int n = rowCount();
+        for (int r = 0; r < n; ++r) {
+            const QString k = index(r, G::PathColumn).data(G::KeyRole).toString();
+            if (VersionKey::isVersion(k) && removedMasters.contains(VersionKey::sourceOf(k)))
+                rows << r;
+        }
+    }
+    for (const QString &m : std::as_const(removedMasters)) versionMasters.remove(m);
     if (rows.isEmpty()) return;
     std::sort(rows.begin(), rows.end());
     rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
@@ -2364,14 +2607,15 @@ void DataModel::removeFolder(const QString &folderPath)
     */
     QStringList paths;
     for (int row = 0; row < rowCount(); ++row) {
-        const QString filePath = index(row, 0).data(G::PathRole).toString();
-        if (QFileInfo(filePath).dir().absolutePath() == folderPath) paths << filePath;
+        const QString key = index(row, 0).data(G::KeyRole).toString();
+        const QString filePath = VersionKey::sourceOf(key);
+        if (QFileInfo(filePath).dir().absolutePath() == folderPath) paths << key;
     }
     removeFiles(paths);
     sf->invalidate();
 
     // update current
-    setCurrent(currentFilePath, instance);
+    setCurrent(currentKey, instance);
     verifyIntegrity("DataModel::removeFolder");
     emit updateStatus(true, "", "DataModel::removeFolder");
 }
@@ -2397,7 +2641,7 @@ QStringList DataModel::refresh()
 
     // modifications
     for (const QString &fPath : std::as_const(modified)) {
-        const int row = rowFromPath(fPath);
+        const int row = rowFromKey(fPath);
         if (row < 0) continue;
         setData(index(row, G::MetadataStatusColumn), G::MetaNotAttempted);
         setData(index(row, G::IconLoadedColumn), false);
@@ -2423,9 +2667,9 @@ bool DataModel::contains(QString &path)
         qDebug() << "DataModel::contains" << "instance =" << instance << path;
 
     for (int row = 0; row < rowCount(); ++row) {
-        if (index(row, 0).data(G::PathRole).toString().toLower() == path.toLower()) {
+        if (index(row, 0).data(G::KeyRole).toString().toLower() == path.toLower()) {
             // set to same case used by op system
-            path = index(row, 0).data(G::PathRole).toString();
+            path = index(row, 0).data(G::KeyRole).toString();
             return true;
         }
     }
@@ -2637,7 +2881,8 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
     }
 }
 
-void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat)
+void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat,
+                                  const QString &key)
 {
 /*
     Load the information from the operating system contained in QFileInfo
@@ -2678,9 +2923,14 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
     QString ext = fileInfo.suffix().toLower();
     QString baseName = fileInfo.completeBaseName();
 
+    /*  The row's KEY: the file path, or for a version row the version key while
+        fileInfo is its source file (Utilities/versionkey.h). */
+    const QString rowKey = key.isEmpty() ? fPath : key;
+    const bool isVersion = VersionKey::isVersion(rowKey);
+
     // build hash to quickly get dmRow from fPath (ie pixmap.cpp, imageCache...)
-    if (fPathRow.contains(fPath)) return;
-    fPathRowSet(fPath, row);
+    if (fPathRow.contains(rowKey)) return;
+    fPathRowSet(rowKey, row);
 
     // string to hold aggregated text for searching
     QString search = fPath;
@@ -2690,7 +2940,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
     const QSignalBlocker b(this);
 
     setData(index(row, G::RowNumberColumn), row + 1);
-    setData(index(row, G::PathColumn), fPath, G::PathRole);
+    setData(index(row, G::PathColumn), rowKey, G::KeyRole);
     // Show tooltips for each item in datamodel views - this has been moved to
     // IconView::mouseMoveEvent so can show tooltips for icon symbols as well
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
@@ -2768,7 +3018,9 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
     setData(index(row, G::SearchColumn), false);
     setData(index(row, G::SearchTextColumn), search);
 
-    rawJpgPairing(row, ext, baseName);
+    /*  A version belongs to its own file and is never half of a raw+jpg pair: pairing
+        it would hide it, or its master, behind the other file. */
+    if (!isVersion) rawJpgPairing(row, ext, baseName);
 
     // emit one compact notification (only if you need the view to refresh now)
     emit dataChanged(index(row, 0), index(row, columnCount()-1));
@@ -2817,8 +3069,12 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
         search results until its file changed on disk. */
     if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) return false;
 
-    const QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
-    if (fPath.isEmpty()) return false;
+    const QString key = index(row, G::PathColumn).data(G::KeyRole).toString();
+    if (key.isEmpty()) return false;
+    /* A version row is not an image in the catalog: its file is the master's, which
+       carries the file-level facts. Per-version values are catalogued separately. */
+    if (VersionKey::isVersion(key)) return false;
+    const QString fPath = key;
     /* Videos have no keywords or camera metadata worth searching, and the catalog is
        a photo index. */
     if (index(row, G::VideoColumn).data().toBool()) return false;
@@ -2904,7 +3160,7 @@ QHash<QString, QSet<QString>> DataModel::folderPathSets() const
     QHash<QString, QSet<QString>> out;
     const int n = rowCount();
     for (int row = 0; row < n; ++row) {
-        const QString fPath = index(row, 0).data(G::PathRole).toString();
+        const QString fPath = index(row, 0).data(G::SourcePathRole).toString();
         if (fPath.isEmpty()) continue;
         out[QFileInfo(fPath).absoluteDir().path()].insert(fPath);
     }
@@ -2972,14 +3228,14 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     ImageMetadata m;
     if (fPath == "") return m;
 
-    int sfRow = proxyRowFromPath(fPath, "DataModel::imMetadata");
+    int sfRow = proxyRowFromKey(fPath, "DataModel::imMetadata");
     // int row = fPathRow[fPath];
     int row = fPathRowValue(fPath);
     if (!index(row,0).isValid()) return m;
 
     if (isDebug) qDebug() << "DataModel::imMetadata" << "instance =" << instance
                           << "row =" << row
-                          << pathFromProxyRow(sfRow);
+                          << keyFromProxyRow(sfRow);
 
     // QMutexLocker hangs if tiff file in the first folder selected after start program
     // static int counter = 0;
@@ -2993,7 +3249,9 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     // file info (calling Metadata not required)
     m.row = sfRow;
-    m.fPath = fPath;
+    /*  The FILE, not the row key: every decoder and writer opens m.fPath. A version row
+        (Utilities/versionkey.h) is its source file's pixels under another recipe. */
+    m.fPath = VersionKey::sourceOf(fPath);
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
     /* ImageDecoder::load() selects the in-house RAW decoder off m.ext in independent
@@ -3166,7 +3424,7 @@ void DataModel::addAllMetadata()
             if (abort || G::stop) break;
             if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted)
                 continue;
-            const QString fPath = index(row, 0).data(G::PathRole).toString();
+            const QString fPath = index(row, 0).data(G::SourcePathRole).toString();
             if (fPath.isEmpty()) continue;
             cands.append(IndexMetadata::candidate(QFileInfo(fPath), metadata));
             if (cands.size() >= kFreshPage) {
@@ -3198,7 +3456,7 @@ void DataModel::addAllMetadata()
         // is metadata already cached (or attempted?)
         if (index(row, G::MetadataStatusColumn).data().toInt() != G::MetaNotAttempted) continue;
 
-        QString fPath = index(row, 0).data(G::PathRole).toString();
+        QString fPath = index(row, 0).data(G::SourcePathRole).toString();
         QFileInfo fileInfo(fPath);
         QString ext = fileInfo.suffix().toLower();
 
@@ -3253,11 +3511,11 @@ bool DataModel::readMetadataForItem(int row, int instance)
 */
     QString fun = "DataModel::readMetadataForItem";
     QString errMsg = "";
-    if (G::isLogger) G::log(fun, index(row, 0).data(G::PathRole).toString());
+    if (G::isLogger) G::log(fun, index(row, 0).data(G::KeyRole).toString());
     if (isDebug) {
         qDebug() << fun << "instance =" << instance
                  << "row =" << row
-                 << pathFromProxyRow(row);
+                 << keyFromProxyRow(row);
     }
 
     // might be called from previous folder during folder change
@@ -3268,7 +3526,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     }
     if (G::stop) return false;
 
-    QString fPath = index(row, 0).data(G::PathRole).toString();
+    QString fPath = index(row, 0).data(G::SourcePathRole).toString();
 
     // load metadata
     /*
@@ -3314,10 +3572,10 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     Reads the image metadata into the datamodel for the proxy row.
 */
     QString fun = "DataModel::refreshMetadataForItem";
-    if (G::isLogger) G::log(fun, sf->index(sfRow, 0).data(G::PathRole).toString());
+    if (G::isLogger) G::log(fun, sf->index(sfRow, 0).data(G::KeyRole).toString());
     if (isDebug) qDebug() << fun << "instance =" << instance
                           << "row =" << sfRow
-                          << pathFromProxyRow(sfRow);
+                          << keyFromProxyRow(sfRow);
 
     // might be called from previous folder during folder change
     if (instance != this->instance) {
@@ -3327,7 +3585,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     }
     if (G::stop) return false;
 
-    QString fPath = sf->index(sfRow, 0).data(G::PathRole).toString();
+    QString fPath = sf->index(sfRow, 0).data(G::SourcePathRole).toString();
 
     // load metadata
     /*
@@ -3471,7 +3729,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (isDebug)
         qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance
                           << "row =" << m.row
-                          << pathFromProxyRow(m.row);
+                          << keyFromProxyRow(m.row);
 
     // deal with lagging signals when new folder selected suddenly
     if (instance > -1 && m.instance != instance) {
@@ -3502,7 +3760,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
        chokepoint covering every vendor parser. When useRaw is off the parsers also skip filling
        rawInfo; the decoder's self-walk covers a later toggle-on. */
     if (G::useRaw && m.rawInfo.isRaw) {
-        QString rawPath = index(row, G::PathColumn).data(G::PathRole).toString();
+        QString rawPath = index(row, G::PathColumn).data(G::SourcePathRole).toString();
         if (!rawPath.isEmpty()) fPathRawInfoSet(rawPath, m.rawInfo);
     }
 
@@ -3525,6 +3783,20 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
        open, so no extra I/O lands on the folder-load path. */
     setData(index(row, G::DevelopColumn), m.developEdited);
     setData(index(row, G::DevPreviewKeyColumn), m.devPreviewKey);
+    /*  VERSIONS. A master's sidecar lists its versions (Metadata::parseSidecar); keep
+        its metadata so each version row can be filled from it (fillVersionRow), and
+        show the count. A version row arrives here from fillVersionRow itself, with its
+        list cleared, and is not a master. */
+    const QString rowKey = index(row, G::PathColumn).data(G::KeyRole).toString();
+    const bool isMasterRow = !VersionKey::isVersion(rowKey);
+    bool versionsDiffer = false;
+    if (isMasterRow) {
+        setData(index(row, G::PathColumn), int(m.versions.size()), G::VersionCountRole);
+        const QStringList before = versionKeysOf(rowKey);
+        if (m.versions.isEmpty()) versionMasters.remove(rowKey);
+        else versionMasters.insert(rowKey, m);
+        versionsDiffer = before != versionKeysOf(rowKey) || !m.versions.isEmpty();
+    }
     // if (m._rating == "") m.rating = "No Rating";
     // if (m._rating == "0") m.rating = "No Rating";
     if (m._rating == "0") m.rating = "";
@@ -3767,6 +4039,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
     sampleRowBytesUsed(row);
 
+    /*  A master re-read AFTER the load (a refresh, an external sidecar edit, an
+        applyModelChange reload): its version rows are refilled from the new values and
+        added or dropped to match. During the load MW::metadataComplete does it once for
+        the whole set; inserting rows mid-load would move row numbers under reads that
+        are in flight. */
+    /*  POSTED, not emitted here: this function holds a QSignalBlocker on the model for
+        its whole body, which silently swallowed a direct emit. */
+    if (isMasterRow && versionsDiffer && !G::isModifyingDatamodel)
+        QMetaObject::invokeMethod(this, [this] { emit versionsChanged(); },
+                                  Qt::QueuedConnection);
+
     return true;
 }
 
@@ -3802,7 +4085,7 @@ void DataModel::processErr(Error e)
         p = e.fPath;
         break;
     case ErrorType::DM:
-        p = sf->index(e.sfRow,0).data(G::PathRole).toString();
+        p = sf->index(e.sfRow,0).data(G::KeyRole).toString();
         break;
     }
 
@@ -3850,7 +4133,7 @@ void DataModel::issue(const QSharedPointer<Issue>& issue)
         ;  //*/
     // check for null fPath
     if (issue->fPath == "" && issue->sfRow > -1) {
-        issue->fPath = sf->index(issue->sfRow, 0).data(G::PathRole).toString();
+        issue->fPath = sf->index(issue->sfRow, 0).data(G::KeyRole).toString();
     }
 
     // retrieve an existing list of issues for this datamodel row
@@ -4104,6 +4387,7 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
     }
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmIdx.row());
+    noteVersionValueWrite(dmIdx);
 }
 
 void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
@@ -4181,6 +4465,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     }
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmIdx.row());
+    noteVersionValueWrite(dmIdx);
 }
 
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
@@ -4196,7 +4481,7 @@ bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
     currentSfRow = sfIdx.row();
     currentDmIdx = sf->mapToSource(currentSfIdx);
     currentDmRow = currentDmIdx.row();
-    currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
+    currentKey = sf->index(currentSfRow, 0).data(G::KeyRole).toString();
     if (isDebug)
     {
         qDebug() << "DataModel::setCurrent"
@@ -4204,7 +4489,7 @@ bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
                  << "currentSfRow =" << currentSfRow
                  << "currentDmIdx =" << currentDmIdx
                  << "currentDmRow =" << currentDmRow
-                 << "currentFilePath =" << currentFilePath
+                 << "currentKey =" << currentKey
             ;
     }
     return true;
@@ -4226,7 +4511,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     currentSfRow = sfIdx.row();
     currentDmIdx = dmIdx;
     currentDmRow = currentDmIdx.row();
-    currentFilePath = sf->index(currentSfRow, 0).data(G::PathRole).toString();
+    currentKey = sf->index(currentSfRow, 0).data(G::KeyRole).toString();
     if (isDebug)
     {
         qDebug() << "DataModel::setCurrent using dmIdx"
@@ -4234,7 +4519,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
                  << "currentSfRow =" << currentSfRow
                  << "currentDmIdx =" << currentDmIdx
                  << "currentDmRow =" << currentDmRow
-                 << "currentFilePath =" << currentFilePath
+                 << "currentKey =" << currentKey
             ;
     }
 }
@@ -4252,11 +4537,11 @@ void DataModel::setCurrent(QString fPath, int instance)
     QMutexLocker locker(&dmMutex);
     // if (fPathRow.contains(fPath)) {
     if (fPathRowContains(fPath)) {
-        currentDmIdx = indexFromPath(fPath);
-        currentFilePath = fPath;
+        currentDmIdx = indexFromKey(fPath);
+        currentKey = fPath;
     } else {
         currentDmIdx = index(0, 0);
-        currentFilePath = index(0, 0).data(G::PathRole).toString();
+        currentKey = index(0, 0).data(G::KeyRole).toString();
     }
     currentDmRow = currentDmIdx.row();
     QModelIndex sfIdx = sf->mapFromSource(currentDmIdx);
@@ -4269,7 +4554,7 @@ void DataModel::setCurrent(QString fPath, int instance)
                  << "currentSfRow =" << currentSfRow
                  << "currentDmIdx =" << currentDmIdx
                  << "currentDmRow =" << currentDmRow
-                 << "currentFilePath =" << currentFilePath
+                 << "currentKey =" << currentKey
             ;
     }
 }
@@ -4321,7 +4606,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
                  << "dmRow =" << dmRow
                  << "instance =" << instance
                  << "fromInstance =" << fromInstance
-                 // << "fPath =" << dmIdx.data(G::PathRole).toString()
+                 // << "fPath =" << dmIdx.data(G::KeyRole).toString()
         ;
 
     if (G::stop) return;
@@ -5700,7 +5985,7 @@ bool DataModel::isPath(QString fPath)
 {
     if (G::isLogger) G::log("DataModel::isPath");
     for (int row = 0; row < rowCount(); ++row) {
-        if (fPath == index(row, 0).data(G::PathRole).toString())
+        if (fPath == index(row, 0).data(G::KeyRole).toString())
             return true;
     }
     return false;
@@ -5767,12 +6052,22 @@ bool DataModel::verifyIntegrity(const QString &src)
     if (emptyKey) problems << "fPathRow has an empty key";
 
     int rowProblems = 0;
+    int versionProblems = 0;
     int meta = 0, loaded = 0, icon = 0, video = 0, unloadable = 0;
     for (int row = 0; row < n; ++row) {
-        const QString p = index(row, G::PathColumn).data(G::PathRole).toString();
+        const QString p = index(row, G::PathColumn).data(G::KeyRole).toString();
         const int mapped = p.isEmpty() ? -1 : fPathRowValue(p);
         if (mapped != row && rowProblems++ < 5)
             problems << QString("row %1 (%2) maps to %3").arg(row).arg(p).arg(mapped);
+        /*  A version row needs its master in the model, AHEAD of it: every lookup that
+            climbs from a version to its file (fillVersionRow, the collapse test, the
+            badge) assumes both. */
+        if (VersionKey::isVersion(p)) {
+            const int master = fPathRowValue(VersionKey::sourceOf(p));
+            if ((master < 0 || master > row) && versionProblems++ < 5)
+                problems << QString("version row %1 (%2) has master row %3")
+                                .arg(row).arg(p).arg(master);
+        }
 
         // the same tally as recountLoadFlags
         const int status = index(row, G::MetadataStatusColumn).data().toInt();
@@ -5805,8 +6100,10 @@ bool DataModel::verifyIntegrity(const QString &src)
     return false;
 }
 
-bool DataModel::fPathRawInfoGet(const QString &path, RawSensorInfo &info)
+bool DataModel::fPathRawInfoGet(const QString &key, RawSensorInfo &info)
 {
+    // raw sensor info is the FILE's: a version key reads its source's
+    const QString path = VersionKey::sourceOf(key);
     QReadLocker locker(&fPathRawInfoLock);
     auto it = fPathRawInfo.constFind(path);
     if (it == fPathRawInfo.constEnd()) return false;
@@ -5826,19 +6123,19 @@ void DataModel::fPathRawInfoClear()
     fPathRawInfo.clear();
 }
 
-int DataModel::rowFromPath(QString fPath)
+int DataModel::rowFromKey(QString fPath)
 {
-    if (isDebug) qDebug() << "DataModel::rowFromPath" << "instance =" << instance << fPath;
-    if (G::isLogger) G::log("DataModel::rowFromPath");
+    if (isDebug) qDebug() << "DataModel::rowFromKey" << "instance =" << instance << fPath;
+    if (G::isLogger) G::log("DataModel::rowFromKey");
     if (fPathRowContains(fPath)) return fPathRowValue(fPath);
     else return -1;
 }
 
-int DataModel::proxyRowFromPath(QString fPath, QString src)
+int DataModel::proxyRowFromKey(QString fPath, QString src)
 {
-    if (G::isLogger) G::log("DataModel::proxyRowFromPath", "scr = " + src);
+    if (G::isLogger) G::log("DataModel::proxyRowFromKey", "scr = " + src);
     if (isDebug)
-        qDebug() << "DataModel::proxyRowFromPath" << "instance =" << instance
+        qDebug() << "DataModel::proxyRowFromKey" << "instance =" << instance
                  << fPath;
     QMutexLocker locker(&dmMutex);
     int dmRow;
@@ -5851,23 +6148,29 @@ int DataModel::proxyRowFromPath(QString fPath, QString src)
     return sfRow;
 }
 
-QString DataModel::pathFromProxyRow(int sfRow)
+QString DataModel::keyFromProxyRow(int sfRow)
 {
-    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
-    return sf->index(sfRow,0).data(G::PathRole).toString();
+    if (G::isLogger) G::log("DataModel::proxyRowFromKey");
+    return sf->index(sfRow,0).data(G::KeyRole).toString();
+}
+
+QString DataModel::sourcePathFromProxyRow(int sfRow)
+{
+    if (G::isLogger) G::log("DataModel::sourcePathFromProxyRow");
+    return sf->index(sfRow,0).data(G::SourcePathRole).toString();
 }
 
 QString DataModel::folderPathFromProxyRow(int sfRow)
 {
-    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
-    QString fPath = sf->index(sfRow,0).data(G::PathRole).toString();
+    if (G::isLogger) G::log("DataModel::proxyRowFromKey");
+    QString fPath = sf->index(sfRow,0).data(G::SourcePathRole).toString();
     return QDir(fPath).absolutePath();
 }
 
 QString DataModel::folderPathFromModelRow(int dmRow)
 {
-    if (G::isLogger) G::log("DataModel::proxyRowFromPath");
-    QString fPath = index(dmRow,0).data(G::PathRole).toString();
+    if (G::isLogger) G::log("DataModel::proxyRowFromKey");
+    QString fPath = index(dmRow,0).data(G::SourcePathRole).toString();
     return QDir(fPath).absolutePath();
 }
 
@@ -5878,12 +6181,14 @@ void DataModel::rebuildRowFromPathHash()
     QMutexLocker locker(&dmMutex);
     // fPathRow.clear();
     fPathRowClear();
+    mVersionRowCount = 0;
     for (int row = 0; row < rowCount(); ++row) {
-        QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = index(row, G::PathColumn).data(G::KeyRole).toString();
         // a row with no path yet must not become an "" key (see DataModel::insert)
         if (fPath.isEmpty()) continue;
         // fPathRow[fPath] = row;
         fPathRowSet(fPath, row);
+        if (VersionKey::isVersion(fPath)) ++mVersionRowCount;
     }
 }
 
@@ -5936,6 +6241,10 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         const QStringList known = fPathRowKeys();
         for (const QString &fPath : known) {
             if (fPath.isEmpty()) continue;
+            /*  A version key is never in a folder listing. It goes when its master goes
+                (removeFiles takes a master's versions with it) and otherwise follows
+                the master's sidecar (MW::reconcileVersionRows) -- never the disk. */
+            if (VersionKey::isVersion(fPath)) continue;
             if (!srcImageFiles.contains(fPath)) {
                 removed << fPath;
             }
@@ -5944,9 +6253,11 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
 
     // modified
     for (int i = 0; i < rowCount(); ++i) {
+        // a version is refreshed through its master's re-read, not on its own
+        if (index(i, G::PathColumn).data(G::VersionIdRole).toInt() > 0) continue;
         QDateTime t1 = index(i, G::ModifiedColumn).data().toDateTime();
         // get current
-        QString fPath = index(i, G::PathColumn).data(G::PathRole).toString();
+        QString fPath = index(i, G::PathColumn).data(G::SourcePathRole).toString();
         QFileInfo info = QFileInfo(fPath);
         QDateTime t2 = info.lastModified();
         // many file formats to not include ms in datetime
@@ -6088,22 +6399,22 @@ void DataModel::rebuildTypeFilter()
 //    filters->addCategoryFromData(typesMap, filters->types);
 //}
 
-QModelIndex DataModel::indexFromPath(QString fPath)
+QModelIndex DataModel::indexFromKey(QString fPath)
 {
 /*
     The hash table fPathRow {path, row} is build when the datamodel is loaded to provide a
     quick lookup to get the datamodel row from an image path.
 */
-    if (G::isLogger) G::log("DataModel::proxyIndexFromPath");
+    if (G::isLogger) G::log("DataModel::proxyIndexFromKey");
     if (isDebug) {
-        qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
+        qDebug() << "DataModel::proxyIndexFromKey" << "instance =" << instance
                  << "fPath =" << fPath;
     }
     // if (!fPathRow.contains(fPath)) {
     if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
-        G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
-        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        G::issue("Warning", errMsg, "DataModel::proxyIndexFromKey", -1, fPath);
+        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromKey", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     // int dmRow = fPathRow[fPath];
@@ -6114,27 +6425,27 @@ QModelIndex DataModel::indexFromPath(QString fPath)
     }
     else {
         errMsg = "Invalid index.";
-        G::issue("Warning", errMsg, "DataModel::indexFromPath", dmRow, fPath);
+        G::issue("Warning", errMsg, "DataModel::indexFromKey", dmRow, fPath);
         return index(-1, -1);       // invalid index
     }
 }
 
-QModelIndex DataModel::proxyIndexFromPath(QString fPath)
+QModelIndex DataModel::proxyIndexFromKey(QString fPath)
 {
     /*
     The hash table fPathRow {path, row} is build when the datamodel is loaded to provide a
     quick lookup to get the datamodel row from an image path.
 */
-    if (G::isLogger) G::log("DataModel::proxyIndexFromPath");
+    if (G::isLogger) G::log("DataModel::proxyIndexFromKey");
     if (isDebug) {
-        qDebug() << "DataModel::proxyIndexFromPath" << "instance =" << instance
+        qDebug() << "DataModel::proxyIndexFromKey" << "instance =" << instance
                  << "fPath =" << fPath;
     }
     // if (!fPathRow.contains(fPath)) {
     if (!fPathRowContains(fPath)) {
         errMsg = "Not in fPathrow.";
-        G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", -1, fPath);
-        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromPath", "Not in fPathrow: " + fPath);
+        G::issue("Warning", errMsg, "DataModel::proxyIndexFromKey", -1, fPath);
+        if (G::isRunByExtern) Utilities::log("MW::proxyIndexFromKey", "Not in fPathrow: " + fPath);
         return index(-1, -1);
     }
     // int dmRow = fPathRow[fPath];
@@ -6145,7 +6456,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     }
     else {
         errMsg = "Invalid proxy.";
-        G::issue("Warning", errMsg, "DataModel::proxyIndexFromPath", dmRow, fPath);
+        G::issue("Warning", errMsg, "DataModel::proxyIndexFromKey", dmRow, fPath);
         return index(-1, -1);       // invalid index
     }
 }
@@ -6289,6 +6600,10 @@ bool DataModel::getSelectionOrPicks(QStringList &list)
 /*
     Adds each image that is selected or picked as a file path to list. If there
     are picks and a selection then a dialog offers the user a choice to use.
+
+    FILES, EACH ONCE. Every caller -- rename, the external app, focus and mean stack, the
+    embellish exports -- acts on image files, so a version (virtual copy) contributes its
+    SOURCE file, and a master and its versions are one entry however many are chosen.
 */
     if (G::isLogger) G::log("DataModel::getSelection");
     if (isDebug)
@@ -6322,21 +6637,23 @@ bool DataModel::getSelectionOrPicks(QStringList &list)
         }
     }
 
+    QSet<QString> seen;
+    auto add = [&](const QModelIndex &idx) {
+        const QString file = idx.data(G::SourcePathRole).toString();
+        if (file.isEmpty() || seen.contains(file)) return;
+        seen.insert(file);
+        list << file;
+    };
     if (usePicks) {
         for (int row = 0; row < sf->rowCount(); row++) {
-            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked") {
-                QModelIndex idx = sf->index(row, 0);
-                list << idx.data(G::PathRole).toString();
-            }
+            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "Picked")
+                add(sf->index(row, 0));
         }
     }
     else {
         QModelIndexList idxList = selectionModel->selectedRows();
-        for (int i = 0; i < idxList.size(); ++i) {
-            int row = idxList.at(i).row();
-            QModelIndex idx = sf->index(row, 0);
-            list << idx.data(G::PathRole).toString();
-        }
+        for (int i = 0; i < idxList.size(); ++i)
+            add(sf->index(idxList.at(i).row(), 0));
     }
 
     return true;
@@ -6435,7 +6752,7 @@ void DataModel::setShowThumbNailSymbolHelp(bool showHelp)
     // refresh datamodel
     for (int row = 0; row < rowCount(); row++) {
         QModelIndex dmIdx = index(row, G::PathColumn);
-        QString fPath = dmIdx.data(G::PathRole).toString();
+        QString fPath = dmIdx.data(G::SourcePathRole).toString();
         QString tip = fPath;  //fileInfo.absoluteFilePath();
         if (showThumbNailSymbolHelp) tip += thumbnailHelp;
         // setData(dmIdx, tip, Qt::ToolTipRole);
@@ -6495,7 +6812,7 @@ QString DataModel::diagnostics()
     rpt << "\n";
     rpt << "\n" << G::sj("combineRawJpg", dots) << G::s(combineRawJpg);
     rpt << "\n";
-    rpt << "\n" << G::sj("currentFilePath", dots) << G::s(currentFilePath);
+    rpt << "\n" << G::sj("currentKey", dots) << G::s(currentKey);
     rpt << "\n" << G::sj("currentDmRow", dots) << G::s(currentDmRow);
     rpt << "\n" << G::sj("currentSfRow", dots) << G::s(currentSfRow);
     rpt << "\n" << G::sj("currentDmIdx.row", dots) << G::s(currentDmIdx.row());
@@ -6769,7 +7086,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n"   << G::sj("DataModel row", dots) << G::s(row);
     dots = 28;
     rpt << "\n  " << G::sj("FileName", dots) << G::s(index(row, G::NameColumn).data());
-    rpt << "\n  " << G::sj("FilePath", dots) << G::s(index(row, 0).data(G::PathRole));
+    rpt << "\n  " << G::sj("FilePath", dots) << G::s(index(row, 0).data(G::KeyRole));
     rpt << "\n  " << G::sj("isIcon", dots)
         << G::s(!index(row, G::PathColumn).data(Qt::DecorationRole).isNull());
     rpt << "\n  " << G::sj("isCached", dots) << G::s(index(row, G::IsCachedColumn).data());
@@ -7010,6 +7327,27 @@ FilterPredicatePtr SortFilter::filterPredicate() const
     return mPredicate;
 }
 
+void SortFilter::setVersionsExpanded(const QString &masterKey, bool expanded)
+{
+    if (expanded) mExpandedVersions.insert(masterKey);
+    else mExpandedVersions.remove(masterKey);
+}
+
+bool SortFilter::versionsExpanded(const QString &masterKey) const
+{
+    return mShowAllVersions || mExpandedVersions.contains(masterKey);
+}
+
+bool SortFilter::isCollapsedVersion(int sourceRow, const QModelIndex &sourceParent) const
+{
+    if (mShowAllVersions) return false;
+    const QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
+    const int id = idx.data(G::VersionIdRole).toInt();
+    if (id <= 0) return false;
+    const QString key = idx.data(G::KeyRole).toString();
+    return !mExpandedVersions.contains(VersionKey::sourceOf(key));
+}
+
 bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
 /*
@@ -7062,7 +7400,11 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     const FilterPredicatePtr p = filterPredicate();
     if (!p || p->acceptsEverything()) {
         finished = true;
-        return true;
+        /*  VERSIONS. With no filter, a collapsed group shows only its master. With a
+            filter every row -- version or not -- stands on its own values, below: a
+            filter asks "which of these match", and a matching version hidden behind a
+            master that does not match would be a wrong answer. */
+        return !isCollapsedVersion(sourceRow, sourceParent);
     }
 
     const bool ok = p->accepts([&](int column) {
@@ -7120,6 +7462,20 @@ void SortFilter::prepareSortKeys(int column)
     dm->rowStore.forEachRow({{column, sortRole()}}, [&](int, const QVariant *v) {
         keys.append(v[0]);
     });
+    /*  A VERSION SORTS WITH ITS MASTER, on the master's value, so a group stays
+        together under any column sort; the proxy's sort is stable and the source order
+        already puts each version right after its master. Only when there are versions:
+        the extra pass reads every row's key. */
+    if (dm->versionRowCount() > 0) {
+        dm->rowStore.forEachRow({{G::PathColumn, G::KeyRole}},
+                                [&](int r, const QVariant *v) {
+            const QString k = v[0].toString();
+            if (!VersionKey::isVersion(k)) return;
+            const int master = dm->fPathRowValue(VersionKey::sourceOf(k));
+            if (master >= 0 && master < keys.size() && r < keys.size())
+                keys[r] = keys.at(master);
+        });
+    }
     QVector<int> ranks;
     if (winnowSortRanks(keys, sortCaseSensitivity(), isSortLocaleAware(), ranks)) {
         mRanks.swap(ranks);
@@ -7161,6 +7517,18 @@ bool SortFilter::lessThan(const QModelIndex &left, const QModelIndex &right) con
             return winnowVariantLessThan(mSortKeys.at(l), mSortKeys.at(r),
                                          sortCaseSensitivity(), isSortLocaleAware());
         }
+    }
+    /*  VERSIONS TIE ON SOURCE ORDER. A version shares its master's name (and, sorted by
+        another column, its master's key -- prepareSortKeys), so outside a full sort --
+        the proxy re-placing one edited row -- equal values must fall back to source
+        order, which puts the master first. Without it a renamed master whose version
+        still carried the old name for a moment landed after its version and stayed
+        there. Only with version rows present: otherwise ties keep Qt's own handling. */
+    auto *dm = qobject_cast<DataModel *>(sourceModel());
+    if (dm && dm->versionRowCount() > 0) {
+        if (QSortFilterProxyModel::lessThan(left, right)) return true;
+        if (QSortFilterProxyModel::lessThan(right, left)) return false;
+        return left.row() < right.row();
     }
     return QSortFilterProxyModel::lessThan(left, right);
 }

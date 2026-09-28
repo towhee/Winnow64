@@ -1296,7 +1296,7 @@ void FSTree::onRowsAboutToBeRemoved(const QModelIndex &parent, int start, int en
     // Q_UNUSED(start)
     // Q_UNUSED(end)
 
-    QString toBeRemoved = fsModel->index(start, 0, parent).data(G::PathRole).toString();
+    QString toBeRemoved = fsModel->index(start, 0, parent).data(QFileSystemModel::FilePathRole).toString();
 
     /*
     qDebug() << "FSTree::onRowsAboutToBeRemoved"

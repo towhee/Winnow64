@@ -567,6 +567,15 @@ void Xmp::initialize()
     e.schema = "winnow";
     definedElements["developpreviewkey"] = e;
 
+    /* The image's VERSIONS (virtual copies): base64 JSON of every version's recipe,
+       preview, name, rating, label and pick. The master stays in winnow:Develop above.
+       See Metadata/versions.h. */
+    e.name = "winnow:Versions";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "winnow";
+    definedElements["versions"] = e;
+
     // orientation
     e.name = "tiff:Orientation";
     e.parentName = "rdf:Description";

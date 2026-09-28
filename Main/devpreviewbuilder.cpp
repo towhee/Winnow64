@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/versionkey.h"
 #include "Cache/devpreviewcache.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "Utilities/volumeinfo.h"
@@ -176,7 +177,7 @@ QString MW::devPreviewBuildKey(const QString &fPath) const
 */
     if (fPath.isEmpty() || !developProperties) return QString();
 
-    const int row = dm ? dm->rowFromPath(fPath) : -1;
+    const int row = dm ? dm->rowFromKey(fPath) : -1;
     const bool edited = row >= 0 &&
                         dm->index(row, G::DevelopColumn).data().toBool();
 
@@ -185,6 +186,9 @@ QString MW::devPreviewBuildKey(const QString &fPath) const
     const QString blob = edited ? developProperties->developBlobFor(fPath) : QString();
     if (!blob.isEmpty()) return Metadata::devPreviewKey(blob);
 
+    /* An unedited VERSION looks exactly like its source's default render, which the
+       master's own entry already holds (ImageDecoder::loadDevPreview reads it there). */
+    if (VersionKey::isVersion(fPath)) return QString();
     if (!RawFormat::HasSensorDecoder(QFileInfo(fPath).suffix().toLower()))
         return QString();
     return Metadata::defaultRenderKey();
@@ -358,7 +362,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
            decoded from the camera JPEG, and the next visit should serve the devPreview just
            written instead. Skipped for the image ON SCREEN, whose loupe pixmap is that cached
            decode -- it picks the preview up on the next visit rather than blinking now. */
-        if (icd && dm && fPath != dm->currentFilePath) icd->remove(fPath);
+        if (icd && dm && fPath != dm->currentKey) icd->remove(fPath);
         devPreviewBuildStepDone();
     });
 
@@ -469,11 +473,11 @@ void MW::buildDevPreviewsForSelection()
     const QModelIndexList sel = dm->selectionModel->selectedRows();
     if (sel.count() > 1) {
         for (const QModelIndex &idx : sel)
-            paths << idx.data(G::PathRole).toString();
+            paths << idx.data(G::KeyRole).toString();
     }
     else {
         for (int row = 0; row < dm->sf->rowCount(); ++row)
-            paths << dm->sf->index(row, 0).data(G::PathRole).toString();
+            paths << dm->sf->index(row, 0).data(G::KeyRole).toString();
     }
     buildDevPreviews(paths, "menu");
 }
@@ -550,16 +554,17 @@ void MW::queueBackgroundDevPreviewBuild()
     QStringList paths;
     for (int row = 0; row < dm->rowCount(); ++row) {
         const QString fPath =
-            dm->index(row, G::PathColumn).data(G::PathRole).toString();
+            dm->index(row, G::PathColumn).data(G::KeyRole).toString();
         if (fPath.isEmpty()) continue;
-        const QFileInfo info(fPath);
+        const QFileInfo info(VersionKey::sourceOf(fPath));     // a version: its file's folder
         /* absoluteDir().path() is the spelling the catalog's folder column uses
            (DataModel::catalogRows), so the two cannot disagree about the same folder. */
         if (!folderAllowed(info.absoluteDir().path())) continue;
         const bool edited = dm->index(row, G::DevelopColumn).data().toBool();
         /* Extension test only -- no file is opened here. buildDevPreviews makes the real
            (and more expensive) per-path decision, on a worker thread. */
-        if (!edited && !RawFormat::HasSensorDecoder(info.suffix().toLower()))
+        if (!edited && (VersionKey::isVersion(fPath)
+                        || !RawFormat::HasSensorDecoder(info.suffix().toLower())))
             continue;
         paths << fPath;
     }

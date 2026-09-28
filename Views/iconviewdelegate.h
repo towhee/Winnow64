@@ -15,6 +15,13 @@ class IconViewDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
+    /*  VERSIONS (virtual copies) badge, top-left of the thumbnail: a master's count
+        with an expand arrow (click toggles the group, IconView::mousePressEvent), or a
+        version's name tag. Empty text = no badge. sfIdx is a proxy index. */
+    QString versionBadgeText(const QModelIndex &sfIdx) const;
+    QRect versionBadgeRect(const QRect &optionRect, const QString &text) const;
+    bool versionsBadgeHit(const QModelIndex &sfIdx, const QRect &optionRect,
+                          const QPoint &pos) const;
     IconViewDelegate(QObject *parent,
                      bool &isRatingBadgeVisible,
                      bool &isIconNumberVisible,
@@ -186,11 +193,13 @@ private:
     QRect developRect;
     QRect availabilityRect;
 
+    /* The loupe viewport, normalized to the thumbnail. Set by setNormVpRect once
+       ImageView has an image; until then the rectangle is not drawn (see paint). */
     QPointF vpCntrN;
     QSizeF vpSizeN;
-    qreal vpA;
+    qreal vpA = 0;
 
-    bool vpRectIsVisible;
+    bool vpRectIsVisible = false;
 
     QImage combineRawJpgSymbol;
 };

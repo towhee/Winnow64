@@ -80,7 +80,7 @@ QString ScrollVerify::pathToVerify(int sfRow, qint64 now, qint64 expiry) const
             != int(Catalog::Availability::Present))
         return QString();
 
-    const QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+    const QString fPath = dm->sf->index(sfRow, 0).data(G::SourcePathRole).toString();
     if (fPath.isEmpty()) return QString();
     const auto it = verifiedAt.constFind(fPath);
     if (it != verifiedAt.cend() && now - *it < expiry) return QString();

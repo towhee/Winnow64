@@ -1,6 +1,7 @@
 #ifndef MOUNTSNAPSHOT_H
 #define MOUNTSNAPSHOT_H
 
+#include "Utilities/versionkey.h"
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
@@ -87,7 +88,9 @@ struct SrcStamp
 
     static SrcStamp of(const QString &path)
     {
-        const QFileInfo fi(path);
+        /* A version (virtual copy) is stamped by its SOURCE file: path + "/#v" + id is
+           not a file, and would otherwise always read as a vanished image. */
+        const QFileInfo fi(VersionKey::sourceOf(path));
         if (!fi.exists() || !fi.isFile()) return SrcStamp();
         SrcStamp s;
         s.size = fi.size();

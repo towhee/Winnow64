@@ -1,4 +1,5 @@
 #include "Cache/devpreviewcache.h"
+#include "Utilities/versionkey.h"
 #include "Cache/cachedb.h"
 #include "Cache/pathkey.h"
 #include "Cache/mountsnapshot.h"
@@ -319,13 +320,17 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
               " live = 1, vol = excluded.vol, srcsize = excluded.srcsize,"
               " srcmtime = excluded.srcmtime, demoted = 0");
     q.addBindValue(qulonglong(id));
+    /* fPath may be a VERSION key (Utilities/versionkey.h): the row is keyed by it, but
+       its folder and volume are its source file's, so the per-folder stats, the mount
+       check and the sweep see the real file. */
+    const QString srcFile = VersionKey::sourceOf(fPath);
     q.addBindValue(fPath);
     q.addBindValue(key);
-    q.addBindValue(QFileInfo(fPath).absolutePath());
+    q.addBindValue(QFileInfo(srcFile).absolutePath());
     q.addBindValue(QString::fromLatin1(blobHash));
     q.addBindValue(qint64(jpg.size()));
     q.addBindValue(nowSecs());
-    q.addBindValue(volumeRootOf(fPath));
+    q.addBindValue(volumeRootOf(srcFile));
     q.addBindValue(stamp.size);
     q.addBindValue(stamp.mtime);
     if (!q.exec()) {
@@ -550,7 +555,8 @@ void DevPreviewCache::onMoved(const QString &srcPath, const QString &dstPath)
         QSqlQuery q(db);
         q.prepare("SELECT id FROM devpreview WHERE pathkey = ?");
         q.addBindValue(srcKey);
-        if (!q.exec() || !q.next()) return;      // nothing cached for the source
+        /* nothing cached for the source -- nor for any of its versions */
+        if ((!q.exec() || !q.next()) && versionKeysLocked(db, srcKey).isEmpty()) return;
     }
 
     /* A pre-existing entry at the destination is being overwritten by this move, so its
@@ -561,17 +567,60 @@ void DevPreviewCache::onMoved(const QString &srcPath, const QString &dstPath)
        at dstPath: a copy carries its own mtime. */
     const SrcStamp stamp = SrcStamp::of(dstPath);
 
+    auto move = [&](const QString &fromKey, const QString &toPath) {
+        const QString toKey = cachePathKey(toPath);
+        const QString toSrc = VersionKey::sourceOf(toPath);
+        QSqlQuery q(db);
+        q.prepare("UPDATE devpreview SET path = ?, pathkey = ?, folder = ?, vol = ?,"
+                  " live = 1, demoted = 0, srcsize = ?, srcmtime = ? WHERE pathkey = ?");
+        q.addBindValue(toPath);
+        q.addBindValue(toKey);
+        q.addBindValue(QFileInfo(toSrc).absolutePath());
+        q.addBindValue(volumeRootOf(toSrc));
+        q.addBindValue(stamp.size);
+        q.addBindValue(stamp.mtime);
+        q.addBindValue(fromKey);
+        q.exec();
+    };
+    /*  The image's VERSIONS move with it: their keys are the image's path plus a suffix,
+        so each is re-keyed onto the new path (and anything already there goes). */
+    const QStringList versions = versionKeysLocked(db, srcKey);
+    move(srcKey, dstPath);
+    for (const QString &vk : versions) {
+        const QString dstVersion = VersionKey::make(dstPath, VersionKey::idOf(vk));
+        removeLocked(db, cachePathKey(dstVersion));
+        move(vk, dstVersion);
+    }
+}
+
+QStringList DevPreviewCache::versionKeysLocked(QSqlDatabase &db, const QString &srcKey)
+{
+/*
+    The rows of srcKey's VERSIONS: pathkey = srcKey + "/#v" + id (Utilities/versionkey.h).
+    LIKE with the key's own % and _ escaped, so a file name containing them matches only
+    itself.
+*/
+    QStringList keys;
+    if (srcKey.isEmpty() || VersionKey::isVersion(srcKey)) return keys;
+    QString esc = srcKey;
+    esc.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     QSqlQuery q(db);
-    q.prepare("UPDATE devpreview SET path = ?, pathkey = ?, folder = ?, vol = ?,"
-              " live = 1, demoted = 0, srcsize = ?, srcmtime = ? WHERE pathkey = ?");
-    q.addBindValue(dstPath);
-    q.addBindValue(dstKey);
-    q.addBindValue(QFileInfo(dstPath).absolutePath());
-    q.addBindValue(volumeRootOf(dstPath));
-    q.addBindValue(stamp.size);
-    q.addBindValue(stamp.mtime);
-    q.addBindValue(srcKey);
-    q.exec();
+    q.prepare("SELECT pathkey FROM devpreview WHERE pathkey LIKE ? ESCAPE '\\'");
+    q.addBindValue(esc + "/#v%");
+    if (q.exec())
+        while (q.next()) {
+            const QString k = q.value(0).toString();
+            if (VersionKey::isVersion(k) && VersionKey::sourceOf(k) == srcKey) keys << k;
+        }
+    return keys;
+}
+
+void DevPreviewCache::removeEntry(const QString &fPath)
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    removeLocked(db, cachePathKey(fPath));
 }
 
 void DevPreviewCache::onDeleted(const QString &fPath)
@@ -579,7 +628,10 @@ void DevPreviewCache::onDeleted(const QString &fPath)
     QMutexLocker lk(&mutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return;
-    removeLocked(db, cachePathKey(fPath));
+    const QString key = cachePathKey(fPath);
+    removeLocked(db, key);
+    // an image takes its versions' previews with it
+    for (const QString &k : versionKeysLocked(db, key)) removeLocked(db, k);
 }
 
 void DevPreviewCache::clear()

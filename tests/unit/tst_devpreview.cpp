@@ -1,4 +1,5 @@
 #include <QtTest>
+#include "Utilities/versionkey.h"
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
@@ -62,6 +63,8 @@ private slots:
     void concurrentGetsAreNotSerialised();
     void legacyJsonIndexIsImported();
     void isCachePathIdentifiesTheProtectedFolder();
+    void versionsHaveTheirOwnEntries();
+    void versionsFollowTheirImage();
 
 private:
     QString imagePath(const QString &name) const;
@@ -823,6 +826,74 @@ void tst_devpreview::isCachePathIdentifiesTheProtectedFolder()
     QVERIFY(!c.isCachePath(imagePath("a.nef")));
     // a sibling whose path is a string prefix of the cache folder is NOT inside it
     QVERIFY(!c.isCachePath(d + "Extra/a.jpg"));
+}
+
+void tst_devpreview::versionsHaveTheirOwnEntries()
+{
+/*
+    A version (virtual copy) is keyed path + "/#v" + id (Utilities/versionkey.h): its
+    preview is its own, beside the master's, and it is stamped by the SOURCE file -- the
+    key is not a file, and a stamp of it would read as a vanished image on every get and
+    every sweep.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("v.nef");
+    QFile f(p);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("raw");
+    f.close();
+    const QString v1 = VersionKey::make(p, 1);
+
+    c.put(p, "masterRecipe", jpg(0x51));
+    c.put(v1, "versionRecipe", jpg(0x52));
+    QCOMPARE(c.count(), 2);
+    QCOMPARE(c.get(v1, "versionRecipe"), jpg(0x52));
+    QCOMPARE(c.get(p, "masterRecipe"), jpg(0x51));
+    QVERIFY(c.contains(v1, "versionRecipe"));
+    QCOMPARE(c.sweep(), 0);                     // the source is there: nothing to demote
+
+    // the SOURCE changing makes the version's stamp disagree too
+    QTest::qSleep(1100);
+    QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Append));
+    f.write("edited elsewhere");
+    f.close();
+    QVERIFY(c.get(v1, "versionRecipe").isEmpty());
+
+    // removeEntry takes exactly one: the master's leaves its version's alone
+    c.put(v1, "versionRecipe", jpg(0x53));
+    c.put(p, "masterRecipe", jpg(0x54));
+    c.removeEntry(p);
+    QVERIFY(c.get(p, "masterRecipe").isEmpty());
+    QCOMPARE(c.get(v1, "versionRecipe"), jpg(0x53));
+}
+
+void tst_devpreview::versionsFollowTheirImage()
+{
+/*
+    Deleting an image takes its versions' previews with it; moving it re-keys them onto
+    the new path. Anything else leaves orphan rows naming a path that is gone -- or,
+    worse, one a different image later takes.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString a = imagePath("a_v.nef");
+    const QString b = imagePath("b_v.nef");
+    const QString other = imagePath("a_v.nef_other.nef");   // shares the prefix, not a version
+    const QString a1 = VersionKey::make(a, 1), a2 = VersionKey::make(a, 2);
+    c.put(a, "m", jpg(0x61));
+    c.put(a1, "r1", jpg(0x62));
+    c.put(a2, "r2", jpg(0x63));
+    c.put(other, "o", jpg(0x64));
+
+    c.onMoved(a, b);
+    QVERIFY(c.get(a1, "r1").isEmpty());
+    QCOMPARE(c.get(VersionKey::make(b, 1), "r1"), jpg(0x62));
+    QCOMPARE(c.get(VersionKey::make(b, 2), "r2"), jpg(0x63));
+    QCOMPARE(c.get(b, "m"), jpg(0x61));
+    QCOMPARE(c.get(other, "o"), jpg(0x64));     // untouched
+
+    c.onDeleted(b);
+    QCOMPARE(c.count(), 1);                     // only the unrelated file's is left
+    QCOMPARE(c.get(other, "o"), jpg(0x64));
 }
 
 QTEST_MAIN(tst_devpreview)

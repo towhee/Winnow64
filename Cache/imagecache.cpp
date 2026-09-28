@@ -1756,7 +1756,7 @@ QString ImageCache::reportCacheItemList(QString title)
         int videoOrInvalid = 0;
         int attBucket0 = 0, attBucket1to3 = 0, attBucket4to9 = 0, attBucketCap = 0;
         for (int r = 0; r < nRows; ++r) {
-            const QString fPath = dm->sf->index(r, 0).data(G::PathRole).toString();
+            const QString fPath = dm->sf->index(r, 0).data(G::KeyRole).toString();
             const int att = dm->sf->index(r, G::AttemptsColumn).data().toInt();
             const bool dmFlag = dm->index(r, G::IsCachedColumn).data().toBool();
             const bool inIm = icd->contains(fPath);
@@ -1833,7 +1833,7 @@ QString ImageCache::reportCacheItemList(QString title)
         }
         rpt.setFieldWidth(9);
         rpt.setFieldAlignment(QTextStream::AlignRight);
-        QString fPath = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+        QString fPath = dm->sf->index(sfRow, 0).data(G::KeyRole).toString();
         rpt
             << sfRow
             << dm->sf->index(sfRow, G::DecoderIdColumn).data().toInt()
@@ -1899,7 +1899,7 @@ QString ImageCache::reportCacheItemList(QString title)
             rpt.setFieldWidth(25);
             rpt << toCacheStatus[sfRow].msg;
             rpt.setFieldWidth(50);
-            rpt << dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+            rpt << dm->sf->index(sfRow, 0).data(G::KeyRole).toString();
             rpt.setFieldWidth(0);
             rpt << "\n";
         }
@@ -1939,7 +1939,7 @@ QString ImageCache::reportImCache()
     for (int i = 0; i < keys.length(); ++i) {
         imRptItem.hashKey = i;
         imRptItem.fPath = keys.at(i);
-        imRptItem.sfRow = dm->proxyRowFromPath(imRptItem.fPath, "ImageCache::reportImCache");
+        imRptItem.sfRow = dm->proxyRowFromKey(imRptItem.fPath, "ImageCache::reportImCache");
         image = icd->imCache.value(keys.at(i));    // QHash<QString, QImage> imCache
         imRptItem.w = image.width();
         imRptItem.h = image.height();
@@ -2016,7 +2016,7 @@ QString ImageCache::reportImCacheRows()
     auto it = icd->imCache.begin();
     while (it != icd->imCache.end()) {
         QString fPath = it.key();
-        int sfRow = dm->proxyRowFromPath(fPath, "ImageCache::reportImCacheRows");
+        int sfRow = dm->proxyRowFromKey(fPath, "ImageCache::reportImCacheRows");
         imCacheRows.append(sfRow);
         ++it;
     }
@@ -2525,7 +2525,7 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
     QString fun = "ImageCache::setCurrentPosition";
 
     // same as previous position
-    // int row = dm->proxyRowFromPath(fPath, fun);
+    // int row = dm->proxyRowFromKey(fPath, fun);
     // if (row == prevRow) return;
     // currRow = row;
 
@@ -2965,7 +2965,7 @@ void ImageCache::cacheImage(int id, int sfRow,
     //     // scale to max icon size
     //     QImage im = doneImage.scaled(G::maxIconSize, Qt::KeepAspectRatio);
     //     im.convertTo(QImage::Format_RGB32);
-    //     int dmRow = dm->rowFromPath(fPath);
+    //     int dmRow = dm->rowFromKey(fPath);
     //     // no connect for setIcon
     //     emit setIcon(dmRow, im, instance, src);
     // }
@@ -3174,7 +3174,7 @@ void ImageCache::fillCache(int id,
     int cacheRow       = haveSnapshot ? doneSfRow       : decoders[id]->sfRow;
     int effectiveStatus= haveSnapshot ? doneStatus      : int(decoders[id]->status);
     QImage effectiveImage = haveSnapshot ? doneImage    : decoders[id]->image;
-    QString effectiveFPath= haveSnapshot ? doneFPath    : decoders[id]->fPath;
+    QString effectiveFPath= haveSnapshot ? doneFPath    : decoders[id]->rowKey;
     qint64 effectiveMs    = haveSnapshot ? doneMsToDecode : decoders[id]->nsToDecode;
 
     if (debugCaching)

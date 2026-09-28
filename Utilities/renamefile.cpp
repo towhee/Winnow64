@@ -98,7 +98,7 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
 
     // Index list to avoid unique name issues while renaming
     for (int i = 0; i < selection.size(); i++) {
-        selectionIndexes.append(dm->proxyIndexFromPath(selection.at(i)));
+        selectionIndexes.append(dm->proxyIndexFromKey(selection.at(i)));
     }
 
     // Simple rename is only meaningful for a single-file selection. For a
@@ -281,13 +281,19 @@ void RenameFileDlg::renameDatamodel(QString oldPath, QString newPath, QString ne
     }
     QModelIndex pathIdx = dm->index(row, G::PathColumn);
     QModelIndex nameIdx = dm->index(row, G::NameColumn);
-    if (pathIdx.isValid()) dm->setData(pathIdx, newPath, G::PathRole);
+    if (pathIdx.isValid()) dm->setData(pathIdx, newPath, G::KeyRole);
     if (nameIdx.isValid()) dm->setData(nameIdx, newName);
 
     // update imageCache
     imageCache->rename(oldPath, newPath);
     if (isDebug) qDebug() << "In ImageCache renamed oldPath =" << oldPath
                  << "to newPath =" << newPath;
+
+    /*  The image's VERSIONS are keyed by its path (Utilities/versionkey.h). Their records
+        rode along in the renamed sidecar and their loupe previews in FileOps::onMoved;
+        the rows and the ImageCache entries are re-keyed here. */
+    for (const auto &kv : dm->rekeyVersions(oldPath, newPath))
+        imageCache->rename(kv.first, kv.second);
 }
 
 void RenameFileDlg::renameAllSharingBaseName(QString oldBase, QString newBase)
@@ -438,7 +444,7 @@ void RenameFileDlg::rename()
     QSet<QString> selectionPaths;
     for (int i = 0; i < selectionIndexes.size(); i++) {
         int row = selectionIndexes.at(i).row();
-        QString path = dm->sf->data(dm->sf->index(row, G::PathColumn), G::PathRole).toString();
+        QString path = dm->sf->data(dm->sf->index(row, G::PathColumn), G::SourcePathRole).toString();
         selectionPaths.insert(path);
         appendAllSharingBaseName(path);
         ui->progressBar->setValue(++progress);
@@ -485,14 +491,14 @@ void RenameFileDlg::rename()
         FileOps::onMoved(oldPath, uniquePath);
 
         // update datamodel
-        QModelIndex idx = dm->proxyIndexFromPath(oldPath);
+        QModelIndex idx = dm->proxyIndexFromKey(oldPath);
         // might be a sidecar file not in datamodel
         if (idx.isValid()) {
             int row = idx.row();
             QModelIndex pathIdx = dm->sf->index(row, G::PathColumn);
             QModelIndex nameIdx = dm->sf->index(row, G::NameColumn);
             QString newName = Utilities::getFileName(uniquePath);
-            dm->sf->setData(pathIdx, uniquePath, G::PathRole);
+            dm->sf->setData(pathIdx, uniquePath, G::KeyRole);
             dm->sf->setData(nameIdx, newName);
             dm->fPathRow.remove(oldPath);
             dm->fPathRow[uniquePath] = row;
@@ -631,7 +637,7 @@ void RenameFileDlg::rename()
     }
 
     // update current image
-    dm->currentFilePath = dm->currentSfIdx.data(G::PathRole).toString();
+    dm->currentKey = dm->currentSfIdx.data(G::KeyRole).toString();
 
     if (isDebug) {
         qDebug() << "Renaming completed";
@@ -903,7 +909,7 @@ bool RenameFileDlg::renameSingleManual(const QString &newBase)
         if (fi.fileName() != selectedFileName) sidecars << fi.fileName();
     }
 
-    dm->currentFilePath = dm->currentSfIdx.data(G::PathRole).toString();
+    dm->currentKey = dm->currentSfIdx.data(G::KeyRole).toString();
 
     if (!sidecars.isEmpty()) {
         QMessageBox::information(this, "Sidecar files renamed",
@@ -1082,7 +1088,7 @@ void RenameFileDlg::diagDatamodel()
     //        qDebug() << i << "\t" << rowMap[i];
     qDebug() << "Datamodel:";
     for (int i = 0; i < dm->rowCount(); i++) {
-        QString path = dm->index(i, G::PathColumn).data(G::PathRole).toString();
+        QString path = dm->index(i, G::PathColumn).data(G::KeyRole).toString();
         QString name = dm->index(i, G::NameColumn).data().toString();
         qDebug() << i << "\tPath =" << path << "Name =" << name;
     }

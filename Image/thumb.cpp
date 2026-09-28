@@ -1,4 +1,8 @@
 #include "Image/thumb.h"
+#include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
+#include "Metadata/versions.h"
+#include "Cache/thumbcache.h"
 #include "Main/global.h"
 
 #ifdef Q_OS_MAC
@@ -549,6 +553,52 @@ struct ScopedIconNs {
     }
 };
 
+bool Thumb::loadVersionThumb(const QString &key, int dmRow, QImage &image,
+                             int instance, Metadata *metadata, QString src)
+{
+/*
+    A version is a different edit of the same photograph. Its icon is its own 256px
+    developed preview from winnow:Versions when that preview was made from the
+    version's current recipe -- the same key check Metadata::readDevThumb makes for the
+    master. Otherwise (an identity version, or a stale preview) it is the SOURCE file's
+    original camera thumbnail: the as-shot picture is the honest fallback, and the
+    master's developed thumbnail would be the wrong edit. The devPreview builder fills
+    the version's own preview in.
+
+    Never ThumbCache::putImage: that index is keyed by file path.
+*/
+    const QString srcPath = VersionKey::sourceOf(key);
+    const int id = VersionKey::idOf(key);
+    if (id <= 0) return false;
+
+    const ImageVersion v = Versions::readVersion(srcPath, id);
+    if (v.id && v.isDeveloped() && !v.preview.isEmpty()
+        && v.previewKey == Metadata::devPreviewKey(v.develop)) {
+        if (image.loadFromData(QByteArray::fromBase64(v.preview), "JPG") && !image.isNull()) {
+            if (qMax(image.width(), image.height()) > G::maxIconSize)
+                image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation);
+            image = image.convertToFormat(QImage::Format_RGB32);
+            return true;
+        }
+    }
+
+    // the source's original thumbnail: the index first, then the file
+    image = ThumbCache::instance().getImage(srcPath, false);
+    if (!image.isNull()) return true;
+    if (!metadata) return false;
+
+    if (!metadata->loadImageMetadata(QFileInfo(srcPath), dmRow, instance, true, true,
+                                     false, true, src, true))
+        return false;
+    ImageMetadata srcMeta = metadata->m;
+    srcMeta.developEdited = false;              // the as-shot picture, not the master's
+    if (srcMeta.offsetThumb && srcMeta.lengthThumb)
+        presetOffset(srcMeta.offsetThumb, srcMeta.lengthThumb);
+    QString p = srcPath;
+    return loadThumb(p, dmRow, image, instance, srcMeta, src) && !image.isNull();
+}
+
 bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
                       const ImageMetadata &m, QString src)
 {
@@ -594,6 +644,8 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
         return false;
     }
     this->instance = instance;
+    // a version row's key is not a file (Utilities/versionkey.h)
+    if (FileOps::refuseVersionKey(fPath, "Thumb::loadThumb")) return false;
 
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
@@ -808,7 +860,7 @@ void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
         if (offsetThumb != offsetFull) continue;
 
         // collect path information
-        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QString fPath = selection.at(i).data(G::SourcePathRole).toString();
         QFileInfo info(fPath);
         QString folder = info.dir().path();
         QString base = info.baseName();

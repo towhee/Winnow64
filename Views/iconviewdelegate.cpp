@@ -1,7 +1,9 @@
 
 #include "iconviewdelegate.h"
 #include "Main/global.h"
+#include <cmath>
 #include "Main/dockwidget.h"   // showDockToolTip (consistent cross-platform tooltip offset)
+#include "Utilities/versionkey.h"
 
 /*
 
@@ -411,6 +413,49 @@ QPoint IconViewDelegate::blackBorderOffset(const QModelIndex &sfIdx) const
     return QPoint(xOff, yOff);
 }
 
+QString IconViewDelegate::versionBadgeText(const QModelIndex &sfIdx) const
+{
+/*
+    A master with versions: its count and an arrow saying whether the group is open.
+    A version: its name ("v2" until named). Anything else: no badge.
+*/
+    if (!sfIdx.isValid()) return QString();
+    const QModelIndex c0 = sfIdx.model()->index(sfIdx.row(), 0);
+    const int id = c0.data(G::VersionIdRole).toInt();
+    if (id > 0) {
+        const QString name = c0.data(G::VersionNameRole).toString();
+        return name.isEmpty() ? QStringLiteral("v%1").arg(id) : name;
+    }
+    const int count = c0.data(G::VersionCountRole).toInt();
+    if (count <= 0) return QString();
+    const auto *sf = qobject_cast<const SortFilter *>(sfIdx.model());
+    const bool open = sf && sf->versionsExpanded(c0.data(G::KeyRole).toString());
+    return QString::number(count) + (open ? QString(" \u25BE") : QString(" \u25B8"));
+}
+
+QRect IconViewDelegate::versionBadgeRect(const QRect &optionRect, const QString &text) const
+{
+    QRect frameRect(optionRect.topLeft() + fPadOffset, frameSize);
+    QRect itemRect(frameRect.topLeft() + tPadOffset, itemSize);
+    QFont f = QApplication::font();
+    f.setPixelSize(qMax(9, G::fontSize - 2));
+    const QFontMetrics fm(f);
+    const int h = fm.height() + 2;
+    const int maxW = qMax(20, itemRect.width() - 8);
+    const int w = qMin(maxW, fm.horizontalAdvance(text) + 10);
+    return QRect(itemRect.left() + 3, itemRect.top() + 3, w, h);
+}
+
+bool IconViewDelegate::versionsBadgeHit(const QModelIndex &sfIdx, const QRect &optionRect,
+                                        const QPoint &pos) const
+{
+    if (!sfIdx.isValid()) return false;
+    const QModelIndex c0 = sfIdx.model()->index(sfIdx.row(), 0);
+    if (c0.data(G::VersionCountRole).toInt() <= 0) return false;   // only a master toggles
+    const QString text = versionBadgeText(sfIdx);
+    return !text.isEmpty() && versionBadgeRect(optionRect, text).contains(pos);
+}
+
 QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &optionRect, const QModelIndex &index) const
 {
     // Common geometry bases
@@ -504,7 +549,22 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
                         G::operationMode != G::OperationMode::Develop;
     bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
 
-    if (developVisible && getSymbolRect("Develop", option.rect, index).contains(viewPos))
+    const QString vText = versionBadgeText(index);
+    const int versionId = sf->index(row, 0).data(G::VersionIdRole).toInt();
+
+    if (!vText.isEmpty() && !G::isSlideShow
+        && versionBadgeRect(option.rect, vText).contains(viewPos)) {
+        if (versionId > 0)
+            tooltip = "Version \"" + vText + "\" of "
+                      + QFileInfo(sf->index(row, 0).data(G::SourcePathRole).toString())
+                            .fileName()
+                      + "\nA second develop recipe for the same file.";
+        else
+            tooltip = "This image has "
+                      + QString::number(sf->index(row, 0).data(G::VersionCountRole).toInt())
+                      + " version(s) besides the original.\nClick to show or hide them.";
+    }
+    else if (developVisible && getSymbolRect("Develop", option.rect, index).contains(viewPos))
         tooltip = "Image has develop edits";
 
     /*  The reason, inline, where the user is already looking -- never a popup. */
@@ -529,7 +589,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     else if (getSymbolRect("Duration", option.rect, index).contains(viewPos))
         tooltip = "Video Duration";
     else if (getSymbolRect("Thumb", option.rect, index).contains(viewPos))
-        tooltip = sf->index(row, 0).data(G::PathRole).toString();
+        tooltip = sf->index(row, 0).data(G::SourcePathRole).toString();
     else
         tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
 
@@ -764,6 +824,31 @@ textRect         = a rectangle below itemRect
         }
     }
 
+    /*  Versions (virtual copies): a master's count + arrow, a version's name tag. The
+        tag is a different shade so a version reads as "a copy of" at a glance. */
+    if (!G::isSlideShow) {
+        const QString vText = versionBadgeText(index);
+        if (!vText.isEmpty()) {
+            const bool isVersionRow =
+                index.model()->index(sfRow, 0).data(G::VersionIdRole).toInt() > 0;
+            const QRect vr = versionBadgeRect(option.rect, vText);
+            QFont f = painter->font();
+            QFont vf = QApplication::font();
+            vf.setPixelSize(qMax(9, G::fontSize - 2));
+            painter->save();
+            painter->setFont(vf);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(isVersionRow ? QColor(40, 90, 150, 220) : QColor(20, 20, 20, 200));
+            painter->drawRoundedRect(vr, 4, 4);
+            painter->setPen(QColor(235, 235, 235));
+            const QString shown = QFontMetrics(vf).elidedText(vText, Qt::ElideRight,
+                                                             vr.width() - 8);
+            painter->drawText(vr, Qt::AlignCenter, shown);
+            painter->restore();
+            painter->setFont(f);
+        }
+    }
+
     // Render file status symbols (RAW+JPG link and file lock)
     if (isCombineRawJpg) painter->drawImage(combineRawJpgRect.translated(origin), combineRawJpgSymbol);
     if (!isReadWrite) lockRenderer->render(painter, lockRect.translated(origin));
@@ -846,8 +931,23 @@ textRect         = a rectangle below itemRect
         painter->drawRoundedRect(QRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset), 8, 8);
     }
 
+    /*  THE VIEWPORT MUST BE REAL BEFORE IT IS DRAWN. The icon can paint before
+        ImageView has sent a viewport (vpA was uninitialised) or while it sends a
+        degenerate one (an image with no size yet gives vpA = 0 or NaN). vpW / vpA then
+        went to inf, the int conversion to garbage, and QRect's checked arithmetic
+        aborted the app -- intermittently, at startup, in whichever smoke test raced
+        it. A viewport larger than a few thumbnails is equally meaningless. */
+    auto finiteIn = [](qreal v, qreal lo, qreal hi) {
+        return std::isfinite(v) && v >= lo && v <= hi;
+    };
+    const bool vpIsReal = finiteIn(vpA, 1e-3, 1e3)
+                          && finiteIn(vpSizeN.width(), 0, 16)
+                          && finiteIn(vpSizeN.height(), 0, 16)
+                          && finiteIn(vpCntrN.x(), -16, 16)
+                          && finiteIn(vpCntrN.y(), -16, 16);
+
     // Render the loupe viewport rectangle
-    if (isCurrentIndex && vpRectIsVisible) {
+    if (isCurrentIndex && vpRectIsVisible && vpIsReal) {
 
         // vp = relative ImageView viewport
         int vpW = vpSizeN.width() * thumbW;      // convert normalized values

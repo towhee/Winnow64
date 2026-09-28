@@ -1,4 +1,5 @@
 #include "Export/imageexporter.h"
+#include "Utilities/versionkey.h"
 
 #include <QColorSpace>
 #include <QDir>
@@ -117,7 +118,7 @@ void ImageExporter::onImageReady(bool ok, const QImage &img)
             const QImage out = resized(img);
             if (save(out, dst)) {
                 if (s.copyMetadata || s.embedThumbnail)
-                    copySourceMetadata(fPath, dst, out);
+                    copySourceMetadata(VersionKey::sourceOf(fPath), dst, out);   // the file
                 result.written << dst;
                 if (!result.folders.contains(folder)) result.folders << folder;
             }
@@ -145,10 +146,10 @@ QString ImageExporter::destinationFolder(const QString &fPath,
                                          const ExportSettings &settings, bool create) const
 {
     if (settings.dest == ExportSettings::SourceFolder)
-        return QFileInfo(fPath).dir().path();
+        return QFileInfo(VersionKey::sourceOf(fPath)).dir().path();
 
     if (settings.dest == ExportSettings::SubfolderOfSource) {
-        const QString parent = QFileInfo(fPath).dir().path();
+        const QString parent = QFileInfo(VersionKey::sourceOf(fPath)).dir().path();
         const QString name = settings.subfolderName.trimmed();
         if (name.isEmpty()) return parent;              // no name: write alongside
         const QString folder = parent + "/" + name;
@@ -165,14 +166,36 @@ QString ImageExporter::destinationFolder(const QString &fPath,
 QString ImageExporter::destinationBaseName(const QString &fPath,
                                            const ExportSettings &settings, int seq) const
 {
-    const QFileInfo info(fPath);
+/*
+    fPath is a row KEY. A version (virtual copy, Utilities/versionkey.h) is named from
+    its SOURCE file plus its own name -- IMG_1-B&W.jpg, or IMG_1-v2.jpg until it is
+    named -- so exporting a master and its versions together writes one file each
+    instead of each overwriting the last. A template that places {VERSION} itself gets
+    no automatic suffix.
+*/
+    const QFileInfo info(VersionKey::sourceOf(fPath));
+    QString version;
+    if (VersionKey::isVersion(fPath)) {
+        if (dm) {
+            const int row = dm->rowFromKey(fPath);
+            if (row >= 0)
+                version = dm->index(row, G::PathColumn).data(G::VersionNameRole).toString();
+        }
+        if (version.isEmpty()) version = QString("v%1").arg(VersionKey::idOf(fPath));
+        // a file name cannot carry every character a version name can
+        static const QRegularExpression bad(R"([\\/:*?"<>|\x00-\x1F])");
+        version.replace(bad, "_");
+    }
     QString base = info.baseName();
+    bool placed = false;
     if (!settings.tokenTemplate.isEmpty() && dm) {
         const ImageMetadata m = dm->imMetadata(fPath);
         const QString parsed =
-            TokenFileName::parse(m, info, settings.tokenTemplate, seq);
+            TokenFileName::parse(m, info, settings.tokenTemplate, seq, version);
         if (!parsed.isEmpty()) base = parsed;
+        placed = settings.tokenTemplate.contains("{VERSION}");
     }
+    if (!version.isEmpty() && !placed) base += "-" + version;
     return base + settings.suffix;
 }
 
@@ -214,7 +237,7 @@ bool ImageExporter::willTouchLoadedFolder(const QStringList &srcPaths,
     /* Source folder / subfolder of source: one destination per SOURCE folder. */
     QSet<QString> seenParents;
     for (const QString &fPath : srcPaths) {
-        const QString parent = QFileInfo(fPath).dir().path();
+        const QString parent = QFileInfo(VersionKey::sourceOf(fPath)).dir().path();
         if (seenParents.contains(parent)) continue;     // same dest as an earlier file
         seenParents.insert(parent);
         if (loaded(destinationFolder(fPath, settings, /*create*/false))) return true;

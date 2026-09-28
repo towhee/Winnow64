@@ -1,4 +1,8 @@
 #include "Main/mainwindow.h"
+#include "Metadata/versions.h"
+#include "Utilities/versionkey.h"
+#include "Utilities/fileops.h"
+#include "Develop/editstack.h"
 
 #include <cstdlib>          // std::_Exit
 
@@ -60,12 +64,12 @@ void MW::selfTestModelMutation(const QString &folder)
             fail(step, "verifyIntegrity (see MODELINTEGRITY lines)");
 
         for (const QString &n : present)
-            if (dm->rowFromPath(path(n)) < 0) fail(step, n + " is not in the model");
+            if (dm->rowFromKey(path(n)) < 0) fail(step, n + " is not in the model");
         for (const QString &n : absent)
-            if (dm->rowFromPath(path(n)) >= 0) fail(step, n + " is still in the model");
+            if (dm->rowFromKey(path(n)) >= 0) fail(step, n + " is still in the model");
 
         for (const QString &n : loaded) {
-            const int r = dm->rowFromPath(path(n));
+            const int r = dm->rowFromKey(path(n));
             if (dm->index(r, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded)
                 fail(step, n + " metadata not loaded");
             if (dm->index(r, 0).data(Qt::DecorationRole).isNull())
@@ -78,21 +82,37 @@ void MW::selfTestModelMutation(const QString &folder)
         QString prev;
         for (int r = 0; r < n; ++r) {
             const QString k = DataModel::sortKey(
-                dm->index(r, G::PathColumn).data(G::PathRole).toString(), combineRawJpg);
+                dm->index(r, G::PathColumn).data(G::KeyRole).toString(), combineRawJpg);
             if (r && k < prev) fail(step, QString("source row %1 is out of order").arg(r));
             prev = k;
         }
 
         /*  The proxy mirrors source order: no filter is active and the default sort has
-            no proxy sort column. A row "landing at the end" shows up right here. */
+            no proxy sort column. A row "landing at the end" shows up right here. The one
+            source row the proxy may leave out is a version whose group is collapsed. */
         if (!filters->isAnyFilter()) {
-            if (dm->sf->rowCount() != n)
-                fail(step, QString("proxy has %1 rows, model %2")
-                               .arg(dm->sf->rowCount()).arg(n));
+            int shown = 0;
+            for (int r = 0; r < n; ++r) {
+                const QString k = dm->index(r, G::PathColumn).data(G::KeyRole).toString();
+                if (!VersionKey::isVersion(k)
+                    || dm->sf->versionsExpanded(VersionKey::sourceOf(k))) ++shown;
+            }
+            if (dm->sf->rowCount() != shown)
+                fail(step, QString("proxy has %1 rows, expected %2 of %3")
+                               .arg(dm->sf->rowCount()).arg(shown).arg(n));
             if (dm->sf->sortColumn() == G::NameColumn || dm->sf->sortColumn() < 0) {
-                for (int r = 0; r < n; ++r)
-                    if (dm->sf->mapToSource(dm->sf->index(r, 0)).row() != r)
-                        fail(step, QString("proxy row %1 is not source row %1").arg(r));
+                int prevSrc = -1;
+                for (int r = 0; r < dm->sf->rowCount(); ++r) {
+                    const int src = dm->sf->mapToSource(dm->sf->index(r, 0)).row();
+                    if (src <= prevSrc) {
+                        for (int q = 0; q < dm->sf->rowCount(); ++q)
+                            fprintf(stderr, "SELFTEST: mutation proxy %d -> source %d %s\n", q,
+                                dm->sf->mapToSource(dm->sf->index(q, 0)).row(),
+                                dm->sf->index(q, 0).data(G::KeyRole).toString().toLocal8Bit().constData());
+                        fail(step, QString("proxy row %1 is out of source order").arg(r));
+                    }
+                    prevSrc = src;
+                }
             }
         }
         fprintf(stderr, "SELFTEST: mutation [%s] ok rows=%d\n",
@@ -140,6 +160,221 @@ void MW::selfTestModelMutation(const QString &folder)
     refresh();
     check("refresh finds removed", {}, {"ext_added.jpg"}, {});
 
+    /*  VERSIONS (virtual copies) -- rows keyed path + "/#v" + id, filled from their
+        master, collapsed behind it (Main/mwversions.cpp). The versions are written to
+        the master's sidecar here and picked up by re-reading the master, which is how
+        they arrive when another window or machine created them. */
+    const QString master = path("sample01.jpg");
+    const QString v1 = VersionKey::make(master, 1), v2 = VersionKey::make(master, 2);
+    const QString v1n = "sample01.jpg/#v1", v2n = "sample01.jpg/#v2";
+    const QString masterRating = dm->index(dm->rowFromKey(master), G::RatingColumn)
+                                     .data().toString();
+
+    // V1  a master's versions appear as rows after it, collapsed, filled from it
+    if (!Versions::update(master, [](VersionSet &set) {
+            ImageVersion a;
+            a.name = "B&W";
+            a.rating = 4;
+            a.label = "Red";
+            a.pick = "Picked";
+            set.add(a);
+            set.add(ImageVersion());
+        }))
+        fail("versions appear", "could not write the versions");
+    insertFiles({master});                          // re-read the master's sidecar
+    settle(400);                                    // the coalesced reconcile
+    check("versions appear", {"sample01.jpg", v1n, v2n}, {}, {"sample01.jpg", v1n, v2n});
+    {
+        const int mr = dm->rowFromKey(master), r1 = dm->rowFromKey(v1),
+                  r2 = dm->rowFromKey(v2);
+        if (!(mr < r1 && r1 < r2 && r2 == mr + 2))
+            fail("versions appear", QString("rows %1 %2 %3 are not a group")
+                                        .arg(mr).arg(r1).arg(r2));
+        if (dm->index(mr, 0).data(G::VersionCountRole).toInt() != 2)
+            fail("versions appear", "master's version count is not 2");
+        if (dm->index(r1, 0).data(G::VersionNameRole).toString() != "B&W")
+            fail("versions appear", "v1 has not got its name");
+        if (dm->index(r1, G::RatingColumn).data().toString() != "4"
+            || dm->index(r1, G::LabelColumn).data().toString() != "Red"
+            || dm->index(r1, G::PickColumn).data().toString() != "Picked")
+            fail("versions appear", "v1 has not got its own rating, label and pick");
+        if (dm->index(r2, G::RatingColumn).data().toString() != "")
+            fail("versions appear", "v2 should be unrated");
+        if (dm->index(mr, G::RatingColumn).data().toString() != masterRating)
+            fail("versions appear", "the master's rating changed");
+        if (dm->index(r1, G::WidthColumn).data() != dm->index(mr, G::WidthColumn).data())
+            fail("versions appear", "v1 did not take the master's metadata");
+        if (dm->index(r1, 0).data(G::SourcePathRole).toString() != master)
+            fail("versions appear", "v1's source is not the master's file");
+        if (dm->proxyRowFromKey(v1) >= 0)
+            fail("versions appear", "v1 is visible in a collapsed group");
+    }
+
+    // V2  expanding shows the group; the versions follow the master in the proxy
+    setVersionsExpanded(master, true);
+    check("versions expand", {v1n, v2n}, {}, {});
+    if (dm->proxyRowFromKey(v1) != dm->proxyRowFromKey(master) + 1)
+        fail("versions expand", "v1 is not right after its master in the proxy");
+
+    // V3  collapsing while a version is current lands on its master
+    sel->select(dm->proxyIndexFromKey(v2), Qt::NoModifier, "selftest");
+    settle(200);
+    setVersionsExpanded(master, false);
+    check("versions collapse", {v1n, v2n}, {}, {});
+    if (dm->currentKey != master)
+        fail("versions collapse", "current is " + dm->currentKey + ", not the master");
+
+    // V4  a version deleted in the sidecar leaves the model; its id is not reused
+    if (!Versions::update(master, [](VersionSet &set) { set.remove(2); }))
+        fail("version removed", "could not rewrite the versions");
+    insertFiles({master});
+    settle(400);
+    check("version removed", {"sample01.jpg", v1n}, {v2n}, {});
+    if (dm->index(dm->rowFromKey(master), 0).data(G::VersionCountRole).toInt() != 1)
+        fail("version removed", "master's version count is not 1");
+
+    // V5  the menu Refresh leaves version rows alone (they are never on disk)
+    refresh();
+    check("versions survive refresh", {"sample01.jpg", v1n}, {}, {});
+
+    // V6  removing the master takes its versions with it
+    QFile::remove(master);
+    QFile::remove(master + ".xmp");
+    refreshAfterRemoval({master});
+    check("master removed with versions", {}, {"sample01.jpg", v1n}, {});
+
+    /*  V7  New Version (Develop > Versions, Ctrl+') on the current image: a copy of its
+            recipe and values, shown and selected so the next edit goes to it. */
+    const QString m2 = path("sample015.jpg");
+    const QString m2v1 = VersionKey::make(m2, 1);
+    sel->select(dm->proxyIndexFromKey(m2), Qt::NoModifier, "selftest");
+    settle(200);
+    newVersion();
+    check("new version", {"sample015.jpg", "sample015.jpg/#v1"}, {},
+          {"sample015.jpg", "sample015.jpg/#v1"});
+    if (dm->currentKey != m2v1)
+        fail("new version", "current is " + dm->currentKey + ", not the new version");
+    if (dm->proxyRowFromKey(m2v1) < 0)
+        fail("new version", "the new version is not shown");
+    if (Metadata::readDevelopSidecar(m2v1) != Metadata::readDevelopSidecar(m2))
+        fail("new version", "the new version did not start from the master's recipe");
+
+    /*  V8  Set Version as Master swaps the two recipes: the version's edit becomes the
+            one in winnow:Develop, the master's old one lives on in the version. */
+    EditStack edited;
+    edited.scopes.append(EditScope());
+    edited.scopes[0].params.exposure = 1.0f;
+    const QString blob = edited.toBase64();
+    Metadata::writeDevelopSidecar(m2v1, blob, QString());
+    if (Metadata::readDevelopSidecar(m2v1) != blob)
+        fail("set as master", "could not give the version a recipe");
+    setVersionAsMaster();
+    check("set as master", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
+    if (Metadata::readDevelopSidecar(m2) != blob)
+        fail("set as master", "the master did not take the version's recipe");
+    if (!Metadata::readDevelopSidecar(m2v1).isEmpty())
+        fail("set as master", "the version did not take the master's (empty) recipe");
+    if (!dm->index(dm->rowFromKey(m2), G::DevelopColumn).data().toBool()
+        || dm->index(dm->rowFromKey(m2v1), G::DevelopColumn).data().toBool())
+        fail("set as master", "the develop badges did not swap");
+
+    /*  V9  A version's rating, label and pick are its OWN: set through the model (the
+            path every writer takes -- keys, menus, undo, recovery) they land in its
+            record, and the master's rating and file are untouched. */
+    {
+        const int vr = dm->rowFromKey(m2v1), mr = dm->rowFromKey(m2);
+        const QString masterRatingBefore = dm->index(mr, G::RatingColumn).data().toString();
+        const QString sidecarBefore = [&] {
+            QFile f(FileOps::sidecarPath(m2));
+            return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll()) : QString();
+        }();
+        const QRegularExpression rating(R"re(xmp:Rating\s*=\s*"(\d)")re");
+        const QString masterFileRating = rating.match(sidecarBefore).captured(1);
+        emit setValDm(vr, G::RatingColumn, "3", dm->instance, "selftest", Qt::EditRole);
+        emit setValDm(vr, G::LabelColumn, "Green", dm->instance, "selftest", Qt::EditRole);
+        emit setValDm(vr, G::PickColumn, "Rejected", dm->instance, "selftest", Qt::EditRole);
+        check("version values", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
+        const ImageVersion rec = Versions::readVersion(m2, 1);
+        if (rec.rating != 3 || rec.label != "Green" || rec.pick != "Rejected")
+            fail("version values", QString("record holds %1 / %2 / %3")
+                                       .arg(rec.rating).arg(rec.label, rec.pick));
+        if (dm->index(mr, G::RatingColumn).data().toString() != masterRatingBefore)
+            fail("version values", "the master's rating changed");
+        QFile f(FileOps::sidecarPath(m2));
+        const QString sidecarAfter =
+            f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll()) : QString();
+        if (rating.match(sidecarAfter).captured(1) != masterFileRating)
+            fail("version values", "xmp:Rating (the master's) changed");
+    }
+
+    /*  V10 Keywords are the FILE's: tagging with only the version selected writes the
+            master's file and shows on both rows. */
+    sel->select(dm->proxyIndexFromKey(m2v1), Qt::NoModifier, "selftest");
+    settle(200);
+    applyKeywordsToSelection({"selftestkw"}, {});
+    check("shared keywords", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
+    for (const QString &k : {m2, m2v1})
+        if (!dm->index(dm->rowFromKey(k), G::KeywordsColumn).data().toStringList()
+                 .contains("selftestkw"))
+            fail("shared keywords", k + " does not show the keyword");
+
+    /*  V11 Rotating the version turns the file and every row of its group. */
+    const int orientBefore =
+        dm->index(dm->rowFromKey(m2), G::OrientationColumn).data().toInt();
+    setRotation(90);
+    check("rotate group", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
+    const int orientM = dm->index(dm->rowFromKey(m2), G::OrientationColumn).data().toInt();
+    const int orientV = dm->index(dm->rowFromKey(m2v1), G::OrientationColumn).data().toInt();
+    if (orientM == orientBefore || orientM != orientV)
+        fail("rotate group", QString("orientation %1 -> master %2, version %3")
+                                 .arg(orientBefore).arg(orientM).arg(orientV));
+    setRotation(270);                               // and back
+
+    /*  V12 Re-reading the master refills its versions from the sidecar: nothing set
+            above may revert. */
+    settle(300);                                    // the orientation write is pooled
+    insertFiles({m2});
+    settle(400);
+    check("refill keeps edits", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
+    {
+        const int vr = dm->rowFromKey(m2v1);
+        if (dm->index(vr, G::RatingColumn).data().toString() != "3"
+            || dm->index(vr, G::LabelColumn).data().toString() != "Green"
+            || dm->index(vr, G::PickColumn).data().toString() != "Rejected")
+            fail("refill keeps edits", "the version's own values reverted");
+        if (!dm->index(vr, G::KeywordsColumn).data().toStringList().contains("selftestkw"))
+            fail("refill keeps edits", "the version lost the file's keyword");
+    }
+
+    /*  V13 Renaming a master with versions (the Rename dialog's in-place update,
+            RenameFileDlg::renameDatamodel): the file and its sidecar move, and the
+            version rows are re-keyed onto the new path. The name keeps the row in sort
+            position, as the dialog leaves rows where they are. */
+    const QString m3 = path("sample016.jpg");
+    const QString m3v1 = VersionKey::make(m3, 1);
+    if (!FileOps::moveFile(m2, m3)) fail("rename master", "could not move the file");
+    {
+        const int row = dm->rowFromKey(m2);
+        dm->fPathRow.remove(m2);
+        dm->fPathRow[m3] = row;
+        dm->setData(dm->index(row, G::PathColumn), m3, G::KeyRole);
+        dm->setData(dm->index(row, G::NameColumn), QFileInfo(m3).fileName());
+        for (const auto &kv : dm->rekeyVersions(m2, m3)) imageCache->rename(kv.first, kv.second);
+    }
+    check("rename master", {"sample016.jpg", "sample016.jpg/#v1"},
+          {"sample015.jpg", "sample015.jpg/#v1"}, {});
+    if (Versions::read(m3).find(1) == nullptr)
+        fail("rename master", "the version did not travel with the sidecar");
+    if (dm->index(dm->rowFromKey(m3v1), G::RatingColumn).data().toString() != "3")
+        fail("rename master", "the version row lost its own values");
+
+    /*  V14 Deleting a selected VERSION removes its record, never the image file. */
+    deleteVersionRecords({m3v1}, /*confirm*/false);
+    check("delete version", {"sample016.jpg"}, {"sample016.jpg/#v1"}, {});
+    if (!QFile::exists(m3)) fail("delete version", "the image file went");
+    if (Versions::read(m3).find(1) != nullptr)
+        fail("delete version", "the version's record is still there");
+
     // 6  everything removed
     QStringList all;
     for (const QString &n : dir.entryList(QDir::Files)) {
@@ -147,7 +382,7 @@ void MW::selfTestModelMutation(const QString &folder)
         QFile::remove(path(n));
     }
     refreshAfterRemoval(all);
-    check("remove all", {}, {"sample01.jpg", "sample015.jpg"}, {});
+    check("remove all", {}, {"sample016.jpg", "sample016.jpg/#v1"}, {});
     if (dm->rowCount() != 0)
         fail("remove all", QString("%1 rows left").arg(dm->rowCount()));
 

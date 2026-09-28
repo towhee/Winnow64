@@ -44,11 +44,13 @@ bool isToken(const QString &tokenString, int pos,
 
 /*
     Expand tokenString for one image. m supplies the metadata (created date, title, camera
-    ...) and info the file name; seqNum feeds the {XX...} sequence tokens. Text outside a
+    ...) and info the file name; seqNum feeds the {XX...} sequence tokens; version the
+    {VERSION} token (a version's name; "" for an original). Text outside a
     valid token is copied through unchanged, so a template with no tokens returns itself.
 */
 QString parse(const ImageMetadata &m, const QFileInfo &info,
-              const QString &tokenString, int seqNum = 0);
+              const QString &tokenString, int seqNum = 0,
+              const QString &version = QString());
 
 } // namespace TokenFileName
 

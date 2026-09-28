@@ -58,6 +58,10 @@ public:
     /* Store the pre-develop WorkingImage for fPath (shares ownership; no pixel copy).
        A null or invalid image is ignored. Marks fPath most-recently-used and evicts LRU
        entries past the byte budget. */
+    /*  KEYED BY SOURCE. Any of these may be given a row KEY: a version (virtual copy,
+        Utilities/versionkey.h) maps to its source file, because the pre-develop pixels
+        are the file's and every version of it shares them -- switching between versions
+        of one raw is a re-render, not a re-decode. */
     void put(const QString &fPath, const std::shared_ptr<const WorkingImage> &work);
 
     /* Fetch the WorkingImage for fPath, or nullptr on a miss. A hit is marked

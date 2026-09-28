@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/versionkey.h"
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
 #include <QSet>
@@ -38,9 +39,13 @@ void MW::copyFiles()
     QMimeData *mimeData = new QMimeData;
     QList<QUrl> urls;
 
+    QSet<QString> seenFiles;
     for (int i = 0; i < n; ++i) {
         // add image path
-        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QString fPath = selection.at(i).data(G::SourcePathRole).toString();
+        /* a version (virtual copy) is its source file: hand each file over once */
+        if (seenFiles.contains(fPath)) continue;
+        seenFiles.insert(fPath);
         urls << QUrl::fromLocalFile(fPath);
         // add sidecar path(s)
         QStringList sidecarPaths = FileOps::companions(fPath);
@@ -147,7 +152,7 @@ void MW::pasteFiles(QString folderPath)
 
     // refresh folder to show pasted images
     if (dm->folderList.contains(folderPath)) {
-        folderAndFileSelectionChange(dm->currentFilePath, "pasteFiles");
+        folderAndFileSelectionChange(dm->currentKey, "pasteFiles");
     }
 
     // popup msg
@@ -178,13 +183,14 @@ void MW::copyImagePathFromContext()
 {
     if (G::isLogger) G::log("MW::copyImagePathFromContext");
     QModelIndexList selection = dm->selectionModel->selectedRows();
-    int n = selection.count();
-    QString paths;
-    for (int i = 0; i < n; ++i) {
-        paths += selection.at(i).data(G::PathRole).toString();
-        if (i < n - 1) paths += "\n";
+    // each FILE once: a version (virtual copy) is its source file
+    QStringList list;
+    for (const QModelIndex &idx : selection) {
+        const QString p = idx.data(G::SourcePathRole).toString();
+        if (!p.isEmpty() && !list.contains(p)) list << p;
     }
-    QApplication::clipboard()->setText(paths);
+    const int n = list.size();
+    QApplication::clipboard()->setText(list.join("\n"));
 
     QString nPaths;
     if (n == 1) nPaths = "1 path";
@@ -236,7 +242,7 @@ void MW::renameSelectedFiles()
     rf.exec();
 
     // may have renamed current image
-    titleFilePath = dm->currentFilePath;
+    titleFilePath = dm->currentSourcePath();
     updateWindowTitle();
 }
 
@@ -253,8 +259,12 @@ void MW::shareFiles()
     if (selection.isEmpty()) return;
 
     QList<QUrl> urls;
+    QSet<QString> seenFiles;
     for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QString fPath = selection.at(i).data(G::SourcePathRole).toString();
+        /* a version (virtual copy) is its source file: hand each file over once */
+        if (seenFiles.contains(fPath)) continue;
+        seenFiles.insert(fPath);
         urls << QUrl::fromLocalFile(fPath);
     }
 
@@ -290,7 +300,7 @@ void MW::saveAsFile()
             previewPixelSource(fPath, done);
         });
 
-    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentFilePath,
+    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
                   filenameTemplates, ExportDlg::Mode::Preview, this);
     QMetaObject::Connection c = connect(imageExporter, &ImageExporter::finished, this,
         [this](const ImageExporter::Result &r) {
@@ -344,7 +354,7 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
     for (const QString &fPath : added) {
         if (fPath.isEmpty() || toLoad.contains(fPath)) continue;
         toLoad << fPath;
-        const int dmRow = dm->rowFromPath(fPath);
+        const int dmRow = dm->rowFromKey(fPath);
         if (dmRow < 0) continue;                    // new: inserted below
         /* Rewritten in place (a re-run focus stack, a re-embellish): forget everything
            decoded from the old content. */
@@ -354,6 +364,10 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
         dm->setData(dm->index(dmRow, G::IsCachingColumn), false);
         dm->setData(dm->index(dmRow, G::AttemptsColumn), 0);
         dm->setData(dm->index(dmRow, 0), QVariant(), Qt::DecorationRole);
+        /*  addMetadataForItem APPENDS to the search text, so a re-read would double every
+            field in it. Start it again from what addFileDataForRow put there. */
+        dm->setData(dm->index(dmRow, G::SearchTextColumn),
+                    fPath + dm->index(dmRow, G::ModifiedColumn).data().toString());
         imageCache->removeCachedImage(fPath);
     }
     if (!added.isEmpty()) dm->insertFiles(added);
@@ -369,10 +383,29 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
         refreshThumb = new Thumb(dm, metaRead->getFrameDecoder());
 
     for (const QString &fPath : std::as_const(toLoad)) {
-        const int dmRow = dm->rowFromPath(fPath);
+        const int dmRow = dm->rowFromKey(fPath);
         if (dmRow < 0) continue;
         if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded)
             continue;
+
+        /*  A VERSION ROW has no file of its own: its values come from its master
+            (DataModel::fillVersionRow) and its icon from its own preview, or the source
+            file's thumbnail (Thumb::loadVersionThumb). See Utilities/versionkey.h. */
+        if (VersionKey::isVersion(fPath)) {
+            if (!dm->fillVersionRow(dmRow)) continue;
+            if (refreshThumb) {
+                QModelIndex iconIdx = dm->index(dmRow, 0);
+                dm->setData(iconIdx, QVariant(), Qt::DecorationRole);
+                QImage image;
+                if (refreshThumb->loadVersionThumb(fPath, dmRow, image, dm->instance,
+                                                   metadata, src)) {
+                    QImage icon = image.scaled(G::maxIconSize, G::maxIconSize,
+                                               Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                    dm->setIcon(iconIdx, QPixmap::fromImage(icon), dm->instance, src);
+                }
+            }
+            continue;
+        }
 
         QFileInfo fileInfo(fPath);
         if (!metadata->loadImageMetadata(fileInfo, dmRow, dm->instance,
@@ -448,32 +481,6 @@ void MW::deleteSelectedFiles()
         return;
     }
 
-    // Warning MessageBox
-    if (deleteWarning) {
-        QMessageBox msgBox(this);
-        int msgBoxWidth = 300;
-        msgBox.setWindowTitle("Delete Images");
-        #ifdef Q_OS_WIN
-        msgBox.setText("This operation will move all selected images to the recycle bin.");
-        #endif
-        #ifdef Q_OS_MAC
-        msgBox.setText("This operation will move all selected images to the trash.");
-        #endif
-        msgBox.setInformativeText("Do you want continue?");
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        msgBox.setDefaultButton(QMessageBox::Yes);
-        msgBox.setIcon(QMessageBox::Warning);
-        msgBox.setStyleSheet(G::css);
-        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
-        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-        msgBox.show();
-        msgBox.move(geometry().center());
-        int ret = msgBox.exec();
-        resetFocus();
-        if (ret == QMessageBox::Cancel) return;
-    }
-
     // QModelIndexList selection = dm->selectionModel->selectedRows();
     // if (selection.isEmpty()) return;
     QModelIndexList selection;
@@ -490,17 +497,69 @@ void MW::deleteSelectedFiles()
         return;
     }
 
+    /*  VERSIONS (virtual copies) ARE NOT FILES. A selected version is deleted as a RECORD
+        in its master's sidecar (MW::deleteVersionRecords) -- never by trashing the image,
+        which would take the master and every other version with it. A selected master
+        is trashed and its versions go with it (they live in its sidecar), so a version
+        whose master is also selected needs nothing of its own. */
     QStringList paths;
+    QStringList versionsOnly;
     paths.reserve(selection.size());
-
     for (const QModelIndex &sfIdx : selection) {
         QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
-        QString fPath = dmIdx.data(G::PathRole).toString();
-        if (!fPath.isEmpty())
-            paths << fPath;
+        QString fPath = dmIdx.data(G::KeyRole).toString();
+        if (fPath.isEmpty()) continue;
+        if (VersionKey::isVersion(fPath)) versionsOnly << fPath;
+        else paths << fPath;
+    }
+    paths.removeDuplicates();
+    for (int i = versionsOnly.size() - 1; i >= 0; --i)
+        if (paths.contains(VersionKey::sourceOf(versionsOnly.at(i)))) versionsOnly.removeAt(i);
+    int versionsGoing = 0;
+    for (const QString &p : std::as_const(paths)) versionsGoing += dm->versionKeysOf(p).size();
+
+    if (paths.isEmpty()) {                      // only versions: no file is touched
+        deleteVersionRecords(versionsOnly);
+        return;
     }
 
-    paths.removeDuplicates();
+    /*  Warning MessageBox. Always shown when versions would go to the trash with their
+        image: turning the warning off agreed to trashing images, not to losing versions
+        the user may not know are there. */
+    if (deleteWarning || versionsGoing > 0) {
+        QMessageBox msgBox(this);
+        int msgBoxWidth = 300;
+        msgBox.setWindowTitle("Delete Images");
+        #ifdef Q_OS_WIN
+        msgBox.setText("This operation will move all selected images to the recycle bin.");
+        #endif
+        #ifdef Q_OS_MAC
+        msgBox.setText("This operation will move all selected images to the trash.");
+        #endif
+        QString info = "Do you want continue?";
+        if (versionsGoing > 0)
+            info = QString("%1 version%2 of these images will be deleted with them.\n\n")
+                       .arg(versionsGoing).arg(versionsGoing == 1 ? "" : "s") + info;
+        if (!versionsOnly.isEmpty())
+            info = QString("%1 selected version%2 will be removed; their images stay.\n\n")
+                       .arg(versionsOnly.size()).arg(versionsOnly.size() == 1 ? "" : "s")
+                   + info;
+        msgBox.setInformativeText(info);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setStyleSheet(G::css);
+        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+        msgBox.show();
+        msgBox.move(geometry().center());
+        int ret = msgBox.exec();
+        resetFocus();
+        if (ret == QMessageBox::Cancel) return;
+    }
+
+    if (!versionsOnly.isEmpty()) deleteVersionRecords(versionsOnly, /*confirm*/false);
     deleteFiles(paths);
 }
 

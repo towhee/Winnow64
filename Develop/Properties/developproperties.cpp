@@ -6160,6 +6160,22 @@ void DevelopProperties::updateMaskMenuBtn()
    Per-image edit state (load / save / populate)
    ---------------------------------------------------------------------------------------- */
 
+void DevelopProperties::forgetImage(const QString &key)
+{
+    if (G::isLogger) G::log("DevelopProperties::forgetImage", key);
+    if (key.isEmpty()) return;
+    dirty.remove(key);
+    stackCache.remove(key);
+    if (history) history->forget(key);
+    if (key == toppedUpPath) toppedUpPath.clear();
+    if (key != currentImagePath) return;
+    /* Reload in place: clear the current path so setCurrentImage does not return early
+       (and has nothing of the old recipe to flush), then load the new one. */
+    currentImagePath.clear();
+    setCurrentImage(key);
+    emit paramsChanged();
+}
+
 void DevelopProperties::setCurrentImage(const QString &fPath)
 {
     if (G::isLogger) G::log("DevelopProperties::setCurrentImage", fPath);
@@ -7670,7 +7686,7 @@ QStringList DevelopProperties::otherSelectedPaths() const
         /* A video has no develop recipe; writing one would create a sidecar the
            pipeline never reads. */
         if (idx.siblingAtColumn(G::VideoColumn).data().toBool()) continue;
-        const QString p = idx.data(G::PathRole).toString();
+        const QString p = idx.data(G::KeyRole).toString();
         if (p.isEmpty() || p == currentImagePath) continue;
         paths << p;
     }
@@ -7696,7 +7712,7 @@ int DevelopProperties::selectedStillCount() const
     const QModelIndexList rows = mw->dm->selectionModel->selectedRows();
     for (const QModelIndex &idx : rows) {
         if (idx.siblingAtColumn(G::VideoColumn).data().toBool()) continue;
-        if (idx.data(G::PathRole).toString().isEmpty()) continue;
+        if (idx.data(G::KeyRole).toString().isEmpty()) continue;
         n++;
     }
     return n;

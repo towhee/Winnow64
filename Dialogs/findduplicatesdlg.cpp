@@ -394,7 +394,7 @@ int FindDuplicatesDlg::candidatesInDataModel() const
 */
     int n = 0;
     for (const A &item : aItems) {
-        if (dm->proxyRowFromPath(item.path) >= 0) n++;
+        if (dm->proxyRowFromKey(item.path) >= 0) n++;
     }
     return n;
 }
@@ -465,8 +465,11 @@ void FindDuplicatesDlg::setupModel()
     }
     aItems.clear();
     for (int sfRow : std::as_const(sfRows)) {
+        /*  A version (virtual copy) is the same FILE as its master under another
+            recipe: it would be reported as a duplicate of it every time. */
+        if (dm->sf->index(sfRow, 0).data(G::VersionIdRole).toInt() > 0) continue;
         A item;
-        item.path = dm->sf->index(sfRow, 0).data(G::PathRole).toString();
+        item.path = dm->sf->index(sfRow, 0).data(G::SourcePathRole).toString();
         item.name = dm->sf->index(sfRow, G::NameColumn).data().toString();
         item.created = dm->sf->index(sfRow, G::CreatedColumn).data().toString();
         item.aspect = dm->sf->index(sfRow, G::AspectRatioColumn).data().toDouble();
@@ -534,7 +537,7 @@ void FindDuplicatesDlg::getPreview(QString fPath, QImage &image, QString source)
 */
     QFileInfo fileInfo(fPath);
     ImageMetadata *m;
-    int row = dm->proxyRowFromPath(fPath);
+    int row = dm->proxyRowFromKey(fPath);
     metadata->loadImageMetadata(fileInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::preview");
     m = &metadata->m;
 
@@ -1060,7 +1063,7 @@ void FindDuplicatesDlg::getMetadataBItems()
         // get metadata info for the B file to calc aspect
         QFileInfo fInfo(fPath);
         bool loadMeta = true;
-        int row = dm->proxyRowFromPath(fPath);
+        int row = dm->proxyRowFromKey(fPath);
 
         if (!metadata->loadImageMetadata(fInfo, row, dm->instance, true, true, false, true, "FindDuplicatesDlg::buildBItemsList")) {
             loadMeta = false;
@@ -1875,7 +1878,7 @@ void FindDuplicatesDlg::on_updateDupsAndQuitBtn_clicked()
     }
     for (int a = 0; a < aItems.count(); a++) {
         if (model.itemFromIndex(model.index(a, MC::CheckBox))->checkState() == Qt::Checked) {
-            int sfRow = dm->proxyRowFromPath(aItems.at(a).path);
+            int sfRow = dm->proxyRowFromKey(aItems.at(a).path);
             if (sfRow >= 0) dm->sf->setData(dm->sf->index(sfRow, G::CompareColumn), true);
         }
     }
@@ -2019,7 +2022,7 @@ void FindDuplicatesDlg::reportAspects()
     qDebug() << "\n" << "FindDuplicatesDlg::reportAspects";
     for (int a = 0, b = 0; static_cast<void>(a < aItems.count()), b < bItems.count(); a++, b++) {
         QFileInfo fInfo(bItems.at(b).fPath);
-        int row = dm->proxyRowFromPath(bItems.at(b).fPath);
+        int row = dm->proxyRowFromKey(bItems.at(b).fPath);
         QString fileNameB  = (QFileInfo(bItems.at(b).fPath)).fileName();
         metadata->loadImageMetadata(fInfo, row, dm->instance, true, true, false, true);
         ImageMetadata *m = &metadata->m;

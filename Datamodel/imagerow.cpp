@@ -1,5 +1,6 @@
 #include "Datamodel/imagerow.h"
 #include "Utilities/foldertree.h"
+#include "Utilities/versionkey.h"
 
 /*
     The column <-> field mapping. This is the seam that lets the storage change
@@ -11,7 +12,7 @@
 /*  THE ONE COLUMN <-> FIELD MAPPING. Every column this store holds has a BIT
     here, and covers() is derived from it rather than kept as a second list --
     two lists that must agree is one list too many, which is the lesson the
-    write-side guard already taught (see the PathRole note below).
+    write-side guard already taught (see the KeyRole note below).
 
     The bit index doubles as the setMask position, so "is this column held here"
     and "has this row's copy of it been written" are answered from the same
@@ -36,19 +37,25 @@ enum Field {
     F_Search, F_Ingested, F_Availability, F_FolderPath,
     /* column 0's custom roles -- not values */
     F_IconRect, F_DupHideRaw, F_DupIsJpg, F_DupRawType, F_DupOtherIdx,
+    F_VersionCount, F_VersionName,
     F_Count
 };
 static_assert(F_Count <= 128, "ImageRow::setLo/setHi hold 128 bits");
 
 int fieldBit(int column, int role)
 {
-    /*  Column 0 is six fields, not one. The path is on G::PathRole because
+    /*  Column 0 is six fields, not one. The key is on G::KeyRole because
         addFileDataForRow never set EditRole there -- an unset item returns an
         invalid QVariant and callers test for it -- and the icon rect and the
-        four pairing roles sit beside it on their own roles. */
+        four pairing roles sit beside it on their own roles. G::SourcePathRole is
+        derived from the same field (Utilities/versionkey.h) and is read-only. */
     if (column == G::PathColumn) {
         switch (role) {
-        case G::PathRole:        return F_Path;
+        case G::KeyRole:         return F_Path;
+        case G::SourcePathRole:  return F_Path;
+        case G::VersionIdRole:   return F_Path;
+        case G::VersionCountRole: return F_VersionCount;
+        case G::VersionNameRole: return F_VersionName;
         case G::IconRectRole:    return F_IconRect;
         case G::DupHideRawRole:  return F_DupHideRaw;
         case G::DupIsJpgRole:    return F_DupIsJpg;
@@ -210,7 +217,11 @@ QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
 
     if (column == G::PathColumn) {
         switch (role) {
-        case G::PathRole:        return r.path;
+        case G::KeyRole:         return r.path;
+        case G::SourcePathRole:  return VersionKey::sourceOf(r.path);
+        case G::VersionIdRole:   return VersionKey::idOf(r.path);
+        case G::VersionCountRole: return r.versionCount;
+        case G::VersionNameRole: return mStrings.value(r.versionNameId);
         case G::IconRectRole:    return r.iconRect;
         case G::DupHideRawRole:  return r.dupHideRaw;
         case G::DupIsJpgRole:    return r.dupIsJpg;
@@ -315,6 +326,9 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     if (column == G::FolderPathsAllColumn) return;
     // Derived from G::GPSCoordColumn, likewise.
     if (column == G::HasGPSColumn) return;
+    // Derived from G::KeyRole, likewise.
+    if (column == G::PathColumn
+        && (role == G::SourcePathRole || role == G::VersionIdRole)) return;
     ImageRow &r = mRows[row];
     setBit(r, bit);
     ++mFieldGen[bit];
@@ -326,12 +340,14 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
 
     if (column == G::PathColumn) {
         switch (role) {
-        case G::PathRole:        r.path = v.toString(); break;
+        case G::KeyRole:         r.path = v.toString(); break;
         case G::IconRectRole:    r.iconRect = v.toRect(); break;
         case G::DupHideRawRole:  r.dupHideRaw = v.toBool(); break;
         case G::DupIsJpgRole:    r.dupIsJpg = v.toBool(); break;
         case G::DupRawTypeRole:  r.dupRawTypeId = mStrings.id(v.toString()); break;
         case G::DupOtherIdxRole: r.dupOtherIdx = v.toInt(); break;
+        case G::VersionCountRole: r.versionCount = v.toInt(); break;
+        case G::VersionNameRole: r.versionNameId = mStrings.id(v.toString()); break;
         default: break;
         }
         return;

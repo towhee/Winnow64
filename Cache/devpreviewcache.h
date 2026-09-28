@@ -180,7 +180,10 @@ public:
 
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
-    void onDeleted(const QString &fPath);
+    void onDeleted(const QString &fPath);   // an image: takes its versions' previews too
+    /* Exactly one entry -- fPath's own, never its versions'. For a recipe that changed
+       under a key (Set Version as Master) rather than an image that went away. */
+    void removeEntry(const QString &fPath);
 
     /* Drop everything, on disk and in memory (the preferences "Clear preview cache"). */
     void clear();
@@ -267,6 +270,7 @@ private:
     QString dirLocked() const;
     QString filePathLocked(quint64 id) const;
     /* Takes the NORMALISED key (Cache/pathkey.h), not a path. */
+    QStringList versionKeysLocked(QSqlDatabase &db, const QString &srcKey);
     void removeLocked(QSqlDatabase &db, const QString &key);
     void evictLocked(QSqlDatabase &db);
     static QString volumeRootOf(const QString &path);

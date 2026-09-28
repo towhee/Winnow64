@@ -80,7 +80,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
     QFile imFile(fPath);
 //    if (imFile.isOpen()) imFile.close();
-    int dmRow = dm->rowFromPath(fPath);
+    int dmRow = dm->rowFromKey(fPath);
 
     // metadata read attempted but failed
     if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() == G::MetaFailed)

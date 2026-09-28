@@ -87,6 +87,7 @@ private:
     /* Fill metadata->m from the local index; false when it cannot. */
     bool readMetadataFromIndex(const QFileInfo &fileInfo);
     void readIcon();
+    bool readVersionIcon(QImage &image);
     inline bool instanceOk();
     DataModel *dm;
     ImageMetadata *m;

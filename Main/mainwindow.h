@@ -1541,6 +1541,13 @@ private:
     QAction *colorManageAction;
     QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
+    QAction *showAllVersionsAction;
+    QMenu *versionsMenu = nullptr;
+    QAction *versionsGroupAct = nullptr;
+    QAction *newVersionAction;
+    QAction *renameVersionAction;
+    QAction *deleteVersionAction;
+    QAction *setVersionAsMasterAction;
     QAction *refreshFoldersAction;
     /*  The catalog's two entry points, in the File menu. The Filter dock used to carry
         both -- a Folders|Catalog toggle and a "Manage..." button under its footer -- but
@@ -2932,6 +2939,28 @@ private:
         against the disk (DataModel::refresh) -- the menu Refresh, not a known change. */
     void applyModelChange(const QStringList &added, const QStringList &removed,
                           const QString &src, bool reconcileDisk = false);
+    /*  VERSIONS (virtual copies) in the grid (Main/mwversions.cpp). reconcileVersionRows
+        adds and drops version rows to match the versions the masters' sidecars list
+        (DataModel::versionRowChanges) and refills the rest; it runs once when a load
+        completes and, coalesced, whenever a master is re-read after it. The expand
+        calls record the collapse state on the proxy and re-filter through filterChange. */
+    void reconcileVersionRows(const QString &src);
+    void scheduleVersionReconcile();
+    void setVersionsExpanded(const QString &masterKey, bool expanded);
+    void toggleVersionsExpanded(const QString &key);
+    void setShowAllVersions(bool show);
+    bool versionReconcilePending = false;
+    /*  The version operations (Develop > Versions, the thumbnail context menu). All
+        write the master's sidecar (Metadata/versions.h) and then bring the grid in line;
+        none ever touches the image file. */
+    void newVersion();
+    void renameVersion();
+    void deleteVersion();
+    void deleteVersionRecords(const QStringList &keys, bool confirm = true);
+    void setVersionAsMaster();
+    void syncVersionsMenu();
+    void rereadVersionMasters(const QStringList &masters, const QString &src);
+    void writeVersionValues(const QStringList &versionKeys);
     void insertFiles(QStringList fPaths);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);

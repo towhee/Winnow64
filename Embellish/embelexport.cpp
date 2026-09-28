@@ -61,7 +61,7 @@ bool EmbelExport::loadImage(QString fPath)
 
     if (G::isLogger) G::log(srcFun);
     QImage image;
-    int dmRow = dm->rowFromPath(fPath);
+    int dmRow = dm->rowFromKey(fPath);
 
     QString msg = "embellish->isRemote = " + QVariant(embellish->isRemote).toString();
     if (G::embelLog) G::log(srcFun, msg);

@@ -53,7 +53,7 @@ Selection::Selection(QWidget *parent,
 void Selection::setCurrentPath(QString &fPath)
 {
     if (G::isLogger || isDebug) G::log("Selection::current QString");
-    setCurrentIndex(dm->proxyIndexFromPath(fPath));
+    setCurrentIndex(dm->proxyIndexFromKey(fPath));
 }
 
 void Selection::setCurrentRow(int sfRow)
@@ -141,7 +141,7 @@ void Selection::select(const QString &fPath, Qt::KeyboardModifiers modifiers)
 {
     if (G::isLogger || G::isFlowLogger || isDebug) G::log("Selection::select(QString)", fPath);
     //qDebug() << "Selection::select QString" << fPath;
-    select(dm->proxyIndexFromPath(fPath), modifiers);
+    select(dm->proxyIndexFromKey(fPath), modifiers);
 }
 
 void Selection::select(int sfRow, Qt::KeyboardModifiers modifiers)

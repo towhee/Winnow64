@@ -1,4 +1,5 @@
 #include "Develop/workingimagecache.h"
+#include "Utilities/versionkey.h"
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
 #include "Develop/cameraprofilestore.h"
@@ -72,9 +73,10 @@ qint64 WorkingImageCache::bytesOf(const WorkingImage &work)
     return static_cast<qint64>(work.rgb.size()) * static_cast<qint64>(sizeof(float));
 }
 
-void WorkingImageCache::put(const QString &fPath,
+void WorkingImageCache::put(const QString &key,
                             const std::shared_ptr<const WorkingImage> &work)
 {
+    const QString fPath = VersionKey::sourceOf(key);    // see KEYED BY SOURCE in the header
     if (fPath.isEmpty() || !work || !work->isValid()) return;
 
     QMutexLocker lock(&mutex);
@@ -97,8 +99,9 @@ void WorkingImageCache::put(const QString &fPath,
     evictLocked();
 }
 
-std::shared_ptr<const WorkingImage> WorkingImageCache::get(const QString &fPath)
+std::shared_ptr<const WorkingImage> WorkingImageCache::get(const QString &key)
 {
+    const QString fPath = VersionKey::sourceOf(key);
     QMutexLocker lock(&mutex);
     auto it = entries.constFind(fPath);
     if (it == entries.constEnd()) return nullptr;
@@ -106,14 +109,15 @@ std::shared_ptr<const WorkingImage> WorkingImageCache::get(const QString &fPath)
     return it->work;
 }
 
-bool WorkingImageCache::contains(const QString &fPath) const
+bool WorkingImageCache::contains(const QString &key) const
 {
     QMutexLocker lock(&mutex);
-    return entries.contains(fPath);
+    return entries.contains(VersionKey::sourceOf(key));
 }
 
-void WorkingImageCache::remove(const QString &fPath)
+void WorkingImageCache::remove(const QString &key)
 {
+    const QString fPath = VersionKey::sourceOf(key);
     QMutexLocker lock(&mutex);
     auto it = entries.find(fPath);
     if (it == entries.end()) return;

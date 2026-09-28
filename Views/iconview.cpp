@@ -34,7 +34,7 @@ DataModel QStandardItemModel roles used:
 
    User defined roles include:
 
-        PathRole - the file path
+        KeyRole - the row key (file path, or a version key)
         FileNameRole - the file name xxxxxx.ext
 
    Datamodel columns:
@@ -1863,6 +1863,14 @@ void IconView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    /*  The VERSIONS badge on a master opens or closes its group (Main/mwversions.cpp).
+        A plain click only: with a modifier it is an ordinary selection click. */
+    if (event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier
+        && iconViewDelegate->versionsBadgeHit(sfIdx, visualRect(sfIdx), event->pos())) {
+        m2->toggleVersionsExpanded(sfIdx.data(G::KeyRole).toString());
+        return;
+    }
+
     // left button or touch
     if (event->button() == Qt::LeftButton) {
         // qDebug() << "IconView::mousePressEvent LeftMouseBtnPressed  row =" << sfIdx.row();
@@ -2272,8 +2280,12 @@ void IconView::startDrag(Qt::DropActions)
 
     QList<QUrl> urls;
     QList<QString>paths;
+    QSet<QString> seenFiles;
     for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QString fPath = selection.at(i).data(G::SourcePathRole).toString();
+        /* a version (virtual copy) is its source file: hand each file over once */
+        if (seenFiles.contains(fPath)) continue;
+        seenFiles.insert(fPath);
         urls << QUrl::fromLocalFile(fPath);
         paths << fPath;
         /* FileOps::companions finds .txt sidecars and case variants (.XMP) that the old

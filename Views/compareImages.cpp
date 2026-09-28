@@ -89,8 +89,8 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     if (count > 16) count = 16;
 
     for (int i = 0; i < count; ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        int dmRow = dm->rowFromPath(fPath);
+        QString fPath = selection.at(i).data(G::KeyRole).toString();
+        int dmRow = dm->rowFromKey(fPath);
         if (dmRow == -1) continue;
         int width = dm->index(dmRow, G::WidthColumn).data().toInt();
         int height = dm->index(dmRow, G::HeightColumn).data().toInt();
@@ -108,7 +108,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     for (int i = 0; i < count; ++i) {
         QModelIndex idxPath = selection.at(i);
 //        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
-        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QString fPath = selection.at(i).data(G::KeyRole).toString();
         // create new compareView and append to list
         imList->append(new CompareView(this, gridCell, dm, sel, metadata, icd, thumbView));
         imList->at(i)->loadImage(selection.at(i), fPath);
