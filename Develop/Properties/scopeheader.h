@@ -16,7 +16,7 @@ class BarBtn;
     ScopeHeader -- the Develop dock's scope control: ONE gradient-headed line naming the
     scope everything below it edits.
 
-        | v Edits  Scope: [Global v]  [+] [eye] [:] |   <- the whole scope control
+        | v Scope  [Global v]  [+] [eye] [:] |   <- the whole scope control
         |   MaskPanel                     |   <- detail, slot MaskDetail
         |   Basic / Color / ...           |   <- detail, slot EditsDetail (the tree)
 
@@ -90,7 +90,7 @@ public:
     bool isEditsCollapsed() const { return editsCollapsed; }
     QString currentScopeName() const;
 
-    /* The narrowest the BAR can be drawn whole -- arrow, "Edits", "Scope:", the combo at
+    /* The narrowest the BAR can be drawn whole -- arrow, "Scope", the combo at
        its own minimum, the gaps, and [+] [eye] [:]. The dock hands this to
        setMinimumWidth so the splitter cannot squeeze the trailing buttons out of sight:
        the scope block scrolls VERTICALLY inside a QScrollArea, which happily clips
@@ -120,7 +120,7 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent *) override;         // gradient behind the scope bar
-    bool eventFilter(QObject *obj, QEvent *event) override;   // "Edits" click -> toggle
+    bool eventFilter(QObject *obj, QEvent *event) override;   // "Scope" click -> toggle
 
 private:
     void buildScopeBar(QVBoxLayout *outer);   // the one-line scope selector
@@ -133,13 +133,12 @@ private:
     static void setEyeIcon(BarBtn *b, bool shown);      // eye.png / eye_off.png
     void selectScopeDeferred(const QString &name);      // emit scopeSelected next tick
 
-    /* The whole scope control on one line -- "Edits Scope: [Global v] [+] [eye] [:]". It stands
+    /* The whole scope control on one line -- "Scope [Global v] [+] [eye] [:]". It stands
        in for a panel header band, so paintEvent draws the property-header gradient
        behind it. */
     QWidget     *scopeBar        = nullptr;
     BarBtn      *barCollapseBtn  = nullptr;   // leading arrow: fold the details away
-    QLabel      *barLabel        = nullptr;   // "Edits" -- a click toggles the arrow
-    QLabel      *scopeLabel      = nullptr;   // "Scope:" -- names what the combo picks
+    QLabel      *barLabel        = nullptr;   // "Scope" -- a click toggles the arrow
     QComboBox   *scopeCombo      = nullptr;
     BarBtn      *barAddBtn       = nullptr;   // [+] new mask
     BarBtn      *barEyeBtn       = nullptr;

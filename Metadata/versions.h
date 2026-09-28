@@ -82,6 +82,10 @@ struct VersionSummary
     QString pick;
     bool developed = false;
     QString devPreviewKey;      // key of the RECIPE, like ImageMetadata::devPreviewKey
+    /*  The version's develop geometry as output/source per axis, like
+        ImageMetadata::cropFx/cropFy. Filled by Metadata::parseSidecar, which has the
+        image's dimensions; summaries() leaves 1,1. */
+    float cropFx = 1.0f, cropFy = 1.0f;
 };
 
 struct VersionSet

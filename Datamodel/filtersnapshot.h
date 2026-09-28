@@ -62,8 +62,14 @@ namespace FilterCat {
     };
 }
 
+class QTreeWidgetItem;
+
 struct FilterSnapshotRow {
     QString v[FilterCat::SlotCount];    // already trimmed, ready to count
+    /*  One value per SESSION category ("Filter on..."), in FilterSnapshot::extraItems
+        order. Trimmed, and a number is left-padded so the category sorts numerically.
+        Counted as slot FilterCat::SlotCount + i -- see BuildFilters::countSlot. */
+    QVector<QString> extra;
     QStringList keywords;               // G::KeywordsAllColumn, trimmed
     bool hiddenRaw = false;             // combineRawJpg && G::DupHideRawRole
 };
@@ -96,6 +102,13 @@ struct FilterSnapshot {
     FilterValuesPtr values;             // by DATAMODEL row; may be shared
     QVector<char> inProxy;              // by DATAMODEL row: survives the current filter
     int proxyRows = 0;                  // rows with inProxy set
+    /*  THE SESSION CATEGORIES THIS SNAPSHOT WAS TAKEN FOR, captured on the GUI thread
+        with the values, so the worker never reads Filters::sessionCats (which the GUI
+        thread changes). extraItems[i] is the category header whose values are
+        FilterSnapshotRow::extra[i]. A removed category is RETIRED, never deleted (see
+        Filters::removeSessionCategory), so a pointer held here cannot dangle. */
+    QVector<int> extraColumns;
+    QVector<QTreeWidgetItem *> extraItems;
 
     int rowCount() const { return values ? values->rows : 0; }
     bool isEmpty() const { return rowCount() == 0; }

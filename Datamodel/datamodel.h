@@ -275,6 +275,8 @@ public:
     /*  Rebuild NOW if one is pending. Call before queueing work to a worker thread that
         will read the snapshot -- MW::filterChange does, before MetaRead::initialize. */
     void flushProxySnapshot();              // GUI thread
+    void spliceRowSync(int at, int count);   // rows opened (+) or closed (-) at `at`
+    void rebuildRowSync();                   // from the row store, after a reset
     void resizeRowSync(int rows);           // GUI thread
 
     /*  Raw+JPG pair accessors.
@@ -350,7 +352,15 @@ public:
         develop badge and devPreview key. Other per-version fields change through a
         re-read of the master's sidecar. */
     void noteVersionDevelop(const QString &versionKey, bool developed,
-                            const QString &devPreviewKey);
+                            const QString &devPreviewKey,
+                            float cropFx = 1.0f, float cropFy = 1.0f);
+    /*  WRITE THE CROPPED COLUMNS (G::CroppedDimensionsColumn, CroppedAspectRatioColumn)
+        from the file's dimensions and orientation and the develop geometry's factors
+        (ImageMetadata::cropFx). Both are the image AS DISPLAYED: oriented, then
+        cropped/straightened/warped. known = false (a developed row whose recipe was not
+        read) or no dimensions leaves both blank. Signals nothing: callers batch. */
+    void setCroppedGeometry(int row, int width, int height, int orientation,
+                            float cropFx, float cropFy, bool known = true);
     /*  The same for a version's rating, label and pick, once MW::writeVersionValues has
         written them to the record. */
     void noteVersionValues(const QString &versionKey, int rating, const QString &label,

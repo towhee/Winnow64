@@ -689,6 +689,15 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         });
     }
 
+    /*  WINNOW_SELFTEST_NAV=1 clicks through the first rows once the load has settled
+        and checks the loupe and the ImageCache follow (Main/selftestnav.cpp). */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV") == 1) {
+        QTimer::singleShot(settleMs / 2, this, [this]() {
+            QThreadPool::globalInstance()->waitForDone(30000);
+            selfTestNavigate();
+        });
+    }
+
     if (fsTree->select(loadPath))
         folderSelectionChange(loadPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
@@ -6921,9 +6930,26 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     dm->setData(dm->index(dmRow, G::DevelopColumn), !blob.isEmpty());
     dm->setData(dm->index(dmRow, G::DevPreviewKeyColumn),
                 blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob));
-    if (VersionKey::isVersion(fPath))
+    /* And the cropped size: the recipe just written may have moved the crop. */
+    float cropFx = 1.0f, cropFy = 1.0f;
+    const int w = dm->index(dmRow, G::WidthColumn).data().toInt();
+    const int h = dm->index(dmRow, G::HeightColumn).data().toInt();
+    const int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
+    Metadata::developCropFactors(blob, w, h, orientation, cropFx, cropFy);
+    dm->setCroppedGeometry(dmRow, w, h, orientation, cropFx, cropFy);
+    /*  A "Filter on..." category over a cropped column lists VALUES, and the new crop
+        may be one it has not got: refill it, as a rating edit refills Ratings. */
+    for (QTreeWidgetItem *cat : filters->sessionCategories()) {
+        const int col = cat->data(0, G::ColumnRole).toInt();
+        if (col == G::CroppedDimensionsColumn || col == G::CroppedAspectRatioColumn)
+            buildFilters->updateSessionCategory(cat);
+    }
+    if (VersionKey::isVersion(fPath)) {
         dm->noteVersionDevelop(fPath, !blob.isEmpty(),
-                               blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob));
+                               blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob),
+                               cropFx, cropFy);
+        updateCatalogForRow(dm->rowFromKey(VersionKey::sourceOf(fPath)));
+    }
 
     /* The full-size image cached for this path was decoded from the OLD recipe (or from
        the camera render), so it no longer depicts the image. Drop it: the next visit

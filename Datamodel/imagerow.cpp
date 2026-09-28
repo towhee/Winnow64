@@ -35,6 +35,7 @@ enum Field {
     F_Email_, F_Url_, F_Permissions, F_ReadWrite, F_Sidecar, F_OrientationOffset,
     F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
     F_Search, F_Ingested, F_Availability, F_FolderPath,
+    F_CroppedDimensions, F_CroppedAspectRatio,
     /* column 0's custom roles -- not values */
     F_IconRect, F_DupHideRaw, F_DupIsJpg, F_DupRawType, F_DupOtherIdx,
     F_VersionCount, F_VersionName,
@@ -109,6 +110,8 @@ int fieldBit(int column, int role)
     case G::FocusYColumn:               return F_FocusY;
     case G::AspectRatioColumn:          return F_AspectRatio;
     case G::IconAspectRatioColumn:      return F_IconAspectRatio;
+    case G::CroppedDimensionsColumn:    return F_CroppedDimensions;
+    case G::CroppedAspectRatioColumn:   return F_CroppedAspectRatio;
     case G::OrientationColumn:          return F_Orientation;
     case G::RotationColumn:             return F_Rotation;
     case G::EmailColumn:                return F_Email;
@@ -273,6 +276,8 @@ QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
     case G::FocusYColumn:          return r.focusY;
     case G::AspectRatioColumn:     return mStrings.value(r.aspectRatioId);
     case G::IconAspectRatioColumn: return r.iconAspectRatio;
+    case G::CroppedDimensionsColumn:  return mStrings.value(r.croppedDimensionsId);
+    case G::CroppedAspectRatioColumn: return mStrings.value(r.croppedAspectRatioId);
     case G::OrientationColumn:     return r.orientation;
     case G::RotationColumn:        return mStrings.value(r.rotationId);
     case G::EmailColumn:           return mStrings.value(r.emailId);
@@ -401,6 +406,8 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::FocusYColumn:          r.focusY = v.toFloat(); break;
     case G::AspectRatioColumn:     r.aspectRatioId = mStrings.id(v.toString()); break;
     case G::IconAspectRatioColumn: r.iconAspectRatio = v.toDouble(); break;
+    case G::CroppedDimensionsColumn:  r.croppedDimensionsId = mStrings.id(v.toString()); break;
+    case G::CroppedAspectRatioColumn: r.croppedAspectRatioId = mStrings.id(v.toString()); break;
     case G::OrientationColumn:     r.orientation = v.toInt(); break;
     case G::RotationColumn:        r.rotationId = mStrings.id(v.toString()); break;
     case G::EmailColumn:           r.emailId = mStrings.id(v.toString()); break;

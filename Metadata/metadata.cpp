@@ -11,6 +11,8 @@
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Metadata/versions.h"
+#include "Develop/editstack.h"
+#include "Develop/Transform/croptransform.h"
 #include "Metadata/xmpembed.h"
 #include "ImageFormats/Video/mov.h"
 
@@ -624,6 +626,32 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
         G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
     }
     sidecarFile.close();
+}
+
+void Metadata::developCropFactors(const QString &blob, int width, int height,
+                                  int orientation, float &fx, float &fy)
+{
+/*
+    The geometry stage runs on the ORIENTED frame (EXIF rotation is applied before it),
+    so a 6/8 orientation swaps the axes first; CropTransform::geometryTransform then gives
+    the output size for that frame -- the same straighten -> warp -> crop sizing the
+    render uses. Only the frame's aspect matters to it, so factors computed here scale
+    to whatever size the row later reports.
+*/
+    fx = fy = 1.0f;
+    if (blob.isEmpty() || width <= 0 || height <= 0) return;
+    const EditStack stack = EditStack::fromBase64(blob);
+    const Geometry &g = stack.geometry;
+    if (!g.show || g.isIdentity()) return;
+    const bool swap = orientation == 5 || orientation == 6
+                      || orientation == 7 || orientation == 8;
+    const double w = swap ? height : width;
+    const double h = swap ? width : height;
+    QSizeF out;
+    CropTransform::geometryTransform(w, h, g, &out);
+    if (out.width() <= 0 || out.height() <= 0) return;
+    fx = float(out.width() / w);
+    fy = float(out.height() / h);
 }
 
 QString Metadata::devPreviewKey(const QString &blob)
@@ -1445,6 +1473,7 @@ bool Metadata::parseSidecar()
     m.developEdited = false;
     m.devPreviewKey.clear();
     m.versions.clear();
+    m.cropFx = m.cropFy = 1.0f;
 
     QString sidecarPath = FileOps::existingSidecar(QFileInfo(p.file).absoluteFilePath());
     QFile sidecarFile(sidecarPath);
@@ -1482,6 +1511,8 @@ bool Metadata::parseSidecar()
            this image should look like" rather than "what was last rendered". A devPreview
            whose key does not match simply misses. */
         if (m.developEdited) m.devPreviewKey = devPreviewKey(blob);
+        /* The format parse ran first, so the dimensions are known. */
+        developCropFactors(blob, m.width, m.height, m.orientation, m.cropFx, m.cropFy);
 
         /* The versions, from the same parsed document. A corrupt set reads as none
            here; Versions::update refuses to overwrite it, so nothing is lost. */
@@ -1489,6 +1520,11 @@ bool Metadata::parseSidecar()
         if (!vb64.isEmpty()) {
             const VersionSet set = VersionSet::fromBase64(vb64, VersionSet::Detail::Recipe);
             m.versions = Versions::summaries(set, &Metadata::devPreviewKey);
+            // summaries keeps the set's order
+            for (int i = 0; i < m.versions.size() && i < set.versions.size(); ++i)
+                developCropFactors(set.versions.at(i).develop, m.width, m.height,
+                                   m.orientation, m.versions[i].cropFx,
+                                   m.versions[i].cropFy);
         }
     }
 

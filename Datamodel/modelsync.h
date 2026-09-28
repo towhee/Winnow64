@@ -89,6 +89,28 @@ public:
     }
 
     // Carry existing values onto a larger array when the model grows.
+    /*  other with count rows opened (count > 0) or closed (count < 0) at row `at` --
+        what the datamodel's rows just did. copyFrom is position-for-position, which is
+        right only for rows appended or removed at the END: an insert in the middle
+        left every later row reading its neighbour's flags (see DataModel::spliceRowSync). */
+    void copySpliced(const RowSyncArray &other, int at, int count) {
+        for (int i = 0; i < mSize; ++i) {
+            int from = i;
+            if (count > 0) {
+                if (i >= at && i < at + count) continue;        // a new row: zero
+                if (i >= at + count) from = i - count;
+            }
+            else if (count < 0 && i >= at) {
+                from = i - count;                               // rows after the gap
+            }
+            if (from < 0 || from >= other.mSize) continue;
+            mRows[i].flags.store(other.mRows[from].flags.load(std::memory_order_relaxed),
+                                 std::memory_order_relaxed);
+            mRows[i].cacheMB.store(other.mRows[from].cacheMB.load(std::memory_order_relaxed),
+                                   std::memory_order_relaxed);
+        }
+    }
+
     void copyFrom(const RowSyncArray &other) {
         const int n = qMin(mSize, other.mSize);
         for (int i = 0; i < n; ++i) {

@@ -86,6 +86,13 @@ struct FilterCategory
         values matches nothing. Excludes are untouched by it -- an exclusion rejects in
         either mode. */
     bool matchAll = false;
+    /*  COMPARE AS TEXT, for a session category ("Filter on..."). Its items are built from
+        BuildFilters' snapshot, which holds every value as a trimmed -- and, when numeric,
+        left-padded -- STRING; the column itself may hold a double or an int, and a Qt 6
+        QVariant compare of a double with a QString is not one to rely on. The built-in
+        categories were each made to agree with their column by hand; a column chosen at
+        run time cannot be, so both sides are compared as trimmed text. */
+    bool compareAsText = false;
 
     /*  CAN THIS CATEGORY REJECT A ROW? An exclude can. An include can -- unless
         includeAll is set, because includeAll accepts every row without comparing, so its
@@ -160,6 +167,18 @@ struct FilterPredicate
             if (!cat.isFiltering()) continue;
 
             const QVariant dataValue = valueFor(cat.column);
+
+            if (cat.compareAsText) {
+                const QString text = dataValue.toString().trimmed();
+                for (const QVariant &ex : cat.excludes)
+                    if (text == ex.toString().trimmed()) return false;
+                if (cat.includes.isEmpty()) continue;
+                bool isMatch = false;
+                for (const QVariant &in : cat.includes)
+                    if (text == in.toString().trimmed()) { isMatch = true; break; }
+                if (!isMatch) return false;
+                continue;
+            }
 
             /*  Exclusions first and answered immediately: no other category can
                 readmit a row the user has said to leave out. */

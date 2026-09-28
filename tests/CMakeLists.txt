@@ -633,6 +633,23 @@ if(TARGET Winnow)
         TIMEOUT 180
     )
 
+    # -------------------------------------------------------------------------
+    # selftest_nav — click through the loaded rows and check that each click reaches
+    # the ImageCache and the loupe (MW::selfTestNavigate). Every other self-test stops
+    # once the folder has loaded; this is the browse itself.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME selftest_nav
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(selftest_nav PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_NAV=1;WINNOW_SELFTEST_CLICK_MS=2500;WINNOW_SELFTEST_MS=40000"
+        PASS_REGULAR_EXPRESSION "SELFTEST: NAV PASS"
+        FAIL_REGULAR_EXPRESSION "NAV FAIL|MODELINTEGRITY"
+        LABELS "smoke"
+        TIMEOUT 120
+    )
+
     add_test(
         NAME smoke_launch
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images

@@ -42,6 +42,15 @@ public:
        G::DevPreviewKeyColumn, so a decoder thread can ask the devPreview cache for this
        image's preview without touching DevelopProperties on the GUI thread. */
     QString devPreviewKey = "";
+    /*  WHAT THE DEVELOP GEOMETRY DOES TO THE SIZE: output width / oriented source width,
+        and the same for height (Metadata::developCropFactors). 1,1 when there is no crop,
+        straighten or warp. Held as factors rather than pixels so a later correction of
+        the dimensions (the thumb path writes Width/Height too) still gives the right
+        cropped size. NOT KNOWN for a developed row served from the catalog index
+        (fromIndex): the recipe was not read, so the cropped columns stay blank rather
+        than claim the file's size. Read in the same sidecar pass as developEdited; see
+        DataModel::setCroppedGeometry. */
+    float cropFx = 1.0f, cropFy = 1.0f;
     /* The image's versions (virtual copies) from winnow:Versions, read in the same
        sidecar pass as developEdited: enough to make each version's row, none of the
        recipe or preview bytes. Empty for an image without versions. */

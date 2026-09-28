@@ -206,6 +206,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     debugFilters = false;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
+
+    filterOnAction = new QAction("Filter on...", this);
+    filterOnAction->setToolTip("Add a filter category for any column that does not have "
+                               "one, such as Aspect Ratio.\nIt lasts until Winnow quits.");
+    connect(filterOnAction, &QAction::triggered, this, &Filters::filterOnRequested);
 }
 
 void Filters::createPredefinedFilters()
@@ -324,6 +329,75 @@ void Filters::createDynamicFilters()
     createFilter(compare, catCompare);
 }
 
+QTreeWidgetItem *Filters::addSessionCategory(int column, const QString &name)
+{
+/*
+    Append a session category -- see the declaration. Set up as createFilter sets up a
+    built-in one, so save()/restore(), compileFilters and the per-item styling treat it
+    no differently; SessionRole is the one extra fact, and all it changes is that the
+    predicate compares the column as text (FilterCategory::compareAsText).
+
+    The caller fills it: BuildFilters counts it from the snapshot like any category.
+*/
+    if (G::isLogger) G::log("Filters::addSessionCategory", name);
+    QTreeWidgetItem *cat = new QTreeWidgetItem(this);   // appended: bottom of the tree
+    cat->setText(0, name);
+    cat->setData(0, CategoryNameRole, name);
+    cat->setData(0, G::ColumnRole, column);
+    cat->setData(0, SessionRole, true);
+    cat->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
+    cat->setToolTip(0, "Added with Filter on... -- lasts until Winnow quits.\n"
+                       "Right-click to remove it.");
+    setCategoryBackground(cat);
+    sessionCats << cat;
+    return cat;
+}
+
+void Filters::removeSessionCategory(QTreeWidgetItem *category)
+{
+/*
+    Take a session category out of the panel. See the declaration for why the item is
+    retired rather than deleted.
+*/
+    if (!isSessionCategory(category)) return;
+    if (G::isLogger) G::log("Filters::removeSessionCategory", category->text(0));
+
+    /*  Any item not Unchecked, excludes included -- isCatFiltering discounts a
+        category of one item, but a checked lone item still filters. */
+    bool wasFiltering = false;
+    for (QTreeWidgetItem *item : itemsInCategory(category))
+        if (item->checkState(0) != Qt::Unchecked) { wasFiltering = true; break; }
+    if (rangeAnchorCategory == category) {
+        rangeAnchorCategory = nullptr;
+        rangeAnchorItem.clear();
+    }
+    if (activeCategory == category) activeCategory = nullptr;
+
+    sessionCats.removeAll(category);
+    takeTopLevelItem(indexOfTopLevelItem(category));
+    category->takeChildren();
+    retiredSessionCats << category;
+
+    if (wasFiltering) emit filterChange("Filters::removeSessionCategory");
+    else setEachCatTextColor();
+}
+
+QList<int> Filters::categoryColumns() const
+{
+    QList<int> cols = filterCategoryToDmColumn.values();
+    for (const QTreeWidgetItem *c : sessionCats)
+        cols << c->data(0, G::ColumnRole).toInt();
+    return cols;
+}
+
+QStringList Filters::categoryNames() const
+{
+    QStringList names = filterCategoryToDmColumn.keys();
+    for (const QTreeWidgetItem *c : sessionCats)
+        names << c->data(0, CategoryNameRole).toString();
+    return names;
+}
+
 void Filters::setCategoryBackground(QTreeWidgetItem *cat)
 {
     if (G::isLogger) G::log("Filters::setCategoryBackground(QTreeWidgetItem *cat)");
@@ -370,6 +444,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(availability);
     // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
+    for (QTreeWidgetItem *cat : std::as_const(sessionCats)) setCategoryBackground(cat);
 }
 
 void Filters::removeChildrenDynamicFilters()
@@ -402,6 +477,9 @@ void Filters::removeChildrenDynamicFilters()
     availability->takeChildren();
     // missingThumbs->takeChildren();
     compare->takeChildren();
+    /*  Session categories KEEP THEIR HEADERS across a folder change -- they last the
+        session -- and are refilled by the build like the rest. */
+    for (QTreeWidgetItem *cat : std::as_const(sessionCats)) cat->takeChildren();
 }
 
 void Filters::setPicksState(bool isChecked)
@@ -1490,6 +1568,20 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     QTreeWidgetItem *root = item;
     while (root != nullptr && root->parent()) root = root->parent();
     const bool inKeywords = root == keywords;
+    /*  A session category is removed from ITSELF -- header or item -- which is where the
+        user is looking when they are done with it. */
+    QTreeWidgetItem *sessionCat = isSessionCategory(root) ? root : nullptr;
+    auto addRemoveSession = [&](QMenu &menu) -> QAction * {
+        if (sessionCat == nullptr) return nullptr;
+        QAction *a = menu.addAction("Remove \"" + sessionCat->text(0) + "\" category");
+        a->setToolTip("Take this Filter on... category out of the panel, clearing any "
+                      "filter it applies.");
+        if (buildingFilters) {
+            a->setEnabled(false);
+            a->setText(a->text() + " - filters are building");
+        }
+        return a;
+    };
 
     const bool ready = categoriesFrom == FromCatalog
                        || (!G::isModifyingDatamodel && !buildingFilters);
@@ -1500,12 +1592,15 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         QMenu menu(this);
         QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
         QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
+        QAction *removeSession = addRemoveSession(menu);
         addFilterActions(menu);
         QAction *chosen = menu.exec(event->globalPos());
         if (unfiled != nullptr && chosen == unfiled)
             setShowUnfiledOnly(!showUnfiledOnly);
         else if (mode != nullptr && chosen == mode)
             setKeywordsMatchAll(!keywordsMatchAll());
+        else if (removeSession != nullptr && chosen == removeSession)
+            removeSessionCategory(sessionCat);
         return;
     }
 
@@ -1552,6 +1647,8 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     clr->setEnabled(now != Qt::Unchecked);
     QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
     QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
+    if (sessionCat != nullptr) menu.addSeparator();
+    QAction *removeSession = addRemoveSession(menu);
     addFilterActions(menu);
 
     QAction *chosen = menu.exec(event->globalPos());
@@ -1564,6 +1661,8 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         setShowUnfiledOnly(!showUnfiledOnly);
     else if (mode != nullptr && chosen == mode)
         setKeywordsMatchAll(!keywordsMatchAll());
+    else if (removeSession != nullptr && chosen == removeSession)
+        removeSessionCategory(sessionCat);
 }
 
 bool Filters::vocabHasLeaf(const QString &leafFold) const
@@ -1690,8 +1789,18 @@ void Filters::addFilterActions(QMenu &menu)
     no caller has to dispatch what it returns. They belong to the widget, not to the
     temporary menu, so they survive it.
 */
-    if (actions().isEmpty()) return;
     if (!menu.isEmpty()) menu.addSeparator();
+    /*  "Filter on..." first. Disabled WITH THE REASON in Catalog scope, where a category
+        is filled from the index, and the index holds only the columns it was built for. */
+    if (filterOnAction) {
+        const bool folders = categoriesFrom == FromDatamodel;
+        filterOnAction->setEnabled(folders);
+        filterOnAction->setText(folders ? "Filter on..."
+                                        : "Filter on... - Folders scope only");
+        menu.addAction(filterOnAction);
+    }
+    if (actions().isEmpty()) return;
+    menu.addSeparator();
     menu.addActions(actions());
 }
 
@@ -2016,6 +2125,10 @@ bool Filters::loadCatalogCategories()
        other category, and it shows itself when a row is not Present. */
     setRowHidden(indexOfTopLevelItem(compare), QModelIndex(), true);
     setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+    /*  Session categories read an arbitrary datamodel column, which the index cannot
+        answer. showAllCategories brings them back with the Folders scope. */
+    for (QTreeWidgetItem *c : std::as_const(sessionCats))
+        setRowHidden(indexOfTopLevelItem(c), QModelIndex(), true);
     updateAvailabilityVisibility();
 
     filtersBuilt = true;
@@ -2158,9 +2271,15 @@ static const QChar kStateSep(0x1f);
 
 QVariantMap Filters::persistableState() const
 {
+    /*  A session category ends with the session, so its checks are not persisted: the
+        next launch has no category to restore them into. */
+    QSet<QString> sessionNames;
+    for (const QTreeWidgetItem *c : sessionCats)
+        sessionNames.insert(c->data(0, CategoryNameRole).toString());
     QStringList items;
     for (const ItemState &st : checkedItemStates())
-        items << st.category + kStateSep + st.value + kStateSep
+        if (!sessionNames.contains(st.category))
+            items << st.category + kStateSep + st.value + kStateSep
                      + QString::number(int(st.state));
     QString text = searchTrue->text(0);
     if (text == enterSearchString) text.clear();
@@ -2362,6 +2481,7 @@ void Filters::collapseAllFiltersExceptSearch()
     collapse(indexFromItem(availability));
     // collapse(indexFromItem(missingThumbs));
     collapse(indexFromItem(compare));
+    for (QTreeWidgetItem *cat : std::as_const(sessionCats)) collapse(indexFromItem(cat));
 }
 
 void Filters::toggleExpansion()

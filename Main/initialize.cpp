@@ -311,6 +311,7 @@ void MW::createDataModel()
     connect(dm, &DataModel::folderChange, this, &MW::folderChanged);
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(filters, &Filters::mergeUnfiledKeyword, this, &MW::mergeUnfiledKeyword);
+    connect(filters, &Filters::filterOnRequested, this, &MW::filterOnColumn);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     // versions (virtual copies): a master re-read after the load -- see Main/mwversions.cpp
     connect(dm, &DataModel::versionsChanged, this, &MW::scheduleVersionReconcile);
@@ -3042,7 +3043,7 @@ void MW::createDevelopDock()
        ([+] [eye] [:]) out of sight. The scope block lives in a QScrollArea that scrolls
        VERTICALLY only, so a too-narrow dock CLIPS the bar rather than refusing to shrink
        -- the dock is the only place the limit can be enforced. barMinimumWidth is the
-       bar's own layout minimum (arrow, "Edits", "Scope:", combo, gaps, three buttons), so
+       bar's own layout minimum (arrow, "Scope", combo, gaps, three buttons), so
        it tracks the font and any control added to the bar instead of going stale like the
        hand-picked 275 it replaces; the scrollbar's width is reserved on top, because the
        bar loses that much whenever the block below it is tall enough to need one. */

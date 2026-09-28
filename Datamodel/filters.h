@@ -232,6 +232,8 @@ signals:
         questions about the vocabulary and the catalog, so MW answers them. See
         MW::mergeUnfiledKeyword. */
     void mergeUnfiledKeyword(const QString &path);
+    /*  "Filter on..." was chosen. MW shows the columns and calls addSessionCategory. */
+    void filterOnRequested();
 
 public slots:
 
@@ -305,8 +307,40 @@ public:
         /*  On a category HEADER: its includes must ALL match, not any one. Only the
             Keywords header ever carries it -- see setKeywordsMatchAll. Read by
             SortFilter::compileFilters into FilterCategory::matchAll. */
-        MatchAllRole
+        MatchAllRole,
+        /*  On a category HEADER: a SESSION category, made by "Filter on..." from a column
+            the panel has no category for. Read by SortFilter::compileFilters into
+            FilterCategory::compareAsText. See addSessionCategory. */
+        SessionRole
     };
+
+    /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
+        Aspect Ratio, Aperture, Make -- becomes a category at the bottom of the tree,
+        built from the data by BuildFilters like any other, and lasts until Winnow quits:
+        it survives folder changes, is never written to settings, and is hidden in
+        Catalog scope because the index cannot answer an arbitrary column.
+
+        The panel knows nothing about the datamodel's columns, so it only ASKS
+        (filterOnRequested); MW offers the columns, adds the category and has it filled.
+        See MW::filterOnColumn. */
+    QTreeWidgetItem *addSessionCategory(int column, const QString &name);
+    /*  Clear the category's checks and take it out of the tree. The item is RETIRED,
+        not deleted: a BuildFilters run in flight may hold ops naming it, and an op on a
+        detached item is harmless where one on a freed item is a crash. Emits
+        filterChange when anything in it was checked. */
+    void removeSessionCategory(QTreeWidgetItem *category);
+    const QList<QTreeWidgetItem *> &sessionCategories() const { return sessionCats; }
+    bool isSessionCategory(const QTreeWidgetItem *category) const
+    {
+        return category != nullptr
+               && sessionCats.contains(const_cast<QTreeWidgetItem *>(category));
+    }
+    /*  Every column a category already reads, built-in and session -- what the "Filter
+        on..." picker leaves out. */
+    QList<int> categoryColumns() const;
+    /*  Every category NAME in use, which the picker must not reuse: save() and restore()
+        key on the name, so two categories called "Keywords" would share their checks. */
+    QStringList categoryNames() const;
 
     /*  ANY OR ALL OF THE CHECKED KEYWORDS. Checked items in a category are OR-ed; for
         Keywords, where an image carries several, "Family AND Beach" is the question as
@@ -452,6 +486,12 @@ private:
     QSet<QString> vocabPathsFold;
     bool showUnfiledOnly = false;
     QStringList folderAnchors;          // see setFolderAnchors
+    QList<QTreeWidgetItem *> sessionCats;       // see addSessionCategory
+    QList<QTreeWidgetItem *> retiredSessionCats;    // see removeSessionCategory
+    /*  "Filter on...", appended to every menu by addFilterActions. Owned here rather
+        than in MW's filterActions because its enabled state and text follow the scope,
+        which only this class knows at the moment the menu opens. */
+    QAction *filterOnAction = nullptr;
     struct ItemState {
         /*  KEYED ON THE TOP-LEVEL CATEGORY AND THE ITEM'S FILTER VALUE, not on the
             item's parent and its label. Those were the same thing while every category

@@ -41,6 +41,7 @@ private slots:
     void foldersMatchTheirSubtreeByPathNotName();
     void matchAllNeedsEveryKeyword();
     void readsColumnOnlyForActiveCategories();
+    void sessionCategoryComparesAsPaddedText();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -346,4 +347,37 @@ void tst_filterpredicate::readsColumnOnlyForActiveCategories()
 }
 
 QTEST_MAIN(tst_filterpredicate)
+void tst_filterpredicate::sessionCategoryComparesAsPaddedText()
+{
+/*
+    A "Filter on..." category (Filters::addSessionCategory) is built from BuildFilters'
+    snapshot, which holds every value as TEXT and left-pads a number so the category sorts
+    numerically. The column itself may hold a double. compareAsText is what makes the
+    padded string item match the double the row holds -- and the aspect-ratio column, the
+    first use, holds a formatted string, which must match too.
+*/
+    FilterPredicate p;
+    FilterCategory c = cat(G::ApertureColumn, { "       5.6" });   // padded, as the item is
+    c.compareAsText = true;
+    p.categories << c;
+
+    const Row f56{ { G::ApertureColumn, 5.6 } };
+    const Row f8 { { G::ApertureColumn, 8.0 } };
+    QVERIFY(p.accepts(fetch(f56)));
+    QVERIFY(!p.accepts(fetch(f8)));
+
+    // an exclude compares the same way
+    p.categories[0] = cat(G::ApertureColumn, {}, { "         8" });
+    p.categories[0].compareAsText = true;
+    QVERIFY(p.accepts(fetch(f56)));
+    QVERIFY(!p.accepts(fetch(f8)));
+
+    // a string column: Aspect Ratio holds "1.50", and the item carries the same text
+    p.categories[0] = cat(G::AspectRatioColumn, { "1.50" });
+    p.categories[0].compareAsText = true;
+    QVERIFY(p.accepts(fetch(Row{ { G::AspectRatioColumn, "1.50" } })));
+    QVERIFY(!p.accepts(fetch(Row{ { G::AspectRatioColumn, "0.67" } })));
+    QVERIFY(p.readsColumn(G::AspectRatioColumn));
+}
+
 #include "tst_filterpredicate.moc"

@@ -1402,6 +1402,9 @@ private slots:
     /*  Put back the checks a folder add/remove saved, once the categories have been
         rebuilt for the new set, and re-apply them. */
     void restoreFiltersAfterFolderChange();
+    /*  "Filter on..." in the Filters panel: offer the columns that have no category and
+        add the one chosen as a session category. See Filters::addSessionCategory. */
+    void filterOnColumn();
     void showMetadataDock();
 
     void setMenuBarVisibility();
@@ -2961,6 +2964,7 @@ private:
     void syncVersionsMenu();
     void rereadVersionMasters(const QStringList &masters, const QString &src);
     void writeVersionValues(const QStringList &versionKeys);
+    void selfTestNavigate();            // WINNOW_SELFTEST_NAV, Main/selftestnav.cpp
     void insertFiles(QStringList fPaths);
     void deleteSelectedFiles();
     void deleteFiles(QStringList paths);

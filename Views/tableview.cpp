@@ -257,6 +257,8 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::DimensionsColumn] = fm.boundingRect("=99999x99999=").width();
     defaultColumnWidth[G::AspectRatioColumn] = fm.boundingRect("=Aspect Ratio=").width();
     defaultColumnWidth[G::IconAspectRatioColumn] = fm.boundingRect("=Icon Aspect Ratio=").width();
+    defaultColumnWidth[G::CroppedDimensionsColumn] = fm.boundingRect("=Cropped Dimensions=").width();
+    defaultColumnWidth[G::CroppedAspectRatioColumn] = fm.boundingRect("=Cropped Aspect=").width();
     defaultColumnWidth[G::OrientationColumn] = fm.boundingRect("=Orientation=").width();
     defaultColumnWidth[G::RotationColumn] = fm.boundingRect("=Rot=").width();
     defaultColumnWidth[G::CopyrightColumn] = fm.boundingRect("=Copyright=====").width();

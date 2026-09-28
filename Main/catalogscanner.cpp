@@ -213,6 +213,7 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     row._email = m._email;
     row._url = m._url;
     row.developed = m.developEdited;
+    row.versions = m.versions;          // schema 17: the sidecar's versions (virtual copies)
     row.devPreviewKey = m.devPreviewKey;
     row.shootingInfo = m.shootingInfo;
     /* The prefix-expanded PATHS, exactly as DataModel::catalogRows supplies them -- the
