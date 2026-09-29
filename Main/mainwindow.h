@@ -2946,8 +2946,10 @@ private:
         adds and drops version rows to match the versions the masters' sidecars list
         (DataModel::versionRowChanges) and refills the rest; it runs once when a load
         completes and, coalesced, whenever a master is re-read after it. The expand
-        calls record the collapse state on the proxy and re-filter through filterChange. */
-    void reconcileVersionRows(const QString &src);
+        calls record the collapse state on the proxy and re-filter through filterChange.
+        atLoadEnd is MW::metadataComplete's call, which is itself the "load finished"
+        signal the other callers are gated on. */
+    void reconcileVersionRows(const QString &src, bool atLoadEnd = false);
     void scheduleVersionReconcile();
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     void toggleVersionsExpanded(const QString &key);

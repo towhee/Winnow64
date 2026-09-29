@@ -30,10 +30,19 @@ void MW::scheduleVersionReconcile()
     });
 }
 
-void MW::reconcileVersionRows(const QString &src)
+void MW::reconcileVersionRows(const QString &src, bool atLoadEnd)
 {
     if (G::isLogger) G::log("MW::reconcileVersionRows", src);
-    if (!dm || G::stop || G::isModifyingDatamodel) return;
+    /*  NOT UNTIL THE LOAD HAS FINISHED. G::isModifyingDatamodel cannot say so: both
+        loadCatalogScope and folderSelectionChange set it and then call stop(), which
+        clears it, so it is false for the whole fill. A master read mid-fill then ran
+        applyModelChange mid-fill -- new instance, readers restarted while loadingModel
+        still refused their icons -- and those thumbnails never painted. loadingModel
+        covers the fill; metadataCompleteDone (cleared by folderChanged, set by
+        metadataComplete, which runs its own reconcile with atLoadEnd) covers the tail
+        after it. */
+    if (!dm || G::stop || dm->loadingModel) return;
+    if (!atLoadEnd && (G::isModifyingDatamodel || !metadataCompleteDone)) return;
 
     dm->sf->setShowAllVersions(showAllVersionsAction && showAllVersionsAction->isChecked());
 
