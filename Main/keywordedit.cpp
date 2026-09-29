@@ -488,7 +488,7 @@ void MW::rebuildAbortedFilters()
         if (!buildFilters || !dm || dm->rowCount() == 0) return;
         /*  The model is being rebuilt; that load ends with its own full build, which is
             the re-run this wanted. Retrying into it would only be aborted again. */
-        if (G::isModifyingDatamodel || G::stop) return;
+        if (G::isModifyingDatamodel || G::isLoadRunning || G::stop) return;
         buildFilters->build(BuildFilters::NoAfterAction);
     });
 }

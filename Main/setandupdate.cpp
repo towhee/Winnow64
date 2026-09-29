@@ -744,12 +744,13 @@ void MW::applyLibraryFolderFilter(const QStringList &includes, const QStringList
         if (G::scope != G::Scope::Catalog) pendingLibraryFolderFilter = PendingFolderFilter();
         return;
     }
-    if (filters->filtersBuilt && !G::isModifyingDatamodel && !filters->buildingFilters) {
+    if (filters->filtersBuilt && !G::isModifyingDatamodel && !G::isLoadRunning
+        && !filters->buildingFilters) {
         applyPendingLibraryFolderFilter();
         return;
     }
     // a build is coming, and finishedBuildFilters applies the click
-    if (G::isModifyingDatamodel || filters->buildingFilters) return;
+    if (G::isModifyingDatamodel || G::isLoadRunning || filters->buildingFilters) return;
 
     /*  NO BUILD IS COMING when the Filters panel is hidden: the filters are built lazily,
         only while it is on screen (see buildFiltersWhenModelReady), so the click would

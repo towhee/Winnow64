@@ -402,7 +402,17 @@ Q_NAMESPACE
     // datamodel
     // extern bool iconChunkLoaded;
     // extern int dmInstance;
+    /*  TWO DIFFERENT QUESTIONS, two flags.
+        isModifyingDatamodel: MW is TEARING DOWN / STARTING a load -- set by
+        folderSelectionChange and loadCatalogScope, cleared by MW::stop (which a replacing
+        load calls at once) or at MW::metadataComplete. Gates folder and bookmark clicks,
+        which is why a replacing load can still be interrupted by the next click.
+        isLoadRunning: a load's fill or metadata read is IN PROGRESS -- the model is not
+        yet complete. Set by the same two paths (after their stop()), cleared at the top
+        of MW::metadataComplete or by MW::stop. Gates work that must wait for the whole
+        model: filters, version rows, the catalog scanner, the scroll-in sweep. */
     extern std::atomic<bool> isModifyingDatamodel;
+    extern std::atomic<bool> isLoadRunning;
     // "Has MetaRead finished?" — true when every row has been attempted (== model
     // ready). A LIVE value: republished on every DataModel::addMetadataForItem as
     // isMetaReadFinished(), and reset false the instant a row is inserted or a new

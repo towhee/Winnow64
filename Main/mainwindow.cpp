@@ -3685,6 +3685,9 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         }
         buildFilters->reset(false);
     }
+    /*  After stop(), which clears it: the load is running from here until
+        MW::metadataComplete (see G::isLoadRunning). */
+    G::isLoadRunning = true;
 
     /*  Walk the tree once: get the subfolder count AND the list of
         subfolder paths in a single multi-threaded pass, then pass the
@@ -4556,6 +4559,8 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
     /*  After stop(), which lowers it. Appending is a fill too, so both paths grey the
         Module buttons until folderChanged. */
     setCatalogLoading(true);
+    // likewise after stop(), which clears it (see G::isLoadRunning)
+    G::isLoadRunning = true;
 
     dm->abort = false;
     /* Queued for the same reason enqueueFolderSelection is: stop() has just torn down the
@@ -5918,6 +5923,7 @@ void MW::stop(QString src)
 
     G::stop = false;
     G::isModifyingDatamodel = false;
+    G::isLoadRunning = false;       // a stopped load is not running; a new one re-sets it
 
     if (G::isLogger || G::isFlowLogger) G::log(srcFun, "done");
 
@@ -7051,6 +7057,11 @@ void MW::metadataComplete(QString src)
         G::log("MW::metadataComplete", msg);
     }
     QString fun = "MW::metadataComplete";
+
+    /*  THE MODEL IS COMPLETE: every row is in and has been read. Cleared FIRST, because
+        everything below -- the version rows' applyModelChange, the sorts, the filter
+        build -- is work that G::isLoadRunning holds off until now, and would refuse. */
+    G::isLoadRunning = false;
 
     /*  VERSIONS (virtual copies) FIRST, before the filter build below. Every master's
         sidecar has now been read, so the version rows go in with one applyModelChange

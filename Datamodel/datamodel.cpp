@@ -1429,10 +1429,7 @@ void DataModel::versionRowChanges(QStringList &add, QStringList &remove) const
         }
     }
     if (mVersionRowCount == 0) return;
-    const int n = rowCount();
-    for (int r = 0; r < n; ++r) {
-        const QString k = index(r, G::PathColumn).data(G::KeyRole).toString();
-        if (!VersionKey::isVersion(k)) continue;
+    for (const QString &k : versionRowKeys()) {
         const auto it = versionMasters.constFind(VersionKey::sourceOf(k));
         const int id = VersionKey::idOf(k);
         bool listed = false;
@@ -1440,6 +1437,21 @@ void DataModel::versionRowChanges(QStringList &add, QStringList &remove) const
             for (const VersionSummary &v : it->versions) if (v.id == id) { listed = true; break; }
         if (!listed) remove << k;
     }
+}
+
+QStringList DataModel::versionRowKeys() const
+{
+/*
+    Every version row's key. From fPathRow, not a walk of the rows: this runs at the end
+    of every load, and a walk read the key of each of a 155,000-row Library's rows
+    through index().data() to find the handful that are versions.
+*/
+    QStringList keys;
+    if (mVersionRowCount == 0) return keys;
+    QReadLocker locker(&fPathRowLock);
+    for (auto it = fPathRow.cbegin(); it != fPathRow.cend(); ++it)
+        if (VersionKey::isVersion(it.key())) keys << it.key();
+    return keys;
 }
 
 void DataModel::noteVersionValueWrite(const QModelIndex &dmIdx)
@@ -2224,6 +2236,19 @@ void DataModel::addFolder(const QString &folderPath)
     }
 }
 
+/*  THE VERSION ROWS A CATALOG ROW BRINGS WITH IT, in id order and each id once: the
+    ones insertCatalogBatch inserts straight after the master, and addCatalogRows counts
+    ahead of time. One definition, so the count and the insert cannot disagree -- a
+    reserved row left unfilled would be a row with no key. */
+static QList<int> catalogVersionIds(const CatalogRow &r)
+{
+    QList<int> ids;
+    for (const VersionSummary &v : r.versions)
+        if (v.id > 0 && !ids.contains(v.id)) ids.append(v.id);
+    std::sort(ids.begin(), ids.end());
+    return ids;
+}
+
 void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
 {
 /*
@@ -2319,7 +2344,11 @@ void DataModel::addCatalogRows(const QVector<CatalogRow> &rows)
     /*  THE TRUE COUNT FROM THE FIRST BATCH. Set before any row is inserted so the status
         bar can say "1 of 43,050" while the rest are still arriving, rather than counting
         up as they land. Cleared in endLoad. */
-    expectedRows = rowCount() + pendingCatalogRows.size();
+    catalogFillStartRow = rowCount();
+    int versionRows = 0;
+    for (const CatalogRow &r : std::as_const(pendingCatalogRows))
+        versionRows += catalogVersionIds(r).size();
+    expectedRows = rowCount() + pendingCatalogRows.size() + versionRows;
     if (G::isPerfProbe) perfFillPrepNs = prepTimer.nsecsElapsed();
 
     insertCatalogBatch();
@@ -2373,7 +2402,16 @@ void DataModel::insertCatalogBatch()
     QElapsedTimer pt;
     if (probe) pt.start();
 
-    insertRows(row, to - from);
+    /*  VERSIONS (virtual copies) ARRIVE WITH THEIR MASTER. The index lists them
+        (schema 17), so each version row is inserted right after its master in this
+        same batch -- the order insertFiles gives it -- and filled from the master just
+        written. Adding them after the load instead meant an applyModelChange over the
+        whole model: a new instance, a filter pass and a filter rebuild, for one row. */
+    int batchRows = 0;
+    for (int i = from; i < to; ++i)
+        batchRows += 1 + catalogVersionIds(pendingCatalogRows.at(i)).size();
+
+    insertRows(row, batchRows);
     if (probe) { perfFillInsertNs += pt.nsecsElapsed(); pt.restart(); }
     {
         const QSignalBlocker blocker(this);
@@ -2392,6 +2430,16 @@ void DataModel::insertCatalogBatch()
             addMetadataForItem(metadata->m, fun);
             if (probe) { perfFillAddMetaNs += pt.nsecsElapsed(); pt.restart(); }
             row++;
+
+            /*  Its versions, filled from the master's metadata addMetadataForItem just
+                recorded (versionMasters). A version row has no file of its own: its icon
+                comes through Reader -> Thumb::loadVersionThumb like any other row's. */
+            for (int id : catalogVersionIds(r)) {
+                addFileDataForRow(row, fi, &r, VersionKey::make(r.path, id));
+                ++mVersionRowCount;
+                fillVersionRow(row);
+                row++;
+            }
         }
     }
     const qint64 cellsThisBatch = perfFillInsertNs + perfFillFileDataNs
@@ -2471,7 +2519,9 @@ void DataModel::finishCatalogFill()
         }
     }
 
-    if (rowCount() > 0 && rowCount() == pendingCatalogAt) {
+    /*  A REPLACING fill (it began on an empty model), not "every row is one of ours":
+        version rows make rowCount() larger than the images consumed. */
+    if (rowCount() > 0 && catalogFillStartRow == 0) {
         firstFolderPathWithImages =
             QFileInfo(pendingCatalogRows.first().path).absoluteDir().path();
         setCurrent(index(0, 0), instance);
@@ -4123,7 +4173,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         are in flight. */
     /*  POSTED, not emitted here: this function holds a QSignalBlocker on the model for
         its whole body, which silently swallowed a direct emit. */
-    if (isMasterRow && versionsDiffer && !G::isModifyingDatamodel)
+    if (isMasterRow && versionsDiffer && !G::isModifyingDatamodel && !G::isLoadRunning)
         QMetaObject::invokeMethod(this, [this] { emit versionsChanged(); },
                                   Qt::QueuedConnection);
 
@@ -7483,6 +7533,12 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // Suspend?
     if (suspendFiltering) return true;
 
+    // Check Raw + Jpg
+    if (combineRawJpg) {
+        QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
+        if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
+    }
+
     /*  IS A LOAD RUNNING -- not "has every row been read".
 
         This was !G::allMetadataAttempted, and accepting every row when that flag is
@@ -7497,25 +7553,25 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
         makes it routine rather than rare, because every filter change moves the visible
         window and the verifier then finds more stale rows.
 
-        G::isModifyingDatamodel is set by the two paths that actually BUILD the model
-        (MW::folderSelectionChange, MW::loadCatalogScope) and cleared when the load
-        completes; refreshStaleRows does not touch it. That is the distinction that
+        G::isLoadRunning (with G::isModifyingDatamodel, the teardown before it) is set by
+        the two paths that actually BUILD the model (MW::folderSelectionChange,
+        MW::loadCatalogScope) and cleared when the load completes; refreshStaleRows does
+        not touch it. That is the distinction that
         matters: the model is fully populated while a handful of its rows are re-read,
         and filtering it is perfectly well defined. A row whose metadata has not landed
         does not match an active filter, and BuildFilters re-runs when it does. With no
         filter set the predicate acceptsEverything() below, so ordinary browsing during a
-        re-read is unaffected either way. */
-    if (G::isModifyingDatamodel) return true;
+        re-read is unaffected either way.
 
-    // Check Raw + Jpg
-    if (combineRawJpg) {
-        QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
-        if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
-    }
+        ONLY THE USER'S FILTER IS SUSPENDED, below the raw+jpg and collapsed-version
+        tests rather than above them. Those are the model's own shape, not a question
+        about metadata, and skipping them during a load showed every raw+jpg duplicate and
+        every version row until the load ended and then hid them all at once. */
+    const bool loading = G::isModifyingDatamodel || G::isLoadRunning;
 
     finished = false;
     const FilterPredicatePtr p = filterPredicate();
-    if (!p || p->acceptsEverything()) {
+    if (loading || !p || p->acceptsEverything()) {
         finished = true;
         /*  VERSIONS. With no filter, a collapsed group shows only its master. With a
             filter every row -- version or not -- stands on its own values, below: a
