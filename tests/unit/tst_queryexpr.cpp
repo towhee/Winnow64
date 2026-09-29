@@ -32,6 +32,8 @@ private slots:
     void unknownFieldIsAnErrorAndAWord();
     void emptyGroupsRestrictNothing();
     void columnsRead();
+    void theRestOfTheDatamodel();
+    void monthIsANumber();
 
 private:
     using Row = QHash<int, QVariant>;
@@ -251,6 +253,48 @@ void tst_queryexpr::columnsRead()
         Query::Expr::parse("heron rating:>=3 -(label:Red keyword:*)").columnsRead();
     QCOMPARE(cols, (QSet<int>{G::SearchTextColumn, G::RatingColumn, G::LabelColumn,
                               G::KeywordsAllColumn}));
+}
+
+void tst_queryexpr::theRestOfTheDatamodel()
+{
+    /*  The extra fields -- every other user-facing column -- sort after the main ones and
+        compare the way their columns store them: exposure compensation is text with a
+        unit, file size is bytes typed as MB, flags are booleans. */
+    bool seenExtra = false;
+    for (const Query::Field &f : Query::fields()) {
+        if (f.extra) seenExtra = true;
+        else QVERIFY2(!seenExtra, "a main field after the extras");
+    }
+    QVERIFY(seenExtra);
+
+    const Row r{{G::ExposureCompensationColumn, "+0.7 EV"},
+                {G::ByteSizeColumn, qint64(3200000)},
+                {G::VideoColumn, true},
+                {G::KeywordsColumn, QStringList{"Heron", "Bird"}},
+                {G::DimensionsColumn, "6000x4000"}};
+    QVERIFY(hit("exposurecomp:>0.5", r));
+    QVERIFY(!hit("exposurecomp:<0", r));
+    QVERIFY(hit("filesize:>3", r));                 // 3.2 MB
+    QVERIFY(!hit("filesize:>4", r));
+    QVERIFY(hit("video:yes", r));
+    QVERIFY(hit("keywordtext:heron", r));
+    QVERIFY(hit("dimensions:6000*", r));
+    // a negative value round-trips (a leading '-' would read as NOT, so it is quoted)
+    const Query::Expr neg = Query::Expr::parse("exposurecomp:<=\"-1\"");
+    QCOMPARE(Query::Expr::parse(neg.toText()).toText(), neg.toText());
+    QVERIFY(!hit(neg.toText(), r));
+}
+
+void tst_queryexpr::monthIsANumber()
+{
+    // G::MonthColumn holds "1".."12" (Catalog::monthLabel), so months compare
+    const Row june{{G::MonthColumn, "6"}};
+    QVERIFY(hit("month:>5", june));
+    QVERIFY(hit("month:6", june));
+    QVERIFY(hit("month:4..9", june));
+    QVERIFY(!hit("month:<6", june));
+    QVERIFY(!hit("month:>5", Row{{G::MonthColumn, "2"}}));
+    QVERIFY(!hit("month:>5", Row{{G::MonthColumn, ""}}));   // no capture date
 }
 
 QTEST_MAIN(tst_queryexpr)

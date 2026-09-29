@@ -601,6 +601,25 @@ QStringList MW::querySuggestions(const QString &fieldKey)
     return out;
 }
 
+QPair<int, int> MW::countQueryMatches(const Query::Expr &query)
+{
+/*
+    What the builder's Test reports: how many loaded rows the query matches, out of how
+    many -- rows, as every Filters count is (a version is a row). The other filters are
+    not applied: the question is what THIS query admits.
+*/
+    if (!dm) return {0, 0};
+    Query::Expr e = query;
+    e.prepare();
+    const int rows = dm->rowCount();
+    int hits = 0;
+    for (int row = 0; row < rows; ++row)
+        if (e.matches([this, row](int column) {
+                return dm->index(row, column).data(Qt::EditRole);
+            })) ++hits;
+    return {hits, rows};
+}
+
 void MW::openQueryBuilderForSearch()
 {
 /*
@@ -612,6 +631,7 @@ void MW::openQueryBuilderForSearch()
     if (!filters) return;
     QueryBuilderDialog dlg(QueryBuilderDialog::AdHoc, this);
     dlg.builder()->setSuggestions([this](const QString &k) { return querySuggestions(k); });
+    dlg.setCounter([this](const Query::Expr &e) { return countQueryMatches(e); });
     dlg.setExpr(Query::Expr::parse(filters->currentSearchText()));
     connect(&dlg, &QueryBuilderDialog::saveAsQueryRequested,
             this, [this](const Query::Expr &e) { saveQueryAs(e); });
@@ -642,6 +662,7 @@ void MW::newQuery(qint64 parent)
     if (G::isLogger) G::log("MW::newQuery");
     QueryBuilderDialog dlg(QueryBuilderDialog::SavedQuery, this);
     dlg.builder()->setSuggestions([this](const QString &k) { return querySuggestions(k); });
+    dlg.setCounter([this](const Query::Expr &e) { return countQueryMatches(e); });
     dlg.setName(tr("New Query"));
     if (dlg.exec() != QDialog::Accepted) return;
     CollectionStore::instance().create(Kind::Query, parent, dlg.name(),
@@ -660,6 +681,7 @@ void MW::editQuery(qint64 id)
     if (n.id == 0 || n.kind != Kind::Query) return;
     QueryBuilderDialog dlg(QueryBuilderDialog::SavedQuery, this);
     dlg.builder()->setSuggestions([this](const QString &k) { return querySuggestions(k); });
+    dlg.setCounter([this](const Query::Expr &e) { return countQueryMatches(e); });
     dlg.setName(n.name);
     dlg.setExpr(Query::Expr::fromJsonText(n.definition));
     if (dlg.exec() != QDialog::Accepted) return;

@@ -2311,6 +2311,8 @@ private:
     /*  What a builder value box offers as it is typed into: the values the loaded
         Library holds for that field. */
     QStringList querySuggestions(const QString &fieldKey);
+    /*  The builder's Test: (matching, total) of the loaded rows. */
+    QPair<int, int> countQueryMatches(const Query::Expr &e);
     /*  Once: the Search row's saved text queries (QSettings) become Queries. */
     void migrateSavedSearchQueries();
     /*  A LibTree click that arrived before the Library's filters were built, waiting

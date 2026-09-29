@@ -170,8 +170,8 @@ QStringList flatOf(const CatalogRow &r)
 
     THE STRINGS MUST MATCH WHAT DataModel WRITES into the same column, because the Filter
     dock shows one list and the user does not know which scope produced it: TypeColumn is
-    the suffix UPPER-cased, YearColumn is "yyyy", MonthColumn is the English abbreviation
-    ("Jan".."Dec"), ISOColumn is the number right-justified to six, DayColumn is
+    the suffix UPPER-cased, YearColumn is "yyyy", MonthColumn is the month number
+    unpadded ("1".."12"), ISOColumn is the number right-justified to six, DayColumn is
     the day of the month unpadded ("1".."31"), FolderName is
     the folder's NAME and not its path, Pick is the words "Picked"/"Unpicked", and Rating
     is the digit as text with "" for unrated.
@@ -210,18 +210,12 @@ QString categorySql(int dmColumn)
     /* The day of the month, "1".."31": %d is zero-padded, the datamodel's is not. */
     case G::DayColumn:        expr = "CAST(CAST(strftime('%d', i.captured, 'unixepoch')"
                                      " AS INTEGER) AS TEXT)"; break;
-    /* The month NAME, spelled from Catalog::monthLabels so the CASE cannot drift from
-       what DataModel writes into G::MonthColumn. A row with no capture date gives NULL
-       here and IFNULL folds it into the blank item, exactly as Year and Day do. */
-    case G::MonthColumn: {
-        expr = "CASE strftime('%m', i.captured, 'unixepoch')";
-        const QStringList names = Catalog::monthLabels();
-        for (int m = 1; m <= 12; ++m)
-            expr += QString(" WHEN '%1' THEN '%2'")
-                        .arg(m, 2, 10, QChar('0')).arg(names.at(m - 1));
-        expr += " END";
-        break;
-    }
+    /* The month NUMBER, "1".."12", unpadded like the day -- Catalog::monthLabel's
+       spelling, which is what DataModel writes into G::MonthColumn. A number, not a
+       name, so a query can say month:>5. A row with no capture date gives NULL here and
+       IFNULL folds it into the blank item, exactly as Year and Day do. */
+    case G::MonthColumn:      expr = "CAST(CAST(strftime('%m', i.captured, 'unixepoch')"
+                                     " AS INTEGER) AS TEXT)"; break;
     /* ISO right-justified to six, which is what BuildFilters does to the datamodel's
        int before counting it -- the padding is what makes "800" sort after "1600"
        rather than between "100" and "8000". printf() is SQLite's own, so the two sides
@@ -752,8 +746,8 @@ QString Catalog::availabilityLabel(int code)
 
 QStringList Catalog::monthLabels()
 {
-    static const QStringList names = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    static const QStringList names = {"1", "2", "3", "4", "5", "6",
+                                      "7", "8", "9", "10", "11", "12"};
     return names;
 }
 

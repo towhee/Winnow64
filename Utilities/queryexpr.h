@@ -72,9 +72,16 @@ struct Field
     Type type = Type::Text;
     QStringList values;     // an Enum's choices (display spelling)
     QString hint;           // placeholder for the value editor
+    /*  A number field's unit: what is typed is multiplied by this before comparing with
+        the column (File size is typed in MB and held in bytes). */
+    double scale = 1.0;
+    /*  One of the REST OF THE DATAMODEL's user-facing columns, listed after the main
+        fields (and a separator) in the builder. */
+    bool extra = false;
 };
 
-/*  The registry, in builder order. */
+/*  The registry, in builder order: the main fields, then the extras (Field::extra),
+    sorted by label. */
 const QVector<Field> &fields();
 const Field *field(const QString &key);         // case-insensitive; nullptr if unknown
 /*  The operators a field type offers, in builder order, and their builder labels. */

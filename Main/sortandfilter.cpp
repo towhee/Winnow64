@@ -632,10 +632,9 @@ void MW::filterLastDay()
         last = Catalog::instance().mostRecentCaptureDate();
     }
     else {
-        const QStringList months = Catalog::monthLabels();
         for (int row = 0; row < dm->rowCount(); ++row) {
             const int y = dm->index(row, G::YearColumn).data().toInt();
-            const int m = months.indexOf(dm->index(row, G::MonthColumn).data().toString()) + 1;
+            const int m = dm->index(row, G::MonthColumn).data().toInt();  // "1".."12"
             const int d = dm->index(row, G::DayColumn).data().toInt();
             const QDate date(y, m, d);
             if (date.isValid() && (!last.isValid() || date > last)) last = date;

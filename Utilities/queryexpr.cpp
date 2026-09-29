@@ -3,6 +3,8 @@
 
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRegularExpression>
+#include <algorithm>
 #include <cmath>
 
 namespace Query {
@@ -28,20 +30,20 @@ QString canon(const QString &v)
 /*  "1/250" is how a shutter speed is written; everything else is a plain number. */
 bool toNumber(const QString &raw, double &out)
 {
-    const QString s = raw.trimmed();
-    if (s.isEmpty()) return false;
-    const int slash = s.indexOf('/');
-    bool ok = false;
-    if (slash > 0) {
-        bool ok2 = false;
-        const double a = s.left(slash).toDouble(&ok);
-        const double b = s.mid(slash + 1).toDouble(&ok2);
-        if (!ok || !ok2 || b == 0) return false;
-        out = a / b;
-        return true;
-    }
-    out = s.toDouble(&ok);
-    return ok;
+/*
+    The LEADING number, with an optional "/denominator": "1/250", "5.6", and also the
+    unit-bearing text some columns hold -- exposure compensation is "+0.7 EV".
+*/
+    static const QRegularExpression re(
+        R"(^\s*([+-]?(?:\d+\.?\d*|\.\d+))(?:\s*/\s*(\d+\.?\d*))?)");
+    const QRegularExpressionMatch m = re.match(raw);
+    if (!m.hasMatch()) return false;
+    const double a = m.captured(1).toDouble();
+    if (m.captured(2).isEmpty()) { out = a; return true; }
+    const double b = m.captured(2).toDouble();
+    if (b == 0) return false;
+    out = a / b;
+    return true;
 }
 
 bool nearlyEqual(double a, double b)
@@ -89,7 +91,7 @@ const QVector<Field> &fields()
         add("modified", "File modified", G::ModifiedColumn, Type::Date, {},
             "2024, 2024-05 or 2024-05-01");
         add("year", "Year", G::YearColumn, Type::Number, {}, "2024");
-        add("month", "Month", G::MonthColumn, Type::Text, {}, "May");
+        add("month", "Month", G::MonthColumn, Type::Number, {}, "1 to 12");
         add("day", "Day of month", G::DayColumn, Type::Number, {}, "1 to 31");
         add("title", "Title", G::TitleColumn, Type::Text);
         add("creator", "Creator", G::CreatorColumn, Type::Text);
@@ -109,6 +111,42 @@ const QVector<Field> &fields()
         add("mp", "Megapixels", G::MegaPixelsColumn, Type::Number, {}, "24");
         add("gps", "Has GPS", G::HasGPSColumn, Type::Enum, {"Yes", "No"});
         add("developed", "Developed", G::DevelopColumn, Type::Enum, {"Yes", "No"});
+
+        /*  THE REST OF THE DATAMODEL: every user-facing (non-diagnostic) column the main
+            list does not already cover. Left out on purpose: the icon, the row number,
+            the macOS thumbnail handles, the Search result flag, load timing and the icon
+            aspect -- bookkeeping, not facts about a photograph. Sorted by label below,
+            after a separator in the builder. */
+        const int firstExtra = v.size();
+        const QStringList yesNo{"Yes", "No"};
+        add("foldername", "Folder name", G::FolderNameColumn, Type::Text);
+        add("ingested", "Ingested", G::IngestedColumn, Type::Enum, yesNo);
+        add("video", "Video", G::VideoColumn, Type::Enum, yesNo);
+        add("sidecar", "Has sidecar", G::SidecarColumn, Type::Enum, yesNo);
+        add("exposurecomp", "Exposure compensation (EV)", G::ExposureCompensationColumn,
+            Type::Number, {}, "-0.7 or +1");
+        add("duration", "Duration", G::DurationColumn, Type::Text);
+        add("focusx", "Focus point X", G::FocusXColumn, Type::Number);
+        add("focusy", "Focus point Y", G::FocusYColumn, Type::Number);
+        add("gpscoord", "GPS coordinates", G::GPSCoordColumn, Type::Text);
+        add("filesize", "File size (MB)", G::ByteSizeColumn, Type::Number, {}, "25");
+        v.last().scale = 1000000.0;
+        add("dimensions", "Dimensions", G::DimensionsColumn, Type::Text, {}, "6000x4000");
+        add("aspect", "Aspect ratio", G::AspectRatioColumn, Type::Number, {}, "1.5");
+        add("croppeddimensions", "Cropped dimensions", G::CroppedDimensionsColumn,
+            Type::Text);
+        add("croppedaspect", "Cropped aspect ratio", G::CroppedAspectRatioColumn,
+            Type::Number, {}, "1.5");
+        add("orientation", "Orientation", G::OrientationColumn, Type::Number);
+        add("rotation", "Rotation", G::RotationColumn, Type::Number, {}, "0, 90, 180, 270");
+        add("email", "Email", G::EmailColumn, Type::Text);
+        add("url", "Url", G::UrlColumn, Type::Text);
+        add("keywordtext", "Keywords as written", G::KeywordsColumn, Type::List, {},
+            "exactly as in the file (dc:subject)");
+        for (int i = firstExtra; i < v.size(); ++i) v[i].extra = true;
+        std::sort(v.begin() + firstExtra, v.end(), [](const Field &a, const Field &b) {
+            return a.label.compare(b.label, Qt::CaseInsensitive) < 0;
+        });
         return v;
     }();
     return f;
@@ -621,7 +659,7 @@ void prepareNode(Node &n)
         }
         else n.prepValues << v.trimmed();
         double d = 0;
-        n.prepNumbers << (toNumber(v, d) ? d : std::nan(""));
+        n.prepNumbers << (toNumber(v, d) ? d * f->scale : std::nan(""));
     }
 }
 

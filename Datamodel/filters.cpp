@@ -3222,9 +3222,9 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
     /*  ITEM ORDER IS THE MAP'S KEY ORDER, which is alphabetical -- right for a name and
         right for the values deliberately padded so that they sort as numbers (see the
         focal length and ISO justification in BuildFilters::makeSnapshot), but wrong for
-        a closed vocabulary whose meaning is a SEQUENCE. Months sorted as text read Apr,
-        Aug, Dec, Feb ..., which is not a list of months; they are inserted in calendar
-        order instead, and only the months present are offered. */
+        a SEQUENCE. Months are "1".."12" unpadded, and sorted as text read 1, 10, 11,
+        12, 2 ...; they are inserted in calendar order instead, and only the months
+        present are offered. */
     QStringList keys = itemMap.keys();
     if (category == months) {
         QStringList inCalendarOrder;
