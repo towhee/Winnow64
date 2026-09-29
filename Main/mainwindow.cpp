@@ -4521,7 +4521,11 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
     /*  A replacing result set clears the model exactly as a folder change does (see the
         header comment), so it loses picks exactly as a folder change does.  Appending
         keeps every loaded row, and with it every pick, so it never asks. */
-    if (!req.append &&
+    /*  The whole Library asked for from the Library button (MW::setCatalogScopeWhole)
+        has had its picks question already, and put up its own message. */
+    const bool wholeLibrary = pendingWholeLibrary && !req.append;
+    pendingWholeLibrary = false;
+    if (!req.append && !wholeLibrary &&
         !okToDiscardPicks("Loading these search results", "Load search results")) return;
 
     /*  The stall watchdog goes on for a catalog scope, under G::isPerfProbe
@@ -4543,7 +4547,8 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
         bookmarks->setEnabled(false);
         fsTree->setEnabled(false);
 
-        setCentralMessage("Loading search results.\n\nPress \"Esc\" to stop.");
+        setCentralMessage(wholeLibrary ? "Loading the library.\n\nPress \"Esc\" to stop."
+                                       : "Loading search results.\n\nPress \"Esc\" to stop.");
         const qint64 msgMs = G::isPerfProbe ? lcT.restart() : 0;
         stop(fun);
         /*  A FILTER TO RESTORE: the unfiltered Library is not what the user will be
@@ -7071,7 +7076,6 @@ void MW::metadataComplete(QString src)
         the build started here it cut that build short and left the Filters panel empty
         and greyed (155,000-row Library, 2026-09-28). */
     reconcileVersionRows(fun, /*atLoadEnd*/ true);
-    versionProbe("metadataComplete");     // VERSIONPROBE (temporary)
 
     /* One-shot cache housekeeping, deferred to here so it never competes with the folder
        load the user is waiting for, and run off the GUI thread because it stats every
