@@ -27,6 +27,12 @@ set(WINNOW_CORE_TEST_SOURCES
     # The catalog is the database's second tenant, and tst_devpreview's fixtures share a
     # file with it, so the closure carries both.
     ${CMAKE_SOURCE_DIR}/Cache/catalog.cpp
+    # FileOps keeps COLLECTIONS in step on a move or a delete too (they key on the path),
+    # so the closure reaches the collection store. Qt Core + Sql only.
+    ${CMAKE_SOURCE_DIR}/Datamodel/collectionstore.cpp
+    # The query grammar: FilterPredicate (header-only, included everywhere) evaluates
+    # query expressions, so every closure that compiles a predicate needs it.
+    ${CMAKE_SOURCE_DIR}/Utilities/queryexpr.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/inputdlg.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/popup.cpp
     ${CMAKE_SOURCE_DIR}/Main/global.cpp
@@ -398,6 +404,24 @@ winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp
     ${CMAKE_SOURCE_DIR}/Main/catalogenumerate.cpp)
+
+# tst_collections pins the store behind the Collections panel -- the user's own work,
+# which nothing can rebuild: a delete takes exactly its subtree, a drag cannot nest a
+# collection inside itself, a move Winnow makes carries membership with the image, a
+# file from a newer build is left alone -- and the two lookups the Filters Collections
+# category's column is built from (store key -> ids, catalog key -> row path).
+winnow_add_unit_test(tst_collections unit/tst_collections.cpp)
+
+# tst_queryexpr pins the query grammar behind the Search row, the Query Builder and the
+# Queries panel: plain words keep their old meaning, text and JSON round-trip (a saved
+# Query is a published format), and every operator compares the way its column stores
+# the value (dates as text, blank ratings as 0, keywords with every ancestor).
+winnow_add_unit_test(tst_queryexpr unit/tst_queryexpr.cpp)
+
+# tst_querybuilder opens the Query Builder headless, in both modes, and loads nested
+# queries into it -- the first build crashed on exactly that (a completer freed twice).
+winnow_add_unit_test(tst_querybuilder unit/tst_querybuilder.cpp
+    ${CMAKE_SOURCE_DIR}/Dialogs/querybuilder.cpp)
 
 # tst_keywordvocab covers the AUTHORED vocabulary's tree surgery, and above all the MERGE
 # -- the one operation that walks two trees at once and destroys part of one of them.

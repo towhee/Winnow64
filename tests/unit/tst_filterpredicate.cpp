@@ -42,6 +42,7 @@ private slots:
     void matchAllNeedsEveryKeyword();
     void readsColumnOnlyForActiveCategories();
     void sessionCategoryComparesAsPaddedText();
+    void queryExpressionsCombineLikeItems();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -378,6 +379,54 @@ void tst_filterpredicate::sessionCategoryComparesAsPaddedText()
     QVERIFY(p.accepts(fetch(Row{ { G::AspectRatioColumn, "1.50" } })));
     QVERIFY(!p.accepts(fetch(Row{ { G::AspectRatioColumn, "0.67" } })));
     QVERIFY(p.readsColumn(G::AspectRatioColumn));
+}
+
+void tst_filterpredicate::queryExpressionsCombineLikeItems()
+{
+/*
+    A Queries category (and the Search row) holds EXPRESSIONS, evaluated live per row:
+    included ones OR together within the category, an excluded one rejects outright, the
+    category ANDs with the others, and readsColumn reports every column the expressions
+    read -- which is what makes a rating edit refilter.
+*/
+    auto expr = [](const QString &text) {
+        auto e = std::make_shared<Query::Expr>(Query::Expr::parse(text));
+        e->prepare();
+        return std::shared_ptr<const Query::Expr>(e);
+    };
+    FilterCategory queries;
+    queries.column = -1;
+    queries.includeExprs << expr("rating:>=4") << expr("label:Red");
+    queries.exprColumns = {G::RatingColumn, G::LabelColumn};
+    FilterPredicate p;
+    p.categories << queries;
+
+    const Row five{ { G::RatingColumn, "5" }, { G::LabelColumn, "" } };
+    const Row redTwo{ { G::RatingColumn, "2" }, { G::LabelColumn, "Red" } };
+    const Row plain{ { G::RatingColumn, "2" }, { G::LabelColumn, "" } };
+    QVERIFY(p.accepts(fetch(five)));            // first query
+    QVERIFY(p.accepts(fetch(redTwo)));          // second query: OR within
+    QVERIFY(!p.accepts(fetch(plain)));
+    QVERIFY(p.readsColumn(G::RatingColumn));
+    QVERIFY(!p.readsColumn(G::TitleColumn));
+
+    // AND with another category
+    p.categories << cat(G::PickColumn, { "Picked" });
+    Row fivePicked = five;
+    fivePicked.insert(G::PickColumn, "Picked");
+    QVERIFY(!p.accepts(fetch(five)));
+    QVERIFY(p.accepts(fetch(fivePicked)));
+
+    // an excluded query rejects
+    p.categories.removeLast();
+    p.categories[0].excludeExprs << expr("label:Red");
+    QVERIFY(p.accepts(fetch(five)));
+    QVERIFY(!p.accepts(fetch(redTwo)));
+
+    // exclusions only: subtracting, not narrowing
+    p.categories[0].includeExprs.clear();
+    QVERIFY(p.accepts(fetch(plain)));
+    QVERIFY(!p.accepts(fetch(redTwo)));
 }
 
 #include "tst_filterpredicate.moc"

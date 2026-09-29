@@ -285,6 +285,13 @@ void MW::setKeywordsDockVisibility()
     if (keywordsDockVisibleAction->isChecked()) ensureKeywordVocabLoaded();
 }
 
+void MW::setCollectionsDockVisibility()
+{
+    if (G::isLogger) G::log("MW::setCollectionsDockVisibility");
+    if (!collectionsDock) return;
+    collectionsDock->setVisible(collectionsDockVisibleAction->isChecked());
+}
+
 void MW::setModuleDockVisibility()
 {
     if (G::isLogger) G::log("MW::setModuleDockVisibility");
@@ -571,6 +578,7 @@ void MW::setScope(G::Scope s, QString src)
         lowerLoadCurtain("MW::setScope leaving the Library");
     }
     G::scope = s;
+    updateCollectionsAvailability();
 
     if (G::isPerfProbe && changed && s == G::Scope::Catalog) {
         catalogSwitchClock.start();
@@ -988,6 +996,9 @@ void MW::applyDeferredSort()
 
 void MW::syncLibTreeFromFilters()
 {
+    /*  The Collections panel is the other view of a Filters category, pushed from the
+        same places (every filter change and every build). */
+    syncCollectionTreeFromFilters();
     if (!libTree || !filters) return;
     QStringList inc, exc;
     filters->folderFilterState(inc, exc);

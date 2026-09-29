@@ -147,6 +147,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
        category makes. The item's value is the folder's PATH, never its name: 22 of one
        library's 1,599 folder names were used more than once. */
     filterCategoryToDmColumn[catFolder] = G::FolderPathsAllColumn;
+    /* The ids of the collections an image is directly in -- see setSetNodes. */
+    filterCategoryToDmColumn[catCollection] = G::CollectionsColumn;
+    /* Queries read no one column: each item carries an expression (QueryTextRole). -1
+       is no column; compileFilters never fetches it for an expression-only category. */
+    filterCategoryToDmColumn[catQuery] = -1;
     filterCategoryToDmColumn[catYear] = G::YearColumn;
     filterCategoryToDmColumn[catMonth] = G::MonthColumn;
     filterCategoryToDmColumn[catDay] = G::DayColumn;
@@ -287,8 +292,10 @@ void Filters::createDynamicFilters()
         qDebug() << "Filters::createDynamicFilters"
                     ;
 
-    // Folders sits directly under Search, above Picks
+    // Folders sits directly under Search, above Picks; Collections under Folders
     folders = new QTreeWidgetItem(this);
+    collections = new QTreeWidgetItem(this);
+    queries = new QTreeWidgetItem(this);
     picks = new QTreeWidgetItem(this);
     ratings = new QTreeWidgetItem(this);
     labels = new QTreeWidgetItem(this);
@@ -313,6 +320,14 @@ void Filters::createDynamicFilters()
     createFilter(labels, catLabel);
     createFilter(types, catType);
     createFilter(folders, catFolder);
+    createFilter(collections, catCollection);
+    createFilter(queries, catQuery);
+    queries->setToolTip(0, tr("Your saved queries, from the Queries panel.\n"
+                              "Check one to show only the images it matches; it combines "
+                              "with every other filter.\nLibrary only."));
+    collections->setToolTip(0, tr("Your collections, from the Collections panel.\n"
+                                  "Check one to show only its images; it combines with "
+                                  "every other filter.\nLibrary only."));
     createFilter(years, catYear);
     createFilter(months, catMonth);
     createFilter(days, catDay);
@@ -430,6 +445,8 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(labels);
     setCategoryBackground(types);
     setCategoryBackground(folders);
+    setCategoryBackground(collections);
+    setCategoryBackground(queries);
     setCategoryBackground(years);
     setCategoryBackground(months);
     setCategoryBackground(days);
@@ -881,8 +898,10 @@ void Filters::setEachCatTextColor()
             const QList<QTreeWidgetItem *> items = itemsInCategory(*it);
             if (items.isEmpty())
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
-            // category only has one item and item not "true"
-            else if (items.size() == 1 && items.first()->text(0) != "true")
+            /* category only has one item and item not "true". NOT for Collections or
+               Queries: one is still a subset of what is loaded, so checking it filters. */
+            else if (items.size() == 1 && items.first()->text(0) != "true"
+                     && !isLibrarySetCategory(*it))
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
                 bool isChecked = false;
@@ -938,7 +957,7 @@ bool Filters::isCatFiltering(QTreeWidgetItem *item)
     }
     // at every depth: see setEachCatTextColor
     const QList<QTreeWidgetItem *> items = itemsInCategory(item);
-    if (items.size() > 1) {
+    if (items.size() > 1 || (isLibrarySetCategory(item) && !items.isEmpty())) {
         for (QTreeWidgetItem *child : items)
             if (child->checkState(0) != Qt::Unchecked) return true;
     }
@@ -1819,6 +1838,12 @@ void Filters::showSearchQueryMenu(const QPoint &globalPos)
 
     SAVE IS GREYED WITH ITS REASON IN THE ITEM rather than opening a dialog that then
     says there is nothing to save.
+
+    THE QUERY BUILDER AND THE QUERIES PANEL ARE WHERE THESE GO. "Build query..." opens
+    the Query Builder on the row's text (MW does it: the builder is a dialog this widget
+    does not own); "Save as Query..." adds the row's query to the Queries panel; "Load
+    query" lists the saved Queries. The row, the builder and a Query are one grammar
+    (Utilities/queryexpr.h), so each is a view of the others.
 */
     if (G::isLogger) G::log("Filters::showSearchQueryMenu");
 
@@ -1826,21 +1851,20 @@ void Filters::showSearchQueryMenu(const QPoint &globalPos)
 
     QMenu menu(this);
 
-    QAction *larger = menu.addAction(tr("Larger query space..."));
+    QAction *build = menu.addAction(tr("Build query..."));
 
     QAction *save = menu.addAction(query.isEmpty()
-                                   ? tr("Save query... (no query to save)")
-                                   : tr("Save query..."));
+                                   ? tr("Save as Query... (no query to save)")
+                                   : tr("Save as Query..."));
     save->setEnabled(!query.isEmpty());
 
     QMenu *loadMenu = menu.addMenu(tr("Load query"));
-    const QList<QPair<QString, QString>> queries = savedSearchQueries();
-    if (queries.isEmpty()) {
-        QAction *none = loadMenu->addAction(tr("No saved queries"));
+    if (savedQueries.isEmpty()) {
+        QAction *none = loadMenu->addAction(tr("No saved queries -- see the Queries panel"));
         none->setEnabled(false);
     }
     else {
-        for (const QPair<QString, QString> &q : queries) {
+        for (const QPair<QString, QString> &q : std::as_const(savedQueries)) {
             QAction *a = loadMenu->addAction(q.first);
             a->setToolTip(q.second);
             a->setData(q.second);
@@ -1853,12 +1877,12 @@ void Filters::showSearchQueryMenu(const QPoint &globalPos)
     QAction *chosen = menu.exec(globalPos);
     if (chosen == nullptr) return;
 
-    if (chosen == larger) {
-        editSearchInLargeSpace();
+    if (chosen == build) {
+        emit queryBuilderRequested();
         return;
     }
     if (chosen == save) {
-        saveSearchQuery();
+        emit saveAsQueryRequested(query);
         return;
     }
     if (chosen->parent() == loadMenu && chosen->data().isValid()) {
@@ -1868,93 +1892,7 @@ void Filters::showSearchQueryMenu(const QPoint &globalPos)
     /* Anything else is one of the filter actions, which the menu has already run. */
 }
 
-void Filters::editSearchInLargeSpace()
-{
-/*
-    Edit the query in a window instead of in the tree row.
-
-    The row is a single-line editor as wide as a dock panel, which is enough for "heron"
-    and not enough for the grammar it accepts: brackets, quoted phrases and negations
-    scroll out of sight while they are being typed. This is the same text in a resizable
-    box, with the grammar beside it.
-
-    IT COMMITS THE SAME WAY THE ROW DOES -- through setSearchText, so the guarded write,
-    the searchStringChange and the filterChange all happen exactly once. The text is
-    simplified() on the way in because Return in a QPlainTextEdit is a newline, and the
-    row shows one line.
-*/
-    if (G::isLogger) G::log("Filters::editSearchInLargeSpace");
-
-    QDialog dlg(this);
-    dlg.setWindowTitle(tr("Search query"));
-
-    QVBoxLayout *layout = new QVBoxLayout(&dlg);
-
-    QPlainTextEdit *edit = new QPlainTextEdit(currentSearchText(), &dlg);
-    edit->setTabChangesFocus(true);
-    layout->addWidget(edit, 1);
-
-    QLabel *hint = new QLabel(
-        tr("heron nanaimo\t\tboth must appear (AND is the default)\n"
-           "heron OR eagle\t\teither may appear\n"
-           "(heron OR eagle) tide\tbrackets group\n"
-           "\"great blue\"\t\tthe phrase, not the two words\n"
-           "-heron\t\t\tmust NOT appear\n\n"
-           "OR and NOT are recognised in upper case only."), &dlg);
-    layout->addWidget(hint);
-
-    QDialogButtonBox *buttons =
-        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-    layout->addWidget(buttons);
-
-    dlg.resize(600, 320);
-    edit->setFocus();
-
-    if (dlg.exec() != QDialog::Accepted) return;
-    setSearchText(edit->toPlainText().simplified());
-}
-
-void Filters::saveSearchQuery()
-{
-/*
-    Name the current query and keep it. The name is offered as the query itself, because
-    most queries are short enough to be their own name and the ones that are not are
-    exactly the ones worth renaming.
-*/
-    if (G::isLogger) G::log("Filters::saveSearchQuery");
-
-    const QString query = currentSearchText();
-    if (query.isEmpty()) return;
-
-    bool ok = false;
-    QString name = QInputDialog::getText(this, tr("Save query"), tr("Name:"),
-                                         QLineEdit::Normal, query.left(60), &ok).trimmed();
-    if (!ok || name.isEmpty()) return;
-
-    QList<QPair<QString, QString>> queries = savedSearchQueries();
-
-    for (int i = 0; i < queries.count(); ++i) {
-        if (queries.at(i).first.compare(name, Qt::CaseInsensitive) != 0) continue;
-        const auto answer =
-            QMessageBox::question(this, tr("Save query"),
-                                  tr("\"%1\" already exists. Replace it?").arg(name));
-        if (answer != QMessageBox::Yes) return;
-        queries[i].second = query;
-        writeSavedSearchQueries(queries);
-        return;
-    }
-
-    queries << qMakePair(name, query);
-    std::sort(queries.begin(), queries.end(),
-              [](const QPair<QString, QString> &a, const QPair<QString, QString> &b) {
-                  return a.first.compare(b.first, Qt::CaseInsensitive) < 0;
-              });
-    writeSavedSearchQueries(queries);
-}
-
-QList<QPair<QString, QString>> Filters::savedSearchQueries() const
+QList<QPair<QString, QString>> Filters::legacySavedSearchQueries()
 {
     QList<QPair<QString, QString>> queries;
     if (G::settings == nullptr) return queries;
@@ -1968,25 +1906,6 @@ QList<QPair<QString, QString>> Filters::savedSearchQueries() const
     }
     G::settings->endArray();
     return queries;
-}
-
-void Filters::writeSavedSearchQueries(const QList<QPair<QString, QString>> &queries)
-{
-/*
-    The array is REMOVED before it is written, because beginWriteArray leaves any entries
-    beyond the new size in place: without this, deleting or replacing would leave the
-    tail of the previous list behind.
-*/
-    if (G::settings == nullptr) return;
-
-    G::settings->remove("SavedSearchQueries");
-    G::settings->beginWriteArray("SavedSearchQueries");
-    for (int i = 0; i < queries.count(); ++i) {
-        G::settings->setArrayIndex(i);
-        G::settings->setValue("name", queries.at(i).first);
-        G::settings->setValue("query", queries.at(i).second);
-    }
-    G::settings->endArray();
 }
 
 /* ---------------------------------------------------------------------------------
@@ -2151,6 +2070,167 @@ void Filters::showAllCategories()
         arrived. See "Searching Folders and Catalog" in Documentation.txt. */
     /* Availability is conditional on what is loaded, so "show all" does not mean it. */
     updateAvailabilityVisibility();
+    // nor Collections and Queries, which are the Library's (setLibrarySetsAvailable)
+    for (QTreeWidgetItem *c : {collections, queries})
+        if (c) setRowHidden(indexOfTopLevelItem(c), QModelIndex(), !setsShown);
+}
+
+void Filters::setSetNodes(QTreeWidgetItem *category, const QVector<CollectionItem> &nodes)
+{
+/*
+    Rebuild a Library set category (Collections or Queries) from the store, keeping each
+    item's check state, expansion and count by ID -- a rename, a re-parent or an edited
+    query is the same node. Parents arrive before children (CollectionStore::nodes).
+    Emits a filterChange when a checked node was deleted or a checked Query's text
+    changed, because either changes what the check admits.
+*/
+    if (G::isLogger) G::log("Filters::setSetNodes", category ? category->text(0) : "");
+    if (!isLibrarySetCategory(category)) return;
+    const bool isQuery = category == queries;
+    QHash<QString, Qt::CheckState> state;
+    QHash<QString, QVariant> count;
+    QHash<QString, QString> oldText;
+    QSet<QString> expanded;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString id = item->data(1, Qt::EditRole).toString();
+        if (item->checkState(0) != Qt::Unchecked) state.insert(id, item->checkState(0));
+        if (item->isExpanded()) expanded.insert(id);
+        count.insert(id, item->data(3, Qt::EditRole));
+        oldText.insert(id, item->data(0, QueryTextRole).toString());
+    }
+    {
+        QMutexLocker locker(&mutex);
+        qDeleteAll(category->takeChildren());
+    }
+
+    QHash<QString, QTreeWidgetItem *> byId;
+    bool checkedChanged = false;
+    for (const CollectionItem &n : nodes) {
+        QTreeWidgetItem *parent = byId.value(n.parentId, category);
+        QTreeWidgetItem *item = new QTreeWidgetItem(parent);
+        item->setText(0, n.name);
+        item->setData(1, Qt::EditRole, n.id);
+        item->setCheckState(0, state.value(n.id, Qt::Unchecked));
+        item->setData(2, Qt::EditRole, count.value(n.id));
+        item->setData(3, Qt::EditRole, count.value(n.id));
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        if (isQuery) {
+            item->setData(0, QueryTextRole, n.queryText);
+            item->setToolTip(0, tr("%1\n\nClick to show only the images this query "
+                                   "matches. Opt+click to exclude them.")
+                                    .arg(n.queryText.isEmpty() ? tr("(an empty query)")
+                                                               : n.queryText));
+            if (state.contains(n.id) && oldText.value(n.id) != n.queryText)
+                checkedChanged = true;
+        }
+        else {
+            item->setToolTip(0, tr("Click to show only the images in \"%1\". "
+                                   "Opt+click to exclude them.").arg(n.name));
+        }
+        applyItemStyle(item);
+        byId.insert(n.id, item);
+    }
+    for (auto it = byId.constBegin(); it != byId.constEnd(); ++it)
+        if (expanded.contains(it.key())) it.value()->setExpanded(true);
+
+    for (auto it = state.constBegin(); it != state.constEnd(); ++it)
+        if (!byId.contains(it.key())) { checkedChanged = true; break; }
+    // a programmatic change, not a click still to be interpreted (see dataChanged)
+    itemCheckStateHasChanged = false;
+    if (checkedChanged) emit filterChange("Filters::setSetNodes");
+    else setEachCatTextColor();
+}
+
+void Filters::setSetCounts(QTreeWidgetItem *category, const QHash<QString, int> &countsById)
+{
+    if (!isLibrarySetCategory(category)) return;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const int n = countsById.value(item->data(1, Qt::EditRole).toString(), 0);
+        item->setData(2, Qt::EditRole, n);
+        item->setData(3, Qt::EditRole, n);
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+    }
+    itemCheckStateHasChanged = false;
+}
+
+void Filters::setFilterState(QTreeWidgetItem *category, QStringList &includes,
+                             QStringList &excludes) const
+{
+    includes.clear();
+    excludes.clear();
+    if (!isLibrarySetCategory(category)) return;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const Qt::CheckState st = item->checkState(0);
+        if (st == Qt::Unchecked) continue;
+        (st == Qt::Checked ? includes : excludes) << item->data(1, Qt::EditRole).toString();
+    }
+}
+
+void Filters::setSetFilter(QTreeWidgetItem *category, const QStringList &includes,
+                           const QStringList &excludes)
+{
+/*
+    What a Collections or Queries panel click becomes -- setFolderFilter's twin, with ONE
+    filterChange for the same reason. A checked node is made visible (its ancestors
+    expanded).
+*/
+    if (G::isLogger) G::log("Filters::setSetFilter");
+    if (!isLibrarySetCategory(category)) return;
+    const QSet<QString> inc(includes.begin(), includes.end());
+    const QSet<QString> exc(excludes.begin(), excludes.end());
+    bool changed = false;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString id = item->data(1, Qt::EditRole).toString();
+        const Qt::CheckState want = inc.contains(id) ? Qt::Checked
+                                    : exc.contains(id) ? Qt::PartiallyChecked
+                                                       : Qt::Unchecked;
+        if (item->checkState(0) == want) continue;
+        item->setCheckState(0, want);
+        styleFilterItem(item);
+        changed = true;
+        if (want == Qt::Checked)
+            for (QTreeWidgetItem *up = item->parent(); up; up = up->parent())
+                if (!up->isExpanded()) up->setExpanded(true);
+    }
+    itemCheckStateHasChanged = false;
+    if (changed) {
+        activeCategory = category;
+        emit filterChange("Filters::setSetFilter");
+    }
+}
+
+void Filters::setLibrarySetsAvailable(bool available)
+{
+    setsShown = available;
+    for (QTreeWidgetItem *category : {collections, queries}) {
+        if (!category) continue;
+        if (!available) {
+            for (QTreeWidgetItem *item : itemsInCategory(category)) {
+                if (item->checkState(0) == Qt::Unchecked) continue;
+                item->setCheckState(0, Qt::Unchecked);
+                styleFilterItem(item);
+            }
+        }
+        setRowHidden(indexOfTopLevelItem(category), QModelIndex(), !available);
+    }
+    itemCheckStateHasChanged = false;
+}
+
+QString Filters::queryTextFor(const QTreeWidgetItem *item) const
+{
+    if (!item) return QString();
+    if (item == searchTrue || item == searchFalse) {
+        const QString t = searchTrue->text(0);
+        if (t == enterSearchString || ignoreSearchStrings.contains(t)) return QString();
+        return t;
+    }
+    // a Query item at any depth: walk up to its category
+    QTreeWidgetItem *root = const_cast<QTreeWidgetItem *>(item);
+    while (root->parent()) root = root->parent();
+    if (root != queries) return QString();
+    return item->data(0, QueryTextRole).toString();
 }
 
 void Filters::fillQuery(CatalogQuery &q) const

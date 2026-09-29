@@ -3,6 +3,7 @@
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
+#include "Datamodel/collectionstore.h"
 #include "Main/global.h"
 #include "Cache/pathkey.h"
 #include "Utilities/versionkey.h"
@@ -422,6 +423,9 @@ void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
        the image -- otherwise a search keeps offering the old location, and loading the
        result fails. */
     Catalog::instance().onMoved(srcPath, dstPath);
+    /* Collections key on the path as well, and they are the user's own work: an image
+       Winnow moves stays in every collection that held it. */
+    CollectionStore::instance().onMoved(srcPath, dstPath);
 }
 
 void FileOps::onDeleted(const QString &fPath)
@@ -429,4 +433,5 @@ void FileOps::onDeleted(const QString &fPath)
     DevPreviewCache::instance().onDeleted(fPath);
     ThumbCache::instance().onDeleted(fPath);
     Catalog::instance().onDeleted(fPath);
+    CollectionStore::instance().onDeleted(fPath);
 }

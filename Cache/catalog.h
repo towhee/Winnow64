@@ -443,6 +443,13 @@ public:
         rows should not pay it per row. */
     QHash<QString, Availability> availabilityOf(const QStringList &paths);
 
+    /*  The path the index holds for each of these keys (Cache/pathkey.h), for keys it
+        knows; unknown keys are absent. The spelling returned is the one a Library row
+        was loaded with (image.path), so it can key a lookup by row path -- which is
+        what the Filters Collections category needs (MW::refreshCollectionMembership).
+        Paged, one statement per page. */
+    QHash<QString, QString> pathsForKeys(const QStringList &keys);
+
     /* Every keyword in the catalog with its image count, for the category list and the
        vocabulary tree's counts. */
     QList<CatalogKeyword> keywords();

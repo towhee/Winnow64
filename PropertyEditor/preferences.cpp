@@ -526,6 +526,14 @@ void Preferences::itemChange(QModelIndex idx)
         mw->fullScreenDocks.isKeywords = v.toBool();
     }
 
+    if (source == "fullScreenShowCollections") {
+        mw->fullScreenDocks.isCollections = v.toBool();
+    }
+
+    if (source == "fullScreenShowQueries") {
+        mw->fullScreenDocks.isQueries = v.toBool();
+    }
+
     if (source == "fullScreenShowModule") {
         mw->fullScreenDocks.isModule = v.toBool();
     }
@@ -2069,6 +2077,32 @@ void Preferences::addFullScreen()
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isKeywords;
     i.key = "fullScreenShowKeywords";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show collections
+    i.name = "fullScreenShowCollections";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show collections";
+    i.tooltip = "When you switch to full screen show the Collections dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isCollections;
+    i.key = "fullScreenShowCollections";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show queries
+    i.name = "fullScreenShowQueries";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show queries";
+    i.tooltip = "When you switch to full screen show the Queries dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isQueries;
+    i.key = "fullScreenShowQueries";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

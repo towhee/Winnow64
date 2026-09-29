@@ -179,6 +179,8 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     filterDockVisibleAction->setChecked(w.isFilterDockVisible);
     catalogDockVisibleAction->setChecked(w.isCatalogDockVisible);
     keywordsDockVisibleAction->setChecked(w.isKeywordsDockVisible);
+    collectionsDockVisibleAction->setChecked(w.isCollectionsDockVisible);
+    queriesDockVisibleAction->setChecked(w.isQueriesDockVisible);
     moduleDockVisibleAction->setChecked(w.isModuleDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
@@ -346,6 +348,8 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
     wsd.isCatalogDockVisible = catalogDockVisibleAction->isChecked();
     wsd.isKeywordsDockVisible = keywordsDockVisibleAction->isChecked();
+    wsd.isCollectionsDockVisible = collectionsDockVisibleAction->isChecked();
+    wsd.isQueriesDockVisible = queriesDockVisibleAction->isChecked();
     wsd.isModuleDockVisible = moduleDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
@@ -543,6 +547,8 @@ void MW::placeDocksAddedSince(int stateVersion)
         {2, historyDock, developDock, historyDockVisibleAction},
         {4, catalogDock, filterDock, catalogDockVisibleAction},
         {5, keywordsDock, filterDock, keywordsDockVisibleAction},
+        {9, collectionsDock, favDock, collectionsDockVisibleAction},
+        {10, queriesDock, collectionsDock, queriesDockVisibleAction},
         /* Top area, never tabbed; MW::placeShowHideBars pins it there. */
         {8, moduleDock, nullptr, moduleDockVisibleAction},
     };
@@ -598,6 +604,10 @@ void MW::builtInDefaultWorkspace()
     /*  Off, for the reason the Catalog panel is off: the left group is already four
         tabs deep and a fifth most sessions never open costs every session the space. */
     keywordsDockVisibleAction->setChecked(false);
+    /*  Off, as Keywords is: Window > Collections Panel turns it on, and a workspace saved
+        with it on keeps it. */
+    collectionsDockVisibleAction->setChecked(false);
+    queriesDockVisibleAction->setChecked(false);
     moduleDockVisibleAction->setChecked(true);
     metadataDockVisibleAction->setChecked(true);
     embelDockVisibleAction->setChecked(false);
@@ -759,6 +769,8 @@ QString MW::reportWorkspaces()
             << "\n  isFilterDockVisible       " << G::s(ws.isFilterDockVisible)
             << "\n  isCatalogDockVisible      " << G::s(ws.isCatalogDockVisible)
             << "\n  isKeywordsDockVisible     " << G::s(ws.isKeywordsDockVisible)
+            << "\n  isCollectionsDockVisible  " << G::s(ws.isCollectionsDockVisible)
+            << "\n  isQueriesDockVisible      " << G::s(ws.isQueriesDockVisible)
             << "\n  isModuleDockVisible       " << G::s(ws.isModuleDockVisible)
             << "\n  isMetadataDockVisible     " << G::s(ws.isMetadataDockVisible)
             << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
@@ -834,6 +846,8 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisFilterDockVisible" << ws.isFilterDockVisible
         << "\nisCatalogDockVisible" << ws.isCatalogDockVisible
         << "\nisKeywordsDockVisible" << ws.isKeywordsDockVisible
+        << "\nisCollectionsDockVisible" << ws.isCollectionsDockVisible
+        << "\nisQueriesDockVisible" << ws.isQueriesDockVisible
         << "\nisModuleDockVisible" << ws.isModuleDockVisible
         << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
         << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
@@ -907,6 +921,8 @@ QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
     m["isFilterDockVisible"] = wsd.isFilterDockVisible;
     m["isCatalogDockVisible"] = wsd.isCatalogDockVisible;
     m["isKeywordsDockVisible"] = wsd.isKeywordsDockVisible;
+    m["isCollectionsDockVisible"] = wsd.isCollectionsDockVisible;
+    m["isQueriesDockVisible"] = wsd.isQueriesDockVisible;
     m["isModuleDockVisible"] = wsd.isModuleDockVisible;
     m["isMetadataDockVisible"] = wsd.isMetadataDockVisible;
     m["isEmbelDockVisible"] = wsd.isEmbelDockVisible;
@@ -975,6 +991,9 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     /*  Absent from a workspace saved before the Keywords dock existed, which reads as
         false -- the same as its default, so an old workspace needs no migration. */
     wsd.isKeywordsDockVisible = m.value("isKeywordsDockVisible").toBool();
+    // likewise absent before the Collections dock, and likewise off by default
+    wsd.isCollectionsDockVisible = m.value("isCollectionsDockVisible").toBool();
+    wsd.isQueriesDockVisible = m.value("isQueriesDockVisible").toBool();
     /*  Absent from every workspace and shipped default saved before the Module dock
         existed: show it, since it is where the workflow is chosen. */
     wsd.isModuleDockVisible = m.value("isModuleDockVisible", true).toBool();

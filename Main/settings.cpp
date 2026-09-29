@@ -34,6 +34,8 @@ void MW::writeSettings()
     settings->setValue("isFullScreenFilters", fullScreenDocks.isFilters);
     settings->setValue("isFullScreenCatalog", fullScreenDocks.isCatalog);
     settings->setValue("isFullScreenKeywords", fullScreenDocks.isKeywords);
+    settings->setValue("isFullScreenCollections", fullScreenDocks.isCollections);
+    settings->setValue("isFullScreenQueries", fullScreenDocks.isQueries);
     settings->setValue("isFullScreenModule", fullScreenDocks.isModule);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
@@ -166,6 +168,9 @@ void MW::writeSettings()
                        catalogDockVisibleAction->isChecked());
     settings->setValue("isKeywordsDockVisible",
                        keywordsDockVisibleAction->isChecked());
+    settings->setValue("isCollectionsDockVisible",
+                       collectionsDockVisibleAction->isChecked());
+    settings->setValue("isQueriesDockVisible", queriesDockVisibleAction->isChecked());
 
     /* The show/hide bars: which sides the user left collapsed. Separate from the per-dock
        flags above on purpose -- those record which panels the user WANTS, these record
@@ -344,6 +349,9 @@ void MW::writeSettings()
     if (embelDock)    settings->setValue("EmbelDock", embelDock->isCollapsed());
     if (developDock)  settings->setValue("DevelopDock", developDock->isCollapsed());
     if (historyDock)  settings->setValue("HistoryDock", historyDock->isCollapsed());
+    if (collectionsDock)
+        settings->setValue("CollectionsDock", collectionsDock->isCollapsed());
+    if (queriesDock) settings->setValue("QueriesDock", queriesDock->isCollapsed());
     settings->endGroup();
 
     settings->beginGroup("DockSoloMode");
@@ -758,6 +766,11 @@ bool MW::loadSettings()
         fullScreenDocks.isCatalog = settings->value("isFullScreenCatalog").toBool();
     if (settings->contains("isFullScreenKeywords"))
         fullScreenDocks.isKeywords = settings->value("isFullScreenKeywords").toBool();
+    if (settings->contains("isFullScreenCollections"))
+        fullScreenDocks.isCollections =
+            settings->value("isFullScreenCollections").toBool();
+    if (settings->contains("isFullScreenQueries"))
+        fullScreenDocks.isQueries = settings->value("isFullScreenQueries").toBool();
     if (settings->contains("isFullScreenModule"))
         fullScreenDocks.isModule = settings->value("isFullScreenModule").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();
