@@ -61,9 +61,35 @@ void MW::reconcileVersionRows(const QString &src, bool atLoadEnd)
         if (!add.contains(k)) dm->fillVersionRow(dm->rowFromKey(k));
 }
 
+// VERSIONPROBE (temporary): what the proxy decides for every version row, and why
+void MW::versionProbe(const QString &where)
+{
+    if (!dm) return;
+    QStringList rows;
+    for (const QString &k : dm->versionRowKeys()) {
+        const int r = dm->rowFromKey(k);
+        const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(r, 0));
+        rows << QString("%1 dmRow=%2 sfRow=%3 idRole=%4 expanded=%5")
+                    .arg(k).arg(r).arg(sfIdx.row())
+                    .arg(dm->index(r, 0).data(G::VersionIdRole).toInt())
+                    .arg(dm->sf->versionsExpanded(VersionKey::sourceOf(k)));
+    }
+    qDebug().noquote() << "VERSIONPROBE" << where
+                       << "scope =" << int(G::scope)
+                       << "showAll =" << dm->sf->showAllVersions()
+                       << "suspended =" << dm->sf->isSuspended()
+                       << "dynamic =" << dm->sf->dynamicSortFilter()
+                       << "loadRunning =" << bool(G::isLoadRunning)
+                       << "modifying =" << bool(G::isModifyingDatamodel)
+                       << "dmRows =" << dm->rowCount() << "sfRows =" << dm->sf->rowCount()
+                       << "versionRows =" << dm->versionRowCount()
+                       << "\n    " << rows.join("\n    ");
+}
+
 void MW::setVersionsExpanded(const QString &masterKey, bool expanded)
 {
     if (G::isLogger) G::log("MW::setVersionsExpanded", masterKey);
+    qDebug().noquote() << "VERSIONPROBE setVersionsExpanded" << masterKey << expanded;
     if (!dm || masterKey.isEmpty()) return;
     if (dm->sf->versionsExpanded(masterKey) == expanded
         && !dm->sf->showAllVersions()) return;
@@ -78,12 +104,14 @@ void MW::setVersionsExpanded(const QString &masterKey, bool expanded)
     }
     dm->sf->setVersionsExpanded(masterKey, expanded);
     filterChange("MW::setVersionsExpanded");
+    versionProbe("after setVersionsExpanded");
 }
 
 void MW::toggleVersionsExpanded(const QString &key)
 {
     const QString master = VersionKey::sourceOf(key);
     if (!dm) return;
+    versionProbe("toggleVersionsExpanded " + key);
     /*  With Show All Versions on every group is open; a click on one badge turns the
         global switch off and leaves only that group open, which is what the click
         visibly asks for. */

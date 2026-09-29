@@ -2953,6 +2953,7 @@ private:
     void scheduleVersionReconcile();
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     void toggleVersionsExpanded(const QString &key);
+    void versionProbe(const QString &where);    // VERSIONPROBE (temporary)
     void setShowAllVersions(bool show);
     bool versionReconcilePending = false;
     /*  The version operations (Develop > Versions, the thumbnail context menu). All
