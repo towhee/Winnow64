@@ -264,6 +264,13 @@ Q_NAMESPACE
            Appended for the same reason as DevelopColumn. */
         CroppedDimensionsColumn,
         CroppedAspectRatioColumn,
+        /* The ids (as text) of the Collections the image is DIRECTLY in -- what the
+           Filters Collections category filters on. NOT STORED IN THE ROW: collections
+           are the user's, held in collections.db, and change without the row changing,
+           so DataModel::data answers it from a side table keyed by source path
+           (DataModel::setCollectionMembership). READ-ONLY. Appended for the same reason
+           as DevelopColumn. */
+        CollectionsColumn,
         TotalColumns    // insert additional columns before this
     };
 

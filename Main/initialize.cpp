@@ -4089,6 +4089,8 @@ void MW::createDocks()
     createFilterDock();
     createCatalogDock();
     createKeywordsDock();
+    createCollectionsDock();        // after createFilterDock: it listens to filterPanel
+    createQueriesDock();            // after createCollectionsDock: shares its store wiring
     if (G::useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
@@ -4103,6 +4105,8 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
     if (catalogDock) addDockWidget(Qt::LeftDockWidgetArea, catalogDock);
     if (keywordsDock) addDockWidget(Qt::LeftDockWidgetArea, keywordsDock);
+    if (collectionsDock) addDockWidget(Qt::LeftDockWidgetArea, collectionsDock);
+    if (queriesDock) addDockWidget(Qt::LeftDockWidgetArea, queriesDock);
     if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
@@ -4125,6 +4129,10 @@ void MW::createDocks()
        place in the group is taken by the Filter panel's Catalog scope. */
     if (catalogDock) MW::tabifyDockWidget(filterDock, catalogDock);
     if (keywordsDock) MW::tabifyDockWidget(filterDock, keywordsDock);
+    /*  Collections beside Bookmarks: both are places to go in the Library, and the
+        Library is what they open. */
+    if (collectionsDock) MW::tabifyDockWidget(favDock, collectionsDock);
+    if (queriesDock) MW::tabifyDockWidget(collectionsDock, queriesDock);
     if (G::useInfoView)
         MW::tabifyDockWidget(catalogDock ? catalogDock : filterDock, metadataDock);
     /* Do NOT tabify the LEFT-area metadataDock with the RIGHT-area embelDock: that cross-area
@@ -4142,7 +4150,8 @@ void MW::createDocks()
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
     for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, keywordsDock,
-                          metadataDock, embelDock, developDock, historyDock}) {
+                          collectionsDock, queriesDock, metadataDock, embelDock,
+                          developDock, historyDock}) {
         if (!d) continue;       // catalogDock is null with G::useFilterPanel
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
         connect(d, &QDockWidget::topLevelChanged, this, &MW::scheduleDockTabUpdate);
@@ -4180,6 +4189,8 @@ void MW::createDocks()
     wireSolo(filterDock);
     wireSolo(catalogDock);
     wireSolo(keywordsDock);
+    wireSolo(collectionsDock);
+    wireSolo(queriesDock);
     if (G::useInfoView) wireSolo(metadataDock);
     wireSolo(thumbDock);
     wireSolo(embelDock);

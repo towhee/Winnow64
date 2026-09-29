@@ -230,6 +230,16 @@ public:
         are both retired. See "The Row Store" in Documentation.txt. */
     RowStore rowStore;
 
+    /*  COLLECTION MEMBERSHIP, for G::CollectionsColumn: source path -> the ids (as text)
+        of the collections the file is directly in. Not in the row store -- see the
+        column's note in global.h. Replaced whole by MW::refreshCollectionMembership
+        whenever a membership changes; read by data() under the lock, so a reader on
+        another thread never sees it half-swapped. */
+    void setCollectionMembership(const QHash<QString, QStringList> &byPath);
+    bool hasCollectionMembership() const;
+    mutable QReadWriteLock collectionLock;
+    QHash<QString, QStringList> collectionIdsByPath;
+
     /*  Column headers: the name and the geek flag, one entry per column. See
         setModelProperties. */
     std::vector<QString> mHeaderName;

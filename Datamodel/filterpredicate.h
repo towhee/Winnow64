@@ -1,9 +1,13 @@
 #ifndef FILTERPREDICATE_H
 #define FILTERPREDICATE_H
 
+#include <QSet>
 #include <QVariant>
 #include <QVector>
+#include <functional>
 #include <memory>
+
+#include "Utilities/queryexpr.h"
 
 /*
     THE FILTERS TREE, COMPILED.
@@ -93,6 +97,15 @@ struct FilterCategory
         categories were each made to agree with their column by hand; a column chosen at
         run time cannot be, so both sides are compared as trimmed text. */
     bool compareAsText = false;
+    /*  QUERIES (Utilities/queryexpr.h): items whose test is an EXPRESSION rather than a
+        value compare -- the Search row's query and each checked Query. Evaluated live,
+        per row, with the same valueFor as everything else, so an edit to a column the
+        query reads is seen at the next refilter (readsColumn below). An included
+        expression is OR-ed with the category's value includes; an excluded one rejects.
+        exprColumns is every column the expressions read. */
+    QVector<std::shared_ptr<const Query::Expr>> includeExprs;
+    QVector<std::shared_ptr<const Query::Expr>> excludeExprs;
+    QSet<int> exprColumns;
 
     /*  CAN THIS CATEGORY REJECT A ROW? An exclude can. An include can -- unless
         includeAll is set, because includeAll accepts every row without comparing, so its
@@ -103,7 +116,8 @@ struct FilterCategory
         sampled -- and acceptsEverything() never took its fast path. */
     bool isFiltering() const
     {
-        return !excludes.isEmpty() || (!includeAll && !includes.isEmpty());
+        return !excludes.isEmpty() || !excludeExprs.isEmpty()
+               || (!includeAll && (!includes.isEmpty() || !includeExprs.isEmpty()));
     }
 };
 
@@ -125,7 +139,8 @@ struct FilterPredicate
     bool readsColumn(int column) const
     {
         for (const FilterCategory &c : categories)
-            if (c.isFiltering() && c.column == column) return true;
+            if (c.isFiltering() && (c.column == column || c.exprColumns.contains(column)))
+                return true;
         return false;
     }
 
@@ -166,13 +181,28 @@ struct FilterPredicate
         for (const FilterCategory &cat : categories) {
             if (!cat.isFiltering()) continue;
 
+            /*  EXPRESSIONS FIRST: an excluded one rejects outright, as a value exclusion
+                does; an included one that matches satisfies the category's OR. A
+                category holding only expressions never reads its own column. */
+            bool exprHit = false;
+            if (!cat.includeExprs.isEmpty() || !cat.excludeExprs.isEmpty()) {
+                const std::function<QVariant(int)> fn = valueFor;
+                for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return false;
+                for (const auto &e : cat.includeExprs)
+                    if (e->matches(fn)) { exprHit = true; break; }
+                if (cat.includes.isEmpty() && cat.excludes.isEmpty() && !cat.includeAll) {
+                    if (!cat.includeExprs.isEmpty() && !exprHit) return false;
+                    continue;
+                }
+            }
+
             const QVariant dataValue = valueFor(cat.column);
 
             if (cat.compareAsText) {
                 const QString text = dataValue.toString().trimmed();
                 for (const QVariant &ex : cat.excludes)
                     if (text == ex.toString().trimmed()) return false;
-                if (cat.includes.isEmpty()) continue;
+                if (cat.includes.isEmpty() || exprHit) continue;
                 bool isMatch = false;
                 for (const QVariant &in : cat.includes)
                     if (text == in.toString().trimmed()) { isMatch = true; break; }
@@ -189,7 +219,12 @@ struct FilterPredicate
                 the category not narrowing anything -- the old
                 isCategoryUnchecked, which an exclusion deliberately did not
                 clear. */
-            if (cat.includeAll || cat.includes.isEmpty()) continue;
+            if (cat.includeAll || exprHit) continue;
+            if (cat.includes.isEmpty()) {
+                // expressions were included and none matched
+                if (!cat.includeExprs.isEmpty()) return false;
+                continue;
+            }
 
             if (cat.matchAll) {
                 for (const QVariant &in : cat.includes)

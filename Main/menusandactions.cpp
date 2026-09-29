@@ -1842,6 +1842,31 @@ void MW::createWindowActions()
     addAction(keywordsDockVisibleAction);
     connect(keywordsDockVisibleAction, &QAction::triggered, this, &MW::showKeywordsDock);
 
+    collectionsDockVisibleAction = new QAction(tr("Collections Panel"), this);
+    collectionsDockVisibleAction->setObjectName("toggleCollections");
+    collectionsDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    collectionsDockVisibleAction->setCheckable(true);
+    collectionsDockVisibleAction->setToolTip(
+        tr("Collections: sets of Library images you put together. Library only."));
+    /* Off by default, like Keywords: the left group is already several tabs deep. */
+    collectionsDockVisibleAction->setChecked(
+        isSettings && settings->value("isCollectionsDockVisible", false).toBool());
+    addAction(collectionsDockVisibleAction);
+    connect(collectionsDockVisibleAction, &QAction::triggered,
+            this, &MW::showCollectionsDock);
+
+    queriesDockVisibleAction = new QAction(tr("Queries Panel"), this);
+    queriesDockVisibleAction->setObjectName("toggleQueries");
+    queriesDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    queriesDockVisibleAction->setCheckable(true);
+    queriesDockVisibleAction->setToolTip(
+        tr("Queries: saved searches over the Library, built with the Query Builder."));
+    // off by default, like Collections
+    queriesDockVisibleAction->setChecked(
+        isSettings && settings->value("isQueriesDockVisible", false).toBool());
+    addAction(queriesDockVisibleAction);
+    connect(queriesDockVisibleAction, &QAction::triggered, this, &MW::showQueriesDock);
+
     /*  The Module dock (Browse | Develop | ... | Map across the top). ON by
         default: it is where the workflow is chosen. Choosing it from the menu while the
         top show/hide bar has the area collapsed un-collapses it -- the user has asked to
@@ -2926,6 +2951,8 @@ void MW::createWindowMenu()
     windowMenu->addAction(filterDockVisibleAction);
     windowMenu->addAction(catalogDockVisibleAction);
     windowMenu->addAction(keywordsDockVisibleAction);
+    windowMenu->addAction(collectionsDockVisibleAction);
+    windowMenu->addAction(queriesDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
@@ -3721,6 +3748,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[filterDockVisibleAction->objectName()] = filterDockVisibleAction;
     actionKeys[catalogDockVisibleAction->objectName()] = catalogDockVisibleAction;
     actionKeys[keywordsDockVisibleAction->objectName()] = keywordsDockVisibleAction;
+    actionKeys[collectionsDockVisibleAction->objectName()] = collectionsDockVisibleAction;
+    actionKeys[queriesDockVisibleAction->objectName()] = queriesDockVisibleAction;
     actionKeys[moduleDockVisibleAction->objectName()] = moduleDockVisibleAction;
     actionKeys[openCatalogAction->objectName()] = openCatalogAction;
     actionKeys[manageCatalogAction->objectName()] = manageCatalogAction;

@@ -965,6 +965,8 @@ void MW::setupPanelProbe()
         {filterDock,        "FilterDock"},
         {catalogDock,       "CatalogDock"},
         {keywordsDock,      "KeywordsDock"},
+        {collectionsDock,   "CollectionsDock"},
+        {queriesDock,       "QueriesDock"},
         {metadataDock,      "MetadataDock"},
         {thumbDock,         "ThumbDock"},
         {embelDock,         "EmbelDock"},

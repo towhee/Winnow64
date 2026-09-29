@@ -1,6 +1,7 @@
 #include "Views/filterpanel.h"
 #include "Datamodel/filters.h"
 #include "Main/global.h"
+#include "Utilities/queryexpr.h"
 
 #include <QVBoxLayout>
 #include <QPointer>
@@ -198,7 +199,16 @@ CatalogQuery FilterPanel::currentQuery() const
     the index has to be asked, and the reload is the honest cost of a cap the user chose.
 */
     CatalogQuery q;
-    if (resultLimit() > 0) q.text = filters->currentSearchText();
+    /*  PLAIN WORDS ONLY. The Search row now takes field rules too (rating:>=3 ...;
+        Utilities/queryexpr.h), which the catalog's FTS compilation cannot read -- it
+        would search for "rating:>=3" as a word and find nothing. A query with field
+        rules is not sent: the capped set is the newest N, and the proxy applies the
+        whole query to it. */
+    if (resultLimit() > 0) {
+        const QString text = filters->currentSearchText();
+        const QSet<int> cols = Query::Expr::parse(text).columnsRead();
+        if (cols.isEmpty() || cols == QSet<int>{G::SearchTextColumn}) q.text = text;
+    }
     return q;
 }
 

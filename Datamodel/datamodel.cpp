@@ -367,6 +367,7 @@ void DataModel::setModelProperties()
         { G::DevelopColumn,              "Developed",                false },
         { G::AvailabilityColumn,        "Availability",           true },
         { G::DevPreviewKeyColumn,        "DevPreviewKey",            true },
+        { G::CollectionsColumn,          "Collections",              true },
     };
     mHeaderName.assign(G::TotalColumns, QString());
     mHeaderGeek.assign(G::TotalColumns, false);
@@ -945,6 +946,18 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
     return true;
 }
 
+void DataModel::setCollectionMembership(const QHash<QString, QStringList> &byPath)
+{
+    QWriteLocker lock(&collectionLock);
+    collectionIdsByPath = byPath;
+}
+
+bool DataModel::hasCollectionMembership() const
+{
+    QReadLocker lock(&collectionLock);
+    return !collectionIdsByPath.isEmpty();
+}
+
 QVariant DataModel::data(const QModelIndex &idx, int role) const
 {
 /*
@@ -973,6 +986,20 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         rowStore.contains(idx.row()))
     {
         return rowStore.value(idx.row(), idx.column(), role);
+    }
+
+    /*  G::CollectionsColumn is answered from the membership side table, by the row's
+        SOURCE path -- a version is its file, so it is in its master's collections. An
+        empty list, never an invalid variant, for a row in none: the filter compares
+        with QStringList::contains. */
+    if (idx.isValid() && idx.column() == G::CollectionsColumn
+        && (role == Qt::EditRole || role == Qt::DisplayRole))
+    {
+        QReadLocker lock(&collectionLock);
+        if (collectionIdsByPath.isEmpty()) return QStringList();
+        const QString src =
+            rowStore.value(idx.row(), G::PathColumn, G::SourcePathRole).toString();
+        return collectionIdsByPath.value(src);
     }
 
     /*  The scratch columns come from the row-keyed side table
@@ -6465,17 +6492,21 @@ void DataModel::searchStringChange(QString searchString)
        Search filter up for a query that asked for nothing. Treated as no search, like the
        empty string beside it. */
     bool noSearch = filters->ignoreSearchStrings.contains(searchString);
-    if (!noSearch && SearchTerms::parse(searchString).isEmpty()) noSearch = true;
+    /*  THE QUERY GRAMMAR (Utilities/queryexpr.h), which reads what the old search text
+        grammar read and adds field rules (rating:>=3, keyword:...). The proxy evaluates
+        the same expression live (SortFilter::compileFilters); G::SearchColumn written
+        below is what the Search category's COUNTS are built from. */
+    Query::Expr query = Query::Expr::parse(searchString);
+    if (!noSearch && query.isEmpty()) noSearch = true;
+    query.prepare();
 
     /* PARSED ONCE, ABOVE THE LOOP. This runs over every row in the model on the GUI
        thread while the user is typing, so re-parsing per row would put the tokenizer on
        the critical path of a keystroke at a hundred thousand images.
 
-       Utilities/searchterms.h is the SAME grammar the catalog search uses, which is what
-       makes the Folders scope ("here") and the Catalog ("everywhere") narrow the same
-       way -- "heron OR
-       eagle" used to find images in one and nothing in the other. */
-    const SearchTerms terms = noSearch ? SearchTerms() : SearchTerms::parse(searchString);
+       Plain words still mean what Utilities/searchterms.h (the catalog's FTS grammar)
+       makes them mean, so "here" and "everywhere" narrow alike for words; field rules
+       are the datamodel's alone until the catalog compilation exists. */
 
     /*  HOISTED OUT OF THE LOOP. This restores the "Enter search query" placeholder on the
         tree item and has nothing to do with any row, but it sat inside the loop and so
@@ -6530,8 +6561,10 @@ void DataModel::searchStringChange(QString searchString)
             }
             // there is a search string
             else {
-                QString searchableText = index(row, G::SearchTextColumn).data().toString();
-                setData(index(row, G::SearchColumn), terms.matches(searchableText));
+                const bool hit = query.matches([this, row](int column) {
+                    return index(row, column).data(Qt::EditRole);
+                });
+                setData(index(row, G::SearchColumn), hit);
             }
         }
     }
@@ -7463,7 +7496,36 @@ void SortFilter::compileFilters()
             if (fresh->categories.isEmpty()) fresh->categories.append(FilterCategory());
             FilterCategory &cat = fresh->categories.last();
             const Qt::CheckState state = item->checkState(0);
-            if (state != Qt::Unchecked) {
+            /*  A QUERY ITEM -- the Search row, or a Query -- tests an EXPRESSION, evaluated
+                live per row (FilterCategory::includeExprs). Parsed and prepared here, once
+                per compile. "Not matching" (searchFalse) is the expression negated. */
+            const QString queryText =
+                state != Qt::Unchecked ? filters->queryTextFor(item) : QString();
+            if (!queryText.isEmpty()) {
+                auto e = std::make_shared<Query::Expr>(Query::Expr::parse(queryText));
+                if (item == filters->searchFalse) {
+                    Query::Node none = Query::Node::group(Query::Node::None);
+                    none.kids << e->root;
+                    e->root = none;
+                }
+                e->prepare();
+                cat.exprColumns.unite(e->columnsRead());
+                if (state == Qt::PartiallyChecked) cat.excludeExprs.append(e);
+                else                               cat.includeExprs.append(e);
+            }
+            else if (state != Qt::Unchecked && [&] {
+                         const QTreeWidgetItem *root = item;
+                         while (root->parent()) root = root->parent();
+                         return root == filters->queries;      // a Query at any depth
+                     }()) {
+                /*  A checked Query with an empty query: it matches everything, which is
+                    what an empty expression says. Included as one, so the category still
+                    counts as filtering the way a check says it does. */
+                auto e = std::make_shared<Query::Expr>();
+                if (state == Qt::PartiallyChecked) cat.excludeExprs.append(e);
+                else                               cat.includeExprs.append(e);
+            }
+            else if (state != Qt::Unchecked) {
                 if (item == filters->searchTrue && item->text(0) == filters->enterSearchString) {
                     /*  A search is armed but nothing has been typed, so it
                         matched every row. It is a flag rather than an include

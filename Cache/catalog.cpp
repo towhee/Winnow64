@@ -10,6 +10,8 @@
 #include <QDir>
 #include <algorithm>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -874,6 +876,31 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
     return out;
 }
 
+QHash<QString, QString> Catalog::pathsForKeys(const QStringList &keys)
+{
+/*
+    ONE STATEMENT PER PAGE: the page's keys go in as a single bound JSON array expanded
+    by json_each, rather than one placeholder -- or one query -- per key. pathkey is
+    UNIQUE-indexed, so each is an index probe. Paged, with the lock per page, for the
+    reason availabilityOf gives.
+*/
+    QHash<QString, QString> out;
+    for (int from = 0; from < keys.size(); from += kPageRows) {
+        const QStringList page = keys.mid(from, kPageRows);
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return out;
+        QSqlQuery q(db);
+        q.prepare("SELECT pathkey, path FROM image"
+                  " WHERE pathkey IN (SELECT value FROM json_each(?))");
+        q.addBindValue(QString::fromUtf8(
+            QJsonDocument(QJsonArray::fromStringList(page)).toJson(QJsonDocument::Compact)));
+        if (!q.exec()) continue;
+        while (q.next()) out.insert(q.value(0).toString(), q.value(1).toString());
+    }
+    return out;
+}
+
 QHash<QString, Catalog::Availability> Catalog::availabilityOf(const QStringList &paths)
 {
 /*
@@ -1117,7 +1144,6 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
         binds << cq.folder << (cq.folder + "/%");
     }
     if (!cq.includeMissing) where << "i.live = 1";
-
 }
 
 QStringList Catalog::search(const CatalogQuery &cq, int limit, int *total)

@@ -894,6 +894,15 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (!keywordsDockTabText.isEmpty() && tabText == keywordsDockTabText)
         return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
                        "Window > Keywords Panel.</nobr>").arg(keywordsDockTabText);
+    /*  Collections has no shortcut either, for the same reason as Keywords. */
+    if (!collectionsDockTabText.isEmpty() && tabText == collectionsDockTabText)
+        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+                       "Window > Collections Panel. Library only.</nobr>")
+            .arg(collectionsDockTabText);
+    if (!queriesDockTabText.isEmpty() && tabText == queriesDockTabText)
+        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+                       "Window > Queries Panel. Library only.</nobr>")
+            .arg(queriesDockTabText);
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
@@ -1047,6 +1056,8 @@ QAction *MW::dockVisibleAction(QDockWidget *dock) const
     if (dock == filterDock)   return filterDockVisibleAction;
     if (dock == catalogDock)  return catalogDockVisibleAction;
     if (dock == keywordsDock) return keywordsDockVisibleAction;
+    if (dock == collectionsDock) return collectionsDockVisibleAction;
+    if (dock == queriesDock) return queriesDockVisibleAction;
     if (dock == metadataDock) return metadataDockVisibleAction;
     if (dock == thumbDock)    return thumbDockVisibleAction;
     if (dock == embelDock)    return embelDockVisibleAction;
@@ -1260,6 +1271,8 @@ void MW::applyDockCollapseState()
     apply(filterDock,   "FilterDock");
     apply(catalogDock,  "CatalogDock");
     apply(keywordsDock, "KeywordsDock");
+    apply(collectionsDock, "CollectionsDock");
+    apply(queriesDock, "QueriesDock");
     apply(metadataDock, "MetadataDock");
     apply(thumbDock,    "ThumbDock");
     apply(embelDock,    "EmbelDock");

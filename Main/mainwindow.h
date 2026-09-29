@@ -47,6 +47,8 @@
 #include "Views/keywordtags.h"
 #include "Datamodel/keywordvocab.h"
 #include "Views/libtree.h"
+#include "Views/collectiontree.h"
+#include "Utilities/queryexpr.h"
 #include "Views/loadcurtain.h"
 #include "Main/catalogscanner.h"
 #include "Cache/cachedb.h"
@@ -227,8 +229,10 @@ public:
        v8: moduleDock (top area) and the fourth, top, show/hide bar. placeDocksAddedSince
        only restores the Module dock's visibility (no tab group); MW::placeShowHideBars
        pins its position, since it is not movable and where it lives is never a user
-       choice to migrate. */
-    static constexpr int winnowStateVersion = 8;
+       choice to migrate.
+       v9: collectionsDock, tabbed with the Bookmarks panel (favDock).
+       v10: queriesDock, tabbed with collectionsDock. */
+    static constexpr int winnowStateVersion = 10;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -287,6 +291,8 @@ public:
         bool isFilterDockVisible;
         bool isCatalogDockVisible;
         bool isKeywordsDockVisible;
+        bool isCollectionsDockVisible = false;  // absent from older workspaces: hidden
+        bool isQueriesDockVisible = false;      // likewise
         bool isModuleDockVisible = true;    // absent from older workspaces: shown
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
@@ -405,6 +411,8 @@ public:
         bool isFilters = false;
         bool isCatalog = false;
         bool isKeywords = false;
+        bool isCollections = false;
+        bool isQueries = false;
         bool isModule = false;
         bool isMetadata = false;
         bool isDevelop = false;
@@ -1357,6 +1365,7 @@ private slots:
     void setFilterDockVisibility();
     void setCatalogDockVisibility();
     void setKeywordsDockVisibility();
+    void setCollectionsDockVisibility();
     void setModuleDockVisibility();
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
@@ -1806,6 +1815,8 @@ private:
     QAction *filterDockVisibleAction;
     QAction *catalogDockVisibleAction;
     QAction *keywordsDockVisibleAction;
+    QAction *collectionsDockVisibleAction = nullptr;
+    QAction *queriesDockVisibleAction = nullptr;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
@@ -1994,6 +2005,8 @@ private:
         (shipped off, like catalogDock -- the left group is already four tabs deep), so
         every use is null-guarded. */
     DockWidget *keywordsDock = nullptr;
+    DockWidget *collectionsDock = nullptr;
+    DockWidget *queriesDock = nullptr;
     /*  THE MODULE DOCK: the source (Library | Folders) at the left and the workflow
         switcher (Browse | Develop | ... | Map) centred, across the top of the window. No title bar, not movable, not floatable, top area
         only; MW::placeShowHideBars pins it there. See MW::createModuleDock. */
@@ -2147,6 +2160,7 @@ private:
     DockTitleBar *filterTitleBar;
     DockTitleBar *catalogTitleBar;
     DockTitleBar *keywordsTitleBar = nullptr;
+    DockTitleBar *collectionsTitleBar = nullptr;
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
     DockTitleBar *developTitleBar;
@@ -2230,6 +2244,75 @@ private:
     QToolButton *sourceFoldersBtn = nullptr;
     QToolButton *sourceLibraryBtn = nullptr;
     QLabel *sourceSeparator = nullptr;       // the " | " between Library and Folders
+
+    /*  COLLECTIONS AND QUERIES (Main/mwcollections.cpp, Views/collectiontree.h,
+        Datamodel/collectionstore.h, Utilities/queryexpr.h, Dialogs/querybuilder.h).
+        Both are FILTERS over the loaded Library: items in the Filters panel's
+        Collections and Queries categories. A collection filters on G::CollectionsColumn,
+        which DataModel answers from a membership side table MW keeps current
+        (refreshCollectionMembership); a Query carries its query text and is evaluated
+        live per row by the compiled predicate. Each panel is a second view of its
+        category, as LibTree is of Folders: a click asks (applySetFilter) and
+        syncCollectionTreeFromFilters pushes the result back to both panels after every
+        filter change. Usable only in the Library. */
+    CollectionTree *collectionTree = nullptr;
+    CollectionTree *queryTree = nullptr;
+    QLabel *collectionsReason = nullptr;     // why the panel is greyed, or empty
+    QLabel *collectionsEmptyHint = nullptr;  // "none yet" and how to make one
+    QLabel *queriesReason = nullptr;
+    QLabel *queriesEmptyHint = nullptr;
+    BarBtn *collectionsCancelBtn = nullptr;  // enabled only while one filters
+    BarBtn *queriesCancelBtn = nullptr;
+    /*  Collection names -> ids, for the query grammar's collection:"Name" (the
+        Query::Resolver MW installs). Rebuilt when the collections change. */
+    QHash<QString, QStringList> collectionIdsByName;
+    /*  Build either panel -- its body, tree, reason line, empty hint and title bar. */
+    DockWidget *buildLibrarySetDock(CollectionStore::Kind kind, const QString &tabText,
+                                    const QString &objectName);
+    CollectionTree *setTree(CollectionStore::Kind kind) const;
+    QTreeWidgetItem *setCategory(CollectionStore::Kind kind) const;
+    void applySetFilter(CollectionStore::Kind kind, const QVector<qint64> &ids,
+                        bool withSub);
+    void applyCollectionFilter(const QVector<qint64> &ids, bool withSub);
+    void applyQueryFilter(const QVector<qint64> &ids, bool withSub);
+    /*  Cancel (title bar button, context menu): clear that category only -- the whole
+        Library, with every other filter kept. */
+    void cancelSetFilter(CollectionStore::Kind kind);
+    void syncCollectionTreeFromFilters();       // both panels
+    void syncSetCancel(CollectionStore::Kind kind);
+    /*  The Filters categories' items from the store (names, nesting, query text). */
+    void refreshCollectionNodes();
+    void refreshQueryNodes();
+    /*  G::CollectionsColumn's side table from the store and the catalog, then the
+        counts, then a refilter if a collection is filtering. */
+    void refreshCollectionMembership();
+    /*  Loaded images per collection / per query, into the categories and the panels
+        (after every build). */
+    void updateCollectionCounts();
+    void updateQueryCounts();
+    void addPathsToCollection(qint64 id, const QStringList &paths);
+    void addSelectionToCollection(qint64 id);
+    void removeSelectionFromCollection(qint64 id);
+    /*  Grey both panels with their reason in Folders, show or hide the Filters
+        categories, and refresh the empty hints. */
+    void updateCollectionsAvailability();
+    void showCollectionsDock();
+    void closeCollectionsDock();
+    void createQueriesDock();
+    void showQueriesDock();
+    void closeQueriesDock();
+    void setQueriesDockVisibility();
+    /*  THE QUERY BUILDER's entry points: the Search row's "Build query...", "Save as
+        Query...", and the Queries panel's New / Edit. */
+    void openQueryBuilderForSearch();
+    void saveQueryAs(const Query::Expr &e);
+    void newQuery(qint64 parent);
+    void editQuery(qint64 id);
+    /*  What a builder value box offers as it is typed into: the values the loaded
+        Library holds for that field. */
+    QStringList querySuggestions(const QString &fieldKey);
+    /*  Once: the Search row's saved text queries (QSettings) become Queries. */
+    void migrateSavedSearchQueries();
     /*  A LibTree click that arrived before the Library's filters were built, waiting
         for them. */
     struct PendingFolderFilter {
@@ -2708,6 +2791,8 @@ private:
     QString filterDockTabText;
     QString catalogDockTabText;
     QString keywordsDockTabText;
+    QString collectionsDockTabText;
+    QString queriesDockTabText;
     QString metadataDockTabText;
     QString embelDockTabText;
     QString developDockTabText;
@@ -2725,6 +2810,7 @@ private:
     void createFilterDock();
     void createCatalogDock();
     void createKeywordsDock();
+    void createCollectionsDock();
     void createModuleDock();
     /*  Build one row of workflow buttons (Browse ... Map) into `layout`, filling
         `btns` (indexed by Workflow) and, when `separators` is given, putting a " | "

@@ -9,10 +9,15 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
+- Rename progress update after catalog loads and scan is started from Catalog to 'Scanning...'
+- Library loading flaky, thumbs rebuild several times, central widget msg blanked, ...
+- Review rename file(s) - simple option only rename sleelected, not all with same base name
+- Filters tree parent/child alignment
+- Thumbnail items tooltips gone
+- Thumbnail tooltip over file name showing borders tooltip.
 - Fine-tune keywords managing
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
-- Thumbnail tooltip over file name showing borders tooltip.
 - Edit title not persistent or applying to embellish
 - If in Library, bookmark applies Folders filter OR
   Separate workspaces for Library and Folders

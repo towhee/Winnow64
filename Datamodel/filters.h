@@ -30,6 +30,8 @@ public:
     QTreeWidgetItem *labels;
     QTreeWidgetItem *types;
     QTreeWidgetItem *folders;
+    QTreeWidgetItem *collections;
+    QTreeWidgetItem *queries;
     QTreeWidgetItem *models;
     QTreeWidgetItem *titles;
     QTreeWidgetItem *lenses;
@@ -52,6 +54,8 @@ public:
     QString catRating = "Ratings";
     QString catLabel = "Color classes";
     QString catType = "File types";
+    QString catCollection = "Collections";
+    QString catQuery = "Queries";
     QString catFolder = "Folders";
     QString catYear = "Years";
     QString catMonth = "Months";
@@ -118,7 +122,9 @@ public:
         PATH in data(1) rather than on their label. */
     bool isNestedCategory(const QTreeWidgetItem *category) const
     {
-        return category != nullptr && (category == keywords || category == folders);
+        return category != nullptr
+               && (category == keywords || category == folders || category == collections
+                   || category == queries);
     }
     /*  THE ONE FOLDER FILTER, as paths: what the Folders category includes (Checked) and
         excludes (PartiallyChecked). The Source panel's LibTree is a second view of it,
@@ -130,6 +136,61 @@ public:
         only when the category has not been built yet, which the caller must wait for. */
     bool setFolderFilter(const QStringList &includes, const QStringList &excludes,
                          QStringList *missing = nullptr);
+
+    /*  THE LIBRARY SET CATEGORIES: Collections and Queries. Unlike every other category
+        they are not built from the loaded rows by BuildFilters: their items are the
+        user's collections and queries, which exist whether or not anything loaded is in
+        them, so MW fills them from the store (setSetNodes) and pushes the loaded counts
+        separately (setSetCounts, after every build). An item's value (data(1)) is the
+        node's id, as text; nested like Folders; saved and restored by id.
+
+        COLLECTIONS filter on G::CollectionsColumn, the ids of the collections a row is
+        DIRECTLY in -- so a checked parent matches its own images, not its
+        sub-collections' (the Collections panel's Opt+click checks those too).
+        QUERIES carry their query TEXT in QueryTextRole and are evaluated live per row
+        (SortFilter::compileFilters -> FilterCategory::includeExprs); a parent Query is
+        only an organiser -- it matches by its own query, which may be empty.
+
+        Shown only in the Library (setLibrarySetsAvailable). The Collections and Queries
+        panels are second views of these categories, as LibTree is of Folders. */
+    struct CollectionItem
+    {
+        QString id;
+        QString parentId;
+        QString name;
+        QString queryText;      // Queries only: the query, as text
+    };
+    void setSetNodes(QTreeWidgetItem *category, const QVector<CollectionItem> &nodes);
+    void setSetCounts(QTreeWidgetItem *category, const QHash<QString, int> &countsById);
+    void setFilterState(QTreeWidgetItem *category, QStringList &includes,
+                        QStringList &excludes) const;
+    /*  Set the category to exactly this, with ONE filterChange (none if nothing
+        changed). Every other category is left alone. */
+    void setSetFilter(QTreeWidgetItem *category, const QStringList &includes,
+                      const QStringList &excludes);
+    /*  Show both categories (Library) or hide them (Folders). Hiding unchecks them
+        without a filterChange -- the caller is about to load something else -- since a
+        hidden check would go on filtering where nobody could see it. */
+    void setLibrarySetsAvailable(bool available);
+    bool librarySetsAvailable() const { return setsShown; }
+    bool isLibrarySetCategory(const QTreeWidgetItem *c) const
+    {
+        return c != nullptr && (c == collections || c == queries);
+    }
+    /*  The query an item tests, as text, or empty for an ordinary value item: the Search
+        row's text for searchTrue/searchFalse (unless it is the placeholder), a Query
+        item's QueryTextRole. Read by SortFilter::compileFilters. */
+    QString queryTextFor(const QTreeWidgetItem *item) const;
+    /*  The saved Queries the Search row's "Load query" menu lists: name -> query text.
+        MW pushes them whenever the Queries change. */
+    void setSavedQueries(const QList<QPair<QString, QString>> &queries)
+    {
+        savedQueries = queries;
+    }
+    /*  The saved text queries of builds before Queries (QSettings array
+        "SavedSearchQueries", name -> query), read once by MW's migration into the
+        Queries panel. */
+    static QList<QPair<QString, QString>> legacySavedSearchQueries();
     /*  Every filterable item beneath a category, at ANY depth. Categories other than
         Keywords are one level deep and this is just their children; writing the loops
         against it is what stops a nested category being half-handled. */
@@ -234,6 +295,11 @@ signals:
     void mergeUnfiledKeyword(const QString &path);
     /*  "Filter on..." was chosen. MW shows the columns and calls addSessionCategory. */
     void filterOnRequested();
+    /*  The Search row's "Build query..." -- MW opens the Query Builder on
+        currentSearchText() and writes the result back with setSearchText. */
+    void queryBuilderRequested();
+    /*  "Save as Query..." -- MW names it and adds it to the Queries panel. */
+    void saveAsQueryRequested(const QString &queryText);
 
 public slots:
 
@@ -311,7 +377,10 @@ public:
         /*  On a category HEADER: a SESSION category, made by "Filter on..." from a column
             the panel has no category for. Read by SortFilter::compileFilters into
             FilterCategory::compareAsText. See addSessionCategory. */
-        SessionRole
+        SessionRole,
+        /*  On a Queries item: its query, as text (Utilities/queryexpr.h). See
+            queryTextFor. */
+        QueryTextRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
@@ -393,6 +462,7 @@ public:
     void applyCss(const QString &css);
 
 private:
+    bool setsShown = true;            // see setLibrarySetsAvailable
     QMutex mutex;
     void resizeColumns();
     int countCeiling = 0;       // see setCountCeiling
@@ -448,19 +518,7 @@ private:
     /*  Does the keyword list hold any branch whose leaf is this folded name? Answered
         from vocabPathsFold, which the panel already holds for the unfiled marking. */
     bool vocabHasLeaf(const QString &leafFold) const;
-    /*  Edit the query in a resizable dialog. The tree row is a single-line editor a few
-        centimetres wide; a query with brackets and quoted phrases cannot be read in it,
-        let alone revised. The text committed back is simplified(), because the row (and
-        the parser) want one line. */
-    void editSearchInLargeSpace();
-    /*  Name and keep the current query. */
-    void saveSearchQuery();
-    /*  The saved queries, name -> query, in the order they are shown (by name). Held in
-        the app settings as an ARRAY rather than as key = value, so that a name may
-        contain any character -- a '/' in a QSettings key is a group separator, and query
-        names are prose. */
-    QList<QPair<QString, QString>> savedSearchQueries() const;
-    void writeSavedSearchQueries(const QList<QPair<QString, QString>> &queries);
+    QList<QPair<QString, QString>> savedQueries;    // see setSavedQueries
     /* SHIFT+CLICK RANGES, and where a range starts from. The anchor is the item last
        CHECKED, remembered as its category plus its text rather than as a pointer,
        because a category's items are destroyed and rebuilt every time the filters are

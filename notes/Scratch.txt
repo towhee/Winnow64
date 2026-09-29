@@ -5899,6 +5899,125 @@ Two things I didn't change:
 Select from the Source or bookmarks panels.
 
 ==========================================================================================
+Collections
+==========================================================================================
+
+Add a new panel dock called Collections, which will only be available in Library mode.  It is
+to be modelled on Lightroom collections.  Each collection is represented by an item in a
+tree.  Dragging thumbnails onto a collection adds them to the collection.  Clicking on a
+collection is like clicking on a folder in Folders mode: a new dataset is built with the
+images in the collection.  Use the same modifiers as in the Folders panel to select
+multiple collections.  Dragging a collection A onto collection B makes A a child of B.
+Note that another panel called 'Queries' is planned.  Queries will be like Lightroom smart
+collections.  Queries will be in the same tree structure with the same functionality as
+collections, except not accepting external drag events.  Design Collections so that Queries
+will be easier to add later.
+
+Collections now work as a filter category, like Folders. The code compiles, moc and syntax checks pass, and the related unit tests pass. I haven't built or run the app itself:
+  run CMake again, then check it in Qt Creator. Nothing is committed.
+
+  How it works now
+  - A new Collections category in the Filters panel, just under Folders, with one item per collection, nested the same way. Checking a collection shows only its images. It combines
+    with every other filter the usual way: OR within the category, AND with the others, and Opt+click in the Filters panel excludes a collection.
+  - The Collections panel is a second view of that category, the way the hidden LibTree is of Folders. A click in the panel sets the category; checking or clearing a collection in
+    the Filters panel updates the panel. Clear All and your saved Library filters come back in both.
+  - The whole Library stays loaded. A click never reloads anything and never asks about picks.
+  - Clicks behave as before: click shows one collection, Opt+click adds every collection inside it, Cmd+click adds or removes one, Shift+click takes a range.
+  - Cancel (title-bar button, or the last item in the context menu) clears only the Collections category, so you see the whole Library with every other filter kept. It's greyed out
+    when no collection is filtering.
+  - Remove Selected Images is available for any collection currently checked. Removed images leave the grid straight away.
+  - Library only: in Folders the panel is greyed with the reason, and the Filters category is hidden and cleared.
+
+  Behaviour to check
+  1. Checking a parent collection in the Filters panel shows only the images directly in it, not its sub-collections. In the Collections panel, Opt+click also checks every
+     collection inside it. Tell me if you'd rather a parent always include its children.
+  2. Clicking a collection while the Library is still loading is refused with a popup. The load clears filter checks when it finishes, so the click would otherwise vanish unseen.
+  3. The Filters counts are loaded images per collection, so a version counts as its own image, as in other categories. The Collections panel shows each collection's total members.
+  4. A capped Library search (the maximum-results preference) doesn't narrow by collection. It still filters what's loaded. This only matters if you've set a cap.
+
+  Removed from the first version: the reload-per-click path, the "empty collection" screen and its message, and the window-title label.
+
+  Queries still share the store and tree. They would become a second Filters category, computed from each query's saved filter, so they would combine with collections and
+  everything else automatically. This is written up in the updated "Collections (and the Queries to Come)" section of notes/Documentation.txt.
+
+Which power features belong in the FIRST build? (The rest become follow-ups.)
+
+❯ 1. [ ] Nested groups
+         Match ALL/ANY/NONE groups inside groups (Lightroom's Opt+'+'). Without it, one ALL/ANY level only.
+  2. [ ] Relative dates
+         'in the last N days/months', 'this year', 'on this day in any year'.
+  3. [ ] Live match count
+         '1,284 of 43,050' updating as rules change, plus inline reasons for invalid rules.
+  4. [ ] Catalog SQL engine
+         Also compile queries to SQL so the Queries panel shows counts without the Library loaded and capped searches honour them. Otherwise datamodel-only (fine while the Library
+         loads whole).
+
+The Queries panel and Query Builder are written, but I've had to stop before the last one-line fix: the tool-permission check started failing again (three attempts in a row), and
+  more retries would end the turn. I haven't run the app.
+
+  Blocking the build right now: Views/filterpanel.cpp needs #include "Utilities/queryexpr.h" added under #include "Main/global.h". The syntax check fails on that one missing
+  include; every other touched file passes. You can add that line yourself, or tell me to continue.
+
+  Tests
+  - The new tst_queryexpr (25) and tst_filterpredicate (16) pass, the latter including a new check that queries combine with other filters correctly.
+  - tst_collections (12) passes with new checks for query definitions and Duplicate, and tst_filters, tst_catalog, tst_fileops and tst_imagerow still pass.
+  - A bug I found in review after that run is fixed but not re-tested: a checked, nested query with an empty definition would have hidden every image.
+
+  What you get
+  - One query language. The Filters Search row, the Query Builder and saved Queries all use it, and it converts to text and back without loss. Plain words behave as before. New:
+    - field rules such as rating:>=3, label:red,yellow, keyword:"Fauna|Bird", title:her*, title:*, captured:2024-05, captured:<2024-05-01, iso:100..400, shutter:1/250,
+      collection:"Trip 2024";
+    - brackets and OR work as before, and a NOT inside brackets now means what it says. The old search moved every NOT to the whole query.
+  - Query Builder. Each group reads "Match all / any / none of the following" and can hold rules and further groups, using "+ Group" or Alt/Opt-click on a rule's +. A rule is
+    field, operator and value, with typeahead from what your Library holds. Below the rules is the same query as text; edit it and press Return to rebuild the rules.
+  - Search row. The right-click menu now has Build query…, Save as Query… and Load query (which lists your Queries). Search results update straight away after you edit a rating or
+    keyword.
+  - Queries panel. It sits next to Collections, is Library-only and off by default (Window > Queries Panel). A matching Queries category appears in the Filters panel.
+    - A click, Cmd-click, Shift-click or Opt-click filters, as with Collections.
+    - Double-click, or Edit Query…, opens the builder. There's also New Query…, Duplicate, Rename, Delete, Move to Top Level and Cancel, plus the + and Cancel buttons in the title
+      bar.
+    - Each query shows how many loaded images it matches.
+  - Your existing saved searches move into Queries the first time the new build runs. The old settings list is left in place, so nothing is lost if you go back.
+
+  Limits in this first build
+  - Relative dates ("last 30 days"), a live match count inside the builder, and queries that refer to other queries aren't built yet.
+  - Value entry is text with typeahead; there are no star or colour-chip pickers yet.
+  - A query that names a collection stops matching if that collection is renamed.
+  - Query counts are recalculated on the main thread after each load. If WINNOW_PERF_PROBE=1 is set, an [PERF] updateQueryCounts line prints the time. I haven't measured it on your
+    43,000-image Library.
+  - With a result cap set, a Search that includes field rules isn't sent to the catalog search. You get the newest N images, and the full query filters those.
+
+  Still to do:
+  - the documentation section ("Queries and the Query Builder", its table-of-contents entry, and updates to the Collections section);
+  - the project memory update;
+  - a final re-run of the tests after the include fix.
+
+  The new code is in Utilities/queryexpr.*, Dialogs/querybuilder.* and Main/mwcollections.cpp, plus the tab icon images/icon16/queries_white.png, which I drew in code (a magnifier
+  over a list), so you may want to redraw it.
+
+-----------------------------
+
+I fixed the crash when clicking + on the Queries panel. A new headless test builds and fills the Query Builder the same way and passes. I haven't rebuilt or run the app. Qt
+  Creator needs CMake run again to pick up the new test target.
+
+  Cause: the builder crashed while setting up its first rule row, before the window appeared. Each value box's typeahead list was being replaced on every field change, and I also
+  queued the old one for deletion. But Qt already deletes the old one when you replace it. Loading a rule changes the field twice, so the second time deleted freed memory.
+
+  Fix (Dialogs/querybuilder.cpp): each value box now gets one typeahead list when the rule row is created, and a field change only updates its word list. Nothing is created or
+  deleted after that.
+
+  New test (tst_querybuilder, 4 cases, all passing), which follows the same path as the crash:
+  - opens the builder empty in both modes;
+  - loads a nested query, reads it back unchanged, then loads a second one into the same rows;
+  - sets the typeahead suggestions twice;
+  - edits the text box and checks the rules rebuild.
+
+  None of the earlier query tests created the builder window, which is why this got through.
+
+  Next time you're in the app, the other Queries entry points use the same builder and are worth a click: Edit Query… and double-click in the Queries panel, and Build query… on the
+  Search row.
+
+==========================================================================================
 Keywords Manager
 ==========================================================================================
 

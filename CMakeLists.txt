@@ -125,6 +125,7 @@ set(WINNOW_SOURCES
     # Datamodel
     Datamodel/buildfilters.cpp
     Datamodel/datamodel.cpp
+    Datamodel/collectionstore.cpp
     Datamodel/filters.cpp
     Datamodel/selection.cpp
 
@@ -321,6 +322,7 @@ set(WINNOW_SOURCES
     Main/menusandactions.cpp
     Main/navigate.cpp
     Main/mwversions.cpp
+    Main/mwcollections.cpp
     Main/selftestnav.cpp
     Main/pick.cpp
     Main/qtlocalpeer.cpp
@@ -427,6 +429,9 @@ set(WINNOW_SOURCES
     Datamodel/imagerow.cpp
     Datamodel/rowscratch.cpp
     Views/libtree.cpp
+    Views/collectiontree.cpp
+    Utilities/queryexpr.cpp
+    Dialogs/querybuilder.cpp
     Views/filterpanel.cpp
     Views/infoview.cpp
     Views/tableview.cpp
@@ -456,6 +461,7 @@ set(WINNOW_HEADERS
 
     Datamodel/buildfilters.h
     Datamodel/datamodel.h
+    Datamodel/collectionstore.h
     Datamodel/filters.h
     Datamodel/filtersnapshot.h
     Datamodel/modelsync.h
@@ -465,6 +471,9 @@ set(WINNOW_HEADERS
     Datamodel/rowscratch.h
     Datamodel/filterpredicate.h
     Views/libtree.h
+    Views/collectiontree.h
+    Utilities/queryexpr.h
+    Dialogs/querybuilder.h
     Views/loadcurtain.h
     Datamodel/selection.h
 

@@ -110,6 +110,8 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
            because there is no separate Catalog tab to draw. */
         {catalogDockTabText,  ":/images/icon16/catalog_white.png"},
         {keywordsDockTabText, ":/images/icon16/keywords_white.png"},
+        {collectionsDockTabText, ":/images/icon16/collections_white.png"},
+        {queriesDockTabText, ":/images/icon16/queries_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
@@ -121,6 +123,8 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {filterDockTabText,   filterDock},
         {catalogDockTabText,  catalogDock},
         {keywordsDockTabText, keywordsDock},
+        {collectionsDockTabText, collectionsDock},
+        {queriesDockTabText, queriesDock},
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
@@ -308,6 +312,10 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
         must not match an empty tabText. */
     if (!keywordsDockTabText.isEmpty() && tabText == keywordsDockTabText)
         return keywordsDock;
+    if (!collectionsDockTabText.isEmpty() && tabText == collectionsDockTabText)
+        return collectionsDock;
+    if (!queriesDockTabText.isEmpty() && tabText == queriesDockTabText)
+        return queriesDock;
     if (tabText == metadataDockTabText) return metadataDock;
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
@@ -8223,6 +8231,13 @@ void MW::setBackgroundShade(int shade)
         libTree->verticalScrollBar()->setStyleSheet(G::css);
         libTree->updateStyle();
     }
+    for (CollectionTree *tree : {collectionTree, queryTree}) {
+        if (!tree) continue;
+        tree->setStyleSheet(G::css);
+        tree->verticalScrollBar()->setStyleSheet(G::css);
+        tree->updateStyle();
+    }
+    if (collectionTree) updateCollectionsAvailability();    // the reason lines' colour
     styleWorkflowSwitcher();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
@@ -8653,6 +8668,10 @@ void MW::toggleFullScreen()
         if (catalogDock) catalogDock->setVisible(fullScreenDocks.isCatalog);
         keywordsDockVisibleAction->setChecked(fullScreenDocks.isKeywords);
         if (keywordsDock) keywordsDock->setVisible(fullScreenDocks.isKeywords);
+        collectionsDockVisibleAction->setChecked(fullScreenDocks.isCollections);
+        if (collectionsDock) collectionsDock->setVisible(fullScreenDocks.isCollections);
+        queriesDockVisibleAction->setChecked(fullScreenDocks.isQueries);
+        if (queriesDock) queriesDock->setVisible(fullScreenDocks.isQueries);
         moduleDockVisibleAction->setChecked(fullScreenDocks.isModule);
         if (moduleDock) moduleDock->setVisible(fullScreenDocks.isModule);
         if (G::useInfoView) {
@@ -13867,6 +13886,8 @@ void MW::updateState()
     setFilterDockVisibility();
     setCatalogDockVisibility();
     setKeywordsDockVisibility();
+    setCollectionsDockVisibility();
+    setQueriesDockVisibility();
     setModuleDockVisibility();
     setMetadataDockVisibility();
     setEmbelDockVisibility();
