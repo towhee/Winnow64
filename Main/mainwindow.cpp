@@ -8149,7 +8149,8 @@ void MW::setShowImageCount()
     fsTree->setShowImageCount(isShow);
     fsTree->resizeColumns();
     fsTree->repaint();
-    if (isShow) fsTree->fsModel->fetchMore(fsTree->rootIndex());
+    // rootIndex() is an FSFilter (view) index; fsModel needs its own index
+    if (isShow) fsTree->fsModel->fetchMore(fsTree->fsFilter->mapToSource(fsTree->rootIndex()));
 }
 
 void MW::setFontSize(int fontPixelSize)
