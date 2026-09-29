@@ -7052,6 +7052,15 @@ void MW::metadataComplete(QString src)
     }
     QString fun = "MW::metadataComplete";
 
+    /*  VERSIONS (virtual copies) FIRST, before the filter build below. Every master's
+        sidecar has now been read, so the version rows go in with one applyModelChange
+        (Main/mwversions.cpp) -- not earlier, because an insert while the fill or MetaRead
+        still addresses the model by row number lands reads on the wrong image, and not
+        later: applyModelChange rebuilds and restores the filters itself, and run after
+        the build started here it cut that build short and left the Filters panel empty
+        and greyed (155,000-row Library, 2026-09-28). */
+    reconcileVersionRows(fun, /*atLoadEnd*/ true);
+
     /* One-shot cache housekeeping, deferred to here so it never competes with the folder
        load the user is waiting for, and run off the GUI thread because it stats every
        cached entry. Deliberately NOT at shutdown: closeEvent is already doing
@@ -7298,12 +7307,6 @@ void MW::metadataComplete(QString src)
     /* signal anything waiting for the metadata update to finish, including
        dm->insert() */
     emit metadataLoaded();
-
-    /*  VERSIONS (virtual copies): every master's sidecar has now been read, so add the
-        version rows in one applyModelChange (Main/mwversions.cpp). Queued, after this
-        load's own completion work, and never earlier -- inserting rows while MetaRead
-        still addresses the model by row number would land reads on the wrong image. */
-    QTimer::singleShot(0, this, [this] { reconcileVersionRows("MW::metadataComplete"); });
 
     /* test if any null thumbnails
     bool isNullIcon = false;

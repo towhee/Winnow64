@@ -5890,6 +5890,12 @@ Session filter categories ("Filter on...")
    with the session.
  - Session categories in Catalog scope.
 
+Two things I didn't change:
+ - Filters have the same problem. The docs say four filter gates rely on G::isModifyingDatamodel staying set through a load (the "Is A Load Running" section). For the same reason,
+   they aren't protected during the fill either. That's older than Versions and needs its own look.
+ - A remaining cost after the load. Once the load finishes, adding the one version row still runs the full applyModelChange over 155k rows: a filter pass (about 0.8 s) plus
+   rebuilding the filters. A better long-term fix would be for the catalog fill to add version rows itself, since the index already lists them.
+
 ==========================================================================================
 Keywords Manager
 ==========================================================================================
