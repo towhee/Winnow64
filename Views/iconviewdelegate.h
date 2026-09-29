@@ -15,7 +15,7 @@ class IconViewDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    /*  VERSIONS (virtual copies) badge, top-left of the thumbnail: a master's count
+    /*  VERSIONS (virtual copies) badge, top-right of the thumbnail: a master's count
         with an expand arrow (click toggles the group, IconView::mousePressEvent), or a
         version's name tag. Empty text = no badge. sfIdx is a proxy index. */
     QString versionBadgeText(const QModelIndex &sfIdx) const;

@@ -433,17 +433,28 @@ QString IconViewDelegate::versionBadgeText(const QModelIndex &sfIdx) const
     return QString::number(count) + (open ? QString(" \u25BE") : QString(" \u25B8"));
 }
 
+// Versions badge font: shared by the hit rect and the paint so they always agree
+static QFont versionBadgeFont()
+{
+    QFont f = QApplication::font();
+    f.setPixelSize(qMax(11, G::fontSize + 1));
+    f.setBold(true);
+    return f;
+}
+
 QRect IconViewDelegate::versionBadgeRect(const QRect &optionRect, const QString &text) const
 {
+/*
+    Tucked into the top-RIGHT corner of the cell frame, its top and right edges on the
+    frame's, the way the icon number sits in the top-left. The frame border and the
+    selection border stroke over it. Top-left was hidden under the icon number.
+*/
     QRect frameRect(optionRect.topLeft() + fPadOffset, frameSize);
-    QRect itemRect(frameRect.topLeft() + tPadOffset, itemSize);
-    QFont f = QApplication::font();
-    f.setPixelSize(qMax(9, G::fontSize - 2));
-    const QFontMetrics fm(f);
-    const int h = fm.height() + 2;
-    const int maxW = qMax(20, itemRect.width() - 8);
-    const int w = qMin(maxW, fm.horizontalAdvance(text) + 10);
-    return QRect(itemRect.left() + 3, itemRect.top() + 3, w, h);
+    const QFontMetrics fm(versionBadgeFont());
+    const int h = fm.height() + 6;
+    const int maxW = qMax(24, frameRect.width() - 16);
+    const int w = qMin(maxW, fm.horizontalAdvance(text) + 16);
+    return QRect(frameRect.right() + 1 - w, frameRect.top(), w, h);
 }
 
 bool IconViewDelegate::versionsBadgeHit(const QModelIndex &sfIdx, const QRect &optionRect,
@@ -824,8 +835,9 @@ textRect         = a rectangle below itemRect
         }
     }
 
-    /*  Versions (virtual copies): a master's count + arrow, a version's name tag. The
-        tag is a different shade so a version reads as "a copy of" at a glance. */
+    /*  Versions (virtual copies): a master's count + arrow (amber), a version's name
+        tag (blue), in the frame's top-right corner, solid fill with a light outline.
+        Drawn before the frame border so that border strokes over the shared edges. */
     if (!G::isSlideShow) {
         const QString vText = versionBadgeText(index);
         if (!vText.isEmpty()) {
@@ -833,14 +845,15 @@ textRect         = a rectangle below itemRect
                 index.model()->index(sfRow, 0).data(G::VersionIdRole).toInt() > 0;
             const QRect vr = versionBadgeRect(option.rect, vText);
             QFont f = painter->font();
-            QFont vf = QApplication::font();
-            vf.setPixelSize(qMax(9, G::fontSize - 2));
+            const QFont vf = versionBadgeFont();
             painter->save();
+            painter->setRenderHint(QPainter::Antialiasing, true);
             painter->setFont(vf);
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(isVersionRow ? QColor(40, 90, 150, 220) : QColor(20, 20, 20, 200));
-            painter->drawRoundedRect(vr, 4, 4);
-            painter->setPen(QColor(235, 235, 235));
+            painter->setPen(QPen(QColor(255, 255, 255, 230), 1.5));
+            painter->setBrush(isVersionRow ? QColor(30, 115, 215) : QColor(225, 140, 20));
+            // radius 8 = the frame's, so the shared corner follows the frame's curve
+            painter->drawRoundedRect(QRectF(vr).adjusted(0.75, 0.75, -0.75, -0.75), 8, 8);
+            painter->setPen(isVersionRow ? QColor(255, 255, 255) : QColor(20, 20, 20));
             const QString shown = QFontMetrics(vf).elidedText(vText, Qt::ElideRight,
                                                              vr.width() - 8);
             painter->drawText(vr, Qt::AlignCenter, shown);
