@@ -7,7 +7,10 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QKeyEvent>
 #include <QLineEdit>
+#include <QLocale>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStringListModel>
@@ -60,6 +63,7 @@ private:
     const Field *currentField() const;
     void fieldChanged();
     void opChanged();
+    void checkMatch(QLineEdit *e);
 
     QueryGroupWidget *owner;
     const QueryBuilderWidget::Suggestions *suggest;
@@ -110,7 +114,17 @@ QueryRuleWidget::QueryRuleWidget(QueryGroupWidget *owner,
     row->setSpacing(4);
 
     fieldBox = new QComboBox(this);
-    for (const Field &f : fields()) fieldBox->addItem(f.label, f.key);
+    /*  The main fields, a separator, then the rest of the datamodel's user-facing
+        columns (Field::extra). */
+    bool separated = false;
+    for (const Field &f : fields()) {
+        if (f.extra && !separated) {
+            fieldBox->insertSeparator(fieldBox->count());
+            separated = true;
+        }
+        fieldBox->addItem(f.label, f.key);
+    }
+    fieldBox->setMaxVisibleItems(40);
     opBox = new QComboBox(this);
     v1 = new QLineEdit(this);
     andLabel = new QLabel(tr("and"), this);
@@ -140,8 +154,14 @@ QueryRuleWidget::QueryRuleWidget(QueryGroupWidget *owner,
 
     connect(fieldBox, &QComboBox::currentIndexChanged, this, [this] { fieldChanged(); });
     connect(opBox, &QComboBox::currentIndexChanged, this, [this] { opChanged(); });
-    connect(v1, &QLineEdit::textChanged, this, [this] { if (!setting) this->changed(); });
-    connect(v2, &QLineEdit::textChanged, this, [this] { if (!setting) this->changed(); });
+    connect(v1, &QLineEdit::textChanged, this, [this] {
+        checkMatch(v1);
+        if (!setting) this->changed();
+    });
+    connect(v2, &QLineEdit::textChanged, this, [this] {
+        checkMatch(v2);
+        if (!setting) this->changed();
+    });
     connect(minus, &QToolButton::clicked, this, [this] { this->owner->removeChild(this); });
     connect(plus, &QToolButton::clicked, this, [this] {
         if (QApplication::keyboardModifiers() & Qt::AltModifier) {
@@ -185,11 +205,42 @@ void QueryRuleWidget::fieldChanged()
         previous completer parented to the line edit, so a second pass through here --
         setNode picks the field and then calls this again -- deleted it twice. */
     suggestModel->setStringList(offer);
-    for (QLineEdit *e : {v1, v2})
+    for (QLineEdit *e : {v1, v2}) {
         e->setPlaceholderText(f->hint.isEmpty() && !f->values.isEmpty()
                                   ? f->values.join(", ") : f->hint);
+        checkMatch(e);                  // the same text may not match the new field
+    }
     setting = wasSetting;
     opChanged();
+}
+
+void QueryRuleWidget::checkMatch(QLineEdit *e)
+{
+/*
+    RED WHEN NOTHING THE FIELD OFFERS CONTAINS WHAT WAS TYPED. Only for a field with
+    typeahead -- numbers, dates and free text offer nothing, and nothing is wrong with
+    typing a number. "Contains" because that is how the typeahead itself filters: "her"
+    is on its way to "Heron", not a mistake. Each comma-separated value of an "any of"
+    is checked on its own.
+*/
+    const QStringList offer = suggestModel->stringList();
+    const Op op = opBox->count() ? Op(opBox->currentData().toInt()) : Op::Contains;
+    bool bad = false;
+    if (!offer.isEmpty()) {
+        const QStringList parts = (op == Op::AnyOf || op == Op::NoneOf)
+                                      ? e->text().split(',') : QStringList{e->text()};
+        for (const QString &raw : parts) {
+            const QString v = raw.trimmed();
+            if (v.isEmpty()) continue;
+            bool found = false;
+            for (const QString &o : offer)
+                if (o.contains(v, Qt::CaseInsensitive)) { found = true; break; }
+            if (!found) { bad = true; break; }
+        }
+    }
+    e->setStyleSheet(bad ? "QLineEdit { color: #d06060; }" : QString());
+    e->setToolTip(bad ? tr("Nothing loaded in the Library has this value.")
+                      : QString());
 }
 
 void QueryRuleWidget::opChanged()
@@ -202,6 +253,7 @@ void QueryRuleWidget::opChanged()
     if (f && (op == Op::AnyOf || op == Op::NoneOf))
         v1->setToolTip(tr("One value, or several separated by commas."));
     else v1->setToolTip(QString());
+    checkMatch(v1);                     // a mismatch's reason wins the tooltip
     if (!setting) changed();
 }
 
@@ -275,6 +327,7 @@ QueryGroupWidget::QueryGroupWidget(bool isRoot,
         });
     }
     outer->addLayout(head);
+    outer->addSpacing(6);               // the Match row stands apart from its rules
 
     body = new QVBoxLayout();
     body->setContentsMargins(isRoot ? 0 : 12, 0, 0, 0);
@@ -389,9 +442,22 @@ QueryBuilderWidget::QueryBuilderWidget(QWidget *parent) : QWidget(parent)
     scroll->setWidget(holder);
     layout->addWidget(scroll, 1);
 
-    layout->addWidget(new QLabel(tr("As text (edit and press Return to rebuild the rules):"),
+    layout->addWidget(new QLabel(tr("As text (edit, then press Return to rebuild the rules):"),
                                  this));
-    textEdit = new QLineEdit(this);
+    textEdit = new QPlainTextEdit(this);
+    textEdit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    textEdit->setTabChangesFocus(true);
+    textEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    /*  Four lines, then it scrolls: a long query stays readable without the box taking
+        the rows' room. */
+    {
+        const int lines = 4;
+        const QMargins m = textEdit->contentsMargins();
+        textEdit->setFixedHeight(textEdit->fontMetrics().lineSpacing() * lines
+                                 + int(2 * textEdit->document()->documentMargin())
+                                 + m.top() + m.bottom() + 2 * textEdit->frameWidth());
+    }
+    textEdit->installEventFilter(this);
     textEdit->setToolTip(tr(
         "The same query, as the Search row reads it.\n\n"
         "heron OR eagle        either word\n"
@@ -410,8 +476,6 @@ QueryBuilderWidget::QueryBuilderWidget(QWidget *parent) : QWidget(parent)
     errorLabel->setVisible(false);
     layout->addWidget(errorLabel);
 
-    connect(textEdit, &QLineEdit::returnPressed, this, &QueryBuilderWidget::textEdited);
-    connect(textEdit, &QLineEdit::editingFinished, this, &QueryBuilderWidget::textEdited);
 
     setExpr(Expr());
 }
@@ -433,7 +497,7 @@ void QueryBuilderWidget::setExpr(const Expr &e)
     }
     if (n.kids.isEmpty()) n.kids << Node::rule("text", Op::Contains, {});
     root->setNode(n);
-    textEdit->setText(e.toText());
+    textEdit->setPlainText(e.toText());
     errorLabel->setText(e.error());
     errorLabel->setVisible(!e.error().isEmpty());
     syncing = false;
@@ -464,16 +528,37 @@ void QueryBuilderWidget::rowsChanged()
 {
     if (syncing) return;
     syncing = true;
-    textEdit->setText(expr().toText());
+    textEdit->setPlainText(expr().toText());
     errorLabel->setVisible(false);
     syncing = false;
     emit changed();
 }
 
+bool QueryBuilderWidget::eventFilter(QObject *watched, QEvent *event)
+{
+/*
+    Return rebuilds the rows (Shift+Return is a line break); leaving the box does too,
+    as leaving a one-line editor committed it.
+*/
+    if (watched == textEdit) {
+        if (event->type() == QEvent::KeyPress) {
+            auto *k = static_cast<QKeyEvent *>(event);
+            if ((k->key() == Qt::Key_Return || k->key() == Qt::Key_Enter)
+                && !(k->modifiers() & Qt::ShiftModifier)) {
+                textEdited();
+                return true;
+            }
+        }
+        else if (event->type() == QEvent::FocusOut) textEdited();
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
 void QueryBuilderWidget::textEdited()
 {
     if (syncing) return;
-    const QString text = textEdit->text();
+    // a line break is only layout: the grammar reads it as a space
+    const QString text = textEdit->toPlainText().simplified();
     if (text == expr().toText()) return;        // nothing new: keep the rows as they are
     setExpr(Expr::parse(text));
     emit changed();
@@ -495,6 +580,7 @@ QueryBuilderDialog::QueryBuilderDialog(Mode mode, QWidget *parent)
         nameEdit = new QLineEdit(this);
         nameRow->addWidget(nameEdit, 1);
         layout->addLayout(nameRow);
+        layout->addSpacing(10);         // the name stands apart from the query
     }
 
     build = new QueryBuilderWidget(this);
@@ -514,7 +600,28 @@ QueryBuilderDialog::QueryBuilderDialog(Mode mode, QWidget *parent)
     }
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    layout->addWidget(buttons);
+
+    /*  TEST, at the left of the button row, with its answer beside it. */
+    auto *bottom = new QHBoxLayout();
+    testBtn = new QPushButton(tr("Test"), this);
+    testBtn->setToolTip(tr("Count the loaded images this query matches."));
+    testBtn->setVisible(false);                         // until there is a counter
+    testResult = new QLabel(this);
+    bottom->addWidget(testBtn);
+    bottom->addWidget(testResult, 1);
+    bottom->addWidget(buttons);
+    layout->addLayout(bottom);
+    connect(testBtn, &QPushButton::clicked, this, [this] {
+        if (!counter) return;
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        const QPair<int, int> n = counter(build->expr());
+        QApplication::restoreOverrideCursor();
+        const QLocale loc;
+        testResult->setText(tr("%1 of %2 loaded images match.")
+                                .arg(loc.toString(n.first), loc.toString(n.second)));
+    });
+    // a count is only true of the query it was made for
+    connect(build, &QueryBuilderWidget::changed, testResult, &QLabel::clear);
 
     if (nameEdit) {
         auto sync = [this] { okBtn->setEnabled(!nameEdit->text().trimmed().isEmpty()); };
@@ -522,6 +629,12 @@ QueryBuilderDialog::QueryBuilderDialog(Mode mode, QWidget *parent)
         sync();
     }
     resize(760, 460);
+}
+
+void QueryBuilderDialog::setCounter(Counter c)
+{
+    counter = std::move(c);
+    testBtn->setVisible(bool(counter));
 }
 
 void QueryBuilderDialog::setName(const QString &name)

@@ -3979,12 +3979,9 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     }
     if (createdDT.isValid()) {
         setData(index(row, G::YearColumn), createdDT.toString("yyyy"));
-        /*  NOT createdDT.toString("MMM"), which follows the SYSTEM LOCALE: the value
-            would then be the user's language rather than a fact about the image, it
-            would change when they changed their locale, and it could not match the
-            English CASE Catalog::categorySql spells out -- so the same month would be
-            two different filter items in the two scopes. Catalog::monthLabel is the
-            one spelling both sides read. */
+        /*  The month NUMBER, "1".."12" (Catalog::monthLabel, the one spelling both
+            scopes read, and which Catalog::categorySql produces too), so a query can
+            compare it: month:>5. */
         setData(index(row, G::MonthColumn), Catalog::monthLabel(createdDT.date().month()));
         /*  The day of the MONTH, "1".."31", not the date: Year, Month and Day are three
             independent categories that AND together, so "the 15th of every month" is a

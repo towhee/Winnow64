@@ -1514,7 +1514,7 @@ void tst_catalog::migrationStoresCaptureAsTheWallClock()
 
     /* The fields the file records, in both the category SQL and the row read back. */
     QCOMPARE(cat.categoryItems(G::DayColumn).value("15"), 1);
-    QCOMPARE(cat.categoryItems(G::MonthColumn).value("Jun"), 1);
+    QCOMPARE(cat.categoryItems(G::MonthColumn).value("6"), 1);
     QCOMPARE(cat.mostRecentCaptureDate(), QDate(2024, 6, 15));
     const QVector<CatalogRow> rows = cat.searchRows(CatalogQuery(), 0);
     QCOMPARE(rows.size(), 1);
@@ -2026,11 +2026,12 @@ void tst_catalog::categoryItemsMatchWhatTheDatamodelWrites()
     QCOMPARE(cat.categoryItems(G::YearColumn).value("2024"), 2);
     QCOMPARE(cat.categoryItems(G::DayColumn).value("15"), 2);
 
-    /* Month is the English abbreviation Catalog::monthLabel spells, NOT a locale's
-       month name and not "06": the datamodel writes that string into G::MonthColumn,
-       so the SQL CASE has to produce the same one or the same June would be two
-       different filter items in the two scopes. */
-    QCOMPARE(cat.categoryItems(G::MonthColumn).value("Jun"), 2);
+    /* Month is the NUMBER Catalog::monthLabel spells, unpadded -- "6", not "06" and
+       not a name: the datamodel writes that string into G::MonthColumn, so the SQL has
+       to produce the same one or the same June would be two different filter items in
+       the two scopes. A number so a query can compare it (month:>5). */
+    QCOMPARE(cat.categoryItems(G::MonthColumn).value("6"), 2);
+    QVERIFY(!cat.categoryItems(G::MonthColumn).contains("06"));
     QCOMPARE(cat.categoryItems(G::MonthColumn).value(Catalog::monthLabel(6)), 2);
 
     /* ISO is right-justified to six, which is what BuildFilters does to the datamodel's

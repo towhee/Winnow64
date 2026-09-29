@@ -10,6 +10,7 @@
 class QComboBox;
 class QLabel;
 class QLineEdit;
+class QPlainTextEdit;
 class QPushButton;
 class QToolButton;
 class QVBoxLayout;
@@ -27,8 +28,14 @@ class QueryGroupWidget;
     modifier nobody is told about.
 
     THE TEXT BELOW THE ROWS IS THE SAME QUERY, live: every change to the rows rewrites
-    it, and editing it (Return) rebuilds the rows. A parse problem is shown under it and
-    the rows keep what could be read.
+    it, and editing it (Return, or leaving the box) rebuilds the rows. A parse problem is
+    shown under it and the rows keep what could be read. Four lines high and scrolling,
+    because a real query outgrows one line; Shift+Return is a line break, which the
+    grammar reads as a space.
+
+    A VALUE THE LIBRARY DOES NOT HOLD IS RED: when a field offers typeahead (camera,
+    keyword, collection ...) and nothing it offers contains what was typed, the value box
+    turns red, so a misspelt name is seen before the query finds nothing.
 */
 class QueryBuilderWidget : public QWidget
 {
@@ -49,12 +56,15 @@ public:
 signals:
     void changed();
 
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
     void rowsChanged();                 // rows -> text
     void textEdited();                  // text -> rows
 
     QueryGroupWidget *root = nullptr;
-    QLineEdit *textEdit = nullptr;
+    QPlainTextEdit *textEdit = nullptr;
     QLabel *errorLabel = nullptr;
     Suggestions suggest;
     bool syncing = false;
@@ -67,6 +77,11 @@ private:
                 in the Queries panel as well (saveAsQueryRequested) without closing.
     SavedQuery  a Query from the Queries panel: a Name field above the builder, and OK
                 disabled until there is a name.
+
+    TEST counts the loaded images the query matches, through a counter MW supplies
+    (setCounter) -- the answer to "is this the query I meant?" before it is applied or
+    saved. The result is cleared as soon as the query changes, so a stale count is never
+    on screen beside a different query. No counter, no button.
 */
 class QueryBuilderDialog : public QDialog
 {
@@ -74,8 +89,11 @@ class QueryBuilderDialog : public QDialog
 
 public:
     enum Mode { AdHoc, SavedQuery };
+    /*  (matching, total) loaded rows for a query. */
+    using Counter = std::function<QPair<int, int>(const Query::Expr &)>;
 
     QueryBuilderDialog(Mode mode, QWidget *parent = nullptr);
+    void setCounter(Counter c);
 
     QueryBuilderWidget *builder() const { return build; }
     void setName(const QString &name);
@@ -91,6 +109,9 @@ private:
     QueryBuilderWidget *build = nullptr;
     QLineEdit *nameEdit = nullptr;
     QPushButton *okBtn = nullptr;
+    QPushButton *testBtn = nullptr;
+    QLabel *testResult = nullptr;
+    Counter counter;
 };
 
 #endif // QUERYBUILDER_H

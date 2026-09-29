@@ -1,6 +1,9 @@
 #include <QtTest>
 #include <QComboBox>
+#include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QPushButton>
 #include "Dialogs/querybuilder.h"
 
 /*
@@ -22,6 +25,8 @@ private slots:
     void loadsAndReturnsANestedQuery();
     void suggestionsCanBeSetAgain();
     void textBoxRebuildsTheRows();
+    void aValueTheLibraryLacksIsRed();
+    void testButtonCountsAndClearsWhenTheQueryChanges();
 };
 
 void tst_querybuilder::opensEmptyInBothModes()
@@ -72,13 +77,63 @@ void tst_querybuilder::suggestionsCanBeSetAgain()
 void tst_querybuilder::textBoxRebuildsTheRows()
 {
     QueryBuilderWidget w;
-    QLineEdit *text = nullptr;
-    for (QLineEdit *e : w.findChildren<QLineEdit *>())
-        if (e->toolTip().startsWith("The same query")) text = e;
+    auto *text = w.findChild<QPlainTextEdit *>();
     QVERIFY(text);
-    text->setText("rating:5 -label:Red");
-    emit text->returnPressed();
+    text->setPlainText("rating:5\n-label:Red");     // a line break reads as a space
+    QTest::keyClick(text, Qt::Key_Return);
     QCOMPARE(w.expr().toText(), QString("rating:5 -label:Red"));
+}
+
+static QLineEdit *valueBox(QWidget *w, const QString &text)
+{
+    for (QLineEdit *e : w->findChildren<QLineEdit *>())
+        if (e->text() == text && e->isVisibleTo(w)) return e;
+    return nullptr;
+}
+
+void tst_querybuilder::aValueTheLibraryLacksIsRed()
+{
+    QueryBuilderDialog dlg(QueryBuilderDialog::AdHoc);
+    dlg.builder()->setSuggestions([](const QString &key) {
+        return key == "camera" ? QStringList{"Z 9", "Z 8"} : QStringList();
+    });
+    dlg.setExpr(Query::Expr::parse("camera:Z7 iso:12345"));
+    QLineEdit *bad = valueBox(&dlg, "Z7");
+    QVERIFY(bad);
+    QVERIFY(bad->styleSheet().contains("#d06060"));
+    // a number field offers nothing, so nothing typed there is "missing"
+    QLineEdit *iso = valueBox(&dlg, "12345");
+    QVERIFY(iso);
+    QVERIFY(iso->styleSheet().isEmpty());
+    // on its way to a match is not a mistake
+    bad->setText("Z");
+    QVERIFY(bad->styleSheet().isEmpty());
+}
+
+void tst_querybuilder::testButtonCountsAndClearsWhenTheQueryChanges()
+{
+    QueryBuilderDialog dlg(QueryBuilderDialog::SavedQuery);
+    QPushButton *test = nullptr;
+    for (QPushButton *b : dlg.findChildren<QPushButton *>())
+        if (b->text() == "Test") test = b;
+    QVERIFY(test);
+    QVERIFY(!test->isVisibleTo(&dlg));              // no counter, no button
+    dlg.setCounter([](const Query::Expr &) { return QPair<int, int>{1284, 43050}; });
+    QVERIFY(test->isVisibleTo(&dlg));
+
+    dlg.setExpr(Query::Expr::parse("rating:>=3"));
+    test->click();
+    QLabel *result = nullptr;
+    for (QLabel *l : dlg.findChildren<QLabel *>())
+        if (l->text().contains("loaded images match")) result = l;
+    QVERIFY(result);
+    QVERIFY(result->text().startsWith(QLocale().toString(1284)));
+
+    // the count belongs to the query it was made for
+    auto *text = dlg.findChild<QPlainTextEdit *>();
+    text->setPlainText("rating:5");
+    QTest::keyClick(text, Qt::Key_Return);
+    QVERIFY(result->text().isEmpty());
 }
 
 QTEST_MAIN(tst_querybuilder)

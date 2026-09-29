@@ -411,17 +411,20 @@ public:
     static QString availabilityLabel(int code);
     static int availabilityCode(const QString &label);
 
-    /*  THE MONTH NAMES SPELLED ONCE, for the same reason the availability labels are:
-        the datamodel writes G::MonthColumn from this and categorySql builds its CASE
-        from it, so a folder and the library cannot disagree about what June is called.
-        DELIBERATELY NOT LOCALISED -- QDate::toString("MMM") follows the system locale,
-        which would make the value a user's language rather than a fact about the image,
-        and would not match the English CASE the SQL side has to spell out. month is
-        1-12; anything else returns an empty string, which is what a row with no capture
-        date holds. */
+    /*  THE MONTH SPELLED ONCE, for the same reason the availability labels are: the
+        datamodel writes G::MonthColumn from this and categorySql produces the same
+        text, so a folder and the library cannot disagree about what June is.
+
+        A NUMBER, "1".."12", unpadded like the day (2026-09-29; it was "Jan".."Dec").
+        A name cannot be compared -- month:>5 in a query (Utilities/queryexpr.h) needs
+        the number -- and a number is not a language, which the name had to be kept
+        from becoming (QDate::toString("MMM") follows the system locale). month is 1-12;
+        anything else returns an empty string, which is what a row with no capture date
+        holds. A saved Library filter that checked a month by NAME no longer restores
+        into the category. */
     static QString monthLabel(int month);
-    /*  The 12 names in calendar order -- what Filters uses to insert the items in a
-        sequence rather than alphabetically. */
+    /*  "1".."12" in calendar order -- what Filters uses to insert the items as a
+        sequence ("10" would otherwise sort before "2"). */
     static QStringList monthLabels();
 
     /*  image.captured is the CAMERA'S WALL CLOCK, not an instant: the date and time
