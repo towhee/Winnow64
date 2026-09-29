@@ -285,7 +285,7 @@ void BuildFilters::update()
         /*  A LOAD RUNNING, not "every row read" -- see SortFilter::filterAcceptsRow.
             G::allMetadataAttempted flaps false whenever the scroll-in verifier clears a
             stale row, and this then skipped the rebuild silently. */
-        if (!G::isModifyingDatamodel) {
+        if (!G::isModifyingDatamodel && !G::isLoadRunning) {
             publishSnapshot();     // GUI thread
             start(NormalPriority);
         }
@@ -315,7 +315,7 @@ void BuildFilters::updateAllCounts()
     if (filters->filtersBuilt) {
         action = Action::UpdateAllCounts;
         // Same gate, same reason as update().
-        if (!G::isModifyingDatamodel) {
+        if (!G::isModifyingDatamodel && !G::isLoadRunning) {
             publishSnapshot();     // GUI thread
             start(NormalPriority);
         }
@@ -383,7 +383,7 @@ void BuildFilters::updateCategory(BuildFilters::Category category, AfterAction n
             the rebuild AND returned with the proxy still suspended above, so a keyword
             (or rating, or label) edited in a catalog scope updated the file and the model
             but never the filter category. */
-        if (!G::isModifyingDatamodel) {
+        if (!G::isModifyingDatamodel && !G::isLoadRunning) {
             publishSnapshot();     // GUI thread, before either route
             if (runSync) run();     // inline on GUI thread (no race with filterChange)
             else start(NormalPriority);

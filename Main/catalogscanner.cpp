@@ -91,7 +91,7 @@ bool CatalogScanner::shouldPause() const
     anybody was using. Pausing still satisfies what those callers want -- no further
     allocation from here while they tear down -- without throwing the pass away.
 */
-    return G::isModifyingDatamodel || G::stop;
+    return G::isModifyingDatamodel || G::isLoadRunning || G::stop;
 }
 
 bool CatalogScanner::waitWhilePaused()

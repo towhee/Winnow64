@@ -344,8 +344,11 @@ public:
         mid-load, when row numbers are in flight.
         fillVersionRow: write a version row's values. false if its master's metadata
         has not been captured or no longer lists the version.
-        versionKeysOf: the version keys a master's sidecar lists, in id order. */
+        versionKeysOf: the version keys a master's sidecar lists, in id order.
+        versionRowKeys: the keys of the version rows the model holds, from the path hash
+        rather than a walk of the rows. */
     void versionRowChanges(QStringList &add, QStringList &remove) const;
+    QStringList versionRowKeys() const;
     bool fillVersionRow(int row);
     /*  A version's recipe was just saved (DevelopProperties -> MW::devPreviewUpdated):
         bring the captured summary in line so a later refill does not revert the row's
@@ -458,7 +461,7 @@ public:
     void removeFolder(const QString &folderPath);
 
     QMutex dmMutex;
-    QReadWriteLock fPathRowLock;
+    mutable QReadWriteLock fPathRowLock;    // mutable: const readers (versionRowKeys) lock it
     QReadWriteLock fPathRawInfoLock;
 
     bool isProcessingFolders = false;
@@ -946,7 +949,8 @@ private:
     void insertCatalogBatch();
     void finishCatalogFill();
     QVector<CatalogRow> pendingCatalogRows;
-    int pendingCatalogAt = 0;
+    int pendingCatalogAt = 0;           // CatalogRows consumed (images, not model rows)
+    int catalogFillStartRow = 0;        // rowCount() when the fill began: 0 = replacing
     /*  Where the streamed fill's time actually goes, in nanoseconds, accumulated across
         batches and reported once in finishCatalogFill under G::isPerfProbe. The fill is
         the only part of a catalog scope that is per-row, so it is the only part that can

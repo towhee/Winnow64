@@ -61,6 +61,7 @@ std::atomic<bool> allMetadataAttempted{false};
 std::atomic<bool> iconChunkLoaded{false};
 std::atomic<int> dmInstance{0};
 std::atomic<bool> isModifyingDatamodel{false};
+std::atomic<bool> isLoadRunning{false};
 
 
 // temp while resolving issues, set false to not use

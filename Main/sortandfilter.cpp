@@ -231,14 +231,15 @@ void MW::filterChange(QString source)
         happened. In a catalog scope it did not recover on its own, because every filter
         change moves the visible window and the verifier then finds more stale rows.
 
-        G::isModifyingDatamodel is set by the two paths that actually BUILD the model
+        G::isLoadRunning is set by the two paths that actually BUILD the model
         (MW::folderSelectionChange, MW::loadCatalogScope) and cleared when the load
-        completes; refreshStaleRows does not touch it. That is the distinction that
+        completes; refreshStaleRows does not touch it. (G::isModifyingDatamodel alone was
+        not enough: a replacing load's stop() clears it at once -- see G::isLoadRunning.) That is the distinction that
         matters -- the model is fully populated while a handful of its rows are re-read,
         and filtering it is perfectly well defined. A row whose metadata has not landed
         does not match an active filter, and BuildFilters re-runs when it does.
     */
-    if (G::isModifyingDatamodel || G::stop) {
+    if (G::isModifyingDatamodel || G::isLoadRunning || G::stop) {
         dm->sf->suspend(false, "MW::filterChange early return");
         return;
     }

@@ -168,7 +168,7 @@ void ScrollVerify::runWholeSetPage()
     /*  THE SCROLL PASS OUTRANKS THE SWEEP, and a load outranks both. Deferring rather
         than skipping keeps the sweep's place: the page is collected when the slot is
         free, not abandoned. */
-    if (inFlight || G::isModifyingDatamodel) {
+    if (inFlight || G::isModifyingDatamodel || G::isLoadRunning) {
         wholeSet.start(kWholeSetPaceMs);
         return;
     }

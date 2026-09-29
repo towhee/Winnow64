@@ -33,16 +33,14 @@ void MW::scheduleVersionReconcile()
 void MW::reconcileVersionRows(const QString &src, bool atLoadEnd)
 {
     if (G::isLogger) G::log("MW::reconcileVersionRows", src);
-    /*  NOT UNTIL THE LOAD HAS FINISHED. G::isModifyingDatamodel cannot say so: both
-        loadCatalogScope and folderSelectionChange set it and then call stop(), which
-        clears it, so it is false for the whole fill. A master read mid-fill then ran
-        applyModelChange mid-fill -- new instance, readers restarted while loadingModel
-        still refused their icons -- and those thumbnails never painted. loadingModel
-        covers the fill; metadataCompleteDone (cleared by folderChanged, set by
-        metadataComplete, which runs its own reconcile with atLoadEnd) covers the tail
-        after it. */
-    if (!dm || G::stop || dm->loadingModel) return;
-    if (!atLoadEnd && (G::isModifyingDatamodel || !metadataCompleteDone)) return;
+    /*  NOT UNTIL THE LOAD HAS FINISHED -- G::isLoadRunning. This once tested
+        G::isModifyingDatamodel alone, which a replacing load's stop() clears at once, so
+        a master read mid-fill ran applyModelChange mid-fill: new instance, readers
+        restarted while loadingModel still refused their icons, and those thumbnails never
+        painted. MW::metadataComplete clears isLoadRunning and then calls this itself,
+        with atLoadEnd because an Add load's isModifyingDatamodel is still set there. */
+    if (!dm || G::stop || dm->loadingModel || G::isLoadRunning) return;
+    if (!atLoadEnd && G::isModifyingDatamodel) return;
 
     dm->sf->setShowAllVersions(showAllVersionsAction && showAllVersionsAction->isChecked());
 
@@ -59,11 +57,8 @@ void MW::reconcileVersionRows(const QString &src, bool atLoadEnd)
     /*  Refill the version rows that stayed: a master re-read (a rating written by
         another application, a version renamed in another window) changes what they
         show. Rows applyModelChange just inserted were filled there. */
-    const int n = dm->rowCount();
-    for (int r = 0; r < n; ++r) {
-        const QString k = dm->index(r, G::PathColumn).data(G::KeyRole).toString();
-        if (VersionKey::isVersion(k) && !add.contains(k)) dm->fillVersionRow(r);
-    }
+    for (const QString &k : dm->versionRowKeys())
+        if (!add.contains(k)) dm->fillVersionRow(dm->rowFromKey(k));
 }
 
 void MW::setVersionsExpanded(const QString &masterKey, bool expanded)
@@ -191,7 +186,13 @@ void MW::newVersion()
     current image, selected, which is where the user goes next: to edit it.
 */
     if (G::isLogger) G::log("MW::newVersion");
-    if (!dm || G::isModifyingDatamodel) return;
+    if (!dm) return;
+    /*  The version row is inserted through applyModelChange, which a load in progress
+        would have moving rows under it (see reconcileVersionRows). */
+    if (G::isModifyingDatamodel || G::isLoadRunning) {
+        G::popup->showPopup("Please wait until the images have finished loading.", 2000);
+        return;
+    }
 
     QStringList keys;
     for (const QModelIndex &idx : dm->selectionModel->selectedRows())
