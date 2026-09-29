@@ -2573,6 +2573,19 @@ void DataModel::finishCatalogFill()
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  restoreSort"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
+    /*  THE VERSION ROWS ARE FILTERED AGAIN, now that dynamic filtering is back on. The
+        proxy tested each one when insertRows made it -- before insertCatalogBatch wrote
+        its key -- so it read VersionIdRole 0, took it for a master and accepted it, and
+        the batch's dataChanged arrived while dynamic filtering was off. A collapsed
+        group therefore showed its versions in the Library (and the badge's first click
+        "expanded" what was already showing). One dataChanged per version row makes the
+        proxy re-test exactly those rows -- the ones whose acceptance with no filter set
+        turns on the key. */
+    for (const QString &k : versionRowKeys()) {
+        const int r = fPathRowValue(k);
+        if (r >= 0) emit dataChanged(index(r, 0), index(r, columnCount() - 1));
+    }
+
     emit folderChange(aborted);
     if (probeBig)
         qDebug().noquote() << "[PERF] finishCatalogFill  emit folderChange"
@@ -7574,15 +7587,33 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     if (loading || !p || p->acceptsEverything()) {
         finished = true;
         /*  VERSIONS. With no filter, a collapsed group shows only its master. With a
-            filter every row -- version or not -- stands on its own values, below: a
-            filter asks "which of these match", and a matching version hidden behind a
-            master that does not match would be a wrong answer. */
+            filter, see below: collapsed still hides a version, but only behind a master
+            the filter shows. */
         return !isCollapsedVersion(sourceRow, sourceParent);
     }
 
     const bool ok = p->accepts([&](int column) {
         return sourceModel()->index(sourceRow, column, sourceParent).data(Qt::EditRole);
     });
+
+    /*  A COLLAPSED GROUP STAYS COLLAPSED UNDER A FILTER, as long as its master is shown.
+        This used to let every version stand on its own values whenever a filter was set,
+        so that a matching version was never hidden behind a master that did not match.
+        That concern is kept -- such a version still shows -- but the rule was broader
+        than it: in the Library a filter is almost always set (a folder in LibTree IS
+        one), so collapse did nothing there and the badge toggled a state nobody read. */
+    if (ok && isCollapsedVersion(sourceRow, sourceParent)) {
+        auto *dm = qobject_cast<DataModel *>(sourceModel());
+        const QString key = sourceModel()->index(sourceRow, 0, sourceParent)
+                                .data(G::KeyRole).toString();
+        const int mRow = dm ? dm->rowFromKey(VersionKey::sourceOf(key)) : -1;
+        if (mRow >= 0) {
+            const bool masterShown = p->accepts([&](int column) {
+                return sourceModel()->index(mRow, column, sourceParent).data(Qt::EditRole);
+            });
+            if (masterShown) { finished = true; return false; }
+        }
+    }
 
     finished = true;
     return ok;

@@ -7071,6 +7071,7 @@ void MW::metadataComplete(QString src)
         the build started here it cut that build short and left the Filters panel empty
         and greyed (155,000-row Library, 2026-09-28). */
     reconcileVersionRows(fun, /*atLoadEnd*/ true);
+    versionProbe("metadataComplete");     // VERSIONPROBE (temporary)
 
     /* One-shot cache housekeeping, deferred to here so it never competes with the folder
        load the user is waiting for, and run off the GUI thread because it stats every
