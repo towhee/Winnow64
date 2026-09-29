@@ -445,6 +445,12 @@ public:
     /*  The pending filter restore is the LIBRARY's (not a folder change's), so leaving
         the Library before it lands must cancel it -- see setScope. */
     bool libraryFilterRestorePending = false;
+    /*  The next replacing catalog load is the WHOLE Library the user just asked for
+        (MW::setCatalogScopeWhole): the picks question has been answered and "Loading the
+        library." is on screen, so MW::loadCatalogScope neither asks again nor replaces
+        the message with "Loading search results." Consumed there; cleared on leaving
+        the Library, so an agreement cannot outlive the request it was given for. */
+    bool pendingWholeLibrary = false;
     /*  THE VIEWS STAY COVERED UNTIL THE RESTORED FILTER HAS LANDED. A Library load with
         a filter to restore would otherwise show the whole unfiltered Library -- loupe,
         grid and filmstrip -- for the seconds the filter build takes, and then jump to
@@ -2953,7 +2959,6 @@ private:
     void scheduleVersionReconcile();
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     void toggleVersionsExpanded(const QString &key);
-    void versionProbe(const QString &where);    // VERSIONPROBE (temporary)
     void setShowAllVersions(bool show);
     bool versionReconcilePending = false;
     /*  The version operations (Develop > Versions, the thumbnail context menu). All

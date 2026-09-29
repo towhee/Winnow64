@@ -5896,7 +5896,7 @@ Two things I didn't change:
  - A remaining cost after the load. Once the load finishes, adding the one version row still runs the full applyModelChange over 155k rows: a filter pass (about 0.8 s) plus
    rebuilding the filters. A better long-term fix would be for the catalog fill to add version rows itself, since the index already lists them.
 
-
+Select from the Source or bookmarks panels.
 
 ==========================================================================================
 Keywords Manager

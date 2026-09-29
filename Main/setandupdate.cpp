@@ -559,6 +559,7 @@ void MW::setScope(G::Scope s, QString src)
     const bool changed = (G::scope != s);
     /*  Leaving the Library: remember how it was left, while it is still what is loaded. */
     if (changed && G::scope == G::Scope::Catalog) {
+        pendingWholeLibrary = false;
         saveLibraryState();
         /*  A Library filter restore still waiting for its build must not land on the
             folder being switched to. */
@@ -685,6 +686,27 @@ void MW::setCatalogScopeWhole(QString src)
 */
     if (G::isLogger) G::log("MW::setCatalogScopeWhole", src);
     if (catalogEmptyOpenManage(src)) return;
+
+    /*  SAY SO AT ONCE. The catalog search runs on a pool thread for seconds before
+        MW::loadCatalogScope tears anything down, and until then the screen kept what it
+        had -- the start prompt ("Select from the Source or Bookmarks panels."), or the
+        folder's image, as if nothing had been asked. Only when this starts a load:
+        setScope loads nothing if the scope is already the Library, and returns at once
+        while initializing.
+
+        THE PICKS QUESTION MOVES HERE, ahead of clearing the view: okToDiscardPicks must
+        be asked before anything that cannot be undone, and a cleared view with the folder
+        still loaded behind it is exactly that. loadCatalogScope then does not ask again. */
+    if (G::scope != G::Scope::Catalog && !G::isInitializing) {
+        if (!okToDiscardPicks("Opening the Library", "Open the Library")) {
+            setScope(G::scope, src + " refused");       // puts the toggle back
+            return;
+        }
+        pendingWholeLibrary = true;
+        imageView->clear();
+        if (scopesView) scopesView->clear();
+        setCentralMessage(tr("Loading the library."));
+    }
     setScope(G::Scope::Catalog, src);
 }
 

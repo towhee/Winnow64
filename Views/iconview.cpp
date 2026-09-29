@@ -1865,14 +1865,6 @@ void IconView::mousePressEvent(QMouseEvent *event)
 
     /*  The VERSIONS badge on a master opens or closes its group (Main/mwversions.cpp).
         A plain click only: with a modifier it is an ordinary selection click. */
-    // VERSIONPROBE (temporary): does the click reach the badge test, and hit it?
-    if (event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier)
-        qDebug().noquote() << "VERSIONPROBE click" << objectName()
-                           << "key =" << sfIdx.data(G::KeyRole).toString()
-                           << "versionCount =" << dm->sf->index(sfIdx.row(), 0)
-                                                     .data(G::VersionCountRole).toInt()
-                           << "badgeHit =" << iconViewDelegate->versionsBadgeHit(
-                                                  sfIdx, visualRect(sfIdx), event->pos());
     if (event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier
         && iconViewDelegate->versionsBadgeHit(sfIdx, visualRect(sfIdx), event->pos())) {
         m2->toggleVersionsExpanded(sfIdx.data(G::KeyRole).toString());
