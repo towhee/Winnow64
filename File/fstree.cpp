@@ -931,6 +931,61 @@ void FSTree::scrollToCurrent()
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
+bool FSTree::addFolderToSelection(const QString &folderPath, bool recurse)
+{
+/*
+    The Cmd-click toggle-add, from code: FolderOp::Add with resetDataModel false (never
+    refused -- it loses no picks), and the highlight added to the existing selection. A
+    recursive root selects its subtree too, as an Opt-click does, without clearing what
+    is already selected.
+*/
+    if (G::isLogger) G::log("FSTree::addFolderToSelection", folderPath);
+    if (folderPath.isEmpty() || !QDir(folderPath).exists()) return false;
+    if (!emitFolderSelectionChange(folderPath, G::FolderOp::Add, false, recurse))
+        return false;
+    if (recurse) selectRecursively(folderPath);
+    else {
+        const QModelIndex index = fsFilter->mapFromSource(fsModel->index(folderPath));
+        selectionModel()->select(index, QItemSelectionModel::Select
+                                            | QItemSelectionModel::Rows);
+    }
+    return true;
+}
+
+void FSTree::scrollToCurrentWhenLoaded(const QString &folderPath, int windowMs)
+{
+/*
+    AT STARTUP ONE SCROLL IS NOT ENOUGH. QFileSystemModel lists directories on its own
+    thread: FSTree::select makes the target's index at once, but its siblings -- and its
+    ancestors' siblings -- are inserted as their listings arrive, after any scroll made
+    now, and they push the selected folder back out of view. The reopened folder
+    ("Reopen as it was left") loaded and was highlighted, but the tree stayed at the top.
+
+    So re-centre each time a directory on the folder's path finishes loading
+    (directoryLoaded), for a bounded window; scrollToCurrent does nothing once the item
+    is visible. The window ends the connection so a later listing -- the user browsing
+    elsewhere -- never drags the tree back.
+*/
+    if (G::isLogger) G::log("FSTree::scrollToCurrentWhenLoaded", folderPath);
+    if (folderPath.isEmpty()) return;
+    const QString target = QDir::cleanPath(folderPath);
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn = connect(fsModel, &QFileSystemModel::directoryLoaded, this,
+                    [this, target](const QString &loaded){
+        const QString dir = QDir::cleanPath(loaded);
+        const bool onPath = target == dir || target.startsWith(dir + "/")
+                            || dir == "/";
+        if (!onPath) return;
+        // after the rows the listing inserted have been laid out
+        QTimer::singleShot(0, this, [this]{ scrollToCurrent(); });
+    });
+    QTimer::singleShot(windowMs, this, [this, conn]{
+        disconnect(*conn);
+        scrollToCurrent();
+    });
+    scrollToCurrent();
+}
+
 bool FSTree::select(QString folderPath , QString modifier, QString src)
 {
     if (G::isLogger || G::isFlowLogger) {

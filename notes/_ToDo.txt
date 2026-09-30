@@ -9,18 +9,15 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
-- Rename progress update after catalog loads and scan is started from Catalog to 'Scanning...'
-- Library loading flaky, thumbs rebuild several times, central widget msg blanked, ...
+- Fine-tune keywords managing
+- What is the catalog panel?
+- Download models JIT
 - Review rename file(s) - simple option only rename sleelected, not all with same base name
-- Filters tree parent/child alignment
 - Thumbnail items tooltips gone
 - Thumbnail tooltip over file name showing borders tooltip.
-- Fine-tune keywords managing
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
 - Edit title not persistent or applying to embellish
-- If in Library, bookmark applies Folders filter OR
-  Separate workspaces for Library and Folders
 - AI keywording
 - Redo Develop help
 - Edit Winnow shortcutse
@@ -35,6 +32,7 @@ BUGS / TO
 - Tweak workspaces - more sophicated default
 - Review activity log
 - Review issues log
+- Review window/panel shortcuts
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
 - Auto keyword generator (k shortcut?)
@@ -54,16 +52,9 @@ BUGS / TO
 - Spot fill quality issue (reassess)
 - Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
-- Clarity: DONE 2026-08-20 (Develop op #6.5 in Basic, between Texture and Dehaze;
-  midtone-weighted + halo-guarded). Shipped with the Develop/localcontrast.h extraction
-  that de-duplicated Texture/Clarity/Dehaze/Sharpen. See RawDecode_ToDo #32b.
-- Sharpen: DONE 2026-08-20 (Develop op #8.5, new "Detail" panel: Amount/Radius/Detail/
-  Masking; local Denoise moved there from Effects). Soften NOT done -- declined, negative
-  Texture and Denoise already cover it. See RawDecode_ToDo #32.
 - Review what is needed in ReleaseExtras
 - Drag dock tabify to the right (last) - WIP
 - Reformat the documentation.txt (when have lots of tokens)
-- Add Develop Panel to Full Screen defaults in properties
 - The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
 G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
 want to drop the flags and bake the behavior in, but no rush; keeping them is cheap

@@ -456,7 +456,7 @@ void BuildFilters::reset(bool collapse)
 
     filters->reset();
     afterAction = AfterAction::NoAfterAction;
-    if (collapse) filters->collapseAll();
+    if (collapse) filters->collapseCategories();     // groups stay as they are
     action = Action::Reset;
     isReset = true;
 }

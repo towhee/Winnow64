@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
 
 /*  *******************************************************************************************
@@ -588,11 +589,52 @@ void MW::clearAllFilters()
     filterChange("MW::clearAllFilters");
 }
 
+void MW::filterOnKeyword(const QString &path)
+{
+/*
+    Show only the images carrying this keyword: every other filter -- categories, the
+    search text, the pick/rating/colour actions -- is cleared, then the keyword is
+    included, then ONE filterChange runs.
+
+    NO ITEM, NO CHANGE. A keyword in the list that nothing loaded carries has no Filters
+    item; clearing the user's filters and then failing to set the new one would lose
+    their state for nothing, so this says so and leaves everything as it was.
+*/
+    if (G::isLogger) G::log("MW::filterOnKeyword", path);
+    if (!filters || !dm || path.isEmpty()) return;
+    if (filters->keywordItemCount(path) < 0) {
+        G::popup->showPopup(QString("No images here carry \"%1\".")
+                                .arg(keywordLeafOf(path)), 2000);
+        return;
+    }
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+    uncheckAllFilters();
+    filters->searchString = "";
+    dm->searchStringChange("");
+    filters->checkKeywordItem(path);
+    filterChange("MW::filterOnKeyword");
+}
+
 void MW::setFilterSolo()
 {
     if (G::isLogger) G::log("MW::setFilterSolo");
     filters->setSoloMode(filterSoloAction->isChecked());
     settings->setValue("isSoloFilters", filterSoloAction->isChecked());
+}
+
+void MW::setFilterGroups()
+{
+    if (G::isLogger) G::log("MW::setFilterGroups");
+    const bool on = filterGroupsAction->isChecked();
+    filters->setGrouped(on);
+    if (filterGroupsBtn) {
+        filterGroupsBtn->setActive(on);
+        filterGroupsBtn->setToolTip(on ? tr("Filter categories are grouped. Click to show "
+                                            "them as one flat list.")
+                                       : tr("Filter categories are a flat list. Click to "
+                                            "group them under headings."));
+    }
+    settings->setValue("isGroupedFilters", on);
 }
 
 void MW::filterLastDay()
@@ -723,7 +765,10 @@ void MW::sortChange(QString source)
         return;
     }
 
-    setCentralMessage("Sorting images");
+    /*  Not over a load's cover: the message there is the load's, uninterrupted until it
+        is ready. The Browse layout switch re-sorts the folder being left, and this put
+        "Sorting images" in the middle of "Loading the library." (timeline probe). */
+    if (!loadCurtainUp) setCentralMessage("Sorting images");
 
     // save selection prior to sorting
     sel->save("MW::sortChange");
@@ -758,6 +803,9 @@ void MW::sortChange(QString source)
         emit imageCacheFilterChange(fPath, "SortChange");
 
     scrollToCurrentRowIfNotVisible();
+    /*  Every position now holds a different image: restart the icon loader for the
+        ones on screen. Nothing else does after a sort. */
+    resyncIconLoaderAfterReorder("MW::sortChange " + source);
     G::popup->reset();
 }
 

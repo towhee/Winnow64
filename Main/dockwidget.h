@@ -97,6 +97,9 @@ public:
        rules that close to each other read as a mistake. */
     void setBottomBorderVisible(bool visible);
     void setTitle(QString title);
+    /*  Colour the title text; an invalid colour goes back to the stylesheet's. The
+        Filters dock lights its title while anything is filtering. */
+    void setTitleColor(const QColor &color);
     QSize sizeHint() const override;
 protected:
     void paintEvent(QPaintEvent *event) override;

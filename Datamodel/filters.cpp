@@ -114,7 +114,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
        category header uses, which sits on a different row. (An amber "ambiguous keyword"
        colour lived here too, until path identity made ambiguity impossible.) */
     itemIsExcludedColor = QColor(0xd0, 0x60, 0x60);
-    itemIsUnfiledColor = QColor(0x9a, 0x5a, 0x5a);
+    itemIsUnfiledColor = G::unfiledKeywordColor;
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -173,6 +173,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     createPredefinedFilters();
     createDynamicFilters();
+    createGroups();
     updateKeywordModeLabel();       // the any/all control is there from the start
     setCategoryBackground(a, b);
 
@@ -211,6 +212,15 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     debugFilters = false;
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
+    /*  The header arrows follow the expansion however it changed -- a click, the branch
+        control of a nested header, or a programmatic expand. */
+    auto syncIcon = [this](QTreeWidgetItem *item) {
+        if (!isGroupHeader(item) && !isCategoryHeader(item)) return;
+        item->setIcon(0, QIcon(item->isExpanded() ? ":/images/branch-open-winnow.png"
+                                                  : ":/images/branch-closed-winnow.png"));
+    };
+    connect(this, &QTreeWidget::itemExpanded, this, syncIcon);
+    connect(this, &QTreeWidget::itemCollapsed, this, syncIcon);
 
     filterOnAction = new QAction("Filter on...", this);
     filterOnAction->setToolTip("Add a filter category for any column that does not have "
@@ -228,7 +238,7 @@ void Filters::createPredefinedFilters()
         qDebug() << "Filters::createPredefinedFilters"
                     ;
     search = new QTreeWidgetItem(this);
-    search->setText(0, "Search");
+    search->setText(0, catSearchLabel);
     search->setFont(0, categoryFont);
     search->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
     search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
@@ -292,28 +302,29 @@ void Filters::createDynamicFilters()
         qDebug() << "Filters::createDynamicFilters"
                     ;
 
-    // Folders sits directly under Search, above Picks; Collections under Folders
-    folders = new QTreeWidgetItem(this);
-    collections = new QTreeWidgetItem(this);
-    queries = new QTreeWidgetItem(this);
-    picks = new QTreeWidgetItem(this);
-    ratings = new QTreeWidgetItem(this);
-    labels = new QTreeWidgetItem(this);
-    types = new QTreeWidgetItem(this);
-    years = new QTreeWidgetItem(this);
-    months = new QTreeWidgetItem(this);
-    days = new QTreeWidgetItem(this);
-    models = new QTreeWidgetItem(this);
-    lenses = new QTreeWidgetItem(this);
-    focalLengths = new QTreeWidgetItem(this);
-    isos = new QTreeWidgetItem(this);
-    titles = new QTreeWidgetItem(this);
-    keywords = new QTreeWidgetItem(this);
-    creators = new QTreeWidgetItem(this);
-    gps = new QTreeWidgetItem(this);
-    availability = new QTreeWidgetItem(this);
-    // missingThumbs = new QTreeWidgetItem(this);
-    compare = new QTreeWidgetItem(this);
+    /*  Created DETACHED: createGroups decides where they go (setGrouped places them in
+        categoryOrder, flat or under their group). */
+    folders = new QTreeWidgetItem();
+    collections = new QTreeWidgetItem();
+    queries = new QTreeWidgetItem();
+    picks = new QTreeWidgetItem();
+    ratings = new QTreeWidgetItem();
+    labels = new QTreeWidgetItem();
+    types = new QTreeWidgetItem();
+    years = new QTreeWidgetItem();
+    months = new QTreeWidgetItem();
+    days = new QTreeWidgetItem();
+    models = new QTreeWidgetItem();
+    lenses = new QTreeWidgetItem();
+    focalLengths = new QTreeWidgetItem();
+    isos = new QTreeWidgetItem();
+    titles = new QTreeWidgetItem();
+    keywords = new QTreeWidgetItem();
+    creators = new QTreeWidgetItem();
+    gps = new QTreeWidgetItem();
+    availability = new QTreeWidgetItem();
+    // missingThumbs = new QTreeWidgetItem();
+    compare = new QTreeWidgetItem();
 
     createFilter(picks, catPick);
     createFilter(ratings, catRating);
@@ -342,6 +353,187 @@ void Filters::createDynamicFilters()
     createFilter(availability, catAvailability);
     // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
+}
+
+Filters::~Filters()
+{
+    // flat: the group headers are detached and childless, so not the tree's to delete
+    for (const Group &g : std::as_const(groups))
+        if (!g.item->treeWidget()) delete g.item;
+}
+
+void Filters::createGroups()
+{
+/*
+    The six group headers and their members, then the categories placed flat. The
+    member lists ARE the category order -- see categoryOrder -- so the flat and grouped
+    arrangements cannot disagree about it.
+*/
+    if (G::isLogger) G::log("Filters::createGroups");
+    auto add = [this](const QString &name, const QList<QTreeWidgetItem *> &cats) {
+        Group g;
+        g.item = new QTreeWidgetItem();             // detached until grouped
+        g.item->setText(0, name);
+        g.item->setData(0, GroupRole, name);
+        QFont f = categoryFont;
+        f.setBold(true);
+        g.item->setFont(0, f);
+        g.item->setIcon(0, QIcon(":/images/branch-open-winnow.png"));
+        g.cats = cats;
+        groups << g;
+    };
+    add(tr("Folders and files"), {folders, collections, queries, types});
+    add(tr("Time"),              {years, months, days});
+    add(tr("Selection"),         {picks, ratings, labels});
+    add(tr("Camera"),            {models, lenses, focalLengths, isos});
+    add(tr("Metadata"),          {titles, creators, gps, keywords});
+    add(tr("Status"),            {availability, compare});
+
+    for (QTreeWidgetItem *cat : categoryOrder()) addTopLevelItem(cat);
+}
+
+QList<QTreeWidgetItem *> Filters::categoryOrder() const
+{
+    QList<QTreeWidgetItem *> out;
+    for (const Group &g : groups) out << g.cats;
+    return out;
+}
+
+QList<QTreeWidgetItem *> Filters::categoryHeaders() const
+{
+    QList<QTreeWidgetItem *> out;
+    out << search << categoryOrder() << sessionCats;
+    return out;
+}
+
+bool Filters::isGroupHeader(const QTreeWidgetItem *item) const
+{
+    return item != nullptr && item->data(0, GroupRole).isValid();
+}
+
+bool Filters::isCategoryHeader(const QTreeWidgetItem *item) const
+{
+/*
+    Structural rather than a list lookup: a category is whatever sits at the top of the
+    tree, or directly under a group. That keeps it right for session categories and for
+    a detached item, and it is O(1) in the tree walks that call it per item.
+*/
+    if (item == nullptr || isGroupHeader(item)) return false;
+    const QTreeWidgetItem *p = item->parent();
+    if (p == nullptr) return item->treeWidget() == this;
+    return isGroupHeader(p);
+}
+
+QTreeWidgetItem *Filters::categoryOf(const QTreeWidgetItem *item) const
+{
+    QTreeWidgetItem *c = const_cast<QTreeWidgetItem *>(item);
+    while (c != nullptr && !isCategoryHeader(c)) c = c->parent();
+    return c;
+}
+
+bool Filters::isFilterItem(const QTreeWidgetItem *item) const
+{
+    if (item == nullptr || isGroupHeader(item) || isCategoryHeader(item)) return false;
+    return categoryOf(item) != nullptr;
+}
+
+void Filters::setGrouped(bool on)
+{
+/*
+    Put the categories under their groups, or back at the top level, in the same order.
+
+    THE ITEMS ARE MOVED, NOT REBUILT, so every check, count, value and data role goes
+    with them and nothing is refiltered: the compiled predicate never depended on where
+    a category sits. What does NOT survive a take and re-insert is the VIEW's state --
+    expansion and hidden rows (including the keywords "Show unfiled only" hides) -- so
+    that is recorded first and put back after.
+
+    Search stays at the top level and is never moved, so an open editor on it survives.
+*/
+    if (G::isLogger) G::log("Filters::setGrouped", on ? "true" : "false");
+    if (on == grouped) return;
+    const bool wasGrouped = grouped;
+
+    QSet<QTreeWidgetItem *> expanded;
+    QSet<QTreeWidgetItem *> hidden;
+    for (QTreeWidgetItemIterator it(this); *it; ++it) {
+        if ((*it)->isExpanded()) expanded.insert(*it);
+        if ((*it)->isHidden()) hidden.insert(*it);
+    }
+
+    {
+        QMutexLocker locker(&mutex);
+        for (int i = topLevelItemCount() - 1; i >= 0; --i)
+            if (topLevelItem(i) != search) takeTopLevelItem(i);
+        for (const Group &g : std::as_const(groups)) g.item->takeChildren();
+
+        grouped = on;
+        for (const Group &g : std::as_const(groups)) {
+            if (grouped) {
+                addTopLevelItem(g.item);
+                g.item->addChildren(g.cats);
+            }
+            else addTopLevelItems(g.cats);
+        }
+        for (QTreeWidgetItem *cat : std::as_const(sessionCats)) addTopLevelItem(cat);
+    }
+
+    for (QTreeWidgetItem *item : std::as_const(hidden))
+        if (item->treeWidget() == this) item->setHidden(true);
+    for (QTreeWidgetItem *item : std::as_const(expanded))
+        if (item->treeWidget() == this) item->setExpanded(true);
+    /*  Groups start OPEN the first time: a panel of six closed headers hides every
+        category behind a click the user did not ask for. */
+    if (grouped && !wasGrouped)
+        for (const Group &g : std::as_const(groups))
+            if (!expanded.contains(g.item)) g.item->setExpanded(true);
+
+    updateGroupVisibility();
+    syncHeaderIcons();
+    setEachCatTextColor();
+}
+
+void Filters::updateGroupVisibility()
+{
+    if (!grouped) return;
+    for (const Group &g : std::as_const(groups)) {
+        bool anyShown = false;
+        for (QTreeWidgetItem *cat : g.cats)
+            if (!cat->isHidden()) { anyShown = true; break; }
+        if (g.item->isHidden() == anyShown) g.item->setHidden(!anyShown);
+    }
+}
+
+void Filters::syncHeaderIcons()
+{
+    auto sync = [](QTreeWidgetItem *item) {
+        item->setIcon(0, QIcon(item->isExpanded() ? ":/images/branch-open-winnow.png"
+                                                  : ":/images/branch-closed-winnow.png"));
+    };
+    for (QTreeWidgetItem *cat : categoryHeaders()) sync(cat);
+    if (grouped) for (const Group &g : std::as_const(groups)) sync(g.item);
+}
+
+void Filters::notifyFilteringState()
+{
+    bool any = false;
+    for (QTreeWidgetItem *cat : categoryHeaders())
+        if (!cat->isHidden() && isCatFiltering(cat)) { any = true; break; }
+    if (int(any) == lastFilteringState) return;
+    lastFilteringState = int(any);
+    emit filteringChanged(any);
+}
+
+void Filters::collapseCategories()
+{
+    if (G::isLogger) G::log("Filters::collapseCategories");
+    QList<QTreeWidgetItem *> openGroups;
+    if (grouped)
+        for (const Group &g : std::as_const(groups))
+            if (g.item->isExpanded()) openGroups << g.item;
+    collapseAll();
+    for (QTreeWidgetItem *g : std::as_const(openGroups)) g->setExpanded(true);
+    syncHeaderIcons();
 }
 
 QTreeWidgetItem *Filters::addSessionCategory(int column, const QString &name)
@@ -389,7 +581,9 @@ void Filters::removeSessionCategory(QTreeWidgetItem *category)
     if (activeCategory == category) activeCategory = nullptr;
 
     sessionCats.removeAll(category);
-    takeTopLevelItem(indexOfTopLevelItem(category));
+    // top-level in both arrangements (setGrouped appends them), but ask rather than assume
+    if (QTreeWidgetItem *p = category->parent()) p->removeChild(category);
+    else takeTopLevelItem(indexOfTopLevelItem(category));
     category->takeChildren();
     retiredSessionCats << category;
 
@@ -462,6 +656,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
     for (QTreeWidgetItem *cat : std::as_const(sessionCats)) setCategoryBackground(cat);
+    for (const Group &g : std::as_const(groups)) setCategoryBackground(g.item);
 }
 
 void Filters::removeChildrenDynamicFilters()
@@ -663,7 +858,7 @@ bool Filters::isAnyFilter()
     if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
         return true;
     while (*it) {
-        if ((*it)->parent() && (*it) != searchTrue) {
+        if (isFilterItem(*it) && (*it) != searchTrue) {
             /* Either state filters. An exclusion narrows the set just as an inclusion
                does, so a panel holding only exclusions must still report "filtered" --
                or the status bar says nothing is filtered while rows are missing. */
@@ -749,7 +944,7 @@ void Filters::setCategoryFilterStatus(QTreeWidgetItem *item)
         qDebug() << "Filters::setCategoryFilterStatus"
                     ;
 
-    if (!item->parent()) return;
+    if (!isFilterItem(item)) return;
 
     // is this category filtering after itemCheckStateHasChanged
     if (isCatFiltering(item->parent())) {
@@ -791,7 +986,7 @@ void Filters::disableColorZeroCountItems()
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent() && (*it)->parent() != search) {
+        if (isFilterItem(*it) && (*it)->parent() != search) {
            if ((*it)->text(2) == "0") (*it)->setForeground(0, QBrush(G::disabledColor));
             else (*it)->setForeground(0, QBrush(G::textColor));
         }
@@ -828,7 +1023,10 @@ void Filters::disableAllHeaders(bool disable)
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if (!(*it)->parent()) {
+        if (isGroupHeader(*it)) {
+            (*it)->setForeground(0, QBrush(disable ? G::disabledColor : G::textColor));
+        }
+        else if (isCategoryHeader(*it)) {
             if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
             else {
                 if (isCatFiltering(*it))
@@ -852,7 +1050,7 @@ void Filters::disableColorAllHeaders(bool disable)
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if (!(*it)->parent() && (*it) != search) {
+        if (isCategoryHeader(*it) && (*it) != search) {
             if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
             else (*it)->setForeground(0, QBrush(G::textColor));
         }
@@ -886,6 +1084,7 @@ void Filters::setEachCatTextColor()
                     ;
 
     QMutexLocker locker(&mutex);
+    QSet<QTreeWidgetItem *> filtering;      // categories lit, for their groups
 
     /*  ITEMS AT EVERY DEPTH, not the category's children. Keywords and Folders are
         trees: a library under one catalogued root is ONE top-level folder with hundreds
@@ -894,7 +1093,7 @@ void Filters::setEachCatTextColor()
         filtering nested category never lit its header. */
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if (!(*it)->parent() && (*it) != search) {
+        if (isCategoryHeader(*it) && (*it) != search) {
             const QList<QTreeWidgetItem *> items = itemsInCategory(*it);
             if (items.isEmpty())
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
@@ -916,6 +1115,7 @@ void Filters::setEachCatTextColor()
                 QColor colorToUse;
                 isChecked ? colorToUse = hdrIsFilteringColor : colorToUse = G::textColor;
                 (*it)->setForeground(0, QBrush(colorToUse));
+                if (isChecked) filtering.insert(*it);
              }
         }
         ++it;
@@ -930,6 +1130,17 @@ void Filters::setEachCatTextColor()
         if (searchFalse->checkState(0) == Qt::Checked)
             search->setForeground(0, QBrush(hdrIsFilteringColor));
     }
+
+    /*  A group is lit while anything in it filters, so a collapsed group still says
+        where the filter is. */
+    for (const Group &g : std::as_const(groups)) {
+        bool any = false;
+        for (QTreeWidgetItem *cat : g.cats)
+            if (filtering.contains(cat)) { any = true; break; }
+        g.item->setForeground(0, QBrush(any ? hdrIsFilteringColor : G::textColor));
+    }
+
+    notifyFilteringState();
 }
 
 bool Filters::isCatFiltering(QTreeWidgetItem *item)
@@ -977,7 +1188,7 @@ void Filters::disableEmptyCat()
     QTreeWidgetItemIterator it(this);
     while (*it) {
         // categories
-        if (!(*it)->parent() && (*it) != search) {
+        if (isCategoryHeader(*it) && (*it) != search) {
             // at every depth: see setEachCatTextColor
             if (itemsInCategory(*it).size() < 2)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
@@ -1020,13 +1231,12 @@ void Filters::invertFilters()
 
     // populate catWithCheckedItems list with only categories that have one or more checked items
     while (*it) {
-        // if no parent then it is a category
-        if (!(*it)->parent()) {
+        if (isCategoryHeader(*it)) {
             cat = (*it)->text(0);
 //            qDebug() << (*it)->text(0);
         }
         // traverse the children of the category
-        if ((*it)->parent()) {
+        if (isFilterItem(*it)) {
             bool isChecked = (*it)->checkState(0) == Qt::Checked;
             if (isChecked && cat != "") {
                 catWithCheckedItems.append((*it)->parent()->text(0));
@@ -1041,7 +1251,7 @@ void Filters::invertFilters()
     QTreeWidgetItemIterator it2(this);
     while (*it2) {
         // traverse the children of the category and invert checkstate
-        if ((*it2)->parent()) {
+        if (isFilterItem(*it2)) {
             // only want categories with checked items
             QString s = (*it2)->parent()->text(0);
             if (catWithCheckedItems.contains(s)) {
@@ -1166,7 +1376,7 @@ void Filters::clearAll()
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent()) {
+        if (isFilterItem(*it)) {
             (*it)->setCheckState(0, Qt::Unchecked);
             styleFilterItem(*it);       // drop an exclusion's strikethrough too
             (*it)->setData(2, Qt::EditRole, "");
@@ -1182,6 +1392,8 @@ void Filters::clearAll()
         ++it;
     }
     setSearchNewFolder();
+    locker.unlock();
+    notifyFilteringState();
 }
 
 bool Filters::otherHdrExpanded(QModelIndex thisIdx)
@@ -1194,8 +1406,9 @@ bool Filters::otherHdrExpanded(QModelIndex thisIdx)
     if (debugFilters || G::isLogger || G::isFlowLogger)
         qDebug() << "Filters::otherHdrExpanded"
                     ;
-    for (int i = 0; i < topLevelItemCount(); ++i) {
-        QModelIndex idx = indexFromItem(topLevelItem(i));
+    // categories, wherever they sit; a group being open is not "another header"
+    for (QTreeWidgetItem *cat : categoryHeaders()) {
+        QModelIndex idx = indexFromItem(cat);
         if (idx == thisIdx) continue;
         if (isExpanded(idx)) return true;
     }
@@ -1235,7 +1448,7 @@ void Filters::reset()
 
 bool Filters::isFilterableItem(QTreeWidgetItem *item) const
 {
-    if (!item || !item->parent() || item->isDisabled()) return false;
+    if (!isFilterItem(item) || item->isDisabled()) return false;
     /* The Search category's two rows are a text box and its negation, not values to be
        included or excluded -- "not matching the search text" is what searchFalse already
        is, so an exclusion there would be a second way to say the same thing. */
@@ -1253,7 +1466,7 @@ void Filters::styleFilterItem(QTreeWidgetItem *item)
     both. Had both been colours, one would have had to win and the user would lose the
     other fact exactly when they need it -- while resolving the ambiguity.
 */
-    if (!item || !item->parent()) return;
+    if (!isFilterItem(item)) return;
     applyItemStyle(item);
 }
 
@@ -1411,7 +1624,8 @@ void Filters::setShowUnfiledOnly(bool showUnfiled)
     QMutexLocker locker(&mutex);
     showUnfiledOnly = showUnfiled;
     applyUnfiledVisibility(keywords);
-    if (showUnfiledOnly) keywords->setExpanded(true);
+    if (showUnfiledOnly)
+        for (QTreeWidgetItem *up = keywords; up; up = up->parent()) up->setExpanded(true);
 }
 
 int Filters::keywordItemCount(const QString &path, bool filtered) const
@@ -1429,6 +1643,23 @@ int Filters::keywordItemCount(const QString &path, bool filtered) const
         return item->data(filtered ? 2 : 3, Qt::EditRole).toInt();
     }
     return -1;
+}
+
+bool Filters::checkKeywordItem(const QString &path)
+{
+    if (G::isLogger) G::log("Filters::checkKeywordItem", path);
+    const QString fold = keywordFold(path);
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        if (keywordFold(item->data(1, Qt::EditRole).toString()) != fold) continue;
+        item->setCheckState(0, Qt::Checked);
+        styleFilterItem(item);
+        noteRangeAnchor(item);
+        activeCategory = keywords;
+        for (QTreeWidgetItem *p = item->parent(); p; p = p->parent()) p->setExpanded(true);
+        scrollToItem(item);
+        return true;
+    }
+    return false;
 }
 
 QStringList Filters::checkedKeywordPaths() const
@@ -1471,7 +1702,7 @@ void Filters::noteRangeAnchor(QTreeWidgetItem *item)
 /*
     Remember the item just checked. It is where the next Shift+click ranges FROM.
 */
-    if (!item || !item->parent()) return;
+    if (!isFilterItem(item)) return;
     rangeAnchorCategory = item->parent();
     rangeAnchorItem = item->text(0);
 }
@@ -1584,8 +1815,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         reachable from the header row, because that is where the count that advertises it
         is -- and the header is not a filterable item, so it takes the early return
         below. */
-    QTreeWidgetItem *root = item;
-    while (root != nullptr && root->parent()) root = root->parent();
+    QTreeWidgetItem *root = categoryOf(item);    // nullptr on a group header
     const bool inKeywords = root == keywords;
     /*  A session category is removed from ITSELF -- header or item -- which is where the
         user is looking when they are done with it. */
@@ -2035,20 +2265,20 @@ bool Filters::loadCatalogCategories()
         bool anyRealValue = false;
         for (auto it = map.constBegin(); it != map.constEnd(); ++it)
             if (!it.key().isEmpty()) { anyRealValue = true; break; }
-        setRowHidden(indexOfTopLevelItem(c.item), QModelIndex(), !anyRealValue);
+        c.item->setHidden(!anyRealValue);
     }
 
     /* Duplicates compares what is loaded; Search is the panel's own box. Availability
        is a fact about the rows in the model and about the mount table right now, not
        something the index holds -- BuildFilters counts it from the datamodel like any
        other category, and it shows itself when a row is not Present. */
-    setRowHidden(indexOfTopLevelItem(compare), QModelIndex(), true);
-    setRowHidden(indexOfTopLevelItem(search), QModelIndex(), true);
+    compare->setHidden(true);
+    search->setHidden(true);
     /*  Session categories read an arbitrary datamodel column, which the index cannot
         answer. showAllCategories brings them back with the Folders scope. */
-    for (QTreeWidgetItem *c : std::as_const(sessionCats))
-        setRowHidden(indexOfTopLevelItem(c), QModelIndex(), true);
+    for (QTreeWidgetItem *c : std::as_const(sessionCats)) c->setHidden(true);
     updateAvailabilityVisibility();
+    updateGroupVisibility();
 
     filtersBuilt = true;
     setKeywordCategoryToolTip();
@@ -2060,8 +2290,10 @@ void Filters::showAllCategories()
 {
     if (G::isLogger) G::log("Filters::showAllCategories");
     categoriesFrom = FromDatamodel;
-    for (int i = 0; i < topLevelItemCount(); i++)
-        setRowHidden(i, QModelIndex(), false);
+    /*  The headers only -- not every row, which would undo "Show unfiled only". Groups
+        too; updateGroupVisibility below settles them. */
+    for (QTreeWidgetItem *c : categoryHeaders()) c->setHidden(false);
+    for (const Group &g : std::as_const(groups)) g.item->setHidden(false);
     /*  SEARCH IS A CATEGORY AGAIN, in both scopes. It was hidden for a while because the
         Filter panel carried a QLineEdit above the tree, which made the query a thing
         beside the filters rather than one of them -- and left the two rows the category
@@ -2072,7 +2304,8 @@ void Filters::showAllCategories()
     updateAvailabilityVisibility();
     // nor Collections and Queries, which are the Library's (setLibrarySetsAvailable)
     for (QTreeWidgetItem *c : {collections, queries})
-        if (c) setRowHidden(indexOfTopLevelItem(c), QModelIndex(), !setsShown);
+        if (c) c->setHidden(!setsShown);
+    updateGroupVisibility();
 }
 
 void Filters::setSetNodes(QTreeWidgetItem *category, const QVector<CollectionItem> &nodes)
@@ -2213,8 +2446,9 @@ void Filters::setLibrarySetsAvailable(bool available)
                 styleFilterItem(item);
             }
         }
-        setRowHidden(indexOfTopLevelItem(category), QModelIndex(), !available);
+        category->setHidden(!available);
     }
+    updateGroupVisibility();
     itemCheckStateHasChanged = false;
 }
 
@@ -2226,10 +2460,8 @@ QString Filters::queryTextFor(const QTreeWidgetItem *item) const
         if (t == enterSearchString || ignoreSearchStrings.contains(t)) return QString();
         return t;
     }
-    // a Query item at any depth: walk up to its category
-    QTreeWidgetItem *root = const_cast<QTreeWidgetItem *>(item);
-    while (root->parent()) root = root->parent();
-    if (root != queries) return QString();
+    // a Query item at any depth
+    if (categoryOf(item) != queries || item == queries) return QString();
     return item->data(0, QueryTextRole).toString();
 }
 
@@ -2330,11 +2562,11 @@ QList<Filters::ItemState> Filters::checkedItemStates() const
     while (*it) {
         QTreeWidgetItem *item = *it;
         ++it;
-        if (!item->parent()) continue;
+        if (!isFilterItem(item)) continue;
         if (item->checkState(0) == Qt::Unchecked) continue;
 
-        QTreeWidgetItem *root = item;
-        while (root->parent()) root = root->parent();
+        // the CATEGORY, not the root: with groups on, the root is the group
+        QTreeWidgetItem *root = categoryOf(item);
 
         ItemState state;
         state.category = root->data(0, CategoryNameRole).toString();
@@ -2404,9 +2636,8 @@ void Filters::restore()
     while (*it) {
         QTreeWidgetItem *item = *it;
         ++it;
-        if (!item->parent()) continue;
-        QTreeWidgetItem *root = item;
-        while (root->parent()) root = root->parent();
+        if (!isFilterItem(item)) continue;
+        QTreeWidgetItem *root = categoryOf(item);
         byCategoryAndValue[root->data(0, CategoryNameRole).toString()]
             .insert(itemMapKey(root, item), item);
     }
@@ -2483,7 +2714,7 @@ void Filters::uncheckAllFilters()
 
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent()) {
+        if (isFilterItem(*it)) {
             (*it)->setCheckState(0, Qt::Unchecked);
             /* Clears the strikethrough an exclusion left behind: unchecking the box is
                not enough, because exclusion is drawn on the FONT as well. */
@@ -2498,6 +2729,8 @@ void Filters::uncheckAllFilters()
         ++it;
     }
     setSearchNewFolder();
+    locker.unlock();
+    notifyFilteringState();
 }
 
 //void Filters::uncheckTypesFilters()  // not used
@@ -2528,6 +2761,7 @@ void Filters::expandAllFilters()
         qDebug() << "Filters::expandAllFilters"
                     ;
     expandAll();
+    syncHeaderIcons();
 }
 
 void Filters::collapseAllFilters()
@@ -2537,6 +2771,17 @@ void Filters::collapseAllFilters()
         qDebug() << "Filters::collapseAllFilters"
                     ;
     collapseAll();
+    syncHeaderIcons();
+}
+
+void Filters::focusKeywordsCategory()
+{
+    if (G::isLogger) G::log("Filters::focusKeywordsCategory");
+    if (!keywords) return;
+    collapseAll();
+    for (QTreeWidgetItem *p = keywords; p; p = p->parent()) p->setExpanded(true);
+    syncHeaderIcons();
+    scrollToItem(keywords, QAbstractItemView::PositionAtTop);
 }
 
 void Filters::collapseAllFiltersExceptSearch()
@@ -2562,6 +2807,7 @@ void Filters::collapseAllFiltersExceptSearch()
     // collapse(indexFromItem(missingThumbs));
     collapse(indexFromItem(compare));
     for (QTreeWidgetItem *cat : std::as_const(sessionCats)) collapse(indexFromItem(cat));
+    syncHeaderIcons();
 }
 
 void Filters::toggleExpansion()
@@ -2574,18 +2820,18 @@ void Filters::toggleExpansion()
 
     QMutexLocker locker(&mutex);
 
-    QTreeWidgetItemIterator it(this);
-    while (*it) {
-        if (!(*it)->parent()) {
-            if ((*it)->isExpanded()) {
-                isExpanded = true;
-                break;
-            }
+    // any header open -- a group or a category
+    QList<QTreeWidgetItem *> headers = categoryHeaders();
+    if (grouped) for (const Group &g : std::as_const(groups)) headers << g.item;
+    for (QTreeWidgetItem *h : std::as_const(headers)) {
+        if (h->isExpanded()) {
+            isExpanded = true;
+            break;
         }
-        ++it;
     }
     if (isExpanded) collapseAll();
     else expandAll();
+    syncHeaderIcons();
 //    qDebug() << "Filters::toggleExpansion" << "isExpanded =" << isExpanded;
 }
 
@@ -3302,8 +3548,9 @@ void Filters::updateAvailabilityVisibility()
     for (int i = 0; i < availability->childCount(); ++i) {
         if (availability->child(i)->text(0) != present) { anyNotPresent = true; break; }
     }
-    setRowHidden(indexOfTopLevelItem(availability), QModelIndex(), false);
+    availability->setHidden(false);
     availability->setDisabled(!anyNotPresent);
+    updateGroupVisibility();
 }
 
 void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
@@ -3493,6 +3740,7 @@ void Filters::dataChanged(const QModelIndex &topLeft,
             emit searchStringChange(searchString);
             if (isCatFiltering(search)) search->setForeground(0, QBrush(hdrIsFilteringColor));
             else search->setForeground(0, QBrush(G::textColor));
+            notifyFilteringState();
             if (item->checkState(0) == Qt::Unchecked) return;
             emit filterChange("Filters::itemChangedSignal search text change");
             return;
@@ -3546,7 +3794,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||
-        !item->parent() ||
+        !isFilterItem(item) ||
         /*  A LOAD RUNNING, not "every row read" -- see the note in MW::filterChange.
             G::allMetadataAttempted goes false whenever the scroll-in verifier clears a
             stale row, which silently disabled every filter click. */
@@ -3681,7 +3929,10 @@ void Filters::mousePressEvent(QMouseEvent *event)
     if (p.x() < indentation) p.setX(indentation);
     QTreeWidgetItem *item = itemFromIndex(idx);
     bool isLeftBtn = event->button() == Qt::LeftButton;
-    bool isHdr = idx.parent() == QModelIndex();
+    /*  A header is a category or a group, at whatever depth -- with groups on, the
+        categories are not top-level. */
+    const bool isGroup = isGroupHeader(item);
+    bool isHdr = isGroup || isCategoryHeader(item);
     bool isEmptyHdr = isHdr && item->childCount() == 0;
     if (isEmptyHdr) return;
     bool isValid = idx.isValid();
@@ -3745,14 +3996,28 @@ void Filters::mousePressEvent(QMouseEvent *event)
 
     if (isLeftBtn && isHdr && isValid /*&& notIndentation*/) {
         hdrJustClicked = true;
-        if (isSolo && !isCtrlModifier) {
+        /*  SOLO APPLIES AT BOTH LEVELS. Opening a group closes the other groups;
+            opening a category closes the other categories (collapseCategories leaves
+            the groups as they are). Closing a group only closes that one. Cmd/Ctrl
+            opts out, as it does for categories. */
+        if (isGroup) {
+            if (isExpanded(idx)) collapse(idx);
+            else {
+                if (isSolo && !isCtrlModifier)
+                    for (const Group &g : std::as_const(groups))
+                        if (g.item != item && g.item->isExpanded())
+                            g.item->setExpanded(false);
+                expand(idx);
+            }
+        }
+        else if (isSolo && !isCtrlModifier) {
             if (isExpanded(idx)) {
                 bool otherHdrWasExpanded = otherHdrExpanded(idx);
-                collapseAll();
+                collapseCategories();
                 if (otherHdrWasExpanded) expand(idx);
             }
             else {
-                collapseAll();
+                collapseCategories();
                 expand(idx);
             }
         }
@@ -3760,16 +4025,59 @@ void Filters::mousePressEvent(QMouseEvent *event)
             isExpanded(idx) ? collapse(idx) : expand(idx);
         }
         // set decoration
-        if (isExpanded(idx))
-            item->setIcon(0, QIcon(":/images/branch-open-winnow.png"));
-        else
-            item->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
+        syncHeaderIcons();
+        /*  NOT PASSED ON. Under a group a category is nested, and the base class
+            treats a press in its branch area as a click on the expand control and
+            toggles it a second time -- undoing the toggle just made. */
+        return;
     }
     else {
         hdrJustClicked = false;
     }
 
     QTreeWidget::mousePressEvent(event);
+}
+
+void Filters::drawBranches(QPainter *painter, const QRect &rect,
+                           const QModelIndex &index) const
+{
+/*
+    NO BRANCH ARROW ON A HEADER. A group or category header draws its own arrow as its
+    icon; under a group a category is nested, and the stylesheet's branch arrow would
+    draw a second one beside it. Not QTreeWidgetItem::DontShowIndicator: that makes
+    the model report the header as CHILDLESS, and the view then refuses to expand it.
+*/
+    const QTreeWidgetItem *item = itemFromIndex(index);
+    if (isGroupHeader(item) || isCategoryHeader(item)) return;
+
+    /*  A CATEGORY'S FIRST-LEVEL ITEMS PUT THEIR ARROW UNDER THE HEADER'S. The header's
+        arrow is its ICON, drawn at the start of its cell; an item's arrow is the
+        stylesheet's branch glyph, centred in the last indentation slot of the branch
+        area -- a few pixels to the left, so a nested category (Folders, Keywords)
+        showed a column of arrows that did not line up with the headers above them.
+        Shift the glyph so its centre is the header icon's centre. Deeper levels keep
+        Qt's own placement: they align with each other, not with a header. */
+    QTreeWidgetItem *cat = item ? item->parent() : nullptr;
+    if (isCategoryHeader(cat)) {
+        QStyleOptionViewItem opt;
+        initViewItemOption(&opt);
+        opt.rect = visualRect(indexFromItem(cat, 0));
+        opt.features |= QStyleOptionViewItem::HasDecoration;
+        opt.icon = cat->icon(0);
+        const QRect deco = style()->subElementRect(QStyle::SE_ItemViewItemDecoration,
+                                                   &opt, this);
+        const int ind = indentation;                      // = QTreeView::indentation()
+        const int slotCentre = rect.right() + 1 - ind / 2;   // QTreeView's last slot
+        const int dx = deco.center().x() - slotCentre;
+        if (dx != 0) {
+            painter->save();
+            painter->translate(dx, 0);
+            QTreeWidget::drawBranches(painter, rect, index);
+            painter->restore();
+            return;
+        }
+    }
+    QTreeWidget::drawBranches(painter, rect, index);
 }
 
 void Filters::mouseReleaseEvent(QMouseEvent * event)
@@ -3812,7 +4120,7 @@ void Filters::editSearchText()
     hidden behind the panel's own search box.
 */
     if (G::isLogger) G::log("Filters::editSearchText");
-    setRowHidden(indexOfTopLevelItem(search), QModelIndex(), false);
+    search->setHidden(false);
     expandItem(search);
     scrollToItem(search);
     editItem(searchTrue, 0);
@@ -3849,7 +4157,7 @@ QString Filters::diagnostics()
     // data
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent() /*&& (*it) != searchTrue*/) {
+        if (isFilterItem(*it) /*&& (*it) != searchTrue*/) {
             rpt.setFieldAlignment(QTextStream::AlignLeft);
             rpt.setFieldWidth(catWidth);
             rpt << (*it)->parent()->text(0);

@@ -262,6 +262,76 @@ void MW::scheduleIconRangeSettle(const QString &src)
     });
 }
 
+void MW::resyncIconLoaderAfterReorder(const QString &src)
+{
+/*
+    A SORT MOVES EVERY IMAGE AND TELLS THE LOADER NOTHING.
+
+    The icon chunk is a range of PROXY rows, and MetaRead walks proxy rows. A sort keeps
+    the same images and the same instance but puts different ones at every position, so
+    the chunk that was full a moment ago now holds mostly other images -- and nothing
+    restarts the loader for them. A filter change does (it bumps the instance and
+    re-initializes MetaRead); a sort never did. scheduleIconRangeSettle does not either:
+    it re-dispatches only when the range MOVES, and after a sort the range is usually
+    the same numbers over different rows.
+
+    Found with the headless --catalogload probe: the restored Library sort (File Name)
+    runs at load completion, after MetaRead has filled rows 0-10,000 in PATH order. By
+    name, duplicates from a second folder interleave with the first, so every other cell
+    on screen was an image the loader had never been asked for -- blank until a scroll
+    happened to restart it.
+
+    So: re-measure the visible window, which re-centres the chunk and recounts what it
+    is missing (setIconRange), and if anything is missing, restart the loader there.
+    The hydrated catalog scope gets its bulk index prefetch first, as at load, so the
+    icons the index holds arrive in one pass rather than a Reader round trip each.
+
+    QUEUED AND COALESCED, like scheduleIconRangeSettle: the sort's own
+    scrollToCurrentRowIfNotVisible and any layout it posts must land first, or this
+    measures where the view was.
+*/
+    if (G::isInitializing || dm == nullptr) return;
+    if (iconReorderResyncQueued) return;
+    iconReorderResyncQueued = true;
+    QTimer::singleShot(0, this, [this, src]{
+        iconReorderResyncQueued = false;
+        if (G::isInitializing || G::stop || dm == nullptr || dm->abort) return;
+        if (dm->sf->rowCount() == 0) return;
+        if (G::isLogger || G::isFlowLogger)
+            G::log("MW::resyncIconLoaderAfterReorder", src);
+        updateIconRange(src + " reorder");
+        if (G::iconChunkLoaded) return;
+        const bool hydrated = dm->scopeRequest().scope == G::Scope::Catalog
+                              && !dm->scopeRequest().rows.isEmpty();
+        if (hydrated) prefetchIconsFromIndex(src + " reorder");
+        reloadIconChunk();          // flushProxySnapshot + queued MetaRead::setStartRow
+    });
+}
+
+void MW::startLibraryWhenExposed(int attempt)
+{
+/*
+    Reopen the Library at start, AFTER the window is on screen. showEvent put up the
+    message and the cover; this waits for the native window to be exposed (polling a
+    zero/20 ms timer rather than trusting that a zero timer lands after the first paint,
+    which the window system does not promise), paints the cover once synchronously so
+    the message is on screen, and only then starts the load -- which blocks the GUI
+    thread for the layout switch and the query dispatch. Bounded: after ~2 s it starts
+    anyway.
+*/
+    QTimer::singleShot(attempt == 0 ? 0 : 20, this, [this, attempt]{
+        const bool exposed = windowHandle() && windowHandle()->isExposed();
+        if (!exposed && attempt < 100) { startLibraryWhenExposed(attempt + 1); return; }
+        timelineMark("start Library (window exposed)");
+        if (centralCurtain && loadCurtainUp) centralCurtain->repaint();
+        if (restoreLibraryState) queueLibraryStateRestore();
+        chooseSource(true, "MW::showEvent reopen Library");
+        /* chooseSource applied Browse's Library layout, collapse state included; the
+           sides the session left collapsed are the ones the user expects back. */
+        applySessionAreaCollapse();
+    });
+}
+
 void MW::jump()
 {
     class LineEditDialog : public QDialog {

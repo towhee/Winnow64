@@ -197,7 +197,14 @@ DataModel::DataModel(QObject *parent,
         connect(sf, sig, this, [this]{ scheduleProxySnapshotRebuild(); });
     }
     connect(sf, &QAbstractItemModel::modelReset,   this, [this]{ scheduleProxySnapshotRebuild(); });
-    connect(sf, &QAbstractItemModel::layoutChanged, this, [this]{ scheduleProxySnapshotRebuild(); });
+    connect(sf, &QAbstractItemModel::layoutChanged, this, [this]{
+        scheduleProxySnapshotRebuild();
+        /*  A REORDER INVALIDATES THE EVICTION DELTA. clearIconsOutsideChunkRange walks
+            only the rows that slid out of the kept window since the last sweep, which
+            assumes a proxy row still names the same image. After a sort it does not,
+            so the next sweep must be a full one. */
+        lastEvictStart = lastEvictEnd = -1;
+    });
 
     /*  The row-count changes the proxy reports also size the live per-row array.
         It is grown from the SOURCE row count, not the proxy's -- the array is
@@ -4856,8 +4863,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
         in-flight marker. Emitted unconditionally -- if the icon was already
         set the row is done just the same, and leaving the marker in place
         would keep the dispatcher from ever revisiting the row. */
-    const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
-    if (sfRow >= 0) emit videoReadingCleared(sfRow, fromInstance);
+    emit videoReadingCleared(dmRow, fromInstance);
 }
 
 void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
@@ -4896,8 +4902,7 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
     }
 
     // failure counterpart of the emit in setIconFromVideoFrame
-    const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
-    if (sfRow >= 0) emit videoReadingCleared(sfRow, fromInstance);
+    emit videoReadingCleared(dmRow, fromInstance);
 }
 
 void DataModel::updateIconChunkLoaded(int dmRow)
@@ -7485,7 +7490,11 @@ void SortFilter::compileFilters()
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         QTreeWidgetItem *item = *it;
-        if (item->parent()) {
+        /*  A GROUP HEADER filters nothing -- it only holds categories, which follow it in
+            the walk. With groups on a category has a parent, so "has a parent" no longer
+            means "is a filter item"; the tree says which is which. */
+        if (filters->isGroupHeader(item)) { ++it; continue; }
+        if (!filters->isCategoryHeader(item)) {
             /*  A filter item. Items appearing before any category cannot happen
                 -- every non-category item has a parent -- but if the tree were
                 ever malformed they would land on column 0, which is what the
@@ -7510,11 +7519,8 @@ void SortFilter::compileFilters()
                 if (state == Qt::PartiallyChecked) cat.excludeExprs.append(e);
                 else                               cat.includeExprs.append(e);
             }
-            else if (state != Qt::Unchecked && [&] {
-                         const QTreeWidgetItem *root = item;
-                         while (root->parent()) root = root->parent();
-                         return root == filters->queries;      // a Query at any depth
-                     }()) {
+            else if (state != Qt::Unchecked
+                     && filters->categoryOf(item) == filters->queries) {  // at any depth
                 /*  A checked Query with an empty query: it matches everything, which is
                     what an empty expression says. Included as one, so the category still
                     counts as filtering the way a check says it does. */

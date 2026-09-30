@@ -1,4 +1,7 @@
 #include "Main/mainwindow.h"
+#ifdef Q_OS_MAC
+#include <execinfo.h>
+#endif
 #include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
 #include "Metadata/keywordpaths.h"
@@ -233,6 +236,27 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(messageView);      // 6
     centralLayout->addWidget(blankView);        // 7
 
+    /*  WHO TOOK THE MESSAGE AWAY (G::isPerfProbe, i.e. Winnow --perfprobe). During a
+        load the central widget shows the progress message; something was switching it to
+        a view mid-load and the message "blanked". Headless runs could not reproduce it,
+        so every page change while a load is running is printed with its call stack --
+        one real session names the caller. The stack is macOS only; Windows prints the
+        change without it. */
+    connect(centralLayout, &QStackedLayout::currentChanged, this, [this](int page){
+        if (!G::isPerfProbe || !G::isLoadRunning) return;
+        QString trace;
+#ifdef Q_OS_MAC
+        void *frames[14];
+        const int n = backtrace(frames, 14);
+        if (char **names = backtrace_symbols(frames, n)) {
+            for (int i = 1; i < n; ++i) trace += QString("\n      ") + names[i];
+            free(names);
+        }
+#endif
+        qDebug().noquote() << "[PERF] CENTRAL page ->" << page << " mode =" << G::mode
+                           << " loadCurtainUp =" << loadCurtainUp << trace;
+    });
+
     /* The Map module's page (MapTab). Built here, not with the other views, because it
        needs the Selection (createSelection) to hand its clicks to. */
     mapView = new MapView(centralWidget, dm);
@@ -414,7 +438,7 @@ void MW::createMetaRead()
             metaRead, &MetaRead::onRowCached, Qt::QueuedConnection);
 
     // set a value in dm->sf proxy
-    connect(metaRead, &MetaRead::setValSf, dm, &DataModel::setValSf);
+    connect(metaRead, &MetaRead::setValDm, dm, &DataModel::setValDm);
 
     // cleanup icons outside icon chunk range
     connect(metaRead, &MetaRead::cleanupIcons, dm, &DataModel::clearIconsOutsideChunkRange);
@@ -507,7 +531,7 @@ void MW::createCatalogScanner()
             like a slot -- so it needs its own Scope or the ingest probe's slot tally
             cannot see it, and a stall lands as an unattributed MW(MW)/MetaCall. */
         IngestProbe::Scope _ip("catalogScanner::progress");
-        /*  THE ROW'S LABEL STAYS "Catalog", like every other row. The counts and
+        /*  THE ROW'S LABEL STAYS "Scanning for changes", like every other row's. The counts and
             the time left changed four times a second, and a changing label resizes
             Progress's shared text column and rebuilds EVERY row's bar -- the Image
             Cache and Metadata bars were wiped on each report -- while the container
@@ -516,14 +540,14 @@ void MW::createCatalogScanner()
         const QLocale loc;
         QString tip;
         if (p.phase == CatalogScanProgress::Checking)
-            tip = QString("Catalog: checking folders, %1 of %2")
+            tip = QString("Scanning for changes: checking folders, %1 of %2")
                       .arg(loc.toString(p.done), loc.toString(p.total));
         else
-            tip = QString("Catalog: indexing %1 of %2 images")
+            tip = QString("Scanning for changes: indexing %1 of %2 images")
                       .arg(loc.toString(p.done), loc.toString(p.total));
         tip += " · " + catalogFormatEta(p.etaSecs)
                + (p.etaSecs < 0 ? "" : " left");
-        if (p.paused) tip = "Catalog: paused while a folder loads\n" + tip;
+        if (p.paused) tip = "Scanning for changes: paused while a folder loads\n" + tip;
         if (progress) {
             progress->setRowToolTip(progressCatalogRow, tip);
             if (p.total > 0)
@@ -1449,7 +1473,9 @@ void MW::createStatusBar()
        work rather than under a popup. Teal: unclaimed by the rows above. */
     progressCatalogRow = progress->addRow("Catalog", 2, QColor("#3fa8a0"),
                                           Progress::Fill::FromStart);
-    progress->setRowText(progressCatalogRow, "Catalog");
+    /*  The Library's sources being checked for changes (CatalogScanner) -- run by Scan
+        Now and automatically on entering the Library. */
+    progress->setRowText(progressCatalogRow, "Scanning for changes");
     /*  LOADING A CATALOG RESULT. At 150k rows the streamed fill runs for seconds, and the
         central message saying "x of y images loading" is covered as soon as the grid
         paints; this row keeps the answer visible in the status bar until the last row
@@ -1943,6 +1969,26 @@ void MW::createFilterDock()
     // Spacer
     filterTitleLayout->addSpacing(5);
 
+    /*  Grouped / flat categories. The action (created later, in createFilterActions) owns
+        the state and the setting; MW::setFilterGroups syncs this button's look. */
+    filterGroupsBtn = new BarBtn();
+    filterGroupsBtn->setIcon(":/images/icon16/groups.png", G::iconOpacity);
+    filterGroupsBtn->setToolTip("Group the filter categories under headings.");
+    connect(filterGroupsBtn, &BarBtn::clicked, this, [this]{
+        if (filterGroupsAction) filterGroupsAction->trigger();
+    });
+    filterTitleLayout->addWidget(filterGroupsBtn);
+
+    // Spacer
+    filterTitleLayout->addSpacing(5);
+
+    /*  THE TITLE IS LIT WHILE ANYTHING FILTERS, in the colour a filtering category's
+        header uses -- so a panel scrolled or collapsed away from the lit category, or a
+        docked-but-tabbed panel, still says the view is filtered. */
+    connect(filters, &Filters::filteringChanged, this, [this](bool on){
+        filterTitleBar->setTitleColor(on ? QColor(Qt::yellow) : QColor());
+    });
+
     // preferences button
     BarBtn *filterGearBtn = new BarBtn();
     filterGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
@@ -2012,6 +2058,15 @@ void MW::createFilterDock()
         filterPanel = new FilterPanel(filters);
         filterLayout->addWidget(filterPanel);
         connect(filterPanel, &FilterPanel::loadResults, this, &MW::loadCatalogRows);
+        /*  No load is coming, so nothing else would lift the cover MW::setScope raised
+            on entering the Library. A no-op when no cover is up. */
+        connect(filterPanel, &FilterPanel::searchNotLoaded, this, [this]{
+            if (!loadCurtainUp) return;
+            /*  Nothing loaded underneath: say so, rather than uncover a stale
+                "Loading the library." */
+            if (dm->rowCount() == 0) setCentralMessage(tr("No images to show."));
+            lowerLoadCurtain("FilterPanel::searchNotLoaded", true);
+        });
         /* Returning to Folders: the tree is holding catalog values, so rebuild it from
            the datamodel. buildFilters->reset() clears the catalog items (and the checks
            that went with them) before build() repopulates from the model. */
@@ -3504,6 +3559,29 @@ void MW::createKeywordsDock()
     filterEdit->setClearButtonEnabled(true);
     connect(filterEdit, &QLineEdit::textChanged,
             keywordTree, &KeywordTree::setFilterText);
+    /*  A white tag clicked: show it in the list. If the Find filter is hiding it, clear
+        the filter rather than fail silently -- the user asked to SEE that keyword. */
+    connect(keywordTags, &KeywordTags::showRequested, this,
+            [this, filterEdit](const QString &p) {
+        if (!keywordTree->revealPath(p) && !filterEdit->text().isEmpty()) {
+            filterEdit->clear();
+            keywordTree->revealPath(p);
+        }
+        /*  And filter on it, clearing every other filter. DEFERRED: this runs inside
+            the clicked Tag's mouseReleaseEvent, and the filter change can change the
+            selection, which rebuilds the tag zone and deletes that Tag. */
+        QTimer::singleShot(0, this, [this, p] { filterOnKeyword(p); });
+    });
+    connect(keywordTree, &KeywordTree::filterRequested, this, &MW::filterOnKeyword);
+    connect(keywordTags, &KeywordTags::redTagClicked, this, [this](const QString &p) {
+        /*  Deferred for the same reason as a white tag. Filter FIRST, then open the
+            replace list, so the filter's selection change lands before the replace
+            starts rather than after it. */
+        QTimer::singleShot(0, this, [this, p] {
+            filterOnKeyword(p);
+            keywordTags->startReplace(p);
+        });
+    });
     treeLayout->addWidget(filterEdit);
     keywordTree->setParent(treePane);
     treeLayout->addWidget(keywordTree, 1);
@@ -3514,6 +3592,14 @@ void MW::createKeywordsDock()
     /*  The tags get enough for two or three rows and the tree the rest: the tags are
         what the user glances at, the vocabulary is what they browse. */
     splitter->setSizes({120, 420});
+    /*  THE SPLIT PERSISTS. Saved the moment the user drags it rather than at quit, so a
+        crash or a Dock/logout quit does not lose it; restored over the default above. */
+    const QString splitKey = "KeywordsDockSplitter";
+    if (settings && settings->contains(splitKey))
+        splitter->restoreState(settings->value(splitKey).toByteArray());
+    connect(splitter, &QSplitter::splitterMoved, this, [this, splitter, splitKey] {
+        if (settings) settings->setValue(splitKey, splitter->saveState());
+    });
     bodyLayout->addWidget(splitter, 1);
 
     keywordsDock->setWidget(body);
@@ -3547,6 +3633,14 @@ void MW::createKeywordsDock()
     });
     connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
     connect(keywordTree, &KeywordTree::tidyRequested, this, &MW::tidyFlatKeywords);
+    /*  QUEUED: the drop is still inside the dragged tag's QDrag::exec(), and
+        refreshKeywordsDock rebuilds the tag zone -- deleting that very tag under it. */
+    connect(keywordTree, &KeywordTree::tagFiled, this,
+            [this](const QString &tagPath, const QString &newPath) {
+        applyKeywordsToSelection({newPath}, {tagPath}, true, /*replace*/ true);
+        if (keywordVocab) keywordVocab->refreshCounts();
+        refreshKeywordsDock();
+    }, Qt::QueuedConnection);
 
     connect(keywordTags, &KeywordTags::addRequested, this, [this](const QString &p) {
         applyKeywordsToSelection({p}, {});
@@ -3562,26 +3656,16 @@ void MW::createKeywordsDock()
         applyKeywordsToSelection({}, {p});
         refreshKeywordsDock();
     });
-    connect(keywordTags, &KeywordTags::fileRequested, this, [this](const QString &p) {
-        /*  An unfiled keyword: put it in the vocabulary at the place its own path says it
-            belongs, creating the ancestors it names. Nothing is written to any image --
-            the keyword was already on it; only the LIST gains an entry. */
-        QModelIndex parent;
-        QString built;
-        for (const QString &node : keywordNodes(p)) {
-            built = built.isEmpty() ? node : built + '|' + node;
-            const QModelIndex have = keywordVocab->indexForPath(built);
-            parent = have.isValid() ? have : keywordVocab->insertChild(parent, node);
-            if (!parent.isValid()) break;
-        }
-        if (parent.isValid()) {
-            keywordTree->expandRecursively(parent.parent());
-            keywordTree->setCurrentIndex(parent);
-            keywordTree->scrollTo(parent);
-        }
+    connect(keywordTags, &KeywordTags::replaceRequested, this,
+            [this](const QString &unfiled, const QStringList &paths) {
+        /*  A vocabulary keyword dropped on a red (unfiled) tag: swap, in one pass, and
+            only on the selected images that carry the red one. */
+        applyKeywordsToSelection(paths, {unfiled}, true, /*replace*/ true);
+        /*  The keyword list's image counts too: the dropped keyword gained the images
+            the red one lost. (Filters, icons and catalog: the call above.) */
+        if (keywordVocab) keywordVocab->refreshCounts();
         refreshKeywordsDock();
     });
-
     // customize the keywordsDock titlebar
     QHBoxLayout *keywordsTitleLayout = new QHBoxLayout();
     keywordsTitleLayout->setContentsMargins(0, 0, 0, 0);
@@ -3733,9 +3817,13 @@ void MW::setOperationMode(G::OperationMode mode)
     /* Only show develop (and its History panel) in Develop Mode. History first, so
        Develop ends up the front tab (see setDevelopPanelEnabled). */
     const bool inDevelop = (mode == G::OperationMode::Develop);
-    if (historyDock) historyDock->setVisible(inDevelop);
-    developDock->setVisible(inDevelop);
-    if (inDevelop) developDock->raise();
+    /* Not shown into a side the show/hide bar holds collapsed (the Develop workspace
+       may have been captured that way): the bar brings the panels back with the side. */
+    if (!inDevelop || !isDockAreaCollapsed(dockWidgetArea(developDock))) {
+        if (historyDock) historyDock->setVisible(inDevelop);
+        developDock->setVisible(inDevelop);
+        if (inDevelop) developDock->raise();
+    }
 
     /* The mode changes the TAB COUNT of whatever dock area holds Develop / History /
        Presets, so the responsive tab titles must be re-evaluated: three more tabs may no

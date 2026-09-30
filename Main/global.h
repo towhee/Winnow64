@@ -766,6 +766,11 @@ Q_NAMESPACE
     extern QColor header3Color;
     extern QColor borderColor;
     extern QColor tabWidgetBorderColor;
+    /*  A keyword an image carries that is NOT in the keyword list. One colour so the
+        Filters Keywords items and the Keywords dock tags read as the same thing. */
+    extern QColor unfiledKeywordColor;
+    /*  A Keywords dock keyword-list row the current image carries (dull yellow). */
+    extern QColor appliedKeywordColor;
     /*  THE FRAMELINE: the 1px line in colour mb (backgroundShade + 15) that borders every
         panel and the central widget. Set by WidgetCSS::css(); WidgetCSS::frameLine() is
         the same line as a stylesheet border value. See FrameLineBox (dockwidget.h).

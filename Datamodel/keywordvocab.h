@@ -73,7 +73,8 @@ public:
         SynonymsRole,
         ExportableRole,
         /*  True when the node's path is carried by the image the loupe is showing. The
-            dot in the tree, and the only thing here that depends on what is selected. */
+            dull-yellow name in the tree, and the only thing here that depends on what
+            is selected. */
         AppliedRole
     };
 

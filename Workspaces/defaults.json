@@ -1,5 +1,8 @@
 {
     "Develop": {
+        "bottomAreaExtent": 0,
+        "bottomAreaFront": [
+        ],
         "geometry": "AdnQywADAAAAAA+5AAAAPQAAGXoAAAVGAAAPuQAAAF0AABl6AAAFRgAAAAEAAAAADwAAAA+5AAAAXQAAGXoAAAVG",
         "geometryRect": [
             4025,
@@ -7,6 +10,7 @@
             2498,
             1258
         ],
+        "isBottomAreaCollapsed": false,
         "isCatalogDockVisible": false,
         "isCollectionsDockVisible": false,
         "isColorManage": false,
@@ -22,6 +26,7 @@
         "isHistoryDockVisible": true,
         "isImageInfoVisible": false,
         "isKeywordsDockVisible": false,
+        "isLeftAreaCollapsed": false,
         "isLoupeDisplay": true,
         "isMaximised": false,
         "isMetadataDockVisible": false,
@@ -29,14 +34,22 @@
         "isPresetsDockVisible": true,
         "isQueriesDockVisible": false,
         "isReverseSort": false,
+        "isRightAreaCollapsed": false,
         "isStatusBarVisible": true,
         "isTableDisplay": false,
         "isThumbDockVisible": true,
+        "isTopAreaCollapsed": false,
         "isWindowTitleBarVisible": false,
         "labelChoice": "",
         "labelFontSize": 10,
         "labelFontSizeGrid": 10,
+        "leftAreaExtent": 0,
+        "leftAreaFront": [
+        ],
         "name": "Develop",
+        "rightAreaExtent": 0,
+        "rightAreaFront": [
+        ],
         "screenNumber": 1,
         "showThumbLabels": false,
         "showThumbLabelsGrid": true,
@@ -50,9 +63,15 @@
         "thumbSpacing": 0,
         "thumbSpacingGrid": 0,
         "thumbWidth": 152,
-        "thumbWidthGrid": 160
+        "thumbWidthGrid": 160,
+        "topAreaExtent": 0,
+        "topAreaFront": [
+        ]
     },
     "Embellish": {
+        "bottomAreaExtent": 0,
+        "bottomAreaFront": [
+        ],
         "geometry": "AdnQywADAAAAAA+0AAAAXQAAGiEAAAYCAAAPtAAAAH0AABohAAAGAgAAAAEAAAAADSAAAA+0AAAAfQAAGiEAAAYC",
         "geometryRect": [
             4020,
@@ -60,6 +79,7 @@
             2670,
             1414
         ],
+        "isBottomAreaCollapsed": false,
         "isCatalogDockVisible": true,
         "isCollectionsDockVisible": false,
         "isColorManage": false,
@@ -75,6 +95,7 @@
         "isHistoryDockVisible": false,
         "isImageInfoVisible": true,
         "isKeywordsDockVisible": false,
+        "isLeftAreaCollapsed": false,
         "isLoupeDisplay": true,
         "isMaximised": false,
         "isMetadataDockVisible": false,
@@ -82,14 +103,22 @@
         "isPresetsDockVisible": false,
         "isQueriesDockVisible": false,
         "isReverseSort": false,
+        "isRightAreaCollapsed": false,
         "isStatusBarVisible": true,
         "isTableDisplay": false,
         "isThumbDockVisible": true,
+        "isTopAreaCollapsed": false,
         "isWindowTitleBarVisible": false,
         "labelChoice": "",
         "labelFontSize": 10,
         "labelFontSizeGrid": 10,
+        "leftAreaExtent": 0,
+        "leftAreaFront": [
+        ],
         "name": "Embellish",
+        "rightAreaExtent": 0,
+        "rightAreaFront": [
+        ],
         "screenNumber": 1,
         "showThumbLabels": false,
         "showThumbLabelsGrid": true,
@@ -103,9 +132,15 @@
         "thumbSpacing": 0,
         "thumbSpacingGrid": 0,
         "thumbWidth": 182,
-        "thumbWidthGrid": 160
+        "thumbWidthGrid": 160,
+        "topAreaExtent": 0,
+        "topAreaFront": [
+        ]
     },
     "Folders": {
+        "bottomAreaExtent": 0,
+        "bottomAreaFront": [
+        ],
         "geometry": "AdnQywADAAAAAAAAAAAAHgAADR8AAAdhAAADcQAAATIAAAtWAAAEzgAAAAACAAAADSAAAAAAAAAAPgAADR8AAAdh",
         "geometryRect": [
             0,
@@ -113,6 +148,7 @@
             3360,
             1828
         ],
+        "isBottomAreaCollapsed": false,
         "isCatalogDockVisible": true,
         "isCollectionsDockVisible": false,
         "isColorManage": false,
@@ -128,6 +164,7 @@
         "isHistoryDockVisible": false,
         "isImageInfoVisible": false,
         "isKeywordsDockVisible": true,
+        "isLeftAreaCollapsed": false,
         "isLoupeDisplay": false,
         "isMaximised": true,
         "isMetadataDockVisible": true,
@@ -135,14 +172,22 @@
         "isPresetsDockVisible": false,
         "isQueriesDockVisible": false,
         "isReverseSort": false,
+        "isRightAreaCollapsed": false,
         "isStatusBarVisible": true,
         "isTableDisplay": false,
         "isThumbDockVisible": false,
+        "isTopAreaCollapsed": false,
         "isWindowTitleBarVisible": false,
         "labelChoice": "",
         "labelFontSize": 10,
         "labelFontSizeGrid": 10,
+        "leftAreaExtent": 0,
+        "leftAreaFront": [
+        ],
         "name": "Folders",
+        "rightAreaExtent": 0,
+        "rightAreaFront": [
+        ],
         "screenNumber": 0,
         "showThumbLabels": false,
         "showThumbLabelsGrid": true,
@@ -156,62 +201,84 @@
         "thumbSpacing": 0,
         "thumbSpacingGrid": 0,
         "thumbWidth": 143,
-        "thumbWidthGrid": 160
+        "thumbWidthGrid": 160,
+        "topAreaExtent": 0,
+        "topAreaFront": [
+        ]
     },
     "Keywords": {
-        "geometry": "AdnQywADAAAAAA+PAAAANQAAGyMAAAYeAAAPjwAAAFUAABsjAAAGHgAAAAEAAAAADSAAAA+PAAAAVQAAGyMAAAYe",
-        "geometryRect": [
-            3983,
-            85,
-            2965,
-            1482
+        "bottomAreaExtent": 0,
+        "bottomAreaFront": [
         ],
+        "geometry": "AdnQywADAAAAAA2BAAAAOwAAFLkAAAP4AAANgQAAAFsAABS5AAAD+AAAAAEAAAAADSAAAA2BAAAAWwAAFLkAAAP4",
+        "geometryRect": [
+            3457,
+            91,
+            1849,
+            926
+        ],
+        "isBottomAreaCollapsed": false,
         "isCatalogDockVisible": true,
         "isCollectionsDockVisible": false,
         "isColorManage": false,
         "isCompareDisplay": false,
         "isDevelopDockVisible": false,
         "isEmbelDockVisible": false,
-        "isFavDockVisible": true,
+        "isFavDockVisible": false,
         "isFilterDockVisible": true,
-        "isFolderDockVisible": true,
+        "isFolderDockVisible": false,
         "isFullScreen": false,
         "isGeometryIncluded": false,
-        "isGridDisplay": false,
+        "isGridDisplay": true,
         "isHistoryDockVisible": false,
-        "isImageInfoVisible": true,
+        "isImageInfoVisible": false,
         "isKeywordsDockVisible": true,
-        "isLoupeDisplay": true,
+        "isLeftAreaCollapsed": false,
+        "isLoupeDisplay": false,
         "isMaximised": false,
         "isMetadataDockVisible": true,
         "isModuleDockVisible": true,
         "isPresetsDockVisible": false,
         "isQueriesDockVisible": false,
         "isReverseSort": false,
+        "isRightAreaCollapsed": false,
         "isStatusBarVisible": true,
         "isTableDisplay": false,
-        "isThumbDockVisible": true,
+        "isThumbDockVisible": false,
+        "isTopAreaCollapsed": false,
         "isWindowTitleBarVisible": false,
         "labelChoice": "",
         "labelFontSize": 10,
         "labelFontSizeGrid": 10,
+        "leftAreaExtent": 0,
+        "leftAreaFront": [
+        ],
         "name": "Keywords",
+        "rightAreaExtent": 0,
+        "rightAreaFront": [
+        ],
         "screenNumber": 1,
         "showThumbLabels": false,
         "showThumbLabelsGrid": true,
         "sortColumn": 2,
-        "state": "AAAA/wAAAAD9AAAAAwAAAAAAAAGNAAAE1fwCAAAAAvsAAAASAEUAbQBiAGUAbABEAG8AYwBrAAAAAAAAAAHsAAAAaQD////8AAAAAAAABNUAAADKAQAAGfoAAAAAAgAAAAT7AAAAFABGAG8AbABkAGUAcgBEAG8AYwBrAQAAAAD/////AAAAsAD////7AAAAGABCAG8AbwBrAG0AYQByAGsARABvAGMAawEAAAAA/////wAAAGkA////+wAAABQARgBpAGwAdABlAHIARABvAGMAawEAAAAA/////wAAAGkA////+wAAABgATQBlAHQAYQBkAGEAdABhAEQAbwBjAGsBAAAAAP////8AAABpAP///wAAAAEAAAEkAAAE1fwCAAAAAvwAAAAAAAAE0QAAAAAA////+v////8BAAAAA/sAAAAWAEQAZQB2AGUAbABvAHAARABvAGMAawAAAAAA/////wAAARMA////+wAAABYASABpAHMAdABvAHIAeQBEAG8AYwBrAAAAAAD/////AAAAnwD////7AAAAFgBQAHIAZQBzAGUAdABzAEQAbwBjAGsAAAAHcQAAAQMAAAC7AP////sAAAAYAEsAZQB5AHcAbwByAGQAcwBEAG8AYwBrAQAAAAAAAATVAAABNgD///8AAAADAAALlQAAANb8AQAAAAH7AAAAEgBUAGgAdQBtAGIARABvAGMAawEAAAAAAAALlQAAAGcA////AAAI3AAABNUAAAAEAAAABAAAAAgAAAAI/AAAAAA=",
-        "stateVersion": 5,
-        "thumbHeight": 182,
-        "thumbHeightGrid": 62,
+        "state": "AAAA/wAAAAD9AAAABAAAAAAAAAGxAAADT/wCAAAAAvsAAAASAEUAbQBiAGUAbABEAG8AYwBrAAAAAAAAAAHsAAAAagD////8AAAANAAAA08AAABsAP////oAAAAAAgAAAAX7AAAAFABGAGkAbAB0AGUAcgBEAG8AYwBrAQAAAAD/////AAAAbAD////7AAAAFABGAG8AbABkAGUAcgBEAG8AYwBrAAAAAAD/////AAAAagD////7AAAAGABCAG8AbwBrAG0AYQByAGsARABvAGMAawAAAAAA/////wAAAGoA////+wAAAB4AQwBvAGwAbABlAGMAdABpAG8AbgBzAEQAbwBjAGsAAAAAAP////8AAAB0AP////sAAAAWAFEAdQBlAHIAaQBlAHMARABvAGMAawAAAAAA/////wAAAHQA////AAAAAQAAAXIAAANP/AIAAAAC/AAAADQAAANPAAABUwEAABn6AAAAAAEAAAAC+wAAABgASwBlAHkAdwBvAHIAZABzAEQAbwBjAGsBAAAAAP////8AAACZAP////sAAAAYAE0AZQB0AGEAZABhAHQAYQBEAG8AYwBrAQAABmYAAAFyAAAAlgD////8AAAAAAAABNEAAAAAAP////oAAAACAQAAAAP7AAAAFgBEAGUAdgBlAGwAbwBwAEQAbwBjAGsAAAAAAP////8AAAEpAP////sAAAAWAEgAaQBzAHQAbwByAHkARABvAGMAawAAAAAA/////wAAAIMA////+wAAABYAUAByAGUAcwBlAHQAcwBEAG8AYwBrAAAAB3EAAAEDAAAAAAAAAAAAAAACAAAHHQAAACL8AQAAAAH7AAAAFABNAG8AZAB1AGwAZQBEAG8AYwBrAQAAAA4AAAcdAAADNQD///8AAAADAAAHygAAALX8AQAAAAH7AAAAEgBUAGgAdQBtAGIARABvAGMAawAAAAAOAAAHygAAAG0A////AAAD8gAAA08AAAAEAAAABAAAAAgAAAAI/AAAAAQAAAAAAAAAAQAAAB4ATABlAGYAdABTAGgAbwB3AEgAaQBkAGUAQgBhAHIDAAAAAP////8AAAAAAAAAAAAAAAEAAAABAAAAIABSAGkAZwBoAHQAUwBoAG8AdwBIAGkAZABlAEIAYQByAwAAAAD/////AAAAAAAAAAAAAAACAAAAAQAAABwAVABvAHAAUwBoAG8AdwBIAGkAZABlAEIAYQByAQAAAAD/////AAAAAAAAAAAAAAADAAAAAQAAACIAQgBvAHQAdABvAG0AUwBoAG8AdwBIAGkAZABlAEIAYQByAAAAAAD/////AAAAAAAAAAA=",
+        "stateVersion": 10,
+        "thumbHeight": 143,
+        "thumbHeightGrid": 180,
         "thumbPadding": 0,
         "thumbPaddingGrid": 0,
         "thumbSpacing": 0,
         "thumbSpacingGrid": 0,
-        "thumbWidth": 182,
-        "thumbWidthGrid": 160
+        "thumbWidth": 143,
+        "thumbWidthGrid": 160,
+        "topAreaExtent": 0,
+        "topAreaFront": [
+        ]
     },
     "Library": {
+        "bottomAreaExtent": 0,
+        "bottomAreaFront": [
+        ],
         "geometry": "AdnQywADAAAAAANxAAABEgAAC1YAAATOAAADcQAAATIAAAtWAAAEzgAAAAAAAAAADSAAAANxAAABMgAAC1YAAATO",
         "geometryRect": [
             881,
@@ -219,6 +286,7 @@
             2022,
             925
         ],
+        "isBottomAreaCollapsed": false,
         "isCatalogDockVisible": true,
         "isCollectionsDockVisible": true,
         "isColorManage": false,
@@ -234,6 +302,7 @@
         "isHistoryDockVisible": false,
         "isImageInfoVisible": false,
         "isKeywordsDockVisible": true,
+        "isLeftAreaCollapsed": false,
         "isLoupeDisplay": false,
         "isMaximised": false,
         "isMetadataDockVisible": true,
@@ -241,14 +310,22 @@
         "isPresetsDockVisible": false,
         "isQueriesDockVisible": true,
         "isReverseSort": false,
+        "isRightAreaCollapsed": false,
         "isStatusBarVisible": true,
         "isTableDisplay": false,
         "isThumbDockVisible": false,
+        "isTopAreaCollapsed": false,
         "isWindowTitleBarVisible": false,
         "labelChoice": "",
         "labelFontSize": 10,
         "labelFontSizeGrid": 10,
+        "leftAreaExtent": 0,
+        "leftAreaFront": [
+        ],
         "name": "Library",
+        "rightAreaExtent": 0,
+        "rightAreaFront": [
+        ],
         "screenNumber": 0,
         "showThumbLabels": false,
         "showThumbLabelsGrid": true,
@@ -262,9 +339,15 @@
         "thumbSpacing": 0,
         "thumbSpacingGrid": 0,
         "thumbWidth": 143,
-        "thumbWidthGrid": 160
+        "thumbWidthGrid": 160,
+        "topAreaExtent": 0,
+        "topAreaFront": [
+        ]
     },
     "SlideShow": {
+        "bottomAreaExtent": 0,
+        "bottomAreaFront": [
+        ],
         "geometry": "AdnQywADAAAAAA+HAAAATwAAFjEAAASVAAAPhwAAAG8AABYxAAAElQAAAAEAAAAADSAAAA+HAAAAbwAAFjEAAASV",
         "geometryRect": [
             3975,
@@ -272,6 +355,7 @@
             1707,
             1063
         ],
+        "isBottomAreaCollapsed": false,
         "isCatalogDockVisible": true,
         "isCollectionsDockVisible": false,
         "isColorManage": false,
@@ -287,6 +371,7 @@
         "isHistoryDockVisible": false,
         "isImageInfoVisible": false,
         "isKeywordsDockVisible": false,
+        "isLeftAreaCollapsed": false,
         "isLoupeDisplay": true,
         "isMaximised": false,
         "isMetadataDockVisible": false,
@@ -294,14 +379,22 @@
         "isPresetsDockVisible": false,
         "isQueriesDockVisible": false,
         "isReverseSort": false,
+        "isRightAreaCollapsed": false,
         "isStatusBarVisible": true,
         "isTableDisplay": false,
         "isThumbDockVisible": false,
+        "isTopAreaCollapsed": false,
         "isWindowTitleBarVisible": false,
         "labelChoice": "",
         "labelFontSize": 10,
         "labelFontSizeGrid": 10,
+        "leftAreaExtent": 0,
+        "leftAreaFront": [
+        ],
         "name": "Slide Show",
+        "rightAreaExtent": 0,
+        "rightAreaFront": [
+        ],
         "screenNumber": 1,
         "showThumbLabels": false,
         "showThumbLabelsGrid": true,
@@ -315,6 +408,9 @@
         "thumbSpacing": 0,
         "thumbSpacingGrid": 0,
         "thumbWidth": 182,
-        "thumbWidthGrid": 160
+        "thumbWidthGrid": 160,
+        "topAreaExtent": 0,
+        "topAreaFront": [
+        ]
     }
 }

@@ -6018,6 +6018,76 @@ I fixed the crash when clicking + on the Queries panel. A new headless test buil
   Search row.
 
 ==========================================================================================
+Add groups to Filters
+==========================================================================================
+
+Add Groups as an option (toggle button added to the Filters title bar).  The filter categories
+heirarchy when grouped should look like this:
+
+Adhoc search (was Search)
+Folders and files
+  Folders
+  Collections
+  Queries
+  File types
+Time
+  Years
+  Months
+  Days
+Selection
+  Picks
+  Ratings
+  Color classes
+Camera
+  Camera models
+  Lenses
+  Focal lengths
+  ISO
+Metadata
+  Titles
+  Creators
+  GPS
+  Keywords
+Status
+  Availability
+  Duplicates found
+
+Use the same category order when flattened.  Turn the Filters title the same yellow as the
+filter categories when there is any filtering.
+
+Groups are in, with a title-bar toggle. Everything compiles and the Filters unit tests pass, but I haven't run the app, so please try it in Qt Creator.
+
+  What you'll see
+  - Toggle: a new button in the Filters title bar (stacked-lines icon, next to expand/collapse). "Group categories" is also on the panel's right-click menu. Your choice is saved
+    (isGroupedFilters, off by default).
+  - Grouped layout: Adhoc search, then your six groups in the order you listed. Groups open the first time they appear.
+  - Flat layout: the same category order. Any "Filter on..." categories stay at the bottom in both layouts.
+  - "Adhoc search": only the row's label changed. The saved key is still "Search", so saved filter states still restore.
+  - Switching layouts moves the existing rows and doesn't rebuild them. Checks, counts and open/closed branches (including "Show unfiled only") carry over, and nothing refilters.
+  - Yellow title: the Filters title turns the same yellow as the category headers whenever a category header is yellow. That follows the headers' rule, so a category with only one
+    item doesn't light it. That differs slightly from the status bar's "filtered" check.
+
+  Choices I made that you may want changed
+  - Group headers also turn yellow while any category inside them is filtering, so a closed group still shows where the filter is. You didn't ask for this.
+  - Solo mode applies to categories, not groups. Opening a category closes the other categories wherever they are but leaves groups as they were. Clicking a group just opens or
+    closes it.
+  - Loading a new folder now collapses the categories but not the groups. Otherwise every load would hide everything behind the group headers.
+
+  The main risk, now fixed
+  - Category detection: about 30 places, including SortFilter::compileFilters and filter save/restore, identified a category by "has no parent". With groups on, that stops being
+    true: category headers would have been compiled as filter items, and saved keyword filters would have been filed under "Metadata". They now use new helpers: isCategoryHeader,
+    isGroupHeader, isFilterItem and categoryOf.
+  - Role clash: the new group marker first shared a role number with G::ColumnRole, which every category carries, so every category counted as a group. The tests caught it, and it
+    now uses Qt::UserRole + 100.
+
+  Tests: I added four tests to tst_filters covering the flat order, the grouped structure, checks and saved state surviving a regroup, and the yellow group and title. tst_filters
+  (16/16), tst_filterpredicate and tst_collections all pass.
+
+  Files changed: Datamodel/filters.{h,cpp}, Datamodel/datamodel.cpp, Datamodel/buildfilters.cpp, Main/dockwidget.{h,cpp} (title colour), Main/initialize.cpp,
+  Main/menusandactions.cpp, Main/sortandfilter.cpp, Main/mainwindow.h, plus a new icon images/icon16/groups.png (added to winnow.qrc). Docs are updated in Docs/filtershelp.html and
+  a new section in notes/Documentation.txt, with its contents entry.
+
+==========================================================================================
 Keywords Manager
 ==========================================================================================
 
@@ -6049,3 +6119,4 @@ Keyword List
 [] Keyword               xxxxx  =>
 
 Filters visible
+"Users/roryhill/Photos/2010-2019 √/2010 √/201004 √/2010-04-11_Hummer √/JPG/pbase1024/2010-04-11_0039.jpg"

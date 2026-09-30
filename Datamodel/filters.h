@@ -22,6 +22,7 @@ public:
     void setStateToRestore(const QVariantMap &m);
 
     Filters(QWidget *parent);
+    ~Filters() override;
     QTreeWidgetItem *search;
     QTreeWidgetItem *searchTrue;
     QTreeWidgetItem *searchFalse;
@@ -71,6 +72,39 @@ public:
     QString catAvailability = "Availability";
     // QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
+    /*  What the Search category SAYS. catSearch stays the key (filterCategoryToDmColumn,
+        the "Filter on..." name check); only the row's text changed. */
+    QString catSearchLabel = "Adhoc search";
+
+    /*  GROUPS. The categories can be shown flat or under six group headers (Folders and
+        files, Time, Selection, Camera, Metadata, Status) -- the toggle in the Filters
+        title bar. Both arrangements use the SAME order; see categoryOrder.
+
+        A GROUP IS ONLY AN ORGANISER. It has no column and no check state, filters
+        nothing, and is skipped by SortFilter::compileFilters. It is lit in the filtering
+        colour while any category inside it is filtering, so a collapsed group still says
+        where the filter is.
+
+        CATEGORIES ARE NO LONGER ALWAYS TOP-LEVEL. Code that needs "is this a category
+        header", "is this a filter item" or "which category is this item in" must ask
+        isCategoryHeader / isFilterItem / categoryOf, never parent() == nullptr or a
+        walk to the root: with groups on, the root of a keyword is "Metadata". */
+    void setGrouped(bool grouped);
+    bool isGrouped() const { return grouped; }
+    bool isGroupHeader(const QTreeWidgetItem *item) const;
+    bool isCategoryHeader(const QTreeWidgetItem *item) const;
+    /*  The category an item belongs to, at any depth; the category itself for a header;
+        nullptr for a group header or no item. */
+    QTreeWidgetItem *categoryOf(const QTreeWidgetItem *item) const;
+    /*  A row beneath a category (at any depth) -- not a category or a group header. */
+    bool isFilterItem(const QTreeWidgetItem *item) const;
+    /*  Every category header in display order: Search, the built-ins (categoryOrder),
+        then the session categories. */
+    QList<QTreeWidgetItem *> categoryHeaders() const;
+    /*  Collapse every category (and anything open inside one) but leave the groups as
+        they are -- what a new folder and solo mode want. collapseAll() would also close
+        the groups, and with groups on that hides every category behind a click. */
+    void collapseCategories();
 
     QMap<QString,int> filterCategoryToDmColumn;
 //    QHash<QString,QString>categories;
@@ -300,6 +334,9 @@ signals:
     void queryBuilderRequested();
     /*  "Save as Query..." -- MW names it and adds it to the Queries panel. */
     void saveAsQueryRequested(const QString &queryText);
+    /*  Whether any category header is lit in the filtering colour -- emitted only when
+        that changes. MW colours the Filters title bar with it. */
+    void filteringChanged(bool isFiltering);
 
 public slots:
 
@@ -323,6 +360,9 @@ public slots:
     void expandAllFilters();
     void collapseAllFilters();
     void collapseAllFiltersExceptSearch();
+    /*  The Keywords workflow's view of Filters: everything collapsed, the Keywords
+        category (and its group heading, when grouped) expanded and scrolled to the top. */
+    void focusKeywordsCategory();
     void toggleExpansion();
     void setPicksState(bool isChecked);
     void setRatingState(QString rating, bool isChecked);
@@ -351,6 +391,8 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void drawBranches(QPainter *painter, const QRect &rect,
+                      const QModelIndex &index) const override;
 
 public:
     /*  ITEM DATA ROLES on column 0. Both are state the item must CARRY rather than have
@@ -380,7 +422,13 @@ public:
         SessionRole,
         /*  On a Queries item: its query, as text (Utilities/queryexpr.h). See
             queryTextFor. */
-        QueryTextRole
+        QueryTextRole,
+        /*  On a GROUP header: the group's name. Its presence is what makes an item a
+            group -- see isGroupHeader. NUMBERED CLEAR OF G::UserRoles: these roles
+            share Qt::UserRole + n with them, and the next in sequence (+7) is
+            G::ColumnRole, which every category carries -- so every category read as a
+            group. */
+        GroupRole = Qt::UserRole + 100
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
@@ -435,6 +483,10 @@ public:
         files. Excluded items (Qt::PartiallyChecked) are not sources: "not this one" does
         not name a keyword to move. */
     QStringList checkedKeywordPaths() const;
+    /*  Include the keyword item at path and bring it into view. No filterChange: the
+        caller (MW::filterOnKeyword) clears the other filters first and runs ONE. False
+        when there is no such item -- nothing loaded carries the keyword. */
+    bool checkKeywordItem(const QString &path);
 
 
     /*  What the panel is showing for one keyword: the Filter column (filtered = true) or
@@ -463,6 +515,25 @@ public:
 
 private:
     bool setsShown = true;            // see setLibrarySetsAvailable
+
+    struct Group {
+        QTreeWidgetItem *item = nullptr;
+        QList<QTreeWidgetItem *> cats;
+    };
+    QList<Group> groups;                // see setGrouped
+    bool grouped = false;
+    void createGroups();
+    /*  The built-in categories below Search, in the one order both arrangements use --
+        the groups' members, concatenated. */
+    QList<QTreeWidgetItem *> categoryOrder() const;
+    /*  Hide a group whose every category is hidden (Catalog scope hides several). */
+    void updateGroupVisibility();
+    /*  The closed/open arrow on every group and category header, from its expansion.
+        Set after anything that expands or collapses more than the row clicked. */
+    void syncHeaderIcons();
+    /*  Emit filteringChanged if the answer moved. Cheap: header rows only. */
+    void notifyFilteringState();
+    int lastFilteringState = -1;        // -1 = never emitted
     QMutex mutex;
     void resizeColumns();
     int countCeiling = 0;       // see setCountCeiling

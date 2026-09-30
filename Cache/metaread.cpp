@@ -289,7 +289,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     /* Arm on a selection call, but NEVER disarm on a scroll: a scroll's setStartRow
        arrives with fileSelectionChanged = false while the folder's own start row is
        still being read, and clearing here is what left the loupe blank. */
-    if (fileSelectionChanged) pendingSelectionRow = sfRow;
+    if (fileSelectionChanged) pendingSelectionDmRow = dmRowOf(sfRow);
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
@@ -330,7 +330,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         for (int row = first; row <= last; ++row) {
             if (isVideoAt(row)) continue;
             if (!iconLoadedAt(row))
-                readSuccessThisCycle.remove(row);
+                readSuccessThisCycle.remove(dmRowOf(row));
         }
         if (G::isPerfProbe)
             dm->probeRearmNs.fetch_add(probeTimer.nsecsElapsed(),
@@ -586,7 +586,7 @@ void MetaRead::initialize(QString src)
     allFinishedFired = false;
     /* A new folder owes one selection; see the members in metaread.h. */
     firstSelectionPending = true;
-    pendingSelectionRow = -1;
+    pendingSelectionDmRow = -1;
     success = false;
     quitAfterTimeoutInitiated = false;
     if (quitTimer->isActive()) quitTimer->stop();
@@ -697,7 +697,7 @@ QString MetaRead::diagnostics()
     kv("fileSelectionChanged",       QVariant(fileSelectionChanged).toString());
     kv("isNewStartRowWhileDisp.",    QVariant(isNewStartRowWhileDispatching).toString());
     kv("imageCacheTriggered",        QVariant(imageCacheTriggered).toString());
-    kv("pendingSelectionRow",        QVariant(pendingSelectionRow).toString());
+    kv("pendingSelectionDmRow",      QVariant(pendingSelectionDmRow).toString());
     kv("firstSelectionPending",      QVariant(firstSelectionPending).toString());
     kv("success",                    QVariant(success).toString());
     kv("quitAfterTimeoutInitiated",  QVariant(quitAfterTimeoutInitiated).toString());
@@ -809,6 +809,50 @@ QString MetaRead::diagnostics()
     return reportString;
 }
 
+QString MetaRead::rowStateReport(int first, int last)
+{
+/*
+    WHY IS THIS VISIBLE ROW STILL BLANK, from the loader's side. The model can say a row
+    has no icon; only MetaRead knows whether it thinks the row is in flight, already
+    returned this cycle, or never looked at. Probe only (G::isPerfProbe callers).
+*/
+    QString s;
+    QTextStream rpt(&s);
+    rpt << "rowStateReport " << first << "-" << last
+        << "  instance=" << instance << "/" << dm->instance.load()
+        << "  iconRange=" << firstIconRow << "-" << lastIconRow
+        << "  dmRange=" << dm->startIconRange.load() << "-" << dm->endIconRange.load()
+        << "  a=" << a << " b=" << b << " aDone=" << aIsDone << " bDone=" << bIsDone
+        << "  isDispatching=" << isDispatching << " isDone=" << isDone
+        << "  abort=" << abort << " redo=" << redoCount
+        << "  readSuccess=" << readSuccessThisCycle.size()
+        << " rowsReading=" << rowsReading.size()
+        << " videoReading=" << videoRowsReading.size() << "\n";
+    rpt << "  cycling:";
+    for (int id = 0; id < readerCount; ++id)
+        rpt << " " << id << (cycling.at(id) ? "C" : "-")
+            << (readers[id]->isPending() ? "P" : "")
+            << ":" << readers[id]->statusText.at(readers[id]->status);
+    rpt << "\n";
+    const int n = rowCountSf();
+    int missing = 0;
+    for (int row = qMax(0, first); row <= qMin(n - 1, last); ++row) {
+        const bool loaded = iconLoadedAt(row);
+        if (loaded && !qEnvironmentVariableIsSet("WINNOW_ROWREPORT_ALL")) continue;
+        if (!loaded) ++missing;
+        rpt << (loaded ? "  ok" : "  --") << " sf " << row << " dm " << dmRowOf(row)
+            << (isVideoAt(row) ? " VIDEO" : "")
+            << (metaAttemptedAt(row) ? " meta" : " NOMETA")
+            << (rowsReading.contains(dmRowOf(row)) ? " IN-FLIGHT" : "")
+            << (videoRowsReading.contains(dmRowOf(row)) ? " VIDEO-IN-FLIGHT" : "")
+            << (readSuccessThisCycle.contains(dmRowOf(row)) ? " RETURNED" : "")
+            << ((row >= firstIconRow && row <= lastIconRow) ? "" : " OUTSIDE-RANGE")
+            << "  " << pathAt(row) << "\n";
+    }
+    rpt << "  missing=" << missing << "\n";
+    return s;
+}
+
 QString MetaRead::reportHealthChecks()
 {
 /*
@@ -917,7 +961,7 @@ QString MetaRead::reportHealthChecks()
     {
         int overlap = 0;
         for (int r : readSuccessThisCycle) {
-            if (dm->sf->index(r, G::MetadataStatusColumn).data().toInt() == G::MetaNotAttempted) {
+            if (dm->index(r, G::MetadataStatusColumn).data().toInt() == G::MetaNotAttempted) {
                 ++overlap;
             }
         }
@@ -1025,7 +1069,7 @@ bool MetaRead::isVideoAt(int sfRow) const
     return sync->has(snap->dmRow(sfRow), RowSync::IsVideo);
 }
 
-void MetaRead::onVideoReadingCleared(int sfRow, int fromInstance)
+void MetaRead::onVideoReadingCleared(int dmRow, int fromInstance)
 {
 /*
     A video row's frame decode has been resolved on the GUI thread (a frame
@@ -1034,10 +1078,21 @@ void MetaRead::onVideoReadingCleared(int sfRow, int fromInstance)
 
     A stale instance is ignored: the set is cleared wholesale on setStartRow
     and initialize, so a late signal from the previous folder must not remove
-    an sf row the CURRENT folder has just dispatched.
+    a row the CURRENT folder has just dispatched.
+
+    A DATAMODEL row, like the set it clears. The proxy row was mapped on the GUI
+    thread when the decode finished, and after a re-sort that is not the row the
+    marker was inserted under -- the marker stayed, and the video was never
+    revisited.
 */
     if (fromInstance != instance) return;
-    videoRowsReading.remove(sfRow);
+    videoRowsReading.remove(dmRow);
+}
+
+bool MetaRead::isVideoDm(int dmRow) const
+{
+    auto sync = dm->rowSync();
+    return sync && sync->has(dmRow, RowSync::IsVideo);
 }
 
 inline bool MetaRead::needToRead(int sfRow)
@@ -1055,12 +1110,16 @@ inline bool MetaRead::needToRead(int sfRow)
     bool isIcon  = iconLoadedAt(sfRow);
     bool isMeta  = metaAttemptedAt(sfRow);
     bool isVideo = isVideoAt(sfRow);
+    /*  The worker-local sets are keyed by DATAMODEL row -- see readSuccessThisCycle in
+        the header for why a proxy row cannot be a key. */
+    const int dmRow = dmRowOf(sfRow);
+    if (dmRow < 0) return false;
 
     /* In-flight check, entirely worker-local. Video rows have their own set
        because their decode outlives the Reader -- see videoRowsReading in the
        header for why neither a direct nor a queued model write works here. */
-    bool isReading = isVideo ? videoRowsReading.contains(sfRow)
-                             : rowsReading.contains(sfRow);
+    bool isReading = isVideo ? videoRowsReading.contains(dmRow)
+                             : rowsReading.contains(dmRow);
 
     // already reading this item?
     if (isReading || isIcon) {
@@ -1072,7 +1131,7 @@ inline bool MetaRead::needToRead(int sfRow)
        IconLoadedColumn for the last-completing row hasn't yet been
        published by the main thread, so isIcon above looks false even
        though the Reader successfully loaded the icon. */
-    if (readSuccessThisCycle.contains(sfRow)) {
+    if (readSuccessThisCycle.contains(dmRow)) {
         return false;
     }
 
@@ -1111,15 +1170,15 @@ inline bool MetaRead::needToRead(int sfRow)
 
     // mark in-flight
     if (isVideo) {
-        videoRowsReading.insert(sfRow);
+        videoRowsReading.insert(dmRow);
         /* Keep the column in step for the table and the diagnostics report,
            but through the queued setter -- the guard above is what actually
            prevents a double dispatch. */
-        emit setValSf(sfRow, G::MetadataReadingColumn, true, instance,
+        emit setValDm(dmRow, G::MetadataReadingColumn, true, instance,
                       "MetaRead::needToRead");
     }
     else {
-        rowsReading.insert(sfRow);
+        rowsReading.insert(dmRow);
     }
 
     if (G::isPerfProbe) dm->probeDispatched.fetch_add(1, std::memory_order_relaxed);
@@ -1276,7 +1335,7 @@ void MetaRead::redo()
         const int last  = qMin(rowCountSf() - 1, lastIconRow);
         for (int row = first; row <= last; ++row) {
             if (isVideoAt(row)) continue;
-            if (!iconLoadedAt(row)) readSuccessThisCycle.remove(row);
+            if (!iconLoadedAt(row)) readSuccessThisCycle.remove(dmRowOf(row));
         }
     }
 
@@ -1324,14 +1383,17 @@ void MetaRead::processReturningReader(int id, Reader *r)
     /* metaRead works in proxy rows and the reader reports a datamodel row.
        The snapshot carries the reverse map, so this is O(1) -- it runs once
        per returning reader, which is once per image. */
+    /*  The sets are keyed by the datamodel row the reader was dispatched on, so the
+        entry removed is the entry needToRead inserted whatever the proxy has done
+        since. The proxy row is still needed below, for the selection handshake. */
+    if (dmRow >= 0) {
+        readSuccessThisCycle.insert(dmRow);
+        if (!isVideoDm(dmRow)) rowsReading.remove(dmRow);
+    }
     int sfRow = -1;
     {
         auto snap = dm->proxySnapshot();
         sfRow = snap ? snap->sfRowFromDmRow(dmRow) : -1;
-        if (sfRow >= 0) {
-            readSuccessThisCycle.insert(sfRow);
-            if (!isVideoAt(sfRow)) rowsReading.remove(sfRow);
-        }
     }
 
     // progress counter
@@ -1372,16 +1434,16 @@ void MetaRead::processReturningReader(int id, Reader *r)
 
     /*  trigger MW::fileSelectionChange which starts ImageCache
 
-        Compared in PROXY rows. This was dmRow == startRow, which mixes the two row
-        spaces: startRow is the proxy row setStartRow was given, dmRow is the
-        datamodel row the reader was dispatched on. They agree only while the proxy
-        is unsorted and unfiltered, so any other ordering either selected the wrong
-        image or -- when no reader ever returned on a dm row equal to the proxy
-        start row -- selected nothing at all. */
-    if (pendingSelectionRow >= 0 &&
+        Compared in DATAMODEL rows -- the image, not its position. This was once
+        dmRow == startRow, which mixed the two row spaces, and then sfRow ==
+        pendingSelectionRow, which named a position: correct until the proxy was
+        re-sorted, after which it selected whatever image had moved there. The row
+        emitted is where that image is NOW. */
+    if (pendingSelectionDmRow >= 0 &&
         !imageCacheTriggered &&
         instance == dm->instance &&
-        sfRow == pendingSelectionRow
+        dmRow == pendingSelectionDmRow &&
+        sfRow >= 0
         )
     {
         imageCacheTriggered = true;
@@ -1391,7 +1453,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
             may have changed before it is delivered -- an index is only ever
             valid in the thread and the moment that made it. Selection::
             setCurrentIndex is given a fresh one built on the GUI thread. */
-        pendingSelectionRow = -1;
+        pendingSelectionDmRow = -1;
         firstSelectionPending = false;
         bool clearSelection = true;
         // Selection::setCurrentIndex routes through MW::updateChange which
@@ -1982,8 +2044,13 @@ void MetaRead::allFinished(QString src)
         before MW::folderChangeCompleted sets the image cache position. */
     if (firstSelectionPending && instance == dm->instance) {
         firstSelectionPending = false;
-        int sfRow = pendingSelectionRow >= 0 ? pendingSelectionRow : startRow;
-        pendingSelectionRow = -1;
+        int sfRow = startRow;
+        if (pendingSelectionDmRow >= 0) {
+            auto snap = dm->proxySnapshot();
+            const int at = snap ? snap->sfRowFromDmRow(pendingSelectionDmRow) : -1;
+            if (at >= 0) sfRow = at;
+        }
+        pendingSelectionDmRow = -1;
         if (sfRow >= 0 && sfRow < rowCountSf()) {
             if (G::isLogger || G::isFlowLogger)
                 G::log(fun, "No reader triggered the first selection; selecting row " +

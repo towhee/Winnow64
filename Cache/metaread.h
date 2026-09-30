@@ -34,6 +34,9 @@ public:
     void syncInstance();
     // void cleanupIcons();
     QString diagnostics();
+    /*  Per-row loader state for sf rows first..last that have no icon (probe only).
+        Runs on the metaReadThread: invoke it BlockingQueued from the GUI thread. */
+    Q_INVOKABLE QString rowStateReport(int first, int last);
     QString reportHealthChecks();
     QString reportLifetimeCounters();
     void debugRunStatus();
@@ -88,7 +91,9 @@ signals:
     void updateProgressInStatusbar(int progress, int total, QColor);
     // void updateProgressInStatusbar(int progress, int total, QColor darkRed);
 
-    void setValSf(int sfRow, int sfCol, QVariant value,
+    /*  A DATAMODEL row: a proxy row emitted from this thread is mapped on the GUI
+        thread later, and a re-sort in between lands the write on another image. */
+    void setValDm(int dmRow, int dmCol, QVariant value,
                   int instance, QString src = "",
                   int role = Qt::EditRole);
     void cleanupIcons(int instance);
@@ -111,7 +116,7 @@ signals:
 public slots:
     /*  DataModel::videoReadingCleared -> drop the worker-local marker for a
         video row whose frame decode has been resolved. */
-    void onVideoReadingCleared(int sfRow, int fromInstance);
+    void onVideoReadingCleared(int dmRow, int fromInstance);
 
     void initialize(QString src = "");
     void dispatchReaders();
@@ -153,6 +158,7 @@ private:
     bool iconLoadedAt(int sfRow) const;
     bool metaAttemptedAt(int sfRow) const;
     bool isVideoAt(int sfRow) const;
+    bool isVideoDm(int dmRow) const;
     bool nextRowToRead();
 
     QMutex mutex;
@@ -174,14 +180,24 @@ private:
     bool allReadersCycling();
     bool noReadersCycling();
 
-    /* Per-cycle set of sf rows a Reader returned Status::Success for.
+    /* Per-cycle set of rows a Reader returned Status::Success for.
        Consulted in needToRead to short-circuit the post-redo race where
        the proxy's IconLoadedColumn hasn't yet been published by the main
        thread for a row whose Reader already completed. Cleared on
-       setStartRow and initialize. */
+       setStartRow and initialize.
+
+       ALL THREE SETS ARE KEYED BY DATAMODEL ROW, never by proxy row. A proxy row
+       names a POSITION, and a sort moves every image to a new one without changing
+       the instance (a filter change does change it, and clears these). Keyed by
+       position, a re-sort left each entry naming some other image: rows marked
+       returned were skipped though they had never been read, and a reader's return
+       removed the wrong in-flight marker, stranding the real one for the session.
+       Found by the headless --catalogload probe after the restored Library sort:
+       every other visible cell blank. Datamodel rows only move under a new
+       instance (MW::applyModelChange bumps it first), which clears the sets. */
     QSet<int> readSuccessThisCycle;
 
-    /* sf rows currently dispatched to a Reader but not yet returned. Replaces
+    /* Rows currently dispatched to a Reader but not yet returned. Replaces
        the old cross-thread write of MetadataReadingColumn on the proxy from
        this worker thread (which mutated the QSortFilterProxyModel off the GUI
        thread and queued a view dataChanged per dispatched row). Accessed only
@@ -192,7 +208,7 @@ private:
        readSuccessThisCycle. */
     QSet<int> rowsReading;
 
-    /*  sf rows of VIDEO files dispatched to the FrameDecoder but not yet
+    /*  Rows of VIDEO files dispatched to the FrameDecoder but not yet
         resolved. Video needs its own set because the decode outlives the
         Reader: processReturningReader must NOT clear the marker, or dispatch
         would re-pick the file and spawn a second QMediaPlayer on it
@@ -239,13 +255,17 @@ private:
         startRow and clear fileSelectionChanged, so the trigger never fired and the
         loupe kept showing nothing until the user clicked a thumbnail.
 
-        pendingSelectionRow is the PROXY row still owed a selection. A scroll does not
-        touch it, so the bootstrap survives one. firstSelectionPending is the same
+        pendingSelectionDmRow is the DATAMODEL row -- the image -- still owed a
+        selection. A scroll does not touch it, so the bootstrap survives one. It was a
+        proxy row, and a row served by the index prefetch never has a reader return for
+        it, so the position stayed armed; after a re-sort the first reader to return
+        ANY image at that position selected it, yanking the selection away from the
+        image the user was on. firstSelectionPending is the same
         question asked once per folder load (reset in initialize alongside
         allFinishedFired): it arms the backstop in allFinished for the case where the
         start row's reader never returns at all -- a failed or aborted read, or a row
         the dispatcher skipped. */
-    int pendingSelectionRow = -1;
+    int pendingSelectionDmRow = -1;
     bool firstSelectionPending = false;
 
     // cache progress color

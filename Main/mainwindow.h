@@ -261,6 +261,19 @@ public:
     QList<G::App> externalApps;          // list of external apps
     QVector<QString> xAppShortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
 
+    /* One window side's show/hide bar state in a form that can be saved: whether the
+       bar holds that side collapsed, plus what is needed to put it back as it was --
+       the side's extent and the panels that were the front tab of their groups. A side
+       restored already collapsed has nothing on screen to measure those from, so they
+       travel with the flag. Saved for the session (MW::writeSettings) and in every
+       workspace. See MW::areaCollapseState / MW::applyAreaCollapse. */
+    struct AreaCollapse {
+        bool collapsed = false;
+        int extent = 0;             // width (left/right) or height (top/bottom)
+        QStringList front;          // objectNames of the docks that were the front tab
+    };
+    static constexpr int kCollapsibleAreas = 4;     // left, right, bottom, top
+
     struct WorkspaceData {
         QString name;           // used for menu
         // State
@@ -301,6 +314,9 @@ public:
         bool isPresetsDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
+        /* Which sides the show/hide bars hold collapsed, indexed as MW::collapsibleAreas.
+           Absent from older workspaces: every side expanded, as they always applied. */
+        AreaCollapse areaCollapse[kCollapsibleAreas];
         // View
         bool isLoupeDisplay;
         bool isGridDisplay;
@@ -441,12 +457,27 @@ public:
     // int displayHorizontalPixels; // move to global
     // int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;          // automatic check for a newer Winnow at startup
-    bool openLibraryAtStart = false;    // start in Catalog scope instead of a folder
-    /*  With openLibraryAtStart: reopen the Library with the sort and filters it was left
-        with. Saved by saveLibraryState on leaving the Library and at quit; applied by
-        queueLibraryStateRestore (filters, through restoreFiltersAfterFolderChange) and
-        applyRestoredLibrarySort (the sort, from metadataComplete). */
+    /*  "Reopen as it was left". Winnow ALWAYS starts in the source that was active at
+        the last close (lastScopeWasLibrary): the Library loads the Library, Folders
+        comes up waiting for a folder. With this on, what was loaded comes back too --
+        the Library's sort and filters (saveLibraryState / queueLibraryStateRestore /
+        applyRestoredLibrarySort), or the folders that were selected and their filters
+        (saveFoldersState / restoreFoldersState). Settings key still
+        "restoreLibraryState". */
     bool restoreLibraryState = false;
+    /*  Was the Library (Catalog scope) the active source when Winnow last closed?
+        Captured in closeEvent before any teardown, written by writeSettings. */
+    bool lastScopeWasLibrary = false;
+    /*  THE FOLDERS THE USER SELECTED, as selected: each root and whether its subtree
+        came with it. dm->folderList cannot answer this -- a recursive load lists every
+        subfolder. Maintained by MW::folderSelectionChange; saved by saveFoldersState. */
+    struct FolderRoot { QString path; bool recurse = false; };
+    QVector<FolderRoot> folderRoots;
+    /*  A Folders filter restore queued at start for the load it begins: exempt from
+        MW::reset like libraryFilterRestorePending, cancelled by entering the Library. */
+    bool foldersFilterRestorePending = false;
+    void saveFoldersState();
+    void restoreFoldersState();
     bool libraryRestoreSortPending = false;
     int  libraryRestoreSortColumn = -1;     // what queueLibraryStateRestore read
     bool libraryRestoreReverse = false;
@@ -459,14 +490,18 @@ public:
         the message with "Loading search results." Consumed there; cleared on leaving
         the Library, so an agreement cannot outlive the request it was given for. */
     bool pendingWholeLibrary = false;
-    /*  THE VIEWS STAY COVERED UNTIL THE RESTORED FILTER HAS LANDED. A Library load with
-        a filter to restore would otherwise show the whole unfiltered Library -- loupe,
-        grid and filmstrip -- for the seconds the filter build takes, and then jump to
-        the filtered set. Raised by loadCatalogScope, lifted by lowerLoadCurtain from
-        every path on which the restore lands, is abandoned, or can no longer come. See
-        "REOPEN LIBRARY AS IT WAS LEFT" in notes/Documentation.txt. */
+    /*  THE VIEWS STAY COVERED UNTIL THE LIBRARY IS READY TO SHOW. Every replacing
+        Library load raises it (loadCatalogScope), so the rows streaming in, the restored
+        sort and a restored filter are never seen as three successive pictures. Lifted by
+        metadataComplete once sorted (no filter restore pending), by
+        restoreFiltersAfterFolderChange when the restored filter lands, and on every path
+        on which that restore is abandoned or can no longer come. See "REOPEN LIBRARY AS
+        IT WAS LEFT" in notes/Documentation.txt. */
     void raiseLoadCurtain();
-    void lowerLoadCurtain(QString src);
+    /*  revealView: put the mode's page (prevCentralView) in place BEFORE the cover
+        comes off, so the reveal is the finished view rather than the message pane
+        underneath. For the "ready" lifts; not for Esc or leaving the Library. */
+    void lowerLoadCurtain(QString src, bool revealView = false);
     bool isLoadCurtainUp() const { return loadCurtainUp; }
     bool loadCurtainUp = false;
     LoadCurtain *centralCurtain = nullptr;
@@ -704,6 +739,9 @@ public slots:
         first batch and to the last, then exits. See Cache/catalogprobe.h for why this
         cannot be a unit test. Called from main, like the other test modes. */
     void runCatalogLoadTest(const QString &pathFilter);
+    /*  Probe: a 20 ms timeline of the central area. See the definition. */
+    void startCentralTimeline(std::shared_ptr<QElapsedTimer> clock);
+    void timelineMark(const char *what);
     /*  GUI STALL WATCHDOG. A timer that should fire every 250 ms and reports when it was
         LATE, which is the only direct measurement of a beachball: it says when the event
         loop froze and for how long, so the [PERF] lines either side of the gap say what
@@ -964,9 +1002,11 @@ private slots:
 
     /*  KEYWORDS (Main/keywordedit.cpp). Add and/or remove keyword PATHS across the whole
         selection, writing each image's sidecar and updating the model, the filters and
-        the catalog. add and remove are full paths ("Fauna|Bird|Heron"), never leaves. */
+        the catalog. add and remove are full paths ("Fauna|Bird|Heron"), never leaves.
+        replace: add only to the images that had something in remove -- a swap, so a
+        selected image that never carried the old keyword does not gain the new one. */
     void applyKeywordsToSelection(const QStringList &add, const QStringList &remove,
-                                  bool rebuildFilters = true);
+                                  bool rebuildFilters = true, bool replace = false);
     /*  Rebuild the Keywords filter category after keywords were written. Separate so a
         caller filing several keywords at once pays for one rebuild, not one each. */
     void rebuildKeywordFilters(const QString &src);
@@ -975,6 +1015,9 @@ private slots:
     void rebuildAbortedFilters();
     /*  A full build completed: restore the aborted-rebuild retry allowance. */
     void filterBuildCompleted();
+    /*  Entering the Keywords workflow: Filters collapsed to its Keywords category, at
+        the top. Deferred a tick so the workspace's docks have settled. */
+    void focusKeywordsFilters();
     /*  File the CHECKED Filters keywords into the vocabulary node these images were
         dropped on -- one pass per keyword. Returns how many images were filed. */
     int applyKeywordMoves(const QString &targetNodePath, const QStringList &imagePaths);
@@ -1188,9 +1231,13 @@ private slots:
     bool isSortFilter();
     void invertFilters();
     void setFilterSolo();
+    void setFilterGroups();
     void toggleReject();
     void uncheckAllFilters();
     void clearAllFilters();
+    /*  Clear every filter, then filter on this one keyword path. A Keywords dock tag
+        or keyword-list click. */
+    void filterOnKeyword(const QString &path);
     void sortChangeFromAction();
     void sortReverse();
     void sortChange(QString src = "Action");
@@ -1245,6 +1292,14 @@ private slots:
         MW::scheduleIconRangeSettle -- it is what replaced the nested event loop that
         scrollToCurrentRowIfNotVisible used to open. */
     void scheduleIconRangeSettle(const QString &src);
+    /*  After the proxy is REORDERED (a sort): the same rows, new positions. Re-centres
+        the chunk and restarts the loader for what is now on screen. See the definition. */
+    void resyncIconLoaderAfterReorder(const QString &src);
+    /*  Start-up Library load, deferred until the window is exposed and the load
+        cover has painted. See the definition. */
+    void startLibraryWhenExposed(int attempt);
+    /*  While the load cover is up the status bar repeats its message (one line). */
+    void mirrorLoadMessageToStatus(const QString &message);
     void jump();
     void zoomToggle();
     // status functions
@@ -1660,6 +1715,7 @@ private:
     // Filters
 
     QAction *filterSoloAction;
+    QAction *filterGroupsAction = nullptr;
     QAction *filterUpdateAction;
     QAction *clearAllFiltersAction;
     QAction *expandAllFiltersAction;
@@ -2067,7 +2123,21 @@ private:
     void createShowHideBars();               // build the three bars + their host docks
     void placeShowHideBars();                // re-assert them on the rim after a layout
     void toggleDockArea(Qt::DockWidgetArea area);   // a bar was clicked
+    /* Hide the wanted docks in `area` and record them, `front` naming the front tabs. */
+    void collapseDockArea(Qt::DockWidgetArea area, const QStringList &front, int extent);
     void syncShowHideBars();                 // triangles + which bars are on screen
+    /* ---- Saving the collapse (session + workspaces) ----
+       The four sides in AreaCollapse array order, each with the stem of its saved keys
+       ("Left" -> isLeftAreaCollapsed, leftAreaExtent, leftAreaFront). */
+    static const QList<QPair<Qt::DockWidgetArea, QString>> &collapsibleAreas();
+    AreaCollapse areaCollapseState(Qt::DockWidgetArea area) const;
+    void snapshotAreaCollapse(AreaCollapse *c) const;       // all four, from the live map
+    void applyAreaCollapse(Qt::DockWidgetArea area, const AreaCollapse &c);
+    void applyAreaCollapse(const AreaCollapse *c);          // all four
+    static void areaCollapseToMap(const AreaCollapse *c, QVariantMap &m);
+    static void areaCollapseFromMap(const QVariantMap &m, AreaCollapse *c);
+    void writeSessionAreaCollapse();         // QSettings, at quit
+    void applySessionAreaCollapse();         // QSettings, at startup
 public:
     /* True while a bar is holding this area collapsed. The paths that push dock
        visibility back from the actions (setThumbDockVisibity, the Grid/Compare view-mode
@@ -2158,6 +2228,7 @@ private:
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
+    BarBtn *filterGroupsBtn = nullptr;      // title bar toggle for filterGroupsAction
     DockTitleBar *catalogTitleBar;
     DockTitleBar *keywordsTitleBar = nullptr;
     DockTitleBar *collectionsTitleBar = nullptr;
@@ -2743,6 +2814,8 @@ private:
 
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool iconRangeSettleQueued = false; // one pending scheduleIconRangeSettle at a time
+    bool iconReorderResyncQueued = false; // one pending resyncIconLoaderAfterReorder
+    std::shared_ptr<QElapsedTimer> timelineClock;   // set by startCentralTimeline (probe)
 
     bool simulateJustInstalled;
     bool isSettings = false;
@@ -2843,6 +2916,10 @@ private:
     /*  Consecutive aborted-rebuild retries, capped so a chain of full rebuilds cannot
         become a minute of apparent idleness. Cleared by filterBuildCompleted. */
     int filterRebuildAttempts = 0;
+    /*  Launched into the Keywords workflow: focus the Keywords filters again when the
+        first filter build completes, since the build fills the category after the
+        layout was applied. */
+    bool focusKeywordsFiltersAfterBuild = false;
     /*  Load the vocabulary if it is not loaded yet. Called from EVERY route by which the
         dock can become visible, because there are several and only one of them used to
         do it. Retries rather than latching: see the definition.
