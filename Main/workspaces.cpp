@@ -287,9 +287,9 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        UNVERSIONED so an old one still restores; w.stateVersion is what says which docks
        it predates. */
     if (w.stateVersion < winnowStateVersion) placeDocksAddedSince(w.stateVersion);
-    /* Unconditional, at every version -- see MW::placeShowHideBars. A workspace carries
-       each panel's visibility, so any area the bars had collapsed is now expanded; the
-       collapse map is dropped to match rather than left claiming otherwise. */
+    /* Unconditional, at every version -- see MW::placeShowHideBars. The collapse map
+       belongs to the layout being left; the workspace's own collapse state is applied
+       below, once the docks are where it puts them. */
     areaCollapsed.clear();
     areaCollapsedExtent.clear();
     placeShowHideBars();
@@ -299,6 +299,13 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         raises a panel of its own afterwards (D raising the Develop panel as it enters
         Develop mode) still wins. */
     restoreDockTabSelection(w.name);
+
+    /*  The sides this workspace was captured with collapsed.  Its state blob already
+        has those panels hidden; this records them as the bars' so the triangle points
+        the right way and a click brings back the panels, the front tab and the width
+        the side had when it was captured.  After everything above that sets dock
+        visibility, or one of those would undo it. */
+    applyAreaCollapse(w.areaCollapse);
 
     /*  A workspace switch is the other route to a panel the wrong size, and it uses the
         same restoreState the startup path does -- so it is marked the same way, and
@@ -358,6 +365,8 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isPresetsDockVisible = presetsDockVisibleAction->isChecked();
     wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
+    // which sides the show/hide bars hold collapsed
+    snapshotAreaCollapse(wsd.areaCollapse);
 
     // View
     wsd.isLoupeDisplay = asLoupeAction->isChecked();
@@ -930,6 +939,7 @@ QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
     m["isHistoryDockVisible"] = wsd.isHistoryDockVisible;
     m["isPresetsDockVisible"] = wsd.isPresetsDockVisible;
     m["isThumbDockVisible"] = wsd.isThumbDockVisible;
+    areaCollapseToMap(wsd.areaCollapse, m);
     // View
     m["isLoupeDisplay"] = wsd.isLoupeDisplay;
     m["isGridDisplay"] = wsd.isGridDisplay;
@@ -1003,6 +1013,8 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     wsd.isHistoryDockVisible = m.value("isHistoryDockVisible").toBool();
     wsd.isPresetsDockVisible = m.value("isPresetsDockVisible").toBool();
     wsd.isThumbDockVisible = m.value("isThumbDockVisible").toBool();
+    // absent from a workspace saved before collapse was recorded: all sides expanded
+    areaCollapseFromMap(m, wsd.areaCollapse);
 
     // View
     wsd.isLoupeDisplay = m.value("isLoupeDisplay").toBool();
@@ -1409,10 +1421,19 @@ void MW::invokeWorkflowLayout(int wf, int lay)
     if (wf == WfSource) browseLayoutApplied = lay;
     currentWorkflow = wf;
     syncWorkflowSwitcher();
+    if (wf == WfKeywords) focusKeywordsFilters();
     /* A workspace carries a Browse view (Loupe, Grid ...) and invokeWorkspace just put
        it up; the Map workflow's page is the map instead. Here rather than in
        invokeMapWorkflow so Reset Layout and a resumed session get the map too. */
     if (wf == WfMap) showMapPage();
+}
+
+void MW::focusKeywordsFilters()
+{
+    if (G::isLogger) G::log("MW::focusKeywordsFilters");
+    QTimer::singleShot(0, this, [this] {
+        if (filters && currentWorkflow == WfKeywords) filters->focusKeywordsCategory();
+    });
 }
 
 void MW::invokeWorkflowDefault(int wf)
@@ -1687,6 +1708,18 @@ void MW::chooseSource(bool library, const QString &src)
     const bool follow = currentWorkflow == WfSource
                         && G::operationMode != G::OperationMode::Develop
                         && G::scope != target && before != lay;
+    /*  COVERED FROM THE CLICK. The Browse layout switch below takes about a second
+        (timeline probe: 1.1 s), and until setCatalogScopeWhole puts up its message the
+        folder being left sat on screen while the panels moved around it. Raised here;
+        lifted below if the Library is not entered after all (picks kept, empty catalog),
+        otherwise it stays until the Library is ready (see loadCurtainUp). */
+    const bool coverForLibrary = library && G::scope != G::Scope::Catalog
+                                 && !G::isInitializing;
+    if (coverForLibrary) {
+        setCentralMessage(tr("Loading the library."));
+        raiseLoadCurtain();
+    }
+
     if (follow) {
         invokeWorkflowLayout(WfSource, lay);
         requestView(browseView);
@@ -1694,6 +1727,8 @@ void MW::chooseSource(bool library, const QString &src)
 
     if (library) setCatalogScopeWhole(src);
     else showFoldersSource();
+    if (coverForLibrary && G::scope != G::Scope::Catalog)
+        lowerLoadCurtain("MW::chooseSource Library refused");
 
     if (follow && G::scope != target) {
         invokeWorkflowLayout(WfSource, before);

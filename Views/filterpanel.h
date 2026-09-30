@@ -125,6 +125,9 @@ signals:
         reload or a refresh has something to re-run. */
     void loadResults(const QVector<CatalogRow> &rows, bool append,
                      const CatalogQuery &query);
+    /*  A search finished and loads nothing (empty, over the auto-load cap, or
+        unchanged): MW lifts the load cover entering the Library raised. */
+    void searchNotLoaded();
     /* Back in Folders scope: the tree is holding the CATALOG's values and must be rebuilt
        from the datamodel. Only MW knows whether the model is ready for that, so it owns
        the rebuild (buildFiltersWhenModelReady) and this only asks. */

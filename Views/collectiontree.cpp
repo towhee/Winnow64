@@ -24,8 +24,11 @@ namespace {
 const char *kNodeMime = "application/x-winnow-collection-node";
 
 /*  Collections are violet, so they read as neither a folder on disk (blue on macOS,
-    yellow on Windows) nor the Library row's teal. */
+    yellow on Windows) nor the Library row's teal. Queries are amber, and draw their own
+    glyph (a magnifier over a list), so a query never reads as a collection -- one holds
+    images, the other describes them. */
 const QColor kCollectionColor(160, 130, 210);
+const QColor kQueryColor(222, 150, 70);
 
 QIcon tinted(const QString &resource, const QColor &c)
 {
@@ -60,7 +63,9 @@ CollectionTree::CollectionTree(CollectionStore::Kind kind, const QString &countM
     if (G::isLogger) G::log("CollectionTree::CollectionTree");
     setObjectName(kind == CollectionStore::Kind::Collection ? "collectionTree"
                                                             : "queryTree");
-    nodeIcon = tinted(":/images/icon16/collections_white.png", kCollectionColor);
+    nodeIcon = kind == CollectionStore::Kind::Query
+        ? tinted(":/images/icon16/queries_white.png", kQueryColor)
+        : tinted(":/images/icon16/collections_white.png", kCollectionColor);
 
     setColumnCount(2);
     setHeaderHidden(true);

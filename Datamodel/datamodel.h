@@ -682,7 +682,9 @@ signals:
         read MetadataReadingColumn off its own thread. The PROXY row is sent
         because that is how MetaRead keys its set, and only the GUI thread may
         map a datamodel row to a proxy row. */
-    void videoReadingCleared(int sfRow, int fromInstance);
+    /*  A DATAMODEL row: MetaRead keys its in-flight sets by model row, so a
+        re-sort between dispatch and decode cannot strand the marker. */
+    void videoReadingCleared(int dmRow, int fromInstance);
 
     void stop(QString src);
     void folderChange(bool aborted);

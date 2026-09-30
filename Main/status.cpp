@@ -38,6 +38,13 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 */
     IngestProbe::Scope _ip("MW::updateStatus");
     if (!G::useUpdateStatus) return;
+    /*  THE LOAD COVER OWNS THE STATUS BAR while it is up (mirrorLoadMessageToStatus):
+        position, selection and picks describe a set that is not ready to be shown.
+        lowerLoadCurtain calls back here when it is. */
+    if (loadCurtainUp && centralCurtain) {
+        mirrorLoadMessageToStatus(centralCurtain->message());
+        return;
+    }
 
     QString fun = "MW::updateStatus";
     if (G::isLogger)

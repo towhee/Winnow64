@@ -978,6 +978,17 @@ void MW::createFilterActions()
         filterSoloAction->setChecked(settings->value("isSoloFilters").toBool());
     setFilterSolo();    // set solo in filters and save to settings
     connect(filterSoloAction,  &QAction::triggered, this, &MW::setFilterSolo);
+
+    filterGroupsAction = new QAction(tr("Group categories"), this);
+    filterGroupsAction->setShortcutVisibleInContextMenu(true);
+    filterGroupsAction->setCheckable(true);
+    filterGroupsAction->setToolTip(tr("Show the filter categories under headings "
+                                      "(Time, Camera, Metadata...) or as one flat list."));
+    addAction(filterGroupsAction);
+    filterGroupsAction->setChecked(settings->value("isGroupedFilters", false).toBool()
+                                   && !simulateJustInstalled);
+    setFilterGroups();  // arrange the categories, sync the title bar button, save
+    connect(filterGroupsAction, &QAction::triggered, this, &MW::setFilterGroups);
 }
 
 void MW::createSortActions()
@@ -3160,6 +3171,7 @@ void MW::createFiltersContextMenu()
     filterActions->append(expandAllFiltersAction);
     filterActions->append(collapseAllFiltersAction);
     filterActions->append(filterSoloAction);
+    filterActions->append(filterGroupsAction);
     // docking panels context menus
     filters->addActions(*filterActions);
     /*  DefaultContextMenu, NOT ActionsContextMenu, so that Filters::contextMenuEvent is

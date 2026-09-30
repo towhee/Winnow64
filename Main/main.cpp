@@ -351,7 +351,17 @@ int main(int argc, char *argv[])
         std::_Exit(rc);
     }
 
+    /*  WINNOW_STARTUP_TIMELINE=1: the central-area timeline (MW::startCentralTimeline)
+        from before the window is built -- what a launch shows, and when. */
+    auto startupClock = std::make_shared<QElapsedTimer>();
+    startupClock->start();
+    const bool startupTimeline = qEnvironmentVariableIntValue("WINNOW_STARTUP_TIMELINE") == 1;
+
     MW mw(args);
+    if (startupTimeline) {
+        mw.startCentralTimeline(startupClock);
+        mw.timelineMark("MW constructed");
+    }
 
     // // hide root in FSTree after loaded
     // QObject::connect(&instance, &QGuiApplication::applicationStateChanged,

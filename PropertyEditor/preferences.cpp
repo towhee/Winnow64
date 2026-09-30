@@ -454,11 +454,6 @@ void Preferences::itemChange(QModelIndex idx)
         mw->checkIfUpdate = v.toBool();
     }
 
-    /*  Takes effect at the NEXT start: changing it mid-session must not yank the user out
-        of the folder they are browsing. */
-    if (source == "openLibraryAtStart") {
-        mw->openLibraryAtStart = v.toBool();
-    }
     /*  Also takes effect at the next start; the state is saved regardless of when this
         is turned on, from the next time the Library is left or Winnow quits. */
     if (source == "restoreLibraryState") {
@@ -629,34 +624,19 @@ void Preferences::addGeneral()
     addItem(i);
 
     /*  FIRST under General, because it is about what Winnow does before the user has
-        done anything.  Off by default: the established behaviour is to come up on a
-        folder. */
-    i.name = "openLibraryAtStart";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Open library at start";
-    i.tooltip = "Start Winnow showing the whole library -- the same as clicking Catalog\n"
-                "above the folder tree -- instead of a folder.\n\n"
-                "If nothing has been catalogued yet the Manage Catalog window opens\n"
-                "instead, which is where folders are nominated for indexing.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = mw->openLibraryAtStart;
-    i.key = "openLibraryAtStart";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    /*  Directly under what it modifies: it only means anything when the Library is what
-        Winnow opens. */
+        done anything. Which source Winnow starts in is not a preference -- it is always
+        the one left showing; this decides whether what was loaded comes back. */
     i.name = "restoreLibraryState";
     i.parentName = "GeneralHeader";
-    i.captionText = "Reopen library as it was left";
-    i.tooltip = "With \"Open library at start\" on, open the library with the sort and\n"
-                "the filters it had when you last left it -- by switching to Folders or\n"
-                "by quitting -- instead of newest first with no filters.\n\n"
-                "The filters are applied when the Filters panel is showing -- at start,\n"
-                "or when you open it -- so a filter is never applied where you cannot\n"
-                "see it.";
+    i.captionText = "Reopen as it was left";
+    i.tooltip = "Winnow always starts in the source that was showing when it last\n"
+                "closed -- the Library or Folders. With this on, what was loaded\n"
+                "comes back too:\n\n"
+                "  Library: the sort and the filters it had.\n"
+                "  Folders: the folders that were selected, and their filters.\n\n"
+                "Hold Shift at launch to skip reopening folders. Filters are applied\n"
+                "when the Filters panel is showing, so a filter is never applied\n"
+                "where you cannot see it.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->restoreLibraryState;

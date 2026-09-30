@@ -130,6 +130,12 @@ public:
     QFileSystemWatcher folderWatcher;
 
     QString diagnostics();
+    /*  Keep the current folder centred while the directories on its path finish their
+        asynchronous listing (startup). See the definition. */
+    void scrollToCurrentWhenLoaded(const QString &folderPath, int windowMs = 5000);
+    /*  Add a folder to the loaded set without resetting it -- a Cmd-click, from code
+        (MW::restoreFoldersState). */
+    bool addFolderToSelection(const QString &folderPath, bool recurse);
 
     void test();
     void debugSelectedFolders(QString msg = "");

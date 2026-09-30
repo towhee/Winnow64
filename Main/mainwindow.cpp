@@ -1195,6 +1195,8 @@ void MW::showEvent(QShowEvent *event)
 
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::showEvent");
+    timelineMark("showEvent begin");
+    const auto showEventEnd = qScopeGuard([this]{ timelineMark("showEvent end"); });
 
     /*  The panel sizing sequence starts here.  Every step below is marked, because the
         final geometry is negotiated between them and no single one of them owns it --
@@ -1286,6 +1288,10 @@ void MW::showEvent(QShowEvent *event)
             currentWorkflow = lastWf;
             syncWorkflowSwitcher();
             if (lastWf == WfMap) showMapPage();     // the layout alone brings up Loupe
+            if (lastWf == WfKeywords) {
+                focusKeywordsFilters();
+                focusKeywordsFiltersAfterBuild = true;
+            }
         }
     }
     else {
@@ -1337,17 +1343,9 @@ void MW::showEvent(QShowEvent *event)
     /* Re-collapse the sides the user left folded away. LAST, after every path that
        restores or asserts dock visibility (restoreWindowState, the workspace fallback,
        closeDevelopDock above), or one of them would re-show the panels a moment after
-       the collapse hid them. */
-    if (isSettings) {
-        if (settings->value("isLeftAreaCollapsed").toBool())
-            toggleDockArea(Qt::LeftDockWidgetArea);
-        if (settings->value("isRightAreaCollapsed").toBool())
-            toggleDockArea(Qt::RightDockWidgetArea);
-        if (settings->value("isBottomAreaCollapsed").toBool())
-            toggleDockArea(Qt::BottomDockWidgetArea);
-        if (settings->value("isTopAreaCollapsed").toBool())
-            toggleDockArea(Qt::TopDockWidgetArea);
-    }
+       the collapse hid them. A Library start applies Browse's Library layout later
+       still, and re-applies this after it (MW::startLibraryWhenExposed). */
+    applySessionAreaCollapse();
     syncShowHideBars();
 
     QMainWindow::showEvent(event);
@@ -1374,7 +1372,7 @@ void MW::showEvent(QShowEvent *event)
         through a long one -- picks up again once the first load has settled. */
     resumeIncompleteCatalogScan();
 
-    /*  "Open library at start": come up on the whole library instead of a folder.
+    /*  A Library close comes back up on the whole library instead of a folder.
 
         Here and not earlier because MW::setScope returns immediately while
         G::isInitializing, and because updateLibraryTree() above is what seeds the
@@ -1388,9 +1386,27 @@ void MW::showEvent(QShowEvent *event)
         what loads, and they do not reliably get their own settings file -- so a developer
         with this preference on would otherwise change what the tests do.  A stress test is
         excluded for the same reason: it drives folders on a timer. */
-    if (openLibraryAtStart && !G::isAutomatedRun && !G::isStressTest) {
-        if (restoreLibraryState) queueLibraryStateRestore();
-        chooseSource(true, "MW::showEvent openLibraryAtStart");
+    /*  START IN THE SOURCE LEFT SHOWING, always -- not a preference. The Library cannot
+        be shown without loading it (setScope drives the whole-Library load), so a
+        Library close loads the Library; "Reopen as it was left" adds its sort and
+        filters. A Folders close starts in Folders, and "Reopen as it was left" reloads
+        the folders that were selected, with their filters (restoreFoldersState). */
+    const bool startupAllowed = !G::isAutomatedRun && !G::isStressTest && !isStartupArgs;
+    timelineMark("showEvent: start source");
+    if (startupAllowed && lastScopeWasLibrary) {
+        /*  THE MESSAGE FIRST, THE LOAD ON THE NEXT TURN. showEvent runs before the window
+            has painted at all, and everything chooseSource starts -- the Browse layout
+            switch, the scope change, the catalog query -- ran here synchronously, so the
+            window came up with an empty central area for ~2 s and the first message
+            anyone saw was loadCatalogScope's, after the query (screen recording). So:
+            cover and message now, and the load once the window is on screen and the
+            cover has painted (startLibraryWhenExposed). */
+        setCentralMessage(tr("Loading the library."));
+        raiseLoadCurtain();
+        startLibraryWhenExposed(0);
+    }
+    else if (startupAllowed && restoreLibraryState && !isShiftOnOpen) {
+        restoreFoldersState();
     }
 
     G::issueBeginSession();
@@ -1461,8 +1477,12 @@ void MW::closeEvent(QCloseEvent *event)
         return;
     }
 
-    /*  Before any teardown: the filter tree and the sort are still the Library's. */
+    /*  Before any teardown: the filter tree and the sort are still the Library's or the
+        folders', and the scope is still the one the user was in -- which is what the
+        next start opens (see restoreLibraryState). */
     saveLibraryState();
+    saveFoldersState();
+    lastScopeWasLibrary = G::scope == G::Scope::Catalog;
 
     setCentralMessage("Closing Winnow ...");
 
@@ -3612,6 +3632,29 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
         scope has not changed, so the ordinary folder click costs nothing. */
     setScope(G::Scope::Folders, "MW::folderSelectionChange");
 
+    /*  THE ROOTS, as the user chose them -- what "Reopen as it was left" saves. After the
+        refusal above, so a declined change is not recorded. */
+    {
+        auto at = [this](const QString &p){
+            for (int i = 0; i < folderRoots.size(); ++i)
+                if (folderRoots.at(i).path == p) return i;
+            return -1;
+        };
+        if (resetDataModel) folderRoots.clear();
+        const int i = at(folderPath);
+        if (op == G::FolderOp::Add) {
+            if (i >= 0) folderRoots[i].recurse = recurse;
+            else folderRoots.append({folderPath, recurse});
+        }
+        else if (op == G::FolderOp::Remove) {
+            if (i >= 0) folderRoots.remove(i);
+        }
+        else if (op == G::FolderOp::Toggle) {
+            if (i >= 0) folderRoots.remove(i);
+            else folderRoots.append({folderPath, recurse});
+        }
+    }
+
     QString fun = "MW::folderSelectionChange";
     if (G::isLogger || G::isFlowLogger)
     {
@@ -4208,7 +4251,7 @@ void MW::startCatalogScan(bool automatic)
     if (settings) settings->setValue("catalogScanIncomplete", true);
 
     if (progress) {
-        progress->setRowText(progressCatalogRow, "Catalog");
+        progress->setRowText(progressCatalogRow, "Scanning for changes");
         progress->showRow(progressCatalogRow, true);
     }
     /*  RECONCILE BEFORE WALKING. Editing the scope forgets what it disowns as the edit
@@ -4457,7 +4500,7 @@ void MW::loadCatalogResults(const QStringList &paths, bool append, const Catalog
         G::log("MW::loadCatalogResults",
                QString::number(paths.size()) + (append ? " results (add)" : " results"));
 
-    if (paths.isEmpty()) return;
+    if (paths.isEmpty()) { lowerLoadCurtain("MW::loadCatalogResults empty", true); return; }
 
     ScopeRequest req;
     req.scope = G::Scope::Catalog;
@@ -4480,7 +4523,8 @@ void MW::loadCatalogRows(const QVector<CatalogRow> &rows, bool append,
         G::log("MW::loadCatalogRows",
                QString::number(rows.size()) + (append ? " rows (add)" : " rows"));
 
-    if (rows.isEmpty()) return;
+    /*  NOTHING TO LOAD, so no load will lift the cover the Library click raised. */
+    if (rows.isEmpty()) { lowerLoadCurtain("MW::loadCatalogRows empty", true); return; }
 
     QStringList paths;
     paths.reserve(rows.size());
@@ -4559,10 +4603,14 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
                                        : "Loading search results.\n\nPress \"Esc\" to stop.");
         const qint64 msgMs = G::isPerfProbe ? lcT.restart() : 0;
         stop(fun);
-        /*  A FILTER TO RESTORE: the unfiltered Library is not what the user will be
-            looking at, so it is not shown on the way there. After stop(), which lowers
-            it. See MW::raiseLoadCurtain. */
-        if (restoreFiltersPending && libraryFilterRestorePending) raiseLoadCurtain();
+        /*  THE MESSAGE STAYS UNTIL THE MODEL IS READY TO SHOW -- every replacing Library
+            load, not only one restoring a filter. Rows streaming into the grid, then
+            re-sorted, then cut down by a restored filter, is three different pictures
+            in a few seconds; the user asked for one. Lowered by metadataComplete once
+            the sorts are in (no restore pending) or by restoreFiltersAfterFolderChange
+            when the restored filter lands. After stop(), which lowers it. See
+            MW::raiseLoadCurtain. */
+        raiseLoadCurtain();
         if (G::isPerfProbe)
             qDebug().noquote() << "[PERF] loadCatalogScope teardown  resetDevelopCaches ="
                                << devMs << "ms  centralMsg =" << msgMs
@@ -5006,6 +5054,59 @@ int MW::guiStallInterval() const
     return G::isIngestProbe ? 50 : 250;
 }
 
+void MW::startCentralTimeline(std::shared_ptr<QElapsedTimer> clock)
+{
+/*
+    EVERY CHANGE IN WHAT THE CENTRAL AREA SHOWS -- page, cover, frontmost widget,
+    message, rows -- sampled every 20 ms and printed when it changes. A flicker is a
+    state that appears between two others; a sampled timeline shows it where a
+    once-a-second grab steps over it, and a GAP between samples is the GUI thread
+    blocked. top= names the frontmost visible child of the central widget: the cover
+    being visible is not the cover being in front (QStackedLayout raises the page it
+    switches to). Used by --catalogload (WINNOW_CATALOGLOAD_TIMELINE=1) and by a normal
+    launch with WINNOW_STARTUP_TIMELINE=1 (Main/main.cpp).
+*/
+    timelineClock = clock;
+    auto sampler = new QTimer(this);
+    auto last = std::make_shared<QString>();
+    connect(sampler, &QTimer::timeout, this, [this, clock, last]{
+        const bool covered = loadCurtainUp && centralCurtain && centralCurtain->isVisible();
+        QString top = "-";
+        const QObjectList kids = centralWidget->children();
+        for (int i = kids.size() - 1; i >= 0; --i) {
+            auto *w = qobject_cast<QWidget *>(kids.at(i));
+            if (w && w->isVisible()) {
+                top = w == centralCurtain ? QString("COVER")
+                                          : (w->objectName().isEmpty()
+                                                 ? QString(w->metaObject()->className())
+                                                 : w->objectName());
+                break;
+            }
+        }
+        const QString shown = covered ? centralCurtain->message()
+                                      : (centralLayout->currentIndex() == MessageTab
+                                             ? msg.msgLabel->text() : QString("-"));
+        const QString state = QString("page=%1 covered=%2 top=%3 sfRows=%4 status=\"%5\" msg=\"%6\"")
+                .arg(centralLayout->currentIndex()).arg(covered).arg(top)
+                .arg(dm->sf->rowCount())
+                .arg(statusLabel ? statusLabel->text().left(40) : QString())
+                .arg(QString(shown).replace('\n', ' ').left(60));
+        if (state == *last) return;
+        *last = state;
+        fprintf(stderr, "TIMELINE %6lld ms  %s\n", (long long)clock->elapsed(),
+                state.toUtf8().constData());
+        fflush(stderr);
+    });
+    sampler->start(20);
+}
+
+void MW::timelineMark(const char *what)
+{
+    if (!timelineClock) return;
+    fprintf(stderr, "TIMELINE %6lld ms  ---- %s\n", (long long)timelineClock->elapsed(), what);
+    fflush(stderr);
+}
+
 void MW::runCatalogLoadTest(const QString &pathFilter)
 {
 /*
@@ -5025,6 +5126,20 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
     if (G::isLogger) G::log("MW::runCatalogLoadTest", pathFilter);
 
     G::isPerfProbe = true;
+
+    /*  WINNOW_CATALOGLOAD_FROMFOLDER=<folder>: load that folder first, then press Library
+        -- the switch a person makes, and the one that flickered. Re-enters once the
+        folder has had time to load. */
+    const QString fromFolder = qEnvironmentVariable("WINNOW_CATALOGLOAD_FROMFOLDER");
+    static bool fromFolderLoaded = false;
+    if (!fromFolder.isEmpty() && !fromFolderLoaded) {
+        fromFolderLoaded = true;
+        fprintf(stderr, "CATALOGLOAD: loading folder %s first\n", fromFolder.toUtf8().constData());
+        fflush(stderr);
+        fsTree->select(fromFolder, "None", "runCatalogLoadTest from folder");
+        QTimer::singleShot(8000, this, [this, pathFilter]{ runCatalogLoadTest(pathFilter); });
+        return;
+    }
 
     CatalogQuery q;
     q.includeMissing = true;
@@ -5057,6 +5172,16 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
         fprintf(stderr, "CATALOGLOAD: first batch inserted at %lld ms\n",
                 (long long)started->elapsed());
         fflush(stderr);
+        /*  WINNOW_CATALOGLOAD_RESIZE=1: change the window geometry once mid-fill, as the
+            status bar growing for the "Loading" progress row does in a real session.
+            The central message must survive it (see MW::updateIconRange). */
+        if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_RESIZE") == 1)
+            QTimer::singleShot(500, this, [this, started]{
+                resize(width() + 40, height() + 40);
+                fprintf(stderr, "CATALOGLOAD: resized mid-fill at %lld ms\n",
+                        (long long)started->elapsed());
+                fflush(stderr);
+            });
     });
 
     connect(dm, &DataModel::folderChange, this, [this, started](bool aborted){
@@ -5104,11 +5229,63 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
                 only make the run longer than the thing it measures. */
             if (icons == *lastIcons) ++(*stable); else *stable = 0;
             *lastIcons = icons;
-            if (*stable >= 5 || ++(*ticks) * 1000 >= watchMs) {
+            /*  WINNOW_CATALOGLOAD_WAITCURTAIN=1: a restored filter lands after the icons
+                settle, so wait for the load curtain to come down too. */
+            const bool waitCurtain = loadCurtainUp
+                && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_WAITCURTAIN") == 1;
+            if ((*stable >= 5 && !waitCurtain) || ++(*ticks) * 1000 >= watchMs) {
                 watch->stop();
                 fprintf(stderr, "CATALOGLOAD: settled at %lld ms with %d icons\n",
                         (long long)started->elapsed(), icons);
                 fflush(stderr);
+
+                /*  WHICH VISIBLE ROWS ARE BLANK, AND WHY. The icon total says nothing
+                    about the rows on screen; this names each one with the loader's
+                    view of it. WINNOW_CATALOGLOAD_JUMP=<row> then selects that row,
+                    as a person scrolling a long way would, and reports again. */
+                auto report = [this](const char *when){
+                    QString s;
+                    /*  The offscreen window shows only a few cells, so a jump reports
+                        a screenful either side of the target instead. */
+                    const int jmp = qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_JUMP");
+                    const int at = jmp > 0 ? jmp : dm->currentSfRow;
+                    const int from = qMax(0, at - 20);
+                    const int to = at + 20;
+                    QMetaObject::invokeMethod(metaRead, "rowStateReport",
+                                              Qt::BlockingQueuedConnection,
+                                              Q_RETURN_ARG(QString, s),
+                                              Q_ARG(int, from),
+                                              Q_ARG(int, to));
+                    fprintf(stderr, "CATALOGLOAD: %s mode=%s current=%d visible=%d-%d "
+                                    "chunk=%d\n%s",
+                            when, G::mode.toUtf8().constData(), dm->currentSfRow,
+                            dm->firstVisibleIcon, dm->lastVisibleIcon,
+                            dm->iconChunkSize.load(), s.toUtf8().constData());
+                    fflush(stderr);
+                };
+                report("settled");
+                /*  WINNOW_CATALOGLOAD_SORTNAME=1: re-sort by file name, as the restored
+                    Library sort does at load completion, and report what the loader
+                    made of the new order. */
+                if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_SORTNAME") == 1) {
+                    sortColumn = G::NameColumn;
+                    updateSortColumn(sortColumn);
+                    sortChange("MW::applyRestoredLibrarySort");
+                    QTimer::singleShot(8000, this, [report]{
+                        report("after sort");
+                        std::_Exit(0);
+                    });
+                    return;
+                }
+                const int jump = qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_JUMP");
+                if (jump > 0 && jump < dm->sf->rowCount()) {
+                    sel->setCurrentRow(jump);
+                    QTimer::singleShot(8000, this, [report]{
+                        report("after jump");
+                        std::_Exit(0);
+                    });
+                    return;
+                }
 
                 /*  AND NOW CLICK IT AGAIN, which is what a person did to find the second
                     beachball. The second click is not the first: the model already holds
@@ -5157,6 +5334,54 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
 
         WINNOW_CATALOGLOAD_DIRECT=1 forces the old model-only path, for isolating the fill
         from everything the panel does around it. */
+    /*  WINNOW_CATALOGLOAD_RESTORESORT=1: arm the restored Library sort (File Name), so
+        it runs where a normal launch runs it -- metadataComplete, while the first icon
+        cycle is still in flight -- rather than after the load has settled. */
+    /*  WINNOW_CATALOGLOAD_RESTORESTATE=1: queue the saved LibraryState (sort + filters)
+        exactly as a launch with "Reopen as it was left" does. */
+    if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_RESTORESTATE") == 1)
+        queueLibraryStateRestore();
+    if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_RESTORESORT") == 1) {
+        libraryRestoreSortColumn = G::NameColumn;
+        libraryRestoreReverse = false;
+        libraryRestoreSortPending = true;
+    }
+    /*  WINNOW_CATALOGLOAD_GRAB=<dir>: save what the window actually shows, once a
+        second from the click -- the only way a headless run can tell a covered view from
+        a bare one. */
+    const QString grabDir = qEnvironmentVariable("WINNOW_CATALOGLOAD_GRAB");
+    if (!grabDir.isEmpty()) {
+        auto grabber = new QTimer(this);
+        connect(grabber, &QTimer::timeout, this, [this, grabDir, started]{
+            grab().save(QString("%1/t%2.png").arg(grabDir)
+                            .arg(started->elapsed(), 6, 10, QChar('0')));
+        });
+        grabber->start(1000);
+    }
+    connect(centralLayout, &QStackedLayout::currentChanged, this, [started](int i){
+        fprintf(stderr, "CATALOGLOAD: CENTRAL page -> %d at %lld ms\n", i,
+                (long long)started->elapsed());
+        fflush(stderr);
+    });
+    /*  WINNOW_CATALOGLOAD_TIMELINE=1: see MW::startCentralTimeline. */
+    if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_TIMELINE") == 1)
+        startCentralTimeline(started);
+    /*  WINNOW_CATALOGLOAD_STARTUP=1: the start-up reopen exactly as MW::showEvent does
+        it (message + cover now, load once exposed), "Reopen as it was left" honoured. */
+    if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_STARTUP") == 1) {
+        fprintf(stderr, "CATALOGLOAD: start-up reopen path\n");
+        fflush(stderr);
+        setCentralMessage(tr("Loading the library."));
+        raiseLoadCurtain();
+        startLibraryWhenExposed(0);
+        return;
+    }
+    if (!fromFolder.isEmpty()) {
+        fprintf(stderr, "CATALOGLOAD: pressing Library (chooseSource)\n");
+        fflush(stderr);
+        chooseSource(true, "runCatalogLoadTest Library button");
+        return;
+    }
     setScope(G::Scope::Catalog, "runCatalogLoadTest");
     if (filterPanel && qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_DIRECT") != 1) {
         fprintf(stderr, "CATALOGLOAD: driving FilterPanel::setScope(CatalogScope)\n");
@@ -5834,7 +6059,11 @@ void MW::stop(QString src)
 
     /*  Whatever the curtain was waiting for belongs to the load being stopped. A new
         Library load raises it again after this (MW::loadCatalogScope). */
-    lowerLoadCurtain("MW::stop " + src);
+    /*  NOT THE LIBRARY LOAD'S OWN TEARDOWN: loadCatalogScope stops the folder it is
+        replacing with the cover already up (raised on the click), and lifting it here
+        for the moment until it is raised again is a flicker. Esc, and every other
+        stop, still lift it. */
+    if (src != "MW::loadCatalogScope") lowerLoadCurtain("MW::stop " + src);
     setCatalogLoading(false);
 
     // stop flags
@@ -5972,7 +6201,8 @@ bool MW::reset(QString src)
         which queueLibraryStateRestore queued FOR the load this reset begins. Clearing it
         here is what made the saved filters never come back; leaving the Library before
         it lands still cancels it (MW::setScope). */
-    if (!libraryFilterRestorePending) restoreFiltersPending = false;
+    if (!libraryFilterRestorePending && !foldersFilterRestorePending)
+        restoreFiltersPending = false;
 
     titleFilePath.clear();
     updateWindowTitle();
@@ -6269,8 +6499,20 @@ void MW::updateIconRange(QString src)
         catalog, and inflated the JIT floor, which is 3x this number. */
     int largestPage = 0;
 
-    // Grid might not be selected in CentralWidget
-    if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
+    /*  Grid might not be selected in CentralWidget -- so gridView counts as visible
+        below and its page is measured.
+
+        BUT NOT OVER A LOAD'S MESSAGE. This is a measurement, and it is reached from
+        IconView::resizeEvent / rejustify, which QStackedLayout delivers to the HIDDEN
+        grid page too: any geometry change while "Loading the library" is up -- the
+        status bar growing for the Catalog "Loading" progress row is one -- flipped the
+        central widget to an empty grid and the message vanished for the rest of the
+        fill. Until the model is complete (G::isLoadRunning) the message pane stays;
+        with no visible range the chunk centres on the selection, which is what a load
+        wants anyway. */
+    const bool loadMessageUp = G::isLoadRunning
+                               && centralLayout->currentIndex() == MessageTab;
+    if (G::mode == "Grid" && !loadMessageUp) centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
         thumbView->updateVisible("MW::updateIconRange");
@@ -7315,6 +7557,12 @@ void MW::metadataComplete(QString src)
         sortChange deferred rather than dropped. After the restore, so it wins. */
     applyDeferredSort();
 
+    /*  THE LIBRARY IS READY TO SHOW once it is sorted -- unless a restored filter is still
+        to land, in which case restoreFiltersAfterFolderChange lifts the curtain after it
+        does. A no-op for a folder load, which raises no curtain. */
+    if (loadCurtainUp && !restoreFiltersPending)
+        lowerLoadCurtain("MW::metadataComplete model ready", true);
+
     enableStatusBarBtns();
     updateStatus(true, "", fun);    // clear any status message
 
@@ -7418,8 +7666,14 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
        them when the panel is shown (the datamodel is fully loaded by then). */
     if (!filterDock->isVisible()) {
         /*  No build, so no restored filter to wait for: it lands when the panel is
-            opened, and the unfiltered set is the honest thing to show until then. */
-        lowerLoadCurtain("MW::buildFiltersWhenModelReady Filters panel hidden");
+            opened, and the unfiltered set is the honest thing to show until then.
+            QUEUED: this runs inside metadataComplete BEFORE its restored sort, so an
+            immediate lift showed the unsorted set first. Instance-guarded so a lift
+            meant for this load cannot drop the next load's curtain. */
+        QTimer::singleShot(0, this, [this, inst = dm->instance.load()]{
+            if (dm->instance == inst)
+                lowerLoadCurtain("MW::buildFiltersWhenModelReady Filters panel hidden", true);
+        });
         return;
     }
 
@@ -7496,8 +7750,12 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
     if (!resetWillRun) {
         setCentralProgressMessage(loadedMsg() + "Counting images per filter ...");
         buildFilters->recount();
-        /*  No finishedBuildFilters follows a recount, so no restore either. */
-        lowerLoadCurtain("MW::buildFiltersWhenModelReady no build");
+        /*  No finishedBuildFilters follows a recount, so no restore either. Queued
+            and guarded for the same reasons as the panel-hidden lift above. */
+        QTimer::singleShot(0, this, [this, inst = dm->instance.load()]{
+            if (dm->instance == inst)
+                lowerLoadCurtain("MW::buildFiltersWhenModelReady no build", true);
+        });
     }
     filters->setEnabled(true);
 }

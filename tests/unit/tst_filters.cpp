@@ -35,6 +35,10 @@ private slots:
     void foldersReachTheQueryByPath();
     void aNestedCategoryIsCountedAtEveryDepth();
     void keywordMatchModeTravelsAndResets();
+    void flatOrderIsTheGroupOrder();
+    void groupsHoldTheirCategories();
+    void checksSurviveRegroupingAndSaveRestore();
+    void filteringLightsTheGroupAndSignals();
 
 private:
     /*  The vocabulary the catalog hands over: PATHS, prefix-expanded, so every ancestor
@@ -385,6 +389,159 @@ void tst_filters::keywordMatchModeTravelsAndResets()
     spy.clear();
     f.setKeywordsMatchAll(true);
     QCOMPARE(spy.count(), 0);
+}
+
+/*
+    GROUPS. With groups on, a category is no longer top-level, so every "parent() ==
+    nullptr means category" and every walk to the root would silently treat a category
+    as a filter item and key a saved keyword on "Metadata". These pin the arrangement
+    and the helpers that replaced those tests.
+*/
+static QStringList headerNames(QTreeWidgetItem *parent, Filters &f)
+{
+    QStringList out;
+    const int n = parent ? parent->childCount() : f.topLevelItemCount();
+    for (int i = 0; i < n; ++i) {
+        QTreeWidgetItem *c = parent ? parent->child(i) : f.topLevelItem(i);
+        if (c == f.search) { out << "Search"; continue; }
+        const QVariant g = c->data(0, Filters::GroupRole);
+        out << (g.isValid() ? g.toString() : c->data(0, Filters::CategoryNameRole).toString());
+    }
+    return out;
+}
+
+static const QStringList kFlatOrder {
+    "Search", "Folders", "Collections", "Queries", "File types",
+    "Years", "Months", "Days",
+    "Picks", "Ratings", "Color classes",
+    "Camera models", "Lenses", "Focal lengths", "ISO",
+    "Titles", "Creators", "GPS", "Keywords",
+    "Availability", "Duplicates found"
+};
+
+void tst_filters::flatOrderIsTheGroupOrder()
+{
+    Filters f(nullptr);
+    QVERIFY(!f.isGrouped());
+    QCOMPARE(headerNames(nullptr, f), kFlatOrder);
+    QCOMPARE(f.search->text(0), QString("Adhoc search"));
+
+    f.setGrouped(true);
+    f.setGrouped(false);
+    QCOMPARE(headerNames(nullptr, f), kFlatOrder);
+}
+
+void tst_filters::groupsHoldTheirCategories()
+{
+    Filters f(nullptr);
+    f.addCategoryItems(vocabulary(), f.keywords);
+    f.setGrouped(true);
+
+    QCOMPARE(headerNames(nullptr, f),
+             QStringList({"Search", "Folders and files", "Time", "Selection", "Camera",
+                          "Metadata", "Status"}));
+    QTreeWidgetItem *metadata = f.topLevelItem(5);
+    QVERIFY(f.isGroupHeader(metadata));
+    QVERIFY(!f.isCategoryHeader(metadata));
+    QCOMPARE(headerNames(metadata, f),
+             QStringList({"Titles", "Creators", "GPS", "Keywords"}));
+    QVERIFY2(metadata->isExpanded(), "groups open the first time they appear");
+    /*  EXPANDABLE, as the view sees it. isExpanded() alone passed while the view
+        refused to open any header: DontShowIndicator made hasChildren() false. */
+    QVERIFY(f.model()->hasChildren(f.model()->index(5, 0)));
+    const QModelIndex kwIdx = f.model()->index(3, 0, f.model()->index(5, 0));
+    QCOMPARE(kwIdx.data(Filters::CategoryNameRole).toString(), QString("Keywords"));
+    QVERIFY(f.model()->hasChildren(kwIdx));
+
+    // the categories are headers still, though no longer top-level
+    QCOMPARE(f.keywords->parent(), metadata);
+    QVERIFY(f.isCategoryHeader(f.keywords));
+    QVERIFY(!f.isFilterItem(f.keywords));
+    QVERIFY(f.isCategoryHeader(f.search));
+
+    QTreeWidgetItem *van = findByValue(f.keywords, "Location|Canada|BC|Vancouver");
+    QVERIFY(van);
+    QVERIFY(f.isFilterItem(van));
+    QCOMPARE(f.categoryOf(van), f.keywords);
+    QCOMPARE(f.categoryOf(metadata), nullptr);
+
+    // concatenated, the groups are the flat order
+    QStringList all {"Search"};
+    for (int i = 1; i < f.topLevelItemCount(); ++i)
+        all << headerNames(f.topLevelItem(i), f);
+    QCOMPARE(all, kFlatOrder);
+}
+
+void tst_filters::checksSurviveRegroupingAndSaveRestore()
+{
+    Filters f(nullptr);
+    f.addCategoryItems(vocabulary(), f.keywords);
+    f.addCategoryItems({{"JPG", 2}, {"NEF", 3}}, f.types);
+    QTreeWidgetItem *van = findByValue(f.keywords, "Location|USA|WA|Vancouver");
+    QVERIFY(van);
+    van->setCheckState(0, Qt::PartiallyChecked);
+    f.types->child(1)->setCheckState(0, Qt::Checked);
+    const QVariantMap flatState = f.persistableState();
+
+    f.setGrouped(true);
+    QCOMPARE(van->checkState(0), Qt::PartiallyChecked);
+    QVERIFY(f.isAnyFilter());
+    QVERIFY(f.isCatFiltering(f.keywords));
+    /*  THE KEY IS THE CATEGORY, not the root: grouped, the root of a keyword is
+        "Metadata", and a state saved under it would never restore flat. */
+    QCOMPARE(f.persistableState(), flatState);
+
+    f.save();
+    f.keywords->takeChildren();
+    f.addCategoryItems(vocabulary(), f.keywords);
+    f.restore();
+    QTreeWidgetItem *again = findByValue(f.keywords, "Location|USA|WA|Vancouver");
+    QVERIFY(again);
+    QCOMPARE(again->checkState(0), Qt::PartiallyChecked);
+    QCOMPARE(f.types->child(1)->checkState(0), Qt::Checked);
+
+    // and a grouped save restores into a flat tree
+    Filters g(nullptr);
+    g.addCategoryItems(vocabulary(), g.keywords);
+    g.addCategoryItems({{"JPG", 2}, {"NEF", 3}}, g.types);
+    g.setStateToRestore(f.persistableState());
+    g.restore();
+    QCOMPARE(findByValue(g.keywords, "Location|USA|WA|Vancouver")->checkState(0),
+             Qt::PartiallyChecked);
+
+    // the view state goes with the items: an open nested keyword stays open
+    QTreeWidgetItem *location = findByValue(f.keywords, "Location");
+    f.keywords->setExpanded(true);
+    location->setExpanded(true);
+    f.setGrouped(false);
+    QVERIFY(f.keywords->isExpanded());
+    QVERIFY(location->isExpanded());
+}
+
+void tst_filters::filteringLightsTheGroupAndSignals()
+{
+    Filters f(nullptr);
+    f.addCategoryItems({{"JPG", 2}, {"NEF", 3}}, f.types);
+    f.setGrouped(true);
+    QSignalSpy spy(&f, &Filters::filteringChanged);
+
+    f.types->child(0)->setCheckState(0, Qt::Checked);
+    f.setEachCatTextColor();
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.last().at(0).toBool(), true);
+    QTreeWidgetItem *files = f.types->parent();
+    QVERIFY(f.isGroupHeader(files));
+    QCOMPARE(files->foreground(0).color(), QColor(Qt::yellow));
+    QCOMPARE(f.types->foreground(0).color(), QColor(Qt::yellow));
+
+    f.setEachCatTextColor();
+    QCOMPARE(spy.count(), 1);                       // only when it changes
+
+    f.uncheckAllFilters();
+    QCOMPARE(spy.count(), 2);
+    QCOMPARE(spy.last().at(0).toBool(), false);
+    f.setEachCatTextColor();
+    QVERIFY(files->foreground(0).color() != QColor(Qt::yellow));
 }
 
 QTEST_MAIN(tst_filters)

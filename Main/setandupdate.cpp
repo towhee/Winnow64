@@ -11,9 +11,25 @@ void MW::setCentralMessage(QString message)
     if (loadCurtainUp && centralCurtain) {
         centralCurtain->setMessage(message);
         centralCurtain->repaint();
+        mirrorLoadMessageToStatus(message);
         return;
     }
     centralLayout->currentWidget()->repaint();
+}
+
+void MW::mirrorLoadMessageToStatus(const QString &message)
+{
+/*
+    While the load cover is up the status bar says what the cover says, on one line --
+    not "Pos: 241 of 155098" for a set that is still being loaded, sorted and filtered.
+    MW::updateStatus defers to this for as long as the cover is up; lowerLoadCurtain
+    puts the ordinary status back.
+*/
+    if (!statusLabel) return;
+    QString line = message.simplified();
+    line.replace("Press \"Esc\" to stop.", "");
+    statusLabel->setText("  " + line.trimmed());
+    statusLabel->repaint();
 }
 
 void MW::setCentralProgressMessage(QString message)
@@ -40,6 +56,7 @@ void MW::setCentralProgressMessage(QString message)
     if (loadCurtainUp && centralCurtain) {
         centralCurtain->setMessage(message);
         centralCurtain->repaint();
+        mirrorLoadMessageToStatus(message);
         return;
     }
     if (centralLayout->currentIndex() != MessageTab) return;
@@ -65,6 +82,11 @@ bool MW::showCentralMessageIfNoImages()
 */
     if (G::isLogger) G::log("MW::showCentralMessageIfNoImages");
     if (dm->sf->rowCount() > 0) return false;
+    /*  A LOAD IS UNDER WAY: its cover is the message, and the model is empty only
+        because it has not been filled yet. The Browse layout switch on the way into the
+        Library came here and put "Select from the Source or Bookmarks panels." in the
+        middle of "Loading the library." (timeline probe). */
+    if (loadCurtainUp) return true;
 
     /* Same wording as MW::nullFiltration, which reports the empty cases when the
        filtration changes. */
@@ -577,6 +599,12 @@ void MW::setScope(G::Scope s, QString src)
         libraryRestoreSortPending = false;
         lowerLoadCurtain("MW::setScope leaving the Library");
     }
+    /*  Entering the Library: a Folders filter restore still waiting for its build must
+        not land on the Library. */
+    if (changed && s == G::Scope::Catalog && foldersFilterRestorePending) {
+        foldersFilterRestorePending = false;
+        restoreFiltersPending = false;
+    }
     G::scope = s;
     updateCollectionsAvailability();
 
@@ -667,6 +695,16 @@ void MW::setScope(G::Scope s, QString src)
     if (!changed) return;
 
     if (s == G::Scope::Catalog) {
+        /*  ENTERING THE LIBRARY STARTS A LOAD (filterPanel->setScope below runs the
+            catalog query, seconds on a pool thread, then MW::loadCatalogScope), so the
+            cover goes up here -- the one place every entry point passes. Without it the
+            query's seconds showed an empty grid with no message (timeline probe:
+            2.9 s). The Library button raises it earlier still (chooseSource); raising
+            again is harmless. An empty result lifts it (loadCatalogRows). */
+        if (G::useFilterPanel && filterPanel && !loadCurtainUp) {
+            setCentralMessage(tr("Loading the library."));
+            raiseLoadCurtain();
+        }
         // the panel is where a catalog scope is actually used, so bring it up
         if (G::useFilterPanel && filterPanel) {
             filterDock->setVisible(true);
@@ -714,6 +752,13 @@ void MW::setCatalogScopeWhole(QString src)
         imageView->clear();
         if (scopesView) scopesView->clear();
         setCentralMessage(tr("Loading the library."));
+        /*  COVERED FROM THE CLICK, not from the fill. The catalog query runs for seconds
+            on a pool thread before MW::loadCatalogScope tears the folder down, and in
+            that window anything that measured the grid switched the central page back
+            to it: the timeline probe showed the folder's thumbnails for 3.2 s between
+            "Loading the library." and the fill. The cover holds the message over
+            whatever the page is until the Library is ready (see loadCurtainUp). */
+        raiseLoadCurtain();
     }
     setScope(G::Scope::Catalog, src);
 }
@@ -837,19 +882,23 @@ void MW::restoreFiltersAfterFolderChange()
     if (!restoreFiltersPending || !filters) return;
     restoreFiltersPending = false;
     libraryFilterRestorePending = false;
+    foldersFilterRestorePending = false;
     const bool hadChecks = filters->hasSavedStates();
     filters->restore();
     if (hadChecks || filters->isAnyFilter())
         filterChange("MW::restoreFiltersAfterFolderChange");
     // the filtered set is what is loaded now: show it
-    lowerLoadCurtain("MW::restoreFiltersAfterFolderChange");
+    lowerLoadCurtain("MW::restoreFiltersAfterFolderChange", true);
 }
 
 void MW::raiseLoadCurtain()
 {
 /*
-    Cover the central views and the filmstrip until the Library's restored filter has
-    been applied -- see the note on loadCurtainUp in mainwindow.h. The views load
+    Cover the central views and the filmstrip until the Library is ready to show --
+    loaded, sorted, and any restored filter applied; see the note on loadCurtainUp in
+    mainwindow.h. It covers rather than switching centralLayout to the MessageTab: a
+    hidden view has no visible cells, so the icon range and every isVisible() gate would
+    answer differently for the whole wait. The views load
     underneath as they always do (the first image is cached, the icons are read); only
     the sight of the unfiltered set is withheld. The central curtain carries the load
     messages meanwhile (setCentralMessage and setCentralProgressMessage write to it), so
@@ -861,21 +910,48 @@ void MW::raiseLoadCurtain()
     already built), leaving the Library (setScope), and any stop -- Esc, or another load.
 */
     if (G::isLogger) G::log("MW::raiseLoadCurtain");
-    if (!centralCurtain) centralCurtain = new LoadCurtain(centralWidget);
+    if (G::isPerfProbe) qDebug().noquote() << "[PERF] CURTAIN raise  rows =" << dm->rowCount();
+    if (!centralCurtain) {
+        centralCurtain = new LoadCurtain(centralWidget);
+        /*  QStackedLayout::setCurrentIndex RAISES the page it switches to (Qt source:
+            next->raise(); next->show()), and the cover is that page's sibling -- so every
+            page switch during a load put the view IN FRONT of the cover until something
+            re-raised it. The screen recording caught the whole unfiltered Library for one
+            frame this way (a restored sort switching to the grid page). currentChanged is
+            emitted inside setCurrentIndex, before anything can paint, so re-raising here
+            leaves no frame for the view to show through. */
+        connect(centralLayout, &QStackedLayout::currentChanged, centralCurtain, [this]{
+            if (loadCurtainUp && centralCurtain->isVisible()) centralCurtain->raise();
+        });
+    }
     if (!thumbCurtain) thumbCurtain = new LoadCurtain(thumbView);
     loadCurtainUp = true;
     centralCurtain->setMessage(msg.msgLabel->text());
+    mirrorLoadMessageToStatus(msg.msgLabel->text());
     centralCurtain->cover(G::css);
     thumbCurtain->cover(G::css);
 }
 
-void MW::lowerLoadCurtain(QString src)
+void MW::lowerLoadCurtain(QString src, bool revealView)
 {
     if (!loadCurtainUp) return;
+    /*  THE PAGE FIRST, THEN THE COVER. Lifted over the message pane, the cover revealed
+        a stale "Collating folders ..." for the ~140 ms until something switched to the
+        grid (timeline probe). Switched underneath while still covered, the first frame
+        after the lift is the view. */
+    if (revealView && dm && dm->sf->rowCount() > 0 && !inMapModule()
+        && centralLayout->currentIndex() == MessageTab)
+        centralLayout->setCurrentIndex(prevCentralView);
     if (G::isLogger) G::log("MW::lowerLoadCurtain", src);
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] CURTAIN lower  src =" << src
+                           << " rows =" << dm->rowCount() << " sfRows =" << dm->sf->rowCount()
+                           << " isAnyFilter =" << (filters && filters->isAnyFilter());
     loadCurtainUp = false;
     if (centralCurtain) centralCurtain->hide();
     if (thumbCurtain) thumbCurtain->hide();
+    /*  The status bar mirrored the load message; now it describes what is loaded. */
+    updateStatus(true, "", "MW::lowerLoadCurtain");
 }
 
 void MW::saveLibraryState()
@@ -911,6 +987,92 @@ void MW::saveLibraryState()
     settings->setValue("isReverseSort", sortReverseAction->isChecked());
     settings->setValue("filters", filters->persistableState());
     settings->endGroup();
+}
+
+void MW::saveFoldersState()
+{
+/*
+    "Reopen as it was left", Folders half: the folders the user selected -- each root
+    with its recurse flag, from folderRoots, since dm->folderList lists every subfolder
+    of a recursive load -- and the Filters checks. Called from closeEvent before any
+    teardown, only while Folders is the scope. Nothing loaded saves nothing, so the next
+    start comes up waiting for a folder, as it was left.
+*/
+    if (G::isLogger) G::log("MW::saveFoldersState");
+    if (!restoreLibraryState || G::scope != G::Scope::Folders) return;
+    QVector<FolderRoot> roots = folderRoots;
+    /*  A load that did not come through folderSelectionChange still has a folder. */
+    if (roots.isEmpty() && dm && !dm->primaryFolderPath().isEmpty())
+        roots.append({dm->primaryFolderPath(), false});
+    QStringList saved;
+    for (const FolderRoot &r : std::as_const(roots))
+        saved << r.path + QChar(0x1f) + (r.recurse ? "1" : "0");
+    settings->beginGroup("FoldersState");
+    settings->setValue("roots", saved);
+    settings->setValue("filters", filters && dm && dm->rowCount()
+                                      ? filters->persistableState() : QVariantMap());
+    settings->endGroup();
+}
+
+void MW::restoreFoldersState()
+{
+/*
+    Start-up, Folders half of "Reopen as it was left": reselect the saved folders and
+    queue their filters.
+
+    THE FIRST FOLDER REPLACES, THE REST ADD -- the shape of a click followed by
+    Cmd-clicks. FSTree::select (the Recent Folders route) gives the first one a click's
+    highlight, bookmark sync and load; FSTree::addFolderToSelection adds each other one
+    without a reset, which the DataModel queues behind it like a Shift-range.
+
+    THE FILTERS ride the after-build restore a folder add uses (restoreFiltersPending ->
+    restoreFiltersAfterFolderChange). foldersFilterRestorePending exempts it from the
+    MW::reset the first load begins with -- the reset that otherwise discards checks
+    belonging to the previous set -- and the later adds see restoreFiltersPending already
+    set, so they do not overwrite it with an empty save.
+
+    Folders that no longer exist (an unplugged drive) are skipped silently; select()'s
+    "not found" popup is for a click. Before this group existed only lastDir was kept, so
+    that is the fallback.
+*/
+    if (G::isLogger) G::log("MW::restoreFoldersState");
+    QStringList saved;
+    QVariantMap f;
+    if (settings->childGroups().contains("FoldersState")) {
+        settings->beginGroup("FoldersState");
+        saved = settings->value("roots").toStringList();
+        f = settings->value("filters").toMap();
+        settings->endGroup();
+    }
+    else if (!lastDir.isEmpty()) {
+        saved << lastDir + QChar(0x1f) + "0";
+    }
+
+    QVector<FolderRoot> roots;
+    for (const QString &line : std::as_const(saved)) {
+        const QStringList parts = line.split(QChar(0x1f));
+        if (parts.isEmpty() || !QDir(parts.at(0)).exists()) continue;
+        roots.append({parts.at(0), parts.value(1) == "1"});
+    }
+    if (roots.isEmpty()) return;
+
+    const bool haveFilters = filters && !f.value("items").toStringList().isEmpty();
+    if (haveFilters) {
+        filters->setStateToRestore(f);
+        restoreFiltersPending = true;
+        foldersFilterRestorePending = true;
+    }
+
+    const QString src = "MW::restoreFoldersState";
+    const FolderRoot &first = roots.first();
+    if (!fsTree->select(first.path, first.recurse ? "Recurse" : "None", src)) {
+        foldersFilterRestorePending = false;
+        restoreFiltersPending = false;
+        return;
+    }
+    for (int i = 1; i < roots.size(); ++i)
+        fsTree->addFolderToSelection(roots.at(i).path, roots.at(i).recurse);
+    fsTree->scrollToCurrentWhenLoaded(first.path);
 }
 
 void MW::queueLibraryStateRestore()

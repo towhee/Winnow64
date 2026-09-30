@@ -37,10 +37,12 @@ images would be affected, Winnow asks first and tells you how many.</p>
 <p>Select one or more images, then do any of these:</p>
 
 <ul>
-<li>Type in the <span class="highlight">Add keyword</span> box. As you type, matching
-keywords are offered with their branch shown faintly beside them, so two keywords sharing
-a name are two distinct choices. Press <span class="highlight">Return</span> without
-choosing one to create the keyword exactly as you typed it.</li>
+<li>Type in the <span class="highlight">Add keyword from your list</span> box. As you
+type, matching keywords are offered with their branch shown faintly beside them, so two
+keywords sharing a name are two distinct choices. Pressing
+<span class="highlight">Return</span> adds the keyword whose name or synonym you typed, if
+exactly one keyword in your list has it. The box only adds keywords that are already in
+your list &mdash; new keywords are created in the Keyword list.</li>
 <li><span class="highlight">Double-click</span> a keyword in the list, or select it and
 press <span class="highlight">Return</span>.</li>
 <li><span class="highlight">Drag</span> a keyword from the list up onto the tags.</li>
@@ -48,23 +50,41 @@ press <span class="highlight">Return</span>.</li>
 list.</li>
 </ul>
 
+<p>You can also drag a <span style="color:#9a5a5a">red</span> tag down onto a keyword in
+the list.
+The tag's keyword is added to your list under that keyword (or at the top level, if you
+drop it on empty space), and the selected images that carry the tag are switched to it.
+This is the quick way to file a <span style="color:#9a5a5a">red</span> tag where it
+belongs.</p>
+
 <p>To remove a keyword, click the <span class="highlight">&times;</span> on its tag. It is
 removed from every selected image, along with anything filed beneath it &mdash; taking
 Fauna &gt; Bird off an image cannot leave Fauna &gt; Bird &gt; Heron on it.</p>
 
-<p>A <span class="highlight">dot</span> beside a keyword in the list marks one the current
-image already has.</p>
+<p>A keyword drawn in <span style="color:#b4a45a">dull yellow</span> in the list is one the
+current image already has.</p>
 
 <h1>What the tag markings mean</h1>
 
 <ul>
-<li>A plain tag is on <span class="highlight">every</span> selected image.</li>
+<li>A plain tag is on <span class="highlight">every</span> selected image. Click it to
+show that keyword in your list and filter the images on it.</li>
 <li><span class="highlight">*</span> means only <span class="highlight">some</span> of
-them have it. Click the tag to give it to all of them.</li>
-<li><span class="highlight">?</span> means the image carries a keyword that is not in your
-list &mdash; written by another application, perhaps, or left behind by a rename you chose
-not to apply. Click it to add it to your list, where its own path says it belongs.</li>
+them have it. Right-click the tag and choose
+<span class="highlight">Add to all selected images</span> to give it to all of them.</li>
+<li>A tag in <span style="color:#9a5a5a">red</span> means the image carries a keyword that
+is not in your list &mdash; written by another application, perhaps, or left behind by a
+rename you chose not to apply. Click it and the <span class="highlight">Add keyword from
+your list</span> box offers similar keywords from your list &mdash; pick one to replace it
+&mdash; or drag the correct keyword from your list onto it to replace it on the images
+that have it.</li>
 </ul>
+
+<h1>Filtering on a keyword</h1>
+
+<p>Click a keyword in the list, or a tag, to show only the images that carry it.
+Any other filters are cleared first. (A double-click in the list still adds the keyword to
+the selected images instead.)</p>
 
 <h1>Organising your list</h1>
 
@@ -88,7 +108,7 @@ where you say which folders those are.</p>
 
 <p>Deleting a keyword removes it from your <span class="highlight">list only</span>. Images
 already tagged with it keep it in their own files, where it shows as a
-<span class="highlight">?</span> tag.</p>
+<span style="color:#9a5a5a">red</span> tag.</p>
 
 <h1>When images need updating</h1>
 
@@ -102,7 +122,7 @@ are looking at.</li>
 <li><span class="highlight">Everywhere</span> &mdash; every catalogued image carrying it,
 including folders that are not open.</li>
 <li><span class="highlight">Not now</span> &mdash; leave the files alone. Those images show
-the old keyword as a <span class="highlight">?</span> tag until you deal with it, so
+the old keyword as a <span style="color:#9a5a5a">red</span> tag until you deal with it, so
 nothing is lost track of.</li>
 </ul>
 
@@ -161,7 +181,7 @@ you selected, and its button says how many keywords that is.</p>
 catalog, whether or not the folder is open. Winnow tells you how many images that is and
 asks once more before it starts. It cannot be undone from inside Winnow.</p>
 
-<p>A tag marked <span class="highlight">?</span> &mdash; one that is not in your keyword
+<p>A <span style="color:#9a5a5a">red</span> tag &mdash; one that is not in your keyword
 list &mdash; shows its whole keyword, because that is the one you are deciding about:
 <span class="highlight">Buoy|Thing</span>, not just
 <span class="highlight">Thing</span>. A tag that <em>is</em> in your list shows only its

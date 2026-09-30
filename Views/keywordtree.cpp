@@ -7,6 +7,8 @@
 #include "Utilities/popup.h"
 
 #include <QAction>
+#include <QApplication>
+#include <QTimer>
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -29,11 +31,11 @@
 
 namespace {
 
-/*  Draws the "on this image" dot before the name. A delegate rather than a decoration
-    role because the dot is not an icon: it is a small mark in the text colour that has to
-    sit tight against the label at any row height, and an icon would be padded and would
-    fight the branch indicator for space. */
-class AppliedDotDelegate : public QStyledItemDelegate
+/*  Draws an "on this image" keyword in dull yellow (G::appliedKeywordColor). A colour
+    rather than a mark before the name: a mark cost indent on every applied row and was
+    easy to miss at a glance, where a coloured name reads the way the red unfiled
+    keywords in the tag zone and Filters do. */
+class AppliedKeywordDelegate : public QStyledItemDelegate
 {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
@@ -46,9 +48,9 @@ public:
         answered that with a filled row everywhere else a drop lands on something, so this
         does not invent a second visual language for it.
 
-        HERE RATHER THAN IN File/hoverdelegate.h, because this tree also draws the applied
-        dot and a view has one delegate. Sharing the colour is what matters; sharing the
-        class would cost the dot. */
+        HERE RATHER THAN IN File/hoverdelegate.h, because this tree also colours the
+        applied keywords and a view has one delegate. Sharing the colour is what matters;
+        sharing the class would cost the applied colour. */
     void setDropRow(const QModelIndex &idx)
     {
         const QModelIndex row = idx.isValid()
@@ -68,18 +70,13 @@ public:
             painter->fillRect(opt.rect, QColor(b, b, b));
         }
 
+        /*  Through the OPTION's palette, which QStyledItemDelegate paints the text with.
+            A palette set on the view would lose to the app stylesheet; this is per item,
+            the same route Filters' setForeground takes for its unfiled red. */
         const bool applied = index.data(KeywordVocab::AppliedRole).toBool();
         if (applied && index.column() == KeywordVocab::NameColumn) {
-            const int d = 5;
-            const int x = opt.rect.left() + 1;
-            const int y = opt.rect.center().y() - d / 2;
-            painter->save();
-            painter->setRenderHint(QPainter::Antialiasing, true);
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(opt.palette.color(QPalette::Text));
-            painter->drawEllipse(QRect(x, y, d, d));
-            painter->restore();
-            opt.rect.setLeft(x + d + 4);
+            opt.palette.setColor(QPalette::Text, G::appliedKeywordColor);
+            opt.palette.setColor(QPalette::HighlightedText, G::appliedKeywordColor);
         }
         QStyledItemDelegate::paint(painter, opt, index);
     }
@@ -101,8 +98,8 @@ KeywordTree::KeywordTree(KeywordVocab *vocab, QWidget *parent)
     setExpandsOnDoubleClick(false);
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
-    dotDelegate = new AppliedDotDelegate(this);
-    setItemDelegate(dotDelegate);
+    appliedDelegate = new AppliedKeywordDelegate(this);
+    setItemDelegate(appliedDelegate);
 
     header()->setStretchLastSection(false);
     header()->setSectionResizeMode(KeywordVocab::NameColumn, QHeaderView::Stretch);
@@ -121,8 +118,28 @@ KeywordTree::KeywordTree(KeywordVocab *vocab, QWidget *parent)
     setDragDropMode(QAbstractItemView::DragDrop);
 
     connect(this, &QTreeView::doubleClicked, this, [this](const QModelIndex &idx) {
+        clickTimer->stop();
         const QString path = idx.data(KeywordVocab::PathRole).toString();
         if (!path.isEmpty()) emit assignRequested(path);
+    });
+
+    /*  A SINGLE CLICK FILTERS ON THE KEYWORD -- but not straight away. A double-click
+        ASSIGNS the keyword to the selected images, and its first click arrives as a
+        click: filtering then would hide the very images about to be tagged (they usually
+        do not carry it yet) and change the selection under the double-click. So the
+        filter waits out the double-click interval and a double-click cancels it.
+        Modifier clicks are selection gestures (multi-select to drag) and never filter. */
+    clickTimer = new QTimer(this);
+    clickTimer->setSingleShot(true);
+    connect(clickTimer, &QTimer::timeout, this, [this] {
+        if (!clickedPath.isEmpty()) emit filterRequested(clickedPath);
+    });
+    connect(this, &QTreeView::clicked, this, [this](const QModelIndex &idx) {
+        if (QApplication::keyboardModifiers() != Qt::NoModifier) return;
+        clickedPath = idx.sibling(idx.row(), KeywordVocab::NameColumn)
+                          .data(KeywordVocab::PathRole).toString();
+        if (clickedPath.isEmpty()) return;
+        clickTimer->start(QApplication::doubleClickInterval());
     });
 
     connect(vocab, &KeywordVocab::pathChanged, this, &KeywordTree::pathChanged);
@@ -253,6 +270,20 @@ void KeywordTree::setFilterText(const QString &text)
 {
     filterText = text.trimmed();
     applyFilter(QModelIndex(), keywordFold(filterText));
+}
+
+bool KeywordTree::revealPath(const QString &path)
+{
+    const QModelIndex idx = vocab->indexForPath(path);
+    if (!idx.isValid()) return false;
+    for (QModelIndex p = idx.parent(); p.isValid(); p = p.parent()) {
+        if (isRowHidden(p.row(), p.parent())) return false;
+        setExpanded(p, true);
+    }
+    if (isRowHidden(idx.row(), idx.parent())) return false;
+    setCurrentIndex(idx);
+    scrollTo(idx, QAbstractItemView::PositionAtCenter);
+    return true;
 }
 
 void KeywordTree::applyFilter(const QModelIndex &parent, const QString &needle)
@@ -491,8 +522,10 @@ void KeywordTree::buildFromCatalog()
     }
 }
 
-/*  Shared with Views/keywordtags.cpp, which accepts a keyword dragged down from here. */
+/*  Shared with Views/keywordtags.cpp, which accepts a keyword dragged down from here,
+    and drags its tags up here. */
 extern const char *kVocabNodeMime;
+extern const char *kKeywordTagMime;
 
 void KeywordTree::startDrag(Qt::DropActions)
 {
@@ -524,15 +557,15 @@ void KeywordTree::startDrag(Qt::DropActions)
 /*  The delegate, typed. It is created here and never replaced, so the cast is a fact
     rather than a hope; the member is held as the base type because the delegate class is
     private to this file. */
-static AppliedDotDelegate *dropDelegateOf(QStyledItemDelegate *d)
+static AppliedKeywordDelegate *dropDelegateOf(QStyledItemDelegate *d)
 {
-    return static_cast<AppliedDotDelegate *>(d);
+    return static_cast<AppliedKeywordDelegate *>(d);
 }
 
 void KeywordTree::setDropRow(const QModelIndex &idx)
 {
-    if (dotDelegate == nullptr) return;
-    dropDelegateOf(dotDelegate)->setDropRow(idx);
+    if (appliedDelegate == nullptr) return;
+    dropDelegateOf(appliedDelegate)->setDropRow(idx);
     viewport()->update();
 }
 
@@ -574,6 +607,7 @@ void KeywordTree::dragEnterEvent(QDragEnterEvent *event)
 {
     if (event->mimeData()->hasUrls()) acceptWithoutMoving(event);
     else if (event->mimeData()->hasFormat(kVocabNodeMime)) event->acceptProposedAction();
+    else if (event->mimeData()->hasFormat(kKeywordTagMime)) acceptWithoutMoving(event);
     else event->ignore();
 }
 
@@ -610,6 +644,24 @@ void KeywordTree::dragMoveEvent(QDragMoveEvent *event)
         }
         setDropRow(target);
         event->acceptProposedAction();
+        return;
+    }
+
+    /*  A TAG lands on a keyword (filed under it) or on blank space (filed at the root).
+        Refused only when it would name itself -- already filed exactly there. */
+    if (event->mimeData()->hasFormat(kKeywordTagMime)) {
+        const QString tag =
+            QString::fromUtf8(event->mimeData()->data(kKeywordTagMime));
+        const QString leaf = keywordLeafOf(tag);
+        const QString parent = target.data(KeywordVocab::PathRole).toString();
+        const QString filed = parent.isEmpty() ? leaf : parent + '|' + leaf;
+        if (leaf.isEmpty() || keywordFold(filed) == keywordFold(tag)) {
+            setDropRow(QModelIndex());
+            event->ignore();
+            return;
+        }
+        setDropRow(target);
+        acceptWithoutMoving(event);
         return;
     }
 
@@ -702,6 +754,45 @@ void KeywordTree::dropEvent(QDropEvent *event)
             if (tgt.isValid()) setExpanded(tgt, true);
         }
         event->acceptProposedAction();
+        return;
+    }
+
+    if (event->mimeData()->hasFormat(kKeywordTagMime)) {
+        /*  A RED TAG FILED UNDER THE TARGET (only red tags start this drag). Keywords
+            are created in the Keyword list, and this is in it: the tag's LEAF becomes a
+            child of the drop target (or a root, dropped on blank space) unless one of
+            that name is already there -- a red "Buoy|Thing" dropped on "Marine" files as
+            "Marine|Thing", because the stray's own branches are what the user is
+            correcting. Then the dock swaps the tag for the filed path on the images
+            (tagFiled), which is what turns a red tag ordinary. Copy, not move: the tag
+            zone has nothing to clean up. */
+        acceptWithoutMoving(event);
+        const QString tag =
+            QString::fromUtf8(event->mimeData()->data(kKeywordTagMime));
+        const QString leaf = keywordLeafOf(tag);
+        const QString parent = target.data(KeywordVocab::PathRole).toString();
+        const QString filed = parent.isEmpty() ? leaf : parent + '|' + leaf;
+        if (leaf.isEmpty() || keywordFold(filed) == keywordFold(tag)) return;
+
+        QModelIndex node = vocab->indexForPath(filed);
+        if (!node.isValid()) {
+            node = vocab->insertChild(target, leaf);
+            if (!node.isValid()) {
+                QMessageBox::warning(this, "Add keyword",
+                    QString("Could not add \"%1\" to the keyword list.").arg(filed));
+                return;
+            }
+        }
+        const QString newPath = node.data(KeywordVocab::PathRole).toString();
+        /*  Re-resolved: insertChild reset the model, so any index from before it is
+            stale. */
+        const QModelIndex shown = vocab->indexForPath(newPath);
+        if (shown.isValid()) {
+            if (shown.parent().isValid()) setExpanded(shown.parent(), true);
+            setCurrentIndex(shown);
+            scrollTo(shown);
+        }
+        emit tagFiled(tag, newPath);
         return;
     }
 

@@ -282,6 +282,12 @@ void DockTitleBar::setTitle(QString title)
     //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
 }
 
+void DockTitleBar::setTitleColor(const QColor &color)
+{
+    titleLabel->setStyleSheet(color.isValid() ? "QLabel { color: " + color.name() + "; }"
+                                              : QString());
+}
+
 void showDockToolTip(const QPoint &globalPos, const QString &tip, QWidget *w)
 {
     if (tip.isEmpty()) return;
@@ -1133,14 +1139,14 @@ void MW::toggleDockArea(Qt::DockWidgetArea area)
             });
     }
     else {
-        QList<CollapsedDock> wanted;
+        /* Measure what is on screen -- the front tabs and the side's extent -- and
+           hand that to collapseDockArea, which is also how a SAVED collapse is applied
+           (applyAreaCollapse), with the measurements read back instead. */
+        QStringList front;
         int extent = 0;
         for (DockWidget *d : docksInArea(area)) {
-            /* The ACTION, not isHidden(): a back tab is hidden too, and it has to come
-               back. A panel the user closed has its action unchecked and is left alone.
-               Falling back to !isHidden() covers a dock with no action of its own. */
             const QAction *a = dockVisibleAction(d);
-            if (a ? !a->isChecked() : d->isHidden()) continue;
+            if (a ? !a->isChecked() : d->isHidden()) continue;   // see collapseDockArea
             /* isSelectedDockTab, NOT !isHidden(): a back tab is only hidden once Qt has
                actually built the tab bar, so on a freshly restored layout every member
                of a group still reports not-hidden and "the front tab" came out as
@@ -1149,19 +1155,158 @@ void MW::toggleDockArea(Qt::DockWidgetArea area)
                isSelectedDockTab asks whether the dock has a non-empty visible region,
                which is true of exactly the one on top, and is what frontDockTabs()
                already uses for the per-workspace tab memory. */
-            const bool current = isSelectedDockTab(d);
-            if (current) extent = qMax(extent, horizontal ? d->width() : d->height());
-            wanted << CollapsedDock{d, current};
+            if (!isSelectedDockTab(d)) continue;
+            front << d->objectName();
+            extent = qMax(extent, horizontal ? d->width() : d->height());
         }
-        /* Nothing the user wants here: do not record an empty collapse, or the bar
-           would flip to "restore" with nothing to restore. */
-        if (wanted.isEmpty()) return;
-        areaCollapsed.insert(area, wanted);
-        areaCollapsedExtent.insert(area, extent);
-        for (const CollapsedDock &c : wanted)
-            if (c.dock) c.dock->setVisible(false);
+        collapseDockArea(area, front, extent);
     }
     syncShowHideBars();
+}
+
+void MW::collapseDockArea(Qt::DockWidgetArea area, const QStringList &front, int extent)
+{
+/*
+    Hide every panel in `area` the user wants and record them in areaCollapsed, so the
+    bar can put back exactly that set. `front` names the docks to raise again on the way
+    back and `extent` is the side's size to restore; toggleDockArea measures both from
+    the screen, applyAreaCollapse reads them from a saved session or workspace.
+
+    Works whether the docks are currently shown or already hidden -- a workspace saved
+    while a side was collapsed restores its state blob with those docks hidden, and
+    they are still recorded here because what makes a dock WANTED is its action.
+*/
+    QList<CollapsedDock> wanted;
+    for (DockWidget *d : docksInArea(area)) {
+        /* The ACTION, not isHidden(): a back tab is hidden too, and it has to come back.
+           A panel the user closed has its action unchecked and is left alone. Falling
+           back to !isHidden() covers a dock with no action of its own. */
+        const QAction *a = dockVisibleAction(d);
+        if (a ? !a->isChecked() : d->isHidden()) continue;
+        wanted << CollapsedDock{d, front.contains(d->objectName())};
+    }
+    /* Nothing the user wants here: do not record an empty collapse, or the bar would
+       flip to "restore" with nothing to restore. */
+    if (wanted.isEmpty()) return;
+    areaCollapsed.insert(area, wanted);
+    areaCollapsedExtent.insert(area, extent);
+    for (const CollapsedDock &c : wanted)
+        if (c.dock) c.dock->setVisible(false);
+}
+
+const QList<QPair<Qt::DockWidgetArea, QString>> &MW::collapsibleAreas()
+{
+    static const QList<QPair<Qt::DockWidgetArea, QString>> areas{
+        {Qt::LeftDockWidgetArea,   "Left"},
+        {Qt::RightDockWidgetArea,  "Right"},
+        {Qt::BottomDockWidgetArea, "Bottom"},
+        {Qt::TopDockWidgetArea,    "Top"},
+    };
+    return areas;
+}
+
+MW::AreaCollapse MW::areaCollapseState(Qt::DockWidgetArea area) const
+{
+    AreaCollapse c;
+    if (!areaCollapsed.contains(area)) return c;
+    c.collapsed = true;
+    c.extent = areaCollapsedExtent.value(area);
+    for (const CollapsedDock &d : areaCollapsed.value(area))
+        if (d.dock && d.wasCurrentTab) c.front << d.dock->objectName();
+    return c;
+}
+
+void MW::snapshotAreaCollapse(AreaCollapse *c) const
+{
+    const auto &areas = collapsibleAreas();
+    for (int i = 0; i < areas.size(); ++i) c[i] = areaCollapseState(areas.at(i).first);
+}
+
+void MW::applyAreaCollapse(Qt::DockWidgetArea area, const AreaCollapse &c)
+{
+/*
+    Bring one side to a saved collapse state. Called LAST on the paths that lay docks
+    out, after anything that pushes dock visibility back from the actions, or that
+    would re-show the panels a moment after this hid them.
+*/
+    const bool isCollapsed = isDockAreaCollapsed(area);
+    if (c.collapsed == isCollapsed) return;
+    if (!c.collapsed) {                         // saved expanded: put the panels back
+        toggleDockArea(area);
+        return;
+    }
+    /* A session saved before the extent and front tabs were recorded carries only the
+       flag: measure the screen, as a click would. */
+    if (c.front.isEmpty() && c.extent <= 0) toggleDockArea(area);
+    else collapseDockArea(area, c.front, c.extent);
+    syncShowHideBars();
+}
+
+void MW::applyAreaCollapse(const AreaCollapse *c)
+{
+    const auto &areas = collapsibleAreas();
+    for (int i = 0; i < areas.size(); ++i) applyAreaCollapse(areas.at(i).first, c[i]);
+    syncShowHideBars();
+}
+
+void MW::areaCollapseToMap(const AreaCollapse *c, QVariantMap &m)
+{
+/*
+    Flat keys, so the same writer serves QSettings (the session and each workspace) and
+    the workspace JSON. "isLeftAreaCollapsed" is the key the session has always used.
+*/
+    const auto &areas = collapsibleAreas();
+    for (int i = 0; i < areas.size(); ++i) {
+        const QString &stem = areas.at(i).second;
+        const QString lower = stem.at(0).toLower() + stem.mid(1);
+        m["is" + stem + "AreaCollapsed"] = c[i].collapsed;
+        m[lower + "AreaExtent"] = c[i].extent;
+        m[lower + "AreaFront"] = c[i].front;
+    }
+}
+
+void MW::areaCollapseFromMap(const QVariantMap &m, AreaCollapse *c)
+{
+    // absent keys (an older workspace or session) read as expanded
+    const auto &areas = collapsibleAreas();
+    for (int i = 0; i < areas.size(); ++i) {
+        const QString &stem = areas.at(i).second;
+        const QString lower = stem.at(0).toLower() + stem.mid(1);
+        c[i].collapsed = m.value("is" + stem + "AreaCollapsed").toBool();
+        c[i].extent = m.value(lower + "AreaExtent").toInt();
+        c[i].front = m.value(lower + "AreaFront").toStringList();
+    }
+}
+
+void MW::writeSessionAreaCollapse()
+{
+/*
+    Which sides the user left collapsed. Separate from the per-dock visibility flags on
+    purpose -- those record which panels the user WANTS, these record that a whole side
+    is folded away with those preferences intact underneath.
+*/
+    AreaCollapse c[kCollapsibleAreas];
+    snapshotAreaCollapse(c);
+    QVariantMap m;
+    areaCollapseToMap(c, m);
+    for (auto it = m.cbegin(); it != m.cend(); ++it) settings->setValue(it.key(), it.value());
+}
+
+void MW::applySessionAreaCollapse()
+{
+/*
+    Re-collapse the sides the last session left folded away -- and expand any the
+    workspace applied at startup has collapsed that the session had not: the session's
+    state is the one the user left, so it wins over the layout's.
+*/
+    if (!isSettings) return;
+    AreaCollapse c[kCollapsibleAreas];
+    QVariantMap m;
+    areaCollapseToMap(c, m);            // the key names, defaulted to expanded
+    for (auto it = m.begin(); it != m.end(); ++it)
+        it.value() = settings->value(it.key(), it.value());
+    areaCollapseFromMap(m, c);
+    applyAreaCollapse(c);
 }
 
 void MW::syncShowHideBars()

@@ -41,6 +41,7 @@ public:
     }
 
     void setMessage(const QString &text) { label->setText(text); }
+    QString message() const { return label->text(); }
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override

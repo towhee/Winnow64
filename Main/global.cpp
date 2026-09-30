@@ -138,6 +138,8 @@ QColor header3Color;                //
 
 QColor borderColor;                 // define after app stylesheet defined
 QColor tabWidgetBorderColor;        // define after app stylesheet defined
+QColor unfiledKeywordColor = QColor(0x9a, 0x5a, 0x5a); // Filters + Keywords dock
+QColor appliedKeywordColor = QColor(0xb4, 0xa4, 0x5a); // Keywords dock: on this image
 QColor frameLineColor;              // define after app stylesheet defined (mb)
 int frameLineWidth = 1;
 int frameLineRadius = 6;             // = WidgetCSS brInteractive (buttons)

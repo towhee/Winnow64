@@ -12,6 +12,8 @@
 #include <QFileInfo>
 #include <QLocale>
 #include <QMessageBox>
+#include <QPointer>
+#include <QScrollBar>
 #include <QTimer>
 
 #include <functional>
@@ -212,7 +214,7 @@ QMap<QString, int> MW::keywordsInSelection() const
 }
 
 void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &remove,
-                                 bool rebuildFilters)
+                                 bool rebuildFilters, bool replace)
 {
 /*
     Add and/or remove keyword paths across the selection.
@@ -303,17 +305,18 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
 
         QStringList next;
         QSet<QString> seen;
+        bool removedAny = false;
         for (const QString &p : have) {
             const QString fold = keywordFold(p);
             bool drop = false;
             for (const QString &r : removeFolded)
                 if (keywordIsDescendant(fold, r)) { drop = true; break; }
-            if (drop) continue;
+            if (drop) { removedAny = true; continue; }
             if (seen.contains(fold)) continue;
             seen.insert(fold);
             next << p;
         }
-        for (const QString &a : add) {
+        for (const QString &a : (replace && !removedAny) ? QStringList() : add) {
             const QString trimmed = keywordNodes(a).join('|');
             if (trimmed.isEmpty()) continue;
             const QString fold = keywordFold(trimmed);
@@ -433,6 +436,13 @@ void MW::filterBuildCompleted()
 */
     filterRebuildAttempts = 0;
 
+    /*  Launched into the Keywords workflow: the build just filled the Keywords category
+        the layout had already focused, so focus it again -- once, not on every load. */
+    if (focusKeywordsFiltersAfterBuild) {
+        focusKeywordsFiltersAfterBuild = false;
+        focusKeywordsFilters();
+    }
+
     /*  THE LAST WORD OF THE LOAD. The filter build is the end of the wait that the
         central widget has been narrating, but it is not the end of the load: the image
         cache is still decoding the first image, and it is the cache that finally puts the
@@ -515,6 +525,13 @@ void MW::rebuildKeywordFilters(const QString &src)
 */
     if (!dm || !buildFilters) return;
 
+    /*  THE FILTERS PANEL KEEPS ITS PLACE. updateKeywordItems deletes and recreates every
+        keyword item (keeping check and expansion state), and emptying the category
+        clamps the scroll bar -- so the panel jumped back toward the top after every
+        keyword edit, away from the keyword the user was working on. */
+    const int filtersV = filters ? filters->verticalScrollBar()->value() : 0;
+    const int filtersH = filters ? filters->horizontalScrollBar()->value() : 0;
+
     dm->sf->suspend(true, src);
     buildFilters->updateCategory(BuildFilters::KeywordEdit,
                                  BuildFilters::NoAfterAction, /*runSync*/ true);
@@ -531,6 +548,21 @@ void MW::rebuildKeywordFilters(const QString &src)
         back on the new ones. Cheap: a set lookup per node. */
     refreshFilterVocabMarking();
     movePhases.mark("vocabMarking");
+
+    /*  Restore after a synchronous layout, so the range is the new tree's and not a
+        stale one -- and again a tick later, because the view's own delayed layout can
+        clamp it a second time once control returns to the event loop. */
+    if (filters) {
+        filters->doItemsLayout();
+        filters->verticalScrollBar()->setValue(filtersV);
+        filters->horizontalScrollBar()->setValue(filtersH);
+        QPointer<Filters> f = filters;
+        QTimer::singleShot(0, filters, [f, filtersV, filtersH] {
+            if (!f) return;
+            f->verticalScrollBar()->setValue(filtersV);
+            f->horizontalScrollBar()->setValue(filtersH);
+        });
+    }
 }
 
 void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
@@ -1110,15 +1142,16 @@ void MW::scheduleKeywordsDockRefresh()
 void MW::refreshKeywordsDock()
 {
 /*
-    Repaint the dock from the current selection: the tags above and the dots in the tree.
+    Repaint the dock from the current selection: the tags above and the applied
+    (dull-yellow) keywords in the tree.
 
     GUARDED ON VISIBILITY. The dock ships off, and walking a vocabulary on every arrow key
     for a panel nobody has open is work for nothing.
 
-    THE TAGS AND THE DOTS ANSWER DIFFERENT QUESTIONS and are fed differently. The tags
+    THE TAGS AND THE YELLOW ANSWER DIFFERENT QUESTIONS and are fed differently. The tags
     describe the SELECTION (with a count per keyword, so "on some" can be marked); the
-    dots describe the CURRENT image alone, because a dot is a yes/no mark and there is no
-    honest way to draw "sort of".
+    yellow describes the CURRENT image alone, because it is a yes/no mark and there is
+    no honest way to draw "sort of".
 */
     if (!keywordsDock || !keywordsDock->isVisible()) return;
     if (!keywordVocab || !keywordTags || !dm || !sel) return;

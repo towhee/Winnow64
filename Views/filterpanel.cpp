@@ -300,6 +300,8 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
     */
     if ((force || changed) && !results.isEmpty() && results.size() <= autoLoadMax())
         emit loadResults(results, false, q);
+    else
+        emit searchNotLoaded();
 }
 
 void FilterPanel::searchTextChanged(const QString &text)

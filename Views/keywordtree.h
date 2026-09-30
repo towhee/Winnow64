@@ -6,6 +6,7 @@
 #include <QSet>
 
 class KeywordVocab;
+class QTimer;
 class QLineEdit;
 class QStyledItemDelegate;
 
@@ -41,6 +42,10 @@ public:
         read. */
     void setFilterText(const QString &text);
 
+    /*  Expand to, select and centre the node at path. False when it is not in the list
+        or the Find filter hides it -- the caller clears the filter and tries again. */
+    bool revealPath(const QString &path);
+
 signals:
     /*  Images were dropped on a keyword node: tag them with its path. The view does not
         touch a file -- the dock routes this to MW::applyKeywordsToSelection. */
@@ -54,12 +59,20 @@ signals:
         Emitted rather than done here for the same reason as the rest of this class --
         it rewrites IMAGES, and this view never touches one. MW::tidyFlatKeywords. */
     void tidyRequested();
+    /*  A plain single click on a keyword: filter the images on it. Delayed by the
+        double-click interval and cancelled by a double-click -- see the constructor. */
+    void filterRequested(const QString &path);
+    /*  A red tag from the tag zone was dropped on the list and filed as newPath (created
+        under the drop target if it was not there). The dock swaps tagPath for newPath on
+        the selected images that carry it -- otherwise a filed red keyword stays red. */
+    void tagFiled(const QString &tagPath, const QString &newPath);
 
 protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     /*  Drag and drop, all at the VIEW rather than in the model. Two different things can
-        be dropped here -- a keyword node (re-parent) and a set of images (tag them) --
+        be dropped here -- a keyword node (re-parent), a set of images (tag them) and a
+        red tag from the tag zone (file it under the target) --
         and only one of them is the model's business, so keeping both here avoids a model
         that knows what an image is. */
     void startDrag(Qt::DropActions supportedActions) override;
@@ -101,8 +114,10 @@ private:
     KeywordVocab *vocab = nullptr;
     /*  The item delegate, kept so the drop highlight can reach it. Base type: the
         delegate class is private to keywordtree.cpp. */
-    QStyledItemDelegate *dotDelegate = nullptr;
+    QStyledItemDelegate *appliedDelegate = nullptr;
     QString filterText;
+    QTimer *clickTimer = nullptr;
+    QString clickedPath;
 };
 
 #endif // KEYWORDTREE_H

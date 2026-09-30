@@ -84,8 +84,8 @@ void MW::writeSettings()
     settings->setValue("decodeRawEngine", static_cast<int>(G::decodeRawEngine));
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
-    settings->setValue("openLibraryAtStart", openLibraryAtStart);
     settings->setValue("restoreLibraryState", restoreLibraryState);
+    settings->setValue("lastScopeWasLibrary", lastScopeWasLibrary);
     settings->setValue("updateSkipVersion", updateSkipVersion);
     settings->setValue("combineRawJpg", combineRawJpg);
 
@@ -172,17 +172,8 @@ void MW::writeSettings()
                        collectionsDockVisibleAction->isChecked());
     settings->setValue("isQueriesDockVisible", queriesDockVisibleAction->isChecked());
 
-    /* The show/hide bars: which sides the user left collapsed. Separate from the per-dock
-       flags above on purpose -- those record which panels the user WANTS, these record
-       that a whole side is folded away with those preferences intact underneath. */
-    settings->setValue("isLeftAreaCollapsed",
-                       isDockAreaCollapsed(Qt::LeftDockWidgetArea));
-    settings->setValue("isRightAreaCollapsed",
-                       isDockAreaCollapsed(Qt::RightDockWidgetArea));
-    settings->setValue("isBottomAreaCollapsed",
-                       isDockAreaCollapsed(Qt::BottomDockWidgetArea));
-    settings->setValue("isTopAreaCollapsed",
-                       isDockAreaCollapsed(Qt::TopDockWidgetArea));
+    // the show/hide bars: which sides the user left collapsed (see the function)
+    writeSessionAreaCollapse();
     settings->setValue("isModuleDockVisible", moduleDockVisibleAction->isChecked());
 
     /* The scope table the user nominated for background cataloguing. It lives HERE and
@@ -433,8 +424,8 @@ bool MW::loadSettings()
         G::buildDevPreviewsInBackground = false;
         rememberLastDir = false;
         checkIfUpdate = true;
-        openLibraryAtStart = false;
         restoreLibraryState = false;
+        lastScopeWasLibrary = false;
         updateSkipVersion = "";
         lastDir = "";
         deleteWarning = true;
@@ -714,10 +705,15 @@ bool MW::loadSettings()
     // if (settings->contains("rememberLastDir")) rememberLastDir = settings->value("rememberLastDir").toBool();
     rememberLastDir = false;    // remove rememberLastDir for now 2025-03-21
     if (settings->contains("checkIfUpdate")) checkIfUpdate = settings->value("checkIfUpdate").toBool();
-    if (settings->contains("openLibraryAtStart"))
-        openLibraryAtStart = settings->value("openLibraryAtStart").toBool();
     if (settings->contains("restoreLibraryState"))
         restoreLibraryState = settings->value("restoreLibraryState").toBool();
+    /*  MISSING = the retired "Open library at start": a user who had it on always came
+        up in the Library, so the first start after the upgrade still does. From the next
+        close on the key records the truth, and the old one is dropped. */
+    lastScopeWasLibrary = settings->value("lastScopeWasLibrary",
+                                          settings->value("openLibraryAtStart", false))
+                              .toBool();
+    settings->remove("openLibraryAtStart");
     if (settings->contains("updateSkipVersion")) updateSkipVersion = settings->value("updateSkipVersion").toString();
     if (settings->contains("lastDir")) lastDir = settings->value("lastDir").toString();
 
