@@ -6243,3 +6243,10 @@ Here's the layout as IconViewDelegate::paint() draws it (Views/iconviewdelegate.
   The tooltips for each mark are in helpEvent() (iconviewdelegate.cpp:542), and they use the same visibility conditions as the paint code.
 
 Users/roryhill/Pictures/_test0
+
+BMPROBE to be removed
+
+==========================================================================================
+Revise file menu
+==========================================================================================
+
