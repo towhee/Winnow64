@@ -30,6 +30,9 @@ set(WINNOW_CORE_TEST_SOURCES
     # FileOps keeps COLLECTIONS in step on a move or a delete too (they key on the path),
     # so the closure reaches the collection store. Qt Core + Sql only.
     ${CMAKE_SOURCE_DIR}/Datamodel/collectionstore.cpp
+    # ...and Develop history (the History dock's undo steps), keyed on the path the same
+    # way. Qt Core + Sql only; the entries are header-only EditStack JSON.
+    ${CMAKE_SOURCE_DIR}/Develop/History/historystore.cpp
     # The query grammar: FilterPredicate (header-only, included everywhere) evaluates
     # query expressions, so every closure that compiles a predicate needs it.
     ${CMAKE_SOURCE_DIR}/Utilities/queryexpr.cpp
@@ -114,6 +117,9 @@ winnow_add_unit_test(tst_crx unit/tst_crx.cpp
 )
 # tst_sharpen tests Develop/sharpen.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_sharpen unit/tst_sharpen.cpp)
+# tst_fillspot tests Develop/fillspot.h (header-only, Qt Core JSON): the spot-local heal
+# coverage must match a full-frame raster at every pixel and stay local.
+winnow_add_unit_test(tst_fillspot unit/tst_fillspot.cpp)
 # tst_detailroi tests Develop/detailroi.h -- the Detail 1:1 preview's ROI mapping
 # (header-only integer geometry, same closure as tst_sharpen).
 winnow_add_unit_test(tst_detailroi unit/tst_detailroi.cpp)
@@ -411,6 +417,12 @@ winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp
 # file from a newer build is left alone -- and the two lookups the Filters Collections
 # category's column is built from (store key -> ids, catalog key -> row path).
 winnow_add_unit_test(tst_collections unit/tst_collections.cpp)
+# tst_historystore pins Develop history across restarts (index.db table develop_history)
+# and DevelopHistory::seed's rule: restore only when the saved history ends at the
+# sidecar's recipe. develophistory.h is listed so AUTOMOC sees its Q_OBJECT.
+winnow_add_unit_test(tst_historystore unit/tst_historystore.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/History/develophistory.h
+)
 
 # tst_queryexpr pins the query grammar behind the Search row, the Query Builder and the
 # Queries panel: plain words keep their old meaning, text and JSON round-trip (a saved

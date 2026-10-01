@@ -430,7 +430,7 @@ void applyGrainMatch(cv::Mat &fill, const cv::Mat &orig, const cv::Mat &hard)
     the model path. Coarse-to-fine: match at reduced resolution (hole ~<=48px), refine
     +-q px at full res.
 */
-bool cloneHealOne(cv::Mat &full, const std::vector<float> &cov,
+bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
                   int bx0, int by0, int bx1, int by1, const ChunkWin &win = {},
                   const QString &offsetKey = QString())
 {
@@ -455,9 +455,8 @@ bool cloneHealOne(cv::Mat &full, const std::vector<float> &cov,
     cv::Mat alpha(C.height, C.width, CV_32F);
     for (int y = 0; y < C.height; ++y) {
         float *a = alpha.ptr<float>(y);
-        const size_t row = size_t(C.y + y) * W + C.x;
         for (int x = 0; x < C.width; ++x)
-            a[x] = cov[row + x] * float(winWeight(win, C.x + x, C.y + y));
+            a[x] = cov.at(C.x + x, C.y + y) * float(winWeight(win, C.x + x, C.y + y));
     }
     cv::Mat hard;
     cv::threshold(alpha, hard, 0.05, 1.0, cv::THRESH_BINARY);
@@ -494,8 +493,7 @@ bool cloneHealOne(cv::Mat &full, const std::vector<float> &cov,
     cv::Mat tmplMask(C.height, C.width, CV_8U);
     for (int y = 0; y < C.height; ++y) {
         uchar *tm = tmplMask.ptr<uchar>(y);
-        const size_t row = size_t(C.y + y) * W + C.x;
-        for (int x = 0; x < C.width; ++x) tm[x] = cov[row + x] > 0.02f ? 0 : 255;
+        for (int x = 0; x < C.width; ++x) tm[x] = cov.at(C.x + x, C.y + y) > 0.02f ? 0 : 255;
     }
     cv::erode(tmplMask, tmplMask, cv::getStructuringElement(cv::MORPH_ELLIPSE, {9, 9}));
 
@@ -515,11 +513,11 @@ bool cloneHealOne(cv::Mat &full, const std::vector<float> &cov,
        the hole shape. (A bounding-RECT test rejected nearly every candidate for a
        diagonal stroke, whose bbox is a huge mostly-empty square -- chunks then all fell
        back to the model, which was the visible smudge; lab-verified.) */
-    cv::Mat covS(S.height, S.width, CV_32F);
-    for (int y = 0; y < S.height; ++y) {
-        float *cm = covS.ptr<float>(y);
-        const size_t row = size_t(S.y + y) * W + S.x;
-        for (int x = 0; x < S.width; ++x) cm[x] = cov[row + x] > 0.02f ? 1.0f : 0.0f;
+    cv::Mat covS(S.height, S.width, CV_32F, cv::Scalar(0));
+    for (int y = std::max(S.y, cov.y0); y <= std::min(S.y + S.height - 1, cov.y1); ++y) {
+        float *cm = covS.ptr<float>(y - S.y);
+        for (int x = std::max(S.x, cov.x0); x <= std::min(S.x + S.width - 1, cov.x1); ++x)
+            cm[x - S.x] = cov.at(x, y) > 0.02f ? 1.0f : 0.0f;
     }
     cv::Mat holeP;
     cv::dilate(hard, holeP, cv::getStructuringElement(cv::MORPH_ELLIPSE, {9, 9}));
@@ -638,9 +636,9 @@ bool cloneHealOne(cv::Mat &full, const std::vector<float> &cov,
     return true;
 }
 
-/* Heal one spot's (or one chunk's windowed share of a) coverage `cov` (row-major W*H,
-   0..1) into RGB888 `full`, in place, with the model. */
-void healOne(cv::Mat &full, const std::vector<float> &cov, int bx0, int by0, int bx1, int by1,
+/* Heal one spot's (or one chunk's windowed share of a) coverage `cov` (frame
+   coordinates, 0..1) into RGB888 `full`, in place, with the model. */
+void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
              InferenceSession *s, const std::string &imgName, const std::string &maskName,
              const std::string &outName, const ChunkWin &win = {})
 {
@@ -659,7 +657,7 @@ void healOne(cv::Mat &full, const std::vector<float> &cov, int bx0, int by0, int
     for (int y = 0; y < t; ++y) {
         float *d = hole.ptr<float>(y);
         for (int x = 0; x < t; ++x)
-            d[x] = cov[size_t(ty0 + y) * W + (tx0 + x)]
+            d[x] = cov.at(tx0 + x, ty0 + y)
                    * float(winWeight(win, tx0 + x, ty0 + y));
     }
 
@@ -794,14 +792,14 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
 
     bool applied = false;
     int healed = 0;
-    std::vector<float> cov;
+    FillSpotGeom::Coverage cov;
     for (const FillSpot &sp : spots) {
         if (!sp.enabled || sp.paramsJson.isEmpty()) continue;
         const FillSpotGeom::Parsed p = FillSpotGeom::parse(sp.paramsJson);
         if (!p.valid()) continue;
-        int bx0, by0, bx1, by1;
-        FillSpotGeom::rasterize(p, W, H, cov, bx0, by0, bx1, by1);
-        if (bx1 < bx0 || by1 < by0) continue;            // empty coverage
+        FillSpotGeom::rasterize(p, W, H, cov);
+        if (cov.empty()) continue;                       // empty coverage
+        const int bx0 = cov.bx0, by0 = cov.by0, bx1 = cov.bx1, by1 = cov.by1;
         /* The spot's kind picks the engine (Replace panel mode): Spot/Fill heal by
            exemplar CLONE (real neighbouring texture), falling back to the model when no
            clean source region exists; Object is a regenerative model fill (the removed
@@ -826,8 +824,7 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
             cv::Mat covB(by1 - by0 + 3, bx1 - bx0 + 3, CV_8U, cv::Scalar(0));
             for (int y = by0; y <= by1; ++y) {
                 uchar *dm = covB.ptr<uchar>(y - by0 + 1) + 1;
-                const float *c = cov.data() + size_t(y) * W;
-                for (int x = bx0; x <= bx1; ++x) dm[x - bx0] = c[x] > 0.05f ? 255 : 0;
+                for (int x = bx0; x <= bx1; ++x) dm[x - bx0] = cov.at(x, y) > 0.05f ? 255 : 0;
             }
             cv::Mat dtS;
             cv::distanceTransform(covB, dtS, cv::DIST_L2, 3);
@@ -856,9 +853,8 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
                         const int ey1 = std::min(H - 1, gy + core - 1 + ramp);
                         int cx0 = ex1 + 1, cy0 = ey1 + 1, cx1 = ex0 - 1, cy1 = ey0 - 1;
                         for (int y = ey0; y <= ey1; ++y) {
-                            const float *c = cov.data() + size_t(y) * W;
                             for (int x = ex0; x <= ex1; ++x) {
-                                if (c[x] > 0.0f) {
+                                if (cov.at(x, y) > 0.0f) {
                                     cx0 = std::min(cx0, x); cy0 = std::min(cy0, y);
                                     cx1 = std::max(cx1, x); cy1 = std::max(cy1, y);
                                 }

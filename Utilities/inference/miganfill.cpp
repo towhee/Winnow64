@@ -54,8 +54,9 @@ InferenceSession *SharedSession()
     return session.get();
 }
 
-/* Heal one spot's coverage `cov` (row-major W*H, 0..1) into RGB888 `full`, in place. */
-void healOne(cv::Mat &full, const std::vector<float> &cov, int bx0, int by0, int bx1, int by1,
+/* Heal one spot's coverage `cov` (frame coordinates, 0..1) into RGB888 `full`, in
+   place. */
+void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
              InferenceSession *s, const std::string &inName, const std::string &outName)
 {
     const int W = full.cols, H = full.rows;
@@ -72,7 +73,7 @@ void healOne(cv::Mat &full, const std::vector<float> &cov, int bx0, int by0, int
     cv::Mat hole(t, t, CV_32F);
     for (int y = 0; y < t; ++y) {
         float *d = hole.ptr<float>(y);
-        for (int x = 0; x < t; ++x) d[x] = cov[size_t(ty0 + y) * W + (tx0 + x)];
+        for (int x = 0; x < t; ++x) d[x] = cov.at(tx0 + x, ty0 + y);
     }
 
     cv::Mat imgN, holeN;
@@ -172,15 +173,14 @@ bool apply(QImage &img, const QVector<FillSpot> &spots)
     const std::string outName = s->OutputNames().empty() ? "out" : s->OutputNames()[0];
 
     bool applied = false;
-    std::vector<float> cov;
+    FillSpotGeom::Coverage cov;
     for (const FillSpot &sp : spots) {
         if (!sp.enabled || sp.paramsJson.isEmpty()) continue;
         const FillSpotGeom::Parsed p = FillSpotGeom::parse(sp.paramsJson);
         if (!p.valid()) continue;
-        int bx0, by0, bx1, by1;
-        FillSpotGeom::rasterize(p, W, H, cov, bx0, by0, bx1, by1);
-        if (bx1 < bx0 || by1 < by0) continue;            // empty coverage
-        healOne(full, cov, bx0, by0, bx1, by1, s, inName, outName);
+        FillSpotGeom::rasterize(p, W, H, cov);
+        if (cov.empty()) continue;                       // empty coverage
+        healOne(full, cov, cov.bx0, cov.by0, cov.bx1, cov.by1, s, inName, outName);
         applied = true;
     }
 

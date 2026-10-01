@@ -350,11 +350,12 @@ void HistoryPanel::showHistoryHelp()
         "Every develop action for this image, newest first.<br>"
         "Hover an entry to preview that state; click it to go back to it.<br>"
         "Editing from an earlier entry discards the entries after it.<br><br>"
-        "Press \\ to flip the image between <b>Before</b> (the bottom entry, where "
-        "this session started) and <b>After</b> (where you are now). It stays on "
-        "Before until you press \\ again, edit, or move to another image.<br><br>"
-        "History is per image and lasts for this session -- the sidecar keeps the "
-        "current state, not the steps.", 7000);
+        "Press \\ to flip the image between <b>Before</b> (the bottom entry) and "
+        "<b>After</b> (where you are now). It stays on Before until you press \\ "
+        "again, edit, or move to another image.<br><br>"
+        "History is per image and is kept between sessions. It is set aside if the "
+        "image was changed somewhere Winnow did not see (another computer, a restored "
+        "sidecar) -- the edits themselves are always kept.", 7000);
 }
 
 void HistoryPanel::showPresetsHelp()

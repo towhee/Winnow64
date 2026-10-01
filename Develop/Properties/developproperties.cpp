@@ -10,6 +10,7 @@
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
+#include "Develop/History/historystore.h"
 #include "Develop/Presets/presetsview.h"
 #include "Develop/fillspot.h"
 #include "Main/mainwindow.h"
@@ -53,10 +54,21 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     }
 
     initialize();
-    /* Per-image edit history (the History dock's model). Session scoped: it records a
-       labelled EditStack snapshot per action via noteEdit and is never written to the
-       sidecar (which holds only the current state). */
+    /* Per-image edit history (the History dock's model): a labelled EditStack snapshot
+       per action via noteEdit. Never written to the sidecar (which holds only the current
+       state) -- it persists in the local index instead: flushImage saves it alongside the
+       sidecar write, and seed() reloads it through the loader on an image's first touch,
+       if it still ends at the sidecar's recipe (see develophistory.h). */
     history = new DevelopHistory(this);
+    history->loader = [](const QString &p, QVector<HistoryEntry> &e, int &pos,
+                         QString &stamp) {
+        return HistoryStore::load(p, e, pos, stamp);
+    };
+    history->remover = [](const QString &p) { HistoryStore::remove(p); };
+    /* Multi-image link ids are SAVED with the history now, so they must not repeat across
+       sessions: start from the clock (ms since epoch, shifted to leave room for 65k
+       batches per millisecond) rather than from 0. */
+    nextSyncId = quint64(QDateTime::currentMSecsSinceEpoch()) << 16;
     /* The named develop presets (the Presets dock's model). Unlike history these ARE
        persistent -- they live in QSettings under "Develop Presets". */
     presets = new DevelopPresets(setting, this);
@@ -1729,6 +1741,9 @@ void DevelopProperties::resetImageEdits(const QString &fPath)
     if (history && history->count(fPath) > 0) {
         history->forget(fPath);
         history->seed(fPath, s);
+    }
+    else {
+        HistoryStore::remove(fPath);     // a saved timeline from an earlier session too
     }
 
     /* Sidecar: written NOW rather than left to the debounce. An identity stack makes
@@ -6304,7 +6319,7 @@ void DevelopProperties::noteScopeEdit(const QString &scope, const QString &actio
     /* Multi-image editing: whatever this commit changed in the GLOBAL scope is queued
        for the other selected images. Hooked here rather than at each edit site so it
        covers every develop action by construction -- present and future. */
-    queuePropagation(action, value);
+    queuePropagation(action, value, mergeKey);
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -6454,8 +6469,8 @@ void DevelopProperties::applyHistoryEntry(int index)
     if (!history || currentImagePath.isEmpty()) return;
     const HistoryEntry *e = history->at(currentImagePath, index);
     if (!e) return;
-    /* History is per-image: a revert here must not un-edit the rest of the selection,
-       but a batch queued BEFORE the revert was a real edit and still has to land. */
+    /* A batch queued BEFORE the revert was a real edit and must land first -- both so it
+       is not lost and so its linked steps exist for revertSelectionToMatch below. */
     flushPropagation();
 
     /* A half-built mask tool indexes into the scope we are about to replace, so retire it
@@ -6492,10 +6507,47 @@ void DevelopProperties::applyHistoryEntry(int index)
     if (spotMode) emitSpotPins();
     isRestoringHistory = false;
     syncPropagateBase();                // the restored state is the new diff baseline
+    revertSelectionToMatch(index);      // linked multi-image steps revert with it
 
     emit paramsChanged();               // full render + settled full-res
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
+}
+
+void DevelopProperties::revertSelectionToMatch(int index)
+{
+/*
+    The multi-image half of a History revert. The current image has just moved to entry
+    `index`; every OTHER selected image whose history shares linked steps with it
+    (HistoryEntry::syncId -- one multi-image edit) moves to the matching point in its own
+    history: before the first linked edit that is no longer in force, or to its newest
+    step when all of them are (a redo). An image that shares no linked step is left
+    alone, as is every image outside the selection -- a revert follows the same rule as
+    an edit: it applies to what is selected.
+*/
+    if (!history) return;
+    const QStringList others = otherSelectedPaths();
+    if (others.isEmpty()) return;
+    QSet<quint64> known, applied;
+    history->syncIds(currentImagePath, index, known, applied);
+    if (known.isEmpty()) return;
+
+    int n = 0;
+    for (const QString &p : others) {
+        const int q = history->syncedPos(p, known, applied);
+        if (q < 0 || q == history->pos(p)) continue;
+        const HistoryEntry *e = history->at(p, q);
+        if (!e) continue;
+        EditStack s = e->stack;
+        if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+        s.scopes[0].name = "Global";
+        stackCache[p] = s;
+        dirty.insert(p);                 // flushed (and its thumbnail rebuilt) as an edit
+        history->setPos(p, q);
+        ++n;
+    }
+    if (G::isLogger) G::log("DevelopProperties::revertSelectionToMatch",
+                            QString::number(n) + " images");
 }
 
 /* --------------------------------------------------------------------------------
@@ -7486,6 +7538,12 @@ void DevelopProperties::flushImage(const QString &fPath)
     // synchronous; sidecar is a few KB plus ~20 KB of preview, and never on a drag
     Metadata::writeDevelopSidecar(fPath, blob,
                                   QString::fromLatin1(thumbJpg.toBase64()));
+    /* The History steps that led here, saved WITH the recipe so the two are written
+       together: a later session trusts the saved history only if its current step is
+       this recipe (DevelopHistory::seed). */
+    if (history && history->count(fPath) > 0)
+        HistoryStore::save(fPath, history->entries(fPath), history->pos(fPath),
+                           HistoryEntry::recipeStamp(s));
 
     if (!blob.isEmpty() && !loupeJpg.isEmpty()) {
         DevPreviewCache::instance().put(
@@ -7764,7 +7822,8 @@ void DevelopProperties::syncPropagateBase()
     propagateGeomBase = s.geometry;
 }
 
-void DevelopProperties::queuePropagation(const QString &action, const QString &value)
+void DevelopProperties::queuePropagation(const QString &action, const QString &value,
+                                         const QString &mergeKey)
 {
     if (currentImagePath.isEmpty()) return;
     const EditStack s = stackCache.value(currentImagePath);
@@ -7787,16 +7846,31 @@ void DevelopProperties::queuePropagation(const QString &action, const QString &v
     propagateGeomBase = s.geometry;
     if (changed.isEmpty()) return;       // a mask/spot edit -- stays per-image
 
+    /* ONE BATCH PER HISTORY STEP. A batch is linked to the current image's step by a
+       syncId, so a commit that is a different step (another gesture, or a non-coalescing
+       action) closes the open batch first -- otherwise two steps on this image would map
+       onto one step on the others, and reverting between them could not be matched. */
+    if (!pendingFields.isEmpty() &&
+        (mergeKey.isEmpty() || mergeKey != propagateMergeKey))
+        flushPropagation();
+
     /* The batch belongs to the selection that was live when it OPENED, so a selection
        change mid-drag cannot redirect edits the user has already made -- and a drag
        (which commits continuously) reads the selection once, not once per tick. */
     if (pendingFields.isEmpty()) {
         propagateTargets = otherSelectedPaths();
         if (propagateTargets.isEmpty()) return;   // single image: nothing to fan out to
+        propagateSyncId = ++nextSyncId;
     }
     pendingFields += changed;
     propagateAction = action;
     propagateValue  = value;
+    propagateMergeKey = mergeKey;
+    /* noteScopeEdit recorded this image's step just before calling here (it records
+       whenever action is non-empty and we are not populating/restoring, which returned
+       above). Link it to the batch. */
+    if (history && !action.isEmpty())
+        history->stampTop(currentImagePath, propagateSyncId);
     if (propagateTimer) propagateTimer->start(kPropagateMs);
 }
 
@@ -7810,8 +7884,10 @@ void DevelopProperties::flushPropagation()
     }
     const QSet<QString> fields = pendingFields;
     const QStringList targets = propagateTargets;
+    const quint64 syncId = propagateSyncId;
     pendingFields.clear();
     propagateTargets.clear();
+    propagateMergeKey.clear();
 
     const EditStack cur = stackCache.value(currentImagePath);
     if (cur.scopes.isEmpty()) return;
@@ -7822,9 +7898,12 @@ void DevelopProperties::flushPropagation()
 
     /* One history entry per target per settled gesture, coalesced on the field set: a
        long Exposure drag reads as one "Exposure" step on every image, not one per tick.
-       Only images the user has already opened carry history (seeding an unvisited image
-       here would evict the live one from the LRU store for no benefit -- see
-       DevelopHistory::kMaxImages).
+
+       EVERY target gets the step, opened or not, linked by syncId to the current image's
+       -- that is what makes a multi-image edit undoable (applyHistoryEntry). An image
+       with no history is seeded first with its state BEFORE this edit, so there is
+       something to revert to. (This used to record only on images already opened, to
+       spare the LRU store; the store was enlarged instead -- DevelopHistory::kMaxImages.)
 
        The key is SORTED: a QSet's iteration order is not stable, and an unstable key
        would defeat the coalescing it exists for. */
@@ -7833,13 +7912,18 @@ void DevelopProperties::flushPropagation()
     const QString mergeKey = "sync/" + names.join(',');
     for (const QString &p : targets) {
         EditStack &t = stackFor(p);
+        if (history) history->seed(p, t);          // no-op once it has history
         copyParamFields(src, t.scopes[0].params, fields);
         copyGeometryFields(cur.geometry, t.geometry, fields);
         EditStack::sanitize(t);
         dirty.insert(p);
-        if (history && history->count(p) > 0)
-            history->record(p, "Global", propagateAction, propagateValue, mergeKey, t);
+        if (history)
+            history->record(p, "Global", propagateAction, propagateValue, mergeKey, t,
+                            syncId);
     }
+    /* Seeding and recording touched every target; touch the image on screen last so a
+       large selection can never evict ITS history. */
+    if (history) history->seed(currentImagePath, cur);
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -7858,13 +7942,20 @@ int DevelopProperties::propagatePreset(const DevelopPreset &preset, const QStrin
     if (targets.isEmpty()) return 0;
     if (G::isLogger) G::log("DevelopProperties::propagatePreset",
                             QString::number(targets.count()) + " images");
+    /* Linked like an adjustment batch (see flushPropagation): every target gets a step,
+       seeded first if it had no history, and the current image's step -- recorded by the
+       caller just before this -- carries the same syncId. */
+    const quint64 syncId = ++nextSyncId;
+    if (history) history->stampTop(currentImagePath, syncId);
     for (const QString &p : targets) {
         EditStack &t = stackFor(p);
+        if (history) history->seed(p, t);
         t = mergePreset(preset, t, 0);
         dirty.insert(p);
-        if (history && history->count(p) > 0)
-            history->record(p, "Global", label, QString(), QString(), t);
+        if (history)
+            history->record(p, "Global", label, QString(), QString(), t, syncId);
     }
+    if (history) history->seed(currentImagePath, stackCache.value(currentImagePath));
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
     return targets.count();

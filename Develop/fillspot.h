@@ -159,8 +159,33 @@ inline double distSeg(double px, double py, double ax, double ay, double bx, dou
     segments). Also returns the stroke's padded clipped bbox (inclusive; empty when
     x1<x0).
 */
+/* The image-px rect a stroke can touch (its r-padded polyline bbox), clipped to the
+   frame; empty when x1<x0. Sizes a spot-local coverage buffer before rasterizing. */
+inline void strokeBounds(const Stroke &st, int w, int h,
+                         int &x0, int &y0, int &x1, int &y1)
+{
+    x0 = w; y0 = h; x1 = -1; y1 = -1;
+    const int n = int(st.pts.size() / 2);
+    if (n < 1) return;
+    const double pad = 0.5 * std::max(st.sizeFrac, 1e-4) * std::max(w, h) + 1.0;
+    double ax0 = 1e300, ay0 = 1e300, ax1 = -1e300, ay1 = -1e300;
+    for (int i = 0; i < n; ++i) {
+        ax0 = std::min(ax0, st.pts[2 * i] * w);  ax1 = std::max(ax1, st.pts[2 * i] * w);
+        ay0 = std::min(ay0, st.pts[2 * i + 1] * h); ay1 = std::max(ay1, st.pts[2 * i + 1] * h);
+    }
+    x0 = std::max(0,     int(std::floor(ax0 - pad)));
+    y0 = std::max(0,     int(std::floor(ay0 - pad)));
+    x1 = std::min(w - 1, int(std::ceil (ax1 + pad)));
+    y1 = std::min(h - 1, int(std::ceil (ay1 + pad)));
+}
+
+/*
+    `field` covers only the image rect [fx0, fx0+fw) x [fy0, fy0+fh), row-major with
+    stride fw; the stroke is clipped to it. The full-frame form passes (0, 0, w, h).
+*/
 inline void rasterizeStrokeMax(const Stroke &st, int w, int h,
                                std::vector<float> &field,
+                               int fx0, int fy0, int fw, int fh,
                                int &sx0, int &sy0, int &sx1, int &sy1)
 {
     sx0 = w; sy0 = h; sx1 = -1; sy1 = -1;
@@ -172,22 +197,22 @@ inline void rasterizeStrokeMax(const Stroke &st, int w, int h,
     const double pad  = r + band;
 
     auto segment = [&](double ax, double ay, double bx, double by) {
-        const int ix0 = std::max(0,     int(std::floor(std::min(ax, bx) - pad)));
-        const int iy0 = std::max(0,     int(std::floor(std::min(ay, by) - pad)));
-        const int ix1 = std::min(w - 1, int(std::ceil (std::max(ax, bx) + pad)));
-        const int iy1 = std::min(h - 1, int(std::ceil (std::max(ay, by) + pad)));
+        const int ix0 = std::max(fx0,          int(std::floor(std::min(ax, bx) - pad)));
+        const int iy0 = std::max(fy0,          int(std::floor(std::min(ay, by) - pad)));
+        const int ix1 = std::min(fx0 + fw - 1, int(std::ceil (std::max(ax, bx) + pad)));
+        const int iy1 = std::min(fy0 + fh - 1, int(std::ceil (std::max(ay, by) + pad)));
         if (ix1 < ix0 || iy1 < iy0) return;
         sx0 = std::min(sx0, ix0); sy0 = std::min(sy0, iy0);
         sx1 = std::max(sx1, ix1); sy1 = std::max(sy1, iy1);
         for (int y = iy0; y <= iy1; ++y) {
-            float *row = field.data() + size_t(y) * w;
+            float *row = field.data() + size_t(y - fy0) * fw;
             for (int x = ix0; x <= ix1; ++x) {
                 const double d = distSeg(x + 0.5, y + 0.5, ax, ay, bx, by);
                 float a;
                 if      (d <= r - band) a = 1.0f;
                 else if (d >= r)        a = 0.0f;
                 else { const double t = (r - d) / band; a = float(t * t * (3.0 - 2.0 * t)); }
-                if (a > row[x]) row[x] = a;
+                if (a > row[x - fx0]) row[x - fx0] = a;
             }
         }
     };
@@ -208,43 +233,83 @@ inline void rasterizeStrokeMax(const Stroke &st, int w, int h,
     (row-major w*h, 0..1) and the inclusive nonzero bbox [bx0,by0,bx1,by1]; empty when
     bx1<bx0 (e.g. everything painted was erased).
 */
-inline void rasterize(const Parsed &p, int w, int h, std::vector<float> &cov,
-                      int &bx0, int &by0, int &bx1, int &by1)
+/*
+    One spot's coverage, stored only over the rect its strokes can touch -- a spot is a
+    few dozen px on a 12+ MP frame, and the old full-frame W*H buffer had to be cleared
+    and scanned per spot per render: 817 of 925 ms for a 68-spot image in a Debug build
+    (55 of 105 ms optimised). at() reads 0 outside the stored rect, so callers address it
+    in frame coordinates exactly as they did the full-frame buffer.
+*/
+struct Coverage {
+    int w = 0, h = 0;                        // frame size the spot was rasterized at
+    int x0 = 0, y0 = 0, x1 = -1, y1 = -1;    // stored rect, inclusive, frame px
+    int bx0 = 0, by0 = 0, bx1 = -1, by1 = -1; // tight nonzero bbox; empty when bx1<bx0
+    std::vector<float> data;                 // (x1-x0+1) x (y1-y0+1), row-major
+
+    bool empty() const { return bx1 < bx0 || by1 < by0; }
+    int stride() const { return x1 - x0 + 1; }
+    float at(int x, int y) const {
+        if (x < x0 || x > x1 || y < y0 || y > y1) return 0.0f;
+        return data[size_t(y - y0) * stride() + (x - x0)];
+    }
+};
+
+/*
+    Rasterize the spot to a HARD coverage mask at (w,h) -- exactly the brushed area (the
+    stored featherPct is legacy metadata; the heal engines derive their own transition
+    band). The single stroke ("pts"), or the painted area ("strokes") composited IN
+    ORDER -- add strokes max into the coverage, erase strokes multiply it by
+    (1 - alpha), so paint/erase/repaint scopes the way it was painted. Erases only ever
+    remove coverage, so the stored rect is the union of the ADD strokes' bounds.
+*/
+inline void rasterize(const Parsed &p, int w, int h, Coverage &cov)
 {
-    cov.assign(size_t(w) * size_t(h), 0.0f);
-    bx0 = w; by0 = h; bx1 = -1; by1 = -1;                 // empty
+    cov = Coverage();
+    cov.w = w; cov.h = h;
     if (!p.valid() || w <= 0 || h <= 0) return;
 
     /* Normalize to a stroke list: the single-stroke form is one add stroke. */
     std::vector<Stroke> strokes = p.strokes;
     if (strokes.empty()) strokes.push_back({p.sizeFrac, false, p.pts});
 
-    int ux0 = w, uy0 = h, ux1 = -1, uy1 = -1;             // union of ADD stroke bboxes
+    int ux0 = w, uy0 = h, ux1 = -1, uy1 = -1;             // union of ADD stroke bounds
+    for (const Stroke &st : strokes) {
+        if (st.erase) continue;
+        int x0, y0, x1, y1;
+        strokeBounds(st, w, h, x0, y0, x1, y1);
+        if (x1 < x0 || y1 < y0) continue;
+        ux0 = std::min(ux0, x0); uy0 = std::min(uy0, y0);
+        ux1 = std::max(ux1, x1); uy1 = std::max(uy1, y1);
+    }
+    if (ux1 < ux0 || uy1 < uy0) return;
+    cov.x0 = ux0; cov.y0 = uy0; cov.x1 = ux1; cov.y1 = uy1;
+    const int fw = ux1 - ux0 + 1, fh = uy1 - uy0 + 1;
+    cov.data.assign(size_t(fw) * size_t(fh), 0.0f);
+
     std::vector<float> tmp;                               // erase-stroke alpha (reused)
     for (const Stroke &st : strokes) {
         int sx0, sy0, sx1, sy1;
         if (!st.erase) {
-            rasterizeStrokeMax(st, w, h, cov, sx0, sy0, sx1, sy1);
-            ux0 = std::min(ux0, sx0); uy0 = std::min(uy0, sy0);
-            ux1 = std::max(ux1, sx1); uy1 = std::max(uy1, sy1);
+            rasterizeStrokeMax(st, w, h, cov.data, ux0, uy0, fw, fh, sx0, sy0, sx1, sy1);
         } else {
-            tmp.assign(size_t(w) * size_t(h), 0.0f);
-            rasterizeStrokeMax(st, w, h, tmp, sx0, sy0, sx1, sy1);
+            tmp.assign(size_t(fw) * size_t(fh), 0.0f);
+            rasterizeStrokeMax(st, w, h, tmp, ux0, uy0, fw, fh, sx0, sy0, sx1, sy1);
             for (int y = sy0; y <= sy1; ++y) {
-                float *c = cov.data() + size_t(y) * w;
-                const float *e = tmp.data() + size_t(y) * w;
-                for (int x = sx0; x <= sx1; ++x) c[x] *= 1.0f - e[x];
+                float *c = cov.data.data() + size_t(y - uy0) * fw;
+                const float *e = tmp.data() + size_t(y - uy0) * fw;
+                for (int x = sx0 - ux0; x <= sx1 - ux0; ++x) c[x] *= 1.0f - e[x];
             }
         }
     }
 
-    /* Tight nonzero bbox: scan the add-coverage union (erases only shrink it). */
-    for (int y = std::max(0, uy0); y <= std::min(h - 1, uy1); ++y) {
-        const float *c = cov.data() + size_t(y) * w;
-        for (int x = std::max(0, ux0); x <= std::min(w - 1, ux1); ++x) {
-            if (c[x] > 0.0f) {
-                bx0 = std::min(bx0, x); by0 = std::min(by0, y);
-                bx1 = std::max(bx1, x); by1 = std::max(by1, y);
+    /* Tight nonzero bbox. */
+    cov.bx0 = w; cov.by0 = h; cov.bx1 = -1; cov.by1 = -1;
+    for (int y = uy0; y <= uy1; ++y) {
+        const float *c = cov.data.data() + size_t(y - uy0) * fw;
+        for (int x = ux0; x <= ux1; ++x) {
+            if (c[x - ux0] > 0.0f) {
+                cov.bx0 = std::min(cov.bx0, x); cov.by0 = std::min(cov.by0, y);
+                cov.bx1 = std::max(cov.bx1, x); cov.by1 = std::max(cov.by1, y);
             }
         }
     }

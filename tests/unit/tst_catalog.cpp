@@ -235,7 +235,7 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         folder's on any Mac in any timezone; version 17 added image_version, the
         versions (virtual copies) an image's sidecar lists, because a row served from
         the index never parses the sidecar that holds them. */
-    QCOMPARE(CacheDb::schemaVersion(), 17);
+    QCOMPARE(CacheDb::schemaVersion(), 18);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
