@@ -1,5 +1,6 @@
 #include "embelexport.h"
 #include "Main/global.h"
+#include "Utilities/fileops.h"
 
 EmbelExport::EmbelExport(Metadata *metadata,
                          DataModel *dm,
@@ -298,6 +299,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 
             // qDebug() << "EmbelExport::exportImages" << i << dst;
             dstPaths << dst;
+            FileOps::onCreated({dst});
 
             QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
             if (G::embelLog) G::log(srcFun, msg);

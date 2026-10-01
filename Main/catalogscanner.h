@@ -141,6 +141,17 @@ public slots:
        on, which MW makes a dedicated one -- never call it directly from the GUI
        thread. */
     void scan(const CatalogScope &scope);
+    /*  Catalogue just these files -- images Winnow itself has created in folders the
+        scope admits (MW::catalogCreatedFiles has already checked that, and the
+        extensions). The scan's own rules apply per file: zero-byte files are skipped,
+        an up-to-date row is not re-parsed, and a file that will not parse gets the same
+        unreadable stub row a scan would give it.
+
+        NOT A SCAN. It does not set isRunning() or send progress: a handful of exports
+        must not light up the "Scanning for changes" row or make a Scan Now press bounce.
+        Queued behind a running scan on the same thread, it simply runs when that ends.
+        It still gives way to a folder load, for the same reason a scan does. */
+    void indexFiles(const QStringList &paths);
     /* Ask the running scan to stop. Safe from any thread; the scan notices between
        files, so it ends promptly but not instantly. */
     void stop();
@@ -168,6 +179,9 @@ signals:
         rather than its catalogued keywords. */
     void finished(int scanned, int indexed, int unreadable,
                   int newFolders, int demoted, bool aborted);
+    /* indexFiles is done; indexed = rows written. Sent even when nothing was, so a
+       caller tracking work in flight can rely on one reply per call. */
+    void filesIndexed(int indexed);
 
 private:
     /* True when the scan should give way -- a folder load is running, or the app is
@@ -197,6 +211,9 @@ private:
     qint64 pausedMs = 0;               // scanner thread only
     std::atomic<bool> abort{false};
     std::atomic<bool> running{false};
+    /* Set by shutdown() only. abort cannot serve indexFiles: it stays raised after the
+       user stops a scan, until the next scan clears it. */
+    std::atomic<bool> closing{false};
 };
 
 #endif // CATALOGSCANNER_H

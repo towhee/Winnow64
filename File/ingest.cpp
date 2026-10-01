@@ -358,6 +358,9 @@ void Ingest::run()
     QStringList integrityFailure;
 
     // copy picked images
+    /* Every image this run put on disk, for the catalog -- reported once the loop is
+       done, so each one's sidecars have been copied beside it. */
+    QStringList created;
     for (int i = 0; i < pickList.size(); ++i) {
         if (abort) break;
         int progress = (i + 1) * 100 * n / (pickList.size());
@@ -407,6 +410,7 @@ void Ingest::run()
 
         // copy source image to destination
         bool copyOk = QFile::copy(sourcePath, destinationPath);
+        if (copyOk) created << destinationPath;
 
         /* for demonstration:
         failedToCopy << thumbNum + sourcePath + " to " + destinationPath;
@@ -427,6 +431,7 @@ void Ingest::run()
         // copy source image to backup
         if (isBackup) {
             bool backupCopyOk = QFile::copy(sourcePath, backupPath);
+            if (backupCopyOk) created << backupPath;
             if (!backupCopyOk) {
                 qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << backupPath;
                 failedToCopy << thumbNum + sourcePath + " to " + backupPath;
@@ -502,6 +507,8 @@ void Ingest::run()
             }
         }
         */
+
+    FileOps::onCreated(created);
 
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();

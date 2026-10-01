@@ -771,6 +771,13 @@ public slots:
     bool isCatalogScopeFolder(const QString &folder) const;
     /* The subset of rows the scope table admits, answered once per folder. */
     QVector<CatalogRow> inCatalogScope(const QVector<CatalogRow> &rows) const;
+    /*  NEW FILES JOIN THE CATALOG. The FileOps::onCreated hook: an image Winnow just
+        made (export, ingest, stack, embellish, copy, move) in a folder the scope admits
+        is indexed now rather than at the next scan. Any thread -- it only queues; the
+        paths are batched for a moment on the GUI thread, filtered by scope and
+        extension, and handed to CatalogScanner::indexFiles. */
+    void catalogCreatedFiles(const QStringList &paths);
+    void flushCatalogCreatedFiles();
     /*  Ask the user to define a scope, ONCE, the first time browsing would have
         catalogued something and the table is empty. Returns true if it was shown. */
     void promptForCatalogScope();
@@ -2263,6 +2270,8 @@ private:
        CacheDb::moveAside discards that file without asking, and this is user intent
        rather than derived data. */
     CatalogScope catalogScope;
+    /* Created files waiting for flushCatalogCreatedFiles; GUI thread only. */
+    QStringList catalogCreatedPending;
     /* Images on disk under the scope table (the scanner's own walk), or -1 while the
        walk that counts them is still running. Compared with the catalog's own count, it
        is what says whether a Scan is owed. */

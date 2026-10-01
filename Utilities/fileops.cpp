@@ -20,10 +20,23 @@
 
 std::function<void()> FileOps::flushHook;
 std::function<bool(const QString &)> FileOps::trashHook;
+std::function<void(const QStringList &)> FileOps::createdHook;
 
 void FileOps::setFlushHook(std::function<void()> hook)
 {
     flushHook = std::move(hook);
+}
+
+/* Guards createdHook. onCreated runs on worker threads (Ingest::run) while MW clears
+   the hook on quit; calling it UNDER the lock means that once setCreatedHook({})
+   returns, no call can still be reaching into MW. The hook only posts an event, so
+   holding the lock across it costs nothing. */
+static QMutex createdHookMutex;
+
+void FileOps::setCreatedHook(std::function<void(const QStringList &)> hook)
+{
+    QMutexLocker lk(&createdHookMutex);
+    createdHook = std::move(hook);
 }
 
 void FileOps::flushPendingEdits()
@@ -414,6 +427,7 @@ void FileOps::onCopied(const QString &srcPath, const QString &dstPath)
        preview travels; the loupe preview simply misses at the destination and is
        re-rendered the next time that image is edited. Duplicating it would double the
        cache for every copy to buy back one ~2s decode. */
+    onCreated({dstPath});
 }
 
 void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
@@ -429,6 +443,17 @@ void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
     CollectionStore::instance().onMoved(srcPath, dstPath);
     /* Develop history keys on the path as well; undo steps follow the image. */
     HistoryStore::onMoved(srcPath, dstPath);
+    /* A move INTO the catalog scope from outside it is a new image as far as the
+       catalog is concerned: Catalog::onMoved had no row to carry. When it did carry one,
+       the stamps still match and the indexer passes it over without a parse. */
+    onCreated({dstPath});
+}
+
+void FileOps::onCreated(const QStringList &paths)
+{
+    if (paths.isEmpty()) return;
+    QMutexLocker lk(&createdHookMutex);
+    if (createdHook) createdHook(paths);
 }
 
 void FileOps::onDeleted(const QString &fPath)

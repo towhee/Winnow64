@@ -366,6 +366,7 @@ void FS::run()
             // Save path in global for MW::generateFocusStack when finished
             if (!fusedPath.isEmpty()) {
                 G::fsFusedPaths << fusedPath;
+                FileOps::onCreated({fusedPath});
             }
         }
     }

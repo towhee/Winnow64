@@ -1,4 +1,5 @@
 #include "Export/imageexporter.h"
+#include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 
 #include <QColorSpace>
@@ -120,6 +121,7 @@ void ImageExporter::onImageReady(bool ok, const QImage &img)
                 if (s.copyMetadata || s.embedThumbnail)
                     copySourceMetadata(VersionKey::sourceOf(fPath), dst, out);   // the file
                 result.written << dst;
+                FileOps::onCreated({dst});
                 if (!result.folders.contains(folder)) result.folders << folder;
             }
             else {

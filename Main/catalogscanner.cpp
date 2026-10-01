@@ -65,6 +65,7 @@ void CatalogScanner::shutdown(int maxWaitMs)
     a quit must not hang on one pathological file. A thread that does not stop in time is
     left running, which is no worse than what every quit did before this existed.
 */
+    closing.store(true, std::memory_order_relaxed);
     stop();
     if (!scannerThread.isRunning()) return;
     scannerThread.quit();
@@ -229,6 +230,59 @@ bool CatalogScanner::parseInto(CatalogRow &row)
         may ever be written back to a file, and schema 10's rebuild reads it. */
     row.keywordsLiteral = m.keywords;
     return true;
+}
+
+void CatalogScanner::indexFiles(const QStringList &paths)
+{
+/*
+    The scan's Indexing phase over a list it was handed rather than one it walked:
+    stamp, ask staleOf, parse what is stale, commit. See the header for what it is not.
+*/
+    if (G::isLogger) G::log("CatalogScanner::indexFiles", QString::number(paths.size()));
+
+    if (!metadata) metadata = new Metadata;    // on this thread; see scan()
+
+    /* Give way to a folder load. An export into the folder being viewed starts one
+       (MW::insertFiles), and it is the thing the user is watching. */
+    while (shouldPause()) {
+        if (closing.load(std::memory_order_relaxed)) { emit filesIndexed(0); return; }
+        QThread::msleep(kPauseSliceMs);
+    }
+
+    QList<CatalogRow> candidates;
+    QSet<QString> keys;
+    for (const QString &path : paths) {
+        CatalogRow row = stampOnly(path);
+        if (row.srcSize <= 0) continue;          // gone again, or zero bytes
+        const QString key = cachePathKey(row.path);
+        if (keys.contains(key)) continue;
+        keys.insert(key);
+        candidates.append(row);
+    }
+    if (candidates.isEmpty()) { emit filesIndexed(0); return; }
+
+    const QSet<QString> stale = Catalog::instance().staleOf(candidates);
+
+    QVector<CatalogRow> batch;
+    QVector<CatalogRow> unreadableBatch;
+    int indexed = 0;
+    auto flush = [&]() {
+        if (!batch.isEmpty()) indexed += Catalog::instance().commit(batch);
+        if (!unreadableBatch.isEmpty())
+            Catalog::instance().commitUnreadable(unreadableBatch);
+        batch.clear();
+        unreadableBatch.clear();
+    };
+    for (CatalogRow row : std::as_const(candidates)) {
+        if (closing.load(std::memory_order_relaxed)) break;
+        if (!stale.contains(row.path)) continue;
+        if (parseInto(row)) batch.append(row);
+        else unreadableBatch.append(stampOnly(row.path));
+        if (batch.size() >= kCommitRows || unreadableBatch.size() >= kCommitRows) flush();
+    }
+    flush();
+
+    emit filesIndexed(indexed);
 }
 
 void CatalogScanner::scan(const CatalogScope &scope)
