@@ -124,6 +124,7 @@ public:
     /*  FileOps notifications: a file Winnow moved or deleted. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &path);
+    void onFolderDeleted(const QString &folder);   // every image under folder, at any depth, versions included
 
 signals:
     /*  The tree of this kind changed shape or name (create, rename, remove, reparent). */

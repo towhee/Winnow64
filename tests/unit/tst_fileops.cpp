@@ -49,6 +49,7 @@ private slots:
     void moveRenamesFullNameSidecar();
     void versionsTravelWithTheImage();
     void versionKeysAreRefused();
+    void folderDeleteClearsPreviewsUnderItOnly();
 
 private:
     QString p(const QString &name) const;
@@ -566,6 +567,37 @@ void tst_fileops::versionKeysAreRefused()
     QVERIFY(r.trashed.isEmpty());
     QVERIFY(QFile::exists(p("DSC_050.NEF")));
     QVERIFY(QFile::exists(p("DSC_050.xmp")));
+}
+
+void tst_fileops::folderDeleteClearsPreviewsUnderItOnly()
+{
+/*
+    FileOps::onFolderDeleted forgets by PATH-KEY PREFIX, and the trailing separator is
+    the whole point: deleting "a" must take "a/sub" with it and leave "a raw" alone --
+    a plain startsWith would wipe the sibling's previews too.
+*/
+    QDir d(tmp.path());
+    QVERIFY(d.mkpath("a/sub"));
+    QVERIFY(d.mkpath("a raw"));
+    const QString inA   = d.absoluteFilePath("a/IMG_1.NEF");
+    const QString inSub = d.absoluteFilePath("a/sub/IMG_2.NEF");
+    const QString other = d.absoluteFilePath("a raw/IMG_3.NEF");
+
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QByteArray payload(1024, 'p');
+    c.put(inA, "r", payload);
+    c.put(inSub, "r", payload);
+    c.put(other, "r", payload);
+
+    FileOps::onFolderDeleted(d.absoluteFilePath("a"));
+
+    QVERIFY(c.get(inA, "r").isEmpty());
+    QVERIFY(c.get(inSub, "r").isEmpty());
+    QCOMPARE(c.get(other, "r"), payload);
+
+    // init() clears files only, so take the folders away here
+    QDir(d.absoluteFilePath("a")).removeRecursively();
+    QDir(d.absoluteFilePath("a raw")).removeRecursively();
 }
 
 QTEST_MAIN(tst_fileops)

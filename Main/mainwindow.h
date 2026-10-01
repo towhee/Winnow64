@@ -778,6 +778,11 @@ public slots:
         extension, and handed to CatalogScanner::indexFiles. */
     void catalogCreatedFiles(const QStringList &paths);
     void flushCatalogCreatedFiles();
+    /* Redraw what shows the catalog after Winnow changed it outside a scan (files
+       indexed as they were made, a deleted folder forgotten): the Filter panel
+       re-query, LibTree counts and the Manage Catalog status. The same redraw a
+       finished scan does. */
+    void refreshLibraryAfterCatalogChange();
     /*  Ask the user to define a scope, ONCE, the first time browsing would have
         catalogued something and the table is empty. Returns true if it was shown. */
     void promptForCatalogScope();

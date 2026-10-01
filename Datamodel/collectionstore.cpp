@@ -521,6 +521,25 @@ void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)
     if (changed) emit membersChanged();
 }
 
+void CollectionStore::onFolderDeleted(const QString &folder)
+{
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, [this, folder] { onFolderDeleted(folder); },
+                                  Qt::QueuedConnection);
+        return;
+    }
+    const QString prefix = cachePathKey(folder) + "/";
+    if (prefix.size() < 2) return;
+    if (!opened && !QFileInfo::exists(this->path())) return;
+    QSqlDatabase d = db();
+    if (!d.isOpen()) return;
+    QSqlQuery q(d);
+    q.prepare("DELETE FROM member WHERE substr(pathkey, 1, ?) = ?");
+    q.addBindValue(prefix.size());
+    q.addBindValue(prefix);
+    if (q.exec() && q.numRowsAffected() > 0) emit membersChanged();
+}
+
 void CollectionStore::onDeleted(const QString &path)
 {
     if (QThread::currentThread() != thread()) {

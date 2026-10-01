@@ -45,6 +45,7 @@ void remove(const QString &path);
    (their keys are the master's path + "/#v<id>"). */
 void onMoved(const QString &srcPath, const QString &dstPath);
 void onDeleted(const QString &path);
+void onFolderDeleted(const QString &folder);   // every image under folder, at any depth, versions included
 
 }   // namespace HistoryStore
 

@@ -634,6 +634,28 @@ void DevPreviewCache::onDeleted(const QString &fPath)
     for (const QString &k : versionKeysLocked(db, key)) removeLocked(db, k);
 }
 
+void DevPreviewCache::onFolderDeleted(const QString &folder)
+{
+/*
+    By key prefix, then removeLocked per key: each entry has a payload file and a share
+    of the byte total, and removeLocked is what keeps both right. Version keys
+    ("<path>/#v<id>") share the prefix, so they go too.
+*/
+    const QString prefix = cachePathKey(folder) + "/";
+    if (prefix.size() < 2) return;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    QStringList keys;
+    QSqlQuery q(db);
+    q.prepare("SELECT pathkey FROM devpreview WHERE substr(pathkey, 1, ?) = ?");
+    q.addBindValue(prefix.size());
+    q.addBindValue(prefix);
+    if (q.exec())
+        while (q.next()) keys << q.value(0).toString();
+    for (const QString &k : std::as_const(keys)) removeLocked(db, k);
+}
+
 void DevPreviewCache::clear()
 {
     QMutexLocker lk(&mutex);

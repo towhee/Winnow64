@@ -145,4 +145,17 @@ void onDeleted(const QString &path)
     q.exec();
 }
 
+void onFolderDeleted(const QString &folder)
+{
+    const QString prefix = cachePathKey(folder) + "/";
+    if (prefix.size() < 2) return;
+    QSqlDatabase db = CacheDb::instance().db();
+    if (!db.isOpen()) return;
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM develop_history WHERE substr(pathkey, 1, ?) = ?");
+    q.addBindValue(prefix.size());
+    q.addBindValue(prefix);
+    q.exec();
+}
+
 }   // namespace HistoryStore
