@@ -3975,6 +3975,7 @@ void MW::setOperationMode(G::OperationMode mode)
         }
         else {
             developProperties->flushAll();
+            WorkingImageCache::instance().setPinned(QString());   // no edit session now
         }
         /* Show/hide the multi-image warning for the mode we just entered (the banner is
            only reachable in Develop, but its text is stale until refreshed). */

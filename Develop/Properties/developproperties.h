@@ -1200,8 +1200,11 @@ private:
        o GLOBAL SCOPE ONLY. Only scope 0's EditParams travel. A mask scope's params
          describe pixels chosen from THIS image's content, so an edit made inside a
          mask scope stays on the current image -- the same rule presets follow (the
-         mask never travels). Mask geometry, spot heals and crop/straighten/warp are
-         per-image for the same reason and are never propagated by an adjustment.
+         mask never travels). Mask geometry and spot heals are per-image for the same
+         reason and are never propagated by an adjustment. Crop, straighten and warp
+         DO travel (normalized, so a crop lands proportionally on every image): each is
+         a pseudo-field diffed against propagateGeomBase, so cropping one image does
+         not overwrite the others' straighten.
        o WHAT CHANGED, not the whole recipe. Each commit is diffed against
          propagateBase (the current image's scope-0 params as of the previous commit)
          and only the fields that actually moved are written, so propagation never
@@ -1229,6 +1232,7 @@ private:
     static void copyParamFields(const EditParams &src, EditParams &dst,
                                 const QSet<QString> &fields);
     EditParams propagateBase;              // current image scope-0 params at last commit
+    Geometry propagateGeomBase;            // current image geometry at last commit
     QSet<QString> pendingFields;           // fields waiting to be copied to the targets
     QStringList propagateTargets;          // captured when the batch opened
     QString propagateAction, propagateValue;    // history label for the batch

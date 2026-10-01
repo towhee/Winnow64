@@ -7635,6 +7635,45 @@ void copyCurves(const EditParams &src, EditParams &dst)
     }
 }
 
+/* Geometry is not in EditParams at all -- it is per-STACK, not per-scope -- but a crop,
+   straighten or warp made with several images selected travels like any adjustment
+   (Lightroom's Auto Sync does the same). Three pseudo-fields, one per Transform control,
+   so a crop on the current image does not drag its straighten along to images that have
+   their own. Coordinates are normalized, so the same rect lands proportionally on every
+   image, exactly as Paste Settings already does. Geometry::show is a preview toggle, not
+   an edit, and stays per-image. */
+constexpr const char *kCropField       = "crop";
+constexpr const char *kStraightenField = "straighten";
+constexpr const char *kWarpField       = "warp";
+
+QSet<QString> diffGeometryFields(const Geometry &a, const Geometry &b)
+{
+    QSet<QString> changed;
+    if (a.cropX != b.cropX || a.cropY != b.cropY || a.cropW != b.cropW || a.cropH != b.cropH)
+        changed.insert(QString::fromLatin1(kCropField));
+    if (a.straighten != b.straighten) changed.insert(QString::fromLatin1(kStraightenField));
+    if (a.hasWarp != b.hasWarp ||
+        !std::equal(std::begin(a.quad), std::end(a.quad), std::begin(b.quad)))
+        changed.insert(QString::fromLatin1(kWarpField));
+    return changed;
+}
+
+void copyGeometryFields(const Geometry &src, Geometry &dst, const QSet<QString> &fields)
+{
+    if (fields.contains(QString::fromLatin1(kCropField))) {
+        dst.cropX = src.cropX;
+        dst.cropY = src.cropY;
+        dst.cropW = src.cropW;
+        dst.cropH = src.cropH;
+    }
+    if (fields.contains(QString::fromLatin1(kStraightenField)))
+        dst.straighten = src.straighten;
+    if (fields.contains(QString::fromLatin1(kWarpField))) {
+        dst.hasWarp = src.hasWarp;
+        std::copy(std::begin(src.quad), std::end(src.quad), std::begin(dst.quad));
+    }
+}
+
 }   // namespace
 
 QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const EditParams &b)
@@ -7722,6 +7761,7 @@ void DevelopProperties::syncPropagateBase()
 {
     const EditStack s = stackCache.value(currentImagePath);
     propagateBase = s.scopes.isEmpty() ? EditParams() : s.scopes.at(0).params;
+    propagateGeomBase = s.geometry;
 }
 
 void DevelopProperties::queuePropagation(const QString &action, const QString &value)
@@ -7737,12 +7777,15 @@ void DevelopProperties::queuePropagation(const QString &action, const QString &v
        merged object themselves. */
     if (propagateSuspended || isPopulating || isRestoringHistory) {
         propagateBase = now;
+        propagateGeomBase = s.geometry;
         return;
     }
 
-    const QSet<QString> changed = diffParamFields(propagateBase, now);
+    QSet<QString> changed = diffParamFields(propagateBase, now);
+    changed += diffGeometryFields(propagateGeomBase, s.geometry);
     propagateBase = now;                 // consumed either way: it is the new baseline
-    if (changed.isEmpty()) return;       // a mask/spot/geometry edit -- stays per-image
+    propagateGeomBase = s.geometry;
+    if (changed.isEmpty()) return;       // a mask/spot edit -- stays per-image
 
     /* The batch belongs to the selection that was live when it OPENED, so a selection
        change mid-drag cannot redirect edits the user has already made -- and a drag
@@ -7791,6 +7834,7 @@ void DevelopProperties::flushPropagation()
     for (const QString &p : targets) {
         EditStack &t = stackFor(p);
         copyParamFields(src, t.scopes[0].params, fields);
+        copyGeometryFields(cur.geometry, t.geometry, fields);
         EditStack::sanitize(t);
         dirty.insert(p);
         if (history && history->count(p) > 0)

@@ -188,14 +188,23 @@ void WorkingImageCache::evictLocked()
     /* Trim from the least-recently-used front while over budget, but never evict the last
        (most-recently-used) entry: the image being edited must stay resident even if it alone
        exceeds the budget. */
-    while (totalBytes > budget && lru.size() > 1) {
-        const QString victim = lru.takeFirst();
+    int i = 0;
+    while (totalBytes > budget && i < lru.size() - 1) {
+        if (lru.at(i) == pinned) { ++i; continue; }    // the Develop image stays resident
+        const QString victim = lru.takeAt(i);
         auto it = entries.find(victim);
         if (it != entries.end()) {
             totalBytes -= it->bytes;
             entries.erase(it);
         }
     }
+}
+
+void WorkingImageCache::setPinned(const QString &key)
+{
+    QMutexLocker lock(&mutex);
+    pinned = key.isEmpty() ? QString() : VersionKey::sourceOf(key);
+    evictLocked();
 }
 
 bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit, QImage &out,
