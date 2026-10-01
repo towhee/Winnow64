@@ -327,8 +327,16 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             dm->probeRearmRows.fetch_add(qMax(0, last - first + 1),
                                          std::memory_order_relaxed);
         }
+        /*  VIDEO ROWS ARE RE-ARMED TOO.  They used to be skipped, and a video's
+            thumbnail evicted by clearIconsOutsideChunkRange (a re-sort or a scroll that
+            moves it out of the chunk) then stayed in readSuccessThisCycle and never
+            loaded again: WFPROBE showed 21 video icons cleared by a re-sort and 4 back.
+            Both reasons to skip are already covered.  A video whose decode FAILED has
+            IconLoaded = true (DataModel::clearVideoReadingFlag), so !iconLoadedAt is
+            false and it is not retried.  A video still decoding is held by
+            videoRowsReading, which needToRead tests before this set, so no second
+            QMediaPlayer is started on it. */
         for (int row = first; row <= last; ++row) {
-            if (isVideoAt(row)) continue;
             if (!iconLoadedAt(row))
                 readSuccessThisCycle.remove(dmRowOf(row));
         }
@@ -1333,8 +1341,7 @@ void MetaRead::redo()
     {
         const int first = qMax(0, firstIconRow);
         const int last  = qMin(rowCountSf() - 1, lastIconRow);
-        for (int row = first; row <= last; ++row) {
-            if (isVideoAt(row)) continue;
+        for (int row = first; row <= last; ++row) {       // videos too: see setStartRow
             if (!iconLoadedAt(row)) readSuccessThisCycle.remove(dmRowOf(row));
         }
     }

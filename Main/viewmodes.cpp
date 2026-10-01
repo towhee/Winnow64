@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/wfprobe.h"     // WFPROBE
 
 void MW::setCentralView()
 {
@@ -76,6 +77,7 @@ void MW::loupeDisplay(const QString src)
     /* Capture the shared scroll anchor before any view is shown/hidden. Showing a view
        emits scroll signals from its stale position, whose handlers overwrite
        dm->scrollToIcon; using the captured value keeps the new view's scroll in sync. */
+    WfProbe::mark("  loupeDisplay enter src=" + src + " " + WfProbe::cur(dm));  // WFPROBE
     int scrollAnchor = dm->scrollToIcon;
     G::mode = "Loupe";
     filterDock->setEnabled(true);
@@ -138,6 +140,7 @@ void MW::loupeDisplay(const QString src)
 
     // selection has been lost while tableView and possibly thumbView were hidden
     sel->recover("MW::loupeDisplay");
+    WfProbe::mark("  loupeDisplay selection recovered " + WfProbe::cur(dm));  // WFPROBE
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -193,9 +196,11 @@ void MW::gridDisplay()
     /* Capture the shared scroll anchor before any view is shown/hidden (see note in
        MW::loupeDisplay). */
     int scrollAnchor = dm->scrollToIcon;
+    WfProbe::mark("  gridDisplay enter " + WfProbe::cur(dm));         // WFPROBE
     G::mode = "Grid";
     filterDock->setEnabled(true);
     filters->enable();
+    WfProbe::mark("  gridDisplay filters enabled");                   // WFPROBE
     thumbDockVisibleAction->setEnabled(false);
     asGridAction->setChecked(true);
     updateStatus(true, "", "MW::gridDisplay");
@@ -218,11 +223,15 @@ void MW::gridDisplay()
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
+    WfProbe::mark("  gridDisplay thumb dock hidden, grid page shown"); // WFPROBE
     gridView->refreshIcons("MW::gridDisplay");
+    WfProbe::mark("  gridDisplay refreshIcons");                      // WFPROBE
 
     QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     gridView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
+    WfProbe::mark("  gridDisplay setCurrentIndex x2 (selected sf row " // WFPROBE
+                  + QString::number(idx.row()) + ") " + WfProbe::cur(dm));
 
     // req'd to show thumbs first time
 //    gridView->setThumbParameters();
@@ -232,6 +241,7 @@ void MW::gridDisplay()
 
     // selection has been lost while tableView and possibly thumbView were hidden
     sel->recover("MW::gridDisplay");
+    WfProbe::mark("  gridDisplay selection recovered " + WfProbe::cur(dm));  // WFPROBE
 
     // req'd to show thumbs first time
 //    gridView->setThumbParameters();
@@ -248,12 +258,15 @@ void MW::gridDisplay()
 
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
+    WfProbe::mark("gridDisplay G::wait(100) pump start");            // WFPROBE
     G::wait(100);
+    WfProbe::mark("gridDisplay G::wait(100) pump end");              // WFPROBE
 
     /* Sync to the shared scroll anchor (mid-visible row of the last-scrolled view), not
        the current selection, so the grid keeps the scroll position of the previous view.
        Matches MW::tableDisplay. */
     gridView->scrollToRow(scrollAnchor, "MW::gridDisplay");
+    WfProbe::mark("  gridDisplay scrollToRow");                       // WFPROBE
 
 
     // if the zoom dialog was open then hide it as no image visible to zoom
@@ -266,6 +279,7 @@ void MW::gridDisplay()
     showCentralMessageIfNoImages();     // see MW::loupeDisplay
 
     enableSelectionDependentMenus();
+    WfProbe::mark("  gridDisplay returning");                         // WFPROBE
 //    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
 }
 
@@ -358,7 +372,9 @@ void MW::tableDisplay()
     //     else scrollRow = thumbView->midVisibleCell;
     // }
     // G::ignoreScrollSignal = false;
+    WfProbe::mark("tableDisplay G::wait(100) pump start");           // WFPROBE
     G::wait(100);
+    WfProbe::mark("tableDisplay G::wait(100) pump end");             // WFPROBE
     scrollRow = scrollAnchor;
     tableView->scrollToRow(scrollRow, "MW::tableDisplay");
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");
