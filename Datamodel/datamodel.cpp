@@ -7899,27 +7899,6 @@ void SortFilter::filterChange(QString src)
         rowCount();
     }
     verifySortOrder("SortFilter::filterChange");
-    return;
-
-    // force wait until finished to prevent sorting/editing datamodel
-    // this may be causing occasional crashes
-    int waitMs = 2000;
-    int ms = 0;
-    bool timeIsUp = false;
-    while (!finished || timeIsUp) {
-        G::wait(10);
-        ms += 10;
-        if (ms > waitMs) {
-            timeIsUp = true;
-            // qDebug() << "SortFilter::filterChange  timeIsUp triggered";
-        }
-    }
-    /*
-    qDebug() << "SortFilter::filterChange" << ms
-             << "finished =" << finished
-             << "proxy row count =" << rowCount()
-             << "src =" << src
-                ; //*/
 }
 
 void SortFilter::suspend(bool suspendFiltering, QString src)

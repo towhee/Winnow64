@@ -46,6 +46,7 @@ public:
 
     bool isColumnVisibleInViewport(int columnIndex);
     QList<int> visibleColumns();
+    void applyRowMetrics();
 
     void test();
 

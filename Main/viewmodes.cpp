@@ -256,16 +256,34 @@ void MW::gridDisplay()
     //     else scrollRow = thumbView->midVisibleCell;
     // }
 
-    // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
-    WfProbe::mark("gridDisplay G::wait(100) pump start");            // WFPROBE
-    G::wait(100);
-    WfProbe::mark("gridDisplay G::wait(100) pump end");              // WFPROBE
+
+    /*  NO NESTED EVENT LOOP HERE.  This was G::wait(100), which is not a sleep: it runs
+        the whole event queue in the middle of this function -- repaints (the full-window
+        grid that flashed leaving Develop), deferred work (the keyword count refresh ran
+        inside it), and the user's next key, which could re-enter a view switch.  It cost
+        whatever was queued, not 100 ms (see MW::scrollToCurrentRowIfNotVisible, where
+        the same wait measured 3,710 ms and was removed).
+
+        WHAT IT WAS ACTUALLY WAITING FOR is the new page's size.  QStackedLayout sizes
+        only its CURRENT widget, and a page made current arrives as a posted
+        LayoutRequest, so scrolling before that ran centred the row in the size the page
+        had when last shown.  Re-applying the stack's rect sizes the new page now, and
+        synchronously (setGeometry on a visible widget sends its resize, so the grid
+        rejustifies).  Guarded for the first show, before the stack has a rect at all.
+        The main window's own layout is activated too, for the thumb dock just hidden.
+        The QListView's deferred item layout needs nothing: scrollTo -> visualRect
+        forces it.  scheduleIconRangeSettle re-measures the visible window once the
+        queue turns, coalesced, as MW::scrollToCurrentRowIfNotVisible does. */
+    if (layout()) layout()->activate();
+    if (centralLayout->geometry().isValid())
+        centralLayout->setGeometry(centralLayout->geometry());
 
     /* Sync to the shared scroll anchor (mid-visible row of the last-scrolled view), not
        the current selection, so the grid keeps the scroll position of the previous view.
        Matches MW::tableDisplay. */
     gridView->scrollToRow(scrollAnchor, "MW::gridDisplay");
+    scheduleIconRangeSettle("MW::gridDisplay");
     WfProbe::mark("  gridDisplay scrollToRow");                       // WFPROBE
 
 
@@ -372,12 +390,22 @@ void MW::tableDisplay()
     //     else scrollRow = thumbView->midVisibleCell;
     // }
     // G::ignoreScrollSignal = false;
-    WfProbe::mark("tableDisplay G::wait(100) pump start");           // WFPROBE
-    G::wait(100);
-    WfProbe::mark("tableDisplay G::wait(100) pump end");             // WFPROBE
+    /*  No G::wait here either -- see MW::gridDisplay.  Settle the main window's layout
+        (the thumb dock may just have been shown) and size the new table page, then
+        scroll; TableView's cached visible-row window is refreshed by updateVisible, as
+        MW::scrollToCurrentRowIfNotVisible does. */
+    if (layout()) layout()->activate();
+    if (centralLayout->geometry().isValid())
+        centralLayout->setGeometry(centralLayout->geometry());
+    /*  Row height before the scroll: it was only ever set on paint, so the first table
+        show centred with Qt's default row height and was off-centre (see
+        TableView::applyRowMetrics). */
+    tableView->applyRowMetrics();
     scrollRow = scrollAnchor;
     tableView->scrollToRow(scrollRow, "MW::tableDisplay");
+    tableView->updateVisible("MW::tableDisplay");
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");
+    scheduleIconRangeSettle("MW::tableDisplay");
 
     // if the zoom dialog was open then hide it as no image visible to zoom
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);

@@ -176,6 +176,16 @@ private:
     // used during gridView resize to keep close to beginning thumb size
     bool skipResize;
 
+    /*  A window resize is a BURST of resizeEvents (a maximize animates through ~10
+        widths).  See IconView::resizeEvent: one restartable timer per view for the
+        rejustify that follows, the row to hold in place captured at the burst's first
+        event, and the previous width per view (it was a static shared by thumbView and
+        gridView). */
+    QTimer rejustifyTimer;
+    int resizeAnchorRow = -1;
+    bool resizeAnchorAtTop = false;
+    int prevResizeWidth = 0;
+
     // used when invert selection
     bool selectionInverted = false;
     QModelIndex newCurrentIndex;

@@ -427,16 +427,39 @@ void TableView::resizeEvent(QResizeEvent *event)
     updateVisible("TableView::resizeEvent");
 }
 
+void TableView::applyRowMetrics()
+{
+/*
+    Row height, icon size and header height follow the font size.
+
+    CALLED BEFORE A SCROLL, NOT ONLY FROM paintEvent.  These were set only on paint,
+    so the FIRST time the table was shown MW::tableDisplay centred the row using Qt's
+    default row height, and the first paint then changed every row's height under that
+    pixel scroll position -- the table landed off-centre the first time and right every
+    time after (2026-10-01).  MW::tableDisplay now calls this before scrolling.
+
+    Each setter is skipped when the value is unchanged: this still runs on every paint
+    (it is how a font-size change reaches the table), and re-setting the vertical
+    header's default section size is not free on a 155k-row header.
+*/
+    const int d = static_cast<int>(G::strFontSize.toInt() * G::ptToPx * 1.5);
+    if (iconSize() != QSize(d, d)) setIconSize(QSize(d, d));
+    if (frozenView->iconSize() != QSize(d, d)) frozenView->setIconSize(QSize(d, d));
+    if (verticalHeader()->defaultSectionSize() != d)
+        verticalHeader()->setDefaultSectionSize(d);
+    if (frozenView->verticalHeader()->defaultSectionSize() != d)
+        frozenView->verticalHeader()->setDefaultSectionSize(d);
+    auto fixHeight = [d](QHeaderView *h) {
+        if (h->minimumHeight() != d || h->maximumHeight() != d) h->setFixedHeight(d);
+    };
+    fixHeight(horizontalHeader());
+    fixHeight(frozenView->horizontalHeader());
+}
+
 void TableView::paintEvent(QPaintEvent *event)
 {
 //    resizeColumns();      // prevents user changing column widths
-    int d = static_cast<int>(G::strFontSize.toInt() * G::ptToPx * 1.5);
-    setIconSize(QSize(d, d));
-    frozenView->setIconSize(QSize(d, d));
-    verticalHeader()->setDefaultSectionSize(d);
-    frozenView->verticalHeader()->setDefaultSectionSize(d);
-    horizontalHeader()->setFixedHeight(d);
-    frozenView->horizontalHeader()->setFixedHeight(d);
+    applyRowMetrics();
     QTableView::paintEvent(event);
 }
 
