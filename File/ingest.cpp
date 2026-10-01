@@ -345,6 +345,12 @@ void Ingest::run()
     }
     if (tokenString == "") {
         // add failure message
+        /*  Every exit says it finished.  This one used to return silently, leaving
+            G::isRunningBackgroundIngest true for good -- which made a quit hang in
+            MW::closeEvent's old wait loop, and would now decline every quit (closeEvent
+            defers a quit until MW::ingestFinished). */
+        emit updateProgress(-1);
+        emit ingestFinished();
         return;
     }
 
