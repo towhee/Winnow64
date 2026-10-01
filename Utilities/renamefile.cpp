@@ -67,7 +67,6 @@ QString RenameFileDlg::lockedFilesMsg(const QStringList &names)
 }
 
 RenameFileDlg::RenameFileDlg(QWidget *parent,
-                             QString &folderPath,
                              QStringList &selection,
                              QMap<QString,QString> &filenameTemplates,
                              DataModel *dm,
@@ -79,11 +78,20 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
                              dm(dm),
                              metadata(metadata),
                              imageCache(imageCache),
-                             folderPath(folderPath),
                              selection(selection),
                              filenameTemplatesMap(filenameTemplates)
 {
     ui->setupUi(this);
+
+    /* The selection may span folders (Library / Catalog mode, recursive folders).
+       Every name-conflict, sidecar and sequence scan is per folder, so rename()
+       runs once per folder; folderPath starts at the first, which is all the
+       single-file manual rename needs. */
+    for (const QString &path : std::as_const(selection)) {
+        const QString folder = QFileInfo(path).path();
+        if (!folders.contains(folder)) folders << folder;
+    }
+    if (!folders.isEmpty()) folderPath = folders.first();
 
     QString n = QString::number(selection.count());
     QString title;
@@ -96,10 +104,6 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     ui->progressBar->setTextVisible(false);
     if (G::useProcessEvents) qApp->processEvents();
 
-    // Index list to avoid unique name issues while renaming
-    for (int i = 0; i < selection.size(); i++) {
-        selectionIndexes.append(dm->proxyIndexFromKey(selection.at(i)));
-    }
 
     // Simple rename is only meaningful for a single-file selection. For a
     // multi-selection, hide both checkboxes and the simple body — only the
@@ -209,7 +213,7 @@ void RenameFileDlg::makeExistingBaseUnique(QString newBase)
             QString uniqueBase;
             int k = 0;
             do {
-                uniqueBase = existBase + "-" + QString::number(k);
+                uniqueBase = existBase + "-" + QString::number(k++);
             } while (baseNames.contains(uniqueBase));
 
             if (isDebug)
@@ -372,7 +376,7 @@ void RenameFileDlg::rename()
     selected, file.
 
     Structures:
-    Selection                       selectionIndexes
+    Selection (grouped by folder)   selection
     All files in folder             allFilesList
     All files for base name list    baseNames
     All base names renamed list     baseNamesUsed
@@ -413,20 +417,68 @@ void RenameFileDlg::rename()
          "Test_0007"         "Test_0007.xmp"
 
 */
-    QString tokenString = filenameTemplatesMap[ui->filenameTemplatesCB->currentText()];
     seqNum  = ui->spinBoxStartNumber->value();
+
+    /* Group the selection by folder up front, before anything is renamed: a renamed
+       row can re-sort in the proxy, so nothing below reads paths back from the model.
+       The sequence number runs on across folders, so with an {XX..} token every
+       renamed image gets a distinct number however many folders it came from. */
+    QMap<QString, QStringList> pathsInFolder;
+    for (const QString &path : std::as_const(selection))
+        pathsInFolder[QFileInfo(path).path()] << path;
+
+    ui->progressMsg->setVisible(true);
+    ui->progressBar->setVisible(true);
+    QStringList sidecars;
+    int progress = 0;
+    for (const QString &folder : std::as_const(folders)) {
+        folderPath = folder;
+        renameInFolder(pathsInFolder.value(folder), sidecars, progress);
+    }
+
+    // update current image
+    dm->currentKey = dm->currentSfIdx.data(G::KeyRole).toString();
+
+    if (isDebug) {
+        qDebug() << "Renaming completed";
+    }
+
+    if (!sidecars.isEmpty()) {
+        ui->progressMsg->setVisible(false);
+        ui->progressBar->setVisible(false);
+        QMessageBox::information(this, "Sidecar files renamed",
+            "In addition to the selected file(s), the following file(s) sharing "
+            "the same base name were also renamed:<br><br><b>" +
+            formatNameList(sidecars) + "</b>");
+    }
+}
+
+void RenameFileDlg::renameInFolder(const QStringList &paths, QStringList &sidecars,
+                                   int &progress)
+{
+/*
+    rename() for the selected images in ONE folder (folderPath). Appends the names of
+    the non-selected files sharing a base name (sidecars, raw+JPEG partners) to
+    sidecars, and continues seqNum from where the previous folder left it.
+*/
+    QString tokenString = filenameTemplatesMap[ui->filenameTemplatesCB->currentText()];
     int pathCol = 0;    // filesToRename.at(i).at(pathCol)
     int baseCol = 1;    // filesToRename.at(i).at(baseCol)
     int doneCol = 2;    // filesToRename.at(i).at(doneCol)
 
+    baseNames.clear();
+    baseNamesUsed.clear();
+
     // populate base names in folder
     QFileInfoList inf = QDir(folderPath).entryInfoList(QDir::Files);
 
-    ui->progressMsg->setVisible(true);
-    ui->progressBar->setVisible(true);
-    int progress = 0;
+    QString folderTxt;
+    if (folders.size() > 1)
+        folderTxt = " (folder " + QString::number(folders.indexOf(folderPath) + 1)
+                    + " of " + QString::number(folders.size()) + ")";
+    progress = 0;
     ui->progressBar->setMaximum(inf.size());
-    ui->progressMsg->setText("Step 1 of 3: Preparing...");
+    ui->progressMsg->setText("Step 1 of 3: Preparing" + folderTxt + "...");
     for (int i = 0; i < inf.size(); i++) {
         const QString base = inf.at(i).baseName();
         if (!baseNames.contains(base)) baseNames.append(base);
@@ -437,14 +489,12 @@ void RenameFileDlg::rename()
 
     // Build list of all files to rename
     progress = 0;
-    ui->progressBar->setMaximum(selectionIndexes.size());
-    ui->progressMsg->setText("Step 2 of 3: Checking for name conflicts...");
+    ui->progressBar->setMaximum(paths.size());
+    ui->progressMsg->setText("Step 2 of 3: Checking for name conflicts" + folderTxt + "...");
     if (isDebug)  qDebug() << "FILE LIST TO RENAME:";
     filesToRename.clear();
     QSet<QString> selectionPaths;
-    for (int i = 0; i < selectionIndexes.size(); i++) {
-        int row = selectionIndexes.at(i).row();
-        QString path = dm->sf->data(dm->sf->index(row, G::PathColumn), G::SourcePathRole).toString();
+    for (const QString &path : paths) {
         selectionPaths.insert(path);
         appendAllSharingBaseName(path);
         ui->progressBar->setValue(++progress);
@@ -453,7 +503,6 @@ void RenameFileDlg::rename()
 
     // Sidecars = files in filesToRename that weren't part of the user selection.
     // Capture their original names now, before the rename loop mutates paths.
-    QStringList sidecars;
     for (int i = 0; i < filesToRename.size(); i++) {
         const QString &p = filesToRename.at(i).at(0);
         if (!selectionPaths.contains(p)) sidecars << QFileInfo(p).fileName();
@@ -524,7 +573,8 @@ void RenameFileDlg::rename()
 
     progress = 0;
     ui->progressBar->setMaximum(filesToRename.size());
-    QString txt = "Step 2 of 3: Renaming " + QString::number(filesToRename.size()) + " files...";
+    QString txt = "Step 3 of 3: Renaming " + QString::number(filesToRename.size())
+                  + " files" + folderTxt + "...";
     ui->progressMsg->setText(txt);
 
     for (int i = 0; i < filesToRename.size(); i++) {
@@ -635,22 +685,6 @@ void RenameFileDlg::rename()
         ui->progressBar->setValue(++progress);
         if (G::useProcessEvents) qApp->processEvents();
     }
-
-    // update current image
-    dm->currentKey = dm->currentSfIdx.data(G::KeyRole).toString();
-
-    if (isDebug) {
-        qDebug() << "Renaming completed";
-    }
-
-    if (!sidecars.isEmpty()) {
-        ui->progressMsg->setVisible(false);
-        ui->progressBar->setVisible(false);
-        QMessageBox::information(this, "Sidecar files renamed",
-            "In addition to the selected file(s), the following file(s) sharing "
-            "the same base name were also renamed:<br><br><b>" +
-            formatNameList(sidecars) + "</b>");
-    }
 }
 
 int RenameFileDlg::getSequenceStart(const QString &path)
@@ -725,16 +759,22 @@ void RenameFileDlg::updateExistingSequence()
     ui->spinBoxStartNumber->setDisabled(false);
     ui->existingSequenceLabel->setVisible(true);
 
+    /* One sequence runs across every folder in the selection, so start it past the
+       highest existing number in ANY of them. */
     QDir dir(folderPath);
     if (dir.exists()) {
-        int sequenceNum = getSequenceStart(folderPath);
+        int sequenceNum = 0;
+        for (const QString &folder : std::as_const(folders))
+            sequenceNum = qMax(sequenceNum, getSequenceStart(folder));
         if (ui->spinBoxStartNumber->value() < sequenceNum + 1)
             ui->spinBoxStartNumber->setValue(sequenceNum + 1);
+        const QString where = folders.size() > 1
+            ? QString::number(folders.size()) + " folders exist" : QString("Folder exists");
         if (sequenceNum > 0)
-            ui->existingSequenceLabel->setText("Folder exists and last image sequence found = "
+            ui->existingSequenceLabel->setText(where + " and last image sequence found = "
                                                + QString::number(sequenceNum));
         else
-            ui->existingSequenceLabel->setText("Folder exists but no sequenced images found");
+            ui->existingSequenceLabel->setText(where + " but no sequenced images found");
     }
     else {
         ui->spinBoxStartNumber->setValue(1);
