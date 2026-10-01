@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Main/wfprobe.h"     // WFPROBE
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Datamodel/variantless.h"
@@ -4838,6 +4839,12 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
         icon is not on the item any more and a covered column may not create one
         at all, so a null item here would have silently dropped the thumbnail.
         dmIdx.isValid() is the question that was actually being asked. */
+    if (WfProbe::clock().isValid())                                     // WFPROBE
+        WfProbe::mark(QString("VIDEO ICON SET setIconFromVideoFrame dmRow=%1 %2 (%3)")
+                          .arg(dmRow)
+                          .arg(index(dmRow, 0).data(G::KeyRole).toString().section('/', -1))
+                          .arg(data(dmIdx, Qt::DecorationRole).isNull()
+                                   ? "was blank" : "already had one, ignored"));
     if (dmIdx.isValid() && data(dmIdx, Qt::DecorationRole).isNull()) {
         /*  BLOCKED AND EMITTED ONCE, the pattern setIcon1, setIcon, setValDm and setValSf
             all use. The braces were already here with nothing in them -- the shape was
@@ -5078,6 +5085,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         way. Removals are rare -- a repair or an insert -- so the exact O(span) recount is
         affordable here and cannot drift. */
     if (pm.isNull()) {
+        WfProbe::videoIconCleared(this, dmIdx.row(), "setIcon(null pixmap)");  // WFPROBE
         {
             const QSignalBlocker blocker(this);
             setData(dmIdx, QVariant(), Qt::DecorationRole);
@@ -5172,6 +5180,7 @@ void DataModel::clearDevelopIcon(int dmRow)
 
     QModelIndex dmIdx = index(dmRow, 0);
     if (!dmIdx.isValid()) return;
+    WfProbe::videoIconCleared(this, dmRow, "clearDevelopIcon");       // WFPROBE
     {
         const QSignalBlocker blocker(this);
         setData(dmIdx, QVariant(), Qt::DecorationRole);
@@ -5744,6 +5753,7 @@ void DataModel::evictHiddenIcons()
     {
         const QSignalBlocker blocker(this);
         for (int row : hidden) {
+            WfProbe::videoIconCleared(this, row, "evictHiddenIcons");   // WFPROBE
             setData(index(row, 0), QVariant(), Qt::DecorationRole);
             setData(index(row, G::IconLoadedColumn), false);
         }
@@ -5819,6 +5829,8 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
         const QModelIndex sfIdx = sf->index(sfRow, 0);
         if (sfIdx.data(Qt::DecorationRole).isNull()) return;
         const QModelIndex dmIdx = sf->mapToSource(sfIdx);
+        if (dmIdx.isValid())                                            // WFPROBE
+            WfProbe::videoIconCleared(this, dmIdx.row(), "clearIconsOutsideChunkRange");
         {
             const QSignalBlocker blocker(this);
             sf->setData(sfIdx, QVariant(), Qt::DecorationRole);
@@ -7791,31 +7803,45 @@ void SortFilter::clearSortKeys()
 
 bool SortFilter::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
+/*
+    EVERY TIE BREAKS ON SOURCE ORDER -- the order is TOTAL.
+
+    A full sort never needed this: Qt's sort is stable, so equal keys keep source order.
+    A SINGLE-ROW RE-PLACEMENT does. When one row's data changes the proxy (dynamic sort)
+    takes it out and binary-searches it back in with this comparator, and with no
+    tie-break it lands at either end of its block of equal keys, not where it was.
+    Sorting a catalog by Created puts thousands of images with a BLANK date in one such
+    block, so any edit to one of them (a Develop flush, a rating) moved it -- and code
+    that still held its old proxy row (dm->currentSfRow) then selected a neighbour.
+    Seen leaving Develop: the current image became the one next to it (2026-10-01).
+
+    Breaking ties on source row gives exactly the order a stable full sort produces, so
+    a re-placed row goes back to its own slot.  The same rule covers VERSIONS: a version
+    shares its master's key and the source order puts the master first (a renamed master
+    whose version still carried the old name for a moment used to land after it).
+*/
     if ((mRanksActive || mSortKeysValid) && left.column() == mSortKeyColumn
         && right.column() == mSortKeyColumn && QThread::currentThread() == thread()) {
         const int l = left.row(), r = right.row();
         if (mRanksActive) {
-            if (l >= 0 && r >= 0 && l < mRanks.size() && r < mRanks.size())
-                return mRanks.at(l) < mRanks.at(r);
+            if (l >= 0 && r >= 0 && l < mRanks.size() && r < mRanks.size()) {
+                const int rl = mRanks.at(l), rr = mRanks.at(r);
+                return rl != rr ? rl < rr : l < r;
+            }
         }
         else if (l >= 0 && r >= 0 && l < mSortKeys.size() && r < mSortKeys.size()) {
-            return winnowVariantLessThan(mSortKeys.at(l), mSortKeys.at(r),
-                                         sortCaseSensitivity(), isSortLocaleAware());
+            const Qt::CaseSensitivity cs = sortCaseSensitivity();
+            const bool locale = isSortLocaleAware();
+            if (winnowVariantLessThan(mSortKeys.at(l), mSortKeys.at(r), cs, locale))
+                return true;
+            if (winnowVariantLessThan(mSortKeys.at(r), mSortKeys.at(l), cs, locale))
+                return false;
+            return l < r;
         }
     }
-    /*  VERSIONS TIE ON SOURCE ORDER. A version shares its master's name (and, sorted by
-        another column, its master's key -- prepareSortKeys), so outside a full sort --
-        the proxy re-placing one edited row -- equal values must fall back to source
-        order, which puts the master first. Without it a renamed master whose version
-        still carried the old name for a moment landed after its version and stayed
-        there. Only with version rows present: otherwise ties keep Qt's own handling. */
-    auto *dm = qobject_cast<DataModel *>(sourceModel());
-    if (dm && dm->versionRowCount() > 0) {
-        if (QSortFilterProxyModel::lessThan(left, right)) return true;
-        if (QSortFilterProxyModel::lessThan(right, left)) return false;
-        return left.row() < right.row();
-    }
-    return QSortFilterProxyModel::lessThan(left, right);
+    if (QSortFilterProxyModel::lessThan(left, right)) return true;
+    if (QSortFilterProxyModel::lessThan(right, left)) return false;
+    return left.row() < right.row();
 }
 
 void SortFilter::filterChange(QString src)

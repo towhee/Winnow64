@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/wfprobe.h"     // WFPROBE
 #include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
 
@@ -741,6 +742,11 @@ void MW::sortChange(QString source)
         G::log("MW::sortChange",  "Src = " + source);
     // qDebug() << "MW::sortChange  Src:" << source;
 
+    WfProbe::mark(QString("sortChange src=%1 sortColumn=%2 reverse=%3 init=%4 "  // WFPROBE
+                          "matchTable=%5 allMetadataAttempted=%6")
+                      .arg(source).arg(sortColumn).arg(isReverseSort)
+                      .arg(bool(G::isInitializing)).arg(bool(sortMenuUpdateToMatchTable))
+                      .arg(bool(G::allMetadataAttempted)));
     if (G::isInitializing || sortMenuUpdateToMatchTable) return;
     /*  NOT SILENTLY. A sort asked for while a load's metadata is still arriving cannot
         run yet (the proxy would sort half-read rows), and this used to just return: the
@@ -809,6 +815,7 @@ void MW::sortChange(QString source)
         ones on screen. Nothing else does after a sort. */
     resyncIconLoaderAfterReorder("MW::sortChange " + source);
     G::popup->reset();
+    WfProbe::mark("sortChange done src=" + source);                   // WFPROBE
 }
 
 void MW::sortReverse()

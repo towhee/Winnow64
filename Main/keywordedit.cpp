@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/wfprobe.h"     // WFPROBE
 #include "Utilities/versionkey.h"
 #include "Utilities/fileops.h"
 #include "Dialogs/keyworddropdlg.h"
@@ -1097,7 +1098,11 @@ void MW::ensureKeywordVocabLoaded(bool withCounts)
     if (!keywordVocab || !keywordsDock) return;
 
     if (keywordVocab->rowCount(QModelIndex()) > 0) {
-        if (withCounts) keywordVocab->refreshCounts();
+        if (withCounts) {
+            WfProbe::mark("        ensureKeywordVocabLoaded refreshCounts start");  // WFPROBE
+            keywordVocab->refreshCounts();
+            WfProbe::mark("        ensureKeywordVocabLoaded refreshCounts done");   // WFPROBE
+        }
         return;
     }
     /*  No database yet: not an error and not an empty vocabulary, just too early. */
@@ -1108,8 +1113,44 @@ void MW::ensureKeywordVocabLoaded(bool withCounts)
 void MW::keywordsDockVisibilityChange(bool visible)
 {
     if (!visible) return;
-    ensureKeywordVocabLoaded();
+    WfProbe::mark("      keywordsDockVisibilityChange(true) start");     // WFPROBE
+    ensureKeywordVocabLoaded(/*withCounts*/ false);
+    scheduleKeywordCountsRefresh();
+    WfProbe::mark("      keywordsDockVisibilityChange ensureKeywordVocabLoaded done");
     refreshKeywordsDock();
+    WfProbe::mark("      keywordsDockVisibilityChange refreshKeywordsDock done");
+}
+
+void MW::scheduleKeywordCountsRefresh()
+{
+/*
+    Refresh the Keywords dock's image counts ONCE, shortly after the dock comes on screen.
+
+    WHY NOT INLINE. KeywordVocab::refreshCounts is a whole-vocabulary catalog query --
+    ~240 ms at 155k images -- and the dock becoming visible is not one event. Leaving
+    Develop for the Library ran it FOUR times inside a single switch (WFPROBE,
+    2026-10-01): visibilityChanged fired twice during setVisible and once more during
+    restoreState, and setKeywordsDockVisibility asked again on its own.  That was ~950 ms
+    of a 1.25 s switch, behind a window that could not repaint until it finished.
+
+    The counts still have to be refreshed on show: they go stale while the dock is hidden
+    (a catalog scan, keywords applied from another panel). So the visibility routes load
+    the tree without counts and come here, and the bursts collapse to one query.
+
+    50 ms, NOT A ZERO TIMER, like scheduleKeywordsDockRefresh: the switch posts its own
+    repaint (invokeWorkspace's PaintHold), and the new layout should be on screen before
+    this blocks the GUI thread.  A caller whose counts are an INPUT (the merge dialog)
+    keeps calling ensureKeywordVocabLoaded() with counts, synchronously.
+*/
+    if (keywordCountsRefreshPending) return;
+    keywordCountsRefreshPending = true;
+    QTimer::singleShot(50, this, [this] {
+        keywordCountsRefreshPending = false;
+        if (!keywordVocab || !keywordsDock || !keywordsDock->isVisible()) return;
+        WfProbe::mark("        scheduleKeywordCountsRefresh refreshCounts start");  // WFPROBE
+        keywordVocab->refreshCounts();
+        WfProbe::mark("        scheduleKeywordCountsRefresh refreshCounts done");   // WFPROBE
+    });
 }
 
 void MW::scheduleKeywordsDockRefresh()

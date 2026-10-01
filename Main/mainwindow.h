@@ -2940,6 +2940,10 @@ private:
     /*  Coalesced refresh for selectionChanged, which a rubber band emits per row. */
     void scheduleKeywordsDockRefresh();
     bool keywordsDockRefreshPending = false;
+    /*  Coalesced keyword-count refresh for the dock becoming visible -- see
+        MW::scheduleKeywordCountsRefresh. */
+    void scheduleKeywordCountsRefresh();
+    bool keywordCountsRefreshPending = false;
     /*  One pending restart at a time -- see MW::rebuildAbortedFilters. NOT in the
         private slots block above: a plain member there is moc'd as a slot declaration
         and the build fails with "Not a signal or slot declaration". */

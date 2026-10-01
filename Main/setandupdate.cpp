@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/wfprobe.h"     // WFPROBE
 #include "Utilities/panelprobe.h"
 
 void MW::setCentralMessage(QString message)
@@ -300,11 +301,18 @@ void MW::setKeywordsDockVisibility()
 {
     if (G::isLogger) G::log("MW::setKeywordsDockVisibility");
     if (!keywordsDock) return;
+    WfProbe::mark(QString("    keywords dock setVisible(%1) start, visible now=%2")  // WFPROBE
+                      .arg(keywordsDockVisibleAction->isChecked())
+                      .arg(keywordsDock->isVisible()));
     keywordsDock->setVisible(keywordsDockVisibleAction->isChecked());
+    WfProbe::mark("    keywords dock setVisible done (incl. visibilityChanged slot)");  // WFPROBE
     /*  THE ROUTE THAT USED TO MISS. A dock restored VISIBLE from settings never goes
         through showKeywordsDock -- the user did not choose it this session, the saved
         state did -- so nothing loaded the vocabulary and the panel came up empty. */
-    if (keywordsDockVisibleAction->isChecked()) ensureKeywordVocabLoaded();
+    if (keywordsDockVisibleAction->isChecked()) {
+        ensureKeywordVocabLoaded(/*withCounts*/ false);
+        scheduleKeywordCountsRefresh();     // coalesced: see the function
+    }
 }
 
 void MW::setCollectionsDockVisibility()
@@ -1223,7 +1231,8 @@ void MW::showKeywordsDock()
     if (!wanted) return;
 
     keywordsDock->raise();
-    ensureKeywordVocabLoaded();
+    ensureKeywordVocabLoaded(/*withCounts*/ false);
+    scheduleKeywordCountsRefresh();         // coalesced with visibilityChanged's
     /*  The dock was hidden, so the selection-driven refresh has been skipping it; fill
         the tags and the dots now that it is on screen. */
     refreshKeywordsDock();
