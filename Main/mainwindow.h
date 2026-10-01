@@ -1178,7 +1178,7 @@ private slots:
     void toggleDevelopWbSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
     /* "\" in Develop mode: flip the loupe between Before (the first History entry, the
-       state this session started from) and After (the current state). */
+       baseline at the bottom of History) and After (the current state). */
     void toggleDevelopBeforeAfter();
     /* Repaint the tint swatch (it lives on the Mask band): it is filled with the overlay
        colour and it carries the blue active border while the tint is shown. */

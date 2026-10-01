@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 17;
+constexpr int kSchemaVersion = 18;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1424,6 +1424,29 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  developed     INTEGER NOT NULL DEFAULT 0,"
                     "  devpreviewkey TEXT NOT NULL DEFAULT '',"
                     "  PRIMARY KEY (image_id, vid)) WITHOUT ROWID")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 18) {
+    /*
+        DEVELOP HISTORY (Develop/History/historystore.h): one row per image holding its
+        History dock steps as compressed JSON, so undo survives a restart. ADDITIVE: a
+        new table, nothing existing changes. Not referenced by the catalog -- an image
+        need not be indexed to have history -- so keyed on the normalised path like the
+        devpreview table. Losing it costs undo steps, never edits: the recipe itself
+        stays in the sidecar.
+    */
+        if (!q.exec("CREATE TABLE IF NOT EXISTS develop_history ("
+                    "  pathkey TEXT PRIMARY KEY,"
+                    "  path    TEXT NOT NULL,"
+                    "  pos     INTEGER NOT NULL,"
+                    "  recipe  TEXT NOT NULL,"
+                    "  entries BLOB NOT NULL,"
+                    "  saved   INTEGER NOT NULL)")
+            || !q.exec("CREATE INDEX IF NOT EXISTS develop_history_saved"
+                       " ON develop_history(saved)")) {
             db.rollback();
             return false;
         }

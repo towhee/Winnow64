@@ -159,6 +159,7 @@ set(WINNOW_SOURCES
     Develop/Transform/croptransform.cpp
     Develop/Replace/replacepanel.cpp
     Develop/History/historypanel.cpp
+    Develop/History/historystore.cpp
     Develop/History/historyview.cpp
     Develop/Presets/developpresets.cpp
     Develop/Presets/presetsview.cpp
@@ -516,6 +517,8 @@ set(WINNOW_HEADERS
     Develop/Transform/croptransform.h
     Develop/Replace/replacepanel.h
     Develop/History/develophistory.h
+    Develop/History/historyentry.h
+    Develop/History/historystore.h
     Develop/History/historypanel.h
     Develop/History/historyview.h
     Develop/Presets/developpresets.h

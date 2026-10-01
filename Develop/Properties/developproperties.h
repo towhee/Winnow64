@@ -1218,7 +1218,8 @@ private:
        read, so commits accumulate into pendingFields and land once edits settle
        (kPropagateMs). propagateTargets is captured when a batch OPENS, so changing the
        selection mid-drag cannot redirect edits already made. */
-    void queuePropagation(const QString &action, const QString &value);
+    void queuePropagation(const QString &action, const QString &value,
+                          const QString &mergeKey);
     void syncPropagateBase();                  // adopt the current stack as the diff base
     /* Whole-object merge into the other selected images; returns how many it wrote. */
     int  propagatePreset(const DevelopPreset &preset, const QString &label);
@@ -1236,6 +1237,12 @@ private:
     QSet<QString> pendingFields;           // fields waiting to be copied to the targets
     QStringList propagateTargets;          // captured when the batch opened
     QString propagateAction, propagateValue;    // history label for the batch
+    QString propagateMergeKey;             // gesture the open batch belongs to
+    /* Links the batch's History steps across images (HistoryEntry::syncId), so a revert
+       on the current image can revert the selection with it. See applyHistoryEntry. */
+    quint64 propagateSyncId = 0;
+    quint64 nextSyncId = 0;
+    void revertSelectionToMatch(int index);    // applyHistoryEntry's multi-image half
     bool propagateSuspended = false;       // whole-object paths do their own propagation
     QTimer *propagateTimer = nullptr;
     static constexpr int kPropagateMs = 400;    // apply this long after edits settle

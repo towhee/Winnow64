@@ -515,15 +515,17 @@ void MW::applyQueryFilter(const QVector<qint64> &ids, bool withSub)
 void MW::applySetFilter(Kind kind, const QVector<qint64> &ids, bool withSub)
 {
 /*
-    A panel click: set its category to these nodes (and, with withSub, every node inside
-    them), keeping any node the user EXCLUDED in the Filters panel unless it is now
-    included. Everything else in the Filters panel is left alone. An empty set is Cancel.
+    A panel click: clear EVERY filter -- all categories, the search text, the pick /
+    rating / colour actions, as Clear All does -- then set this category to these nodes
+    (and, with withSub, every node inside them), in ONE filterChange. A click means "show
+    me this collection / query", not "narrow what I am looking at". An empty set (Cmd+click
+    off the last node) is Cancel, which clears only this category.
 
     NOT WHILE A LOAD IS RUNNING. The load's build resets the categories' checks when it
     lands, so a check made now would be swept away unseen; say so instead.
 */
     if (G::isLogger) G::log("MW::applySetFilter", QString::number(ids.size()));
-    if (!filters || G::scope != G::Scope::Catalog) return;
+    if (!filters || !dm || G::scope != G::Scope::Catalog) return;
     if (G::isLoadRunning || G::isModifyingDatamodel || filters->buildingFilters) {
         if (G::popup)
             G::popup->showPopup(tr("The Library is still loading. Click again when it has "
@@ -541,10 +543,22 @@ void MW::applySetFilter(Kind kind, const QVector<qint64> &ids, bool withSub)
             if (!inc.contains(t)) inc << t;
         }
     }
-    QStringList curInc, exc;
-    filters->setFilterState(setCategory(kind), curInc, exc);
-    for (const QString &t : std::as_const(inc)) exc.removeAll(t);
-    filters->setSetFilter(setCategory(kind), inc, exc);
+    if (inc.isEmpty()) {
+        cancelSetFilter(kind);
+        return;
+    }
+
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+    uncheckAllFilters();
+    filters->searchString = "";
+    dm->searchStringChange("");
+    /*  setSetFilter emits the filterChange when it checks a node. If none of these nodes
+        has a Filters item it checks nothing and emits nothing, so the clear above must
+        still be applied. */
+    filters->setSetFilter(setCategory(kind), inc, {});
+    QStringList nowInc, nowExc;
+    filters->setFilterState(setCategory(kind), nowInc, nowExc);
+    if (nowInc.isEmpty()) filterChange("MW::applySetFilter");
     syncCollectionTreeFromFilters();
 }
 

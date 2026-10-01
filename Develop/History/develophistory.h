@@ -3,11 +3,12 @@
 
 #include <QHash>
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
 #include <functional>
-#include "Develop/editstack.h"
+#include "Develop/History/historyentry.h"
 
 /*
     Lightroom-style Develop edit history (the History dock's model).
@@ -23,11 +24,21 @@
     sidecar remains the single source of truth for the CURRENT state; History is the
     road there.
 
-    SESSION SCOPED: entries are built in memory as the user edits and are discarded on
-    quit (nothing is written to the sidecar). Snapshots are not free -- a scope's brush /
-    object mask paramsJson can run to tens of KB -- so the store is capped two ways:
-    kMaxEntries per image (oldest edits fall off, the baseline is relabelled but kept) and
-    kMaxImages images retained, evicting the least recently touched.
+    PERSISTED IN THE LOCAL INDEX, NOT THE SIDECAR (2026-09-30). It used to be session
+    scoped -- gone on quit, so reopening an image showed one "Saved settings" step. Now
+    DevelopProperties saves an image's history to index.db (HistoryStore, table
+    develop_history) every time it writes the sidecar, and seed() restores it through
+    the `loader` hook on the image's first touch in a session -- but ONLY while the
+    sidecar still holds the recipe it was saved with (HistoryEntry::recipeStamp). A
+    history whose recipe has moved on (edited on another machine, reset elsewhere, a
+    sidecar restored from a backup) is ignored and the baseline is laid down as before:
+    a history that does not lead to the image on screen would revert to states the user
+    never saw. The sidecar stays the single source of truth for the CURRENT state.
+
+    Snapshots are not free -- a scope's brush / object mask paramsJson can run to tens of
+    KB -- so memory is capped two ways: kMaxEntries per image (oldest edits fall off, the
+    baseline is relabelled but kept) and kMaxImages images retained, evicting the least
+    recently touched. An evicted image's history is still in the store.
 
     REVERT MODEL (Lightroom): pos is the entry currently applied. Recording a new action
     while pos is not the last entry DISCARDS everything after pos -- editing from an
@@ -36,15 +47,13 @@
     COALESCING: a continuous gesture (a slider drag, a colour-wheel drag) commits many
     times. A non-empty mergeKey that matches the top entry's REPLACES that entry instead
     of appending, so a whole drag reads as one "Global: Exposure  +0.35" step.
-*/
 
-struct HistoryEntry {
-    QString   scope;      // display prefix: "Global", "Subject Mask", ...
-    QString   action;     // "Exposure", "Add Subject Mask", "Crop", ...
-    QString   value;      // "+0.35", "-18"; empty when the action has no value
-    QString   mergeKey;   // gesture identity for coalescing; empty = never merge
-    EditStack stack;      // full snapshot AFTER the action
-};
+    LINKED STEPS (multi-image edits). History stays per image, but one edit made with
+    several images selected writes a step into EVERY image it lands on, and all of those
+    steps carry the same syncId. That is what lets a revert on the current image move the
+    rest of the selection to the matching point in THEIR histories (syncedPos), undo and
+    redo alike, without touching each image's own unrelated steps.
+*/
 
 class DevelopHistory : public QObject
 {
@@ -53,7 +62,11 @@ public:
     explicit DevelopHistory(QObject *parent = nullptr) : QObject(parent) {}
 
     static constexpr int kMaxEntries = 100;   // steps kept per image
-    static constexpr int kMaxImages  = 40;    // images kept before LRU eviction
+    /* Images kept before LRU eviction. 200, not the original 40: every image a
+       multi-image edit lands on now gets history (so it can be undone), and a 40-image
+       store would evict the very images a large selection just edited. A snapshot with
+       no brush/object masks is a few KB. */
+    static constexpr int kMaxImages  = 200;
 
     /* First touch of an image: lay down the baseline entry the user can always return
        to. "Original" for an untouched image, "Saved settings" when the sidecar already
@@ -62,6 +75,19 @@ public:
         if (path.isEmpty()) return;
         touch(path);
         if (byImage.contains(path) && !byImage[path].isEmpty()) return;
+        /* A saved history from an earlier session, if the sidecar still holds the recipe
+           it was saved with. */
+        QVector<HistoryEntry> saved;
+        int savedPos = -1;
+        QString stamp;
+        if (loader && loader(path, saved, savedPos, stamp) &&
+            savedPos >= 0 && savedPos < saved.size() &&
+            stamp == HistoryEntry::recipeStamp(s)) {
+            byImage[path] = saved;
+            posByImage[path] = savedPos;
+            emit changed(path);
+            return;
+        }
         HistoryEntry e;
         e.action = s.isIdentity() ? QStringLiteral("Original")
                                   : QStringLiteral("Saved settings");
@@ -74,7 +100,8 @@ public:
     /* Commit one action. Truncates anything after the current position, then merges into
        the top entry (same non-empty mergeKey) or appends. */
     void record(const QString &path, const QString &scope, const QString &action,
-                const QString &value, const QString &mergeKey, const EditStack &after)
+                const QString &value, const QString &mergeKey, const EditStack &after,
+                quint64 syncId = 0)
     {
         if (path.isEmpty()) return;
         touch(path);
@@ -91,7 +118,7 @@ public:
 
         HistoryEntry e;
         e.scope = scope; e.action = action; e.value = value;
-        e.mergeKey = mergeKey; e.stack = after;
+        e.mergeKey = mergeKey; e.stack = after; e.syncId = syncId;
 
         const bool merge = !mergeKey.isEmpty() && v.size() > 1 &&
                            v.last().mergeKey == mergeKey;
@@ -110,6 +137,16 @@ public:
         emit changed(path);
     }
 
+    /* Persistence hooks, set by DevelopProperties (the model stays free of the database).
+       loader: fill entries + pos with path's saved history, and the stamp of the recipe
+       it was saved with; false when there is none.
+       remover: drop path's saved history (forget -- a reset or a deleted version). */
+    std::function<bool(const QString &, QVector<HistoryEntry> &, int &, QString &)> loader;
+    std::function<void(const QString &)> remover;
+
+    /* path's whole history, for the store. */
+    QVector<HistoryEntry> entries(const QString &path) const { return byImage.value(path); }
+
     int count(const QString &path) const { return byImage.value(path).size(); }
     int pos(const QString &path) const { return posByImage.value(path, -1); }
 
@@ -117,6 +154,44 @@ public:
         auto it = byImage.constFind(path);
         if (it == byImage.constEnd() || i < 0 || i >= it->size()) return nullptr;
         return &(*it)[i];
+    }
+
+    /* Link the step just recorded on path (its newest, current entry) to a multi-image
+       edit. The source image records BEFORE the batch exists, so it is stamped after. */
+    void stampTop(const QString &path, quint64 syncId) {
+        auto it = byImage.find(path);
+        if (it == byImage.end() || it->size() < 2) return;   // never the baseline
+        if (posByImage.value(path) != it->size() - 1) return;
+        it->last().syncId = syncId;
+    }
+
+    /* The multi-image edits path's history links to: every non-zero syncId in it, and
+       the subset applied at entry i (indices 1..i). */
+    void syncIds(const QString &path, int i, QSet<quint64> &known,
+                 QSet<quint64> &applied) const {
+        const QVector<HistoryEntry> v = byImage.value(path);
+        for (int k = 1; k < v.size(); ++k) {
+            if (!v[k].syncId) continue;
+            known.insert(v[k].syncId);
+            if (k <= i) applied.insert(v[k].syncId);
+        }
+    }
+
+    /* Where path's history should stand when another image reverted to a point where
+       exactly `applied` of the `known` linked edits are in force: just before its first
+       step from a known edit that is NOT applied, else its newest step. -1 when path
+       shares no linked edit with it (leave it alone). Its own unlinked steps after that
+       point go with it, as they would on any revert. */
+    int syncedPos(const QString &path, const QSet<quint64> &known,
+                  const QSet<quint64> &applied) const {
+        const QVector<HistoryEntry> v = byImage.value(path);
+        bool linked = false;
+        for (int k = 1; k < v.size(); ++k) {
+            if (!v[k].syncId || !known.contains(v[k].syncId)) continue;
+            linked = true;
+            if (!applied.contains(v[k].syncId)) return k - 1;
+        }
+        return linked ? int(v.size()) - 1 : -1;
     }
 
     void setPos(const QString &path, int i) {
@@ -141,6 +216,7 @@ public:
     }
 
     void forget(const QString &path) {
+        if (remover) remover(path);
         byImage.remove(path);
         posByImage.remove(path);
         lru.removeAll(path);
