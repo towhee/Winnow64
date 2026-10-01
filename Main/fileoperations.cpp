@@ -751,7 +751,9 @@ void MW::deleteFolder()
     }
 
     // okay to delete
-    QFile(dirToDelete).moveToTrash();
+    if (QFile(dirToDelete).moveToTrash()) {
+        if (FileOps::onFolderDeleted(dirToDelete) > 0) refreshLibraryAfterCatalogChange();
+    }
 
     // currentFolderDeletedExternally can check if internal folder deletion
     lastFolderDeletedByWinnow = dirToDelete;
@@ -803,6 +805,7 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     // delete
     qDebug() << "MW::deleteAllImageMemCard   removed" << dcimPath;
     dcimDir.removeRecursively();
+    if (FileOps::onFolderDeleted(dcimPath) > 0) refreshLibraryAfterCatalogChange();
 
     QString msg = "All images removed from " + name;
     G::popup->showPopup(msg);

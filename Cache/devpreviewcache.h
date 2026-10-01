@@ -181,6 +181,7 @@ public:
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);   // an image: takes its versions' previews too
+    void onFolderDeleted(const QString &folder);   // every image under folder, at any depth, versions included
     /* Exactly one entry -- fPath's own, never its versions'. For a recipe that changed
        under a key (Set Version as Master) rather than an image that went away. */
     void removeEntry(const QString &fPath);

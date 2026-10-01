@@ -206,7 +206,7 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
 
     // remove the temp image files used to create the embellished version
     for (int i = 0; i < pathList.size(); i++) {
-        QFile(pathList.at(i)).remove();
+        if (QFile(pathList.at(i)).remove()) FileOps::onDeleted(pathList.at(i));
     }
 
     // clear embellish

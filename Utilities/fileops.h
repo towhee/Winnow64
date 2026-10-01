@@ -140,6 +140,13 @@ public:
     static void onCopied(const QString &srcPath, const QString &dstPath);
     static void onMoved(const QString &srcPath, const QString &dstPath);
     static void onDeleted(const QString &fPath);
+    /* A whole FOLDER Winnow removed (Delete Folder, erase a memory card, focus-stack
+       work folders): its catalog rows and everything below it are deleted, as
+       onDeleted does for one image -- and the same for every store onDeleted tells:
+       thumbnails, devPreviews (payload files included), collection membership and
+       Develop history. Returns the catalog rows removed, so a GUI caller knows whether
+       the Library needs redrawing. Any thread. */
+    static int onFolderDeleted(const QString &folder);
 
     /* NEW IMAGE FILES ON DISK -- an export, an ingest copy, a stacked or embellished
        result. Call once the file is COMPLETE (metadata copied, sidecar written), since
@@ -148,8 +155,8 @@ public:
 
        It exists so the catalog can take in an image Winnow itself just made in a
        folder the scope table admits, instead of leaving it unsearchable until the next
-       scan. Any thread: the hook only queues the paths. See "New Files Join the
-       Catalog" in notes/Documentation.txt. */
+       scan. Any thread: the hook only queues the paths. See "New and Deleted Files
+       Follow the Catalog" in notes/Documentation.txt. */
     static void onCreated(const QStringList &paths);
 
     /* Set once at startup by MW, which owns the scope table. Must be safe to call from

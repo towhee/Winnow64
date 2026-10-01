@@ -449,6 +449,19 @@ void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
     onCreated({dstPath});
 }
 
+int FileOps::onFolderDeleted(const QString &folder)
+{
+    if (folder.isEmpty()) return 0;
+    /* onDeleted's receivers, by folder. A removal Winnow performed itself is certain,
+       so every store deletes rather than demotes -- the same reasoning as
+       Catalog::onDeleted. */
+    DevPreviewCache::instance().onFolderDeleted(folder);
+    ThumbCache::instance().onFolderDeleted(folder);
+    CollectionStore::instance().onFolderDeleted(folder);
+    HistoryStore::onFolderDeleted(folder);
+    return Catalog::instance().forgetUnder(folder, /*recurse*/true);
+}
+
 void FileOps::onCreated(const QStringList &paths)
 {
     if (paths.isEmpty()) return;

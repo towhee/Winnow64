@@ -532,17 +532,7 @@ void MW::createCatalogScanner()
     });
     connect(catalogScanner, &CatalogScanner::filesIndexed, this, [this](int indexed) {
         IngestProbe::Scope _ip("catalogScanner::filesIndexed");
-        if (!indexed) return;
-        /* The same redraw a finished scan does: the Library re-queries and reloads only
-           if its result moved, and the tree's folder counts follow. */
-        if (catalogView && catalogDock && catalogDock->isVisible())
-            catalogView->refresh();
-        if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
-        updateLibraryTree();
-        if (catalogRootsDlg) {
-            catalogRootsDlg->setCatalogStatus(catalogStatusText());
-            updateCatalogCounts();
-        }
+        if (indexed) refreshLibraryAfterCatalogChange();
     }, Qt::QueuedConnection);
 
     connect(catalogScanner, &CatalogScanner::progress, this,

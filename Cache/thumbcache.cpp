@@ -647,6 +647,20 @@ void ThumbCache::onDeleted(const QString &fPath)
     q.exec();
 }
 
+void ThumbCache::onFolderDeleted(const QString &folder)
+{
+    const QString prefix = cachePathKey(folder) + "/";
+    if (prefix.size() < 2) return;
+    QMutexLocker lk(&mMutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM thumb WHERE substr(pathkey, 1, ?) = ?");
+    q.addBindValue(prefix.size());
+    q.addBindValue(prefix);
+    q.exec();
+}
+
 int ThumbCache::sweep()
 {
 /*

@@ -3869,6 +3869,20 @@ void MW::flushCatalogCreatedFiles()
                               Q_ARG(QStringList, admitted));
 }
 
+void MW::refreshLibraryAfterCatalogChange()
+{
+    /* The Library re-queries and reloads only if its result moved, and the tree's
+       folder counts follow. */
+    if (catalogView && catalogDock && catalogDock->isVisible())
+        catalogView->refresh();
+    if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
+    updateLibraryTree();
+    if (catalogRootsDlg) {
+        catalogRootsDlg->setCatalogStatus(catalogStatusText());
+        updateCatalogCounts();
+    }
+}
+
 void MW::promptForCatalogScope()
 {
 /*

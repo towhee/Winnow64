@@ -244,6 +244,7 @@ public:
     /*  File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);
+    void onFolderDeleted(const QString &folder);   // every image under folder, at any depth, versions included
 
     /*  Demote entries whose source file is gone, skipping unmounted volumes.
         Safe to call off the GUI thread. Returns the number demoted. */

@@ -960,6 +960,7 @@ bool FS::cleanup()
         if (G::FSLog) G::log(srcFun, msg);
 
         QDir(subFolder).removeRecursively();
+        FileOps::onFolderDeleted(subFolder);
     }
 
     if (o.isLocal) return true;
@@ -987,7 +988,7 @@ bool FS::cleanup()
             msg = "Remove input file: " + s;
             if (G::FSLog) G::log(srcFun, msg);
             // remove temp image file
-            QFile::remove(s);
+            if (QFile::remove(s)) FileOps::onDeleted(s);
         }
     }
 
@@ -1000,6 +1001,7 @@ bool FS::cleanup()
             if (G::FSLog) G::log(srcFun, msg);
             // remove folder if it is empty
             QDir(d).removeRecursively();
+            FileOps::onFolderDeleted(d);
         }
     }
 
