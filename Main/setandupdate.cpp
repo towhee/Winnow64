@@ -810,9 +810,29 @@ void MW::applyLibraryFolderFilter(const QStringList &includes, const QStringList
     asking for the build checked nothing at all.
 */
     if (G::isLogger) G::log("MW::applyLibraryFolderFilter");
-    if (G::isInitializing || !filters) return;
+    requestLibraryFolderFilter(includes, excludes, false);
+}
 
-    pendingLibraryFolderFilter = {true, includes, excludes};
+void MW::requestLibraryFolderFilter(const QStringList &includes,
+                                    const QStringList &excludes, bool clearOthers)
+{
+/*
+    See applyLibraryFolderFilter. clearOthers (a Bookmarks click, like a Collections or
+    Queries click -- see applySetFilter) clears every filter before the folder is set: a
+    click means "show me this folder", not "narrow what I am looking at". The clear waits
+    with the folder for the filters to be built, so it lands in the same filterChange.
+*/
+    if (G::isLogger) G::log("MW::requestLibraryFolderFilter");
+    if (G::isInitializing || !filters) return;
+    qDebug() << "BMPROBE MW::requestLibraryFolderFilter" << includes << excludes
+             << "clearOthers =" << clearOthers
+             << "filterDock visible =" << filterDock->isVisible()
+             << "built =" << filters->filtersBuilt
+             << "building =" << filters->buildingFilters
+             << "loadRunning =" << G::isLoadRunning
+             << "modifying =" << G::isModifyingDatamodel;  // BMPROBE
+
+    pendingLibraryFolderFilter = {true, includes, excludes, clearOthers};
     if (G::scope != G::Scope::Catalog) {
         setCatalogScopeWhole("LibTree");
         // nothing catalogued: Manage Catalog opened instead, and nothing is waiting
@@ -853,11 +873,29 @@ void MW::applyPendingLibraryFolderFilter()
         pendingLibraryFolderFilter = PendingFolderFilter();
         return;
     }
-    QStringList missing;
-    if (!filters->setFolderFilter(pendingLibraryFolderFilter.includes,
-                                  pendingLibraryFolderFilter.excludes, &missing)) {
-        return;                                 // not built yet: still pending
+    qDebug() << "BMPROBE MW::applyPendingLibraryFolderFilter"
+             << "built =" << filters->filtersBuilt
+             << "folders =" << filters->itemsInCategory(filters->folders).size()
+             << "includes =" << pendingLibraryFolderFilter.includes;  // BMPROBE
+    if (!filters->filtersBuilt) return;         // not built yet: still pending
+    const bool clearOthers = pendingLibraryFolderFilter.clearOthers;
+    if (clearOthers) {
+        if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+        uncheckAllFilters();
+        filters->searchString = "";
+        dm->searchStringChange("");
     }
+    QStringList missing;
+    filters->setFolderFilter(pendingLibraryFolderFilter.includes,
+                             pendingLibraryFolderFilter.excludes, &missing);
+    /*  setFolderFilter emits the filterChange only when a check moved. After the clear
+        every folder is unchecked, so it moves nothing only when none of the folders has
+        a Filters item -- and the clear must still be applied. */
+    qDebug() << "BMPROBE   after setFolderFilter missing =" << missing
+             << "folders =" << filters->itemsInCategory(filters->folders).size();  // BMPROBE
+    if (clearOthers && pendingLibraryFolderFilter.excludes.isEmpty()
+        && missing.size() == pendingLibraryFolderFilter.includes.size())
+        filterChange("MW::applyPendingLibraryFolderFilter");
     pendingLibraryFolderFilter = PendingFolderFilter();
     syncLibTreeFromFilters();
     /*  A folder the Library lists and nothing loaded holds -- every image in it is a raw

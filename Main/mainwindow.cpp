@@ -4607,6 +4607,40 @@ void MW::loadCatalogRows(const QVector<CatalogRow> &rows, bool append,
     loadCatalogScope(req, paths);
 }
 
+void MW::applyCatalogDelta(const QVector<CatalogRow> &rows, const QStringList &added,
+                           const QStringList &removed, const CatalogQuery &query)
+{
+/*
+    The loaded Library's result gained or lost a few paths without the user asking -- a
+    background scan finished, or Winnow catalogued files it just wrote (an export, an
+    ingest). Reloading for that (loadCatalogRows) is a full model reset: it threw away
+    the filters, the selection and the scroll position a second after an export.
+
+    Instead the difference goes through applyModelChange, the on-the-fly pipeline an
+    export into a loaded folder already uses, which keeps the rows that stay and saves
+    and restores the filters around the change. Paths the model already has (MW::
+    onExportFinished inserts an export into a loaded folder first) and removals it has
+    already made (deleteFiles) are dropped, so nothing is read twice.
+
+    A model that is not a settled Library load cannot take a delta; that falls back to
+    the full load, which is what happened before.
+*/
+    if (G::isLogger || G::isFlowLogger)
+        G::log("MW::applyCatalogDelta", "+" + QString::number(added.size()) +
+               " -" + QString::number(removed.size()));
+
+    if (G::scope != G::Scope::Catalog || G::isLoadRunning || dm->rowCount() == 0) {
+        loadCatalogRows(rows, false, query);
+        return;
+    }
+
+    QStringList toAdd, toRemove;
+    for (const QString &p : added) if (dm->rowFromKey(p) < 0) toAdd << p;
+    for (const QString &p : removed) if (dm->rowFromKey(p) >= 0) toRemove << p;
+    if (toAdd.isEmpty() && toRemove.isEmpty()) return;
+    applyModelChange(toAdd, toRemove, "MW::applyCatalogDelta");
+}
+
 void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
 {
 /*
@@ -7739,6 +7773,8 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
        latch filters->filtersBuilt, blocking the rebuild. When hidden, leave the
        filters unbuilt; MW::showFilterDock / MW::filterDockTabMousePress build
        them when the panel is shown (the datamodel is fully loaded by then). */
+    qDebug() << "BMPROBE MW::buildFiltersWhenModelReady filterDock visible ="
+             << filterDock->isVisible() << "built =" << filters->filtersBuilt;  // BMPROBE
     if (!filterDock->isVisible()) {
         /*  No build, so no restored filter to wait for: it lands when the panel is
             opened, and the unfiltered set is the honest thing to show until then.
@@ -8136,6 +8172,8 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     a bookmark FILTERS it -- the request a plain click on the same folder in LibTree
     makes, through the same MW::applyLibraryFolderFilter, and the highlight then comes
     back from the Filters panel like any other folder filter (syncLibTreeFromFilters).
+    Unlike a LibTree click, a bookmark CLEARS EVERY OTHER FILTER first, as a Collections or
+    Queries click does: it means "show me this folder".
     A bookmark the Library holds nothing in is not a dead row: it opens the folder in
     Folders, which switches the source the ordinary way (its tooltip says so).
 */
@@ -8147,7 +8185,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     if (G::scope == G::Scope::Catalog) {
         const QStringList inc = bookmarks->libraryFolders(dPath);
         if (!inc.isEmpty()) {
-            applyLibraryFolderFilter(inc, {});
+            requestLibraryFolderFilter(inc, {}, true);
             return;
         }
     }

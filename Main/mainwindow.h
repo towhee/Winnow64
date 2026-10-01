@@ -718,6 +718,10 @@ public slots:
         DataModel::addCatalogRows. */
     void loadCatalogRows(const QVector<CatalogRow> &rows, bool append = false,
                          const CatalogQuery &query = CatalogQuery());
+    /*  FilterPanel::resultsDelta: splice a few catalog paths in / out of the loaded
+        Library without reloading it, so filters and place survive a scan or an export. */
+    void applyCatalogDelta(const QVector<CatalogRow> &rows, const QStringList &added,
+                           const QStringList &removed, const CatalogQuery &query);
     /*  What the two above share: the teardown a replace needs, the queued fill, and the
         one availability pass over the set. Only the ScopeRequest differs between them. */
     void loadCatalogScope(const ScopeRequest &req, const QStringList &paths);
@@ -1482,6 +1486,10 @@ private slots:
         or, while the Library is still loading, remembered until its filters are built
         (applyPendingLibraryFolderFilter, on BuildFilters::finishedBuildFilters). */
     void applyLibraryFolderFilter(const QStringList &includes, const QStringList &excludes);
+    /*  The same, with clearOthers: every other filter is cleared first, as Clear All
+        does (a Bookmarks click). */
+    void requestLibraryFolderFilter(const QStringList &includes, const QStringList &excludes,
+                                    bool clearOthers);
     void applyPendingLibraryFolderFilter();
     /*  Mirror the Filters panel's folder filter into LibTree. Emits nothing. */
     void syncLibTreeFromFilters();
@@ -1607,6 +1615,7 @@ private:
     QAction *openUsbAction;
     QAction *revealFileAction;
     QAction *saveAsFileAction;
+    QAction *exportDevelopedAction;     // File + thumb context twin of developExportAction
     QAction *revealFileActionFromContext;
     QAction *createFolderFromContextAction;
     QAction *copyFolderPathFromContextAction;
@@ -2413,6 +2422,7 @@ private:
         bool pending = false;
         QStringList includes;
         QStringList excludes;
+        bool clearOthers = false;
     } pendingLibraryFolderFilter;
     /*  What the Folders view had loaded when the Library was chosen, so the toggle's
         Folders button can go back to it. */

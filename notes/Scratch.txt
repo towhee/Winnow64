@@ -6126,6 +6126,7 @@ Users/roryhill/Photos/2010-2019 √/2011 √/201107 √/2011-07-25_Neck Point �
 Rename
 ==========================================================================================
 
+
 Both pieces are in: the "Only rename the selected file" checkbox for simple rename, and a Help button in the rename dialog. It isn't built or run yet. renamefile.cpp and the test
   file pass a syntax check, and uic and moc both run clean on the .ui and header. The new unit test hasn't run, because that needs a build.
 
@@ -6156,3 +6157,89 @@ Both pieces are in: the "Only rename the selected file" checkbox for simple rena
 
   To check it in the app, make a scratch folder with x.arw x.jpg x.tif x.xmp x.tif.xmp. Rename x.tif to y with the box ticked, then again with it unticked, and do the same with
   Combine Raw+Jpg turned on.
+
+
+==========================================================================================
+Thumbs
+==========================================================================================
+
+Here's the layout as IconViewDelegate::paint() draws it (Views/iconviewdelegate.cpp:627). Layers are listed in paint order, so later ones draw on top.
+
+  cellRect (option.rect) ──────────────────────────────────────────────────┐
+  │ ╔═ current: YELLOW 3px, inset 1px in the cell ══════════════════════╗  │
+  │ ║  fPad 4                                                           ║  │
+  │ ║ ╭─ frameRect (r=8) ── fill = colour label, or background ───────╮ ║  │
+  │ ║ │[ 12 ]  ← icon number                     [ 3 ▸ ]  ← versions  │ ║  │
+  │ ║ │   tPad 4                                    (top-right)       │ ║  │
+  │ ║ │   ┌─ itemRect (thumb box) ─────────────────────────────┐      │ ║  │
+  │ ║ │   │ ╭─ outerThumbRect (actual pixmap, centred) ─────╮  │      │ ║  │
+  │ ║ │   │ │  pick border: GREEN / BLUE (ingested) /       │  │      │ ║  │
+  │ ║ │   │ │  RED (rejected), 2px, r=6                     │  │      │ ║  │
+  │ ║ │   │ │   ┌─ thumbRect (minus black letterbox) ──┐    │  │      │ ║  │
+  │ ║ │   │ │   │        ┌┄┄┄┄┄┐                       │    │  │      │ ║  │
+  │ ║ │   │ │   │        ┆ vp  ┆ ← loupe viewport      │    │  │      │ ║  │
+  │ ║ │   │ │   │        └┄┄┄┄┄┘   (white+black 1px)   │    │  │      │ ║  │
+  │ ║ │   │ │   └──────────────────────────────────────┘    │  │      │ ║  │
+  │ ║ │   │ │                 ★★★  (or "3" when small)      │  │      │ ║  │
+  │ ║ │   │ │             [ 00:01:23 ]  video duration      │  │      │ ║  │
+  │ ║ │   │ ╰───────────────────────────────────────────────╯  │      │ ║  │
+  │ ║ │   │ ●S 🔒 ●D    ●A                      ⛓RJ ●C         │      │ ║  │
+  │ ║ │   └────────────────────────────────────────────────────┘      │ ║  │
+  │ ║ │                 IMG_1234.NEF   (name or title label)          │ ║  │
+  │ ║ ╰─ selected: WHITE 2px over the frame ──────────────────────────╯ ║  │
+  │ ╚═══════════════════════════════════════════════════════════════════╝  │
+  └────────────────────────────────────────────────────────────────────────┘
+
+  Bottom badge row (x offsets from the itemRect's left edge; the dots are 6px):
+
+  x:  5   12      23 26     47                    W-23   W-7
+      ●S  [ lock 12px ] ●D  ●A   ·············   ⛓RJ    ●C
+
+  ┌──────┬────────────────────────────┬────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────┐
+  │ Mark │          Meaning           │                     Colour                     │                          Shown when                           │
+  ├──────┼────────────────────────────┼────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ ●S   │ Has a sidecar              │ dark teal (5,82,56)                            │ isSidecar, not in a slideshow                                 │
+  ├──────┼────────────────────────────┼────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 🔒   │ File is read-only          │ SVG                                            │ !isReadWrite                                                  │
+  ├──────┼────────────────────────────┼────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ ●D   │ Has Develop edits          │ amber (150,110,20)                             │ the recipe isn't identity; shows in both modes                │
+  ├──────┼────────────────────────────┼────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ ●A   │ Offline / Missing          │ slate blue (90,130,170) / dull red (170,70,60) │ availability 1 / 2                                            │
+  ├──────┼────────────────────────────┼────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ ⛓RJ  │ JPG half of a RAW+JPG pair │ image, 14×14                                   │ DupIsJpgRole && G::combineRawJpg                              │
+  ├──────┼────────────────────────────┼────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ ●C   │ Not in the image cache     │ red (200,0,0)                                  │ metadata loaded, not a video, not cached, not in Develop mode │
+  └──────┴────────────────────────────┴────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────┘
+
+  Other overlays
+
+  ┌────────────────┬──────────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │    Overlay     │                    Where                     │                                                Notes                                                │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Colour label   │ fills the whole frame background             │ Gated by isRatingBadgeVisible, the same flag as the stars                                           │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Icon number    │ frame top-left, filled with the label colour │ isIconNumberVisible; shows sfRow+1                                                                  │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Versions badge │ frame top-right                              │ Amber "N ▸/▾" on a master (clickable to open or close the group); blue name tag ("v2") on a version │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Rating         │ centred at the bottom, above the duration    │ Stars if itemH/6 > 14, otherwise a digit                                                            │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Video duration │ centred at the bottom of itemRect            │ Background at alpha 200                                                                             │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Pick border    │ around outerThumbRect                        │ Only one shows: picked beats ingested, which beats rejected                                         │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Selected       │ frame border, white 2px                      │                                                                                                     │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Current        │ cell inset, yellow 3px                       │                                                                                                     │
+  ├────────────────┼──────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Loupe viewport │ inside thumbRect, clipped to the pixmap      │ Current item only, and only when the viewport is valid                                              │
+  └────────────────┴──────────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  There are two things about the code you might not expect:
+  - The bottom badges sit at the corners of itemRect, not the pixmap. On a portrait thumbnail in a landscape cell, or any letterboxed one, they float on the frame background beside
+    the image instead of overlaying it.
+  - The lock sits in the gap between ●S and ●D, and ●A leaves a 12px slot empty after ●D. If ●S, 🔒 and ●D all show, they sit tight together, but they don't collide.
+
+  The tooltips for each mark are in helpEvent() (iconviewdelegate.cpp:542), and they use the same visibility conditions as the paint code.
+
+Users/roryhill/Pictures/_test0

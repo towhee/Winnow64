@@ -9,19 +9,19 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
+- Add the develop editor panel Export to the Main menu and thumbView context menu.
+- Develop > Browse show one layout and then the final browse layout
+- Cleanup File menu: Library vs Folders
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?
 - Do we need backups when edit, and if so, should they be in the catalog?
 - Download models JIT
-- Review rename file(s) - simple option only rename selected, not all with same base name
-- Thumbnail items tooltips gone
-- Thumbnail tooltip over file name showing borders tooltip.
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
 - Edit title not persistent or applying to embellish
 - AI keywording
 - Redo Develop help
-- Edit Winnow shortcutse
+- Edit Winnow shortcuts
 - Customize Info (I) location/size.
 - Review Apple render (new raw engine)
 - Develop behavior when no image is selected

@@ -26,6 +26,8 @@
 void MW::filterDockTabMousePress()
 {
     if (G::isLogger) G::log("MW::filterDockVisibilityChange");
+    qDebug() << "BMPROBE MW::filterDockTabMousePress visible =" << filterDock->isVisible()
+             << "built =" << filters->filtersBuilt;  // BMPROBE
     /*
     qDebug() << "MW::filterDockTabMousePress"
              << "filterDock->isVisible() =" << filterDock->isVisible()

@@ -105,6 +105,7 @@ void FilterPanel::applyScope()
         filters->showAllCategories();
         results.clear();
         resultPathList.clear();
+        resultLoaded = false;
         totalMatches = 0;
         appliedGen = ++searchGen;           // a catalog search still in flight is void
         forcePending = false;
@@ -271,6 +272,19 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
     forcePending = false;
 
     const bool changed = paths != resultPathList;
+    /*  WHAT MOVED, for an unasked re-run over a result the model already holds. Only
+        uncapped: a capped result is the newest N, so a delta there would not be what the
+        index holds. */
+    QStringList added, removed;
+    const bool canSplice = !force && changed && resultLoaded && resultLimit() == 0
+                           && results.size() <= autoLoadMax();
+    if (canSplice) {
+        const QSet<QString> before(resultPathList.cbegin(), resultPathList.cend());
+        const QSet<QString> after(paths.cbegin(), paths.cend());
+        for (const QString &p : paths) if (!before.contains(p)) added << p;
+        for (const QString &p : std::as_const(resultPathList))
+            if (!after.contains(p)) removed << p;
+    }
     results = rows;
     resultPathList = paths;
     totalMatches = total;
@@ -298,10 +312,26 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
             Search row edit ONLY in a capped scope. Narrowing an uncapped catalog is a
             proxy filter and reaches none of this -- see searchTextChanged.
     */
-    if ((force || changed) && !results.isEmpty() && results.size() <= autoLoadMax())
+    /*  A RE-RUN NOBODY ASKED FOR MUST NOT RELOAD. refresh() runs this after a scan, or
+        after Winnow catalogued files it just made (an export into a Library folder);
+        reloading for that reset the model and with it the user's filters and place.
+        Those changes are spliced instead -- the same on-the-fly insert / remove an
+        export into a loaded folder gets. Only a large change, or one the model cannot
+        take (see canSplice), still reloads. */
+    if (canSplice && added.size() + removed.size() <= kMaxSpliceDelta) {
+        if (!added.isEmpty() || !removed.isEmpty())
+            emit resultsDelta(results, added, removed, q);
+        else
+            emit searchNotLoaded();                 // same set, new order: nothing to do
+    }
+    else if ((force || changed) && !results.isEmpty() && results.size() <= autoLoadMax()) {
+        resultLoaded = true;
         emit loadResults(results, false, q);
-    else
+    }
+    else {
+        if (force || changed) resultLoaded = false;
         emit searchNotLoaded();
+    }
 }
 
 void FilterPanel::searchTextChanged(const QString &text)
