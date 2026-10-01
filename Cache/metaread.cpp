@@ -1605,6 +1605,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
                     not one of the published flags, so it is not broken out -- the
                     datamodel already excludes unavailable rows from the requirement. */
                 int noIcon = 0, notAttempted = 0, failed = 0, video = 0;
+                QStringList wfStuck;                                    // WFPROBE
                 const int first = qMax(0, firstIconRow);
                 const int last  = qMin(rowCountSf() - 1, lastIconRow);
                 for (int row = first; row <= last; ++row) {
@@ -1613,7 +1614,10 @@ void MetaRead::processReturningReader(int id, Reader *r)
                     ++noIcon;
                     if (!metaAttemptedAt(row)) ++notAttempted;
                     else                       ++failed;
+                    if (wfStuck.size() < 6)                             // WFPROBE
+                        wfStuck << QString("%1:%2").arg(row).arg(pathAt(row));
                 }
+                qWarning().noquote() << "WFPROBE REDO stuck rows:" << wfStuck.join("  ");
                 qWarning().noquote()
                     << "REDO MAXED OUT  iconRange" << first << "-" << last
                     << " noIcon =" << noIcon

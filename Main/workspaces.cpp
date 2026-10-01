@@ -144,8 +144,9 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 
     /*  NO PAINT UNTIL THE LAYOUT IS COMPLETE.  Applying a workspace is not one step:
         updateState puts up the workspace's central view BEFORE restoreState moves the
-        docks, and gridDisplay / tableDisplay pump a nested event loop (G::wait) on the
-        way.  That pump painted the half-applied window -- leaving Develop for a Grid
+        docks, and anything that pumps the event loop in between paints the half-applied
+        window.  gridDisplay / tableDisplay's G::wait(100) did (since removed -- the hold
+        stays, as the guard against the next pump).  Leaving Develop for a Grid
         layout (Library: D then E) showed the grid filling the whole window, the Develop
         dock already hidden and the thumb dock hidden by gridDisplay, before the Library
         docks came back.  Painting is held for the main window and its docked children
