@@ -330,7 +330,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         /*  VIDEO ROWS ARE RE-ARMED TOO.  They used to be skipped, and a video's
             thumbnail evicted by clearIconsOutsideChunkRange (a re-sort or a scroll that
             moves it out of the chunk) then stayed in readSuccessThisCycle and never
-            loaded again: WFPROBE showed 21 video icons cleared by a re-sort and 4 back.
+            loaded again: a probe trace showed 21 video icons cleared by a re-sort and 4 back.
             Both reasons to skip are already covered.  A video whose decode FAILED has
             IconLoaded = true (DataModel::clearVideoReadingFlag), so !iconLoadedAt is
             false and it is not retried.  A video still decoding is held by
@@ -1605,7 +1605,6 @@ void MetaRead::processReturningReader(int id, Reader *r)
                     not one of the published flags, so it is not broken out -- the
                     datamodel already excludes unavailable rows from the requirement. */
                 int noIcon = 0, notAttempted = 0, failed = 0, video = 0;
-                QStringList wfStuck;                                    // WFPROBE
                 const int first = qMax(0, firstIconRow);
                 const int last  = qMin(rowCountSf() - 1, lastIconRow);
                 for (int row = first; row <= last; ++row) {
@@ -1614,10 +1613,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
                     ++noIcon;
                     if (!metaAttemptedAt(row)) ++notAttempted;
                     else                       ++failed;
-                    if (wfStuck.size() < 6)                             // WFPROBE
-                        wfStuck << QString("%1:%2").arg(row).arg(pathAt(row));
                 }
-                qWarning().noquote() << "WFPROBE REDO stuck rows:" << wfStuck.join("  ");
                 qWarning().noquote()
                     << "REDO MAXED OUT  iconRange" << first << "-" << last
                     << " noIcon =" << noIcon

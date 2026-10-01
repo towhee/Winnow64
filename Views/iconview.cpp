@@ -2,7 +2,6 @@
 #include <cmath>
 #include "Utilities/fileops.h"
 #include "Main/mainwindow.h"
-#include "Main/wfprobe.h"     // WFPROBE
 
 /*  IconView Overview
 
@@ -759,34 +758,6 @@ int IconView::justifyMargin()
 }
 
 
-/*  WFPROBE: "the grid blanked (no gridlines) on maximize until scrolled" (2026-10-01).
-    Hypothesis under test: the view is scrolled PAST THE END of its content -- more
-    columns after a widen means fewer rows, and a scroll value kept from the old layout
-    then shows empty space.  So: the scroll value against its maximum, the content
-    height the current cell size implies, and the row actually at the viewport centre
-    (-1 = nothing there).  (iconViewDelegate->firstVisible is never set -- not used.) */
-static bool wfPaintArmed = false;                                     // WFPROBE
-static QString wfVisible(IconView *v, DataModel *dm)
-{
-    const QSize grid = v->gridSize().isValid() ? v->gridSize()
-                                               : v->iconViewDelegate->sizeHint(
-                                                     QStyleOptionViewItem(), QModelIndex());
-    const int rows = dm->sf->rowCount();
-    const int perRow = grid.width() > 0 ? qMax(1, v->viewport()->width() / grid.width()) : 1;
-    const qint64 contentH = grid.height() > 0
-                                ? qint64((rows + perRow - 1) / perRow) * grid.height() : -1;
-    const QModelIndex mid = v->indexAt(QPoint(v->viewport()->width() / 2,
-                                              v->viewport()->height() / 2));
-    return QString("vp=%1x%2 cell=%3x%4 perRow=%5 contentH~%6 vScroll=%7/%8 "
-                   "rowAtCentre=%9 visibleCells=%10-%11 iconRange=%12-%13")
-        .arg(v->viewport()->width()).arg(v->viewport()->height())
-        .arg(grid.width()).arg(grid.height()).arg(perRow).arg(contentH)
-        .arg(v->verticalScrollBar()->value()).arg(v->verticalScrollBar()->maximum())
-        .arg(mid.isValid() ? mid.row() : -1)
-        .arg(v->firstVisibleCell).arg(v->lastVisibleCell)
-        .arg(dm->startIconRange.load()).arg(dm->endIconRange.load());
-}
-
 void IconView::rejustify(/*int prevMidVisibleCell*/)
 {
 /*
@@ -820,7 +791,6 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
 
     QString src = "IconView::rejustify";
     if (isDebug || G::isLogger) G::log(src, objectName());
-    if (objectName() == "Grid") WfProbe::mark("GRID rejustify start " + wfVisible(this, dm));  // WFPROBE
 
     /*  The row to keep centred.  After a window resize it is the one resizeEvent captured
         at the start of the burst -- by now the pixel scroll offset has been reinterpreted
@@ -885,12 +855,6 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
 
     // Synchronize visibility ranges for caching and metadata reading
     m2->updateIconRange(src);
-    if (objectName() == "Grid") {                                       // WFPROBE
-        WfProbe::mark("GRID rejustify after updateIconRange " + wfVisible(this, dm));
-        QTimer::singleShot(1000, this, [this] {
-            WfProbe::mark("GRID rejustify +1 s " + wfVisible(this, dm));
-        });
-    }
 
 
 
@@ -1051,11 +1015,6 @@ void IconView::resizeEvent(QResizeEvent *)
     // Rejustify icons
     bool widthChange = width() != prevResizeWidth;
     bool needToRejustify = isWrapping() && widthChange;
-    if (objectName() == "Grid") wfPaintArmed = true;                    // WFPROBE
-    if (objectName() == "Grid")                                         // WFPROBE
-        WfProbe::mark(QString("GRID resizeEvent width %1 -> %2 needToRejustify=%3 ")
-                          .arg(prevResizeWidth).arg(width()).arg(needToRejustify)
-                      + wfVisible(this, dm));
 
     if (needToRejustify) {
         /*  HOLD THE IMAGE IN PLACE THROUGH THE WHOLE RESIZE.
@@ -1063,7 +1022,7 @@ void IconView::resizeEvent(QResizeEvent *)
             The scroll position is a PIXEL offset, and a wrapping view's rows-per-pixel
             changes with its width: a maximize animates through ~10 widths, 6 cells a row
             becoming 13, and the same offset lands on a different image at every step.
-            Measured (WFPROBE, 2026-10-01): centre row 33,537 drifted to 72,689 during a
+            Measured (probe trace, 2026-10-01): centre row 33,537 drifted to 72,689 during a
             maximize -- far outside the loaded icon chunk, so the grid showed nothing --
             and rejustify, which read its anchor off the centre AFTER the drift, then
             locked the view there.  Restoring drifted back to 27,945, not 33,537.
@@ -1891,13 +1850,6 @@ void IconView::paintEvent(QPaintEvent *event)
     //qDebug() << "IconView::paintEvent" << event << event->region() << viewport()->visibleRegion();
     iconViewDelegate->resetFirstLastVisible();
     QListView::paintEvent(event);
-    if (wfPaintArmed && objectName() == "Grid") {                       // WFPROBE
-        wfPaintArmed = false;
-        const QRect r = event->region().boundingRect();
-        WfProbe::mark(QString("GRID first paint after resize region=%1,%2 %3x%4 ")
-                          .arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height())
-                      + wfVisible(this, dm));
-    }
 }
 
 void IconView::keyPressEvent(QKeyEvent *event){

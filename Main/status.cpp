@@ -1,5 +1,4 @@
 #include "Main/mainwindow.h"
-#include "Main/wfprobe.h"     // WFPROBE
 
 /*
     Builds the "Decode Raw is On" toolbar icon: a 2px white border surrounding a
@@ -775,17 +774,12 @@ void MW::refreshDevelopThumbs()
        (DataModel::setDevelopIcon) -- the camera thumb is not kept alongside it -- so
        getting either one back means re-reading it. */
     bool anyCleared = false;
-    int wfCleared = 0;                                                  // WFPROBE
     for (int row = 0; row < dm->rowCount(); ++row) {
         if (!dm->index(row, G::DevPreviewKeyColumn).data().toString().isEmpty()) {
-            WfProbe::videoIconCleared(dm, row, "refreshDevelopThumbs");  // WFPROBE
             dm->clearDevelopIcon(row);
             anyCleared = true;
-            ++wfCleared;                                                // WFPROBE
         }
     }
-    WfProbe::mark(QString("refreshDevelopThumbs cleared %1 developed rows")  // WFPROBE
-                      .arg(wfCleared));
     if (!anyCleared) return;            // nothing in this folder is developed
 
     /* The delegates keep their own scaled QPixmap per row, so they have to be told too or

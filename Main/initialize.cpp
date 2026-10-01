@@ -4,7 +4,6 @@
 #endif
 #include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
-#include "Main/wfprobe.h"     // WFPROBE
 #include "Metadata/keywordpaths.h"
 #include "Views/libtree.h"
 #include "Develop/workingimagecache.h"
@@ -3854,10 +3853,8 @@ void MW::setOperationMode(G::OperationMode mode)
         if (a) a->setEnabled(inDevelop);
 
     if (G::operationMode == mode) {                     // no change
-        WfProbe::mark("setOperationMode(" + QString(mode == G::OperationMode::Develop ? "Develop" : "Preview") + ") no change");  // WFPROBE
         return;
     }
-    WfProbe::mark("setOperationMode(" + QString(mode == G::OperationMode::Develop ? "Develop" : "Preview") + ") enter, docks shown/hidden " + WfProbe::cur(dm));  // WFPROBE
     G::operationMode = mode;
     updateDevelopRenderingHint();     // Preview hides the chip; Develop re-evaluates
 
@@ -3877,12 +3874,7 @@ void MW::setOperationMode(G::OperationMode mode)
        Developed in both modes, so there is nothing to redo -- and skipping it matters,
        since that is the default and this would otherwise re-read every developed
        thumbnail on each D press. */
-    WfProbe::mark("setOperationMode status bar + preview source synced");   // WFPROBE
     if (G::previewSource == G::PreviewSource::Original) refreshDevelopThumbs();
-    WfProbe::mark(QString("setOperationMode refreshDevelopThumbs %1")      // WFPROBE
-                      .arg(G::previewSource == G::PreviewSource::Original
-                               ? "RAN (previewSource=Original)"
-                               : "skipped (previewSource=Developed)"));
 
     /* Develop shows a single image, so it always runs in Loupe: force Loupe on entry, and
        refresh the View-menu gating (enableSelectionDependentMenus disables Compare -- and
@@ -3891,7 +3883,6 @@ void MW::setOperationMode(G::OperationMode mode)
     if (mode == G::OperationMode::Develop && G::mode != "Loupe")
         loupeDisplay("MW::setOperationMode");
     enableSelectionDependentMenus();
-    WfProbe::mark("setOperationMode loupe/menus done");               // WFPROBE
 
     /* Capture the Preview (embedded) image BEFORE the re-decode below so the Develop
        diagnostics can verify the Develop render (demosaic + edits) actually differs from
@@ -3952,12 +3943,7 @@ void MW::setOperationMode(G::OperationMode mode)
     still selection re-targets the cache anyway (fileSelectionChange -> setImageCachePosition).
     The useRaw flip itself is NOT skipped: it is a mode-level setting and must track the
     mode so the next still decodes correctly. */
-    WfProbe::mark("setOperationMode devPreview interim done");        // WFPROBE
     const bool wantUseRaw = (mode == G::OperationMode::Develop);
-    WfProbe::mark(QString("setOperationMode decode: useRaw %1 -> %2 (%3)")  // WFPROBE
-                      .arg(G::useRaw).arg(wantUseRaw)
-                      .arg(G::useRaw != wantUseRaw ? "toggleUseRaw, cache reload"
-                                                   : "re-target + force re-decode"));
     if (G::useRaw != wantUseRaw)
         toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);   // flips useRaw + reloads cache
     else if (imageCache && dm && !dm->currentKey.isEmpty() && !currentIsVideo()) {
@@ -3980,7 +3966,6 @@ void MW::setOperationMode(G::OperationMode mode)
     on entering Develop point it at the current image before enabling. Leaving Develop,
     flush any unsaved edits of the image we were on so they persist. */
 
-    WfProbe::mark("setOperationMode decode re-targeted");              // WFPROBE
     if (developProperties) {
         if (mode == G::OperationMode::Develop) {
             const bool selIsVideo = currentIsVideo();
@@ -4004,7 +3989,6 @@ void MW::setOperationMode(G::OperationMode mode)
         else {
             developProperties->flushAll();
             WorkingImageCache::instance().setPinned(QString());   // no edit session now
-            WfProbe::mark("setOperationMode develop flushAll done " + WfProbe::cur(dm));  // WFPROBE
         }
         /* Show/hide the multi-image warning for the mode we just entered (the banner is
            only reachable in Develop, but its text is stale until refreshed). */
@@ -4025,7 +4009,6 @@ void MW::setOperationMode(G::OperationMode mode)
        image are added/removed to match the new mode. */
     if (thumbView) thumbView->viewport()->update();
     if (gridView) gridView->viewport()->update();
-    WfProbe::mark("setOperationMode returning " + WfProbe::cur(dm));  // WFPROBE
 }
 
 void MW::updateDevelopSelectionWarning()

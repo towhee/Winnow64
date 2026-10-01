@@ -1,5 +1,4 @@
 ﻿#include "Main/mainwindow.h"
-#include "Main/wfprobe.h"     // WFPROBE
 #include "Utilities/versionkey.h"
 #include "Metadata/keywordpaths.h"
 #include <QtConcurrent>
@@ -14280,33 +14279,22 @@ void MW::updateState()
     //setWindowsTitleBarVisibility();   // problem with full screen toggling
     // setCentralView has to precede setting visibility to docks
     setCentralView();
-    WfProbe::mark("  updateState setCentralView done");               // WFPROBE
     setMenuBarVisibility();
     setStatusBarVisibility();
     setCacheStatusVisibility();
-    WfProbe::mark("  updateState menu/status bars done");             // WFPROBE
     setFolderDockVisibility();
-    WfProbe::mark("  updateState folders dock");                      // WFPROBE
     setFavDockVisibility();
-    WfProbe::mark("  updateState bookmarks dock");                    // WFPROBE
     setFilterDockVisibility();
-    WfProbe::mark("  updateState filters dock");                      // WFPROBE
     setCatalogDockVisibility();
-    WfProbe::mark("  updateState catalog dock");                      // WFPROBE
     setKeywordsDockVisibility();
-    WfProbe::mark("  updateState keywords dock");                     // WFPROBE
     setCollectionsDockVisibility();
     setQueriesDockVisibility();
-    WfProbe::mark("  updateState collections + queries docks");       // WFPROBE
     setModuleDockVisibility();
     setMetadataDockVisibility();
-    WfProbe::mark("  updateState module + metadata docks");           // WFPROBE
     setEmbelDockVisibility();
     setDevelopDockVisibility();
     setHistoryDockVisibility();     // follows Develop (set just above)
-    WfProbe::mark("  updateState embellish/develop/history docks");   // WFPROBE
     setThumbDockVisibity();
-    WfProbe::mark("  updateState thumb dock");                        // WFPROBE
     // setShootingInfoVisibility();
     updateStatusBar();
     //setActualDevicePixelRation();
