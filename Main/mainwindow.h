@@ -604,6 +604,10 @@ public:
     // first use
     bool isFirstTimeTableViewVisible = true;
 
+    /*  A quit asked for while a background ingest runs: MW::closeEvent declines it and
+        MW::ingestFinished closes the window when the copy is done.  See closeEvent. */
+    bool quitWhenIngestDone = false;
+
     // tooltip for tabs in docked and tabified panels
     // int prevTabIndex= -1;
 

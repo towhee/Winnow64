@@ -1464,14 +1464,37 @@ void MW::closeEvent(QCloseEvent *event)
         G::log("MW::closeEvent");
     }
 
+    /*  NOT WHILE A BACKGROUND INGEST IS COPYING.  The close is DECLINED and remembered;
+        MW::ingestFinished closes the window again when the copy is done, and that second
+        close runs everything below -- the picks question included, so it is asked once,
+        about the picks as they are then.
+
+        This used to wait right here, `while (isRunningBackgroundIngest) G::wait(100)`:
+        a nested event loop inside closeEvent for as long as the ingest took, which ran
+        every queued event, timer, key and click -- a second quit, a folder click, the
+        Dock -- inside a half-closed window.  Declining keeps the app fully live, and
+        nothing has been torn down yet when the real close arrives.
+
+        Checked FIRST, ahead of the picks question, so the user is not asked about picks
+        now and again when the deferred close runs. */
+    if (G::isRunningBackgroundIngest) {
+        quitWhenIngestDone = true;
+        if (G::popup)
+            G::popup->showPopup("There is a background ingest in progress.  When it<br>"
+                                "has completed Winnow will close.", 0);
+        event->ignore();
+        return;
+    }
+    quitWhenIngestDone = false;
+
     /*  AHEAD OF EVERY TEARDOWN STEP, including the "Closing Winnow ..." message: quitting
         discards the datamodel exactly as a folder change does, and the picks go with it.
         Everything below this point is one-way, so an answer taken any later could not be
         honoured.  event->ignore() leaves the session running untouched.
 
-        The background-ingest wait just below is NOT a case this catches: MW::ingest marks
-        those rows "Ingested" as soon as the copy is commenced, so there is nothing to
-        warn about by the time the user can ask to quit. */
+        A background ingest is NOT a case this catches: MW::ingest marks those rows
+        "Ingested" as soon as the copy is commenced, so there is nothing to warn about by
+        the time the user can ask to quit. */
     if (!okToDiscardPicks("Closing Winnow", "Close")) {
         event->ignore();
         return;
@@ -1485,16 +1508,6 @@ void MW::closeEvent(QCloseEvent *event)
     lastScopeWasLibrary = G::scope == G::Scope::Catalog;
 
     setCentralMessage("Closing Winnow ...");
-
-    // do not allow if there is a background ingest in progress
-    if (G::isRunningBackgroundIngest) {
-        QString msg =
-                "There is a background ingest in progress.  When it<br>"
-                "has completed Winnow will close."
-                ;
-        G::popup->showPopup(msg, 0);
-        while (G::isRunningBackgroundIngest) G::wait(100);
-    }
 
     // for debugging crash test
     //if (testCrash) return;
@@ -3015,6 +3028,12 @@ void MW::ingestFinished()
     G::isRunningBackgroundIngest = false;
     // Audible to signal completion
     QApplication::beep();
+    /*  A quit was asked for during the copy (see MW::closeEvent): finish it now.  Queued,
+        so this slot and the ingest's own signal emission have returned first. */
+    if (quitWhenIngestDone) {
+        if (G::popup) G::popup->reset();
+        QTimer::singleShot(0, this, &MW::close);
+    }
 }
 
 void MW::appStateChange(Qt::ApplicationState state)
