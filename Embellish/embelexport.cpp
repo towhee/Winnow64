@@ -2,6 +2,66 @@
 #include "Main/global.h"
 #include "Utilities/fileops.h"
 
+/*  EXPORT INPUT GUARD.  EmbelExport::exportImages runs on the GUI thread and pumps the
+    event loop (G::wait) between images, because that pump is how Esc reaches the abort:
+    MW::keyReleaseEvent emits abortEmbelExport while G::isProcessingExportedImages is set.
+    But the same pump also delivered every other key, click, wheel, drop and window close
+    in the middle of the export -- a folder change, a selection change or a quit could
+    run underneath it.  The render cannot simply move to a worker thread: it goes through
+    a QGraphicsScene of QPixmap items, which are GUI-thread only.
+
+    So for the export's duration this filter, installed on the application, swallows USER
+    INPUT except Esc.  Paint, timers, layout, the popup's progress and everything else
+    the pump exists for still pass.  Esc passes in every form it arrives in (override,
+    shortcut, press, release).  Scoped: installed and removed by its own lifetime. */
+namespace {
+class ExportInputGuard : public QObject
+{
+public:
+    ExportInputGuard() { qApp->installEventFilter(this); }
+    ~ExportInputGuard() override { qApp->removeEventFilter(this); }
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override
+    {
+        switch (event->type()) {
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease:
+        case QEvent::ShortcutOverride:
+            return static_cast<QKeyEvent *>(event)->key() != Qt::Key_Escape;
+        case QEvent::Shortcut:
+            return static_cast<QShortcutEvent *>(event)->key()
+                   != QKeySequence(Qt::Key_Escape);
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+        case QEvent::MouseButtonDblClick:
+        case QEvent::NonClientAreaMouseButtonPress:
+        case QEvent::NonClientAreaMouseButtonRelease:
+        case QEvent::NonClientAreaMouseButtonDblClick:
+        case QEvent::Wheel:
+        case QEvent::ContextMenu:
+        case QEvent::DragEnter:
+        case QEvent::DragMove:
+        case QEvent::Drop:
+        case QEvent::TouchBegin:
+        case QEvent::TouchUpdate:
+        case QEvent::TouchEnd:
+        case QEvent::NativeGesture:
+        case QEvent::TabletPress:
+        case QEvent::TabletRelease:
+        case QEvent::InputMethod:
+            return true;
+        case QEvent::Close:
+            /*  Only a close the USER or the OS asked for (window button, Cmd+Q, Dock);
+                a widget closing itself in code during the export is left alone. */
+            return event->spontaneous();
+        default:
+            return QObject::eventFilter(obj, event);
+        }
+    }
+};
+}   // namespace
+
 EmbelExport::EmbelExport(Metadata *metadata,
                          DataModel *dm,
                          ImageCacheData *icd,
@@ -233,7 +293,10 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     G::isProcessingExportedImages = true;
     abort = false;
     int count = srcList.size();
+    /*  Every early return below clears the flag again: while it is set ImageView::loadImage
+        refuses to load anything, and MW::exportEmbel does not reset it after us. */
     if (count == 0) {
+        G::isProcessingExportedImages = false;
         G::popup->showPopup("No images picked or selected");
         return;
     }
@@ -243,6 +306,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
                             "Please select an embellish template and try again.<p><hr>"
                             "Press <font color=\"red\"><b>Esc</b></font> to continue.",
                             0);
+        G::isProcessingExportedImages = false;
         return;
     }
 
@@ -254,6 +318,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             exportFolderIfNotSubfolder = QFileDialog::getExistingDirectory(this, msg,
                 "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
             if (exportFolderIfNotSubfolder == "") {
+                G::isProcessingExportedImages = false;
                 return;
             }
         }
@@ -265,6 +330,10 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     QFileInfo filedir(srcList.at(0));
     QString folderPath = filedir.dir().path();
     QStringList thumbList;
+
+    /*  From here to the end only Esc reaches the app -- see ExportInputGuard.  After the
+        folder dialog above, which needs normal input. */
+    ExportInputGuard inputGuard;
 
     G::popup->setProgressVisible(true);
     G::popup->setProgressMax(count);
