@@ -720,11 +720,16 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
         if (abort) {idle = true; return false;}
 
-        // try again after 100ms
+        /*  Try again after 100 ms.  A PLAIN SLEEP, not G::wait: this runs on a Reader's
+            own thread inside a queued Reader::read, and G::wait's nested event loop would
+            run that thread's other queued calls in the middle of this load -- including
+            MetaRead's BlockingQueued Reader::stop, which quits the thread under it.
+            Abort is unaffected: Thumb::abortProcessing sets the flag directly from the
+            caller's thread, and it is tested on both sides of the wait. */
         if (status == Status::Open) {
             attempts++;
             if (G::isPerfProbe) G::probeThumbRetryCount.fetch_add(1, std::memory_order_relaxed);
-            G::wait(100);
+            QThread::msleep(100);
         }
         if (abort) {idle = true; return false;}
 

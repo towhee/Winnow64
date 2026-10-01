@@ -740,9 +740,17 @@ void DockWidget::restore()
              << "defaultFloatingGeometry =" << defaultFloatingGeometry
              << "floatingGeometry =" << floatingGeometry
         ; //*/
-    // Necessary to pause for the QDockWidget default geometry to be set before overriding.
-    G::wait(10);
-    setGeometry(floatingGeometry);
+    /*  Applied 10 ms LATER, not after a G::wait(10).  setFloating(true) has just made this
+        a native window and the platform places it on its own schedule; the saved
+        geometry has to land after that, which is all the pause was for.  G::wait ran a
+        nested event loop inside the double-click handler that called this -- every
+        queued event in the app, mid-gesture.  A deferred call gets the same ordering
+        without the re-entrancy.  Skipped if the dock was docked again in between.  The
+        timer's context is this dock, so it cannot fire into a deleted one. */
+    const QRect target = floatingGeometry;
+    QTimer::singleShot(10, this, [this, target] {
+        if (isFloating()) setGeometry(target);
+    });
 }
 
 QRect DockWidget::deconstructSavedGeometry(QByteArray geometry)
