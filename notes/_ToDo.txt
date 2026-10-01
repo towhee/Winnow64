@@ -9,10 +9,9 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
-- /Users/roryhill/Photos/2000-2009/2005/200505/20050514_PNW trip/2005-05-19_0003.NEF
-  rendering sucks.
 - Fine-tune keywords managing
-- What is the catalog panel?
+- Remove the catalog panel code not being used?
+- Do we need backups when edit, and if so, should they be in the catalog?
 - Download models JIT
 - Review rename file(s) - simple option only rename sleelected, not all with same base name
 - Thumbnail items tooltips gone

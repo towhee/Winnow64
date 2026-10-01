@@ -1528,6 +1528,8 @@ void MW::closeEvent(QCloseEvent *event)
        thread still mid-file then crashed in the globals exit() was destroying. Its thread
        checks between files, so this returns promptly, and anything already committed is
        kept -- the scan resumes from staleOf next time rather than starting over. */
+    /* No more created files queued at an MW that is going away. */
+    FileOps::setCreatedHook({});
     if (catalogScanner) catalogScanner->shutdown();
 
     if (filterDock->isVisible()) {
@@ -3813,6 +3815,58 @@ bool MW::isCatalogScopeFolder(const QString &folder) const
     if (catalogScope.isEmpty()) return false;
     return catalogScopeIncludes(catalogScope, folder)
            && !catalogScopeExcludes(catalogScope, folder);
+}
+
+void MW::catalogCreatedFiles(const QStringList &paths)
+{
+/*
+    The FileOps::onCreated hook, so it may be called from any thread (Ingest::run, the
+    exporters). It only hops to the GUI thread, where catalogScope lives.
+
+    BATCHED FOR A MOMENT. An export or an ingest reports its files one at a time; a
+    short wait turns a run of them into one indexFiles call and one Library refresh,
+    instead of a staleOf query and a filter-panel requery per file.
+*/
+    QMetaObject::invokeMethod(this, [this, paths]() {
+        const bool idle = catalogCreatedPending.isEmpty();
+        catalogCreatedPending << paths;
+        if (idle) QTimer::singleShot(500, this, &MW::flushCatalogCreatedFiles);
+    }, Qt::QueuedConnection);
+}
+
+void MW::flushCatalogCreatedFiles()
+{
+/*
+    Keep what the scope table admits and the scanner would index (a supported
+    extension), and hand it to the scanner thread. The same two rules a scan applies, so
+    an image made here is in the catalog exactly when the next scan would have put it
+    there -- only sooner. Sidecars and other companions fall out at the extension test.
+*/
+    QStringList paths;
+    paths.swap(catalogCreatedPending);
+    paths.removeDuplicates();
+    if (!catalogScanner || catalogScope.isEmpty()) return;
+    if (!Catalog::instance().isAvailable()) return;
+
+    const QSet<QString> exts(metadata->supportedFormats.cbegin(),
+                             metadata->supportedFormats.cend());
+    QStringList admitted;
+    QHash<QString, bool> folderIn;
+    for (const QString &path : std::as_const(paths)) {
+        const QFileInfo fi(path);
+        if (!catalogCandidateName(fi.fileName(), exts)) continue;
+        const QString folder = fi.absolutePath();
+        auto it = folderIn.find(folder);
+        if (it == folderIn.end())
+            it = folderIn.insert(folder, isCatalogScopeFolder(folder));
+        if (it.value()) admitted << path;
+    }
+    if (admitted.isEmpty()) return;
+
+    if (G::isLogger)
+        G::log("MW::flushCatalogCreatedFiles", QString::number(admitted.size()));
+    QMetaObject::invokeMethod(catalogScanner, "indexFiles", Qt::QueuedConnection,
+                              Q_ARG(QStringList, admitted));
 }
 
 void MW::promptForCatalogScope()

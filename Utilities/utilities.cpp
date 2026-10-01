@@ -466,6 +466,7 @@ bool Utilities::backup(QString fPath, QString subfolderName)
                      "Utilities::backup", -1, companion);
         }
     }
+    FileOps::onCreated({backupPath});
     return true;
 }
 

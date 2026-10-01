@@ -141,6 +141,21 @@ public:
     static void onMoved(const QString &srcPath, const QString &dstPath);
     static void onDeleted(const QString &fPath);
 
+    /* NEW IMAGE FILES ON DISK -- an export, an ingest copy, a stacked or embellished
+       result. Call once the file is COMPLETE (metadata copied, sidecar written), since
+       what is notified may be indexed straight away. onCopied and onMoved call it for
+       their destination, so callers of those need not.
+
+       It exists so the catalog can take in an image Winnow itself just made in a
+       folder the scope table admits, instead of leaving it unsearchable until the next
+       scan. Any thread: the hook only queues the paths. See "New Files Join the
+       Catalog" in notes/Documentation.txt. */
+    static void onCreated(const QStringList &paths);
+
+    /* Set once at startup by MW, which owns the scope table. Must be safe to call from
+       any thread. Unset (unit tests), onCreated does nothing. */
+    static void setCreatedHook(std::function<void(const QStringList &)> hook);
+
     /* VERSION KEY GUARD. A DataModel row key for a version (path + "/#v" + id, see
        Utilities/versionkey.h) is not a file. Returns true, and raises G::issue, when
        path is one -- the caller must then refuse the operation. Every file entry point
@@ -166,6 +181,7 @@ public:
 private:
     static std::function<void()> flushHook;
     static std::function<bool(const QString &)> trashHook;
+    static std::function<void(const QStringList &)> createdHook;
     static bool moveOneToTrash(const QString &path);
 };
 

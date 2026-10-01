@@ -267,6 +267,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      Any or All Keywords (AND Within One Category)
      Searching Folders and Catalog (One Grammar)
      Cataloguing Designated Folders (the Scope Table Defines the Catalog; the Background Scanner Fills It)
+     New Files Join the Catalog (Export, Ingest, Stacks, Copies)
      Long Scans: Progress, Time Left, Resume, and Catalog Diagnostics
 
 
@@ -6624,6 +6625,27 @@ WHY IT SURVIVED. CatalogScanner appeared in tests/ only inside a comment, MW::st
 
 THE GUARD IS THE catalog_scan SMOKE TEST, which drives the scanner rather than checking the pointer: WINNOW_SELFTEST_CATALOG_SCAN=<folder> sets the scope to that one included folder and calls startCatalogScan, and the settle exit fails (code 6) unless CatalogScanner::finished arrived un-aborted with scanned > 0. It asserts `scanned`, NOT `indexed`: the scanner skips work already done (Catalog::staleOf) and the fixture folder has just been catalogued by the folder load in the same run, so a correct scan legitimately indexes nothing. Proved by reverting the one-line fix and watching it fail -- SEGFAULT, 17 s -- then restoring it.
 
+
+⏺ Keywords and Cataloguing > New Files Join the Catalog (Export, Ingest, Stacks, Copies)
+
+AN IMAGE WINNOW MAKES INSIDE THE CATALOG SCOPE IS CATALOGUED AT ONCE. Before this, an export into a library folder, an ingest onto the library drive or a focus stack written beside its sources sat outside search until the next scan -- and with the auto-scan throttled (G::autoScanCatalogMinutes), "the next scan" could be a long way off. The rule is unchanged: the scope table is definitive, and a new file is catalogued exactly when the next scan would have catalogued it. Only the timing moved.
+
+ONE NOTIFICATION, FileOps::onCreated(paths). Every producer calls it once the file is COMPLETE -- metadata copied, sidecar written -- because what it reports may be parsed within the second:
+  - Export (ImageExporter::onImageReady), which also carries Develop export and File > Save Preview as
+  - Embellish export (EmbelExport::exportImages, after ExifTool has copied tags, ICC and thumbnail)
+  - Ingest, both the background Ingest::run and IngestDlg::ingest -- primary and backup destinations, reported after the loop so every sidecar is already beside its image
+  - Focus stack results (FS, where G::fsFusedPaths is recorded) and the mean stack (Stack::mean)
+  - Utilities::backup -- a backup inside the scope is an image in the scope, and the scan would take it too
+  - FileOps::onCopied and FileOps::onMoved call it for their destination, so copy/paste, drag-copy onto a folder or bookmark, rename and moves are covered without their callers doing anything. A move whose row Catalog::onMoved already carried costs one stat and no parse: its stamps still match.
+Deliberately NOT reported: focus-stack intermediates and debug dumps, and the transient embellish thumbnails. They are working files, not results. (If they land inside the scope a scan will still find them -- that is a question about where they are written, not about this hook.)
+
+THE HOOK IS MW's, because MW owns catalogScope. FileOps::setCreatedHook is set in MW::createCatalogScanner and cleared in closeEvent. onCreated may run on any thread (Ingest::run is a QThread), so the hook only posts to the GUI thread, and it is called under a mutex so that once the clear returns nothing can still be reaching into MW. Unset (unit tests), onCreated is a no-op.
+
+BATCHED, FILTERED, THEN HANDED TO THE SCANNER THREAD. MW::catalogCreatedFiles collects paths for 500 ms, so an export of 300 files is one batch and one Library refresh rather than 300. MW::flushCatalogCreatedFiles keeps a path when its extension passes catalogCandidateName and its folder passes MW::isCatalogScopeFolder (the scan's two rules), and queues CatalogScanner::indexFiles. That slot is the scan's Indexing phase over a given list: stamp, Catalog::staleOf, parse what is stale, commit; an unparseable file gets the usual unreadable stub row. It is NOT a scan -- it does not set isRunning() or report progress -- and it waits behind a running scan on the same thread rather than racing it. It gives way to folder loads like the scan does, and stops for shutdown (its own closing flag; the scan's abort flag stays raised after a user Stop and would wrongly cancel it).
+
+THE LIBRARY REDRAWS when rows were written: CatalogScanner::filesIndexed drives the same refresh a finished scan does (Filter panel re-query, LibTree counts, Manage Catalog status if open). Nothing pops up -- the user just made these files.
+
+THE MIRROR CASE IS NOT IMMEDIATE: a catalogued image MOVED OUT of the scope keeps its row, because Catalog::onMoved rewrites the path wherever it lands. It leaves at the next scan, when MW::reconcileCatalogToScope forgets folders the table does not admit. Unchanged by this work.
 
 ⏺ Keywords and Cataloguing > Long Scans: Progress, Time Left, Resume, and Catalog Diagnostics
 

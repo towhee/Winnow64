@@ -399,6 +399,9 @@ void IngestDlg::ingest()
     QElapsedTimer t;
     qint64 bytesWritten = 0;
     t.restart();
+    /* Every image this run put on disk, for the catalog -- reported once the loop is
+       done, so each one's sidecars have been copied beside it. */
+    QStringList created;
     for (int i = 0; i < pickList.size(); ++i) {
         qint64 fileBytesToWrite = 0;
         int progress = (i + 1) * 100 * n / (pickList.size());
@@ -457,6 +460,7 @@ void IngestDlg::ingest()
         // copy source image to destination
         fileBytesToWrite += fileInfo.size();
         bool copyOk = QFile::copy(sourcePath, destinationPath);
+        if (copyOk) created << destinationPath;
 
         /* for demonstration:
         failedToCopy << thumbNum + sourcePath + " to " + destinationPath;
@@ -478,6 +482,7 @@ void IngestDlg::ingest()
         if(isBackup) {
             fileBytesToWrite += fileInfo.size();
             bool backupCopyOk = QFile::copy(sourcePath, backupPath);
+            if (backupCopyOk) created << backupPath;
             if (!backupCopyOk) {
                 qDebug() << "IngestDlg::ingest" << "Failed to copy" << sourcePath << "to" << backupPath;
                 failedToCopy << thumbNum + sourcePath + " to " + backupPath;
@@ -569,6 +574,8 @@ void IngestDlg::ingest()
              << "msec =" << t.elapsed()
                 ;
                 // */
+
+    FileOps::onCreated(created);
 
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();

@@ -1,4 +1,5 @@
 #include "stack.h"
+#include "Utilities/fileops.h"
 
 Stack::Stack(QStringList &selection,
              DataModel *dm,
@@ -183,6 +184,7 @@ QString Stack::mean()
         et.addThumb(src, dst);
         QVariant ret = et.close();
         qDebug() << "Stack::mean" << "et exit code =" << ret;
+        FileOps::onCreated({newFilePath});
 
         G::popup->setProgressVisible(false);
         G::popup->reset();

@@ -525,6 +525,26 @@ void MW::createCatalogScanner()
 
     catalogScanner = new CatalogScanner;
 
+    /* Images Winnow creates in the catalog scope are indexed as they appear, not at the
+       next scan. See MW::catalogCreatedFiles. */
+    FileOps::setCreatedHook([this](const QStringList &paths) {
+        catalogCreatedFiles(paths);
+    });
+    connect(catalogScanner, &CatalogScanner::filesIndexed, this, [this](int indexed) {
+        IngestProbe::Scope _ip("catalogScanner::filesIndexed");
+        if (!indexed) return;
+        /* The same redraw a finished scan does: the Library re-queries and reloads only
+           if its result moved, and the tree's folder counts follow. */
+        if (catalogView && catalogDock && catalogDock->isVisible())
+            catalogView->refresh();
+        if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
+        updateLibraryTree();
+        if (catalogRootsDlg) {
+            catalogRootsDlg->setCatalogStatus(catalogStatusText());
+            updateCatalogCounts();
+        }
+    }, Qt::QueuedConnection);
+
     connect(catalogScanner, &CatalogScanner::progress, this,
             [this](const CatalogScanProgress &p) {
         /*  A lambda with MW as its context object is a QEvent::MetaCall ON MW, exactly
