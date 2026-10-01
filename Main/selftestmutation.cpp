@@ -373,6 +373,12 @@ void MW::selfTestModelMutation(const QString &folder)
     const QString m3 = path("sample016.jpg");
     const QString m3v1 = VersionKey::make(m3, 1);
     if (!FileOps::moveFile(m2, m3)) fail("rename master", "could not move the file");
+    /*  The thumbnails must follow the re-key: the icon store is keyed by path, and a
+        re-key that left them under the old one showed a blank cell for good. */
+    const bool hadIcon = !dm->index(dm->rowFromKey(m2), 0)
+                              .data(Qt::DecorationRole).isNull();
+    const bool hadVersionIcon = !dm->index(dm->rowFromKey(m2v1), 0)
+                                     .data(Qt::DecorationRole).isNull();
     {
         const int row = dm->rowFromKey(m2);
         dm->fPathRow.remove(m2);
@@ -387,6 +393,13 @@ void MW::selfTestModelMutation(const QString &folder)
         fail("rename master", "the version did not travel with the sidecar");
     if (dm->index(dm->rowFromKey(m3v1), G::RatingColumn).data().toString() != "3")
         fail("rename master", "the version row lost its own values");
+    if (hadIcon && dm->index(dm->rowFromKey(m3), 0).data(Qt::DecorationRole).isNull())
+        fail("rename master", "the thumbnail stayed under the old path");
+    if (hadVersionIcon
+        && dm->index(dm->rowFromKey(m3v1), 0).data(Qt::DecorationRole).isNull())
+        fail("rename master", "the version's thumbnail stayed under the old key");
+    if (!hadIcon)
+        qDebug().noquote() << "SELFTEST: rename master: no thumbnail loaded, icon check skipped";
 
     /*  V14 Deleting a selected VERSION removes its record, never the image file. */
     deleteVersionRecords({m3v1}, /*confirm*/false);

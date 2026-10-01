@@ -3,6 +3,7 @@
 #include "ui_renamefiledlg.h"
 #include "Main/global.h"
 #include "Utilities/tokenfilename.h"
+#include "Utilities/htmlwindow.h"
 #include <cerrno>
 #include <cstring>
 #ifdef Q_OS_MAC
@@ -111,11 +112,30 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     // The dialog has no top-level layout, so sizeHint() underestimates the
     // geometry-rect height (Qt then opens shorter than the .ui declares).
     // Pin the height explicitly in both branches.
-    const int fullHeight = 440;
-    const int shift = 125;  // templateGroupBox y=135 → 10 when simple is hidden
+    const int fullHeight = 483;
+    const int shift = 168;  // templateGroupBox y=178 → 10 when simple is hidden
     if (selection.count() == 1) {
         QFileInfo info(selection.at(0));
         ui->manualRenameEdit->setText(info.baseName());
+
+        /* "Only rename the selected file" is off by default: the whole base-name group
+           (x.tif, x.jpg, x.arw, x.xmp) renames together, as it always has. In a
+           combined raw+JPG view the pair is ONE thumbnail, so renaming one half would
+           leave the hidden other half behind under the old name -- disable, and say
+           why. Explicitly disabled, it stays off when the group box is re-enabled. */
+        ui->onlySelectedChk->setChecked(false);
+        const int row = dm->fPathRow.value(selection.at(0), -1);
+        const bool isCombinedPair = G::combineRawJpg && row >= 0
+            && dm->index(row, G::PathColumn).data(G::DupOtherIdxRole).isValid();
+        if (isCombinedPair) {
+            ui->onlySelectedChk->setEnabled(false);
+            ui->onlySelectedChk->setText("Only rename the selected file: off while "
+                                         "Raw+JPG are combined");
+            ui->onlySelectedChk->setToolTip(
+                "This image is a combined raw+JPG pair, shown as one thumbnail.\n"
+                "Renaming one half would leave the hidden other half under the old "
+                "name.\nTurn off Combine Raw+Jpg to rename one file alone.");
+        }
         // Default: template active, simple grayed out.
         ui->simpleRenameChk->setChecked(false);
         ui->templateRenameChk->setChecked(true);
@@ -157,6 +177,8 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
 
         setFixedHeight(fullHeight - shift);
     }
+
+    ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
 
     // initialize templates and tokens
     initTokenList();
@@ -943,6 +965,7 @@ bool RenameFileDlg::renameSingleManual(const QString &newBase)
                 QString::fromLocal8Bit(std::strerror(errno)));
             return false;
         }
+        FileOps::onMoved(oldPath, newPath);
         if (dm->fPathRow.contains(oldPath)) {
             renameDatamodel(oldPath, newPath, newName);
         }
@@ -961,6 +984,87 @@ bool RenameFileDlg::renameSingleManual(const QString &newBase)
     return true;
 }
 
+bool RenameFileDlg::renameOnlySelected(const QString &newBase)
+{
+/*
+    Simple rename with "Only rename the selected file": the image and the sidecars it
+    OWNS, not every file sharing its base name. Renaming x.tif leaves x.jpg, x.arw and
+    the raw's x.xmp where they are.
+
+    Ownership is FileOps::companions -- the one rule move, copy, ingest and trash
+    already use (see "Sidecar Naming" in notes/Documentation.txt): raw and HEIC own
+    x.xmp; JPEG, TIFF, PNG and DNG own x.tif.xmp, and x.xmp only when no other image
+    shares the base name. Each companion's new name comes from FileOps::companionDest,
+    so x.tif.xmp becomes y.tif.xmp and a raw's x.xmp becomes y.xmp.
+
+    Not FileOps::moveFile: it deletes an existing destination first, and in a
+    case-only rename (x.tif -> X.tif) on a case-insensitive volume the destination
+    IS the source.
+*/
+    if (selection.isEmpty()) return false;
+    const QString src = selection.at(0);
+    const QFileInfo si(src);
+    if (newBase == si.baseName()) return true;     // nothing to do
+    const QString dst = si.dir().absoluteFilePath(newBase + "." + si.completeSuffix());
+
+    /* A tif/jpg still reading an old base-name x.xmp takes it to its full-name x.tif.xmp
+       first -- moved when the image is alone, copied when another image may read it.
+       That is what its next edit would do anyway. Without it the rename would carry
+       x.xmp to y.xmp, where a y.arw would claim it. */
+    FileOps::prepareSidecarForWrite(src);
+    const QStringList comps = FileOps::companions(src);
+
+    // refuse if any destination exists (a case-only change is not a clash)
+    auto clash = [](const QString &from, const QString &to) {
+        return QFileInfo::exists(to) && from.compare(to, Qt::CaseInsensitive) != 0;
+    };
+    QStringList clashes;
+    if (clash(src, dst)) clashes << QFileInfo(dst).fileName();
+    for (const QString &c : comps) {
+        const QString d = FileOps::companionDest(c, src, dst);
+        if (clash(c, d)) clashes << QFileInfo(d).fileName();
+    }
+    if (!clashes.isEmpty()) {
+        QMessageBox::warning(this, "Name conflict",
+            "These files already exist:<br><br><b>" + formatNameList(clashes) +
+            "</b><br><br>Choose a different name.");
+        return false;
+    }
+
+    errno = 0;
+    if (std::rename(src.toUtf8().constData(), dst.toUtf8().constData()) != 0) {
+        QMessageBox::warning(this, "Rename failed",
+            "Could not rename <b>" + si.fileName() + "</b>:<br><br>" +
+            QString::fromLocal8Bit(std::strerror(errno)));
+        return false;
+    }
+    QStringList failed;
+    for (const QString &c : comps) {
+        const QString d = FileOps::companionDest(c, src, dst);
+        if (std::rename(c.toUtf8().constData(), d.toUtf8().constData()) != 0)
+            failed << QFileInfo(c).fileName();
+    }
+    FileOps::onMoved(src, dst);
+    if (dm->fPathRow.contains(src)) renameDatamodel(src, dst, QFileInfo(dst).fileName());
+    dm->currentKey = dm->currentSfIdx.data(G::KeyRole).toString();
+
+    if (!failed.isEmpty()) {
+        QMessageBox::warning(this, "Sidecar not renamed",
+            "The image was renamed, but these sidecar file(s) could not be:<br><br><b>" +
+            formatNameList(failed) + "</b><br><br>They still have the old name, so the "
+            "renamed image will not see the settings they hold.");
+    }
+    return true;
+}
+
+void RenameFileDlg::on_helpBtn_clicked()
+{
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Renaming Images",
+                   ":/Docs/renamehelp.html",
+                   QSize(800, 700), r, this);
+}
+
 void RenameFileDlg::on_okBtn_clicked()
 {
     // Manual rename is only chosen when a single file is selected AND the
@@ -977,7 +1081,9 @@ void RenameFileDlg::on_okBtn_clicked()
             accept();  // no-op: user didn't change the name
             return;
         }
-        if (!renameSingleManual(typed)) return;  // conflict, stay open
+        const bool ok = ui->onlySelectedChk->isChecked() ? renameOnlySelected(typed)
+                                                         : renameSingleManual(typed);
+        if (!ok) return;  // conflict, stay open
         accept();
         return;
     }
