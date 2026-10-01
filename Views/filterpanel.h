@@ -128,6 +128,13 @@ signals:
     /*  A search finished and loads nothing (empty, over the auto-load cap, or
         unchanged): MW lifts the load cover entering the Library raised. */
     void searchNotLoaded();
+    /*  An UNASKED re-run (a scan or Winnow's own export / ingest catalogued a few files)
+        found the loaded result grown or shrunk by these paths. MW splices them into the
+        loaded model instead of reloading it, so the view, selection and filters stay put.
+        rows/query are the whole new result, for MW to fall back on a full load when the
+        model is not the one this panel loaded. See applySearchResult. */
+    void resultsDelta(const QVector<CatalogRow> &rows, const QStringList &added,
+                      const QStringList &removed, const CatalogQuery &query);
     /* Back in Folders scope: the tree is holding the CATALOG's values and must be rebuilt
        from the datamodel. Only MW knows whether the model is ready for that, so it owns
        the rebuild (buildFiltersWhenModelReady) and this only asks. */
@@ -190,6 +197,12 @@ private:
     quint64 searchGen = 0;
     quint64 appliedGen = 0;
     bool forcePending = false;
+    /* The last applied result was handed to MW to load (loadResults), so the model holds
+       it and a later small change can be spliced rather than reloaded. */
+    bool resultLoaded = false;
+    /* Above this many added + removed paths a delta is a reload after all: the splice
+       reads each added file synchronously on the GUI thread (MW::applyModelChange). */
+    static constexpr int kMaxSpliceDelta = 200;
     bool searchPending() const { return searchGen != appliedGen; }
     void applySearchResult(quint64 gen, const QVector<CatalogRow> &rows, int total,
                            const QStringList &paths, const CatalogQuery &q, qint64 queryMs);

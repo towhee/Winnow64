@@ -166,6 +166,16 @@ void MW::createFileActions()
     addAction(saveAsFileAction);
     connect(saveAsFileAction, &QAction::triggered, this, &MW::saveAsFile);
 
+    /* File menu / thumbnail context menu twin of developExportAction. That one is greyed
+       outside Develop mode and labelled "X", which is Reject there; this one has no key
+       and stays enabled, since the export renders each image's STORED recipe
+       (stackJobFor) and does not need the Develop session. */
+    exportDevelopedAction = new QAction(tr("Export Developed Images..."), this);
+    exportDevelopedAction->setObjectName("exportDeveloped");
+    exportDevelopedAction->setShortcutVisibleInContextMenu(true);
+    addAction(exportDevelopedAction);
+    connect(exportDevelopedAction, &QAction::triggered, this, &MW::developExport);
+
     revealFileAction = new QAction(revealText, this);
     revealFileAction->setObjectName("openInFinder");
     revealFileAction->setShortcutVisibleInContextMenu(true);
@@ -2509,6 +2519,7 @@ void MW::createFileMenu()
     fileMenu->addSeparator();
     fileMenu->addAction(renameAction);
     fileMenu->addAction(saveAsFileAction);
+    fileMenu->addAction(exportDevelopedAction);
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
     //    fileMenu->addAction(mediaReadSpeedAction);
@@ -3293,6 +3304,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
     thumbViewActions->append(saveAsFileAction);
+    thumbViewActions->append(exportDevelopedAction);
 
     thumbViewActions->append(separatorAction8);
     thumbViewActions->append(renameAction);

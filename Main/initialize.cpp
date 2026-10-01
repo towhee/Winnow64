@@ -2068,6 +2068,7 @@ void MW::createFilterDock()
         filterPanel = new FilterPanel(filters);
         filterLayout->addWidget(filterPanel);
         connect(filterPanel, &FilterPanel::loadResults, this, &MW::loadCatalogRows);
+        connect(filterPanel, &FilterPanel::resultsDelta, this, &MW::applyCatalogDelta);
         /*  No load is coming, so nothing else would lift the cover MW::setScope raised
             on entering the Library. A no-op when no cover is up. */
         connect(filterPanel, &FilterPanel::searchNotLoaded, this, [this]{

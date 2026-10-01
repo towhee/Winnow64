@@ -482,6 +482,15 @@ QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &option
     if (symbol == "Lock") return lockRect.translated(origin);
     if (symbol == "CombineRawJpg") return combineRawJpgRect.translated(origin);
     if (symbol == "Cache") return cacheRect.translated(origin);
+    if (symbol == "IconNumber") {
+        // Mirrors the icon number badge in paint()
+        QFont numberFont = QApplication::font();
+        numberFont.setPixelSize(qMax(6, iconNumberSize));
+        numberFont.setBold(true);
+        QFontMetrics fm(numberFont);
+        int numberWidth = fm.boundingRect(QString::number(index.row() + 1)).width() + 4;
+        return QRect(frameRect.left(), frameRect.top(), numberWidth + 4, iconNumberSize);
+    }
 
     // 2. Dynamic Symbols (Calculated based on Row Data)
     if (symbol == "Duration" || symbol == "Rating") {
@@ -559,6 +568,18 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     bool cacheVisible = !isCached && !isVideo && metaLoaded && !G::isSlideShow &&
                         G::operationMode != G::OperationMode::Develop;
     bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
+    bool durationVisible = isVideo && G::renderVideoThumb;
+    const int avail = sf->index(row, G::AvailabilityColumn).data().toInt();
+    bool availVisible = avail != 0 && !G::isSlideShow;
+    QString colorClass = sf->index(row, G::LabelColumn).data(Qt::EditRole).toString();
+    bool labelVisible = isRatingBadgeVisible && G::labelColors.contains(colorClass);
+    QString pickStatus = sf->index(row, G::PickColumn).data(Qt::EditRole).toString();
+    bool isIngested = sf->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
+
+    auto hit = [&](const char *symbol, int margin = 0) {
+        return getSymbolRect(symbol, option.rect, index)
+            .adjusted(-margin, -margin, margin, margin).contains(viewPos);
+    };
 
     const QString vText = versionBadgeText(index);
     const int versionId = sf->index(row, 0).data(G::VersionIdRole).toInt();
@@ -575,34 +596,47 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
                       + QString::number(sf->index(row, 0).data(G::VersionCountRole).toInt())
                       + " version(s) besides the original.\nClick to show or hide them.";
     }
-    else if (developVisible && getSymbolRect("Develop", option.rect, index).contains(viewPos))
+    /*  ONE if-else chain: a hit earlier in the chain must not be overwritten by the
+        Thumb / Borders fallbacks at the end (the Develop and Versions tooltips never
+        showed because they sat in a separate chain). The 6px status dots get a 2px
+        margin so they are hittable. */
+    else if (developVisible && hit("Develop", 2))
         tooltip = "Image has develop edits";
-
     /*  The reason, inline, where the user is already looking -- never a popup. */
-    const int avail = sf->index(row, G::AvailabilityColumn).data().toInt();
-    if (avail != 0 && getSymbolRect("Availability", option.rect, index).contains(viewPos))
+    else if (availVisible && hit("Availability", 2))
         tooltip = avail == 1
                       ? "Offline: this image is on a volume that is not mounted.\n"
                         "Reconnect the drive to open it."
                       : "Missing: this file was not found where the catalog "
                         "expects it.\nIt may have been moved or deleted "
                         "outside Winnow.";
-    else if (sidecarVisible && getSymbolRect("Sidecar", option.rect, index).contains(viewPos))
+    else if (sidecarVisible && hit("Sidecar", 2))
         tooltip = "Image has a sidecar file";
-    else if (lockVisible && getSymbolRect("Lock", option.rect, index).contains(viewPos))
+    else if (lockVisible && hit("Lock"))
         tooltip = "Image file is locked";
-    else if (combineRawJpgVisible && getSymbolRect("CombineRawJpg", option.rect, index).contains(viewPos))
+    else if (combineRawJpgVisible && hit("CombineRawJpg"))
         tooltip = "Image is JPG version of a RAW+JPG pair";
-    else if (cacheVisible && getSymbolRect("Cache", option.rect, index).contains(viewPos))
+    else if (cacheVisible && hit("Cache", 2))
         tooltip = "Image file is not cached";
-    else if (ratingVisible && getSymbolRect("Rating", option.rect, index).contains(viewPos))
-        tooltip = "Rating";
-    else if (getSymbolRect("Duration", option.rect, index).contains(viewPos))
-        tooltip = "Video Duration";
-    else if (getSymbolRect("Thumb", option.rect, index).contains(viewPos))
+    else if (ratingVisible && hit("Rating"))
+        tooltip = "Rating: " + rating + (rating == "1" ? " star" : " stars");
+    else if (durationVisible && hit("Duration"))
+        tooltip = "Video duration";
+    else if (isIconNumberVisible && hit("IconNumber"))
+        tooltip = "Position " + QString::number(index.row() + 1)
+                  + " in the current sort and filter";
+    else if (hit("Thumb")) {
         tooltip = sf->index(row, 0).data(G::SourcePathRole).toString();
-    else
+        // The pick border is drawn on the thumbnail's edge, so its meaning goes here
+        if (pickStatus == "Picked") tooltip += "\nGreen border: picked";
+        else if (isIngested) tooltip += "\nBlue border: ingested";
+        else if (pickStatus == "Rejected") tooltip += "\nRed border: rejected";
+    }
+    else {
         tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
+        if (labelVisible)
+            tooltip = "Colour label: " + colorClass + "\n\n" + tooltip;
+    }
 
     if (!tooltip.isEmpty()) {
         showDockToolTip(event->globalPos(), tooltip, view);
