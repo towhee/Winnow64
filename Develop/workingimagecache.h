@@ -76,6 +76,13 @@ public:
        Setting a smaller budget evicts immediately. */
     void setMaxBytes(qint64 bytes);
     qint64 maxBytes() const;
+
+    /* Never evict this image (empty = no pin). MW pins the image open in Develop, so a
+       background render of ANOTHER image -- the devPreview builder, an export -- cannot
+       push the edit session's base out: on a large raw one decode alone exceeds the
+       budget, and the LRU rule below protects only the most recent put, which is then the
+       OTHER image. Losing the base costs the next slider tick a full re-decode. */
+    void setPinned(const QString &fPath);
     qint64 currentBytes() const;
     int count() const;
 
@@ -285,6 +292,7 @@ private:
     QList<QString> lru;                  // front = least-recently-used, back = most-recent
     qint64 totalBytes = 0;
     qint64 budget = kDefaultMaxBytes;
+    QString pinned;                      // source path never evicted (see setPinned)
     bool enabled = true;
 };
 

@@ -1072,7 +1072,11 @@ private slots:
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
        are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
     void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
-                               bool faithful, const QByteArray &recipe);
+                               bool faithful, const QByteArray &recipe,
+                               const Geometry &appliedGeom);
+    /* The geometry a render started now would apply (stored, crop suppressed while the
+       crop tool edits). Full-res completions compare against it. */
+    Geometry developRenderGeometry() const;
     /* Global image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
        the Global scope has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
        clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
@@ -2208,6 +2212,9 @@ private:
     void updateDevPreviewBuildProgress();
     QStringList devPreviewBuildQueue;
     QString devPreviewBuildCurrent;      // the render in flight; not abortable
+    /* Queued by a multi-image edit (src "sync"): the only paths the builder renders while
+       Develop is open. See devPreviewBuildNext. */
+    QSet<QString> devPreviewBuildSyncPaths;
     int devPreviewBuildTotal = 0;        // 0 = no build running
     int devPreviewBuildDone = 0;
     bool devPreviewBuildCancelled = false;

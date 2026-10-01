@@ -7236,6 +7236,13 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
         QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
         reloadIconChunk();
     }
+
+    /* A multi-image edit target (the usual null-thumb case): render its preview properly,
+       in the background, so the grid shows the edit instead of the camera thumbnail. The
+       builder renders these -- and only these -- while Develop is open. */
+    if (thumb.isNull() && !blob.isEmpty() && fPath != dm->currentKey
+        && G::operationMode == G::OperationMode::Develop)
+        buildDevPreviews(QStringList(fPath), "sync");
 }
 
 void MW::updateCatalogForRow(int dmRow)
@@ -11585,6 +11592,20 @@ void MW::syncPendingMaskOp()
     developProperties->setPendingMaskOp(DevelopProperties::maskOpFromModifiers());
 }
 
+/* Do two geometries render the same frame? Shared by the proxy path (developProxyGeomGen)
+   and the full-res settle path (onDevelopFullResReady), which must agree on what "the
+   geometry moved" means. */
+static bool sameDevelopGeometry(const Geometry &a, const Geometry &b)
+{
+    if (a.cropX != b.cropX || a.cropY != b.cropY ||
+        a.cropW != b.cropW || a.cropH != b.cropH ||
+        a.straighten != b.straighten || a.hasWarp != b.hasWarp ||
+        a.show != b.show) return false;
+    if (a.hasWarp)
+        for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
+    return true;
+}
+
 void MW::renderDevelopPreview(bool fullRes)
 {
 /*
@@ -11606,6 +11627,9 @@ void MW::renderDevelopPreview(bool fullRes)
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
+    /* Keep this image's base resident while background renders decode others (see
+       WorkingImageCache::setPinned). Cleared on leaving Develop. */
+    WorkingImageCache::instance().setPinned(fPath);
 
     auto mj = developProperties->stackJob();   // full scope stack (independent of active scope)
     /* While the crop tool is active, suppress only the CROP (the overlay sets it, applied on commit)
@@ -11759,16 +11783,7 @@ void MW::renderDevelopPreview(bool fullRes)
     const quint64 reqGen = ++developProxyReqGen;
     /* Bump only when the geometry actually MOVES, so a frame superseded by later requests
        that share its geometry is still safe to show (see developProxyGeomGen). */
-    auto sameGeom = [](const Geometry &a, const Geometry &b) {
-        if (a.cropX != b.cropX || a.cropY != b.cropY ||
-            a.cropW != b.cropW || a.cropH != b.cropH ||
-            a.straighten != b.straighten || a.hasWarp != b.hasWarp ||
-            a.show != b.show) return false;
-        if (a.hasWarp)
-            for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
-        return true;
-    };
-    if (!developProxyHaveLastGeom || !sameGeom(mj.geometry, developProxyLastGeom)) {
+    if (!developProxyHaveLastGeom || !sameDevelopGeometry(mj.geometry, developProxyLastGeom)) {
         developProxyLastGeom = mj.geometry;
         developProxyHaveLastGeom = true;
         ++developProxyGeomGen;
@@ -12225,8 +12240,10 @@ void MW::renderDevelopFullResAsync()
         const bool vRecipeIdentity = mj.global.isIdentity() && mj.scopes.isEmpty();
         const bool vGeometryActive = !mj.geometry.isIdentity();
 
+        const Geometry appliedGeom = mj.geometry;
         QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt, faithful, recipe,
-                                         vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive]() {
+                                         vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive,
+                                         appliedGeom]() {
             if (G::isReportDevelopTime)
                 qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
                                    << " total" << ms
@@ -12257,7 +12274,7 @@ void MW::renderDevelopFullResAsync()
                 developVerifyGeometryActive = vGeometryActive;
                 developVerifyPath = fPath;
             }
-            onDevelopFullResReady(out, fPath, gen, faithful, recipe);
+            onDevelopFullResReady(out, fPath, gen, faithful, recipe, appliedGeom);
         });
     });
 }
@@ -12347,10 +12364,7 @@ void MW::pushDevelopGeometryToView()
     auto work = WorkingImageCache::instance().get(fPath);
     if (!work) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
 
-    Geometry g = developProperties->stackJob().geometry;
-    if (developCropEditing && !developCropShowResult) {
-        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
-    }
+    const Geometry g = developRenderGeometry();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     int fw = work->width, fh = work->height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
@@ -12399,8 +12413,23 @@ void MW::updateDevelopRenderingHint()
     }
 }
 
+Geometry MW::developRenderGeometry() const
+{
+/*
+    The geometry a render started NOW would apply: the stored geometry with the crop
+    suppressed while the crop tool is editing (see renderDevelopPreview).
+*/
+    if (!developProperties) return Geometry();
+    Geometry g = developProperties->stackJob().geometry;
+    if (developCropEditing && !developCropShowResult) {
+        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
+    }
+    return g;
+}
+
 void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
-                               bool faithful, const QByteArray &recipe)
+                               bool faithful, const QByteArray &recipe,
+                               const Geometry &appliedGeom)
 {
 /*
     GUI-thread completion for a background full-res render. Apply the image only if it is still
@@ -12422,9 +12451,17 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
     updateDevelopRenderingHint();
 
     const bool currentImage = (fPath == dm->currentKey);
-    if (!out.isNull() && currentImage && gen == developParamsGen) {
-        /* gen unchanged => the recipe (and its geometry) is still the one this render
-           used, so the current state is the right pairing for the overlays. */
+    /* gen alone is not enough: crop / warp / level commits re-render WITHOUT bumping
+       developParamsGen. A settle render launched while the crop tool was open (crop
+       suppressed) and landing after the commit passed the gen test and painted the
+       UNCROPPED full frame over the cropped proxy -- and, gen being unchanged, never
+       re-armed. Intermittent, because it needs the commit inside the settle + render
+       window. So the geometry this frame was rendered with must still be the one a render
+       would use now. */
+    const bool geomCurrent = sameDevelopGeometry(appliedGeom, developRenderGeometry());
+    if (!out.isNull() && currentImage && gen == developParamsGen && geomCurrent) {
+        /* gen and geometry unchanged => the recipe is still the one this render used, so
+           the current state is the right pairing for the overlays. */
         pushDevelopGeometryToView();
         imageView->setDevelopPreview(out);
         updateDevelopScopes(out);
@@ -12434,7 +12471,7 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
         developFullFrameRecipe = recipe;
     }
 
-    if (currentImage && gen != developParamsGen)
+    if (currentImage && (gen != developParamsGen || !geomCurrent))
         developFullResTimer->start(kDevelopSettleMs);
 }
 

@@ -9,6 +9,8 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
+- /Users/roryhill/Photos/2000-2009/2005/200505/20050514_PNW trip/2005-05-19_0003.NEF
+  rendering sucks.
 - Fine-tune keywords managing
 - What is the catalog panel?
 - Download models JIT

@@ -91,10 +91,17 @@ void MW::buildDevPreviews(const QStringList &paths, const QString &src)
 
     QVector<QPair<QString, QString>> candidates;     // path + the key it should carry
     candidates.reserve(paths.count());
+    const bool sync = (src == "sync");
     for (const QString &fPath : paths) {
         if (fPath.isEmpty()) continue;
-        if (devPreviewBuildQueue.contains(fPath)) continue;
-        if (fPath == devPreviewBuildCurrent) continue;
+        if (devPreviewBuildQueue.contains(fPath)) {
+            if (sync) devPreviewBuildSyncPaths.insert(fPath);
+            continue;
+        }
+        /* The in-flight render depicts the recipe it was dispatched with. A multi-image
+           edit has just moved that recipe, so the render will be dropped by its key check
+           -- queue the new one behind it, or the thumbnail is never rebuilt. */
+        if (fPath == devPreviewBuildCurrent && !sync) continue;
         const QString key = devPreviewBuildKey(fPath);
         if (key.isEmpty()) continue;                 // nothing to depict for this file
         candidates.append({fPath, key});
@@ -137,12 +144,21 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
                                 2000);
         return;
     }
+    const bool sync = (src == "sync");
     for (const QString &fPath : paths) {
+        if (sync) devPreviewBuildSyncPaths.insert(fPath);
         if (devPreviewBuildQueue.contains(fPath)) continue;
-        if (fPath == devPreviewBuildCurrent) continue;
+        if (fPath == devPreviewBuildCurrent && !sync) continue;
         devPreviewBuildQueue.append(fPath);
     }
     if (devPreviewBuildQueue.isEmpty()) return;
+    /* A run is already going: it picks the new paths up in turn. Restarting it here would
+       dispatch a second render beside the one in flight. */
+    if (devPreviewBuildTotal > 0 && !devPreviewBuildCurrent.isEmpty()) {
+        devPreviewBuildTotal = devPreviewBuildQueue.count() + devPreviewBuildDone + 1;
+        updateDevPreviewBuildProgress();
+        return;
+    }
 
     devPreviewBuildTotal = devPreviewBuildQueue.count() + devPreviewBuildDone;
     devPreviewBuildFromMenu = (src == "menu");
@@ -206,14 +222,34 @@ void MW::devPreviewBuildNext()
         devPreviewBuildFinish();
         return;
     }
-    /* Developing an image is a live edit session on the same path-keyed caches this
-       render would touch, and the user's own render must win. Wait, don't interleave. */
+    /* IN DEVELOP, ONLY MULTI-IMAGE EDIT TARGETS. A develop edit made with several images
+       selected lands on images that have no render in memory, so without this their
+       thumbnails fall back to the camera's until the user leaves Develop. Those few are
+       rendered now; everything else (a background build of the whole folder, a menu
+       build) waits, because developRenderPool has ONE thread and every one of those
+       renders would sit in front of the user's own settle render.
+
+       Never the image being edited: its previews come from the live render (the flush
+       provider), and its path-keyed caches belong to the edit session. Its working image
+       is pinned in WorkingImageCache (renderDevelopPreview), so decoding a target here
+       cannot evict it. */
     if (G::operationMode == G::OperationMode::Develop) {
-        devPreviewBuildFinish("paused while you are in Develop mode");
-        return;
+        const QString editing = dm ? dm->currentKey : QString();
+        QStringList keep;
+        for (const QString &p : std::as_const(devPreviewBuildQueue))
+            if (devPreviewBuildSyncPaths.contains(p) && p != editing) keep << p;
+        if (keep.count() != devPreviewBuildQueue.count()) {
+            devPreviewBuildTotal -= devPreviewBuildQueue.count() - keep.count();
+            devPreviewBuildQueue = keep;
+        }
+        if (devPreviewBuildQueue.isEmpty()) {
+            devPreviewBuildFinish("paused while you are in Develop mode");
+            return;
+        }
     }
 
     devPreviewBuildCurrent = devPreviewBuildQueue.takeFirst();
+    devPreviewBuildSyncPaths.remove(devPreviewBuildCurrent);
     const QString fPath = devPreviewBuildCurrent;
     /* The key this render is ABOUT to depict, captured before it starts. devPreviewStore
        re-derives it on the way out and writes only if the two agree, so an edit made while
@@ -422,6 +458,7 @@ void MW::devPreviewBuildFinish(const QString &reason)
 
     devPreviewBuildQueue.clear();
     devPreviewBuildCurrent.clear();
+    devPreviewBuildSyncPaths.clear();
     devPreviewBuildTotal = 0;
     devPreviewBuildDone = 0;
     devPreviewBuildCancelled = false;
