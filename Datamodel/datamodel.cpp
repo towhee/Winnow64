@@ -1,5 +1,4 @@
 #include "Datamodel/datamodel.h"
-#include "Main/wfprobe.h"     // WFPROBE
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Datamodel/variantless.h"
@@ -4839,12 +4838,6 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
         icon is not on the item any more and a covered column may not create one
         at all, so a null item here would have silently dropped the thumbnail.
         dmIdx.isValid() is the question that was actually being asked. */
-    if (WfProbe::clock().isValid())                                     // WFPROBE
-        WfProbe::mark(QString("VIDEO ICON SET setIconFromVideoFrame dmRow=%1 %2 (%3)")
-                          .arg(dmRow)
-                          .arg(index(dmRow, 0).data(G::KeyRole).toString().section('/', -1))
-                          .arg(data(dmIdx, Qt::DecorationRole).isNull()
-                                   ? "was blank" : "already had one, ignored"));
     if (dmIdx.isValid() && data(dmIdx, Qt::DecorationRole).isNull()) {
         /*  BLOCKED AND EMITTED ONCE, the pattern setIcon1, setIcon, setValDm and setValSf
             all use. The braces were already here with nothing in them -- the shape was
@@ -5085,7 +5078,6 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         way. Removals are rare -- a repair or an insert -- so the exact O(span) recount is
         affordable here and cannot drift. */
     if (pm.isNull()) {
-        WfProbe::videoIconCleared(this, dmIdx.row(), "setIcon(null pixmap)");  // WFPROBE
         {
             const QSignalBlocker blocker(this);
             setData(dmIdx, QVariant(), Qt::DecorationRole);
@@ -5180,7 +5172,6 @@ void DataModel::clearDevelopIcon(int dmRow)
 
     QModelIndex dmIdx = index(dmRow, 0);
     if (!dmIdx.isValid()) return;
-    WfProbe::videoIconCleared(this, dmRow, "clearDevelopIcon");       // WFPROBE
     {
         const QSignalBlocker blocker(this);
         setData(dmIdx, QVariant(), Qt::DecorationRole);
@@ -5753,7 +5744,6 @@ void DataModel::evictHiddenIcons()
     {
         const QSignalBlocker blocker(this);
         for (int row : hidden) {
-            WfProbe::videoIconCleared(this, row, "evictHiddenIcons");   // WFPROBE
             setData(index(row, 0), QVariant(), Qt::DecorationRole);
             setData(index(row, G::IconLoadedColumn), false);
         }
@@ -5829,8 +5819,6 @@ void DataModel::clearIconsOutsideChunkRange(int instance)
         const QModelIndex sfIdx = sf->index(sfRow, 0);
         if (sfIdx.data(Qt::DecorationRole).isNull()) return;
         const QModelIndex dmIdx = sf->mapToSource(sfIdx);
-        if (dmIdx.isValid())                                            // WFPROBE
-            WfProbe::videoIconCleared(this, dmIdx.row(), "clearIconsOutsideChunkRange");
         {
             const QSignalBlocker blocker(this);
             sf->setData(sfIdx, QVariant(), Qt::DecorationRole);

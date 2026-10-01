@@ -1,6 +1,5 @@
 #include "Main/mainwindow.h"
 #include "Utilities/panelprobe.h"
-#include "Main/wfprobe.h"     // WFPROBE
 
 /*  *******************************************************************************************
 
@@ -172,18 +171,9 @@ void MW::invokeWorkspace(const WorkspaceData &w)
             w->setUpdatesEnabled(true);
             QCoreApplication::postEvent(w, new QEvent(QEvent::UpdateRequest),
                                         Qt::LowEventPriority);
-            WfProbe::mark("invokeWorkspace paint hold released");      // WFPROBE
         }
     } paintHold(this);
 
-    // WFPROBE: the sort a workspace carries is applied below -- is that the File Name reset?
-    WfProbe::mark("invokeWorkspace enter " + WfProbe::cur(dm));        // WFPROBE
-    WfProbe::mark(QString("invokeWorkspace \"%1\" enter: current sortColumn=%2 reverse=%3"
-                          " | workspace sortColumn=%4 reverse=%5 view L/G/T/C=%6%7%8%9")
-                      .arg(w.name).arg(sortColumn).arg(isReverseSort)
-                      .arg(w.sortColumn).arg(w.isReverseSort)
-                      .arg(w.isLoupeDisplay).arg(w.isGridDisplay)
-                      .arg(w.isTableDisplay).arg(w.isCompareDisplay));
 
     /*  A named workspace is not a workflow.  invokeWorkflowWorkspace re-stamps this
         after the layout is applied, so the workflow routes still record themselves. */
@@ -197,7 +187,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         workspace is the layout restored at startup, which is a Browse one. */
     const QString leaving = ws.name.isEmpty() ? workflowNames().at(WfSource) : ws.name;
     rememberDockTabSelection(leaving);
-    WfProbe::mark("invokeWorkspace rememberDockTabSelection done");    // WFPROBE
 
     ws = w;     // current workspace ws
 
@@ -266,7 +255,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     gridView->assignedIconWidth = gridView->iconWidth;
     gridView->rejustify();
     gridView->setThumbParameters();
-    WfProbe::mark("invokeWorkspace thumb/grid parameters done");       // WFPROBE
     // ImageView: see the Info overlay note above -- w.isImageInfoVisible is not applied.
     // Processes
     if (w.isColorManage != G::colorManage) {
@@ -278,15 +266,12 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         but never applied -- the same decision as the Info overlay above.  Applying them
         made the sort follow the WORKFLOW: the shipped Develop layout carries column 0,
         so D threw away the user's Created sort and E brought back the Library layout's
-        File Name (WFPROBE trace, 2026-10-01).  Every switch also re-sorted the whole
+        File Name (probe trace, 2026-10-01).  Every switch also re-sorted the whole
         model unconditionally (sortChange, 156-196 ms at 155k rows) even when the column
         had not changed, and the re-sort moved videos out of the icon chunk, where
         eviction blanked their thumbnails.  The sort belongs to the content: the sort
         menu, the table header, and the Library state restore. */
-    WfProbe::mark("invokeWorkspace colour settings applied");          // WFPROBE
     updateState();
-    WfProbe::mark("invokeWorkspace updateState done (central view + dock visibility) "
-                  + WfProbe::cur(dm));                                 // WFPROBE
     workspaceChanged = true;
     // chk if a video file
     if (dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool()) {
@@ -294,7 +279,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     }
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
     setThumbDockVisibity();
-    WfProbe::mark("invokeWorkspace setThumbDockVisibity done");        // WFPROBE
 
     // qDebug() << "ws.isMaximised =" << w.isMaximised;
 
@@ -304,7 +288,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        its maximised / fullscreen state. */
     if (!w.isGeometryIncluded) {
         restoreState(w.state);
-        WfProbe::mark("invokeWorkspace restoreState #1 done");          // WFPROBE
         // second restoreState req'd for going from docked to floating docks
         restoreState(w.state);
     }
@@ -338,7 +321,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
        main window state gets -- see MW::placeDocksAddedSince). Workspace states stay
        UNVERSIONED so an old one still restores; w.stateVersion is what says which docks
        it predates. */
-    WfProbe::mark("invokeWorkspace restoreState done");                // WFPROBE
     if (w.stateVersion < winnowStateVersion) placeDocksAddedSince(w.stateVersion);
     /* Unconditional, at every version -- see MW::placeShowHideBars. The collapse map
        belongs to the layout being left; the workspace's own collapse state is applied
@@ -346,7 +328,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     areaCollapsed.clear();
     areaCollapsedExtent.clear();
     placeShowHideBars();
-    WfProbe::mark("invokeWorkspace placeShowHideBars done");           // WFPROBE
 
     /*  Re-raise the panel last used in each tab group in this workspace, overriding the
         front tab the state blob carries.  Done here, synchronously, so a caller that
@@ -360,7 +341,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         the side had when it was captured.  After everything above that sets dock
         visibility, or one of those would undo it. */
     applyAreaCollapse(w.areaCollapse);
-    WfProbe::mark("invokeWorkspace tab selection + area collapse done");  // WFPROBE
 
     /*  A workspace switch is the other route to a panel the wrong size, and it uses the
         same restoreState the startup path does -- so it is marked the same way, and
@@ -378,10 +358,8 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     }
     sel->sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 
-    WfProbe::mark("invokeWorkspace selection recovered " + WfProbe::cur(dm));  // WFPROBE
 
     thumbView->scrollToCurrent("MW::invokeWorkSpace");
-    WfProbe::mark("invokeWorkspace returning");                        // WFPROBE
 
     // if (w.isMaximised) showMaximized();
 }
@@ -1713,27 +1691,8 @@ void MW::requestView(int view)
     if (G::isLogger) G::log("MW::requestView", QString::number(view));
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const bool otherWorkflow = currentWorkflow >= 0 && currentWorkflow != WfSource;
-    // WFPROBE begin
-    const bool wfProbe = inDevelop || otherWorkflow;
-    auto wfState = [this] {
-        return QString("current=%6 sortColumn=%1 reverse=%2 G::mode=%3 workflow=%4 | %5")
-            .arg(sortColumn).arg(isReverseSort).arg(G::mode).arg(currentWorkflow)
-            .arg(WfProbe::videoCensus(dm))
-            .arg(WfProbe::cur(dm));
-    };
-    if (wfProbe) {
-        WfProbe::watchProxy(dm);
-        WfProbe::begin(QString("requestView(%1) leaving %2 workflow=%3")
-                           .arg(view).arg(inDevelop ? "Develop" : "Preview")
-                           .arg(currentWorkflow));
-        WfProbe::mark("before: " + wfState());
-    }
-    // WFPROBE end
     setOperationMode(G::OperationMode::Preview);
-    if (wfProbe) WfProbe::mark("requestView setOperationMode(Preview) done");  // WFPROBE
     if (otherWorkflow || inDevelop) invokeWorkflowWorkspace(WfSource);
-    if (wfProbe) WfProbe::mark("requestView invokeWorkflowWorkspace(Browse) done "
-                               + WfProbe::cur(dm));                    // WFPROBE
 
     switch (view) {
     case CvLoupe:   loupeDisplay("MW::requestView"); break;
@@ -1743,11 +1702,6 @@ void MW::requestView(int view)
     default: return;
     }
     browseView = view;
-    // WFPROBE
-    if (wfProbe) {
-        WfProbe::mark("requestView view shown, returning: " + wfState());
-        WfProbe::followUps(this, "requestView", wfState);
-    }
 }
 
 void MW::invokeBrowseWorkflow()

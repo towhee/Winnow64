@@ -1,5 +1,4 @@
 #include "Main/mainwindow.h"
-#include "Main/wfprobe.h"     // WFPROBE
 #include "Cache/devpreviewcache.h"
 #include "Utilities/panelbuttonbar.h"
 
@@ -1179,22 +1178,8 @@ void MW::createUtilActions()
     operationModeAction->setShortcutVisibleInContextMenu(true);
     addAction(operationModeAction);
     connect(operationModeAction, &QAction::triggered, this, [this]() {
-        // WFPROBE begin
-        auto wfState = [this] {
-            return QString("current=%6 sortColumn=%1 reverse=%2 G::mode=%3 workflow=%4 | %5")
-                .arg(sortColumn).arg(isReverseSort).arg(G::mode).arg(currentWorkflow)
-                .arg(WfProbe::videoCensus(dm))
-                .arg(WfProbe::cur(dm));
-        };
-        WfProbe::watchProxy(dm);
-        WfProbe::begin("D: enter Develop");
-        WfProbe::mark("before: " + wfState());
-        // WFPROBE end
         invokeWorkflowWorkspace(WfDevelop);        // the Develop workflow layout
-        WfProbe::mark("D invokeWorkflowWorkspace(Develop) done");      // WFPROBE
         setOperationMode(G::OperationMode::Develop);
-        WfProbe::mark("D setOperationMode(Develop) done: " + wfState());  // WFPROBE
-        WfProbe::followUps(this, "D", wfState);                        // WFPROBE
     });
 
     /* Which of an image's two pictures the grid and the loupe show. An exclusive pair
