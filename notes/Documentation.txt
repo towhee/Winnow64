@@ -236,6 +236,7 @@ Follow the format conventions above for anything new. In particular, do not hard
 18. FILE HANDLING
      File Operations and Companion Files (the FileOps Choke Point)
      Sidecar Naming (Full-name Sidecars for JPEG, TIFF, PNG and DNG)
+     Renaming Images (Across Folders)
      Writing Metadata Into Image Files (Permit Image File Modification)
 
 19. IMAGE COLOUR MANAGEMENT (EMBEDDED PROFILES)
@@ -5657,6 +5658,17 @@ LEGACY SIDECARS. A full-name image with no IMG_1.JPG.xmp still READS an old IMG_
 THE OWNERSHIP TEST NEEDS THE FOLDER'S FILE NAMES. existingSidecar is on the folder-load path (DataModel's Sidecar column, parseSidecar on the MetaRead workers), and in a raw+JPEG folder every JPEG asks. So FileOps keeps one names-only listing per folder, keyed on the folder's mtime and guarded by a mutex; trashFiles builds its own once per folder, because every trash moves the mtime.
 
 EVERYTHING THAT BUILDS A SIDECAR NAME GOES THROUGH IT: the Metadata writers and readers (writeXMP, writeOrientation, writeDevelopSidecar, writeKeywordsToSidecar, readDevelopSidecar, readDevThumb, parseSidecar, the metadata report), the catalog freshness stamps (catalogscanner, catalogenumerate, IndexMetadata::candidate, catalogRowFor, the keyword write-backs), the focus-stack output label, and FileOps::companionDest for anything that renames a companion (move, copy, ingest, Utilities::backup): DSC_1.JPG.xmp becomes <new>.JPG.xmp, never <new>.xmp. The rename dialog keeps its own base-name scan but now rebuilds names with completeSuffix, so it preserves everything after the base name. Metadata::sidecarPath is gone. Base names use the LAST dot, as Lightroom does: a.b.NEF -> a.b.xmp (older Winnow wrote a.xmp). Pinned by tst_fileops.
+
+
+⏺ File Handling > Renaming Images (Across Folders)
+
+WHAT. File > Rename (MW::renameSelectedFiles, Main/fileoperations.cpp) renames the selected or picked images with a {TOKEN} filename template, or, for one image, a typed name. RenameFileDlg (Utilities/renamefile.cpp) carries every file sharing an image's base name along with it (sidecars, the other half of a raw+JPEG pair), and first moves aside any existing file whose base name the new name would take.
+
+A SELECTION MAY SPAN FOLDERS. In Library and Catalog mode, and in a recursive folder load, the selection comes from many folders. The old gate compared every image with dm->folderList.at(0), the LOADED folder, so in Library mode every rename was refused with "You can only rename images from a single folder". The gate is gone. RenameFileDlg groups the selection by folder (in selection order) and runs renameInFolder once per folder, because the base-name, sidecar and conflict scans are all folder scans. The Finder-lock pre-check in MW::renameSelectedFiles is per folder too.
+
+ONE SEQUENCE ACROSS FOLDERS. With an {XX..} token the counter runs on from folder to folder rather than restarting, and its suggested start is one past the highest existing number in ANY selected folder. Two folders therefore never get the same numbered name from one rename.
+
+PATHS ARE RESOLVED BEFORE ANYTHING IS RENAMED. The selection list (source paths, from DataModel::getSelectionOrPicks) is grouped up front. Nothing reads paths back from proxy rows mid-rename, because a renamed row can re-sort in the proxy.
 
 
 ⏺ File Handling > Writing Metadata Into Image Files (Permit Image File Modification)

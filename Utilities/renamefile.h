@@ -17,7 +17,6 @@ class RenameFileDlg : public QDialog
     Q_OBJECT
 public:
     explicit RenameFileDlg(QWidget *parent,
-                           QString &folderPath,
                            QStringList &selection,
                            QMap<QString, QString>& filenameTemplates,
                            DataModel *dm,
@@ -41,6 +40,7 @@ private:
     void appendAllSharingBaseName(QString path);
     void resolveNameConflicts();
     void rename();
+    void renameInFolder(const QStringList &paths, QStringList &sidecars, int &progress);
     bool isTemplateNoOp();
     bool allFilesAlreadyConform();
     QRegularExpression templateAsRegex(const QString &tokenString);
@@ -60,13 +60,13 @@ private:
     DataModel *dm;
     Metadata *metadata;
     ImageCache *imageCache;
-    QString &folderPath;
+    QString folderPath;         // the folder rename() is working in
+    QStringList folders;        // every folder in the selection, in selection order
     QList<QString> baseNames;
     QList<QString> baseNamesUsed;
     QList<QList<QString>> filesToRename;    // fPath,originalBasename,done
 //    QList<QString> filesToRename;
     QStringList &selection;
-    QModelIndexList selectionIndexes;
     QMap<QString, QString> &filenameTemplatesMap;
     QMap<QString, QString> exampleMap;
     QStringList tokens;

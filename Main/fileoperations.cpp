@@ -201,7 +201,6 @@ void MW::copyImagePathFromContext()
 
 void MW::renameSelectedFiles()
 {
-    QString folderPath = dm->folderList.at(0);
     QStringList selection;
     if (!dm->getSelectionOrPicks(selection)) return;
     /* getSelection can return true with an empty list (no picks, no selection);
@@ -212,21 +211,18 @@ void MW::renameSelectedFiles()
         return;
     }
 
-    // Check all files are in the same folder
-    for (int i = 0; i < selection.size(); i++) {
-        QString thisFolder = QFileInfo(selection.at(i)).path();
-        if (thisFolder != folderPath) {
-            QString msg = "You can only rename images from a single folder.<p>"
-                          "Press <font color=\"red\"><b>Esc</b></font> to continue.";
-            G::popup->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
-            return;
-        }
-    }
-
     // Pre-check for Finder-locked files (macOS UF_IMMUTABLE). rename() fails
     // with EPERM on such files, so warn and bail before opening the dialog —
     // the user has to unlock in Finder first.
-    QStringList lockedFiles = RenameFileDlg::lockedFilesInSelection(folderPath, selection);
+    /* The selection may span folders (Library / Catalog mode, recursive folders);
+       RenameFileDlg renames folder by folder, so check each folder against only its
+       own images. */
+    QMap<QString, QStringList> pathsInFolder;
+    for (const QString &path : std::as_const(selection))
+        pathsInFolder[QFileInfo(path).path()] << path;
+    QStringList lockedFiles;
+    for (auto it = pathsInFolder.cbegin(); it != pathsInFolder.cend(); ++it)
+        lockedFiles << RenameFileDlg::lockedFilesInSelection(it.key(), it.value());
     if (!lockedFiles.isEmpty()) {
         QMessageBox::warning(this, "File locked",
                              RenameFileDlg::lockedFilesMsg(lockedFiles));
@@ -237,7 +233,7 @@ void MW::renameSelectedFiles()
        land afterwards and recreate a sidecar at the OLD name. */
     FileOps::flushPendingEdits();
 
-    RenameFileDlg rf(this, folderPath, selection, filenameTemplates,
+    RenameFileDlg rf(this, selection, filenameTemplates,
                      dm, metadata, imageCache);
     rf.exec();
 

@@ -13,7 +13,7 @@ BUGS / TO
 - Remove the catalog panel code not being used?
 - Do we need backups when edit, and if so, should they be in the catalog?
 - Download models JIT
-- Review rename file(s) - simple option only rename sleelected, not all with same base name
+- Review rename file(s) - simple option only rename selected, not all with same base name
 - Thumbnail items tooltips gone
 - Thumbnail tooltip over file name showing borders tooltip.
 - Subject mask not working on 2021-05-16_0358-2.tif
