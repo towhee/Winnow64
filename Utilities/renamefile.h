@@ -45,6 +45,7 @@ private:
     bool allFilesAlreadyConform();
     QRegularExpression templateAsRegex(const QString &tokenString);
     bool renameSingleManual(const QString &newBase);
+    bool renameOnlySelected(const QString &newBase);
     void initTokenList();
     void initExampleMap();
     void updateExistingSequence();
@@ -78,6 +79,7 @@ private:
 
 private slots:
     void on_okBtn_clicked();
+    void on_helpBtn_clicked();
     void on_filenameTemplatesBtn_clicked();
     void on_filenameTemplatesCB_currentTextChanged(const QString &arg1);
     void on_spinBoxStartNumber_textChanged(const QString /* &arg1 */);

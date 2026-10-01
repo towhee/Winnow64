@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Renaming images</h1>
+
+<p>Rename works on the selected images, or on the picks if you choose them. It
+renames the files on disk. Sidecar files go with them, so ratings, keywords and
+Develop edits still apply after the rename.</p>
+
+<h2>Simple rename</h2>
+
+<p>Available when one image is selected. Type the new name without the
+extension; the extension is kept. For example, <code>DSC_0042.ARW</code> renamed to
+<code>Sunset</code> becomes <code>Sunset.ARW</code>.</p>
+
+<p>By default every file that shares the base name is renamed together. The base
+name is the part before the extension. Renaming <code>x.tif</code> to
+<code>y</code> in a folder that holds</p>
+
+<pre>  x.arw   x.jpg   x.tif   x.xmp   x.tif.xmp</pre>
+
+<p>renames all five:</p>
+
+<pre>  y.arw   y.jpg   y.tif   y.xmp   y.tif.xmp</pre>
+
+<p>Winnow lists the extra files it renamed when it is done. A file name that is
+already taken is refused, so nothing is overwritten.</p>
+
+<h3>Only rename the selected file</h3>
+
+<p>Tick this to rename just the selected image and the sidecar files that
+<span class="highlight">belong to it</span>. Everything else that shares its base
+name is left alone. In the same folder, renaming <code>x.tif</code> to
+<code>y</code> gives</p>
+
+<pre>  x.arw   x.jpg   y.tif   x.xmp   y.tif.xmp</pre>
+
+<p>Here <code>x.xmp</code> stays put because it belongs to <code>x.arw</code>, not
+to the TIFF. The next section explains how Winnow decides which sidecar belongs
+to which file.</p>
+
+<p>The option is greyed out when <b>Combine Raw+Jpg</b> is on and the image is a
+combined raw+JPG pair. A combined pair is one thumbnail, so renaming one half
+would leave the hidden other half behind under the old name. Turn off <b>Combine
+Raw+Jpg</b> to rename one of the pair on its own.</p>
+
+<h2>Which sidecar belongs to which file</h2>
+
+<p>An XMP sidecar holds an image's rating, colour label, title, keywords and
+Develop edits. Winnow follows Lightroom's naming, which depends on the file
+type:</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+<tr><th>Image type</th><th>Image</th><th>Its sidecar</th></tr>
+<tr><td>Raw (ARW, NEF, CR3, ORF...) and HEIC</td>
+    <td><code>x.arw</code></td><td><code>x.xmp</code></td></tr>
+<tr><td>JPEG, TIFF, PNG and DNG</td>
+    <td><code>x.tif</code></td><td><code>x.tif.xmp</code></td></tr>
+</table>
+
+<p>Why there are two styles: Lightroom writes metadata <i>inside</i> JPEG, TIFF,
+PNG and DNG files, and ignores any <code>.xmp</code> beside them. Only raw and HEIC
+files get a sidecar, named <code>x.xmp</code>. So when a raw and a JPEG share a
+base name, <code>x.xmp</code> is the raw's. Winnow gives the JPEG its own
+<code>x.jpg.xmp</code>, so the two never mix: an edit to the JPEG cannot change
+the raw's Lightroom metadata, and the reverse is also true.</p>
+
+<p>The same rules apply to <code>.txt</code> sidecars.</p>
+
+<h3>Older sidecars</h3>
+
+<p>Older versions of Winnow wrote <code>x.xmp</code> for every file type. A JPEG,
+TIFF, PNG or DNG still reads an old <code>x.xmp</code> as long as no raw file
+shares its base name. Once a raw is beside it, <code>x.xmp</code> is the raw's
+sidecar.</p>
+
+<p>When you rename a JPEG, TIFF, PNG or DNG on its own and it is still reading an
+old <code>x.xmp</code>, Winnow first gives it its own sidecar. The old file is
+renamed to <code>x.tif.xmp</code>. If another image may also read it, it is
+copied instead, so that image keeps its settings too. The new sidecar is then
+renamed along with the image.</p>
+
+<h2>Template rename</h2>
+
+<p>Template rename builds each new name from a filename template. The template
+can include the original name, the capture date and time, camera details and a
+sequence number (<code>{XXXX}</code>). Use <b>Edit templates</b> to create or
+change templates. The <b>Example</b> line shows the result for the first selected
+image.</p>
+
+<p>Template rename always renames the whole base-name group of each image, the
+same as simple rename does by default. If a new name is already taken by
+another file, that file is renamed out of the way first by adding
+<code>-0</code> to its name.</p>
+
+<h3>Images from several folders</h3>
+
+<p>In Library and Catalog modes, and when subfolders are included, the selection
+can come from more than one folder. Each image is renamed in its own folder;
+nothing is moved between folders. The sequence number continues from one folder
+to the next instead of restarting. The suggested start number is one past the
+highest number already used in any of the folders. So one rename never gives two
+images the same number.</p>
+
+<h2>Locked files</h2>
+
+<p>On macOS, a file locked in the Finder (Get Info &rarr; Locked) cannot be renamed. Winnow
+checks for locked files before the dialog opens and lists them. Unlock them and
+try again.</p>
+
+</body>
+</html>

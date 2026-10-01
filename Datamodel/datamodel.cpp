@@ -1204,6 +1204,22 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         item no longer holds the thumbnail -- so a removal (setData with an empty
         QVariant, which is how clearIconsOutsideChunkRange drops an icon) must
         reach the store whatever the base class decides to do with the cell. */
+    /*  A RE-KEY CARRIES THE THUMBNAIL. The icon store is keyed by path and the
+        row finds its icon through its key, so a rename (RenameFileDlg) or a
+        version re-key (rekeyVersions) that changed only the key left the icon
+        under the old path: the row showed blank, and IconLoadedColumn still said
+        loaded, so MetaRead never fetched it again -- not on refilter, not ever. */
+    if (role == G::KeyRole && col == G::PathColumn && rowStore.contains(idx.row())) {
+        const QString oldKey =
+            rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString();
+        const QString newKey = value.toString();
+        if (!oldKey.isEmpty() && oldKey != newKey && iconStore.contains(oldKey)) {
+            const QIcon ic = iconStore.icon(oldKey);
+            iconStore.remove(oldKey);
+            iconStore.insert(newKey, ic);
+        }
+    }
+
     if (role == Qt::DecorationRole && col == 0) {
         const QString fPath = rowStore.contains(idx.row())
                                   ? rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString()

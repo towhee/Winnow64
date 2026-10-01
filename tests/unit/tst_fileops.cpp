@@ -45,6 +45,7 @@ private slots:
     void prepareCopiesLegacySharedByFullNameImages();
     void prepareLeavesTheRawsSidecarAlone();
     void companionsSplitARawJpegPair();
+    void renameOneOfAGroupTakesOnlyItsOwnSidecar();
     void trashingTheJpegKeepsTheRawsSidecar();
     void moveRenamesFullNameSidecar();
     void versionsTravelWithTheImage();
@@ -469,6 +470,26 @@ void tst_fileops::companionsSplitARawJpegPair()
              QStringList{"IMG_1.xmp"});
     QCOMPARE(names(FileOps::companions(QDir(d).absoluteFilePath("IMG_1.JPG"))),
              QStringList{"IMG_1.JPG.xmp"});
+}
+
+void tst_fileops::renameOneOfAGroupTakesOnlyItsOwnSidecar()
+{
+/*
+    The rename dialog's "Only rename the selected file" renames an image with
+    companions() and companionDest(). In a raw+JPEG+TIFF group the TIFF takes its
+    full-name sidecar and nothing else: x.xmp is the raw's. This is the example in
+    Docs/renamehelp.html.
+*/
+    const QString d = sub(tmp, "renameOne");
+    for (const char *n : {"x.arw", "x.jpg", "x.tif", "x.xmp", "x.tif.xmp"}) put(d, n);
+    const QString tif = QDir(d).absoluteFilePath("x.tif");
+    const QStringList comps = FileOps::companions(tif);
+    QCOMPARE(names(comps), QStringList{"x.tif.xmp"});
+    QCOMPARE(QFileInfo(FileOps::companionDest(comps.first(), tif,
+                                              QDir(d).absoluteFilePath("y.tif")))
+                 .fileName(), QString("y.tif.xmp"));
+    QCOMPARE(names(FileOps::companions(QDir(d).absoluteFilePath("x.arw"))),
+             QStringList{"x.xmp"});
 }
 
 void tst_fileops::trashingTheJpegKeepsTheRawsSidecar()

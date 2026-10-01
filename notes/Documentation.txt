@@ -236,7 +236,7 @@ Follow the format conventions above for anything new. In particular, do not hard
 18. FILE HANDLING
      File Operations and Companion Files (the FileOps Choke Point)
      Sidecar Naming (Full-name Sidecars for JPEG, TIFF, PNG and DNG)
-     Renaming Images (Across Folders)
+     Renaming Images (Folders and Sidecars)
      Writing Metadata Into Image Files (Permit Image File Modification)
 
 19. IMAGE COLOUR MANAGEMENT (EMBEDDED PROFILES)
@@ -1381,6 +1381,8 @@ THE REMAINING ROLES HAD TO GO FIRST, and they were not values, which is why they
 The first five moved onto ImageRow, which made RowStore's coverage per (COLUMN, ROLE) rather than per column -- column 0 alone is six fields, none of them the cell's value. dupOtherIdx is an int ROW whose callers test isValid() to mean "not paired", so it needs the set mask exactly as the conditional columns do.
 
 THE ICON WAS STILL BEING WRITTEN TO THE ITEM as well as to the path-keyed IconStore, and nothing ever read it back from there. That single wasted write was the reason column 0 still had a QStandardItem on EVERY row after the value columns had gone.
+
+A RE-KEY MUST CARRY THE ICON. Because IconStore is keyed by path and a row finds its thumbnail through its key, DataModel::setData moves the IconStore entry whenever a row's G::KeyRole changes (a rename in RenameFileDlg::renameDatamodel, a version re-key in rekeyVersions). Before that, a renamed image showed a blank cell for good: the icon sat under the old path, and IconLoadedColumn still said loaded, so MetaRead never fetched it again -- refiltering did not help. Pinned by the model_mutation self-test (V13, "rename master").
 
 THE ISSUE LIST GOT A NAMED HOME rather than a general "any role" hash. A general escape hatch would have silently absorbed the next role somebody adds and worked by accident, which is exactly how a column ends up outside every store without anyone noticing. Every setData in the codebase that targets this model was enumerated before the swap: the issue list is the only uncovered one. A role that is neither in a store nor handled explicitly is now DROPPED, deliberately.
 
@@ -5660,7 +5662,7 @@ THE OWNERSHIP TEST NEEDS THE FOLDER'S FILE NAMES. existingSidecar is on the fold
 EVERYTHING THAT BUILDS A SIDECAR NAME GOES THROUGH IT: the Metadata writers and readers (writeXMP, writeOrientation, writeDevelopSidecar, writeKeywordsToSidecar, readDevelopSidecar, readDevThumb, parseSidecar, the metadata report), the catalog freshness stamps (catalogscanner, catalogenumerate, IndexMetadata::candidate, catalogRowFor, the keyword write-backs), the focus-stack output label, and FileOps::companionDest for anything that renames a companion (move, copy, ingest, Utilities::backup): DSC_1.JPG.xmp becomes <new>.JPG.xmp, never <new>.xmp. The rename dialog keeps its own base-name scan but now rebuilds names with completeSuffix, so it preserves everything after the base name. Metadata::sidecarPath is gone. Base names use the LAST dot, as Lightroom does: a.b.NEF -> a.b.xmp (older Winnow wrote a.xmp). Pinned by tst_fileops.
 
 
-⏺ File Handling > Renaming Images (Across Folders)
+⏺ File Handling > Renaming Images (Folders and Sidecars)
 
 WHAT. File > Rename (MW::renameSelectedFiles, Main/fileoperations.cpp) renames the selected or picked images with a {TOKEN} filename template, or, for one image, a typed name. RenameFileDlg (Utilities/renamefile.cpp) carries every file sharing an image's base name along with it (sidecars, the other half of a raw+JPEG pair), and first moves aside any existing file whose base name the new name would take.
 
@@ -5669,6 +5671,16 @@ A SELECTION MAY SPAN FOLDERS. In Library and Catalog mode, and in a recursive fo
 ONE SEQUENCE ACROSS FOLDERS. With an {XX..} token the counter runs on from folder to folder rather than restarting, and its suggested start is one past the highest existing number in ANY selected folder. Two folders therefore never get the same numbered name from one rename.
 
 PATHS ARE RESOLVED BEFORE ANYTHING IS RENAMED. The selection list (source paths, from DataModel::getSelectionOrPicks) is grouped up front. Nothing reads paths back from proxy rows mid-rename, because a renamed row can re-sort in the proxy.
+
+ONLY THE SELECTED FILE (simple rename). By default simple rename takes the whole base-name group, so selecting x.tif renames x.jpg, x.arw and x.xmp too. The "Only rename the selected file" checkbox (off by default; RenameFileDlg::renameOnlySelected) renames the image plus FileOps::companions(image) instead, each to FileOps::companionDest. That is the ownership rule in "Sidecar Naming" above, which move, copy, ingest and trash already use, so in x.arw/x.jpg/x.tif/x.xmp/x.tif.xmp renaming x.tif takes only x.tif.xmp; x.xmp is the raw's. Three details:
+- FileOps::prepareSidecarForWrite runs first, so a full-name image still reading a legacy x.xmp adopts it as x.tif.xmp (moved when alone, copied when shared) before the rename. Without it the rename would carry x.xmp to y.xmp, where a y.arw would claim it.
+- The conflict test checks only the destinations actually written (the image and its companions), not every file with the new base name; a y.arw no longer blocks x.tif -> y.tif. A case-only change is not a conflict.
+- It renames with std::rename, NOT FileOps::moveFile: moveFile removes an existing destination first, and in a case-only rename on a case-insensitive volume the destination is the source.
+The checkbox is disabled, with the reason in its text and tooltip, when Combine Raw+Jpg is on and the image is a combined pair (G::DupOtherIdxRole valid): renaming one half would orphan the hidden other half.
+
+The dialog's Help button opens Docs/renamehelp.html, which explains both rename modes and the sidecar ownership rules for users. Keep it in step with this section.
+
+The base-name-group manual path (renameSingleManual) now calls FileOps::onMoved per file; it was the one rename path that did not, so a manual rename left the devPreview behind.
 
 
 ⏺ File Handling > Writing Metadata Into Image Files (Permit Image File Modification)

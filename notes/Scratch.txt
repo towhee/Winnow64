@@ -6121,3 +6121,38 @@ Keyword List
 Filters visible
 "Users/roryhill/Photos/2010-2019 √/2010 √/201004 √/2010-04-11_Hummer √/JPG/pbase1024/2010-04-11_0039.jpg"
 Users/roryhill/Photos/2010-2019 √/2011 √/201107 √/2011-07-25_Neck Point √/2011-07-25_0017.NEF
+
+==========================================================================================
+Rename
+==========================================================================================
+
+Both pieces are in: the "Only rename the selected file" checkbox for simple rename, and a Help button in the rename dialog. It isn't built or run yet. renamefile.cpp and the test
+  file pass a syntax check, and uic and moc both run clean on the .ui and header. The new unit test hasn't run, because that needs a build.
+
+  Your question — who owns x.xmp: the ARW. Winnow already has one rule for this, the same one move, copy and trash use:
+  - Raw and HEIC use x.xmp.
+  - JPEG, TIFF, PNG and DNG use their own x.tif.xmp / x.jpg.xmp. They read a plain x.xmp only if it's left over from an older Winnow and no raw shares the base name.
+
+  So with x.arw x.jpg x.tif x.xmp x.tif.xmp and only x.tif selected, the new option renames just x.tif and x.tif.xmp. The other three files stay as they are.
+
+  How the option behaves:
+  - Default: it's off, so simple rename still renames the whole base-name group unless you tick it.
+  - Older x.xmp: if the TIFF is still reading an old x.xmp, it first gets its own x.tif.xmp. The file is moved if only the TIFF reads it, or copied if another image may read it
+    too. Without this, the rename would turn x.xmp into y.xmp, and a y.arw would then claim it.
+  - Name clashes: only the files actually being written are checked, so an existing y.arw no longer blocks renaming x.tif to y.tif. Changing only the case of a name doesn't count
+    as a clash.
+  - Combined pairs: when Combine Raw+Jpg is on and the image is a combined pair, the checkbox is greyed out and its text and tooltip say why. Renaming one half would leave the
+    hidden other half under the old name.
+
+  Help button: it opens a new page, Docs/renamehelp.html, registered in winnow.qrc. The page covers both rename modes, a table of which sidecar belongs to which file type and why,
+  older sidecars, renaming across folders, and locked files.
+
+  A bug I fixed on the way: the existing simple rename never told the preview cache about the rename, so a renamed image lost its developed preview. It now does.
+
+  Other changes:
+  - The dialog is 23px taller to fit the checkbox.
+  - A test, renameOneOfAGroupTakesOnlyItsOwnSidecar, pins the example above.
+  - notes/Documentation.txt has the new section, now titled "Renaming Images (Folders and Sidecars)", with the table of contents updated to match.
+
+  To check it in the app, make a scratch folder with x.arw x.jpg x.tif x.xmp x.tif.xmp. Rename x.tif to y with the box ticked, then again with it unticked, and do the same with
+  Combine Raw+Jpg turned on.
