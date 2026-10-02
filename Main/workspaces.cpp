@@ -215,6 +215,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     keywordsDockVisibleAction->setChecked(w.isKeywordsDockVisible);
     collectionsDockVisibleAction->setChecked(w.isCollectionsDockVisible);
     queriesDockVisibleAction->setChecked(w.isQueriesDockVisible);
+    placesDockVisibleAction->setChecked(w.isPlacesDockVisible);
     moduleDockVisibleAction->setChecked(w.isModuleDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
@@ -393,6 +394,7 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isKeywordsDockVisible = keywordsDockVisibleAction->isChecked();
     wsd.isCollectionsDockVisible = collectionsDockVisibleAction->isChecked();
     wsd.isQueriesDockVisible = queriesDockVisibleAction->isChecked();
+    wsd.isPlacesDockVisible = placesDockVisibleAction->isChecked();
     wsd.isModuleDockVisible = moduleDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
@@ -594,6 +596,7 @@ void MW::placeDocksAddedSince(int stateVersion)
         {5, keywordsDock, filterDock, keywordsDockVisibleAction},
         {9, collectionsDock, favDock, collectionsDockVisibleAction},
         {10, queriesDock, collectionsDock, queriesDockVisibleAction},
+        {11, placesDock, queriesDock, placesDockVisibleAction},
         /* Top area, never tabbed; MW::placeShowHideBars pins it there. */
         {8, moduleDock, nullptr, moduleDockVisibleAction},
     };
@@ -653,6 +656,7 @@ void MW::builtInDefaultWorkspace()
         with it on keeps it. */
     collectionsDockVisibleAction->setChecked(false);
     queriesDockVisibleAction->setChecked(false);
+    placesDockVisibleAction->setChecked(false);
     moduleDockVisibleAction->setChecked(true);
     metadataDockVisibleAction->setChecked(true);
     embelDockVisibleAction->setChecked(false);
@@ -815,6 +819,7 @@ QString MW::reportWorkspaces()
             << "\n  isKeywordsDockVisible     " << G::s(ws.isKeywordsDockVisible)
             << "\n  isCollectionsDockVisible  " << G::s(ws.isCollectionsDockVisible)
             << "\n  isQueriesDockVisible      " << G::s(ws.isQueriesDockVisible)
+            << "\n  isPlacesDockVisible       " << G::s(ws.isPlacesDockVisible)
             << "\n  isModuleDockVisible       " << G::s(ws.isModuleDockVisible)
             << "\n  isMetadataDockVisible     " << G::s(ws.isMetadataDockVisible)
             << "\n  isEmbelDockVisible        " << G::s(ws.isEmbelDockVisible)
@@ -892,6 +897,7 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisKeywordsDockVisible" << ws.isKeywordsDockVisible
         << "\nisCollectionsDockVisible" << ws.isCollectionsDockVisible
         << "\nisQueriesDockVisible" << ws.isQueriesDockVisible
+        << "\nisPlacesDockVisible" << ws.isPlacesDockVisible
         << "\nisModuleDockVisible" << ws.isModuleDockVisible
         << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
         << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
@@ -967,6 +973,7 @@ QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
     m["isKeywordsDockVisible"] = wsd.isKeywordsDockVisible;
     m["isCollectionsDockVisible"] = wsd.isCollectionsDockVisible;
     m["isQueriesDockVisible"] = wsd.isQueriesDockVisible;
+    m["isPlacesDockVisible"] = wsd.isPlacesDockVisible;
     m["isModuleDockVisible"] = wsd.isModuleDockVisible;
     m["isMetadataDockVisible"] = wsd.isMetadataDockVisible;
     m["isEmbelDockVisible"] = wsd.isEmbelDockVisible;
@@ -1039,6 +1046,8 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     // likewise absent before the Collections dock, and likewise off by default
     wsd.isCollectionsDockVisible = m.value("isCollectionsDockVisible").toBool();
     wsd.isQueriesDockVisible = m.value("isQueriesDockVisible").toBool();
+    // absent before the Places dock: off, as the shipped Map layout turns it on
+    wsd.isPlacesDockVisible = m.value("isPlacesDockVisible").toBool();
     /*  Absent from every workspace and shipped default saved before the Module dock
         existed: show it, since it is where the workflow is chosen. */
     wsd.isModuleDockVisible = m.value("isModuleDockVisible", true).toBool();

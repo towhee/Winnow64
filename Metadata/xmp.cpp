@@ -633,6 +633,28 @@ void Xmp::initialize()
     e.schema = "exif";
     definedElements["datetimeoriginal"] = e;
 
+    /*  GPS, as Lightroom writes it in a sidecar: exif:GPSLatitude="49,13.22462N" --
+        degrees, then decimal minutes, then the hemisphere (the XMP spec's GPSCoordinate
+        form; "DDD,MM,SSk" is read too). Written by Metadata::writeGpsToSidecar (the Map
+        module's drag-to-geotag) and read back by Metadata::parseSidecar. */
+    e.name = "exif:GPSLatitude";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["gpslatitude"] = e;
+
+    e.name = "exif:GPSLongitude";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["gpslongitude"] = e;
+
+    e.name = "exif:GPSVersionID";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "exif";
+    definedElements["gpsversionid"] = e;
+
     e.name = "exifEX:LensModel";
     e.parentName = "rdf:Description";
     e.type = ElementType::Attribute;
@@ -673,6 +695,11 @@ void Xmp::initialize()
     e.name = "xmlns:Iptc4xmpCore";
     e.value = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
     definedElements["Iptc4xmpCore"] = e;
+
+    // exif schema namespace (GPS)
+    e.name = "xmlns:exif";
+    e.value = "http://ns.adobe.com/exif/1.0/";
+    definedElements["exif"] = e;
 
     // tiff schema namespace
     e.name = "xmlns:tiff";

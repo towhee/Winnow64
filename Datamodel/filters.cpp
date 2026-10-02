@@ -194,6 +194,10 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catCreator] = G::CreatorColumn;
     /* "True"/"False": whether the image has coordinates, derived from G::GPSCoordColumn. */
     filterCategoryToDmColumn[catGps] = G::HasGPSColumn;
+    /* true for the images in the map pin last clicked -- see setMapPinItem. */
+    filterCategoryToDmColumn[catMapPin] = G::MapPinColumn;
+    /* The ids of the places an image was taken in -- see MW::refreshPlaceMembership. */
+    filterCategoryToDmColumn[catPlace] = G::PlacesColumn;
     filterCategoryToDmColumn[catAvailability] = G::AvailabilityColumn;
     // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
@@ -349,6 +353,8 @@ void Filters::createDynamicFilters()
     keywords = new QTreeWidgetItem();
     creators = new QTreeWidgetItem();
     gps = new QTreeWidgetItem();
+    mapPins = new QTreeWidgetItem();
+    places = new QTreeWidgetItem();
     availability = new QTreeWidgetItem();
     // missingThumbs = new QTreeWidgetItem();
     compare = new QTreeWidgetItem();
@@ -377,6 +383,15 @@ void Filters::createDynamicFilters()
     createFilter(keywords, catKeyword);
     createFilter(creators, catCreator);
     createFilter(gps, catGps);
+    createFilter(places, catPlace);
+    places->setToolTip(0, tr("Your places, from the Places panel: areas drawn on the "
+                             "map.\nAn image is in a place when its GPS location is "
+                             "inside it.\nClick + in the Places panel to draw one."));
+    createFilter(mapPins, catMapPin);
+    mapPins->setToolTip(0, tr("Click a pin in the Map module to show only the images "
+                              "in it.\nIt replaces every other filter, as a Collection "
+                              "or Bookmark click does.\nUncheck it to show every image "
+                              "again."));
     createFilter(availability, catAvailability);
     // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
@@ -413,7 +428,7 @@ void Filters::createGroups()
     add(tr("Time"),              {years, months, days});
     add(tr("Selection"),         {picks, ratings, labels});
     add(tr("Camera"),            {models, lenses, focalLengths, isos});
-    add(tr("Metadata"),          {titles, creators, gps, keywords});
+    add(tr("Metadata"),          {titles, creators, gps, places, mapPins, keywords});
     add(tr("Status"),            {availability, compare});
 
     for (QTreeWidgetItem *cat : categoryOrder()) addTopLevelItem(cat);
@@ -679,6 +694,8 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     setCategoryBackground(keywords);
     setCategoryBackground(creators);
     setCategoryBackground(gps);
+    setCategoryBackground(mapPins);
+    setCategoryBackground(places);
     setCategoryBackground(availability);
     // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
@@ -875,8 +892,15 @@ bool Filters::isAnyCatItemChecked(QTreeWidgetItem *category)
 
 bool Filters::isAnyFilter()
 {
+    return isAnyFilterBut(nullptr);
+}
+
+bool Filters::isAnyFilterBut(const QTreeWidgetItem *category)
+{
 /*
-    This is used to determine the filter status in MW::updateFilterStatus
+    This is used to determine the filter status in MW::updateFilterStatus. With a
+    category, its own checks are not counted (MW::applyMapPinFilter asks whether
+    anything but the Map pin is filtering).
 */
     if (G::isLogger) G::log("Filters::isAnyFilter");
     if (debugFilters)
@@ -888,7 +912,8 @@ bool Filters::isAnyFilter()
     if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
         return true;
     while (*it) {
-        if (isFilterItem(*it) && (*it) != searchTrue) {
+        if (isFilterItem(*it) && (*it) != searchTrue
+            && (category == nullptr || categoryOf(*it) != category)) {
             /* Either state filters. An exclusion narrows the set just as an inclusion
                does, so a panel holding only exclusions must still report "filtered" --
                or the status bar says nothing is filtered while rows are missing. */
@@ -1130,7 +1155,7 @@ void Filters::setEachCatTextColor()
             /* category only has one item and item not "true". NOT for Collections or
                Queries: one is still a subset of what is loaded, so checking it filters. */
             else if (items.size() == 1 && items.first()->text(0) != "true"
-                     && !isLibrarySetCategory(*it))
+                     && !isSetCategory(*it) && *it != mapPins)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
                 bool isChecked = false;
@@ -1198,7 +1223,7 @@ bool Filters::isCatFiltering(QTreeWidgetItem *item)
     }
     // at every depth: see setEachCatTextColor
     const QList<QTreeWidgetItem *> items = itemsInCategory(item);
-    if (items.size() > 1 || (isLibrarySetCategory(item) && !items.isEmpty())) {
+    if (items.size() > 1 || (isSetCategory(item) && !items.isEmpty())) {
         for (QTreeWidgetItem *child : items)
             if (child->checkState(0) != Qt::Unchecked) return true;
     }
@@ -1464,6 +1489,8 @@ void Filters::reset()
     // clear all items based on data content ie file types, camera model
     removeChildrenDynamicFilters();
 
+    // a map pin names rows of the model being replaced
+    clearMapPinItem();
     // reset all items to unchecked
     clearAll();
     /*  And the Keywords any/all mode with them: a lasting "all" would quietly empty the
@@ -2346,14 +2373,14 @@ void Filters::showAllCategories()
 void Filters::setSetNodes(QTreeWidgetItem *category, const QVector<CollectionItem> &nodes)
 {
 /*
-    Rebuild a Library set category (Collections or Queries) from the store, keeping each
+    Rebuild a set category (Collections, Queries or Places) from the store, keeping each
     item's check state, expansion and count by ID -- a rename, a re-parent or an edited
     query is the same node. Parents arrive before children (CollectionStore::nodes).
     Emits a filterChange when a checked node was deleted or a checked Query's text
     changed, because either changes what the check admits.
 */
     if (G::isLogger) G::log("Filters::setSetNodes", category ? category->text(0) : "");
-    if (!isLibrarySetCategory(category)) return;
+    if (!isSetCategory(category)) return;
     const bool isQuery = category == queries;
     QHash<QString, Qt::CheckState> state;
     QHash<QString, QVariant> count;
@@ -2392,6 +2419,10 @@ void Filters::setSetNodes(QTreeWidgetItem *category, const QVector<CollectionIte
             if (state.contains(n.id) && oldText.value(n.id) != n.queryText)
                 checkedChanged = true;
         }
+        else if (category == places) {
+            item->setToolTip(0, tr("Click to show only the images taken in \"%1\". "
+                                   "Opt+click to exclude them.").arg(n.name));
+        }
         else {
             item->setToolTip(0, tr("Click to show only the images in \"%1\". "
                                    "Opt+click to exclude them.").arg(n.name));
@@ -2412,7 +2443,7 @@ void Filters::setSetNodes(QTreeWidgetItem *category, const QVector<CollectionIte
 
 void Filters::setSetCounts(QTreeWidgetItem *category, const QHash<QString, int> &countsById)
 {
-    if (!isLibrarySetCategory(category)) return;
+    if (!isSetCategory(category)) return;
     for (QTreeWidgetItem *item : itemsInCategory(category)) {
         const int n = countsById.value(item->data(1, Qt::EditRole).toString(), 0);
         item->setData(2, Qt::EditRole, n);
@@ -2428,7 +2459,7 @@ void Filters::setFilterState(QTreeWidgetItem *category, QStringList &includes,
 {
     includes.clear();
     excludes.clear();
-    if (!isLibrarySetCategory(category)) return;
+    if (!isSetCategory(category)) return;
     for (QTreeWidgetItem *item : itemsInCategory(category)) {
         const Qt::CheckState st = item->checkState(0);
         if (st == Qt::Unchecked) continue;
@@ -2445,7 +2476,7 @@ void Filters::setSetFilter(QTreeWidgetItem *category, const QStringList &include
     expanded).
 */
     if (G::isLogger) G::log("Filters::setSetFilter");
-    if (!isLibrarySetCategory(category)) return;
+    if (!isSetCategory(category)) return;
     const QSet<QString> inc(includes.begin(), includes.end());
     const QSet<QString> exc(excludes.begin(), excludes.end());
     bool changed = false;
@@ -2467,6 +2498,51 @@ void Filters::setSetFilter(QTreeWidgetItem *category, const QStringList &include
         activeCategory = category;
         emit filterChange("Filters::setSetFilter");
     }
+}
+
+void Filters::setMapPinItem(int count)
+{
+/*
+    The one item, created on first use, CHECKED, with the pin's image count in both count
+    columns. No filterChange: MW::applyMapPinFilter clears the other filters first and
+    runs the one filterChange itself.
+*/
+    if (G::isLogger) G::log("Filters::setMapPinItem", QString::number(count));
+    QTreeWidgetItem *item = mapPins->childCount() ? mapPins->child(0) : nullptr;
+    if (!item) {
+        item = new QTreeWidgetItem();           // detached: configured, then added
+        item->setText(0, tr("Images in the pin"));
+        item->setData(1, Qt::EditRole, true);       // compared with G::MapPinColumn
+        item->setToolTip(0, tr("The images in the pin you last clicked in the Map "
+                               "module. Opt+click to exclude them instead."));
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        item->setCheckState(0, Qt::Checked);
+        mapPins->addChild(item);
+    }
+    item->setCheckState(0, Qt::Checked);
+    styleFilterItem(item);
+    item->setData(2, Qt::EditRole, count);
+    item->setData(3, Qt::EditRole, count);
+    if (!mapPins->isExpanded()) mapPins->setExpanded(true);
+    for (QTreeWidgetItem *up = mapPins->parent(); up; up = up->parent())
+        if (!up->isExpanded()) up->setExpanded(true);
+    // a programmatic change, not a click still to be interpreted (see dataChanged)
+    itemCheckStateHasChanged = false;
+    activeCategory = mapPins;
+}
+
+void Filters::clearMapPinItem()
+{
+    if (!mapPins || !mapPins->childCount()) return;
+    QMutexLocker locker(&mutex);
+    qDeleteAll(mapPins->takeChildren());
+}
+
+bool Filters::isMapPinFiltering() const
+{
+    return mapPins && mapPins->childCount()
+           && mapPins->child(0)->checkState(0) != Qt::Unchecked;
 }
 
 void Filters::setLibrarySetsAvailable(bool available)
@@ -2623,6 +2699,7 @@ QVariantMap Filters::persistableState() const
     QSet<QString> sessionNames;
     for (const QTreeWidgetItem *c : sessionCats)
         sessionNames.insert(c->data(0, CategoryNameRole).toString());
+    sessionNames.insert(catMapPin);     // the pin's keys are this session's too
     QStringList items;
     for (const ItemState &st : checkedItemStates())
         if (!sessionNames.contains(st.category))

@@ -1202,6 +1202,7 @@ void MW::syncLibTreeFromFilters()
     /*  The Collections panel is the other view of a Filters category, pushed from the
         same places (every filter change and every build). */
     syncCollectionTreeFromFilters();
+    syncPlaceListFromFilters();         // and the Places panel, in both scopes
     if (!libTree || !filters) return;
     QStringList inc, exc;
     filters->folderFilterState(inc, exc);

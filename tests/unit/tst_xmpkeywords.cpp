@@ -78,6 +78,7 @@ private slots:
     void setItemRefusesAListProperty();
     void setItemListReplacesAnAttributeFormSubject();
     void hierarchicalSubjectWritesUnderTheLrNamespace();
+    void gpsWritesUnderTheExifNamespaceAndKeepsKeywords();
 
 private:
     /* Write text to a .xmp in the temp dir and hand back an OPEN file, which is what
@@ -386,6 +387,41 @@ void tst_xmpkeywords::hierarchicalSubjectWritesUnderTheLrNamespace()
     QCOMPARE(back->getItemList("hierarchicalsubject"), paths);
     // the separators are the whole point of the property and must survive untouched
     QVERIFY(back->getItemList("hierarchicalsubject").at(0).contains('|'));
+}
+
+void tst_xmpkeywords::gpsWritesUnderTheExifNamespaceAndKeepsKeywords()
+{
+/*
+    Drag-to-geotag (Metadata::writeGpsToSidecar) writes exif:GPSLatitude and
+    exif:GPSLongitude into a sidecar that may hold nothing of exif: yet, so the exif
+    namespace must be declared as it is added -- and the keywords already there must
+    come through untouched.
+*/
+    QFile *f = sidecar(kSidecar, "gps.xmp");
+    QVERIFY(f);
+    Xmp xmp(*f, 0);
+    QVERIFY(xmp.isValid);
+    const QStringList before = xmp.getItemList("subject");
+    QVERIFY(!before.isEmpty());
+
+    QVERIFY(xmp.setItem("gpsversionid", "2.2.0.0"));
+    QVERIFY(xmp.setItem("gpslatitude", "49,13.224618N"));
+    QVERIFY(xmp.setItem("gpslongitude", "123,57.370332W"));
+    QVERIFY(xmp.docToQString().contains("xmlns:exif"));
+
+    Xmp *back = reload(xmp, "gps2.xmp");
+    QVERIFY(back);
+    QVERIFY2(back->isValid, "an undeclared exif: prefix would fail the reparse here");
+    QCOMPARE(back->getItem("gpslatitude"), QString("49,13.224618N"));
+    QCOMPARE(back->getItem("gpslongitude"), QString("123,57.370332W"));
+    QCOMPARE(back->getItemList("subject"), before);
+
+    // a second drop replaces the location, never adds a second one
+    QVERIFY(back->setItem("gpslatitude", "10,0.000000S"));
+    Xmp *again = reload(*back, "gps3.xmp");
+    QVERIFY(again);
+    QCOMPARE(again->getItem("gpslatitude"), QString("10,0.000000S"));
+    QCOMPARE(again->docToQString().count("GPSLatitude"), 1);
 }
 
 QTEST_MAIN(tst_xmpkeywords)

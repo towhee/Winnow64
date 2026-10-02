@@ -43,6 +43,8 @@ private slots:
     void readsColumnOnlyForActiveCategories();
     void sessionCategoryComparesAsPaddedText();
     void queryExpressionsCombineLikeItems();
+    void mapPinIsBoolAndCanBeIgnored();
+    void overlappingPlacesAreOrAndExcludable();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -63,6 +65,53 @@ private:
         return c;
     }
 };
+
+void tst_filterpredicate::mapPinIsBoolAndCanBeIgnored()
+{
+    /*  The Map pin category: its one item is true, compared with G::MapPinColumn's bool.
+        The Map module asks with the pin ignored, so a row outside the pin that every
+        other filter admits is still drawn -- and one another filter rejects is not. */
+    FilterPredicate p;
+    p.categories << cat(G::MapPinColumn, { true }) << cat(G::RatingColumn, { "3" });
+
+    Row inPin  { { G::MapPinColumn, true },  { G::RatingColumn, "3" } };
+    Row outPin { { G::MapPinColumn, false }, { G::RatingColumn, "3" } };
+    Row rated2 { { G::MapPinColumn, false }, { G::RatingColumn, "2" } };
+    QVERIFY(p.accepts(fetch(inPin)));
+    QVERIFY(!p.accepts(fetch(outPin)));
+    QVERIFY(p.accepts(fetch(outPin), G::MapPinColumn));
+    QVERIFY(!p.accepts(fetch(rated2), G::MapPinColumn));
+
+    // Excluded (Opt+click) the pin rejects its own rows, unless ignored
+    FilterPredicate ex;
+    ex.categories << cat(G::MapPinColumn, {}, { true });
+    QVERIFY(!ex.accepts(fetch(inPin)));
+    QVERIFY(ex.accepts(fetch(outPin)));
+    QVERIFY(ex.accepts(fetch(inPin), G::MapPinColumn));
+}
+
+void tst_filterpredicate::overlappingPlacesAreOrAndExcludable()
+{
+    /*  G::PlacesColumn holds the ids of EVERY place an image was taken inside -- places
+        may overlap -- so checking two places shows the union, and an image in both
+        is shown once. Opt+click excludes a place's images even when another checked
+        place holds them. */
+    FilterPredicate p;
+    p.categories << cat(G::PlacesColumn, { "1", "2" });
+    Row inA    { { G::PlacesColumn, QStringList{ "1" } } };
+    Row inBoth { { G::PlacesColumn, QStringList{ "1", "2" } } };
+    Row inC    { { G::PlacesColumn, QStringList{ "3" } } };
+    Row inNone { { G::PlacesColumn, QStringList{} } };
+    QVERIFY(p.accepts(fetch(inA)));
+    QVERIFY(p.accepts(fetch(inBoth)));
+    QVERIFY(!p.accepts(fetch(inC)));
+    QVERIFY(!p.accepts(fetch(inNone)));
+
+    FilterPredicate ex;
+    ex.categories << cat(G::PlacesColumn, { "1" }, { "2" });
+    QVERIFY(ex.accepts(fetch(inA)));
+    QVERIFY(!ex.accepts(fetch(inBoth)));
+}
 
 void tst_filterpredicate::nothingCheckedAcceptsEverything()
 {

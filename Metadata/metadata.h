@@ -148,6 +148,13 @@ public:
         state. */
     bool writeKeywordsToSidecar(const QString &fPath, const QStringList &subject,
                                 const QStringList &hierarchical);
+    /*  The image's location -- exif:GPSLatitude / exif:GPSLongitude -- into fPath's
+        SIDECAR, every other property left as it is (as writeKeywordsToSidecar). Never
+        into the image file, whatever "Permit image file modification" says: the Map
+        module's drag-to-geotag (MW::geotagRows) writes the library and the sidecar
+        only, so the camera's own GPS block is never overwritten. parseSidecar reads it
+        back over the file's. */
+    bool writeGpsToSidecar(const QString &fPath, double lat, double lon);
     static void writeOrientation(QString fPath, QString orientationNumber);
     /*  The XMP packet INSIDE an image (JPEG/TIFF/PNG/DNG), used by writeXMP and
         writeKeywordsToSidecar when "Permit image file modification" is on. See

@@ -112,6 +112,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {keywordsDockTabText, ":/images/icon16/keywords_white.png"},
         {collectionsDockTabText, ":/images/icon16/collections_white.png"},
         {queriesDockTabText, ":/images/icon16/queries_white.png"},
+        {placesDockTabText,  ":/images/icon16/places_white.png"},
         {metadataDockTabText, ":/images/icon16/metadata_white.png"},
         {embelDockTabText,    ":/images/icon16/embellish_white.png"},
         {developDockTabText,  ":/images/icon16/develop_white.png"},
@@ -125,6 +126,7 @@ void MW::updateDockTabGraphics(QTabBar *tabBar)
         {keywordsDockTabText, keywordsDock},
         {collectionsDockTabText, collectionsDock},
         {queriesDockTabText, queriesDock},
+        {placesDockTabText,  placesDock},
         {metadataDockTabText, metadataDock},
         {embelDockTabText,    embelDock},
         {developDockTabText,  developDock},
@@ -316,6 +318,8 @@ QDockWidget* MW::dockForTabText(const QString &tabText)
         return collectionsDock;
     if (!queriesDockTabText.isEmpty() && tabText == queriesDockTabText)
         return queriesDock;
+    if (!placesDockTabText.isEmpty() && tabText == placesDockTabText)
+        return placesDock;
     if (tabText == metadataDockTabText) return metadataDock;
     if (tabText == embelDockTabText)    return embelDock;
     if (tabText == developDockTabText)  return developDock;
@@ -9062,6 +9066,8 @@ void MW::toggleFullScreen()
         if (collectionsDock) collectionsDock->setVisible(fullScreenDocks.isCollections);
         queriesDockVisibleAction->setChecked(fullScreenDocks.isQueries);
         if (queriesDock) queriesDock->setVisible(fullScreenDocks.isQueries);
+        placesDockVisibleAction->setChecked(fullScreenDocks.isPlaces);
+        if (placesDock) placesDock->setVisible(fullScreenDocks.isPlaces);
         moduleDockVisibleAction->setChecked(fullScreenDocks.isModule);
         if (moduleDock) moduleDock->setVisible(fullScreenDocks.isModule);
         if (G::useInfoView) {
@@ -14308,6 +14314,7 @@ void MW::updateState()
     setKeywordsDockVisibility();
     setCollectionsDockVisibility();
     setQueriesDockVisibility();
+    setPlacesDockVisibility();
     setModuleDockVisibility();
     setMetadataDockVisibility();
     setEmbelDockVisibility();

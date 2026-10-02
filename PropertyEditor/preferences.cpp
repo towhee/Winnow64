@@ -529,6 +529,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->fullScreenDocks.isQueries = v.toBool();
     }
 
+    if (source == "fullScreenShowPlaces") {
+        mw->fullScreenDocks.isPlaces = v.toBool();
+    }
+
     if (source == "fullScreenShowModule") {
         mw->fullScreenDocks.isModule = v.toBool();
     }
@@ -2083,6 +2087,20 @@ void Preferences::addFullScreen()
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isQueries;
     i.key = "fullScreenShowQueries";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show places
+    i.name = "fullScreenShowPlaces";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show places";
+    i.tooltip = "When you switch to full screen show the Places dock (areas drawn on "
+                "the map).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isPlaces;
+    i.key = "fullScreenShowPlaces";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

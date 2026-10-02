@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 18;
+constexpr int kSchemaVersion = 19;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1447,6 +1447,29 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  saved   INTEGER NOT NULL)")
             || !q.exec("CREATE INDEX IF NOT EXISTS develop_history_saved"
                        " ON develop_history(saved)")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 19) {
+    /*
+        A DATA REPAIR: JPEG and PNG GPS coordinates read from the wrong bytes.
+
+        Jpeg::parse (and Jpeg2, Png) handed GPS::decode a fixed base of 12 -- where the
+        TIFF header sits only when Exif is the FIRST segment after SOI -- instead of the
+        startOffset every other Exif value in those parsers uses. A JPEG with a JFIF APP0
+        before its Exif (an exported or converted iPhone image, say) decoded its latitude
+        and longitude rationals from the wrong place: 48 28' N 123 22' W indexed as
+        0 5' N 47 0' W.
+
+        The file has not changed, so its size/mtime stamp says the row is fresh and no
+        scan would ever re-read it. Zeroing srcmtime makes Catalog::staleOf call the row
+        stale, so the next scan or folder load re-reads it with the fixed parser. Only
+        rows that HAVE a coordinate: a row without one was not affected.
+    */
+        if (!q.exec("UPDATE image SET srcmtime = 0 WHERE gpscoord <> ''"
+                    " AND lower(ext) IN ('jpg', 'jpeg', 'jpe', 'png')")) {
             db.rollback();
             return false;
         }

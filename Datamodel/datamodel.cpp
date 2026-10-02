@@ -375,6 +375,8 @@ void DataModel::setModelProperties()
         { G::AvailabilityColumn,        "Availability",           true },
         { G::DevPreviewKeyColumn,        "DevPreviewKey",            true },
         { G::CollectionsColumn,          "Collections",              true },
+        { G::MapPinColumn,               "Map Pin",                  true },
+        { G::PlacesColumn,               "Places",                   true },
     };
     mHeaderName.assign(G::TotalColumns, QString());
     mHeaderGeek.assign(G::TotalColumns, false);
@@ -965,6 +967,26 @@ bool DataModel::hasCollectionMembership() const
     return !collectionIdsByPath.isEmpty();
 }
 
+void DataModel::setMapPinKeys(const QSet<QString> &keys)
+{
+    QWriteLocker lock(&mapPinLock);
+    mapPinKeys = keys;
+}
+
+QSet<QString> DataModel::mapPinKeySet() const
+{
+    QReadLocker lock(&mapPinLock);
+    return mapPinKeys;
+}
+
+bool DataModel::setPlaceMembership(const QHash<QString, QStringList> &byPath)
+{
+    QWriteLocker lock(&placeLock);
+    if (placeIdsByPath == byPath) return false;
+    placeIdsByPath = byPath;
+    return true;
+}
+
 QVariant DataModel::data(const QModelIndex &idx, int role) const
 {
 /*
@@ -1007,6 +1029,31 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         const QString src =
             rowStore.value(idx.row(), G::PathColumn, G::SourcePathRole).toString();
         return collectionIdsByPath.value(src);
+    }
+
+    /*  G::PlacesColumn: the places the row was taken inside, by SOURCE path as for
+        collections -- a version was taken where its file was. An empty list for none. */
+    if (idx.isValid() && idx.column() == G::PlacesColumn
+        && (role == Qt::EditRole || role == Qt::DisplayRole))
+    {
+        QReadLocker lock(&placeLock);
+        if (placeIdsByPath.isEmpty() || !rowStore.contains(idx.row()))
+            return QStringList();
+        const QString src =
+            rowStore.value(idx.row(), G::PathColumn, G::SourcePathRole).toString();
+        return placeIdsByPath.value(src);
+    }
+
+    /*  G::MapPinColumn: is the row in the map pin the user clicked. A bool, never
+        invalid, so the Filters item's true compares with it. */
+    if (idx.isValid() && idx.column() == G::MapPinColumn
+        && (role == Qt::EditRole || role == Qt::DisplayRole))
+    {
+        QReadLocker lock(&mapPinLock);
+        if (mapPinKeys.isEmpty() || !rowStore.contains(idx.row())) return false;
+        const QString key =
+            rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString();
+        return mapPinKeys.contains(key);
     }
 
     /*  The scratch columns come from the row-keyed side table
@@ -7627,6 +7674,26 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // Suspend?
     if (suspendFiltering) return true;
 
+    finished = false;
+    const bool ok = acceptsRow(sourceRow, sourceParent, -1);
+    finished = true;
+    return ok;
+}
+
+bool SortFilter::acceptsRowIgnoring(int sourceRow, int ignoreColumn) const
+{
+    if (suspendFiltering) return true;
+    return acceptsRow(sourceRow, QModelIndex(), ignoreColumn);
+}
+
+bool SortFilter::acceptsRow(int sourceRow, const QModelIndex &sourceParent,
+                            int ignoreColumn) const
+{
+/*
+    filterAcceptsRow's decision, with one category optionally ignored (see
+    FilterPredicate::accepts). Pure: it sets no state, so the Map module can ask it
+    outside a filter pass.
+*/
     // Check Raw + Jpg
     if (combineRawJpg) {
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
@@ -7663,10 +7730,8 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
         every version row until the load ended and then hid them all at once. */
     const bool loading = G::isModifyingDatamodel || G::isLoadRunning;
 
-    finished = false;
     const FilterPredicatePtr p = filterPredicate();
     if (loading || !p || p->acceptsEverything()) {
-        finished = true;
         /*  VERSIONS. With no filter, a collapsed group shows only its master. With a
             filter, see below: collapsed still hides a version, but only behind a master
             the filter shows. */
@@ -7675,7 +7740,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
 
     const bool ok = p->accepts([&](int column) {
         return sourceModel()->index(sourceRow, column, sourceParent).data(Qt::EditRole);
-    });
+    }, ignoreColumn);
 
     /*  A COLLAPSED GROUP STAYS COLLAPSED UNDER A FILTER, as long as its master is shown.
         This used to let every version stand on its own values whenever a filter was set,
@@ -7691,12 +7756,11 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
         if (mRow >= 0) {
             const bool masterShown = p->accepts([&](int column) {
                 return sourceModel()->index(mRow, column, sourceParent).data(Qt::EditRole);
-            });
-            if (masterShown) { finished = true; return false; }
+            }, ignoreColumn);
+            if (masterShown) return false;
         }
     }
 
-    finished = true;
     return ok;
 }
 

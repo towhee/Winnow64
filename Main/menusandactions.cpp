@@ -1888,6 +1888,19 @@ void MW::createWindowActions()
     addAction(queriesDockVisibleAction);
     connect(queriesDockVisibleAction, &QAction::triggered, this, &MW::showQueriesDock);
 
+    placesDockVisibleAction = new QAction(tr("Places Panel"), this);
+    placesDockVisibleAction->setObjectName("togglePlaces");
+    placesDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    placesDockVisibleAction->setCheckable(true);
+    placesDockVisibleAction->setToolTip(
+        tr("Places: areas you draw on the map. Click one to show the images taken "
+           "inside it."));
+    // off by default, like Collections; the Map workflow shows it
+    placesDockVisibleAction->setChecked(
+        isSettings && settings->value("isPlacesDockVisible", false).toBool());
+    addAction(placesDockVisibleAction);
+    connect(placesDockVisibleAction, &QAction::triggered, this, &MW::showPlacesDock);
+
     /*  The Module dock (Browse | Develop | ... | Map across the top). ON by
         default: it is where the workflow is chosen. Choosing it from the menu while the
         top show/hide bar has the area collapsed un-collapses it -- the user has asked to
@@ -2975,6 +2988,7 @@ void MW::createWindowMenu()
     windowMenu->addAction(keywordsDockVisibleAction);
     windowMenu->addAction(collectionsDockVisibleAction);
     windowMenu->addAction(queriesDockVisibleAction);
+    windowMenu->addAction(placesDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
@@ -3774,6 +3788,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[keywordsDockVisibleAction->objectName()] = keywordsDockVisibleAction;
     actionKeys[collectionsDockVisibleAction->objectName()] = collectionsDockVisibleAction;
     actionKeys[queriesDockVisibleAction->objectName()] = queriesDockVisibleAction;
+    actionKeys[placesDockVisibleAction->objectName()] = placesDockVisibleAction;
     actionKeys[moduleDockVisibleAction->objectName()] = moduleDockVisibleAction;
     actionKeys[openCatalogAction->objectName()] = openCatalogAction;
     actionKeys[manageCatalogAction->objectName()] = manageCatalogAction;

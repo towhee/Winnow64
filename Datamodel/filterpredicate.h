@@ -174,12 +174,18 @@ struct FilterPredicate
 
         It is called ONCE PER FILTERING CATEGORY, which is most of what made the
         old version expensive: walking the tree fetched the same cell once per
-        ITEM, so a category holding 200 keywords read it 200 times. */
+        ITEM, so a category holding 200 keywords read it 200 times.
+
+        ignoreColumn skips the category on that column, as if nothing in it were
+        checked: the Map module asks which rows every OTHER filter admits, so the pins
+        outside the clicked one stay on the map to be clicked next
+        (SortFilter::acceptsRowIgnoring). */
     template <typename Fetch>
-    bool accepts(Fetch &&valueFor) const
+    bool accepts(Fetch &&valueFor, int ignoreColumn = -1) const
     {
         for (const FilterCategory &cat : categories) {
             if (!cat.isFiltering()) continue;
+            if (ignoreColumn >= 0 && cat.column == ignoreColumn) continue;
 
             /*  EXPRESSIONS FIRST: an excluded one rejects outright, as a value exclusion
                 does; an included one that matches satisfies the category's OR. A

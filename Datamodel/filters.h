@@ -44,6 +44,8 @@ public:
     QTreeWidgetItem *days;
     QTreeWidgetItem *creators;
     QTreeWidgetItem *gps;
+    QTreeWidgetItem *mapPins;
+    QTreeWidgetItem *places;
     QTreeWidgetItem *availability;
     // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare;
@@ -69,6 +71,8 @@ public:
     QString catKeyword = "Keywords";
     QString catCreator = "Creators";
     QString catGps = "GPS";
+    QString catMapPin = "Map pin";
+    QString catPlace = "Places";
     QString catAvailability = "Availability";
     // QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
@@ -158,7 +162,7 @@ public:
     {
         return category != nullptr
                && (category == keywords || category == folders || category == collections
-                   || category == queries);
+                   || category == queries || category == places);
     }
     /*  THE ONE FOLDER FILTER, as paths: what the Folders category includes (Checked) and
         excludes (PartiallyChecked). The Source panel's LibTree is a second view of it,
@@ -211,6 +215,27 @@ public:
     {
         return c != nullptr && (c == collections || c == queries);
     }
+    /*  THE SET CATEGORIES: the Library's two, and PLACES (Main/mwplaces.cpp), areas drawn
+        on the map that filter on G::PlacesColumn. Places are filled, counted and checked
+        through the same calls (setSetNodes, setSetCounts, setSetFilter) but are NOT the
+        Library's: they are shown in Folders too, so setLibrarySetsAvailable leaves them
+        alone. */
+    bool isSetCategory(const QTreeWidgetItem *c) const
+    {
+        return isLibrarySetCategory(c) || (c != nullptr && c == places);
+    }
+
+    /*  THE MAP PIN CATEGORY: one item, "Images in the pin", checked by a click on a pin
+        in the Map module (MW::applyMapPinFilter) and filtering on G::MapPinColumn,
+        whose keys DataModel holds. Not built by BuildFilters: MW makes the item and
+        gives it its count. ALWAYS SHOWN, greyed and empty until a pin is clicked, so
+        the category says where it comes from (see updateAvailabilityVisibility for
+        why nothing here comes and goes). A session choice, so never persisted, and
+        dropped with a new folder or Library load (reset). The item stays when
+        unchecked, so the pin can be checked again from here. */
+    void setMapPinItem(int count);
+    void clearMapPinItem();
+    bool isMapPinFiltering() const;
     /*  The query an item tests, as text, or empty for an ordinary value item: the Search
         row's text for searchTrue/searchFalse (unless it is the placeholder), a Query
         item's QueryTextRole. Read by SortFilter::compileFilters. */
@@ -341,6 +366,7 @@ signals:
 public slots:
 
     bool isAnyFilter();
+    bool isAnyFilterBut(const QTreeWidgetItem *category);
     void setEachCatTextColor();
     bool isCatFiltering(QTreeWidgetItem *item);
     void reset();
