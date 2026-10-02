@@ -617,6 +617,71 @@ void MW::filterOnKeyword(const QString &path)
     filterChange("MW::filterOnKeyword");
 }
 
+void MW::applyMapPinFilter(const QList<int> &dmRows, bool add)
+{
+/*
+    Show only the images in a Map module pin. A plain click REPLACES every filter --
+    categories, the search text, the pick / rating / colour actions -- with the Filters
+    "Map pin" category, in ONE filterChange, as a Collection, Query or Bookmark click
+    does: it means "show me these", not "narrow what I am looking at".
+
+    ADD (Cmd/Shift+click) while a pin is filtering toggles this pin in it and leaves the
+    other filters alone: the pin's images are taken out when all of them are already
+    in, otherwise added. Taking out the last one unchecks the category. With no pin
+    filtering it is a plain click.
+
+    The pin is held as row KEYS (DataModel::setMapPinKeys), not rows, so an insert or a
+    sort cannot move it onto other images. The same pin clicked again changes nothing,
+    which is also what the second release of a double-click is.
+
+    NOT WHILE A LOAD IS RUNNING: the load's filter build resets the checks when it
+    lands, as MW::applySetFilter explains.
+*/
+    if (G::isLogger) G::log("MW::applyMapPinFilter", QString::number(dmRows.size()));
+    if (!filters || !dm || dmRows.isEmpty()) return;
+    if (G::isLoadRunning || G::isModifyingDatamodel || filters->buildingFilters) {
+        if (G::popup)
+            G::popup->showPopup(tr("Still loading. Click the pin again when it has "
+                                   "finished."), 2500);
+        return;
+    }
+
+    QSet<QString> pin;
+    for (int r : dmRows) {
+        const QString key = dm->index(r, G::PathColumn).data(G::KeyRole).toString();
+        if (!key.isEmpty()) pin.insert(key);
+    }
+    if (pin.isEmpty()) return;
+
+    const bool pinFiltering = filters->isMapPinFiltering();
+    QSet<QString> keys = pin;
+    if (add && pinFiltering) {
+        keys = dm->mapPinKeySet();
+        if (keys.contains(pin)) keys.subtract(pin);
+        else keys.unite(pin);
+        if (keys.isEmpty()) {
+            filters->clearMapPinItem();
+            dm->setMapPinKeys({});
+            filterChange("MW::applyMapPinFilter");
+            return;
+        }
+    }
+    else if (pinFiltering && keys == dm->mapPinKeySet() && !filters->isAnyFilterBut(
+                 filters->mapPins)) {
+        return;                                 // this pin, and only this pin, already
+    }
+
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+    if (!add || !pinFiltering) {
+        uncheckAllFilters();
+        filters->searchString = "";
+        dm->searchStringChange("");
+    }
+    dm->setMapPinKeys(keys);
+    filters->setMapPinItem(keys.size());
+    filterChange("MW::applyMapPinFilter");
+}
+
 void MW::setFilterSolo()
 {
     if (G::isLogger) G::log("MW::setFilterSolo");

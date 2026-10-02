@@ -324,6 +324,8 @@ set(WINNOW_SOURCES
     Main/navigate.cpp
     Main/mwversions.cpp
     Main/mwcollections.cpp
+    Main/mwplaces.cpp
+    Main/mwgeotag.cpp
     Main/selftestnav.cpp
     Main/pick.cpp
     Main/qtlocalpeer.cpp
@@ -441,6 +443,8 @@ set(WINNOW_SOURCES
     Utilities/geo.cpp
     Views/Map/maptilesource.cpp
     Views/Map/mapview.cpp
+    Views/Map/placelist.cpp
+    Dialogs/placedlg.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -731,6 +735,8 @@ set(WINNOW_HEADERS
     Utilities/geo.h
     Views/Map/maptilesource.h
     Views/Map/mapview.h
+    Views/Map/placelist.h
+    Dialogs/placedlg.h
 )
 
 # -----------------------------------------------------------------------------

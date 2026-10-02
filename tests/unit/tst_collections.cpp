@@ -38,6 +38,7 @@ private slots:
     void membershipIsIdempotentAndCounted();
     void membershipIsDirectAndPerKind();
     void queriesKeepTheirDefinitionAndDuplicate();
+    void placesAreTheirOwnKind();
     void aMoveFollowsTheImage();
     void aDeleteLeavesEveryCollection();
     void catalogMapsKeysToRowPaths();
@@ -180,6 +181,33 @@ void tst_collections::membershipIsDirectAndPerKind()
     QCOMPARE(one, want);
     QCOMPARE(m.value(cachePathKey(img("2.nef"))), QStringList{QString::number(b)});
     QVERIFY(s.membershipByKey(Kind::Query).isEmpty());
+}
+
+void tst_collections::placesAreTheirOwnKind()
+{
+    /*  A Place (Main/mwplaces.cpp) is a node of kind 2 whose definition is its shape
+        (Geo::toJson). It never shows in the Collections or Queries trees, and an edit
+        to its shape or name is kept. */
+    CollectionStore &s = CollectionStore::instance();
+    const QString def = R"({"shape":"polygon","points":[[49,-123],[49,-122],[50,-122.5]]})";
+    const qint64 c = s.create(Kind::Collection, 0, "Trip");
+    const qint64 p = s.create(Kind::Place, 0, "Home", def);
+    QVERIFY(c);
+    QVERIFY(p);
+    QCOMPARE(static_cast<int>(Kind::Place), 2);     // a published integer
+    QCOMPARE(s.nodes(Kind::Collection).size(), 1);
+    QCOMPARE(s.nodes(Kind::Query).size(), 0);
+    QCOMPARE(s.nodes(Kind::Place).size(), 1);
+    QCOMPARE(s.node(p).definition, def);
+    QVERIFY(s.rename(p, "Cottage"));
+    const QString def2 = R"({"shape":"ellipse","lat":49,"lon":-123,"rx":1,"ry":1})";
+    QVERIFY(s.setDefinition(p, def2));
+    QCOMPARE(s.node(p).name, QString("Cottage"));
+    QCOMPARE(s.node(p).definition, def2);
+    // nesting across kinds is refused, as for collections and queries
+    QVERIFY(!s.reparent(p, c));
+    QVERIFY(s.remove(p));
+    QCOMPARE(s.nodes(Kind::Place).size(), 0);
 }
 
 void tst_collections::queriesKeepTheirDefinitionAndDuplicate()

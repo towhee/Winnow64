@@ -274,7 +274,7 @@ bool PNG::parseExifChunk(MetadataParameters &p, ImageMetadata &m,
         ifd->readIFD(p, isBigEnd);
 
         if (ifd->ifdDataHash.contains(1)) {  // GPSLatitudeRef
-            m.gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, 12);
+            m.gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, startOffset);
         }
     }
 

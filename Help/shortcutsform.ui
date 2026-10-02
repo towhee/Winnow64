@@ -1815,6 +1815,60 @@
       </item>
       <item>
        <property name="text">
+        <string>Map: drawing a place</string>
+       </property>
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <item>
+        <property name="text">
+         <string>Remove last corner</string>
+        </property>
+        <property name="text">
+         <string>Delete / Backspace</string>
+        </property>
+        <property name="text">
+         <string>While a polygon place is drawn on the map (Places panel +): takes away the last corner you clicked.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Close the polygon</string>
+        </property>
+        <property name="text">
+         <string>Double-click</string>
+        </property>
+        <property name="text">
+         <string>Or click the first (green) corner.  Needs at least three corners.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Cancel the place</string>
+        </property>
+        <property name="text">
+         <string>Esc</string>
+        </property>
+        <property name="text">
+         <string>With the map focused, cancels the New / Edit Place dialog.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Keep the ellipse shape</string>
+        </property>
+        <property name="text">
+         <string>Shift + drag</string>
+        </property>
+        <property name="text">
+         <string>Dragging an ellipse handle with Shift scales both axes together.</string>
+        </property>
+       </item>
+      </item>
+      <item>
+       <property name="text">
         <string>Preferences</string>
        </property>
        <property name="text">

@@ -190,6 +190,7 @@ void MW::createCollectionsDock()
         constructor). */
     CollectionStore &store = CollectionStore::instance();
     connect(&store, &CollectionStore::nodesChanged, this, [this](Kind k) {
+        if (k == Kind::Place) return;          // Main/mwplaces.cpp has its own
         if (k == Kind::Collection) refreshCollectionNodes();
         else refreshQueryNodes();
         updateCollectionsAvailability();

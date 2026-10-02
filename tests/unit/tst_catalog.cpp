@@ -234,8 +234,12 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         encoded as UTC (Catalog::wallClockSecs), so the Library's Year/Month/Day match a
         folder's on any Mac in any timezone; version 17 added image_version, the
         versions (virtual copies) an image's sidecar lists, because a row served from
-        the index never parses the sidecar that holds them. */
-    QCOMPARE(CacheDb::schemaVersion(), 18);
+        the index never parses the sidecar that holds them; version 18 added
+        develop_history, the History dock's steps; version 19 added NO table -- the
+        sixth data repair: JPEG/PNG GPS was decoded from a fixed base of 12 instead of
+        the Exif start, so it clears the freshness stamp of every JPEG/PNG row holding
+        a coordinate and the next scan re-reads it. */
+    QCOMPARE(CacheDb::schemaVersion(), 19);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

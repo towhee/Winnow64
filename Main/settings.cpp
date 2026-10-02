@@ -36,6 +36,7 @@ void MW::writeSettings()
     settings->setValue("isFullScreenKeywords", fullScreenDocks.isKeywords);
     settings->setValue("isFullScreenCollections", fullScreenDocks.isCollections);
     settings->setValue("isFullScreenQueries", fullScreenDocks.isQueries);
+    settings->setValue("isFullScreenPlaces", fullScreenDocks.isPlaces);
     settings->setValue("isFullScreenModule", fullScreenDocks.isModule);
     settings->setValue("isFullScreenMetadata", fullScreenDocks.isMetadata);
     settings->setValue("isFullScreenDevelop", fullScreenDocks.isDevelop);
@@ -171,6 +172,7 @@ void MW::writeSettings()
     settings->setValue("isCollectionsDockVisible",
                        collectionsDockVisibleAction->isChecked());
     settings->setValue("isQueriesDockVisible", queriesDockVisibleAction->isChecked());
+    settings->setValue("isPlacesDockVisible", placesDockVisibleAction->isChecked());
 
     // the show/hide bars: which sides the user left collapsed (see the function)
     writeSessionAreaCollapse();
@@ -343,6 +345,7 @@ void MW::writeSettings()
     if (collectionsDock)
         settings->setValue("CollectionsDock", collectionsDock->isCollapsed());
     if (queriesDock) settings->setValue("QueriesDock", queriesDock->isCollapsed());
+    if (placesDock) settings->setValue("PlacesDock", placesDock->isCollapsed());
     settings->endGroup();
 
     settings->beginGroup("DockSoloMode");
@@ -767,6 +770,8 @@ bool MW::loadSettings()
             settings->value("isFullScreenCollections").toBool();
     if (settings->contains("isFullScreenQueries"))
         fullScreenDocks.isQueries = settings->value("isFullScreenQueries").toBool();
+    if (settings->contains("isFullScreenPlaces"))
+        fullScreenDocks.isPlaces = settings->value("isFullScreenPlaces").toBool();
     if (settings->contains("isFullScreenModule"))
         fullScreenDocks.isModule = settings->value("isFullScreenModule").toBool();
     if (settings->contains("isFullScreenMetadata")) fullScreenDocks.isMetadata = settings->value("isFullScreenMetadata").toBool();

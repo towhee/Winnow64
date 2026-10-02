@@ -1,4 +1,5 @@
 #include "Metadata/metadata.h"
+#include "Utilities/geo.h"
 #include <QDebug>
 #include <QCryptographicHash>
 #include <QStorageInfo>
@@ -967,6 +968,56 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
     return ok;
 }
 
+bool Metadata::writeGpsToSidecar(const QString &fPath, double lat, double lon)
+{
+/*
+    The two GPS properties (and exif:GPSVersionID, which Lightroom writes beside them),
+    and nothing else -- the same narrow, in-place edit writeKeywordsToSidecar makes,
+    for the same reason: every other property is left exactly as the file has it.
+
+    A STRIPPED SIDECAR STAYS STRIPPED. If the image took its metadata while "Permit
+    image file modification" was on (metadataembedded = True), the flag is kept: the
+    keywords and scalars still live in the file, and parseSidecar reads the location
+    before it honours that flag.
+*/
+    if (G::isLogger) G::log("Metadata::writeGpsToSidecar", fPath);
+    const QString srcFun = "Metadata::writeGpsToSidecar";
+    if (FileOps::refuseVersionKey(fPath, srcFun)) return false;
+    if (isPreviewCachePath(fPath, srcFun)) return false;
+    if (!std::isfinite(lat) || !std::isfinite(lon) || std::abs(lat) > 90
+        || std::abs(lon) > 180) return false;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
+
+    const QString sPath = FileOps::prepareSidecarForWrite(fPath);
+    // Refuse to write through a symlink, as every other sidecar writer here does.
+    if (QFileInfo(fPath).isSymLink() || QFileInfo(sPath).isSymLink()) {
+        G::issue("Warning", "Refusing to write sidecar: path is a symlink.", srcFun, -1,
+                 sPath);
+        return false;
+    }
+    QFile sidecarFile(sPath);
+    if (!sidecarFile.open(QIODevice::ReadWrite)) {
+        G::issue("Warning", "Failed to open sidecar to write the location.", srcFun, -1,
+                 sPath);
+        return false;
+    }
+    Xmp xmp(sidecarFile, G::dmInstance);
+    if (!xmp.isValid) xmp.fix();
+    xmp.setItem("gpsversionid", "2.2.0.0");
+    xmp.setItem("gpslatitude", Geo::toXmpCoord(lat, true).toLatin1());
+    xmp.setItem("gpslongitude", Geo::toXmpCoord(lon, false).toLatin1());
+    xmp.setItem("modifydate", xmpNow());
+    const bool ok = xmp.writeSidecar(sidecarFile);
+    sidecarFile.close();
+    if (!ok) {
+        G::issue("Warning", "Failed to write the location to the sidecar.", srcFun, -1,
+                 sPath);
+        return false;
+    }
+    emit updateSidecarStatus(fPath);
+    return true;
+}
+
 QByteArray Metadata::xmpNow()
 {
     const QDateTime now = QDateTime::currentDateTime();
@@ -1556,6 +1607,18 @@ bool Metadata::parseSidecar()
         && sidecarModifyDate < p.xmpModifyDate) {
         sidecarFile.close();
         return false;
+    }
+
+    /*  THE LOCATION, read first: a sidecar flagged metadataembedded still speaks for it
+        (writeGpsToSidecar never embeds). Both axes or neither, and it WINS over the
+        file's own GPS -- it is where a location set in Winnow, or in Lightroom for a
+        raw file, lives. */
+    {
+        double la = 0, lo = 0;
+        if (Geo::fromXmpCoord(xmp.getItem("gpslatitude"), true, la)
+            && Geo::fromXmpCoord(xmp.getItem("gpslongitude"), false, lo)
+            && !(la == 0 && lo == 0))
+            m.gpsCoord = Geo::formatCoord(la, lo);
     }
 
     QString s;

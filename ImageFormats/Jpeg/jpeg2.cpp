@@ -380,7 +380,7 @@ bool Jpeg2::parse(MetadataParameters &p,
 
         if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
             // process GPS info
-            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, 12);
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, startOffset);
             m.gpsCoord = gpsCoord;
         }
     }

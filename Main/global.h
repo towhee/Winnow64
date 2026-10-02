@@ -271,6 +271,20 @@ Q_NAMESPACE
            (DataModel::setCollectionMembership). READ-ONLY. Appended for the same reason
            as DevelopColumn. */
         CollectionsColumn,
+        /* True for the images in the map pin the user clicked in the Map module -- what
+           the Filters "Map pin" category filters on. NOT STORED IN THE ROW: a pin is a
+           session-only choice, so DataModel::data answers it from a side table of row
+           keys (DataModel::setMapPinKeys). READ-ONLY. Appended for the same reason as
+           DevelopColumn. */
+        MapPinColumn,
+        /* The ids (as text) of the Places (Main/mwplaces.cpp) -- areas drawn on the map
+           -- the image was taken inside: what the Filters "Places" category filters on.
+           NOT STORED IN THE ROW: places are the user's, held in collections.db, and an
+           edit to one changes the answer without the row changing, so DataModel::data
+           answers it from a side table keyed by source path
+           (DataModel::setPlaceMembership). READ-ONLY. Appended for the same reason as
+           DevelopColumn. */
+        PlacesColumn,
         TotalColumns    // insert additional columns before this
     };
 

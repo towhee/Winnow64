@@ -16,6 +16,13 @@ private slots:
     void mercatorKnownPoints();
     void tileRangeWraps();
     void clusterCounts();
+    void placeEllipse();
+    void placeRotatedEllipse();
+    void placeConcavePolygon();
+    void placeAntimeridianPolygon();
+    void placeJsonRoundTrip();
+    void formatCoordRoundTrip();
+    void xmpCoordRoundTrip();
 };
 
 void TstGeo::parseDms_data()
@@ -124,6 +131,143 @@ void TstGeo::clusterCounts()
     QVERIFY(qAbs(cs.at(0).world.x() - 29.6666667) < 1e-6);
     QVERIFY(qAbs(cs.at(2).world.y() - 502.5) < 1e-9);
     QVERIFY(Geo::cluster({}, 60).isEmpty());
+}
+
+void TstGeo::placeEllipse()
+{
+    // A circle of 1 zoom-0 pixel (~1.4 degrees of longitude) around Vancouver.
+    Geo::Place p;
+    p.lat = 49.28;
+    p.lon = -123.12;
+    p.rx = p.ry = 1.0;
+    QVERIFY(p.isValid());
+    QVERIFY(Geo::contains(p, 49.28, -123.12));
+    QVERIFY(Geo::contains(p, 49.28, -122.0));      // 1.12 deg east: 0.8 px
+    QVERIFY(!Geo::contains(p, 49.28, -121.5));     // 1.62 deg east: 1.15 px
+    QVERIFY(!Geo::contains(p, -33.865, 151.21));
+    p.rx = 0;
+    QVERIFY(!p.isValid());
+    QVERIFY(!Geo::contains(p, 49.28, -123.12));
+}
+
+void TstGeo::placeRotatedEllipse()
+{
+    // Long east-west (rx 4), thin (ry 0.5), on the equator: a point 3 px east is in.
+    Geo::Place p;
+    p.lat = 0.1;
+    p.lon = 10;
+    p.rx = 4;
+    p.ry = 0.5;
+    const double degPerPx = 360.0 / 256.0;
+    QVERIFY(Geo::contains(p, 0.1, 10 + 3 * degPerPx));
+    // Turned 90 degrees, the same point is outside and one 3 px "south" is in.
+    p.angleDeg = 90;
+    QVERIFY(!Geo::contains(p, 0.1, 10 + 3 * degPerPx));
+    double lat = 0, lon = 0;
+    const QPointF c = Geo::lonLatToWorld(0.1, 10, 0);
+    Geo::worldToLonLat(c + QPointF(0, 3), 0, lat, lon);
+    QVERIFY(Geo::contains(p, lat, lon));
+}
+
+void TstGeo::placeConcavePolygon()
+{
+    // A "U": the notch at the top middle is outside.
+    Geo::Place p;
+    p.shape = Geo::Place::Polygon;
+    p.verts = {{0, 10}, {3, 10}, {3, 2}, {2, 2}, {2, 8}, {1, 8}, {1, 2}, {0, 2}};
+    QVERIFY(p.isValid());
+    QVERIFY(Geo::contains(p, 5, 0.5));            // left arm
+    QVERIFY(Geo::contains(p, 5, 2.5));            // right arm
+    QVERIFY(Geo::contains(p, 9, 1.5));            // the base
+    QVERIFY(!Geo::contains(p, 5, 1.5));           // the notch
+    QVERIFY(!Geo::contains(p, 20, 1.5));
+    p.verts.resize(2);
+    QVERIFY(!p.isValid());
+}
+
+void TstGeo::placeAntimeridianPolygon()
+{
+    // A square straddling 180: from 170 E to 170 W.
+    Geo::Place p;
+    p.shape = Geo::Place::Polygon;
+    p.verts = {{170, 10}, {-170, 10}, {-170, -10}, {170, -10}};
+    QVERIFY(Geo::contains(p, 0.5, 179.0));
+    QVERIFY(Geo::contains(p, 0.5, -179.0));
+    QVERIFY(Geo::contains(p, 0.5, 180.0));
+    QVERIFY(!Geo::contains(p, 0.5, 0.0));
+    QVERIFY(!Geo::contains(p, 0.5, 160.0));
+    QVERIFY(!Geo::contains(p, 0.5, -160.0));
+    // An ellipse centred on the seam works the same way.
+    Geo::Place e;
+    e.lat = 0.5;
+    e.lon = 179.5;
+    e.rx = e.ry = 2;
+    QVERIFY(Geo::contains(e, 0.5, -179.0));
+    QVERIFY(!Geo::contains(e, 0.5, 0.0));
+}
+
+void TstGeo::placeJsonRoundTrip()
+{
+    Geo::Place e;
+    e.lat = 49.28;
+    e.lon = -123.12;
+    e.rx = 0.3;
+    e.ry = 0.125;
+    e.angleDeg = 33;
+    Geo::Place back;
+    QVERIFY(Geo::fromJson(Geo::toJson(e), back));
+    QCOMPARE(back.shape, Geo::Place::Ellipse);
+    QCOMPARE(back.lat, e.lat);
+    QCOMPARE(back.lon, e.lon);
+    QCOMPARE(back.rx, e.rx);
+    QCOMPARE(back.ry, e.ry);
+    QCOMPARE(back.angleDeg, e.angleDeg);
+
+    Geo::Place p;
+    p.shape = Geo::Place::Polygon;
+    p.verts = {{-123, 49}, {-122, 49}, {-122.5, 50}};
+    QVERIFY(Geo::fromJson(Geo::toJson(p), back));
+    QCOMPARE(back.shape, Geo::Place::Polygon);
+    QCOMPARE(back.verts, p.verts);
+    // The published shape of the JSON: [lat, lon] pairs.
+    QVERIFY(Geo::toJson(p).contains("[49,-123]"));
+
+    QVERIFY(!Geo::fromJson("", back));
+    QVERIFY(!Geo::fromJson("{\"shape\":\"star\"}", back));
+}
+
+void TstGeo::formatCoordRoundTrip()
+{
+    // The exact shape GPS::decode builds, and back through parseCoord
+    QCOMPARE(Geo::formatCoord(49.2204103, -123.9561722),
+             QString("49°13'13.477\" N 123°57'22.220\" W"));
+    QCOMPARE(Geo::formatCoord(-33.865, 151.21),
+             QString("33°51'54.000\" S 151°12'36.000\" E"));
+    // a second that rounds up carries into the minute, never 60.000"
+    QCOMPARE(Geo::formatCoord(10.0166666, 20.0), QString("10°1'0.000\" N 20°0'0.000\" E"));
+    const double pts[][2] = {{49.28, -123.12}, {-0.5, 0.25}, {84.9, 179.99}};
+    for (const auto &p : pts) {
+        double la = 0, lo = 0;
+        QVERIFY(Geo::parseCoord(Geo::formatCoord(p[0], p[1]), la, lo));
+        QVERIFY(qAbs(la - p[0]) < 1e-6 && qAbs(lo - p[1]) < 1e-6);
+    }
+}
+
+void TstGeo::xmpCoordRoundTrip()
+{
+    QCOMPARE(Geo::toXmpCoord(49.2204103, true), QString("49,13.224618N"));
+    QCOMPARE(Geo::toXmpCoord(-123.9561722, false), QString("123,57.370332W"));
+    double v = 0;
+    QVERIFY(Geo::fromXmpCoord("49,13.224618N", true, v));
+    QVERIFY(qAbs(v - 49.2204103) < 1e-6);
+    QVERIFY(Geo::fromXmpCoord("123,57,22.22W", false, v));      // DDD,MM,SS form
+    QVERIFY(qAbs(v + 123.9561722) < 1e-6);
+    QVERIFY(Geo::fromXmpCoord("33,51.9S", true, v));
+    QVERIFY(qAbs(v + 33.865) < 1e-9);
+    QVERIFY(!Geo::fromXmpCoord("", true, v));
+    QVERIFY(!Geo::fromXmpCoord("49,13N", false, v));            // a latitude as longitude
+    QVERIFY(!Geo::fromXmpCoord("95,0N", true, v));
+    QVERIFY(!Geo::fromXmpCoord("abc", true, v));
 }
 
 QTEST_GUILESS_MAIN(TstGeo)

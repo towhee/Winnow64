@@ -415,7 +415,7 @@ static const QStringList kFlatOrder {
     "Years", "Months", "Days",
     "Picks", "Ratings", "Color classes",
     "Camera models", "Lenses", "Focal lengths", "ISO",
-    "Titles", "Creators", "GPS", "Keywords",
+    "Titles", "Creators", "GPS", "Places", "Map pin", "Keywords",
     "Availability", "Duplicates found"
 };
 
@@ -444,12 +444,12 @@ void tst_filters::groupsHoldTheirCategories()
     QVERIFY(f.isGroupHeader(metadata));
     QVERIFY(!f.isCategoryHeader(metadata));
     QCOMPARE(headerNames(metadata, f),
-             QStringList({"Titles", "Creators", "GPS", "Keywords"}));
+             QStringList({"Titles", "Creators", "GPS", "Places", "Map pin", "Keywords"}));
     QVERIFY2(metadata->isExpanded(), "groups open the first time they appear");
     /*  EXPANDABLE, as the view sees it. isExpanded() alone passed while the view
         refused to open any header: DontShowIndicator made hasChildren() false. */
     QVERIFY(f.model()->hasChildren(f.model()->index(5, 0)));
-    const QModelIndex kwIdx = f.model()->index(3, 0, f.model()->index(5, 0));
+    const QModelIndex kwIdx = f.model()->index(5, 0, f.model()->index(5, 0));
     QCOMPARE(kwIdx.data(Filters::CategoryNameRole).toString(), QString("Keywords"));
     QVERIFY(f.model()->hasChildren(kwIdx));
 

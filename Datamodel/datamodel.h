@@ -104,6 +104,11 @@ public:
     bool versionsExpanded(const QString &masterKey) const;
     void clearVersionsExpanded() { mExpandedVersions.clear(); }
 
+    /*  Would this source row be shown if the category on ignoreColumn were unchecked?
+        What the Map module draws while its own pin is filtering: every pin the OTHER
+        filters admit, so the next one can be clicked. GUI thread. */
+    bool acceptsRowIgnoring(int sourceRow, int ignoreColumn) const;
+
 public slots:
     void filterChange(QString src = "");
     void suspend(bool suspendFiltering, QString src = "");
@@ -129,6 +134,8 @@ private slots:
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+    bool acceptsRow(int sourceRow, const QModelIndex &sourceParent,
+                    int ignoreColumn) const;
     /*  Qt's own comparison on keys taken in ONE pass, while a sort WE started is
         running; Qt's base lessThan otherwise. See the definition. */
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
@@ -239,6 +246,23 @@ public:
     bool hasCollectionMembership() const;
     mutable QReadWriteLock collectionLock;
     QHash<QString, QStringList> collectionIdsByPath;
+
+    /*  THE MAP PIN, for G::MapPinColumn: the KEYS (G::KeyRole -- a version is its own
+        row) of the images in the pin last clicked in the Map module. Session-only and
+        replaced whole by MW::applyMapPinFilter; read by data() under the lock, as the
+        collection table is. */
+    void setMapPinKeys(const QSet<QString> &keys);
+    QSet<QString> mapPinKeySet() const;
+    mutable QReadWriteLock mapPinLock;
+    QSet<QString> mapPinKeys;
+
+    /*  PLACE MEMBERSHIP, for G::PlacesColumn: source path -> the ids (as text) of the
+        places the image was taken inside. Worked out from each row's GPS coordinates by
+        MW::refreshPlaceMembership and replaced whole; read by data() under the lock, as
+        the collection table is. */
+    bool setPlaceMembership(const QHash<QString, QStringList> &byPath);   // changed?
+    mutable QReadWriteLock placeLock;
+    QHash<QString, QStringList> placeIdsByPath;
 
     /*  Column headers: the name and the geek flag, one entry per column. See
         setModelProperties. */

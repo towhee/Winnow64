@@ -42,6 +42,13 @@
     stays a member and simply stops loading until it is back, which is what a
     catalogued image does too.
 
+    PLACES live here too (Kind::Place): an area drawn on the map (Main/mwplaces.cpp),
+    its shape the node's definition, with no members -- an image is in a place because
+    of where it was taken, worked out when the images load. Unlike collections and
+    queries they are not the Library's: they filter whatever is loaded, folder or
+    Library. They are here because they are the user's own work, which this file exists
+    to keep.
+
     A VERSION (virtual copy) IS ITS FILE here: membership is by source path, so adding a
     version adds the image, and opening the collection shows the image with its versions
     as the Library does. Per-version membership is a later step.
@@ -56,7 +63,7 @@ class CollectionStore : public QObject
 public:
     /*  Stored as an integer in node.kind: a published format, so values are never
         renumbered. */
-    enum class Kind : int { Collection = 0, Query = 1 };
+    enum class Kind : int { Collection = 0, Query = 1, Place = 2 };
 
     struct Node
     {
@@ -66,7 +73,8 @@ public:
         QString name;
         int position = 0;           // order among its siblings
         /*  A Query's saved definition, Query::Expr::toJsonText (Utilities/queryexpr.h);
-            empty for a collection. A PUBLISHED FORMAT: see queryexpr.h. */
+            a Place's area, Geo::toJson (Utilities/geo.h); empty for a collection.
+            PUBLISHED FORMATS: see queryexpr.h and geo.h. */
         QString definition;
     };
 

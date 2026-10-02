@@ -1,3 +1,53 @@
+==========================================================================================
+CTEST
+==========================================================================================
+
+ctest doesn't build anything. It runs test programs that have already been compiled and reports which passed. So there are two steps: build the tests, then run them.
+
+  <preset> is a placeholder for a build folder name. Your repo has build/mac-debug (the one to use), build/mac-release and build/mac-tsan.
+
+  Option A: From Terminal (recommended)
+
+  ctest isn't on your PATH, so call it by its full path inside Qt's tools. From the Winnow64 folder:
+
+  cd ~/Projects/Winnow64
+  CMAKE=/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake
+  CTEST=/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/ctest
+
+  # 1. Build the two tests these changes affect (takes seconds)
+  $CMAKE --build build/mac-debug --target tst_filterpredicate tst_catalog
+
+  # 2. Run them
+  $CTEST --test-dir build/mac-debug -R "tst_filterpredicate|tst_catalog" --output-on-failure
+
+  What the parts mean:
+  - --test-dir build/mac-debug: which build folder's tests to run.
+  - -R "...": run only tests whose names match this pattern. Leave it out to run every test.
+  - --output-on-failure: print a failing test's full output. Passing tests show just one line.
+
+  To run the whole suite, build everything in build/mac-debug first ($CMAKE --build build/mac-debug, which takes much longer), then run $CTEST --test-dir build/mac-debug
+  --output-on-failure. You can also pick a layer with -L unit or -L smoke (see tests/README.md).
+
+  Reading the result: the summary at the end looks like 100% tests passed, 0 tests failed out of 2. A failure prints the test's output, including the QCOMPARE/QVERIFY line that
+  failed.
+
+  One caution: if build/mac-debug complains about its configuration, it needs the -local presets in CMakeUserPresets.json. Never run plain cmake --preset mac-debug without QT_DIR
+  set, because it silently switches the build to the wrong Qt.
+
+  Option B: Inside Qt Creator
+
+  Qt Creator builds into its own folder (~/Projects/build-Winnow-Qt_6_11_0_for_macOS-Debug), not build/.
+  1. Build the project as usual. The test targets build with it if tests are enabled in that kit.
+  2. Open the Tests panel (View → Output → Test Results) and choose Run All Tests. Or use Tools → Tests → Run All Tests.
+
+  Qt Creator finds the CTest tests itself, and failures show in the Test Results pane.
+
+  The same Terminal command also works on Qt Creator's build folder: replace build/mac-debug with ~/Projects/build-Winnow-Qt_6_11_0_for_macOS-Debug.
+
+
+
+
+
 Raw files decode:
 ImageDecoder
     ImageFormat::demosaic()
@@ -6246,7 +6296,366 @@ Users/roryhill/Pictures/_test0
 
 BMPROBE to be removed
 
+=No. It's reliable as a timer but not safe as a general tool, because it doesn't pause anything. It runs a nested event loop (QEventLoop::exec() until a timer quits it,
+Main/global.cpp:481), so for those milliseconds anything else queued in the app runs, in the middle of the caller's function.
+
+What that means in practice
+
+1. Code can re-enter mid-operation. Timers, queued signals, posted events and even your key presses are handled inside the wait. A second E or G pressed during a switch can start
+   another requestView while the first is half done.
+2. The cost has no upper bound. It runs until the queue is empty, not for the time asked. The old G::wait(100) in scrollToCurrentRowIfNotVisible measured 3,710 ms, which is why
+   it was removed (Main/navigate.cpp:194).
+3. The screen can paint half-finished states. That's the grid flash we fixed this session: the wait in gridDisplay painted a half-applied layout.
+4. Deferred work runs at the wrong time. In the last trace, the keyword count I deferred by 50 ms ran inside the grid's wait, in the middle of the switch.
+5. The comment is misleading. It describes the function as "an alternative to qApp->processEvents()", but it is processEvents running in a loop, with the same hazards.
+
+Where it's used
+
+┌───────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                 Call site                 │                                                             Verdict                                                             │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ viewmodes.cpp:262 gridDisplay, :376       │ Remove. These are the same pattern as the one removed from navigate.cpp, with the same fix: the scrollToRow that follows        │
+│ tableDisplay                              │ already forces layout through visualRect. They run on every view switch, and twice on G from Develop.                           │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ dockwidget.cpp:744 DockWidget::restore    │ Risky. It waits 10 ms "for the default geometry to be set", which is a timing guess. It should hook the event that actually     │
+│                                           │ sets the geometry.                                                                                                              │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ embelexport.cpp:275/284/321               │ Risky. It's used to let the UI update during export, but it also lets the user act in the middle of an export. Progress should  │
+│                                           │ use showPopupNow and pulse.                                                                                                     │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ mainwindow.cpp:1497 closing during a      │ Acceptable in intent. The app has to stay responsive while it waits. Still, close events and other input are processed inside a │
+│ background ingest                         │  closeEvent. A "finished" signal that triggers the quit would be safer.                                                         │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ thumb.cpp:727                             │ Low risk. It's a retry delay on a Reader worker thread, so it only runs that thread's own queue. QThread::msleep(100) would be  │
+│                                           │ simpler there.                                                                                                                  │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ datamodel.cpp:7910                        │ Dead code, after a return. It's also buggy: while (!finished || timeIsUp) never exits once the time is up. Delete it.           │
+├───────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ test.cpp                                  │ Fine for test drivers.                                                                                                          │
+└───────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+Recommendation: remove the two waits in gridDisplay and tableDisplay first. That takes about 100 ms (twice on G) off every view switch and closes the re-entrancy hole on the
+hottest path. Delete the dead loop in datamodel.cpp at the same time. The dock, export and close cases each need their real event wired in, so treat them as separate changes.
+
 ==========================================================================================
-Revise file menu
+Map
 ==========================================================================================
 
+Clicking an orange badge on the map now filters the library to just the images in that pin, and it replaces any existing filters the same way a Collection, Query or Bookmark
+  click does. All the edited files pass a compile-only syntax check and moc. I haven't built the app or run the tests, so none of this has been tried in Winnow yet.
+
+  How it works
+  - Click a badge: shows only that pin's images. Clear All, or a Collection, Query, Bookmark or keyword click, replaces it in turn, because they all clear every filter first.
+  - Cmd/Ctrl- or Shift-click: adds another pin to the current pin filter, or takes it out if all its images are already in. Taking out the last one turns the filter off. I chose
+    this; before, these modifiers added to the selection. Say if you'd rather keep the old behaviour.
+  - Filters panel: there's a new "Map pin" category in the Metadata group, after GPS, with one item, "Images in the pin". Unchecking it shows everything again, and Opt+click
+    excludes those images instead. Following the rule the Availability category uses, the category is always visible and greyed until you click a pin. It lasts only for the
+    session: it isn't saved and is dropped when a new folder or Library loads.
+  - Double-click a pin: filters to it and opens the loupe.
+  - Hover preview: clicking the thumbnail still selects that image. If the pin filter is hiding it, it switches to that pin first.
+
+  The map keeps every pin. If the map only drew the filtered images, one click would leave a single pin and nothing else to click. So the map now draws the images every other
+  filter allows and dims the pins outside the current pin filter to 45% opacity. The count at the bottom left changes to "Showing the n images in the clicked pin". A side effect is
+  that the map's pins now work from all loaded rows, not just the filtered ones.
+
+  Where the changes are
+  - Pin membership: a new read-only column, G::MapPinColumn, built the same way as CollectionsColumn. It's answered from a list of the pin's image keys, so sorting or inserting
+    rows can't move the pin onto other images.
+  - Map's view of the filters: FilterPredicate::accepts can now skip one column. SortFilter::filterAcceptsRow is split so the map can ask "would this row show if the pin filter
+    were off?"
+  - Click handling: MW::applyMapPinFilter is in Main/sortandfilter.cpp. A click while a folder or the Library is loading shows a popup instead of filtering, as Collections clicks
+    already do.
+  - Test and docs: I added the unit test tst_filterpredicate::mapPinIsBoolAndCanBeIgnored. I updated the Map Module section of notes/Documentation.txt and added no new headings, so
+    the ToC doesn't change.
+
+Users/roryhill/Temp/Photos_to_be_curated/2026/202606/2026-06-10_Victoria/2026-06-30_0049.jpg
+Correct coord 48°28'7.72" N 123°22'13.88" W
+Winnow  0°5'0.000" N 47°0'48.545" W
+Can you fix?
+
+I fixed it. Winnow's JPEG reader assumed the Exif block is always the first thing in the file. Your image has a small JFIF header in front of it (common in exported or converted
+  iPhone photos), so the GPS numbers were read from the wrong bytes.
+
+  Verified against your file: reading from the old fixed position reproduces Winnow's wrong 0°5'0.000" N 47°0'48.545" W exactly. Reading from the real Exif position gives
+  48°28'7.720" N 123°22'13.880" W, which matches the correct value.
+
+  The fix: the GPS decoder now uses the real start of the Exif block, like every other Exif field in these readers already does. The same hard-coded value was in jpeg.cpp,
+  jpeg2.cpp and png.cpp, so I fixed all three.
+
+  Fixing images already in your catalog: your index.db still holds the wrong coordinate for this image (I checked). Fixing the reader alone won't correct it. The catalog only
+  re-reads a file when its size or modified time changes, and yours haven't changed. So I added a one-time catalog upgrade (schema 18 → 19). On first launch it marks every indexed
+  JPEG/PNG that has a GPS value for re-reading, and the next scan or folder load reads them again with the fixed code. That covers about 12,700 JPEGs in your index. Images without
+  GPS weren't affected and aren't touched. I updated the catalog test that asserts the schema version (tst_catalog), and added a note to notes/Documentation.txt.
+
+Map module: the Places panel (saved geographic areas)
+
+ Context
+
+ The Map module (v1, view and browse) lists "Saved Locations" as a later phase. You
+ asked for a Lightroom-style panel of areas you draw on the map. Each area is an
+ ellipse (edited with handles like the radial gradient mask) or a polygon (built
+ by clicking). Each one has a name and an image count. Clicking a row filters to the
+ images inside the area and draws the area on the map.
+
+ Decisions you made:
+ - The panel is named "Places". Your keyword tree already uses Location|..., so
+   "Locations" would be ambiguous.
+ - A click replaces all filters, as a Collections, Bookmarks or map-pin click does.
+   Cmd+click and Shift+click change a multi-selection.
+ - Places work in Folders and the Library. They are pure geometry and need no
+   catalog.
+
+ What the plan builds on:
+ - The uncommitted map-pin filter: G::MapPinColumn, MW::applyMapPinFilter,
+   SortFilter::acceptsRowIgnoring, and dmRow-based MapView points.
+ - The Collections machinery: CollectionStore, the Filters set-category API, and
+   MW::buildLibrarySetDock.
+
+ Design
+
+ 1. Geometry: Utilities/geo.h/.cpp (pure math, unit tested)
+
+ - Add struct Geo::Place:
+   - Shape shape (Ellipse or Polygon);
+   - ellipse fields: centre c as lat/lon, rx, ry, angleDeg;
+   - polygon field: verts, a list of lat/lon points.
+ - Add bool contains(const Place&, double lat, double lon).
+ - Add QString toJson(const Place&) and bool fromJson(const QString&, Place&).
+   The JSON is a published format: keys may be added, never renamed.
+ - Containment is tested in Web Mercator world space at zoom 0, the same space the
+   map draws in. So what you see is exactly what filters.
+   - Ellipse: rx/ry are in zoom-0 world units. The test un-rotates the point and
+     checks (x/rx)^2 + (y/ry)^2 <= 1.
+   - Polygon: even-odd ray casting on the projected vertices.
+   - Antimeridian: longitudes are unwrapped relative to the place's first vertex or
+     centre before projecting.
+
+ 2. Store: Datamodel/collectionstore.h
+
+ - Add Kind::Place = 2. The enum is a published integer: appended, never renumbered.
+ - A place is a top-level node whose definition holds Geo::toJson. It has no members.
+ - This needs no schema change. Rename, remove, nodesChanged and the
+   never-move-aside rules come for free.
+ - Update the class comment: collections.db now also holds Places, which are app-wide
+   and not tied to the Library.
+
+ 3. Membership column and filtering
+
+ - Main/global.h: add G::PlacesColumn. It is virtual and read-only, appended after
+   MapPinColumn, and holds a QStringList of place ids.
+ - DataModel:
+   - Add a side table, row key -> place ids, under a QReadWriteLock. It is written by
+     setPlaceMembership().
+   - data() answers PlacesColumn from it, as CollectionsColumn and MapPinColumn
+     are answered.
+   - Add a header entry "Places".
+ - MW::refreshPlaceMembership() (new Main/mwplaces.cpp):
+   - Runs one pass over the dm rows: Geo::parseCoord(GPSCoordColumn), then tests
+     every place.
+   - Pushes the result through dm->setPlaceMembership, then updates the counts.
+   - Refilters if the Places category is filtering.
+   - Triggers:
+     - CollectionStore::nodesChanged(Place);
+     - BuildFilters::finishedBuildFilters, so after every load;
+     - a dm dataChanged that covers GPSCoordColumn.
+   - Logs [PERF] under G::isPerfProbe, so the 43k-row cost is measured, not
+     guessed.
+ - Filters:
+   - Add places / catPlace = "Places" mapped to G::PlacesColumn, in the Metadata
+     group next to GPS and Map pin.
+   - Add isSetCategory(c) (collections, queries or places). setSetNodes,
+     setSetCounts, setSetFilter and setEachCatTextColor use it.
+   - isLibrarySetCategory stays as it is (collections and queries only), so
+     setLibrarySetsAvailable never hides Places in Folders.
+   - Places checks persist with the Library's saved filters, like Collections.
+ - MW::applyPlaceFilter(ids) follows MW::applySetFilter:
+   - It refuses while a load is running and says why.
+   - It calls uncheckAllFilters, clears the search, then
+     setSetFilter(filters->places, ids) as one filterChange.
+   - An empty set means Cancel.
+   - It has no G::scope gate.
+
+ 4. Panel: Views/Map/placelist.h/.cpp and the dock
+
+ - PlaceList is a QTreeWidget with two columns: Name and Images
+   (right-aligned).
+   - Selection mode is ExtendedSelection: a click replaces the selection, Cmd+click
+     toggles a row, Shift+click selects a range.
+   - A selection change emits filterRequested(ids).
+   - syncFromFilter(ids) mirrors the Filters checks back into the selection, with
+     signals blocked.
+ - Context menu: Rename..., Edit Shape..., Zoom to, Delete.... It overrides
+   contextMenuEvent; not Qt::ActionsContextMenu.
+ - An empty-state hint: "No places yet. Click + above to draw one on the map."
+ - Use the dock pattern from MW::buildLibrarySetDock (Main/mwcollections.cpp:46): a
+   DockTitleBar with BarBtns for + (new.png), Cancel (reset.png), collapse
+   and close.
+ - The dock is placesDock. Register it in every place queriesDock is registered.
+   Representative files:
+   - Main/mainwindow.h: the member pointer, plus winnowStateVersion 10 -> 11 with a
+     history line.
+   - Main/workspaces.cpp: placeDocksAddedSince {11, placesDock, ...}, and the
+     workspace field read/write/apply.
+   - Main/initialize.cpp: create, add, tabify, wireSolo, and dockTextNames.
+   - Main/mainwindow.cpp: graphicFor/dockFor, dockForTabText, full-screen
+     restore.
+   - Main/dockwidget.cpp: tooltip, dockVisibleAction, collapse state.
+   - Main/menusandactions.cpp: the Window > Places Panel action.
+   - Main/settings.cpp, Main/diagnostics.cpp.
+   - A new glyph, images/icon16/places_white.png: a map marker, drawn 16x16 white with
+     PIL and registered in winnow.qrc.
+   - Workspaces/defaults.json: the Map workflow shows Places; every workflow gets
+     stateVersion 11.
+
+ 5. Drawing places on the map: Views/Map/mapview.*
+
+ - setPlaces(list of {id, name, Geo::Place}) and setShownPlaces(ids). Shown places
+   are the ones checked in the Places filter.
+ - paintEvent draws each shown place after the tiles and before the pins:
+   - a translucent fill with an outline, and the name at the centroid;
+   - world copies k = -1..1, as the pins are drawn.
+ - The ellipse is drawn as a 64-segment QPolygonF through world -> screen, the same
+   space as the containment test.
+ - After a click, fitPlaces(ids) fits the union bounding box of the selected places.
+
+ 6. Creating and editing places
+
+ - The dialog, Dialogs/placedlg.h/.cpp. It is built in code and non-modal
+   (Qt::Tool, show(), kept by MW), modelled on CatalogRootsDlg.
+   - It holds a Name line edit and a Type selector (Ellipse / Polygon radio buttons).
+   - A directions caption (a word-wrapped QLabel) follows the type and state.
+     - Ellipse: "Drag the centre to move it, the blue handles to size it (Shift keeps
+       its shape), and the green knob to rotate it. Scroll inside it to resize."
+     - Polygon: "Click the map to add corners. Double-click, or click the first corner,
+       to close the shape. Delete or Backspace removes the last corner. Drag the map to
+       pan. Once it is closed, drag a corner to move it."
+   - It has Cancel and Done buttons.
+     - Done is disabled until there is a name and a complete shape. The caption says
+       what is missing (disable with a reason, never a popup).
+     - Edit Shape... opens the same dialog prefilled. A rename-only change works from
+       the dialog too.
+ - The + button:
+   - If the map is not showing, it enters the Map workflow first (invokeMapWorkflow).
+   - It opens the dialog and calls mapView->beginPlaceEdit(shape).
+   - Done -> CollectionStore::create(Kind::Place, 0, name, toJson), or
+     setDefinition/rename for an edit.
+   - Cancel, or closing the dialog -> endPlaceEdit().
+   - Switching the type in the dialog resets the shape in progress.
+ - Edit mode in MapView:
+   - New state: editing, editPlace, polyClosed, editDrag handle.
+   - A new signal, placeEditChanged(bool complete), tells the dialog to update Done and
+     the caption.
+   - Pin clicks and pin hover previews are suspended while editing, so clicks
+     belong to the tool. A drag still pans and the wheel still zooms.
+   - Ellipse: it starts centred in the view at about a quarter of the view's size.
+     The handles and maths port from ImageView's radial mask (Views/imageview.cpp):
+     - centre (maskHitTest order, 11 px pick radius);
+     - +-x and +-y axis handles (maskRadialAxisHandles :2329), Shift for a
+       proportional resize;
+     - a rotate knob 24 px past +x (maskRadialRotateHandleVp :2400), angle from atan2;
+     - a wheel inside the shape resizes in proportion (adjustRadialSize :2375).
+     - The work is done in screen space and converted to zoom-0 world units on each
+       move and on release.
+   - Polygon:
+     - A click (press then release without a drag) adds a vertex.
+     - A rubber-band line follows the cursor from the last vertex.
+     - It closes on a double-click or on a click within 10 px of the first vertex, once
+       there are at least 3 vertices. The double-click's first click already added its
+       vertex, so it is not added twice.
+     - Backspace or Delete pops a vertex. Esc cancels the dialog.
+     - Once closed, its vertices can be dragged.
+   - The existing double-click (zoom in, or open the loupe) is skipped while editing.
+ - Esc, Backspace and Delete are handled in MapView::keyPressEvent; the view takes
+   Qt::StrongFocus while editing. First check that MW::developShortcutIntercept and
+   the app filter do not swallow these keys in the Map workflow.
+
+ 7. Documentation and help
+
+ - notes/Documentation.txt, "The Map Module": add a Places subsection.
+   - Cover the naming (why not "Locations"), storage (collections.db, Kind 2, JSON),
+     Mercator-space containment, the filter category and the edit interactions.
+   - Then sync the ToC.
+ - Add the dock to the dock-checklist sections if they list docks.
+ - Help/shortcutsform.ui: the map edit keys (Backspace/Delete, Esc).
+
+ Critical files
+
+ - New: Main/mwplaces.cpp, Views/Map/placelist.h/.cpp, Dialogs/placedlg.h/.cpp,
+   images/icon16/places_white.png.
+ - Modified:
+   - Utilities/geo.*, Datamodel/collectionstore.*, Datamodel/datamodel.*,
+     Datamodel/filters.*, Main/global.h, Views/Map/mapview.*;
+   - Main/mainwindow.h/.cpp, Main/initialize.cpp, Main/workspaces.cpp,
+     Main/dockwidget.cpp, Main/menusandactions.cpp, Main/settings.cpp;
+   - winnow.qrc, Workspaces/defaults.json, CMakeLists.txt (new sources),
+     notes/Documentation.txt.
+
+
+I've built the Places panel (my name for your Locations panel), but it hasn't been run in the app yet. Every edited file passes a syntax-only compile check, moc passes on the
+  edited headers, and the unit tests pass. You'll need to build it in Qt Creator to try it.
+
+  Decisions you made:
+  - It's called Places, so it doesn't clash with your Location|… keywords.
+  - A click replaces all filters, the same as a Collections click.
+  - It works in both Folders and the Library.
+
+  How it works:
+  - Panel: one row per place, with its name and how many loaded images fall inside it.
+    - The selection is the filter: click for one place, Cmd+click to add or remove one, Shift+click for a range, click empty space to stop filtering.
+    - The title bar has +, Cancel, collapse and close.
+    - Right-click gives Zoom Map to, Rename, Edit Shape and Delete. Double-clicking a row zooms the map to it.
+  - On the map: clicking a place filters the grid, draws the selected areas and fits the map to them. Places can overlap: an image is in every place its GPS location falls inside.
+  - New Place dialog (+): it stays open beside the map while you draw. It has the name, Ellipse/Polygon, a directions caption and Cancel/Done.
+    - Done stays greyed until there's a name and a finished shape, and the dialog says which is missing.
+    - + switches to the Map module if you're not already there.
+  - Ellipse: uses the radial gradient mask's handles: drag the centre to move it, the blue ends to size it (Shift keeps its shape), and the green knob to rotate it.
+  - Polygon: each click adds a corner, with a dashed line following the cursor.
+    - A double-click, or a click on the first (green) corner, closes it.
+    - Delete/Backspace removes the last corner; Esc cancels.
+    - Once it's closed, you can drag any corner.
+  - Accuracy: the area is tested in the same projection the map is drawn in, so the outline you see is exactly the filter's boundary. A place that crosses the 180° meridian also
+    works.
+
+  Where things live:
+  - Places are saved in collections.db as a new node kind, with the shape stored as JSON. No schema change was needed.
+  - There is a new Filters category, Places, in the Metadata group.
+  - New code is in Main/mwplaces.cpp, Views/Map/placelist.* and Dialogs/placedlg.*. The map drawing and editing changes are in MapView, and the geometry is in Utilities/geo.*.
+
+  Other changes:
+  - Panel registration: the dock is registered everywhere the Queries dock is, plus the full-screen "Show places" preference. It has its own tab icon, places_white.png. The saved
+    window-layout version is now 11.
+  - Shipped layouts: the Map layout in defaults.json shows Places. I left the stateVersion values there alone, because the existing migration handles layouts saved before the
+    Places panel existed.
+  - Saved Map layout: if you saved your own Map layout earlier, it won't show Places until you turn it on in the Window menu. Clicking + from another workflow turns it on for you.
+  - Tests: new tests cover the shape geometry, saving places in the store and the filter.
+  - tst_filters: it was already failing before my change, because it didn't list your uncommitted "Map pin" category. I added both Map pin and Places to it.
+  - Help and docs: added the drawing keys to the shortcuts help and a new "Places (Saved Map Areas)" section to Documentation.txt.
+
+  Things to watch when you try it:
+  - How long it takes to work out which images are in which places on a 43k-image Library hasn't been measured. It's logged under the perf probe as [PERF] refreshPlaceMembership.
+  - Hiding the map page (switching workflow, or a folder load) cancels a place you're drawing.
+  - Not in this version: folders of places, a place: field in the query grammar, or naming a place automatically from its location.
+
+Dragging thumbnails onto the map now geotags them, but it hasn't been run in the app yet. The edited files pass a syntax-only compile check, moc passes on the edited headers, and
+  the new tests pass (tst_geo 26/26, tst_xmpkeywords 14/14). You'll need to build it in Qt Creator to try it.
+
+  What happens on a drop:
+  - While you drag over the map, a yellow pin marks the drop point with "Drop to set the location of N images".
+  - When you drop, each image gets that location:
+    - Sidecar: exif:GPSLatitude and exif:GPSLongitude, in the form Lightroom writes. Everything else in the sidecar is left as it was.
+    - Library: the GPS column is updated, so the GPS filter, the map pins and Places membership all pick it up. The catalog index is updated too.
+  - Image files are never written, even with "Permit image file modification" on. The camera's own GPS stays in the file, and removing the two sidecar entries restores it. You
+    asked for the library and the sidecars, so I treated this as a correction, not an edit to the original.
+  - Reading it back: a location in a sidecar now overrides the file's own GPS on every later load. That also means GPS that Lightroom wrote into raw files' sidecars now shows up.
+  - What gets updated: every row of each dropped file — its versions, and the other half of a combined raw+jpg pair.
+  - Replacing a location: if any of the images already have one, a dialog asks before replacing it, so a drop a few pixels off never silently moves the camera's coordinates.
+
+  Safety:
+  - The drop is accepted as a Copy, set before any work is done. A target that accepts the default Move makes the grid send the dragged files to the Trash.
+  - Only files that are loaded in Winnow count. Other items in the drag (sidecars, files from Finder) are ignored.
+  - The writer is only reachable from the drop, and it works from model rows, so the proxy-row/model-row mix-up that once embedded a title into the wrong photo can't happen here.
+
+  The main new code is Main/mwgeotag.cpp (MW::geotagRows). Smaller changes are in MapView (the drop handling and marker), Metadata::writeGpsToSidecar and parseSidecar, Xmp (the GPS
+  properties and exif namespace) and Utilities/geo (the coordinate formats). Documentation.txt has a new "Drag to Geotag" section.
+
+  Not done yet: undo, removing a location, and GPX tracklogs.

@@ -146,6 +146,8 @@ class QToolBar;
 struct KeywordTidyAction;
 struct KeywordMove;
 
+class PlaceList;
+class PlaceDlg;
 class QNetworkAccessManager;
 class QNetworkReply;
 
@@ -231,8 +233,9 @@ public:
        pins its position, since it is not movable and where it lives is never a user
        choice to migrate.
        v9: collectionsDock, tabbed with the Bookmarks panel (favDock).
-       v10: queriesDock, tabbed with collectionsDock. */
-    static constexpr int winnowStateVersion = 10;
+       v10: queriesDock, tabbed with collectionsDock.
+       v11: placesDock (the Map module's saved areas), tabbed with queriesDock. */
+    static constexpr int winnowStateVersion = 11;
 
     // debugging flags
     bool ignoreSelectionChange = false;
@@ -306,6 +309,7 @@ public:
         bool isKeywordsDockVisible;
         bool isCollectionsDockVisible = false;  // absent from older workspaces: hidden
         bool isQueriesDockVisible = false;      // likewise
+        bool isPlacesDockVisible = false;       // likewise
         bool isModuleDockVisible = true;    // absent from older workspaces: shown
         bool isMetadataDockVisible;
         bool isEmbelDockVisible;
@@ -429,6 +433,7 @@ public:
         bool isKeywords = false;
         bool isCollections = false;
         bool isQueries = false;
+        bool isPlaces = false;
         bool isModule = false;
         bool isMetadata = false;
         bool isDevelop = false;
@@ -1262,6 +1267,9 @@ private slots:
     /*  Clear every filter, then filter on this one keyword path. A Keywords dock tag
         or keyword-list click. */
     void filterOnKeyword(const QString &path);
+    /*  A Map module pin click: the Filters "Map pin" category, set to these datamodel
+        rows. See the definition. */
+    void applyMapPinFilter(const QList<int> &dmRows, bool add);
     void sortChangeFromAction();
     void sortReverse();
     void sortChange(QString src = "Action");
@@ -1902,6 +1910,7 @@ private:
     QAction *keywordsDockVisibleAction;
     QAction *collectionsDockVisibleAction = nullptr;
     QAction *queriesDockVisibleAction = nullptr;
+    QAction *placesDockVisibleAction = nullptr;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
@@ -2092,6 +2101,7 @@ private:
     DockWidget *keywordsDock = nullptr;
     DockWidget *collectionsDock = nullptr;
     DockWidget *queriesDock = nullptr;
+    DockWidget *placesDock = nullptr;
     /*  THE MODULE DOCK: the source (Library | Folders) at the left and the workflow
         switcher (Browse | Develop | ... | Map) centred, across the top of the window. No title bar, not movable, not floatable, top area
         only; MW::placeShowHideBars pins it there. See MW::createModuleDock. */
@@ -2407,6 +2417,43 @@ private:
     void showQueriesDock();
     void closeQueriesDock();
     void setQueriesDockVisibility();
+
+    /*  PLACES (Main/mwplaces.cpp, Views/Map/placelist.h, Dialogs/placedlg.h): areas the
+        user draws on the map -- an ellipse or a polygon, with a name -- stored in
+        collections.db as CollectionStore::Kind::Place. Like a collection, a place is an
+        item in a Filters category ("Places"), filtering on G::PlacesColumn, which
+        DataModel answers from a side table refreshPlaceMembership works out from each
+        row's GPS coordinates. NOT the Library's: usable over any folder too. The panel
+        is a second view of the category; a click asks (applyPlaceFilter) and
+        syncPlaceListFromFilters pushes the result back, and shows the checked places
+        on the map. */
+    PlaceList *placeList = nullptr;
+    QLabel *placesEmptyHint = nullptr;
+    QLabel *placesReason = nullptr;          // why + is greyed (collections.db unusable)
+    BarBtn *placesNewBtn = nullptr;
+    BarBtn *placesCancelBtn = nullptr;
+    PlaceDlg *placeDlg = nullptr;            // the non-modal New / Edit dialog
+    QTimer *placeRefreshTimer = nullptr;     // debounces refreshPlaceMembership
+    void createPlacesDock();
+    void wirePlacesToMap();                  // once mapView exists (setupCentralWidget)
+    void showPlacesDock();
+    void closePlacesDock();
+    void setPlacesDockVisibility();
+    void refreshPlaceNodes();
+    void refreshPlaceMembership();
+    void applyPlaceFilter(const QVector<qint64> &ids);
+    void cancelPlaceFilter();
+    void syncPlaceListFromFilters();
+    void newPlace();
+    void editPlace(qint64 id);
+    void renamePlace(qint64 id);
+    void deletePlace(qint64 id);
+    void openPlaceDlg(qint64 id);
+    void finishPlaceDlg(bool accepted);
+    /*  DRAG TO GEOTAG (Main/mwgeotag.cpp): thumbnails dropped on the map get the drop's
+        location in the library (G::GPSCoordColumn, the catalog) and in their sidecars
+        (Metadata::writeGpsToSidecar) -- never in the image files. */
+    void geotagRows(const QList<int> &dmRows, double lat, double lon);
     /*  THE QUERY BUILDER's entry points: the Search row's "Build query...", "Save as
         Query...", and the Queries panel's New / Edit. */
     void openQueryBuilderForSearch();
@@ -2903,6 +2950,7 @@ private:
     QString keywordsDockTabText;
     QString collectionsDockTabText;
     QString queriesDockTabText;
+    QString placesDockTabText;
     QString metadataDockTabText;
     QString embelDockTabText;
     QString developDockTabText;

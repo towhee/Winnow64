@@ -10,6 +10,8 @@ WHAT'S NEW
 
 BUGS / TO
 - Add the develop editor panel Export to the Main menu and thumbView context menu.
+- Move Embellish export off the GUI thread. Requires reworking the Embellish render path
+  from QPixmap/QGraphicsScene to QImage-only, since QPixmap is GUI-thread-only.
 - Develop > Browse show one layout and then the final browse layout
 - Cleanup File menu: Library vs Folders
 - Fine-tune keywords managing

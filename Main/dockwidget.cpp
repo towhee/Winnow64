@@ -917,6 +917,10 @@ QString MW::dockTabToolTip(const QString &tabText)
         return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
                        "Window > Queries Panel. Library only.</nobr>")
             .arg(queriesDockTabText);
+    if (!placesDockTabText.isEmpty() && tabText == placesDockTabText)
+        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+                       "Window > Places Panel. Areas drawn on the map.</nobr>")
+            .arg(placesDockTabText);
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
@@ -1072,6 +1076,7 @@ QAction *MW::dockVisibleAction(QDockWidget *dock) const
     if (dock == keywordsDock) return keywordsDockVisibleAction;
     if (dock == collectionsDock) return collectionsDockVisibleAction;
     if (dock == queriesDock) return queriesDockVisibleAction;
+    if (dock == placesDock) return placesDockVisibleAction;
     if (dock == metadataDock) return metadataDockVisibleAction;
     if (dock == thumbDock)    return thumbDockVisibleAction;
     if (dock == embelDock)    return embelDockVisibleAction;
@@ -1426,6 +1431,7 @@ void MW::applyDockCollapseState()
     apply(keywordsDock, "KeywordsDock");
     apply(collectionsDock, "CollectionsDock");
     apply(queriesDock, "QueriesDock");
+    apply(placesDock, "PlacesDock");
     apply(metadataDock, "MetadataDock");
     apply(thumbDock,    "ThumbDock");
     apply(embelDock,    "EmbelDock");

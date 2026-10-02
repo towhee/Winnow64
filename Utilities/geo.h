@@ -2,6 +2,7 @@
 #define GEO_H
 
 #include <QList>
+#include <QPolygonF>
 #include <QPointF>
 #include <QRectF>
 #include <QString>
@@ -33,6 +34,13 @@ constexpr double kMaxLat = 85.05112878;
 constexpr int kTileSize = 256;
 
 bool parseCoord(const QString &s, double &lat, double &lon);
+/* The other way: decimal degrees as the string GPS::decode builds, so a location set in
+   Winnow reads exactly like one from a camera -- 49°13'13.477" N 123°57'22.220" W. */
+QString formatCoord(double lat, double lon);
+/* XMP's GPSCoordinate (exif:GPSLatitude / exif:GPSLongitude in a sidecar):
+   "DDD,MM.mmmmmmK" with K = N/S or E/W. fromXmpCoord also reads "DDD,MM,SSK". */
+QString toXmpCoord(double deg, bool isLat);
+bool fromXmpCoord(const QString &s, bool isLat, double &deg);
 
 double worldSize(double zoom);
 QPointF lonLatToWorld(double lat, double lon, double zoom);
@@ -56,6 +64,39 @@ struct Cluster {
 };
 
 QList<Cluster> cluster(const QList<Point> &points, double cellPx);
+
+/*  PLACES: a user-drawn area on the map (the Places panel, Main/mwplaces.cpp), an ellipse
+    or a polygon, that filters to the images inside it.
+
+    WHAT YOU SEE IS WHAT FILTERS. The map draws in Web Mercator, so containment is tested
+    there too, in world pixels at zoom 0 (the world is kTileSize square): an ellipse is a
+    true ellipse ON THE MAP and a polygon's edges are the straight lines drawn between its
+    corners. An ellipse's semi-axes are therefore in zoom-0 world pixels, not metres.
+
+    THE ANTIMERIDIAN. A place may straddle 180 degrees. Every longitude -- the corners and
+    the point tested -- is unwrapped to within 180 degrees of the place's anchor (its
+    centre, or its first corner) before it is projected, so a place drawn across the
+    seam is one shape, not two.
+
+    THE JSON (toJson / fromJson) IS A PUBLISHED FORMAT, stored in collections.db as the
+    place's node definition: keys may be added, never renamed or rescaled. */
+struct Place {
+    enum Shape { Ellipse = 0, Polygon = 1 };
+    Shape shape = Ellipse;
+    double lat = 0, lon = 0;    // ellipse centre, decimal degrees
+    double rx = 0, ry = 0;      // ellipse semi-axes, zoom-0 world pixels
+    double angleDeg = 0;        // ellipse rotation, clockwise on screen
+    QList<QPointF> verts;       // polygon corners, x = lon, y = lat
+
+    bool isValid() const;
+};
+
+bool contains(const Place &place, double lat, double lon);
+/* The place's outline as zoom-0 world points (an ellipse as `segments` points), its
+   longitudes unwrapped about the anchor, so x may run past either edge of the world. */
+QPolygonF outlineWorld0(const Place &place, int segments = 64);
+QString toJson(const Place &place);
+bool fromJson(const QString &json, Place &place);
 
 } // namespace Geo
 

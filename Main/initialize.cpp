@@ -262,6 +262,8 @@ void MW::setupCentralWidget()
     mapView = new MapView(centralWidget, dm);
     centralLayout->addWidget(mapView);          // 8
     connect(mapView, &MapView::selectRows, sel, &Selection::selectRows);
+    connect(mapView, &MapView::filterToPin, this, &MW::applyMapPinFilter);
+    connect(mapView, &MapView::geotagRequested, this, &MW::geotagRows);
     connect(mapView, &MapView::openInLoupe, this, [this]() { requestView(CvLoupe); });
     connect(mapView, &MapView::openPreferences, this, [this]() { preferences("MapHeader"); });
     connect(mapView, &MapView::styleChosen, this, [this](const QString &key) {
@@ -269,6 +271,7 @@ void MW::setupCentralWidget()
         applyMapProvider();
     });
     applyMapProvider();
+    wirePlacesToMap();          // the Places dock was built first (createDocks)
 
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
@@ -4193,6 +4196,7 @@ void MW::createDocks()
     createKeywordsDock();
     createCollectionsDock();        // after createFilterDock: it listens to filterPanel
     createQueriesDock();            // after createCollectionsDock: shares its store wiring
+    createPlacesDock();             // after createFilterDock: its category is Filters'
     if (G::useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
@@ -4209,6 +4213,7 @@ void MW::createDocks()
     if (keywordsDock) addDockWidget(Qt::LeftDockWidgetArea, keywordsDock);
     if (collectionsDock) addDockWidget(Qt::LeftDockWidgetArea, collectionsDock);
     if (queriesDock) addDockWidget(Qt::LeftDockWidgetArea, queriesDock);
+    if (placesDock) addDockWidget(Qt::LeftDockWidgetArea, placesDock);
     if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
@@ -4235,6 +4240,7 @@ void MW::createDocks()
         Library is what they open. */
     if (collectionsDock) MW::tabifyDockWidget(favDock, collectionsDock);
     if (queriesDock) MW::tabifyDockWidget(collectionsDock, queriesDock);
+    if (placesDock) MW::tabifyDockWidget(queriesDock, placesDock);
     if (G::useInfoView)
         MW::tabifyDockWidget(catalogDock ? catalogDock : filterDock, metadataDock);
     /* Do NOT tabify the LEFT-area metadataDock with the RIGHT-area embelDock: that cross-area
@@ -4252,7 +4258,8 @@ void MW::createDocks()
     // docks/areas or floated: dragging into a tab group changes the tab count
     // without a reliable resize/show on the surviving docks.
     for (DockWidget *d : {folderDock, favDock, filterDock, catalogDock, keywordsDock,
-                          collectionsDock, queriesDock, metadataDock, embelDock,
+                          collectionsDock, queriesDock, placesDock, metadataDock,
+                          embelDock,
                           developDock, historyDock}) {
         if (!d) continue;       // catalogDock is null with G::useFilterPanel
         connect(d, &QDockWidget::dockLocationChanged, this, &MW::scheduleDockTabUpdate);
@@ -4293,6 +4300,7 @@ void MW::createDocks()
     wireSolo(keywordsDock);
     wireSolo(collectionsDock);
     wireSolo(queriesDock);
+    wireSolo(placesDock);
     if (G::useInfoView) wireSolo(metadataDock);
     wireSolo(thumbDock);
     wireSolo(embelDock);
