@@ -610,6 +610,7 @@ void MW::setScope(G::Scope s, QString src)
     }
     G::scope = s;
     updateCollectionsAvailability();
+    updateLibraryOnlyActions();
 
     if (G::isPerfProbe && changed && s == G::Scope::Catalog) {
         catalogSwitchClock.start();
@@ -726,6 +727,39 @@ void MW::setScope(G::Scope s, QString src)
         catalogDockVisibleAction->setChecked(s == G::Scope::Catalog);
 }
 
+void MW::updateLibraryOnlyActions()
+{
+/*
+    THREE MENU ITEMS BELONG TO THE LIBRARY: the Collections and Queries panels, and Manage
+    Catalog (which chooses the folders the Library is made of). In Folders they are
+    disabled, and the tooltip -- shown by the File and Window menus -- says why and how to
+    get there, rather than leaving a greyed item to explain itself (feedback: disable with
+    a reason).
+
+    ONLY THE MENU ITEMS. Manage Catalog stays reachable from where it is genuinely needed
+    in Folders: the first-folder prompt (promptForCatalogScope), the empty-Library bail
+    (catalogEmptyOpenManage) and Preferences > Catalogued folders all call
+    manageCatalogRoots directly. A Collections or Queries panel already open stays on
+    screen, greyed with its own reason (updateCollectionsAvailability). Called from
+    createActions and from setScope on every scope change.
+*/
+    if (!collectionsDockVisibleAction || !queriesDockVisibleAction || !manageCatalogAction)
+        return;
+    const bool library = G::scope == G::Scope::Catalog;
+    const QString why = tr("Library only: choose Library at the top left of the window.");
+
+    collectionsDockVisibleAction->setEnabled(library);
+    collectionsDockVisibleAction->setToolTip(library
+        ? tr("Collections: sets of Library images you put together.") : why);
+    queriesDockVisibleAction->setEnabled(library);
+    queriesDockVisibleAction->setToolTip(library
+        ? tr("Queries: saved searches over the Library, built with the Query Builder.")
+        : why);
+    manageCatalogAction->setEnabled(library);
+    manageCatalogAction->setToolTip(library
+        ? tr("Choose the folders that make up the Library.") : why);
+}
+
 void MW::setCatalogScopeWhole(QString src)
 {
 /*
@@ -827,13 +861,6 @@ void MW::requestLibraryFolderFilter(const QStringList &includes,
 */
     if (G::isLogger) G::log("MW::requestLibraryFolderFilter");
     if (G::isInitializing || !filters) return;
-    qDebug() << "BMPROBE MW::requestLibraryFolderFilter" << includes << excludes
-             << "clearOthers =" << clearOthers
-             << "filterDock visible =" << filterDock->isVisible()
-             << "built =" << filters->filtersBuilt
-             << "building =" << filters->buildingFilters
-             << "loadRunning =" << G::isLoadRunning
-             << "modifying =" << G::isModifyingDatamodel;  // BMPROBE
 
     pendingLibraryFolderFilter = {true, includes, excludes, clearOthers};
     if (G::scope != G::Scope::Catalog) {
@@ -876,10 +903,6 @@ void MW::applyPendingLibraryFolderFilter()
         pendingLibraryFolderFilter = PendingFolderFilter();
         return;
     }
-    qDebug() << "BMPROBE MW::applyPendingLibraryFolderFilter"
-             << "built =" << filters->filtersBuilt
-             << "folders =" << filters->itemsInCategory(filters->folders).size()
-             << "includes =" << pendingLibraryFolderFilter.includes;  // BMPROBE
     if (!filters->filtersBuilt) return;         // not built yet: still pending
     const bool clearOthers = pendingLibraryFolderFilter.clearOthers;
     if (clearOthers) {
@@ -894,8 +917,6 @@ void MW::applyPendingLibraryFolderFilter()
     /*  setFolderFilter emits the filterChange only when a check moved. After the clear
         every folder is unchecked, so it moves nothing only when none of the folders has
         a Filters item -- and the clear must still be applied. */
-    qDebug() << "BMPROBE   after setFolderFilter missing =" << missing
-             << "folders =" << filters->itemsInCategory(filters->folders).size();  // BMPROBE
     if (clearOthers && pendingLibraryFolderFilter.excludes.isEmpty()
         && missing.size() == pendingLibraryFolderFilter.includes.size())
         filterChange("MW::applyPendingLibraryFolderFilter");

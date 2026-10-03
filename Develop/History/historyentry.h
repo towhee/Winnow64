@@ -20,6 +20,7 @@ struct HistoryEntry {
     QString   mergeKey;   // gesture identity for coalescing; empty = never merge
     EditStack stack;      // full snapshot AFTER the action
     quint64   syncId = 0; // the multi-image edit this step is part of; 0 = this image
+    int       trimmed = 0; // baseline only: steps the kMaxEntries cap dropped after it
 
     /* JSON form for the persistent store. syncId is written as a STRING: a JSON number
        is a double, which cannot hold every 64-bit id. */
@@ -30,6 +31,7 @@ struct HistoryEntry {
         if (!value.isEmpty())    o["value"] = value;
         if (!mergeKey.isEmpty()) o["mergeKey"] = mergeKey;
         if (syncId)              o["syncId"] = QString::number(syncId);
+        if (trimmed)             o["trimmed"] = trimmed;
         o["stack"] = stack.toJson();
         return o;
     }
@@ -40,6 +42,7 @@ struct HistoryEntry {
         e.value    = o.value("value").toString();
         e.mergeKey = o.value("mergeKey").toString();
         e.syncId   = o.value("syncId").toString().toULongLong();
+        e.trimmed  = o.value("trimmed").toInt();
         e.stack    = EditStack::fromJson(o.value("stack").toObject());
         return e;
     }

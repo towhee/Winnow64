@@ -37,14 +37,14 @@ void HistoryDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     if (state == Current) {
         painter->fillRect(option.rect, G::selectionColor);
     }
-    else if (index.row() == hoveredRow) {
+    else if (index.row() == hoveredRow && state != Marker) {
         const int b = G::backgroundShade + 20;
         painter->fillRect(option.rect, QColor(b, b, b));
     }
 
     QColor fg = G::textColor;
     QColor vg = G::header2Color;
-    if (state == Future) {          // superseded: still listed until the next edit
+    if (state == Future || state == Marker) {   // superseded / not a state
         fg = G::disabledColor;
         vg = G::disabledColor;
     }
@@ -65,6 +65,11 @@ void HistoryDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     }
     painter->setPen(fg);
     const QRect ar = r.adjusted(0, 0, -valW, 0);
+    if (state == Marker) {
+        QFont f = option.font;
+        f.setItalic(true);
+        painter->setFont(f);
+    }
     painter->drawText(ar, Qt::AlignLeft | Qt::AlignVCenter,
                       fm.elidedText(action, Qt::ElideRight, ar.width()));
 
@@ -144,6 +149,18 @@ void HistoryView::refresh()
                                : (i > pos ? HistoryDelegate::Future
                                           : HistoryDelegate::Past));
         item->setToolTip(e->value.isEmpty() ? action : action + "   " + e->value);
+        /* The gap the cap left between the oldest surviving step and Original. */
+        const int trimmed = history->trimmed(imagePath);
+        if (i == 1 && trimmed > 0) {
+            QListWidgetItem *m = new QListWidgetItem(
+                trimmed == 1 ? tr("1 earlier step trimmed")
+                             : tr("%1 earlier steps trimmed").arg(trimmed), this);
+            m->setData(HistoryDelegate::EntryRole, -1);    // hover / click do nothing
+            m->setData(HistoryDelegate::StateRole, HistoryDelegate::Marker);
+            m->setToolTip(tr("History keeps the newest %1 steps per image. Original "
+                             "is always the image with no edits.")
+                              .arg(DevelopHistory::kMaxEntries));
+        }
     }
     scrollToTop();          // the newest action is what the user just did
 }

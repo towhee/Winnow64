@@ -1382,7 +1382,7 @@
          <string>R</string>
         </property>
         <property name="text">
-         <string>Toggles the crop / perspective panel</string>
+         <string>Toggles the crop / perspective panel; from Browse, enters Develop and opens it</string>
         </property>
        </item>
        <item>
@@ -1740,7 +1740,7 @@
        </property>
        <item>
         <property name="text">
-         <string>Help document</string>
+         <string>Winnow overview</string>
         </property>
         <property name="text">
          <string>?</string>

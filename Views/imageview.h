@@ -210,6 +210,10 @@ public slots:
        tool stays armed, so points can be placed one after another. */
     void beginCurvePick();
     void endCurvePick();
+    /* Leaving Develop: put back the loupe's own cursor (open hand when zoomed, else the
+       arrow) once no Develop tool holds the canvas. The tools' end* calls restore it
+       too, but the hide that ends some of them can race the pointer sitting still. */
+    void resetToolCursor();
     /* The sample point currently shown by the Detail preview (normalized), so the loupe
        can mark it while Detail is open, and clearing it when nothing is picked. Separate
        calls rather than a null-point sentinel: (0,0) is a legitimate pick. */

@@ -32,7 +32,8 @@ public:
         StateRole   = Qt::UserRole + 2,   // int RowState below
         EntryRole   = Qt::UserRole + 3    // int: DevelopHistory index (chronological)
     };
-    enum RowState { Past = 0, Current = 1, Future = 2 };
+    /* Marker: not a state -- the "N earlier steps trimmed" note above Original. */
+    enum RowState { Past = 0, Current = 1, Future = 2, Marker = 3 };
 
     void setHoveredRow(int row);
 
@@ -49,8 +50,9 @@ private:
 /*
     HistoryView -- the History dock's list of develop actions (Lightroom's History panel).
 
-    Rows are NEWEST FIRST, so the baseline ("Original" / "Saved settings") sits at the
-    bottom. The list is a dumb view over DevelopHistory: it rebuilds whole on any change
+    Rows are NEWEST FIRST, so "Original" (the unedited image, always entry 0) sits at the
+    bottom -- with a dimmed, unclickable "N earlier steps trimmed" row above it once the
+    kMaxEntries cap has dropped steps. The list is a dumb view over DevelopHistory: it rebuilds whole on any change
     (the lists are short and this is what every sibling Develop panel does) and reports
     three things back to DevelopProperties:
 

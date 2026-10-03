@@ -37,12 +37,11 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     resize(850, height());
 
     QLabel *intro = new QLabel(
-        "Folders included here are scanned in the background so their images can be "
-        "found by the Catalog panel before you open them.\n\n"
-        "Folders you browse are catalogued automatically -- this is only needed to "
-        "index a library you have not visited yet. Exclude a folder to carve a branch "
-        "out of an included folder; an exclusion always wins, wherever it sits in the "
-        "table.");
+        "These folders make up your Library. They are scanned in the background, so "
+        "their images can be found in the Library without opening each folder.\n\n"
+        "Only folders listed here are catalogued. You can still browse any other folder, "
+        "but it is not added to the Library. Exclude a folder to carve a branch out of "
+        "an included folder; an exclusion always wins, wherever it sits in the table.");
     intro->setWordWrap(true);
 
     table = new QTableWidget(0, ColCount);

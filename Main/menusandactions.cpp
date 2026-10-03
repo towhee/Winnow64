@@ -1596,7 +1596,7 @@ void MW::createViewActions()
     addAction(infoSelectAction);
     connect(infoSelectAction, &QAction::triggered, this, &MW::changeInfoOverlay);
 
-    asLoupeAction = new QAction(tr("Loupe Mode"), this);
+    asLoupeAction = new QAction(tr("Loupe View"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);
     asLoupeAction->setCheckable(true);
     if (isSettings && settings->contains("isLoupeDisplay"))
@@ -1610,7 +1610,7 @@ void MW::createViewActions()
        what they do and do not change. */
     connect(asLoupeAction, &QAction::triggered, this, [this]() { requestView(CvLoupe); });
 
-    asGridAction = new QAction(tr("Grid Mode"), this);
+    asGridAction = new QAction(tr("Grid View"), this);
     asGridAction->setShortcutVisibleInContextMenu(true);
     asGridAction->setCheckable(true);
     if (isSettings && settings->contains("isGridDisplay")) asGridAction->setChecked(settings->value("isGridDisplay").toBool());
@@ -1618,7 +1618,7 @@ void MW::createViewActions()
     addAction(asGridAction);
     connect(asGridAction, &QAction::triggered, this, [this]() { requestView(CvGrid); });
 
-    asTableAction = new QAction(tr("Table Mode"), this);
+    asTableAction = new QAction(tr("Table View"), this);
     asTableAction->setShortcutVisibleInContextMenu(true);
     asTableAction->setCheckable(true);
     if (isSettings && settings->contains("isTableDisplay")) asTableAction->setChecked(settings->value("isTableDisplay").toBool());
@@ -1721,7 +1721,7 @@ void MW::createViewActions()
         syncWorkflowButtonEnabled(wf);
     }
 
-    asCompareAction = new QAction(tr("Compare Mode"), this);
+    asCompareAction = new QAction(tr("Compare View"), this);
     asCompareAction->setShortcutVisibleInContextMenu(true);
     asCompareAction->setCheckable(true);
     asCompareAction->setChecked(false); // never start with compare set true
@@ -1984,9 +1984,11 @@ void MW::createWindowActions()
     addAction(presetsDockVisibleAction);
     connect(presetsDockVisibleAction, &QAction::triggered, this, &MW::showPresetsDock);
 
-    /* "R" (Develop mode only) toggles the Develop Transform (crop + perspective) panel.
-       Like every Develop-local action it has no QKeySequence -- loadDevelopShortcuts owns
-       the key, and the tab in the text renders the hint a key-less action cannot. */
+    /* "R" toggles the Develop Transform (crop + perspective) panel. From Browse
+       (Preview) it enters Develop first and opens the panel (toggleDevelopTransform).
+       Like every Develop-local action it has no QKeySequence -- loadDevelopShortcuts
+       owns the key in Develop and MW::eventFilter dispatches it in Preview -- and the
+       tab in the text renders the hint a key-less action cannot. */
     developTransformAction = new QAction(tr("Crop / Transform Panel\tR"), this);
     developTransformAction->setObjectName("toggleDevelopTransform");
     developTransformAction->setShortcutVisibleInContextMenu(true);
@@ -2114,7 +2116,7 @@ void MW::createHelpActions()
     addAction(aboutAction);
     connect(aboutAction, &QAction::triggered, this, &MW::about);
 
-    helpAction = new QAction(tr("Winnow Help"), this);
+    helpAction = new QAction(tr("Winnow Overview"), this);
     helpAction->setObjectName("help");
     helpAction->setShortcutVisibleInContextMenu(true);
     addAction(helpAction);
@@ -2437,6 +2439,9 @@ void MW::createMiscActions()
     // connect(pasteFilesAction, &QAction::triggered, this, &MW::pasteFiles);
     connect(pasteFilesAction, &QAction::triggered, this,
            [this](){pasteFiles(mouseOverFolderPath);});
+
+    // the Library-only items start in the state of the scope Winnow starts in
+    updateLibraryOnlyActions();
 }
 
 void MW::createMenus()
@@ -2937,6 +2942,8 @@ void MW::createWindowMenu()
     toggles lived in View.  They are about the window, not the picture.
 */
     windowMenu = new QMenu(this);
+    // the Library-only panels say why they are greyed in Folders
+    windowMenu->setToolTipsVisible(true);
     windowGroupAct = new QAction("Window", this);
     windowGroupAct->setMenu(windowMenu);
 
@@ -4042,7 +4049,9 @@ void MW::loadDevelopShortcuts()
     The Develop mode local shortcut table: a bare key -> the action to run INSTEAD of
     whatever the global table above binds that key to.  MW::developShortcutIntercept looks
     the key up here while G::operationMode == Develop; in Preview nothing changes, so S is
-    still Slideshow, G still Grid view, X still Reject and H still unbound.
+    still Slideshow, G still Grid view, X still Reject and H still unbound.  The one
+    exception is R: in Preview MW::eventFilter sends it to MW::toggleDevelopTransform,
+    which enters Develop and opens the Transform panel.
 
     These keys are deliberately NOT QAction shortcuts.  Qt permits one QAction per key
     sequence -- bind "S" to both Slideshow and the spot tool and QShortcutMap reports an
@@ -4101,9 +4110,13 @@ void MW::syncDevelopMenuEnabled()
 */
     if (G::isLogger) G::log("MW::syncDevelopMenuEnabled");
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    /* developTransformAction is NOT mode local: from Preview it enters Develop and opens
+       the panel, so it is gated like D (operationModeAction) instead. */
+    if (developTransformAction && operationModeAction)
+        developTransformAction->setEnabled(inDevelop || operationModeAction->isEnabled());
     const QList<QAction *> modeLocal {
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
-        developTransformAction, developSpotAction, developWbSamplerAction,
+        developSpotAction, developWbSamplerAction,
         developBeforeAfterAction, developExportAction,
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };

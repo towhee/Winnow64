@@ -2189,6 +2189,34 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* BROWSE (PREVIEW) R: enter Develop and open the Transform panel (see
+       MW::toggleDevelopTransform). R owns no global QAction, so only the KeyPress needs
+       handling. Not in a slide show (R toggles random order there), not in a dialog or a
+       text / value editor, not on auto-repeat (one press, one switch). */
+    {
+        if (!G::isInitializing && !G::isSlideShow
+            && G::operationMode == G::OperationMode::Preview
+            && event->type() == QEvent::KeyPress) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            if (e->key() == Qt::Key_R && G::bareModifiers(e) == Qt::NoModifier
+                && !e->isAutoRepeat()) {
+                QWidget *fw = QApplication::focusWidget();
+                QWidget *win = fw ? fw->window() : nullptr;
+                const bool inDialog = win && win != this && qobject_cast<QDialog *>(win);
+                const bool editor =
+                    isTextEntryWidget(fw) || qobject_cast<QAbstractSpinBox *>(fw)
+                    || qobject_cast<QLineEdit *>(fw);
+                /* The slot, not developTransformAction->trigger(): the action's enabled
+                   state is only re-synced when the Develop menu opens, and the slot
+                   gives the refusal reason itself where Develop is unavailable. */
+                if (!inDialog && !editor) {
+                    toggleDevelopTransform();
+                    return true;
+                }
+            }
+        }
+    }
+
     /* DEVELOP MODE: hold Space to borrow the loupe zoom/pan gesture over a mask / spot /
        crop tool (click toggles zoom, drag pans a zoomed image); release resumes the tool.
        ImageView usually lacks keyboard focus in Develop, so drive it from this global
@@ -2926,7 +2954,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         if (event->type() == QEvent::MouseButtonPress) {
             if (obj->objectName() == "Filters" && G::mode == "Compare")
             {
-                QString msg = "Filtering is verboten in Compare Mode";
+                QString msg = "Filtering is verboten in Compare View";
                 G::popup->showPopup(msg, 3000);
             }
         }
@@ -7796,8 +7824,6 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
        latch filters->filtersBuilt, blocking the rebuild. When hidden, leave the
        filters unbuilt; MW::showFilterDock / MW::filterDockTabMousePress build
        them when the panel is shown (the datamodel is fully loaded by then). */
-    qDebug() << "BMPROBE MW::buildFiltersWhenModelReady filterDock visible ="
-             << filterDock->isVisible() << "built =" << filters->filtersBuilt;  // BMPROBE
     if (!filterDock->isVisible()) {
         /*  No build, so no restored filter to wait for: it lands when the panel is
             opened, and the unfiltered set is the honest thing to show until then.
@@ -13326,13 +13352,27 @@ void MW::toggleDevelopTransform()
     dock forward so the panel is visible.
 */
     if (G::isLogger) G::log("MW::toggleDevelopTransform");
-    /* Transform/Crop only exists in Develop mode. In Preview mode tell the user how to switch and
-       leave the panel closed. */
+    /* Transform/Crop only exists in Develop mode, so from Browse (Preview) R ENTERS
+       Develop first, exactly as D does (operationModeAction: the Develop layout, then
+       the mode), and then opens the panel. Always OPENS from Preview: the panel may
+       already be up when Develop is entered (developDockVisibilityChange restores a
+       persisted Transform), and toggling it shut there would read as R doing nothing.
+       Where Develop is refused (the preview cache folder, operationModeAction greyed),
+       setOperationMode shows the reason and leaves the mode alone, so the panel stays
+       closed. */
     if (G::operationMode != G::OperationMode::Develop) {
-        if (G::popup) G::popup->showPopup("Transform/Crop is only available in Develop Mode, "
-                                          "which can be set in the status bar or the shortcut \"D\".",
-                                          3000);
-        return;
+        if (operationModeAction && operationModeAction->isEnabled())
+            operationModeAction->trigger();
+        else
+            setOperationMode(G::OperationMode::Develop);   // refuses, with the reason
+        if (G::operationMode != G::OperationMode::Develop) {
+            if (developTransformAction) developTransformAction->setChecked(false);
+            return;
+        }
+        if (developTransformVisible) {
+            if (developTransformAction) developTransformAction->setChecked(true);
+            return;
+        }
     }
     /* Transform and Spot are MUTUALLY EXCLUSIVE: both own the loupe (crop overlay vs
        spot brush), so opening Transform disarms Spot. Done before the panel is shown so
@@ -15503,7 +15543,7 @@ void MW::findDuplicates()
 void MW::help()
 {
     if (G::isLogger) G::log("MW::help");
-    HtmlWindow *w = new HtmlWindow("Winnow - Help",
+    HtmlWindow *w = new HtmlWindow("Winnow - Overview",
                                    ":/Docs/winnowhelp.html",
                                    QSize(900, 750), geometry(), this);
     openWindows.append(w);
