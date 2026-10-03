@@ -10,6 +10,7 @@
 #include "Utilities/fileops.h"
 #include "Utilities/gradientheader.h"
 #include "Cache/devpreviewcache.h"
+#include "Datamodel/userdb.h"
 
 void MW::initialize()
 {
@@ -271,6 +272,11 @@ void MW::setupCentralWidget()
         applyMapProvider();
     });
     applyMapProvider();
+    // the view the map had at the last quit (MW::writeSettings)
+    if (settings->contains("mapZoom"))
+        mapView->setView(settings->value("mapLat").toDouble(),
+                         settings->value("mapLon").toDouble(),
+                         settings->value("mapZoom").toDouble());
     wirePlacesToMap();          // the Places dock was built first (createDocks)
 
     centralWidget->setLayout(centralLayout);
@@ -3391,9 +3397,9 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
         {WfSource,    tr("Browse")},
         {WfDevelop,   tr("Develop")},
         {WfKeywords,  tr("Keywords")},
+        {WfMap,       tr("Map")},
         {WfEmbellish, tr("Embellish")},
         {WfSlideShow, tr("Slide Show")},
-        {WfMap,       tr("Map")},
     };
     bool first = true;
     for (const auto &b : buttons) {
@@ -3424,7 +3430,7 @@ void MW::createModuleDock()
 {
 /*
     THE MODULE DOCK: Library | Folders at the left and Browse | Develop | Keywords |
-    Embellish | Slide Show | Map centred, across the top of the window -- the source and
+    Map | Embellish | Slide Show centred, across the top of the window -- the source and
     the workflow settings of the UI model (see "THE UI MODEL" in workspaces.cpp). It
     replaces the status-bar switcher, which is still built but hidden.
 
@@ -3600,6 +3606,19 @@ void MW::createKeywordsDock()
     keywordTree->setParent(treePane);
     treeLayout->addWidget(keywordTree, 1);
     splitter->addWidget(treePane);
+
+    /*  THE LIST IS THE USER'S OWN WORK, kept in userdata.db (Datamodel/userdb.h) with the
+        collections. A file that cannot be used greys the list with the reason above it,
+        as the Collections panel does, and leaves the file untouched; the tag zone still
+        works, because tags are written to the images, not to that file. */
+    if (!UserDb::instance().isAvailable()) {
+        QLabel *reason = new QLabel(UserDb::instance().unavailableReason(), treePane);
+        reason->setWordWrap(true);
+        reason->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
+        treeLayout->insertWidget(1, reason);
+        filterEdit->setEnabled(false);
+        keywordTree->setEnabled(false);
+    }
 
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);

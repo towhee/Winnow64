@@ -27,7 +27,9 @@
     and their sidecars, so losing it costs re-rendering and re-scanning, never data. That
     is what lets the failure policy be "recreate it and move on". Develop recipes,
     ratings, labels and titles live in the sidecars beside the images, and must stay
-    there.
+    there. What the user makes inside Winnow -- collections, queries, places, the
+    keyword vocabulary -- goes in userdata.db (Datamodel/userdb.h). The vocabulary broke
+    this rule until userdata schema 2 moved it out.
 
     WHY SQLITE AND NOT THE JSON INDEX IT REPLACES
 
@@ -59,6 +61,13 @@
     and degrade to "no cache" rather than refusing to run. A database that exists but
     cannot be opened is MOVED ASIDE (.corrupt) and recreated, because the alternative is a
     user who can never cache anything again and no way to tell them why.
+
+    EXCEPT WHEN IT IS ONLY LOCKED. A failed open is followed by a probe on a fresh
+    connection (probeFile in cachedb.cpp): a file another process holds locked is LEFT IN
+    PLACE and db() answers "no index" for 30 s before trying again; a readable file is
+    retried once in place; only an unreadable, non-database or newer-schema file is
+    moved aside. busy_timeout is the first pragma, so a brief lock is simply waited out.
+    Pinned by tst_catalog::aLockedIndexIsLeftInPlace / anUnreadableIndexIsStillMovedAside.
 */
 class CacheDb
 {

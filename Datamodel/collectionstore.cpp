@@ -1,4 +1,5 @@
 #include "Datamodel/collectionstore.h"
+#include "Datamodel/userdb.h"
 #include "Cache/pathkey.h"
 #include "Main/global.h"
 
@@ -7,19 +8,11 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QSet>
-#include <QSqlError>
 #include <QSqlQuery>
-#include <QStandardPaths>
 #include <QThread>
 #include <QVariant>
 
 namespace {
-
-const char *kDbName = "collections.db";
-
-/*  The schema this build writes (PRAGMA user_version). ADDITIVE ONLY, as for the index:
-    a new table or column is a new version and a new block in migrate(). */
-constexpr int kSchemaVersion = 1;
 
 qint64 nowSecs() { return QDateTime::currentSecsSinceEpoch(); }
 
@@ -48,132 +41,32 @@ CollectionStore &CollectionStore::instance()
 
 void CollectionStore::setPath(const QString &p)
 {
-    if (G::isLogger) G::log("CollectionStore::setPath", p);
-    if (!connName.isEmpty()) {
-        {
-            QSqlDatabase d = QSqlDatabase::database(connName, false);
-            if (d.isOpen()) d.close();
-        }
-        QSqlDatabase::removeDatabase(connName);
-        connName.clear();
-    }
-    dbPath = p;
-    opened = false;
-    failed = false;
-    lastError.clear();
+    UserDb::instance().setPath(p);
 }
 
 QString CollectionStore::path() const
 {
-    if (!dbPath.isEmpty()) return dbPath;
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-           + "/" + kDbName;
+    return UserDb::instance().path();
 }
 
 bool CollectionStore::isAvailable()
 {
-    return db().isOpen();
+    return UserDb::instance().isAvailable();
+}
+
+QString CollectionStore::unavailableReason() const
+{
+    return UserDb::instance().unavailableReason();
 }
 
 QSqlDatabase CollectionStore::db()
 {
-/*
-    Open on first use. A failure is REMEMBERED rather than retried on every call -- the
-    panel asks often, and a file that would not open a moment ago will not open now --
-    and the file is left exactly as it was found. setPath clears the memory.
-*/
-    if (opened) return QSqlDatabase::database(connName, false);
-    if (failed) return QSqlDatabase();
-
-    const QString p = path();
-    QDir().mkpath(QFileInfo(p).absolutePath());
-    connName = QString("winnow_collections_%1").arg(reinterpret_cast<quintptr>(this));
-    QSqlDatabase d = QSqlDatabase::addDatabase("QSQLITE", connName);
-    d.setDatabaseName(p);
-    if (!d.open()) {
-        lastError = tr("The collections file could not be opened: %1")
-                        .arg(d.lastError().text());
-        failed = true;
-        G::issue("Warning", lastError, "CollectionStore::db", -1, p);
-        return QSqlDatabase();
-    }
-    QSqlQuery q(d);
-    /*  The foreign keys ARE the cascade: deleting a node takes its children and its
-        memberships with it, in the one statement. SQLite has them off per connection
-        unless asked. */
-    q.exec("PRAGMA foreign_keys = ON");
-    q.exec("PRAGMA journal_mode = WAL");
-    q.exec("PRAGMA synchronous = NORMAL");
-    if (!migrate(d)) {
-        d.close();
-        failed = true;
-        G::issue("Warning", lastError, "CollectionStore::db", -1, p);
-        return QSqlDatabase();
-    }
-    opened = true;
-    return d;
+    return UserDb::instance().db();
 }
 
-bool CollectionStore::migrate(QSqlDatabase &d)
+bool CollectionStore::isOpen() const
 {
-    QSqlQuery q(d);
-    if (!q.exec("PRAGMA user_version") || !q.next()) {
-        lastError = tr("The collections file could not be read: %1")
-                        .arg(q.lastError().text());
-        return false;
-    }
-    const int version = q.value(0).toInt();
-    /*  A NEWER FILE IS LEFT ALONE. The index would be moved aside and rebuilt; this
-        cannot be rebuilt, so an older Winnow simply does without Collections until the
-        newer one is back. */
-    if (version > kSchemaVersion) {
-        lastError = tr("The collections file was written by a newer version of Winnow, "
-                       "so this version leaves it untouched.");
-        return false;
-    }
-    if (version == kSchemaVersion) return true;
-
-    d.transaction();
-    if (version < 1) {
-        const char *ddl[] = {
-            /*  One table for both kinds. `definition` is a Query's saved search; a
-                collection leaves it empty. `position` orders siblings -- the order the
-                user dragged them into, not alphabetical, as in Lightroom. */
-            "CREATE TABLE IF NOT EXISTS node ("
-            "  id         INTEGER PRIMARY KEY,"
-            "  parent     INTEGER REFERENCES node(id) ON DELETE CASCADE,"
-            "  kind       INTEGER NOT NULL DEFAULT 0,"
-            "  name       TEXT    NOT NULL,"
-            "  position   INTEGER NOT NULL DEFAULT 0,"
-            "  definition TEXT    NOT NULL DEFAULT '',"
-            "  created    INTEGER NOT NULL DEFAULT 0,"
-            "  modified   INTEGER NOT NULL DEFAULT 0)",
-            "CREATE INDEX IF NOT EXISTS node_parent ON node(parent)",
-            /*  pathkey is the identity (it is what the catalog's image.pathkey holds);
-                path is kept so the file is readable, and so a move can be followed. */
-            "CREATE TABLE IF NOT EXISTS member ("
-            "  node     INTEGER NOT NULL REFERENCES node(id) ON DELETE CASCADE,"
-            "  pathkey  TEXT    NOT NULL,"
-            "  path     TEXT    NOT NULL,"
-            "  added    INTEGER NOT NULL DEFAULT 0,"
-            "  PRIMARY KEY (node, pathkey)) WITHOUT ROWID",
-            "CREATE INDEX IF NOT EXISTS member_pathkey ON member(pathkey)",
-        };
-        for (const char *s : ddl) {
-            if (!q.exec(QString::fromLatin1(s))) {
-                lastError = tr("The collections file could not be set up: %1")
-                                .arg(q.lastError().text());
-                d.rollback();
-                return false;
-            }
-        }
-    }
-    if (!q.exec(QString("PRAGMA user_version = %1").arg(kSchemaVersion))) {
-        lastError = q.lastError().text();
-        d.rollback();
-        return false;
-    }
-    return d.commit();
+    return UserDb::instance().isOpen();
 }
 
 QVector<CollectionStore::Node> CollectionStore::nodes(Kind kind)
@@ -488,7 +381,7 @@ void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)
         }, Qt::QueuedConnection);
         return;
     }
-    if (!opened && !QFileInfo::exists(path())) return;
+    if (!isOpen() && !QFileInfo::exists(path())) return;
     QSqlDatabase d = db();
     if (!d.isOpen()) return;
     const QString from = cachePathKey(srcPath);
@@ -530,7 +423,7 @@ void CollectionStore::onFolderDeleted(const QString &folder)
     }
     const QString prefix = cachePathKey(folder) + "/";
     if (prefix.size() < 2) return;
-    if (!opened && !QFileInfo::exists(this->path())) return;
+    if (!isOpen() && !QFileInfo::exists(this->path())) return;
     QSqlDatabase d = db();
     if (!d.isOpen()) return;
     QSqlQuery q(d);
@@ -547,7 +440,7 @@ void CollectionStore::onDeleted(const QString &path)
                                   Qt::QueuedConnection);
         return;
     }
-    if (!opened && !QFileInfo::exists(this->path())) return;
+    if (!isOpen() && !QFileInfo::exists(this->path())) return;
     QSqlDatabase d = db();
     if (!d.isOpen()) return;
     QSqlQuery q(d);

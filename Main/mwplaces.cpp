@@ -14,7 +14,7 @@
     it would be read as a view of it.
 
     A PLACE is an ellipse or a polygon the user draws on the map, with a name. It is
-    stored in collections.db as a node of CollectionStore::Kind::Place, its shape in the
+    stored in userdata.db as a node of CollectionStore::Kind::Place, its shape in the
     node's definition (Geo::toJson -- a published format). Places may overlap; an image
     is in every place its GPS location falls inside.
 
@@ -211,7 +211,7 @@ void MW::refreshPlaceNodes()
 {
 /*
     The places from the store into the Filters category, the panel's list and the map.
-    Also greys + with the store's reason when collections.db cannot be used.
+    Also greys + with the store's reason when userdata.db cannot be used.
 */
     if (!filters || !placeList) return;
     CollectionStore &store = CollectionStore::instance();

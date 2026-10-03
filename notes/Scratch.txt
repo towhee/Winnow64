@@ -6659,3 +6659,29 @@ Dragging thumbnails onto the map now geotags them, but it hasn't been run in the
   properties and exif namespace) and Utilities/geo (the coordinate formats). Documentation.txt has a new "Drag to Geotag" section.
 
   Not done yet: undo, removing a location, and GPX tracklogs.
+
+==========================================================================================
+Models
+==========================================================================================
+
+That's expected, because Winnow hasn't downloaded anything on that machine yet. The Models folder doesn't exist at all; Winnow only creates it when it first needs one of the
+  seven downloadable models. The reason is the order in which Winnow looks for a model (computeState, Utilities/modelstore.cpp:138):
+
+  1. Next to the app executable (Winnow.app/Contents/MacOS). If the file is there, Winnow uses it and never checks the download folder. This was kept on purpose so older dev builds
+     would keep working.
+  2. Otherwise, ~/Library/Application Support/Winnow/Models.
+  3. Otherwise, it offers to download the model.
+
+  Your Qt Creator builds still have all nine models inside the app, copied there by builds from before the 2026-09-21 change. Both
+  build-Winnow-Qt_6_11_0_for_macOS-Debug/Winnow.app/Contents/MacOS/ and ...-Release/ contain u2net, skyseg, midas, migan, lama and both sam2 files. CMake doesn't delete files it no
+  longer copies, so they stayed. Every AI mask and spot fill you've run since then has used those copies, and the download path has never run on your Mac Studio.
+
+  ReleaseExtras/ is just where the source copies are kept. The app never reads from it, and the large models are git-ignored there.
+
+  The release build is clean. The macOS deploy packages build/mac-release/Winnow.app (packaging/macos/deploy.command:71), which has no models inside the app. build/mac-debug has
+  only the two bundled models.
+
+  There's a catch: the download path has never been tested on your machine. If you want to try it, delete the seven large .onnx files from Contents/MacOS in your Qt Creator build.
+  Next time you use Select Subject, Sky, Depth, Object or spot fill, Winnow should prompt and download into ~/Library/Application Support/Winnow/Models. That only works if the
+  models have been uploaded to winnow.ca/winnow/models/, and I haven't checked that. Want me to delete those leftover copies from the Qt Creator build folders?
+

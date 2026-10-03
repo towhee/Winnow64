@@ -3,7 +3,7 @@
  <class>shortcutsForm</class>
  <widget class="QScrollArea" name="shortcutsForm">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -44,7 +44,7 @@
     <item>
      <widget class="QTreeWidget" name="treeWidget">
       <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
+       <enum>Qt::FocusPolicy::NoFocus</enum>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
@@ -782,44 +782,44 @@
           <string>Opt/Alt + Down</string>
          </property>
         </item>
-       <item>
-        <property name="text">
-         <string>Scroll Page Up</string>
-        </property>
-        <property name="text">
-         <string>Opt/Alt + Page Up</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Scroll Page Down</string>
-        </property>
-        <property name="text">
-         <string>Opt/Alt + Page Down</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Scroll Home</string>
-        </property>
-        <property name="text">
-         <string>Opt/Alt + Home</string>
-        </property>
-        <property name="text">
-         <string>Scroll to the start of the current view</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Scroll End</string>
-        </property>
-        <property name="text">
-         <string>Opt/Alt + End</string>
-        </property>
-        <property name="text">
-         <string>Scroll to the end of the current view</string>
-        </property>
-       </item>
+        <item>
+         <property name="text">
+          <string>Scroll Page Up</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Page Up</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Page Down</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Page Down</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll Home</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + Home</string>
+         </property>
+         <property name="text">
+          <string>Scroll to the start of the current view</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scroll End</string>
+         </property>
+         <property name="text">
+          <string>Opt/Alt + End</string>
+         </property>
+         <property name="text">
+          <string>Scroll to the end of the current view</string>
+         </property>
+        </item>
         <item>
          <property name="text">
           <string>Scroll to Current</string>
@@ -1206,7 +1206,7 @@
          <string>D</string>
         </property>
         <property name="text">
-         <string>Enter Develop operation mode.  To go back to Preview mode press E (loupe), G (grid) or T (table).</string>
+         <string>Develop editor.</string>
         </property>
        </item>
        <item>
@@ -1217,18 +1217,7 @@
          <string>Y</string>
         </property>
         <property name="text">
-         <string>Switch the thumbnails and the loupe between the camera&apos;s picture (Original) and your develop edits (Developed).  Not available in Develop mode, which always shows the developed image.  Also on the status bar dropdown at the far left and in the View menu.</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Develop Mode keys</string>
-        </property>
-        <property name="text">
-         <string>R  N  M  O  S  W  X  H  P  \</string>
-        </property>
-        <property name="text">
-         <string>These ten keys mean something different in Develop mode than they do in Preview mode: in Preview, S is Slideshow, W is New Workspace, X is Reject, O is Open Folder, P is Pick, \ is Show image count, and R / N / M / H do nothing. Every other shortcut in this list behaves the same in both modes.</string>
+         <string>Toggle the thumbnails and the loupe between image preview and developed.</string>
         </property>
        </item>
        <item>
@@ -1239,7 +1228,7 @@
          <string>Arrows, PgUp / PgDn, Home / End</string>
         </property>
         <property name="text">
-         <string>IGNORED in Develop mode unless the Thumbnails panel has the focus, so the keys cannot navigate off the image being developed. Click a thumbnail to give the panel focus. Alt + the same keys still scroll and pan the image.</string>
+         <string>Ignored in Develop mode unless the Thumbnails panel has the focus.</string>
         </property>
        </item>
        <item>
@@ -1247,10 +1236,21 @@
          <string>Nudge Slider</string>
         </property>
         <property name="text">
-         <string>Left / Right (PageUp / PageDown = larger step)</string>
+         <string>Left / Right</string>
         </property>
         <property name="text">
          <string>Adjusts the focused slider; click or Tab to a slider to give it focus (it shows an accent bar)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Nudge Slider more</string>
+        </property>
+        <property name="text">
+         <string>PageUp / PageDown </string>
+        </property>
+        <property name="text">
+         <string>Adjusts the focused slider a larger amount</string>
         </property>
        </item>
        <item>
@@ -1261,7 +1261,7 @@
          <string>\</string>
         </property>
         <property name="text">
-         <string>Flips the loupe between Before -- the first entry in the History panel, the state this session found the image in -- and After, the state it is in now. It stays on Before until you press \ again, edit, move to another image, or open a mask / spot tool. Nothing is changed either way. In Develop mode</string>
+         <string>Before is no edits, after is current edits</string>
         </property>
        </item>
        <item>
@@ -1269,21 +1269,21 @@
          <string>New Mask</string>
         </property>
         <property name="text">
-         <string>N</string>
+         <string>M</string>
         </property>
         <property name="text">
-         <string>Adds a mask to this image (prompts for a name); in Develop mode</string>
+         <string>Adds a mask to this image </string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Tweak Mask</string>
+         <string>New Submask</string>
         </property>
         <property name="text">
-         <string>M</string>
+         <string/>
         </property>
         <property name="text">
-         <string>Pops the submask type menu for the active mask, appending a submask; same as the [+] on the mask panel's Submasks list. In Develop mode. Global applies to the whole image and cannot be masked</string>
+         <string/>
         </property>
        </item>
        <item>
@@ -1294,18 +1294,7 @@
          <string>O</string>
         </property>
         <property name="text">
-         <string>Hide / show the current mask overlay; while a submask is being defined</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Commit Mask (add submask)</string>
-        </property>
-        <property name="text">
-         <string>Return</string>
-        </property>
-        <property name="text">
-         <string>Finishes the submask being defined: folds it into the mask now rather than waiting the two seconds it would take to land on its own, and closes its settings. Esc discards it instead. On a submask that has already landed, Return / Esc simply close it - its edits are already part of the mask</string>
+         <string>Hide / show the current mask overlay</string>
         </property>
        </item>
        <item>
@@ -1316,7 +1305,7 @@
          <string>Opt/Alt (held)</string>
         </property>
         <property name="text">
-         <string>The overlay previews the submask being REMOVED from the mask, and Update / Return commits it that way; while a submask is being defined. Held while painting a Brush or Object submask it keeps that meaning - the image shows the mask retreating as you paint</string>
+         <string>While painting a brush mask</string>
         </property>
        </item>
        <item>
@@ -1327,7 +1316,7 @@
          <string>Shift + Opt/Alt (held)</string>
         </property>
         <property name="text">
-         <string>The overlay previews the mask reduced to where it OVERLAPS the submask, and Update / Return commits it that way; while a submask is being defined</string>
+         <string>While painting a brush mask</string>
         </property>
        </item>
        <item>
@@ -1338,7 +1327,7 @@
          <string>Opt/Alt + drag Masking</string>
         </property>
         <property name="text">
-         <string>Held while dragging the Detail panel's Masking slider, the photo is replaced by the sharpening mask in black and white - white is sharpened, black is protected - so the slider can be set by looking at the whole frame. Shown only for the duration of the drag</string>
+         <string>Held while dragging the Detail panel's Masking slider, the photo is replaced by the sharpening mask in black and white</string>
         </property>
        </item>
        <item>
@@ -1354,24 +1343,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Resize Brush (Brush / Object mask / Spot)</string>
-        </property>
-        <property name="text">
-         <string>[ / ]  (or two-finger drag)</string>
-        </property>
-        <property name="text">
-         <string>Shrinks / grows the brush; while a Brush, Object mask or Spot tool is active. In the mask panel, while you are adding a stroke, hold Shift when changing an attribute to change only the LAST stroke painted - the panel header always states what the adjustment will apply to</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
          <string>Feather (Gradient / Brush mask)</string>
         </property>
         <property name="text">
          <string>Shift + scroll (wheel or two-finger drag)</string>
         </property>
         <property name="text">
-         <string>Softens / hardens the mask edge; while a Linear Gradient, Radial Gradient or Brush mask tool is active. Brush feather applies to the NEXT stroke while the submask is being built; on a submask re-opened from the Submasks list it re-feathers every stroke already painted</string>
+         <string>Softens / hardens the mask edge</string>
         </property>
        </item>
        <item>
@@ -1382,7 +1360,7 @@
          <string>Shift + drag an axis handle</string>
         </property>
         <property name="text">
-         <string>Scales both axes together so the ellipse keeps its proportions (a circle stays a circle); while a Radial Gradient mask tool is active</string>
+         <string/>
         </property>
        </item>
        <item>
@@ -1393,7 +1371,7 @@
          <string>Cmd/Ctrl + Z</string>
         </property>
         <property name="text">
-         <string>Removes the last painted stroke; while a Brush or Object mask tool is active</string>
+         <string>Removes the last painted stroke</string>
         </property>
        </item>
        <item>
@@ -1404,7 +1382,7 @@
          <string>R</string>
         </property>
         <property name="text">
-         <string>Toggles the crop / perspective panel and its crop tool, applying changes on close (Esc cancels instead); in Develop mode</string>
+         <string>Toggles the crop / perspective panel</string>
         </property>
        </item>
        <item>
@@ -1415,7 +1393,7 @@
          <string>A</string>
         </property>
         <property name="text">
-         <string>Toggles; while Transform is active (panel or crop overlay)</string>
+         <string>Toggles; while Transform is active </string>
         </property>
        </item>
        <item>
@@ -1426,7 +1404,7 @@
          <string>F</string>
         </property>
         <property name="text">
-         <string>Swaps the crop between landscape and portrait; while Transform is active (panel or crop overlay)</string>
+         <string>Swaps the crop between landscape and portrait; while Transform is active</string>
         </property>
        </item>
        <item>
@@ -1437,18 +1415,7 @@
          <string>C / L / W</string>
         </property>
         <property name="text">
-         <string>Select Crop / Level / Warp; while Transform is active (panel or crop overlay)</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Commit Transform</string>
-        </property>
-        <property name="text">
-         <string>Return / Enter</string>
-        </property>
-        <property name="text">
-         <string>Applies this crop / level / warp and closes the panel, the same as pressing R again (while tracing a Warp quad, Enter commits the quad instead); in Develop mode</string>
+         <string>Select Crop / Level / Warp; while Transform is active</string>
         </property>
        </item>
        <item>
@@ -1459,7 +1426,7 @@
          <string>Esc</string>
         </property>
         <property name="text">
-         <string>Discards this crop / level / warp session and closes the panel (R closes but keeps the changes); in Develop mode</string>
+         <string>Discards this crop / level / warp session</string>
         </property>
        </item>
        <item>
@@ -1470,18 +1437,7 @@
          <string>W</string>
         </property>
         <property name="text">
-         <string>Arms the Basic panel's white-balance dropper (click a neutral to balance from it); in Develop mode. While a Transform session is active W means Warp instead</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Cancel White Balance Dropper</string>
-        </property>
-        <property name="text">
-         <string>Esc</string>
-        </property>
-        <property name="text">
-         <string>Disarms the Basic panel's white-balance dropper without sampling; in Develop mode</string>
+         <string>Arms the Basic panel's white-balance dropper</string>
         </property>
        </item>
        <item>
@@ -1492,7 +1448,7 @@
          <string>Opt/Alt + click</string>
         </property>
         <property name="text">
-         <string>With the white-balance dropper armed, Opt/Alt-click a lit midtone area of skin to correct the skin colour instead of sampling a neutral; in Develop mode</string>
+         <string>Correct the skin colour instead of sampling a neutral</string>
         </property>
        </item>
        <item>
@@ -1503,18 +1459,18 @@
          <string>S</string>
         </property>
         <property name="text">
-         <string>Toggles the spot-removal tool (click a blemish to heal it); in Develop mode</string>
+         <string>Toggles the spot-removal tool</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Zoom / Pan (hold)</string>
+         <string>Zoom</string>
         </property>
         <property name="text">
          <string>Space</string>
         </property>
         <property name="text">
-         <string>Hold Space to temporarily zoom/pan over any mask, spot or crop tool (click toggles zoom, drag pans); release resumes the tool. The mouse wheel / two-finger scroll zooms the image; while a Spot or Brush tool is armed the wheel resizes it, so hold Space to zoom with the wheel there. In Develop mode</string>
+         <string/>
         </property>
        </item>
        <item>
@@ -1525,7 +1481,7 @@
          <string>X</string>
         </property>
         <property name="text">
-         <string>Exports the selected images with their develop settings applied; in Develop mode</string>
+         <string>Exports the selected images with their develop settings applied</string>
         </property>
        </item>
        <item>
@@ -1536,7 +1492,7 @@
          <string>Cmd/Ctrl + Shift + N</string>
         </property>
         <property name="text">
-         <string>Saves the current develop settings as a reusable preset; in Develop mode</string>
+         <string/>
         </property>
        </item>
        <item>
@@ -1547,7 +1503,7 @@
          <string>Cmd/Ctrl + Opt/Alt + C</string>
         </property>
         <property name="text">
-         <string>Opens a checklist and copies the settings you tick to the develop clipboard; in Develop mode</string>
+         <string/>
         </property>
        </item>
        <item>
@@ -1558,18 +1514,7 @@
          <string>Cmd/Ctrl + Opt/Alt + V</string>
         </property>
         <property name="text">
-         <string>Applies the copied settings to this image, on the selected scope, as one history step; in Develop mode</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Run Develop Preset</string>
-        </property>
-        <property name="text">
-         <string>P</string>
-        </property>
-        <property name="text">
-         <string>Applies a saved develop preset (NOT IMPLEMENTED YET); in Develop mode. In Preview, P is Pick</string>
+         <string/>
         </property>
        </item>
        <item>
@@ -1580,7 +1525,7 @@
          <string>Cmd/Ctrl + '</string>
         </property>
         <property name="text">
-         <string>Makes a version (virtual copy) of each selected image: a second set of develop settings for the same file, shown beside it in the grid. In both modes</string>
+         <string/>
         </property>
        </item>
       </item>

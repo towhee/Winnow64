@@ -266,7 +266,7 @@ Q_NAMESPACE
         CroppedAspectRatioColumn,
         /* The ids (as text) of the Collections the image is DIRECTLY in -- what the
            Filters Collections category filters on. NOT STORED IN THE ROW: collections
-           are the user's, held in collections.db, and change without the row changing,
+           are the user's, held in userdata.db, and change without the row changing,
            so DataModel::data answers it from a side table keyed by source path
            (DataModel::setCollectionMembership). READ-ONLY. Appended for the same reason
            as DevelopColumn. */
@@ -279,7 +279,7 @@ Q_NAMESPACE
         MapPinColumn,
         /* The ids (as text) of the Places (Main/mwplaces.cpp) -- areas drawn on the map
            -- the image was taken inside: what the Filters "Places" category filters on.
-           NOT STORED IN THE ROW: places are the user's, held in collections.db, and an
+           NOT STORED IN THE ROW: places are the user's, held in userdata.db, and an
            edit to one changes the answer without the row changing, so DataModel::data
            answers it from a side table keyed by source path
            (DataModel::setPlaceMembership). READ-ONLY. Appended for the same reason as

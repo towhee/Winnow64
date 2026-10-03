@@ -266,7 +266,6 @@ struct KeywordAudit
     int imagesWithText = 0;         // live images carrying keyword text
     int imagesWithLinks = 0;        // live images with at least one image_keyword row
     int keywordRows = 0;            // rows in `keyword`, the OBSERVED vocabulary
-    int vocabRows = 0;              // rows in `vocab`, the AUTHORED vocabulary
     int links = 0;                  // rows in image_keyword
     int unlinkedKeywords = 0;       // keyword rows no image links to (prunable)
     int orphanLinksNoKeyword = 0;   // links naming a keyword row that is gone

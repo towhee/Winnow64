@@ -29,8 +29,9 @@
     NOT IN index.db, DELIBERATELY. The local index (Cache/cachedb.h) holds only what can
     be rebuilt from the images, and its failure policy is to move the file aside and
     start again. A collection is the user's own work -- nothing can rebuild it -- so it
-    lives in its own file, collections.db beside the index, and this class NEVER moves
-    that file aside: a file it cannot open or cannot migrate leaves Collections
+    lives in userdata.db (Datamodel/userdb.h, which owns the file, its schema and the
+    connection; it was collections.db before it also held the keyword vocabulary). That
+    file is NEVER moved aside: one that cannot be opened or migrated leaves Collections
     unavailable (with the reason in the panel) and the file untouched for the user to
     recover.
 
@@ -80,16 +81,16 @@ public:
 
     static CollectionStore &instance();
 
-    /*  Point at a file. Closes the open connection; the next call opens the new one.
-        Tests point it at a temp file; the app leaves the default, AppDataLocation/
-        collections.db. */
+    /*  The file is UserDb's (Datamodel/userdb.h); these forward to it. setPath closes
+        the open connection; the next call opens the new one. Tests point it at a temp
+        file; the app leaves the default, AppDataLocation/userdata.db. */
     void setPath(const QString &dbPath);
     QString path() const;
 
     /*  Open (or create) the file. False with a reason when it cannot be used -- the
         panel shows the reason and disables itself. Never moves the file aside. */
     bool isAvailable();
-    QString unavailableReason() const { return lastError; }
+    QString unavailableReason() const;
 
     /*  Every node of one kind, parents before children, siblings in position order. */
     QVector<Node> nodes(Kind kind);
@@ -145,14 +146,8 @@ private:
     Q_DISABLE_COPY(CollectionStore)
 
     QSqlDatabase db();
-    bool migrate(QSqlDatabase &d);
+    bool isOpen() const;
     int nextPosition(QSqlDatabase &d, qint64 parent, Kind kind);
-
-    QString dbPath;
-    QString connName;
-    QString lastError;
-    bool opened = false;
-    bool failed = false;
 };
 
 #endif // COLLECTIONSTORE_H

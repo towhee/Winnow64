@@ -137,6 +137,14 @@ void MW::writeSettings()
     settings->setValue("isSlideShowWrap", isSlideShowWrap);
     // map (the Map module's tile provider)
     settings->setValue("mapStyle", mapStyle);
+    /*  Where the map was looking, so a restart opens on the same place (MapView::
+        setView). Only once the map has been shown: a session that never opened the
+        Map module leaves the last real view alone. */
+    if (mapView && mapView->hasBeenShown()) {
+        settings->setValue("mapLat", mapView->viewLat());
+        settings->setValue("mapLon", mapView->viewLon());
+        settings->setValue("mapZoom", mapView->viewZoom());
+    }
     settings->setValue("mapTileUrl", mapTileUrl);
     settings->setValue("mapTileKey", mapTileKey);
     settings->setValue("mapAttribution", mapAttribution);

@@ -8,6 +8,7 @@
 #include "Cache/catalog.h"
 #include "Cache/devpreviewcache.h"
 #include "Datamodel/keywordvocab.h"
+#include "Datamodel/userdb.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 
@@ -84,17 +85,22 @@ void tst_keywordvocab::initTestCase()
     QStandardPaths::setTestModeEnabled(true);
     QVERIFY(tmp.isValid());
     DevPreviewCache::instance().setCacheDir(tmp.path());
+    /*  The vocabulary is in userdata.db (Datamodel/userdb.h), not the index. No index to
+        import from: these cases start from an empty vocabulary. */
+    UserDb::instance().setLegacyIndexPath(tmp.filePath("no-index.db"));
+    UserDb::instance().setPath(tmp.filePath("userdata.db"));
 }
 
 void tst_keywordvocab::cleanupTestCase()
 {
+    UserDb::instance().setPath(QString());
     CacheDb::instance().closeThisThread();
 }
 
 void tst_keywordvocab::init()
 {
     Catalog::instance().clear();
-    QSqlQuery q(CacheDb::instance().db());
+    QSqlQuery q(UserDb::instance().db());
     QVERIFY(q.exec("DELETE FROM vocab"));
 }
 

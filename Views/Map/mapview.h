@@ -79,6 +79,15 @@ public:
     void fitAll();
     void fitSelection();
 
+    /*  THE VIEW, persisted across restarts (MW::writeSettings -> QSettings mapLat,
+        mapLon, mapZoom). A restored view also stands in for the first load's automatic
+        fit, so the map reopens where it was left rather than jumping to the images. */
+    void setView(double lat, double lon, double zoom);
+    double viewLat() const { return lat; }
+    double viewLon() const { return lon; }
+    double viewZoom() const { return zoom; }
+    bool hasBeenShown() const { return shownOnce; }
+
     // places: see the class note
     struct PlaceShape { qint64 id; QString name; Geo::Place place; };
     void setPlaces(const QList<PlaceShape> &places);
@@ -195,7 +204,9 @@ private:
     QSet<int> selected;                     // selected dmRows
     int totalRows = 0;                      // rows the other filters admit
     int dimmedPoints = 0;                   // points the Map pin filter leaves out
-    int fittedInstance = -1;                // G::dmInstance the view was fitted to
+    QString fittedDataset;                  // key of dm row 0 when last fitted
+    bool viewRestored = false;              // setView: skip the first automatic fit
+    bool shownOnce = false;
 
     // interaction
     bool pressed = false;

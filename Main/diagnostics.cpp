@@ -7,6 +7,8 @@
 #include "Cache/pathkey.h"
 #include "Main/catalogenumerate.h"
 #include "Cache/cachedb.h"
+#include "Datamodel/userdb.h"
+#include <QSqlQuery>
 #include "Metadata/keywordpaths.h"
 #include "ui_metadatareport.h"
 #include "ui_shortcutsform.h"
@@ -1134,7 +1136,15 @@ QString MW::keywordDiagnostics()
         rpt << "\n" << "  ... carrying keyword text = " << G::s(a.imagesWithText);
         rpt << "\n" << "  ... carrying links        = " << G::s(a.imagesWithLinks);
         rpt << "\n" << "  keyword rows            = " << G::s(a.keywordRows);
-        rpt << "\n" << "  vocab rows              = " << G::s(a.vocabRows);
+        /*  The AUTHORED vocabulary is not a catalog table any more: it lives in
+            userdata.db (Datamodel/userdb.h). Counted here so the two sit side by side. */
+        int vocabRows = -1;
+        {
+            QSqlQuery vq(UserDb::instance().db());
+            if (vq.exec("SELECT COUNT(*) FROM vocab") && vq.next())
+                vocabRows = vq.value(0).toInt();
+        }
+        rpt << "\n" << "  vocab rows (userdata.db) = " << G::s(vocabRows);
         rpt << "\n" << "  image_keyword links     = " << G::s(a.links);
         rpt << "\n" << "  Keywords nothing links to = " << G::s(a.unlinkedKeywords)
             << "   (prunable)";
