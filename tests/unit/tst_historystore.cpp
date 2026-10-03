@@ -65,6 +65,8 @@ private slots:
     void forgetRemovesSaved();
     void stampSurvivesSidecarRoundTrip();
     void unrecordedChangeStillRestores();
+    void capKeepsTrueOriginal();
+    void legacyBaselineGetsOriginal();
 
 private:
     QTemporaryDir cacheTmp;
@@ -171,8 +173,71 @@ void TstHistoryStore::seedIgnoresWhenRecipeMoved()
     DevelopHistory h;
     h.loader = loader();
     h.seed(p, stackWithExposure(1.25f));                  // edited elsewhere since
-    QCOMPARE(h.count(p), 1);
-    QCOMPARE(h.at(p, 0)->action, QString("Saved settings"));
+    QCOMPARE(h.count(p), 2);
+    QCOMPARE(h.at(p, 0)->action, QString("Original"));
+    QVERIFY(h.at(p, 0)->stack.isIdentity());
+    QCOMPARE(h.at(p, 1)->action, QString("Saved settings"));
+    QCOMPARE(h.pos(p), 1);
+}
+
+void TstHistoryStore::capKeepsTrueOriginal()
+{
+    /* The cap drops the oldest edits but never touches entry 0: it stays the unedited
+       image, labelled Original, and counts what went -- across a save and a restore. */
+    const QString p = "/Photos/F/IMG_9.NEF";
+    DevelopHistory h;
+    h.seed(p, DevelopHistory::originalStack());
+    const int n = DevelopHistory::kMaxEntries + 25;
+    for (int i = 1; i <= n; ++i)
+        h.record(p, "Global", "Exposure", QString::number(i), QString(),
+                 stackWithExposure(0.01f * i));
+    QCOMPARE(h.count(p), DevelopHistory::kMaxEntries);
+    QCOMPARE(h.at(p, 0)->action, QString("Original"));
+    QVERIFY(h.at(p, 0)->stack.isIdentity());
+    QCOMPARE(h.trimmed(p), n - (DevelopHistory::kMaxEntries - 1));
+    QCOMPARE(h.at(p, 1)->value, QString::number(h.trimmed(p) + 1));
+
+    const EditStack last = stackWithExposure(0.01f * n);
+    HistoryStore::save(p, h.entries(p), h.pos(p), HistoryEntry::recipeStamp(last));
+    DevelopHistory h2;
+    h2.loader = loader();
+    h2.seed(p, last);
+    QCOMPARE(h2.count(p), DevelopHistory::kMaxEntries);
+    QVERIFY(h2.at(p, 0)->stack.isIdentity());
+    QCOMPARE(h2.trimmed(p), h.trimmed(p));
+}
+
+void TstHistoryStore::legacyBaselineGetsOriginal()
+{
+    /* Saved before entry 0 was pinned: the cap had advanced "Original" to an edited
+       state. Restoring puts the real original under it and keeps the old baseline as a
+       step, with the position following the shift. */
+    const QString p = "/Photos/F/IMG_10.NEF";
+    QVector<HistoryEntry> v = threeSteps();
+    v[0].stack = stackWithExposure(0.25f);                // advanced, still "Original"
+    HistoryStore::save(p, v, 2, kStamp);
+    DevelopHistory h;
+    h.loader = loader();
+    h.seed(p, stackWithExposure(0.5f, 3));
+    QCOMPARE(h.count(p), 4);
+    QCOMPARE(h.pos(p), 3);
+    QCOMPARE(h.at(p, 0)->action, QString("Original"));
+    QVERIFY(h.at(p, 0)->stack.isIdentity());
+    QCOMPARE(h.at(p, 1)->action, QString("Earlier edits"));
+    QCOMPARE(h.at(p, 2)->action, QString("Exposure"));
+
+    /* A legacy "Saved settings" baseline keeps its label. */
+    const QString q = "/Photos/F/IMG_11.NEF";
+    v = threeSteps();
+    v[0].action = "Saved settings";
+    v[0].stack = stackWithExposure(0.25f);
+    HistoryStore::save(q, v, 1, kStamp);
+    DevelopHistory h2;
+    h2.loader = loader();
+    h2.seed(q, stackWithExposure(0.5f, 3));
+    QCOMPARE(h2.count(q), 4);
+    QCOMPARE(h2.pos(q), 2);
+    QCOMPARE(h2.at(q, 1)->action, QString("Saved settings"));
 }
 
 void TstHistoryStore::forgetRemovesSaved()

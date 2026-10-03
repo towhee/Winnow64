@@ -6685,3 +6685,30 @@ That's expected, because Winnow hasn't downloaded anything on that machine yet. 
   Next time you use Select Subject, Sky, Depth, Object or spot fill, Winnow should prompt and download into ~/Library/Application Support/Winnow/Models. That only works if the
   models have been uploaded to winnow.ca/winnow/models/, and I haven't checked that. Want me to delete those leftover copies from the Qt Creator build folders?
 
+==========================================================================================
+Folders vs Library
+==========================================================================================
+
+Not in Folders UI
+- Collections Panel
+- Queries Panel
+
+Not in Library UI
+-
+
+
+Users/roryhill/Pictures/_test1/ARW A7R2.JPG
+
+
+
+
+
+
+
+
+
+
+
+
+
+

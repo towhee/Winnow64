@@ -35,10 +35,21 @@
     a history that does not lead to the image on screen would revert to states the user
     never saw. The sidecar stays the single source of truth for the CURRENT state.
 
+    ENTRY 0 IS ALWAYS THE TRUE ORIGINAL: the image with no develop edits at all
+    (originalStack), whatever else has happened to the history. An image whose sidecar
+    already carried edits when it was first seen gets a SECOND step, "Saved settings",
+    holding them. Entry 0 is never advanced, relabelled or replaced -- not by the cap, not
+    by a restore -- so the bottom row of the History dock always means what it says. It
+    used to be the state the history STARTED from, which the cap moved forward, and a
+    truncated history saved with it then showed a mid-edit state labelled "Original" in
+    every later session.
+
     Snapshots are not free -- a scope's brush / object mask paramsJson can run to tens of
-    KB -- so memory is capped two ways: kMaxEntries per image (oldest edits fall off, the
-    baseline is relabelled but kept) and kMaxImages images retained, evicting the least
-    recently touched. An evicted image's history is still in the store.
+    KB -- so memory is capped two ways: kMaxEntries per image (the oldest EDITS after the
+    original fall off, counted in the original's `trimmed` so the dock can say so) and
+    kMaxImages images retained, evicting the least recently touched. An evicted image's
+    history is still in the store. Trimming never strands a state: every step is a whole
+    EditStack, so the oldest surviving step is a complete recipe in its own right.
 
     REVERT MODEL (Lightroom): pos is the entry currently applied. Recording a new action
     while pos is not the last entry DISCARDS everything after pos -- editing from an
@@ -68,9 +79,18 @@ public:
        no brush/object masks is a few KB. */
     static constexpr int kMaxImages  = 200;
 
-    /* First touch of an image: lay down the baseline entry the user can always return
-       to. "Original" for an untouched image, "Saved settings" when the sidecar already
-       carried edits. Idempotent -- re-visiting an image must not reset its history. */
+    /* The image with no develop edits: one default Global scope. Renders exactly as a
+       never-edited image does -- default params and camera profile, identity geometry,
+       no spots. Entry 0 of every history, and the Before of Before / After. */
+    static EditStack originalStack() {
+        EditStack s;
+        s.scopes.append(EditScope());       // name defaults to "Global"
+        return s;
+    }
+
+    /* First touch of an image: lay down the "Original" entry the user can always return
+       to, plus a "Saved settings" step when the sidecar already carried edits.
+       Idempotent -- re-visiting an image must not reset its history. */
     void seed(const QString &path, const EditStack &s) {
         if (path.isEmpty()) return;
         touch(path);
@@ -83,18 +103,42 @@ public:
         if (loader && loader(path, saved, savedPos, stamp) &&
             savedPos >= 0 && savedPos < saved.size() &&
             stamp == HistoryEntry::recipeStamp(s)) {
+            normalizeOriginal(saved, savedPos);
             byImage[path] = saved;
             posByImage[path] = savedPos;
             emit changed(path);
             return;
         }
-        HistoryEntry e;
-        e.action = s.isIdentity() ? QStringLiteral("Original")
-                                  : QStringLiteral("Saved settings");
-        e.stack  = s;
-        byImage[path] = QVector<HistoryEntry>{e};
-        posByImage[path] = 0;
+        QVector<HistoryEntry> v{originalEntry()};
+        if (!s.isIdentity()) {
+            HistoryEntry e;
+            e.action = QStringLiteral("Saved settings");
+            e.stack  = s;
+            v.append(e);
+        }
+        byImage[path] = v;
+        posByImage[path] = v.size() - 1;
         emit changed(path);
+    }
+
+    /* Make entry 0 the true original. A history saved before 2026-10-03 started from
+       whatever state the image was first seen in -- "Saved settings", or an "Original"
+       the cap had advanced into the middle of the user's edits. A baseline that is not
+       the unedited image is kept as an ordinary step (it is still a state the user
+       reached) and the real original goes in under it. */
+    static void normalizeOriginal(QVector<HistoryEntry> &v, int &pos) {
+        if (!v.isEmpty() && v[0].stack.isIdentity()) {
+            v[0].action = QStringLiteral("Original");
+            v[0].scope.clear();
+            v[0].value.clear();
+            v[0].mergeKey.clear();
+            v[0].syncId = 0;
+            return;
+        }
+        if (!v.isEmpty() && v[0].action == QLatin1String("Original"))
+            v[0].action = QStringLiteral("Earlier edits");
+        v.prepend(originalEntry());
+        ++pos;
     }
 
     /* Commit one action. Truncates anything after the current position, then merges into
@@ -108,9 +152,7 @@ public:
         QVector<HistoryEntry> &v = byImage[path];
         int &pos = posByImage[path];
         if (v.isEmpty()) {                 // no seed (can't happen) -- synthesize one
-            HistoryEntry base;
-            base.action = QStringLiteral("Original");
-            v.append(base);
+            v.append(originalEntry());
             pos = 0;
         }
         /* Editing from an earlier state discards the steps after it. */
@@ -125,13 +167,12 @@ public:
         if (merge) v.last() = e;
         else       v.append(e);
 
-        /* Cap: drop the oldest EDITS, never the baseline (index 0), so "Original" stays
-           reachable. The baseline keeps its label but adopts the state it now stands
-           for -- otherwise reverting to it would resurrect a state the user cannot see
-           any of the steps for. */
+        /* Cap: drop the oldest EDITS, never the original (index 0). The original keeps
+           its own state -- the unedited image -- and counts what went, so the dock can
+           show the gap rather than pretend the oldest surviving step came first. */
         while (v.size() > kMaxEntries) {
-            v[0].stack = v[1].stack;       // baseline advances to the dropped step
             v.remove(1);
+            ++v[0].trimmed;
         }
         pos = v.size() - 1;
         emit changed(path);
@@ -148,6 +189,11 @@ public:
     QVector<HistoryEntry> entries(const QString &path) const { return byImage.value(path); }
 
     int count(const QString &path) const { return byImage.value(path).size(); }
+    /* Steps the cap has dropped between the original and the oldest surviving step. */
+    int trimmed(const QString &path) const {
+        auto it = byImage.constFind(path);
+        return (it == byImage.constEnd() || it->isEmpty()) ? 0 : it->first().trimmed;
+    }
     int pos(const QString &path) const { return posByImage.value(path, -1); }
 
     const HistoryEntry *at(const QString &path, int i) const {
@@ -234,6 +280,13 @@ signals:
     void changed(const QString &path);
 
 private:
+    static HistoryEntry originalEntry() {
+        HistoryEntry e;
+        e.action = QStringLiteral("Original");
+        e.stack  = originalStack();
+        return e;
+    }
+
     /* Mark an image most-recently-used and evict the coldest once over kMaxImages. */
     void touch(const QString &path) {
         lru.removeAll(path);

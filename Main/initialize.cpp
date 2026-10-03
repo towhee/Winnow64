@@ -3847,6 +3847,20 @@ void MW::setOperationMode(G::OperationMode mode)
         return;
     }
 
+    /* LEAVING DEVELOP CANCELS THE ACTIVE TOOL. A tool armed in Develop (spot brush, WB
+       dropper, Detail picker, mask tool, Curves sampler, Transform) changes the loupe
+       cursor and owns the canvas click; switching to Browse must not leave the blank
+       spot cursor or the dropper behind, nor re-arm the tool on the next D. Done before
+       the dock hides below: toggleDevelopTransform refuses outside Develop, and the
+       Transform session closes through its R path (commit, not discard), so a crop is
+       not lost to a workflow switch. */
+    if (mode != G::OperationMode::Develop
+        && G::operationMode == G::OperationMode::Develop) {
+        if (developTransformVisible) toggleDevelopTransform();
+        if (developProperties) developProperties->cancelCanvasTools();
+        if (imageView) imageView->resetToolCursor();
+    }
+
     /* Only show develop (and its History panel) in Develop Mode. History first, so
        Develop ends up the front tab (see setDevelopPanelEnabled). */
     const bool inDevelop = (mode == G::OperationMode::Develop);

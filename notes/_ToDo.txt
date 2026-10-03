@@ -9,15 +9,14 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
+- Switch from Develop mode should cancel any active develop tools
 - Move Embellish export off the GUI thread. Requires reworking the Embellish render path
   from QPixmap/QGraphicsScene to QImage-only, since QPixmap is GUI-thread-only.
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?
 - Do we need backups when edit, and if so, should they be in the catalog?
-- Download models JIT
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
-- Edit title not persistent or applying to embellish
 - AI keywording
 - Redo Develop help
 - Edit Winnow shortcuts

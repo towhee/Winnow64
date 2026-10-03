@@ -3,33 +3,6 @@
 #include "Utilities/foldertree.h"
 #include "Cache/catalog.h"
 #include "Metadata/keywordpaths.h"
-#ifdef Q_OS_MAC   // BMPROBE
-#include <execinfo.h>
-#include <cxxabi.h>
-#endif
-// BMPROBE: who called. Temporary diagnostic, remove with the other BMPROBE lines.
-static void bmprobeStack(const char *where)
-{
-#ifdef Q_OS_MAC
-    void *frames[14];
-    const int n = backtrace(frames, 14);
-    char **syms = backtrace_symbols(frames, n);
-    qDebug().noquote() << "BMPROBE   stack for" << where;
-    for (int i = 1; i < n; ++i) {
-        /* "<idx> <image> <addr> <mangled> + <off>": demangle the 4th field */
-        const QStringList f = QString(syms[i]).split(' ', Qt::SkipEmptyParts);
-        QString name = f.size() > 3 ? f.at(3) : QString(syms[i]);
-        int st = 0;
-        char *dem = abi::__cxa_demangle(name.toUtf8().constData(), nullptr, nullptr, &st);
-        if (st == 0 && dem) name = QString(dem).left(110);
-        free(dem);
-        qDebug().noquote() << "BMPROBE     " << i << name;
-    }
-    free(syms);
-#else
-    Q_UNUSED(where)
-#endif
-}
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
 #include <QStyleFactory>
@@ -711,9 +684,6 @@ void Filters::removeChildrenDynamicFilters()
     prevent duplication and orphans.
 */
     if (G::isLogger || G::isFlowLogger) G::log("Filters::removeChildrenDynamicFilters");
-    qDebug() << "BMPROBE Filters::removeChildrenDynamicFilters"
-             << "folders before =" << itemsInCategory(folders).size();  // BMPROBE
-    bmprobeStack("removeChildrenDynamicFilters");  // BMPROBE
     if (debugFilters)
         qDebug() << "Filters::removeChildrenDynamicFilters"
                     ;
@@ -1397,8 +1367,6 @@ void Filters::loadingDataModelFailed()
 void Filters::startBuildFilters(bool isReset)
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::startBuildFilters");
-    qDebug() << "BMPROBE Filters::startBuildFilters isReset =" << isReset;  // BMPROBE
-    bmprobeStack("startBuildFilters");  // BMPROBE
     if (debugFilters)
         qDebug() << "Filters::startBuildFilters"
                  << "G::allMetadataAttempted =" << G::allMetadataAttempted
@@ -1430,9 +1398,6 @@ void Filters::finishedBuildFilters()
 
     filtersBuilt = true;
     buildingFilters = false;
-    qDebug() << "BMPROBE Filters::finishedBuildFilters folders ="
-             << itemsInCategory(folders).size();  // BMPROBE
-    bmprobeStack("finishedBuildFilters");  // BMPROBE
     filterLabel->setVisible(false);
     bfProgressBar->setValue(0);
     bfProgressBar->setVisible(false);
@@ -3135,8 +3100,6 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
     are found by path and kept, which is what addCategoryItems' duplicate pass does for
     the flat categories.
 */
-    qDebug() << "BMPROBE Filters::addFolderItems counts =" << folderCounts.size();  // BMPROBE
-    bmprobeStack("addFolderItems");  // BMPROBE
     QMutexLocker locker(&mutex);
 
     QHash<QString, QTreeWidgetItem *> byPath;
@@ -4056,7 +4019,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
 */
     if (G::isLogger) G::log("Filters::mousePressEvent");
     if (G::mode == "Compare") {
-        G::popup->showPopup("Filters are unavailable while in Compare Mode", 3000);
+        G::popup->showPopup("Filters are unavailable while in Compare View", 3000);
     }
     if (buildingFilters) return;
     QPoint p = event->pos();

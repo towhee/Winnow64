@@ -2689,6 +2689,18 @@ bool DevelopProperties::escapeMaskTool()
     return true;
 }
 
+void DevelopProperties::cancelCanvasTools()
+{
+    if (G::isLogger) G::log("DevelopProperties::cancelCanvasTools");
+    cancelWbDropper();
+    cancelDetailPick();
+    if (spotMode) onSpotToolToggled(false);
+    setCurveSamplerActive(false);
+    /* escapeMaskTool steps down one level per call (discard a pending submask, close a
+       committed submask's session, collapse the tool) -- run it until nothing is left. */
+    for (int i = 0; i < 3 && escapeMaskTool(); ++i) {}
+}
+
 QString DevelopProperties::defaultMaskParams(int tool)
 {
     /* Geometry is stored normalized (0..1 of the image), so it is resolution-independent and
@@ -6257,8 +6269,8 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     selectedMaskIndex = -1;
     syncPropagateBase();     // multi-image edits are diffed from this image's state
 
-    /* Baseline history entry for this image ("Original", or "Saved settings" when the
-       sidecar already carried edits). Idempotent, so returning to an image keeps the
+    /* History's "Original" entry for this image, plus "Saved settings" when the sidecar
+       already carried edits. Idempotent, so returning to an image keeps the
        steps taken earlier in this session. */
     if (history) history->seed(fPath, s);
     if (historyView) historyView->setImage(fPath);
@@ -6395,12 +6407,10 @@ EditStack DevelopProperties::originalStack() const
     The Before image: this image with NO develop edits. A default EditStack with one
     Global scope renders exactly as a never-edited image does -- default params, empty
     (= default) camera profile, identity geometry, no spots -- so the crop and the spot
-    heals are dropped along with the sliders. Synthesized rather than taken from history;
-    see the header for why entry 0 is not the original.
+    heals are dropped along with the sliders. The same stack as History's "Original"
+    (entry 0), from the one definition in DevelopHistory.
 */
-    EditStack s;
-    s.scopes.append(EditScope());       // name defaults to "Global"
-    return s;
+    return DevelopHistory::originalStack();
 }
 
 void DevelopProperties::toggleBeforeAfter()

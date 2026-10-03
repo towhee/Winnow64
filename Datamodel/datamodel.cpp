@@ -1354,6 +1354,14 @@ void DataModel::newInstance(const QString &src)
     G::dmInstance = next;
     if (G::isIngestProbe)
         IngestProbe::Instance().NoteInstanceBump(src.isEmpty() ? QString("unnamed") : src);
+    /*  The proxy snapshot carries the instance it was built under, and MetaRead will
+        not dispatch from one that differs (MetaRead::dispatch). A bump with no
+        structural change after it (a filterChange that moves no rows) would otherwise
+        leave the snapshot on the old instance and MetaRead waiting for a rebuild
+        nothing asked for. */
+    if (G::isGuiThread()) scheduleProxySnapshotRebuild();
+    else QMetaObject::invokeMethod(this, [this]{ scheduleProxySnapshotRebuild(); },
+                                   Qt::QueuedConnection);
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)

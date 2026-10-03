@@ -1770,8 +1770,8 @@ void Preferences::addCatalog()
     i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Catalog";
-    i.tooltip = "Searching across every folder Winnow has seen, not just the one that "
-                "is loaded.";
+    i.tooltip = "The Library: every photo in the folders you have chosen to catalogue, "
+                "searchable together, not just the folder that is loaded.";
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
@@ -1782,8 +1782,8 @@ void Preferences::addCatalog()
     i.parentName = "CatalogHeader";
     i.captionText = "Catalogued folders";
     i.tooltip = "Choose which folders are indexed in the background, and scan them now.\n\n"
-                "Folders you browse are catalogued automatically. This is only needed\n"
-                "to index a library you have not visited yet.";
+                "Only these folders are catalogued. You can still browse any other\n"
+                "folder, but it is not added to the Library.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;

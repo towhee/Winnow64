@@ -2411,6 +2411,10 @@ private:
     /*  Grey both panels with their reason in Folders, show or hide the Filters
         categories, and refresh the empty hints. */
     void updateCollectionsAvailability();
+    /*  Enable the Library-only menu items (Window > Collections Panel, Window > Queries
+        Panel, File > Manage Catalog...) in the Library, and disable them with the reason
+        in their tooltips in Folders. */
+    void updateLibraryOnlyActions();
     void showCollectionsDock();
     void closeCollectionsDock();
     void createQueriesDock();

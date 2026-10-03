@@ -928,6 +928,12 @@ void ImageView::endCurvePick()
     viewport()->update();
 }
 
+void ImageView::resetToolCursor()
+{
+    if (developToolActive()) return;
+    setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+}
+
 void ImageView::setDetailPoint(QPointF n)
 {
     if (detailPointOn && n == detailPoint) return;

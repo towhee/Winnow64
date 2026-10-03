@@ -154,6 +154,11 @@ public:
     /* Esc from the Develop arbiter: if a mask tool is expanded, collapse it (hide its
        settings, like clicking its caption again) and return true; else false. */
     bool escapeMaskTool();
+    /* Leaving Develop for another workflow (Browse ...): disarm every canvas tool the
+       dock arms -- WB dropper, Detail picker, Spot brush, Curves sampler, mask tool --
+       through the same paths Esc uses, so the buttons and the cursor both reset. The
+       Transform panel is MW's (MW::setOperationMode closes it). */
+    void cancelCanvasTools();
     QVector<MaskComponent> activeScopeComponents() const;
     /* The active scope's mask-level Edge (EditScope::maskEdge), so the loupe veil grows
        and shrinks the composited mask exactly as the render does. 0 on the Global scope
@@ -339,14 +344,12 @@ public:
     */
     void toggleBeforeAfter();
     bool isShowingBefore() const { return beforeAfterActive; }
-    /* The Before image: this image with no develop edits at all. SYNTHESIZED rather than
-       read from history entry 0, because history is session scoped -- on a second visit
-       entry 0 is "Saved settings" (the PRIOR session's result, already edited), and the
-       kMaxEntries cap advances the baseline even within one session. A default EditStack
-       carrying one Global scope IS the unedited render by construction: default params,
-       empty (= default) camera profile, identity geometry and no spots -- so the crop and
-       the spot heals come off for the comparison too, and Before is the whole original
-       frame, unhealed. */
+    /* The Before image: this image with no develop edits at all -- DevelopHistory::
+       originalStack, the same state as History's "Original" row (entry 0, which is never
+       advanced or replaced). A default EditStack carrying one Global scope IS the unedited
+       render by construction: default params, empty (= default) camera profile, identity
+       geometry and no spots -- so the crop and the spot heals come off for the comparison
+       too, and Before is the whole original frame, unhealed. */
     EditStack originalStack() const;
     /* Index (into the active scope's submasks) of the in-progress, uncommitted submask.
        MW composites it into the veil with the PREVIEWED op (pendingMaskOp), so the

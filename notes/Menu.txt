@@ -71,5 +71,5 @@ Window
 
 Help
 - About Winnow
-- Winnow Help*
+- Winnow Overview*
 

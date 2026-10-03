@@ -1820,6 +1820,30 @@ void MetaRead::dispatch(int id, bool isReturning)
         }
     }
 
+    /*  NEVER DISPATCH FROM A SNAPSHOT THE MODEL HAS MOVED ON FROM. A reader writes
+        what it read from a PATH into a ROW, and both come from the proxy snapshot,
+        but the reader is stamped with dm->instance -- the instance guard on the way
+        back can only protect it if the snapshot belongs to that instance. The
+        snapshot is rebuilt on the GUI thread a turn of the event loop AFTER the model
+        changes, so in between it can describe the old rows. MW::applyModelChange
+        bumps the instance, inserts a version row near the top, and MetaRead
+        dispatched at once from the 14-row snapshot into the 15-row model: every
+        result was accepted, and landed one row above its own image (a video's row
+        got a PNG, so its thumbnail never rendered). Same place and terms as the
+        backpressure gate: nextRowToRead has not run, so nothing is marked in flight
+        and the wait loses no work. DataModel::newInstance schedules the rebuild that
+        ends the wait. */
+    if (!abort) {
+        auto snap = dm->proxySnapshot();
+        if (!snap || snap->instance != dm->instance
+            || snap->sourceRows != dm->rowStore.size()) {
+            QTimer::singleShot(10, this, [this, id]() {
+                if (!abort) dispatch(id, false);
+            });
+            return;
+        }
+    }
+
     // assign either a or b as the next row to read in the datamodel
     if (nextRowToRead()) {
         int dmRow = dmRowOf(nextRow);
