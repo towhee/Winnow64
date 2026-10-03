@@ -1,6 +1,6 @@
 #include "Datamodel/keywordvocab.h"
 
-#include "Cache/cachedb.h"
+#include "Datamodel/userdb.h"
 #include "Cache/catalog.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
@@ -163,7 +163,7 @@ void KeywordVocab::reload()
     beginResetModel();
     clearTree();
 
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (db.isOpen()) {
         QSqlQuery q(db);
         /*  SHALLOWEST FIRST, so a parent is always in byId before a child needs it.
@@ -288,7 +288,7 @@ QList<const VocabNode *> KeywordVocab::completions(const QString &prefix, int li
 
 bool KeywordVocab::writeNode(const VocabNode *n)
 {
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return false;
 
     QSqlQuery q(db);
@@ -467,7 +467,7 @@ bool KeywordVocab::deleteLeafNode(VocabNode *n)
     off it. mergeNodes empties n first, so there is nothing to cascade to -- but the
     distinction is worth having in the name.
 */
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return false;
 
     QSqlQuery q(db);
@@ -585,7 +585,7 @@ QString KeywordVocab::reparentMerging(const QModelIndex &idx, const QModelIndex 
         back and reload() puts the in-memory tree back in step with them; without that the
         two would disagree for the rest of the session, which is the one thing every
         mutator here is written to prevent. */
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return QString();
     const bool inTransaction = db.transaction();
 
@@ -621,7 +621,7 @@ VocabNode *KeywordVocab::ensureChild(VocabNode *p, const QString &leaf, bool *cr
 
     const QString path = joinPath(p == root ? QString() : p->path, leaf);
 
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return nullptr;
     QSqlQuery q(db);
     q.prepare("INSERT INTO vocab (name, namefold, path, pathfold, parent)"
@@ -707,7 +707,7 @@ int KeywordVocab::insertPaths(const QStringList &paths)
 */
     if (paths.isEmpty()) return 0;
 
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return 0;
 
     QStringList sorted = paths;
@@ -778,7 +778,7 @@ bool KeywordVocab::remove(const QModelIndex &idx)
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
     if (!n) return false;
 
-    QSqlDatabase db = CacheDb::instance().db();
+    QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return false;
     QSqlQuery q(db);
     /*  The children go by ON DELETE CASCADE, which is the schema saying what this means:

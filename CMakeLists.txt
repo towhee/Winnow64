@@ -126,6 +126,7 @@ set(WINNOW_SOURCES
     Datamodel/buildfilters.cpp
     Datamodel/datamodel.cpp
     Datamodel/collectionstore.cpp
+    Datamodel/userdb.cpp
     Datamodel/filters.cpp
     Datamodel/selection.cpp
 
@@ -467,6 +468,7 @@ set(WINNOW_HEADERS
     Datamodel/buildfilters.h
     Datamodel/datamodel.h
     Datamodel/collectionstore.h
+    Datamodel/userdb.h
     Datamodel/filters.h
     Datamodel/filtersnapshot.h
     Datamodel/modelsync.h

@@ -119,6 +119,75 @@ void moveAside(const QString &dbPath)
     G::issue("Warning", msg, "CacheDb::moveAside", -1, dbPath);
 }
 
+/*  A LOCKED INDEX IS NOT RETRIED ON EVERY CALL. Each try waits out busy_timeout twice
+    (the open and the probe), and callers ask for a connection constantly, so after a
+    lock db() answers "no index" at once until this passes. Guarded by CacheDb::mutex. */
+qint64 gLockedUntilMs = 0;
+constexpr qint64 kLockedBackoffMs = 30000;
+
+/*  What a failed open says about the FILE, as opposed to about this moment. */
+enum class FileState {
+    Busy,       // another connection or process holds a lock: the file is fine
+    Readable,   // opens and reads, at a schema this build can migrate
+    Unusable    // cannot be read, is not a database, or is from a newer Winnow
+};
+
+bool isBusyError(const QSqlError &e)
+{
+    /*  SQLITE_BUSY (5) and SQLITE_LOCKED (6), and their extended codes (517
+        BUSY_SNAPSHOT, 261 BUSY_RECOVERY, 262 LOCKED_SHAREDCACHE, ...), whose low byte is
+        the primary code. */
+    bool ok = false;
+    const int code = e.nativeErrorCode().toInt(&ok);
+    if (!ok) return false;
+    const int primary = code & 0xff;
+    return primary == 5 || primary == 6;
+}
+
+FileState probeFile(const QString &dbPath)
+{
+/*
+    ASK THE FILE, ON A FRESH CONNECTION, BEFORE THROWING IT AWAY. A failed open or
+    migrate used to move the index aside whatever the cause -- and "database is locked"
+    is a cause that says nothing about the file. Several Winnow processes starting on one
+    profile (the parallel smoke tests do exactly that) could each discard a healthy index
+    because another held a lock for a moment, and a user would pay a full rescan for it.
+
+    Reads the schema and user_version with the same busy_timeout as a real connection.
+    Only a lock is spared; anything else keeps the old policy (move aside and rebuild).
+*/
+    const QString name = QString("winnow_cache_probe_%1")
+                             .arg(quintptr(QThread::currentThreadId()), 0, 16);
+    FileState state = FileState::Unusable;
+    {
+        QSqlDatabase d = QSqlDatabase::addDatabase("QSQLITE", name);
+        d.setDatabaseName(dbPath);
+        if (d.open()) {
+            QSqlQuery q(d);
+            if (!q.exec("PRAGMA busy_timeout = 5000")) {
+                state = isBusyError(q.lastError()) ? FileState::Busy : FileState::Unusable;
+            }
+            else if (!q.exec("SELECT COUNT(*) FROM sqlite_master") || !q.next()) {
+                state = isBusyError(q.lastError()) ? FileState::Busy : FileState::Unusable;
+            }
+            else if (!q.exec("PRAGMA user_version") || !q.next()) {
+                state = isBusyError(q.lastError()) ? FileState::Busy : FileState::Unusable;
+            }
+            else {
+                state = q.value(0).toInt() <= kSchemaVersion ? FileState::Readable
+                                                             : FileState::Unusable;
+            }
+            q.finish();
+            d.close();
+        }
+        else if (isBusyError(d.lastError())) {
+            state = FileState::Busy;
+        }
+    }
+    QSqlDatabase::removeDatabase(name);
+    return state;
+}
+
 }  // namespace
 
 CacheDb &CacheDb::instance()
@@ -138,6 +207,7 @@ void CacheDb::setPath(const QString &p)
         QMutexLocker lk(&mutex);
         if (dbPath == p) return;
         dbPath = p;
+        gLockedUntilMs = 0;         // a different file: its lock state is unknown
         /* Every thread's connection is now stale. They cannot be closed from here -- a
            connection belongs to its own thread -- so bump the generation and let each
            thread reopen on its next call. */
@@ -244,12 +314,19 @@ QSqlDatabase CacheDb::db()
        both. */
     QMutexLocker lk(&mutex);
     if (p != dbPath) p = dbPath;    // setPath landed while we were unlocked
+    if (QDateTime::currentMSecsSinceEpoch() < gLockedUntilMs) return QSqlDatabase();
 
     const QString name = QString("winnow_cache_%1_%2")
                              .arg(wantGen)
                              .arg(quintptr(QThread::currentThreadId()), 0, 16);
 
-    for (int attempt = 0; attempt < 2; ++attempt) {
+    /*  Up to three tries: a READABLE file that failed is retried once in place (a lock
+        released in between); a file that still fails, or is unusable, is moved aside and
+        the last try gets a fresh one; a LOCKED file is never moved aside. */
+    bool retriedInPlace = false;
+    bool movedAside = false;
+    QString err;
+    for (int attempt = 0; attempt < 3; ++attempt) {
         QSqlDatabase d = QSqlDatabase::addDatabase("QSQLITE", name);
         /*  Once, now that QtSql's registry certainly exists -- see gProcessExiting. */
         static const bool exitHookRegistered = (std::atexit(markProcessExiting), true);
@@ -261,7 +338,7 @@ QSqlDatabase CacheDb::db()
             return d;
         }
 
-        const QString err = d.lastError().text();
+        err = d.lastError().text();
         {
             QSqlDatabase dead = d;
             dead.close();
@@ -269,13 +346,28 @@ QSqlDatabase CacheDb::db()
         d = QSqlDatabase();
         QSqlDatabase::removeDatabase(name);
 
-        if (attempt == 0) {
-            moveAside(p);           // and try once more against a fresh file
-            continue;
+        if (movedAside) break;      // a fresh file failed too: nothing left to try
+
+        if (QFileInfo::exists(p)) {
+            const FileState state = probeFile(p);
+            if (state == FileState::Busy) {
+                /*  LOCKED, NOT BROKEN: leave it. This thread runs without an index for
+                    now; its next db() call tries again. */
+                G::issue("Warning", "The local index database is locked by another "
+                         "process; it was left in place. " + err, "CacheDb::db", -1, p);
+                gLockedUntilMs = QDateTime::currentMSecsSinceEpoch() + kLockedBackoffMs;
+                return QSqlDatabase();
+            }
+            if (state == FileState::Readable && !retriedInPlace) {
+                retriedInPlace = true;
+                continue;
+            }
         }
-        QString msg = "Could not open the local index database: " + err;
-        G::issue("Warning", msg, "CacheDb::db", -1, p);
+        moveAside(p);               // and try once more against a fresh file
+        movedAside = true;
     }
+    QString msg = "Could not open the local index database: " + err;
+    G::issue("Warning", msg, "CacheDb::db", -1, p);
     return QSqlDatabase();
 }
 
@@ -288,10 +380,13 @@ bool CacheDb::applyPragmas(QSqlDatabase &db)
     every develop flush. busy_timeout covers the brief writer overlap WAL still has.
 */
     QSqlQuery q(db);
-    return q.exec("PRAGMA journal_mode = WAL")
+    /*  busy_timeout FIRST. It was last, so "journal_mode = WAL" -- which takes a lock --
+        ran with no timeout at all: another process holding the file for a moment made it
+        fail at once, and the failure used to send a healthy index to moveAside. */
+    return q.exec("PRAGMA busy_timeout = 5000")
+           && q.exec("PRAGMA journal_mode = WAL")
            && q.exec("PRAGMA synchronous = NORMAL")
-           && q.exec("PRAGMA foreign_keys = ON")
-           && q.exec("PRAGMA busy_timeout = 5000");
+           && q.exec("PRAGMA foreign_keys = ON");
 }
 
 namespace {
@@ -1065,7 +1160,14 @@ bool CacheDb::migrate(QSqlDatabase &db)
                that the user has not filed yet.
 
                Created here rather than in a schema of its own so the dock that uses it
-               needs no migration when it lands. */
+               needs no migration when it lands.
+
+               RETIRED: the live vocabulary is in userdata.db (Datamodel/userdb.h, its
+               schema 2), because it is the user's work and this file may be moved aside
+               and rebuilt. UserDb copies this table once and nothing reads it after
+               that. The DDL and the seeding below stay, as migration history -- an old
+               index still seeds here first and the copy picks it up -- and the table is
+               not dropped, because this schema is additive only. */
             "CREATE TABLE IF NOT EXISTS vocab ("
             "  id         INTEGER PRIMARY KEY,"
             "  name       TEXT    NOT NULL,"

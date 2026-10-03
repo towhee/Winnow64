@@ -2420,7 +2420,7 @@ private:
 
     /*  PLACES (Main/mwplaces.cpp, Views/Map/placelist.h, Dialogs/placedlg.h): areas the
         user draws on the map -- an ellipse or a polygon, with a name -- stored in
-        collections.db as CollectionStore::Kind::Place. Like a collection, a place is an
+        userdata.db as CollectionStore::Kind::Place. Like a collection, a place is an
         item in a Filters category ("Places"), filtering on G::PlacesColumn, which
         DataModel answers from a side table refreshPlaceMembership works out from each
         row's GPS coordinates. NOT the Library's: usable over any folder too. The panel
@@ -2429,7 +2429,7 @@ private:
         on the map. */
     PlaceList *placeList = nullptr;
     QLabel *placesEmptyHint = nullptr;
-    QLabel *placesReason = nullptr;          // why + is greyed (collections.db unusable)
+    QLabel *placesReason = nullptr;          // why + is greyed (userdata.db unusable)
     BarBtn *placesNewBtn = nullptr;
     BarBtn *placesCancelBtn = nullptr;
     PlaceDlg *placeDlg = nullptr;            // the non-modal New / Edit dialog

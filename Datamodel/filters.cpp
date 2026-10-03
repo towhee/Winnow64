@@ -1176,6 +1176,32 @@ void Filters::setEachCatTextColor()
         ++it;
     }
 
+    /*  BRANCH ITEMS lit like headers: a collection folder, folder or keyword with a
+        checked item anywhere beneath it. Restyled only when the mark changes, so the
+        colours other passes set (zero counts) are not churned on every check. */
+    std::function<bool(QTreeWidgetItem *)> anyBelow = [&](QTreeWidgetItem *parent) {
+        bool any = false;
+        for (int i = 0; i < parent->childCount(); ++i) {
+            QTreeWidgetItem *child = parent->child(i);
+            if (isCategoryHeader(child)) continue;
+            const bool below = anyBelow(child);
+            if (child->childCount()) {
+                if (child->data(0, DescendantFilteringRole).toBool() != below) {
+                    child->setData(0, DescendantFilteringRole, below ? QVariant(true)
+                                                                     : QVariant());
+                    applyItemStyle(child);
+                }
+            }
+            if (below || child->checkState(0) != Qt::Unchecked) any = true;
+        }
+        return any;
+    };
+    QTreeWidgetItemIterator cats(this);
+    while (*cats) {
+        if (isCategoryHeader(*cats) && (*cats) != search) anyBelow(*cats);
+        ++cats;
+    }
+
     updateKeywordModeLabel();
 
     search->setForeground(0, G::textColor);
@@ -1556,6 +1582,8 @@ void Filters::applyItemStyle(QTreeWidgetItem *item)
         to say it with and "this keyword is not in your list" has nothing else. */
     if (unfiled)        item->setForeground(0, QBrush(itemIsUnfiledColor));
     else if (excluded)  item->setForeground(0, QBrush(itemIsExcludedColor));
+    else if (item->data(0, DescendantFilteringRole).toBool())
+                        item->setForeground(0, QBrush(hdrIsFilteringColor));
     else                item->setForeground(0, QBrush(G::textColor));
 }
 

@@ -30,6 +30,9 @@ set(WINNOW_CORE_TEST_SOURCES
     # FileOps keeps COLLECTIONS in step on a move or a delete too (they key on the path),
     # so the closure reaches the collection store. Qt Core + Sql only.
     ${CMAKE_SOURCE_DIR}/Datamodel/collectionstore.cpp
+    # ...whose file is UserDb's (userdata.db, the user's own work), shared with the
+    # keyword vocabulary.
+    ${CMAKE_SOURCE_DIR}/Datamodel/userdb.cpp
     # ...and Develop history (the History dock's undo steps), keyed on the path the same
     # way. Qt Core + Sql only; the entries are header-only EditStack JSON.
     ${CMAKE_SOURCE_DIR}/Develop/History/historystore.cpp

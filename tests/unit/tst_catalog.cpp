@@ -1,5 +1,6 @@
 #include <QtTest>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -99,6 +100,8 @@ private slots:
     void etaWording();
     void reconcileQueryUsesTheFolderIndex();
     void storageUsageMeasuresTheIndex();
+    void aLockedIndexIsLeftInPlace();
+    void anUnreadableIndexIsStillMovedAside();
 
 private:
     QString imagePath(const QString &name) const;
@@ -2761,6 +2764,95 @@ void tst_catalog::versionsRoundTripThroughTheIndex()
     QSqlQuery q(CacheDb::instance().db());
     QVERIFY(q.exec("SELECT COUNT(*) FROM image_version") && q.next());
     QCOMPARE(q.value(0).toInt(), 0);
+}
+
+void tst_catalog::aLockedIndexIsLeftInPlace()
+{
+/*
+    A LOCK SAYS NOTHING ABOUT THE FILE. Several Winnow processes on one profile (the
+    parallel smoke tests) made CacheDb move a healthy index aside because another held a
+    lock for a moment. The file here is held under an EXCLUSIVE lock in rollback-journal
+    mode, which blocks even reading the schema, for the whole call: db() must come back
+    closed with the file untouched and no .corrupt beside it -- and once the lock goes,
+    open the SAME file, its own table still in it.
+
+    Slow on purpose (~10 s): the open and the probe each wait out busy_timeout.
+*/
+    const QString prev = CacheDb::instance().path();
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+
+    const QString holder = "tst_catalog_lock_holder";
+    {
+        QSqlDatabase h = QSqlDatabase::addDatabase("QSQLITE", holder);
+        h.setDatabaseName(dbPath);
+        QVERIFY(h.open());
+        QSqlQuery q(h);
+        QVERIFY(q.exec("PRAGMA journal_mode = DELETE"));
+        QVERIFY(q.exec("CREATE TABLE mine (x INTEGER)"));
+        QVERIFY(q.exec("INSERT INTO mine VALUES (42)"));
+        QVERIFY(q.exec("BEGIN EXCLUSIVE"));
+        QVERIFY(q.exec("INSERT INTO mine VALUES (43)"));
+
+        CacheDb::instance().setPath(dbPath);
+        QVERIFY2(!CacheDb::instance().db().isOpen(), "a locked file cannot open");
+        QVERIFY(QFile::exists(dbPath));
+        const QStringList corrupt =
+            QDir(dir.path()).entryList({"*.corrupt.*"}, QDir::Files);
+        QVERIFY2(corrupt.isEmpty(), "a locked index must not be moved aside");
+
+        QVERIFY(q.exec("ROLLBACK"));
+        h.close();
+    }
+    QSqlDatabase::removeDatabase(holder);
+
+    // a new path clears the lock back-off; then the same file opens and migrates
+    CacheDb::instance().setPath(QDir(dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QVERIFY(db.isOpen());
+        QSqlQuery q(db);
+        QVERIFY2(q.exec("SELECT x FROM mine") && q.next(),
+                 "the same file, not a new one");
+        QCOMPARE(q.value(0).toInt(), 42);
+    }
+
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(prev);
+}
+
+void tst_catalog::anUnreadableIndexIsStillMovedAside()
+{
+/*
+    The other half of the policy, unchanged: a file that is not a database is moved
+    aside (.corrupt) and a fresh index takes its place, at once.
+*/
+    const QString prev = CacheDb::instance().path();
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+    {
+        QFile f(dbPath);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(QByteArray(8192, 'x'));     // not a SQLite header
+    }
+
+    CacheDb::instance().setPath(dbPath);
+    QElapsedTimer t;
+    t.start();
+    QVERIFY(CacheDb::instance().db().isOpen());
+    QVERIFY2(t.elapsed() < 4000, "a broken file must not wait out a lock timeout");
+    QCOMPARE(QDir(dir.path()).entryList({"index.db.corrupt.*"}, QDir::Files).size(), 1);
+    {
+        QSqlQuery q(CacheDb::instance().db());
+        QVERIFY(q.exec("PRAGMA user_version") && q.next());
+        QCOMPARE(q.value(0).toInt(), CacheDb::schemaVersion());
+    }
+
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(prev);
 }
 
 QTEST_MAIN(tst_catalog)

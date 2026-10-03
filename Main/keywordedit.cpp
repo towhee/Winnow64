@@ -448,7 +448,13 @@ void MW::filterBuildCompleted()
         cache is still decoding the first image, and it is the cache that finally puts the
         loupe up (MW::refreshViewsOnCacheChange). Without this the pane would sit on
         whichever category finished last, which reads as a stall in the filters. A no-op
-        once the loupe is up. */
+        once the loupe is up. NOT WHEN THE FILTRATION IS EMPTY: there is nothing to load,
+        and this overwrote MW::nullFiltration's message with a "Loading images ..." that
+        never finished (a restored filter that matches nothing in the Library). */
+    if (!loadCurtainUp && dm->rowCount() && dm->sf->rowCount() == 0) {
+        showCentralMessageIfNoImages();
+        return;
+    }
     setCentralProgressMessage(loadedMsg() + "Loading images ...");
 
 }

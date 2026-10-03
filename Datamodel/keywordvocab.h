@@ -18,8 +18,14 @@
     node's synonyms and its export flag attach to the node rather than to its current
     spelling. One table cannot be keyed both ways. See the schema 10 block in cachedb.cpp.
 
-    They join on pathfold, which is how a node gets its image count and how an
-    unfiled keyword found in a file is recognised as unfiled.
+    TWO FILES, TOO. `keyword` is derived, so it stays in index.db, which may be moved
+    aside and rebuilt. `vocab` is the user's work, so it lives in userdata.db
+    (Datamodel/userdb.h), which never is -- it moved there at userdata schema 2, copied
+    once from index.db, whose old table is left in place and no longer read.
+
+    They join on pathfold, IN MEMORY (Catalog::keywords() against byPathFold, never in
+    SQL), which is how a node gets its image count and how an unfiled keyword found in a
+    file is recognised as unfiled.
 
     LOADED WHOLE, IN MEMORY, GUI THREAD ONLY. A vocabulary is thousands of nodes, not the
     quarter of a million rows the datamodel is sized for, so there is no reason for the

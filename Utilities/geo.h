@@ -78,7 +78,7 @@ QList<Cluster> cluster(const QList<Point> &points, double cellPx);
     centre, or its first corner) before it is projected, so a place drawn across the
     seam is one shape, not two.
 
-    THE JSON (toJson / fromJson) IS A PUBLISHED FORMAT, stored in collections.db as the
+    THE JSON (toJson / fromJson) IS A PUBLISHED FORMAT, stored in userdata.db as the
     place's node definition: keys may be added, never renamed or rescaled. */
 struct Place {
     enum Shape { Ellipse = 0, Polygon = 1 };

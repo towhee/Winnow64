@@ -454,7 +454,12 @@ public:
             share Qt::UserRole + n with them, and the next in sequence (+7) is
             G::ColumnRole, which every category carries -- so every category read as a
             group. */
-        GroupRole = Qt::UserRole + 100
+        GroupRole = Qt::UserRole + 100,
+        /*  On a BRANCH item (a keyword, folder or collection folder with items under
+            it): something beneath it is checked, so it is drawn in the filtering yellow
+            like a category header -- a collapsed branch still says where the filter is.
+            Set by setEachCatTextColor, read by applyItemStyle. */
+        DescendantFilteringRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --

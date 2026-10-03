@@ -94,7 +94,7 @@ bool MW::showCentralMessageIfNoImages()
     if (dm->folderList.count() == 0)
         text = "Select from the Source or Bookmarks panels.";
     else if (dm->rowCount())
-        text = "No images match the filtration.";
+        text = "No images in filter result.";
     else if (dm->folderList.count() == 1)
         text = "No images in the folder.";
     else
@@ -1236,7 +1236,7 @@ void MW::showKeywordsDock()
 
 void MW::showCatalogDock()
 /*
-    "Search Catalog" (Window > Search Catalog, File > Open Catalog / Shift+O).
+    File > Open Library / Shift+O (and Window > Catalog Panel without the Filter dock).
 
     WITH THE FILTER DOCK this is not a second panel but a SCOPE: show the Filter dock,
     switch it to the Catalog scope and focus its box -- the same box the Folders scope

@@ -240,9 +240,23 @@ void MapView::activate()
     updateBanner();
 }
 
+void MapView::setView(double la, double lo, double z)
+{
+    if (!std::isfinite(la) || !std::isfinite(lo) || !std::isfinite(z)) return;
+    lat = std::clamp(la, -Geo::kMaxLat, Geo::kMaxLat);
+    lon = std::remainder(lo, 360.0);
+    const double maxZ = tiles->provider().isValid() ? tiles->provider().maxZoom : 19;
+    zoom = std::clamp(z, kMinZoom, maxZ);
+    viewRestored = true;
+    clusterZoom = -1;
+    syncControls();
+    update();
+}
+
 void MapView::showEvent(QShowEvent *e)
 {
     QWidget::showEvent(e);
+    shownOnce = true;
     activate();
 }
 
@@ -325,10 +339,19 @@ void MapView::rebuildPoints()
     rebuildSelected();
     updateCount();
 
-    // A new folder or catalog is fitted once; a filter change keeps the view.
-    if (fittedInstance != G::dmInstance && !points.isEmpty()) {
-        fittedInstance = G::dmInstance;
-        fitAll();
+    /*  A NEW FOLDER OR LIBRARY IS FITTED ONCE; a filter change keeps the view. This was
+        keyed on G::dmInstance, but MW::filterChange bumps the instance too, so every
+        filter change re-fitted the map -- the restore of the saved filters at startup
+        threw away the restored view, and a Places click lost its zoom to the place. The
+        DATASET is the datamodel's first row: a load replaces it, a filter or a sort never
+        does, and rows appended by a progressive load leave it in place.
+        The first dataset after a restart keeps the view the map was left at instead. */
+    const QString dataset =
+        rows ? dm->index(0, G::PathColumn).data(G::KeyRole).toString() : QString();
+    if (dataset != fittedDataset && !points.isEmpty()) {
+        fittedDataset = dataset;
+        if (viewRestored) viewRestored = false;
+        else fitAll();
     }
     update();
 }

@@ -6575,7 +6575,7 @@ void MW::nullFiltration()
 */
     if (G::isLogger) G::log("MW::nullFiltration");
     QString msg;
-    if (dm->rowCount()) msg = "No images match the filtration.";
+    if (dm->rowCount()) msg = "No images in filter result.";
     else if (dm->folderList.count() == 1)
         msg = "No images in the folder.";
     else msg = "No images in the folders.";

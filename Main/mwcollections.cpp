@@ -24,7 +24,7 @@
     Queries panel) AND the Filters Search row's ad hoc query ("Build query..."), because
     the Search row speaks the same grammar.
 
-    The store is Datamodel/collectionstore.h (its own file, collections.db, because
+    The store is Datamodel/collectionstore.h (its own file, userdata.db, because
     neither can be rebuilt from the images); the panels are Views/collectiontree.h.
     See notes/Documentation.txt "Collections (and the Queries to Come)" and "Queries and
     the Query Builder".
@@ -284,7 +284,7 @@ void MW::setQueriesDockVisibility()
 void MW::updateCollectionsAvailability()
 {
 /*
-    Greyed in Folders, with the reason; greyed with the store's reason if collections.db
+    Greyed in Folders, with the reason; greyed with the store's reason if userdata.db
     cannot be used. The trees stay on screen either way, so the user can see what they
     would get.
 */

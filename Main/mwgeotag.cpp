@@ -110,6 +110,10 @@ void MW::geotagRows(const QList<int> &dmRows, double lat, double lon)
             filterChange(src);
         refreshPlaceMembership();
         if (mapView && mapView->isVisible()) mapView->activate();
+        /*  The Metadata panel reads the model, but only when the selection changes --
+            and a drop does not change it. The current image is usually one dropped. */
+        if (G::useInfoView && infoView && dm->currentSfRow >= 0)
+            infoView->updateInfo(dm->currentSfRow);
     }
 
     if (!failed.isEmpty()) {

@@ -1831,9 +1831,10 @@ void MW::createWindowActions()
     addAction(filterDockVisibleAction);
     connect(filterDockVisibleAction, &QAction::triggered, this, &MW::showFilterDock);
 
-    /* With the Filter dock this is not a second panel but its Catalog SCOPE, so the menu
-       item says what it now does. It carries no shortcut: F2 searches whichever scope is
-       current, and this is how the Catalog scope is entered. */
+    /* With the Filter dock this is not a second panel but its Catalog SCOPE. It is not in
+       the Window menu then (File > Open Library is the same command), but it stays alive:
+       its checked state mirrors the scope for workspaces and settings. It carries no
+       shortcut: F2 searches whichever scope is current. */
     catalogDockVisibleAction = new QAction(
         G::useFilterPanel ? tr("Search Library") : tr("Catalog Panel"), this);
     catalogDockVisibleAction->setObjectName("toggleCatalog");
@@ -2984,7 +2985,10 @@ void MW::createWindowMenu()
     windowMenu->addAction(folderDockVisibleAction);
     windowMenu->addAction(favDockVisibleAction);
     windowMenu->addAction(filterDockVisibleAction);
-    windowMenu->addAction(catalogDockVisibleAction);
+    /* With the Filter dock there is no Catalog panel to show: the action only enters
+       the Library scope, which File > Open Library already does, so it stays off this
+       menu. */
+    if (!G::useFilterPanel) windowMenu->addAction(catalogDockVisibleAction);
     windowMenu->addAction(keywordsDockVisibleAction);
     windowMenu->addAction(collectionsDockVisibleAction);
     windowMenu->addAction(queriesDockVisibleAction);
@@ -3317,6 +3321,8 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(copyFilesAction);
     thumbViewActions->append(copyImageAction);
     thumbViewActions->append(copyImagePathFromContextAction);
+
+    thumbViewActions->append(separatorAction9);
     thumbViewActions->append(saveAsFileAction);
     thumbViewActions->append(exportDevelopedAction);
 

@@ -1443,7 +1443,6 @@ KeywordAudit Catalog::keywordAudit(int sampleLimit)
     a.imagesWithLinks     = scalar("SELECT COUNT(DISTINCT ik.image_id) FROM image_keyword ik"
                                    " JOIN image i ON i.id = ik.image_id AND i.live = 1");
     a.keywordRows         = scalar("SELECT COUNT(*) FROM keyword");
-    a.vocabRows           = scalar("SELECT COUNT(*) FROM vocab");
     a.links               = scalar("SELECT COUNT(*) FROM image_keyword");
     a.unlinkedKeywords    = scalar("SELECT COUNT(*) FROM keyword WHERE id NOT IN"
                                    " (SELECT DISTINCT keyword_id FROM image_keyword)");
