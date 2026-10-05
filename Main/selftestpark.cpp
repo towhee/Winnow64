@@ -6,7 +6,8 @@
     WINNOW_SELFTEST_PARK=1 -- the parked Library self-test (ctest park_restore). See
     DataModel::parkScope and "The Parked Library" in notes/Documentation.txt.
 
-    THE ROUND TRIP A PERSON MAKES: Library, then Folders, then Library again. The second
+    THE ROUND TRIP A PERSON MAKES: Library, then Folders (with no folder to go back to,
+    as after a start-up in the Library), a folder picked, then Library again. The second
     Library must come back RESTORED -- the same rows, the same current image, a model
     that passes verifyIntegrity -- and not by the catalog query and fill it replaces,
     which would pass every other check here while defeating the point. So the restore
@@ -77,11 +78,21 @@ void MW::selfTestParkLibrary(const QString &folder)
     fprintf(stderr, "SELFTEST: park: Library rows=%d current=%s\n",
             dm->rowCount(), current.toLocal8Bit().constData());
 
-    // 2. Folders: the model is parked, not cleared
+    /*  2. Folders WITH NOTHING TO GO BACK TO -- the Library opened at start-up, the
+        user's first Folders click (MW::showFoldersSource stops before it sets the scope,
+        which once cleared the Library before the park decision ran) -- then a folder
+        picked, as a person does next. The Library must stay parked through both. */
+    lastFolderPath.clear();
     chooseSource(false, "selftest park: Folders");
-    if (!waitFor(settled(G::Scope::Folders), 30000))
-        fail("Folders", QString("did not settle: rows=%1").arg(dm->rowCount()));
+    if (!waitFor([this]{ return G::scope == G::Scope::Folders && !G::isLoadRunning; },
+                 30000))
+        fail("Folders", "did not reach the Folders scope");
     if (!dm->hasParkedScope()) fail("Folders", "the Library was not parked");
+    if (fsTree->select(folder))
+        folderSelectionChange(folder, G::FolderOp::Add, /*resetDataModel*/true, false);
+    if (!waitFor(settled(G::Scope::Folders), 30000))
+        fail("Folders", QString("folder did not settle: rows=%1").arg(dm->rowCount()));
+    if (!dm->hasParkedScope()) fail("Folders", "the folder load dropped the parked Library");
     if (dm->parkedRowCount() != before.size())
         fail("Folders", QString("parked %1 rows of %2").arg(dm->parkedRowCount())
                             .arg(before.size()));

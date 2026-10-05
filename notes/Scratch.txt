@@ -6816,6 +6816,11 @@ Keep the Library parked while visiting Folders
 
  The same mechanism can park the Folders scope so Library→Folders is instant too.
 
+Not covered yet
+- The restore path with an active filter hasn't been tested, either automatically or in the app.
+- The parked Library uses memory while you're in Folders, roughly 100 MB plus its loaded thumbnails. It isn't released under memory pressure yet.
+
+
 
 
 
