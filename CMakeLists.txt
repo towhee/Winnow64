@@ -411,6 +411,7 @@ set(WINNOW_SOURCES
     Utilities/inputdlg.cpp
     Utilities/performance.cpp
     Utilities/popup.cpp
+    Utilities/zchunkdevice.cpp
     Utilities/progress.cpp
     Utilities/renamefile.cpp
     Utilities/reportdialog.cpp
