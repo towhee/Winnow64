@@ -6411,7 +6411,13 @@ bool MW::reset(QString src)
             if (G::isPerfProbe)
                 qDebug().noquote() << "[PERF] Library parked  rows =" << dm->parkedRowCount();
         }
-        else if (filterPanel && !dm->hasParkedScope()) filterPanel->dropParkedResults();
+        else {
+            if (G::isPerfProbe)
+                qDebug().noquote() << "[PERF] Library NOT parked at reset: rows ="
+                                   << dm->rowCount() << " scope request ="
+                                   << int(dm->scopeRequest().scope) << " src =" << src;
+            if (filterPanel && !dm->hasParkedScope()) filterPanel->dropParkedResults();
+        }
     }
     dm->clearDataModel();
     syncWorkflowButtonsEnabled();   // no rows: the Module buttons grey

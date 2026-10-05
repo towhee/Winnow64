@@ -602,17 +602,8 @@ void MW::setScope(G::Scope s, QString src)
         libraryRestoreSortPending = false;
         lowerLoadCurtain("MW::setScope leaving the Library");
         /*  PARK IT, if it is whole: the folder load this is the start of reaches
-            MW::reset, which moves the model aside instead of clearing it. How it looked is
-            captured now, while it is still what is loaded. */
-        if (libraryParkable()) {
-            parkedLibraryView.sortColumn = sortColumn;
-            parkedLibraryView.reverse = sortReverseAction->isChecked();
-            parkedLibraryView.filters = filters ? filters->persistableState() : QVariantMap();
-            parkedLibraryView.filtered = filters && filters->isAnyFilter();
-            parkedLibraryView.currentKey = dm->currentKey;
-            parkLibraryOnReset = true;
-            filterPanel->parkResults();
-        }
+            MW::reset, which moves the model aside instead of clearing it. */
+        prepareLibraryPark("MW::setScope");
     }
     /*  Entering the Library: a Folders filter restore still waiting for its build must
         not land on the Library. */
@@ -738,6 +729,10 @@ void MW::setScope(G::Scope s, QString src)
         }
         else if (filterPanel) filterPanel->dropParkedResults();
         const bool restoreParked = dm->hasParkedScope();
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] entering the Library: restore parked ="
+                               << restoreParked << " changed while parked ="
+                               << changedWhileParked.size();
 
         // the panel is where a catalog scope is actually used, so bring it up
         if (G::useFilterPanel && filterPanel) {
@@ -863,24 +858,59 @@ void MW::showFoldersSource()
         setScope(G::scope, "MW::showFoldersSource refused");
         return;
     }
+    /*  stop() clears the model before setScope runs, so the park decision is made here. */
+    prepareLibraryPark("MW::showFoldersSource");
     stop("MW::showFoldersSource");
     setScope(G::Scope::Folders, "MW::showFoldersSource");
     setCentralMessage(tr("Select a folder."));
 }
 
-bool MW::libraryParkable() const
+bool MW::libraryParkable(QString *why) const
 {
 /*
     A LIBRARY WORTH PARKING is one that finished loading: every row in, every row
     attempted, nothing still writing to the model. A load abandoned part-way is thrown
     away as before -- restoring it would hand back a half-filled set as if it were whole.
+    why, when given, names the first condition that failed (the [PERF] line in setScope).
 */
-    return G::scope == G::Scope::Catalog
-           && G::useFilterPanel && filterPanel
-           && dm && dm->rowCount() > 0
-           && dm->scopeRequest().scope == G::Scope::Catalog
-           && !G::isLoadRunning && !G::isModifyingDatamodel
-           && G::allMetadataAttempted;
+    QString r;
+    if (G::scope != G::Scope::Catalog) r = "scope is not the Library";
+    else if (!G::useFilterPanel || !filterPanel) r = "no Filters panel";
+    else if (!dm || dm->rowCount() == 0) r = "no rows";
+    else if (dm->scopeRequest().scope != G::Scope::Catalog) r = "model holds a folder scope";
+    else if (G::isLoadRunning) r = "G::isLoadRunning";
+    else if (G::isModifyingDatamodel) r = "G::isModifyingDatamodel";
+    else if (!G::allMetadataAttempted) r = "G::allMetadataAttempted is false";
+    if (why) *why = r;
+    return r.isEmpty();
+}
+
+void MW::prepareLibraryPark(const QString &src)
+{
+/*
+    DECIDE, ON THE WAY OUT OF THE LIBRARY, WHETHER THE NEXT MW::reset PARKS IT -- and
+    capture how it looked while it is still what is loaded. It must run BEFORE anything
+    clears the model: MW::setScope calls it, and so does MW::showFoldersSource's
+    nothing-to-go-back-to branch, which stops (clears) before it sets the scope. That
+    branch is the one a Library opened at start-up takes on its first Folders click, and
+    missing it meant the first round trips of a session always reloaded.
+
+    Only ever SETS the flag: called a second time after the clear (setScope following
+    that stop), it finds no rows and must not cancel the decision already made.
+*/
+    QString notParkable;
+    const bool parkable = libraryParkable(&notParkable);
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] leaving the Library (" + src + "): parkable ="
+                           << parkable << (parkable ? QString() : "(" + notParkable + ")");
+    if (!parkable) return;
+    parkedLibraryView.sortColumn = sortColumn;
+    parkedLibraryView.reverse = sortReverseAction->isChecked();
+    parkedLibraryView.filters = filters ? filters->persistableState() : QVariantMap();
+    parkedLibraryView.filtered = filters && filters->isAnyFilter();
+    parkedLibraryView.currentKey = dm->currentKey;
+    parkLibraryOnReset = true;
+    filterPanel->parkResults();
 }
 
 void MW::dropParkedLibrary(const QString &why)

@@ -513,9 +513,10 @@ public:
     ParkedLibraryView parkedLibraryView;
     bool parkLibraryOnReset = false;
     int libraryRestoreCount = 0;          // restores completed (self-test)
-    bool libraryParkable() const;
+    bool libraryParkable(QString *why = nullptr) const;
     void restoreParkedLibrary(const QSet<QString> &changed);
     void dropParkedLibrary(const QString &why);
+    void prepareLibraryPark(const QString &src);
     /*  THE VIEWS STAY COVERED UNTIL THE LIBRARY IS READY TO SHOW. Every replacing
         Library load raises it (loadCatalogScope), so the rows streaming in, the restored
         sort and a restored filter are never seen as three successive pictures. Lifted by
