@@ -31,16 +31,16 @@ float SrgbGammaRef(float v)
                            : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
-/* ACES (Narkowicz) shoulder after a fixed +0.68 EV lift; scene-referred input only. */
+/* The refitted ACES (Narkowicz) rational, lift + toe (2026-10-04); scene-referred only. */
 float BaselineToneRef(float v)
 {
     /* kBaselineExposure, stated INDEPENDENTLY rather than included, so this reference
        checks the pipeline instead of borrowing the number it is meant to verify. It has
        to be updated by hand when the production constant moves -- which is the point: the
        byte-exactness tests below fail loudly until someone does. */
-    v *= 1.191f;
+    v *= 2.869f;
     if (v < 0.0f) v = 0.0f;
-    const float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
+    const float a = 2.51f, b = 0.2166f, c = 2.43f, d = 0.59f, e = 1.0550f;
     return Clamp01Ref((v * (a * v + b)) / (v * (c * v + d) + e));
 }
 
@@ -162,7 +162,7 @@ int TestOutputTransform::compare(const WorkingImage &img, qint64 &offBy, qint64 
 
 /* RAW (scene-referred): the baseline tone curve runs, so the rolloff can never fire and
    EVERY pixel goes through the table. The ramp must reach past FilmicTone's saturation
-   (v=6.081) so the table's far end is exercised and not just assumed. */
+   (v=2.318) so the table's far end is exercised and not just assumed. */
 void TestOutputTransform::sceneReferredMatchesExactWithinOne()
 {
     const WorkingImage img = makeRamp(512, 384, 6.5f, /*sceneReferred*/true);
@@ -201,7 +201,7 @@ void TestOutputTransform::blackAndWhiteAreExact()
     img.sceneReferred = true;
     img.rgb = { 0.0f, 0.0f, 0.0f,        // black
                 -1.0f, -1.0f, -1.0f,     // negative: clamps to black
-                6.1f, 6.1f, 6.1f,        // the table's last entry (kToneDomainMax)
+                2.35f, 2.35f, 2.35f,     // the table's last entry (kToneDomainMax)
                 1e30f, 1e30f, 1e30f };   // far past it
     QImage out;
     OutputTransform t;
@@ -216,26 +216,23 @@ void TestOutputTransform::blackAndWhiteAreExact()
 
 /*
     kToneDomainMax MUST REACH FilmicTone's SATURATION, and this is the guard for the trap
-    that the two constants are coupled.
+    that the domain and the curve's constants are coupled.
 
     The transfer LUT covers 0..kToneDomainMax and clamps to its last entry above that,
-    which is only correct where the curve has ALREADY carried to white. Lower the lift
-    without raising the domain and the table ends early, and the symptom is specific:
-    the last entry is no longer white, so EVERY value above it renders as that same
-    almost-white byte and the image never reaches 255 at all. With the domain left at 4.6
-    and the lift at 1.191 the whole top end pins at 254.
+    which is only correct where the curve has ALREADY carried to white. Change the
+    constants so the curve saturates later without raising the domain and the table ends
+    early, and the symptom is specific: the last entry is no longer white, so EVERY value
+    above it renders as the same almost-white byte and the image never reaches 255.
 
-    So the two assertions that matter are a pair: 4.6 must still be SHORT of white (the
-    curve has further to go, which is why the domain had to grow), and a value past
-    saturation must be EXACTLY white (the clamp above the table is on white, as it must
-    be). NOT strict rise throughout -- 8-bit quantisation legitimately flattens the last
-    stretch, since the curve reaches 254 at v=4.6 and rounds to 255 from v=5.5, well
-    before its true saturation at v = 7.2416 / 1.191 = 6.081.
+    So the assertions are a pair: a value just short of saturation must still be SHORT of
+    white (2.0 renders 254 -- the curve has further to go), and a value past saturation
+    must be EXACTLY white. NOT strict rise throughout: 8-bit quantisation flattens the last
+    stretch (255 from v~2.1, before the true saturation at v = 6.650 / 2.869 = 2.318).
 */
 void TestOutputTransform::filmicDomainCoversSaturation()
 {
-    const std::vector<float> vs = {1.0f, 2.0f, 3.0f, 4.0f, 4.6f, 5.0f,
-                                   5.5f, 6.0f, 6.081f, 7.081f, 100.0f};
+    const std::vector<float> vs = {0.5f, 1.0f, 1.5f, 1.8f, 2.0f, 2.1f,
+                                   2.2f, 2.318f, 2.35f, 3.5f, 100.0f};
     WorkingImage img;
     img.width = int(vs.size());
     img.height = 1;
@@ -256,15 +253,14 @@ void TestOutputTransform::filmicDomainCoversSaturation()
                                 .arg(vs[i]).arg(got).arg(vs[i - 1]).arg(prev)));
     }
 
-    /* 4.6 was the OLD kToneDomainMax. Under the old lift it was white; under this one the
-       curve must still have somewhere to go. */
-    const int at46 = line[4 * 3];
-    QVERIFY2(at46 == 254, qPrintable(QString("v=4.6 rendered %1, expected 254 -- the lift "
-                                             "and the domain have drifted apart").arg(at46)));
+    /* Just short of saturation the curve must still have somewhere to go. */
+    const int at20 = line[4 * 3];
+    QVERIFY2(at20 == 254, qPrintable(QString("v=2.0 rendered %1, expected 254 -- the curve "
+                                             "and the domain have drifted apart").arg(at20)));
 
     /* And past saturation it is exactly white, so the clamp above the table stays exact.
-       This is the assertion a too-small domain fails: it pins at 254 forever. */
-    QCOMPARE(int(line[8 * 3]), 255);                    // v = 6.081, the saturation point
+       This is the assertion a too-small domain fails: it pins below 255 forever. */
+    QCOMPARE(int(line[7 * 3]), 255);                    // v = 2.318, the saturation point
     QCOMPARE(int(line[(vs.size() - 1) * 3]), 255);      // v = 100, far past the table
 }
 
@@ -570,6 +566,10 @@ void TestOutputTransform::outputBytesAreUnchanged()
         quint64 want;
     };
     /*
+        THE FOUR Filmic HASHES MOVED AGAIN ON 2026-10-04, deliberately: Standard roll-off
+        was refitted (lift + toe; see Develop/outputtransform.cpp). Again "sRGB/None/
+        display" and "sRGB/AgX/scene" did NOT move -- the refit reached Filmic only.
+
         THE FOUR Filmic HASHES MOVED ON 2026-09-17, deliberately: kBaselineExposure went
         from 1.6 to 1.191 (see Develop/outputtransform.cpp for the fit). The other two did
         NOT, and that is the useful half of this regeneration -- "sRGB/None/display" and
@@ -583,19 +583,19 @@ void TestOutputTransform::outputBytesAreUnchanged()
          0xdd34c2eff5da0abfULL},
         {"sRGB/Filmic/scene",  OutputTransform::Space::sRGB,
          OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
-         0x487191a6062f57f5ULL},
+         0x90890a4dd1bd752fULL},
         {"sRGB/AgX/scene",     OutputTransform::Space::sRGB,
          OutputTransform::ViewTransform::AgX,    true,  4.0f, false,
          0x1fc31ce2190d435dULL},
         {"P3/Filmic/scene",    OutputTransform::Space::DisplayP3,
          OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
-         0x0330c7d40ddfba9dULL},
+         0xfdb1febbebe46621ULL},
         {"Adobe/Filmic/scene", OutputTransform::Space::AdobeRGB,
          OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
-         0x59f234583969c5d9ULL},
+         0xa20f1fe37a348028ULL},
         {"sRGB16/Filmic/scene",OutputTransform::Space::sRGB,
          OutputTransform::ViewTransform::Filmic, true,  4.0f, true,
-         0x8d6498456e664c47ULL},
+         0x6ebb5a62d8f864d6ULL},
     };
     for (const Case &c : cases) {
         const WorkingImage img = makeRamp(97, 53, c.vMax, c.scene);

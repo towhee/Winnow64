@@ -4975,7 +4975,7 @@ void DevelopProperties::setCameraProfile(const QString &name)
     noteScopeEdit("Global", "Profile",
                   name.isEmpty() ? QString(kBuiltInProfileLabel) : name,
                   "global/cameraProfile");
-    /* A different profile may or may not bring its own tone mapping with it. */
+    /* A different profile may or may not carry a tone curve ("Profile curve"). */
     refreshViewTransformRow();
     emit paramsChanged();
 }
@@ -5004,10 +5004,13 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
           "raw developer lands.\n"
           "Soft roll-off: longer, wider roll-off -- saturated highlights desaturate "
           "toward white instead of shifting hue.\n"
+          "Camera contrast: the contrast of this camera maker's own JPEGs -- brighter "
+          "midtones and punchier shadows -- with the same smooth highlight roll-off.\n"
+          "Profile curve: the tone curve of the selected camera profile (the Camera "
+          "Standard / Neutral / Vivid ... profiles carry one), with the same roll-off.\n"
           "None: no tone mapping at all. Scene-linear data, which looks dark and flat -- "
           "a starting point for building a look from scratch, not a finished picture.\n"
-          "A camera profile carrying its own tone curve owns the mapping, and this row "
-          "then shows that instead of a choice."
+          "The profile above sets the colour; this sets the tone. Any combination works."
         : "Only raw files need a view transform. This file already carries the tone "
           "mapping its camera applied.";
     i.isIndent = true;
@@ -5073,42 +5076,34 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
        both so the terms stay searchable for anyone who has read about them elsewhere. */
     combo->addItem("Standard roll-off", int(OutputTransform::ViewTransform::Filmic));
     combo->addItem("Soft roll-off", int(OutputTransform::ViewTransform::AgX));
+    /* The camera-style pair: shapes taken from cameras' own renderings, finished with the
+       same roll-off. Profile curve's availability follows the PROFILE, so its text and
+       enabled state are set by refreshViewTransformRow. */
+    combo->addItem(viewTransformName(int(OutputTransform::ViewTransform::CameraContrast)),
+                   int(OutputTransform::ViewTransform::CameraContrast));
+    combo->addItem(viewTransformName(int(OutputTransform::ViewTransform::ProfileCurve)),
+                   int(OutputTransform::ViewTransform::ProfileCurve));
     combo->insertSeparator(combo->count());
     combo->addItem("None", int(OutputTransform::ViewTransform::None));
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
             [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
     viewTransformCombo = combo;
-    vhb->addWidget(combo);
-
-    /* The second reason this row can be dead, and unlike "raw only" it comes and goes with
-       the PROFILE rather than with the file -- so the label is built here and shown by
-       refreshViewTransformRow, instead of being chosen once at build time. */
-    QLabel *why = new QLabel("set by the profile");
-    why->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
-    why->setEnabled(false);
-    why->setAttribute(Qt::WA_TransparentForMouseEvents);
-    why->hide();
-    viewTransformReason = why;
     /* NO trailing stretch: the combo is Expanding, and a stretch item would take the
        spare width and leave the dropdown at its sizeHint -- narrower than Profile's,
-       directly above it, which reads as a mistake. The reason label takes the cell
-       instead when it is the visible one (left-aligned, so it looks the same). */
-    vhb->addWidget(why, 1, Qt::AlignLeft | Qt::AlignVCenter);
+       directly above it, which reads as a mistake. */
+    vhb->addWidget(combo);
 
     setIndexWidget(valIdx, cell);
     refreshViewTransformRow();
 }
 
 /*
-    Does the selected camera profile bring its own tone mapping?
-
-    A ProfileToneCurve is a whole scene-linear -> display mapping, not a contrast tweak, so
-    when a profile carries one it OWNS the tone mapping and the combo must not add a second
-    (see OutputTransform::EffectiveView, which enforces the same thing at render time).
-    False for Winnow Standard, for a synthesised "Camera Base", and for Adobe Standard --
-    none of which carry a curve -- so for those the combo stays live.
+    Does the selected camera profile carry a tone curve? The Camera Standard / Neutral /
+    Vivid ... family do; Adobe Standard, a synthesised "Camera Base" and Winnow's own
+    matrix do not. Decides whether "Profile curve" is available -- the curve is one tone
+    mapping among the others now, never an override (see OutputTransform::EffectiveView).
 */
-bool DevelopProperties::profileSuppliesToneMapping() const
+bool DevelopProperties::profileHasToneCurve() const
 {
     if (currentImagePath.isEmpty()) return false;
     const EditStack &s = stackCache[currentImagePath];
@@ -5139,8 +5134,10 @@ void DevelopProperties::setViewTransform(int vt)
 QString DevelopProperties::viewTransformName(int vt)
 {
     switch (static_cast<OutputTransform::ViewTransform>(vt)) {
-    case OutputTransform::ViewTransform::AgX:    return "Soft roll-off";
-    case OutputTransform::ViewTransform::Filmic: return "Standard roll-off";
+    case OutputTransform::ViewTransform::AgX:            return "Soft roll-off";
+    case OutputTransform::ViewTransform::Filmic:         return "Standard roll-off";
+    case OutputTransform::ViewTransform::CameraContrast: return "Camera contrast";
+    case OutputTransform::ViewTransform::ProfileCurve:   return "Profile curve";
     default: break;
     }
     return "None";
@@ -5152,14 +5149,26 @@ void DevelopProperties::refreshViewTransformRow()
 {
     if (!viewTransformCombo) return;
 
-    /* Swap the control for its reason when a profile owns the tone mapping. The stored
-       value is left ALONE -- the user's choice is not rewritten behind their back, it is
-       simply not in effect while this profile is selected, and comes back when it is
-       not. EffectiveView applies the same rule to the render. */
-    const bool byProfile = profileSuppliesToneMapping();
-    if (viewTransformReason) viewTransformReason->setVisible(byProfile);
-    viewTransformCombo->setVisible(!byProfile);
-    setItemEnabled("viewTransform", !byProfile);
+    /* "Profile curve" is only real while the profile carries a curve. Otherwise the item
+       is greyed with its reason in the text -- greyed control + brief inline reason --
+       and, if it is the stored choice, the render falls back to Standard roll-off
+       (EffectiveView), which the text says. The stored value is left ALONE: it comes back
+       into effect when a profile with a curve is chosen. */
+    const int pcIx = viewTransformCombo->findData(
+        int(OutputTransform::ViewTransform::ProfileCurve));
+    if (auto *m = qobject_cast<QStandardItemModel*>(viewTransformCombo->model());
+        m && pcIx >= 0) {
+        const bool has = profileHasToneCurve();
+        QStandardItem *it = m->item(pcIx);
+        it->setEnabled(has);
+        it->setText(has ? QString("Profile curve")
+                        : QString("Profile curve (none in this profile)"));
+        it->setToolTip(has ? QString("The selected camera profile's own tone curve, "
+                                     "with Winnow's highlight roll-off.")
+                           : QString("This profile carries no tone curve -- choose a "
+                                     "Camera Standard / Neutral / Vivid ... profile. "
+                                     "Renders as Standard roll-off meanwhile."));
+    }
 
     int stored = 0;
     if (!currentImagePath.isEmpty()) {

@@ -306,7 +306,7 @@ bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
         nothing to blend. Empty on a profile that carries no look.
     */
     out.lookTable = toHsmTable(p.lookTable);
-    ProfileTone::Build(p.toneCurve, out.toneCurve);
+    CameraCurve::BuildFromPairs(p.toneCurve, 1.0f, out.toneCurve);
     if (p.baselineExposureOffset != 0.0f)
         out.exposureScale = std::exp2(p.baselineExposureOffset);
 

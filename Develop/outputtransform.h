@@ -78,9 +78,15 @@ public:
         bug, not a shortcut.
     */
     enum class ViewTransform {
-        None   = 0, // the default: no tone mapping -- scene-linear to the transfer fn
-        Filmic = 1, // +0.68 EV then an ACES/Narkowicz shoulder
-        AgX    = 2  // log2 window + inset/outset gamut compression (see the .cpp)
+        None   = 0, // the identity: no tone mapping -- scene-linear to the transfer fn
+        Filmic = 1, // "Standard roll-off": +0.25 EV then an ACES/Narkowicz shoulder
+        AgX    = 2, // "Soft roll-off": log2 window + inset/outset gamut compression
+        /* "Camera contrast": the image's MAKER's average camera curve below a knee,
+           Winnow's roll-off above it (Develop/cameracurve.h). */
+        CameraContrast = 3,
+        /* "Profile curve": the selected profile's own ProfileToneCurve, with the same
+           roll-off above its knee. Renders as Filmic when the profile carries none. */
+        ProfileCurve   = 4
     };
 
     /* EditParams::viewTransform (an int, so it rides the existing int machinery) -> the
@@ -98,8 +104,10 @@ public:
     static ViewTransform ViewFromInt(int v)
     {
         switch (v) {
-        case int(ViewTransform::AgX):    return ViewTransform::AgX;
-        case int(ViewTransform::Filmic): return ViewTransform::Filmic;
+        case int(ViewTransform::AgX):            return ViewTransform::AgX;
+        case int(ViewTransform::Filmic):         return ViewTransform::Filmic;
+        case int(ViewTransform::CameraContrast): return ViewTransform::CameraContrast;
+        case int(ViewTransform::ProfileCurve):   return ViewTransform::ProfileCurve;
         default: break;
         }
         return ViewTransform::None;

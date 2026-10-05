@@ -854,7 +854,7 @@ private:
     void addViewTransformRow(const QModelIndex &parIdx);
     void setViewTransform(int vt);
     void refreshViewTransformRow();
-    bool profileSuppliesToneMapping() const;
+    bool profileHasToneCurve() const;
     static QString viewTransformName(int vt);
     void setWbDropperActive(bool on);
     void setDetailPickActive(bool on);
@@ -876,11 +876,6 @@ private:
     void setCurveSamplerActive(bool on);
     QPointer<QComboBox> wbCombo;
     QPointer<QComboBox> viewTransformCombo;
-    /* Shown IN PLACE of the combo when the selected camera profile brings its own tone
-       curve: greyed control plus a brief inline reason, never a popup after the fact. It
-       has to be a widget rather than a build-time choice because the reason appears and
-       disappears with the PROFILE, without the tree being rebuilt. */
-    QPointer<QLabel> viewTransformReason;
     QPointer<QComboBox> cameraProfileCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;

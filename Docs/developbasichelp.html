@@ -36,9 +36,11 @@ fixes what a matrix cannot, because a sensor&rsquo;s error is not linear.  Winno
 both, so an <b>Adobe Standard</b> profile renders in full.</p>
 
 <p>The <b>Camera&nbsp;&hellip;</b> profiles add a second thing on top: a <i>look</i> &mdash;
-a colour grade, a contrast curve, and the exposure that grade assumes.  That is what makes
-Camera Vivid vivid.  A profile is always applied whole, as Lightroom applies it; there is
-no switch for the look half.</p>
+a colour grade, a contrast curve, and the exposure that grade assumes.  The colour grade
+is most of what makes Camera Vivid vivid, and it always applies.  The contrast curve is
+yours to use or not: it is the <b>Profile curve</b> choice under <b>Tone mapping</b>, so
+you can have Camera Vivid&rsquo;s colour with Winnow&rsquo;s Standard roll-off, or with
+its own curve.</p>
 
 <p><b>Camera Base</b> is that family with the look taken away: the camera maker&rsquo;s
 colour science and nothing else.  It is one entry rather than nine because every
@@ -48,11 +50,10 @@ the identical rendering.  Choose it when you want the maker&rsquo;s colour with 
 contrast.  Some cameras have had their colour science revised, and then you will see both
 <b>Camera Base</b> and <b>Camera Base v2</b>.</p>
 
-<p>Because a look carries a full tone mapping, a profile that has one <b>takes over the
-Tone mapping row</b>: it reads <i>set by the profile</i> and the dropdown is put away,
-since applying a second mapping on top compresses the highlights twice.  Your setting is
-remembered and comes back when you choose a profile without a look &mdash; Winnow
-Standard, Camera Base, or Adobe Standard.</p>
+<p><b>Profile sets the colour; Tone mapping sets the tone.</b>  Any profile works with any
+tone mapping.  A camera profile&rsquo;s own curve is only used when you pick <b>Profile
+curve</b>; with Winnow Standard, Camera Base or Adobe Standard, which carry no curve, that
+choice is greyed out and reads <i>none in this profile</i>.</p>
 
 <p>A profile carries two calibrations, one under tungsten light and one under daylight, and
 Winnow blends between them according to the temperature you have dialled.  That is why
@@ -94,6 +95,18 @@ toward orange, and a blue toward purple, because the channels run out one at a t
 sunsets, stage and neon lighting, fire, and anything with a bright saturated subject.  It
 looks flatter and less punchy at first glance; that is the trade for keeping the colour.
 (This is the transform published as <i>AgX</i>, if you have read about it elsewhere.)</li>
+<li><b>Camera contrast</b> takes its contrast from the camera maker&rsquo;s own JPEGs
+&mdash; brighter midtones and deeper shadows than Standard roll-off, averaged from that
+maker&rsquo;s cameras (Nikon for a Nikon file, Sony for a Sony file, and so on) &mdash;
+and finishes the highlights with the same smooth roll-off, so pushing exposure still
+fades into white instead of clipping.  It works with any profile: pair it with a
+<b>Camera&nbsp;&hellip;</b> profile for that profile&rsquo;s colour with a camera-like
+tone.</li>
+<li><b>Profile curve</b> uses the selected camera profile&rsquo;s own contrast curve
+&mdash; Camera Neutral&rsquo;s gentle one, Camera Vivid&rsquo;s punchier one &mdash; again
+with the smooth roll-off above it, as Lightroom shows that profile.  Only profiles that
+carry a curve offer it (the <b>Camera&nbsp;&hellip;</b> family); otherwise it is greyed
+out, and an image left on it renders with Standard roll-off.</li>
 <li><b>None</b>, set apart at the foot of the list, applies no mapping at all: the image is
 shown as the sensor recorded it, which looks dark and flat.  That is not a fault &mdash; it
 is the unrendered data, and it is the right starting point for building a look entirely of
@@ -147,6 +160,10 @@ which.  Highlights and Shadows act on a <b>region of the tone range</b> and fade
 before they reach either extreme, so they shape the picture without touching where it
 clips.  Whites and Blacks move the end points, which rescales everything in between &mdash;
 so they reach all the way to the midtones, and they are the two that can clip.</p>
+
+<p>Shadows <b>multiplies</b> the light in the dark tones rather than adding to it, as
+Lightroom's does.  Pure black stays black, and the contrast between dark tones is kept,
+so opening the shadows reveals the detail in them instead of greying them out.</p>
 
 <p>Where the two regions sit is adjustable: the handles under the histogram scope (and
 under the parametric curve in the Curves panel) place the shadows and highlights peaks,

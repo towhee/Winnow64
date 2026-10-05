@@ -612,7 +612,7 @@ struct EditStack {
         /* An UNKNOWN value falls back to the default rather than failing: a sidecar
            written by a later build that added a transform must still open here, showing
            the default look, not refuse to load. */
-        if (p.viewTransform < 0 || p.viewTransform > 2) {
+        if (p.viewTransform < 0 || p.viewTransform > 4) {   // ViewTransform::ProfileCurve
             p.viewTransform = def.viewTransform;
             ++fixed;
         }
