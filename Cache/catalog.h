@@ -296,6 +296,17 @@ public:
        Safe to call off the GUI thread. */
     int commit(const QVector<CatalogRow> &rows);
 
+    /* WHAT CHANGED WHILE THE LIBRARY WAS PARKED (MW::restoreParkedLibrary). While on,
+       every path whose row commit() or commitUnreadable() actually rewrote is recorded --
+       the unchanged rows commit() skips are not, so revisiting a folder records nothing.
+       Those two are the only writers of a row's VALUES; rows gained or lost (a scan,
+       reconcile, forget, sweep) are found by the Library's own re-run of its search, which
+       compares paths. overflow means "too many to name": a clear(), or more than
+       kMaxTrackedChanges, and the caller reloads instead. Turning tracking on or off
+       empties the set. */
+    void trackChangedPaths(bool on);
+    QSet<QString> takeChangedPaths(bool *overflow = nullptr);
+
     /* Of these paths, which are absent from the catalog or have changed since they were
        indexed. The scanner asks this before parsing anything. */
     QSet<QString> staleOf(const QList<CatalogRow> &candidates);
@@ -656,6 +667,13 @@ private:
     /* Which database the memo above describes, so pointing CacheDb at a different file
        invalidates it rather than mixing two files' primary keys. */
     QString loadedPath;
+
+    /* See trackChangedPaths. Under mutex, like everything above. */
+    void noteChangedLocked(const QString &path);
+    bool trackingChanges = false;
+    bool changedOverflow = false;
+    QSet<QString> changedPaths;
+    static constexpr int kMaxTrackedChanges = 20000;
 };
 
 #endif // CATALOG_H

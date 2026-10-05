@@ -67,6 +67,8 @@ public:
     }
 
     void clear() { mIcons.clear(); mBytes = 0; }
+    // parking (DataModel::parkScope): GUI thread only, so no lock
+    void swapContents(IconStore &o) { mIcons.swap(o.mIcons); std::swap(mBytes, o.mBytes); }
 
     int count() const { return mIcons.size(); }
     qint64 bytes() const { return mBytes; }

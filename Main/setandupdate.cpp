@@ -601,6 +601,18 @@ void MW::setScope(G::Scope s, QString src)
         }
         libraryRestoreSortPending = false;
         lowerLoadCurtain("MW::setScope leaving the Library");
+        /*  PARK IT, if it is whole: the folder load this is the start of reaches
+            MW::reset, which moves the model aside instead of clearing it. How it looked is
+            captured now, while it is still what is loaded. */
+        if (libraryParkable()) {
+            parkedLibraryView.sortColumn = sortColumn;
+            parkedLibraryView.reverse = sortReverseAction->isChecked();
+            parkedLibraryView.filters = filters ? filters->persistableState() : QVariantMap();
+            parkedLibraryView.filtered = filters && filters->isAnyFilter();
+            parkedLibraryView.currentKey = dm->currentKey;
+            parkLibraryOnReset = true;
+            filterPanel->parkResults();
+        }
     }
     /*  Entering the Library: a Folders filter restore still waiting for its build must
         not land on the Library. */
@@ -709,13 +721,36 @@ void MW::setScope(G::Scope s, QString src)
             setCentralMessage(tr("Loading the library."));
             raiseLoadCurtain();
         }
+        /*  A PARKED LIBRARY IS RESTORED, NOT LOADED (MW::restoreParkedLibrary), unless
+            the index changed too much while it was parked to name what changed. */
+        QSet<QString> changedWhileParked;
+        parkLibraryOnReset = false;
+        if (dm->hasParkedScope()) {
+            bool overflow = false;
+            changedWhileParked = Catalog::instance().takeChangedPaths(&overflow);
+            Catalog::instance().trackChangedPaths(false);
+            if (overflow || !G::useFilterPanel || !filterPanel)
+                dropParkedLibrary("index changed too much while parked");
+            /*  The panel switched itself (its own scope selector) and has already asked
+                for a forced load, which will replace whatever is restored. */
+            else if (filterPanel->scope() == FilterPanel::CatalogScope)
+                dropParkedLibrary("Filters panel already loading the Library");
+        }
+        else if (filterPanel) filterPanel->dropParkedResults();
+        const bool restoreParked = dm->hasParkedScope();
+
         // the panel is where a catalog scope is actually used, so bring it up
         if (G::useFilterPanel && filterPanel) {
             filterDock->setVisible(true);
             filterDock->raise();
             filterDockVisibleAction->setChecked(true);
+            if (restoreParked) filterPanel->resumeParkedOnEntry();
             filterPanel->setScope(FilterPanel::CatalogScope);
         }
+        if (restoreParked)
+            QTimer::singleShot(0, this, [this, changedWhileParked]{
+                restoreParkedLibrary(changedWhileParked);
+            });
     }
     else {
         if (G::useFilterPanel && filterPanel)
@@ -831,6 +866,129 @@ void MW::showFoldersSource()
     stop("MW::showFoldersSource");
     setScope(G::Scope::Folders, "MW::showFoldersSource");
     setCentralMessage(tr("Select a folder."));
+}
+
+bool MW::libraryParkable() const
+{
+/*
+    A LIBRARY WORTH PARKING is one that finished loading: every row in, every row
+    attempted, nothing still writing to the model. A load abandoned part-way is thrown
+    away as before -- restoring it would hand back a half-filled set as if it were whole.
+*/
+    return G::scope == G::Scope::Catalog
+           && G::useFilterPanel && filterPanel
+           && dm && dm->rowCount() > 0
+           && dm->scopeRequest().scope == G::Scope::Catalog
+           && !G::isLoadRunning && !G::isModifyingDatamodel
+           && G::allMetadataAttempted;
+}
+
+void MW::dropParkedLibrary(const QString &why)
+{
+    if (!dm->hasParkedScope() && !parkLibraryOnReset) return;
+    if (G::isLogger || G::isFlowLogger) G::log("MW::dropParkedLibrary", why);
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] parked Library dropped:" << why
+                           << " rows =" << dm->parkedRowCount();
+    parkLibraryOnReset = false;
+    dm->dropParkedScope();
+    if (filterPanel) filterPanel->dropParkedResults();
+    Catalog::instance().trackChangedPaths(false);
+}
+
+void MW::restoreParkedLibrary(const QSet<QString> &changed)
+{
+/*
+    THE LIBRARY, BACK FROM PARKING. loadCatalogScope's replacing load with the query and
+    the fill taken out: the same teardown of whatever Folders had loaded, the same cover
+    and flags, and DataModel::restoreScope in place of DataModel::setScope. restoreScope
+    ends in folderChange, so MW::folderChanged and metadataComplete run as after any
+    Library load -- which is where the view as it was left is put back: the sort and the
+    filters through the restore path the start-up uses (queueLibraryStateRestore), the
+    current image through folderAndFileChangePath.
+
+    WHAT CHANGED WHILE PARKED is corrected after, not before, so the user is not kept
+    waiting for it:
+      - rows whose values the index rewrote (changed, from Catalog::trackChangedPaths)
+        are re-read through refreshStaleRows, the scroll-in verification's repair;
+      - rows gained or lost are found by FilterPanel's unforced re-run of the search,
+        already in flight (MW::setScope), which splices them via applyCatalogDelta;
+      - availability is asked again, since a drive may have come or gone.
+*/
+    const QString fun = "MW::restoreParkedLibrary";
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, QString::number(dm->parkedRowCount()) + " rows");
+    if (!dm->hasParkedScope()) return;
+    /*  Left again before this ran: it stays parked for the next visit. */
+    if (G::scope != G::Scope::Catalog) return;
+
+    const bool wholeLibrary = pendingWholeLibrary;
+    pendingWholeLibrary = false;
+    if (!wholeLibrary && !okToDiscardPicks("Opening the Library", "Open the Library")) return;
+
+    QElapsedTimer rt;
+    rt.start();
+    if (G::isPerfProbe) armGuiStallWatchdog();
+
+    G::allMetadataAttempted = false;
+    G::iconChunkLoaded = false;
+    G::isModifyingDatamodel = true;
+    resetDevelopCachesForNewFolder();
+    bookmarks->setEnabled(false);
+    fsTree->setEnabled(false);
+    setCentralMessage(tr("Loading the library."));
+    stop(fun);
+    raiseLoadCurtain();
+    setCatalogLoading(true);
+    G::isLoadRunning = true;
+
+    /*  The view as it was left, queued for the post-load path exactly as
+        queueLibraryStateRestore queues the saved one at start -- after stop(), whose
+        reset clears a pending restore that is not the Library's own. */
+    const ParkedLibraryView v = parkedLibraryView;
+    if (v.sortColumn > 0 && v.sortColumn < G::TotalColumns) {
+        libraryRestoreSortColumn = v.sortColumn;
+        libraryRestoreReverse = v.reverse;
+        libraryRestoreSortPending = true;
+    }
+    /*  ONLY IF SOMETHING WAS FILTERING. A queued restore holds the cover until the filter
+        build finishes (restoreFiltersAfterFolderChange) -- 1.8 s at 155k rows -- which
+        is right when the rows on screen depend on it and pure wait when they do not:
+        persistableState also lists checks that narrow nothing (the search row's
+        placeholder, a collection that matches everything), and isAnyFilter is the test
+        that knows the difference. */
+    if (filters && v.filtered) {
+        filters->setStateToRestore(v.filters);
+        restoreFiltersPending = true;
+        libraryFilterRestorePending = true;
+    }
+    if (!v.currentKey.isEmpty()) folderAndFileChangePath = v.currentKey;
+
+    dm->abort = false;
+    /*  Queued, as loadCatalogScope queues its fill: stop() has just torn the readers
+        down, and the model must not be refilled inside the call that asked for it. */
+    QTimer::singleShot(0, this, [this, changed, rt]{
+        if (G::scope != G::Scope::Catalog) return;
+        auto conn = std::make_shared<QMetaObject::Connection>();
+        *conn = connect(dm, &DataModel::folderChange, this, [this, changed, conn, rt](bool){
+            disconnect(*conn);
+            ++libraryRestoreCount;
+            if (G::isPerfProbe)
+                qDebug().noquote() << "[PERF] restoreParkedLibrary" << dm->rowCount()
+                                   << "rows restored in" << rt.elapsed()
+                                   << "ms  changed while parked =" << changed.size();
+            if (filterPanel) queueAvailabilityPass(filterPanel->currentResultPaths());
+            QStringList stale;
+            for (const QString &p : changed) if (dm->rowFromKey(p) >= 0) stale << p;
+            if (!stale.isEmpty())
+                QTimer::singleShot(0, this, [this, stale]{ refreshStaleRows(stale); });
+        });
+        if (!dm->restoreScope()) {
+            disconnect(*conn);
+            dropParkedLibrary("restore refused");
+            if (filterPanel) filterPanel->reloadResults();
+        }
+    });
 }
 
 void MW::applyLibraryFolderFilter(const QStringList &includes, const QStringList &excludes)

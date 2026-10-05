@@ -311,6 +311,7 @@ set(WINNOW_SOURCES
     Main/catalogscanner.cpp
     Main/devpreviewbuilder.cpp
     Main/selftestmutation.cpp
+    Main/selftestpark.cpp
     Main/diagnostics.cpp
     Main/dockwidget.cpp
     Main/showhidebar.cpp

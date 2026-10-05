@@ -169,6 +169,18 @@ public:
         QWriteLocker l(&mLock);
         mRows.clear(); mStrings.clear(); mBlobs.clear();
     }
+    /*  PARKING: RowStore::swapContents's twin, locks in address order. */
+    void swapContents(ScratchStore &o)
+    {
+        if (&o == this) return;
+        ScratchStore *a = this < &o ? this : &o;
+        ScratchStore *b = this < &o ? &o : this;
+        QWriteLocker la(&a->mLock);
+        QWriteLocker lb(&b->mLock);
+        mRows.swap(o.mRows);
+        std::swap(mStrings, o.mStrings);
+        std::swap(mBlobs, o.mBlobs);
+    }
 
     /*  ROW SPLICING, the hash equivalent of RowStore's. Keys ARE row numbers,
         so an insert or removal in the middle re-addresses every entry above it.

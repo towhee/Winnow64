@@ -105,6 +105,19 @@ public:
 
     Scope scope() const { return currentScope; }
     void setScope(Scope scope);
+    /*  THE PARKED LIBRARY (MW::setScope). parkResults keeps the result paths across a
+        visit to Folders scope, which otherwise clears them; resumeParkedOnEntry makes the
+        next entry to Catalog scope put them back and re-run the search UNFORCED, so the
+        ordinary run-to-run comparison finds what changed while parked and reports it as
+        resultsDelta (or a reload, if too much did). dropParkedResults forgets them. */
+    void parkResults();
+    void resumeParkedOnEntry() { resumeParked = hasParked; }
+    void dropParkedResults();
+    /*  A FORCED reload of the Library from a fresh search: the parked set could not be
+        restored after all (MW::restoreParkedLibrary). No-op outside Catalog scope. */
+    void reloadResults() { if (currentScope == CatalogScope) runSearch(true); }
+    // the paths of the result last applied (for the availability pass on a restore)
+    QStringList currentResultPaths() const { return resultPathList; }
 
     /* Open the editor on the Search category row. F2 calls this after
        switching to their scope. */
@@ -200,6 +213,12 @@ private:
     /* The last applied result was handed to MW to load (loadResults), so the model holds
        it and a later small change can be spliced rather than reloaded. */
     bool resultLoaded = false;
+    // see parkResults
+    QStringList parkedPathList;
+    int parkedTotal = 0;
+    bool parkedLoaded = false;
+    bool hasParked = false;
+    bool resumeParked = false;
     /* Above this many added + removed paths a delta is a reload after all: the splice
        reads each added file synchronously on the GUI thread (MW::applyModelChange). */
     static constexpr int kMaxSpliceDelta = 200;

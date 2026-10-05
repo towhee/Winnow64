@@ -172,6 +172,9 @@ public:
     /* WINNOW_SELFTEST_MUTATION=1: insert/replace/delete/refresh on the loaded copy of the
        fixture folder, checking the model after each (Main/selftestmutation.cpp). */
     void selfTestModelMutation(const QString &folder);
+    /* WINNOW_SELFTEST_PARK=1: Library -> Folders -> Library must restore the parked
+       model, not reload it (Main/selftestpark.cpp, ctest park_restore). */
+    void selfTestParkLibrary(const QString &folder);
 
     // End-to-end metadata read used by the metadata test layer (tests/). Reads
     // filePath through the full Metadata pipeline and exits 0 if make/model and
@@ -495,6 +498,24 @@ public:
         the message with "Loading search results." Consumed there; cleared on leaving
         the Library, so an agreement cannot outlive the request it was given for. */
     bool pendingWholeLibrary = false;
+    /*  THE PARKED LIBRARY -- see DataModel::parkScope and "The Parked Library" in
+        notes/Documentation.txt. setScope, leaving a settled Library, sets
+        parkLibraryOnReset and captures how the Library looked; the folder load's
+        MW::reset then parks the model instead of clearing it. setScope, entering the
+        Library with one parked, restores it (restoreParkedLibrary) instead of loading. */
+    struct ParkedLibraryView {
+        int sortColumn = -1;
+        bool reverse = false;
+        QVariantMap filters;            // Filters::persistableState
+        bool filtered = false;          // Filters::isAnyFilter when parked
+        QString currentKey;
+    };
+    ParkedLibraryView parkedLibraryView;
+    bool parkLibraryOnReset = false;
+    int libraryRestoreCount = 0;          // restores completed (self-test)
+    bool libraryParkable() const;
+    void restoreParkedLibrary(const QSet<QString> &changed);
+    void dropParkedLibrary(const QString &why);
     /*  THE VIEWS STAY COVERED UNTIL THE LIBRARY IS READY TO SHOW. Every replacing
         Library load raises it (loadCatalogScope), so the rows streaming in, the restored
         sort and a restored filter are never seen as three successive pictures. Lifted by

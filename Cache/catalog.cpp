@@ -635,6 +635,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         writeKeywordsLocked(db, id, r);
         writeFtsLocked(db, id, r);
         writeVersionsLocked(db, id, r);
+        noteChangedLocked(r.path);
         ++written;
     }
 
@@ -1880,7 +1881,8 @@ int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
     if (!db.transaction()) return 0;
 
     QSqlQuery sel(db);
-    sel.prepare("SELECT id FROM image WHERE pathkey = ?");
+    sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime, unreadable, live, path"
+                " FROM image WHERE pathkey = ?");
     QSqlQuery upd(db);
     upd.prepare("UPDATE image SET path = ?, folder = ?, vol = ?, filename = ?, ext = ?,"
                 " srcsize = ?, srcmtime = ?, sidecarmtime = ?, live = 1, unreadable = 1"
@@ -1897,9 +1899,24 @@ int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
         const QString vol = mounts.rootOf(r.path);
 
         qint64 id = 0;
+        bool same = false;
         sel.addBindValue(key);
-        if (sel.exec() && sel.next()) id = sel.value(0).toLongLong();
+        if (sel.exec() && sel.next()) {
+            id = sel.value(0).toLongLong();
+            /*  THE SAME STUB AGAIN IS NOT A WRITE. A stub is never fresh (see commit),
+                so every scan re-tries it, fails again and lands here with the same
+                stamps -- and rewrote it, which also reported 2,488 rows "changed" to
+                a parked Library on every visit (Catalog::trackChangedPaths) and sent
+                them all back to be re-read. Skipped exactly as commit() skips an
+                unchanged row: same stamps, still a live stub, same spelling. */
+            same = sel.value(1).toLongLong() == r.srcSize
+                   && sel.value(2).toLongLong() == r.srcMtime
+                   && sel.value(3).toLongLong() == r.sidecarMtime
+                   && sel.value(4).toBool() && sel.value(5).toBool()
+                   && sel.value(6).toString() == r.path;
+        }
         sel.finish();
+        if (same) continue;
 
         QSqlQuery &q = id ? upd : ins;
         if (!id) q.addBindValue(key);
@@ -1912,7 +1929,7 @@ int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
         q.addBindValue(r.srcMtime);
         q.addBindValue(r.sidecarMtime);
         if (id) q.addBindValue(id);
-        if (q.exec()) ++written;
+        if (q.exec()) { noteChangedLocked(r.path); ++written; }
         q.finish();
     }
 
@@ -2244,4 +2261,34 @@ void Catalog::clear()
     q.exec("DELETE FROM image");
     q.exec("DELETE FROM keyword");
     keywordIds.clear();
+    if (trackingChanges) changedOverflow = true;    // every row changed
+}
+
+void Catalog::trackChangedPaths(bool on)
+{
+    QMutexLocker lk(&mutex);
+    trackingChanges = on;
+    changedPaths.clear();
+    changedOverflow = false;
+}
+
+QSet<QString> Catalog::takeChangedPaths(bool *overflow)
+{
+    QMutexLocker lk(&mutex);
+    if (overflow) *overflow = changedOverflow;
+    QSet<QString> out;
+    out.swap(changedPaths);
+    changedOverflow = false;
+    return out;
+}
+
+void Catalog::noteChangedLocked(const QString &path)
+{
+    if (!trackingChanges || changedOverflow) return;
+    if (changedPaths.size() >= kMaxTrackedChanges) {
+        changedPaths.clear();
+        changedOverflow = true;
+        return;
+    }
+    changedPaths.insert(path);
 }

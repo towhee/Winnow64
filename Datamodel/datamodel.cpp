@@ -722,6 +722,153 @@ void DataModel::clearDataModel()
     iconUnloadableCount.store(0, std::memory_order_relaxed);
 }
 
+void DataModel::parkScope()
+{
+/*
+    MOVE THE LOADED SET ASIDE, leaving the model empty. See ParkedScope in the header.
+
+    Everything a row is made of goes -- the row store, the in-flight scratch, the icons,
+    the path index and the per-load bookkeeping -- because restoreScope must hand back a
+    model indistinguishable from the one finishCatalogFill left. What does NOT go is
+    anything keyed by instance or by worker: MW::stop has halted the readers, and
+    clearDataModel, which runs straight after this, purges their posted writes and
+    builds fresh worker views, exactly as for any other teardown.
+
+    The swaps are O(1); the reset is what tells the proxy and the views that the rows
+    have gone, before clearDataModel's own reset finds nothing left to clear.
+*/
+    if (G::isLogger || G::isFlowLogger)
+        G::log("DataModel::parkScope", QString::number(rowCount()) + " rows");
+    auto p = std::make_unique<ParkedScope>();
+
+    beginResetModel();
+    p->rows.swapContents(rowStore);
+    p->scratch.swapContents(scratchStore);
+    p->icons.swapContents(iconStore);
+    p->issueLists.swap(mIssueLists);
+    p->versionMasters.swap(versionMasters);
+    p->versionRowCount = mVersionRowCount;
+    mVersionRowCount = 0;
+    {
+        QWriteLocker l(&fPathRowLock);
+        p->fPathRow.swap(fPathRow);
+    }
+    {
+        QWriteLocker l(&fPathRawInfoLock);
+        p->fPathRawInfo.swap(fPathRawInfo);
+    }
+    {
+        QMutexLocker lk(&dmMutex);
+        p->folderList.swap(folderList);
+        p->folderSet.swap(folderSet);
+        p->folderImageCount.swap(folderImageCount);
+        ++folderListGen;
+    }
+    p->firstFolderPathWithImages = firstFolderPathWithImages;
+    p->keywordsAllMemo.swap(keywordsAllMemo);
+    p->scope = currentScope;
+    p->currentKey = currentKey;
+    p->bytesUsed = bytesUsed;
+    p->bytesUsedSampleTotal = bytesUsedSampleTotal;
+    p->bytesUsedSampleCount = bytesUsedSampleCount;
+    p->metadataAttempted = metadataAttemptedCount.load(std::memory_order_relaxed);
+    p->metadataLoaded = metadataLoadedCount.load(std::memory_order_relaxed);
+    p->iconLoaded = iconLoadedCount.load(std::memory_order_relaxed);
+    p->videoRows = videoRowCount.load(std::memory_order_relaxed);
+    p->iconUnloadable = iconUnloadableCount.load(std::memory_order_relaxed);
+    endResetModel();
+
+    parked = std::move(p);
+}
+
+bool DataModel::restoreScope()
+{
+/*
+    PUT THE PARKED SET BACK, as a fill that has already happened.
+
+    THE CALLER HAS ALREADY STOPPED whatever was loaded and the model is empty
+    (MW::restoreParkedLibrary runs MW::stop first), which is the same precondition
+    addCatalogRows states. Returns false, keeping the parked set, if it is not.
+
+    ONE RESET, then the tail of finishCatalogFill: the current row, every row attempted,
+    endLoad, and folderChange -- so MW::folderChanged, metadataComplete, the filter build
+    and the restored sort and filters all run exactly as after a Library load. The reset
+    itself rebuilds the worker views (rebuildRowSync on modelReset), and endLoad
+    republishes the proxy snapshot.
+
+    NOT THE VERSION-ROW dataChanged PASS finishCatalogFill makes. That corrects rows the
+    proxy tested before their key was written; here every key is in place before the
+    proxy sees a single row.
+*/
+    if (!parked) return false;
+    const QString fun = "DataModel::restoreScope";
+    if (rowCount() != 0) {
+        qWarning() << fun << "model not empty:" << rowCount() << "rows -- not restored";
+        return false;
+    }
+    if (G::isLogger || G::isFlowLogger)
+        G::log(fun, QString::number(parked->rows.size()) + " rows");
+    std::unique_ptr<ParkedScope> p = std::move(parked);
+
+    {
+        QMutexLocker locker(&dmMutex);
+        abort = false;
+        loadingModel = true;
+    }
+
+    beginResetModel();
+    rowStore.swapContents(p->rows);
+    scratchStore.swapContents(p->scratch);
+    iconStore.swapContents(p->icons);
+    mIssueLists.swap(p->issueLists);
+    versionMasters.swap(p->versionMasters);
+    mVersionRowCount = p->versionRowCount;
+    {
+        QWriteLocker l(&fPathRowLock);
+        fPathRow.swap(p->fPathRow);
+    }
+    {
+        QWriteLocker l(&fPathRawInfoLock);
+        fPathRawInfo.swap(p->fPathRawInfo);
+    }
+    {
+        QMutexLocker lk(&dmMutex);
+        folderList.swap(p->folderList);
+        folderSet.swap(p->folderSet);
+        folderImageCount.swap(p->folderImageCount);
+        ++folderListGen;
+    }
+    firstFolderPathWithImages = p->firstFolderPathWithImages;
+    keywordsAllMemo.swap(p->keywordsAllMemo);
+    currentScope = p->scope;
+    bytesUsed = p->bytesUsed;
+    bytesUsedSampleTotal = p->bytesUsedSampleTotal;
+    bytesUsedSampleCount = p->bytesUsedSampleCount;
+    metadataAttemptedCount.store(p->metadataAttempted, std::memory_order_relaxed);
+    metadataLoadedCount.store(p->metadataLoaded, std::memory_order_relaxed);
+    iconLoadedCount.store(p->iconLoaded, std::memory_order_relaxed);
+    videoRowCount.store(p->videoRows, std::memory_order_relaxed);
+    iconUnloadableCount.store(p->iconUnloadable, std::memory_order_relaxed);
+    endResetModel();
+
+    if (rowCount() > 0) {
+        const int r = p->currentKey.isEmpty() ? -1 : fPathRowValue(p->currentKey);
+        setCurrent(index(r >= 0 ? r : 0, 0), instance);
+    }
+    setAllMetadataAttempted(true);
+    endLoad(true);
+    emit folderChange(false);
+    return true;
+}
+
+void DataModel::dropParkedScope()
+{
+    if (!parked) return;
+    if (G::isLogger || G::isFlowLogger)
+        G::log("DataModel::dropParkedScope", QString::number(parked->rows.size()) + " rows");
+    parked.reset();
+}
+
 /*  The columns whose tooltip is simply their own text. Chosen explicitly rather
     than "every text column", because which columns offer a tooltip is a
     deliberate UI decision and the list must stay exactly the one the per-row

@@ -710,6 +710,15 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         });
     }
 
+    /*  WINNOW_SELFTEST_PARK=1: Library -> Folders -> Library once the folder has been
+        catalogued, asserting the second Library is the parked one (Main/selftestpark.cpp). */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_PARK") == 1) {
+        QTimer::singleShot(settleMs / 4, this, [this, loadPath]() {
+            QThreadPool::globalInstance()->waitForDone(30000);   // let the capture land
+            selfTestParkLibrary(loadPath);
+        });
+    }
+
     if (fsTree->select(loadPath))
         folderSelectionChange(loadPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
@@ -4858,9 +4867,20 @@ void MW::queueAvailabilityPass(const QStringList &paths)
                 int written = 0;
                 int offline = 0, missing = 0, unreadable = 0;
                 for (auto it = avail.cbegin(); it != avail.cend(); ++it) {
-                    if (it.value() == Catalog::Availability::Present) continue;
                     const int row = dm->rowFromKey(it.key());
                     if (row < 0) continue;
+                    /*  PRESENT IS WRITTEN ONLY OVER SOMETHING ELSE. A fill starts every
+                        row Present, so this used to skip them all -- but a parked Library
+                        (MW::restoreParkedLibrary) comes back holding the answers of its
+                        last pass, and a drive plugged in since must clear them. */
+                    if (it.value() == Catalog::Availability::Present) {
+                        const QModelIndex ai = dm->index(row, G::AvailabilityColumn);
+                        if (ai.data().toInt() != int(Catalog::Availability::Present)) {
+                            dm->setData(ai, int(Catalog::Availability::Present));
+                            ++written;
+                        }
+                        continue;
+                    }
                     dm->setData(dm->index(row, G::AvailabilityColumn), int(it.value()));
                     if (it.value() == Catalog::Availability::Offline) ++offline;
                     else if (it.value() == Catalog::Availability::Unreadable) ++unreadable;
@@ -5337,7 +5357,11 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
             });
     });
 
+    /*  Set once WINNOW_CATALOGLOAD_ROUNDTRIP has left for Folders: the folder load and
+        the restore emit folderChange too, and must not each start another watch. */
+    static bool roundTripStarted = false;
     connect(dm, &DataModel::folderChange, this, [this, started](bool aborted){
+        if (roundTripStarted) return;
         fprintf(stderr, "CATALOGLOAD: fill complete at %lld ms, rows=%d, aborted=%d\n",
                 (long long)started->elapsed(), dm->rowCount(), aborted ? 1 : 0);
         fflush(stderr);
@@ -5436,6 +5460,41 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
                     QTimer::singleShot(8000, this, [report]{
                         report("after jump");
                         std::_Exit(0);
+                    });
+                    return;
+                }
+
+                /*  WINNOW_CATALOGLOAD_ROUNDTRIP=1 (with _FROMFOLDER): back to Folders, then
+                    the Library again -- the trip the parked Library exists for (see
+                    MW::restoreParkedLibrary). Times the return, click to cover down. */
+                if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_ROUNDTRIP") == 1) {
+                    roundTripStarted = true;
+                    fprintf(stderr, "CATALOGLOAD: --- round trip: Folders ---\n");
+                    fflush(stderr);
+                    chooseSource(false, "catalogload round trip");
+                    QTimer::singleShot(8000, this, [this]{
+                        auto back = std::make_shared<QElapsedTimer>();
+                        back->start();
+                        fprintf(stderr, "CATALOGLOAD: --- round trip: Library  parked=%d"
+                                        " rows=%d ---\n",
+                                dm->hasParkedScope() ? 1 : 0, dm->parkedRowCount());
+                        fflush(stderr);
+                        chooseSource(true, "catalogload round trip back");
+                        auto poll = new QTimer(this);
+                        connect(poll, &QTimer::timeout, this, [this, poll, back]{
+                            const bool done = G::scope == G::Scope::Catalog
+                                              && !loadCurtainUp && !G::isLoadRunning
+                                              && dm->rowCount() > 0;
+                            if (!done && back->elapsed() < 60000) return;
+                            poll->stop();
+                            fprintf(stderr, "CATALOGLOAD: round trip back: cover down at"
+                                            " %lld ms  rows=%d  restores=%d\n",
+                                    (long long)back->elapsed(), dm->rowCount(),
+                                    libraryRestoreCount);
+                            fflush(stderr);
+                            QTimer::singleShot(3000, this, []{ std::_Exit(0); });
+                        });
+                        poll->start(10);
                     });
                     return;
                 }
@@ -6216,7 +6275,8 @@ void MW::stop(QString src)
         replacing with the cover already up (raised on the click), and lifting it here
         for the moment until it is raised again is a flicker. Esc, and every other
         stop, still lift it. */
-    if (src != "MW::loadCatalogScope") lowerLoadCurtain("MW::stop " + src);
+    if (src != "MW::loadCatalogScope" && src != "MW::restoreParkedLibrary")
+        lowerLoadCurtain("MW::stop " + src);
     setCatalogLoading(false);
 
     // stop flags
@@ -6338,6 +6398,21 @@ bool MW::reset(QString src)
     // datamodel
     dm->selectionModel->clear();
     dm->currentSfRow = 0;
+    /*  THE PARKED LIBRARY: a settled Library replaced by a folder load is moved aside,
+        not cleared (MW::setScope decided, on the way out). clearDataModel below then
+        clears an empty model. Index writes are recorded from here so the return can
+        correct what they changed. */
+    if (parkLibraryOnReset) {
+        parkLibraryOnReset = false;
+        if (dm->rowCount() > 0 && dm->scopeRequest().scope == G::Scope::Catalog) {
+            dm->dropParkedScope();
+            dm->parkScope();
+            Catalog::instance().trackChangedPaths(true);
+            if (G::isPerfProbe)
+                qDebug().noquote() << "[PERF] Library parked  rows =" << dm->parkedRowCount();
+        }
+        else if (filterPanel && !dm->hasParkedScope()) filterPanel->dropParkedResults();
+    }
     dm->clearDataModel();
     syncWorkflowButtonsEnabled();   // no rows: the Module buttons grey
     // new instance: only done here and if sort/filter operation

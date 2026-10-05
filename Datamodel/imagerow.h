@@ -267,6 +267,31 @@ public:
         markWatchStructuralLocked();
         ++mSpliceGen;
     }
+    /*  PARKING (DataModel::parkScope / restoreScope): exchange the whole store with
+        another, under both locks, taken in address order so two swaps cannot deadlock.
+        The generations are NOT exchanged -- each store's own counters only ever move
+        forward -- and every one of them moves on both sides, field generations
+        included: the rows a cached answer described are no longer the rows here, and
+        no setData will happen to say so. */
+    void swapContents(RowStore &o)
+    {
+        if (&o == this) return;
+        RowStore *a = this < &o ? this : &o;
+        RowStore *b = this < &o ? &o : this;
+        QWriteLocker la(&a->mLock);
+        QWriteLocker lb(&b->mLock);
+        mRows.swap(o.mRows);
+        std::swap(mStrings, o.mStrings);
+        mFolderAncestry.swap(o.mFolderAncestry);
+        std::swap(mPicked, o.mPicked);
+        for (RowStore *s : {this, &o}) {
+            ++s->mPickGen;
+            ++s->mWatchGen;
+            ++s->mSpliceGen;
+            for (quint64 &g : s->mFieldGen) ++g;
+            s->markWatchStructuralLocked();
+        }
+    }
     void resize(int n)
     {
         QWriteLocker l(&mLock);
