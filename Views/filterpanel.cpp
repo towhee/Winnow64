@@ -65,6 +65,16 @@ void FilterPanel::parkResults()
     parkedPathList = resultPathList;
     parkedTotal = totalMatches;
     parkedLoaded = resultLoaded;
+    parkedSeq = loadedSeq;
+    hasParked = true;
+}
+
+void FilterPanel::adoptParkedResults(const QStringList &paths, int total, qint64 seq)
+{
+    parkedPathList = paths;
+    parkedTotal = total;
+    parkedLoaded = true;
+    parkedSeq = seq;
     hasParked = true;
 }
 
@@ -73,6 +83,7 @@ void FilterPanel::dropParkedResults()
     parkedPathList.clear();
     parkedTotal = 0;
     parkedLoaded = false;
+    parkedSeq = -1;
     hasParked = false;
 }
 
@@ -122,6 +133,7 @@ void FilterPanel::applyScope()
             resultPathList = parkedPathList;
             resultLoaded = parkedLoaded;
             totalMatches = parkedTotal;
+            loadedSeq = parkedSeq;
             dropParkedResults();
             runSearch(false);
         }
@@ -273,13 +285,17 @@ void FilterPanel::runSearch(bool force)
         QElapsedTimer t;
         t.start();
         int total = 0;
+        /*  THE CHANGE SEQUENCE THE ROWS ARE READ AT, taken first: anything the index
+            writes from here on is newer than these rows, and the library snapshot asks
+            for exactly that (DataModel::saveLibrarySnapshot). */
+        const qint64 seq = Catalog::instance().changeSeq();
         const QVector<CatalogRow> rows = Catalog::instance().searchRows(q, limit, &total);
         QStringList paths;
         paths.reserve(rows.size());
         for (const CatalogRow &r : rows) paths << r.path;
         const qint64 ms = t.elapsed();
-        QMetaObject::invokeMethod(qApp, [self, gen, rows, total, paths, q, ms] {
-            if (self) self->applySearchResult(gen, rows, total, paths, q, ms);
+        QMetaObject::invokeMethod(qApp, [self, gen, rows, total, paths, q, ms, seq] {
+            if (self) self->applySearchResult(gen, rows, total, paths, q, ms, seq);
         }, Qt::QueuedConnection);
     });
     updateStatus();
@@ -287,7 +303,7 @@ void FilterPanel::runSearch(bool force)
 
 void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows,
                                     int total, const QStringList &paths,
-                                    const CatalogQuery &q, qint64 queryMs)
+                                    const CatalogQuery &q, qint64 queryMs, qint64 seq)
 {
 /*
     The second half of runSearch, back on the GUI thread with the rows.
@@ -353,6 +369,7 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
     }
     else if ((force || changed) && !results.isEmpty() && results.size() <= autoLoadMax()) {
         resultLoaded = true;
+        loadedSeq = seq;
         emit loadResults(results, false, q);
     }
     else {

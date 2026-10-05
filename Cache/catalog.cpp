@@ -1,4 +1,5 @@
 #include "Cache/catalog.h"
+#include <QUuid>
 #include "Cache/cachedb.h"
 #include "Cache/mountsnapshot.h"
 #include "Cache/pathkey.h"
@@ -520,7 +521,9 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " orig_creator = ?, orig_title = ?, orig_copyright = ?,"
                 " orig_email = ?, orig_url = ?, developed = ?, devpreviewkey = ?,"
                 /* schema 7 */
-                " keywordpaths = ?, shootinginfo = ?, keywords_literal = ?"
+                " keywordpaths = ?, shootinginfo = ?, keywords_literal = ?,"
+                /* schema 20 */
+                " change_seq = ?"
                 " , unreadable = 0"
               " WHERE id = ?");
 
@@ -534,10 +537,14 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " orientation, exposurecomp, focusx, focusy, email, url,"
                 " orig_rating, orig_label, orig_creator, orig_title,"
                 " orig_copyright, orig_email, orig_url, developed, devpreviewkey,"
-                " keywordpaths, shootinginfo, keywords_literal)"
+                " keywordpaths, shootinginfo, keywords_literal, change_seq)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1,"
                 " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
-                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    /*  THE CHANGE SEQUENCE (schema 20): every row this transaction writes is stamped
+        with the next value, and the counter advances only if something was written. */
+    const qint64 seq = changeSeqLocked(db) + 1;
 
     int written = 0;
     for (const CatalogRow &r : rows) {
@@ -620,6 +627,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(text(r.keywordPaths.join('\n')));
         w.addBindValue(text(r.shootingInfo));
         w.addBindValue(text(r.keywordsLiteral.join('\n')));
+        w.addBindValue(seq);
         if (id) w.addBindValue(id);
 
         if (!w.exec()) {
@@ -639,6 +647,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         ++written;
     }
 
+    if (written) setMetaLocked(db, "change_seq", QString::number(seq));
     if (!db.commit()) {
         db.rollback();
         return 0;
@@ -781,7 +790,27 @@ int Catalog::availabilityCode(const QString &label)
     return int(Availability::Present);
 }
 
+QHash<QString, CatalogRow> Catalog::rowsForPaths(const QStringList &paths)
+{
+/*
+    fetchFresh without the freshness test: the index's row for each path, whatever the
+    file now holds. For the library snapshot's version masters, whose metadata the model
+    keeps outside the rows (DataModel::versionMasters) and which the snapshot does not
+    carry.
+*/
+    QList<CatalogRow> candidates;
+    candidates.reserve(paths.size());
+    for (const QString &p : paths) { CatalogRow c; c.path = p; candidates << c; }
+    return fetchRows(candidates, false);
+}
+
 QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidates)
+{
+    return fetchRows(candidates, true);
+}
+
+QHash<QString, CatalogRow> Catalog::fetchRows(const QList<CatalogRow> &candidates,
+                                              bool requireFresh)
 {
 /*
     staleOf() read the other way round -- see the declaration for why both exist.
@@ -838,17 +867,20 @@ QHash<QString, CatalogRow> Catalog::fetchFresh(const QList<CatalogRow> &candidat
         const bool fresh = q.value(1).toLongLong() == cand.srcSize
                            && q.value(2).toLongLong() == cand.srcMtime
                            && q.value(3).toLongLong() == cand.sidecarMtime;
-        if (!fresh) { q.finish(); continue; }
+        if (requireFresh && !fresh) { q.finish(); continue; }
 
         CatalogRow r;
         const qint64 id = readRow(q, r);
         /*  The path AND ITS STAMPS AS THE CALLER SPELLED THEM, overwriting what readRow
             took from the database. The two are the same file but not always the same
-            string, and the caller looks the result up by what it passed in. */
+            string, and the caller looks the result up by what it passed in. (Not the
+            stamps when they were not compared: then the index's are the answer.) */
         r.path = cand.path;
-        r.srcSize = cand.srcSize;
-        r.srcMtime = cand.srcMtime;
-        r.sidecarMtime = cand.sidecarMtime;
+        if (requireFresh) {
+            r.srcSize = cand.srcSize;
+            r.srcMtime = cand.srcMtime;
+            r.sidecarMtime = cand.sidecarMtime;
+        }
         q.finish();
 
         kw.addBindValue(id);
@@ -1885,12 +1917,13 @@ int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
                 " FROM image WHERE pathkey = ?");
     QSqlQuery upd(db);
     upd.prepare("UPDATE image SET path = ?, folder = ?, vol = ?, filename = ?, ext = ?,"
-                " srcsize = ?, srcmtime = ?, sidecarmtime = ?, live = 1, unreadable = 1"
-                " WHERE id = ?");
+                " srcsize = ?, srcmtime = ?, sidecarmtime = ?, change_seq = ?,"
+                " live = 1, unreadable = 1 WHERE id = ?");
     QSqlQuery ins(db);
     ins.prepare("INSERT INTO image (pathkey, path, folder, vol, filename, ext,"
-                " srcsize, srcmtime, sidecarmtime, live, unreadable)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)");
+                " srcsize, srcmtime, sidecarmtime, change_seq, live, unreadable)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)");
+    const qint64 seq = changeSeqLocked(db) + 1;     // see commit
 
     int written = 0;
     for (const CatalogRow &r : rows) {
@@ -1928,11 +1961,13 @@ int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
         q.addBindValue(r.srcSize);
         q.addBindValue(r.srcMtime);
         q.addBindValue(r.sidecarMtime);
+        q.addBindValue(seq);
         if (id) q.addBindValue(id);
         if (q.exec()) { noteChangedLocked(r.path); ++written; }
         q.finish();
     }
 
+    if (written) setMetaLocked(db, "change_seq", QString::number(seq));
     if (!db.commit()) { db.rollback(); return 0; }
     return written;
 }
@@ -2261,7 +2296,75 @@ void Catalog::clear()
     q.exec("DELETE FROM image");
     q.exec("DELETE FROM keyword");
     keywordIds.clear();
+    /*  A NEW IDENTITY: an emptied index is not the one any snapshot was read from, even
+        though its change counter carries on (see catalogId). */
+    q.exec("DELETE FROM catalog_meta WHERE key = 'catalog_id'");
     if (trackingChanges) changedOverflow = true;    // every row changed
+}
+
+qint64 Catalog::changeSeqLocked(QSqlDatabase &db)
+{
+    return metaLocked(db, "change_seq").toLongLong();
+}
+
+QString Catalog::metaLocked(QSqlDatabase &db, const QString &key)
+{
+    QSqlQuery q(db);
+    q.prepare("SELECT value FROM catalog_meta WHERE key = ?");
+    q.addBindValue(key);
+    if (q.exec() && q.next()) return q.value(0).toString();
+    return QString();
+}
+
+void Catalog::setMetaLocked(QSqlDatabase &db, const QString &key, const QString &value)
+{
+    QSqlQuery q(db);
+    q.prepare("INSERT INTO catalog_meta (key, value) VALUES (?, ?)"
+              " ON CONFLICT(key) DO UPDATE SET value = excluded.value");
+    q.addBindValue(key);
+    q.addBindValue(value);
+    q.exec();
+}
+
+qint64 Catalog::changeSeq()
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return -1;
+    return changeSeqLocked(db);
+}
+
+QString Catalog::catalogId()
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return QString();
+    QString id = metaLocked(db, "catalog_id");
+    if (id.isEmpty()) {
+        id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        setMetaLocked(db, "catalog_id", id);
+    }
+    return id;
+}
+
+QStringList Catalog::pathsChangedSince(qint64 seq, int limit, bool *overflow)
+{
+    if (overflow) *overflow = false;
+    QStringList out;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) { if (overflow) *overflow = true; return out; }
+    QSqlQuery q(db);
+    q.prepare("SELECT path FROM image WHERE change_seq > ? AND live = 1 LIMIT ?");
+    q.addBindValue(seq);
+    q.addBindValue(limit + 1);
+    if (!q.exec()) { if (overflow) *overflow = true; return out; }
+    while (q.next()) out << q.value(0).toString();
+    if (out.size() > limit) {
+        out.clear();
+        if (overflow) *overflow = true;
+    }
+    return out;
 }
 
 void Catalog::trackChangedPaths(bool on)

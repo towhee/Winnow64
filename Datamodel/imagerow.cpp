@@ -1,4 +1,5 @@
 #include "Datamodel/imagerow.h"
+#include <QDataStream>
 #include "Utilities/foldertree.h"
 #include "Utilities/versionkey.h"
 
@@ -452,4 +453,108 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     default:
         break;
     }
+}
+
+/*
+    THE LIBRARY SNAPSHOT -- RowStore::save / load.
+
+    ONE FIELD LIST, used by both directions, so the two cannot drift apart; and a
+    static_assert on the size of ImageRow, so a field added to the struct and not to the
+    list fails the build rather than silently coming back from every snapshot as its
+    default. When it fires: add the field to WINNOW_IMAGEROW_FIELDS, bump kRowFormat, and
+    update the size. kRowFormat and sizeof(ImageRow) are both written, and a stream from
+    any other layout is refused (the caller then loads the Library the ordinary way).
+
+    Every field type here has a QDataStream operator; int is written as qint32 and float
+    as a double, the same both ways because both use the stream's default settings.
+*/
+#define WINNOW_IMAGEROW_FIELDS(X) \
+    X(path) X(name) X(title) X(searchText) \
+    X(folderId) X(typeId) X(makeId) X(modelId) X(lensId) X(folderPathId) \
+    X(yearId) X(monthId) X(dayId) X(creatorId) X(copyrightId) \
+    X(labelId) X(pickId) X(gpsId) X(dimensionsId) X(createdId) X(modifiedId) \
+    X(ratingId) X(megaPixelsId) \
+    X(keywordIds) X(keywordPathIds) X(keywordAllIds) \
+    X(byteSize) X(rowNumber) X(width) X(height) X(aperture) X(exposureTime) \
+    X(focalLength) X(iso) X(metaStatus) X(isVideo) X(iconLoaded) X(isCompare) \
+    X(err) \
+    X(emailId) X(urlId) X(shootingInfoId) X(exposureCompId) X(durationId) \
+    X(aspectRatioId) X(rotationId) X(devPreviewKeyId) \
+    X(croppedDimensionsId) X(croppedAspectRatioId) \
+    X(_ratingId) X(_labelId) X(_creatorId) X(_titleId) X(_copyrightId) X(_emailId) \
+    X(_urlId) \
+    X(permissions) X(orientationOffset) X(orientation) X(rotationDegrees) \
+    X(focusX) X(focusY) X(iconAspectRatio) X(iconRect) \
+    X(dupRawTypeId) X(dupOtherIdx) X(dupHideRaw) X(dupIsJpg) \
+    X(versionCount) X(versionNameId) X(availability) \
+    X(isSearch) X(isIngested) X(metadataReading) X(isReadWrite) X(hasSidecar) \
+    X(developEdited) \
+    X(setLo) X(setHi)
+
+namespace {
+constexpr quint32 kRowMagic = 0x57524f57;      // "WROW"
+constexpr quint32 kRowFormat = 1;
+}
+/*  macOS only, where Winnow is developed: the guard is for the developer adding a field,
+    and another compiler's layout need not match this number. Every platform still
+    refuses a snapshot whose recorded sizeof differs (RowStore::load). */
+#ifdef Q_OS_MAC
+static_assert(sizeof(ImageRow) == 496,
+              "ImageRow changed: add the field to WINNOW_IMAGEROW_FIELDS, bump "
+              "kRowFormat, then update this size");
+#endif
+
+void RowStore::save(QDataStream &out) const
+{
+    QReadLocker l(&mLock);
+    out << kRowMagic << kRowFormat << quint32(sizeof(ImageRow));
+    out << mStrings.values() << mFolderAncestry << qint32(mPicked);
+    out << qint32(mRows.size());
+#define WINNOW_OUT(f) out << r.f;
+    for (const ImageRow &r : mRows) { WINNOW_IMAGEROW_FIELDS(WINNOW_OUT) }
+#undef WINNOW_OUT
+}
+
+bool RowStore::load(QDataStream &in)
+{
+    quint32 magic = 0, format = 0, rowSize = 0;
+    in >> magic >> format >> rowSize;
+    if (magic != kRowMagic || format != kRowFormat || rowSize != sizeof(ImageRow))
+        return false;
+    QVector<QString> strings;
+    QHash<qint32, QStringList> ancestry;
+    qint32 picked = 0, n = 0;
+    in >> strings >> ancestry >> picked >> n;
+    if (in.status() != QDataStream::Ok || n < 0) return false;
+
+    QVector<ImageRow> rows(n);
+#define WINNOW_IN(f) in >> r.f;
+    for (ImageRow &r : rows) {
+        WINNOW_IMAGEROW_FIELDS(WINNOW_IN)
+        /*  NO ICON CAME WITH IT: as a fresh fill leaves the row. iconLoaded keeps its
+            "written" bit (a fill writes it false); the icon geometry is written only when
+            an icon lands, so its bits go too. A reader is not mid-row either. */
+        r.iconLoaded = false;
+        r.metadataReading = false;
+        r.iconAspectRatio = 0.0;
+        r.iconRect = QRect();
+        for (int bit : {int(F_IconAspectRatio), int(F_IconRect)}) {
+            if (bit < 64) r.setLo &= ~(quint64(1) << bit);
+            else r.setHi &= ~(quint64(1) << (bit - 64));
+        }
+    }
+#undef WINNOW_IN
+    if (in.status() != QDataStream::Ok) return false;
+
+    QWriteLocker l(&mLock);
+    mRows.swap(rows);
+    mStrings.assign(strings);
+    mFolderAncestry.swap(ancestry);
+    mPicked = picked;
+    ++mPickGen;
+    ++mWatchGen;
+    ++mSpliceGen;
+    for (quint64 &g : mFieldGen) ++g;
+    markWatchStructuralLocked();
+    return true;
 }

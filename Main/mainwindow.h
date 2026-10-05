@@ -175,6 +175,11 @@ public:
     /* WINNOW_SELFTEST_PARK=1: Library -> Folders -> Library must restore the parked
        model, not reload it (Main/selftestpark.cpp, ctest park_restore). */
     void selfTestParkLibrary(const QString &folder);
+    bool selfTestCatalogueFolder(const QString &folder);   // Main/selftestpark.cpp
+    /* WINNOW_SELFTEST_SNAPSHOT=1: the Library restored from its snapshot file, with an
+       index change made after it was written (Main/selftestpark.cpp, ctest
+       library_snapshot). */
+    void selfTestLibrarySnapshot(const QString &folder);
 
     // End-to-end metadata read used by the metadata test layer (tests/). Reads
     // filePath through the full Metadata pipeline and exits 0 if make/model and
@@ -517,6 +522,23 @@ public:
     void restoreParkedLibrary(const QSet<QString> &changed);
     void dropParkedLibrary(const QString &why);
     void prepareLibraryPark(const QString &src);
+    void enterLibraryPanel(bool restoreParked, const QSet<QString> &changed);
+    void repairRowsWhenSettled(const QStringList &paths);
+    /*  THE LIBRARY SNAPSHOT -- the parked Library on disk (Datamodel/librarysnapshot.cpp):
+        written at quit, read on the first Library entry of a session that has nothing
+        parked. More than kMaxSnapshotChanges rows rewritten since means a full load. */
+    QString librarySnapshotPath() const;
+    void saveLibrarySnapshot();
+    void startLibrarySnapshotRestore();
+    void finishLibrarySnapshotRestore(
+        quint64 gen, std::shared_ptr<std::unique_ptr<DataModel::ParkedScope>> holder,
+        std::shared_ptr<DataModel::LibrarySnapshotMeta> meta, const QStringList &changed,
+        const QString &why, qint64 readMs);
+    quint64 librarySnapshotGen = 0;
+    int lastSnapshotChanged = -1;        // rows re-read after the last snapshot restore
+    int settledRepairs = 0;              // repairRowsWhenSettled hand-offs (self-test)
+    quint64 modelResetGen = 0;           // MW::reset count: "is it the same model?"
+    static constexpr int kMaxSnapshotChanges = 20000;
     /*  THE VIEWS STAY COVERED UNTIL THE LIBRARY IS READY TO SHOW. Every replacing
         Library load raises it (loadCatalogScope), so the rows streaming in, the restored
         sort and a restored filter are never seen as three successive pictures. Lifted by

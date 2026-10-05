@@ -111,8 +111,19 @@ public:
         ordinary run-to-run comparison finds what changed while parked and reports it as
         resultsDelta (or a reload, if too much did). dropParkedResults forgets them. */
     void parkResults();
+    /*  The same from the library snapshot: paths it recorded, as a loaded result read
+        at change sequence seq. */
+    void adoptParkedResults(const QStringList &paths, int total, qint64 seq);
     void resumeParkedOnEntry() { resumeParked = hasParked; }
     void dropParkedResults();
+    /*  For the library snapshot: the loaded result and the change sequence its rows were
+        read at (-1: unknown), or the parked ones while the Library is parked. */
+    qint64 loadedResultSeq() const { return resultLoaded ? loadedSeq : -1; }
+    int resultTotal() const { return totalMatches; }
+    bool hasParkedResults() const { return hasParked; }
+    QStringList parkedResultPaths() const { return parkedPathList; }
+    int parkedResultTotal() const { return parkedTotal; }
+    qint64 parkedResultSeq() const { return parkedLoaded ? parkedSeq : -1; }
     /*  A FORCED reload of the Library from a fresh search: the parked set could not be
         restored after all (MW::restoreParkedLibrary). No-op outside Catalog scope. */
     void reloadResults() { if (currentScope == CatalogScope) runSearch(true); }
@@ -219,12 +230,15 @@ private:
     bool parkedLoaded = false;
     bool hasParked = false;
     bool resumeParked = false;
+    qint64 parkedSeq = -1;
+    qint64 loadedSeq = -1;              // Catalog::changeSeq of the loaded result
     /* Above this many added + removed paths a delta is a reload after all: the splice
        reads each added file synchronously on the GUI thread (MW::applyModelChange). */
     static constexpr int kMaxSpliceDelta = 200;
     bool searchPending() const { return searchGen != appliedGen; }
     void applySearchResult(quint64 gen, const QVector<CatalogRow> &rows, int total,
-                           const QStringList &paths, const CatalogQuery &q, qint64 queryMs);
+                           const QStringList &paths, const CatalogQuery &q, qint64 queryMs,
+                           qint64 seq);
     Scope currentScope = FolderScope;
     bool scanning = false;
 

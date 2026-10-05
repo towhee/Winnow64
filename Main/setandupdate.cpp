@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Cache/cachedb.h"
 #include "Utilities/panelprobe.h"
 
 void MW::setCentralMessage(QString message)
@@ -591,6 +592,7 @@ void MW::setScope(G::Scope s, QString src)
     const bool changed = (G::scope != s);
     /*  Leaving the Library: remember how it was left, while it is still what is loaded. */
     if (changed && G::scope == G::Scope::Catalog) {
+        ++librarySnapshotGen;               // a snapshot still being read is not wanted
         pendingWholeLibrary = false;
         saveLibraryState();
         /*  A Library filter restore still waiting for its build must not land on the
@@ -734,18 +736,18 @@ void MW::setScope(G::Scope s, QString src)
                                << restoreParked << " changed while parked ="
                                << changedWhileParked.size();
 
-        // the panel is where a catalog scope is actually used, so bring it up
-        if (G::useFilterPanel && filterPanel) {
+        /*  NOTHING PARKED: THE LAST SESSION'S, if it left a snapshot (see "The Parked
+            Library"). Read off the GUI thread; the panel waits for it, because its search
+            must compare against the snapshot's result or it would ask for a full load. */
+        if (!restoreParked && G::useFilterPanel && filterPanel
+            && filterPanel->scope() != FilterPanel::CatalogScope
+            && QFileInfo::exists(librarySnapshotPath())) {
             filterDock->setVisible(true);
             filterDock->raise();
             filterDockVisibleAction->setChecked(true);
-            if (restoreParked) filterPanel->resumeParkedOnEntry();
-            filterPanel->setScope(FilterPanel::CatalogScope);
+            startLibrarySnapshotRestore();
         }
-        if (restoreParked)
-            QTimer::singleShot(0, this, [this, changedWhileParked]{
-                restoreParkedLibrary(changedWhileParked);
-            });
+        else enterLibraryPanel(restoreParked, changedWhileParked);
     }
     else {
         if (G::useFilterPanel && filterPanel)
@@ -880,7 +882,12 @@ bool MW::libraryParkable(QString *why) const
     else if (dm->scopeRequest().scope != G::Scope::Catalog) r = "model holds a folder scope";
     else if (G::isLoadRunning) r = "G::isLoadRunning";
     else if (G::isModifyingDatamodel) r = "G::isModifyingDatamodel";
-    else if (!G::allMetadataAttempted) r = "G::allMetadataAttempted is false";
+    /*  NOT G::allMetadataAttempted: it flaps false whenever the scroll-in verification or
+        a restore's repair re-reads a row, so leaving the Library during one refused to
+        park it. The load's tail having run is the fact wanted; a row caught mid re-read
+        parks as not attempted and MetaRead, which decides per row, reads it after the
+        restore. */
+    else if (!metadataCompleteDone) r = "the load has not finished (metadataComplete)";
     if (why) *why = r;
     return r.isEmpty();
 }
@@ -911,6 +918,181 @@ void MW::prepareLibraryPark(const QString &src)
     parkedLibraryView.currentKey = dm->currentKey;
     parkLibraryOnReset = true;
     filterPanel->parkResults();
+}
+
+void MW::enterLibraryPanel(bool restoreParked, const QSet<QString> &changed)
+{
+/*
+    The second half of entering the Library (MW::setScope): bring the Filters panel up and
+    switch it to the Library, which starts its search -- unforced when a parked Library is
+    being restored, so the search answers "what changed" (FilterPanel::parkResults) --
+    and queue the restore. MW::finishLibrarySnapshotRestore arrives here too.
+*/
+    if (G::useFilterPanel && filterPanel) {
+        filterDock->setVisible(true);
+        filterDock->raise();
+        filterDockVisibleAction->setChecked(true);
+        if (restoreParked) filterPanel->resumeParkedOnEntry();
+        filterPanel->setScope(FilterPanel::CatalogScope);
+    }
+    if (restoreParked)
+        QTimer::singleShot(0, this, [this, changed]{ restoreParkedLibrary(changed); });
+}
+
+QString MW::librarySnapshotPath() const
+{
+    // beside the index it describes, so test mode and a moved cache move it too
+    return QFileInfo(CacheDb::instance().path()).absolutePath() + "/library.snapshot";
+}
+
+void MW::saveLibrarySnapshot()
+{
+/*
+    AT QUIT (closeEvent, before any teardown): the Library as it stands -- parked, if the
+    user quits from Folders, else loaded and settled -- for the next session's first
+    Library. Nothing to write keeps the file that is there: it is checked when it is used,
+    and a still-valid snapshot is better than none.
+*/
+    if (!G::useFilterPanel || !filterPanel || !dm) return;
+    DataModel::LibrarySnapshotMeta meta;
+    QString notParkable;
+    if (dm->hasParkedScope()) {
+        meta.baseSeq = filterPanel->parkedResultSeq();
+        meta.resultPaths = filterPanel->parkedResultPaths();
+        meta.totalMatches = filterPanel->parkedResultTotal();
+        meta.currentKey = parkedLibraryView.currentKey;
+    }
+    else if (libraryParkable(&notParkable)) {
+        meta.baseSeq = filterPanel->loadedResultSeq();
+        meta.resultPaths = filterPanel->currentResultPaths();
+        meta.totalMatches = filterPanel->resultTotal();
+        meta.currentKey = dm->currentKey;
+    }
+    else {
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[PERF] library snapshot not written:" << notParkable;
+        return;
+    }
+    meta.catalogId = Catalog::instance().catalogId();
+
+    QElapsedTimer t;
+    t.start();
+    QString why;
+    const QString file = librarySnapshotPath();
+    const bool ok = dm->saveLibrarySnapshot(file, meta, &why);
+    if (G::isPerfProbe || !ok)
+        qDebug().noquote() << "[PERF] library snapshot" << (ok ? "written" : "NOT written:")
+                           << why << " rows =" << (dm->hasParkedScope()
+                                                       ? dm->parkedRowCount()
+                                                       : dm->rowCount())
+                           << " bytes =" << QFileInfo(file).size()
+                           << " ms =" << t.elapsed();
+}
+
+void MW::startLibrarySnapshotRestore()
+{
+/*
+    Read the snapshot on a pool thread, and ask the index what changed since it was
+    written (Catalog::pathsChangedSince); the answer comes back to
+    finishLibrarySnapshotRestore. librarySnapshotGen voids it if the Library is left, or
+    entered again, before it lands.
+*/
+    const quint64 gen = ++librarySnapshotGen;
+    const QString file = librarySnapshotPath();
+    auto clock = std::make_shared<QElapsedTimer>();
+    clock->start();
+    timelineMark("library snapshot: reading");
+    QThreadPool::globalInstance()->start([this, gen, file, clock]{
+        auto meta = std::make_shared<DataModel::LibrarySnapshotMeta>();
+        QString why;
+        std::unique_ptr<DataModel::ParkedScope> p =
+            DataModel::readLibrarySnapshot(file, *meta, &why);
+        QStringList changed;
+        if (p) {
+            const qint64 now = Catalog::instance().changeSeq();
+            bool overflow = false;
+            if (now < meta->baseSeq) why = "the index is older than the snapshot";
+            else {
+                changed = Catalog::instance().pathsChangedSince(meta->baseSeq,
+                                                                kMaxSnapshotChanges,
+                                                                &overflow);
+                if (overflow) why = "too many index changes since it was written";
+            }
+            if (!why.isEmpty()) p.reset();
+        }
+        auto holder = std::make_shared<std::unique_ptr<DataModel::ParkedScope>>(
+            std::move(p));
+        const qint64 readMs = clock->elapsed();
+        QMetaObject::invokeMethod(this, [this, gen, holder, meta, changed, why, readMs]{
+            finishLibrarySnapshotRestore(gen, holder, meta, changed, why, readMs);
+        }, Qt::QueuedConnection);
+    });
+}
+
+void MW::finishLibrarySnapshotRestore(
+    quint64 gen, std::shared_ptr<std::unique_ptr<DataModel::ParkedScope>> holder,
+    std::shared_ptr<DataModel::LibrarySnapshotMeta> meta, const QStringList &changed,
+    const QString &why, qint64 readMs)
+{
+    if (gen != librarySnapshotGen || G::scope != G::Scope::Catalog) return;   // superseded
+    const bool ok = holder && *holder && !dm->hasParkedScope();
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] library snapshot read in" << readMs << "ms:"
+                           << (ok ? QString("restoring %1 rows, %2 changed since")
+                                        .arg((*holder)->rows.size()).arg(changed.size())
+                                  : "not used (" + why + ")");
+    if (!ok) {
+        enterLibraryPanel(false, {});
+        return;
+    }
+    lastSnapshotChanged = changed.size();
+    dm->adoptParkedScope(std::move(*holder));
+    filterPanel->adoptParkedResults(meta->resultPaths, meta->totalMatches, meta->baseSeq);
+    /*  The sort and the filters are left to the start-up restore (queueLibraryStateRestore),
+        which "Reopen as it was left" has already queued; the current image is the
+        snapshot's. */
+    parkedLibraryView = ParkedLibraryView();
+    parkedLibraryView.currentKey = meta->currentKey;
+    enterLibraryPanel(true, QSet<QString>(changed.cbegin(), changed.cend()));
+}
+
+void MW::repairRowsWhenSettled(const QStringList &paths)
+{
+/*
+    THE ROWS THE INDEX REWROTE WHILE THE LIBRARY WAS PARKED (or since its snapshot), handed
+    to refreshStaleRows -- but only once the load has SETTLED: metadataComplete has run, no
+    load is running and the cover is down. That is the state its usual caller, the
+    scroll-in verification, always calls it in. (Not "MetaRead idle": MetaRead sets that
+    only at the end of a whole pass, and after a restore it can stay unset indefinitely.) Called straight after the restore's folderChange instead, MetaRead
+    was still in its post-load pass, the re-read it asks for (reloadIconChunk ->
+    setStartRow) never happened, and G::allMetadataAttempted stayed false for good
+    (ctest library_snapshot). Polled, bounded at 30 s; dropped if the model is REPLACED
+    (modelResetGen) -- not on dm->instance, which every sort and filter change bumps,
+    and the post-load sort always does.
+*/
+    auto tries = std::make_shared<int>(0);
+    auto timer = new QTimer(this);
+    timer->setInterval(100);
+    const quint64 gen = modelResetGen;
+    connect(timer, &QTimer::timeout, this, [this, timer, tries, paths, gen]{
+        if (modelResetGen != gen || ++(*tries) > 300) {
+            if (G::isPerfProbe)
+                qDebug().noquote() << "[PERF] repairRowsWhenSettled gave up: replaced ="
+                                   << (modelResetGen != gen) << " loadRunning ="
+                                   << bool(G::isLoadRunning) << " modifying ="
+                                   << bool(G::isModifyingDatamodel) << " curtain ="
+                                   << loadCurtainUp << " metadataComplete ="
+                                   << metadataCompleteDone;
+            timer->deleteLater();
+            return;
+        }
+        if (G::isLoadRunning || G::isModifyingDatamodel || loadCurtainUp
+            || !metadataCompleteDone) return;
+        timer->deleteLater();
+        ++settledRepairs;
+        refreshStaleRows(paths);
+    });
+    timer->start();
 }
 
 void MW::dropParkedLibrary(const QString &why)
@@ -992,7 +1174,26 @@ void MW::restoreParkedLibrary(const QSet<QString> &changed)
         restoreFiltersPending = true;
         libraryFilterRestorePending = true;
     }
-    if (!v.currentKey.isEmpty()) folderAndFileChangePath = v.currentKey;
+    if (!v.currentKey.isEmpty()) {
+        folderAndFileChangePath = v.currentKey;
+        /*  AND ONCE THE SORT HAS LANDED, BY KEY. metadataComplete resets the sort and then
+            applies the Library's, after folderChanged has started MetaRead at a proxy row
+            -- so the row it selects can name another image by then (ctest
+            library_snapshot, intermittently). metadataLoaded is emitted at the end of
+            metadataComplete, past every sort, in the same call as the cover coming down,
+            so the correction is never seen. */
+        const QString key = v.currentKey;
+        auto once = std::make_shared<QMetaObject::Connection>();
+        *once = connect(this, &MW::metadataLoaded, this, [this, key, once]{
+            disconnect(*once);
+            if (G::isPerfProbe)
+                qDebug().noquote() << "[PERF] restore: current at metadataLoaded ="
+                                   << dm->currentKey << " parked =" << key;
+            if (G::scope == G::Scope::Catalog && dm->currentKey != key
+                && dm->rowFromKey(key) >= 0)
+                sel->select(key);
+        });
+    }
 
     dm->abort = false;
     /*  Queued, as loadCatalogScope queues its fill: stop() has just torn the readers
@@ -1010,8 +1211,7 @@ void MW::restoreParkedLibrary(const QSet<QString> &changed)
             if (filterPanel) queueAvailabilityPass(filterPanel->currentResultPaths());
             QStringList stale;
             for (const QString &p : changed) if (dm->rowFromKey(p) >= 0) stale << p;
-            if (!stale.isEmpty())
-                QTimer::singleShot(0, this, [this, stale]{ refreshStaleRows(stale); });
+            if (!stale.isEmpty()) repairRowsWhenSettled(stale);
         });
         if (!dm->restoreScope()) {
             disconnect(*conn);

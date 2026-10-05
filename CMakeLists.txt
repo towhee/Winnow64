@@ -432,6 +432,7 @@ set(WINNOW_SOURCES
     Views/infostring.cpp
     Views/catalogview.cpp
     Datamodel/imagerow.cpp
+    Datamodel/librarysnapshot.cpp
     Datamodel/rowscratch.cpp
     Views/libtree.cpp
     Views/collectiontree.cpp

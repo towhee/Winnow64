@@ -468,7 +468,15 @@ void MW::createMetaRead()
         at the moment it is used. A QModelIndex carried across a queued
         connection was built on metaReadThread and could name a different row by
         the time it arrived. */
-    connect(metaRead, &MetaRead::selectRow, sel, [this](int sfRow, bool clearSelection) {
+    connect(metaRead, &MetaRead::selectRow, sel,
+            [this](int sfRow, int dmRow, bool clearSelection) {
+        /*  The IMAGE, where it is now: the dm row through the live proxy (see the
+            signal). The snapshot's sfRow only when no dm row is known or it is no longer
+            in the proxy (filtered out). */
+        if (dmRow >= 0 && dmRow < dm->rowCount()) {
+            const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
+            if (sfIdx.isValid()) sfRow = sfIdx.row();
+        }
         if (sfRow >= 0 && sfRow < dm->sf->rowCount())
             sel->setCurrentIndex(dm->sf->index(sfRow, 0), clearSelection);
     }, Qt::QueuedConnection);

@@ -178,6 +178,13 @@ void Popup::showPopup1(const QString &text,
                  Qt::Alignment corner)
 {
     // qDebug() << "PopUp::showPopup" << text << msDuration;
+    /*  HEADLESS (QT_QPA_PLATFORM=offscreen, every smoke test): there is no native window,
+        and the macOS path below messages one -- a SIGSEGV in objc_msgSend the first time a
+        self-test reached a popup (an auto-scan's "Catalog updated", library_snapshot). */
+    if (QGuiApplication::platformName() == QLatin1String("offscreen")) {
+        fprintf(stderr, "POPUP (offscreen, not shown): %s\n", text.toLocal8Bit().constData());
+        return;
+    }
     hideTimer->stop();
     // okayToHide = true;
     // hide();

@@ -625,6 +625,25 @@ if(TARGET Winnow)
     )
 
     # -------------------------------------------------------------------------
+    # library_snapshot -- the Library restored from its snapshot FILE
+    # (MW::selfTestLibrarySnapshot), as the first Library of a session is: written as
+    # quit writes it, the parked copy dropped, one index row rewritten in between. The
+    # restore must be counted, report exactly that one row changed, and give back the
+    # same rows and current image.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME library_snapshot
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(library_snapshot PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_SNAPSHOT=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=120000"
+        PASS_REGULAR_EXPRESSION "SELFTEST: SNAPSHOT PASS"
+        FAIL_REGULAR_EXPRESSION "SNAPSHOT FAIL|MODELINTEGRITY|ROWLOSS"
+        LABELS "smoke"
+        TIMEOUT 180
+    )
+
+    # -------------------------------------------------------------------------
     # catalog_capture — a folder load must actually reach the catalog. This had
     # no coverage and was silently broken: folderChangeCompleted read
     # catalogRows() inline, that skips rows not yet MetaLoaded, and the status

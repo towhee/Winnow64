@@ -52,6 +52,7 @@ private slots:
     void folderAncestryCostsARowOneId();
     void hasGpsIsDerivedFromTheCoordinate();
     void sourcePathIsDerivedFromTheKey();
+    void snapshotRoundTripsEveryCell();
 
 private:
     static void fill(RowStore &s, int row, const QString &path)
@@ -787,6 +788,87 @@ void tst_imagerow::sourcePathIsDerivedFromTheKey()
     empty.setValue(0, G::PathColumn, G::SourcePathRole, "/x.jpg");
     QVERIFY(!empty.value(0, G::PathColumn, G::SourcePathRole).isValid());
     QVERIFY(!empty.value(0, G::PathColumn, G::KeyRole).isValid());
+}
+
+void tst_imagerow::snapshotRoundTripsEveryCell()
+{
+/*
+    THE LIBRARY SNAPSHOT (RowStore::save / load) must bring every cell back -- the same
+    value, the same type, and unset where it was unset -- except the icon, which is not
+    in a snapshot and comes back as a fresh fill leaves it. Compared cell by cell over
+    every column and every role the store covers, so a field missing from the shared
+    field list shows up here as the cell it belongs to.
+*/
+    RowStore s;
+    s.resize(3);
+    fill(s, 0, "/a/b/one.jpg");
+    fill(s, 1, "/a/c/two.nef");
+    fill(s, 2, "/a/c/two.nef/#v1");
+    s.setValue(0, G::RatingColumn, Qt::EditRole, "3");
+    s.setValue(0, G::LabelColumn, Qt::EditRole, "Red");
+    s.setValue(0, G::ApertureColumn, Qt::EditRole, double(5.6));
+    s.setValue(0, G::KeywordsColumn, Qt::EditRole, QStringList{"Heron", "Bird"});
+    s.setValue(0, G::ErrColumn, Qt::EditRole, QStringList{"no embedded thumb"});
+    s.setValue(0, G::FocusXColumn, Qt::EditRole, 0.25f);
+    s.setValue(0, G::MetadataStatusColumn, Qt::EditRole, int(G::MetaLoaded));
+    s.setValue(1, G::AvailabilityColumn, Qt::EditRole, int(1));
+    s.setValue(1, G::PathColumn, G::VersionCountRole, 1);
+    s.setValue(1, G::PathColumn, G::DupOtherIdxRole, 0);
+    s.setValue(1, G::PathColumn, G::DupRawTypeRole, "NEF");
+    s.setValue(2, G::PathColumn, G::VersionNameRole, "B&W");
+    // the icon: present in the store, absent from what comes back
+    s.setValue(0, G::IconLoadedColumn, Qt::EditRole, true);
+    s.setValue(0, G::IconAspectRatioColumn, Qt::EditRole, 1.5);
+    s.setValue(0, G::PathColumn, G::IconRectRole, QRect(1, 2, 3, 4));
+    s.setValue(0, G::MetadataReadingColumn, Qt::EditRole, true);
+
+    QByteArray bytes;
+    {
+        QDataStream out(&bytes, QIODevice::WriteOnly);
+        s.save(out);
+    }
+    RowStore t;
+    {
+        QDataStream in(bytes);
+        QVERIFY(t.load(in));
+    }
+    QCOMPARE(t.size(), s.size());
+    QCOMPARE(t.pickedCount(), s.pickedCount());
+
+    const QVector<int> roles {
+        Qt::EditRole, G::KeyRole, G::SourcePathRole, G::VersionIdRole,
+        G::VersionCountRole, G::VersionNameRole, G::IconRectRole, G::DupHideRawRole,
+        G::DupIsJpgRole, G::DupRawTypeRole, G::DupOtherIdxRole
+    };
+    const QSet<QPair<int, int>> iconCells {
+        {G::IconLoadedColumn, Qt::EditRole}, {G::IconAspectRatioColumn, Qt::EditRole},
+        {G::PathColumn, G::IconRectRole}, {G::MetadataReadingColumn, Qt::EditRole}
+    };
+    int compared = 0;
+    for (int row = 0; row < s.size(); ++row)
+        for (int col = 0; col < G::TotalColumns; ++col)
+            for (int role : roles) {
+                if (!RowStore::covers(col, role)) continue;
+                if (iconCells.contains({col, role})) continue;
+                const QVariant a = s.value(row, col, role), b = t.value(row, col, role);
+                QVERIFY2(a.isValid() == b.isValid() && a.typeId() == b.typeId() && a == b,
+                         qPrintable(QString("row %1 column %2 role %3: %4 -> %5")
+                                        .arg(row).arg(col).arg(role)
+                                        .arg(a.toString(), b.toString())));
+                ++compared;
+            }
+    QVERIFY(compared > 100);
+
+    QCOMPARE(t.value(0, G::IconLoadedColumn).toBool(), false);
+    QCOMPARE(t.value(0, G::MetadataReadingColumn).toBool(), false);
+    QVERIFY(!t.value(0, G::IconAspectRatioColumn).isValid());
+    QVERIFY(!t.value(0, G::PathColumn, G::IconRectRole).isValid());
+
+    // another layout's stream is refused, and leaves the store as it was
+    QByteArray junk(64, '\x01');
+    QDataStream bad(junk);
+    QVERIFY(!t.load(bad));
+    QCOMPARE(t.size(), s.size());
 }
 
 QTEST_MAIN(tst_imagerow)
