@@ -381,6 +381,9 @@ void MW::moveDroppedDockLast()
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
+    /*  Pin the build the library snapshot is checked against to the executable as it
+        was launched (DataModel::librarySnapshotFingerprint). */
+    DataModel::librarySnapshotFingerprint();
     if (G::isLogger || G::isFlowLogger) G::log("MW::MW", "START APPLICATION", true);
     setObjectName("MW");
 

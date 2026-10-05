@@ -516,6 +516,9 @@ winnow_add_unit_test(tst_rowscratch unit/tst_rowscratch.cpp ../Datamodel/rowscra
 # "text is not number" have to be checked here instead. It also pins the row
 # splicing that replaced the rebuild-from-items.
 winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cpp)
+# tst_zchunkdevice: the chunked zlib stream the library snapshot is written through --
+# round trip across chunk boundaries, the end mark, truncation and corruption refused.
+winnow_add_unit_test(tst_zchunkdevice unit/tst_zchunkdevice.cpp ../Utilities/zchunkdevice.cpp)
 
 # tst_variantless pins SortFilter's sort keys to Qt's own order: the proxy compares
 # stored keys with a COPY of Qt's private isVariantLessThan, and this sorts the same

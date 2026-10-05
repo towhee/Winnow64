@@ -1,6 +1,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/indexmetadata.h"
 #include "Utilities/versionkey.h"
+#include "Utilities/zchunkdevice.h"
 
 #include <QDataStream>
 #include <QSaveFile>
@@ -23,6 +24,9 @@
            metadata is rebuilt from the index, since a missing master would make the
            load-end version reconcile REMOVE its version rows.
 
+    THE FILE is a raw header (magic, format) and then one zlib-chunked QDataStream
+    (Utilities/zchunkdevice.h) for everything else.
+
     VALIDITY is three checks here and one by the caller. Here: the format, the build (the
     executable's size and time -- a rebuild may have changed what a row means, and a
     misread row would be shown as fact), and the index identity (Catalog::catalogId). The
@@ -32,15 +36,29 @@
 
 namespace {
 constexpr quint32 kSnapMagic = 0x574c4942;      // "WLIB"
-constexpr quint32 kSnapFormat = 1;
+constexpr quint32 kSnapFormat = 2;      // 2: zlib chunks after the header
 
 QString buildFingerprint()
 {
-    const QFileInfo fi(QCoreApplication::applicationFilePath());
-    return QString::number(fi.size()) + "-"
-           + QString::number(fi.lastModified().toMSecsSinceEpoch());
+    return DataModel::librarySnapshotFingerprint();
 }
 }  // namespace
+
+QString DataModel::librarySnapshotFingerprint()
+{
+/*
+    THE EXECUTABLE THIS PROCESS WAS LAUNCHED FROM, not the one on disk now: computed once
+    and kept. MW's constructor calls this, so the stamp is taken at start -- read at quit
+    instead, a Winnow left running across a rebuild stamped its snapshot with the NEW
+    binary's size and time, and the new build then trusted rows the old code wrote.
+*/
+    static const QString fp = [] {
+        const QFileInfo fi(QCoreApplication::applicationFilePath());
+        return QString::number(fi.size()) + "-"
+               + QString::number(fi.lastModified().toMSecsSinceEpoch());
+    }();
+    return fp;
+}
 
 bool DataModel::saveLibrarySnapshot(const QString &file, const LibrarySnapshotMeta &meta,
                                     QString *why)
@@ -55,10 +73,20 @@ bool DataModel::saveLibrarySnapshot(const QString &file, const LibrarySnapshotMe
 
     QSaveFile f(file);
     if (!f.open(QIODevice::WriteOnly)) return failed(f.errorString());
-    QDataStream out(&f);
+    /*  THE HEADER UNCOMPRESSED (so another format is refused before anything is
+        inflated), EVERYTHING ELSE THROUGH ZLIB CHUNKS (Utilities/zchunkdevice.h): 275 MB
+        -> ~26 MB at 155,216 rows, the chunks compressed on a worker while the rows are
+        still being serialised. */
+    {
+        QDataStream head(&f);
+        head << kSnapMagic << kSnapFormat;
+    }
+    ZChunkDevice z(&f, 4 << 20, 1);
+    if (!z.open(QIODevice::WriteOnly)) { f.cancelWriting(); return failed("compressor"); }
+    QDataStream out(&z);
     out.setVersion(QDataStream::Qt_6_0);
 
-    out << kSnapMagic << kSnapFormat << buildFingerprint() << meta.catalogId
+    out << buildFingerprint() << meta.catalogId
         << meta.baseSeq << meta.currentKey << qint32(meta.totalMatches) << meta.resultPaths;
     if (p) {
         out << p->folderList << p->folderImageCount << p->firstFolderPathWithImages
@@ -82,8 +110,12 @@ bool DataModel::saveLibrarySnapshot(const QString &file, const LibrarySnapshotMe
             << bytesUsed << bytesUsedSampleTotal << qint32(bytesUsedSampleCount);
     }
     rows.save(out);
+    z.close();                          // the last chunk and the end mark
 
-    if (out.status() != QDataStream::Ok) { f.cancelWriting(); return failed("write error"); }
+    if (out.status() != QDataStream::Ok || f.error() != QFileDevice::NoError) {
+        f.cancelWriting();
+        return failed("write error");
+    }
     if (!f.commit()) return failed(f.errorString());
     return true;
 }
@@ -98,14 +130,19 @@ DataModel::readLibrarySnapshot(const QString &file, LibrarySnapshotMeta &meta, Q
     QFile f(file);
     if (!f.exists()) return failed("no snapshot");
     if (!f.open(QIODevice::ReadOnly)) return failed(f.errorString());
-    QDataStream in(&f);
+    quint32 magic = 0, format = 0;
+    {
+        QDataStream head(&f);
+        head >> magic >> format;
+    }
+    if (magic != kSnapMagic || format != kSnapFormat) return failed("other format");
+    ZChunkDevice z(&f, 4 << 20, 1);
+    if (!z.open(QIODevice::ReadOnly)) return failed("decompressor");
+    QDataStream in(&z);
     in.setVersion(QDataStream::Qt_6_0);
 
-    quint32 magic = 0, format = 0;
     QString fingerprint;
     qint32 total = 0;
-    in >> magic >> format;
-    if (magic != kSnapMagic || format != kSnapFormat) return failed("other format");
     in >> fingerprint;
     if (fingerprint != buildFingerprint()) return failed("written by another build");
     in >> meta.catalogId >> meta.baseSeq >> meta.currentKey >> total >> meta.resultPaths;
@@ -119,8 +156,11 @@ DataModel::readLibrarySnapshot(const QString &file, LibrarySnapshotMeta &meta, Q
        >> sampleCount;
     p->versionRowCount = versionRows;
     p->bytesUsedSampleCount = sampleCount;
-    if (in.status() != QDataStream::Ok) return failed("truncated");
-    if (!p->rows.load(in)) return failed("row layout differs");
+    if (in.status() != QDataStream::Ok)
+        return failed("truncated " + z.streamError());
+    if (!p->rows.load(in))
+        return failed(z.streamError().isEmpty() ? QString("row layout differs")
+                                                : "damaged: " + z.streamError());
     if (p->rows.size() == 0 || p->fPathRow.size() > p->rows.size())
         return failed("inconsistent");
 

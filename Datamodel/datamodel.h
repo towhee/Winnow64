@@ -393,6 +393,9 @@ public:
                                                             LibrarySnapshotMeta &meta,
                                                             QString *why = nullptr);
     void adoptParkedScope(std::unique_ptr<ParkedScope> p) { parked = std::move(p); }
+    /*  The build a snapshot must come from: this process's executable as LAUNCHED
+        (pinned on first call; MW's constructor makes that call). */
+    static QString librarySnapshotFingerprint();
     /*  src names the caller for the ingest probe's instance-bump tally: a bump
         invalidates every in-flight decode and reader task, so during a cull it matters
         which action is spending them. Diagnostic only. */
