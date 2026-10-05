@@ -86,6 +86,7 @@ private slots:
     void migrationFromVersionThreeMergesKeywords();
     void migrationCollapsesDoubledPathSeparators();
     void unreadableFileIsCataloguedAsAStubAndClearsWhenItParses();
+    void changeTrackingRecordsOnlyRealWrites();
     void categoryItemsMatchWhatTheDatamodelWrites();
     void categoryItemsAreEmptyForColumnsTheIndexCannotAnswer();
     void genericIncludeAndExcludeNarrowTheSearch();
@@ -1908,6 +1909,47 @@ void tst_catalog::unreadableFileIsCataloguedAsAStubAndClearsWhenItParses()
     QCOMPARE(cat.count(), 1);           // updated in place, not duplicated
     avail = cat.availabilityOf({path});
     QCOMPARE(int(avail.value(path)), int(Catalog::Availability::Present));
+}
+
+void tst_catalog::changeTrackingRecordsOnlyRealWrites()
+{
+/*
+    WHAT A PARKED LIBRARY IS TOLD CHANGED (Catalog::trackChangedPaths, used by
+    MW::restoreParkedLibrary): only rows actually rewritten. Every path recorded here is
+    re-read on the return, so a write that changes nothing must not be one -- the first
+    measurement found the scanner re-committing all 2,488 unreadable stubs on every visit,
+    identical each time, and the return re-reading every one of them.
+*/
+    Catalog &cat = Catalog::instance();
+    const CatalogRow a = rowFor("track-a.jpg");
+    CatalogRow stub = rowFor("track-stub.nef");
+    QCOMPARE(cat.commit({a}), 1);
+    QCOMPARE(cat.commitUnreadable({stub}), 1);
+
+    cat.trackChangedPaths(true);
+    QCOMPARE(cat.commit({a}), 0);                   // unchanged: skipped
+    QCOMPARE(cat.commitUnreadable({stub}), 0);      // the same stub again: skipped
+    bool overflow = true;
+    QVERIFY(cat.takeChangedPaths(&overflow).isEmpty());
+    QVERIFY(!overflow);
+
+    CatalogRow a2 = a;
+    a2.srcMtime += 1;                               // the file changed
+    stub.srcSize += 1;
+    QCOMPARE(cat.commit({a2}), 1);
+    QCOMPARE(cat.commitUnreadable({stub}), 1);
+    const QSet<QString> changed = cat.takeChangedPaths(&overflow);
+    QVERIFY(!overflow);
+    QCOMPARE(changed, QSet<QString>({a.path, stub.path}));
+    QVERIFY(cat.takeChangedPaths().isEmpty());      // taken means emptied
+
+    cat.clear();                                    // every row changed at once
+    cat.takeChangedPaths(&overflow);
+    QVERIFY(overflow);
+
+    cat.trackChangedPaths(false);
+    QCOMPARE(cat.commit({a}), 1);
+    QVERIFY(cat.takeChangedPaths().isEmpty());      // not tracking: nothing recorded
 }
 
 void tst_catalog::migrationCollapsesDoubledPathSeparators()

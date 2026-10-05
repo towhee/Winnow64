@@ -9,7 +9,6 @@ WHAT'S NEW
 - Map
 
 BUGS / TO
-- Switch from Develop mode should cancel any active develop tools
 - Move Embellish export off the GUI thread. Requires reworking the Embellish render path
   from QPixmap/QGraphicsScene to QImage-only, since QPixmap is GUI-thread-only.
 - Fine-tune keywords managing

@@ -325,6 +325,44 @@ public:
     bool isDupHiddenRaw(int dmRow) const;   // the raw half, hidden if combined
     QString dupRawType(int dmRow) const;    // "NEF", "ORF" ... else empty
     void clearDataModel();
+
+    /*  THE PARKED LIBRARY. Leaving a settled Library for Folders moves the whole model
+        aside instead of discarding it, and coming back moves it in again: one model
+        reset rather than the catalog query plus the streamed fill (2.9 s + 3.8 s at
+        155,216 rows). See "The Parked Library" in notes/Documentation.txt.
+
+        parkScope is called where the model would otherwise be cleared (MW::reset) and
+        leaves it empty; clearDataModel then runs as usual over nothing. restoreScope
+        is a fill that has already happened: it ends exactly as finishCatalogFill does,
+        with folderChange, so everything MW runs after a Library load runs after it.
+        GUI thread, both. */
+    struct ParkedScope {
+        RowStore rows;
+        ScratchStore scratch;
+        IconStore icons;
+        QHash<int, QVariant> issueLists;
+        QHash<QString, ImageMetadata> versionMasters;
+        int versionRowCount = 0;
+        QHash<QString, int> fPathRow;
+        QHash<QString, RawSensorInfo> fPathRawInfo;
+        QStringList folderList;
+        QSet<QString> folderSet;
+        QHash<QString, int> folderImageCount;
+        QString firstFolderPathWithImages;
+        QHash<QString, QStringList> keywordsAllMemo;
+        ScopeRequest scope;
+        QString currentKey;
+        qint64 bytesUsed = 0;
+        qint64 bytesUsedSampleTotal = 0;
+        int bytesUsedSampleCount = 0;
+        int metadataAttempted = 0, metadataLoaded = 0, iconLoaded = 0;
+        int videoRows = 0, iconUnloadable = 0;
+    };
+    void parkScope();
+    bool restoreScope();
+    void dropParkedScope();
+    bool hasParkedScope() const { return parked != nullptr; }
+    int parkedRowCount() const { return parked ? parked->rows.size() : 0; }
     /*  src names the caller for the ingest probe's instance-bump tally: a bump
         invalidates every in-flight decode and reader task, so during a cull it matters
         which action is spending them. Diagnostic only. */
@@ -976,6 +1014,7 @@ private:
         images that have versions are held. GUI thread. */
     QHash<QString, ImageMetadata> versionMasters;
     int mVersionRowCount = 0;
+    std::unique_ptr<ParkedScope> parked;    // see parkScope
     void noteVersionValueWrite(const QModelIndex &dmIdx);
     QSet<QString> pendingVersionValueKeys;
     bool versionValueWritePending = false;

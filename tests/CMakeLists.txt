@@ -607,6 +607,24 @@ if(TARGET Winnow)
     )
 
     # -------------------------------------------------------------------------
+    # park_restore -- Library -> Folders -> Library (MW::selfTestParkLibrary). The
+    # second Library must be the PARKED model handed back (DataModel::parkScope /
+    # restoreScope): same rows, same current image, verifyIntegrity clean, and a
+    # restore counted rather than a reload, which would pass everything else.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME park_restore
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(park_restore PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_PARK=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=120000"
+        PASS_REGULAR_EXPRESSION "SELFTEST: PARK PASS"
+        FAIL_REGULAR_EXPRESSION "PARK FAIL|MODELINTEGRITY|ROWLOSS"
+        LABELS "smoke"
+        TIMEOUT 180
+    )
+
+    # -------------------------------------------------------------------------
     # catalog_capture — a folder load must actually reach the catalog. This had
     # no coverage and was silently broken: folderChangeCompleted read
     # catalogRows() inline, that skips rows not yet MetaLoaded, and the status

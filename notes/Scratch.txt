@@ -6686,19 +6686,135 @@ That's expected, because Winnow hasn't downloaded anything on that machine yet. 
   models have been uploaded to winnow.ca/winnow/models/, and I haven't checked that. Want me to delete those leftover copies from the Qt Creator build folders?
 
 ==========================================================================================
-Folders vs Library
+Keep the Library parked while visiting Folders
 ==========================================================================================
 
-Not in Folders UI
-- Collections Panel
-- Queries Panel
+ Context
 
-Not in Library UI
--
+ Use case: in Library, hop to Folders to work in a folder outside the library, hop
+ back. Today every return runs the full Library load: MW::chooseSource →
+ setCatalogScopeWhole → catalog query on a pool thread ("seconds") →
+ loadCatalogScope (stop, resetDevelop, dm->setScope → addCatalogRows
+ batches) → sort → BuildFilters thread → availability pass → icon chunk, all
+ behind the LoadCurtain. Leaving does fsTree->select(lastFolderPath) →
+ dm->clear(), which throws the 43k-row model away.
 
+ Feasible: yes. DataModel is a QAbstractTableModel whose whole state lives
+ in a few movable stores (rowStore, scratchStore, iconStore, mIssueLists,
+ versionMasters, fPathRow, folderImageCount, fPathRawInfo,
+ currentScope, …). Parking is a std::move into a side struct instead of
+ clear(); returning is one beginResetModel/endResetModel with the stores
+ moved back. Memory cost ~30 MB at 43k rows (row store is <186 MB at 250k), fine
+ on both dev machines.
 
-Users/roryhill/Pictures/_test1/ARW A7R2.JPG
+ Stage 1 = Steps 0–3 below (in-memory park). Stage 2 = startup snapshot, gated.
 
+ Step 0 — measure first (instrument, don't guess)
+
+ Run Winnow --catalogload with WINNOW_PERF_PROBE=1 WINNOW_CATALOGLOAD_TIMELINE=1 WINNOW_CATALOGLOAD_FROMFOLDER=<dir> (only when
+ the user's Winnow is closed) and split the return trip into: query / fill /
+ sort / BuildFilters / availability / icon chunk / curtain lowered. This decides
+ what restore must skip and is the before-number for verification.
+
+ Step 1 — park on leave
+
+ - New DataModel::ParkedScope: the stores above + currentScope + proxy sort
+   column/order + current/selected keys + scroll anchor key + active filter state
+   (as restoreFiltersAfterFolderChange already serialises it).
+ - DataModel::parkScope() moves stores out (rowStore lock held; bump its gens
+   as clear() does), then resets the model empty. Called from the
+   Library→Folders teardown (MW::showFoldersSource / its stop()+clear)
+   only if the Library load completed (!G::isLoadRunning,
+   G::allMetadataAttempted, filters built). An incomplete load is discarded as
+   today.
+ - Drop the parked scope on: catalog rescan / Manage Catalog change, a catalog
+   search replacing it, memory-governor pressure, quit.
+
+ Step 2 — restore on return
+
+ - MW::setCatalogScopeWhole: with a valid parked scope, skip the query and call
+   a new MW::restoreParkedLibrary() instead of loadCatalogScope. Same folder
+   teardown (stop, resetDevelopCachesForNewFolder, picks prompt).
+ - DataModel::restoreScope(): ++instance, reset with stores moved back,
+   rebuild rowSync/proxySnapshot (ordering per MW::applyModelChange), mark
+   load complete, emit folderChange so folderChangeCompleted runs as usual.
+ - Filters: rebuild via BuildFilters (threaded) and re-apply the parked filter
+   through restoreFiltersAfterFolderChange; restore sort, selection, scroll
+   anchor (dm->scrollToIcon).
+ - Icons: re-arm with invalidateLoadedIcons / setIconRange around the
+   visible window (icon re-arm + chunk-contains-visible rules). Not optional.
+ - LoadCurtain stays, but should be up well under a second.
+
+ Step 3 — staleness while parked
+
+ Work in Folders can change library rows (rating/label/keyword/Develop edits on
+ a catalogued folder, a scan). Folder loads also write back to the index, so a
+ catalog-wide counter would invalidate every time. Instead:
+ - Catalog records a dirty path set in its write entry points while a scope
+   is parked (QSet under the existing mutex).
+ - On restore: dirty ∩ parked → refresh those rows in place from Catalog
+   rows-for-paths; dirty paths new under a library root → append. Above a
+   threshold (e.g. 2,000) fall back to a full reload.
+ - Rerun the availability pass on restore (pool thread) — a volume may be gone.
+
+ Files
+
+ - Datamodel/datamodel.h/.cpp — ParkedScope, parkScope/restoreScope.
+ - Datamodel/imagerow.h — RowStore move-out/in under its lock.
+ - Main/setandupdate.cpp — setCatalogScopeWhole / showFoldersSource branches.
+ - Main/mainwindow.cpp — restoreParkedLibrary (sibling of loadCatalogScope).
+ - Cache/catalog.h/.cpp — dirty-path tracking.
+ - notes/Documentation.txt — new "Parked Library" section + ToC sync.
+ - tests/ — model_mutation-style test: load catalog rows, park, load folder,
+   restore; assert rows, keys, sort, selection, and a dirtied row refreshed.
+
+ Verification
+
+ 1. ctest --test-dir build/<preset> --output-on-failure (new test + existing
+    model_mutation, catalog_scan).
+ 2. --catalogload timeline with _FROMFOLDER: Folders→Library time before vs
+    after, several runs each (single A/B pairs are a coin toss here).
+ 3. In-app: Library → filter + sort + select → Folders (non-library folder, rate
+    an image) → Library: same filter/sort/selection/scroll, thumbnails present,
+    none blank. Repeat after rating a library image via Folders → rating shows.
+ 4. Memory governor: park, then load a large raw folder — no overrun dialog.
+
+ Stage 2 — startup snapshot (GATED on measurement)
+
+ Reuses restoreScope(); only the source of the parked state changes (disk, not RAM).
+
+ Gate: after Stage 1 ships, measure startup with --catalogload
+ WINNOW_CATALOGLOAD_STARTUP=1 WINNOW_CATALOGLOAD_TIMELINE=1 WINNOW_PERF_PROBE=1.
+ Proceed only if query + fill are a large share of the startup load; if icons
+ dominate (as they do for folder loads), stop and report.
+
+ - Change sequence in the index (additive schema bump in Cache/cachedb.cpp,
+   never edit an already-run block): a change_seq column on the image row plus a
+   meta counter; every Catalog write entry point bumps the counter and stamps the
+   row. Note image_version is versions/virtual copies, not this.
+ - Write on quit (quit path is exit(), so hook where threads are stopped,
+   not only closeEvent): if the Library is the loaded or parked scope and its load
+   completed, serialise ParkedScope + the catalog's change_seq + a format version
+   - the catalog DB identity to <AppSupport>/Winnow/library.snapshot (write to a
+     temp name, then rename). Background-thread serialise from the moved-out stores.
+ - Read at startup (startLibraryWhenExposed): on a valid snapshot, load it on
+   a pool thread, then query rows with change_seq > stored value; apply them as
+   the Stage 1 dirty-set delta (refresh/append; removed rows demoted) and
+   restoreScope(). Fall back to the full load when: missing/corrupt file, format
+   or schema mismatch, different catalog, seq went backwards, delta > threshold.
+ - Availability pass, BuildFilters and icon re-arm run exactly as in Stage 1.
+ - Files: Cache/cachedb.cpp, Cache/catalog.h/.cpp (seq + rowsChangedSince),
+   Datamodel/datamodel.cpp (serialise/deserialise ParkedScope), quit and
+   startup paths in Main/mainwindow.cpp, Documentation.txt section.
+ - Tests: snapshot round-trip equals the live model; a write after the snapshot
+   shows up via the delta; corrupt/mismatched snapshot falls back to full load.
+ - Verify: startup timeline before/after (several runs); in-app quit → rate an
+   image on the other machine's shared index or via a scan → relaunch → change
+   visible.
+
+ Follow-up (not in this change)
+
+ The same mechanism can park the Folders scope so Library→Folders is instant too.
 
 
 

@@ -60,6 +60,22 @@ void FilterPanel::setScope(Scope s)
     emit scopeChanged(static_cast<int>(s));
 }
 
+void FilterPanel::parkResults()
+{
+    parkedPathList = resultPathList;
+    parkedTotal = totalMatches;
+    parkedLoaded = resultLoaded;
+    hasParked = true;
+}
+
+void FilterPanel::dropParkedResults()
+{
+    parkedPathList.clear();
+    parkedTotal = 0;
+    parkedLoaded = false;
+    hasParked = false;
+}
+
 void FilterPanel::applyScope()
 {
     /*  TIMED UNCONDITIONALLY -- once per scope switch is one line, and this is inside
@@ -99,7 +115,18 @@ void FilterPanel::applyScope()
             names the catalog rows loaded last time, so the "did the result change" guard
             would compare equal and load nothing at all -- a Catalog scope showing one
             folder. The guard is for a re-run of the same query, not for a scope entry. */
-        runSearch(true);
+        /*  EXCEPT WHEN THE MODEL IS BEING HANDED BACK THE SET results DESCRIBED: a parked
+            Library (see parkResults). Then the comparison is exactly the right question --
+            what changed in the index while it was parked -- so the run is unforced. */
+        if (resumeParked && hasParked) {
+            resultPathList = parkedPathList;
+            resultLoaded = parkedLoaded;
+            totalMatches = parkedTotal;
+            dropParkedResults();
+            runSearch(false);
+        }
+        else runSearch(true);
+        resumeParked = false;
     }
     else {
         filters->showAllCategories();
