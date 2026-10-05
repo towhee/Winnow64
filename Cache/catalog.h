@@ -307,6 +307,17 @@ public:
     void trackChangedPaths(bool on);
     QSet<QString> takeChangedPaths(bool *overflow = nullptr);
 
+    /* THE CHANGE SEQUENCE (schema 20), for the library snapshot. changeSeq is the counter
+       commit/commitUnreadable stamp each written row with (-1: no index). catalogId is
+       this index's identity, created on first use and replaced by clear(). The rows
+       whose values changed after seq, at most limit of them -- overflow (and an empty
+       list) when there are more, or the index cannot answer. */
+    qint64 changeSeq();
+    QString catalogId();
+    QStringList pathsChangedSince(qint64 seq, int limit, bool *overflow = nullptr);
+    /* The index's row for each path, unconditionally (fetchFresh without the stamps). */
+    QHash<QString, CatalogRow> rowsForPaths(const QStringList &paths);
+
     /* Of these paths, which are absent from the catalog or have changed since they were
        indexed. The scanner asks this before parsing anything. */
     QSet<QString> staleOf(const QList<CatalogRow> &candidates);
@@ -670,6 +681,11 @@ private:
 
     /* See trackChangedPaths. Under mutex, like everything above. */
     void noteChangedLocked(const QString &path);
+    qint64 changeSeqLocked(QSqlDatabase &db);
+    QString metaLocked(QSqlDatabase &db, const QString &key);
+    void setMetaLocked(QSqlDatabase &db, const QString &key, const QString &value);
+    QHash<QString, CatalogRow> fetchRows(const QList<CatalogRow> &candidates,
+                                         bool requireFresh);
     bool trackingChanges = false;
     bool changedOverflow = false;
     QSet<QString> changedPaths;

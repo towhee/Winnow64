@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 19;
+constexpr int kSchemaVersion = 20;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1572,6 +1572,37 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("UPDATE image SET srcmtime = 0 WHERE gpscoord <> ''"
                     " AND lower(ext) IN ('jpg', 'jpeg', 'jpe', 'png')")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 20) {
+    /*
+        THE CHANGE SEQUENCE, for the library snapshot (DataModel::saveLibrarySnapshot).
+        ADDITIVE: a column and a key/value table.
+
+        image.change_seq is stamped by Catalog::commit and commitUnreadable -- the only
+        writers of a row's VALUES -- with a counter kept in catalog_meta and advanced once
+        per transaction that writes anything. A snapshot records the counter its rows were
+        read at; at the next start, "WHERE change_seq > that" is exactly the rows whose
+        values the snapshot no longer matches. Existing rows start at 0, older than any
+        snapshot can be. catalog_meta also holds catalog_id, a random identity written on
+        first use and replaced by Catalog::clear, so a snapshot cannot be applied to a
+        different or emptied index whose counter happens to be larger.
+    */
+        /*  RE-RUNNABLE, like every block from 16 on: the migration tests rewind
+            user_version on a current file and migrate again, and SQLite has no
+            ADD COLUMN IF NOT EXISTS. */
+        bool hasSeq = false;
+        if (q.exec("PRAGMA table_info(image)"))
+            while (q.next()) if (q.value(1).toString() == "change_seq") hasSeq = true;
+        if ((!hasSeq && !q.exec("ALTER TABLE image ADD COLUMN change_seq INTEGER"
+                                " NOT NULL DEFAULT 0"))
+            || !q.exec("CREATE INDEX IF NOT EXISTS image_change_seq ON image(change_seq)")
+            || !q.exec("CREATE TABLE IF NOT EXISTS catalog_meta ("
+                       "  key   TEXT PRIMARY KEY,"
+                       "  value TEXT NOT NULL)")) {
             db.rollback();
             return false;
         }

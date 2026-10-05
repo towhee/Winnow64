@@ -69,6 +69,15 @@ struct ScopeRequest
        directory listing IS the truth; false for a search result, which is a list of
        files from many folders with no directory to enumerate. */
     bool reconcile = true;
+
+    /*  THE ROWS CAME FROM THE INDEX (addCatalogRows), so every row is already MetaLoaded
+        and nothing needs committing. Said explicitly by a scope restored from the library
+        snapshot, which has no rows vector to say it with; isHydrated() is the one test. */
+    bool hydrated = false;
+    bool isHydrated() const
+    {
+        return scope == G::Scope::Catalog && (hydrated || !rows.isEmpty());
+    }
 };
 
 class SortFilter : public QSortFilterProxyModel
@@ -363,6 +372,27 @@ public:
     void dropParkedScope();
     bool hasParkedScope() const { return parked != nullptr; }
     int parkedRowCount() const { return parked ? parked->rows.size() : 0; }
+
+    /*  THE LIBRARY SNAPSHOT (Datamodel/librarysnapshot.cpp): a parked Library on disk, so
+        the first Library of a session -- the start-up one included -- is restored rather
+        than queried and filled. saveLibrarySnapshot writes the parked set if there is
+        one, else the loaded model (the caller has checked it is a settled Library).
+        readLibrarySnapshot is thread-safe and touches no model: it returns a ParkedScope
+        for adoptParkedScope, or null with why, and checks the format, the build that
+        wrote it and the index identity -- the change sequence is the caller's. */
+    struct LibrarySnapshotMeta {
+        qint64 baseSeq = -1;            // Catalog::changeSeq the rows were read at
+        QString catalogId;              // Catalog::catalogId of that index
+        QStringList resultPaths;        // FilterPanel's result, for its delta re-run
+        int totalMatches = 0;
+        QString currentKey;
+    };
+    bool saveLibrarySnapshot(const QString &file, const LibrarySnapshotMeta &meta,
+                             QString *why = nullptr);
+    static std::unique_ptr<ParkedScope> readLibrarySnapshot(const QString &file,
+                                                            LibrarySnapshotMeta &meta,
+                                                            QString *why = nullptr);
+    void adoptParkedScope(std::unique_ptr<ParkedScope> p) { parked = std::move(p); }
     /*  src names the caller for the ingest probe's instance-bump tally: a bump
         invalidates every in-flight decode and reader task, so during a cull it matters
         which action is spending them. Diagnostic only. */

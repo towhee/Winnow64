@@ -712,6 +712,12 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
 
     /*  WINNOW_SELFTEST_PARK=1: Library -> Folders -> Library once the folder has been
         catalogued, asserting the second Library is the parked one (Main/selftestpark.cpp). */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_SNAPSHOT") == 1) {
+        QTimer::singleShot(settleMs / 4, this, [this, loadPath]() {
+            QThreadPool::globalInstance()->waitForDone(30000);   // let the capture land
+            selfTestLibrarySnapshot(loadPath);
+        });
+    }
     if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_PARK") == 1) {
         QTimer::singleShot(settleMs / 4, this, [this, loadPath]() {
             QThreadPool::globalInstance()->waitForDone(30000);   // let the capture land
@@ -1518,6 +1524,7 @@ void MW::closeEvent(QCloseEvent *event)
         next start opens (see restoreLibraryState). */
     saveLibraryState();
     saveFoldersState();
+    saveLibrarySnapshot();          // the next session's first Library is a restore
     lastScopeWasLibrary = G::scope == G::Scope::Catalog;
 
     setCentralMessage("Closing Winnow ...");
@@ -5530,6 +5537,11 @@ void MW::runCatalogLoadTest(const QString &pathFilter)
                     });
                     return;
                 }
+                /*  WINNOW_CATALOGLOAD_SAVESNAPSHOT=1: write the library snapshot as quit
+                    would (this harness exits without closeEvent), so the next
+                    --catalogload with _STARTUP=1 measures the restore. */
+                if (qEnvironmentVariableIntValue("WINNOW_CATALOGLOAD_SAVESNAPSHOT") == 1)
+                    saveLibrarySnapshot();
                 std::_Exit(0);
             }
         });
@@ -6398,6 +6410,7 @@ bool MW::reset(QString src)
     // datamodel
     dm->selectionModel->clear();
     dm->currentSfRow = 0;
+    ++modelResetGen;
     /*  THE PARKED LIBRARY: a settled Library replaced by a folder load is moved aside,
         not cleared (MW::setScope decided, on the way out). clearDataModel below then
         clears an empty model. Index writes are recorded from here so the return can
@@ -7135,8 +7148,13 @@ void MW::folderChanged(bool aborted)
 
     // if there was a folder and file change
     if (folderAndFileChangePath != "") {
-        dm->setCurrent(folderAndFileChangePath, instance);
-        startRow = dm->rowFromKey(folderAndFileChangePath);
+        /*  dm->instance, not MW::instance: that member is never assigned, so this call
+            always failed DataModel::setCurrent's instance check and the image asked for
+            was never made current. And a PROXY row: setIconRange and MetaRead's start
+            row are both proxy rows, and a dm row named a different image whenever the
+            sort was not the datamodel's own order (a restored Library). */
+        dm->setCurrent(folderAndFileChangePath, dm->instance);
+        startRow = qMax(0, dm->currentSfRow);
         qDebug() << fun
                  << "startRow =" << startRow
                  << "folderAndFileChangePath =" << folderAndFileChangePath;
@@ -7252,8 +7270,7 @@ void MW::folderChanged(bool aborted)
         false whenever the scroll-in verifier clears a stale row. It is the same hydrated
         test MW::folderChangeCompleted uses to decide there is nothing to commit and that
         ScrollVerify uses to decide the scope is its responsibility. */
-    const bool hydrated = dm->scopeRequest().scope == G::Scope::Catalog
-                          && !dm->scopeRequest().rows.isEmpty();
+    const bool hydrated = dm->scopeRequest().isHydrated();
     if (hydrated && !aborted && dm->rowCount() > 0) {
         /*  THE ICONS THE INDEX CAN ALREADY ANSWER FOR, in bulk and without a stat, rather
             than one Reader round trip at a time. The readers started just above keep
@@ -7645,8 +7662,7 @@ void MW::metadataComplete(QString src)
         never have seen them. So may a catalog scope whose rows fell through to a file
         read -- but those are the stale ones, which the verification pass will commit when
         it re-reads them, not this. */
-    const bool nothingToCommit = dm->scopeRequest().scope == G::Scope::Catalog
-                                 && !dm->scopeRequest().rows.isEmpty();
+    const bool nothingToCommit = dm->scopeRequest().isHydrated();
 
     QMetaObject::invokeMethod(this, [this, reconcile, nothingToCommit]{
         if (nothingToCommit) {
@@ -7931,8 +7947,7 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
         before the filters read it -- is already true on this path, and by a stronger
         route: the fill is complete and setAllMetadataAttempted(true) has run before
         folderChange is emitted at all (DataModel::finishCatalogFill). */
-    const bool hydrated = dm->scopeRequest().scope == G::Scope::Catalog
-                          && !dm->scopeRequest().rows.isEmpty();
+    const bool hydrated = dm->scopeRequest().isHydrated();
 
     // wait for the reader-event queue to drain so the datamodel is fully updated
     if (!hydrated && dm->queuedReaderEvents.load(std::memory_order_relaxed) > 0) {

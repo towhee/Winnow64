@@ -59,6 +59,8 @@
     preference, and it comes out with them.
 */
 
+class QDataStream;
+
 class Interner
 {
 public:
@@ -78,6 +80,15 @@ public:
     }
     void clear() { mIds.clear(); mValues.clear(); }
     int distinctCount() const { return mValues.size(); }
+    // the library snapshot (RowStore::save / load): the values ARE the interner
+    const QVector<QString> &values() const { return mValues; }
+    void assign(const QVector<QString> &values)
+    {
+        mValues = values;
+        mIds.clear();
+        mIds.reserve(mValues.size());
+        for (int i = 0; i < mValues.size(); ++i) mIds.insert(mValues.at(i), i);
+    }
 
     /*  Approximate resident bytes. See ImageRow::approxBytes for why "approximate" is
         the honest word and what the number is for.
@@ -273,6 +284,14 @@ public:
         forward -- and every one of them moves on both sides, field generations
         included: the rows a cached answer described are no longer the rows here, and
         no setData will happen to say so. */
+    /*  THE LIBRARY SNAPSHOT (DataModel::saveLibrarySnapshot): the whole store to a stream
+        and back. load REPLACES the contents and brings every row back as a fresh catalog
+        fill would leave it as far as icons go -- not loaded, no icon geometry -- since
+        the icons are not in the snapshot; it returns false, leaving the store empty, on
+        a stream written by a different row layout. Defined in imagerow.cpp, beside the
+        one field list both directions use. */
+    void save(QDataStream &out) const;
+    bool load(QDataStream &in);
     void swapContents(RowStore &o)
     {
         if (&o == this) return;

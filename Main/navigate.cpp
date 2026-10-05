@@ -301,8 +301,7 @@ void MW::resyncIconLoaderAfterReorder(const QString &src)
             G::log("MW::resyncIconLoaderAfterReorder", src);
         updateIconRange(src + " reorder");
         if (G::iconChunkLoaded) return;
-        const bool hydrated = dm->scopeRequest().scope == G::Scope::Catalog
-                              && !dm->scopeRequest().rows.isEmpty();
+        const bool hydrated = dm->scopeRequest().isHydrated();
         if (hydrated) prefetchIconsFromIndex(src + " reorder");
         reloadIconChunk();          // flushProxySnapshot + queued MetaRead::setStartRow
     });

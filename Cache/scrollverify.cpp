@@ -59,8 +59,7 @@ bool ScrollVerify::scopeIsHydrated() const
 */
     if (dm == nullptr) return false;
     if (G::useIndexMetadata) return true;
-    const ScopeRequest &req = dm->scopeRequest();
-    return req.scope == G::Scope::Catalog && !req.rows.isEmpty();
+    return dm->scopeRequest().isHydrated();
 }
 
 QString ScrollVerify::pathToVerify(int sfRow, qint64 now, qint64 expiry) const

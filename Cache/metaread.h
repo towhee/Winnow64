@@ -85,8 +85,12 @@ signals:
     void okToSelect(bool ok);
     /*  The proxy ROW to select, not a QModelIndex: this is delivered queued, and
         an index is only valid in the thread and the moment that built it. The
-        connect site builds a fresh one on the GUI thread. */
-    void selectRow(int sfRow, bool clearSelection);
+        connect site builds a fresh one on the GUI thread.
+        AND THE DATAMODEL ROW (-1 if unknown), which the connect site prefers: sfRow
+        comes from this thread's proxy snapshot, and a sort on the GUI thread before
+        the signal lands (a restored Library's, at load end) made it name another
+        image. The dm row names the image; the GUI maps it through the live proxy. */
+    void selectRow(int sfRow, int dmRow, bool clearSelection);
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total, QColor);
     // void updateProgressInStatusbar(int progress, int total, QColor darkRed);

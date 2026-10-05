@@ -87,6 +87,7 @@ private slots:
     void migrationCollapsesDoubledPathSeparators();
     void unreadableFileIsCataloguedAsAStubAndClearsWhenItParses();
     void changeTrackingRecordsOnlyRealWrites();
+    void changeSequenceStampsWrittenRows();
     void categoryItemsMatchWhatTheDatamodelWrites();
     void categoryItemsAreEmptyForColumnsTheIndexCannotAnswer();
     void genericIncludeAndExcludeNarrowTheSearch();
@@ -242,8 +243,9 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         develop_history, the History dock's steps; version 19 added NO table -- the
         sixth data repair: JPEG/PNG GPS was decoded from a fixed base of 12 instead of
         the Exif start, so it clears the freshness stamp of every JPEG/PNG row holding
-        a coordinate and the next scan re-reads it. */
-    QCOMPARE(CacheDb::schemaVersion(), 19);
+        a coordinate and the next scan re-reads it; version 20 added image.change_seq and
+        catalog_meta, the change sequence the library snapshot is checked against. */
+    QCOMPARE(CacheDb::schemaVersion(), 20);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1950,6 +1952,56 @@ void tst_catalog::changeTrackingRecordsOnlyRealWrites()
     cat.trackChangedPaths(false);
     QCOMPARE(cat.commit({a}), 1);
     QVERIFY(cat.takeChangedPaths().isEmpty());      // not tracking: nothing recorded
+}
+
+void tst_catalog::changeSequenceStampsWrittenRows()
+{
+/*
+    THE LIBRARY SNAPSHOT'S QUESTION (schema 20): which rows did the index rewrite after
+    the snapshot's sequence? Once per writing transaction, never for a skipped row, and
+    "too many" said rather than truncated. The identity must survive reads and change
+    when the index is emptied.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString id = cat.catalogId();
+    QVERIFY(!id.isEmpty());
+    QCOMPARE(cat.catalogId(), id);
+
+    const qint64 s0 = cat.changeSeq();
+    QVERIFY(s0 >= 0);
+    const CatalogRow a = rowFor("seq-a.jpg");
+    const CatalogRow b = rowFor("seq-b.jpg");
+    QCOMPARE(cat.commit({a, b}), 2);
+    const qint64 s1 = cat.changeSeq();
+    QCOMPARE(s1, s0 + 1);                               // one transaction, one step
+    QStringList changed = cat.pathsChangedSince(s0, 100);
+    changed.sort();
+    QCOMPARE(changed, QStringList({a.path, b.path}));
+
+    QCOMPARE(cat.commit({a}), 0);                       // unchanged: skipped
+    QCOMPARE(cat.changeSeq(), s1);
+    QVERIFY(cat.pathsChangedSince(s1, 100).isEmpty());
+
+    CatalogRow a2 = a;
+    a2.srcMtime += 1;
+    QCOMPARE(cat.commit({a2}), 1);
+    QCOMPARE(cat.pathsChangedSince(s1, 100), QStringList{a.path});
+
+    bool overflow = false;
+    QVERIFY(cat.pathsChangedSince(s0, 1, &overflow).isEmpty());
+    QVERIFY(overflow);
+
+    CatalogRow stub = rowFor("seq-stub.nef");
+    const qint64 s2 = cat.changeSeq();
+    QCOMPARE(cat.commitUnreadable({stub}), 1);
+    QCOMPARE(cat.pathsChangedSince(s2, 100), QStringList{stub.path});
+
+    const QHash<QString, CatalogRow> rows = cat.rowsForPaths({b.path, "/nowhere.jpg"});
+    QCOMPARE(rows.size(), 1);
+    QCOMPARE(rows.value(b.path).path, b.path);
+
+    cat.clear();
+    QVERIFY(cat.catalogId() != id);
 }
 
 void tst_catalog::migrationCollapsesDoubledPathSeparators()

@@ -1466,7 +1466,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
         // Selection::setCurrentIndex routes through MW::updateChange which
         // in turn invokes MW::fileSelectionChange, so do not emit
         // fileSelectionChange here as well.
-        emit selectRow(sfRow, clearSelection);
+        emit selectRow(sfRow, dmRow, clearSelection);
     }
 
     if (isDebug)  // returning reader, row has been processed by reader
@@ -2076,6 +2076,7 @@ void MetaRead::allFinished(QString src)
     if (firstSelectionPending && instance == dm->instance) {
         firstSelectionPending = false;
         int sfRow = startRow;
+        const int selDmRow = pendingSelectionDmRow;
         if (pendingSelectionDmRow >= 0) {
             auto snap = dm->proxySnapshot();
             const int at = snap ? snap->sfRowFromDmRow(pendingSelectionDmRow) : -1;
@@ -2086,7 +2087,7 @@ void MetaRead::allFinished(QString src)
             if (G::isLogger || G::isFlowLogger)
                 G::log(fun, "No reader triggered the first selection; selecting row " +
                             QString::number(sfRow));
-            emit selectRow(sfRow, true);
+            emit selectRow(sfRow, selDmRow, true);
         }
     }
 
