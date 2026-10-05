@@ -20,7 +20,7 @@
 
 #include "Develop/huesatmap.h"
 #include "Develop/cameraprofile.h"
-#include "Develop/profiletone.h"
+#include "Develop/cameracurve.h"
 
 class TstHueSatMap : public QObject
 {
@@ -37,10 +37,11 @@ private slots:
     void srgbEncodedTableRoundTrips();
     void srgbTransferTableMatchesTheExactCurve();
     void neutralSurvivesARealProfile();
-    void toneCurveIdentityIsIdentity();
-    void toneCurveHoldsHueAndSaturation();
-    void toneCurveExtendsAboveWhiteInsteadOfClamping();
+    void toneCurveFollowsTheCameraBelowTheKnee();
+    void toneCurveHoldsHue();
+    void toneCurveRollsOffAboveWhite();
     void toneCurveRejectsUnusableData();
+    void cameraContrastPicksTheMaker();
     void lookStripsCleanlyFromTheCharacterisation();
 
 private:
@@ -358,97 +359,102 @@ void TstHueSatMap::srgbTransferTableMatchesTheExactCurve()
    characterisation
    ------------------------------------------------------------------------------------ */
 
-void TstHueSatMap::toneCurveIdentityIsIdentity()
+/*
+    Below the knee a camera curve applies EXACTLY as written: that is where the camera's
+    contrast lives, and the roll-off must not touch it.
+*/
+void TstHueSatMap::toneCurveFollowsTheCameraBelowTheKnee()
 {
-    ProfileTone::Lut l;
-    QVERIFY(ProfileTone::Build({0.0f, 0.0f, 1.0f, 1.0f}, l));
-    for (float v : {0.0f, 0.05f, 0.18f, 0.5f, 0.9f, 1.0f})
-        QVERIFY2(qAbs(l.eval(v) - v) < 1e-5f,
-                 qPrintable(QString("diagonal moved %1 to %2").arg(double(v)).arg(double(l.eval(v)))));
-    QVERIFY(qAbs(l.endSlope - 1.0f) < 1e-3f);
+    CameraCurve::Curve c;
+    QVERIFY(CameraCurve::BuildFromPairs({0.0f, 0.0f, 0.18f, 0.45f, 0.5f, 0.85f,
+                                         1.0f, 1.0f}, 1.0f, c));
+    for (float x : {0.02f, 0.1f, 0.18f, 0.25f}) {
+        const float want = c.shape.camera(x);
+        QVERIFY2(qAbs(c.eval(x) - want) < 2e-3f,
+                 qPrintable(QString("x %1: %2 vs camera %3").arg(double(x))
+                                .arg(double(c.eval(x))).arg(double(want))));
+    }
+    QVERIFY(qAbs(c.shape.yk - CameraCurve::kKneeY) < 2e-3f);
 }
 
 /*
-    A curve run independently on R, G and B pulls colour toward the primaries as it
-    steepens -- the familiar per-channel-curve hue shift, and a real defect in a control
-    whose whole job is tone. Winnow applies it to the VALUE and scales the triple, so hue
-    and saturation come through untouched.
+    The DNG SDK's RGBTone holds hue: the middle channel keeps its relative position
+    between the outer two, whatever the curve does to them.
 */
-void TstHueSatMap::toneCurveHoldsHueAndSaturation()
+void TstHueSatMap::toneCurveHoldsHue()
 {
-    /* A pronounced S-curve: darkens the low end, lifts the high end. */
-    ProfileTone::Lut l;
-    QVERIFY(ProfileTone::Build({0.0f, 0.0f, 0.25f, 0.15f, 0.5f, 0.5f,
-                                0.75f, 0.87f, 1.0f, 1.0f}, l));
-
+    const CameraCurve::Curve &c = CameraCurve::Generic();
     const float probes[][3] = {{0.60f, 0.22f, 0.18f}, {0.20f, 0.55f, 0.30f},
-                               {0.15f, 0.30f, 0.80f}, {0.40f, 0.40f, 0.40f}};
+                               {0.15f, 0.30f, 0.80f}, {3.0f, 1.2f, 0.6f}};
     for (const auto &probe : probes) {
         float r = probe[0], g = probe[1], b = probe[2];
         float h0, s0, v0;
         HueSatMap::ToHsv(r, g, b, h0, s0, v0);
-
-        ProfileTone::ApplyToValue(l, r, g, b);
-
+        CameraCurve::ApplyRGBTone(c, r, g, b);
         float h1, s1, v1;
         HueSatMap::ToHsv(r, g, b, h1, s1, v1);
         QVERIFY2(qAbs(h1 - h0) < 1e-3f,
                  qPrintable(QString("hue moved %1 -> %2").arg(double(h0)).arg(double(h1))));
-        QVERIFY2(qAbs(s1 - s0) < 1e-4f,
-                 qPrintable(QString("saturation moved %1 -> %2").arg(double(s0)).arg(double(s1))));
-        QVERIFY2(qAbs(v1 - l.eval(v0)) < 1e-4f, "value did not follow the curve");
     }
-
-    /* ...and it really is a curve, not a no-op. */
-    QVERIFY(l.eval(0.25f) < 0.20f);
-    QVERIFY(l.eval(0.75f) > 0.80f);
+    /* A grey stays grey. */
+    float r = 0.3f, g = 0.3f, b = 0.3f;
+    CameraCurve::ApplyRGBTone(c, r, g, b);
+    QVERIFY(r == g && g == b);
 }
 
 /*
-    ABOVE WHITE THE CURVE CONTINUES, it does not stop. A ProfileToneCurve is defined over
-    0..1 because DNG describes a display-referred pipeline; Winnow's data is scene-referred
-    and carries the headroom the view transform exists to roll off. Clamping at the top
-    would flatten every specular highlight the moment a look was switched on -- and it
-    would read as a property of the profile rather than as a bug.
+    ABOVE THE KNEE THE CURVE ROLLS OFF AND NEVER REACHES WHITE -- the whole reason these
+    curves exist. A camera curve is at white by sensor white, so +3 EV turned faces into a
+    flat white patch; here the curve keeps rising through six stops over white, so pushed
+    highlights keep their separation, the behaviour Standard roll-off has.
 */
-void TstHueSatMap::toneCurveExtendsAboveWhiteInsteadOfClamping()
+void TstHueSatMap::toneCurveRollsOffAboveWhite()
 {
-    ProfileTone::Lut l;
-    QVERIFY(ProfileTone::Build({0.0f, 0.0f, 0.5f, 0.42f, 1.0f, 1.0f}, l));
-
-    const float atWhite = l.eval(1.0f);
-    QVERIFY(qAbs(atWhite - 1.0f) < 1e-4f);
-
-    /* Strictly increasing well past white, and by the slope the curve ended with. */
-    float prev = atWhite;
-    for (float v : {1.5f, 2.0f, 4.0f, 8.0f}) {
-        const float y = l.eval(v);
-        QVERIFY2(y > prev, qPrintable(QString("curve stopped rising at %1").arg(double(v))));
-        QVERIFY2(qAbs(y - (atWhite + (v - 1.0f) * l.endSlope)) < 1e-3f,
-                 "the extension is not the end slope");
-        prev = y;
+    for (const CameraCurve::Curve *c : {&CameraCurve::Generic(),
+                                        &CameraCurve::ForCameraModel("Nikon D7200")}) {
+        float prev = c->eval(0.5f);
+        for (float x : {1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f}) {
+            const float y = c->eval(x);
+            QVERIFY2(y > prev, qPrintable(QString("stopped rising at %1").arg(double(x))));
+            QVERIFY2(y < 1.0f, qPrintable(QString("reached white at %1").arg(double(x))));
+            prev = y;
+        }
+        /* Sensor white sits below white, with room for a push above it. */
+        QVERIFY(c->eval(1.0f) < 0.97f);
+        /* Continuous at the knee: no step where the camera hands over. */
+        const float uk = c->shape.uk / c->shape.gain;
+        QVERIFY(qAbs(c->shape.eval(uk * 1.001f) - c->shape.eval(uk * 0.999f)) < 2e-3f);
     }
-
-    /* And a pixel 2.5 stops over white keeps its headroom through the whole apply. */
-    float r = 6.0f, g = 5.0f, b = 4.0f;
-    ProfileTone::ApplyToValue(l, r, g, b);
-    QVERIFY2(r > 4.0f, qPrintable(QString("over-white red collapsed to %1").arg(double(r))));
 }
 
 void TstHueSatMap::toneCurveRejectsUnusableData()
 {
-    ProfileTone::Lut l;
-    QVERIFY(!ProfileTone::Build({}, l));                            // absent
-    QVERIFY(!ProfileTone::Build({0.0f, 0.0f}, l));                  // one point
-    QVERIFY(!ProfileTone::Build({0.0f, 0.0f, 1.0f}, l));            // odd count
-    QVERIFY(!ProfileTone::Build({0.0f, 0.0f, 0.7f, 0.5f, 0.3f, 0.9f}, l));   // x goes back
+    CameraCurve::Curve c;
+    QVERIFY(!CameraCurve::BuildFromPairs({}, 1.0f, c));                     // absent
+    QVERIFY(!CameraCurve::BuildFromPairs({0.0f, 0.0f}, 1.0f, c));           // one point
+    QVERIFY(!CameraCurve::BuildFromPairs({0.0f, 0.0f, 1.0f}, 1.0f, c));     // odd count
+    /* x goes back */
+    QVERIFY(!CameraCurve::BuildFromPairs({0.0f, 0.0f, 0.7f, 0.5f, 0.3f, 0.9f}, 1.0f, c));
+    /* A rejected curve is empty, so the render has no profile curve rather than a
+       broken one (EffectiveView then falls back to Standard roll-off). */
+    QVERIFY(c.isEmpty());
+}
 
-    /* A rejected curve must leave the Lut empty and inert, not half-built: the render
-       applies no curve rather than a broken one. */
-    QVERIFY(l.isEmpty());
-    float r = 0.4f, g = 0.3f, b = 0.2f;
-    ProfileTone::ApplyToValue(l, r, g, b);
-    QVERIFY(qAbs(r - 0.4f) < 1e-6f && qAbs(g - 0.3f) < 1e-6f && qAbs(b - 0.2f) < 1e-6f);
+/* The maker word leads the canonical camera model; Adobe's "OM" spelling is Olympus, and
+   anything unlisted gets the generic curve. */
+void TstHueSatMap::cameraContrastPicksTheMaker()
+{
+    const CameraCurve::Curve &nikon = CameraCurve::ForCameraModel("Nikon D7200");
+    const CameraCurve::Curve &canon = CameraCurve::ForCameraModel("canon EOS R5");
+    QVERIFY(&nikon != &CameraCurve::Generic());
+    QVERIFY(&canon != &CameraCurve::Generic());
+    QVERIFY(&nikon != &canon);
+    QCOMPARE(&CameraCurve::ForCameraModel("OM Digital Solutions OM-1"),
+             &CameraCurve::ForCameraModel("Olympus E-M1"));
+    QCOMPARE(&CameraCurve::ForCameraModel("Fujifilm X-T4"), &CameraCurve::Generic());
+    QCOMPARE(&CameraCurve::ForCameraModel(QString()), &CameraCurve::Generic());
+    /* Canon's Standard is measurably flatter in the midtones than Nikon's. */
+    QVERIFY(canon.eval(0.18f) < nikon.eval(0.18f));
 }
 
 /*

@@ -154,12 +154,13 @@ struct EditParams {
        of the world renders, and None remains one click away for anyone who wants the
        linear data.
 
-       WHY A PROFILE DOES NOT MAKE THIS REDUNDANT. A ProfileToneCurve would own the tone
-       mapping and suppress this (see DevelopProperties::profileSuppliesToneMapping and
-       OutputTransform::EffectiveView), but almost nothing carries one: every Adobe
-       Standard profile sampled on this machine has a HueSatMap and a LookTable and NO
-       tone curve, as does Winnow Standard. Lightroom supplies its own baseline curve in
-       exactly that case. This is Winnow's.
+       A PROFILE'S TONE CURVE IS ONE OF THESE CHOICES, not an override. The Camera *
+       profiles carry a ProfileToneCurve; it applies only when this is ProfileCurve, and
+       otherwise the profile contributes its colour (matrices, HueSatMap, LookTable) under
+       whichever tone mapping is chosen. Adobe Standard and Winnow Standard carry no
+       curve -- Lightroom supplies its own baseline curve in exactly that case, and
+       Standard roll-off is Winnow's. CameraContrast is the camera-style middle ground: a
+       per-maker curve with Winnow's roll-off (Develop/cameracurve.h).
 
        A JPEG IS UNAFFECTED whatever this says: OutputTransform forces None when
        img.sceneReferred is false, since a display-referred file already carries its

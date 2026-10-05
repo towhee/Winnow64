@@ -3,7 +3,7 @@
 
 #include "Develop/colorspace.h"
 #include "Develop/huesatmap.h"
-#include "Develop/profiletone.h"
+#include "Develop/cameracurve.h"
 #include "ImageFormats/Dcp/dcp.h"
 
 /* Declared, not included: CameraColor lives in Develop/workingimage.h, which already
@@ -126,7 +126,10 @@ struct Tables {
        reuses that code exactly -- but a different thing at a different point in the stage.
        Absent on a profile that carries none, including the synthesised "Camera Base". */
     HueSatMap::Table lookTable;
-    ProfileTone::Lut toneCurve;
+    /* THE LOOK'S TONE CURVE, with Winnow's roll-off above its knee (Develop/
+       cameracurve.h). Empty when the profile carries none. Used only when the user picks
+       the "Profile curve" tone mapping; see Develop/outputlook.h. */
+    CameraCurve::Curve toneCurve;
     /* 2^BaselineExposureOffset -- the exposure the LOOK assumes it is applied at. 1.0 on
        a profile with no look. 224 of 436 sampled profiles carry a non-zero offset, so
        omitting it would render most looks at the wrong brightness. */

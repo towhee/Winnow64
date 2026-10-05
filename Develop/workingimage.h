@@ -11,6 +11,8 @@
    is happy with an incomplete type -- its deleter is type-erased where the profile is
    actually built (CameraProfileStore). */
 namespace Dcp { struct Profile; }
+/* Likewise the profile's look, built by Develop and applied by OutputTransform. */
+struct OutputLook;
 
 /*
     The shared, high-precision representation that both decode paths converge on and the
@@ -107,20 +109,16 @@ struct WorkingImage {
     ColorSpaceMath::ColorSpace space = ColorSpaceMath::ColorSpace::LinearSRGB;
 
     /*
-        TRUE ONCE A CAMERA PROFILE'S TONE CURVE HAS BEEN APPLIED to these pixels.
+        THE PROFILE'S LOOK, still to be applied: its LookTable, BaselineExposureOffset and
+        ProfileToneCurve (Develop/outputlook.h). Null when no profile is selected or the
+        profile carries none of the three.
 
-        A ProfileToneCurve is not a contrast tweak, it is a whole scene-linear -> display
-        mapping: a real one takes 0.18 to 0.478 with an end slope of 0.03, and 211 of 217
-        measured lift mid grey by more than 1.5x. So it does the same job as the view
-        transform, and running both compresses the highlights twice -- measured, a full
-        stop above white collapsed to nothing (1.0 and 2.0 both rendering 242).
-
-        OutputTransform::EffectiveView reads this and forces the view transform to None,
-        which is the SAME rule it already applies to display-referred input: a view
-        transform tone-maps, so data that already carries a tone curve does not get a
-        second one. One rule, one place.
+        Attached by Develop::ApplyProfileTables on the base pass and applied by
+        OutputTransform, AFTER every edit -- the DNG SDK's order, where the look follows
+        exposure. Survives Develop::Apply's end-of-pass profile reset deliberately: the
+        profile's CHARACTERISATION is spent at stage 0, its look is not.
     */
-    bool profileToneMapped = false;
+    std::shared_ptr<const OutputLook> look;
 
     /* True for sensor data (RAW): scene-referred linear with highlight headroom (values
        may exceed white), so the output stage applies a view transform (tone mapping) to
@@ -232,7 +230,7 @@ inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)
     dst.white         = src.white;
     dst.space         = src.space;
     dst.sceneReferred = src.sceneReferred;
-    dst.profileToneMapped = src.profileToneMapped;
+    dst.look          = src.look;
     dst.renderScale   = src.renderScale;
 }
 

@@ -1,7 +1,8 @@
 #include "Develop/develop.h"
 #include "Develop/cameraprofile.h"
 #include "Develop/huesatmap.h"
-#include "Develop/profiletone.h"
+#include "Develop/outputlook.h"
+#include "Develop/baselineexposure.h"
 #include "Develop/colorspace.h"
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
@@ -127,7 +128,7 @@ constexpr float kToneLutMaxN      = 8.0f;   // build the curve over linear n in 
         Blacks +    band lift           opens the shadows; nothing to clip against
         Whites +    white point lower   brightens; clips at white
         Whites -    band pull           recovers; nothing to clip against
-        Shadows +/- band
+        Shadows +/- gain        multiplies display-linear light (refit 2026-10-05)
         Highlights +/- band
 
     Modelling all four as one kind of operator is what the first attempt did -- all four as
@@ -148,12 +149,41 @@ struct ToneOp {
 };
 
 /* Bands. */
-constexpr ToneOp kShadowsUp   = {0.14f, 1.3f, 0.00f, 0.02f, 0.70f};
-constexpr ToneOp kShadowsDown = {0.08f, 1.0f, 0.00f, 0.10f, 0.75f};
 constexpr ToneOp kBlacksUp    = {0.12f, 1.3f, 0.00f, 0.10f, 1.00f};
 constexpr ToneOp kHighsUp     = {0.20f, 0.8f, 0.10f, 0.78f, 1.00f};
 constexpr ToneOp kHighsDown   = {0.22f, 1.0f, 0.10f, 0.90f, 1.00f};
 constexpr ToneOp kWhitesDown  = {0.10f, 0.9f, 0.15f, 0.94f, 1.00f};
+
+/*
+    SHADOWS IS A GAIN, NOT A BAND (refit 2026-10-05 against Lightroom Classic exports of
+    one ILCE-1 raw at Shadows -100/-50/0/+50/+100, 16-bit sRGB).
+
+    The band above it replaced was an additive display-space lift peaking at level 5, and
+    adding a constant to the deepest tones is a black-point raise: at +100 the darkest 1%
+    rose from level 5 to 35 while the contrast between dark tones FELL. Lightroom does the
+    opposite. Per pixel, its change is a gain on display-linear light (sRGB-decoded), the
+    same in stops for -100 as for +100 mirrored, and linear in the slider (+-50 is half of
+    +-100 in stops). Black stays black because 0 times any gain is 0, and detail inside
+    shadow regions GROWS, by 43% at +100, because the tones in them are scaled apart rather
+    than shifted together.
+
+    The gain is 2^(amount * kShadowGainStops * w(d0)), where w is 1 at black, decays
+    quickly (kShadowGainDecay, an e-folding length on the display axis) and keeps a slow
+    tail (kShadowGainTail of the full weight) that smoothsteps out at kShadowGainEnd.
+    Lightroom's measured gain at +100: +2.6 stops at level 2, +1.2 at 18, +0.5 at 42,
+    +0.15 at 74, +0.04 at 146, 0 by ~190. The fit is 0.31 levels of 255 RMS across all four
+    settings, worst point 1.35; the band it replaced was 3.9-14.3 RMS, worst 23.
+
+    WHAT IT IS NOT: a local operator. Lightroom's gain is only slightly better predicted by
+    an 8 px neighbourhood than by the pixel itself (82% vs 78% of variance, falling away
+    at larger radii), so a 1-D curve captures nearly all of it. Monotone at both ends of
+    the slider for the default handles: the composed curve's minimum slope is 0.79 of the
+    input's at +100 and 0.20 at -100.
+*/
+constexpr float kShadowGainStops = 2.34f;   // full-slider gain at black, in stops
+constexpr float kShadowGainDecay = 0.089f;  // e-folding length of the fast part (display)
+constexpr float kShadowGainTail  = 0.058f;  // share of the weight in the slow tail
+constexpr float kShadowGainEnd   = 0.874f;  // where the tail reaches zero (display)
 
 /* Endpoint moves. R is how far full slider drags the point, on the display axis. */
 constexpr float kBlackPointRange = 0.220f, kBlackPointExpo = 1.6f;
@@ -182,6 +212,29 @@ inline float toneBand(float d, const ToneOp &op, float shift, float reach)
     if (d <= lo || d >= hi || pk <= lo || hi <= pk) return 0.0f;
     return (d <= pk) ? toneSmooth((d - lo) / (pk - lo))
                      : toneSmooth((hi - d) / (hi - pk));
+}
+
+/* The shadows gain's weight at display position d. The shadow handle slides the start of
+   the decay (below it the weight is flat at 1) and the crossover handle stretches the
+   tail, the same two things they do to a band; the defaults are a no-op. */
+inline float shadowGainWeight(float d, float shift, float reach)
+{
+    const float x   = std::max(0.0f, d - shift);
+    const float end = std::max(0.05f, kShadowGainEnd + reach);
+    return ((1.0f - kShadowGainTail) * std::exp(-x / kShadowGainDecay) + kShadowGainTail)
+           * (1.0f - toneSmooth(x / end));
+}
+
+/* sRGB's transfer, the one OutputTransform::DisplayPosition ends with: the display axis
+   is sRGB-encoded, and the shadows gain is applied to the light it encodes. */
+inline float displayToLinear(float d)
+{
+    return d <= 0.04045f ? d / 12.92f : std::pow((d + 0.055f) / 1.055f, 2.4f);
+}
+inline float linearToDisplay(float v)
+{
+    if (v <= 0.0f) return 0.0f;
+    return v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
 /* One signed control -> its display-space shift at d. */
@@ -287,8 +340,13 @@ inline float applyToneShape(const ToneShape &t, float s)
     if (t.blackPoint > 0.0f) d = qMax(0.0f, (d - t.blackPoint) / (1.0f - t.blackPoint));
     if (t.whitePoint < 1.0f) d = qMin(1.0f, d / t.whitePoint);
 
-    d += toneOpShift(t.sh, kShadowsUp, kShadowsDown, d0, t.shShift, t.reach)
-       + toneOpShift(t.hi, kHighsUp,   kHighsDown,   d0, t.hiShift, t.reach);
+    /* Shadows scales the light, so it goes first: the additive moves below then shift
+       the scaled value, and black is still black when they start. */
+    if (t.sh != 0.0f)
+        d = linearToDisplay(displayToLinear(d) *
+                            std::exp2(t.sh * kShadowGainStops *
+                                      shadowGainWeight(d0, t.shShift, t.reach)));
+    d += toneOpShift(t.hi, kHighsUp, kHighsDown, d0, t.hiShift, t.reach);
     /* Blacks + and Whites - are the non-clipping directions, so they are bands. Their
        opposite directions were consumed by the endpoint moves above. */
     if (t.bk > 0.0f) d += kBlacksUp.amp  * std::pow(t.bk,  kBlacksUp.expo)
@@ -487,6 +545,21 @@ bool Develop::InputMatrix(const WorkingImage &img, const EditParams *p,
 {
     wbIncluded = false;
     if (!img.cam.valid) return false;
+    const bool ok = InputMatrixUnexposed(img, p, m, wbIncluded);
+    /* THE CAMERA'S BASELINE EXPOSURE, folded in here because this matrix is applied
+       exactly once per image (ToWorkingSpace or the preMat fold) -- a mask layer works on
+       a copy of the converted base and never sees it again. A uniform scale, so it
+       commutes with the white balance in the matrix. See Develop/baselineexposure.h. */
+    const float k = std::exp2(BaselineExposure::ForModel(img.cam.cameraModel));
+    if (ok && k != 1.0f)
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) m[i][j] *= k;
+    return ok;
+}
+
+bool Develop::InputMatrixUnexposed(const WorkingImage &img, const EditParams *p,
+                                   float m[3][3], bool &wbIncluded)
+{
 
     /*
         A CAMERA PROFILE replaces this whole stage. Under DNG the chosen white picks the
@@ -521,26 +594,20 @@ bool Develop::ProfileTablesActive(const WorkingImage &img, const EditParams &p)
 {
     if (!img.cam.valid || !img.cam.profile) return false;
     const Dcp::Profile &d = *img.cam.profile;
-    /* A cheap STRUCTURAL test -- does the profile carry anything per-pixel at all -- rather
-       than building the tables, because this is asked on every render to choose the route.
-       A creative profile has no HueSatMap and a camera-matching one usually has no look,
-       so one of the two halves is normally absent; a synthesised "Camera Base" for the
-       common camera has neither, and skips this stage entirely. */
+    /* A cheap STRUCTURAL test -- does the profile carry a HueSatMap -- rather than
+       building the tables, because this is asked on every render to choose the route.
+       Only the HueSatMap is per-pixel work HERE; the look half (LookTable, offset, tone
+       curve) is carried to the output stage and costs stage 0 nothing. */
     Q_UNUSED(p)
-    return !d.cal[0].hueSatMap.isEmpty() || !d.cal[1].hueSatMap.isEmpty() ||
-           !d.lookTable.isEmpty() || !d.toneCurve.empty() ||
-           d.baselineExposureOffset != 0.0f;
+    return !d.cal[0].hueSatMap.isEmpty() || !d.cal[1].hueSatMap.isEmpty();
 }
 
 void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
 {
-    if (!ProfileTablesActive(img, p)) return;
-    if (!img.isValid()) return;
-    /* The table is defined in a space reached FROM the working space; camera-native pixels
-       have not got there yet. Apply() guarantees this by forcing the early conversion when
-       a table is active, so reaching here untagged is a caller error, not a state to
-       handle silently. */
-    if (img.space != ColorSpaceMath::kWorking) return;
+    if (!img.isValid() || !img.cam.valid || !img.cam.profile) return;
+    /* A fresh base pass: whatever look a previous render left on this buffer belongs to
+       that render's profile, not necessarily this one. */
+    img.look.reset();
 
     float kelvin = 0.0f, tint = 0.0f;
     WhiteBalance::resolve(img.cam, p.temp, p.tint, kelvin, tint);
@@ -548,52 +615,50 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
     CameraProfile::Tables t;
     if (!CameraProfile::tables(*img.cam.profile, kelvin, t) || !t.active) return;
 
-    /* Everything constant for the render is resolved HERE, once: the two illuminants'
-       HueSatMaps are blended into one (so the lookup is eight taps, not sixteen), the tone
-       curve is sampled into a 1-D table, and the two bracketing matrices are folded 3x3s.
-       ONE ProPhoto round trip covers all four stages below, whichever of them are live. */
-    /* Tell the output stage the data is already tone mapped, BEFORE the pass runs -- the
-       flag describes this render, not the loop. See WorkingImage::profileToneMapped. */
-    if (!t.toneCurve.isEmpty()) img.profileToneMapped = true;
+    /*
+        THE LOOK GOES TO THE OUTPUT STAGE. The DNG SDK applies it after exposure --
+        HueSatMap, exposure (with BaselineExposureOffset), LookTable, ToneCurve -- so it
+        must follow every edit, not precede them. It used to run here, before exposure and
+        with the curve ahead of the LookTable: a +3 EV push then scaled pixels the curve
+        had already carried to display white. See Develop/outputlook.h.
+    */
+    if (!t.lookTable.isEmpty() || t.exposureScale != 1.0f || !t.toneCurve.isEmpty()) {
+        auto look = std::make_shared<OutputLook>();
+        look->lookTable = t.lookTable;
+        look->exposureScale = t.exposureScale;
+        look->profileCurve = t.toneCurve;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) {
+                look->toTable[i][j]   = t.toTable[i][j];
+                look->fromTable[i][j] = t.fromTable[i][j];
+            }
+        img.look = look;
+    }
 
-    const HueSatMap::Table &hsm  = t.hueSatMap;
-    const HueSatMap::Table &look = t.lookTable;
-    const ProfileTone::Lut &tone = t.toneCurve;
-    const float gain = t.exposureScale;
+    /* THE CHARACTERISATION STAYS HERE: the HueSatMap is a correction to the camera's
+       colour, so it runs before anything is adjusted on top of it. */
+    if (t.hueSatMap.isEmpty()) return;
+    /* The table is defined in a space reached FROM the working space; camera-native
+       pixels have not got there yet. Apply() guarantees this by forcing the early
+       conversion when a HueSatMap is present, so reaching here untagged is a caller
+       error. */
+    if (img.space != ColorSpaceMath::kWorking) return;
+
+    const HueSatMap::Table &hsm = t.hueSatMap;
     float to[3][3], fr[3][3];
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) { to[i][j] = t.toTable[i][j]; fr[i][j] = t.fromTable[i][j]; }
 
     float *rgb = img.rgb.data();
     const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
-    parallelFor(n, [=, &hsm, &look, &tone](size_t i0, size_t i1) {
+    parallelFor(n, [=, &hsm](size_t i0, size_t i1) {
         for (size_t i = i0; i < i1; ++i) {
             float *px = rgb + i * 3;
             const float r = px[0], g = px[1], b = px[2];
             float pr = to[0][0] * r + to[0][1] * g + to[0][2] * b;
             float pg = to[1][0] * r + to[1][1] * g + to[1][2] * b;
             float pb = to[2][0] * r + to[2][1] * g + to[2][2] * b;
-
-            /*
-                THE ORDER WITHIN THE PROFILE STAGE, and each step depends on the one
-                before it:
-                  1 HueSatMap  the colorimetric correction -- part of the characterisation
-                  2 exposure   the offset the look was built at
-                  3 tone curve the look's contrast, on value, hue and saturation held
-                  4 LookTable  the look's grade
-
-                THE LOOK TABLE RUNS LAST, AFTER THE TONE CURVE, and that is not
-                interchangeable: a LookTable has a real value axis (90x16x16 is typical,
-                against valDivs == 1 on every installed HueSatMap) and it was fitted
-                against post-curve data. Run it on scene-linear values instead and most
-                pixels sit at the bottom of that axis, so the value-dependent half of the
-                grade is read from the wrong place.
-            */
             HueSatMap::Apply(hsm, pr, pg, pb);
-            if (gain != 1.0f) { pr *= gain; pg *= gain; pb *= gain; }
-            ProfileTone::ApplyToValue(tone, pr, pg, pb);
-            HueSatMap::Apply(look, pr, pg, pb);
-
             px[0] = fr[0][0] * pr + fr[0][1] * pg + fr[0][2] * pb;
             px[1] = fr[1][0] * pr + fr[1][1] * pg + fr[1][2] * pb;
             px[2] = fr[2][0] * pr + fr[2][1] * pg + fr[2][2] * pb;
@@ -643,7 +708,11 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     const bool tablesActive = ProfileTablesActive(img, p);
     if (p.isIdentity() || denoiseActive || tablesActive) ToWorkingSpace(img, &p);
 
-    if (p.isIdentity()) { img.cam.profile.reset(); return true; }   // see the note below
+    if (p.isIdentity()) {                                // see the note below
+        img.cam.profile.reset();
+        img.look.reset();
+        return true;
+    }
 
     QElapsedTimer probe;
     if (t) probe.start();

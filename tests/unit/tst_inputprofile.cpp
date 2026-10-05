@@ -29,6 +29,7 @@
 
 #include <QtTest>
 #include <vector>
+#include <algorithm>
 #include <cmath>
 
 #include "Develop/develop.h"
@@ -39,6 +40,8 @@
 #include "Develop/editstack.h"
 #include "Develop/colorspace.h"
 #include "Develop/outputtransform.h"
+#include "Develop/outputlook.h"
+#include "Develop/baselineexposure.h"
 
 namespace {
 
@@ -121,8 +124,10 @@ private slots:
     void cameraProfileSurvivesTheDenoiseRoute();
     void stageZeroRunsOnlyOnce();
     void cameraBaseRendersWithoutTheLook();
-    void profileToneCurveSuppressesTheViewTransform();
-    void profileToneMappedSurvivesACopy();
+    void profileCurveIsOneToneMappingAmongOthers();
+    void profileCurveRollsOffAPushedExposure();
+    void lookSurvivesACopy();
+    void baselineExposureAppliesOncePerBody();
 };
 
 /*
@@ -175,6 +180,10 @@ void TestInputProfile::defaultViewTransformIsFilmic()
     QCOMPARE(int(OutputTransform::ViewTransform::None),   0);
     QCOMPARE(int(OutputTransform::ViewTransform::Filmic), 1);
     QCOMPARE(int(OutputTransform::ViewTransform::AgX),    2);
+    QCOMPARE(int(OutputTransform::ViewTransform::CameraContrast), 3);
+    QCOMPARE(int(OutputTransform::ViewTransform::ProfileCurve),   4);
+    QCOMPARE(OutputTransform::ViewFromInt(3), OutputTransform::ViewTransform::CameraContrast);
+    QCOMPARE(OutputTransform::ViewFromInt(4), OutputTransform::ViewTransform::ProfileCurve);
 
     /* An unknown value (a sidecar from a later build) resolves to the IDENTITY rather
        than to whatever the cast happens to land on -- the output stage does not invent a
@@ -580,22 +589,40 @@ static Dcp::Profile withLook(const Dcp::Profile &base, float offsetEv)
     return p;
 }
 
+/* The largest per-channel difference between two 8-bit renders, in levels. */
+static int worstLevels(const QImage &a, const QImage &b)
+{
+    int worst = 0;
+    for (int y = 0; y < a.height(); ++y) {
+        const uchar *pa = a.constScanLine(y), *pb = b.constScanLine(y);
+        for (int x = 0; x < a.width() * 3; ++x) worst = qMax(worst, qAbs(pa[x] - pb[x]));
+    }
+    return worst;
+}
+
+static QImage renderOut(const WorkingImage &img, OutputTransform::ViewTransform vt)
+{
+    QImage out;
+    OutputTransform ot;
+    ot.ToImage(img, out, OutputTransform::Space::sRGB, vt);
+    return out;
+}
+
 /*
     A "CAMERA BASE" IS THE PROFILE WITH ITS LOOK STRIPPED, and must render exactly as a
     profile that never had one.
 
-    There is no "apply the look?" flag in the pipeline any more: the store hands back a
-    synthesised profile whose look tags are cleared, and the render path cannot tell the
-    difference. This pins that -- including the BaselineExposureOffset, which is the piece
-    that would move the picture's brightness if it were left behind (224 of 436 installed
-    profiles carry one).
+    The look (LookTable, offset, curve) no longer touches stage 0 at all -- it rides to
+    the output stage on img.look -- so the developed pixels match outright, and under Winnow's
+    own tone mapping the offset is undone after the (here identity) LookTable, so the
+    rendered output matches too. Only "Profile curve" keeps the offset, because that curve
+    was built for it.
 */
 void TestInputProfile::cameraBaseRendersWithoutTheLook()
 {
     const auto plain = makeProfile();                       // no look tags at all
     const auto full  = std::make_shared<const Dcp::Profile>(withLook(*plain, 1.0f));
 
-    /* What CameraProfileStore::profile() does for a base name. */
     Dcp::Profile stripped = *full;
     stripped.lookTable = Dcp::Table3D();
     stripped.toneCurve.clear();
@@ -614,103 +641,189 @@ void TestInputProfile::cameraBaseRendersWithoutTheLook()
     viaPlain.cam.profile = plain;
     Develop d2;
     QVERIFY(d2.Apply(viaPlain, p));
-
     QVERIFY2(worstDiff(viaBase, viaPlain) < 1e-6f,
-             qPrintable(QString("a stripped profile is not the bare characterisation: %1")
-                            .arg(double(worstDiff(viaBase, viaPlain)))));
+             "a stripped profile is not the bare characterisation");
+    QVERIFY(!viaBase.look);
 
-    /* And the un-stripped profile is NOT the same -- one stop brighter, from its offset.
-       Without this the comparison above would pass with both sides equally inert. */
+    /* The full profile: the same developed pixels, its look carried for the output. */
     WorkingImage viaFull = makeCameraNative(12, 9);
     viaFull.cam.profile = full;
     Develop d3;
     QVERIFY(d3.Apply(viaFull, p));
-    for (size_t i = 0; i < viaFull.rgb.size(); ++i) {
-        if (viaBase.rgb[i] <= 0.0f) continue;
-        QVERIFY2(qAbs(viaFull.rgb[i] / viaBase.rgb[i] - 2.0f) < 2e-3f,
-                 "the look profile did not apply its one-stop offset");
-    }
+    QVERIFY2(worstDiff(viaFull, viaBase) < 1e-6f, "the look leaked into stage 0");
+    QVERIFY2(viaFull.look, "the look was not attached for the output stage");
+    QVERIFY(qAbs(viaFull.look->exposureScale - 2.0f) < 1e-4f);
+
+    /* Under Winnow's own tone mapping the offset nets out around the identity table. */
+    const QImage a = renderOut(viaFull, OutputTransform::ViewTransform::Filmic);
+    const QImage b = renderOut(viaBase, OutputTransform::ViewTransform::Filmic);
+    QVERIFY2(worstLevels(a, b) <= 1,
+             qPrintable(QString("look changed a Standard roll-off render by %1 levels")
+                            .arg(worstLevels(a, b))));
 }
 
 /*
-    EXACTLY ONE TONE MAPPING IS EVER IN PLAY.
-
-    A ProfileToneCurve is a whole scene-linear -> display mapping, so a view transform on
-    top of it compresses the highlights twice. Measured before this guard existed: mid grey
-    rendered 220 instead of 176, and a full stop above white collapsed to nothing (1.0 and
-    2.0 both 242). OutputTransform::EffectiveView now forces None when the profile has
-    already mapped the data -- the same rule it applies to display-referred input.
+    THE PROFILE'S CURVE IS A TONE MAPPING CHOICE, NOT AN OVERRIDE. It applies under
+    "Profile curve" and only there; every other choice renders the profile's colour with
+    Winnow's own tone. A profile without a curve renders "Profile curve" as Standard
+    roll-off rather than as unmapped data.
 */
-void TestInputProfile::profileToneCurveSuppressesTheViewTransform()
+void TestInputProfile::profileCurveIsOneToneMappingAmongOthers()
 {
+    using VT = OutputTransform::ViewTransform;
     const auto plain = makeProfile();
     Dcp::Profile curved = withLook(*plain, 0.0f);
-    /* A real, pronounced curve rather than the diagonal, so "suppressed" and "applied"
-       cannot look alike. */
     curved.toneCurve = {0.0f, 0.0f, 0.25f, 0.55f, 0.5f, 0.78f, 1.0f, 1.0f};
     const auto profile = std::make_shared<const Dcp::Profile>(curved);
 
-    auto render = [&](int viewTransform, QImage &out) {
-        WorkingImage img = makeCameraNative(8, 6);
-        img.cam.profile = profile;
-        EditParams p;
-        p.cameraProfile = "Camera NT";
-        p.viewTransform = viewTransform;
-        Develop d;
-        QVERIFY(d.Apply(img, p));
-        QVERIFY2(img.profileToneMapped,
-                 "applying a ProfileToneCurve must mark the image tone mapped");
-        OutputTransform ot;
-        QVERIFY(ot.ToImage(img, out));
-    };
+    WorkingImage img = makeCameraNative(8, 6);
+    img.cam.profile = profile;
+    EditParams p;
+    p.cameraProfile = "Camera NT";
+    Develop d;
+    QVERIFY(d.Apply(img, p));
+    QVERIFY(img.look && img.look->hasProfileCurve());
 
-    QImage none, filmic, agx;
-    render(int(OutputTransform::ViewTransform::None), none);
-    render(int(OutputTransform::ViewTransform::Filmic), filmic);
-    render(int(OutputTransform::ViewTransform::AgX), agx);
+    const QImage curve  = renderOut(img, VT::ProfileCurve);
+    const QImage filmic = renderOut(img, VT::Filmic);
+    const QImage none   = renderOut(img, VT::None);
+    const QImage camera = renderOut(img, VT::CameraContrast);
+    QVERIFY2(curve != filmic && curve != none && curve != camera,
+             "the profile curve is not its own rendering");
 
-    QCOMPARE(filmic, none);
-    QCOMPARE(agx, none);
-
-    /* The guard must be conditional, not a blanket disable: with no profile curve the
-       view transform still does its job. */
+    /* No curve in the profile: Profile curve falls back to Standard roll-off. */
     WorkingImage bare = makeCameraNative(8, 6);
     bare.cam.profile = plain;
-    EditParams p;
-    p.cameraProfile = "Camera Base";
-    p.viewTransform = int(OutputTransform::ViewTransform::Filmic);
-    Develop d;
-    QVERIFY(d.Apply(bare, p));
-    QVERIFY(!bare.profileToneMapped);
-    QImage bareFilmic, bareNone;
-    OutputTransform ot;
-    QVERIFY(ot.ToImage(bare, bareFilmic, OutputTransform::Space::sRGB,
-                       OutputTransform::ViewTransform::Filmic));
-    QVERIFY(ot.ToImage(bare, bareNone, OutputTransform::Space::sRGB,
-                       OutputTransform::ViewTransform::None));
-    QVERIFY2(bareFilmic != bareNone, "the view transform was disabled unconditionally");
+    Develop d2;
+    QVERIFY(d2.Apply(bare, p));
+    QCOMPARE(renderOut(bare, VT::ProfileCurve), renderOut(bare, VT::Filmic));
 }
 
 /*
-    THE FLAG MUST SURVIVE copyMetadata.
-
-    A WorkingImage field that is not copied there does not fail to compile and does not
-    fail loudly: the scope compositor copies the developed accumulator into every mask
-    layer, and WorkingImageCache::downscaled builds the interactive proxy the same way. A
-    missed field there once cost a whole-image green cast on every proxy render.
+    THE BLOWOUT THIS WAS BUILT FOR: Camera Neutral at +3 EV turned a face into a flat
+    white patch, because the curve ran BEFORE exposure and the push multiplied pixels it
+    had already taken to white. Now the curve runs last, with a roll-off above its knee,
+    so a pushed exposure keeps separation: through two stops over white (where a +3 EV
+    face lands) no channel reaches 255 and brighter input renders brighter. Far beyond
+    that the roll-off may round to 255 in 8 bits -- as Standard roll-off does from 2.6
+    stops over -- so that is not asserted.
 */
-void TestInputProfile::profileToneMappedSurvivesACopy()
+void TestInputProfile::profileCurveRollsOffAPushedExposure()
+{
+    const auto plain = makeProfile();
+    Dcp::Profile curved = withLook(*plain, 0.0f);
+    curved.toneCurve = {0.0f, 0.0f, 0.18f, 0.45f, 0.5f, 0.85f, 0.9f, 0.99f, 1.0f, 1.0f};
+    const auto profile = std::make_shared<const Dcp::Profile>(curved);
+
+    WorkingImage img = makeCameraNative(16, 12);
+    img.cam.profile = profile;
+    EditParams p;
+    p.cameraProfile = "Camera Neutral";
+    p.exposure = 3.0f;
+    Develop d;
+    QVERIFY(d.Apply(img, p));
+
+    using VT = OutputTransform::ViewTransform;
+    const int y = img.height / 2;
+    int tested = 0;
+    for (VT vt : {VT::ProfileCurve, VT::CameraContrast}) {
+        const QImage out = renderOut(img, vt);
+        const uchar *row = out.constScanLine(y);
+        int prevSum = -1;
+        for (int x = 0; x < img.width; ++x) {
+            const float *px = &img.rgb[(size_t(y) * img.width + x) * 3];
+            if (std::max({px[0], px[1], px[2]}) > 4.0f) continue;   // past two stops over
+            const uchar *o = row + x * 3;
+            QVERIFY2(o[0] < 255 && o[1] < 255 && o[2] < 255,
+                     qPrintable(QString("view %1 clipped to white at x %2 (max %3)")
+                                    .arg(int(vt)).arg(x)
+                                    .arg(double(std::max({px[0], px[1], px[2]})))));
+            const int sum = o[0] + o[1] + o[2];
+            QVERIFY2(sum > prevSum, qPrintable(QString("view %1 lost separation at x %2")
+                                                   .arg(int(vt)).arg(x)));
+            prevSum = sum;
+            ++tested;
+        }
+    }
+    QVERIFY2(tested >= 6, "too few pixels in range -- the test is not testing anything");
+
+    /* The old behaviour for contrast: no tone mapping at all clips the same pixels. */
+    const QImage none = renderOut(img, VT::None);
+    int noneClipped = 0;
+    const uchar *nrow = none.constScanLine(y);
+    for (int x = 0; x < img.width; ++x)
+        if (nrow[x * 3] == 255 || nrow[x * 3 + 1] == 255 || nrow[x * 3 + 2] == 255)
+            ++noneClipped;
+    QVERIFY2(noneClipped > 0, "the exposure push is not over white -- test is too weak");
+}
+
+/*
+    THE LOOK MUST SURVIVE copyMetadata. A WorkingImage field not copied there does not
+    fail to compile and does not fail loudly: the scope compositor copies the developed
+    accumulator into every mask layer, and WorkingImageCache::downscaled builds the
+    interactive proxy the same way. A missed field there once cost a whole-image green
+    cast on every proxy render.
+*/
+void TestInputProfile::lookSurvivesACopy()
 {
     WorkingImage src = makeCameraNative(4, 4);
-    src.profileToneMapped = true;
+    src.look = std::make_shared<const OutputLook>();
 
     WorkingImage viaMetadata;
     copyMetadata(viaMetadata, src);
-    QVERIFY2(viaMetadata.profileToneMapped, "copyMetadata dropped profileToneMapped");
+    QVERIFY2(viaMetadata.look == src.look, "copyMetadata dropped the look");
 
     WorkingImage viaAssign = makeCameraNative(4, 4);
     assignReusing(viaAssign, src);
-    QVERIFY2(viaAssign.profileToneMapped, "assignReusing dropped profileToneMapped");
+    QVERIFY2(viaAssign.look == src.look, "assignReusing dropped the look");
+}
+
+/*
+    ADOBE'S PER-CAMERA BASELINE EXPOSURE is applied at stage 0, once. An ILCE-1 (+0.15 EV)
+    develops exactly 2^0.15 brighter than the same pixels with no camera named; an
+    unlisted body gets the common +0.35; an empty model (non-raw, synthetic) gets nothing.
+    And a mask layer -- developed from a copy of the converted base, with cam copied too --
+    must NOT add it again.
+*/
+void TestInputProfile::baselineExposureAppliesOncePerBody()
+{
+    QCOMPARE(BaselineExposure::ForModel(QString()), 0.0f);
+    QCOMPARE(BaselineExposure::ForModel("Sony ILCE-1"), 0.15f);
+    QCOMPARE(BaselineExposure::ForModel("nikon d7200"), 0.35f);
+    QCOMPARE(BaselineExposure::ForModel("Olympus OM-1 Mark II"),
+             BaselineExposure::ForModel("OM Digital Solutions OM-1 Mark II"));
+    QCOMPARE(BaselineExposure::ForModel("Acme Nonesuch 9"), BaselineExposure::kUnlistedEv);
+
+    EditParams p;
+    p.exposure = 0.3f;                  // non-identity, so the fused pass runs
+    WorkingImage none = makeCameraNative(10, 8);
+    WorkingImage sony = makeCameraNative(10, 8);
+    sony.cam.cameraModel = "Sony ILCE-1";
+    Develop d1, d2;
+    QVERIFY(d1.Apply(none, p));
+    QVERIFY(d2.Apply(sony, p));
+    const float k = std::exp2(0.15f);
+    for (size_t i = 0; i < none.rgb.size(); ++i) {
+        if (std::fabs(none.rgb[i]) < 1e-4f) continue;
+        QVERIFY2(std::fabs(sony.rgb[i] / none.rgb[i] - k) < 1e-3f,
+                 "BaselineExposure was not applied as a uniform 2^EV at stage 0");
+    }
+
+    /* A scope layer: the converted base, developed again with neutral params. */
+    WorkingImage layer = sony;
+    EditParams scope;
+    scope.exposure = 0.0f;
+    scope.contrast = 1.0f;              // non-identity, but no exposure change
+    WorkingImage layerRef = none;
+    Develop d3, d4;
+    QVERIFY(d3.Apply(layer, scope));
+    QVERIFY(d4.Apply(layerRef, scope));
+    /* Same ratio still: the layer pass did not apply it a second time. Contrast is not a
+       linear scale, so compare on a pixel the two passes treat alike -- the ratio of the
+       means of the two whole images must stay well under 2^0.30. */
+    double a = 0, b = 0;
+    for (size_t i = 0; i < layer.rgb.size(); ++i) { a += layer.rgb[i]; b += layerRef.rgb[i]; }
+    QVERIFY2(a / b < std::exp2(0.25), "BaselineExposure applied twice on a scope layer");
 }
 
 QTEST_APPLESS_MAIN(TestInputProfile)

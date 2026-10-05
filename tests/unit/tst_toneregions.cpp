@@ -144,6 +144,7 @@ private slots:
     void twoControlsDoNotCompound();
     void opposingSlidersStayMonotone();
     void regionsDoNotSlideWithContrast();
+    void shadowsIsAGainNotAnOffset();
 };
 
 /*
@@ -315,18 +316,25 @@ void tst_toneregions::opposingSlidersStayMonotone()
 }
 
 /*
-    4. THE REGIONS DO NOT SLIDE WITH CONTRAST. Shadows +100 lifts some band of the ramp.
+    4. THE REGIONS DO NOT SLIDE WITH CONTRAST. Highlights +100 lifts some band of the ramp.
     Where the PEAK of that lift falls must not move when Contrast changes, because the
     ToneRegionSlider handle that places it is drawn against the input histogram, not the
     post-contrast one. Measured as the ramp index of the largest lift, against the same
-    ramp rendered at the same contrast WITHOUT the shadows slider, so the contrast
+    ramp rendered at the same contrast WITHOUT the highlights slider, so the contrast
     slope's own redistribution is differenced out.
+
+    MEASURED ON HIGHLIGHTS, NOT SHADOWS, since 2026-10-05. Shadows became a gain, and the
+    peak of a gain's lift IN LEVELS depends on the value being scaled as well as on the
+    weight -- Contrast +100 darkens the deep shadows, so the same gain lifts them fewer
+    levels and that peak moves for a reason that has nothing to do with where the region
+    sits. Highlights is still an additive band, whose lift is its weight, and both read
+    their weights from the same pre-contrast position d0 in applyToneShape.
 */
 void tst_toneregions::regionsDoNotSlideWithContrast()
 {
-    auto peakOfShadowLift = [](float contrast) {
+    auto peakOfHighlightLift = [](float contrast) {
         EditParams base; base.contrast = contrast;
-        EditParams sh = base; sh.shadows = 100.0f;
+        EditParams sh = base; sh.highlights = 100.0f;
         const std::vector<int> b = render(base), s = render(sh);
         int peak = -1, best = -1;
         for (int i = 0; i < kRampN; ++i) {
@@ -336,20 +344,70 @@ void tst_toneregions::regionsDoNotSlideWithContrast()
         return peak;
     };
 
-    const int flat = peakOfShadowLift(0.0f);
-    const int up   = peakOfShadowLift(100.0f);
-    const int down = peakOfShadowLift(-100.0f);
+    const int flat = peakOfHighlightLift(0.0f);
+    const int up   = peakOfHighlightLift(100.0f);
+    const int down = peakOfHighlightLift(-100.0f);
 
     QVERIFY(flat >= 0 && up >= 0 && down >= 0);
     /* Within 8 of 256 samples: tight enough to catch the old post-contrast sampling
        (which moved the peak by tens of samples at full contrast), loose enough that
        8-bit quantisation picking a neighbouring sample does not fail the test. */
     QVERIFY2(std::abs(up - flat) <= 8,
-             qPrintable(QString("Contrast +100 slid the shadows region from sample %1 to %2")
+             qPrintable(QString("Contrast +100 slid the highlights region from sample %1 to %2")
                         .arg(flat).arg(up)));
     QVERIFY2(std::abs(down - flat) <= 8,
-             qPrintable(QString("Contrast -100 slid the shadows region from sample %1 to %2")
+             qPrintable(QString("Contrast -100 slid the highlights region from sample %1 to %2")
                         .arg(flat).arg(down)));
+}
+
+/*
+    5. SHADOWS IS A GAIN, NOT AN OFFSET. Lightroom's Shadows multiplies display-linear
+    light (measured 2026-10-05: its -100 and +100 curves are mirror images in stops, and
+    detail inside shadow regions grows 43% at +100). Winnow's used to ADD a display-space
+    lift that peaked at level 5, which is a black-point raise: the deepest tones all rose
+    by about the same amount, and the contrast between them was flattened.
+
+    WHAT SEPARATES THE TWO IS RATIO, NOT RISE. Adding a constant to two dark tones
+    collapses the ratio between their light; multiplying them keeps it (exactly, for a flat
+    gain). A gain that FADES with brightness, as Lightroom's does, still shrinks the rise
+    in levels between two shadow tones -- Lightroom's own curve does, 30 levels to 26
+    between levels 10 and 40 -- so asserting the rise grows would pin something Lightroom
+    does not do. Measured between display levels ~5 and ~20 of the base render, where
+    the light differs by ~4.6x: the old offset kept 37% of that ratio, Lightroom keeps 56%.
+    The 45% threshold sits between them with room for 8-bit rounding at level 5. And a
+    gain leaves black at black, because 0 times anything is 0.
+*/
+void tst_toneregions::shadowsIsAGainNotAnOffset()
+{
+    EditParams base;
+    EditParams up = base; up.shadows = 100.0f;
+
+    const std::vector<int> b = render(base), u = render(up);
+    QVERIFY(!b.empty() && !u.empty());
+
+    int lo = -1, hi = -1;
+    for (int i = 0; i < kRampN; ++i) {
+        if (lo < 0 && b[i] >= 5)  lo = i;
+        if (hi < 0 && b[i] >= 20) hi = i;
+    }
+    QVERIFY(lo >= 0 && hi > lo);
+
+    auto lin = [](int level) {
+        const float d = level / 255.0f;
+        return d <= 0.04045f ? d / 12.92f : std::pow((d + 0.055f) / 1.055f, 2.4f);
+    };
+    const float inRatio  = lin(b[hi]) / lin(b[lo]);
+    const float outRatio = lin(u[hi]) / lin(u[lo]);
+
+    QVERIFY2(std::abs(u[0] - b[0]) <= 1,
+             qPrintable(QString("Shadows +100 moved BLACK from %1 to %2")
+                        .arg(b[0]).arg(u[0])));
+    QVERIFY2(outRatio >= 0.45f * inRatio,
+             qPrintable(QString("Shadows +100 collapsed the shadows: levels %1 and %2 "
+                                "(light ratio %3) rendered at %4 and %5 (ratio %6); an "
+                                "offset does that, a gain keeps the ratio")
+                        .arg(b[lo]).arg(b[hi]).arg(inRatio, 0, 'f', 2)
+                        .arg(u[lo]).arg(u[hi]).arg(outRatio, 0, 'f', 2)));
 }
 
 QTEST_APPLESS_MAIN(tst_toneregions)

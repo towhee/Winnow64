@@ -484,11 +484,15 @@ set(WINNOW_HEADERS
     Views/loadcurtain.h
     Datamodel/selection.h
 
+    Develop/baselineexposure.h
+    Develop/baselineexposuredata.h
+    Develop/cameracurve.h
+    Develop/cameracurvedata.h
     Develop/cameraprofile.h
     Develop/cameraprofilestore.h
     Develop/develop.h
+    Develop/outputlook.h
     Develop/huesatmap.h
-    Develop/profiletone.h
     Develop/calibrate.h
     Develop/colorgrade.h
     Develop/colorspace.h

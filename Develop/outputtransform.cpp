@@ -1,4 +1,5 @@
 #include "Develop/outputtransform.h"
+#include "Develop/outputlook.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QFuture>
@@ -103,48 +104,61 @@ inline float Transfer(float v, float gammaInv)
     function. A raw render is scene-linear and otherwise lands dark and flat; this lifts
     the midtones and rolls highlights off smoothly instead of hard-clipping.
 
-    THE LIFT IS THE ONE FITTED NUMBER IN THIS FILE, so it is worth saying exactly what it
-    was fitted to. It was 1.6 (+0.68 EV), validated against the A9 II embedded preview.
-    RE-MEASURED 2026-09-17 on a different raw against TWO independent references -- that
-    file's own embedded preview, and Lightroom's Adobe Standard rendering of it -- and 1.6
-    was about 0.43 EV too bright against both:
+    REFITTED 2026-10-04 AGAINST FIVE LIGHTROOM EXPORTS, and it is now three fitted
+    numbers -- the lift (kBaselineExposure) and the two toe terms (b, e) of the Narkowicz
+    rational -- with the shoulder terms (a, c, d) unchanged, so the curve keeps its shape
+    and its smooth roll-off.
 
-        target            best offset     implied lift    residual
-        embedded preview    -0.42 EV          1.196       1.5 / 255
-        Lightroom           -0.43 EV          1.188       1.1 / 255
-        joint                                 1.191       1.3 / 255
+    WHY THE OLD SINGLE-NUMBER FIT FAILED. It was a lift alone (1.191, after an earlier
+    1.6), fitted on one well-exposed frame each time. Two things were missing. (1)
+    Adobe's per-camera BaselineExposure (+0.15 EV on an ILCE-1, +0.35 on an A9 II or a
+    D7200), which Winnow did not apply, so each fit absorbed ONE camera's value -- that
+    is most of the "unexplained" 0.43 EV between the 1.6 (A9 II) and 1.191 (ILCE-1)
+    fits. It is now applied per body at
+    stage 0 (Develop/baselineexposure.h), BEFORE this curve, so the lift no longer carries
+    it. (2) The Narkowicz toe: its slope at black is b/e = 0.21, which crushed low-key
+    frames -- a dim indoor portrait rendered 0.5-0.9 EV darker than Lightroom through the
+    shadows, and per-channel curves in that steep region also oversaturated skin, which
+    read as "redder".
 
-    Two references that were derived independently agreeing to within 0.01 EV is what
-    makes this a measurement rather than a preference, so the joint value is the constant.
-    The method was a histogram fit (99 luminance percentiles) rather than a pixel diff,
-    because the exports were framed slightly differently and a pixel diff would have been
-    measuring the crop.
+    THE FIT. Lightroom Classic 15.5 exports (Adobe Standard, defaults, lens corrections
+    off, 16-bit sRGB) of three ILCE-1 frames (low-key portrait, indoor, bright outdoor),
+    an ILCE-1M2 frame with a near-clipped highlight, and a D7200 frame held out. Winnow's
+    scene-linear luminance (Adobe Standard, after stage 0) was quantile-matched to
+    Lightroom's -- a histogram fit, so framing differences do not matter -- which recovers
+    Lightroom's tone curve per image. The four Sony frames collapse onto ONE curve within
+    ~1 level once BaselineExposure is applied, so there is one curve to fit. RMS error in
+    levels of 255 (ILCE-1 x3 / ILCE-1M2 / D7200 held out):
 
-    WHY THE OLD NUMBER IS NOT EXPLAINED HERE: it is not known. The 1.6 note recorded mean
-    luma 0.434 vs 0.445, i.e. 111 vs 113 of 255, and neither value is near this file's
-    preview (100.9) or its 1.6 render (118.8), so that validation was done on a frame
-    whose behaviour cannot be recovered from here. It is recorded as unexplained rather
-    than given a plausible story -- the first attempt at one (that the preview is a
-    brighter target than Lightroom) was wrong, and measurably so: the two agree to
-    2.1 / 255.
+        old lift-only curve       7.4  12.5  12.8 / 14.4 / 13.9
+        refitted (these numbers)  0.8   1.5   1.5 /  2.4 /  2.4
 
-    AFTER the lift is right, what remains against Lightroom is 2-4 levels of 255 at p1/p5
-    and p99 and about 1 level through the midtones -- the ACES shoulder being slightly
-    more contrasty at both extremes than Adobe's curve. Below what a print or a screen
-    shows, and NOT worth replacing the shoulder over.
+    (The first refit, the same morning, fed Sony pixels scaled x1.069 on the mistaken
+    belief that Winnow normalised ARWs to the SR2 WhiteLevel 15360; it uses 16383, the
+    raw IFD's value, deliberately -- libraw and Adobe's own DNG of the file agree. That
+    put every Sony render 0.1 EV dark against the fit; the lift moved 2.685 -> 2.869.)
+
+    A fit with ALL six constants free does better on paper (0.5-1.9) but reaches white at
+    sensor white -- no roll-off above it, so any push clips. Rejected: the roll-off is the
+    point of this transform. The refit still reaches white only at 2.48x sensor white
+    (the old one at 6.08x); with these constants 2.32x; the ILCE-1M2's near-white wing matches Lightroom to 4 levels.
+    Harness: libraw camera-native pixels fed through Winnow's own Characterise / Develop /
+    OutputTransform (notes/Documentation.txt, "Standard roll-off refit").
 
     This WAS the pipeline's only look, applied unconditionally to scene-referred data. It
     is now one value of OutputTransform::ViewTransform, and it is the default.
     Display-referred input still skips it -- see the header: a JPEG already carries its
     camera's tone curve.
 */
-constexpr float kBaselineExposure = 1.191f;     // ~ +0.25 EV; see the fit above
+constexpr float kBaselineExposure = 2.869f;     // the lift; see the fit above
+constexpr float kFilmicToeB = 0.2166f;          // toe terms, refitted (were 0.03, 0.14)
+constexpr float kFilmicToeE = 1.0550f;
 
 inline float FilmicTone(float v)
 {
     v *= kBaselineExposure;
     if (v < 0.0f) v = 0.0f;
-    const float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
+    const float a = 2.51f, b = kFilmicToeB, c = 2.43f, d = 0.59f, e = kFilmicToeE;
     return Clamp01((v * (a * v + b)) / (v * (c * v + d) + e));
 }
 
@@ -263,6 +277,14 @@ inline float ViewCurve(OutputTransform::ViewTransform vt, float v)
     switch (vt) {
     case OutputTransform::ViewTransform::Filmic: return FilmicTone(v);
     case OutputTransform::ViewTransform::AgX:    return AgxCurve(v);
+    /* The camera curves are image-specific (maker, profile) and applied hue-preservingly
+       by the camera path in ToImage, never through here. This per-channel stand-in --
+       the GENERIC camera curve -- serves only DisplayPosition, which places the tone
+       region handles and has no image to ask; the maker curves sit within a few levels
+       of it. */
+    case OutputTransform::ViewTransform::CameraContrast:
+    case OutputTransform::ViewTransform::ProfileCurve:
+        return CameraCurve::Generic().eval(v);
     case OutputTransform::ViewTransform::None:   break;
     }
     return v;
@@ -274,27 +296,40 @@ inline float ViewCurve(OutputTransform::ViewTransform vt, float v)
 inline bool ViewClampsToWhite(OutputTransform::ViewTransform vt)
 {
     return vt == OutputTransform::ViewTransform::Filmic
-        || vt == OutputTransform::ViewTransform::AgX;
+        || vt == OutputTransform::ViewTransform::AgX
+        || vt == OutputTransform::ViewTransform::CameraContrast
+        || vt == OutputTransform::ViewTransform::ProfileCurve;
 }
 
 /*
-    The transform actually applied: a view transform tone-maps, so data that ALREADY
-    carries a tone curve is forced to None. One rule, one place, and now two ways to
-    already carry one:
+    The transform actually applied. Two rules, one place:
 
-      display-referred input   the camera baked its own curve in before Winnow saw it
-      profileToneMapped        a camera profile's ProfileToneCurve was applied at stage 0
+      display-referred input   forced to None: the camera baked its own curve in before
+                               Winnow saw it, and a second would tone-map twice.
+      Profile curve, no curve  the selected profile carries no ProfileToneCurve (Adobe
+                               Standard, a Camera Base, Winnow's own matrix), so there is
+                               nothing to apply; it renders as Standard roll-off, the
+                               default, rather than as unmapped scene-linear data.
 
-    The second is not a nuance. A ProfileToneCurve is a whole scene-linear -> display
-    mapping, so letting a view transform run on top compresses the highlights twice:
-    measured on a real look profile, a full stop above white collapsed to nothing (1.0 and
-    2.0 both rendering 242) and mid grey landed at 220 instead of 176.
+    A profile's curve is no longer applied upstream, so it can never stack with a view
+    transform: it IS one of the view transforms now (ProfileCurve).
 */
 inline OutputTransform::ViewTransform EffectiveView(OutputTransform::ViewTransform vt,
-                                                    bool sceneReferred,
-                                                    bool profileToneMapped)
+                                                    const WorkingImage &img)
 {
-    return (sceneReferred && !profileToneMapped) ? vt : OutputTransform::ViewTransform::None;
+    if (!img.sceneReferred) return OutputTransform::ViewTransform::None;
+    if (vt == OutputTransform::ViewTransform::ProfileCurve &&
+        !(img.look && img.look->hasProfileCurve()))
+        return OutputTransform::ViewTransform::Filmic;
+    return vt;
+}
+
+/* The camera curves: applied hue-preservingly (CameraCurve::ApplyRGBTone) per pixel, so
+   they leave the 1-D table paths and take the camera path in ToImage / ToImage16. */
+inline bool IsCameraCurve(OutputTransform::ViewTransform vt)
+{
+    return vt == OutputTransform::ViewTransform::CameraContrast
+        || vt == OutputTransform::ViewTransform::ProfileCurve;
 }
 
 /*
@@ -337,9 +372,12 @@ ViewMatrices ViewMatricesFor(OutputTransform::ViewTransform vt,
                              ColorSpaceMath::ColorSpace working)
 {
     switch (vt) {
-    /* Both per-channel: no space of their own, so no matrices. */
+    /* Per-channel (or, for the camera curves, applied without a space of their own):
+       no matrices. */
     case OutputTransform::ViewTransform::None:
     case OutputTransform::ViewTransform::Filmic:
+    case OutputTransform::ViewTransform::CameraContrast:
+    case OutputTransform::ViewTransform::ProfileCurve:
         break;
 
     case OutputTransform::ViewTransform::AgX: {
@@ -434,12 +472,12 @@ inline void HighlightRolloff(float &r, float &g, float &b)
     and 8-bit export so the two always agree; ToImage16 keeps the exact maths, since 16-bit
     output is where precision is the point.
 
-    kToneDomainMax is where FilmicTone saturates, and it is DERIVED FROM
-    kBaselineExposure -- the two constants move together and the clamp below is only
-    correct because of it. Solving f(u)=1 for the Narkowicz curve gives u=7.2416, so with
-    u = kBaselineExposure * v the curve reaches white at v = 7.2416 / 1.191 = 6.081. Past
-    the table's end the function is flat at white, so clamping to the last entry is exact
-    THERE AND ONLY THERE.
+    kToneDomainMax is where FilmicTone saturates, and it is DERIVED FROM ITS CONSTANTS --
+    they move together and the clamp below is only correct because of it. Solving f(u)=1
+    for the refitted rational gives u=6.650, so with u = kBaselineExposure * v the curve
+    reaches white at v = 6.650 / 2.869 = 2.318. Past the table's end the function is flat
+    at white, so clamping to the last entry is exact THERE AND ONLY THERE. (It was 6.1 for
+    the 2026-09-17 constants, whose curve reached white at v = 6.081.)
 
     SO A LIFT CHANGE MUST MOVE THIS TOO. It was 4.6, for the old lift of 1.6 (saturation
     at v=4.53); leaving it there while the lift dropped to 1.191 would have put the
@@ -449,7 +487,7 @@ inline void HighlightRolloff(float &r, float &g, float &b)
     filmicDomainCoversSaturation is the guard.
 */
 constexpr int   kLutSize       = 16384;
-constexpr float kToneDomainMax = 6.1f;      // covers FilmicTone's saturation at v=6.081
+constexpr float kToneDomainMax = 2.35f;     // covers FilmicTone's saturation at v=2.318
 
 /*
     INDEXING. Most curves are sampled on a LINEAR axis (scale = index per unit value).
@@ -595,6 +633,90 @@ inline uchar LutSample(const TransferLut &t, float v)
 }
 
 /*
+    THE CAMERA PATH: a profile's look and/or a camera tone curve, per pixel.
+
+    Taken whenever the profile carries a LookTable (a 3-D table, not a 1-D curve), or the
+    tone mapping is a camera curve (applied hue-preservingly, across channels) -- either
+    way the per-channel table paths below cannot represent it. Everything else keeps
+    those paths untouched, so Standard roll-off, Soft roll-off and None render exactly as
+    they did for any image whose profile has no look.
+
+    The order is the DNG SDK's (dng_render.cpp): exposure offset -> LookTable -> tone
+    curve. For Winnow's own tone mappings the offset is undone after the LookTable -- the
+    look still reads at the exposure it was built for, but Standard roll-off was fitted
+    without it. See Develop/outputlook.h.
+*/
+struct CameraPath {
+    const OutputLook *look = nullptr;
+    bool  lookTable = false;            // run the LookTable (in linear ProPhoto)
+    float offset = 1.0f;                // 2^BaselineExposureOffset, before the table
+    float unOffset = 1.0f;              // after it: 1/offset unless the profile curve
+    const CameraCurve::Curve *curve = nullptr;   // non-null: RGBTone with this curve
+};
+
+CameraPath CameraPathFor(OutputTransform::ViewTransform vt, const WorkingImage &img)
+{
+    CameraPath cp;
+    const OutputLook *look = img.look.get();
+    const bool profileCurve = vt == OutputTransform::ViewTransform::ProfileCurve;
+    if (look && img.sceneReferred) {
+        cp.look = look;
+        cp.lookTable = look->hasLookTable();
+        cp.offset = look->exposureScale;
+        cp.unOffset = profileCurve ? 1.0f : 1.0f / look->exposureScale;
+    }
+    if (profileCurve && look) cp.curve = &look->profileCurve;
+    else if (vt == OutputTransform::ViewTransform::CameraContrast)
+        cp.curve = &CameraCurve::ForCameraModel(img.cam.cameraModel);
+    return cp;
+}
+
+/* Is there anything for the camera path to do? */
+inline bool CameraPathActive(const CameraPath &cp)
+{
+    return cp.lookTable || cp.curve || cp.offset * cp.unOffset != 1.0f;
+}
+
+/*
+    Look, then tone, for one pixel: scene-linear working RGB in, display-linear out (or,
+    for None, still scene-linear -- HighlightRolloff handles what is over range).
+    viewLut, when given, is the view-only table for a per-channel transform; null means
+    evaluate the curve exactly (the 16-bit path).
+*/
+inline void CameraLookAndTone(const CameraPath &cp, OutputTransform::ViewTransform vt,
+                              const ViewMatrices &vm, const TransferLut *viewLut,
+                              float v[3])
+{
+    if (cp.lookTable) {
+        const OutputLook &l = *cp.look;
+        float p0 = l.toTable[0][0]*v[0] + l.toTable[0][1]*v[1] + l.toTable[0][2]*v[2];
+        float p1 = l.toTable[1][0]*v[0] + l.toTable[1][1]*v[1] + l.toTable[1][2]*v[2];
+        float p2 = l.toTable[2][0]*v[0] + l.toTable[2][1]*v[1] + l.toTable[2][2]*v[2];
+        p0 *= cp.offset; p1 *= cp.offset; p2 *= cp.offset;
+        HueSatMap::Apply(l.lookTable, p0, p1, p2);
+        p0 *= cp.unOffset; p1 *= cp.unOffset; p2 *= cp.unOffset;
+        v[0] = l.fromTable[0][0]*p0 + l.fromTable[0][1]*p1 + l.fromTable[0][2]*p2;
+        v[1] = l.fromTable[1][0]*p0 + l.fromTable[1][1]*p1 + l.fromTable[1][2]*p2;
+        v[2] = l.fromTable[2][0]*p0 + l.fromTable[2][1]*p1 + l.fromTable[2][2]*p2;
+    }
+    else {
+        /* No table: the offset is a scalar and commutes, so it nets out to one multiply
+           (and to nothing at all for Winnow's own curves). */
+        const float k = cp.offset * cp.unOffset;
+        if (k != 1.0f) { v[0] *= k; v[1] *= k; v[2] *= k; }
+    }
+
+    if (cp.curve) {
+        CameraCurve::ApplyRGBTone(*cp.curve, v[0], v[1], v[2]);
+        return;
+    }
+    if (!vm.preIdentity) ToPrimaries(vm.pre, v[0], v[1], v[2]);
+    if (vt == OutputTransform::ViewTransform::None) return;
+    for (int c = 0; c < 3; ++c)
+        v[c] = viewLut ? LutValue(*viewLut, v[c]) : ViewCurve(vt, v[c]);
+}
+
+/*
     Run processRows(y0, y1) over the image's rows, parallelised over disjoint row chunks
     (QtConcurrent + the global pool) exactly as Develop::applyPointOps is. Rows are
     disjoint, so the threads write into the output buffer without contention. Shared by
@@ -648,8 +770,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
     out = QImage(W, H, QImage::Format_RGB888);
     if (out.isNull()) return false;
 
-    const OutputTransform::ViewTransform vt =
-        EffectiveView(view, img.sceneReferred, img.profileToneMapped);
+    const OutputTransform::ViewTransform vt = EffectiveView(view, img);
     const bool clampsToWhite = ViewClampsToWhite(vt);
     Encoding enc = EncodingFor(space, img.space);
     const float *rgb = img.rgb.data();
@@ -665,6 +786,37 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
         Mul3x3(enc.m, vm.post, folded);
         for (int i = 0; i < 9; ++i) enc.m[i] = folded[i];
         enc.identity = false;
+    }
+
+    /* CAMERA path -- a profile look and/or a camera tone curve (see CameraPath). Tables
+       throughout: the view-only table for a per-channel transform, the camera curve's own
+       log-axis table, the transfer table. */
+    const CameraPath cp = CameraPathFor(vt, img);
+    if (CameraPathActive(cp)) {
+        const TransferLut *viewLut =
+            (cp.curve || vt == OutputTransform::ViewTransform::None) ? nullptr
+                                                                     : &ViewOnlyLut(vt);
+        const TransferLut &encLut = LutFor(OutputTransform::ViewTransform::None,
+                                           enc.gammaInv);
+        auto processRowsCam = [=, &encLut](int y0, int y1) {
+            for (int y = y0; y < y1; ++y) {
+                uchar *line = bits + static_cast<qsizetype>(y) * bpl;
+                const size_t base = static_cast<size_t>(y) * W * 3;
+                for (int x = 0; x < W; ++x) {
+                    const size_t o = base + static_cast<size_t>(x) * 3;
+                    float v[3];
+                    for (int c = 0; c < 3; ++c) v[c] = rgb[o + c] * scale;
+                    CameraLookAndTone(cp, vt, vm, viewLut, v);
+                    if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
+                    HighlightRolloff(v[0], v[1], v[2]);
+                    for (int c = 0; c < 3; ++c)
+                        line[x * 3 + c] = static_cast<uchar>(
+                            std::lround(LutValue(encLut, v[c]) * 255.0f));
+                }
+            }
+        };
+        RunRows(H, processRowsCam);
+        return true;
     }
 
     /* FUSED fast path -- taken when the primaries matrix is the identity, so the whole
@@ -772,8 +924,7 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
     out = QImage(W, H, QImage::Format_RGBX64);
     if (out.isNull()) return false;
 
-    const OutputTransform::ViewTransform vt =
-        EffectiveView(view, img.sceneReferred, img.profileToneMapped);
+    const OutputTransform::ViewTransform vt = EffectiveView(view, img);
     Encoding enc = EncodingFor(space, img.space);
     const float *rgb = img.rgb.data();
     uchar *bits = out.bits();
@@ -789,6 +940,11 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
         enc.identity = false;
     }
 
+    /* The camera path (a profile look and/or a camera tone curve) shares this loop; only
+       the look-and-tone step differs. */
+    const CameraPath cp = CameraPathFor(vt, img);
+    const bool camActive = CameraPathActive(cp);
+
     auto processRows = [=](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             quint16 *line = reinterpret_cast<quint16*>(bits + static_cast<qsizetype>(y) * bpl);
@@ -797,8 +953,13 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
                 const size_t o = base + static_cast<size_t>(x) * 3;
                 float v[3];
                 for (int c = 0; c < 3; ++c) v[c] = rgb[o + c] * scale;
-                if (!vm.preIdentity) ToPrimaries(vm.pre, v[0], v[1], v[2]);
-                for (int c = 0; c < 3; ++c) v[c] = ViewCurve(vt, v[c]);
+                if (camActive) {
+                    CameraLookAndTone(cp, vt, vm, nullptr, v);   // exact maths
+                }
+                else {
+                    if (!vm.preIdentity) ToPrimaries(vm.pre, v[0], v[1], v[2]);
+                    for (int c = 0; c < 3; ++c) v[c] = ViewCurve(vt, v[c]);
+                }
                 if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
                 HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)

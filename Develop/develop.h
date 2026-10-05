@@ -72,10 +72,14 @@ public:
         The camera-native -> working matrix this render should use, and whether it already
         carries the white balance. ONE definition, shared by ToWorkingSpace and by
         buildPointCoeffs's preMat fold, because the two must never disagree about which
-        matrix an image went through. False when there is nothing to convert.
+        matrix an image went through. False when there is nothing to convert. Includes
+        the camera's BaselineExposure as a uniform scale (Develop/baselineexposure.h).
     */
     static bool InputMatrix(const WorkingImage &img, const EditParams *p,
                             float m[3][3], bool &wbIncluded);
+    /* InputMatrix without the camera's BaselineExposure -- the colour transform alone. */
+    static bool InputMatrixUnexposed(const WorkingImage &img, const EditParams *p,
+                                     float m[3][3], bool &wbIncluded);
 
     /*
         STAGE 0.5 -- the camera profile's HueSatMap, the part of a profile a 3x3 cannot
@@ -86,12 +90,15 @@ public:
 
         A no-op unless the image has a profile carrying a HueSatMap, which is why an
         active one forces the early conversion (a table cannot be folded into a matrix).
-        Creative "Camera *" profiles carry a LookTable instead and are NOT affected: that
-        table runs at a different point in the pipeline and is not applied yet.
+
+        It also ATTACHES the profile's look -- LookTable, BaselineExposureOffset,
+        ProfileToneCurve -- to img.look for OutputTransform, which applies it after every
+        edit, in the DNG SDK's order (see Develop/outputlook.h).
     */
     static void ApplyProfileTables(WorkingImage &img, const EditParams &p);
 
-    /* Whether the above would do anything -- asked before stage 0, to choose the route. */
+    /* Whether the profile has a HueSatMap, i.e. per-pixel work at stage 0.5 -- asked
+       before stage 0, to choose the route. */
     static bool ProfileTablesActive(const WorkingImage &img, const EditParams &p);
 
     /* Blend a full-strength raw-denoised image toward the clean one, per the Global "Denoise raw"
