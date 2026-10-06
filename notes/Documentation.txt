@@ -251,6 +251,7 @@ Follow the format conventions above for anything new. In particular, do not hard
      The Catalog Dock and Loading Results
      The Filter Dock (Folders and Catalog)
      Grouped Filter Categories (and the Lit Title)
+     Filter History (Back and Forward)
      Node Consumption (the Phantom Top-Level Keyword)
      Tidying Flat Keywords (Filing a Legacy Vocabulary)
      Schema 12: The Links Drifted From The Text (Third Data Repair)
@@ -6210,6 +6211,18 @@ EXPANSION. SOLO MODE APPLIES AT BOTH LEVELS (revised 2026-09-30 at the user's re
 THE LIT TITLE. A group header is drawn in the filtering yellow while any category in it is filtering, so a closed group still says where the filter is. BRANCH ITEMS ARE LIT THE SAME WAY: a collection folder, folder or keyword with a checked item anywhere beneath it is drawn in the filtering yellow (Filters::DescendantFilteringRole, set by setEachCatTextColor and read by applyItemStyle, where the unfiled and excluded colours still win), so a collapsed branch says where its filter is. The Filters title bar (DockTitleBar::setTitleColor) turns the same yellow whenever ANY visible category header is lit: Filters::notifyFilteringState emits filteringChanged only when that answer changes, from setEachCatTextColor, clearAll, uncheckAllFilters and a Search text edit. It follows the headers' rule rather than isAnyFilter's -- a category of one item does not light its header, so it does not light the title either.
 
 Pinned by tst_filters::flatOrderIsTheGroupOrder, groupsHoldTheirCategories, checksSurviveRegroupingAndSaveRestore (a grouped persistableState equals the flat one; view state survives) and filteringLightsTheGroupAndSignals.
+
+⏺ Keywords and Cataloguing > Filter History (Back and Forward)
+
+BACK AND FORWARD THROUGH FILTER STATES (2026-10-06). The Filters title bar starts its button row with a left and a right arrow (images/icon16/prev.png and next.png, made by rotating up.png). Back re-applies the filter state before the one showing, Forward the one after it, like a browser's history. Each is greyed while there is nowhere to go, and its tooltip says how many states lie that way.
+
+WHAT IS RECORDED. MW::filterChange calls MW::recordFilterHistory just after its early-return gate, so every filter change that is actually applied is a candidate. The state is Filters::persistableState -- checked items as {category, value, include/exclude}, the search text and the keyword any/all mode -- the same map the Library and Folders restores save. It is appended only if it differs from the entry showing, so a refilter after a rating edit, a restore that lands on the same checks, or the step itself records nothing. A new state after a Back drops the forward entries. The list is capped at 100.
+
+THE FIRST ENTRY IS "NOTHING FILTERED". By the time filterChange runs, the tree already holds the new checks, so the state before the first change cannot be read. After MW::reset it can only have been unfiltered, so the first record pushes an empty state ahead of the new one, and Back from the first filter clears it.
+
+STEPPING. MW::stepFilterHistory applies an entry through the path a folder change's restore uses: Filters::setStateToRestore, Filters::restore(keepMissing false), one filterChange. filterHistoryStepping stops that filterChange (and the nested one restore triggers when the search text changes) from recording. Filters::restore now calls notifyFilteringState, so the lit title follows a step back to an unfiltered state. A step is REFUSED, with a popup, while a load runs or a restore is pending (restoreFiltersPending): filterChange would apply nothing, and setStateToRestore would overwrite the states the pending restore is waiting for.
+
+SCOPE OF A HISTORY. MW::reset clears it, so it covers one loaded set -- a folder, a recursive tree, the Library. Another set's checks mostly name values not in this one, and restore would silently drop them. Session categories (Filter on..., Map pin) are not in persistableState, so changing only one of them records nothing, and a step leaves them as they are.
 
 ⏺ Keywords and Cataloguing > Node Consumption (the Phantom Top-Level Keyword)
 
