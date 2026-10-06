@@ -883,6 +883,8 @@ private:
     QPointF cropNToVp(QPointF n) const;             // a normalized image point -> viewport point
     void    cropEnterWarp();                        // seed the quad from the current rectangle
     QRectF  cropFrameBBoxVp() const;                // bbox of the frame/quad in viewport px
+    QSize   cropPixelSize() const;                  // crop size in FULL-RES output pixels
+    void    cropDrawSizeLabel(QPainter *painter, const QRectF &frameVp);
     void    cropSyncFrameFromN();                   // recompute frame/quad from cropN/cropQuadN
     void    cropEmitChanged();                      // clamp cropN to [0,1] and emit cropChanged
     int     cropHitTest(QPoint vp) const;           // handle under vp (-1 none, 8 = inside)

@@ -2173,7 +2173,58 @@ void ImageView::cropDrawOverlay(QPainter *painter, const QRectF &br)
             painter->drawRect(QRectF(m.x() - hs, m.y() - hs, hs * 2, hs * 2));
     }
 
+    cropDrawSizeLabel(painter, f);
     painter->restore();
+}
+
+QSize ImageView::cropPixelSize() const
+{
+/*
+    The crop in the pixels it will produce, NOT the pixels on screen: the loupe shows a
+    proxy, so pmItem's size is only a fallback. While the crop tool is open the render
+    suppresses the crop but keeps straighten/warp, so cropN is normalized in the
+    geometry stage's output canvas (developGeomOut) when there is one, else the oriented
+    full frame.
+*/
+    QSizeF full;
+    if (!developGeomOut.isEmpty())      full = developGeomOut;
+    else if (!developGeomSrc.isEmpty()) full = QSizeF(developGeomSrc);
+    else if (pmItem)                    full = pmItem->boundingRect().size();
+    if (full.isEmpty()) return QSize();
+    return QSize(qMax(1, qRound(cropN.width()  * full.width())),
+                 qMax(1, qRound(cropN.height() * full.height())));
+}
+
+void ImageView::cropDrawSizeLabel(QPainter *painter, const QRectF &frameVp)
+{
+/*
+    "2032 × 2415" chip centred under the crop frame (or just inside its bottom edge when
+    the frame reaches the bottom of the viewport). Painter is in viewport coords. Updated
+    on every repaint, so it tracks handle drags, aspect changes and flips live.
+*/
+    const QSize px = cropPixelSize();
+    if (px.isEmpty()) return;
+    const QString text = QString("%1 %2 %3").arg(px.width()).arg(QChar(0x00D7)).arg(px.height());
+
+    QFont font = painter->font();
+    font.setPointSizeF(qMax(9.0, font.pointSizeF() > 0 ? font.pointSizeF() : 11.0));
+    painter->setFont(font);
+    const QFontMetricsF fm(font);
+    const qreal padX = 7.0, padY = 3.0, gap = 8.0;
+    const QSizeF chip(fm.horizontalAdvance(text) + 2 * padX, fm.height() + 2 * padY);
+
+    const QRectF vr(viewport()->rect());
+    qreal y = frameVp.bottom() + gap;
+    if (y + chip.height() > vr.bottom() - 2.0) y = frameVp.bottom() - gap - chip.height();
+    qreal x = frameVp.center().x() - chip.width() / 2.0;
+    x = qBound(vr.left() + 2.0, x, vr.right() - 2.0 - chip.width());
+    const QRectF r(QPointF(x, y), chip);
+
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(QColor(0, 0, 0, 170));
+    painter->drawRoundedRect(r, 4.0, 4.0);
+    painter->setPen(QColor(255, 255, 255, 235));
+    painter->drawText(r, Qt::AlignCenter, text);
 }
 
 bool ImageView::parseMaskParams(const QString &json)
