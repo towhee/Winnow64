@@ -6820,8 +6820,99 @@ Not covered yet
 - The restore path with an active filter hasn't been tested, either automatically or in the app.
 - The parked Library uses memory while you're in Folders, roughly 100 MB plus its loaded thumbnails. It isn't released under memory pressure yet.
 
+==========================================================================================
+Focus stack: develop every slice to a temp 16-bit TIFF, then stack the TIFFs
+==========================================================================================
 
+ Context
 
+ The OM-1 ORF stacks in 2026-10-04_Mount Douglas came out at 3200×2400. That is the
+ embedded preview size; the sensor is 5184×3888. The outputs are 16-bit, so they went
+ through the develop route (developDecoder → MW::developPixelSource), not
+ matFromQImage, which is 8-bit. settings.ini has useRaw=true and the Winnow raw
+ engine, and ORF has a sensor decoder (rawformat.cpp:41, OlympusRaw). So the develop
+ render silently started from a display-referred, preview-sized base. There are two
+ ways that can happen in developPixelSource (Main/mainwindow.cpp:13789):
+
+ 1. Stale cache reuse. The guard that discards a preview-built WorkingImage reads
+    qMax(work) * 2 < sensorEdge. Here that is 3200×2 = 6400, which is not < 5184, so an
+    embedded-JPEG base cached in Library/Preview mode passes as "the sensor image". The
+    half-edge heuristic was tuned on DNG's 1024 px previews; Olympus previews are 62% of
+    the sensor.
+ 2. Silent decode fallback. If the raw decode fails, decodeIndependent falls back to
+    the embedded JPEG. developPixelSource then builds the base from that 8-bit image
+    with no error.
+
+ Either way, the stack is quietly built from previews. The goal is for every selected
+ slice
+ to be rendered through Winnow Develop from the sensor data, using the stored recipe or
+ default settings, and written as a temp 16-bit TIFF. Focus stacking (OpenCV) then reads
+ only those TIFFs. This removes the old in-memory decode routes, which predate Develop.
+
+ Changes
+
+ 1. MW::developPixelSource: never hand back a preview for a raw
+
+ File: Main/mainwindow.cpp.
+ - Replace the half-edge size heuristic with an exact test. For a raw with G::useRaw, a
+   cached base must have work->sceneReferred == true; otherwise reset it and decode
+   again. sceneReferred is set only by the sensor decode (Develop/workingimage.h:131).
+   This fixes export and the devPreview builder too, which the existing comment already
+   intends.
+ - Add a trailing parameter bool requireSensor = false. When it is true and the file is
+   a raw with G::useRaw, a base that is still not scene-referred after the decode makes
+   the call fail: done(false, …), and the decoder's error is logged under
+   G::FSLog. It does not build from the 8-bit image. Export keeps its current fallback.
+ - Add an FSLog line that reports the base dimensions, sceneReferred and
+   decodedHere. That pins down which of the two causes was at work here.
+
+ 2. New FS stage: render the group's sources to temp TIFFs (FocusStack/fs.cpp/.h)
+
+ - FS::prepareFolders adds sourceFolderPath = grpFolderPath + "/source". It is removed
+   with the rest of the group folder in FS::cleanup.
+ - New bool FS::prepareSources() is called from FS::run() per group, after
+   initializeGroup and before runDMap/runPMax. It fills a new
+   QStringList sourcePaths that runs parallel to inputPaths:
+   - Slice needs a develop render. That is any raw, any file with a stored recipe, any
+     version key (VersionKey), or any slice in a group where one slice qualifies. Keep
+     today's all-or-nothing rule per group. Call the existing developDecoder(path, &abort); it already polls abort and waits off the GUI thread. Then convert to BGR
+     16-bit and write source/NNN_<basename>.tif with cv::imwrite on the FS thread,
+     never in the GUI callback. Progress: one step per slice, with
+     status("Developing slice k of n").
+   - Unedited TIFF/JPEG/PNG. Use the original path as is. The file already is its
+     develop render, and imread keeps a 16-bit TIFF at full depth. This also covers the
+     Lightroom/remote route, whose inputs are already TIFFs.
+   - Failure. A render returns empty, which includes requireSensor rejecting a
+     preview base. Raise a G::issue naming the file, set the status to "Could not develop
+     <file> from raw data", and abort the group. Do not fall back to a preview.
+   - Size mismatch. If the rendered slices in a group differ in size (for example
+     different per-slice crops), abort with a clear message instead of misaligning.
+ - runDMap (fs.cpp:445-470) and runPMax (fs.cpp:722) load
+   FSLoader::load(sourcePaths.at(slice)), with no decoder argument.
+   FSLoader::loadAlignedSliceOrig callers (fsfusiondmapbasic.cpp:466/503) get
+   sourcePaths instead of inputPaths. inputPaths stays the identity list for output
+   naming, metadata and grouping.
+
+ 3. GUI-side setup (FocusStack/generateFocusStack.cpp)
+
+ - In developDecoder, pass requireSensor = true to developPixelSource.
+ - Flush pending develop edits first, as MW::prepareExport does
+   (developProperties->flushPropagation(); flushAll();). Otherwise a slider change still
+   batching across the selection would not be in the sidecar the stack reads.
+ - Ensure developProperties exists. If it is null today, every raw silently takes the
+   imread → matFromQImage preview path. With the new rule, a raw with no
+   developProperties aborts with a message.
+ - Remove the old preview-decode routes: the FS::requestImage signal and its
+   connection, MW::matFromQImage (with its declaration in mainwindow.h), the decoder
+   lambda in runDMap, and the externalDecoder parameter of FSLoader::load
+   (fsloader.cpp:177, fsloader.h). Keep metaSnapshot; developDecoder uses it.
+
+ 4. Docs
+
+ - Update notes/Documentation.txt, in the Focus Stack section plus the ToC sync. Cover:
+   sources are developed to grpFolder/source/*.tif; raws must decode from sensor data or
+   the stack aborts; unedited TIFF/JPEG/PNG are used directly. Update the folder-structure
+   comments in generateFocusStack and prepareFolders.
 
 
 

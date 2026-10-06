@@ -121,6 +121,11 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 
 DONE/FIXED
+- Quick load library
+- Map module
+- Develop module
+- Keywording
+- Library module
 - Release 2.05
 - Collapse DockWidgets and Solo mode
 - Show images that have sidecars (indicator in thumbnail and col in datamodel)

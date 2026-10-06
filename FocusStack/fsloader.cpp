@@ -173,7 +173,7 @@ Key idea:
     Alignment always operates on padded 8-bit grayscale, regardless of input
     format.
 */
-Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
+Image load(const std::string &filePath)
 {
     QString srcFun = "FSLoader::load";
     if (G::FSLog) G::log(srcFun, QString::fromStdString(filePath));
@@ -192,13 +192,6 @@ Image load(const std::string &filePath, ImageDecoderSync externalDecoder)
         // src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
         src = cv::imread(filePath, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH |
                          cv::IMREAD_IGNORE_ORIENTATION);
-    }
-
-    // Read using Winnow
-    if (src.empty() && externalDecoder) {
-        // Use the provided Qt-based decoder for unsupported types (RAW, HEIC, etc.)
-        if (G::FSLog) G::log(srcFun, "Load using externalDecoder");
-        src = externalDecoder(QString::fromStdString(filePath));
     }
 
     if (src.empty()) {

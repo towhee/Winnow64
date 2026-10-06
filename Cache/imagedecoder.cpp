@@ -539,7 +539,14 @@ bool ImageDecoder::load()
         deliberate user choice ("Edit: Raw" / the Decode Raw button), not transient UI
         state, so honouring it keeps a preview consistent with what Develop would show.
     */
-    if ((isIndependent || G::operationMode == G::OperationMode::Develop) && G::useRaw) {
+    /* forceSensorDecode: an independent caller that wants sensor pixels whatever
+       G::useRaw says (MW::developPixelSource: export, devPreview builder, Embellish
+       export, focus stack). useRaw tracks the operation mode, so it is off in Preview,
+       and "a deliberate user choice" above is only true of it inside Develop. */
+    const bool wantSensor = isIndependent
+        ? (G::useRaw || forceSensorDecode)
+        : (G::operationMode == G::OperationMode::Develop && G::useRaw);
+    if (wantSensor) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
             /* Reuse an already-decoded clean base (e.g. one MW::ensureRawDenoise
                published on select) instead of repeating the costly

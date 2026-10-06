@@ -60,12 +60,14 @@ public:
     QHash<QString, ImageMetadata> metaSnapshot;
 
     /*
-    Slices in developPaths are loaded through developDecoder -- the full develop
-    render (MW::developPixelSource, the exporter's path: stored recipe, masks,
-    spots, geometry, 16-bit) -- instead of the file on disk or the browse decode.
-    Both are set by MW::generateFocusStack before the thread starts. The decoder
-    runs on this worker thread and waits for the render; it returns an empty Mat
-    on failure, or as soon as *abort is set.
+    Slices in developPaths are rendered through developDecoder -- the full develop
+    render (MW::developPixelSource, the exporter's path: stored recipe or default
+    settings, masks, spots, geometry, 16-bit, raws from the sensor) -- and written to
+    grpFolder/source as 16-bit TIFFs by prepareSources(). The stacker reads only
+    those TIFFs (or, for an unedited TIFF/JPEG/PNG, the original file). Both are set
+    by MW::generateFocusStack before the thread starts. The decoder runs on this
+    worker thread and waits for the render; it returns an empty Mat on failure, or as
+    soon as *abort is set.
     */
     std::function<cv::Mat(const QString &, const std::atomic_bool *)> developDecoder;
     QSet<QString> developPaths;
@@ -82,7 +84,6 @@ public:
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
-    void requestImage(QString fPath, ImageMetadata m, cv::Mat &mat);
     void finished(bool success, bool aborted);
 
 protected:
@@ -101,6 +102,7 @@ private:
 
     bool initializeGroup(int group);            // source groups
     bool prepareFolders();
+    bool prepareSources();                      // develop slices -> source TIFFs
     bool validAlignMatsAvailable(int count) const;
     QImage thumbnail(const cv::Mat &mat);
 
@@ -116,7 +118,8 @@ private:
     QString srcFolderPath;   // original source for input images (parent if lightroom)
     QString inputFolderPath; //
 
-    QStringList inputPaths;
+    QStringList inputPaths;     // the selected images: naming, metadata, grouping
+    QStringList sourcePaths;    // what is stacked: parallel to inputPaths, see above
     QString     grpFolderPath;
     QStringList grpFolderPaths;
     int grpSlices = 0;
@@ -124,6 +127,7 @@ private:
     int totSlices = 0;
 
     // Stage folders (automatically set from projectRoot)
+    QString sourceFolderPath;   // developed slices (16-bit TIFF)
     QString alignFolderPath;
     QString depthFolderPath;
     QString fusionFolderPath;

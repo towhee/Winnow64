@@ -23,17 +23,13 @@ struct Image
     bool is16bit = false;           // original color depth
 };
 
-// Add a typedef for the decoder function
-using ImageDecoderSync = std::function<cv::Mat(const QString&)>;
-
 /*
     Load one image from file:
      - preserves bit depth (8 or 16)
      - converts grayscale to 8-bit
      - pads via BORDER_REFLECT to wavelet-friendly size
 */
-Image load(const std::string &filename, ImageDecoderSync externalDecoder = nullptr);
-// Image load(const std::string &filename);
+Image load(const std::string &filename);
 
 // Load from an existing Mat (for testing):
 Image loadFromMat(const cv::Mat &source);

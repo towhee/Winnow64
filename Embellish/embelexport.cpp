@@ -128,6 +128,18 @@ bool EmbelExport::loadImage(QString fPath)
     if (G::embelLog) G::log(srcFun, msg);
 
     if (!embellish->isRemote) {
+        /*  The develop render first: the image cache holds the EMBEDDED PREVIEW of a raw
+            while the user browses (3200x2400 for an OM-1, against a 5184x3888 sensor),
+            and nothing in it carries the develop recipe. */
+        if (pixelSource) {
+            QImage developed;
+            if (renderDeveloped(fPath, developed)) {
+                pmItem->setPixmap(QPixmap::fromImage(developed));
+                return true;
+            }
+            if (abort) return false;
+            if (G::embelLog) G::log(srcFun, "Develop render failed, fallback: " + fPath);
+        }
         /*  One locked lookup, and a null image falls through to the decode below rather
             than exporting a blank frame.  See ImageCacheData::get. */
         QImage cached;
@@ -166,6 +178,35 @@ bool EmbelExport::loadImage(QString fPath)
     // convert QImage to QGraphicsPixmapItem
     pmItem->setPixmap(QPixmap::fromImage(im));
 
+    return true;
+}
+
+bool EmbelExport::renderDeveloped(const QString &fPath, QImage &image)
+{
+/*
+    Run pixelSource for fPath and wait for it. The render is asynchronous (decode and
+    composite on developRenderPool, with GUI-thread steps between), so this pumps the
+    event loop -- as exportImages already does between images, under ExportInputGuard --
+    until it lands or Esc sets abort. The callback writes to shared state, not to this,
+    so a render that lands after an abort is harmless.
+*/
+    QString srcFun = "EmbelExport::renderDeveloped";
+    if (G::embelLog) G::log(srcFun, fPath);
+
+    struct Pending { bool done = false; bool ok = false; QImage image; };
+    auto pending = std::make_shared<Pending>();
+    pixelSource(fPath, [pending](bool ok, const QImage &img) {
+        pending->ok = ok;
+        pending->image = img;
+        pending->done = true;
+    });
+    while (!pending->done && !abort) G::wait(20);
+    if (!pending->done || !pending->ok || pending->image.isNull()) return false;
+
+    image = pending->image;
+    if (G::embelLog) {
+        G::log(srcFun, QString("%1x%2").arg(image.width()).arg(image.height()));
+    }
     return true;
 }
 

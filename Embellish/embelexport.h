@@ -12,6 +12,7 @@
 //#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
 //#endif
+#include <functional>
 
 class EmbelExport : public QGraphicsView
 {
@@ -25,6 +26,14 @@ public:
                 QWidget *parent = nullptr);
     ~EmbelExport() override;
 
+    /* The image each export embellishes: MW::developPixelSource -- the develop recipe
+       (or default settings) rendered from the raw SENSOR data, not the embedded preview
+       the image cache holds while browsing. Unset, or for a remote (winnet) export, the
+       old path is used: the image cache, else the file decoded by Qt. */
+    using PixelDone = std::function<void(bool ok, const QImage &img)>;
+    using PixelSource = std::function<void(const QString &fPath, PixelDone done)>;
+    void setPixelSource(PixelSource source) { pixelSource = std::move(source); }
+
     void exportImages(const QStringList &srcList, bool isRemote = false);
     QStringList exportRemoteFiles(QString templateName, QStringList &pathList);
     bool exportImage(const QString &fPath);
@@ -37,6 +46,8 @@ public slots:
 
 private:
     bool loadImage(QString fPath);
+    bool renderDeveloped(const QString &fPath, QImage &image);
+    PixelSource pixelSource;
     bool isValidExportFolder();
     Metadata *metadata;
     DataModel *dm;
