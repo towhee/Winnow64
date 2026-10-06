@@ -1020,7 +1020,6 @@ public slots:
     void saveWorkspaces();
     void readWorkspaceSettings(WorkspaceData &wsd);
     void writeWorkspaceSettings(const WorkspaceData &wsd);
-    void matFromQImage(QString fPath, ImageMetadata m, cv::Mat &mat);
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -1618,7 +1617,9 @@ private:
     void developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
-                            const ImageMetadata *mSnap = nullptr, int degreesSnap = -1);
+                            const ImageMetadata *mSnap = nullptr, int degreesSnap = -1,
+                            bool requireSensor = false);
+    void setEmbelPixelSource(EmbelExport &embelExport);
     void previewPixelSource(const QString &fPath,
                             std::function<void(bool, const QImage &)> done);
     void onExportFinished(const ImageExporter::Result &result, bool addToFolderView);

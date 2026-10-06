@@ -17,6 +17,7 @@
 #include "FocusStack/fsutilities.h"
 
 #include "utilities.h"
+#include "Utilities/versionkey.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Tiff/tiff.h"
 
@@ -56,9 +57,19 @@
     saved.  Local:   srcFolder = inputFolder.
             Remote:  srcFolder = parent of inputFolder.
 
+    SOURCE IMAGES
+
+    Every slice is stacked from a file OpenCV can read. FS::prepareSources renders each
+    slice that needs it through Winnow Develop (stored recipe, or default settings when
+    the image has never been developed; raws from the sensor) into a 16-bit TIFF in
+    sourceFolder. An unedited TIFF/JPEG/PNG is used as is: its file already IS its
+    develop render. A raw that cannot be decoded from the sensor aborts the stack rather
+    than stacking the embedded previews.
+
     Working folders:
         inputFolder (temp if remote)
             grpFolder (temp)
+                sourceFolder (temp)
                 alignFolder (temp)
                 depthFolder (temp)
                 fusionFolder (temp)
@@ -82,7 +93,8 @@ bool FS::initializeGroup(int group)
     grpSlices = inputPaths.count();
     grpLastSlice = grpSlices - 1;
 
-    QFileInfo info(inputPaths.first());
+    // a version key (path/#vN) is not a file: name the folders after its source
+    QFileInfo info(VersionKey::sourceOf(inputPaths.first()));
     inputFolderPath = info.absolutePath();
 
     if (o.isLocal) srcFolderPath = inputFolderPath;
@@ -95,7 +107,7 @@ bool FS::initializeGroup(int group)
     grpFolderPaths << grpFolderPath;
     // qDebug() << "group" << group << "grpFolderPaths =" << grpFolderPaths;
 
-    prepareFolders();
+    if (!prepareFolders()) return false;
 
     statusGroupPrefix = "Stack: " + QString::number(group+1) + " of " +
                         QString::number(groups.count());
@@ -153,6 +165,7 @@ bool FS::prepareFolders()
     Lightroom folder (only if remote)
         srcFolder (focus stack input tiffs)
             grpFolder ie 2025-11-07_0078_StreamPMax
+                sourceFolder
                 alignFolder
                 depthFolder
                 fusionFolder
@@ -161,6 +174,7 @@ bool FS::prepareFolders()
         srcFolder
             inputFolder (src images converted to tiffs)
                 grpFolder
+                    sourceFolder
                     alignFolder
                     depthFolder
                     fusionFolder
@@ -168,6 +182,7 @@ bool FS::prepareFolders()
     Local:
             inputFolder = srcFolder
                 grpFolder
+                    sourceFolder
                     alignFolder
                     depthFolder
                     fusionFolder
@@ -189,14 +204,104 @@ bool FS::prepareFolders()
         return false;
     }
 
+    sourceFolderPath     = grpFolderPath + "/source";
     alignFolderPath      = grpFolderPath + "/align";
     depthFolderPath      = grpFolderPath + "/depth";
     fusionFolderPath     = grpFolderPath + "/fusion";
 
+    dir.mkpath(sourceFolderPath);
     dir.mkpath(alignFolderPath);
     dir.mkpath(depthFolderPath);
     dir.mkpath(fusionFolderPath);
 
+    return true;
+}
+
+bool FS::prepareSources()
+{
+/*
+    Fill sourcePaths, parallel to inputPaths, with the file each slice is stacked from.
+
+    A slice in developPaths is rendered through Winnow Develop (developDecoder: the
+    stored recipe, or default settings if the image was never developed; a raw from the
+    sensor, never its embedded preview) and written to sourceFolder as a 16-bit TIFF.
+    The TIFF is encoded HERE, on the FS thread -- the render calls back on the GUI
+    thread, and an encode there stalls the whole UI.
+
+    Any other slice (an unedited TIFF/JPEG/PNG) is stacked from its own file.
+
+    Returns false on abort, or when a slice cannot be developed or the developed slices
+    differ in size (e.g. a different crop on one of them), which alignment cannot fix.
+*/
+    QString srcFun = "FS::prepareSources";
+    if (G::FSLog) G::log(srcFun, QString::number(grpSlices) + " slices");
+
+    sourcePaths.clear();
+    cv::Size renderedSize;
+
+    for (int slice = 0; slice < grpSlices; ++slice) {
+        if (abortRequested()) return false;
+
+        const QString &path = inputPaths.at(slice);
+        if (!developDecoder || !developPaths.contains(path)) {
+            sourcePaths << path;
+            incrementProgress();
+            continue;
+        }
+
+        status(QString("Developing Slice %1 of %2").arg(slice + 1).arg(grpSlices));
+        const QFileInfo srcInfo(VersionKey::sourceOf(path));
+
+        const cv::Mat bgr = developDecoder(path, &abort);
+        if (abortRequested()) return false;
+        if (bgr.empty()) {
+            const QString msg = "Could not develop " + srcInfo.fileName() +
+                                ". A raw must decode from its sensor data. "
+                                "Focus stack aborted.";
+            status(msg);
+            G::issue("Error", msg, srcFun, -1, path);
+            return false;
+        }
+
+        if (renderedSize.empty()) renderedSize = bgr.size();
+        else if (bgr.size() != renderedSize) {
+            const QString msg = QString("Developed slices differ in size (%1x%2 vs %3x%4 "
+                                        "for %5); check for a different crop. "
+                                        "Focus stack aborted.")
+                                    .arg(renderedSize.width).arg(renderedSize.height)
+                                    .arg(bgr.cols).arg(bgr.rows)
+                                    .arg(srcInfo.fileName());
+            status(msg);
+            G::issue("Error", msg, srcFun, -1, path);
+            return false;
+        }
+
+        // slice-numbered so two versions of one file cannot collide
+        const QString dst = sourceFolderPath + "/" +
+                            QString("%1_").arg(slice, 3, 10, QChar('0')) +
+                            srcInfo.completeBaseName() + ".tif";
+        bool written = false;
+        try {
+            written = cv::imwrite(dst.toStdString(), bgr);
+        } catch (const cv::Exception &e) {
+            qWarning().noquote() << srcFun << "imwrite failed:" << e.what();
+        }
+        if (!written) {
+            const QString msg = "Could not write the developed slice " + dst +
+                                ". Focus stack aborted.";
+            status(msg);
+            G::issue("Error", msg, srcFun, -1, path);
+            return false;
+        }
+
+        if (G::FSLog) {
+            G::log(srcFun, QString("slice %1 %2x%3 depth=%4 -> %5")
+                               .arg(slice).arg(bgr.cols).arg(bgr.rows)
+                               .arg(bgr.depth() == CV_16U ? 16 : 8).arg(dst));
+        }
+        sourcePaths << dst;
+        incrementProgress();
+    }
     return true;
 }
 
@@ -206,6 +311,7 @@ void FS::initializeProgress()
     progressTotal = 0;
     for (const QStringList &g : groups) {
         int gSlices = g.count();
+        progressTotal += gSlices;                   // prepareSources
         if (o.method == "DMap") progressTotal += (gSlices * 4 + 1);
         if (o.method == "PMax") progressTotal += (gSlices * 2 + 1);
         totSlices += gSlices;
@@ -353,6 +459,7 @@ void FS::run()
         if (G::FSLog) G::log(srcFun, msg);
 
         if (!initializeGroup(groupCounter++)) { failed = true; break; }
+        if (!prepareSources()) { failed = !abortRequested(); break; }
 
         if (o.method == "DMap" && !abortRequested()) { if (!runDMap()) failed = true; }
         if (o.method == "PMax" && !abortRequested()) { if (!runPMax()) failed = true; }
@@ -444,29 +551,9 @@ bool FS::runDMap()
 
         status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
-        QString path = inputPaths.at(slice);
-
-        auto decoder = [this](const QString& p) -> cv::Mat {
-            cv::Mat result;
-            // This triggers MW::matFromQImage on the GUI thread and WAITS.
-            // Pass the metadata snapshot captured up front so the GUI-thread
-            // decode does not depend on live DataModel state (the user may
-            // have navigated to another folder by now).
-            ImageMetadata m = metaSnapshot.value(p);
-            emit requestImage(p, m, result);
-            return result.clone(); // Ensure we own the data
-        };
-
         // Sequential Part: Load and ECC Align
         try {
-            if (developDecoder && developPaths.contains(path)) {
-                const cv::Mat developed = developDecoder(path, &abort);
-                currImage = developed.empty() ? FSLoader::Image()
-                                              : FSLoader::loadFromMat(developed);
-            }
-            else {
-                currImage = FSLoader::load(path.toStdString(), decoder);
-            }
+            currImage = FSLoader::load(sourcePaths.at(slice).toStdString());
         } catch (const std::exception &e) {
             QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
             status(msg);
@@ -481,9 +568,8 @@ bool FS::runDMap()
 
         /*
         FSLoader::load returns an empty Image (rather than throwing) when the
-        decode fails, e.g. when the user navigates to another folder while the
-        stack is still processing. Abort cleanly here instead of feeding empty
-        matrices into alignment.
+        file cannot be read. Abort cleanly here instead of feeding empty matrices
+        into alignment.
         */
         if (abortRequested()) {
             for (auto &f : futures) f.waitForFinished();
@@ -637,7 +723,7 @@ bool FS::runDMap()
         fusedColorMat,
         fopt,
         depthIndex16Mat,
-        inputPaths,
+        sourcePaths,
         globals,
         &abort,
         statusCb,
@@ -719,7 +805,7 @@ bool FS::runPMax()
         status(QString("Aligning Slice %1 of %2").arg(slice + 1).arg(grpSlices));
 
         try {
-            currImage = FSLoader::load(inputPaths.at(slice).toStdString());
+            currImage = FSLoader::load(sourcePaths.at(slice).toStdString());
         } catch (const std::exception &e) {
             QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
             status(msg);
@@ -814,7 +900,7 @@ bool FS::runPMax()
         fusedColorMat,
         fopt,
         depthIndex16Mat,
-        inputPaths,
+        sourcePaths,
         globals,
         &abort,
         statusCb,
@@ -837,7 +923,8 @@ QString FS::save(QString fuseFolderPath)
     QString srcFun = "FS::save";
 
     // Make file name for fused image based on last input image in stack
-    QFileInfo lastFi(inputPaths.last());
+    const QString lastSrc = VersionKey::sourceOf(inputPaths.last());  // file, not key
+    QFileInfo lastFi(lastSrc);
     QString base = lastFi.completeBaseName() + "_FocusStack";
     if (o.isLocal) base += "_" + o.method; // + o.methodInfo;
     QString ext  = lastFi.suffix();
@@ -873,11 +960,11 @@ QString FS::save(QString fuseFolderPath)
     }
 
     // Copy metadata from first source using your existing logic
-    msg = "Copy metadata using ExifTool from " + inputPaths.last();
+    msg = "Copy metadata using ExifTool from " + lastSrc;
     if (G::FSLog) G::log(srcFun, msg);
     ExifTool et;
     et.setOverWrite(true);
-    et.copyAll(inputPaths.last(), fusedPath);
+    et.copyAll(lastSrc, fusedPath);
     // qDebug() << srcFun << "et.copyAll" << inputPaths.last() << fusedPath;
     // et.copyAllTags(inputPaths.last(), fusedPath);
     et.close();

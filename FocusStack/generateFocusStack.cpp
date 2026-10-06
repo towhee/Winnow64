@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "FocusStack/fs.h"
+#include "Utilities/versionkey.h"
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -194,11 +195,12 @@ void MW::generateFocusStack(const QStringList paths,
     remoteFolder            Source stack images (any file format), srcFolder
         inputFolder         "FocusStack" if remote, srcFolder if local
             grpFolder       Working folder for each group
+                source      Developed slices (16-bit tiff), the stacker's input
                 align       Aligned color pngs
                 depth       Depth map and diagnostics
                 fusion      Fused results when testing
 
-    inputFolder contains the input focus stack images (tiff or png)
+    inputFolder contains the input focus stack images (any format Winnow reads)
     srcFolder is where to save the fused result image
         - if local, srcFolder = inputFolder
         - if remote, srcFolder = inputFolder parent = Lightroom folder
@@ -249,9 +251,6 @@ void MW::generateFocusStack(const QStringList paths,
             progress->updateProgress(progressFocusStackRow, current, total, Qt::darkYellow);
     }, Qt::QueuedConnection);
 
-    // Use Winnow to decode and return a cv::Mat
-    connect(fs, &FS::requestImage, this, &MW::matFromQImage, Qt::BlockingQueuedConnection);
-
     // cleanup when finished
     connect(fsThread, &QThread::finished, fs, &QObject::deleteLater);
     connect(fsThread, &QThread::finished, fsThread,   &QObject::deleteLater);
@@ -279,17 +278,29 @@ void MW::generateFocusStack(const QStringList paths,
     }
 
     /*
+    Edits still batching across a multi-image selection have not reached the
+    sidecars yet, and the render below reads each slice's STORED recipe. Flush
+    first, as MW::prepareExport does, or a slider change made just before
+    stacking would be missing from every slice but the current one.
+    */
+    if (developProperties) {
+        developProperties->flushPropagation();
+        developProperties->flushAll();
+    }
+
+    /*
     Snapshot the metadata for every slice now, while we are on the GUI thread
-    and the DataModel still describes these files. The worker passes each
-    snapshot back with its decode request, so decoding never re-queries the
-    live DataModel. This lets the user navigate to other folders while the
-    stack processes without the decode failing (which previously crashed in
-    MW::matFromQImage).
+    and the DataModel still describes these files. developDecoder hands each
+    snapshot to the render, so it never re-queries the live DataModel. This lets
+    the user navigate to other folders while the stack processes.
+
+    A version key (path/#vN) is not a file, so it is not snapshotted here: the
+    render reads it from the DataModel, as the exporter does.
     */
     fs->metaSnapshot.clear();
     for (const QStringList &group : std::as_const(fs->groups)) {
         for (const QString &p : group) {
-            if (fs->metaSnapshot.contains(p)) continue;
+            if (fs->metaSnapshot.contains(p) || VersionKey::isVersion(p)) continue;
             QFileInfo fileInfo(p);
             int row = dm->proxyRowFromKey(p);
             metadata->loadImageMetadata(fileInfo, row, dm->instance,
@@ -305,10 +316,18 @@ void MW::generateFocusStack(const QStringList paths,
     sees in Develop: edits, masks, spots and geometry, and a raw from Winnow's
     sensor render. 16-bit, so the fused TIFF keeps the develop precision.
 
-    Which slices: every raw, and any other image with a stored develop recipe. An
-    unedited JPEG/TIFF is still read straight from disk -- its file already IS its
-    develop render, and the direct read keeps a 16-bit TIFF at full depth (the
-    develop path would come in through an 8-bit decode).
+    Which slices: every raw (and any other format OpenCV cannot read), every
+    version, and any other image with a stored develop recipe. An image that was
+    never developed renders with default settings. An unedited JPEG/TIFF/PNG is
+    still read straight from disk -- its file already IS its develop render, and
+    the direct read keeps a 16-bit TIFF at full depth (the develop path would come
+    in through an 8-bit decode).
+
+    FS::prepareSources writes each render to grpFolder/source as a 16-bit TIFF and
+    the stacker reads only those files. A raw must render from its SENSOR data
+    (requireSensor): if that decode fails the stack aborts with the file named,
+    instead of quietly stacking the embedded previews (which is how an OM-1 stack
+    came out at 3200x2400).
 
     PER GROUP, all or nothing: one develop-rendered slice makes the whole group
     develop-rendered, so every slice in a stack has the same bit depth and the same
@@ -326,7 +345,7 @@ void MW::generateFocusStack(const QStringList paths,
             bool develop = false;
             for (const QString &p : group) {
                 const QString ext = QFileInfo(p).suffix().toLower();
-                if (!cvReadable.contains(ext) ||
+                if (!cvReadable.contains(ext) || VersionKey::isVersion(p) ||
                     !developProperties->developBlobFor(p).isEmpty()) {
                     develop = true;
                     break;
@@ -357,8 +376,8 @@ void MW::generateFocusStack(const QStringList paths,
     Runs on the FS worker thread. The render is started on the GUI thread (it owns
     the recipe capture and the mask prerequisites) and runs on developRenderPool,
     calling back on the GUI thread; the worker waits for the result, which is why
-    this cannot be a BlockingQueuedConnection like requestImage -- that would park
-    the GUI thread the render's own callbacks need. The wait polls the abort flag,
+    this cannot be a BlockingQueuedConnection -- that would park the GUI thread
+    the render's own callbacks need. The wait polls the abort flag,
     so ESC and quit (closeEvent aborts, then waits on fsThread) never hang on a
     render still in flight.
     */
@@ -374,7 +393,7 @@ void MW::generateFocusStack(const QStringList paths,
                 [result](bool ok, const QImage &out) {
                     result->set_value(ok ? out : QImage());
                 },
-                m.fPath.isEmpty() ? nullptr : &m, degrees);
+                m.fPath.isEmpty() ? nullptr : &m, degrees, /*requireSensor*/true);
         }, Qt::QueuedConnection);
 
         while (rendered.wait_for(std::chrono::milliseconds(100)) !=
@@ -463,53 +482,6 @@ void MW::generateFocusStack(const QStringList paths,
     // --------------------------------------------------------------------
 
     fsThread->start();
-}
-
-void MW::matFromQImage(QString fPath, ImageMetadata m, cv::Mat &mat)
-{
-    G::log("MW::matFromQImage", fPath);
-
-    /*
-    This slot runs on the GUI thread via a Qt::BlockingQueuedConnection from
-    the focus-stack worker. Any exception thrown here unwinds through the Qt
-    event loop and terminates the app (the worker's try/catch cannot catch a
-    throw that happens on another thread). cv::cvtColor throws on an empty Mat,
-    so every failure path must leave mat empty and return instead of throwing.
-    FSLoader::load treats an empty Mat as a load failure and aborts the stack
-    cleanly.
-
-    The ImageMetadata 'm' is the snapshot captured up front in
-    MW::generateFocusStack. Decoding from it (rather than re-querying the live
-    DataModel) means the user can navigate to other folders while a stack is
-    processing without the decode failing.
-    */
-    mat.release();
-
-    if (m.fPath.isEmpty()) m.fPath = fPath;     // guard against a missing snapshot
-    if (m.video) return;
-
-    // decode the source image from the metadata snapshot (no DataModel lookup)
-    ImageDecoder imageDecoder(0, dm, metadata);
-    QImage src;
-    if (!imageDecoder.decodeIndependent(src, metadata, m) || src.isNull()) {
-        qWarning() << "MW::matFromQImage: decode failed, returning empty mat for" << fPath;
-        return;
-    }
-
-    // Convert to Format_RGB888 for 3-channel or RGBA8888 for 4-channel
-    // Avoid RGB32 as OpenCV expects 3 or 4 channels specifically
-    QImage swapped = src.convertToFormat(QImage::Format_RGBA8888);
-    if (swapped.isNull()) {
-        qWarning() << "MW::matFromQImage: convertToFormat failed for" << fPath;
-        return;
-    }
-
-    // Deep copy into the output Mat
-    mat = cv::Mat(swapped.height(), swapped.width(), CV_8UC4,
-                  (void*)swapped.bits(), swapped.bytesPerLine()).clone();
-
-    // OpenCV expects BGRA, not RGBA. Swap the channels:
-    cv::cvtColor(mat, mat, cv::COLOR_RGBA2BGRA);
 }
 
 void MW::copyFocusStackWinnetPath()

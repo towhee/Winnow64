@@ -74,6 +74,11 @@ public:
     /* Progress sink for the RAW demosaic, set by decodeIndependent and forwarded to
        RawFormat::Decode by load(). Empty for all other decode paths. */
     std::function<void(int, int)> decodeProgress;
+    /* Independent decodes only: decode a raw from the SENSOR even when G::useRaw is
+       off. G::useRaw follows the operation mode (Preview turns it off), so without this
+       an export, devPreview, Embellish export or focus stack run outside Develop got
+       the embedded preview. Set by MW::developPixelSource. */
+    bool forceSensorDecode = false;
 
     enum Status {
         Undefined,

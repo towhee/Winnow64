@@ -1,5 +1,6 @@
 ﻿#include "Main/mainwindow.h"
 #include "Utilities/versionkey.h"
+#include "ImageFormats/Raw/rawformat.h"
 #include "Metadata/keywordpaths.h"
 #include <QtConcurrent>
 #include <QSslConfiguration>
@@ -13789,7 +13790,8 @@ bool MW::prepareExport(QStringList &targets)
 void MW::developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
-                            const ImageMetadata *mSnap, int degreesSnap)
+                            const ImageMetadata *mSnap, int degreesSnap,
+                            bool requireSensor)
 {
 /*
     Render one image's FULL develop recipe for the exporter.
@@ -13803,6 +13805,12 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
 
     Unlike the preview path this uses stackJobFor(fPath): every image gets its OWN stored
     recipe, which is the whole point of a batch export.
+
+    requireSensor (the focus stacker): a raw with a sensor decoder must be rendered from
+    the SENSOR image. If the decode fails, done(false) is called instead of quietly
+    building the base from the embedded preview -- a stack of previews comes out at the
+    preview's size (3200x2400 for an OM-1, whose sensor is 5184x3888) with nothing to say
+    why. The exporter leaves it off and keeps the preview as a last resort.
 */
     if (G::isLogger) G::log("MW::developPixelSource");
 
@@ -13820,6 +13828,19 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     ImageMetadata m = mSnap ? *mSnap : dm->imMetadata(fPath);
     if (m.fPath.isEmpty()) m.fPath = fPath;
     if (m.ext.isEmpty()) m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
+    /* A raw that Winnow decodes from the sensor: only that decode marks a base
+       sceneReferred, so any other base under this path is a preview stand-in.
+
+       EVERY caller wants the sensor image, whatever mode the user is in. G::useRaw
+       follows the operation mode -- MW::setOperationMode turns it off in Preview -- so
+       gating on it alone rendered exports, devPreviews, Embellish exports and focus
+       stacks from the embedded preview whenever they ran outside Develop. useRaw off IN
+       Develop is different: that is the deliberate "Edit: Embedded Preview" choice, and
+       the render honours it (except requireSensor, which never takes a preview). */
+    const bool previewChosen = !G::useRaw &&
+                               G::operationMode == G::OperationMode::Develop;
+    const bool sensorRaw = (requireSensor || !previewChosen) &&
+                           RawFormat::HasSensorDecoder(m.ext);
 
     /* "Denoise raw" is a property of the BASE, applied before the composite. The
        interactive path gets there through developRawDenoisedBase / ensureRawDenoise, and
@@ -13852,26 +13873,44 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     /* Step 1 (worker): make sure the scene-linear WorkingImage exists. decodeIndependent
        caches it as a side effect, so an image already visited is a cache hit. */
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
-                              pmridCached, degreesSnap, done]() mutable {
+                              pmridCached, degreesSnap, sensorRaw, requireSensor,
+                              done]() mutable {
         auto work = WorkingImageCache::instance().get(fPath);
         /* A cached base is only usable here if it IS the sensor image. The cache is keyed
            by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
            typically 1024 px), so reusing it would render this image's export -- or its
-           devPreview, the thing the loupe shows at 100% -- from a thumbnail. Compare
-           against the CFA active area and decode again when the entry is nowhere near it;
-           half the long edge separates a preview from a sensor image (which lands on the
-           active area or the slightly smaller default crop) without being brittle. */
-        if (work && G::useRaw && m.rawInfo.isRaw && m.rawInfo.width > 0) {
+           devPreview, the thing the loupe shows at 100% -- from a thumbnail.
+
+           sceneReferred is the exact test: only the sensor decode sets it. The size test
+           that came before it (preview long edge < half the sensor's) is kept as a
+           backstop, but on its own it MISSED an Olympus: an OM-1's embedded preview is
+           3200 px against a 5184 px sensor, 62% rather than under half, so a focus stack
+           started in the Library was rendered from previews. */
+        if (work && sensorRaw && !work->sceneReferred) work.reset();
+        if (work && sensorRaw && m.rawInfo.isRaw && m.rawInfo.width > 0) {
             const int sensorEdge = qMax(m.rawInfo.width, m.rawInfo.height);
             if (qMax(work->width, work->height) * 2 < sensorEdge) work.reset();
         }
         bool decodedHere = false;
         if (!work) {
             ImageDecoder dec(0, dm, metadata);
+            dec.forceSensorDecode = sensorRaw;
             QImage img;
             dec.decodeIndependent(img, metadata, m, nullptr);
             work = WorkingImageCache::instance().get(fPath);
             decodedHere = true;
+            /* The sensor decode failed and decodeIndependent fell back to the embedded
+               preview. requireSensor callers want a failure, not a preview-sized
+               render. */
+            if (requireSensor && sensorRaw && (!work || !work->sceneReferred)) {
+                const QString msg = "Raw sensor decode failed; not using the embedded "
+                                    "preview. " + fPath;
+                qWarning().noquote() << "MW::developPixelSource" << msg;
+                if (G::FSLog) G::log("MW::developPixelSource", msg);
+                if (fPath != dm->currentKey) WorkingImageCache::instance().remove(fPath);
+                QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
+                return;
+            }
             if (!work && !img.isNull()) {
                 /* Display-referred format (or the raw decode failed): build the working
                    image from the decoded 8-bit image, as renderDevelopPreview does. */
@@ -13886,6 +13925,12 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         if (!work) {
             QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
             return;
+        }
+        if (G::FSLog) {
+            G::log("MW::developPixelSource",
+                   QString("base %1x%2 sceneReferred=%3 decodedHere=%4 %5")
+                       .arg(work->width).arg(work->height)
+                       .arg(work->sceneReferred).arg(decodedHere).arg(fPath));
         }
 
         /* Raw denoise -> the base the COMPOSITE starts from. PMRID is pre-demosaic, so the
@@ -14521,6 +14566,24 @@ void MW::changeInfoOverlay()
     embelProperties->updateMetadataTemplateList();
 }
 
+void MW::setEmbelPixelSource(EmbelExport &embelExport)
+{
+/*
+    Embellish exports the DEVELOP render: the recipe (or default settings) from the raw
+    sensor data, as Develop's own export does. Pending multi-image edits are flushed
+    first so the stored recipes are current (see prepareExport). 8-bit sRGB: the
+    embellish scene renders into an 8-bit image anyway.
+*/
+    if (!developProperties) return;
+    developProperties->flushPropagation();
+    developProperties->flushAll();
+    embelExport.setPixelSource([this](const QString &fPath,
+                                      EmbelExport::PixelDone done) {
+        developPixelSource(fPath, /*want16Bit*/false, OutputTransform::Space::sRGB,
+                           std::move(done));
+    });
+}
+
 void MW::exportEmbelFromAction(QAction *embelExportAction)
 {
 /*
@@ -14541,6 +14604,7 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
 
     EmbelExport embelExport(metadata, dm, icd, embelProperties);
     connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
+    setEmbelPixelSource(embelExport);
 
 //    embelExport.exportRemoteFiles(embelExportAction->text(), picks);
 
@@ -14572,6 +14636,7 @@ void MW::exportEmbel()
 
     EmbelExport embelExport(metadata, dm, icd, embelProperties);
     connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
+    setEmbelPixelSource(embelExport);
 
     embelExport.exportImages(picks);
 }
