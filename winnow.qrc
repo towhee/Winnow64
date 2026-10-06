@@ -164,6 +164,8 @@
         <file>images/icon16/new.png</file>
         <file>images/icon16/down.png</file>
         <file>images/icon16/up.png</file>
+        <file>images/icon16/prev.png</file>
+        <file>images/icon16/next.png</file>
         <file>images/icon16/collapse.png</file>
         <file>images/icon16/expand.png</file>
         <file>images/branch-blank.png</file>

@@ -245,6 +245,9 @@ void MW::filterChange(QString source)
         return;
     }
 
+    // the state this change settles on, for the title bar's Back/Forward
+    recordFilterHistory();
+
     /*  BOTH SCOPES FILTER THE PROXY NOW, and this gate is gone.
 
         It existed because the Catalog tree used to hold the CATALOG's values, queried
@@ -474,6 +477,112 @@ void MW::filterChange(QString source)
                            << " snapshots =" << dm->probeSnapRebuilds
                            << "(" << QString::number(dm->probeSnapNs / 1.0e6, 'f', 1) << "ms)"
                            << " phases(ms):" << phases.join(" ");
+}
+
+void MW::recordFilterHistory()
+{
+/*
+    Append the filter state MW::filterChange is applying to the history, unless it is the
+    state already showing -- a refilter after a rating edit, or a Back/Forward step, changes
+    nothing a user would step back to. A new state after a Back drops the forward
+    entries, as a browser does.
+
+    THE STATE IS Filters::persistableState: checked items keyed on {category, value,
+    include/exclude}, the search text and the keyword any/all mode. Session categories
+    (Filter on..., map pins) are not in it, so a change to one alone records nothing.
+
+    THE FIRST ENTRY IS "NOTHING FILTERED". By the time filterChange runs the tree already
+    holds the new checks, so the state before the first change is gone; after MW::reset it
+    can only have been unfiltered, which is what Back from the first filter should show.
+*/
+    if (!filters || filterHistoryStepping) return;
+    const QVariantMap state = filters->persistableState();
+    if (filterHistory.isEmpty()) {
+        QVariantMap none;
+        none["items"] = QStringList();
+        none["searchText"] = QString();
+        none["keywordsMatchAll"] = state.value("keywordsMatchAll");
+        filterHistory << none;
+        filterHistoryPos = 0;
+    }
+    if (filterHistory.at(filterHistoryPos) == state) {
+        syncFilterHistoryButtons();
+        return;
+    }
+    while (filterHistory.size() > filterHistoryPos + 1) filterHistory.removeLast();
+    filterHistory << state;
+    // bounded: a long session of clicks should not grow without limit
+    const int maxEntries = 100;
+    while (filterHistory.size() > maxEntries) filterHistory.removeFirst();
+    filterHistoryPos = filterHistory.size() - 1;
+    syncFilterHistoryButtons();
+}
+
+void MW::clearFilterHistory()
+{
+    filterHistory.clear();
+    filterHistoryPos = -1;
+    syncFilterHistoryButtons();
+}
+
+void MW::filterHistoryBack()
+{
+    stepFilterHistory(-1);
+}
+
+void MW::filterHistoryForward()
+{
+    stepFilterHistory(1);
+}
+
+void MW::stepFilterHistory(int delta)
+{
+/*
+    Re-apply the history entry delta steps from the one showing, through the path a
+    folder change's restore takes: Filters::setStateToRestore + Filters::restore, then
+    one filterChange. A check whose value is no longer in the set simply does not come
+    back (restore with keepMissing false).
+
+    REFUSED WHILE A RESTORE IS PENDING, because setStateToRestore would overwrite the
+    states that restore is waiting to apply, and while a load runs, because filterChange
+    would return without applying anything.
+*/
+    if (G::isLogger) G::log("MW::stepFilterHistory", QString::number(delta));
+    if (!filters || filterHistoryStepping) return;
+    const int to = filterHistoryPos + delta;
+    if (to < 0 || to >= filterHistory.size()) return;
+    if (restoreFiltersPending || G::isModifyingDatamodel || G::isLoadRunning || G::stop) {
+        if (G::popup)
+            G::popup->showPopup(tr("Filter history is unavailable while images load."));
+        return;
+    }
+    filterHistoryPos = to;
+    filterHistoryStepping = true;
+    filters->setStateToRestore(filterHistory.at(to));
+    filters->restore(false /*keepMissing*/);
+    filterChange("MW::stepFilterHistory");
+    filterHistoryStepping = false;
+    syncFilterHistoryButtons();
+}
+
+void MW::syncFilterHistoryButtons()
+{
+    const bool back = filterHistoryPos > 0;
+    const bool forward = filterHistoryPos >= 0
+                         && filterHistoryPos < filterHistory.size() - 1;
+    if (filterBackBtn) {
+        filterBackBtn->setEnabled(back);
+        filterBackBtn->setToolTip(back
+            ? tr("Previous filter state (%1 earlier)").arg(filterHistoryPos)
+            : tr("Previous filter state: none earlier since this set loaded"));
+    }
+    if (filterForwardBtn) {
+        filterForwardBtn->setEnabled(forward);
+        filterForwardBtn->setToolTip(forward
+            ? tr("Next filter state (%1 later)")
+                  .arg(filterHistory.size() - 1 - filterHistoryPos)
+            : tr("Next filter state: none later"));
+    }
 }
 
 void MW::quickFilter()

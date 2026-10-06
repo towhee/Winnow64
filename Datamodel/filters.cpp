@@ -2774,6 +2774,9 @@ void Filters::restore(bool keepMissing)
     // the mode goes back with the checks it combines; the caller re-applies both
     if (keywords) keywords->setData(0, MatchAllRole, savedKeywordsMatchAll);
     updateKeywordModeLabel();
+    /*  The title bar's "filtering" colour follows the checks just restored -- a filter
+        history step (MW::stepFilterHistory) can land on an unfiltered state. */
+    notifyFilteringState();
     // emit filterChange("Filters::restore");
 }
 

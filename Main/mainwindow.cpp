@@ -6449,6 +6449,7 @@ bool MW::reset(QString src)
 
     // filters
     buildFilters->reset();
+    clearFilterHistory();       // another set's checks mostly name values not in this one
     /*  A whole new set: checks saved by an earlier folder add/remove belong to the set
         being thrown away -- EXCEPT the Library's own restore (restoreLibraryState),
         which queueLibraryStateRestore queued FOR the load this reset begins. Clearing it

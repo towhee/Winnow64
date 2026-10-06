@@ -1976,6 +1976,22 @@ void MW::createFilterDock()
     connect(filterDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // add widgets to the right side of the title bar layout
+    /*  Back / Forward through the filter history (MW::recordFilterHistory). Disabled
+        until there is somewhere to go; syncFilterHistoryButtons keeps them current. */
+    filterBackBtn = new BarBtn();
+    filterBackBtn->setIcon(":/images/icon16/prev.png", G::iconOpacity);
+    connect(filterBackBtn, &BarBtn::clicked, this, &MW::filterHistoryBack);
+    filterTitleLayout->addWidget(filterBackBtn);
+
+    filterForwardBtn = new BarBtn();
+    filterForwardBtn->setIcon(":/images/icon16/next.png", G::iconOpacity);
+    connect(filterForwardBtn, &BarBtn::clicked, this, &MW::filterHistoryForward);
+    filterTitleLayout->addWidget(filterForwardBtn);
+    syncFilterHistoryButtons();
+
+    // Spacer
+    filterTitleLayout->addSpacing(5);
+
     // toggle expansion button
     BarBtn *updateFiltersBtn = new BarBtn();
     updateFiltersBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
