@@ -435,6 +435,9 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
         if (!restoreFiltersPending) {
             filters->save();
             restoreFiltersPending = true;
+            /*  The same set, less what left it: a check whose value went with the rows
+                (every 5-star image deleted) stays checked on an empty item. */
+            restoreKeepsMissing = true;
         }
         buildFilters->rebuild();
     }
@@ -651,10 +654,9 @@ void MW::deleteFiles(QStringList paths)
         G::popup->showPopup(msg, 4000);
     }
 
-    /* Update selection. When every filtered item is deleted the filters are
-       cleared and the prior current/saved rows no longer exist, leaving
-       dm->currentSfRow invalid (-1). Fall back to the first row so a valid
-       selection is always set (unless the folder is now empty). */
+    /* Update selection. When every filtered item is deleted the filters stay and
+       the proxy is empty, so nothing is selected; otherwise the prior current row may
+       be gone (dm->currentSfRow -1), so fall back to the first row. */
     int sfRow = dm->currentSfRow;
     if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
     if (dm->sf->rowCount() > 0) sel->select(sfRow);

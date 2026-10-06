@@ -3807,6 +3807,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
             filters->save();
             restoreFiltersPending = true;
         }
+        restoreKeepsMissing = false;            // a new set: a value not in it goes
         buildFilters->reset(false);
     }
     /*  After stop(), which clears it: the load is running from here until
@@ -6139,11 +6140,12 @@ void MW::refreshViews(QString srcFun)
 /*
     The second half of MW::refresh: bring filters, proxy, ImageCache and views into line
     with a datamodel that has just gained or lost rows.
-*/
-    if (!dm->sf->rowCount()) {
-        buildFilters->rebuild();
-    }
 
+    NO FILTER REBUILD HERE. One used to run when the proxy came up empty -- which is
+    what deleting every filtered image does -- and it removed the checked items before
+    applyModelChange saved them, so the filters cleared. applyModelChange rebuilds them
+    after this, saved and restored.
+*/
     // Point-in-time check: dm->insert() bumps rowCount, so isMetaReadFinished()
     // reads false immediately while the new row is unread, routing fresh inserts
     // to the positioning path below. (Reading the G::allMetadataAttempted global
@@ -6454,6 +6456,7 @@ bool MW::reset(QString src)
         it lands still cancels it (MW::setScope). */
     if (!libraryFilterRestorePending && !foldersFilterRestorePending)
         restoreFiltersPending = false;
+    restoreKeepsMissing = false;
 
     titleFilePath.clear();
     updateWindowTitle();

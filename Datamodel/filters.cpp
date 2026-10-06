@@ -2725,10 +2725,15 @@ void Filters::setStateToRestore(const QVariantMap &m)
     savedKeywordsMatchAll = m.value("keywordsMatchAll").toBool();
 }
 
-void Filters::restore()
+void Filters::restore(bool keepMissing)
 /*
     First, uncheck all items to start with a clean state.  Then iterate through all
     the ItemState and checking the matching item in the QWidgetTree (this).
+
+    KEEP MISSING is for a rebuild of the SAME set after rows left it (a delete): a check
+    whose value no row carries any more is put back on an empty item, so the filter
+    stays and shows nothing, rather than silently lifting and showing everything. A
+    folder change leaves it false -- there a value not in the new set should go.
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::restore");
@@ -2754,6 +2759,7 @@ void Filters::restore()
         /*  A state with no matching item is normal rather than an error: the value is
             simply not in this folder, or the keyword was re-parented and its path
             changed, in which case dropping the filter is correct. */
+        if (!item && keepMissing) item = emptyItemFor(state);
         if (!item) continue;
         item->setCheckState(0, state.state);
         styleFilterItem(item);
@@ -2769,6 +2775,34 @@ void Filters::restore()
     if (keywords) keywords->setData(0, MatchAllRole, savedKeywordsMatchAll);
     updateKeywordModeLabel();
     // emit filterChange("Filters::restore");
+}
+
+QTreeWidgetItem *Filters::emptyItemFor(const ItemState &state)
+{
+/*
+    See restore(keepMissing). Adds a zero-count item for a saved check to its category,
+    through the same builder the rows' values go through, and returns it. Only the
+    categories the build fills from the rows: the others (Search, Collections, Queries,
+    Places) do not lose items when rows go.
+*/
+    QTreeWidgetItem *category = nullptr;
+    for (QTreeWidgetItem *cat : categoryHeaders()) {
+        if (cat->data(0, CategoryNameRole).toString() == state.category) {
+            category = cat;
+            break;
+        }
+    }
+    if (!category || state.value.isEmpty()) return nullptr;
+    const QList<QTreeWidgetItem *> rowCats {
+        picks, ratings, labels, types, folders, years, months, days, models, lenses,
+        focalLengths, isos, titles, keywords, creators, gps, availability, compare
+    };
+    if (!rowCats.contains(category) && !sessionCats.contains(category)) return nullptr;
+
+    addCategoryItems({{state.value, 0}}, category);
+    for (QTreeWidgetItem *item : itemsInCategory(category))
+        if (itemMapKey(category, item) == state.value) return item;
+    return nullptr;
 }
 
 void Filters::reportSaved()
