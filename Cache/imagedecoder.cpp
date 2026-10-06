@@ -146,12 +146,20 @@ void ImageDecoder::decode(int row, int instance)
         then took over 20 s to clear a one-item filter (sampled 2026-09-24). It was also
         a data race on the proxy's private mapping. The snapshot is immutable and is
         what the ImageCache chose this row from, so the row means the same thing here. */
+    /*  NOT GATED ON dm->sf->isSuspended(). That guard dates from when this function read
+        the live proxy; since the snapshot it protects nothing. Worse, it reported
+        Status::Failed, which okToDecode treats as TERMINAL: a filter edit or category
+        rebuild that suspended the proxy for a moment failed every decode in flight and
+        blacklisted those rows for the rest of the folder -- the current image among them,
+        so the loupe went blank and stayed blank (2026-10-06, 95 rows on an OM-1 card).
+
+        A row missing from the snapshot means the model changed under the request, which
+        is transient too: Abort leaves the row retry-eligible. */
     const ProxySnapshotPtr snap = dm->proxySnapshot();
-    const bool suspended = dm->sf->isSuspended();
-    if (suspended || !snap || !snap->contains(row)) {
+    if (!snap || !snap->contains(row)) {
         dmRow = -1;
-        status = Status::Failed;
-        errMsg = suspended ? "Proxy suspended." : "Row out of range.";
+        status = Status::Abort;
+        errMsg = "Row out of range.";
         setIdle();
         emit done(threadId, int(status), sfRow, QImage(), QString(), 0);
         return;
