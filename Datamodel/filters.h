@@ -374,7 +374,7 @@ public slots:
     /*  Whether save() found anything checked -- what a caller restoring after a rebuild
         needs to know to decide whether the compiled predicate is now stale. */
     bool hasSavedStates() const { return !itemStates.isEmpty(); }
-    void restore();
+    void restore(bool keepMissing = false);
     void reportSaved();
     void disable();
     void enable();
@@ -667,6 +667,7 @@ private:
         Qt::CheckState state = Qt::Checked;
     };
     QList<ItemState>itemStates;
+    QTreeWidgetItem *emptyItemFor(const ItemState &state);
     /*  Every item that is not Unchecked, keyed as ItemState says. save()'s walk. */
     QList<ItemState> checkedItemStates() const;
     bool savedKeywordsMatchAll = false;     // the any/all mode, with itemStates

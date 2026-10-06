@@ -2531,6 +2531,9 @@ private:
     /*  Filters saved by a folder add/remove, waiting for the rebuild to finish; see
         MW::folderSelectionChange and restoreFiltersAfterFolderChange. */
     bool restoreFiltersPending = false;
+    /*  The pending restore is applyModelChange's (rows left or joined the SAME set), so
+        Filters::restore keeps a check whose value no row carries now. */
+    bool restoreKeepsMissing = false;
     /*  One Library-tree read in flight at a time; see updateLibraryTree. */
     bool libraryTreePending = false;
     bool libraryTreeAgain = false;

@@ -1323,18 +1323,23 @@ void MW::restoreFiltersAfterFolderChange()
 /*
     See MW::folderSelectionChange. A check whose value is no longer in the set (the
     removed folder, say) simply does not come back -- Filters::restore finds no item for
-    it, which is the right answer.
+    it, which is the right answer. Not after applyModelChange (restoreKeepsMissing):
+    there the set is the same one, and deleting every filtered image must leave the
+    filter on, showing nothing.
 
     RE-APPLIED WHENEVER ANYTHING HAD BEEN CHECKED, not only when something still is: the
     proxy's compiled predicate holds the pre-rebuild checks until a filterChange
     recompiles it, so a check that did not come back would otherwise keep filtering.
 */
     if (!restoreFiltersPending || !filters) return;
+    const bool keepMissing = restoreKeepsMissing && !libraryFilterRestorePending
+                             && !foldersFilterRestorePending;
     restoreFiltersPending = false;
+    restoreKeepsMissing = false;
     libraryFilterRestorePending = false;
     foldersFilterRestorePending = false;
     const bool hadChecks = filters->hasSavedStates();
-    filters->restore();
+    filters->restore(keepMissing);
     if (hadChecks || filters->isAnyFilter())
         filterChange("MW::restoreFiltersAfterFolderChange");
     // the filtered set is what is loaded now: show it

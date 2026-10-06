@@ -14,6 +14,13 @@ BUGS / TO
 - One possible colour problem in Embellish export, not checked: after writing the file it
   still copies the source file's colour profile into it. The new render is sRGB, so a
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
+- Go to previous ingest folder and bookmarks switches to folders even if in library.
+- In library filter on collection, unfilter, entire library except Folders, File types,
+  all other categoeries are disabled.
+- Fosus stack sets color class to green, but does not rebuild filters
+- Unfiled keywords
+- Show image size as crop
+- Prev / Next filter
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?
 - Do we need backups when edit, and if so, should they be in the catalog?
