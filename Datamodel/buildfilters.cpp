@@ -256,7 +256,10 @@ void BuildFilters::build(AfterAction newAction)
 
     // define action for BuildFilters::run
     action = Action::Reset;
+    // the drained run's Done is replaced by this build's -- see done()
+    superseding = true;
     abortProcessing();
+    superseding = false;
     instance = dm->instance;
     filters->startBuildFilters(isReset);
     progress = 0;
@@ -426,6 +429,21 @@ void BuildFilters::done()
             << "afterAction =" << afterAction
                ;
     }
+    /*
+        A SUPERSEDED RUN DOES NOT FINISH THE BUILD. build() drains, through
+        abortProcessing, a run that has already finished counting but whose ops are still
+        queued -- its tree updates are applied, but this Done is replaced by the Done of
+        the build starting now. Only build() sets superseding: update(), updateAllCounts()
+        and updateCategory() may start nothing (their load gate), and a Reset they drain
+        must still finish here or buildingFilters stays latched.
+        Letting it through fired finishedBuildFilters from INSIDE build():
+        restoreFiltersAfterFolderChange -> filterChange -> update() started the thread,
+        and build()'s own start() then found it running and did nothing, so the Reset
+        never ran. A focus stack's Green label never reached the Labels count that way
+        (MW::applyModelChange: refreshViews' update, then rebuild). It also reset isReset
+        and consumed the afterAction the new build had just set.
+    */
+    if (superseding) return;
     // dm->sf->suspend(false);
     filters->setEnabled(true);
     isReset = false;

@@ -191,6 +191,9 @@ private:
        remove the TSan-confirmed data race (abort: run vs updateUnfilteredCounts). */
     std::atomic<bool> abort{false};
     std::atomic<bool> idle{true};
+    /*  GUI thread only: build() is draining a run it is about to replace, so that run's
+        Done op must not finish the build. See BuildFilters::done. */
+    bool superseding = false;
     DataModel *dm;
     Metadata *metadata;
     Filters *filters;
