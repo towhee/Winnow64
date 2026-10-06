@@ -2579,6 +2579,19 @@ void ImageCache::setCurrentPosition(QString fPath, QString src)
         return;
     }
 
+    /*  THE CURRENT IMAGE ALWAYS GETS ANOTHER TRY. A terminal status blacklists a row for
+        the rest of the folder (okToDecode), and the loupe shows only what this cache
+        holds -- so one bad decode, whatever caused it, left the image blank for good
+        however often the user came back to it. Clearing the status here re-admits just
+        this row; the attempts cap still bounds a file that really cannot be read. */
+    const QString currPath = pathAt(currRow);
+    const RowCache cs = stateOf(currPath);
+    if (!cs.isCached && !cs.isCaching &&
+        cs.status != ImageDecoder::Status::Undefined &&
+        cs.status != ImageDecoder::Status::Success) {
+        setStateStatus(currPath, ImageDecoder::Status::Undefined);
+    }
+
     abort = false;
     dispatch();
 }
