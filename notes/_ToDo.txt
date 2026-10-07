@@ -14,7 +14,6 @@ BUGS / TO
 - One possible colour problem in Embellish export, not checked: after writing the file it
   still copies the source file's colour profile into it. The new render is sRGB, so a
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
-- Go to previous ingest folder and bookmarks switches to folders even if in library.
 - Unfiled keywords
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?

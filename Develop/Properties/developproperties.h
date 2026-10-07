@@ -824,27 +824,40 @@ private:
     void setCameraProfile(const QString &name);
 
     /*
-        HOVERING AN ITEM IN THE OPEN PROFILE DROPDOWN PREVIEWS IT ON THE LOUPE.
+        HOVERING AN ITEM IN AN OPEN BASIC DROPDOWN PREVIEWS IT ON THE LOUPE -- the
+        Profile list and the Tone mapping list.
 
         A profile is the one Basic control whose effect cannot be guessed from its name --
         "Camera VV2 v2" means nothing until you see it -- and the list is long, so trying
-        them one click at a time is the wrong interaction. Uses the SAME preview override
-        the Presets list and History use (previewStack / previewActive /
-        historyPreviewChanged): the stored stack, the sliders and the history are never
-        touched, and the render is proxy-only with no full-res settle.
+        them one click at a time is the wrong interaction. Tone mapping is short but just
+        as visual: "Soft roll-off" versus "Camera contrast" is a picture, not a word.
+        Uses the SAME preview override the Presets list and History use (previewStack /
+        previewActive / historyPreviewChanged): the stored stack, the sliders and the
+        history are never touched, and the render is proxy-only with no full-res settle.
 
         DEBOUNCED at the same 120 ms the Presets list uses, so sweeping the cursor down
         the list does not queue one develop render per row -- a look profile costs ~13 ms
         of pixel work per tick on top of the rest of the pipeline.
+
+        ONE timer, one pending action and one active flag serve both rows: only one popup
+        can be open at a time, and a single "end" path means no row can leave the other's
+        preview up.
     */
     void previewCameraProfile(const QString &name);
-    void endCameraProfilePreview();
-    QPointer<QTimer> cameraProfileHoverTimer;
-    QString cameraProfileHoverName;
+    void previewViewTransform(int vt);
+    /* Put `preview` up as the hover override (or take ours down when it matches the
+       stored stack -- the loupe already shows it). */
+    void showComboHoverPreview(const EditStack &preview, bool sameAsStored);
+    void endComboHoverPreview();
+    /* Wire a Basic combo's `highlighted` to the shared debounce, and watch its popup for
+       Hide (see eventFilter). `fire` runs when the hover settles. */
+    void armComboHover(QComboBox *combo, std::function<void(int ix)> fire);
+    QPointer<QTimer> comboHoverTimer;
+    std::function<void()> comboHoverPending;
     /* Whether WE started the live preview, so closing the popup restores only what this
        row put up -- and costs no render when nothing was previewed. */
-    bool cameraProfileHoverActive = false;
-    static constexpr int kProfileHoverDelayMs = 120;
+    bool comboHoverActive = false;
+    static constexpr int kComboHoverDelayMs = 120;
     void refreshCameraProfileRow();
     /* Fill the combo with the built-in entry plus every profile installed for THIS
        camera, and select the stored one. Separate from refresh because the list itself
