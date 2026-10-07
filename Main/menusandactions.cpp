@@ -2501,6 +2501,8 @@ void MW::createFileMenu()
     }
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeRecentFolder(QAction*)));
+    recentFoldersMenu->setToolTipsVisible(true);   // the "not in the Library" reason
+    connect(recentFoldersMenu, &QMenu::aboutToShow, this, &MW::updateRecentFoldersEnabled);
 
     fileMenu->addAction(revealFileAction);
 

@@ -1548,6 +1548,13 @@ private slots:
     void requestLibraryFolderFilter(const QStringList &includes, const QStringList &excludes,
                                     bool clearOthers);
     void applyPendingLibraryFolderFilter();
+    /*  A folder opened while in the Library (Go to Folder, Open Folder, Recent Folders)
+        FILTERS the Library to it and never switches to Folders. False, with the reason
+        in a popup, when the Library holds nothing there. See MW::gotoFolder. */
+    bool filterLibraryToFolder(const QString &path, bool recurse);
+    /*  Recent Folders' aboutToShow: in the Library, grey the folders it holds nothing
+        in, with the reason as the tooltip. */
+    void updateRecentFoldersEnabled();
     /*  Mirror the Filters panel's folder filter into LibTree. Emits nothing. */
     void syncLibTreeFromFilters();
     /*  Put back the checks a folder add/remove saved, once the categories have been

@@ -36,6 +36,13 @@ public:
         when it is inside the Library, the Library's include folders beneath it when it
         sits above them, and empty when the Library holds nothing there. */
     QStringList libraryFolders(const QString &path) const;
+    /*  The folders directly inside path that the Library holds images at or beneath:
+        what a "this folder only" Library folder filter excludes (see LibTree's Alt
+        click and MW::gotoFolder). */
+    QStringList libraryChildFolders(const QString &path) const;
+    /*  The Library's folders have been pushed (MW::updateLibraryTree), so
+        libraryFolders is an answer rather than "not known yet". */
+    bool isLibraryKnown() const { return libraryKnown; }
     /*  MW's push of the Library folder filter: highlight the bookmark that asks for
         exactly this filter, or nothing. Emits nothing. */
     void syncFromLibraryFilter(const QStringList &includes, const QStringList &excludes);

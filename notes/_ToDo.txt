@@ -16,7 +16,6 @@ BUGS / TO
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
 - Go to previous ingest folder and bookmarks switches to folders even if in library.
 - Unfiled keywords
-- Prev / Next filter
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?
 - Do we need backups when edit, and if so, should they be in the catalog?
