@@ -2799,9 +2799,10 @@ void MW::createDevelopDock()
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,
             imageView, &ImageView::hideMaskTint);
-    /* Scope selected -> un-hide the tint so that scope's combined mask shows. */
-    connect(developProperties, &DevelopProperties::maskTintShowRequested,
-            imageView, &ImageView::showMaskTint);
+    /* AUTO-SHOW DISABLED (2026-10-07, by request): selecting a scope used to un-hide the
+       tint (maskTintShowRequested -> ImageView::showMaskTint) and it got in the way. The
+       overlay is now shown only by an explicit toggle; the signal and showMaskTint are
+       kept so the auto-show rules can be re-wired here once they are decided. */
     /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);

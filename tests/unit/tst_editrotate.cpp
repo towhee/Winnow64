@@ -144,7 +144,8 @@ void tst_editrotate::strokesTurnAndKeepTheirSettings()
 {
     const QString src =
         R"({"size":20,"flow":80,"autoMask":true,"strokes":[{"size":15,"erase":true,"pts":[0.1,0.2,0.3,0.4]}]})";
-    for (int tool : {int(MaskTool::Brush), int(MaskTool::Object)}) {
+    for (int tool : {int(MaskTool::Brush), int(MaskTool::Object),
+                     int(MaskTool::RefineBrush)}) {
         const QJsonObject o = obj(EditRotate::maskParams(tool, src, 270));
         QCOMPARE(o.value("size").toInt(), 20);
         QCOMPARE(o.value("flow").toInt(), 80);

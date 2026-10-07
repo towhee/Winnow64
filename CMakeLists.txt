@@ -1085,8 +1085,8 @@ if(APPLE)
     # ONNX models bundled into the .app (Contents/MacOS). ONLY the two small ones ship
     # inside the app: focus_point_model.onnx loads eagerly in ImageView's constructor
     # (an on-demand model there would mean a download prompt at launch) and pmrid.onnx is
-    # 4 MB. The other seven -- u2net, skyseg, midas, migan, lama, sam2_encoder,
-    # sam2_decoder, ~771 MB together -- are DOWNLOADED ON DEMAND from
+    # 4 MB. The other eight -- u2net, skyseg, sky_segformer, midas, migan, lama,
+    # sam2_encoder, sam2_decoder, ~1 GB together -- are DOWNLOADED ON DEMAND from
     # https://winnow.ca/winnow/models/ the first time a feature needs one. See
     # Utilities/modelstore.h, and tools/gen_model_catalog.sh for the release step.
     foreach(_m focus_point_model pmrid)

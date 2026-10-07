@@ -21,6 +21,7 @@
 #include "Develop/brushstamp.h"
 #include "Develop/maskedge.h"
 #include "Develop/maskhalo.h"
+#include "Develop/maskrefine.h"
 #include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
@@ -9895,7 +9896,22 @@ struct CompDesc {
        MaskEdge::kMinRadius it is left at 0, so a sub-threshold nudge stays on the cheap
        path rather than paying a materialize for a no-op. */
     double edgePx = 0.0;
+    /* Refine Brush: NOT a coverage. `brush` holds the stroke region; the fold hands the
+       buffer folded so far to MaskRefine::apply inside it (see foldSegments). */
+    bool isRefine = false;
+    MaskRefine::Mode refineMode = MaskRefine::Mode::Add;
 };
+
+/* A Refine Brush component's mode: "mode":"edge" in paramsJson is Fix Edge; otherwise the
+   op says it -- Add adds, Subtract (and Intersect, which also takes area away) removes.
+   That mapping is what lets the Opt-at-stroke-start latch every submask already has pick
+   Remove for free. */
+MaskRefine::Mode refineModeOf(const MaskComponent &m)
+{
+    const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
+    if (o.value("mode").toString() == "edge") return MaskRefine::Mode::Edge;
+    return (m.op == int(MaskOp::Add)) ? MaskRefine::Mode::Add : MaskRefine::Mode::Remove;
+}
 
 /*
     One component's coverage at one pixel. This is the whole per-tool switch, in ONE
@@ -9912,6 +9928,7 @@ inline float evalCompAt(const CompDesc &d, double onx, double ony, size_t k,
                         const DepthMask::DepthRef *depthp,
                         double Wo, double Ho)
 {
+    if (d.isRefine) return 0.0f;     // never folded inline -- foldSegments routes it
     if (d.isBrush) { const float c = (*d.brush)[k]; return d.inverted ? 1.0f - c : c; }
     if (d.isRange)
         return (d.rangeTool == int(MaskTool::LuminanceRange))
@@ -10072,6 +10089,47 @@ void buildHaloGuide(const WorkingImage &src, std::vector<float> &guide)
 }
 
 /*
+    Display-like RGB of a working image, on ITS OWN grid, for the Refine Brush's guide
+    (Develop/maskrefine.h): interleaved R,G,B in 0..1.
+
+    THE UNDEVELOPED IMAGE, for the reason buildHaloGuide gives: a guide that moved with the
+    sliders would make the mask chase the adjustment it masks. But MaskRefine compares
+    COLOURS against thresholds tuned on display sRGB, so unlike the halo's luminance this
+    has to look like a picture: camera-native pixels are taken through toWorkingColor (the
+    as-shot white balance + camera matrix Develop's stage 0 applies), scaled so `white` is
+    1, and given the display gamma. No tone curve -- that would move with the edits.
+
+    Built ONCE per render tick, and only when some scope carries a Refine Brush.
+*/
+void buildRefineGuide(const WorkingImage &src, std::vector<float> &guide)
+{
+    const int w = src.width, h = src.height;
+    if (w <= 0 || h <= 0) { guide.clear(); return; }
+    guide.resize(size_t(w) * size_t(h) * 3);
+    const float *rgb = src.rgb.data();
+    float *g = guide.data();
+    const float invWhite = src.white > 1e-6f ? 1.0f / src.white : 1.0f;
+    developParallelRows(w, h, [&](int y0, int y1) {
+        for (size_t k = size_t(y0) * w, e = size_t(y1) * w; k < e; ++k) {
+            float r = rgb[k*3+0], gg = rgb[k*3+1], b = rgb[k*3+2];
+            toWorkingColor(src, r, gg, b);
+            const float c[3] = {r * invWhite, gg * invWhite, b * invWhite};
+            for (int i = 0; i < 3; ++i)
+                g[k*3+i] = c[i] <= 0.0f ? 0.0f
+                                        : std::min(1.0f, std::pow(c[i], 1.0f / 2.2f));
+        }
+    });
+}
+
+/* True if any of these components is a Refine Brush -- the fold then needs the guide. */
+bool componentsHaveRefine(const QVector<MaskComponent> &components)
+{
+    for (const MaskComponent &m : components)
+        if (m.tool == int(MaskTool::RefineBrush)) return true;
+    return false;
+}
+
+/*
     pixelScale converts an Edge slider value (which is FULL-RESOLUTION pixels, so it means
     the same thing in the sidecar whatever this render's size) into pixels of THIS buffer:
     this render's long edge over the full-res long edge. 1.0 for a settle or export, ~0.3
@@ -10082,7 +10140,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
                                    MaskBuildStats *stats = nullptr,
                                    double pixelScale = 1.0, float scopeEdge = 0.0f,
                                    float scopeHalo = 0.0f,
-                                   const std::vector<float> *haloGuide = nullptr)
+                                   const std::vector<float> *haloGuide = nullptr,
+                                   const std::vector<float> *refineGuide = nullptr)
 {
     QElapsedTimer buildProbe;
     const qint64 rasterMsOnEntry = stats ? stats->rasterMs : 0;
@@ -10243,6 +10302,14 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op = m.op;
             d.inverted = m.inverted;
             d.edgePx = morphPx;
+            comps.append(d);
+        }
+        else if (m.tool == int(MaskTool::RefineBrush)) {  // region: rasterize its strokes
+            CompDesc d;
+            d.isRefine = true;
+            d.brush = brushRasterCached(m.paramsJson, w, h, degrees, fPath,
+                                        &refsHereReady, stats);
+            d.refineMode = refineModeOf(m);
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) {
@@ -10445,12 +10512,54 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         });
         if (stats) { stats->morphMs += morphProbe.elapsed(); ++stats->morphs; }
     };
+    /* A Refine Brush is a step ON the buffer folded so far, not a coverage folded into it:
+       MaskRefine::apply re-mattes `out` inside the stroke against the guide. Without a
+       guide (the veil before a proxy exists) it degrades to the plain brush it would look
+       like -- Add/Remove by the stroke, Fix Edge left alone -- rather than doing nothing. */
+    auto foldRefineComp = [&](const CompDesc &d) {
+        if (!d.brush || d.brush->size() != out.size()) return;
+        /* REFINEPROBE (temporary, 2026-10-07): the user saw no effect from Fix Edge in the
+           app while the offline run worked -- report what the step actually got and did.
+           Remove once the in-app behaviour is understood. */
+        auto probe = [&](const char *path, const std::vector<float> &before) {
+            size_t roiPx = 0, changed = 0; double maxD = 0;
+            for (size_t k = 0; k < out.size(); ++k) {
+                if ((*d.brush)[k] > 0.01f) ++roiPx;
+                const double dd = std::fabs(double(out[k]) - before[k]);
+                if (dd > 0.02) ++changed;
+                maxD = std::max(maxD, dd);
+            }
+            const char *mode = d.refineMode == MaskRefine::Mode::Edge   ? "edge"
+                             : d.refineMode == MaskRefine::Mode::Remove ? "remove" : "add";
+            qDebug().noquote() << "REFINEPROBE" << path << QString("%1x%2").arg(w).arg(h)
+                               << "mode" << mode << "roiPx" << roiPx << "changed" << changed
+                               << "maxDelta" << QString::number(maxD, 'f', 3)
+                               << "guide" << (refineGuide ? int(refineGuide->size()) : -1);
+        };
+        if (refineGuide && refineGuide->size() == out.size() * 3) {
+            const std::vector<float> before = out;
+            const cv::Mat rgb(h, w, CV_32FC3, const_cast<float *>(refineGuide->data()));
+            MaskRefine::apply(out, *d.brush, rgb, w, h, d.refineMode);
+            probe("guided", before);
+            return;
+        }
+        probe("NO-GUIDE", out);
+        if (d.refineMode == MaskRefine::Mode::Edge) return;
+        const bool add = (d.refineMode == MaskRefine::Mode::Add);
+        developParallelRows(w, h, [&](int y0, int y1) {
+            for (size_t k = size_t(y0) * w, e = size_t(y1) * w; k < e; ++k) {
+                const float c = (*d.brush)[k];
+                out[k] = add ? qMax(out[k], c) : out[k] * (1.0f - c);
+            }
+        });
+    };
     auto foldSegments = [&](int c0, int c1) {
         int i = c0;
         while (i < c1) {
+            if (comps.at(i).isRefine)       { foldRefineComp(comps.at(i)); ++i; continue; }
             if (comps.at(i).edgePx != 0.0) { foldEdgeComp(comps.at(i)); ++i; continue; }
             int j = i;
-            while (j < c1 && comps.at(j).edgePx == 0.0) ++j;
+            while (j < c1 && comps.at(j).edgePx == 0.0 && !comps.at(j).isRefine) ++j;
             developParallelRows(w, h, [&](int y0, int y1){ rows(i, j, y0, y1); });
             i = j;
         }
@@ -10777,6 +10886,14 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                 break;
             }
         }
+        /* Same rule for the Refine Brush's colour guide. */
+        std::vector<float> refineGuide;
+        for (int i = 0; i < job.scopes.size(); ++i) {
+            if (componentsHaveRefine(job.scopes.at(i).components)) {
+                buildRefineGuide(src, refineGuide);
+                break;
+            }
+        }
 
         std::vector<WorkingImageCache::StackScope> sl;
         sl.reserve(nScopes);
@@ -10795,7 +10912,8 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                                         fPath, &refsReady, maskStats,
                                         double(src.renderScale), L.maskEdge,
                                         L.maskHalo,
-                                        haloGuide.empty() ? nullptr : &haloGuide));
+                                        haloGuide.empty() ? nullptr : &haloGuide,
+                                        refineGuide.empty() ? nullptr : &refineGuide));
                     if (timings) ++timings->maskScopes;
                     /* A buffer built without one of its references is a placeholder --
                        cache it and nothing would ever retire it (the components do not
@@ -10957,7 +11075,8 @@ bool stackHasAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
 {
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
         for (const MaskComponent &m : L.components) {
-            if (m.tool != int(MaskTool::Brush)) continue;
+            if (m.tool != int(MaskTool::Brush) && m.tool != int(MaskTool::RefineBrush))
+                continue;
             const QJsonArray strokes = QJsonDocument::fromJson(m.paramsJson.toUtf8())
                                            .object().value("strokes").toArray();
             for (const QJsonValue &sv : strokes) {
@@ -11085,34 +11204,43 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
                        const EditParams &base, int degrees)
 {
 /*
-    Sky twin of ensureSubjectMask: build (once per image) the sky coverage the "Select Sky" mask
-    samples and register it by path, from the developed GLOBAL scope (downscaled, output-oriented) so
-    it lines up with what the user sees. Cached by path only; synchronous on the GUI thread with a
-    busy cursor. Lazily loads skyseg.onnx.
+    Sky twin of ensureSubjectMask: build (once per image) the sky alpha the "Select Sky"
+    mask samples and register it by path, from the developed GLOBAL scope (output-
+    oriented) so it lines up with what the user sees. Cached by path only.
+
+    Two models plus a colour matte (Utilities/skypredictor + skyrefine.h), at up to
+    kSkyMatteLongEdge px -- the matte's edge detail is the point, so it is built near
+    render resolution rather than at the 1024 the other AI masks use. ~1.5-2 s on the
+    CPU, once per image, so it says so (progress over one second) -- synchronous on the
+    GUI thread because the full-res render and export callers need the alpha before they
+    composite.
 */
     if (G::isLogger) G::log("MW::ensureSkyMask");
     if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) return;      // already current
 
     if (!skyPredictor) {                    // downloaded on demand -- see ensureSubjectMask
-        const QString modelPath = ModelStore::path(ModelStore::Model::SkySeg);
-        if (modelPath.isEmpty()) return;
-        skyPredictor = new SkyPredictor(modelPath, 320);
+        const QString skyPath = ModelStore::path(ModelStore::Model::SkySeg);
+        const QString segPath = ModelStore::path(ModelStore::Model::SkySegFormer);
+        if (skyPath.isEmpty() || segPath.isEmpty()) return;
+        skyPredictor = new SkyPredictor(skyPath, segPath);
         if (!skyPredictor->isLoaded())
-            qWarning("Select Sky: skyseg.onnx failed to load at %s",
-                     modelPath.toUtf8().constData());
+            qWarning("Select Sky: a sky model failed to load (%s, %s)",
+                     skyPath.toUtf8().constData(), segPath.toUtf8().constData());
     }
     if (!skyPredictor->isLoaded()) return;
 
-    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    constexpr int kSkyMatteLongEdge = 4096;
+    const WorkingImage small = WorkingImageCache::downscaled(work, kSkyMatteLongEdge);
     int fw = small.width, fh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
-    if (img.isNull()) return;
 
+    if (G::popup) G::popup->showPopupNow("Finding the sky...", 0, true, 0.75);
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
     auto r = std::make_shared<SkyMask::SkyRef>();
-    const bool ok = skyPredictor->predict(img, r->cov, r->w, r->h);
+    const bool ok = !img.isNull() && skyPredictor->predict(img, r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
+    if (G::popup) G::popup->reset();
     if (!ok || !r->valid()) return;
 
     SkyMask::putRef(fPath, r);
@@ -11440,7 +11568,7 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
        straight on, so the mask appears on this click rather than the next one. */
     QVector<ModelStore::Model> need;
     if (needsSubject)  need << ModelStore::Model::U2Net;        // Background = inverted subject
-    else if (isSky)    need << ModelStore::Model::SkySeg;
+    else if (isSky)    need << ModelStore::Model::SkySeg << ModelStore::Model::SkySegFormer;
     else if (isDepth)  need << ModelStore::Model::Midas;
     else if (isObject) need << ModelStore::Model::Sam2Encoder << ModelStore::Model::Sam2Decoder;
     if (!ModelStore::ensure(need, this)) return;
@@ -11601,19 +11729,23 @@ void MW::updateMaskOverlayTint()
        there is no working image at bw/bh to build a guide from, so the veil draws the
        unrefined mask for the moment before the proxy lands rather than a guide resampled
        from the wrong grid. */
-    std::vector<float> veilGuide;
+    std::vector<float> veilGuide, veilRefineGuide;
     const float veilHalo = developProperties->activeScopeMaskHalo();
-    if (veilHalo >= MaskHalo::kMinAmount && developProxy
-        && developProxyPath == fPath && developProxy->isValid()
-        && developProxy->width == bw && developProxy->height == bh)
+    const bool proxyOnGrid = developProxy && developProxyPath == fPath
+                             && developProxy->isValid()
+                             && developProxy->width == bw && developProxy->height == bh;
+    if (veilHalo >= MaskHalo::kMinAmount && proxyOnGrid)
         buildHaloGuide(*developProxy, veilGuide);
+    if (proxyOnGrid && componentsHaveRefine(masks))
+        buildRefineGuide(*developProxy, veilRefineGuide);
 
     MaskBuildStats tintStats;
     const std::vector<float> buf =
         buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
                         G::isReportDevelopTime ? &tintStats : nullptr,
                         edgeScale, developProperties->activeScopeMaskEdge(),
-                        veilHalo, veilGuide.empty() ? nullptr : &veilGuide);
+                        veilHalo, veilGuide.empty() ? nullptr : &veilGuide,
+                        veilRefineGuide.empty() ? nullptr : &veilRefineGuide);
 
     /* THE FOCUS SUBMASK'S OWN COVERAGE, if one is open. Its own footprint, not its
        signed contribution: op forced to Add so a Subtract submask still rasterizes as
@@ -11623,6 +11755,9 @@ void MW::updateMaskOverlayTint()
     if (hasFocus) {
         MaskComponent c = masks[focusIdx];
         c.op = int(MaskOp::Add);
+        /* A Refine Brush's footprint is its stroke region: rasterize it as the plain
+           brush it is on the canvas (on its own it has no mask to refine). */
+        if (c.tool == int(MaskTool::RefineBrush)) c.tool = int(MaskTool::Brush);
         cov = buildMaskBuffer({c}, bw, bh, degrees, fPath, nullptr,
                               G::isReportDevelopTime ? &tintStats : nullptr,
                               edgeScale, 0.0f);

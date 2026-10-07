@@ -11,13 +11,13 @@ class QWidget;
     ON-DEMAND ONNX MODELS
 
     Winnow ships two small models inside the app (focus_point_model.onnx, pmrid.onnx) and
-    downloads the other seven on first use, into
+    downloads the other eight on first use, into
 
         <QStandardPaths::AppDataLocation>/Models
         mac: ~/Library/Application Support/Winnow/Models
         win: %APPDATA%/Winnow/Models
 
-    Together those seven are ~771 MB, and most users never touch the features that need
+    Together those eight are ~1 GB, and most users never touch the features that need
     them, so bundling them made every DMG and installer that much larger for nothing.
 
     ModelStore is the single seam for "where is model X?". Before it, nine call sites each
@@ -51,6 +51,7 @@ enum class Model {
     Pmrid,          // pmrid.onnx             -- bundled
     U2Net,          // u2net.onnx
     SkySeg,         // skyseg.onnx
+    SkySegFormer,   // sky_segformer.onnx (Select Sky's second model)
     Midas,          // midas.onnx
     Migan,          // migan.onnx
     Lama,           // lama.onnx

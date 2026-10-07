@@ -34,6 +34,7 @@ MODELS=(
     "pmrid|Denoise raw|1"
     "u2net|Select Subject|0"
     "skyseg|Select Sky|0"
+    "sky_segformer|Select Sky|0"
     "midas|Depth Range|0"
     "migan|Spot Heal|0"
     "lama|Spot Heal|0"

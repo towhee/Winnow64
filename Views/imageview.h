@@ -798,7 +798,10 @@ private:
     QString renderingHint;                          // non-empty => chip shown
     QImage  scopeMaskTint;                          // whole-mask composite coverage tint (output-oriented), all tools
     QImage  sharpenMaskImage;                       // sharpening gate, grayscale (displayed space)
-    bool    maskTintHidden = false;                 // "M": suppress the mask overlay tint
+    /* The mask overlay tint starts HIDDEN and is shown only by an explicit toggle (the
+       tint button, "M"/"O", the scope menu) -- by request, 2026-10-07: the automatic
+       re-show on scope selection got in the way. When to auto-show is to be decided. */
+    bool    maskTintHidden = true;
     /* The geometry the displayed render carries (see setDevelopGeometry), with the
        input->output pixel transform and output size cached: the warp case builds a
        homography, and the overlays ask for it on every paint. */

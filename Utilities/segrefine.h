@@ -2,10 +2,11 @@
 #define SEGREFINE_H
 
 /*
-    Shared edge refinement for the AI segmentation masks (Select Subject = U^2-Net, Select Sky =
-    single-channel sky net). Both models emit a coarse low-res single-channel map; this turns it into
-    a full-resolution 0..1 coverage that hugs the photo's real edges, so the two masks share identical
-    matting behaviour. Header-only (all inline), no build-system entry.
+    Shared edge refinement for the AI segmentation masks (Select Subject = U^2-Net, Object
+    Mask = SAM 2). Both models emit a coarse low-res single-channel map; this turns it into
+    a full-resolution 0..1 coverage that hugs the photo's real edges. Select Sky USED this
+    too until 2026-10-07; it now has its own two-model colour matte, Utilities/skyrefine.h.
+    Header-only (all inline), no build-system entry.
 
     Pipeline: min-max normalize the raw output -> upsample to the guide image's native size (this un-
     squishes the model's square input) -> guided-filter (He et al.) against the guide luminance so the
@@ -46,7 +47,7 @@ inline void guidedFilterGray(const cv::Mat &I, const cv::Mat &p, cv::Mat &q, int
 /*
     How refine() turns the model's raw output into alpha.
 
-    Saliency (Subject / Sky, the original behaviour): the net emits a sigmoid-ish map whose absolute
+    Saliency (Subject, the original behaviour): the net emits a sigmoid-ish map whose absolute
     scale means little, so min-max stretch it, then CONTRAST it around 0.5 to crush the residual
     halo into a clean 1-2 px cutout edge.
 
@@ -57,7 +58,7 @@ inline void guidedFilterGray(const cv::Mat &I, const cv::Mat &p, cv::Mat &q, int
     fringe IS the result, and stretching it to near-binary is what produced a blobby cutout.
 */
 enum class Mode {
-    Saliency,       // min-max stretch + halo-killing contrast (Subject, Sky)
+    Saliency,       // min-max stretch + halo-killing contrast (Subject)
     AlphaLogits     // sigmoid of logits, partial alpha preserved (Object Mask)
 };
 

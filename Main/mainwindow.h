@@ -2837,8 +2837,9 @@ private:
     void syncPendingMaskOp();
     QString developSubjectRefPath;
     class SubjectPredictor *subjectPredictor = nullptr;
-    /* AI "Select Sky" mask: single-channel sky coverage (SkyMask store) built once per image by
-       ensureSkyMask (skyseg.onnx, lazily loaded). Keyed on path only. Twin of the Subject mask. */
+    /* AI "Select Sky" mask: a sky alpha matte (SkyMask store) built once per image by
+       ensureSkyMask (skyseg.onnx + sky_segformer.onnx, lazily loaded). Keyed on path
+       only. Twin of the Subject mask. */
     void ensureSkyMask(const QString &fPath, const WorkingImage &work,
                        const EditParams &base, int degrees);
     QString developSkyRefPath;

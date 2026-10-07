@@ -6915,12 +6915,335 @@ Focus stack: develop every slice to a temp 16-bit TIFF, then stack the TIFFs
    comments in generateFocusStack and prepareFolders.
 
 
+==========================================================================================
+SKY MASK "no back-compat" rule
+==========================================================================================
 
+Select Sky: wider sky coverage + halo-free edges
 
+ Context
 
+ The user asked for a short description of the current Select Sky mask, and a plan
+ to (a) recognise a wider range of skies (grey and overcast, sunset, hazy, blue hour)
+ and (b) remove halos at the mask boundary. Priorities, in order: quality, then
+ speed, then size.
 
+ How it works today
 
+ - Input. The developed Global scope, downscaled to 1024 px on the long edge.
+   MW::ensureSkyMask (Main/mainwindow.cpp:11084).
+ - Model. skyseg.onnx, a full U²-Net (168 MB) from HF JianyuanWang/skyseg. The
+   image is squashed to a fixed 320×320 and run through OpenCV DNN on the
+   CPU, on the GUI thread behind a busy cursor. The output used is
+   outs[0] = d0. Utilities/skypredictor.cpp.
+ - Refine. SegRefine::refine in Saliency mode: min-max stretch, then cubic
+   upsample to 1024 px, then a guided filter against luma only (r≈4,
+   eps 1e-6), then a contrast step around 0.5 (k=1.6). Utilities/segrefine.h.
+ - Store. Coverage is kept at 1024 px and sampled bilinearly at render
+   resolution. Feather is a Gaussian CDF band around 0.5. Develop/skymask.h.
+ - Halo control. Mask Halo (Develop/maskhalo.h) is a general alpha-damping
+   control. It is not specific to sky.
 
+ The model was checked on a horizon sky and gave a near-perfect result. It is known
+ to be weak where sky shows through dense canopy.
 
+ Why the misses and halos happen (ranked by likely impact)
 
+ 1. Resolution. The coverage tops out at 1024 px. On a 6000 px image, each step
+    of the coverage map becomes about 6 px of bilinear ramp. Darkening the sky then
+    leaks across that ramp, and that is the halo. This is the largest cause, and it
+    is independent of the model.
+ 2. Luma-only guide. Blue sky and green leaves can have the same luma, so the
+    guided filter sees no edge there and smears across it. Grey sky against a pale
+    building has the same problem.
+ 3. Contrast step + min-max. The contrast step (k=1.6) removes the real partial
+    alpha in leaf gaps and branch tips. Those areas then flip between full sky and
+    none, which shows up as rims and dark specks. Min-max also discards the model's
+    absolute confidence. On grey skies, or images with no sky, it stretches weak
+    noise up to "sky".
+ 4. Squashed 320² input. Thin branches and wires fall below the input
+    resolution. A panorama or tall portrait also gets badly distorted.
+ 5. Model coverage. skyseg is a single-purpose net with good results on horizon
+    skies. Grey, orange or night skies, and sky seen through foliage, look like a
+    weaker part of its training data. This has not been measured yet; stage 0
+    measures it.
 
+ Plan
+
+ Stage 0: Offline benchmark first (instrument, don't guess)
+
+ - Assemble a labelled test set of about 20 to 30 real photos covering: grey
+   overcast, sunset or sunrise, blue hour or night, haze or fog, canopy with sky
+   gaps, a branch silhouette against bright sky, and the false-positive traps
+   (water reflections, snow, white walls, blue cars). Hand-paint the ground truth
+   once, at a coarse quality.
+ - Use the existing offline harness recipe (Python, onnxruntime + pillow in a
+   scratch --target). Score each candidate model on IoU and on boundary
+   F-score. The boundary score is the metric that matters for halos.
+ - Candidates:
+   - (a) skyseg as the baseline.
+   - (b) SegFormer ADE20K, taking the sky-class softmax. Try B2 first, then B4
+     if B2 falls short. ADE20K has a huge variety of skies, and its sky class is
+     one of its most accurate. It is a transformer, so it must run through the
+     existing ORT layer (Utilities/inference/), not cv::dnn.
+   - (c) The mean of (a) and (b) as an ensemble.
+ - Decision rule: adopt a model only if it clearly beats skyseg on the hard
+   categories. This follows the earlier "no blind rebuilds" decision.
+
+ Stage 1: Halo removal (model-agnostic; do this whatever stage 0 decides)
+
+ New SegRefine::Mode::Sky path. Subject and Object keep their current behaviour.
+ 1. Use calibrated probability, not min-max. Use the model's sigmoid or softmax
+    probability directly, so "no sky" stays at 0.
+ 2. Trimap from the low-res probability. Values above 0.9 are sky and below 0.1
+    are not sky. The band in between is "unknown", dilated by a few px at the
+    refine resolution.
+ 3. Colour-model matting in the unknown band only, at high resolution (long
+    edge about 4096 px, or full res if that is cheaper than expected):
+    - Estimate a smooth local sky colour S(x) by normalized-convolution or
+      pyramid fill of confident-sky pixels into the band. Sky is low-frequency,
+      so this works well.
+    - Estimate the local foreground colour F(x) the same way.
+    - Compute alpha = clamp(dot(I−F, S−F) / |S−F|²) in a perceptual RGB space.
+    - This produces true fractional alpha in leaf gaps and on branch tips, and it
+      does not blur. That is the failure the rejected guided-filter Refine had
+      (see the maskhalo.h note).
+    - Pixels where |S−F| is small (low local contrast) fall back to an RGB
+      (3-channel) guided filter of the probability.
+ 4. Sky-hole recovery. A pixel that is enclosed by, or near, confident sky and
+    is within a tolerance of S(x) gets promoted to sky. This partly fixes the
+    canopy weakness without a new model.
+ 5. No contrast step. Partial alpha is the result. Feather continues to work
+    on top of it.
+ 6. Store the coverage as uint8 or uint16 at the refine resolution. That is
+    about 11 MB at 4096 px as u8, instead of 1024 px as float. Sampling stays
+    bilinear in SkyMask::sampleCov.
+ - Validate on real photos from the stage 0 set, and compare in the loupe against
+   the current output with a −1 EV sky adjustment. Do not accept results tested
+   only on synthetic step edges. That was the lesson recorded in maskhalo.h.
+
+ Stage 2: Better recognition
+
+ - Replace skyseg outright with the stage 0 winner. We are still in
+   development, so there is no backward compatibility to keep with existing AI
+   mask models. Drop the cv::dnn path from SkyPredictor, move it onto
+   InferenceSession (ORT) alone, and remove the SkySeg entry from ModelStore.
+   Sky coverage is rebuilt per session from the image and is never persisted, so
+   nothing on disk depends on the old model. Grey the Select Sky tool, with a
+   reason, when InferenceSession::BackendCompiledIn() is false.
+ - Keep the ensemble (c) only if stage 0 shows it beats the best single model.
+ - Aspect-correct, higher-res inference. Letterbox instead of squashing, and
+   use 512 to 640 px input or two overlapping tiles for panoramas. The earlier
+   "squash = letterbox" finding was on one wide horizon image, so re-check it on
+   the stage 0 set.
+
+ Stage 3: Speed
+
+ - Run the model through ORT with the CoreML execution provider on Mac and
+   DirectML or CPU on Windows, using the existing InferenceSession.
+ - Move ensureSkyMask off the GUI thread. Show progress per the over-1-second
+   rule, and post the ref back when it is done. Today it blocks the GUI thread
+   with a busy cursor.
+ - Every stage-1 per-pixel loop uses parallelFor, and matting runs only over the
+   band pixels.
+
+ Size
+
+ - With ModelStore downloading models on demand, size is the lowest priority.
+   SegFormer-B2 is about 110 MB in fp32 and about 55 MB in fp16, smaller than
+   skyseg's 168 MB. B4 is larger. Choose fp16 if the benchmark shows no quality
+   loss.
+
+ Critical files
+
+ - Utilities/segrefine.h: new Sky mode (trimap, colour matting, RGB guided
+   filter)
+ - Utilities/skypredictor.{h,cpp}: rewritten on InferenceSession (ORT only),
+   calibrated output, letterbox; the cv::dnn path is deleted
+ - Develop/skymask.h: higher-res, compact storage
+ - Main/mainwindow.cpp MW::ensureSkyMask: refine resolution, async build +
+   progress
+ - Utilities/modelstore: swap the SkySeg entry for the new model; CMake
+   bundling of skyseg.onnx removed
+ - notes/Documentation.txt "SELECT SKY MASK": update in the same pass, then sync
+   the ToC
+
+ Verification
+
+ - Stage 0 harness: IoU and boundary-F per category, for the old pipeline vs the
+   new one.
+ - In-app (the user builds in Qt Creator): Select Sky plus −1 EV on the canopy,
+   branch-silhouette, sunset and grey-sky test images. Check preview against
+   render at 100% in the loupe.
+ - Time ensureSkyMask end to end with and without CoreML.
+ - Add a Qt Test for SegRefine Sky mode, using a fixture made from a real crop,
+   that checks fractional alpha in a leaf-gap patch.
+
+NEW PLAN...
+
+I've written a plan for the sky mask and run a first offline test of the current model against two SegFormer sizes. The test turned up a problem bigger than missed skies: on your
+  photos, the mask often selects blurred backgrounds that aren't sky.
+
+  How the sky mask works today
+
+  - Model: skyseg.onnx, a 168 MB U²-Net. It runs on the CPU, on the main UI thread, with the image squashed to 320×320.
+  - Edges: the model's map is stretched to the 0–1 range, sharpened against the photo's brightness only, and then contrast-boosted around 0.5.
+  - Stored size: the result is kept at 1024 px on the long edge and scaled up for the full-size render.
+
+  Why there are halos
+
+  - Low resolution (the main cause). On a 6000 px image, the 1024 px mask leaves an edge ramp about 6 px wide, and a sky adjustment leaks across it.
+  - Brightness-only edge guide. Blue sky and green leaves of the same brightness show no edge to it.
+  - Contrast boost. It throws away the partial values in leaf gaps and branch tips, which leaves rims and specks.
+
+  The plan (approved)
+
+  - Halo fix, independent of the model:
+    - Use the model's probability directly instead of stretching it.
+    - Re-estimate edges by colour (local sky colour against local foreground colour), only in the uncertain band and at about 4096 px.
+    - Recover small sky gaps in foliage, and store the mask as 8-bit.
+  - Replace the model outright. As you said, there's no backward compatibility to keep, so the old model and its loading code get deleted.
+  - Speed: run the model through ONNX Runtime with Core ML (Mac's GPU/Neural Engine) and build the mask off the main thread, with progress shown.
+
+  What the offline test found
+
+  I ran skyseg, SegFormer-B2 and SegFormer-B4 on 86 of your JPEGs. There's no ground truth yet, so I compared the results by eye.
+
+  - The stretching step creates sky out of nothing. Two photos with no sky (peak scores 0.005 and 0.016) get stretched into a full-strength false sky. Using the score directly
+    fixes this.
+  - False sky is the main failure on your photos, not missed skies. Most of the shots are wildlife or macro with smooth blurred backgrounds, and all three models sometimes call
+    that blur or water "sky", at full confidence. No edge refinement can fix that.
+  - The models get different images wrong:
+    - skyseg: green, dark and olive blur, and blue water.
+    - SegFormer: light grey blur.
+    - B4: a spider web.
+  - Requiring two models to agree (skyseg and B4) removed most of the false skies I saw.
+  - Edges: skyseg's are crisp. SegFormer's are soft because its output is coarse, so its edges would need the colour refinement.
+  - The sample had almost no grey, sunset or night skies, so I haven't been able to measure how well each model finds those.
+
+  This adds one item to the plan: requiring the two models to agree, which costs speed and download size in exchange for fewer false skies. I'll only adopt it once your harder sky
+  images confirm it doesn't lose real skies.
+
+  What I need from you: a folder of about 20 hard sky shots (grey or overcast, sunset, blue hour, haze, sky through branches). A few blurred-background shots that aren't sky would
+  help too. Should I start the halo fix now while you gather those? It doesn't depend on which model wins.
+
+  I saved the findings and the "no backward compatibility" rule to memory. The test script and comparison images are in the session scratchpad.
+
+I've written a plan for the sky mask and run a first offline test of the current model against two SegFormer sizes. The test turned up a problem bigger than missed skies: on your
+  photos, the mask often selects blurred backgrounds that aren't sky.
+
+  How the sky mask works today
+
+  - Model: skyseg.onnx, a 168 MB U²-Net. It runs on the CPU, on the main UI thread, with the image squashed to 320×320.
+  - Edges: the model's map is stretched to the 0–1 range, sharpened against the photo's brightness only, and then contrast-boosted around 0.5.
+  - Stored size: the result is kept at 1024 px on the long edge and scaled up for the full-size render.
+
+  Why there are halos
+
+  - Low resolution (the main cause). On a 6000 px image, the 1024 px mask leaves an edge ramp about 6 px wide, and a sky adjustment leaks across it.
+  - Brightness-only edge guide. Blue sky and green leaves of the same brightness show no edge to it.
+  - Contrast boost. It throws away the partial values in leaf gaps and branch tips, which leaves rims and specks.
+
+  The plan (approved)
+
+  - Halo fix, independent of the model:
+    - Use the model's probability directly instead of stretching it.
+    - Re-estimate edges by colour (local sky colour against local foreground colour), only in the uncertain band and at about 4096 px.
+    - Recover small sky gaps in foliage, and store the mask as 8-bit.
+  - Replace the model outright. As you said, there's no backward compatibility to keep, so the old model and its loading code get deleted.
+  - Speed: run the model through ONNX Runtime with Core ML (Mac's GPU/Neural Engine) and build the mask off the main thread, with progress shown.
+
+  What the offline test found
+
+  I ran skyseg, SegFormer-B2 and SegFormer-B4 on 86 of your JPEGs. There's no ground truth yet, so I compared the results by eye.
+
+  - The stretching step creates sky out of nothing. Two photos with no sky (peak scores 0.005 and 0.016) get stretched into a full-strength false sky. Using the score directly
+    fixes this.
+  - False sky is the main failure on your photos, not missed skies. Most of the shots are wildlife or macro with smooth blurred backgrounds, and all three models sometimes call
+    that blur or water "sky", at full confidence. No edge refinement can fix that.
+  - The models get different images wrong:
+    - skyseg: green, dark and olive blur, and blue water.
+    - SegFormer: light grey blur.
+    - B4: a spider web.
+  - Requiring two models to agree (skyseg and B4) removed most of the false skies I saw.
+  - Edges: skyseg's are crisp. SegFormer's are soft because its output is coarse, so its edges would need the colour refinement.
+  - The sample had almost no grey, sunset or night skies, so I haven't been able to measure how well each model finds those.
+
+  This adds one item to the plan: requiring the two models to agree, which costs speed and download size in exchange for fewer false skies. I'll only adopt it once your harder sky
+  images confirm it doesn't lose real skies.
+
+  What I need from you: a folder of about 20 hard sky shots (grey or overcast, sunset, blue hour, haze, sky through branches). A few blurred-background shots that aren't sky would
+  help too. Should I start the halo fix now while you gather those? It doesn't depend on which model wins.
+
+  I saved the findings and the "no backward compatibility" rule to memory. The test script and comparison images are in the session scratchpad.
+
+-----------
+
+The prototype works. It ran on your "Sky Mask Test Images" collection plus the 15 earlier false-sky images, comparing today's pipeline with the new one by eye, with the sky
+  darkened 1.5 EV to expose halos.
+
+  What the new pipeline does:
+  1. Use the model's probability directly. This removes the false sky the stretching step created on no-sky images.
+  2. Keep or drop whole sky regions. Each skyseg sky region is kept only if SegFormer-B4 mostly agrees across that region. This dropped the false skies on the frog, moose, grebe,
+     gravel, fritillary, dipper water, wren and most of the hawk. My first per-pixel version failed: SegFormer's blurry outline erased the sky between branches.
+  3. Small sky gaps next to real sky (between branches or leaves) are kept, and colour decides them pixel by pixel. SegFormer is too coarse to judge them.
+  4. Where the models disagree, a pixel is removed only if it also looks different from the nearby sky. Without this, blurred backgrounds came out blotchy, which looks worse than a
+     uniform false sky.
+  5. Colour-based edges in the uncertain band: local sky colour is compared with local foreground colour. This removed the bright rims around snow clumps and bokeh discs, and
+     resolved real branch detail on the storm-sky tree (#12), the snowy canopy (#05) and the aspens (#13).
+
+  No regressions on sunsets, grey or hazy skies, night water scenes, mountain ridges or conifer horizons.
+
+  Still imperfect:
+  - #06 snow-laden tree: a few sky "holes" remain inside the tree.
+  - #08 redwoods: a small, isolated strip of real sky in the top-left corner is lost, because it sits too far from the main sky region to count as a gap.
+  - Ground squirrel: one faint soft patch remains in the background.
+  - Hummingbird: the grey blur behind it is still selected, because both models call it sky. It may well be overcast sky.
+  - #25 Mt Baker: it ends up mostly counted as sky. That one is a judgement call.
+
+  Cost: about 1.7 s per image in Python on the CPU at 2048 px, with both models. C++ through Core ML should be well under that, but that's an estimate until I measure it. Download
+  size goes from 168 MB to 168 + 258 MB.
+
+  Proposed next step: port this into Winnow. That covers a new sky mode in segrefine.h, a two-model SkyPredictor on ONNX Runtime, mask storage at about 4096 px in 8 bits, and
+  building the mask off the main thread with progress. Feather 0 would use the result as-is, like Object Mask does. You'd then check it in the loupe on the same collection. Shall I
+  start the port?
+
+/Users/roryhill/Photos/2010-2019 √/2017 √/201709 √/2017-09-14_Joffrey Lake √/2017-09-14_0330.ORF
+- Some halo along skyline edges
+- Part of glacier masked as sky
+
+/Users/roryhill/Photos/2010-2019 √/2010 √/201008 √/2010-08-23_Neck Point sunset √/2010-08-23_0005-Edit.jpg
+- Masked part of moon as sky
+- Excellent masking along treeline on right side
+
+/Users/roryhill/Photos/2000-2009/2005/200510/20051022_Mt Baker sunrise/2005-10-22_0043_crop.jpg
+- Total fail - no mask
+
+/Users/roryhill/Photos/2000-2009/2009 √/200908 √/2009-08-20_Manning Park √/2009-08-20_0032.NEF
+- Minor false additions to mask along skyline
+
+/Users/roryhill/Photos/2010-2019 √/2010 √/201001 √/2010-01-07_Long Lake sunrise √/2010-01-07_0003.NEF
+- Pretty good, selected red sunrise
+- A few sky holes inside treeline
+
+/Users/roryhill/Photos/2010-2019 √/2011 √/201101 √/2011-01-09_Big Qualicum √/2011-01-09_0194.NEF
+- Worked well on blue sky
+- Failed to identify clouds vs snow on branches
+
+/Users/roryhill/Photos/2010-2019 √/2011 √/201101 √/2011-01-09_Big Qualicum √/2011-01-09_0199.NEF
+- Included foreground snow in sky mask
+
+/Users/roryhill/Photos/2010-2019 √/2011 √/201106 √/2011-06-17_hike around Lac le Jeune √/2011-06-18_2028.RW2
+- Missed some sky holes
+- Mask includes out-of-focus branches
+
+/Users/roryhill/Photos/2010-2019 √/2011 √/201108 √/2011-08-06_Cathedral Grove √/2011-08-06_0006.NEF
+- Missed sky
+- This type of image too tough to mask
+
+/Users/roryhill/Pictures/Zenfolio/2011-09-15_0086.tif
+- Worked perfectly
+
+/Users/roryhill/Photos/2010-2019 √/2015 √/201506 √/2015-06-28_Dempster Hwy √/2015-06-28_0133.NEF
+- Halo on ridgeline
+-

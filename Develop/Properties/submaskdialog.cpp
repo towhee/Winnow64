@@ -124,6 +124,24 @@ void SubmaskDialog::buildUi()
     addToolGroup(tr("Drawn"),     int(MaskTool::LinearGradient), int(MaskTool::Brush));
     addToolGroup(tr("Content"),   int(MaskTool::ColorRange),     int(MaskTool::LuminanceRange));
     addToolGroup(tr("Automatic"), int(MaskTool::Subject),        int(MaskTool::Object));
+    addToolGroup(tr("Refine"),    int(MaskTool::RefineBrush),    int(MaskTool::RefineBrush));
+
+    /* The Refine Brush re-mattes the mask ABOVE it, so as the first submask it has
+       nothing to work on. Greyed with the reason, not hidden: the user should learn the
+       tool exists and what it needs. */
+    for (int r = 0; r < toolList->count(); ++r) {
+        QListWidgetItem *it = toolList->item(r);
+        if (it->data(UR_Tool).toInt() != int(MaskTool::RefineBrush)
+            || !it->data(UR_Tool).isValid()) continue;
+        it->setToolTip(tr("Paint a region to re-fit the mask above it to the picture: "
+                          "add what it missed, remove what it wrongly took, or fix a "
+                          "haloed edge."));
+        if (firstMask) {
+            it->setFlags(it->flags() & ~Qt::ItemIsEnabled & ~Qt::ItemIsSelectable);
+            it->setToolTip(tr("Refines the mask above it -- add another submask "
+                              "first, then refine it."));
+        }
+    }
 
     /* Tall enough for every row: the list is short and scrolling it hides choices. Row
        heights are summed (headings are bold, so not uniform) rather than assumed. */

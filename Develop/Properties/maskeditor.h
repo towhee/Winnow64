@@ -28,8 +28,11 @@ public:
     explicit MaskEditor(QWidget *parent = nullptr);
 
     /* Build + seed the rows for the tool being edited (reads m.tool, m.feather,
-       m.inverted, and m.paramsJson for size/flow/range/hue/sat). */
-    void showTool(const MaskComponent &m);
+       m.inverted, and m.paramsJson for size/flow/range/hue/sat). firstSubmask and
+       effectiveOp serve the Refine Brush's Mode row: its Add/Remove IS the op, a pending
+       submask's real op is the caller's pendingOp rather than m.op, and the first
+       submask cannot Remove (there is nothing above it to remove from). */
+    void showTool(const MaskComponent &m, bool firstSubmask = false, int effectiveOp = -1);
     /* Color Range: push the pipette-sampled colours into the wheel (hue 0..360, sat
        0..1). No-op unless a Color Range tool is showing. */
     void setWheelSamples(const QVector<QPointF> &samples);

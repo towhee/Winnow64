@@ -30,6 +30,23 @@
 #include <QVariantAnimation>
 #include <algorithm>
 #include <functional>
+
+/* Is this a stroke-based tool -- one whose attributes are baked per stroke rather than
+   evaluated for the submask as a whole? */
+static bool isStrokeTool(int tool)
+{
+    return tool == int(MaskTool::Brush) || tool == int(MaskTool::Object)
+           || tool == int(MaskTool::RefineBrush);
+}
+
+/* Does this tool PAINT on the canvas as a brush (size / feather / flow / auto-mask,
+   strokes in paramsJson)? The Refine Brush does -- it is a brush on the canvas and a
+   refine step in the fold (Develop/maskrefine.h). */
+static bool isBrushCanvasTool(int tool)
+{
+    return tool == int(MaskTool::Brush) || tool == int(MaskTool::RefineBrush);
+}
+
 /*
     See developproperties.h for an overview. Construction mirrors EmbelProperties:
     initialize tree behaviour, read the saved scope list, add the persistent Scopes
@@ -777,11 +794,11 @@ void DevelopProperties::reopenSubmask(int index)
     const MaskComponent &m = scope->components.at(index);
     if (MaskEditor *ed = maskPanel ? maskPanel->editor() : nullptr) {
         ed->setCaptionWidth(maskPanelCaptionWidth());
-        ed->showTool(m);
+        ed->showTool(m, index == 0);
         if (m.tool == int(MaskTool::ColorRange))
             ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
     }
-    if (m.tool == int(MaskTool::Brush)) emitBrushSettings(m);
+    if (isBrushCanvasTool(m.tool)) emitBrushSettings(m);
     /* buildTree ends in updateMaskEdit, which emits maskEditBegin for the selected
        component -- that is what puts the tool's handles back on the canvas. */
     buildTree();
@@ -900,12 +917,6 @@ static int brushStrokeCount(const QString &paramsJson)
                .object().value("strokes").toArray().size();
 }
 
-/* Is this a stroke-based tool -- one whose attributes are baked per stroke rather than
-   evaluated for the submask as a whole? */
-static bool isStrokeTool(int tool)
-{
-    return tool == int(MaskTool::Brush) || tool == int(MaskTool::Object);
-}
 
 QString DevelopProperties::maskAttributeScopeText()
 {
@@ -954,7 +965,7 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
        cursor, do NOT re-composite (existing strokes keep their snapshot). */
     const bool brushLike = key == "maskSize" || key == "maskFlow" ||
                            key == "maskAutoMask" ||
-                           (key == "maskFeather" && mm->tool == int(MaskTool::Brush));
+                           (key == "maskFeather" && isBrushCanvasTool(mm->tool));
     if (brushLike) {
         /* THREE SCOPES, one slider. Size/feather/flow/auto-mask are baked into each
            stroke as it is drawn, which is what lets one submask hold strokes of different
@@ -1012,6 +1023,28 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
         else                           mm->paramsJson = brushWith(mm->paramsJson, "satHi", v.toInt());
         emit maskRangeChanged(mm->paramsJson);
         emit paramsChanged();
+    }
+    /* Refine Brush mode. Add/Remove ARE the op (the same one the Opt-at-stroke latch
+       sets), so they go through setSubmaskOp, which also moves a pending submask's
+       previewed op; Fix Edge is the "mode" key, which overrides the op in the fold
+       (refineModeOf). setSubmaskOp writes its own history entry and rebuilds. */
+    else if (key == "maskRefineMode") {
+        const QString mode = v.toString();
+        const bool edge = (mode == "Fix Edge");
+        const QString was = QJsonDocument::fromJson(mm->paramsJson.toUtf8())
+                                .object().value("mode").toString();
+        if ((was == "edge") != edge) {
+            mm->paramsJson = brushWith(mm->paramsJson, "mode", edge ? "edge" : "");
+            noteEdit("Refine " + mode, QString(), "mask/" + key);
+            emit paramsChanged();
+            buildTree();
+        }
+        if (!edge)
+            setSubmaskOp(selectedMaskIndex, mode == "Remove" ? int(MaskOp::Subtract)
+                                                             : int(MaskOp::Add));
+        armMaskAutoCommit();
+        noteMaskInteraction();
+        return;
     }
     /* Feather (non-brush) / Edge / Invert: change the mask -> overlay + re-composite. */
     else if (key == "maskFeather" || key == "maskEdge" || key == "maskInvert") {
@@ -1107,6 +1140,11 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     m.tool = tool;
     m.paramsJson = defaultMaskParams(tool);
     if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
+    /* Sky is a real matte -- its fractional edge IS the result (Utilities/skyrefine.h) --
+       and Feather > 0 re-sharpens it around 0.5, undoing the halo work. Start at the matte
+       as-is. (Refine Brush keeps the default: a soft stroke edge fades the refinement in
+       rather than leaving a seam where the region ends.) */
+    if (tool == int(MaskTool::Sky)) m.feather = 0.0f;
 
     /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
        submask is pending until its edits settle (or Return lands it early) -- the first
@@ -1129,7 +1167,7 @@ void DevelopProperties::beginMaskTool(int tool, int op)
            the indent the nested panel sits at -- see kMaskPanelIndent). */
         if (MaskEditor *ed = maskPanel->editor()) {
             ed->setCaptionWidth(maskPanelCaptionWidth());
-            ed->showTool(m);
+            ed->showTool(m, first, op);
             if (tool == int(MaskTool::ColorRange))
                 ed->setWheelSamples(colorRangeSamplesHS(m.paramsJson));
         }
@@ -1406,7 +1444,7 @@ bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
     Anything that misses both tests just means the prompt appears -- the safe direction.
 */
     const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
-    if (m.tool == int(MaskTool::Brush) || m.tool == int(MaskTool::Object))
+    if (isStrokeTool(m.tool))
         return o.value("strokes").toArray().isEmpty();
     if (m.tool == int(MaskTool::ColorRange))
         return o.value("samples").toArray().isEmpty();
@@ -2015,6 +2053,7 @@ QString DevelopProperties::maskToolName(int tool)
     case MaskTool::Background:      return "Background Mask";
     case MaskTool::Depth:           return "Depth Range Mask";
     case MaskTool::Object:          return "Object Mask";
+    case MaskTool::RefineBrush:     return "Refine Brush";
     }
     return "Mask";
 }
@@ -2721,7 +2760,7 @@ QString DevelopProperties::defaultMaskParams(int tool)
         o["angle"] = 0.0;
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
-    if (tool == int(MaskTool::Brush)) {
+    if (isBrushCanvasTool(tool)) {
         /* Freehand: starts empty. size/flow are 0..100 (current settings for the NEXT stroke; feather
            lives in MaskComponent.feather). strokes is the accumulated path list -- each stroke
            snapshots the settings it was painted with. Points are normalized output coords. */
@@ -2857,7 +2896,7 @@ void DevelopProperties::setActiveBrushSize(double size)
     EditScope *l = activeScope();
     if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
     MaskComponent &m = l->components[selectedMaskIndex];
-    if (m.tool != int(MaskTool::Brush) && m.tool != int(MaskTool::Object)) return;
+    if (!isStrokeTool(m.tool)) return;
     /* Quantised to ImageView's 0.1% step (the canvas gesture already is) -- the old
        whole-percent round made the smallest brush ~1% of the long edge. */
     const double s = qBound(0.1, qRound(size * 10.0) / 10.0, 100.0);
@@ -2881,7 +2920,7 @@ void DevelopProperties::setActiveMaskFeather(double feather)
     MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::LinearGradient) &&
         m.tool != int(MaskTool::RadialGradient) &&
-        m.tool != int(MaskTool::Brush)) return;
+        !isBrushCanvasTool(m.tool)) return;
     const int f = qBound(0, int(feather + 0.5), 100);
     if (int(m.feather + 0.5f) == f) return;
     m.feather = f;
@@ -2892,7 +2931,7 @@ void DevelopProperties::setActiveMaskFeather(double feather)
        submask there is no next stroke, so it re-feathers every stroke instead. A
        gradient's coverage always changed -> re-composite. Either way ImageView already
        holds the new value, so no maskFeatherChanged echo. */
-    if (m.tool == int(MaskTool::Brush)) {
+    if (isBrushCanvasTool(m.tool)) {
         emitBrushSettings(m);
         if (pendingIdx < 0) {
             m.paramsJson = brushStrokesWith(m.paramsJson, "feather", f);
@@ -2916,7 +2955,7 @@ void DevelopProperties::setActiveBrushAutoMask(bool on)
     EditScope *l = activeScope();
     if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
     MaskComponent &m = l->components[selectedMaskIndex];
-    if (m.tool != int(MaskTool::Brush)) return;
+    if (!isBrushCanvasTool(m.tool)) return;
     /* Next stroke while the submask is being built; retroactive on a re-opened one (see
        onMaskEditorSetting). */
     const bool retro = (pendingIdx < 0);
@@ -2984,6 +3023,13 @@ void DevelopProperties::updateMaskEdit()
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
+        /* The Refine Brush IS a brush on the canvas: hand ImageView the Brush tool so
+           every paint path, cursor and shortcut there serves it unchanged. */
+        if (m.tool == int(MaskTool::RefineBrush)) {
+            emit maskEditBegin(int(MaskTool::Brush), m.op, m.inverted, m.paramsJson,
+                               m.feather);
+            return;
+        }
     }
     emit maskEditEnd();
 }
@@ -2996,8 +3042,17 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
        at selectedMaskIndex, so the normal path below persists it too. */
     EditScope *scope = activeScope();
     if (!scope || selectedMaskIndex < 0 || selectedMaskIndex >= scope->components.size()) return;
-    if (scope->components[selectedMaskIndex].paramsJson == paramsJson) return;
-    scope->components[selectedMaskIndex].paramsJson = paramsJson;
+    QString incoming = paramsJson;
+    /* ImageView paints a Refine Brush as a plain brush, so the JSON it sends back has no
+       "mode" -- carry the submask's own across or every stroke would reset Fix Edge. */
+    if (scope->components[selectedMaskIndex].tool == int(MaskTool::RefineBrush)) {
+        const QString mode = QJsonDocument::fromJson(
+            scope->components[selectedMaskIndex].paramsJson.toUtf8())
+            .object().value("mode").toString();
+        if (!mode.isEmpty()) incoming = brushWith(incoming, "mode", mode);
+    }
+    if (scope->components[selectedMaskIndex].paramsJson == incoming) return;
+    scope->components[selectedMaskIndex].paramsJson = incoming;
     /* One entry per tool being shaped, not per drag tick / per brush stroke. */
     noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex].tool),
              QString(), QString("mask/geom/%1").arg(selectedMaskIndex));
@@ -5845,7 +5900,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
        strokes keep their own snapshot, so these do NOT re-composite -- they just refresh the cursor
        and brush state in ImageView. (Invert still flips the whole mask -- handled below.) */
     if (source == "maskSize" || source == "maskFlow" || source == "maskAutoMask" ||
-        (source == "maskFeather" && activeMaskTool() == int(MaskTool::Brush))) {
+        (source == "maskFeather" && isBrushCanvasTool(activeMaskTool()))) {
         EditScope *l = activeScope();
         if (l && selectedMaskIndex >= 0 && selectedMaskIndex < l->components.size()) {
             MaskComponent &mm = l->components[selectedMaskIndex];

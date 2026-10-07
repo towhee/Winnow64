@@ -32,8 +32,12 @@ public:
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
                    int min, int max, int div = 0);
     void addCheckbox(const QString &key, const QString &caption, const QString &tooltip);
+    /* A drop-down of `items`; settingChanged reports the chosen item's TEXT. */
+    void addCombo(const QString &key, const QString &caption, const QString &tooltip,
+                  const QStringList &items);
     void setSliderReal(const QString &key, double real);
     void setCheckboxValue(const QString &key, bool on);
+    void setComboValue(const QString &key, const QString &item);
     void setRowEnabled(const QString &key, bool on);   // grey / enable a row
     int  sliderInt(const QString &key) const;          // current int value of a row
     void setCaptionWidth(int w);   // align the value column to the main tree
