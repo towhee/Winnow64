@@ -175,6 +175,15 @@ QStringList BookMarks::libraryFolders(const QString &path) const
     return under;
 }
 
+QStringList BookMarks::libraryChildFolders(const QString &path) const
+{
+    QStringList out;
+    if (path.isEmpty()) return out;
+    for (auto it = libraryTotals.constBegin(); it != libraryTotals.constEnd(); ++it)
+        if (it.value() > 0 && FolderTree::parentOf(it.key()) == path) out << it.key();
+    return out;
+}
+
 void BookMarks::syncFromLibraryFilter(const QStringList &includes,
                                       const QStringList &excludes)
 {

@@ -8570,7 +8570,69 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
     QString dirPath = recentFolderActions->text();
     if (G::isLogger) G::log("MW::invokeRecentFolder", dirPath);
 
+    /*  In the Library a recent folder filters it, with its subfolders, as a Bookmarks
+        click does; it never switches to Folders. */
+    if (G::scope == G::Scope::Catalog) {
+        filterLibraryToFolder(dirPath, true);
+        return;
+    }
     fsTree->select(dirPath);
+}
+
+void MW::updateRecentFoldersEnabled()
+{
+/*
+    Recent Folders' aboutToShow. In the Library an entry the Library holds nothing in
+    cannot be gone to (filterLibraryToFolder), so it is greyed with the reason rather than
+    left to fail after the click. Until the Library's folders have arrived nothing is
+    greyed: the click then gets the reason instead.
+*/
+    const bool judge = G::scope == G::Scope::Catalog && bookmarks
+                       && bookmarks->isLibraryKnown();
+    for (QAction *a : std::as_const(recentFolderActions)) {
+        if (!a->isVisible()) continue;
+        const QString path = FolderTree::normalize(a->text());
+        const bool ok = !judge || !bookmarks->libraryFolders(path).isEmpty();
+        a->setEnabled(ok);
+        a->setToolTip(ok ? QString()
+                         : tr("Not in the Library. Use Folders in the Source panel to "
+                              "open it."));
+    }
+}
+
+bool MW::filterLibraryToFolder(const QString &path, bool recurse)
+{
+/*
+    THE LIBRARY NEVER LEAVES FOR A FOLDER. Go to Folder, Open Folder and Recent Folders,
+    used while the Library is the source, check the folder in the Filters panel's Folders
+    category instead of loading it -- what a Bookmarks click does there
+    (MW::bookmarkClicked), through the same requestLibraryFolderFilter, clearing every
+    other filter first ("show me this folder"). Only the Source panel's Folders button
+    switches to Folders.
+
+    BookMarks::libraryFolders gives the folder itself, or the Library's include folders
+    beneath it when the path sits above them. recurse false is the folder with each
+    Library folder directly inside it excluded, as LibTree's Alt click asks.
+*/
+    if (G::isLogger) G::log("MW::filterLibraryToFolder", path);
+    if (G::scope != G::Scope::Catalog || !bookmarks) return false;
+
+    const QString dirPath = FolderTree::normalize(path);
+    const QStringList inc = bookmarks->libraryFolders(dirPath);
+    if (inc.isEmpty()) {
+        const QString shown = QDir::toNativeSeparators(dirPath);
+        G::popup->showPopup(bookmarks->isLibraryKnown()
+            ? tr("%1 is not in the Library.<p>Use Folders in the Source panel to open it.")
+                  .arg(shown)
+            : tr("The Library's folders are still being read. Try %1 again in a moment.")
+                  .arg(shown), 4000);
+        return false;
+    }
+    QStringList exc;
+    if (!recurse && inc == QStringList{dirPath})
+        exc = bookmarks->libraryChildFolders(dirPath);
+    requestLibraryFolderFilter(inc, exc, true);
+    return true;
 }
 
 void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
@@ -15081,9 +15143,17 @@ void MW::addBookmark(QString path)
 void MW::openFolder()
 {
     if (G::isLogger) G::log("MW::openFolder");
-    QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
+    const bool inLibrary = (G::scope == G::Scope::Catalog);
+    QString dirPath = QFileDialog::getExistingDirectory(this,
+         inLibrary ? tr("Open Folder in the Library") : tr("Open Folder"),
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (dirPath == "") return;
+    /*  The native dialog cannot grey folders the Library does not hold, so the reason
+        comes after the choice (filterLibraryToFolder's popup). */
+    if (inLibrary) {
+        filterLibraryToFolder(dirPath, true);
+        return;
+    }
     fsTree->select(dirPath);
 }
 
@@ -15097,11 +15167,21 @@ void MW::gotoFolder()
 
     The OK button is enabled only once the text names an existing folder; the reason it is
     not is shown inline beneath the field rather than as a popup after the fact.
+
+    IN THE LIBRARY IT FILTERS, IT DOES NOT LEAVE. The Library is already loaded, so the
+    folder is checked in the Filters panel's Folders category -- what a Bookmarks click
+    does there (MW::bookmarkClicked), through the same requestLibraryFolderFilter -- and
+    the source stays the Library. Only the Source panel's Folders button switches to
+    Folders. A folder the Library holds nothing in cannot be gone to: Go greys out and
+    the reason says so. "Include subfolders" keeps its meaning: unticked is the folder
+    with each Library folder directly inside it excluded, as LibTree's Alt click does.
 */
     if (G::isLogger) G::log("MW::gotoFolder");
 
+    const bool inLibrary = (G::scope == G::Scope::Catalog);
+
     QDialog dlg(this);
-    dlg.setWindowTitle(tr("Go to Folder"));
+    dlg.setWindowTitle(inLibrary ? tr("Go to Folder in the Library") : tr("Go to Folder"));
 
     QLabel *label = new QLabel(tr("Folder path:"), &dlg);
     QLineEdit *pathEdit = new QLineEdit(&dlg);
@@ -15137,7 +15217,7 @@ void MW::gotoFolder()
     layout->addWidget(buttons, 3, 0, 1, 3);
 
     /* Seed with the loaded folder so the field is a starting point, not a blank. */
-    if (dm->folderList.count() == 1) pathEdit->setText(dm->folderList.at(0));
+    if (!inLibrary && dm->folderList.count() == 1) pathEdit->setText(dm->folderList.at(0));
 
     auto expand = [](QString path) {
         path = path.trimmed();
@@ -15147,7 +15227,14 @@ void MW::gotoFolder()
         if (path.startsWith("file://")) path = QUrl(path).toLocalFile();
         if (path == "~") path = QDir::homePath();
         else if (path.startsWith("~/")) path = QDir::homePath() + path.mid(1);
-        return path;
+        return FolderTree::normalize(path);
+    };
+
+    /*  What the Library holds there, or empty. Not known until updateLibraryTree's
+        background read lands; until then the folder is checked after Go instead. */
+    const bool libraryKnown = inLibrary && bookmarks && bookmarks->isLibraryKnown();
+    auto libraryFolders = [&](const QString &path) {
+        return bookmarks ? bookmarks->libraryFolders(path) : QStringList();
     };
 
     auto validate = [&] {
@@ -15155,7 +15242,16 @@ void MW::gotoFolder()
         bool ok = false;
         /* An empty field needs no reason -- the label already says what goes here. */
         if (path.isEmpty()) reason->clear();
+        /*  A Library folder on a volume that is not mounted is still in the Library, so
+            this comes before the disk checks. */
+        else if (libraryKnown && !libraryFolders(path).isEmpty()) {
+            reason->clear();
+            ok = true;
+        }
         else if (QFileInfo(path).isFile()) reason->setText(tr("That is a file, not a folder"));
+        else if (libraryKnown && QDir(path).exists())
+            reason->setText(tr("Not in the Library. Use Folders in the Source panel to "
+                               "open it."));
         else if (!QDir(path).exists()) reason->setText(tr("Folder not found"));
         else {
             reason->clear();
@@ -15183,6 +15279,11 @@ void MW::gotoFolder()
 
     const QString dirPath = expand(pathEdit->text());
     if (dirPath.isEmpty()) return;
+
+    if (inLibrary) {
+        filterLibraryToFolder(dirPath, recurseCB->isChecked());
+        return;
+    }
 
     /* The Folders dock is where the selection lands, so show it if it is hidden -
        otherwise the folder loads with no visible sign of where it came from. */
