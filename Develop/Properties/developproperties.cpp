@@ -1693,8 +1693,8 @@ void DevelopProperties::resetAllEdits()
     previewActive = false;
     previewStack = EditStack();
     clearBeforeAfterLatch();
-    cameraProfileHoverActive = false;
-    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+    comboHoverActive = false;
+    if (comboHoverTimer) comboHoverTimer->stop();
 
     isRestoringHistory = true;          // suppress recording while the panel repopulates
     resetImageEdits(currentImagePath);
@@ -4776,38 +4776,14 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
             [this, combo](int ix){
                 /* The click ends the hover: the selection becomes the real state, and
                    leaving the override up would make the next render fight it. */
-                endCameraProfilePreview();
+                endComboHoverPreview();
                 setCameraProfile(combo->itemData(ix).toString());
             });
     vhb->addWidget(combo);
 
-    /*
-        HOVER PREVIEW. `highlighted` is the right signal rather than a mouse handler on the
-        popup view: it fires for the KEYBOARD too, so arrowing through the list previews
-        exactly as hovering does, and it reports the index the combo itself considers
-        current.
-
-        The popup view is watched for Hide because QComboBox reports a selection and never
-        a dismissal -- without it, pressing Esc or clicking away would leave the loupe
-        showing a profile the image does not have.
-    */
-    /* ONE timer for the life of the panel, not one per tree rebuild: this row is rebuilt
-       whenever the tree is, and a new QTimer each time would accumulate as children of
-       `this`, each still connected and each able to fire a preview for a combo that no
-       longer exists. */
-    if (!cameraProfileHoverTimer) {
-        cameraProfileHoverTimer = new QTimer(this);
-        cameraProfileHoverTimer->setSingleShot(true);
-        connect(cameraProfileHoverTimer, &QTimer::timeout, this, [this]{
-            previewCameraProfile(cameraProfileHoverName);
-        });
-    }
-    connect(combo, &QComboBox::highlighted, this, [this, combo](int ix){
-        if (ix < 0) return;
-        cameraProfileHoverName = combo->itemData(ix).toString();
-        cameraProfileHoverTimer->start(kProfileHoverDelayMs);
+    armComboHover(combo, [this, combo](int ix){
+        previewCameraProfile(combo->itemData(ix).toString());
     });
-    if (combo->view()) combo->view()->installEventFilter(this);
 
     setIndexWidget(valIdx, cell);
 
@@ -4906,35 +4882,84 @@ void DevelopProperties::repopulateCameraProfileCombo()
 void DevelopProperties::previewCameraProfile(const QString &name)
 {
     if (currentImagePath.isEmpty()) return;
-    /* The crop overlay and an open mask tool own the canvas; a hover preview underneath
-       them would fight for it (the same guard previewPreset and previewHistoryEntry use). */
-    if (maskPanelOpen || spotMode) return;
-
     const EditStack s = stackCache.value(currentImagePath);
     if (s.scopes.isEmpty()) return;
-    /* Back on the profile already in effect: take the override down rather than putting up
-       an identical one. Hovering it with nothing previewed costs nothing at all -- the
-       loupe is already showing it, and a render producing the same picture is still a
-       whole develop pass. */
-    if (s.scopes[0].params.cameraProfile == name) { endCameraProfilePreview(); return; }
-
     EditStack preview = s;
     /* Scope 0, whatever scope is active: a profile characterises the CAMERA, exactly as
        setCameraProfile writes it. */
     preview.scopes[0].params.cameraProfile = name;
+    showComboHoverPreview(preview, s.scopes[0].params.cameraProfile == name);
+}
+
+void DevelopProperties::previewViewTransform(int vt)
+{
+    if (currentImagePath.isEmpty()) return;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (s.scopes.isEmpty()) return;
+    EditStack preview = s;
+    preview.scopes[0].params.viewTransform = vt;    // scope 0, as setViewTransform
+    showComboHoverPreview(preview, s.scopes[0].params.viewTransform == vt);
+}
+
+void DevelopProperties::showComboHoverPreview(const EditStack &preview, bool sameAsStored)
+{
+    /* The crop overlay and an open mask tool own the canvas; a hover preview underneath
+       them would fight for it (the same guard previewPreset and previewHistoryEntry use). */
+    if (maskPanelOpen || spotMode) return;
+    /* Back on the value already in effect: take the override down rather than putting up
+       an identical one. Hovering it with nothing previewed costs nothing at all -- the
+       loupe is already showing it, and a render producing the same picture is still a
+       whole develop pass. */
+    if (sameAsStored) { endComboHoverPreview(); return; }
+
     clearBeforeAfterLatch();            // this hover is now the override, not Before
     previewStack = preview;
     previewActive = true;
-    cameraProfileHoverActive = true;
+    comboHoverActive = true;
     emit historyPreviewChanged();       // proxy render only, no full-res settle
 }
 
-void DevelopProperties::endCameraProfilePreview()
+void DevelopProperties::endComboHoverPreview()
 {
-    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
-    if (!cameraProfileHoverActive) return;
-    cameraProfileHoverActive = false;
+    if (comboHoverTimer) comboHoverTimer->stop();
+    if (!comboHoverActive) return;
+    comboHoverActive = false;
     endHistoryPreview();                // one preview override, one way to end it
+}
+
+/*
+    HOVER PREVIEW for a Basic dropdown. `highlighted` is the right signal rather than a
+    mouse handler on the popup view: it fires for the KEYBOARD too, so arrowing through
+    the list previews exactly as hovering does, and it reports the index the combo itself
+    considers current.
+
+    The popup view is watched for Hide because QComboBox reports a selection and never a
+    dismissal -- without it, pressing Esc or clicking away would leave the loupe showing
+    a value the image does not have (see eventFilter).
+*/
+void DevelopProperties::armComboHover(QComboBox *combo, std::function<void(int ix)> fire)
+{
+    /* ONE timer for the life of the panel, not one per tree rebuild: these rows are
+       rebuilt whenever the tree is, and a new QTimer each time would accumulate as
+       children of `this`, each still connected and each able to fire a preview for a
+       combo that no longer exists. What it runs is the pending action the last
+       `highlighted` set, so the one timer serves every row. */
+    if (!comboHoverTimer) {
+        comboHoverTimer = new QTimer(this);
+        comboHoverTimer->setSingleShot(true);
+        connect(comboHoverTimer, &QTimer::timeout, this, [this]{
+            if (comboHoverPending) comboHoverPending();
+        });
+    }
+    connect(combo, &QComboBox::highlighted, this, [this, combo, fire](int ix){
+        if (ix < 0) return;
+        /* A QPointer guard: the combo dies with a tree rebuild, possibly while the
+           debounce is still pending. */
+        QPointer<QComboBox> guard(combo);
+        comboHoverPending = [guard, fire, ix]{ if (guard) fire(ix); };
+        comboHoverTimer->start(kComboHoverDelayMs);
+    });
+    if (combo->view()) combo->view()->installEventFilter(this);
 }
 
 bool DevelopProperties::eventFilter(QObject *watched, QEvent *event)
@@ -4948,18 +4973,19 @@ bool DevelopProperties::eventFilter(QObject *watched, QEvent *event)
         showPanelContextMenu(sectionAt(panelContainer->childAt(e->pos())), e->globalPos());
         return true;
     }
-    if (event->type() == QEvent::Hide && cameraProfileCombo &&
-        watched == cameraProfileCombo->view()) {
+    if (event->type() == QEvent::Hide &&
+        ((cameraProfileCombo && watched == cameraProfileCombo->view()) ||
+         (viewTransformCombo && watched == viewTransformCombo->view()))) {
         /* Stopped SYNCHRONOUSLY so a hover that has not fired yet cannot put a preview up
            after the popup has already gone. */
-        if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+        if (comboHoverTimer) comboHoverTimer->stop();
         /* Deferred: on a CLICK the view hides before activated() is delivered, so ending
-           the preview inline here would restore the old profile and then immediately be
+           the preview inline here would restore the old value and then immediately be
            overwritten -- one wasted full render, and a visible flash of the previous
            rendering on the way past. By the time this runs, activated() has been handled
            and has already ended the preview itself, so this is a no-op on that path and
            only does work on a dismissal. */
-        QMetaObject::invokeMethod(this, [this]{ endCameraProfilePreview(); },
+        QMetaObject::invokeMethod(this, [this]{ endComboHoverPreview(); },
                                   Qt::QueuedConnection);
     }
     return PropertyEditor::eventFilter(watched, event);
@@ -5086,7 +5112,15 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     combo->insertSeparator(combo->count());
     combo->addItem("None", int(OutputTransform::ViewTransform::None));
     connect(combo, QOverload<int>::of(&QComboBox::activated), this,
-            [this, combo](int ix){ setViewTransform(combo->itemData(ix).toInt()); });
+            [this, combo](int ix){
+                endComboHoverPreview();     // the click makes the hover the real state
+                setViewTransform(combo->itemData(ix).toInt());
+            });
+    /* Hover previews, exactly as the Profile row above (armComboHover). A disabled
+       "Profile curve" is never highlighted, so it cannot preview a fallback. */
+    armComboHover(combo, [this, combo](int ix){
+        previewViewTransform(combo->itemData(ix).toInt());
+    });
     viewTransformCombo = combo;
     /* NO trailing stretch: the combo is Expanding, and a stretch item would take the
        spare width and leave the dropdown at its sizeHint -- narrower than Profile's,
@@ -6238,11 +6272,11 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
     /* ...and neither does a latched Before: the new image has its own baseline, and the
        key must start from After there. */
     clearBeforeAfterLatch();
-    /* ...and neither does a Profile-dropdown hover. Cleared alongside, so the flag cannot
-       outlive the override it describes and leave endCameraProfilePreview() firing a
+    /* ...and neither does a Profile / Tone mapping dropdown hover. Cleared alongside, so the flag cannot
+       outlive the override it describes and leave endComboHoverPreview() firing a
        render for a preview that is already gone. */
-    cameraProfileHoverActive = false;
-    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+    comboHoverActive = false;
+    if (comboHoverTimer) comboHoverTimer->stop();
     /* A queued multi-image batch belongs to the image being left; land it before the
        diff base moves to the new image. */
     flushPropagation();
@@ -6467,10 +6501,10 @@ void DevelopProperties::toggleBeforeAfter()
         return;
     }
 
-    /* Some other preview (a Presets or Profile hover) may be up; this replaces it, and
+    /* Some other preview (a Presets, Profile or Tone mapping hover) may be up; this replaces it, and
        its own "end" is a no-op once previewActive goes down with the latch. */
-    cameraProfileHoverActive = false;
-    if (cameraProfileHoverTimer) cameraProfileHoverTimer->stop();
+    comboHoverActive = false;
+    if (comboHoverTimer) comboHoverTimer->stop();
 
     previewStack = originalStack();
     previewActive = true;
