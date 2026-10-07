@@ -92,6 +92,7 @@ packaging/windows/config.ps1
 # See Utilities/modelstore.h and tools/gen_model_catalog.sh.
 ReleaseExtras/midas.onnx
 ReleaseExtras/skyseg.onnx
+ReleaseExtras/sky_segformer.onnx
 ReleaseExtras/u2net.onnx
 ReleaseExtras/sam2_decoder.onnx
 ReleaseExtras/sam2_encoder.onnx

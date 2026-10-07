@@ -106,6 +106,28 @@ void PanelEditor::addCheckbox(const QString &key, const QString &caption, const 
     addItem(i);
 }
 
+void PanelEditor::addCombo(const QString &key, const QString &caption, const QString &tooltip,
+                           const QStringList &items)
+{
+    clearItemInfo(i);
+    i.name = key;
+    i.parIdx = QModelIndex();
+    i.parentName = "";
+    i.captionText = caption;
+    i.tooltip = tooltip;
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = key;
+    i.defaultValue = items.value(0);
+    i.path = "";
+    i.value = i.defaultValue;
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList = items;
+    addItem(i);
+}
+
 void PanelEditor::setSliderReal(const QString &key, double real)
 {
     const QModelIndex vIdx = sourceIdx.value(key);
@@ -128,6 +150,17 @@ void PanelEditor::setCheckboxValue(const QString &key, bool on)
     const bool wasPop = isPopulating;
     isPopulating = true;
     setItemValue(vIdx, on);
+    isPopulating = wasPop;
+}
+
+void PanelEditor::setComboValue(const QString &key, const QString &item)
+{
+    const QModelIndex vIdx = sourceIdx.value(key);
+    if (!vIdx.isValid()) return;
+    if (vIdx.data(UR_Editor).value<void*>() == nullptr) return;
+    const bool wasPop = isPopulating;
+    isPopulating = true;            // a programmatic seed must not echo as settingChanged
+    setItemValue(vIdx, item);
     isPopulating = wasPop;
 }
 

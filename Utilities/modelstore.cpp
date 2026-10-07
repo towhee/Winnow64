@@ -45,6 +45,8 @@ const QVector<ModelInfo> &table()
           175997641LL, "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491", false },
         { Model::SkySeg,      "skyseg.onnx",            "Select Sky",         1,
           175997079LL, "ab9c34c64c3d821220a2886a4a06da4642ffa14d5b30e8d5339056a089aa1d39", false },
+        { Model::SkySegFormer, "sky_segformer.onnx",    "Select Sky",         1,
+          257336934LL, "0365a0cf38928cb73b8e60b54dbcc4268f09b1b2908600a0d3273de78d4fa93a", false },
         { Model::Midas,       "midas.onnx",             "Depth Range",        1,
           66764249LL,  "2d8c6cb8f415229daf1eb041024208e2608c9f98e17c81cc7c6ecb449c56fd58", false },
         { Model::Migan,       "migan.onnx",             "Spot Heal",          1,

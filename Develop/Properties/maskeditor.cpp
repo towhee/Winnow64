@@ -22,7 +22,7 @@ static const char *kEdgeTip =
     "Grow (+) or shrink (-) this submask's boundary, in pixels of the full-size image. "
     "Feather softens an edge; Edge moves it.";
 
-void MaskEditor::showTool(const MaskComponent &m)
+void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effectiveOp)
 {
     isPopulating = true;
     wheel = nullptr;                 // freed with its row by clearRows() below
@@ -48,6 +48,39 @@ void MaskEditor::showTool(const MaskComponent &m)
         setCheckboxValue("maskAutoMask", o.value("autoMask").toBool(false));
         setCheckboxValue("maskInvert", m.inverted);
         break;
+
+    case int(MaskTool::RefineBrush): {
+        /* Re-mattes the mask ABOVE it inside the painted region (Develop/maskrefine.h).
+           No Edge / Invert rows: it is a step on the folded mask, not a coverage. */
+        QStringList modes{"Add"};
+        if (!firstSubmask) modes << "Remove";
+        modes << "Fix Edge";
+        QString tip = "Add: paint where the mask missed -- only what looks like the mask "
+                      "joins it.\nRemove: paint over what it wrongly took -- only what "
+                      "does not look like it leaves.\nFix Edge: paint along a haloed edge "
+                      "to re-fit it to the picture.\nHolding Opt as a stroke starts "
+                      "paints in Remove.";
+        if (firstSubmask)
+            tip += "\n\nRemove is not offered: this is the first submask, so there is "
+                   "no mask above it to remove from.";
+        addCombo("maskRefineMode", "Mode", tip, modes);
+        addSlider("maskSize", "Size", "Brush diameter (% of the long edge).", 1, 1000, 10);
+        addSlider("maskFeather", "Feather",
+                  "Soft edge outside the brush size: fades the refinement in.", 0, 100);
+        addSlider("maskFlow", "Flow", "How much each stroke builds up.", 1, 100);
+        addCheckbox("maskAutoMask", "Auto mask",
+                    "Keep the brush inside the edges under the cursor. Toggle with A.");
+        const int op = effectiveOp >= 0 ? effectiveOp : m.op;
+        const QString mode = o.value("mode").toString() == "edge"   ? "Fix Edge"
+                           : (op != int(MaskOp::Add) && !firstSubmask) ? "Remove"
+                                                                       : "Add";
+        setComboValue("maskRefineMode", mode);
+        setSliderReal("maskSize", pnum(o, "size", 20));
+        setSliderReal("maskFeather", feather);
+        setSliderReal("maskFlow", pnum(o, "flow", 100));
+        setCheckboxValue("maskAutoMask", o.value("autoMask").toBool(false));
+        break;
+    }
 
     case int(MaskTool::LuminanceRange):
         addSlider("maskRangeLo", "Range Min", "Lower luminance bound of the band.", 0, 100);

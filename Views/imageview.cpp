@@ -1597,8 +1597,9 @@ void ImageView::toggleMaskTint()
 void ImageView::hideMaskTint()
 {
     /* An adjustment slider (Basic/Color/Effects) was changed; get the red coverage out of
-       the way so the user sees the effect on the masked pixels. Re-shown by "M"/"O" or by
-       re-selecting a mask tool. Applies to the committed-mask display too. */
+       the way so the user sees the effect on the masked pixels. Re-shown only by an
+       explicit toggle ("M"/"O", the tint button, the scope menu). Applies to the
+       committed-mask display too. */
     if (maskTintHidden || (!maskEditMode && scopeMaskTint.isNull())) return;
     maskTintHidden = true;
     emit maskTintVisibilityChanged(false);
@@ -1607,9 +1608,10 @@ void ImageView::hideMaskTint()
 
 void ImageView::showMaskTint()
 {
-    /* The hidden flag is sticky (it survives commits and scope changes), so an explicit
-       "show this mask" event -- selecting another scope -- has to clear it or the scope's
-       combined mask would stay invisible. */
+    /* Un-hide the tint. NOT CONNECTED since 2026-10-07: the overlay starts hidden and is
+       shown only by an explicit toggle (toggleMaskTint). This was the scope-selection
+       auto-show (DevelopProperties::maskTintShowRequested), kept for when the auto-show
+       rules are decided. */
     if (!maskTintHidden) return;
     maskTintHidden = false;
     emit maskTintVisibilityChanged(true);
@@ -3448,8 +3450,8 @@ void ImageView::buildSubjectPreview()
 
 void ImageView::buildSkyPreview()
 {
-    /* Sky twin of buildSubjectPreview: tint from the shared SkyMask coverage (built + registered by
-       MW from skyseg.onnx -- the SAME map the render samples, so preview == render). */
+    /* Sky twin of buildSubjectPreview: tint from the shared SkyMask alpha (built + registered by
+       MW::ensureSkyMask -- the SAME map the render samples, so preview == render). */
     maskRangePreview = QImage();
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = SkyMask::getRef(currentImagePath);

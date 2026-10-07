@@ -163,7 +163,7 @@ private:
     bool editsCollapsed = false;           // the bar's arrow: details below hidden
     bool globalActive = true;
     bool maskOverlayAvailable = false;
-    bool maskOverlayShown     = true;
+    bool maskOverlayShown     = false;     // matches ImageView: the tint starts hidden
 };
 
 #endif // SCOPEHEADER_H

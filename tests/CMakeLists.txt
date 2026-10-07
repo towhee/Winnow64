@@ -182,6 +182,38 @@ elseif(WIN32)
     target_link_libraries(tst_maskhalo PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
+# tst_skyrefine tests Utilities/skyrefine.h, the two-model sky matte behind Select Sky:
+# the calibration / region-gate / agreement rules on synthetic input, and the canopy matte
+# on a real photograph with the two models' real outputs (fixtures/sky/). Header-only,
+# OpenCV core + imgproc like tst_maskhalo; no model runs.
+winnow_add_unit_test(tst_skyrefine unit/tst_skyrefine.cpp)
+if(APPLE)
+    target_include_directories(tst_skyrefine PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_skyrefine PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_skyrefine PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_skyrefine PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_skyrefine PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
+# tst_maskrefine tests Develop/maskrefine.h, the Refine Brush: a painted region in which
+# the folded mask is re-matted against the photo (Add / Remove / Fix Edge), on synthetic
+# scenes built to provoke the failures each rule was added for. Header-only, OpenCV core +
+# imgproc like tst_skyrefine (it builds on Utilities/skyrefine.h).
+winnow_add_unit_test(tst_maskrefine unit/tst_maskrefine.cpp)
+if(APPLE)
+    target_include_directories(tst_maskrefine PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_maskrefine PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_maskrefine PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_maskrefine PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_maskrefine PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
 # tst_devpreview tests Cache/devpreviewcache.cpp, the on-disk cache of develop
 # previews (already in the shared closure above).
 winnow_add_unit_test(tst_devpreview unit/tst_devpreview.cpp)

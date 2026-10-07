@@ -116,6 +116,7 @@ inline QString maskParams(int tool, const QString &json, int degrees)
     }
     case MaskTool::Brush:
     case MaskTool::Object:
+    case MaskTool::RefineBrush:
         if (!o.contains("strokes")) return json;
         o["strokes"] = strokes(o.value("strokes").toArray(), degrees);
         return toJson(o);

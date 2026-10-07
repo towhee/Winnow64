@@ -3,19 +3,29 @@
 
 /*
     Shared reference + coverage for the AI "Select Sky" develop mask -- the sky twin of
-    Develop/subjectmask.h. A single-channel sky coverage (0..1), produced once by the sky
-    segmentation model (Utilities/skypredictor) and edge-refined (Utilities/segrefine.h), registered
-    by image path and sampled identically by the ImageView overlay (preview) and the develop render
-    (buildMaskBuffer) so the two are pixel-identical. Header-only (all inline, no Q_OBJECT).
+    Develop/subjectmask.h. A single-channel sky ALPHA (0..1), produced once per image by
+    the two-model sky matte (Utilities/skypredictor + Utilities/skyrefine.h), registered
+    by image path and sampled identically by the ImageView overlay (preview) and the
+    develop render (buildMaskBuffer) so the two are pixel-identical. Header-only (all
+    inline, no Q_OBJECT).
 
-    A SEPARATE store from SubjectMask on purpose: a scope stack may carry both a Subject and a Sky
-    mask on the same image, so their coverage maps must not collide on the shared path key.
+    RESOLUTION. The alpha is a real matte -- leaf gaps and branch tips carry fractional
+    values -- so it is stored at up to 4096 px on the long edge (MW::ensureSkyMask), not
+    the 1024 the old path used: bilinear sampling of a 1024 map onto a 6000 px render
+    was a ~6 px ramp, and that ramp was the halo. Stored as 8 bits (11 MB at 4096x2730
+    instead of 45 MB as float); a 1/255 alpha step is invisible under any adjustment.
 
-    onx/ony are OUTPUT-normalized (0..1 of the oriented image) -- the same space the geometric, range
-    and subject tools use, so a sky component drops into the same per-pixel loop.
+    A SEPARATE store from SubjectMask on purpose: a scope stack may carry both a Subject
+    and a Sky mask on the same image, so their coverage maps must not collide on the
+    shared path key.
+
+    onx/ony are OUTPUT-normalized (0..1 of the oriented image) -- the same space the
+    geometric, range and subject tools use, so a sky component drops into the same
+    per-pixel loop.
 */
 
 #include <vector>
+#include <cstdint>
 #include <cmath>
 #include <algorithm>
 #include <memory>
@@ -27,7 +37,7 @@
 namespace SkyMask {
 
 struct SkyRef {
-    std::vector<float> cov;     // single channel 0..1, row-major, output-oriented
+    std::vector<uint8_t> cov;   // alpha 0..255, row-major, output-oriented
     int w = 0, h = 0;
     bool valid() const { return w > 0 && h > 0 && cov.size() == size_t(w) * size_t(h); }
 };
@@ -61,25 +71,24 @@ inline float sampleCov(const SkyRef &ref, double onx, double ony)
     const int x0 = int(fx), y0 = int(fy);
     const int x1 = std::min(x0 + 1, ref.w - 1), y1 = std::min(y0 + 1, ref.h - 1);
     const double tx = fx - x0, ty = fy - y0;
-    const float *c = ref.cov.data();
+    const uint8_t *c = ref.cov.data();
     const float c00 = c[size_t(y0) * ref.w + x0], c10 = c[size_t(y0) * ref.w + x1];
     const float c01 = c[size_t(y1) * ref.w + x0], c11 = c[size_t(y1) * ref.w + x1];
     const float top = float(c00 + (c10 - c00) * tx);
     const float bot = float(c01 + (c11 - c01) * tx);
-    return float(top + (bot - top) * ty);
+    return float(top + (bot - top) * ty) * (1.0f / 255.0f);
 }
 
-/* Coverage for the sky at (onx,ony): the saliency thresholded around 0.5 with a feather band
-   (featherPct 0..100 -> up to 0.5 half-width). inverted flips (selects non-sky). */
+/* Coverage for the sky at (onx,ony). Feather 0 uses the matte AS IS -- its fractional
+   edge is the result, as for the Object Mask. Feather > 0 re-shapes it with a Gaussian
+   band around 0.5 (featherPct 0..100 -> up to 0.5 half-width), the same control every
+   AI mask has. inverted flips (selects non-sky). */
 inline float coverage(const SkyRef &ref, double onx, double ony, float featherPct, bool inverted)
 {
     const float s = sampleCov(ref, onx, ony);
     const double band = std::clamp(double(featherPct) / 100.0, 0.0, 1.0) * 0.5;
-    double v;
-    if (band <= 1e-6)  v = (s >= 0.5f) ? 1.0 : 0.0;      // hard threshold
-    /* Gaussian edge (MaskFalloff::cdf), sigma matched to the 10-90 width of the
-       smootherstep it replaces, so the band reads the same but has no hard ends. */
-    else               v = MaskFalloff::cdf((s - 0.5) / (0.48 * band));
+    const double v = (band <= 1e-6) ? std::clamp(double(s), 0.0, 1.0)     // matte as-is
+                                    : MaskFalloff::cdf((s - 0.5) / (0.48 * band));
     const float c = float(v);
     return inverted ? 1.0f - c : c;
 }
