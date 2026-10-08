@@ -16,9 +16,14 @@
     from the neighbourhood of the stroke -- where sky and foreground are separable even
     when they are not across the whole frame. Three modes:
 
-      ADD     masked pixels near the stroke define the mask colour S; unmasked pixels that
-              look unlike S define F; pixels under the stroke that project toward S join
-              the mask (sky holes in a treeline). No S nearby -> a plain add brush.
+      ADD     the unmasked pixels under the stroke are split RELATIVELY (k-means in a
+              chroma-weighted space; the cluster nearest the mask colour is the mask's),
+              the mask-like ones seed a LOCAL S and the rest F, and the matte between
+              them adds the holes (sky through branches) but not the branches or snow.
+              The mask colour comes from masked pixels near the stroke, or the nearest
+              masked pixels anywhere when none are near. A fixed "looks like S"
+              distance (0.08) added nothing on Paradise Meadows, where the sky through
+              the trees is hazier and paler than the open sky (0.13-0.31 away).
       REMOVE  the TRUE mask colour is learned from masked pixels OUTSIDE the stroke;
               masked pixels under the stroke that are clearly unlike it are the
               intruders (glacier, moon, foreground snow) and are matted out. Painting
@@ -132,6 +137,123 @@ inline cv::Mat matte(const cv::Mat &rgb, const cv::Mat &S, const cv::Mat &F,
     return t;
 }
 
+/* ADD's colour space: Y plus chroma weighted kChromaW times. Pale horizon sky and lit
+   snow have nearly the same RGB (and the same Y); they differ in chroma, and in plain RGB
+   k-means put them in one cluster and added the snowy treetops. The brush Auto mask
+   weights chroma for the same reason. */
+constexpr float kChromaW = 3.0f;
+inline cv::Vec3f chroma(const cv::Vec3f &c)
+{
+    const float Y = 0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2];
+    return {Y, kChromaW * 0.564f * (c[2] - Y), kChromaW * 0.713f * (c[0] - Y)};
+}
+
+/* Mean colour of the masked pixels nearest the stroke's box (sx0..sx1, sy0..sy1), for an
+   Add stroke with no masked pixel in its own context. The search widens (2M, 4M, ...)
+   until it finds some, then keeps the K nearest -- NOT every masked pixel in reach: on
+   Paradise Meadows that mean was the deep zenith blue, not the nearer sky. False if the
+   mask is empty. */
+inline bool nearestMaskColour(const std::vector<float> &m, const cv::Mat &rgb, int w, int h,
+                              int sx0, int sy0, int sx1, int sy1, int M, cv::Vec3f &out)
+{
+    const int L = std::max(w, h);
+    const size_t K = size_t(std::max(50, (L / 100) * (L / 100)));
+    for (int r = 2 * M; ; r *= 2) {
+        const int x0 = std::max(0, sx0 - r), y0 = std::max(0, sy0 - r);
+        const int x1 = std::min(w - 1, sx1 + r), y1 = std::min(h - 1, sy1 + r);
+        std::vector<std::pair<long long, int>> hits;     // (distance^2, pixel index)
+        for (int y = y0; y <= y1; ++y) {
+            const float *mp = m.data() + size_t(y) * w;
+            const long long dy = y < sy0 ? sy0 - y : (y > sy1 ? y - sy1 : 0);
+            for (int x = x0; x <= x1; ++x)
+                if (mp[x] > 0.95f) {
+                    const long long dx = x < sx0 ? sx0 - x : (x > sx1 ? x - sx1 : 0);
+                    hits.push_back({dx * dx + dy * dy, y * w + x});
+                }
+        }
+        if (hits.size() >= 20) {
+            const size_t k = std::min(K, hits.size());
+            std::nth_element(hits.begin(), hits.begin() + long(k - 1), hits.end());
+            cv::Vec3d acc(0, 0, 0);
+            for (size_t i = 0; i < k; ++i)
+                acc += cv::Vec3d(rgb.at<cv::Vec3f>(hits[i].second / w, hits[i].second % w));
+            out = cv::Vec3f(acc / double(k));
+            return true;
+        }
+        if (x0 == 0 && y0 == 0 && x1 == w - 1 && y1 == h - 1) return false;
+    }
+}
+
+/*
+    ADD's split of the unmasked pixels under the stroke into "mask-like" and foreground.
+    A fixed distance from the mask colour (0.08, the old rule) failed in the field: sky
+    seen through branches is hazier and paler than the sky the reference comes from
+    (0.13-0.31 away on Paradise Meadows), so the holes counted as foreground and nothing
+    was added. The split is RELATIVE instead: k-means (k = 4, chroma space) on the
+    pixels under the stroke, the cluster nearest the mask colour s0 is the mask's (merged
+    with any cluster within kMerge of it -- a sky gradient is one class), and each pixel
+    goes to whichever side's nearest centre is closer. A nearest cluster more than kGuard
+    from s0 means nothing under the stroke looks like the mask: returns false. (The guard
+    is loose on purpose: on the real image the chosen cluster was <= 0.33 even for a
+    stroke over snow only, while a saturated test sky put real haze at 0.41-0.51. It
+    cannot tell shaded snow from hazy sky; the user's stroke is the semantic cue.)
+
+    far   = foreground (CV_8U, the box), clear = clearly mask-like (seeds the local S).
+    k-means is seeded from a fixed RNG state: the render caches need a pure function.
+*/
+constexpr int   kClusters = 4;
+constexpr float kMerge = 0.15f, kGuard = 0.6f;
+inline bool splitUnderStroke(const cv::Mat &ic, const cv::Mat &under, const cv::Vec3f &s0,
+                             cv::Mat &far, cv::Mat &clear)
+{
+    const int n = cv::countNonZero(under);
+    if (n < 50) return false;
+    const int stride = std::max(1, n / 20000);
+    std::vector<cv::Vec3f> pts;
+    pts.reserve(size_t(n / stride + 1));
+    int k = 0;
+    for (int y = 0; y < ic.rows; ++y) {
+        const cv::Vec3f *ip = ic.ptr<cv::Vec3f>(y);
+        const uchar *up = under.ptr<uchar>(y);
+        for (int x = 0; x < ic.cols; ++x)
+            if (up[x] && k++ % stride == 0) pts.push_back(chroma(ip[x]));
+    }
+    const cv::Mat samples = cv::Mat(pts).reshape(1);   // N x 3, CV_32F
+    cv::Mat labels, C;
+    cv::RNG &rng = cv::theRNG();
+    const uint64 saved = rng.state;
+    rng.state = 0x2545F4914F6CDD1DULL;
+    cv::kmeans(samples, kClusters, labels,
+               cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::COUNT, 20, 1e-3),
+               3, cv::KMEANS_PP_CENTERS, C);
+    rng.state = saved;
+
+    auto centre = [&](int j) { return cv::Vec3f(C.ptr<float>(j)); };
+    int best = 0;
+    for (int j = 1; j < C.rows; ++j)
+        if (cv::norm(centre(j) - s0) < cv::norm(centre(best) - s0)) best = j;
+    if (cv::norm(centre(best) - s0) > kGuard) return false;
+    std::vector<cv::Vec3f> mask, other;
+    for (int j = 0; j < C.rows; ++j)
+        (j == best || cv::norm(centre(j) - centre(best)) < kMerge ? mask : other)
+            .push_back(centre(j));
+
+    far.create(ic.size(), CV_8U); clear.create(ic.size(), CV_8U);
+    forRows(ic.rows, [&](int y) {
+        const cv::Vec3f *ip = ic.ptr<cv::Vec3f>(y);
+        uchar *fp = far.ptr<uchar>(y), *cp = clear.ptr<uchar>(y);
+        for (int x = 0; x < ic.cols; ++x) {
+            const cv::Vec3f c = chroma(ip[x]);
+            float dm = 1e9f, dn = 1e9f;
+            for (const auto &q : mask)  dm = std::min(dm, float(cv::norm(c - q)));
+            for (const auto &q : other) dn = std::min(dn, float(cv::norm(c - q)));
+            fp[x] = dm >= dn ? 255 : 0;
+            cp[x] = dm < 0.5f * dn ? 255 : 0;
+        }
+    });
+    return true;
+}
+
 }   // namespace detail
 
 /*
@@ -157,6 +279,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
     if (x1 < 0) return;
     const int L = std::max(w, h);
     const int M = std::max(16, L / 30);
+    const int sx0 = x0, sy0 = y0, sx1 = x1, sy1 = y1;   // the stroke's own box
     x0 = std::max(0, x0 - M); y0 = std::max(0, y0 - M);
     x1 = std::min(w - 1, x1 + M); y1 = std::min(h - 1, y1 + M);
     const cv::Rect box(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
@@ -226,17 +349,43 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
     else if (mode == Mode::Add) {
         int nS = 0;
         const cv::Mat S = fill(ic, toF(inside), nS);
-        if (nS < 20) {                                   // no reference: plain add
-            cv::max(mc, rc, result);
+        cv::Vec3f s0;                                    // the mask colour, chroma space
+        bool haveS = nS >= 20;
+        if (haveS) {
+            cv::Vec3d acc(0, 0, 0); int n = 0;
+            for (int y = 0; y < ic.rows; ++y) {
+                const cv::Vec3f *sp = S.ptr<cv::Vec3f>(y);
+                const uchar *op = outside.ptr<uchar>(y);
+                const float *rp = rc.ptr<float>(y);
+                for (int x = 0; x < ic.cols; ++x)
+                    if (op[x] && rp[x] > 0.5f) { acc += cv::Vec3d(chroma(sp[x])); ++n; }
+            }
+            if (n) s0 = cv::Vec3f(acc / n);
+            else   haveS = false;
         }
+        if (!haveS) {
+            cv::Vec3f c;
+            if (nearestMaskColour(m, rgb, w, h, sx0, sy0, sx1, sy1, M, c)) {
+                s0 = chroma(c); haveS = true;
+            }
+        }
+        if (!haveS) cv::max(mc, rc, result);             // empty mask: plain add
         else {
-            const cv::Mat far = distTo(ic, S) > tau;
-            int nF = 0;
-            const cv::Mat F = fill(ic, toF(outside & far), nF);
-            cv::Mat a;
-            if (nF < 20) toF(~far).copyTo(a);   // nothing unlike S: add lookalikes
-            else         a = matte(ic, S, F, ~far, L, /*decon*/true);
-            cv::max(mc, a, result);
+            cv::Mat far, clear;
+            if (!splitUnderStroke(ic, outside & (rc > 0.5f), s0, far, clear)) {
+                result = mc.clone();                     // nothing mask-like under it
+            }
+            else {
+                /* The LOCAL mask colour: masked context plus the clearly mask-like
+                   pixels under the stroke -- the hole's own sky, not the reference. */
+                int nS2 = 0, nF = 0;
+                const cv::Mat S2 = fill(ic, toF(inside | (outside & (rc > 0.5f) & clear)), nS2);
+                const cv::Mat F = fill(ic, toF(outside & far), nF);
+                cv::Mat a;
+                if (nF < 20) toF(~far).copyTo(a);        // nothing unlike S: lookalikes
+                else         a = matte(ic, S2, F, ~far, L, /*decon*/true);
+                cv::max(mc, a, result);
+            }
         }
     }
     else {                                               // Fix Edge

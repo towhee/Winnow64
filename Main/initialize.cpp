@@ -308,7 +308,7 @@ void MW::createFilterView()
     filters = new Filters(this);
     filters->setObjectName("Filters");
     filters->setMaximumWidth(folderMaxWidth);
-    filters->applyCss(G::css);      // G::fontSize - 2
+    filters->applyCss(G::css);      // G::panelFontSize, same as Folders
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
@@ -2876,6 +2876,7 @@ void MW::createDevelopDock()
         developScopesLayout > ScopesView::VectorscopeOnly)
         developScopesLayout = ScopesView::Both;
     G::autoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
+    G::autoRemoveCA = settings->value("Develop/autoRemoveCA", false).toBool();
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
@@ -2961,6 +2962,14 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
     /* Per-row reset: clear just the crop / straighten / warp contribution. */
     connect(transformPanel, &TransformPanel::resetModeRequested, this, &MW::resetDevelopTransformMode);
+    /* Lens rows: Global recipe values owned by DevelopProperties, pushed back on every
+       rebuild (image switch, History, undo) through lensStateChanged. */
+    connect(transformPanel, &TransformPanel::removeCAToggled,
+            developProperties, &DevelopProperties::setGlobalRemoveCA);
+    connect(transformPanel, &TransformPanel::defringeChanged,
+            developProperties, &DevelopProperties::setGlobalDefringe);
+    connect(developProperties, &DevelopProperties::lensStateChanged,
+            transformPanel, &TransformPanel::setLens);
     /* Transform Preview eye: a LIVE result toggle while the crop tool is active. ON = commit the
        overlay's crop, drop the overlay and render the cropped/warped RESULT; OFF = back to full-frame
        editing with the overlay. (The panel is only visible while crop-editing, so that is the only

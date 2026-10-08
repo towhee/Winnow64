@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 20;
+constexpr int kSchemaVersion = 21;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1603,6 +1603,23 @@ bool CacheDb::migrate(QSqlDatabase &db)
             || !q.exec("CREATE TABLE IF NOT EXISTS catalog_meta ("
                        "  key   TEXT PRIMARY KEY,"
                        "  value TEXT NOT NULL)")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 21) {
+    /*
+        A DATA REPAIR: picks are session-only, so image.pick is cleared.
+
+        DataModel::catalogRowFor copied the row's pick into every commit, and a catalog
+        fill put it back on the row -- but an unpick writes no sidecar, so the stamp
+        check in Catalog::commit skipped the row and the index went on saying Picked.
+        The stale pick came back every launch with the "picks not ingested" warning at
+        quit. Neither side reads or writes the column now; this clears what is left.
+        Re-runnable.
+    */
+        if (!q.exec("UPDATE image SET pick = 0 WHERE pick <> 0")) {
             db.rollback();
             return false;
         }

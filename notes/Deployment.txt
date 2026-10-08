@@ -56,6 +56,15 @@ Three principles:
       installer filenames always match the binary. To change the version, edit
       ONLY the project() line and rebuild.
 
+      Pre-release label: WINNOW_VERSION_LABEL (set just below project()) is the
+      user-facing version, e.g. "3_beta". It goes into WINNOW_VERSION (About,
+      update check); both deploy scripts read it back from the generated
+      winnow_version.h to name the DMG / Setup.exe (Winnow3_beta.dmg). Qt's
+      Info.plist template has no free-form version key, so the bundle itself
+      only carries the numeric version. The numeric project VERSION stays in the fields that
+      must be numeric (CFBundleShortVersionString, rc FILEVERSION). Empty label =
+      plain release (falls back to PROJECT_VERSION).
+
 Distribution is plain downloads (a DMG and a Setup.exe uploaded to the server).
 There is no in-app auto-update; the old Qt Installer Framework online-installer
 mechanism was retired.

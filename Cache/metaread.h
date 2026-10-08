@@ -67,6 +67,9 @@ public:
     std::atomic<quint64> readsFailedCount{0};      // terminal failure (Meta/Icon/MetaIconFailed)
     std::atomic<quint64> redosTriggeredCount{0};
     std::atomic<quint64> dispatchCycleCount{0};
+    /* PROBE: dispatch calls that returned on abort or a suspended proxy. That return
+       leaves the reader's cycling flag set, and dispatchReaders skips cycling readers. */
+    std::atomic<quint64> suspendedReturnCount{0};
 
     /* Phase-2 perf probe (gated by G::isPerfProbe). Single-threaded on metaReadThread, so
        plain members are safe. dispatch(ns) = thread-busy time; needToRead(ns) is the proxy
@@ -132,6 +135,10 @@ public slots:
        JIT re-arm block in setStartRow for why. Thread-safe; call it queued, before the
        setStartRow that should act on it. */
     void invalidateLoadedIcons();
+    /* PROBE (--perfprobe): why a row refreshStaleRows cleared is not being re-read.
+       Prints this thread's view of it -- in-flight / success sets, RowSync flags, the
+       readers' cycling flags, the a/b cursors, the icon range. Call it queued. */
+    void probeStaleRow(int dmRow, int sfRow);
     void dispatchFinished(QString src);
     void allFinished(QString src);
     void abortProcessing();

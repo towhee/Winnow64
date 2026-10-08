@@ -121,8 +121,8 @@ qreal sysDevicePixelRatio;          // current monitor
 QString trash;                      // Mac = Trash PC = recycle bin
 
 // application parameters
-QString strFontSize;                // app font point size
-int fontSize;
+QString strFontSize = "12";         // app font point size
+int fontSize = 12;                  // kept in step with strFontSize
 qreal dpi;                          // current logical screen dots per inch
 qreal ptToPx;                       // font points to pixels conversion factor
 
@@ -210,7 +210,13 @@ bool wheelSpinning = false;
 
 int panelFontSize()
 {
-    return qMax(6, fontSize - 2);
+    /*  A first run (no settings) used to leave fontSize at 0 while strFontSize was "12",
+        which made the panels 6pt.  Fall back to strFontSize, then to the 12pt default,
+        so an unset fontSize can never shrink the panels. */
+    int base = fontSize;
+    if (base <= 0) base = strFontSize.toInt();
+    if (base <= 0) base = 12;
+    return qMax(8, qRound(base * 0.85));
 }
 
 QString panelFontCss(const QString &selector)
@@ -276,6 +282,7 @@ bool cacheThumbnails = true;                 // write thumbnails to the index as
 qint64 thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;    // 5 GB ~ 250k thumbnails
 bool buildDevPreviewsInBackground = false;
 bool autoRunDenoise = true;
+bool autoRemoveCA = false;
 
 bool useBatchedFolderInsert = true;    // batched per-folder insert (one rowsInserted + one dataChanged); cuts Phase-1 insert ~34%. Z-A reorder fixed: dynamic sort disabled during load, restored once at end (see DataModel::scheduleProcessing / restoreProxySortAfterLoad)
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)

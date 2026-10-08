@@ -670,9 +670,12 @@ QString Metadata::devPreviewKey(const QString &blob)
     rebuild for images that pinned it, and never shows the wrong picture.
 */
     if (blob.isEmpty()) return QString();
+    /* autoCA is appended only when ON, so the default (off) leaves every key that
+       existed before the preference did unchanged -- no mass rebuild. */
     const QString d = blob + QString("|engine=%1|autoDenoise=%2")
                                  .arg(int(G::decodeRawEngine))
-                                 .arg(G::autoRunDenoise ? 1 : 0);
+                                 .arg(G::autoRunDenoise ? 1 : 0)
+                    + (G::autoRemoveCA ? QString("|autoCA=1") : QString());
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
     return QString::fromLatin1(h.toHex().left(12));
@@ -704,7 +707,8 @@ QString Metadata::defaultRenderKey()
 */
     const QString d = QString("defaultRender|v1|engine=%1|autoDenoise=%2")
                           .arg(int(G::decodeRawEngine))
-                          .arg(G::autoRunDenoise ? 1 : 0);
+                          .arg(G::autoRunDenoise ? 1 : 0)
+                    + (G::autoRemoveCA ? QString("|autoCA=1") : QString());   // see devPreviewKey
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return "R" + QString::fromLatin1(h.toHex().left(11));
 }

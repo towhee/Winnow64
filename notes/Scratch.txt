@@ -7246,4 +7246,49 @@ The prototype works. It ran on your "Sky Mask Test Images" collection plus the 1
 
 /Users/roryhill/Photos/2010-2019 √/2015 √/201506 √/2015-06-28_Dempster Hwy √/2015-06-28_0133.NEF
 - Halo on ridgeline
--
+
+I've rewritten the Refine Brush's Add mode so it adds the hazy sky holes. It works offline on your Paradise Meadows image, but I haven't built or tested it in the app.
+
+  Why it failed. Add decided what "looks like the mask colour" using a fixed distance of 0.08 from the masked sky. The sky you see through branches is hazier and paler than the
+  open sky: on this image it's 0.13–0.31 away. So those holes were treated as foreground and nothing was added. The holes that worked happened to be close to the open sky's blue.
+  There was a second problem: where no masked pixel was near the stroke, Add fell back to a plain brush that paints the branches too.
+
+  What changed (all in Develop/maskrefine.h, Add mode only; Remove and Fix Edge are untouched):
+  - Comparison is now relative. Add groups the unmasked pixels under the stroke into four colour groups. The group nearest the mask colour is treated as sky, and that sky is used
+    locally to blend the edges.
+  - Colour matters more than brightness in that grouping. Without this, lit snow and pale horizon sky fell into one group and the snowy treetops got added.
+  - When the mask is far from the stroke, Add takes the colour of the nearest masked pixels. Averaging every masked pixel within reach gave the deep zenith blue, which made things
+    worse.
+  - Results are repeatable. The grouping step starts from a fixed seed, so the same stroke always gives the same mask, which the render caches rely on.
+
+  Results on your image (rendered at 2048 px, using the sky matte from yesterday's prototype):
+
+  ┌─────────────────────────────────────────┬────────────────────────────────────────────┬──────────────────────────────┐
+  │                 Stroke                  │                   Before                   │            After             │
+  ├─────────────────────────────────────────┼────────────────────────────────────────────┼──────────────────────────────┤
+  │ The two holes you marked, plus two more │ pale sky not added, or branches painted in │ sky added, branches left out │
+  ├─────────────────────────────────────────┼────────────────────────────────────────────┼──────────────────────────────┤
+  │ Stroke entirely over sky                │ partial, with a gap in the middle          │ fully filled                 │
+  ├─────────────────────────────────────────┼────────────────────────────────────────────┼──────────────────────────────┤
+  │ Sky gaps between snowy treetops         │ —                                          │ snow left out                │
+  └─────────────────────────────────────────┴────────────────────────────────────────────┴──────────────────────────────┘
+
+  - The C++ matches the Python prototype on 8 strokes (average difference ≤ 0.0008 per pixel).
+  - Cost is 10–36 ms per stroke, in line with the 20–40 ms already documented.
+  - tst_maskrefine passes 9/9, including two new tests: pale holes far from any masked pixel, and snow next to pale horizon sky.
+  - I compiled and ran the tests on their own; nothing in build/ was touched.
+
+  Known limit: a stroke with no sky under it at all can still add shaded, bluish snow. It is as close to the mask colour as real hazy sky, so no colour cut-off can tell them apart.
+  That's misuse, and it adds less than the old plain-brush fallback did.
+
+  To try it: build in Qt Creator, then re-paint one of the holes that failed. Your existing Refine Brush strokes will re-render with the new rule automatically. I updated the
+  Refine Brush entry in notes/Documentation.txt and the project memory.
+
+  Separately, MEMORY.md is over its size limit and its last entry is being cut off. The index entries need shortening at some point.
+
+------------------------------------------------------------------------------------------
+DEPLOYMENT
+------------------------------------------------------------------------------------------
+
+http://165.227.46.158/winnow_mac/beta/Winnow3_beta.dmg
+http://winnow.ca/winnow_mac/beta/Winnow3_beta.dmg

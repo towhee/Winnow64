@@ -3381,12 +3381,12 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
             : fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
-    /*  THE CATALOG REMEMBERS THE PICK, SO HONOUR IT. image.pick has existed since the
-        table did, catalogRowFor writes it and IndexMetadata::fill reads it into m.pick --
-        but nothing ever put it on the row, so a catalog-loaded image came back Unpicked
-        however it was left. Unpicked stays the default for a row with no catalog entry
-        behind it, which is every row of an ordinary folder load. */
-    setData(index(row, G::PickColumn), (cat && cat->pick) ? "Picked" : "Unpicked");
+    /*  PICKS ARE SESSION-ONLY, so a row always starts Unpicked -- catalog-backed or not.
+        This used to restore image.pick, but nothing kept that column current: an unpick
+        writes no sidecar, so Catalog::commit's stamp check skipped the row and the stale
+        pick came back on every launch, along with the "picks not ingested" warning at
+        quit (MW::okToDiscardPicks), which is the statement that picks do not survive. */
+    setData(index(row, G::PickColumn), "Unpicked");
     /*  bool, not the QString "false" this used to be. Ingested had three writers
         disagreeing about the type -- "false" here, true (bool) from the ingest
         pass, "true" (QString) from MW::setIngested -- so the column's type
@@ -3484,7 +3484,7 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
     r.captured = index(row, G::CreatedColumn).data().toDateTime();
     r.rating = index(row, G::RatingColumn).data().toString().toInt();
     r.label = index(row, G::LabelColumn).data().toString();
-    r.pick = index(row, G::PickColumn).data().toString() == "Picked";
+    r.pick = false;     // session-only: never indexed (see addFileDataForRow)
     r.title = index(row, G::TitleColumn).data().toString();
     r.creator = index(row, G::CreatorColumn).data().toString();
     r.copyright = index(row, G::CopyrightColumn).data().toString();

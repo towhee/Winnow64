@@ -241,6 +241,33 @@ void MetaRead::invalidateLoadedIcons()
     loadedIconsInvalidated.store(true);
 }
 
+void MetaRead::probeStaleRow(int dmRow, int sfRow)
+{
+    auto sync = dm->rowSync();
+    auto snap = dm->proxySnapshot();
+    QString cyc;
+    for (bool c : cycling) cyc += c ? '1' : '0';
+    qDebug().noquote()
+        << "[PERF] stale row (MetaRead): dmRow =" << dmRow << " sfRow =" << sfRow
+        << " snap sfRow->dmRow =" << (snap ? snap->dmRow(sfRow) : -2)
+        << " rowsReading =" << rowsReading.contains(dmRow)
+        << " readSuccessThisCycle =" << readSuccessThisCycle.contains(dmRow)
+        << " sync metaAttempted =" << (sync && sync->has(dmRow, RowSync::MetaAttempted))
+        << " sync metaLoaded =" << (sync && sync->has(dmRow, RowSync::MetaLoaded))
+        << " sync iconLoaded =" << (sync && sync->has(dmRow, RowSync::IconLoaded))
+        << "\n         cycling =" << cyc << " pending =" << pending()
+        << " isDispatching =" << isDispatching << " abort =" << abort
+        << " sfSuspended =" << dm->sf->isSuspended()
+        << " suspendedReturns =" << suspendedReturnCount.load()
+        << " instance =" << instance << "/" << dm->instance
+        << "\n         startRow =" << startRow << " a =" << a << " b =" << b
+        << " aIsDone =" << aIsDone << " bIsDone =" << bIsDone << " isDone =" << isDone
+        << " iconRange =" << firstIconRow << "-" << lastIconRow
+        << " sfRowCount =" << rowCountSf()
+        << " awaitingDecodeRow =" << awaitingDecodeRow.load()
+        << " queuedReaderEvents =" << dm->queuedReaderEvents.load();
+}
+
 void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
 {
 /*
@@ -1699,6 +1726,7 @@ void MetaRead::dispatch(int id, bool isReturning)
 
     if (abort || dm->sf->isSuspended()) {
         r->status = Reader::Status::Ready;
+        suspendedReturnCount.fetch_add(1, std::memory_order_relaxed);
         return;
     }
 

@@ -716,6 +716,11 @@ Q_NAMESPACE
        whether PMRID is baked into a default-render devPreview, so Metadata::defaultRenderKey
        must hash it, and that runs on ImageCache decoder threads which cannot reach MW. */
     extern bool autoRunDenoise;
+    /* "Auto-remove chromatic aberration on raw files": an UNSET EditParams::removeCA
+       follows it for a raw (off for anything else). Persisted to QSettings
+       Develop/autoRemoveCA, default off. Global for autoRunDenoise's reason: it changes
+       the default render, so Metadata::defaultRenderKey / devPreviewKey must hash it. */
+    extern bool autoRemoveCA;
 
     /* Gate for the OPTIONAL debounce-while-editing write of per-image Develop settings to the XMP
        sidecar (a short time after edits settle). Navigate-away / quit / pre-op flushes always run

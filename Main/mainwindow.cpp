@@ -22,6 +22,7 @@
 #include "Develop/maskedge.h"
 #include "Develop/maskhalo.h"
 #include "Develop/maskrefine.h"
+#include "Develop/lenscorrect.h"
 #include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
@@ -5141,6 +5142,29 @@ void MW::drainStaleRecommit()
         qDebug().noquote() << "[PERF] stale re-commit: committed" << fixed.size()
                            << "of" << pendingBefore << "pending; still pending ="
                            << staleRecommit.size();
+    /*  PROBE: a row that never comes back. GUI-side state here, MetaRead's own view of
+        the row from its thread (MetaRead::probeStaleRow). */
+    if (G::isPerfProbe) {
+        for (const QString &fPath : std::as_const(staleRecommit)) {
+            const int dmRow = dm->rowFromKey(fPath);
+            const int sfRow = dm->proxyRowFromKey(fPath);
+            qDebug().noquote()
+                << "[PERF] stale row (GUI):" << QFileInfo(fPath).fileName()
+                << " dmRow =" << dmRow << " sfRow =" << sfRow
+                << " status =" << (dmRow < 0 ? -1 : dm->index(dmRow, G::MetadataStatusColumn)
+                                                        .data().toInt())
+                << " iconLoaded =" << (dmRow >= 0 && dm->index(dmRow, G::IconLoadedColumn)
+                                                         .data().toBool())
+                << " currentSfRow =" << dm->currentSfRow
+                << " iconRange =" << dm->startIconRange.load() << "-"
+                << dm->endIconRange.load()
+                << " allMetadataAttempted =" << bool(G::allMetadataAttempted)
+                << " iconChunkLoaded =" << bool(G::iconChunkLoaded);
+            if (dmRow >= 0)
+                QMetaObject::invokeMethod(metaRead, "probeStaleRow", Qt::QueuedConnection,
+                                          Q_ARG(int, dmRow), Q_ARG(int, sfRow));
+        }
+    }
 
     /*  ROWS WHOSE RE-READ HAS NOT LANDED YET ARE STILL IN THE SET; COME BACK FOR THEM --
         BUT NOT FOREVER.
@@ -10121,6 +10145,153 @@ void buildRefineGuide(const WorkingImage &src, std::vector<float> &guide)
     });
 }
 
+/*
+    LENS CORRECTIONS ON THE BASE (Develop/lenscorrect.h; EditParams::removeCA /
+    defringePurple / defringeGreen, Global scope only).
+
+    Applied to the SOURCE every render path composites from -- the proxy, the settled
+    full resolution base, the export base -- so every scope, mask and guide downstream
+    sees the corrected edges. Runs on the render WORKERS, never the GUI thread: the
+    result is cached per (source object, settings), so a slider tick that does not touch
+    the lens group costs a lookup, and one that does recomputes on the worker.
+
+    CA COEFFICIENTS are a property of the image, estimated ONCE per path from FULL-
+    resolution pixels (the shifts are sub-pixel) and kept in caStore. Whichever worker
+    first needs them measures them from the full-res base it was handed (~0.3 s at 36 MP);
+    a proxy render then applies the same ratios at its own size.
+
+    DEFRINGE works in display terms -- its hue bands and thresholds are perceptual -- so
+    the working image is taken through toWorkingColor (as-shot WB + camera matrix),
+    / white and display gamma, corrected, and ONLY the pixels it changed are mapped back
+    through the inverse of that transform. Clipped highlights are never touched (lenscorrect.h),
+    so raw headroom is never flattened.
+*/
+namespace {
+QMutex g_caMutex;
+QHash<QString, LensCorrect::CACoeffs> g_caStore;
+
+struct LensCacheEntry {
+    std::weak_ptr<const WorkingImage> src;
+    QString key;
+    std::shared_ptr<const WorkingImage> out;
+};
+QMutex g_lensMutex;
+QVector<LensCacheEntry> g_lensCache;           // a few entries: proxy + settle + export
+
+/* The camera -> working transform toWorkingColor applies (identity when the pixels are
+   already in a working space), as a 3x3 for inverting. */
+cv::Matx33d workingFromImage(const WorkingImage &img)
+{
+    if (img.space != ColorSpaceMath::ColorSpace::CameraNative || !img.cam.valid)
+        return cv::Matx33d::eye();
+    cv::Matx33d m;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            m(i, j) = double(img.cam.camToWorking[i][j]) * double(img.cam.asShotMul[j]);
+    return m;
+}
+}   // namespace
+
+/* The CA coefficients for fPath, measuring them from `full` if they are not known yet. */
+LensCorrect::CACoeffs caCoeffsFor(const QString &fPath, const WorkingImage *full)
+{
+    {
+        QMutexLocker lk(&g_caMutex);
+        auto it = g_caStore.constFind(fPath);
+        if (it != g_caStore.constEnd()) return it.value();
+    }
+    if (!full || !full->isValid()) return LensCorrect::CACoeffs();
+    const cv::Mat rgb(full->height, full->width, CV_32FC3,
+                      const_cast<float *>(full->rgb.data()));
+    const LensCorrect::CACoeffs k = LensCorrect::estimateCA(rgb);
+    QMutexLocker lk(&g_caMutex);
+    if (g_caStore.size() > 64) g_caStore.clear();
+    g_caStore.insert(fPath, k);
+    return k;
+}
+
+std::shared_ptr<const WorkingImage> lensCorrectedSource(
+    const QString &fPath, const std::shared_ptr<const WorkingImage> &src,
+    const EditParams &g, const WorkingImage *fullForEstimate)
+{
+    if (!src || !src->isValid()) return src;
+    const bool doCA = g.wantsRemoveCA(G::autoRemoveCA, src->sceneReferred);
+    const bool doFringe = g.wantsDefringe();
+    if (!doCA && !doFringe) return src;
+    LensCorrect::CACoeffs ca;
+    if (doCA) ca = caCoeffsFor(fPath, fullForEstimate ? fullForEstimate : src.get());
+    if (!ca.any() && !doFringe) return src;
+
+    const QString key = QString("%1|%2x%3|ca=%4,%5|fr=%6,%7")
+                            .arg(fPath).arg(src->width).arg(src->height)
+                            .arg(ca.any() ? ca.kR : 0.0f).arg(ca.any() ? ca.kB : 0.0f)
+                            .arg(g.defringePurple).arg(g.defringeGreen);
+    {
+        QMutexLocker lk(&g_lensMutex);
+        for (const LensCacheEntry &e : g_lensCache) {
+            const auto held = e.src.lock();
+            if (held && held == src && e.key == key) return e.out;
+        }
+    }
+
+    auto out = std::make_shared<WorkingImage>(*src);
+    const int w = out->width, h = out->height;
+    cv::Mat m(h, w, CV_32FC3, out->rgb.data());
+    if (ca.any()) LensCorrect::applyCA(m, ca);
+
+    if (doFringe) {
+        const cv::Matx33d M = workingFromImage(*out);
+        const cv::Matx33d Minv = M.inv();
+        const float invWhite = out->white > 1e-6f ? 1.0f / out->white : 1.0f;
+        cv::Mat disp(h, w, CV_32FC3);
+        LensCorrect::forRows(h, [&](int y) {
+            const cv::Vec3f *s = m.ptr<cv::Vec3f>(y);
+            cv::Vec3f *d = disp.ptr<cv::Vec3f>(y);
+            for (int x = 0; x < w; ++x) {
+                float r = s[x][0], gg = s[x][1], b = s[x][2];
+                toWorkingColor(*out, r, gg, b);
+                const float c[3] = {r * invWhite, gg * invWhite, b * invWhite};
+                for (int i = 0; i < 3; ++i)
+                    d[x][i] = c[i] <= 0.0f ? 0.0f : std::pow(c[i], 1.0f / 2.2f);
+            }
+        });
+        /* `applied` says which pixels the defringe changed -- cheaper than cloning the
+           whole display image (430 MB at 36 MP) to diff against. */
+        cv::Mat applied;
+        LensCorrect::defringe(disp, g.defringePurple, g.defringeGreen,
+                              out->renderScale > 0.0f ? out->renderScale : 1.0f, &applied);
+        const float white = out->white > 1e-6f ? out->white : 1.0f;
+        LensCorrect::forRows(h, [&](int y) {
+            const cv::Vec3f *d = disp.ptr<cv::Vec3f>(y);
+            const float *ap = applied.ptr<float>(y);
+            cv::Vec3f *s = m.ptr<cv::Vec3f>(y);
+            for (int x = 0; x < w; ++x) {
+                if (ap[x] <= 0.0f) continue;               // untouched by the defringe
+                const cv::Vec3d lin(std::pow(double(d[x][0]), 2.2) * white,
+                                    std::pow(double(d[x][1]), 2.2) * white,
+                                    std::pow(double(d[x][2]), 2.2) * white);
+                const cv::Vec3d cam = Minv * lin;
+                s[x] = cv::Vec3f(float(cam[0]), float(cam[1]), float(cam[2]));
+            }
+        });
+    }
+
+    std::shared_ptr<const WorkingImage> res = out;
+    QMutexLocker lk(&g_lensMutex);
+    /* Bounded by MEMORY, not just count: a 36 MP result is ~430 MB, so at most ONE large
+       (full-resolution) entry is kept -- there is one settled image at a time -- beside a
+       couple of proxy-sized ones. */
+    auto isLarge = [](const std::shared_ptr<const WorkingImage> &im) {
+        return im && size_t(im->width) * size_t(im->height) > size_t(8) * 1000 * 1000;
+    };
+    for (int i = g_lensCache.size() - 1; i >= 0; --i)
+        if (g_lensCache.at(i).src.expired() || (isLarge(res) && isLarge(g_lensCache.at(i).out)))
+            g_lensCache.removeAt(i);
+    if (g_lensCache.size() >= 3) g_lensCache.removeFirst();
+    g_lensCache.append({src, key, res});
+    return res;
+}
+
 /* True if any of these components is a Refine Brush -- the fold then needs the guide. */
 bool componentsHaveRefine(const QVector<MaskComponent> &components)
 {
@@ -10518,32 +10689,11 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
        like -- Add/Remove by the stroke, Fix Edge left alone -- rather than doing nothing. */
     auto foldRefineComp = [&](const CompDesc &d) {
         if (!d.brush || d.brush->size() != out.size()) return;
-        /* REFINEPROBE (temporary, 2026-10-07): the user saw no effect from Fix Edge in the
-           app while the offline run worked -- report what the step actually got and did.
-           Remove once the in-app behaviour is understood. */
-        auto probe = [&](const char *path, const std::vector<float> &before) {
-            size_t roiPx = 0, changed = 0; double maxD = 0;
-            for (size_t k = 0; k < out.size(); ++k) {
-                if ((*d.brush)[k] > 0.01f) ++roiPx;
-                const double dd = std::fabs(double(out[k]) - before[k]);
-                if (dd > 0.02) ++changed;
-                maxD = std::max(maxD, dd);
-            }
-            const char *mode = d.refineMode == MaskRefine::Mode::Edge   ? "edge"
-                             : d.refineMode == MaskRefine::Mode::Remove ? "remove" : "add";
-            qDebug().noquote() << "REFINEPROBE" << path << QString("%1x%2").arg(w).arg(h)
-                               << "mode" << mode << "roiPx" << roiPx << "changed" << changed
-                               << "maxDelta" << QString::number(maxD, 'f', 3)
-                               << "guide" << (refineGuide ? int(refineGuide->size()) : -1);
-        };
         if (refineGuide && refineGuide->size() == out.size() * 3) {
-            const std::vector<float> before = out;
             const cv::Mat rgb(h, w, CV_32FC3, const_cast<float *>(refineGuide->data()));
             MaskRefine::apply(out, *d.brush, rgb, w, h, d.refineMode);
-            probe("guided", before);
             return;
         }
-        probe("NO-GUIDE", out);
         if (d.refineMode == MaskRefine::Mode::Edge) return;
         const bool add = (d.refineMode == MaskRefine::Mode::Add);
         developParallelRows(w, h, [&](int y0, int y1) {
@@ -12284,16 +12434,20 @@ void MW::renderDevelopPreview(bool fullRes)
         }
     }
 
+    /* CA is measured at full resolution, so the worker gets the full base too. */
+    const std::shared_ptr<const WorkingImage> lensFull = base;
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
                             reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
-                            baseKey, faithful, recipe, roiJob, roiHold]() mutable {
+                            baseKey, faithful, recipe, roiJob, roiHold, lensFull]() mutable {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
         rt.cacheSurvived = cacheSurvived;
         MaskBuildStats ms;
         QSize displaySize;
-        QImage out = developCompositeStack(*proxySrc, mj, degrees, fullRes, fw, fh, fPath,
+        const std::shared_ptr<const WorkingImage> lensSrc =
+            lensCorrectedSource(fPath, proxySrc, mj.global, lensFull.get());
+        QImage out = developCompositeStack(*lensSrc, mj, degrees, fullRes, fw, fh, fPath,
                                            wantTime ? &rt : nullptr,
                                            WorkingImageCache::OutDepth::Eight,
                                            WorkingImageCache::Space::sRGB, cache,
@@ -12649,8 +12803,10 @@ void MW::renderDevelopFullResAsync()
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
         if (probe) t.start();
-        const QImage out = developCompositeStack(*src, mj, degrees, /*fullRes*/true, 0, 0, fPath,
-                                                 probe ? &rt : nullptr);
+        const std::shared_ptr<const WorkingImage> lensSrc =
+            lensCorrectedSource(fPath, src, mj.global, src.get());
+        const QImage out = developCompositeStack(*lensSrc, mj, degrees, /*fullRes*/true, 0, 0,
+                                                 fPath, probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
 
         /* Cheap pixel-change verification (developVerifyMaxAbs): at a small fixed size,
@@ -14189,7 +14345,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                because the mask fields registered above are keyed to those pixels. */
             developRenderPool->start([this, fPath, work, src, mj, degrees, depth, space,
                                       outSpace, decodedHere, done]() {
-                QImage out = developCompositeStack(*src, mj, degrees,
+                const std::shared_ptr<const WorkingImage> lensSrc =
+                    lensCorrectedSource(fPath, src, mj.global, src.get());
+                QImage out = developCompositeStack(*lensSrc, mj, degrees,
                                                    /*fullRes*/true, 0, 0, fPath,
                                                    nullptr, depth, space);
                 /* Tag at the export boundary, not inside the composite: the geometry and

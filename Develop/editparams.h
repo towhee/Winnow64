@@ -272,6 +272,32 @@ struct EditParams {
         return denoiseRaw >= 0 ? denoiseRaw > 0 : autoRun;
     }
 
+    /*
+        LENS CORRECTIONS (Develop/lenscorrect.h), Global scope only, applied to the BASE
+        image before any scope develops -- so every mask, guide and scope sees corrected
+        edges. Set from the Transform panel's Lens group.
+
+        removeCA -- lateral chromatic aberration, TRI-STATE like denoiseRaw and for the
+        same reason (an untouched raw must keep its recipe and devPreview key):
+          -1  unset  follow G::autoRemoveCA for a raw; off for anything else. DEFAULT,
+                     omitted from the sidecar.
+           0  off    not corrected, even with the preference on.
+           1  on     corrected (the radial R/B scale is estimated from the image).
+        Read it through wantsRemoveCA().
+
+        defringePurple / defringeGreen -- edge colour fringing, 0..1, 0 = off. Purple
+        covers cyan-blue through magenta (the Dempster ridge line was cyan-blue); green is
+        off by default in practice, as Lightroom's is.
+    */
+    int   removeCA       = -1;
+    float defringePurple = 0.0f;
+    float defringeGreen  = 0.0f;
+
+    bool wantsRemoveCA(bool autoRaw, bool isRaw) const {
+        return removeCA >= 0 ? removeCA > 0 : (autoRaw && isRaw);
+    }
+    bool wantsDefringe() const { return defringePurple > 0.0f || defringeGreen > 0.0f; }
+
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
        "Scope & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
@@ -454,6 +480,7 @@ struct EditParams {
                gradeGlobalSat == 0.0f && gradeGlobalLum == 0.0f &&
                denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
                denoiseRaw < 0 &&        // unset = "follow the preference" = untouched
+               removeCA < 0 && defringePurple == 0.0f && defringeGreen == 0.0f &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&
